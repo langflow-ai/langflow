@@ -3,7 +3,7 @@ title: Administer users and teams with the API and CLI
 slug: /admin-api-cli
 ---
 
-Langflow 1.13 provides matching REST and command-line surfaces for user, team, role, and role-assignment administration. Existing `/api/v1` routes remain canonical; the CLI calls those routes with a Langflow API key.
+Langflow provides matching REST and command-line surfaces for user, team, role, and role-assignment administration. Existing `/api/v1` routes remain canonical; the CLI calls those routes with a Langflow API key.
 
 The open-source authorization service is fail-closed for delegated administration. Superusers retain access. A non-superuser can administer a resource only when an installed authorization plugin implements the corresponding permission:
 

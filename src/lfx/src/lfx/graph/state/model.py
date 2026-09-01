@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from types import FunctionType, MethodType
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, computed_field, create_model
@@ -84,7 +85,13 @@ def build_output_getter(method: Callable, *, validate: bool = True) -> Callable:
     return_type = resolve_method_return_annotation(method)
 
     if return_type is None:
-        msg = f"Method {method.__name__} has no return type annotation."
+        function = object.__getattribute__(method, "__func__") if type(method) is MethodType else method
+        annotations = object.__getattribute__(function, "__annotations__") if type(function) is FunctionType else {}
+        has_return_annotation = isinstance(annotations, dict) and dict.__contains__(annotations, "return")
+        if has_return_annotation:
+            msg = f"Method {method.__name__} return type annotation could not be resolved safely."
+        else:
+            msg = f"Method {method.__name__} has no return type annotation."
         raise ValueError(msg)
     output_getter.__annotations__["return"] = return_type
     return output_getter

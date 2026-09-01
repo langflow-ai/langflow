@@ -2,7 +2,7 @@
 
 Phase: EXPAND
 Revision ID: b8e1d4f6a2c9
-Revises: a3f8b1c9d7e2
+Revises: c6d8e0f2a4b7
 Create Date: 2026-08-26
 
 Existing ``authz_team_member`` rows are retained as effective compatibility
@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 revision: str = "b8e1d4f6a2c9"  # pragma: allowlist secret
-down_revision: str | None = "a3f8b1c9d7e2"  # pragma: allowlist secret
+down_revision: str | None = "c6d8e0f2a4b7"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

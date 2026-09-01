@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from lfx.log.logger import logger
 from lfx.services.authorization import AuthorizationMutation, AuthorizationMutationKind
 from lfx.utils.util_strings import escape_like_pattern
@@ -15,7 +15,13 @@ from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas.authz_roles import RoleCreate, RoleRead, RoleUpdate
-from langflow.services.authorization.admin import administration_audit_details, ensure_administration_permission
+from langflow.services.authorization.admin import (
+    ADMINISTRATION_REQUIRED_REASON,
+    administration_audit_details,
+    administration_denied,
+    is_administrator,
+)
+from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS, AUDIT_EVENT_MUTATION
 from langflow.services.authorization.lifecycle import (
     acquire_identity_mutation_lock,
     safe_identity_mutation_committed,
@@ -25,34 +31,82 @@ from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
 from langflow.services.deps import get_authorization_service
 
-router = APIRouter(prefix="/authz/roles", tags=["Authorization"])
+router = APIRouter(prefix="/authz/roles", tags=["Authorization"], include_in_schema=False)
 
 # Match ``authz_shares``: cap any single list call so an authenticated client
 # (or a buggy frontend) can't enumerate the entire role/team catalog in one
 # request. 100 default / 200 max is enough for typical UI dropdowns.
 _LIST_MAX_LIMIT = 200
 _LIST_DEFAULT_LIMIT = 100
+_POSTGRES_UNIQUE_VIOLATION_SQLSTATE = "23505"
+_ROLE_NAME_UNIQUE_INDEX = "ix_authz_role_name"
+_SQLITE_ROLE_NAME_UNIQUE_MARKER = "UNIQUE constraint failed: authz_role.name"
 OperationId = Annotated[str | None, Header(alias="X-Langflow-Operation-ID", max_length=128)]
 _LEGACY_SUPERUSER_DENIAL = "Superuser required to administer roles."
 
 
-async def _require_role_administrator(user, *, operation_id: str | None = None) -> None:
-    await ensure_administration_permission(
-        user,
-        resource="role",
-        authorization_service=get_authorization_service(),
-        action="role:manage",
-        obj="role:*",
-        operation_id=operation_id,
-        denial_detail=_LEGACY_SUPERUSER_DENIAL,
+async def _audit_deny(
+    *,
+    user_id: UUID,
+    action: str,
+    obj: str,
+    status_code: int,
+    reason: str,
+    operation_id: str | None = None,
+) -> None:
+    await audit_decision(
+        user_id=user_id,
+        action=action,
+        obj=obj,
+        result="deny",
+        details=administration_audit_details(
+            {"event": AUDIT_EVENT_ACCESS, "status_code": status_code, "reason": reason},
+            operation_id=operation_id,
+        ),
     )
 
 
+def _is_role_name_conflict(exc: IntegrityError) -> bool:
+    """Return whether an integrity failure is specifically role-name uniqueness."""
+    current: BaseException | None = exc
+    constraint_name: str | None = None
+    is_unique_violation = False
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if _SQLITE_ROLE_NAME_UNIQUE_MARKER in str(current):
+            return True
+        sqlstate = getattr(current, "sqlstate", None) or getattr(current, "pgcode", None)
+        is_unique_violation = is_unique_violation or sqlstate == _POSTGRES_UNIQUE_VIOLATION_SQLSTATE
+        diagnostic = getattr(current, "diag", None)
+        candidate = getattr(diagnostic, "constraint_name", None) or getattr(current, "constraint_name", None)
+        if candidate:
+            constraint_name = str(candidate)
+        current = getattr(current, "orig", None) or current.__cause__
+    return is_unique_violation and constraint_name == _ROLE_NAME_UNIQUE_INDEX
+
+
+async def _require_role_administrator(user, *, action: str, obj: str, operation_id: str | None = None) -> None:
+    """Allow superusers or a plugin-delegated ``role:manage`` administrator."""
+    if await is_administrator(user, resource="role", authorization_service=get_authorization_service()):
+        return
+    await _audit_deny(
+        user_id=user.id,
+        action=action,
+        obj=obj,
+        status_code=status.HTTP_403_FORBIDDEN,
+        reason=ADMINISTRATION_REQUIRED_REASON,
+        operation_id=operation_id,
+    )
+    raise administration_denied(_LEGACY_SUPERUSER_DENIAL, resource="role")
+
+
 async def _require_role_administrator_dependency(
+    request: Request,
     current_user: CurrentActiveUser,
     operation_id: OperationId = None,
 ) -> None:
-    """Run the role-administrator gate as a route dependency before body validation.
+    """Run the role-administrator gate as a route dependency, i.e. before body validation.
 
     FastAPI solves a route's ``dependencies`` before validating that route's own
     body, so an unauthorised caller is refused whatever they post. Gated only in
@@ -63,7 +117,12 @@ async def _require_role_administrator_dependency(
     The in-body call is kept as well: it is the gate for anything that reaches
     the endpoint function without FastAPI resolving dependencies.
     """
-    await _require_role_administrator(current_user, operation_id=operation_id)
+    role_id = request.path_params.get("role_id", "*")
+    action = {"POST": "role:create", "PATCH": "role:update", "DELETE": "role:delete"}.get(
+        request.method,
+        "role:access",
+    )
+    await _require_role_administrator(current_user, action=action, obj=f"role:{role_id}", operation_id=operation_id)
 
 
 ROLE_ADMINISTRATOR_ONLY = [Depends(_require_role_administrator_dependency)]
@@ -144,7 +203,7 @@ async def create_role(
     operation_id: OperationId = None,
 ) -> RoleRead:
     """Create a custom (non-system) role."""
-    await _require_role_administrator(current_user, operation_id=operation_id)
+    await _require_role_administrator(current_user, action="role:create", obj="role:*", operation_id=operation_id)
     authorization_service = get_authorization_service()
     await acquire_identity_mutation_lock(
         authorization_service,
@@ -155,6 +214,14 @@ async def create_role(
     if payload.parent_role_id is not None:
         parent = await session.get(AuthzRole, payload.parent_role_id)
         if parent is None:
+            await _audit_deny(
+                user_id=current_user.id,
+                action="role:create",
+                obj="role:*",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                reason="parent_role_not_found",
+                operation_id=operation_id,
+            )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="parent_role_id does not reference an existing role",
@@ -182,9 +249,22 @@ async def create_role(
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
+        is_name_conflict = _is_role_name_conflict(exc)
+        await _audit_deny(
+            user_id=current_user.id,
+            action="role:create",
+            obj="role:*",
+            status_code=status.HTTP_409_CONFLICT,
+            reason="role_name_conflict" if is_name_conflict else "role_integrity_conflict",
+            operation_id=operation_id,
+        )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Role with name {payload.name!r} already exists",
+            detail=(
+                f"Role with name {payload.name!r} already exists"
+                if is_name_conflict
+                else "Role data conflicts with the current database state"
+            ),
         ) from exc
     await safe_identity_mutation_committed(authorization_service, mutation)
     await session.refresh(role)
@@ -195,6 +275,7 @@ async def create_role(
         result="allow",
         details=administration_audit_details(
             {
+                "event": AUDIT_EVENT_MUTATION,
                 "role_name": role.name,
                 "permissions": list(role.permissions),
                 "parent_role_id": str(role.parent_role_id) if role.parent_role_id else None,
@@ -216,7 +297,12 @@ async def update_role(
     operation_id: OperationId = None,
 ) -> RoleRead:
     """Update fields on a custom role. System roles are read-only."""
-    await _require_role_administrator(current_user, operation_id=operation_id)
+    await _require_role_administrator(
+        current_user,
+        action="role:update",
+        obj=f"role:{role_id}",
+        operation_id=operation_id,
+    )
     authorization_service = get_authorization_service()
     await acquire_identity_mutation_lock(
         authorization_service,
@@ -227,8 +313,24 @@ async def update_role(
 
     role = await session.get(AuthzRole, role_id)
     if role is None:
+        await _audit_deny(
+            user_id=current_user.id,
+            action="role:update",
+            obj=f"role:{role_id}",
+            status_code=status.HTTP_404_NOT_FOUND,
+            reason="role_not_found",
+            operation_id=operation_id,
+        )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
     if role.is_system:
+        await _audit_deny(
+            user_id=current_user.id,
+            action="role:update",
+            obj=f"role:{role_id}",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            reason="system_role_read_only",
+            operation_id=operation_id,
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="System roles cannot be modified",
@@ -245,17 +347,41 @@ async def update_role(
             role.parent_role_id = None
         else:
             if payload.parent_role_id == role.id:
+                await _audit_deny(
+                    user_id=current_user.id,
+                    action="role:update",
+                    obj=f"role:{role_id}",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    reason="self_parent_forbidden",
+                    operation_id=operation_id,
+                )
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="A role cannot be its own parent",
                 )
             parent = await session.get(AuthzRole, payload.parent_role_id)
             if parent is None:
+                await _audit_deny(
+                    user_id=current_user.id,
+                    action="role:update",
+                    obj=f"role:{role_id}",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    reason="parent_role_not_found",
+                    operation_id=operation_id,
+                )
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="parent_role_id does not reference an existing role",
                 )
             if await _detect_parent_cycle(session, role_id=role.id, proposed_parent_id=payload.parent_role_id):
+                await _audit_deny(
+                    user_id=current_user.id,
+                    action="role:update",
+                    obj=f"role:{role_id}",
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    reason="role_hierarchy_cycle",
+                    operation_id=operation_id,
+                )
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Setting this parent would create a role hierarchy cycle",
@@ -271,6 +397,14 @@ async def update_role(
         # the boundary so the caller gets a clear 400 instead of an opaque
         # IntegrityError that the catch block below mislabels as "Name conflict".
         if payload.name is None:
+            await _audit_deny(
+                user_id=current_user.id,
+                action="role:update",
+                obj=f"role:{role_id}",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                reason="null_name_forbidden",
+                operation_id=operation_id,
+            )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="name cannot be null",
@@ -282,6 +416,14 @@ async def update_role(
         # list is the natural "clear" — None would violate the constraint at
         # commit, so reject it up front.
         if payload.permissions is None:
+            await _audit_deny(
+                user_id=current_user.id,
+                action="role:update",
+                obj=f"role:{role_id}",
+                status_code=status.HTTP_400_BAD_REQUEST,
+                reason="null_permissions_forbidden",
+                operation_id=operation_id,
+            )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="permissions cannot be null; pass an empty list to clear",
@@ -303,9 +445,22 @@ async def update_role(
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
+        is_name_conflict = _is_role_name_conflict(exc)
+        await _audit_deny(
+            user_id=current_user.id,
+            action="role:update",
+            obj=f"role:{role_id}",
+            status_code=status.HTTP_409_CONFLICT,
+            reason="role_name_conflict" if is_name_conflict else "role_integrity_conflict",
+            operation_id=operation_id,
+        )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Name conflict — another role already uses this name",
+            detail=(
+                "Name conflict — another role already uses this name"
+                if is_name_conflict
+                else "Role data conflicts with the current database state"
+            ),
         ) from exc
     await safe_identity_mutation_committed(authorization_service, mutation)
     await session.refresh(role)
@@ -315,7 +470,7 @@ async def update_role(
         obj=f"role:{role.id}",
         result="allow",
         details=administration_audit_details(
-            {"role_name": role.name, "fields_changed": sorted(fields_set)},
+            {"event": AUDIT_EVENT_MUTATION, "role_name": role.name, "fields_changed": sorted(fields_set)},
             operation_id=operation_id,
         ),
     )
@@ -335,7 +490,12 @@ async def delete_role(
     System roles cannot be deleted; roles with active assignments return 409
     (delete the assignments first).
     """
-    await _require_role_administrator(current_user, operation_id=operation_id)
+    await _require_role_administrator(
+        current_user,
+        action="role:delete",
+        obj=f"role:{role_id}",
+        operation_id=operation_id,
+    )
     authorization_service = get_authorization_service()
     await acquire_identity_mutation_lock(
         authorization_service,
@@ -346,8 +506,24 @@ async def delete_role(
 
     role = await session.get(AuthzRole, role_id)
     if role is None:
+        await _audit_deny(
+            user_id=current_user.id,
+            action="role:delete",
+            obj=f"role:{role_id}",
+            status_code=status.HTTP_404_NOT_FOUND,
+            reason="role_not_found",
+            operation_id=operation_id,
+        )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
     if role.is_system:
+        await _audit_deny(
+            user_id=current_user.id,
+            action="role:delete",
+            obj=f"role:{role_id}",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            reason="system_role_read_only",
+            operation_id=operation_id,
+        )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="System roles cannot be deleted",
@@ -357,6 +533,14 @@ async def delete_role(
         await session.exec(select(AuthzRoleAssignment).where(AuthzRoleAssignment.role_id == role_id).limit(1))
     ).first()
     if assigned is not None:
+        await _audit_deny(
+            user_id=current_user.id,
+            action="role:delete",
+            obj=f"role:{role_id}",
+            status_code=status.HTTP_409_CONFLICT,
+            reason="active_assignments_exist",
+            operation_id=operation_id,
+        )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Role still has active assignments — revoke them before deleting",
@@ -381,6 +565,9 @@ async def delete_role(
         action="role:delete",
         obj=f"role:{role_id}",
         result="allow",
-        details=administration_audit_details({"role_name": role_name}, operation_id=operation_id),
+        details=administration_audit_details(
+            {"event": AUDIT_EVENT_MUTATION, "role_name": role_name},
+            operation_id=operation_id,
+        ),
     )
     logger.info("Deleted role id=%s", role_id)
