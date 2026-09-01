@@ -22,7 +22,7 @@ export default function useLoadFlowForRoute({
   applyFlowToCanvas,
   navigate,
 }: UseLoadFlowForRouteProps): void {
-  const requestedFlowIdRef = useRef<string | null>(null);
+  const activeRequestRef = useRef<{ id: string } | null>(null);
   const mountedRef = useRef(true);
 
   // Cancellation has to outlive the effect: React re-runs the cleanup on every
@@ -50,14 +50,15 @@ export default function useLoadFlowForRoute({
     // those renders fires another request, and the pending mutation state
     // renders again — a loop that saturates the browser socket pool and
     // prevents the very response that would end it.
-    if (requestedFlowIdRef.current === id) {
+    if (activeRequestRef.current?.id === id) {
       return;
     }
-    requestedFlowIdRef.current = id;
+    const request = { id };
+    activeRequestRef.current = request;
 
     const storedFlow = flows.find((flow) => flow.id === id);
     const isStale = () =>
-      !mountedRef.current || requestedFlowIdRef.current !== id;
+      !mountedRef.current || activeRequestRef.current !== request;
 
     const loadFlowToCanvas = async (flowId: string) => {
       const flow = await getFlow({ id: flowId });
@@ -67,8 +68,8 @@ export default function useLoadFlowForRoute({
     };
 
     const releaseForRetry = () => {
-      if (requestedFlowIdRef.current === id) {
-        requestedFlowIdRef.current = null;
+      if (activeRequestRef.current === request) {
+        activeRequestRef.current = null;
       }
     };
 
