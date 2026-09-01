@@ -160,7 +160,7 @@ async function mockProviderCatalog(
   } = {},
 ) {
   await page.route(
-    /\/api\/v1\/models\?include_deprecated=true$/,
+    /\/api\/v1\/models\?[^#]*include_deprecated=true(?:&[^#]*)?$/,
     async (route: Route) => {
       if (providersDelayMs > 0) {
         await new Promise((resolve) => setTimeout(resolve, providersDelayMs));
@@ -170,7 +170,7 @@ async function mockProviderCatalog(
   );
 
   await page.route(
-    /\/api\/v1\/models\/enabled_models$/,
+    /\/api\/v1\/models\/enabled_models(?:\?[^#]*)?$/,
     async (route: Route) => {
       if (route.request().method() === "POST") {
         await route.fulfill({ json: { disabled_models: [] } });
@@ -181,7 +181,7 @@ async function mockProviderCatalog(
   );
 
   await page.route(
-    /\/api\/v1\/models\/provider-variable-mapping$/,
+    /\/api\/v1\/models\/provider-variable-mapping(?:\?[^#]*)?$/,
     async (route: Route) => {
       await route.fulfill({ json: providerVariables });
     },
@@ -296,7 +296,10 @@ test.describe("Model providers route accessibility", () => {
     "scans provider list loading state",
     { tag: ["@release", "@workspace"] },
     async ({ page }) => {
+      // The catalog is stalled far past the teardown drain window on purpose:
+      // the loading state has to still be on screen when the scan runs.
       await mockProviderCatalog(page, { providersDelayMs: 6000 });
+      page.expectPendingRequest({ method: "GET", path: "/api/v1/models" });
       await mockGlobalVariables(page);
       await awaitBootstrapTest(page, { skipModal: true });
       await page.goto("/settings/model-providers");

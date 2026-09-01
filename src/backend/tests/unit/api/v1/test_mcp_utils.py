@@ -1,5 +1,6 @@
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
 
 import pytest
 from langflow.api.utils.core import extract_global_variables_from_headers
@@ -9,6 +10,7 @@ from langflow.services.database.models import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
 from lfx.interface.components import component_cache
+from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
 
 
 class FakeResult:
@@ -142,6 +144,8 @@ async def test_handle_list_tools_skips_blocked_custom_flows(monkeypatch):
     finally:
         mcp_utils.current_user_ctx.reset(token)
 
+    # The global server is the editor-plane surface, where an empty list is a normal
+    # state; only the project endpoint raises. See test_mcp_failure_reporting.py.
     assert tools == []
 
 
@@ -434,19 +438,58 @@ def _build_fake_server() -> SimpleNamespace:
     )
 
 
-async def _invoke_handle_call_tool(monkeypatch, arguments: dict) -> AsyncMock:
-    """Run handle_call_tool with all external deps stubbed; return the simple_run_flow mock."""
+def test_public_mcp_session_namespace_is_stable_and_isolated():
+    """Namespaces are stable per connection and isolated by connection, project, and flow."""
+    project_id = uuid4()
+    flow_id = uuid4()
+    server = SimpleNamespace(request_context=SimpleNamespace(session=SimpleNamespace(session_id="connection-a")))
+
+    namespace = mcp_utils._public_mcp_session_namespace(server, project_id, flow_id)
+
+    assert mcp_utils._public_mcp_session_namespace(server, project_id, flow_id) == namespace
+    assert mcp_utils._public_mcp_session_namespace(server, uuid4(), flow_id) != namespace
+    assert mcp_utils._public_mcp_session_namespace(server, project_id, uuid4()) != namespace
+
+    other_server = SimpleNamespace(request_context=SimpleNamespace(session=SimpleNamespace(session_id="connection-b")))
+    assert mcp_utils._public_mcp_session_namespace(other_server, project_id, flow_id) != namespace
+
+
+async def _invoke_handle_call_tool(
+    monkeypatch,
+    arguments: dict,
+    *,
+    authenticated_caller="user-1",
+    project_id=None,
+    flow_data=None,
+    request_variables: dict[str, str] | None = None,
+    expected_error: str | None = None,
+) -> AsyncMock:
+    """Run handle_call_tool with all external deps stubbed; return the simple_run_flow mock.
+
+    ``authenticated_caller`` is the principal that presented a credential, which the auth
+    dependency establishes before the handler runs. It is not the same as the principal the
+    flow executes as: a project with ``auth_type="none"`` executes as its owner for an
+    anonymous caller, so the handler cannot read ownership off the execution principal.
+    """
     # ``user_id`` matches the current user (see ``current_user_ctx`` below) so the
     # owner-override path in ``ensure_flow_permission`` is exercised; ``workspace_id``
     # is read by the same guard. ``data`` feeds the HITL support gate.
     flow = SimpleNamespace(
-        id="flow-id-1",
+        id=uuid4(),
         name="my_flow",
-        folder_id=None,
+        folder_id=project_id,
         user_id="user-1",
         workspace_id=None,
-        data={"nodes": [], "edges": []},
+        data=flow_data or {"nodes": [], "edges": []},
     )
+
+    def model_copy(*, update, deep):
+        assert deep is True
+        copied = vars(flow).copy()
+        copied.update(update)
+        return SimpleNamespace(**copied)
+
+    flow.model_copy = model_copy
 
     async def fake_get_flow_snake_case(*_args, **_kwargs):
         return flow
@@ -461,16 +504,240 @@ async def _invoke_handle_call_tool(monkeypatch, arguments: dict) -> AsyncMock:
     mcp_utils.get_mcp_config().enable_progress_notifications = False
 
     token = mcp_utils.current_user_ctx.set(SimpleNamespace(id="user-1"))
+    caller_token = mcp_utils.authenticated_caller_ctx.set(authenticated_caller)
+    request_variables_token = mcp_utils.current_request_variables_ctx.set(request_variables)
     try:
-        await mcp_utils.handle_call_tool(
-            name="my_flow",
-            arguments=arguments,
-            server=_build_fake_server(),
-        )
+        if expected_error is None:
+            await mcp_utils.handle_call_tool(
+                name="my_flow",
+                arguments=arguments,
+                server=_build_fake_server(),
+                project_id=project_id,
+            )
+        else:
+            with pytest.raises(RuntimeError, match=expected_error):
+                await mcp_utils.handle_call_tool(
+                    name="my_flow",
+                    arguments=arguments,
+                    server=_build_fake_server(),
+                    project_id=project_id,
+                )
     finally:
+        mcp_utils.current_request_variables_ctx.reset(request_variables_token)
+        mcp_utils.authenticated_caller_ctx.reset(caller_token)
         mcp_utils.current_user_ctx.reset(token)
 
     return simple_run_flow_mock
+
+
+async def test_handle_call_tool_applies_public_policy_and_scopes_session(monkeypatch):
+    project_id = uuid4()
+    prepared_data = {"nodes": [{"prepared": True}], "edges": []}
+    sanitized_data = {"nodes": [{"sanitized": True}], "edges": []}
+    validate = MagicMock()
+    prepare = AsyncMock(return_value=prepared_data)
+    strip = MagicMock(return_value=sanitized_data)
+    monkeypatch.setattr(mcp_utils, "validate_public_flow_no_code_execution", validate)
+    monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", prepare)
+    monkeypatch.setattr(mcp_utils, "strip_secret_field_values", strip)
+
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello", "session_id": "owner-private"},
+        authenticated_caller=None,
+        project_id=project_id,
+    )
+
+    validate.assert_called_once()
+    prepare.assert_awaited_once()
+    strip.assert_called_once_with(prepared_data)
+    forwarded_flow = simple_run_flow_mock.await_args.kwargs["flow"]
+    forwarded_request = simple_run_flow_mock.await_args.kwargs["input_request"]
+    forwarded_user = simple_run_flow_mock.await_args.kwargs["api_key_user"]
+    assert forwarded_flow.data == sanitized_data
+    assert forwarded_request.session_id != "owner-private"
+    assert forwarded_request.session_id.endswith(":owner-private")
+    assert forwarded_user.id == PUBLIC_ANONYMOUS_ACTOR_ID
+    assert forwarded_user.is_superuser is False
+
+
+async def test_handle_call_tool_preserves_request_backed_secret_references_for_public_flow(monkeypatch):
+    variable_name = "OPENRAG_INGEST_TOKEN"
+    flow_data = {
+        "nodes": [
+            {
+                "id": "openrag",
+                "data": {
+                    "id": "openrag",
+                    "type": "OpenRAG",
+                    "node": {
+                        "template": {
+                            "api_key": {
+                                "name": "api_key",
+                                "password": True,
+                                "load_from_db": True,
+                                "value": variable_name,
+                            },
+                            "headers": {
+                                "name": "headers",
+                                "type": "table",
+                                "table_schema": [
+                                    {"name": "key", "type": "str"},
+                                    {"name": "value", "type": "str", "load_from_db": True},
+                                ],
+                                "value": [
+                                    {
+                                        "key": f"X-Langflow-Global-Var-{variable_name}",
+                                        "value": variable_name,
+                                        "__load_from_db_fields": {"value": True},
+                                    }
+                                ],
+                            },
+                        }
+                    },
+                },
+            }
+        ],
+        "edges": [],
+    }
+    monkeypatch.setattr(mcp_utils, "validate_public_flow_no_code_execution", MagicMock())
+    monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", AsyncMock(return_value=flow_data))
+
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello"},
+        authenticated_caller=None,
+        project_id=uuid4(),
+        flow_data=flow_data,
+        request_variables={variable_name: "request-scoped-secret"},  # pragma: allowlist secret
+    )
+
+    forwarded_flow = simple_run_flow_mock.await_args.kwargs["flow"]
+    forwarded_template = forwarded_flow.data["nodes"][0]["data"]["node"]["template"]
+    assert forwarded_template["api_key"]["value"] == variable_name
+    assert forwarded_template["headers"]["value"][0]["value"] == variable_name
+    assert simple_run_flow_mock.await_args.kwargs["context"] == {
+        "request_variables": {variable_name: "request-scoped-secret"}  # pragma: allowlist secret
+    }
+
+
+async def test_handle_call_tool_keeps_unmatched_public_secret_references_scrubbed(monkeypatch):
+    variable_name = "OWNER_ONLY_TOKEN"
+    flow_data = {
+        "nodes": [
+            {
+                "id": "private-token",
+                "data": {
+                    "id": "private-token",
+                    "type": "SecretConsumer",
+                    "node": {
+                        "template": {
+                            "api_key": {
+                                "name": "api_key",
+                                "password": True,
+                                "load_from_db": True,
+                                "value": variable_name,
+                            },
+                            "headers": {
+                                "name": "headers",
+                                "type": "table",
+                                "table_schema": [{"name": "value", "type": "str", "load_from_db": True}],
+                                "value": [
+                                    {
+                                        "key": "X-Langflow-Global-Var-OWNER_ONLY_TABLE_TOKEN",
+                                        "value": "OWNER_ONLY_TABLE_TOKEN",
+                                        "__load_from_db_fields": {"value": True},
+                                    },
+                                    {
+                                        "key": "X-Langflow-Global-Var-LITERAL_TOKEN",
+                                        "value": "LITERAL_TOKEN",
+                                        "__load_from_db_fields": {"value": False},
+                                    },
+                                ],
+                            },
+                        }
+                    },
+                },
+            }
+        ],
+        "edges": [],
+    }
+    monkeypatch.setattr(mcp_utils, "validate_public_flow_no_code_execution", MagicMock())
+    monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", AsyncMock(return_value=flow_data))
+
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello"},
+        authenticated_caller=None,
+        project_id=uuid4(),
+        flow_data=flow_data,
+        request_variables={
+            "DIFFERENT_TOKEN": "request-scoped-secret",  # pragma: allowlist secret
+            "LITERAL_TOKEN": "must-not-be-used",  # pragma: allowlist secret
+        },
+    )
+
+    forwarded_flow = simple_run_flow_mock.await_args.kwargs["flow"]
+    forwarded_template = forwarded_flow.data["nodes"][0]["data"]["node"]["template"]
+    assert forwarded_template["api_key"]["value"] is None
+    assert forwarded_template["headers"]["value"][0]["value"] is None
+    assert forwarded_template["headers"]["value"][1]["value"] is None
+
+
+async def test_handle_call_tool_rejects_public_flow_validation_failure(monkeypatch):
+    validate = MagicMock(side_effect=mcp_utils.CustomComponentValidationError("custom code is not allowed"))
+    prepare = AsyncMock()
+    monkeypatch.setattr(mcp_utils, "validate_public_flow_no_code_execution", validate)
+    monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", prepare)
+
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello"},
+        authenticated_caller=None,
+        project_id=uuid4(),
+        expected_error="cannot be executed through a public MCP project",
+    )
+
+    validate.assert_called_once()
+    prepare.assert_not_awaited()
+    simple_run_flow_mock.assert_not_awaited()
+
+
+async def test_handle_call_tool_rejects_public_flow_prepare_failure(monkeypatch):
+    validate = MagicMock()
+    prepare = AsyncMock(side_effect=mcp_utils.CustomComponentValidationError("invalid public flow"))
+    monkeypatch.setattr(mcp_utils, "validate_public_flow_no_code_execution", validate)
+    monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", prepare)
+
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello"},
+        authenticated_caller=None,
+        project_id=uuid4(),
+        expected_error="cannot be executed through a public MCP project",
+    )
+
+    validate.assert_called_once()
+    prepare.assert_awaited_once()
+    simple_run_flow_mock.assert_not_awaited()
+
+
+async def test_handle_call_tool_preserves_authenticated_mcp_session(monkeypatch):
+    prepare = AsyncMock()
+    monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", prepare)
+
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello", "session_id": "user-thread"},
+        authenticated_caller="user-1",
+        project_id=uuid4(),
+    )
+
+    prepare.assert_not_awaited()
+    forwarded_request = simple_run_flow_mock.await_args.kwargs["input_request"]
+    forwarded_user = simple_run_flow_mock.await_args.kwargs["api_key_user"]
+    assert forwarded_request.session_id == "user-thread"
+    assert forwarded_user.id == "user-1"
 
 
 @pytest.mark.asyncio
@@ -486,6 +753,35 @@ async def test_handle_call_tool_uses_provided_session_id(monkeypatch):
     assert forwarded_request.session_id == "user-1-thread-7"
     assert forwarded_request.input_value == "hello"
     assert simple_run_flow_mock.await_args.kwargs["expose_error_details"] is True
+
+
+@pytest.mark.asyncio
+async def test_handle_call_tool_hides_error_details_from_an_anonymous_caller(monkeypatch):
+    """A public project runs as its owner, so ownership cannot be read off the executor.
+
+    ``auth_type="none"`` establishes no caller. Comparing the execution principal to the
+    flow owner answered yes for everyone and handed anonymous callers the owner's raw
+    component errors, so the absence of a caller has to read as anonymous.
+    """
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello"},
+        authenticated_caller=None,
+    )
+
+    assert simple_run_flow_mock.await_args.kwargs["expose_error_details"] is False
+
+
+@pytest.mark.asyncio
+async def test_handle_call_tool_hides_error_details_from_a_different_user(monkeypatch):
+    """Authenticating as somebody else must not disclose the owner's internals either."""
+    simple_run_flow_mock = await _invoke_handle_call_tool(
+        monkeypatch,
+        arguments={"input_value": "hello"},
+        authenticated_caller="user-2",
+    )
+
+    assert simple_run_flow_mock.await_args.kwargs["expose_error_details"] is False
 
 
 @pytest.mark.asyncio
@@ -535,24 +831,24 @@ async def test_handle_call_tool_forwards_only_advertised_input_fields(monkeypatc
                     is_input=True,
                     template={
                         "input_value": {"show": True, "advanced": False},
-                        "backend_token": {"show": True, "advanced": False},
-                        "enabled": {"show": True, "advanced": False},
-                        "hidden": {"show": False, "advanced": False},
-                        "advanced": {"show": True, "advanced": True},
+                        "backend_token": {"show": True, "advanced": False, "api_editable": True},
+                        "enabled": {"show": True, "advanced": False, "api_editable": True},
+                        "hidden": {"show": False, "advanced": False, "api_editable": True},
+                        "advanced": {"show": True, "advanced": True, "api_editable": True},
                     },
                 ),
                 _FakeNode(
                     "input-b",
                     is_input=True,
                     template={
-                        "backend_token": {"show": True, "advanced": False},
-                        "backend_url": {"show": True, "advanced": False},
+                        "backend_token": {"show": True, "advanced": False, "api_editable": True},
+                        "backend_url": {"show": True, "advanced": False, "api_editable": True},
                     },
                 ),
                 _FakeNode(
                     "downstream",
                     is_input=False,
-                    template={"backend_url": {"show": True, "advanced": False}},
+                    template={"backend_url": {"show": True, "advanced": False, "api_editable": True}},
                 ),
             ]
 
@@ -632,6 +928,7 @@ def test_json_schema_from_flow_preserves_flow_defined_session_id(monkeypatch):
                     "session_id": {
                         "show": True,
                         "advanced": False,
+                        "api_editable": True,
                         "type": "str",
                         "info": custom_session_id_property["description"],
                         "required": True,
@@ -658,6 +955,263 @@ def test_json_schema_from_flow_preserves_flow_defined_session_id(monkeypatch):
     # The flow's own definition wins — the reserved injection must not clobber it.
     assert schema["properties"]["session_id"]["description"] == custom_session_id_property["description"]
     assert "session_id" in schema["required"]
+
+
+def test_json_schema_from_flow_only_advertises_api_exposed_fields(monkeypatch):
+    """MCP tools/list must honor each input field's API exposure toggle."""
+
+    class _FakeNode:
+        is_input = True
+        data = {
+            "node": {
+                "template": {
+                    "exposed": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "str",
+                        "required": True,
+                    },
+                    "not_exposed": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": False,
+                        "type": "str",
+                        "required": True,
+                    },
+                    "legacy_without_exposure_flag": {
+                        "show": True,
+                        "advanced": False,
+                        "type": "str",
+                    },
+                    "off_node": {
+                        "show": True,
+                        "advanced": True,
+                        "api_editable": True,
+                        "type": "str",
+                    },
+                }
+            }
+        }
+
+    class _FakeGraph:
+        vertices = [_FakeNode()]
+
+        @classmethod
+        def from_payload(cls, _flow_data):
+            return cls()
+
+    import lfx.graph.graph.base as graph_base_module
+
+    monkeypatch.setattr(graph_base_module, "Graph", _FakeGraph)
+
+    schema = flow_helpers.json_schema_from_flow(SimpleNamespace(data={"nodes": [], "edges": []}))
+
+    assert set(schema["properties"]) == {"exposed", "session_id"}
+    assert schema["required"] == ["exposed"]
+
+
+def _patch_graph_with_input_nodes(monkeypatch, templates):
+    """Stand a fake graph whose input vertices carry ``templates`` (a list of node templates)."""
+
+    class _FakeNode:
+        def __init__(self, node_id, template):
+            self.id = node_id
+            self.is_input = True
+            self.data = {"node": {"template": template}}
+
+    class _FakeGraph:
+        vertices = [_FakeNode(f"input-{index}", template) for index, template in enumerate(templates)]
+
+        @classmethod
+        def from_payload(cls, _flow_data):
+            return cls()
+
+    import lfx.graph.graph.base as graph_base_module
+
+    monkeypatch.setattr(graph_base_module, "Graph", _FakeGraph)
+
+
+def test_json_schema_from_flow_keeps_visible_fields_when_flow_declares_no_allowlist(monkeypatch):
+    """A flow that toggled nothing has declared no allowlist and keeps its previous contract.
+
+    ``api_editable`` defaults to False and has no backfill, so gating on it without this fallback
+    empties the advertised schema of every flow nobody hand-prepared -- templates included.
+    """
+    _patch_graph_with_input_nodes(
+        monkeypatch,
+        [
+            {
+                "input_value": {"show": True, "advanced": False, "type": "str", "required": True},
+                "sender_name": {"show": True, "advanced": False, "type": "str"},
+                "opt_out": {"show": True, "advanced": False, "api_editable": False, "type": "str"},
+                "hidden": {"show": False, "advanced": False, "type": "str"},
+                "off_node": {"show": True, "advanced": True, "type": "str"},
+            }
+        ],
+    )
+
+    schema = flow_helpers.json_schema_from_flow(SimpleNamespace(data={"nodes": [], "edges": []}))
+
+    assert set(schema["properties"]) == {"input_value", "sender_name", "opt_out", "session_id"}
+    assert schema["required"] == ["input_value"]
+
+
+def test_json_schema_from_flow_always_advertises_input_value(monkeypatch):
+    """``input_value`` stays advertised even under an allowlist, because the runtime still takes it.
+
+    ``handle_call_tool`` pops ``input_value`` before the tweak filter and forwards it directly, so
+    dropping it from the schema would publish a contract narrower than the one served -- a caller
+    obeying the schema would run the flow with no message.
+    """
+    _patch_graph_with_input_nodes(
+        monkeypatch,
+        [
+            {
+                "input_value": {"show": True, "advanced": False, "type": "str"},
+                "sender_name": {"show": True, "advanced": False, "api_editable": True, "type": "str"},
+                "session_ttl": {"show": True, "advanced": False, "type": "int"},
+            }
+        ],
+    )
+
+    schema = flow_helpers.json_schema_from_flow(SimpleNamespace(data={"nodes": [], "edges": []}))
+
+    assert set(schema["properties"]) == {"input_value", "sender_name", "session_id"}
+
+
+def test_json_schema_from_flow_allowlist_is_scoped_to_a_single_flow(monkeypatch):
+    """One input node's toggle closes the whole flow, not just that node."""
+    _patch_graph_with_input_nodes(
+        monkeypatch,
+        [
+            {"greeting": {"show": True, "advanced": False, "api_editable": True, "type": "str"}},
+            {"untoggled": {"show": True, "advanced": False, "type": "str"}},
+        ],
+    )
+
+    schema = flow_helpers.json_schema_from_flow(SimpleNamespace(data={"nodes": [], "edges": []}))
+
+    assert set(schema["properties"]) == {"greeting", "session_id"}
+
+
+def test_get_flow_input_tweaks_matches_the_advertised_schema(monkeypatch):
+    """The call-time filter must accept exactly what ``tools/list`` advertised."""
+    template = {
+        "sender_name": {"show": True, "advanced": False, "type": "str"},
+        "hidden": {"show": False, "advanced": False, "type": "str"},
+    }
+    _patch_graph_with_input_nodes(monkeypatch, [template])
+    flow = SimpleNamespace(data={"nodes": [], "edges": []})
+
+    # No toggle anywhere: permissive, so the visible field is forwarded.
+    assert flow_helpers.get_flow_input_tweaks(flow, {"sender_name": "ada", "hidden": "no"}) == {
+        "input-0": {"sender_name": "ada"}
+    }
+
+    # Once the flow declares an allowlist, an untoggled field is refused at both ends.
+    _patch_graph_with_input_nodes(
+        monkeypatch,
+        [{**template, "greeting": {"show": True, "advanced": False, "api_editable": True, "type": "str"}}],
+    )
+    assert flow_helpers.get_flow_input_tweaks(flow, {"sender_name": "ada", "greeting": "hi"}) == {
+        "input-0": {"greeting": "hi"}
+    }
+
+
+def test_json_schema_from_flow_maps_structured_and_list_field_types(monkeypatch):
+    """MCP input schemas must describe the JSON values accepted by exposed fields."""
+
+    class _FakeNode:
+        is_input = True
+        data = {
+            "node": {
+                "template": {
+                    "metadata": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "dict",
+                    },
+                    "nested": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "NestedDict",
+                    },
+                    "steps": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "sortableList",
+                    },
+                    "rows": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "table",
+                        "list": True,
+                    },
+                    "actions": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "actionPicker",
+                        "list": True,
+                    },
+                    "tools": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "tools",
+                        "is_list": True,
+                    },
+                    "models": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "model",
+                        "list": False,
+                    },
+                    "tags": {
+                        "show": True,
+                        "advanced": False,
+                        "api_editable": True,
+                        "type": "str",
+                        "list": True,
+                    },
+                }
+            }
+        }
+
+    class _FakeGraph:
+        vertices = [_FakeNode()]
+
+        @classmethod
+        def from_payload(cls, _flow_data):
+            return cls()
+
+    import lfx.graph.graph.base as graph_base_module
+
+    monkeypatch.setattr(graph_base_module, "Graph", _FakeGraph)
+
+    schema = flow_helpers.json_schema_from_flow(SimpleNamespace(data={"nodes": [], "edges": []}))
+    properties = schema["properties"]
+
+    assert properties["metadata"]["type"] == "object"
+    assert properties["nested"]["type"] == "object"
+    assert properties["steps"]["type"] == "array"
+    assert properties["steps"]["items"] == {"type": "object"}
+    assert properties["rows"]["type"] == "array"
+    assert properties["rows"]["items"] == {"type": "object"}
+    assert properties["actions"]["type"] == "array"
+    assert properties["actions"]["items"] == {"type": "string"}
+    assert properties["tools"]["type"] == "array"
+    assert properties["tools"]["items"] == {"type": "object"}
+    assert properties["models"]["type"] == "array"
+    assert properties["models"]["items"] == {"type": "object"}
+    assert properties["tags"]["type"] == "array"
+    assert properties["tags"]["items"] == {"type": "string"}
 
 
 @pytest.mark.asyncio

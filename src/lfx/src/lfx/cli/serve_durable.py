@@ -245,7 +245,7 @@ class DurableServeWorkflowHost(ServeWorkflowHost):
         allowed = pending.get("allowed_decisions") or []
         if allowed and (request.decision or {}).get("action_id") not in allowed:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail={
                     "error": "Invalid decision",
                     "code": "INVALID_DECISION",

@@ -164,11 +164,10 @@ class TestCometAPIComponent(ComponentTestBaseWithoutClient):
         assert models == MODEL_NAMES
         assert "Error decoding models response" in component.status
 
-    @pytest.mark.skipif(os.getenv("COMETAPI_KEY") is None, reason="COMETAPI_KEY is not set")
     def test_build_model_integration(self):
-        """Integration test with real API key (if available)."""
+        """Building the client is local and does not require a real provider credential."""
         component = CometAPIComponent()
-        component.api_key = SecretStr(os.getenv("COMETAPI_KEY"))
+        component.api_key = SecretStr("test-cometapi-key")  # pragma: allowlist secret
         component.model_name = "gpt-4o-mini"
         component.temperature = 0.2
         component.max_tokens = 100
@@ -179,6 +178,7 @@ class TestCometAPIComponent(ComponentTestBaseWithoutClient):
         assert model.model_name == "gpt-4o-mini"
         assert model.openai_api_base == "https://api.cometapi.com/v1"
 
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(os.getenv("COMETAPI_KEY") is None, reason="COMETAPI_KEY is not set")
     def test_get_models_integration(self):
         """Integration test for get_models with real API key (if available)."""

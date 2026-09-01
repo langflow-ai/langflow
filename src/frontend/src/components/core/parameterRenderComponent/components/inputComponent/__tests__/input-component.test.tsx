@@ -28,6 +28,23 @@ describe("InputComponent — options popover keyboard", () => {
     ).toBeInTheDocument();
   });
 
+  it("names the select-option toggle with real text, not the raw i18n key", () => {
+    const setSelectedOptions = jest.fn();
+    render(
+      <InputComponent
+        id="apply-to-fields"
+        password={false}
+        selectedOptions={["System"]}
+        setSelectedOptions={setSelectedOptions}
+        options={["System", "System Message"]}
+        optionsPlaceholder="Fields"
+      />,
+    );
+
+    const toggle = screen.getByRole("button", { name: /select input option/i });
+    expect(toggle).toBeInTheDocument();
+  });
+
   it("does not put a password field wrapper in the tab order", () => {
     render(
       <InputComponent

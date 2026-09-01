@@ -190,6 +190,19 @@ the deserialize half is covered by
 ### v0 (this release)
 
 - Initial surface enumerated above.  Frozen as `BUNDLE_API_VERSION = 1`.
+- `ExtensionManifest.version` now accepts the canonical PEP 440 stable, dev,
+  alpha, beta, and release-candidate forms emitted by the repository's bundle
+  release pipeline, in addition to the existing SemVer 2.0.0 forms.  Runtime
+  and published JSON Schema validation remain equivalent; this is additive and
+  does not change `BUNDLE_API_VERSION`.
+- Typed loader diagnostics now distinguish unavailable optional providers from
+  broken bundle imports.  `optional-dependency-missing` is added to
+  `ERROR_CODES`; a manifest-less `lfx-bundles` module emits this warning only
+  when its declared provider distribution is genuinely absent, allowing the
+  remaining bundle components to load.  Undeclared imports and installed but
+  broken distributions remain `module-import-failed` errors.  Expected
+  `bundle-shadowed` / `seed-bundle-shadowed` precedence outcomes are warnings;
+  winner selection is unchanged.
 - Extension manifests may now declare multiple component bundles.  Startup
   discovery loads every declared bundle through `load_extension_bundles()`;
   direct callers may select one with `load_extension(..., bundle_name=...)`.
@@ -499,6 +512,12 @@ the deserialize half is covered by
   provider-only extension with `DiscoveredExtension.bundle_name = None`, and
   `registry.Extension.bundle_name` is likewise now `str | None` (the
   `lfx extension list` BUNDLE column shows `—` for such extensions).
+- **Provider base-URL suffixes (additive).**  A provider metadata variable whose
+  `langchain_param` is `base_url` may declare `base_url_suffix` (for example,
+  `/v1`).  Runtime chat and embedding clients append the normalized suffix only
+  when the configured URL does not already end with it.  The field is published
+  in the extension JSON Schema, and unrecognized sibling keys on base-URL
+  variables are rejected so misspellings cannot silently disable normalization.
 - **Provider identity and static catalogs (additive).**  A `providers[]` entry
   may now declare a stable lowercase `provider_id`, an independent
   `display_name`, legacy `aliases`, and a dotted-path `catalog_loader`.  The

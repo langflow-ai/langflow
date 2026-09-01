@@ -1,5 +1,6 @@
 import axios from "axios";
 import {
+  DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH,
   DEFAULT_POLLING_INTERVAL,
   DEFAULT_TIMEOUT,
 } from "@/constants/constants";
@@ -20,6 +21,7 @@ interface BaseConfig {
   event_delivery: EventDeliveryType;
   voice_mode_available: boolean;
   allow_custom_components: boolean;
+  substitute_outdated_component_code?: boolean;
   catalog_governance_enabled: boolean;
   mcp_base_url: string;
   // Runtime mirror of LANGFLOW_ENABLE_EXTENSION_RELOAD — see utilityStore.enableExtensionReload.
@@ -49,6 +51,11 @@ export interface ConfigResponse extends BaseConfig {
   custom_component_admin_only: boolean;
   a2a_enabled: boolean;
   agentic_experience: boolean;
+  assistant_max_message_length: number;
+  local_vector_store_available: boolean;
+  /** Component types an administrator blocked. Authenticated callers only:
+   *  the public response deliberately withholds the policy contents. */
+  blocked_component_types?: string[];
 }
 
 // Union type for the response (can be either public or full config)
@@ -95,6 +102,12 @@ export const useGetConfig: useQueryFunctionType<
   const setAllowCustomComponents = useUtilityStore(
     (state) => state.setAllowCustomComponents,
   );
+  const setSubstituteOutdatedComponentCode = useUtilityStore(
+    (state) => state.setSubstituteOutdatedComponentCode,
+  );
+  const setBlockedComponentTypes = useUtilityStore(
+    (state) => state.setBlockedComponentTypes,
+  );
   const setCatalogGovernanceEnabled = useUtilityStore(
     (state) => state.setCatalogGovernanceEnabled,
   );
@@ -125,6 +138,12 @@ export const useGetConfig: useQueryFunctionType<
   const setAgenticExperienceEnabled = useUtilityStore(
     (state) => state.setAgenticExperienceEnabled,
   );
+  const setAssistantMaxMessageLength = useUtilityStore(
+    (state) => state.setAssistantMaxMessageLength,
+  );
+  const setLocalVectorStoreAvailable = useUtilityStore(
+    (state) => state.setLocalVectorStoreAvailable,
+  );
 
   const { query } = UseRequestProcessor();
 
@@ -146,6 +165,9 @@ export const useGetConfig: useQueryFunctionType<
       setEventDelivery(data.event_delivery ?? EventDeliveryType.STREAMING);
       const allowCustomComponents = data.allow_custom_components ?? true;
       setAllowCustomComponents(allowCustomComponents);
+      setSubstituteOutdatedComponentCode(
+        data.substitute_outdated_component_code ?? true,
+      );
       setCatalogGovernanceEnabled(Boolean(data.catalog_governance_enabled));
       setMcpBaseUrl(data.mcp_base_url ?? "");
       setEnableExtensionReload(Boolean(data.enable_extension_reload));
@@ -153,6 +175,15 @@ export const useGetConfig: useQueryFunctionType<
 
       // Set authenticated-only fields if present (full config)
       if (isFullConfig(data)) {
+        // Authenticated only: the public response withholds the policy
+        // contents, and an anonymous caller has no editor to inform.
+        setBlockedComponentTypes(
+          Array.isArray(data.blocked_component_types)
+            ? data.blocked_component_types.filter(
+                (type): type is string => typeof type === "string",
+              )
+            : [],
+        );
         setAutoSaving(data.auto_saving);
         setAutoSavingInterval(data.auto_saving_interval);
         setHealthCheckMaxRetries(data.health_check_max_retries);
@@ -176,6 +207,11 @@ export const useGetConfig: useQueryFunctionType<
         setCustomComponentAdminOnly(data.custom_component_admin_only ?? false);
         setA2aEnabled(data.a2a_enabled ?? false);
         setAgenticExperienceEnabled(data.agentic_experience ?? true);
+        setAssistantMaxMessageLength(
+          data.assistant_max_message_length ??
+            DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH,
+        );
+        setLocalVectorStoreAvailable(data.local_vector_store_available ?? true);
       }
     }
     return data;

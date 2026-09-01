@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import ast
 from collections.abc import Mapping
-from pathlib import PurePosixPath
+from pathlib import PurePosixPath, PureWindowsPath
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
@@ -15,7 +15,9 @@ from lfx.services.deps import get_storage_service
 from lfx.utils.constants import DIRECT_TYPES
 from lfx.utils.file_path_security import (
     LocalFileAccessError,
+    StorageNamespaceError,
     enforce_local_file_access,
+    enforce_storage_key_scope,
     is_local_file_access_restricted,
 )
 from lfx.utils.util import unescape_string
@@ -291,10 +293,7 @@ class ParameterHandler:
     def process_runtime_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """Resolve and contain FileInput values supplied as runtime tweaks."""
         processed = params.copy()
-        # Runtime tweaks were historically passed through unchanged. Preserve
-        # that behavior when the operator has explicitly disabled containment.
-        if not is_local_file_access_restricted():
-            return processed
+        restricted = is_local_file_access_restricted()
 
         for field_name, value in processed.items():
             request_field = self.template_dict.get(field_name, {})
@@ -311,11 +310,73 @@ class ParameterHandler:
                 else:
                     msg = "Runtime FileInput tweaks must provide a file path."
                     raise LocalFileAccessError(msg)
-            processed[field_name] = self.process_file_value(
-                file_value,
-                is_list=bool(field.get("list")) or isinstance(file_value, list),
-            )
+            if file_value is None or (isinstance(file_value, str | list) and not file_value):
+                continue
+
+            is_list = bool(field.get("list")) or isinstance(file_value, list)
+            if restricted:
+                processed[field_name] = self.process_file_value(file_value, is_list=is_list)
+            else:
+                # Unrestricted local paths are a documented single-tenant feature. Inspect
+                # their storage-key shape without resolving or rewriting the caller's value.
+                self._validate_unrestricted_file_value(file_value, is_list=is_list)
         return processed
+
+    def _validate_unrestricted_file_value(self, file_path: Any, *, is_list: bool) -> None:
+        """Validate an unrestricted FileInput value without changing its representation."""
+        if is_list:
+            paths = [file_path] if isinstance(file_path, str) else file_path
+            if not isinstance(paths, list) or not all(isinstance(path, str) for path in paths):
+                msg = "FileInput values must be file path strings."
+                raise LocalFileAccessError(msg)
+        else:
+            if not isinstance(file_path, str):
+                msg = "FileInput values must be file path strings."
+                raise LocalFileAccessError(msg)
+            paths = [file_path]
+
+        for path in paths:
+            self._validate_unrestricted_file_path(path)
+
+    def _scoped_storage_key(self, file_path: str) -> str:
+        """Reject a logical storage key whose namespace is outside the executing graph.
+
+        ``StorageService.resolve_component_path`` turns a relative ``"<namespace>/<file_name>"``
+        value into ``<storage root>/<namespace>/<file_name>``, so the namespace segment selects a
+        per-principal storage location. The value comes from the saved template or a runtime
+        tweak, so it has to be checked *before* it is resolved — afterwards the component only
+        sees an already-resolved path and the shape of the input has decided access on its own.
+
+        These cases are deliberately left alone:
+
+        * Absolute paths are not storage keys. Reading a local server file by absolute path is
+          the documented single-tenant behavior that
+          ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` governs, so they stay with
+          ``_enforce_file_paths``. Absoluteness is tested against both flavours: a Windows
+          drive-letter path written with forward slashes ("C:/data/report.csv") is not
+          POSIX-absolute, so testing only ``PurePosixPath`` would split it into namespace
+          "C:" and reject a legitimate local path -- while the backslash spelling of the
+          same path must remain legitimate too.
+        * Separatorless relative values are local file names, not storage keys.
+        * Restricted mode, where ``_enforce_file_paths`` already pins the resolved local path and
+          the S3 logical key to the graph's own scopes. This check exists to close the
+          unrestricted default, and skipping it keeps restricted behavior byte-identical.
+        """
+        if is_local_file_access_restricted():
+            return file_path
+        return self._validate_unrestricted_file_path(file_path)
+
+    def _validate_unrestricted_file_path(self, file_path: str) -> str:
+        """Validate a path's storage-key shape without resolving or rewriting it."""
+        if PurePosixPath(file_path).is_absolute() or PureWindowsPath(file_path).is_absolute():
+            return file_path
+        if "\\" in file_path:
+            msg = "Relative FileInput paths must not contain backslash separators or traversal sequences."
+            raise StorageNamespaceError(msg)
+        if "/" not in file_path:
+            return file_path
+        enforce_storage_key_scope(file_path, self._file_access_scopes())
+        return file_path
 
     def process_file_value(self, file_path: str | list[str], *, is_list: bool) -> str | list[str]:
         """Resolve a FileInput value and enforce the configured storage boundary."""
@@ -325,12 +386,20 @@ class ParameterHandler:
                 if not isinstance(paths, list) or not all(isinstance(path, str) for path in paths):
                     msg = "FileInput values must be file path strings."
                     raise LocalFileAccessError(msg)
-                full_path: str | list[str] = [self.storage_service.resolve_component_path(path) for path in paths]
+                full_path: str | list[str] = [
+                    self.storage_service.resolve_component_path(self._scoped_storage_key(path)) for path in paths
+                ]
             else:
                 if not isinstance(file_path, str):
                     msg = "FileInput values must be file path strings."
                     raise LocalFileAccessError(msg)
-                full_path = self.storage_service.resolve_component_path(file_path)
+                full_path = self.storage_service.resolve_component_path(self._scoped_storage_key(file_path))
+        except StorageNamespaceError:
+            # A namespace denial must never be downgraded. It is a ValueError subclass, so the
+            # broad handler below would otherwise decide its fate by substring-matching an
+            # unrelated message -- correct today, but one added branch away from silently
+            # turning a cross-tenant denial back into a read.
+            raise
         except ValueError as e:
             if "too many values to unpack" in str(e):
                 full_path = file_path

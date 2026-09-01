@@ -124,29 +124,40 @@ def module_name_for(
     return f"{namespace}.{slot}.{bundle_name}.{dotted}"
 
 
-def import_bundle_module(module_name: str, file_path: Path) -> tuple[types.ModuleType | None, ExtensionError | None]:
+def import_bundle_module(
+    module_name: str, file_path: Path
+) -> tuple[types.ModuleType | None, ExtensionError | None, BaseException | None]:
     """Import a single .py file as a module under ``module_name``.
 
-    Returns ``(module, None)`` on success or ``(None, error)`` on failure.
-    Errors are typed as ``module-import-failed``.
+    Returns ``(module, None, None)`` on success or ``(None, error, cause)`` on
+    failure. The cause is preserved so the manifest-less loader can distinguish
+    a declared optional dependency from syntax, symbol-import, and runtime errors.
     """
     try:
         spec = importlib.util.spec_from_file_location(module_name, file_path)
     except (ValueError, ImportError, OSError) as exc:
-        return None, ExtensionError(
-            code="module-import-failed",
-            message=f"Could not build module spec: {exc}",
-            location=str(file_path),
-            content=str(file_path),
-            hint="Make sure the file path is readable and ends in .py.",
+        return (
+            None,
+            ExtensionError(
+                code="module-import-failed",
+                message=f"Could not build module spec: {exc}",
+                location=str(file_path),
+                content=str(file_path),
+                hint="Make sure the file path is readable and ends in .py.",
+            ),
+            exc,
         )
     if spec is None or spec.loader is None:
-        return None, ExtensionError(
-            code="module-import-failed",
-            message="Module spec could not be created",
-            location=str(file_path),
-            content=str(file_path),
-            hint="Confirm that the path points at a regular .py file.",
+        return (
+            None,
+            ExtensionError(
+                code="module-import-failed",
+                message="Module spec could not be created",
+                location=str(file_path),
+                content=str(file_path),
+                hint="Confirm that the path points at a regular .py file.",
+            ),
+            None,
         )
     module = importlib.util.module_from_spec(spec)
     # Single-load-per-process contract: this assignment overwrites any prior
@@ -171,11 +182,15 @@ def import_bundle_module(module_name: str, file_path: Path) -> tuple[types.Modul
         # Roll back the optimistic sys.modules entry on failure so a retry
         # does not pick up a half-initialized module.
         sys.modules.pop(module_name, None)
-        return None, ExtensionError(
-            code="module-import-failed",
-            message=f"{type(exc).__name__}: {exc}",
-            location=str(file_path),
-            content=str(file_path),
-            hint=("Fix the import-time error in this module, or move the offending logic into a function body."),
+        return (
+            None,
+            ExtensionError(
+                code="module-import-failed",
+                message=f"{type(exc).__name__}: {exc}",
+                location=str(file_path),
+                content=str(file_path),
+                hint=("Fix the import-time error in this module, or move the offending logic into a function body."),
+            ),
+            exc,
         )
-    return module, None
+    return module, None, None

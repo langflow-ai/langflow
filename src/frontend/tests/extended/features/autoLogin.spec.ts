@@ -1,6 +1,11 @@
 import { test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { openTemplatesModal } from "../../utils/flow/new-project-flow";
+import { routeTestScopedDefaultFlowNames } from "../../utils/flow/route-test-scoped-default-flow-names";
+
+test.beforeEach(async ({ page }, testInfo) => {
+  await routeTestScopedDefaultFlowNames(page, testInfo, "auto-login");
+});
 
 test.describe(
   "Auto_login tests",

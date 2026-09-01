@@ -59,12 +59,19 @@ export type FlowPoolType = {
 
 export type ComponentsToUpdateType = {
   id: string;
+  /** Registry type, needed to ask whether a policy names this component. */
+  type?: string;
   icon?: string;
   display_name: string;
   outdated: boolean;
   blocked: boolean;
   breakingChange: boolean;
   userEdited: boolean;
+};
+
+export type AutoSaveFlowType = ((flow?: FlowType) => void) & {
+  cancel: () => void;
+  flush: () => Promise<void> | void;
 };
 
 export type FlowStoreType = {
@@ -80,7 +87,10 @@ export type FlowStoreType = {
     [key: number]: number;
   }) => void;
   fitViewNode: (nodeId: string) => void;
-  autoSaveFlow: ((flow?: FlowType) => void) | undefined;
+  /** Set by `requestFitView`; the canvas fits once every node is measured. */
+  fitViewRequest: { id: number; onFitted?: () => void };
+  requestFitView: (onFitted?: () => void) => void;
+  autoSaveFlow: AutoSaveFlowType | undefined;
   componentsToUpdate: ComponentsToUpdateType[];
   setComponentsToUpdate: (
     update:

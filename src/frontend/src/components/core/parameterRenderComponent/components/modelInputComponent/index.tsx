@@ -2,23 +2,49 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";
+import { getEnabledModelsForType } from "@/controllers/API/helpers/enabled-model-policy";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProviderModal from "@/modals/modelProviderModal";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { APIClassType } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Command } from "../../../../ui/command";
+
+/**
+ * cmdk unconditionally renders a hidden `<label htmlFor={inputId}>` inside
+ * <Command>, even when no CommandInput exists for that id — a label whose
+ * `for` references nothing (IBM label_ref_valid, WCAG 1.3.1). The listbox
+ * carries the picker's accessible name, so the reference is pure debt.
+ * Only the `for` ATTRIBUTE is removed — never the node (React owns it and
+ * would fight its removal during reconciliation; attribute edits are safe
+ * because React only rewrites props it sees change, and `htmlFor` never
+ * changes here). The `label` prop stays so the element keeps inner text:
+ * an EMPTY label just trades `label_ref_valid` for `label_content_exists`
+ * (which ignores aria-hidden), while a text-bearing label with no `for`
+ * passes every rule and is inert to screen readers — nothing references it.
+ */
+export function stripDanglingCmdkLabelFor(root: HTMLElement | null): void {
+  const label = root?.querySelector("label[cmdk-label][for]");
+  if (label && !document.getElementById(label.getAttribute("for") ?? "")) {
+    label.removeAttribute("for");
+  }
+}
+
 import {
   Popover,
   PopoverContent,
   PopoverContentWithoutPortal,
 } from "../../../../ui/popover";
 import type { BaseInputProps } from "../../types";
-import { focusCommandListOnOpen } from "../../utils/focus-command-list-on-open";
+import {
+  focusCommandListOnOpen,
+  refocusSelectedCommandItemOnNavigate,
+} from "../../utils/focus-command-list-on-open";
 import { ModelDropdownFooter } from "./components/ModelDropdownFooter";
 import {
   ModelInputErrorButton,
@@ -50,7 +76,11 @@ export default function ModelInputComponent({
   inspectionPanel,
   showEmptyState = false,
   modelType: modelTypeProp,
+  providerScope,
   "aria-label": ariaLabel,
+  ariaLabelledBy,
+  ariaDescribedBy,
+  ariaInvalid,
 }: BaseInputProps<ModelOption[] | undefined> &
   ModelInputComponentType): JSX.Element | null {
   const { t } = useTranslation();
@@ -126,61 +156,110 @@ export default function ModelInputComponent({
     if (entries.length === 0) return undefined;
     return Object.fromEntries(entries) as Record<string, unknown>;
   }, [nodeClass]);
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const hasExplicitProviderScope = providerScope !== undefined;
+  const resolvedProviderScope = hasExplicitProviderScope
+    ? providerScope
+    : { flowId: currentFlowId };
+  const hasExplicitFlowScopeKey =
+    hasExplicitProviderScope && Object.hasOwn(resolvedProviderScope, "flowId");
+  const hasExplicitProjectScopeKey =
+    hasExplicitProviderScope &&
+    Object.hasOwn(resolvedProviderScope, "projectId");
+  const explicitScopeKeyCount =
+    Number(hasExplicitFlowScopeKey) + Number(hasExplicitProjectScopeKey);
+  const hasValidExplicitProviderScope =
+    explicitScopeKeyCount === 0 ||
+    (explicitScopeKeyCount === 1 &&
+      (hasExplicitFlowScopeKey
+        ? Boolean(resolvedProviderScope.flowId?.trim())
+        : Boolean(resolvedProviderScope.projectId?.trim())));
+  const hasProviderPolicyContext = hasExplicitProviderScope
+    ? hasValidExplicitProviderScope
+    : Boolean(currentFlowId);
 
   const {
     data: providersData = [],
     isLoading: isLoadingProviders,
     isFetching: isFetchingProviders,
+    fetchStatus: providersFetchStatus,
     error: providersError,
     refetch: refetchProviders,
-  } = useGetModelProviders({});
+  } = useGetModelProviders(
+    { ...resolvedProviderScope, purpose: "use" },
+    { enabled: hasProviderPolicyContext },
+  );
   const {
     data: enabledModelsData,
     isLoading: isLoadingEnabledModels,
     isFetching: isFetchingEnabledModels,
+    fetchStatus: enabledModelsFetchStatus,
     error: enabledModelsError,
     refetch: refetchEnabledModels,
-  } = useGetEnabledModels();
+  } = useGetEnabledModels({
+    ...resolvedProviderScope,
+    purpose: "use",
+    enabled: hasProviderPolicyContext,
+  });
 
-  const isLoading = isLoadingProviders || isLoadingEnabledModels;
-  const isFetching = isFetchingProviders || isFetchingEnabledModels;
-  const providersUnusable =
-    !!providersError && (!providersData || providersData.length === 0);
-  const enabledModelsUnusable =
-    !!enabledModelsError && enabledModelsData === undefined;
-  const hasInitialLoadError =
-    !isFetching && (providersUnusable || enabledModelsUnusable);
-  const providerStatusIsReliable = !isFetchingProviders && !providersError;
+  const isLoading =
+    !hasProviderPolicyContext || isLoadingProviders || isLoadingEnabledModels;
+  const isPolicyPaused =
+    providersFetchStatus === "paused" || enabledModelsFetchStatus === "paused";
+  const isFetching =
+    isFetchingProviders || isFetchingEnabledModels || isPolicyPaused;
+  const hasPolicyError = !!providersError || !!enabledModelsError;
+  const providerStatusIsReliable =
+    hasProviderPolicyContext &&
+    !isFetchingProviders &&
+    providersFetchStatus !== "paused" &&
+    !providersError;
   const modelStatusIsReliable =
-    providerStatusIsReliable && !isFetchingEnabledModels && !enabledModelsError;
+    providerStatusIsReliable &&
+    !isFetchingEnabledModels &&
+    enabledModelsFetchStatus !== "paused" &&
+    !enabledModelsError;
+  const enabledModelsForType = useMemo(
+    () =>
+      enabledModelsData
+        ? getEnabledModelsForType(enabledModelsData, modelType)
+        : undefined,
+    [enabledModelsData, modelType],
+  );
 
   const hasEnabledProviders = useMemo(() => {
-    return providersData?.some(
-      (provider) => provider.is_enabled || provider.is_configured,
+    return (
+      modelStatusIsReliable &&
+      providersData?.some(
+        (provider) => provider.is_enabled || provider.is_configured,
+      )
     );
-  }, [providersData]);
+  }, [modelStatusIsReliable, providersData]);
 
-  const groupedOptions = useMemo(
-    () =>
-      buildGroupedOptions({
-        options,
-        enabledModels: enabledModelsData?.enabled_models,
-        providers: providersData,
-        modelType,
-        savedValue: value?.[0],
-        modelFilters,
-        providerStatusIsReliable,
-      }),
-    [
+  const groupedOptions = useMemo(() => {
+    // Query data remains cached during background refreshes and after
+    // refresh errors. Do not turn that potentially revoked snapshot into
+    // selectable options until both policy queries have settled cleanly.
+    if (!modelStatusIsReliable) return {};
+    return buildGroupedOptions({
       options,
-      enabledModelsData,
-      providersData,
+      enabledModels: enabledModelsForType,
+      providers: providersData,
       modelType,
-      value,
+      savedValue: value?.[0],
       modelFilters,
       providerStatusIsReliable,
-    ],
-  );
+    });
+  }, [
+    options,
+    enabledModelsForType,
+    providersData,
+    modelType,
+    value,
+    modelFilters,
+    providerStatusIsReliable,
+    modelStatusIsReliable,
+  ]);
 
   const flatOptions = useMemo(
     () => Object.values(groupedOptions).flat(),
@@ -197,6 +276,8 @@ export default function ModelInputComponent({
         flatOptions,
         providers: providersData,
         providerStatusIsReliable,
+        enabledModels: enabledModelsForType,
+        modelStatusIsReliable,
       }),
     [
       value,
@@ -205,6 +286,8 @@ export default function ModelInputComponent({
       externalOptions,
       providersData,
       providerStatusIsReliable,
+      enabledModelsForType,
+      modelStatusIsReliable,
     ],
   );
 
@@ -215,6 +298,7 @@ export default function ModelInputComponent({
     isConnectionMode,
     providers: providersData,
     modelStatusIsReliable,
+    enabledModels: enabledModelsForType,
   });
 
   /**
@@ -222,6 +306,7 @@ export default function ModelInputComponent({
    */
   const handleModelSelect = useCallback(
     (modelName: string, provider?: string) => {
+      if (!modelStatusIsReliable) return;
       setConnectionMode(false);
       if (nodeId) {
         const store = useFlowStore.getState();
@@ -269,7 +354,7 @@ export default function ModelInputComponent({
       handleOnNewValue({ value: newValue });
       setOpen(false);
     },
-    [flatOptions, handleOnNewValue],
+    [flatOptions, handleOnNewValue, modelStatusIsReliable],
   );
 
   const handleRefreshButtonPress = useCallback(async () => {
@@ -295,6 +380,19 @@ export default function ModelInputComponent({
     void refetchEnabledModels();
   }, [refetchProviders, refetchEnabledModels]);
 
+  // Keep the configuration dialog mounted while its own mutations invalidate
+  // the picker's policy queries. The picker still fails closed below, but the
+  // dialog must retain its selection and in-flight save state until it closes.
+  const manageProvidersDialog = openManageProvidersDialog ? (
+    <ModelProviderModal
+      open={openManageProvidersDialog}
+      onClose={handleManageProvidersDialogClose}
+      modelType={modelType || "llm"}
+      flowId={resolvedProviderScope.flowId}
+      projectId={resolvedProviderScope.projectId}
+    />
+  ) : null;
+
   const renderPopoverContent = () => {
     const PopoverContentInput =
       editNode || inspectionPanel || inspectionPanelVisible
@@ -311,9 +409,24 @@ export default function ModelInputComponent({
         className="noflow nowheel nopan nodelete nodrag z-[70] p-0"
         style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
       >
-        {/* The footer actions live outside <Command> so they are not swept into
-            the listbox's composite keyboard/focus model. */}
-        <Command label={t("model.selectModel")} className="flex flex-col">
+        {/* Section 1 — the option list (a self-contained listbox). Keeping the
+            footer actions out of <Command> stops them from being swept into the
+            listbox's composite keyboard/focus model. */}
+        {/* The picker's accessible name lives on the CommandList (the
+            listbox). cmdk also renders a hidden <label htmlFor={inputId}>
+            for a CommandInput that does not exist here — the ref strips
+            that dangling reference; see stripDanglingCmdkLabelFor. */}
+        <Command
+          ref={stripDanglingCmdkLabelFor}
+          label={t("model.selectModel")}
+          className="flex flex-col"
+          defaultValue={
+            selectedModel
+              ? `${selectedModel.provider}::${selectedModel.name}`
+              : undefined
+          }
+          onKeyDown={refocusSelectedCommandItemOnNavigate}
+        >
           <ModelList
             groupedOptions={groupedOptions}
             selectedModel={selectedModel}
@@ -336,19 +449,25 @@ export default function ModelInputComponent({
     return null;
   }
 
-  if (hasInitialLoadError) {
+  if (hasPolicyError && !isFetching) {
     return (
-      <div className="w-full">
-        <ModelInputErrorButton onRetry={handleRetryLoad} />
-      </div>
+      <>
+        <div className="w-full">
+          <ModelInputErrorButton onRetry={handleRetryLoad} />
+        </div>
+        {manageProvidersDialog}
+      </>
     );
   }
 
-  if (isLoading || isRefreshingAfterClose || refreshOptions) {
+  if (isLoading || isFetching || isRefreshingAfterClose || refreshOptions) {
     return (
-      <div className="w-full">
-        <ModelInputLoadingButton />
-      </div>
+      <>
+        <div className="w-full">
+          <ModelInputLoadingButton />
+        </div>
+        {manageProvidersDialog}
+      </>
     );
   }
 
@@ -378,6 +497,9 @@ export default function ModelInputComponent({
               refButton={refButton}
               showEmptyState={showEmptyState}
               aria-label={ariaLabel}
+              ariaLabelledBy={ariaLabelledBy}
+              ariaDescribedBy={ariaDescribedBy}
+              ariaInvalid={ariaInvalid}
             />
           </div>
           {showConfigureAffordance && (
@@ -399,13 +521,7 @@ export default function ModelInputComponent({
         {renderPopoverContent()}
       </Popover>
 
-      {openManageProvidersDialog && (
-        <ModelProviderModal
-          open={openManageProvidersDialog}
-          onClose={handleManageProvidersDialogClose}
-          modelType={modelType || "llm"}
-        />
-      )}
+      {manageProvidersDialog}
     </>
   );
 }

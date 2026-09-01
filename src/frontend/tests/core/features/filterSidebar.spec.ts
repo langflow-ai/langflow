@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
 import {
   closeParametersPanel,
   openParametersPanel,
@@ -19,10 +20,7 @@ test(
     });
 
     await page.getByTestId("blank-flow").click();
-
-    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-      timeout: 3000,
-    });
+    await waitForFlowEditorReady(page);
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("api request");
@@ -45,9 +43,7 @@ test(
     );
     await page.getByTestId("handle-apirequest-shownode-url-left").click();
 
-    await page.waitForTimeout(500);
-
-    expect(await page.getByTestId("icon-ListFilter").first()).toBeVisible();
+    await expect(page.getByTestId("icon-ListFilter").first()).toBeVisible();
 
     await page
       .getByTestId("sidebar-filter-reset")

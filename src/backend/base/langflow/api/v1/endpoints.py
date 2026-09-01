@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-from collections.abc import AsyncGenerator, Collection
+from collections.abc import AsyncGenerator, Collection, Mapping
 from copy import deepcopy
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated, Any
@@ -21,6 +21,7 @@ from lfx.custom.utils import (
     get_instance_name,
     update_component_build_config,
 )
+from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.graph.base import Graph
 from lfx.graph.schema import RunOutputs
 from lfx.log.logger import logger
@@ -28,14 +29,24 @@ from lfx.observability import execution_protocol
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
 from lfx.services.model_provider_policy import (
+    ModelProviderPolicyError,
     ModelProviderPolicyPurpose,
+    aresolve_model_provider_policy,
     reset_current_model_provider_policy_context,
-    resolve_model_provider_policy,
     set_current_model_provider_policy_context,
 )
 from lfx.services.settings.service import SettingsService
 from lfx.utils.component_aliases import ComponentIdentityIndex, build_component_identity_index
-from lfx.utils.flow_validation import CustomComponentValidationError
+from lfx.utils.flow_validation import (
+    CustomComponentValidationError,
+    admin_only_build_required,
+    prepare_flow_build_for_user,
+)
+from lfx.workflow.end_user_identity import (
+    EndUserIdentityRequiredError,
+    end_user_required_detail,
+    resolve_serving_scope,
+)
 
 from langflow.api.utils import (
     CurrentActiveUser,
@@ -53,6 +64,11 @@ from langflow.api.v1.custom_component_policy import (
 )
 from langflow.api.v1.files import get_flow
 from langflow.api.v1.global_variable_defaults import apply_global_variable_defaults
+from langflow.api.v1.model_provider_policy_scope import (
+    ProviderPolicyAttributesDependency,
+    provider_policy_attributes_for_flow,
+    scoped_model_provider_policy_for_flow,
+)
 from langflow.api.v1.run_validation import raise_if_hitl_unsupported
 from langflow.api.v1.schemas import (
     ConfigResponse,
@@ -218,7 +234,13 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
 
 
 @router.get("/all")
-async def get_all(request: Request, current_user: CurrentActiveUser, *, include_blocked: bool = False):
+async def get_all(
+    request: Request,
+    current_user: CurrentActiveUser,
+    provider_policy_attributes: ProviderPolicyAttributesDependency,
+    *,
+    include_blocked: bool = False,
+):
     """Retrieve all component types with compression for better performance.
 
     Returns a compressed response containing all available component types,
@@ -237,10 +259,10 @@ async def get_all(request: Request, current_user: CurrentActiveUser, *, include_
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
         all_types_en = await get_and_cache_all_types_dict(settings_service=get_settings_service())
         component_identity_index = get_component_identity_index(all_types_en)
-        visible_types_en = _filter_component_palette_by_provider_policy(
+        visible_types_en = await _filter_component_palette_by_provider_policy(
             all_types_en,
             user_id=current_user.id,
-            attributes={"is_superuser": bool(current_user.is_superuser)},
+            attributes=provider_policy_attributes,
         )
         if not include_blocked:
             visible_types_en = _filter_component_palette_by_catalog_policy(
@@ -259,7 +281,7 @@ async def get_all(request: Request, current_user: CurrentActiveUser, *, include_
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-def _filter_component_palette_by_provider_policy(
+async def _filter_component_palette_by_provider_policy(
     all_types: dict[str, dict[str, dict]],
     *,
     user_id: UUID | str | None,
@@ -281,7 +303,7 @@ def _filter_component_palette_by_provider_policy(
         and isinstance((provider_id := metadata.get("model_provider_id")), str)
         and provider_id
     }
-    policy = resolve_model_provider_policy(
+    policy = await aresolve_model_provider_policy(
         user_id=user_id,
         providers=provider_ids,
         purpose=ModelProviderPolicyPurpose.DISCOVER,
@@ -367,11 +389,16 @@ async def simple_run_flow(
     context: dict | None = None,
     run_id: str | None = None,
     expose_error_details: bool = False,
+    http_request: Request | None = None,
 ):
     validate_input_and_tweaks(input_request)
     policy_context_token = set_current_model_provider_policy_context(
         user_id=getattr(api_key_user, "id", None),
-        attributes={"is_superuser": bool(getattr(api_key_user, "is_superuser", False))},
+        attributes=provider_policy_attributes_for_flow(
+            flow,
+            is_superuser=bool(getattr(api_key_user, "is_superuser", False)),
+            required=True,
+        ),
     )
     try:
         task_result: list[RunOutputs] = []
@@ -380,13 +407,28 @@ async def simple_run_flow(
         if flow.data is None:
             msg = f"Flow {flow_id_str} has no data"
             raise ValueError(msg)
+        # The stored graph is caller-controlled: a regular user can persist component source
+        # through the flow-write API and then execute it here. Apply the caller-aware
+        # component policy to a detached copy so ``custom_component_admin_only`` is enforced
+        # on stored bytes, not only on inline build payloads. Returns ``None`` when no
+        # caller-specific restriction applies, leaving the existing fast paths untouched.
+        sanitized_flow_data = await prepare_flow_build_for_user(
+            flow.data,
+            is_superuser=bool(getattr(api_key_user, "is_superuser", False)),
+        )
         # Opt-in warm fast-path: serve a deepcopy of the pre-built
         # template + apply this run's identity, skipping from_payload and the flow-row
         # rebuild. Returns None (-> cold rebuild below) for tweaks / context / auto-bind
         # flows / HITL / disabled registry / cache-miss. See ``try_warm_run_graph``.
-        graph = await try_warm_run_graph(flow, input_request, user_id=user_id, context=context, stream=stream)
+        # Skipped entirely once the policy sanitized the graph: the warm template is built
+        # from the unsanitized stored row and would reintroduce the untrusted source.
+        graph = (
+            None
+            if sanitized_flow_data is not None
+            else await try_warm_run_graph(flow, input_request, user_id=user_id, context=context, stream=stream)
+        )
         if graph is None:
-            graph_data = flow.data.copy()
+            graph_data = (sanitized_flow_data if sanitized_flow_data is not None else flow.data).copy()
             graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
             raise_if_hitl_unsupported(graph_data)
             # Mirror the Playground's one-time fix in-memory: bind empty fields whose
@@ -407,6 +449,37 @@ async def simple_run_flow(
         run_id_uuid = uuid4() if run_id is None else UUID(run_id)
         run_id = str(run_id_uuid)
         graph.set_run_id(run_id)
+
+        # Serving-plane end-user session scoping (shared with the v2 workflow router):
+        # merge an identified end-user into the effective session_id so per-user memory
+        # is isolated, and mark an anonymous run non-persisting. resolve_serving_scope
+        # returns None under the default settings (feature off), so v1 /run, webhook and
+        # every editor-plane caller are byte-for-byte unchanged. Callers that cannot
+        # supply the request (no header available) pass http_request=None and skip it.
+        effective_session_id = input_request.session_id
+        if http_request is not None:
+            try:
+                scoped = resolve_serving_scope(
+                    http_request=http_request,
+                    requested_session_id=input_request.session_id,
+                    # run_graph_internal falls back to the flow id when no session id is
+                    # supplied; mirror that here so an identified run with no session id
+                    # scopes to ``<end-user>::<flow_id>`` rather than a bare flow id.
+                    default_session_id=flow_id_str,
+                )
+            except EndUserIdentityRequiredError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=end_user_required_detail(exc),
+                ) from exc
+            if scoped is not None:
+                effective_session_id = scoped.session_id
+                graph.persist_messages = scoped.persist
+                # Carry the end-user identity onto the graph so services (chat memory,
+                # and later telemetry / agent file writes) scope per-user state to the
+                # end user. None for an anonymous run.
+                graph.end_user_id = scoped.end_user_id
+
         inputs = None
         if input_request.input_value is not None:
             inputs = [
@@ -443,6 +516,11 @@ async def simple_run_flow(
                 flow_id=flow.id,
                 user_id=user_id,
                 job_type=JobType.WORKFLOW,
+                # Record the serving end user (set on the graph by resolve_serving_scope) so
+                # status/stop isolate to it; user_id stays the executing SID. See F8. Defensive
+                # getattr: the warm-run path may hand back a lightweight graph stand-in without
+                # this attribute, matching every other end_user_id read in the codebase.
+                end_user_id=getattr(graph, "end_user_id", None),
             )
             # The funnel default. Binding is outermost-wins, so a caller that already named its
             # surface (webhook, mcp, openai_responses) keeps it and only the bare v1 route lands
@@ -453,7 +531,7 @@ async def simple_run_flow(
                     run_graph_internal,
                     graph=graph,
                     flow_id=flow_id_str,
-                    session_id=input_request.session_id,
+                    session_id=effective_session_id,
                     inputs=inputs,
                     outputs=outputs,
                     stream=stream,
@@ -518,6 +596,7 @@ async def simple_run_flow_task(
     run_id: str | None = None,
     emit_events: bool = False,
     flow_id: str | None = None,
+    http_request: Request | None = None,
 ):
     """Run a flow task as a BackgroundTask, therefore it should not throw exceptions.
 
@@ -532,6 +611,8 @@ async def simple_run_flow_task(
         run_id: Unique ID for this run
         emit_events: Whether to emit events to webhook_event_manager (for UI feedback)
         flow_id: Flow ID for event emission (required if emit_events=True)
+        http_request: The incoming HTTP request, forwarded so serving-plane end-user
+            session scoping can read the trusted identity header (None to skip).
     """
     should_emit = emit_events and flow_id
 
@@ -561,6 +642,7 @@ async def simple_run_flow_task(
                 event_manager=effective_event_manager,
                 run_id=run_id,
                 expose_error_details=api_key_user is not None and _caller_owns_flow(flow, api_key_user),
+                http_request=http_request,
             )
 
         if should_emit and flow_id is not None:
@@ -671,6 +753,7 @@ async def run_flow_generator(
     context: dict | None = None,
     *,
     expose_error_details: bool = False,
+    http_request: Request | None = None,
 ) -> None:
     """Executes a flow asynchronously and manages event streaming to the client.
 
@@ -685,6 +768,8 @@ async def run_flow_generator(
         client_consumed_queue (asyncio.Queue): Tracks client consumption of events
         context (dict | None): Optional context to pass to the flow
         expose_error_details: Whether client events may contain owner debugging details.
+        http_request: The incoming HTTP request, forwarded so serving-plane end-user
+            session scoping can read the trusted identity header (None to skip).
 
     Events Generated:
         - "add_message": Sent when new messages are added during flow execution
@@ -707,6 +792,7 @@ async def run_flow_generator(
             event_manager=event_manager,
             context=context,
             expose_error_details=expose_error_details,
+            http_request=http_request,
         )
         event_manager.on_end(data={"result": result.model_dump()})
         await client_consumed_queue.get()
@@ -854,6 +940,24 @@ async def _run_flow_internal(
 
     start_time = time.perf_counter()
 
+    # Required-identity gate must fire BEFORE the streaming branch: that branch returns a
+    # StreamingResponse with 200 headers before simple_run_flow runs, so its 401 would only ever
+    # arrive as an in-stream error event. Enforce it synchronously here (idempotent with the scope
+    # simple_run_flow applies again on the same http_request). The non-stream path also flows
+    # through this — harmless, it already surfaced the 401 by propagation. Mirrors the webhook
+    # pre-check (I3); kept outside any try so the 401 is not rewritten. See BUG-01.
+    try:
+        resolve_serving_scope(
+            http_request=http_request,
+            requested_session_id=input_request.session_id,
+            default_session_id=str(flow.id),
+        )
+    except EndUserIdentityRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=end_user_required_detail(exc),
+        ) from exc
+
     if stream:
         asyncio_queue: asyncio.Queue = asyncio.Queue()
         asyncio_queue_client_consumed: asyncio.Queue = asyncio.Queue()
@@ -867,6 +971,7 @@ async def _run_flow_internal(
                 client_consumed_queue=asyncio_queue_client_consumed,
                 context=context,
                 expose_error_details=expose_error_details,
+                http_request=http_request,
             )
         )
 
@@ -890,6 +995,7 @@ async def _run_flow_internal(
             context=context,
             run_id=run_id,
             expose_error_details=expose_error_details,
+            http_request=http_request,
         )
         end_time = time.perf_counter()
         background_tasks.add_task(
@@ -937,6 +1043,21 @@ async def _run_flow_internal(
         if expose_error_details:
             raise
         raise error_for_client(exc, expose_details=expose_error_details) from exc
+    except TweakRefusedError:
+        # A refused tweak is a caller error, not a server fault. The generic
+        # handler below turns it into a 500 and discards the structured body
+        # naming the refused keys, so let the app-level handler answer with 422.
+        #
+        # Deliberately not routed through error_for_client. That helper only
+        # preserves the status of an HTTPException, and this is not one, so
+        # redacting would degrade it to RuntimeError -> 500 and reinstate the
+        # exact bug this re-raise exists to fix, for delegated callers only.
+        # The cost is that the refusal reason tells a non-owner whether the
+        # flow declares an allowlist or the deployment refuses tweaks. Accepted:
+        # no data, no stack trace, and the refused names are the caller's own
+        # request keys. A caller who cannot tell a refused tweak from an applied
+        # one is the failure this whole path is here to prevent.
+        raise
     except Exception as exc:
         background_tasks.add_task(
             telemetry_service.log_package_run,
@@ -1237,6 +1358,19 @@ async def webhook_run_flow(
 
     raise_if_hitl_unsupported(flow.data or {})
 
+    # The run executes in a fire-and-forget background task that never raises, so the identity gate
+    # inside simple_run_flow can't surface its 401 from the webhook. Enforce it synchronously here so
+    # a required-but-absent end-user identity is rejected BEFORE the task is scheduled (idempotent
+    # with the scoping simple_run_flow does again on the same http_request). See I3. Kept outside the
+    # try below so the 401 is not rewritten to a 500 by its generic handler.
+    try:
+        resolve_serving_scope(http_request=request, requested_session_id=None, default_session_id=str(flow.id))
+    except EndUserIdentityRequiredError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=end_user_required_detail(exc),
+        ) from exc
+
     try:
         # get all webhook components in the flow
         webhook_components = get_all_webhook_components_in_flow(flow.data)
@@ -1270,6 +1404,7 @@ async def webhook_run_flow(
                 run_id=run_id,
                 emit_events=has_ui_listeners,
                 flow_id=flow_id_str,
+                http_request=request,
             )
         )
         # Fire-and-forget: log exceptions but don't block
@@ -1384,6 +1519,16 @@ async def experimental_run_flow(
                 flow.id,
             )
             graph = None
+        elif admin_only_build_required(is_superuser=bool(getattr(api_key_user, "is_superuser", False))):
+            # The cached graph was compiled under whatever component policy was in force when
+            # it was cached. Session cache keys carry no policy generation, so a graph cached
+            # while admin-only mode was off still embeds the caller's own component source and
+            # would execute it unchecked. Rebuild from stored data through the policy instead.
+            await logger.awarning(
+                "Ignoring advanced-run cached graph that predates the admin-only component policy for flow %s",
+                flow.id,
+            )
+            graph = None
 
     if graph is None:
         if flow.data is None:
@@ -1396,15 +1541,27 @@ async def experimental_run_flow(
                 detail=str(client_error),
             )
         try:
-            graph_data = deepcopy(flow.data)
+            # Same caller-aware component policy the other stored-graph run paths apply:
+            # the persisted graph is caller-controlled, so admin-only mode must resolve its
+            # component source against the server registry before anything is compiled.
+            sanitized_flow_data = await prepare_flow_build_for_user(
+                flow.data,
+                is_superuser=bool(getattr(api_key_user, "is_superuser", False)),
+            )
+            graph_data = deepcopy(sanitized_flow_data if sanitized_flow_data is not None else flow.data)
             graph_data = process_tweaks(graph_data, tweaks or {})
             raise_if_hitl_unsupported(graph_data)
-            graph = Graph.from_payload(
-                graph_data,
-                flow_id=flow_id_str,
-                user_id=str(api_key_user.id),
-                flow_name=flow.name,
-            )
+            with scoped_model_provider_policy_for_flow(
+                flow,
+                user_id=api_key_user.id,
+                is_superuser=bool(getattr(api_key_user, "is_superuser", False)),
+            ):
+                graph = Graph.from_payload(
+                    graph_data,
+                    flow_id=flow_id_str,
+                    user_id=str(api_key_user.id),
+                    flow_name=flow.name,
+                )
         except CustomComponentValidationError as exc:
             await logger.aexception("Advanced-run flow validation failed for flow %s", flow.id)
             http_error = HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
@@ -1416,6 +1573,12 @@ async def experimental_run_flow(
                 # than chaining the exception to itself.
                 raise
             raise error_for_client(exc, expose_details=expose_error_details) from exc
+        except TweakRefusedError:
+            # Third run route that applies tweaks, and the generic handler below
+            # would turn a refused tweak into a redacted 500 with a stack trace
+            # in the logs. Let it through so the app-level handler answers 422
+            # naming the refused keys, as the setting documents for every mode.
+            raise
         except Exception as exc:
             await logger.aexception("Failed to build advanced-run graph for flow %s", flow.id)
             client_error = error_for_client(exc, expose_details=expose_error_details)
@@ -1427,7 +1590,14 @@ async def experimental_run_flow(
     await release_db_transaction(session)
 
     try:
-        with execution_protocol("v1.advanced"):
+        with (
+            scoped_model_provider_policy_for_flow(
+                flow,
+                user_id=api_key_user.id,
+                is_superuser=bool(getattr(api_key_user, "is_superuser", False)),
+            ),
+            execution_protocol("v1.advanced"),
+        ):
             task_result, session_id = await run_graph_internal(
                 graph=graph,
                 flow_id=flow_id_str,
@@ -1436,6 +1606,9 @@ async def experimental_run_flow(
                 outputs=outputs,
                 stream=stream,
             )
+    except TweakRefusedError:
+        # Let the app-level handler return the documented structured 422.
+        raise
     except Exception as exc:
         await logger.aexception("Advanced-run execution failed for flow %s", flow.id)
         if isinstance(exc, HTTPException):
@@ -1558,11 +1731,34 @@ async def get_version():
     return get_version_info()
 
 
+def _raw_component_parameters(
+    template: Mapping[str, Any] | None,
+    *,
+    field: str | None = None,
+    field_value: Any = None,
+) -> dict[str, Any]:
+    """Parse non-secret component form values for provider preflight."""
+    params: dict[str, Any] = {}
+    if isinstance(template, Mapping):
+        for key, value_dict in template.items():
+            if isinstance(value_dict, Mapping):
+                params[key] = parse_value(value_dict.get("value"), str(value_dict.get("_input_type")))
+
+    # A real-time-refresh event can be newer than the template snapshot sent
+    # beside it, so its value wins for the changed field.
+    if field:
+        field_template = template.get(field) if isinstance(template, Mapping) else None
+        field_input_type = str(field_template.get("_input_type")) if isinstance(field_template, Mapping) else "None"
+        params[field] = parse_value(field_value, field_input_type)
+    return params
+
+
 @router.post("/custom_component", status_code=HTTPStatus.OK, include_in_schema=False)
 async def custom_component(
     raw_code: CustomComponentRequest,
     user: CurrentActiveUser,
     request: Request,
+    provider_policy_attributes: ProviderPolicyAttributesDependency,
 ) -> CustomComponentResponse:
     # Building a custom component instantiates (and partially executes) posted
     # code. That is a create/write-class action, so enforce the external access
@@ -1589,21 +1785,47 @@ async def custom_component(
         admin_only_detail="Custom component creation is restricted to administrators",
     )
 
-    component = Component(_code=effective_code)
+    policy_context_token = set_current_model_provider_policy_context(
+        user_id=user.id,
+        attributes=provider_policy_attributes,
+    )
+    try:
+        component = Component(_code=effective_code)
 
-    built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
-    type_ = get_instance_name(component_instance)
-    enforce_catalog_policy_for_component_type(type_, snapshot=catalog_policy_snapshot)
-    if raw_code.frontend_node is not None:
-        built_frontend_node = await component_instance.update_frontend_node(built_frontend_node, raw_code.frontend_node)
+        built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
+        type_ = get_instance_name(component_instance)
+        enforce_catalog_policy_for_component_type(type_, snapshot=catalog_policy_snapshot)
+        if isinstance(component_instance, Component):
+            # Dynamic configuration may resolve DB-backed credentials or call
+            # provider APIs. Refresh the active hierarchy before either hook
+            # runs so moved-project and newly inherited grants are current.
+            current_template = (
+                raw_code.frontend_node.get("template") if isinstance(raw_code.frontend_node, Mapping) else None
+            )
+            await component_instance.arequire_model_provider_policy(
+                ModelProviderPolicyPurpose.CONFIGURE,
+                user_id=user.id,
+                parameters=_raw_component_parameters(current_template),
+            )
+        if raw_code.frontend_node is not None:
+            built_frontend_node = await component_instance.update_frontend_node(
+                built_frontend_node,
+                raw_code.frontend_node,
+            )
 
-    tool_mode: bool = built_frontend_node.get("tool_mode", False)
-    if isinstance(component_instance, Component):
-        await component_instance.run_and_validate_update_outputs(
-            frontend_node=built_frontend_node,
-            field_name="tool_mode",
-            field_value=tool_mode,
-        )
+        tool_mode: bool = built_frontend_node.get("tool_mode", False)
+        if isinstance(component_instance, Component):
+            await component_instance.run_and_validate_update_outputs(
+                frontend_node=built_frontend_node,
+                field_name="tool_mode",
+                field_value=tool_mode,
+            )
+    except ModelProviderPolicyError as exc:
+        # Keep scoped denials indistinguishable from unavailable providers and
+        # avoid surfacing an authorization decision as a retryable server error.
+        raise HTTPException(status_code=404, detail="Model provider not found") from exc
+    finally:
+        reset_current_model_provider_policy_context(policy_context_token)
     locale = getattr(request.state, "locale", "en")
     if locale != "en":
         from langflow.utils.i18n import translate_component_node
@@ -1620,6 +1842,7 @@ async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
     user: CurrentActiveUser,
     request: Request,
+    provider_policy_attributes: ProviderPolicyAttributesDependency,
 ):
     """Update an existing custom component with new code and configuration.
 
@@ -1655,7 +1878,7 @@ async def custom_component_update(
 
     policy_context_token = set_current_model_provider_policy_context(
         user_id=user.id,
-        attributes={"is_superuser": bool(user.is_superuser)},
+        attributes=provider_policy_attributes,
     )
     try:
         component = Component(_code=effective_code)
@@ -1666,24 +1889,26 @@ async def custom_component_update(
         component_type = get_instance_name(cc_instance)
         enforce_catalog_policy_for_component_type(component_type, snapshot=catalog_policy_snapshot)
 
+        template = code_request.get_template()
+        params = _raw_component_parameters(template)
+        policy_params = _raw_component_parameters(
+            template,
+            field=code_request.field,
+            field_value=code_request.field_value,
+        )
+
         if isinstance(cc_instance, Component):
-            # Dynamic configuration may resolve DB-backed credentials or call
-            # provider APIs. Apply the same standalone-component policy before
-            # either can happen.
-            cc_instance.require_model_provider_policy(ModelProviderPolicyPurpose.CONFIGURE)
+            # Authorize both fixed-provider components and the raw selected
+            # ModelInput provider before load_from_db can hydrate any secret.
+            await cc_instance.arequire_model_provider_policy(
+                ModelProviderPolicyPurpose.CONFIGURE,
+                user_id=user.id,
+                parameters=policy_params,
+            )
 
         component_node["tool_mode"] = code_request.tool_mode
 
         if hasattr(cc_instance, "set_attributes"):
-            template = code_request.get_template()
-            params = {}
-
-            for key, value_dict in template.items():
-                if isinstance(value_dict, dict):
-                    value = value_dict.get("value")
-                    input_type = str(value_dict.get("_input_type"))
-                    params[key] = parse_value(value, input_type)
-
             load_from_db_fields = [
                 field_name
                 for field_name, field_dict in template.items()
@@ -1735,6 +1960,8 @@ async def custom_component_update(
 
     except CatalogPolicyHTTPException:
         raise
+    except ModelProviderPolicyError as exc:
+        raise HTTPException(status_code=404, detail="Model provider not found") from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     finally:
@@ -1753,6 +1980,47 @@ async def custom_component_update(
         return jsonable_encoder(component_node)
     except Exception as exc:
         raise SerializationError.from_exception(exc, data=component_node) from exc
+
+
+def _blocked_component_types(snapshot) -> list[str]:
+    """Return every component type the editor should treat as policy-blocked.
+
+    The editor compares a node's ``type`` against this set, and a saved node
+    carries whichever identity it was saved under -- ``Prompt`` rather than the
+    registry key ``Prompt Template``. Alias resolution only runs one way, so
+    reporting the administrator's key and its canonical candidates is not
+    enough: blocking the canonical key would leave every node saved under an
+    alias unmatched, and the palette exposes only the canonical key, so that is
+    the one an administrator can find.
+
+    ``_resolve_catalog_policy_matches`` decides the write by resolving the node
+    side too and intersecting, so the same rule is applied here in reverse:
+    every alias whose canonical candidates meet the blocked identities is
+    reported. That keeps this answer identical to the one that decides whether
+    the save succeeds, which is the whole point of sending it.
+    """
+    blocked_keys = getattr(snapshot, "blocked_component_keys", None)
+    if not blocked_keys:
+        return []
+
+    types = set(blocked_keys)
+    try:
+        from lfx.utils.flow_validation import get_component_identity_index_for_validation
+
+        identity_index = get_component_identity_index_for_validation()
+    except Exception:  # noqa: BLE001
+        identity_index = None
+    if identity_index is not None:
+        blocked_identities = frozenset(identity_index.resolve_many(blocked_keys))
+        types |= blocked_identities
+        types |= {
+            alias
+            for alias, candidates in identity_index.aliases.items()
+            # Any overlap blocks the node server side, including an alias that
+            # is ambiguous across components.
+            if not blocked_identities.isdisjoint(candidates)
+        }
+    return sorted(types)
 
 
 @router.get("/config")
@@ -1776,14 +2044,21 @@ async def get_config(
     """
     try:
         settings_service: SettingsService = get_settings_service()
+        blocked_component_types: list[str] = []
         try:
-            catalog_governance_enabled = get_catalog_policy_service().enabled
+            catalog_policy_service = get_catalog_policy_service()
+            catalog_governance_enabled = catalog_policy_service.enabled
+            # A custom policy service need not expose a snapshot. Reporting no
+            # identities then simply leaves the editor unable to name a cause,
+            # which is the safe direction.
+            blocked_component_types = _blocked_component_types(getattr(catalog_policy_service, "snapshot", None))
         except Exception as exc:  # noqa: BLE001
             # Catalog governance is explicitly fail-open. A broken custom
             # policy implementation must not break the public config endpoint
             # or expose its internal exception text.
             await logger.aexception("Catalog policy status unavailable; reporting governance disabled", exception=exc)
             catalog_governance_enabled = False
+            blocked_component_types = []
 
         if user is None:
             return PublicConfigResponse.from_settings(
@@ -1796,6 +2071,7 @@ async def get_config(
             settings_service.settings,
             settings_service.auth_settings,
             catalog_governance_enabled=catalog_governance_enabled,
+            blocked_component_types=blocked_component_types,
         )
 
     except Exception as exc:

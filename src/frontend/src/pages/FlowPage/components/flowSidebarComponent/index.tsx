@@ -341,7 +341,11 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     }
   }, [debouncedSearch, getFilterEdge, getFilterComponent]);
 
-  useSidebarHotkeys({ searchInputRef, setOpen, isSearchFocused });
+  const isSearchHotkeyReady = useSidebarHotkeys({
+    searchInputRef,
+    setOpen,
+    isSearchFocused,
+  });
 
   const onDragStart = useCallback(
     (
@@ -390,15 +394,20 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     filterType !== undefined ||
     getFilterComponent !== "";
 
-  const { showComponents, showBundles, showMcp, isMcpTabActive } =
-    computeSectionVisibility({
-      enableNewSidebar: ENABLE_NEW_SIDEBAR,
-      activeSection,
-      hasSearchInput,
-      hasCoreComponents,
-      hasMcpComponents,
-      hasBundleItems,
-    });
+  const {
+    showComponents,
+    showBundles,
+    showMcp,
+    isMcpTabActive,
+    showDiscoverMore,
+  } = computeSectionVisibility({
+    enableNewSidebar: ENABLE_NEW_SIDEBAR,
+    activeSection,
+    hasSearchInput,
+    hasCoreComponents,
+    hasMcpComponents,
+    hasBundleItems,
+  });
   const showVersions =
     ENABLE_NEW_SIDEBAR && activeSection === "versions" && sidebarOpen;
 
@@ -460,6 +469,7 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     <Sidebar
       collapsible="offcanvas"
       data-testid="shad-sidebar"
+      data-search-hotkey-ready={isSearchHotkeyReady ? "true" : "false"}
       className="noflow select-none"
       role="navigation"
       aria-label={t("sidebar.componentsPanel")}
@@ -580,8 +590,9 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
                             setShowConfig={setShowConfig}
                           />
                         )}
-                        {showComponents && (
+                        {showDiscoverMore && (
                           <Button
+                            data-testid="sidebar-discover-more-button"
                             onClick={() => setActiveSection("bundles")}
                             variant="ghost"
                             className="bg-muted hover:bg-muted/70 mx-3 px-2.5 !text-[13px] font-normal line-height-[16px] mb-3 group -mt-3 h-[34px]"

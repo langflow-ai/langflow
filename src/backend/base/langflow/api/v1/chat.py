@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
+from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
 from lfx.log.logger import logger
@@ -54,7 +55,8 @@ from langflow.api.v1.schemas import (
 from langflow.exceptions.component import ComponentBuildError
 from langflow.services.auth.utils import get_current_user_optional
 from langflow.services.authorization import FlowAction, ensure_flow_permission
-from langflow.services.authorization.fetch import deny_to_404
+from langflow.services.authorization.fetch import deny_to_404_unless_readable
+from langflow.services.authorization.flow_data_override import resolve_flow_data_override
 from langflow.services.authorization.public_access import (
     PUBLIC_FLOW_NOT_FOUND_DETAIL,
     PublicResourceAction,
@@ -75,6 +77,7 @@ from langflow.services.job_queue.service import (
     JobQueueNotFoundError,
     JobQueueService,
 )
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.services.rate_limit import check_rate_limit
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
@@ -82,6 +85,8 @@ if TYPE_CHECKING:
     from lfx.graph.vertex.vertex_types import InterfaceVertex
 
 router = APIRouter(tags=["Chat"])
+
+FLOW_EXECUTE_DENIED_DETAIL = "You don't have permission to execute this flow."
 
 
 def _validate_graph_for_execution(graph: Graph) -> None:
@@ -142,6 +147,38 @@ async def _register_job_owner_or_cancel(queue_service: JobQueueService, job_id: 
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+def _compiled_from(graph: object, graph_data: dict) -> bool:
+    """Whether this compilation was produced from exactly this payload.
+
+    ``raw_graph_data`` is part of ``Graph.__getstate__``, so this survives a serialized
+    cache — a marker attribute would be dropped there and silently reintroduce the
+    rebuild-per-request behaviour on Redis-backed deployments only.
+    """
+    raw = getattr(graph, "raw_graph_data", None)
+    if not isinstance(raw, dict):
+        return False
+    return raw.get("nodes") == graph_data.get("nodes") and raw.get("edges") == graph_data.get("edges")
+
+
+async def _trusted_stored_graph(flow_data, *, is_superuser: bool) -> dict | None:
+    """Run the caller-aware component policy over a STORED graph.
+
+    The stored graph is caller-controlled -- any user who can write a flow can persist
+    component source through the ordinary flow API -- and the global validator does not
+    know who is asking, so it cannot enforce ``custom_component_admin_only`` on its own.
+    Returns the trusted copy to build from, or ``None`` when the policy is permissive and
+    the stored graph stands. The status mapping matches the whole-flow build seam.
+    """
+    try:
+        return await prepare_flow_build_for_user(flow_data, is_superuser=is_superuser)
+    except CatalogPolicyIdentityUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except CustomComponentValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @router.post(
     "/build/{flow_id}/vertices",
     deprecated=True,
@@ -197,19 +234,30 @@ async def retrieve_vertices_order(
     components_count = None
     run_id = str(uuid.uuid4())
     try:
-        if not data:
-            graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
-        else:
-            sanitized_data = await prepare_flow_build_for_user(
-                data.model_dump(),
-                is_superuser=current_user.is_superuser,
-            )
-            if sanitized_data is not None:
-                data = FlowDataRequest.model_validate(sanitized_data)
-            graph = await build_and_cache_graph_from_data(
-                flow_id=flow_id, graph_data=data.model_dump(), chat_service=chat_service
-            )
-        graph = graph.prepare(stop_component_id, start_component_id)
+        with scoped_model_provider_policy_for_flow(
+            flow,
+            user_id=current_user.id,
+            is_superuser=bool(current_user.is_superuser),
+        ):
+            if not data:
+                trusted_data = await _trusted_stored_graph(flow.data, is_superuser=current_user.is_superuser)
+                if trusted_data is not None:
+                    graph = await build_and_cache_graph_from_data(
+                        flow_id=flow_id, graph_data=trusted_data, chat_service=chat_service
+                    )
+                else:
+                    graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
+            else:
+                sanitized_data = await _trusted_stored_graph(
+                    data.model_dump(),
+                    is_superuser=current_user.is_superuser,
+                )
+                if sanitized_data is not None:
+                    data = FlowDataRequest.model_validate(sanitized_data)
+                graph = await build_and_cache_graph_from_data(
+                    flow_id=flow_id, graph_data=data.model_dump(), chat_service=chat_service
+                )
+            graph = graph.prepare(stop_component_id, start_component_id)
         graph.set_run_id(run_id)
 
         # Now vertices is a list of lists
@@ -239,6 +287,10 @@ async def retrieve_vertices_order(
                 playground_run_id=run_id,
             ),
         )
+        # A policy refusal already carries its status; re-wrapping it as 500 would report
+        # an authorization decision as a server fault. Telemetry above still records it.
+        if isinstance(exc, HTTPException):
+            raise
         if "stream or streaming set to True" in str(exc):
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         if isinstance(exc, CustomComponentValidationError):
@@ -312,8 +364,10 @@ async def build_flow(
 
     # Authorize the execute action — runs the authorization plugin if registered,
     # no-op in OSS pass-through. Audited regardless. A plugin deny becomes 404
-    # so the response is identical to "flow does not exist" and the caller
-    # cannot enumerate UUIDs by probing for 403 vs 404.
+    # so a caller who cannot see the flow cannot enumerate UUIDs by probing for
+    # 403 vs 404. A caller who *can* read it has already seen the flow, so that
+    # mask buys nothing and only hides which permission they are missing — the
+    # Playground is exactly this case.
     try:
         await ensure_flow_permission(
             current_user,
@@ -324,18 +378,32 @@ async def build_flow(
             folder_id=flow.folder_id,
         )
     except HTTPException as exc:
-        raise deny_to_404(exc, detail=f"Flow with id {flow_id} not found") from exc
-
-    # Execute-only shares must run the stored graph — non-owners cannot inject
-    # alternate flow data via the request body (would bypass the owner's definition).
-    if data is not None and flow.user_id != current_user.id:
-        raise deny_to_404(
-            HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only the flow owner can override flow data during build",
+        raise await deny_to_404_unless_readable(
+            exc,
+            lambda: ensure_flow_permission(
+                current_user,
+                FlowAction.READ,
+                flow_id=flow_id,
+                flow_user_id=flow.user_id,
+                workspace_id=flow.workspace_id,
+                folder_id=flow.folder_id,
             ),
-            detail=f"Flow with id {flow_id} not found",
+            denied_detail=FLOW_EXECUTE_DENIED_DETAIL,
+            not_found_detail=f"Flow with id {flow_id} not found",
+        ) from exc
+
+    # Execute-only callers must run the stored graph — they cannot inject an
+    # alternate definition and have it run under the owner's resources. This
+    # drops the override rather than denying: the caller holds ``flow:execute``,
+    # so the run itself is theirs to make, and denying it reported the flow as
+    # non-existent to someone already looking at it (LE-1905). Overriding is an
+    # edit expressed at run time, so it is gated on ``flow:write``.
+    if data is not None and not await resolve_flow_data_override(current_user, flow):
+        await logger.ainfo(
+            "Ignoring caller-supplied flow data for flow %s: caller may execute but not edit it.",
+            flow_id,
         )
+        data = None
 
     try:
         if data:
@@ -347,7 +415,23 @@ async def build_flow(
             if sanitized_data is not None:
                 data = FlowDataRequest.model_validate(sanitized_data)
         elif flow and flow.data:
-            validate_flow_for_current_settings(flow.data)
+            # Stored graphs are caller-controlled too: any user who can write a flow can
+            # persist component source through the ordinary flow API and then execute it by
+            # building with an empty body. The global validator does not know the caller, so
+            # it cannot enforce ``custom_component_admin_only`` here. Run the same caller-aware
+            # policy the inline branch runs, and build from the detached copy it returns so the
+            # worker compiles the server's trusted source rather than the stored bytes.
+            # A permissive policy returns ``None`` and the build still loads from the DB.
+            sanitized_data = await prepare_flow_build_for_user(
+                flow.data,
+                is_superuser=current_user.is_superuser,
+            )
+            if sanitized_data is not None:
+                data = FlowDataRequest(
+                    nodes=sanitized_data.get("nodes", []),
+                    edges=sanitized_data.get("edges", []),
+                    viewport=sanitized_data.get("viewport"),
+                )
     except CatalogPolicyIdentityUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except CustomComponentValidationError as exc:
@@ -366,6 +450,7 @@ async def build_flow(
     with execution_protocol("v1.build"):
         job_id = await start_flow_build(
             flow_id=flow_id,
+            provider_policy_flow=flow,
             background_tasks=background_tasks,
             inputs=inputs,
             data=data,
@@ -500,6 +585,8 @@ async def build_vertex(
         folder_id=flow.folder_id,
     )
 
+    sanitized_data = await _trusted_stored_graph(flow.data, is_superuser=current_user.is_superuser)
+
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
     flow_id_str = str(flow_id)
@@ -516,39 +603,78 @@ async def build_vertex(
 
     try:
         cache = await chat_service.get_cache(flow_id_str)
-        if isinstance(cache, CacheMiss):
-            # If there's no cache
-            await logger.awarning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
-            async with session_scope() as session:
-                graph = await build_graph_from_db(
-                    flow_id=flow_id,
-                    session=session,
+        cached_graph = None if isinstance(cache, CacheMiss) else cache.get("result")
+        # This seam is incremental: it is called once per vertex and carries built state in
+        # the cache between calls. The policy hands back a copy on EVERY request from a
+        # non-superuser, so rebuilding on that alone discarded the previous vertex's result
+        # and the next one reported its upstream as unbuilt. Rebuild only when the cached
+        # compilation did not come from this copy — which still covers the case the rebuild
+        # exists for, a graph compiled while the policy was off.
+        needs_initialize_run = True
+        if sanitized_data is not None and not _compiled_from(cached_graph, sanitized_data):
+            # Graph CONSTRUCTION binds the provider scope too, not just execution.
+            with scoped_model_provider_policy_for_flow(
+                flow,
+                user_id=current_user.id,
+                is_superuser=bool(current_user.is_superuser),
+            ):
+                graph = await build_and_cache_graph_from_data(
+                    flow_id=flow_id_str,
                     chat_service=chat_service,
+                    graph_data=sanitized_data,
                 )
             run_id = str(uuid.uuid4())
             graph.set_run_id(run_id)
+        elif cached_graph is None:
+            # If there's no cache
+            await logger.awarning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
+            with scoped_model_provider_policy_for_flow(
+                flow,
+                user_id=current_user.id,
+                is_superuser=bool(current_user.is_superuser),
+            ):
+                async with session_scope() as session:
+                    graph = await build_graph_from_db(
+                        flow_id=flow_id,
+                        session=session,
+                        chat_service=chat_service,
+                    )
+            run_id = str(uuid.uuid4())
+            graph.set_run_id(run_id)
+            # build_graph_from_db initializes the run itself.
+            needs_initialize_run = False
         else:
-            graph = cache.get("result")
+            graph = cached_graph
         try:
             _validate_graph_for_execution(graph)
         except HTTPException:
             await _clear_invalid_graph_cache(chat_service, flow_id_str)
             raise
-        if not isinstance(cache, CacheMiss):
-            await graph.initialize_run()
+        if needs_initialize_run:
+            with scoped_model_provider_policy_for_flow(
+                flow,
+                user_id=current_user.id,
+                is_superuser=bool(current_user.is_superuser),
+            ):
+                await graph.initialize_run()
             run_id = graph.run_id
         vertex = graph.get_vertex(vertex_id)
 
         try:
             lock = chat_service.async_cache_locks[flow_id_str]
-            vertex_build_result = await graph.build_vertex(
-                vertex_id=vertex_id,
-                user_id=str(current_user.id),
-                inputs_dict=inputs.model_dump() if inputs else {},
-                files=files,
-                get_cache=chat_service.get_cache,
-                set_cache=chat_service.set_cache,
-            )
+            with scoped_model_provider_policy_for_flow(
+                flow,
+                user_id=current_user.id,
+                is_superuser=bool(current_user.is_superuser),
+            ):
+                vertex_build_result = await graph.build_vertex(
+                    vertex_id=vertex_id,
+                    user_id=str(current_user.id),
+                    inputs_dict=inputs.model_dump() if inputs else {},
+                    files=files,
+                    get_cache=chat_service.get_cache,
+                    set_cache=chat_service.set_cache,
+                )
             result_dict = vertex_build_result.result_dict
             params = vertex_build_result.params
             valid = vertex_build_result.valid
@@ -744,6 +870,24 @@ async def _stream_vertex(flow_id: str, vertex_id: str, chat_service: ChatService
         yield str(StreamData(event="close", data={"message": "Stream closed"}))
 
 
+async def _stream_vertex_with_provider_scope(
+    flow_id: str,
+    vertex_id: str,
+    chat_service: ChatService,
+    graph: Graph | None,
+    flow: Flow,
+    current_user: User,
+):
+    """Retain the trusted flow scope while the response generator is consumed."""
+    with scoped_model_provider_policy_for_flow(
+        flow,
+        user_id=current_user.id,
+        is_superuser=bool(current_user.is_superuser),
+    ):
+        async for event in _stream_vertex(flow_id, vertex_id, chat_service, graph):
+            yield event
+
+
 @router.get(
     "/build/{flow_id}/{vertex_id}/stream",
     response_class=StreamingResponse,
@@ -809,7 +953,14 @@ async def build_vertex_stream(
                 await _clear_invalid_graph_cache(chat_service, str(flow_id))
                 raise
         return StreamingResponse(
-            _stream_vertex(str(flow_id), vertex_id, chat_service, graph),
+            _stream_vertex_with_provider_scope(
+                str(flow_id),
+                vertex_id,
+                chat_service,
+                graph,
+                flow,
+                current_user,
+            ),
             media_type="text/event-stream",
         )
     except HTTPException:
@@ -984,6 +1135,7 @@ async def build_public_tmp(
             job_id = await start_flow_build(
                 flow_id=new_flow_id,
                 source_flow_id=flow_id,
+                provider_policy_flow=flow,
                 background_tasks=background_tasks,
                 inputs=inputs,
                 # Build from a detached server-sanitized graph. The default path also
@@ -1012,6 +1164,9 @@ async def build_public_tmp(
         # started through this public build path, preventing unauthenticated
         # callers from reading or cancelling private-flow builds by job_id.
         await queue_service.register_public_job(job_id)
+    except TweakRefusedError:
+        # Let the app-level handler return the documented structured 422.
+        raise
     except CatalogPolicyIdentityUnavailableError as exc:
         await logger.awarning("Public flow component identities are temporarily unavailable")
         raise HTTPException(status_code=503, detail=PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE) from exc

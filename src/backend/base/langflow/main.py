@@ -33,7 +33,8 @@ from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
-from langflow.api import health_check_router, log_router
+from langflow.api import log_router
+from langflow.api.health_check_router import health_check_router
 from langflow.api.router import router
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.api.warm_graph import is_warm_registry_enabled
@@ -94,7 +95,7 @@ async def _run_enterprise_lifespan_hooks(phase: str) -> None:
         try:
             await hook()
         except Exception as e:  # noqa: BLE001
-            hook_name = getattr(hook, "__qualname__", repr(hook))
+            hook_name = getattr(hook, "__name__", getattr(hook, "__qualname__", type(hook).__name__))
             await logger.awarning(f"Enterprise lifespan {phase} hook {hook_name} failed: {e}")
 
 
@@ -321,23 +322,36 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await copy_profile_pictures()
                 await logger.adebug(f"Profile pictures copied in {asyncio.get_event_loop().time() - current_time:.2f}s")
 
-            current_time = asyncio.get_event_loop().time()
-            await logger.adebug("Reconciling knowledge base rows from disk")
-            try:
-                from langflow.api.utils import knowledge_base_service
+            # Disk reconciliation is opt-in. The ``knowledge_base`` row is the sole
+            # authority for KB metadata, so this scan exists only to adopt directories
+            # left behind by a version that still wrote the on-disk sidecar. Operators
+            # who need it can flip LANGFLOW_KB_DISK_RECONCILE_ENABLED or run
+            # ``langflow reconcile-kb-from-disk`` once, instead of paying a filesystem
+            # walk on every boot forever.
+            if get_settings_service().settings.kb_disk_reconcile_enabled:
+                current_time = asyncio.get_event_loop().time()
+                await logger.adebug("Reconciling knowledge base rows from disk")
+                try:
+                    from langflow.api.utils import knowledge_base_service
 
-                inserted = await knowledge_base_service.backfill_all_users_from_disk()
-                elapsed = asyncio.get_event_loop().time() - current_time
-                await logger.adebug(
-                    f"Knowledge base reconciliation completed in {elapsed:.2f}s ({inserted} rows inserted)"
-                )
-            except Exception as exc:  # noqa: BLE001
-                await logger.awarning("Knowledge base reconciliation skipped after startup error: %s", exc)
+                    inserted = await knowledge_base_service.backfill_all_users_from_disk()
+                    elapsed = asyncio.get_event_loop().time() - current_time
+                    await logger.adebug(
+                        f"Knowledge base reconciliation completed in {elapsed:.2f}s ({inserted} rows inserted)"
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    await logger.awarning("Knowledge base reconciliation skipped after startup error: %s", exc)
 
             # Memory Bases resolve their backend + embedding purely from the
             # knowledge_base row (no on-disk sidecar), so ensure every Memory Base
             # has one. Sourced from the memory_base table, not disk, so it's
             # replica-safe; only Memory Bases missing a row are touched.
+            #
+            # Deliberately NOT gated behind kb_disk_reconcile_enabled: this is a
+            # DB->DB reconcile that reads no filesystem. Skipping it would leave a
+            # legacy Memory Base with no knowledge_base row, which makes backend and
+            # embedding resolution raise and makes ``check_mismatch`` report a false
+            # mismatch — prompting a regenerate that resets every session cursor.
             try:
                 from langflow.api.utils import knowledge_base_service
 
@@ -908,7 +922,7 @@ def create_app():
 
             if not content_type or "multipart/form-data" not in content_type or "boundary=" not in content_type:
                 return JSONResponse(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     content={"detail": "Content-Type header must be 'multipart/form-data' with a boundary parameter."},
                 )
 
@@ -916,7 +930,7 @@ def create_app():
 
             if not re.match(r"^[\w\-]{1,70}$", boundary):
                 return JSONResponse(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     content={"detail": "Invalid boundary format"},
                 )
 
@@ -930,7 +944,7 @@ def create_app():
 
             if not body.startswith(boundary_start) or not body.endswith((boundary_end, boundary_end_no_newline)):
                 return JSONResponse(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     content={"detail": "Invalid multipart formatting"},
                 )
 
@@ -1022,6 +1036,27 @@ def create_app():
         return JSONResponse(
             status_code=HTTPStatus.CONFLICT,
             content={"detail": exc.detail},
+        )
+
+    from lfx.exceptions.tweaks import TweakRefusedError
+
+    @app.exception_handler(TweakRefusedError)
+    async def tweak_refused_exception_handler(_request: Request, exc: TweakRefusedError):
+        """Refused tweaks are a 422 naming the keys, not a silent drop.
+
+        Mirrors the detail shape of the existing output-selection validator so a
+        caller parses one error format across the run API.
+        """
+        return JSONResponse(
+            status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+            content={
+                "detail": {
+                    "error": "Refused tweaks",
+                    "code": "TWEAKS_REFUSED",
+                    "message": exc.reason,
+                    "fields": exc.refused,
+                }
+            },
         )
 
     # Add rate limit exception handler

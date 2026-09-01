@@ -6,7 +6,6 @@ Covers:
 - Where-clause composition (session filter on / off / multi-predicate).
 - update_build_config dropdown population.
 - _coerce_uuid input coercion.
-- _load_kb_metadata branches (missing file, invalid JSON, decrypt failure).
 - retrieve_data behavior: similarity search w/ filter, empty query short-circuit,
   filter_by_session=False end-to-end, include_metadata=False output shape.
 """
@@ -16,9 +15,8 @@ from __future__ import annotations
 import contextlib
 import json
 import uuid
-from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import numpy as np
 import pytest
@@ -245,51 +243,190 @@ class TestBuildWhereClause:
         component.filter_by_session = ""  # falsy non-bool
         assert component._build_where_clause(session_id="s1") is None
 
+    def test_session_filter_off_with_end_user_scopes_to_end_user(self):
+        # Serving-plane cross-session recall stays within one end user instead of spanning
+        # every end user's chunks in the shared service-account store.
+        component = _make_component(flow_id=uuid.uuid4(), session_id="alice::s1", filter_by_session=False)
+        assert component._build_where_clause(session_id="alice::s1", end_user_id="alice") == {"end_user_id": "alice"}
+
+    def test_session_filter_on_ignores_end_user(self):
+        # The session-id prefix already scopes to the end user, so the session predicate wins.
+        component = _make_component(flow_id=uuid.uuid4(), session_id="alice::s1", filter_by_session=True)
+        assert component._build_where_clause(session_id="alice::s1", end_user_id="alice") == {"session_id": "alice::s1"}
+
+    def test_session_filter_off_without_end_user_returns_none(self):
+        # Editor / feature off: no end user, so cross-session recall spans all sessions (unchanged).
+        component = _make_component(flow_id=uuid.uuid4(), session_id="s1", filter_by_session=False)
+        assert component._build_where_clause(session_id="s1", end_user_id=None) is None
+
 
 # ---------------------------------------------------------------------------
-# load_kb_metadata branches (shared helper)
+# Serving-plane fail-closed: anonymous caller cannot do cross-session recall
 # ---------------------------------------------------------------------------
 
+MR_MODULE = "lfx.components.files_and_knowledge.memory_retrieval"
 
-class TestLoadKbMetadata:
-    def test_missing_file_returns_empty(self, tmp_path: Path):
-        assert _kb_paths.load_kb_metadata(tmp_path, log_label="x") == {}
 
-    def test_invalid_json_returns_empty(self, tmp_path: Path):
-        (tmp_path / "embedding_metadata.json").write_text("{not-json")
-        assert _kb_paths.load_kb_metadata(tmp_path, log_label="x") == {}
+class TestMemoryBaseProviderPolicyPreflight:
+    async def test_db_provider_denial_precedes_owner_credentials_and_uses_actor_scope(self, monkeypatch):
+        """Raw MB selection resolves owner metadata but authorizes the current runtime actor."""
+        from lfx.services.model_provider_policy import (
+            ModelProviderPolicyContext,
+            ModelProviderPolicyError,
+            ModelProviderPolicyPurpose,
+            current_model_provider_policy_context,
+            reset_current_model_provider_policy_context,
+            set_current_model_provider_policy_context,
+        )
 
-    def test_no_api_key_skips_decrypt(self, tmp_path: Path):
-        payload = {"embedding_provider": "OpenAI", "embedding_model": "x"}
-        (tmp_path / "embedding_metadata.json").write_text(json.dumps(payload))
-        with patch("lfx.components.files_and_knowledge._kb_paths.decrypt_api_key") as decrypt:
-            result = _kb_paths.load_kb_metadata(tmp_path, log_label="x")
-            decrypt.assert_not_called()
-        assert result == payload
+        flow_id = uuid.uuid4()
+        owner_id = uuid.uuid4()
+        actor_id = uuid.uuid4()
+        component = _make_component(
+            flow_id=flow_id,
+            session_id="s1",
+            invoker_user_id=owner_id,
+        )
+        mb_row = _make_mb_row(flow_id=flow_id, owner_id=owner_id)
+        db = _exec_owner_scoped(mb_row)
+        selection_lookup = AsyncMock(return_value=("OpenAI", "text-embedding-3-small"))
+        owner_embedding_build = AsyncMock(side_effect=AssertionError("owner credential read before actor denial"))
+        denial = ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.USE)
+        snapshot = SimpleNamespace(require=MagicMock(side_effect=denial))
+        observed_contexts = []
 
-    def test_decrypt_success(self, tmp_path: Path):
-        payload = {"embedding_provider": "OpenAI", "api_key": "ENCRYPTED"}  # pragma: allowlist secret
-        (tmp_path / "embedding_metadata.json").write_text(json.dumps(payload))
-        with patch(
-            "lfx.components.files_and_knowledge._kb_paths.decrypt_api_key",
-            return_value="plain",
+        async def resolve_policy(**_kwargs):
+            observed_contexts.append(current_model_provider_policy_context())
+            return snapshot
+
+        monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+        token = set_current_model_provider_policy_context(
+            user_id=actor_id,
+            attributes={"project_id": "project-current", "workspace_id": "workspace-current"},
+        )
+        try:
+            with (
+                _patched_session_scope(db),
+                patch(f"{MR_MODULE}.resolve_embedding_selection", selection_lookup),
+                patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", owner_embedding_build),
+                pytest.raises(ModelProviderPolicyError),
+            ):
+                await component.arequire_model_provider_policy(
+                    ModelProviderPolicyPurpose.USE,
+                    user_id=actor_id,
+                    parameters={"memory_base": "mb-one"},
+                )
+        finally:
+            reset_current_model_provider_policy_context(token)
+
+        selection_lookup.assert_awaited_once_with(user_id=owner_id, kb_name=mb_row.kb_name)
+        assert observed_contexts == [
+            ModelProviderPolicyContext(
+                user_id=actor_id,
+                attributes={"project_id": "project-current", "workspace_id": "workspace-current"},
+            )
+        ]
+        owner_embedding_build.assert_not_awaited()
+        stmt_params = db.exec.await_args.args[0].compile().params
+        assert owner_id in stmt_params.values()
+        assert actor_id not in stmt_params.values()
+
+    async def test_backend_recheck_uses_actor_policy_snapshot_with_owner_credentials(self, monkeypatch):
+        """A fresh actor decision is passed through while model credentials remain owner-scoped."""
+        from lfx.services.model_provider_policy import (
+            ModelProviderPolicyPurpose,
+            reset_current_model_provider_policy_context,
+            set_current_model_provider_policy_context,
+        )
+
+        flow_id = uuid.uuid4()
+        owner_id = uuid.uuid4()
+        actor_id = uuid.uuid4()
+        owner = SimpleNamespace(id=owner_id, username="owner")
+        component = _make_component(
+            flow_id=flow_id,
+            session_id="s1",
+            invoker_user_id=owner_id,
+        )
+        mb_row = _make_mb_row(flow_id=flow_id, owner_id=owner_id)
+        snapshot = SimpleNamespace(require=MagicMock())
+        resolve_policy = AsyncMock(return_value=snapshot)
+        selection_lookup = AsyncMock(return_value=("OpenAI", "text-embedding-3-small"))
+        owner_embedding_build = AsyncMock(side_effect=AssertionError("owner policy was re-evaluated"))
+        embedding = MagicMock()
+        get_embeddings = MagicMock(return_value=embedding)
+        backend = AsyncMock()
+
+        monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+        token = set_current_model_provider_policy_context(
+            user_id=actor_id,
+            attributes={"project_id": "project-current", "workspace_id": "workspace-current"},
+        )
+        try:
+            with (
+                _patched_session_scope(_exec_owner_scoped(mb_row)),
+                patch(f"{MR_MODULE}.resolve_embedding_selection", selection_lookup),
+                patch(f"{MR_MODULE}.resolve_backend_selection", new=AsyncMock(return_value=("chroma", {}))),
+                patch(f"{MR_MODULE}.resolve_local_store_path", return_value=None),
+                patch("langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings", owner_embedding_build),
+                patch("lfx.base.models.unified_models.get_embeddings", get_embeddings),
+                patch(f"{MR_MODULE}.create_backend", return_value=backend),
+            ):
+                await component.arequire_model_provider_policy(
+                    ModelProviderPolicyPurpose.USE,
+                    user_id=actor_id,
+                    parameters={"memory_base": "mb-one"},
+                )
+                built_backend = await component._build_backend(owner, owner.username, mb_row.kb_name)
+        finally:
+            reset_current_model_provider_policy_context(token)
+
+        assert built_backend is backend
+        assert resolve_policy.await_count == 2
+        assert all(call.kwargs["user_id"] == actor_id for call in resolve_policy.await_args_list)
+        selection_lookup.assert_has_awaits(
+            [
+                call(user_id=owner_id, kb_name=mb_row.kb_name),
+                call(user_id=owner_id, kb_name=mb_row.kb_name),
+            ]
+        )
+        owner_embedding_build.assert_not_awaited()
+        assert get_embeddings.call_args.kwargs["user_id"] == owner_id
+        assert get_embeddings.call_args.kwargs["provider_policy"] is snapshot
+        backend.ensure_ready.assert_awaited_once()
+
+
+class TestServingFailClosed:
+    async def test_anonymous_cross_session_recall_returns_empty(self):
+        # Serving on + filter_by_session off + no derivable end user (anonymous) must NOT
+        # run an unfiltered search over the shared store — it would return every end user's
+        # memory. It short-circuits to empty before any owner lookup / backend construction.
+        component = _make_component(flow_id=uuid.uuid4(), session_id="anon::deadbeef", filter_by_session=False)
+        with (
+            patch(f"{MR_MODULE}.serving_end_user_enabled", return_value=True),
+            patch(f"{MR_MODULE}.end_user_id_from_scoped_session", return_value=None),
         ):
-            result = _kb_paths.load_kb_metadata(tmp_path, log_label="x")
-        assert result["api_key"] == "plain"  # pragma: allowlist secret
+            result = await component.retrieve_memory()
+        assert len(result) == 0
 
-    def test_decrypt_failure_sets_none(self, tmp_path: Path):
-        payload = {"embedding_provider": "OpenAI", "api_key": "ENCRYPTED"}  # pragma: allowlist secret
-        (tmp_path / "embedding_metadata.json").write_text(json.dumps(payload))
-        with patch(
-            "lfx.components.files_and_knowledge._kb_paths.decrypt_api_key",
-            side_effect=ValueError("bad token"),
+    async def test_feature_off_cross_session_recall_not_blocked(self):
+        # Feature off: the fail-closed guard must not fire — cross-session recall stays
+        # available exactly as before (proven by reaching the flow_id validation, not the
+        # early empty return). end_user_id_from_scoped_session returns None when off.
+        component = _make_component(flow_id=None, session_id="s1", filter_by_session=False)
+        with (
+            patch(f"{MR_MODULE}.serving_end_user_enabled", return_value=False),
+            patch(f"{MR_MODULE}.end_user_id_from_scoped_session", return_value=None),
+            pytest.raises(ValueError, match="flow_id is not available"),
         ):
-            result = _kb_paths.load_kb_metadata(tmp_path, log_label="x")
-        assert result["api_key"] is None
+            await component.retrieve_memory()
+
+
+# ---------------------------------------------------------------------------
 
 
 class TestRootPathCache:
-    def test_reset_cache_picks_up_new_setting(self, tmp_path: Path):
+    def test_reset_cache_picks_up_new_setting(self, tmp_path):
         _kb_paths.reset_knowledge_bases_root_path_cache()
         first = tmp_path / "first"
         second = tmp_path / "second"
@@ -510,12 +647,12 @@ class TestMemoryBaseRetrievalInvariants:
                 new=AsyncMock(return_value=owner),
             ),
             patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.get_knowledge_bases_root_path",
-                return_value=Path(),
+                "lfx.components.files_and_knowledge.memory_retrieval.resolve_backend_selection",
+                new=AsyncMock(return_value=("chroma", {})),
             ),
             patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.validate_kb_path",
-                side_effect=ValueError("escapes root"),
+                "lfx.components.files_and_knowledge.memory_retrieval.resolve_local_store_path",
+                side_effect=ValueError("KB path escapes root directory"),
             ),
             pytest.raises(ValueError, match="not accessible"),
         ):
@@ -527,7 +664,7 @@ class TestMemoryBaseRetrievalBehavior:
     def _enter_full_chain(stack: contextlib.ExitStack, *, db, fake_backend, owner, metadata):
         # Embedding provider/model now come from the DB row via
         # resolve_embedding_selection (no on-disk sidecar), so patch that instead
-        # of the removed load_kb_metadata read. The ``metadata`` dict is reused as
+        # of the removed sidecar read. The ``metadata`` dict is reused as
         # the source of the provider/model the resolver returns.
         provider = metadata.get("embedding_provider", "OpenAI")
         model = metadata.get("embedding_model", "x")
@@ -540,21 +677,14 @@ class TestMemoryBaseRetrievalBehavior:
                 new=AsyncMock(return_value=owner),
             ),
             patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.get_knowledge_bases_root_path",
-                return_value=Path(),
-            ),
-            patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.validate_kb_path",
+                "lfx.components.files_and_knowledge.memory_retrieval.resolve_local_store_path",
                 return_value=None,
             ),
             patch(
                 "lfx.components.files_and_knowledge.memory_retrieval.resolve_embedding_selection",
                 new=AsyncMock(return_value=(provider, model)),
             ),
-            patch(
-                "lfx.components.files_and_knowledge.memory_retrieval.KBIngestionHelper.build_embeddings",
-                new=AsyncMock(return_value=MagicMock()),
-            ),
+            patch("lfx.base.models.unified_models.get_embeddings", return_value=MagicMock()),
             patch(
                 "lfx.components.files_and_knowledge.memory_retrieval.resolve_backend_selection",
                 new=AsyncMock(return_value=("chroma", {})),

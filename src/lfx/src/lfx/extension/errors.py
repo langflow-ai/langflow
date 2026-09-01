@@ -62,6 +62,7 @@ ERROR_CODES: frozenset[str] = frozenset(
         "version-constraint-unsatisfied",
         # Loader-specific codes
         "module-import-failed",
+        "optional-dependency-missing",
         "duplicate-component-name",
         "duplicate-distribution",
         "duplicate-inline-bundle",
@@ -260,6 +261,9 @@ _BRANCH_TEMPLATES: dict[str, str] = {
         "include this lfx package's BUNDLE_API_VERSION; refusing to load."
     ),
     "module-import-failed": ("Failed to import bundle module {location}: {message}"),
+    "optional-dependency-missing": (
+        "Manifest-less bundle module {location} was skipped because optional dependency {content!r} is not installed."
+    ),
     "duplicate-component-name": (
         "Duplicate Component class name {content!r} in bundle {location}; "
         "component class names must be unique within a bundle."

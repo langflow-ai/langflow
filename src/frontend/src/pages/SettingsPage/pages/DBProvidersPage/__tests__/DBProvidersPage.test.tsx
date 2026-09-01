@@ -241,6 +241,10 @@ describe("DBProvidersPage characterization", () => {
       ).toBeInTheDocument();
       const useButton = getSaveButton(/use postgres pgvector/i);
       await waitFor(() => expect(useButton).toBeEnabled());
+      // The Button must preserve the "pgVector" brand casing (ignoreTitleCase);
+      // without it the label auto-title-cases to "Pgvector".
+      expect(useButton.textContent).toContain("pgVector");
+      expect(useButton.textContent).not.toContain("Pgvector");
       expect(screen.queryByRole("textbox")).toBeNull();
     });
   });

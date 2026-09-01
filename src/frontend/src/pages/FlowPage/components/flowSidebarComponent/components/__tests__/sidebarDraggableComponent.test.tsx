@@ -224,6 +224,20 @@ jest.mock("@/stores/flowsManagerStore", () => ({
     }),
 }));
 
+jest.mock("@/stores/flowStore", () => ({
+  __esModule: true,
+  default: (selector: (state: { currentFlow: { id: string } }) => unknown) =>
+    selector({ currentFlow: { id: "flow1" } }),
+}));
+
+let mockPermissionPending = false;
+let mockPermissionDenied = false;
+jest.mock("@/contexts/permissionsContext", () => ({
+  useIsFlowPermissionPending: () => mockPermissionPending,
+  // Read-only is true for both halves of the gate, mirroring the real hook.
+  useIsFlowReadOnly: () => mockPermissionPending || mockPermissionDenied,
+}));
+
 jest.mock("@/utils/reactflowUtils", () => ({
   createFlowComponent: jest.fn(),
   downloadNode: jest.fn(),
@@ -266,6 +280,8 @@ describe("SidebarDraggableComponent", () => {
     jest.clearAllMocks();
     mockOnValueChange = undefined;
     mockDeleteFlow.mockClear();
+    mockPermissionPending = false;
+    mockPermissionDenied = false;
   });
 
   describe("Accessibility", () => {
@@ -634,6 +650,27 @@ describe("SidebarDraggableComponent", () => {
       );
       expect(outerWrapper).not.toHaveAttribute("role");
       expect(outerWrapper).not.toHaveAttribute("tabIndex");
+    });
+
+    // WCAG 2.5.3 Label in Name (LE-2235): the badge is visible text, so the
+    // accessible name must contain "<name> Beta" / "<name> Legacy".
+    it("includes the Beta / Legacy badge text in the accessible name", () => {
+      const { rerender } = render(
+        <SidebarDraggableComponent {...defaultProps} beta />,
+      );
+      expect(screen.getByTestId(/testsectiontest component/i)).toHaveAttribute(
+        "aria-label",
+        "Add Test Component Beta to canvas",
+      );
+      expect(
+        screen.getByTestId("add-component-button-test-component"),
+      ).toHaveAttribute("aria-label", "Add Test Component Beta to canvas");
+
+      rerender(<SidebarDraggableComponent {...defaultProps} legacy />);
+      expect(screen.getByTestId(/testsectiontest component/i)).toHaveAttribute(
+        "aria-label",
+        "Add Test Component Legacy to canvas",
+      );
     });
 
     it("should have add button with tabIndex -1", () => {
@@ -1012,6 +1049,178 @@ describe("SidebarDraggableComponent", () => {
 
       // Verify that deleteFlow was not called since flow was not found
       expect(mockDeleteFlow).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("pending permission check", () => {
+    // The add path refuses to run while the flow permission query resolves.
+    // Without gating the affordance too, the control looks and behaves like a
+    // working one and the click is discarded with nothing reported (LE-2176).
+    it("should disable the add button while the check is pending", () => {
+      mockPermissionPending = true;
+
+      render(<SidebarDraggableComponent {...defaultProps} />);
+
+      expect(
+        screen.getByTestId("add-component-button-test-component"),
+      ).toBeDisabled();
+    });
+
+    it("should keep the add button in place, not remove it", () => {
+      // A constraint violation is a verdict and hides the button; a pending
+      // check is transient, so removing it would make the row jump twice.
+      mockPermissionPending = true;
+
+      render(<SidebarDraggableComponent {...defaultProps} />);
+
+      expect(
+        screen.getByTestId("add-component-button-test-component"),
+      ).toBeInTheDocument();
+    });
+
+    it("should stop the row from being dragged while the check is pending", () => {
+      mockPermissionPending = true;
+
+      render(<SidebarDraggableComponent {...defaultProps} />);
+
+      expect(screen.getByTestId(/testsectiontest component/i)).toHaveAttribute(
+        "draggable",
+        "false",
+      );
+    });
+
+    it("should not add on double click while the check is pending", () => {
+      mockPermissionPending = true;
+
+      render(<SidebarDraggableComponent {...defaultProps} />);
+      fireEvent.doubleClick(screen.getByTestId(/testsectiontest component/i));
+
+      expect(mockAddComponentFn).not.toHaveBeenCalled();
+    });
+
+    it("should not add on Enter while the check is pending", () => {
+      mockPermissionPending = true;
+
+      render(<SidebarDraggableComponent {...defaultProps} />);
+      fireEvent.keyDown(screen.getByTestId(/testsectiontest component/i), {
+        key: "Enter",
+      });
+
+      expect(mockAddComponentFn).not.toHaveBeenCalled();
+    });
+
+    it("should explain the wait in the tooltip", () => {
+      mockPermissionPending = true;
+
+      render(<SidebarDraggableComponent {...defaultProps} />);
+
+      expect(screen.getAllByTestId("tooltip")[0]).toHaveAttribute(
+        "data-content",
+        "Checking permissions...",
+      );
+    });
+
+    it("should keep the placement-constraint reason when both apply", () => {
+      // The constraint is the durable reason and must win: telling the user to
+      // wait would be wrong, since the item stays disabled after the check.
+      mockPermissionPending = true;
+
+      render(
+        <SidebarDraggableComponent
+          {...defaultProps}
+          disabled={true}
+          disabledTooltip="This component is disabled"
+        />,
+      );
+
+      expect(screen.getAllByTestId("tooltip")[0]).toHaveAttribute(
+        "data-content",
+        "This component is disabled",
+      );
+      expect(
+        screen.queryByTestId("add-component-button-test-component"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should add normally once the check resolves", () => {
+      mockPermissionPending = false;
+
+      render(<SidebarDraggableComponent {...defaultProps} />);
+      fireEvent.click(
+        screen.getByTestId("add-component-button-test-component"),
+      );
+
+      expect(mockAddComponentFn).toHaveBeenCalledWith(
+        defaultProps.apiClass,
+        defaultProps.itemName,
+      );
+      expect(screen.getByTestId(/testsectiontest component/i)).toHaveAttribute(
+        "draggable",
+        "true",
+      );
+    });
+  });
+
+  describe("denied permission", () => {
+    // The denied half never resolves: a read-only collaborator would otherwise
+    // see a fully interactive sidebar whose every add is discarded, forever.
+    it("should disable the add button when write is denied", () => {
+      mockPermissionDenied = true;
+
+      render(<SidebarDraggableComponent {...defaultProps} />);
+
+      expect(
+        screen.getByTestId("add-component-button-test-component"),
+      ).toBeDisabled();
+    });
+
+    it("should stop the row from being dragged when write is denied", () => {
+      mockPermissionDenied = true;
+
+      render(<SidebarDraggableComponent {...defaultProps} />);
+
+      expect(screen.getByTestId(/testsectiontest component/i)).toHaveAttribute(
+        "draggable",
+        "false",
+      );
+    });
+
+    it("should not add on double click when write is denied", () => {
+      mockPermissionDenied = true;
+
+      render(<SidebarDraggableComponent {...defaultProps} />);
+      fireEvent.doubleClick(screen.getByTestId(/testsectiontest component/i));
+
+      expect(mockAddComponentFn).not.toHaveBeenCalled();
+    });
+
+    it("should say the access is read-only, not that it is still checking", () => {
+      // Naming it "checking" would be a lie: the query already answered.
+      mockPermissionDenied = true;
+
+      render(<SidebarDraggableComponent {...defaultProps} />);
+
+      expect(screen.getAllByTestId("tooltip")[0]).toHaveAttribute(
+        "data-content",
+        "Read-only access",
+      );
+    });
+
+    it("should keep the placement-constraint reason when both apply", () => {
+      mockPermissionDenied = true;
+
+      render(
+        <SidebarDraggableComponent
+          {...defaultProps}
+          disabled={true}
+          disabledTooltip="This component is disabled"
+        />,
+      );
+
+      expect(screen.getAllByTestId("tooltip")[0]).toHaveAttribute(
+        "data-content",
+        "This component is disabled",
+      );
     });
   });
 });

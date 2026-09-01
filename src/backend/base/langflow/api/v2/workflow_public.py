@@ -41,7 +41,7 @@ from lfx.utils.flow_validation import (
     CatalogPolicyIdentityUnavailableError,
     CustomComponentValidationError,
     prepare_public_flow_build,
-    validate_flow_for_current_settings,
+    validate_catalog_policy_for_flow,
     validate_public_flow_no_code_execution,
 )
 from lfx.workflow.adapters import (
@@ -146,7 +146,9 @@ async def execute_public_workflow(
         # so the backend must match here or the popup's chat-view filter
         # would drop every broadcast message.
         client_id = http_request.cookies.get("client_id")
-        auth_settings = get_settings_service().auth_settings
+        settings_service = get_settings_service()
+        settings = settings_service.settings
+        auth_settings = settings_service.auth_settings
         authenticated_user_id = authenticated_user.id if authenticated_user and not auth_settings.AUTO_LOGIN else None
 
         # Direct-link grant + virtual flow id + stable anonymous runtime principal.
@@ -184,7 +186,12 @@ async def execute_public_workflow(
                 msg = "Public flow has no executable data"
                 raise ValueError(msg)
 
-            validate_flow_for_current_settings(flow.data)
+            # The default public path sanitizes code directly and must not apply the global
+            # stored-code hash gate first: that would reject drifted built-ins before their code
+            # can be replaced. Enforce catalog policy explicitly, matching v1. The public custom-
+            # code opt-in delegates to the unified validator inside prepare_public_flow_build.
+            if not settings.allow_public_custom_components:
+                validate_catalog_policy_for_flow(flow.data)
             # Block unauthenticated execution of flows that run arbitrary code
             # (Python interpreter/REPL, legacy Python Code Structured tool,
             # Smart Transform lambda). Without this, any public flow containing
@@ -253,6 +260,7 @@ async def execute_public_workflow(
             background_tasks=background_tasks,
             parsed=parsed,
             current_user=public_user,
+            provider_policy_flow=flow,
             source_flow_id=real_flow_id,
             source_flow_owner_id=source_flow_owner_id,
             # Anonymous shared-link traffic, kept apart from signed-in v2 runs the same way

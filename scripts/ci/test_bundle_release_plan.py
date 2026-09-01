@@ -14,10 +14,12 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import tomllib
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from bundle_release_plan import (
+    BASE_DIR,
     PlanError,
     PublishResult,
     build_artifact_plan,
@@ -29,7 +31,20 @@ from bundle_release_plan import (
     restamp_version,
     update_changed_bundles,
     wait_for_artifacts,
+    wheel_content_digest,
 )
+
+
+@pytest.mark.parametrize(
+    "pyproject",
+    sorted((BASE_DIR / "src" / "bundles").glob("*/pyproject.toml")),
+    ids=lambda path: path.parent.name,
+)
+def test_bundle_build_backend_is_reproducibly_pinned(pyproject: Path) -> None:
+    build_system = tomllib.loads(pyproject.read_text(encoding="utf-8"))["build-system"]
+
+    assert build_system["build-backend"] == "hatchling.build"
+    assert build_system["requires"] == ["hatchling==1.31.0"]
 
 
 class FakeIndex:
@@ -92,7 +107,18 @@ def _create_repository(tmp_path: Path, versions: dict[str, str]) -> Path:
         (tests_dir / "test_component.py").write_text("VALUE = 1\n", encoding="utf-8")
         (source_dir / "component.py").write_text("VALUE = 1\n", encoding="utf-8")
         (source_dir / "extension.json").write_text(
-            json.dumps({"id": name, "version": version}, indent=2) + "\n", encoding="utf-8"
+            json.dumps(
+                {
+                    "id": name,
+                    "version": version,
+                    "name": name,
+                    "lfx": {"compat": ["1"]},
+                    "bundles": [{"name": directory, "path": directory}],
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
         )
     (repo / "pyproject.toml").write_text(
         '[project]\nname = "langflow"\nversion = "1.11.0"\ndependencies = [\n' + "\n".join(dependencies) + "\n]\n",
@@ -118,7 +144,16 @@ def _refresh_lock(repo: Path) -> None:
     (repo / "uv.lock").write_text("version = 1\n\n" + "\n".join(packages), encoding="utf-8")
 
 
-def _make_wheel(tmp_path: Path, package: str, version: str, payload: str) -> Path:
+def _make_wheel(
+    tmp_path: Path,
+    package: str,
+    version: str,
+    payload: str,
+    *,
+    metadata_version: str = "2.3",
+    lfx_requirement: str = "lfx<2,>=1.11.0.dev0",
+) -> Path:
+    tmp_path.mkdir(parents=True, exist_ok=True)
     normalized = package.replace("-", "_")
     wheel_path = tmp_path / f"{normalized}-{version}-py3-none-any.whl"
     dist_info = f"{normalized}-{version}.dist-info"
@@ -126,7 +161,10 @@ def _make_wheel(tmp_path: Path, package: str, version: str, payload: str) -> Pat
         wheel.writestr(f"{normalized}/component.py", payload)
         wheel.writestr(
             f"{dist_info}/METADATA",
-            f"Metadata-Version: 2.3\nName: {package}\nVersion: {version}\nRequires-Dist: lfx<2,>=1.11.0.dev0\n\n",
+            f"Metadata-Version: {metadata_version}\n"
+            f"Name: {package}\n"
+            f"Version: {version}\n"
+            f"Requires-Dist: {lfx_requirement}\n\n",
         )
         wheel.writestr(f"{dist_info}/WHEEL", "Wheel-Version: 1.0\nGenerator: tests\nRoot-Is-Purelib: true\n")
         wheel.writestr(f"{dist_info}/RECORD", "")
@@ -143,6 +181,23 @@ def _matching_release(wheel: Path) -> dict[str, Any]:
             }
         ]
     }
+
+
+def test_normalized_wheel_digest_ignores_only_metadata_format_version(tmp_path: Path) -> None:
+    metadata_24 = _make_wheel(tmp_path / "metadata-24", "lfx-alpha", "0.1.0", "same", metadata_version="2.4")
+    metadata_25 = _make_wheel(tmp_path / "metadata-25", "lfx-alpha", "0.1.0", "same", metadata_version="2.5")
+    changed_requirement = _make_wheel(
+        tmp_path / "changed-requirement",
+        "lfx-alpha",
+        "0.1.0",
+        "same",
+        metadata_version="2.5",
+        lfx_requirement="lfx<3,>=1.11.0.dev0",
+    )
+
+    assert hashlib.sha256(metadata_24.read_bytes()).digest() != hashlib.sha256(metadata_25.read_bytes()).digest()
+    assert wheel_content_digest(metadata_24) == wheel_content_digest(metadata_25)
+    assert wheel_content_digest(metadata_24) != wheel_content_digest(changed_requirement)
 
 
 def test_noop_ignores_bundle_docs_and_tests(tmp_path: Path) -> None:
@@ -162,6 +217,48 @@ def test_single_bundle_source_change_requires_version_bump(tmp_path: Path) -> No
 
     assert len(plan) == 1
     assert plan[0].name == "lfx-alpha"
+    assert plan[0].source_changed is True
+    assert "version remains 0.1.0" in plan[0].errors[0]
+
+
+def test_reproducible_hatchling_pin_does_not_force_package_release(tmp_path: Path) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.1.0"})
+    pyproject = repo / "src" / "bundles" / "alpha" / "pyproject.toml"
+    pyproject.write_text(
+        pyproject.read_text(encoding="utf-8")
+        + '\n[build-system]\nrequires = ["hatchling"]\nbuild-backend = "hatchling.build"\n',
+        encoding="utf-8",
+    )
+    _run(repo, "git", "add", ".")
+    _run(repo, "git", "commit", "-qm", "add unpinned build backend")
+    pyproject.write_text(
+        pyproject.read_text(encoding="utf-8").replace('requires = ["hatchling"]', 'requires = ["hatchling==1.31.0"]'),
+        encoding="utf-8",
+    )
+
+    assert build_change_plan("HEAD", base_dir=repo) == ()
+
+
+def test_hatchling_pin_does_not_hide_other_pyproject_changes(tmp_path: Path) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.1.0"})
+    pyproject = repo / "src" / "bundles" / "alpha" / "pyproject.toml"
+    pyproject.write_text(
+        pyproject.read_text(encoding="utf-8")
+        + '\n[build-system]\nrequires = ["hatchling"]\nbuild-backend = "hatchling.build"\n',
+        encoding="utf-8",
+    )
+    _run(repo, "git", "add", ".")
+    _run(repo, "git", "commit", "-qm", "add unpinned build backend")
+    pyproject.write_text(
+        pyproject.read_text(encoding="utf-8")
+        .replace('requires = ["hatchling"]', 'requires = ["hatchling==1.31.0"]')
+        .replace('dependencies = ["lfx>=1.11.0.dev0,<2.0.0"]', 'dependencies = ["lfx>=1.11.0.dev0,<2.0.0", "httpx"]'),
+        encoding="utf-8",
+    )
+
+    plan = build_change_plan("HEAD", base_dir=repo)
+
+    assert len(plan) == 1
     assert plan[0].source_changed is True
     assert "version remains 0.1.0" in plan[0].errors[0]
 
@@ -211,6 +308,67 @@ def test_prerelease_restamp_reuses_stable_and_changes_only_unpublished_bundle(tm
     assert '"lfx>=1.11.0.dev0,<2.0.0"' in alpha
     assert 'version = "0.2.0rc3"' in beta
     assert '"lfx>=1.11.0rc3,<2.0.0"' in beta
+    beta_manifest = json.loads((repo / "src" / "bundles" / "beta" / "src" / "lfx_beta" / "extension.json").read_text())
+    assert beta_manifest["version"] == "0.2.0rc3"
+
+
+def test_prerelease_restamp_updates_runtime_lfx_requirement_not_quoted_comment(tmp_path: Path) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.1.0"})
+    pyproject = repo / "src" / "bundles" / "alpha" / "pyproject.toml"
+    content = pyproject.read_text(encoding="utf-8")
+    pyproject.write_text(
+        content.replace(
+            'dependencies = ["lfx>=1.11.0.dev0,<2.0.0"]',
+            '# Example compatibility range: "lfx>=1.10.0.dev0,<2.0.0"\ndependencies = ["lfx>=1.11.0.dev0,<2.0.0"]',
+        ),
+        encoding="utf-8",
+    )
+    index = FakeIndex()
+
+    restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
+
+    updated = pyproject.read_text(encoding="utf-8")
+    assert '# Example compatibility range: "lfx>=1.10.0.dev0,<2.0.0"' in updated
+    assert 'dependencies = ["lfx>=1.11.0rc3,<2.0.0"]' in updated
+
+
+def test_prerelease_restamp_updates_dependency_not_identical_description(tmp_path: Path) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.1.0"})
+    pyproject = repo / "src" / "bundles" / "alpha" / "pyproject.toml"
+    content = pyproject.read_text(encoding="utf-8")
+    pyproject.write_text(
+        content.replace(
+            'version = "0.1.0"',
+            'version = "0.1.0"\ndescription = "lfx>=1.11.0.dev0,<2.0.0"',
+        ),
+        encoding="utf-8",
+    )
+    index = FakeIndex()
+
+    restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
+
+    updated = pyproject.read_text(encoding="utf-8")
+    assert 'description = "lfx>=1.11.0.dev0,<2.0.0"' in updated
+    assert 'dependencies = ["lfx>=1.11.0rc3,<2.0.0"]' in updated
+
+
+def test_prerelease_restamp_preserves_lfx_extras_and_environment_marker(tmp_path: Path) -> None:
+    repo = _create_repository(tmp_path, {"alpha": "0.1.0"})
+    pyproject = repo / "src" / "bundles" / "alpha" / "pyproject.toml"
+    content = pyproject.read_text(encoding="utf-8")
+    pyproject.write_text(
+        content.replace(
+            "lfx>=1.11.0.dev0,<2.0.0",
+            "lfx[cli]>=1.11.0.dev0,<2.0.0; python_version >= '3.10'",
+        ),
+        encoding="utf-8",
+    )
+    index = FakeIndex()
+
+    restamp_unpublished_bundles(3, "1.11.0rc3", index, base_dir=repo)
+
+    updated = pyproject.read_text(encoding="utf-8")
+    assert "\"lfx[cli]>=1.11.0rc3,<2.0.0; python_version >= '3.10'\"" in updated
 
 
 def test_prerelease_restamp_rolls_back_all_files_on_late_failure(tmp_path: Path) -> None:

@@ -58,6 +58,7 @@ async def test_component_cache_initialization_is_single_flight_and_atomic() -> N
     from lfx.interface import components as components_module
 
     cache = components_module.ComponentCache()
+    cache.type_to_code = {"StaleComponent": "# stale trusted code"}
     settings_service = SimpleNamespace(settings=SimpleNamespace())
     trusted_code = "# trusted ChatInput code"
     code_hash = hashlib.sha256(trusted_code.encode()).hexdigest()[:12]
@@ -96,6 +97,7 @@ async def test_component_cache_initialization_is_single_flight_and_atomic() -> N
             assert not cache.all_types_ready
             assert cache.type_to_current_hash is None
             assert cache.code_by_hash is None
+            assert cache.type_to_code is None
             assert cache.component_identity_index is None
         assert not follower.done()
 
@@ -108,6 +110,7 @@ async def test_component_cache_initialization_is_single_flight_and_atomic() -> N
     assert cache.all_types_ready
     assert cache.type_to_current_hash == {"ChatInput": {code_hash}, "Chat Input": {code_hash}}
     assert cache.code_by_hash == {code_hash: trusted_code}
+    assert cache.type_to_code == {"ChatInput": trusted_code, "Chat Input": trusted_code}
     assert cache.component_identity_index is not None
     assert cache.component_identity_index.resolve("Chat Input") == frozenset({"ChatInput"})
 
@@ -531,10 +534,10 @@ async def test_seed_bundle_shadowed_by_installed_emits_typed_warning(tmp_path: P
     """When an installed pip dist shadows a same-named seed bundle, installed wins.
 
     Per the deployment doc, installed pip distributions take precedence; the
-    seed copy is dropped and a typed ``seed-bundle-shadowed`` ExtensionError
+    seed copy is dropped and a typed ``seed-bundle-shadowed`` warning
     is appended to the seed result so the diagnostics emitter surfaces the
     misconfiguration.  This test asserts both halves: installed wins in the
-    BundleRegistry, AND the typed error is attached to the seed result that
+    BundleRegistry, AND the typed warning is attached to the seed result that
     flows through ``_emit_extension_diagnostics``.
     """
     import json
@@ -622,10 +625,10 @@ async def test_seed_bundle_shadowed_by_installed_emits_typed_warning(tmp_path: P
     assert record.distribution == "lfx-pilot"
 
     # The seed result that ran through the diagnostics emitter carries the
-    # typed shadowing error so operators can see the misconfiguration.
+    # typed shadowing warning so operators can see the misconfiguration.
     assert captured_diagnostics, "diagnostics emitter was never called"
     all_results = captured_diagnostics[0]
-    shadow_codes = {err.code for r in all_results for err in r.errors}
+    shadow_codes = {warning.code for r in all_results for warning in r.warnings}
     assert "seed-bundle-shadowed" in shadow_codes, (
         f"expected seed-bundle-shadowed in emitted diagnostics; got codes: {sorted(shadow_codes)}"
     )
@@ -737,9 +740,9 @@ async def test_seed_bundle_shadows_dev_emits_generic_bundle_shadowed(tmp_path: P
     # generic typed shadow warning naming both paths.
     assert captured_diagnostics, "diagnostics emitter was never called"
     all_results = captured_diagnostics[0]
-    shadow_errors = [err for r in all_results for err in r.errors if err.code == "bundle-shadowed"]
+    shadow_errors = [warning for r in all_results for warning in r.warnings if warning.code == "bundle-shadowed"]
     assert len(shadow_errors) == 1, (
-        f"expected exactly one bundle-shadowed warning; got {[e.code for r in all_results for e in r.errors]}"
+        f"expected exactly one bundle-shadowed warning; got {[w.code for r in all_results for w in r.warnings]}"
     )
     msg = shadow_errors[0].message
     assert str(dev_path) in msg, msg
@@ -896,6 +899,7 @@ def test_post_swap_hook_invalidates_hash_lookups(tmp_path: Path) -> None:
     component_cache.all_types_ready = True
     component_cache.type_to_current_hash = {"DeltaThing": {"abc123def456"}}  # pragma: allowlist secret
     component_cache.all_known_hashes = {"abc123def456"}  # pragma: allowlist secret
+    component_cache.type_to_code = {"DeltaThing": "# stale trusted code"}
     component_cache.component_identity_index = object()
 
     class _Component:
@@ -931,6 +935,7 @@ def test_post_swap_hook_invalidates_hash_lookups(tmp_path: Path) -> None:
 
     assert component_cache.type_to_current_hash is None
     assert component_cache.all_known_hashes is None
+    assert component_cache.type_to_code is None
     assert component_cache.component_identity_index is None
 
 

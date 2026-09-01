@@ -8,7 +8,6 @@ import { useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import DataTableTab from "@/components/core/dataTableTabComponent";
 import { Button } from "@/components/ui/button";
 import Loading from "@/components/ui/loading";
@@ -36,6 +35,15 @@ interface FilesTabProps {
   setQuantitySelected: (quantity: number) => void;
   isShiftPressed: boolean;
 }
+
+const getFileExtension = (path: string) => {
+  const fileName = path.split("/").pop() ?? "";
+  const extensionStart = fileName.lastIndexOf(".");
+  if (extensionStart <= 0 || extensionStart === fileName.length - 1) {
+    return undefined;
+  }
+  return fileName.slice(extensionStart + 1).toLowerCase();
+};
 
 const FilesTab = ({
   quickFilterText,
@@ -144,10 +152,9 @@ const FilesTab = ({
     if (!actionsButton) {
       return;
     }
-    // Move focus onto the (otherwise unreachable) trigger and replay the key so
-    // the dropdown opens through its native handler, matching a mouse click.
+    // Replay the key before moving focus. Focusing first lets AG Grid remount
+    // the cell and leaves this reference pointing at a detached Radix trigger.
     keyboardEvent.preventDefault();
-    actionsButton.focus();
     actionsButton.dispatchEvent(
       new KeyboardEvent("keydown", {
         key: keyboardEvent.key,
@@ -169,7 +176,7 @@ const FilesTab = ({
       cellClass:
         "cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none",
       cellRenderer: (params) => {
-        const type = params.data.path.split(".")[1]?.toLowerCase();
+        const type = getFileExtension(params.data.path);
         return (
           <div className="flex items-center gap-4 font-medium">
             {params.data.progress !== undefined &&
@@ -231,7 +238,7 @@ const FilesTab = ({
       filter: "agTextColumnFilter",
       editable: false,
       valueFormatter: (params) => {
-        return params.value.split(".")[1]?.toUpperCase();
+        return getFileExtension(params.value)?.toUpperCase();
       },
       cellClass:
         "text-muted-foreground cursor-text select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none",
@@ -271,6 +278,11 @@ const FilesTab = ({
       maxWidth: 60,
       editable: false,
       resizable: false,
+      // The table-level key handler forwards Enter/Space to the Radix trigger.
+      // Keep AG Grid from also treating Space as row selection, which can
+      // remount the cell before the trigger receives the key.
+      suppressKeyboardEvent: (params) =>
+        params.event.key === "Enter" || params.event.key === " ",
       cellClass: "cursor-default",
       cellRenderer: (params) => {
         return (
@@ -392,10 +404,7 @@ const FilesTab = ({
       emptyState={
         <div className="flex h-full flex-col">
           <div className="flex h-full flex-col py-4">
-            <CardsWrapComponent
-              onFileDrop={onFileDrop}
-              dragMessage={t("files.dropToUpload")}
-            >
+            <DragWrapComponent onFileDrop={onFileDrop}>
               <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
                 <div className="flex flex-col items-center gap-2">
                   <h3 className="text-2xl font-semibold">
@@ -409,7 +418,7 @@ const FilesTab = ({
                   {UploadButtonComponent}
                 </div>
               </div>
-            </CardsWrapComponent>
+            </DragWrapComponent>
           </div>
         </div>
       }

@@ -190,15 +190,21 @@ RUN microdnf update -y \
     && microdnf install -y curl git gnupg libpq shadow-utils tar xz \
     && microdnf clean all
 
+RUN python3.14 -m pip install --no-cache-dir --upgrade "pip==26.2.1"
+
 COPY --from=builder-base /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder-base /usr/local/bin/uvx /usr/local/bin/uvx
 COPY --from=builder-base /usr/local/bin/node /usr/local/bin/node
 COPY --from=builder-base /usr/local/lib/node_modules /usr/local/lib/node_modules
 
+COPY ./docker/install_hardened_npm.sh /tmp/install_hardened_npm.sh
+
 # COPY dereferences the npm/npx symlinks from the Node archive. Recreate them
 # against the copied module tree so their relative imports resolve correctly.
 RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
-    && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx
+    && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
+    && sh /tmp/install_hardened_npm.sh \
+    && rm -f /tmp/install_hardened_npm.sh
 
 RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data \
     && mkdir -p /app/data /app/langflow \

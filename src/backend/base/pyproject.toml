@@ -23,7 +23,7 @@ dependencies = [
     "httpx[http2]>=0.27,<1.0.0",
     "h2>=4.4.1",
     "aiofile>=3.9.0,<4.0.0",
-    "uvicorn>=0.30.0,<1.0.0",
+    "uvicorn>=0.45.0,<1.0.0",
     "gunicorn>=25.3.0,<27.0.0",
     "langchain~=1.3.0",
     "langchain-community~=0.4.1",
@@ -78,7 +78,7 @@ dependencies = [
     "opentelemetry-instrumentation-system-metrics>=0.50b0,<1.0.0",
     "prometheus-client>=0.20.0,<1.0.0",
     "aiofiles>=24.1.0,<25.0.0",
-    "pip>=26.0.0,<27.0.0",
+    "pip>=26.2.1,<27.0.0",
     "setuptools>=83.0.0,<84.0.0",
     "nanoid>=2.0.0,<3.0.0",
     "filelock>=3.20.1,<4.0.0",
@@ -116,7 +116,7 @@ dependencies = [
     # 5.6.0 already clears every published transformers advisory (highest patched version is 5.5.0).
     # Do not raise past 5.9.0: docling-ibm-models>=3.13.3 caps transformers<5.9.0 on macOS, and a
     # higher floor silently backtracks the whole docling stack to older releases on darwin only.
-    "transformers>=5.6.0,<6.0.0",
+    "transformers>=5.8.0,<6.0.0",
     # Service-complete runtime dependencies. Provider component SDKs remain
     # owned by lfx-* extension distributions.
     "redis>=7.4.0,<8.0.0",
@@ -309,11 +309,11 @@ fastavro = [
     'fastavro>=1.9.8,<2.0.0; python_version >= "3.13"',
 ]
 gitpython = ["GitPython>=3.1.58"]
-nltk = ["nltk>=3.9.4"]
+nltk = ["nltk>=3.10.3"]
 lark = ["lark==1.2.2"]
 
 # Additional dependencies from requirements
-huggingface = ["huggingface-hub[inference]>=1.0.0,<2.0.0"]
+huggingface = ["huggingface-hub>=1.0.0,<2.0.0"]
 # Backwards-compatible alias: the Exa Search component moved to the lfx-exa
 # bundle and now uses exa-py; metaphor-python is deprecated and unused.
 metaphor = ["exa-py>=1.14,<3"]

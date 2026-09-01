@@ -30,7 +30,11 @@ from lfx.extension.bundle_registry import BundleRecord, get_default_registry
 from lfx.extension.reload import register_post_swap_hook
 from lfx.log.logger import logger
 from lfx.utils.component_aliases import ComponentIdentityIndex, build_component_identity_index
-from lfx.utils.flow_validation import collect_code_by_hash, collect_component_hash_lookups
+from lfx.utils.flow_validation import (
+    collect_code_by_hash,
+    collect_component_code_lookups,
+    collect_component_hash_lookups,
+)
 from lfx.utils.validate_cloud import (
     filter_disabled_components_from_dict,
     is_component_disabled_in_astra_cloud,
@@ -70,6 +74,11 @@ class ComponentCache:
         # substitute the trusted copy for client bytes once the hash gate
         # passes, so a truncated-hash collision can't run attacker code.
         self.code_by_hash: dict[str, str] | None = None
+        # Maps each known component type (and its aliases) to this server's
+        # trusted source for that type. Keyed by type rather than by hash, so a
+        # node whose stored built-in code has merely drifted across versions can
+        # still be rebuilt with the server's current copy.
+        self.type_to_code: dict[str, str] | None = None
         # Collision-aware canonical registry identity lookup used by catalog
         # palette and runtime policy enforcement.
         self.component_identity_index: ComponentIdentityIndex | None = None
@@ -783,13 +792,14 @@ async def _determine_loading_strategy(settings_service: "SettingsService") -> di
 
 def _collect_component_cache_lookups(
     all_types_dict: dict[str, Any],
-) -> tuple[dict[str, set[str]], set[str], dict[str, str], ComponentIdentityIndex]:
+) -> tuple[dict[str, set[str]], set[str], dict[str, str], dict[str, str], ComponentIdentityIndex]:
     """Build every derived component lookup without mutating shared cache state."""
     type_to_hash, all_hashes = collect_component_hash_lookups(all_types_dict)
     return (
         type_to_hash,
         all_hashes,
         collect_code_by_hash(all_types_dict),
+        collect_component_code_lookups(all_types_dict),
         build_component_identity_index(all_types_dict),
     )
 
@@ -806,11 +816,14 @@ def _build_code_hash_lookups(cache: ComponentCache) -> None:
         if all_types_dict is None or (not all_types_dict and not cache.all_types_ready):
             return
 
-        type_to_hash, all_hashes, code_by_hash, identity_index = _collect_component_cache_lookups(all_types_dict)
+        type_to_hash, all_hashes, code_by_hash, type_to_code, identity_index = _collect_component_cache_lookups(
+            all_types_dict
+        )
 
         cache.type_to_current_hash = type_to_hash
         cache.all_known_hashes = all_hashes
         cache.code_by_hash = code_by_hash
+        cache.type_to_code = type_to_code
         cache.component_identity_index = identity_index
         logger.debug(f"Built code hash lookups: {len(type_to_hash)} types, {len(all_hashes)} unique hashes")
 
@@ -910,11 +923,28 @@ def _emit_extension_diagnostics(results: list[LoadResult]) -> None:
     emission; until then we want operators to see what the loader
     rejected without silently dropping the typed payload.
     """
+    optional_missing: dict[tuple[str, str], list[ExtensionError]] = {}
     for result in results:
         for err in result.errors:
             logger.error("Extension load error: %s", format_extension_error(err))
         for warn in result.warnings:
+            if warn.code == "optional-dependency-missing":
+                bundle = result.bundle or "<unknown>"
+                missing_module = warn.content or "<unknown>"
+                missing_root = missing_module.split(".", 1)[0]
+                optional_missing.setdefault((bundle, missing_root), []).append(warn)
+                logger.debug("Suppressed extension optional-dependency detail: %s", format_extension_error(warn))
+                continue
             logger.warning("Extension load warning: %s", format_extension_error(warn))
+    for (bundle, missing_module), warnings_for_dependency in sorted(optional_missing.items()):
+        representative = warnings_for_dependency[0].location or "<unknown>"
+        logger.warning(
+            "Extension optional dependency missing: bundle=%r module=%r skipped_modules=%s representative=%s",
+            bundle,
+            missing_module,
+            len(warnings_for_dependency),
+            representative,
+        )
 
 
 # Discovery-source precedence for cross-source bundle-name collisions.
@@ -1017,9 +1047,8 @@ def _resolve_bundle_shadowing(
             winner_for_bundle.setdefault(result.bundle, (kind, result))
 
     # Second pass: for each result that is NOT the winner, drop its components
-    # and append the typed warning to the result's errors list (mirroring the
-    # original ``seed-bundle-shadowed`` flow so CLI exit-code logic keeps
-    # treating it as a non-fatal diagnostic that stays attached to the loser).
+    # and append a typed warning to the losing result. Shadowing is expected
+    # during bundle graduation and therefore never flips ``LoadResult.ok``.
     for kind in _DISCOVERY_PRECEDENCE:
         for result in sources[kind]:
             if not result.bundle or not result.components:
@@ -1032,7 +1061,7 @@ def _resolve_bundle_shadowing(
             if winner_kind == "installed" and kind == "seed":
                 # Preserve the documented code for the documented pair so the
                 # existing CLI warn-only set and snapshot tests keep working.
-                result.errors.append(
+                result.warnings.append(
                     ExtensionError(
                         code="seed-bundle-shadowed",
                         message=(
@@ -1049,7 +1078,7 @@ def _resolve_bundle_shadowing(
                     )
                 )
             else:
-                result.errors.append(
+                result.warnings.append(
                     ExtensionError(
                         code="bundle-shadowed",
                         message=(
@@ -1266,6 +1295,7 @@ def _publish_bundle_cache(bundle: str, bundle_dict: dict[str, Any]) -> bool:
         component_cache.type_to_current_hash = None
         component_cache.all_known_hashes = None
         component_cache.code_by_hash = None
+        component_cache.type_to_code = None
         component_cache.component_identity_index = None
         return True
 
@@ -1438,12 +1468,13 @@ async def _initialize_component_cache(
                     pending_updates = dict(cache.pending_bundle_updates)
                     cache.pending_bundle_updates.clear()
                 else:
-                    type_to_hash, all_hashes, code_by_hash, identity_index = lookups
+                    type_to_hash, all_hashes, code_by_hash, type_to_code, identity_index = lookups
                     cache.all_types_dict = merged_types
                     cache.all_types_ready = True
                     cache.type_to_current_hash = type_to_hash
                     cache.all_known_hashes = all_hashes
                     cache.code_by_hash = code_by_hash
+                    cache.type_to_code = type_to_code
                     cache.component_identity_index = identity_index
                     cache.initialization_future = None
                     cache.initialization_task = None
@@ -1504,6 +1535,7 @@ async def get_and_cache_all_types_dict(
             cache.type_to_current_hash = None
             cache.all_known_hashes = None
             cache.code_by_hash = None
+            cache.type_to_code = None
             cache.component_identity_index = None
             initialization_task = asyncio.create_task(
                 _initialize_component_cache(cache, settings_service, telemetry_service, initialization_future),

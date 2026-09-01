@@ -9,17 +9,26 @@ The first test asserts that path stays a safe no-op; the rest need the exporters
 the extra is absent.
 """
 
+import builtins
 import importlib.util
 import json
 import os
 import subprocess
 import sys
 
+import httpx
 import pytest
 
 _HAS_OTEL = importlib.util.find_spec("opentelemetry") is not None
 requires_otel = pytest.mark.skipif(not _HAS_OTEL, reason="requires the lfx[otel] extra")
 _TEST_USERINFO = "user:password"  # pragma: allowlist secret
+
+
+def _make_exception_group(message: str, exceptions: list[Exception]) -> BaseException:
+    group_type = getattr(builtins, "ExceptionGroup", None)
+    if group_type is None:
+        group_type = pytest.importorskip("exceptiongroup").ExceptionGroup
+    return group_type(message, exceptions)
 
 
 def _run(probe: str, env_overrides: dict[str, str]) -> subprocess.CompletedProcess:
@@ -280,15 +289,49 @@ def test_span_filter_preserves_attribute_limits_and_drop_count():
     assert exported._attributes.max_value_len == 14
 
 
-@requires_otel
-def test_instrument_fastapi_app_sets_stable_semconv():
-    """The shared FastAPI helper opts into the stable HTTP conventions before instrumenting."""
-    os.environ.pop("OTEL_SEMCONV_STABILITY_OPT_IN", None)
-    from fastapi import FastAPI
-    from lfx.observability import instrument_fastapi_app
+def test_root_error_type_unwraps_a_single_exception_group():
+    from lfx.observability import _root_error_type
 
-    instrument_fastapi_app(FastAPI())
-    assert os.environ.get("OTEL_SEMCONV_STABILITY_OPT_IN") == "http"
+    connection_error = httpx.ConnectError("server unavailable")
+    error_group = _make_exception_group("MCP transport failed", [connection_error])
+
+    assert _root_error_type(error_group) == "ConnectError"
+
+
+def test_root_error_type_keeps_a_multi_exception_group():
+    from lfx.observability import _root_error_type
+
+    error_group = _make_exception_group("MCP transport failed", [ConnectionError(), TimeoutError()])
+
+    assert _root_error_type(error_group) == "ExceptionGroup"
+
+
+@requires_otel
+@pytest.mark.parametrize(
+    ("env_overrides", "expected"),
+    [
+        pytest.param({}, "http", id="default"),
+        pytest.param({"OTEL_SEMCONV_STABILITY_OPT_IN": "http/dup"}, "http/dup", id="operator-override"),
+    ],
+)
+def test_importing_observability_opts_into_stable_semconv(env_overrides: dict[str, str], expected: str):
+    """The opt-in happens at import, which is the only point early enough.
+
+    It used to live in ``instrument_fastapi_app``. That reads as early enough and is not:
+    ``bootstrap_application_telemetry`` runs first on both runtimes and loads OpenTelemetry's
+    instrumentation package, which caches the decision for the process while the variable is
+    still unset. Popping the variable and re-calling the helper cannot restore the old
+    behaviour, because the cache is already set by then.
+
+    Each case runs in a subprocess because the import and the OpenTelemetry decision are both
+    process-wide. The default is stable-only, while an operator can request both conventions
+    during a dashboard migration.
+    """
+    probe = "import os\nimport lfx.observability\nprint(os.environ['OTEL_SEMCONV_STABILITY_OPT_IN'])\n"
+    completed = _run(probe, env_overrides)
+
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.strip() == expected
 
 
 @requires_otel

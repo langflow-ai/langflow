@@ -146,6 +146,9 @@ Supported state actions:
 - `{ "waitForHidden": "<css selector>" }`
 - `{ "waitForText": "<visible text>" }`
 - `{ "wait": 500 }`
+- `{ "scroll": { "selector": "<css selector>", "to": "bottom" } }` — `to` is `top` or
+  `bottom`; use `"by": <pixels>` for a relative scroll, and omit `selector` to scroll the
+  page. Needed for virtualised grids whose tabbable rows only disappear after scrolling.
 
 ## Report
 

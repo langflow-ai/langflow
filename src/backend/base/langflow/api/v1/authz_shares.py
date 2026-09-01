@@ -16,6 +16,7 @@ from sqlmodel import select
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas.authz_shares import ShareCreate, ShareRead, ShareUpdate
 from langflow.services.authorization import ShareAction, ensure_share_permission
+from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import (
@@ -288,6 +289,18 @@ async def _ensure_can_administer_share(
     )
 
 
+def _ensure_supported_share_permission(*, resource_type: str, scope: str, permission_level: str) -> None:
+    """Reject share levels that have no matching public flow product behavior."""
+    if resource_type != "flow" or scope != ShareScope.PUBLIC.value:
+        return
+    if permission_level == SharePermissionLevel.EXECUTE.value:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        detail="PUBLIC flow shares require permission_level 'execute'.",
+    )
+
+
 @router.post("", response_model=ShareRead, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=ShareRead, status_code=status.HTTP_201_CREATED)
 async def create_share(
@@ -315,6 +328,11 @@ async def create_share(
             current_user,
             ShareAction.CREATE,
             share_user_id=owner_id,
+        )
+        _ensure_supported_share_permission(
+            resource_type=payload.resource_type,
+            scope=payload.scope,
+            permission_level=payload.permission_level,
         )
     except HTTPException as exc:
         raise deny_to_404(exc, detail="Resource not found") from exc
@@ -353,6 +371,10 @@ async def create_share(
         obj=f"{payload.resource_type}:{payload.resource_id}",
         result="allow",
         details={
+            # The guard already wrote an ``event: authorization_decision`` row
+            # for the share:create check. This row is the effect, and only it
+            # means a share now exists.
+            "event": AUDIT_EVENT_MUTATION,
             "share_id": str(response.id),
             "scope": payload.scope,
             "target_id": str(payload.target_id) if payload.target_id else None,
@@ -514,6 +536,11 @@ async def update_share(
         share_id=share_id,
         share_user_id=owner_id,
     )
+    _ensure_supported_share_permission(
+        resource_type=row.resource_type,
+        scope=row.scope,
+        permission_level=payload.permission_level,
+    )
 
     # Validate permission_level (422 before DB CHECK).
     try:
@@ -546,6 +573,7 @@ async def update_share(
         obj=f"{response.resource_type}:{response.resource_id}",
         result="allow",
         details={
+            "event": AUDIT_EVENT_MUTATION,
             "share_id": str(response.id),
             "permission_level": response.permission_level,
         },
@@ -598,7 +626,7 @@ async def delete_share(
         action="share:delete",
         obj=f"{snapshot.resource_type}:{snapshot.resource_id}",
         result="allow",
-        details={"share_id": str(share_id)},
+        details={"event": AUDIT_EVENT_MUTATION, "share_id": str(share_id)},
     )
 
 

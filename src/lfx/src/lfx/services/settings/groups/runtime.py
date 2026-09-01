@@ -49,6 +49,18 @@ class RuntimeSettings(BaseModel):
     # Job Queue
     job_queue_type: Literal["asyncio", "redis"] = "asyncio"
     """The job queue backend. Use 'redis' for multi-worker deployments to solve cross-worker JobQueueNotFoundError."""
+    dangerously_allow_multi_worker_without_shared_queue: bool = False
+    """Opt out of the startup guard that refuses ``workers > 1`` with the default
+    in-memory job queue.
+
+    Off by default. Enabling it lets headless deployments take multi-worker
+    throughput without standing up Redis, at the cost of every behavior that
+    needs process-shared state: the v1 ``/build`` editor and playground flows and
+    MCP over SSE stop working, and rate limiting, webhook UI feedback, and the
+    orphan sweep degrade to per-worker or per-node. ``LANGFLOW_JOB_QUEUE_TYPE=redis``
+    remains the supported way to run multiple workers; see
+    ``langflow.__main__.ensure_multi_worker_safe`` for the full list of caveats
+    logged when the bypass is active."""
     redis_queue_host: str | None = None
     """Redis host for the job queue. Falls back to redis_host if not set."""
     redis_queue_port: int | None = None

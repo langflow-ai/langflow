@@ -440,7 +440,8 @@ Therefore, you are locked out of this Langflow instance.
 
 If you aren't an administrator, then a superuser must create and activate a non-superuser account before you can sign in.
 
-If you are the administrator, sign in with a superuser account, or restart Langflow with `LANGFLOW_AUTO_LOGIN=true`.
+If you are the administrator, sign in with a superuser account, and then create and activate users with the [Users API](/api-users).
+Alternatively, restart Langflow with `LANGFLOW_AUTO_LOGIN=true`.
 
 For more information, see [Start Langflow Server with authentication enabled](/api-keys-and-authentication#start-a-langflow-server-with-authentication-enabled).
 
@@ -743,6 +744,8 @@ Startup fails with a `RuntimeError` that explains the in-memory job queue is wor
 Polling and streaming delivery use a follow-up `GET /api/v1/build/<job_id>/events` request after the initial build POST, and the load balancer can route those requests to different workers, which produces intermittent "Job not found" errors.
 
 Set `LANGFLOW_JOB_QUEUE_TYPE=redis` on all workers so queue state is shared. This supports all `LANGFLOW_EVENT_DELIVERY` modes.
+
+If the deployment is headless and never uses the visual editor or MCP over SSE, you can set `LANGFLOW_DANGEROUSLY_ALLOW_MULTI_WORKER_WITHOUT_SHARED_QUEUE=true` to start anyway. This is unsupported with the Langflow UI and with MCP over SSE, and several subsystems become per-worker. Read [Run multiple workers without Redis](./deployment-multi-worker#run-multiple-workers-without-redis) before enabling it.
 
 ### Builds are cancelled unexpectedly
 

@@ -62,7 +62,6 @@ const externalLinkIconClasses = {
   icon: "icons-parameters-comp absolute right-3 h-4 w-4 shrink-0",
   editNodeTop: "top-[-1.4rem] h-5",
   normalTop: "top-[-2.1rem] h-7",
-  iconTop: "top-[-1.7rem]",
 };
 
 export default function TextAreaComponent({
@@ -78,6 +77,7 @@ export default function TextAreaComponent({
   isToolMode = false,
   nodeInformationMetadata,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<string, TextAreaComponentType>): JSX.Element | null {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -211,7 +211,8 @@ export default function TextAreaComponent({
         disabled={disabled}
         className={getInputClassName()}
         placeholder={getPlaceholder(disabled, placeholder)}
-        aria-label={disabled ? displayValue : undefined}
+        aria-label={disabled && !ariaLabelledBy ? displayValue : undefined}
+        aria-labelledby={ariaLabelledBy}
         ref={inputRef}
         // Keyed on the secret-ness, not the live type, so revealing a masked
         // value doesn't re-arm autofill.
@@ -234,16 +235,21 @@ export default function TextAreaComponent({
             onClick={() => changeWebhookFormat("multiline")}
             aria-label={t("input.expandTextEditor")}
             className={cn(
-              // `before:` pseudo-element pads the touch target out to the
-              // WCAG 2.5.8 minimum (24x24) without resizing the visible
-              // icon or shifting its position. The button is already
-              // `position: absolute` (via externalLinkIconClasses.icon),
-              // which is enough to anchor the pseudo-element.
-              "flex items-center justify-center before:absolute before:-inset-1 before:content-['']",
+              "flex items-center justify-center",
               externalLinkIconClasses.icon,
               editNode
-                ? externalLinkIconClasses.editNodeTop
-                : externalLinkIconClasses.iconTop,
+                ? // `before:` pseudo-element pads the touch target out to the
+                  // WCAG 2.5.8 minimum (24x24) without resizing the compact
+                  // edit-node layout; the button is `position: absolute` (via
+                  // externalLinkIconClasses.icon), which anchors the pseudo.
+                  cn(
+                    externalLinkIconClasses.editNodeTop,
+                    "before:absolute before:-inset-1 before:content-['']",
+                  )
+                : // Real 24x24 box (WCAG 2.5.8) — rect-based checkers don't
+                  // count pseudo-element hit areas. The offsets keep the 16px
+                  // icon exactly where the old right-3/top-[-1.7rem] box put it.
+                  "right-2 top-[-1.95rem] h-6 w-6",
             )}
           >
             {renderIcon()}

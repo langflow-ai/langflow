@@ -1,6 +1,6 @@
 [project]
 name = "lfx-datastax"
-version = "0.1.3"
+version = "0.1.6"
 description = "DataStax and Cassandra components as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -45,7 +45,7 @@ Repository = "https://github.com/langflow-ai/langflow"
 lfx-datastax = "lfx_datastax"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.31.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]

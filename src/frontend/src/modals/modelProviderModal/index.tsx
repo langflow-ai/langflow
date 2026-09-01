@@ -6,11 +6,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import type { ModelTypeFilter } from "@/types/models";
 import ModelProvidersContent from "./components/ModelProvidersContent";
 
-interface ModelProviderModalProps {
+interface ModelProviderModalProps extends ProviderScopeParams {
   open: boolean;
   onClose: (opts?: { hasChanges?: boolean }) => void;
   modelType: ModelTypeFilter;
@@ -20,6 +21,8 @@ const ModelProviderModal = ({
   open,
   onClose,
   modelType,
+  flowId,
+  projectId,
 }: ModelProviderModalProps) => {
   const { t } = useTranslation();
   const { refreshAllModelInputs } = useRefreshModelInputs();
@@ -57,7 +60,10 @@ const ModelProviderModal = ({
 
         <div className="h-[513px] overflow-hidden">
           <ModelProvidersContent
+            key={`${flowId ?? ""}:${projectId ?? ""}`}
             modelType={modelType}
+            flowId={flowId}
+            projectId={projectId}
             onFlushRef={flushRef}
             onHasChangesRef={hasChangesRef}
           />

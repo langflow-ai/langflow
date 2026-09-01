@@ -11,7 +11,9 @@ Design principles enforced here:
 - Live cursor: After acquiring the lock, the current cursor_id is re-read from the DB
   (not the dispatch-time snapshot) so the pending message fetch always starts from the
   true latest position, even if a prior job advanced the cursor while this job waited.
-- Path safety: kb_path is validated against kb_root before any filesystem operation.
+- Path safety: a local path is resolved only for local Chroma, and is containment-checked
+  against the KB root before any filesystem operation. Remote-backed Memory Bases resolve
+  no path at all.
 
 The write goes through whichever backend the KB is configured with, resolved from the
 ``knowledge_base`` row — so a Memory Base on OpenSearch or Chroma Cloud ingests to that
@@ -26,7 +28,6 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import types
 import weakref
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -34,10 +35,15 @@ from typing import TYPE_CHECKING
 
 from lfx.base.knowledge_bases.backends import create_backend
 from lfx.log.logger import logger
+from lfx.workflow.end_user_identity import end_user_id_from_scoped_session
 from sqlalchemy import text
 from sqlmodel import Session, col, select
 
-from langflow.api.utils.kb_helpers import KBIngestionHelper, KBStorageHelper, resolve_backend_selection
+from langflow.api.utils.kb_helpers import (
+    KBIngestionHelper,
+    resolve_backend_selection,
+    resolve_local_store_path,
+)
 from langflow.services.database.models.memory_base.model import (
     MemoryBasePreprocessingOutput,
     MemoryBaseSession,
@@ -50,12 +56,19 @@ from langflow.services.memory_base.document_builders import (
     build_preprocessed_document,
     sync_kb_stats_to_record,
 )
-from langflow.services.memory_base.kb_path_helpers import hash_session_id, validate_kb_path
+from langflow.services.memory_base.kb_path_helpers import hash_session_id
 from langflow.services.memory_base.preprocessing import DEFAULT_KILL_PHRASE, run_preprocessing
+from langflow.services.memory_base.provider_scope import (
+    MemoryProviderPolicies,
+    preflight_memory_provider_use,
+    resolve_memory_provider_scope,
+)
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 
 if TYPE_CHECKING:
     import uuid
-    from pathlib import Path
+
+    from lfx.services.model_provider_policy import ModelProviderPolicySnapshot
 
     from langflow.services.jobs.service import JobService
 
@@ -73,7 +86,8 @@ class IngestionRequest:
     flow_id: uuid.UUID
     kb_name: str
     kb_username: str
-    user_id: uuid.UUID
+    owner_user_id: uuid.UUID
+    actor_user_id: uuid.UUID
     embedding_provider: str
     embedding_model: str
     cursor_id: uuid.UUID | None
@@ -188,6 +202,79 @@ async def _read_live_cursor(db: Session, memory_base_id: uuid.UUID, session_id: 
 
 
 async def ingest_memory_task(*, request: IngestionRequest) -> dict:
+    """Re-resolve and bind trusted provider scope before distributed ingestion."""
+    async with session_scope() as db:
+        provider_scope = await resolve_memory_provider_scope(
+            db,
+            memory_base_id=request.memory_base_id,
+            owner_user_id=request.owner_user_id,
+            actor_user_id=request.actor_user_id,
+        )
+
+    provider_policies = await preflight_memory_provider_use(
+        provider_scope,
+        embedding_provider=request.embedding_provider,
+        preprocessing=request.preprocessing,
+        preproc_model=request.preproc_model,
+    )
+    with scoped_model_provider_policy_for_flow(
+        provider_scope.flow,
+        user_id=request.actor_user_id,
+        is_superuser=provider_scope.is_superuser,
+    ):
+        return await _ingest_memory_task_in_scope(
+            request=request,
+            provider_policies=provider_policies,
+        )
+
+
+async def _build_embeddings_for_owner(
+    *,
+    provider: str,
+    model: str,
+    owner_user_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+    provider_policy: ModelProviderPolicySnapshot,
+):
+    """Build with owner variables while preserving the actor's scoped decision."""
+    if owner_user_id == actor_user_id:
+        user_stub = type("MemoryCredentialOwner", (), {"id": owner_user_id})()
+        return await KBIngestionHelper.build_embeddings(provider, model, user_stub)
+
+    from lfx.base.models.unified_models import get_embeddings
+    from lfx.base.models.unified_models.class_registry import (
+        EMBEDDING_PARAM_MAPPINGS,
+        EMBEDDING_PROVIDER_CLASS_MAPPING,
+    )
+
+    embedding_class = EMBEDDING_PROVIDER_CLASS_MAPPING.get(provider)
+    param_mapping = EMBEDDING_PARAM_MAPPINGS.get(provider)
+    if not embedding_class or not param_mapping:
+        msg = f"Embedding provider '{provider}' is not registered"
+        raise ValueError(msg)
+    selected_option = {
+        "name": model,
+        "provider": provider,
+        "category": provider,
+        "icon": provider,
+        "metadata": {
+            "embedding_class": embedding_class,
+            "param_mapping": param_mapping,
+            "model_type": "embeddings",
+        },
+    }
+    return get_embeddings(
+        model=[selected_option],
+        user_id=owner_user_id,
+        provider_policy=provider_policy,
+    )
+
+
+async def _ingest_memory_task_in_scope(
+    *,
+    request: IngestionRequest,
+    provider_policies: MemoryProviderPolicies,
+) -> dict:
     """Ingest pending output messages from a session into the target Knowledge Base.
 
     Accepts a single ``IngestionRequest`` dataclass that bundles all required parameters.
@@ -208,7 +295,8 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
     flow_id = request.flow_id
     kb_name = request.kb_name
     kb_username = request.kb_username
-    user_id = request.user_id
+    owner_user_id = request.owner_user_id
+    actor_user_id = request.actor_user_id
     embedding_provider = request.embedding_provider
     embedding_model = request.embedding_model
     cursor_id = request.cursor_id
@@ -219,6 +307,11 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
     preproc_instructions = request.preproc_instructions
     preproc_kill_phrase = request.preproc_kill_phrase or DEFAULT_KILL_PHRASE
 
+    # Serving plane: recover the end-user id from the scoped session id (the one identity
+    # signal every ingestion path carries — live run, regenerate, manual trigger — since a
+    # graph is not available here). None off / editor / anonymous, so nothing is stamped.
+    end_user_id = end_user_id_from_scoped_session(session_id)
+
     hashed_sid = hash_session_id(session_id)
     await logger.adebug(
         "Ingestion job started | memory_base=%s session=%s dispatch_cursor=%s job=%s",
@@ -227,15 +320,9 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
         cursor_id,
         task_job_id,
     )
-    kb_root = KBStorageHelper.get_root_path()
-    if not kb_root:
-        msg = "Knowledge base root path is not configured"
-        raise RuntimeError(msg)
-
-    kb_path: Path = kb_root / kb_username / kb_name
-
-    # ---- Path traversal guard ----
-    validate_kb_path(kb_root, kb_path)
+    # The on-disk path is resolved later, once the backend is known — a Memory Base
+    # on a remote vector store needs no local directory, so requiring one up front
+    # would fail an ingestion that has no business touching this box's filesystem.
 
     # ---- 0. Acquire per-session serialization lock ----
     async with session_scope() as db:
@@ -317,7 +404,9 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
                         preproc_model=preproc_model,
                         preproc_instructions=preproc_instructions,
                         kill_phrase=preproc_kill_phrase,
-                        user_id=user_id,
+                        owner_user_id=owner_user_id,
+                        actor_user_id=actor_user_id,
+                        provider_policy=provider_policies.preprocessing,
                     )
                     if result.status == "skipped":
                         # Kill phrase — record the skip, advance the cursor, but
@@ -370,10 +459,11 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
                     flow_id=str(flow_id),
                     job_id=job_id_str,
                     preproc_output_id=str(preproc_row.id),
+                    end_user_id=end_user_id,
                 )
             else:
                 documents = build_documents_from_messages(
-                    messages, session_id=session_id, flow_id=str(flow_id), job_id=job_id_str
+                    messages, session_id=session_id, flow_id=str(flow_id), job_id=job_id_str, end_user_id=end_user_id
                 )
 
             if not documents:
@@ -384,15 +474,24 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
                 return {"message": "Job cancelled before ingestion", "ingested": 0}
 
             # ---- 4. Open the KB's vector-store backend, write, then sync metadata ----
-            user_stub = types.SimpleNamespace(id=user_id)
-            embeddings = await KBIngestionHelper.build_embeddings(embedding_provider, embedding_model, user_stub)
+            embeddings = await _build_embeddings_for_owner(
+                provider=embedding_provider,
+                model=embedding_model,
+                owner_user_id=owner_user_id,
+                actor_user_id=actor_user_id,
+                provider_policy=provider_policies.embedding,
+            )
 
-            # Resolved from the knowledge_base row (sidecar only as legacy
-            # fallback), so an ingestion running on a replica that has never
-            # touched this KB's directory still writes to the configured store
-            # instead of silently creating a local one.
-            backend_type, backend_config = await resolve_backend_selection(
-                user_id=user_id, kb_name=kb_name, kb_path=kb_path
+            # Resolved from the knowledge_base row, so an ingestion running on a
+            # replica that has never touched this KB's directory still writes to
+            # the configured store instead of silently creating a local one.
+            backend_type, backend_config = await resolve_backend_selection(user_id=owner_user_id, kb_name=kb_name)
+            # ``None`` for every remote backend; only local Chroma gets a directory.
+            kb_path = resolve_local_store_path(
+                kb_name,
+                kb_username,
+                backend_type=backend_type,
+                backend_config=backend_config,
             )
             backend = create_backend(
                 backend_type,
@@ -400,7 +499,7 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
                 kb_path=kb_path,
                 backend_config=backend_config,
                 embedding_function=embeddings,
-                user_id=user_id,
+                user_id=owner_user_id,
             )
             written = 0
             try:
@@ -414,7 +513,7 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
                 )
 
                 if written == len(documents):
-                    await sync_kb_stats_to_record(user_id=user_id, kb_name=kb_name, backend=backend)
+                    await sync_kb_stats_to_record(user_id=owner_user_id, kb_name=kb_name, backend=backend)
             except Exception:
                 await logger.aerror(
                     "Ingestion write failed | memory_base=%s session=%s job=%s. Rolling back partial writes...",
@@ -428,7 +527,7 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
                     kb_name,
                     backend_type=backend_type,
                     backend_config=backend_config,
-                    user_id=user_id,
+                    user_id=owner_user_id,
                 )
                 raise
             finally:
@@ -442,7 +541,7 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
                     kb_name,
                     backend_type=backend_type,
                     backend_config=backend_config,
-                    user_id=user_id,
+                    user_id=owner_user_id,
                 )
                 return {"message": "Job cancelled during ingestion", "ingested": 0}
 
