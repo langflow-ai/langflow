@@ -58,6 +58,22 @@ class LCModelComponent(Component):
     model_provider_id: str | None = None
     display_name: str = "Model Name"
     description: str = "Model Description"
+
+    @property
+    def detailed_thinking(self) -> bool:
+        if "_attributes" in self.__dict__ and "detailed_thinking" in self.__dict__["_attributes"]:
+            return bool(self.__dict__["_attributes"]["detailed_thinking"])
+        if "_inputs" in self.__dict__ and "detailed_thinking" in self.__dict__["_inputs"]:
+            val = self.__dict__["_inputs"]["detailed_thinking"].value
+            return bool(val) if val is not None else False
+        return False
+
+    @detailed_thinking.setter
+    def detailed_thinking(self, value: bool) -> None:
+        if "_attributes" not in self.__dict__:
+            self.__dict__["_attributes"] = {}
+        self.__dict__["_attributes"]["detailed_thinking"] = bool(value)
+
     trace_type = "llm"
     metadata = {
         "keywords": [
