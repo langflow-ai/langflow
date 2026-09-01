@@ -26,7 +26,6 @@ from lfx.utils.file_path_security import (
     package_resource_root,
 )
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_database_url_for_ssrf
-from lfx.utils.trusted_flow import packaged_flow_run_scope
 
 SCOPE = str(uuid.uuid4())
 
@@ -103,16 +102,23 @@ class TestPackagedFlowPackageExemption:
 
     A write into the installed component library is code execution on the next component
     discovery, so every caller that gates a *write destination* must declare ``for_write``.
-    These assert the property at the gate and at each write-capable call site's argument.
+    ``allow_package_read`` defaults to False and is derived per component from its own graph
+    (``component_may_read_package_resources``), so nothing is exempt by ambient state.
     """
 
-    def test_read_is_allowed_inside_the_run_scope(self):
-        with packaged_flow_run_scope():
-            enforce_local_file_access(str(package_resource_root()), scope_ids=(SCOPE,))
+    def test_read_is_allowed_for_a_packaged_graph(self):
+        enforce_local_file_access(str(package_resource_root()), scope_ids=(SCOPE,), allow_package_read=True)
 
-    def test_write_is_refused_inside_the_run_scope(self):
-        with packaged_flow_run_scope(), pytest.raises(LocalFileAccessError):
-            enforce_local_file_access(str(package_resource_root()), scope_ids=(SCOPE,), for_write=True)
+    def test_write_is_refused_even_for_a_packaged_graph(self):
+        with pytest.raises(LocalFileAccessError):
+            enforce_local_file_access(
+                str(package_resource_root()), scope_ids=(SCOPE,), allow_package_read=True, for_write=True
+            )
+
+    def test_read_is_refused_without_the_packaged_graph(self):
+        """Default is closed: the exemption is opt-in per component, from its own graph."""
+        with pytest.raises(LocalFileAccessError):
+            enforce_local_file_access(str(package_resource_root()), scope_ids=(SCOPE,))
 
     def test_exemption_is_the_component_library_not_the_whole_package(self):
         """A narrower root is a smaller blast radius if the write guard is ever missed."""

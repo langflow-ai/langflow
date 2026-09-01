@@ -7,7 +7,11 @@ from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.services.deps import get_settings_service
 from lfx.template.field.base import Output
-from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
+from lfx.utils.file_path_security import (
+    component_file_access_scopes,
+    component_may_read_package_resources,
+    enforce_local_file_access,
+)
 
 
 class DirectoryComponent(Component):
@@ -120,7 +124,13 @@ class DirectoryComponent(Component):
 
         # Security: confine directory reads to the storage dir in restricted (multi-tenant)
         # mode so a tenant cannot recursively read arbitrary server directories.
-        resolved_path = str(enforce_local_file_access(resolved_path, scope_ids=component_file_access_scopes(self)))
+        resolved_path = str(
+            enforce_local_file_access(
+                resolved_path,
+                scope_ids=component_file_access_scopes(self),
+                allow_package_read=component_may_read_package_resources(self),
+            )
+        )
 
         # If no types are specified, use all supported types
         if not types:
