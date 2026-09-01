@@ -23,12 +23,12 @@ from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
-from lfx_bundles.ollama.ollama import ChatOllamaComponent
-from lfx_bundles.ollama.ollama_embeddings import OllamaEmbeddingsComponent
+from lfx_ollama.components.ollama.ollama import ChatOllamaComponent
+from lfx_ollama.components.ollama.ollama_embeddings import OllamaEmbeddingsComponent
 
 BASE_URL = "http://localhost:11434"
-MODULE_EMBEDDINGS = "lfx_bundles.ollama.ollama_embeddings"
-MODULE_CHAT = "lfx_bundles.ollama.ollama"
+MODULE_EMBEDDINGS = "lfx_ollama.components.ollama.ollama_embeddings"
+MODULE_CHAT = "lfx_ollama.components.ollama.ollama"
 
 # Verbatim from the live daemon: the cloud model is listed but cannot be inspected.
 TAGS = {
