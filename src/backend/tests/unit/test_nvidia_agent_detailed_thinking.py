@@ -3,6 +3,7 @@
 import pytest
 from lfx.base.models.model import DETAILED_THINKING_PREFIX, LCModelComponent
 from lfx.components.models_and_agents.agent import AgentComponent
+
 from tests.unit.mock_language_model import MockLanguageModel
 
 
@@ -49,8 +50,8 @@ async def test_lc_model_get_chat_result_handles_missing_detailed_thinking():
     # Ensure detailed_thinking not in attributes (simulates non-Nemotron model)
     called = {}
 
-    async def fake_get_chat_result(runnable=None, stream=False, input_value=None, system_message=None):
-        called["system_message"] = system_message
+    async def fake_get_chat_result(**kwargs):
+        called["system_message"] = kwargs.get("system_message")
         from lfx.schema.message import Message as Msg
 
         return Msg(text="ok")
@@ -81,8 +82,8 @@ async def test_lc_model_prefixes_system_message_when_detailed_thinking_true():
 
     called = {}
 
-    async def fake_get_chat_result(runnable=None, stream=False, input_value=None, system_message=None):
-        called["system_message"] = system_message
+    async def fake_get_chat_result(**kwargs):
+        called["system_message"] = kwargs.get("system_message")
         from lfx.schema.message import Message as Msg
 
         return Msg(text="ok")
