@@ -764,13 +764,60 @@ class TestWebSearchComponent(ComponentTestBaseWithoutClient):
         assert result.iloc[0]["result"] == "fallback"
 
     def test_empty_query_error(self):
-        """Test that empty query raises ValueError."""
+        """Test that empty query returns an error DataFrame instead of raising."""
         component = WebSearchComponent()
         component.query = ""
         component.timeout = 5
 
-        with pytest.raises(ValueError, match="Empty search query"):
-            component.perform_web_search()
+        result = component.perform_web_search()
+
+        assert isinstance(result, DataFrame)
+        assert result.iloc[0]["snippet"] == "Empty search query"
+        assert component.status == "Empty search query"
+
+    def test_empty_query_after_sanitize_returns_error(self):
+        """Single-character inputs that sanitize to empty must not crash."""
+        for query in ["<", ">", '"', "'", "<>", " ", "  "]:
+            component = WebSearchComponent()
+            component.query = query
+            component.timeout = 5
+
+            result = component.perform_web_search()
+
+            assert isinstance(result, DataFrame)
+            assert result.iloc[0]["snippet"] == "Empty search query"
+            assert component.status == "Empty search query"
+
+    def test_single_character_query_succeeds(self):
+        """Single-character valid query should perform a normal search."""
+        component = WebSearchComponent()
+        component.query = "a"
+        component.timeout = 5
+
+        mock_response = Mock()
+        mock_response.text = """
+        <html>
+            <div class="result">
+                <a class="result__a" href="https://example.com">Test Title</a>
+                <a class="result__snippet">Test snippet</a>
+            </div>
+        </html>
+        """
+        mock_response.headers = {"content-type": "text/html"}
+        mock_response.raise_for_status.return_value = None
+
+        mock_page_response = Mock()
+        mock_page_response.text = "<html><body>Page content</body></html>"
+        mock_page_response.raise_for_status.return_value = None
+
+        with (
+            patch("lfx.components.data_source.web_search.requests.get", return_value=mock_response),
+            patch.object(WebSearchComponent, "_safe_get_url", return_value=mock_page_response),
+        ):
+            result = component.perform_web_search()
+
+        assert isinstance(result, DataFrame)
+        assert len(result) == 1
 
     @patch("lfx.components.data_source.web_search.requests.get")
     def test_news_search_with_location(self, mock_get):
