@@ -9,6 +9,8 @@ from lfx.field_typing import Tool
 from lfx.inputs.inputs import MultilineInput
 from lfx.schema.data import Data
 
+WIKIDATA_API_TIMEOUT = 10.0
+
 
 class WikidataSearchSchema(BaseModel):
     query: str = Field(..., description="The search query for Wikidata")
@@ -29,7 +31,7 @@ class WikidataAPIWrapper(BaseModel):
         }
 
         # Send request to Wikidata API
-        response = httpx.get(self.wikidata_api_url, params=params)
+        response = httpx.get(self.wikidata_api_url, params=params, timeout=WIKIDATA_API_TIMEOUT)
         response.raise_for_status()
         response_json = response.json()
 
