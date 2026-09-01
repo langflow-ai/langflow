@@ -476,6 +476,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "IBM", name: "ibm", icon: "WatsonxAI" },
   { display_name: "IBM Confluent", name: "confluent", icon: "Confluent" },
   { display_name: "Icosa Computing", name: "icosacomputing", icon: "Icosa" },
+  { display_name: "IFlytek Spark", name: "iflytek", icon: "IFlytek" },
   { display_name: "JigsawStack", name: "jigsawstack", icon: "JigsawStack" },
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
   { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
