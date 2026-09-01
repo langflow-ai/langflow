@@ -359,6 +359,7 @@ def test_failing_flow_marks_the_span_as_an_error_without_leaking_the_message():
     assert len(result["spans"]) == 1
     span = result["spans"][0]
     assert span["status"] == "ERROR"
+    assert span["description"] == "KeyError"
     assert span["attrs"]["status"] == "error"
     assert span["attrs"]["error.type"] == "KeyError"
     # The wrapped message embeds component output, which must not reach the operator's APM.
