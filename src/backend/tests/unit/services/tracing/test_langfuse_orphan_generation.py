@@ -295,13 +295,18 @@ class TestRootGenerationNestsUnderFlowTrace:
                 client.shutdown()
 
         spans = {s.name: s for s in exporter.get_finished_spans()}
-        assert "flow-xyz" in spans, f"missing flow root span; got {list(spans)}"
+        assert "repro" in spans, f"missing flow root span; got {list(spans)}"
         assert "Ollama" in spans, f"missing component span; got {list(spans)}"
         assert "ChatOllama" in spans, f"missing generation span; got {list(spans)}"
 
-        root_span = spans["flow-xyz"]
+        root_span = spans["repro"]
         component_span = spans["Ollama"]
         generation_span = spans["ChatOllama"]
+
+        # Root span carries the display name as the trace name (issue #14865),
+        # and keeps the flow UUID in metadata rather than as the name.
+        assert root_span.attributes.get("langfuse.trace.name") == "repro"
+        assert root_span.attributes.get("langfuse.observation.metadata.flow_id") == "flow-xyz"
 
         # The generation is recorded as a langfuse generation (carries token usage).
         assert generation_span.attributes.get("langfuse.observation.type") == "generation"
@@ -311,6 +316,44 @@ class TestRootGenerationNestsUnderFlowTrace:
         # And nest under the component span (not be a root of its own trace).
         assert generation_span.parent is not None
         assert generation_span.parent.span_id == component_span.context.span_id
+
+
+class TestFlowNameParsing:
+    """``LangFuseTracer`` parses ``flow_name``/``flow_id`` out of ``trace_name``.
+
+    ``run_name`` is built as ``f"{flow_name} - {flow_id}"`` in graph/base.py, so a
+    flow name that itself contains ``" - "`` must not truncate the display name.
+    The separator is split from the right so both halves survive.
+    """
+
+    def _make_tracer(self, trace_name: str):
+        import uuid
+
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        with patch("langflow.services.tracing.langfuse._get_or_create_shared_client") as mock_client:
+            mock_client.return_value.auth_check.return_value = True
+            mock_client.return_value.start_span.return_value.__enter__ = lambda s: s
+            mock_client.return_value.start_span.return_value.__exit__ = lambda *_: None
+            mock_client.return_value.start_span.return_value.id = "root-span-id"
+            mock_client.return_value.start_span.return_value.update_trace = lambda **_: None
+            return LangFuseTracer(
+                trace_name=trace_name,
+                trace_type="flow",
+                project_name="test",
+                trace_id=uuid.uuid4(),
+            )
+
+    def test_flow_name_without_separator(self):
+        tracer = self._make_tracer("repro - flow-xyz")
+        assert tracer.flow_name == "repro"
+        assert tracer.flow_id == "flow-xyz"
+
+    def test_flow_name_containing_separator(self):
+        # Regression for #14865: a display name with " - " must not be truncated.
+        tracer = self._make_tracer("Customer - Agent - flow-xyz")
+        assert tracer.flow_name == "Customer - Agent"
+        assert tracer.flow_id == "flow-xyz"
 
 
 def test_handler_deepcopy_returns_self(monkeypatch):
