@@ -388,8 +388,10 @@ async def test_patch_user_password_denial_is_audited(client: AsyncClient, logged
         obj=f"user:{active_user.id}",
         result="deny",
         details={
+            "event": "access",
+            "status_code": 400,
+            "reason": "password_update_forbidden",
             "fields_changed": ["password"],
-            "reason": "administration_required",
             "source": "manual",
             "operation_id": "cli-password-denial",
         },

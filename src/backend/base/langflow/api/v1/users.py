@@ -18,14 +18,24 @@ from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import PasswordResetRequest, UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.utils import get_current_user, get_current_user_optional
-from langflow.services.authorization.admin import administration_audit_details, ensure_administration_permission
+from langflow.services.authorization.admin import (
+    ADMINISTRATION_REQUIRED_REASON,
+    administration_audit_details,
+    administration_denied,
+    is_administrator,
+)
+from langflow.services.authorization.audit import (
+    AUDIT_EVENT_ACCESS,
+    AUDIT_EVENT_MUTATION,
+    audit_decision,
+    stage_audit_decision,
+)
 from langflow.services.authorization.lifecycle import (
     acquire_identity_mutation_lock,
     safe_identity_mutation_committed,
     stage_identity_mutation,
     validate_identity_mutation,
 )
-from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
@@ -34,23 +44,53 @@ from langflow.services.deps import get_auth_service, get_authorization_service, 
 router = APIRouter(tags=["Users"], prefix="/users")
 OperationId = Annotated[str | None, Header(alias="X-Langflow-Operation-ID", max_length=128)]
 _LEGACY_SUPERUSER_DENIAL = "The user doesn't have enough privileges"
+_PERMISSION_DENIED = "Permission denied"
+_SUPERUSER_REQUIRED_HEADERS = {"X-Langflow-Error-Code": "superuser_required"}
+_ACCESS_CEILING_HEADERS = {"X-Langflow-Error-Code": "access_ceiling"}
+
+
+async def _audit_deny(
+    *,
+    user_id: UUID | None,
+    action: str,
+    obj: str,
+    status_code: int,
+    reason: str,
+    operation_id: str | None = None,
+    fields_changed: list[str] | None = None,
+) -> None:
+    details: dict = {"event": AUDIT_EVENT_ACCESS, "status_code": status_code, "reason": reason}
+    if fields_changed is not None:
+        details["fields_changed"] = fields_changed
+    await audit_decision(
+        user_id=user_id,
+        action=action,
+        obj=obj,
+        result="deny",
+        details=administration_audit_details(details, operation_id=operation_id),
+    )
 
 
 async def _require_user_administrator(
     user: User,
     *,
+    action: str,
+    obj: str,
     operation_id: str | None = None,
     denial_detail: str | None = None,
 ) -> None:
-    await ensure_administration_permission(
-        user,
-        resource="user",
-        authorization_service=get_authorization_service(),
-        action="user:manage",
-        obj="user:*",
+    """Allow superusers or a plugin-delegated ``user:manage`` administrator."""
+    if await is_administrator(user, resource="user", authorization_service=get_authorization_service()):
+        return
+    await _audit_deny(
+        user_id=user.id,
+        action=action,
+        obj=obj,
+        status_code=403,
+        reason=ADMINISTRATION_REQUIRED_REASON,
         operation_id=operation_id,
-        denial_detail=denial_detail,
     )
+    raise administration_denied(denial_detail, resource="user")
 
 
 async def _require_user_administrator_dependency(
@@ -65,6 +105,8 @@ async def _require_user_administrator_dependency(
         )
     await _require_user_administrator(
         current_user,
+        action="user:read",
+        obj="user:*",
         operation_id=operation_id,
         denial_detail=_LEGACY_SUPERUSER_DENIAL,
     )
@@ -102,12 +144,17 @@ async def add_user(
     is_admin_caller = bool(
         current_user is not None
         and current_user.is_active
-        and (
-            current_user.is_superuser
-            or await authorization_service.can_administer(user_id=current_user.id, resource="user")
-        )
+        and await is_administrator(current_user, resource="user", authorization_service=authorization_service)
     )
     if not is_admin_caller and (auth_settings.AUTO_LOGIN or not auth_settings.ENABLE_SIGNUP):
+        await _audit_deny(
+            user_id=current_user.id if current_user is not None else None,
+            action="user:create",
+            obj="user:*",
+            status_code=403,
+            reason="public_registration_disabled",
+            operation_id=operation_id,
+        )
         raise HTTPException(status_code=403, detail="Public user registration is disabled.")
 
     new_user = User.model_validate(user, from_attributes=True)
@@ -126,9 +173,26 @@ async def add_user(
         await session.refresh(new_user)
         folder = await get_or_create_default_folder(session, new_user.id)
         if not folder:
+            await session.rollback()
+            await _audit_deny(
+                user_id=current_user.id if current_user is not None else None,
+                action="user:create",
+                obj=f"user:{new_user.id}",
+                status_code=500,
+                reason="default_project_creation_failed",
+                operation_id=operation_id,
+            )
             raise HTTPException(status_code=500, detail="Error creating default project")
     except IntegrityError as e:
         await session.rollback()
+        await _audit_deny(
+            user_id=current_user.id if current_user is not None else None,
+            action="user:create",
+            obj="user:*",
+            status_code=400,
+            reason="username_unavailable",
+            operation_id=operation_id,
+        )
         raise HTTPException(status_code=400, detail="This username is unavailable.") from e
 
     lifecycle_mutation = AuthorizationMutation(
@@ -143,25 +207,38 @@ async def add_user(
             is_superuser=new_user.is_superuser,
         ),
     )
+    audit_details = administration_audit_details(
+        {
+            "event": AUDIT_EVENT_MUTATION,
+            "created_by": "admin" if is_admin_caller else "signup",
+        },
+        operation_id=operation_id,
+        source="manual" if is_admin_caller else "signup",
+    )
     try:
         await stage_identity_mutation(authorization_service, session, lifecycle_mutation)
+        audit_staged = stage_audit_decision(
+            session=session,
+            user_id=current_user.id if current_user is not None else new_user.id,
+            action="user:create",
+            obj=f"user:{new_user.id}",
+            result="allow",
+            details=audit_details,
+        )
         await session.commit()
     except Exception:
         await session.rollback()
         raise
 
     await safe_identity_mutation_committed(authorization_service, lifecycle_mutation)
-    await audit_decision(
-        user_id=current_user.id if current_user is not None else new_user.id,
-        action="user:create",
-        obj=f"user:{new_user.id}",
-        result="allow",
-        details=administration_audit_details(
-            {"created_by": "admin" if is_admin_caller else "signup"},
-            operation_id=operation_id,
-            source="manual" if is_admin_caller else "signup",
-        ),
-    )
+    if not audit_staged:
+        await audit_decision(
+            user_id=current_user.id if current_user is not None else new_user.id,
+            action="user:create",
+            obj=f"user:{new_user.id}",
+            result="allow",
+            details=audit_details,
+        )
     response.headers["Location"] = f"/api/v1/users/{new_user.id}"
     return new_user
 
@@ -225,7 +302,12 @@ async def read_user(
 ) -> User:
     """Read the current user or a specific user with ``user:manage``."""
     if current_user.id != user_id:
-        await _require_user_administrator(current_user, operation_id=operation_id)
+        await _require_user_administrator(
+            current_user,
+            action="user:read",
+            obj=f"user:{user_id}",
+            operation_id=operation_id,
+        )
     user = await get_user_by_id(session, user_id)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
@@ -245,52 +327,60 @@ async def patch_user(
 
     # Prevent users from deactivating their own account to avoid lockout
     if user.id == user_id and user_update.is_active is False:
-        await audit_decision(
+        await _audit_deny(
             user_id=user.id,
             action="user:update",
             obj=f"user:{user_id}",
-            result="deny",
-            details=administration_audit_details(
-                {"fields_changed": ["is_active"], "reason": "self_deactivation"},
-                operation_id=operation_id,
-            ),
+            status_code=403,
+            reason="self_deactivation_forbidden",
+            operation_id=operation_id,
+            fields_changed=["is_active"],
         )
         raise HTTPException(status_code=403, detail="You can't deactivate your own user account")
 
     authorization_service = get_authorization_service()
-    is_user_administrator = user.is_superuser or await authorization_service.can_administer(
-        user_id=user.id,
+    is_user_administrator = await is_administrator(
+        user,
         resource="user",
+        authorization_service=authorization_service,
     )
     if user.id != user_id and not is_user_administrator:
-        await _require_user_administrator(user, operation_id=operation_id)
-    if user_update.is_superuser is not None and not user.is_superuser:
-        await audit_decision(
+        await _audit_deny(
             user_id=user.id,
             action="user:update",
             obj=f"user:{user_id}",
-            result="deny",
-            details=administration_audit_details(
-                {"fields_changed": ["is_superuser"], "reason": "superuser_required"},
-                operation_id=operation_id,
-            ),
+            status_code=403,
+            reason="cross_user_update_forbidden",
+            operation_id=operation_id,
+        )
+        raise administration_denied(_PERMISSION_DENIED, resource="user")
+    # Promotion to platform superuser stays superuser-only, whatever the
+    # caller's delegated administration permissions are.
+    if not user.is_superuser and user_update.is_superuser:
+        await _audit_deny(
+            user_id=user.id,
+            action="user:update",
+            obj=f"user:{user_id}",
+            status_code=403,
+            reason="superuser_required",
+            operation_id=operation_id,
+            fields_changed=["is_superuser"],
         )
         raise HTTPException(
             status_code=403,
             detail="Only a superuser may promote or demote platform superusers",
-            headers={"X-Langflow-Error-Code": "superuser_required"},
+            headers=_SUPERUSER_REQUIRED_HEADERS,
         )
     if update_password:
         if not is_user_administrator:
-            await audit_decision(
+            await _audit_deny(
                 user_id=user.id,
                 action="user:update",
                 obj=f"user:{user_id}",
-                result="deny",
-                details=administration_audit_details(
-                    {"fields_changed": ["password"], "reason": "administration_required"},
-                    operation_id=operation_id,
-                ),
+                status_code=400,
+                reason="password_update_forbidden",
+                operation_id=operation_id,
+                fields_changed=["password"],
             )
             raise HTTPException(status_code=400, detail="You can't change your password here")
         user_update.password = get_auth_service().get_password_hash(user_update.password)
@@ -312,23 +402,28 @@ async def patch_user(
 
     if user_db := await get_user_by_id(session, user_id):
         if user_db.is_superuser and not user.is_superuser and user.id != user_id:
-            await audit_decision(
+            await _audit_deny(
                 user_id=user.id,
                 action="user:update",
                 obj=f"user:{user_id}",
-                result="deny",
-                details=administration_audit_details(
-                    {"fields_changed": sorted(user_update.model_fields_set), "reason": "superuser_required"},
-                    operation_id=operation_id,
-                ),
+                status_code=403,
+                reason="superuser_required",
+                operation_id=operation_id,
+                fields_changed=sorted(user_update.model_fields_set),
             )
             raise HTTPException(
                 status_code=403,
                 detail="Only a superuser may modify another platform superuser",
-                headers={"X-Langflow-Error-Code": "superuser_required"},
+                headers=_SUPERUSER_REQUIRED_HEADERS,
             )
-        requested_fields = sorted(user_update.model_dump(exclude_unset=True))
         lifecycle_mutation: AuthorizationMutation | None = None
+        fields_changed = sorted(
+            field
+            for field in user_update.model_fields_set
+            if field != "password"
+            and getattr(user_update, field) is not None
+            and getattr(user_db, field, None) != getattr(user_update, field)
+        )
         next_is_active = user_db.is_active if user_update.is_active is None else user_update.is_active
         next_is_superuser = user_db.is_superuser if user_update.is_superuser is None else user_update.is_superuser
         if user_db.is_active and not next_is_active:
@@ -339,7 +434,7 @@ async def patch_user(
             lifecycle_kind = None
 
         if lifecycle_kind is not None:
-            changed_fields = tuple(
+            policy_relevant_fields = tuple(
                 field
                 for field, before, after in (
                     ("is_active", user_db.is_active, next_is_active),
@@ -352,7 +447,7 @@ async def patch_user(
                 entity_id=user_db.id,
                 actor_user_id=user.id,
                 affected_user_ids=(user_db.id,),
-                policy_relevant_fields=changed_fields,
+                policy_relevant_fields=policy_relevant_fields,
                 user_before=UserAuthorizationSnapshot(
                     is_active=user_db.is_active,
                     is_superuser=user_db.is_superuser,
@@ -365,53 +460,77 @@ async def patch_user(
             try:
                 await validate_identity_mutation(authorization_service, session, lifecycle_mutation)
             except AuthorizationMutationRejected as exc:
-                await audit_decision(
+                await _audit_deny(
                     user_id=user.id,
                     action="user:update",
                     obj=f"user:{user_db.id}",
-                    result="deny",
-                    details=administration_audit_details(
-                        {
-                            "fields_changed": list(lifecycle_mutation.policy_relevant_fields),
-                            "reason": "access_ceiling",
-                        },
-                        operation_id=operation_id,
-                    ),
+                    status_code=409,
+                    reason="access_ceiling",
+                    operation_id=operation_id,
+                    fields_changed=list(lifecycle_mutation.policy_relevant_fields),
                 )
                 raise HTTPException(
                     status_code=409,
                     detail=exc.public_detail,
-                    headers={"X-Langflow-Error-Code": "access_ceiling"},
+                    headers=_ACCESS_CEILING_HEADERS,
                 ) from exc
 
         if not update_password:
             user_update.password = user_db.password
-        updated_user = await update_user(user_db, user_update, session)
+        try:
+            updated_user = await update_user(user_db, user_update, session)
+        except HTTPException as exc:
+            await _audit_deny(
+                user_id=user.id,
+                action="user:update",
+                obj=f"user:{user_id}",
+                status_code=exc.status_code,
+                reason="update_rejected",
+                operation_id=operation_id,
+            )
+            raise
         if lifecycle_mutation is not None:
             await stage_identity_mutation(authorization_service, session, lifecycle_mutation)
-            await session.commit()
-            await safe_identity_mutation_committed(authorization_service, lifecycle_mutation)
-            await audit_decision(
+        audit_details = administration_audit_details(
+            {
+                "event": AUDIT_EVENT_MUTATION,
+                "fields_changed": fields_changed,
+                "lifecycle_kind": lifecycle_mutation.kind.value if lifecycle_mutation is not None else None,
+            },
+            operation_id=operation_id,
+        )
+        try:
+            audit_staged = stage_audit_decision(
+                session=session,
                 user_id=user.id,
-                action=lifecycle_mutation.kind.value.replace(".", ":"),
+                action="user:update",
                 obj=f"user:{user_db.id}",
                 result="allow",
-                details=administration_audit_details(
-                    {"fields_changed": list(lifecycle_mutation.policy_relevant_fields)},
-                    operation_id=operation_id,
-                ),
+                details=audit_details,
             )
-        await audit_decision(
-            user_id=user.id,
-            action="user:update",
-            obj=f"user:{user_db.id}",
-            result="allow",
-            details=administration_audit_details(
-                {"fields_changed": requested_fields},
-                operation_id=operation_id,
-            ),
-        )
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        if lifecycle_mutation is not None:
+            await safe_identity_mutation_committed(authorization_service, lifecycle_mutation)
+        if not audit_staged:
+            await audit_decision(
+                user_id=user.id,
+                action="user:update",
+                obj=f"user:{user_db.id}",
+                result="allow",
+                details=audit_details,
+            )
         return updated_user
+    await _audit_deny(
+        user_id=user.id,
+        action="user:update",
+        obj=f"user:{user_id}",
+        status_code=404,
+        reason="user_not_found",
+        operation_id=operation_id,
+    )
     raise HTTPException(status_code=404, detail="User not found")
 
 
@@ -454,21 +573,21 @@ async def delete_user(
 ) -> dict:
     """Delete a user from the database."""
     if current_user.id == user_id:
-        await audit_decision(
+        await _audit_deny(
             user_id=current_user.id,
             action="user:delete",
             obj=f"user:{user_id}",
-            result="deny",
-            details=administration_audit_details(
-                {"reason": "self_deletion"},
-                operation_id=operation_id,
-            ),
+            status_code=400,
+            reason="self_deletion_forbidden",
+            operation_id=operation_id,
         )
         raise HTTPException(status_code=400, detail="You can't delete your own user account")
     await _require_user_administrator(
         current_user,
+        action="user:delete",
+        obj=f"user:{user_id}",
         operation_id=operation_id,
-        denial_detail=_LEGACY_SUPERUSER_DENIAL,
+        denial_detail=_PERMISSION_DENIED,
     )
 
     authorization_service = get_authorization_service()
@@ -482,22 +601,28 @@ async def delete_user(
     stmt = select(User).where(User.id == user_id)
     user_db = (await session.exec(stmt)).first()
     if not user_db:
-        raise HTTPException(status_code=404, detail="User not found")
-    if user_db.is_superuser and not current_user.is_superuser:
-        await audit_decision(
+        await _audit_deny(
             user_id=current_user.id,
             action="user:delete",
             obj=f"user:{user_id}",
-            result="deny",
-            details=administration_audit_details(
-                {"reason": "superuser_required"},
-                operation_id=operation_id,
-            ),
+            status_code=404,
+            reason="user_not_found",
+            operation_id=operation_id,
+        )
+        raise HTTPException(status_code=404, detail="User not found")
+    if user_db.is_superuser and not current_user.is_superuser:
+        await _audit_deny(
+            user_id=current_user.id,
+            action="user:delete",
+            obj=f"user:{user_id}",
+            status_code=403,
+            reason="superuser_required",
+            operation_id=operation_id,
         )
         raise HTTPException(
             status_code=403,
             detail="Only a superuser may delete another platform superuser",
-            headers={"X-Langflow-Error-Code": "superuser_required"},
+            headers=_SUPERUSER_REQUIRED_HEADERS,
         )
 
     lifecycle_mutation = AuthorizationMutation(
@@ -515,20 +640,18 @@ async def delete_user(
     try:
         await validate_identity_mutation(authorization_service, session, lifecycle_mutation)
     except AuthorizationMutationRejected as exc:
-        await audit_decision(
+        await _audit_deny(
             user_id=current_user.id,
             action="user:delete",
             obj=f"user:{user_id}",
-            result="deny",
-            details=administration_audit_details(
-                {"reason": "access_ceiling"},
-                operation_id=operation_id,
-            ),
+            status_code=409,
+            reason="access_ceiling",
+            operation_id=operation_id,
         )
         raise HTTPException(
             status_code=409,
             detail=exc.public_detail,
-            headers={"X-Langflow-Error-Code": "access_ceiling"},
+            headers=_ACCESS_CEILING_HEADERS,
         ) from exc
 
     # IMPORTANT:
@@ -539,19 +662,30 @@ async def delete_user(
     await session.delete(user_db)
     await session.flush()
     await stage_identity_mutation(authorization_service, session, lifecycle_mutation)
-    await session.commit()
-    await safe_identity_mutation_committed(authorization_service, lifecycle_mutation)
-    await audit_decision(
+    audit_details = administration_audit_details(
+        {
+            "event": AUDIT_EVENT_MUTATION,
+            "target_was_active": lifecycle_mutation.user_before.is_active,
+            "target_was_superuser": lifecycle_mutation.user_before.is_superuser,
+        },
+        operation_id=operation_id,
+    )
+    audit_staged = stage_audit_decision(
+        session=session,
         user_id=current_user.id,
         action="user:delete",
         obj=f"user:{user_id}",
         result="allow",
-        details=administration_audit_details(
-            {
-                "target_was_active": lifecycle_mutation.user_before.is_active,
-                "target_was_superuser": lifecycle_mutation.user_before.is_superuser,
-            },
-            operation_id=operation_id,
-        ),
+        details=audit_details,
     )
+    await session.commit()
+    await safe_identity_mutation_committed(authorization_service, lifecycle_mutation)
+    if not audit_staged:
+        await audit_decision(
+            user_id=current_user.id,
+            action="user:delete",
+            obj=f"user:{user_id}",
+            result="allow",
+            details=audit_details,
+        )
     return {"detail": "User deleted"}

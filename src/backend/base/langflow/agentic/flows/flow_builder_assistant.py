@@ -569,19 +569,23 @@ async def get_graph(
         model_name: Model name (e.g., "gpt-4o").
         api_key_var: Optional API key variable name.
         iterations_limit: Per-request Agent step budget; defaults to the shared
-            assistant budget. This flow is Python-built, so the JSON-side
+            assistant budget (``LANGFLOW_ASSISTANT_ITERATIONS`` or the pinned
+            value). This flow is Python-built, so the JSON-side
             ``inject_iterations_into_flow`` never touches it — the budget must
             arrive here or the Agent silently runs on the component default.
 
     Returns:
         Graph: The configured flow builder assistant graph.
     """
-    from langflow.agentic.services.flow_preparation import DEFAULT_ASSISTANT_ITERATIONS, MAX_ASSISTANT_ITERATIONS
+    from langflow.agentic.services.flow_preparation import (
+        MAX_ASSISTANT_ITERATIONS,
+        assistant_iterations_default,
+    )
 
     provider = provider or "OpenAI"
     model_name = model_name or "gpt-4o"
     if iterations_limit is None:
-        step_budget = DEFAULT_ASSISTANT_ITERATIONS
+        step_budget = assistant_iterations_default()
     else:
         step_budget = max(1, min(int(iterations_limit), MAX_ASSISTANT_ITERATIONS))
 
