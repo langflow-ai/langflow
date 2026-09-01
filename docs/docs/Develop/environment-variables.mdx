@@ -381,6 +381,17 @@ The following sections provide information about specific Langflow environment v
 
 See [API keys and authentication](/api-keys-and-authentication).
 
+The following variables configure SSO and cookie behavior. SSO requires a plugin; the OSS distribution ships the settings but not an SSO provider.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_COOKIE_DOMAIN` | String | Not set | The domain attribute of the cookies. If None, the domain is not set. |
+| `LANGFLOW_EXTERNAL_AUTH_GROUP_RECONCILE_INTERVAL_SECONDS` | Integer | `60` | Minimum seconds between external group reconciliations for one unchanged directory state. |
+| `LANGFLOW_SSO_CONFIG_FILE` | String | Not set | Path to SSO configuration file (YAML format). Required when SSO_ENABLED=true. |
+| `LANGFLOW_SSO_ENABLED` | Boolean | `False` | Enable SSO authentication. Disabled by default. Set to true to enable SSO. |
+| `LANGFLOW_SSO_PROVIDER` | String | `jwt` | SSO provider type: jwt (default), oidc, saml, ldap. |
+| `LANGFLOW_SSO_REDIRECT_URL` | String | Not set | Same-origin relative URL used after SSO authentication. Absolute URLs are rejected. |
+
 ### Global variables
 
 For information about the relationship between Langflow global variables and environment variables, as well as environment variables that control handling of global variables, see [Global variables](/configuration-global-variables).
@@ -393,6 +404,22 @@ See [Configure log options](/logging#log-storage).
 
 See [Use Langflow as an MCP server](/mcp-server).
 
+The following variables configure how Langflow launches and supervises MCP servers.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_MCP_BASE_URL` | String | Not set | External base URL (scheme + host + optional path) used to build MCP server URLs. Set it to the externally reachable origin (e.g. |
+| `LANGFLOW_MCP_COMPOSER_ENABLED` | Boolean | `True` | If set to False, Langflow will not start the MCP Composer service. |
+| `LANGFLOW_MCP_COMPOSER_VERSION` | String | `==0.1.0.8.10` | Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax. |
+| `LANGFLOW_MCP_SDK_CONSTRAINT` | String | `mcp~=1.28` | Requirement injected as `uvx --with` when Langflow launches an MCP server through uvx. `uvx` resolves each server into its own ephemeral environment, so Langflow's own `mcp` pin does not apply there. |
+| `LANGFLOW_MCP_SERVER_ALLOWED_PACKAGES` | String | Not set | Comma-separated package allowlist for MCP `npx`/`uvx` stdio servers. When set, package runners may download and execute only these exact package names. Version specifiers are allowed but do not change the package identity. |
+| `LANGFLOW_MCP_SERVER_ENV_ALLOWLIST` | String | Not set | Comma-separated allowlist of environment-variable names an MCP stdio config may set. |
+| `LANGFLOW_MCP_SERVER_INTERPRETER_HARDENING` | Boolean | `False` | If set to True, blocks tenant-controlled Python, Node.js, and shell MCP entrypoints. The command allowlist alone cannot make `python <uploaded-file>` or `node <uploaded-file>` or `bash <uploaded-file>` safe. |
+| `LANGFLOW_MCP_SESSION_CLEANUP_INTERVAL` | Integer | `120` | Frequency (in seconds) at which the background cleanup task wakes up to reap idle sessions. |
+| `LANGFLOW_MCP_SESSION_IDLE_TIMEOUT` | Integer | `400` | How long (in seconds) an MCP session can stay idle before the background cleanup task disposes of it. |
+| `LANGFLOW_MCP_SSE_ENABLED` | Boolean | `True` | If set to False, the legacy SSE transport and its message endpoint answer 404. `mcp_server_enabled` mounts both transports and there is no way to serve only the modern one. |
+| `LANGFLOW_SKIP_MCP_AUTO_INIT` | Boolean | `False` | If set to True, Langflow skips the background MCP server auto-initialization on startup. The startup task reconciles every project's MCP server config, which for apikey/none projects can spawn `uvx mcp-proxy` and open an outbound connection. |
+
 ### A2A agents {#a2a}
 
 See [A2A environment variables](./a2a-server#a2a-environment-variables).
@@ -404,6 +431,79 @@ For multi-worker tuning—including the Redis job queue and Gunicorn worker sett
 ### Monitoring and metrics
 
 For environment variables for specific monitoring service providers, see the Langflow monitoring integration guides, such as [Langfuse](/integrations-langfuse) and [Best practices for Langflow on Kubernetes](/deployment-prod-best-practices).
+
+Langflow can report errors to Sentry. Sentry is initialized only when a DSN is set.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_SENTRY_DSN` | String | Not set | Sentry DSN. Sentry initialization is skipped entirely when this is unset. |
+| `LANGFLOW_SENTRY_PROFILES_SAMPLE_RATE` | Float | `1.0` | Passed straight to sentry_sdk.init as profiles_sample_rate. Defaults to 1.0 (sample everything) and is only read when a Sentry DSN is set. |
+| `LANGFLOW_SENTRY_TRACES_SAMPLE_RATE` | Float | `1.0` | Passed straight to sentry_sdk.init as traces_sample_rate. Defaults to 1.0 (sample everything) and is only read when a Sentry DSN is set. |
+
+### Background jobs and workflow execution
+
+The following variables tune the background execution service that runs flows submitted with `mode: background`, and the wall-clock ceiling applied to a single run.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_BACKGROUND_HEARTBEAT_INTERVAL_S` | Float | `15.0` | How often a running background job refreshes its liveness heartbeat. Kept well below `background_lease_ttl_s` so a brief stall does not trip the reconciler. Must be greater than `0`. |
+| `LANGFLOW_BACKGROUND_INPUT_DEADLINE_S` | Float | Not set | Optional wall-clock seconds a background run may stay SUSPENDED (awaiting human input) before it is given up on. Independent of `background_job_timeout`: paused time never accrues against the compute timeout (resume re-enqueues a fresh pass). |
+| `LANGFLOW_BACKGROUND_JOB_TIMEOUT` | Float | Not set | Wall-clock seconds a single background job may run before it is marked TIMED_OUT. `None` (default) means no timeout. Applies per job, enforced by the runner via `asyncio.wait_for` around the build loop. |
+| `LANGFLOW_BACKGROUND_LEASE_TTL_S` | Float | `45.0` | Liveness lease window for a running background job. The running owner refreshes a heartbeat on the job row; a reconciler (startup sweep / scaled watchdog) only fails or requeues an IN_PROGRESS job whose heartbeat is older than this TTL (or never recorded). |
+| `LANGFLOW_BACKGROUND_MAX_CONCURRENCY` | Integer | `5` | Max number of background workflow jobs the in-process executor runs concurrently. Jobs beyond this queue and start as workers free up. Kept small by default so background runs cannot starve the request event loop; raise it for dedicated worker processes. |
+| `LANGFLOW_BACKGROUND_WATCHDOG_INTERVAL_S` | Float | `15.0` | How often the scaled worker's periodic watchdog scans for orphaned leases (a dead worker's in-flight job) and reconciles them WITHOUT requiring a restart. Must be greater than `0`. |
+| `LANGFLOW_EXECUTOR_KIND` | String | `in-process` | The default executor kind used by the execution coordinator. Must match the `kind` of an Executor registered with the executor service. |
+| `LANGFLOW_WORKFLOW_EXECUTION_TIMEOUT` | Integer | `300` | Wall-clock ceiling in seconds for a single v2 workflow run, applied to every execution mode. Sync runs raise a 408; stream, background, and public runs emit the protocol's terminal-error event and (for background) mark the job failed. |
+
+### Flow cache and warm registry
+
+The warm registry keeps recently used flows in memory so a repeat run skips rebuilding the graph. The following variables bound how much it retains.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_CACHE_DIR` | String | Not set | Directory used by FlowEventsService for cross-worker event storage. Defaults to a temp dir if not set. |
+| `LANGFLOW_CACHE_EXPIRE` | Integer | `3600` | Expiry in seconds for the in-memory caches (the threading and async cache backends, and the shared component cache). Separate from `LANGFLOW_REDIS_CACHE_EXPIRE`, which covers the Redis backend. |
+| `LANGFLOW_WARM_RECONCILE_INTERVAL` | Float | `20.0` | Seconds between warm-registry reconcile passes. |
+| `LANGFLOW_WARM_REGISTRY_ENABLED` | Boolean | `False` | Enable the process-local warm graph registry. |
+| `LANGFLOW_WARM_REGISTRY_MAX_ENTRIES` | Integer | `128` | Maximum resident flow templates per worker. |
+| `LANGFLOW_WARM_REGISTRY_MAX_FLOW_BYTES` | Integer | `2000000` | Maximum serialized retained execution snapshot eligible for warming, in bytes. |
+| `LANGFLOW_WARM_REGISTRY_MAX_TOTAL_BYTES` | Integer | `32000000` | Maximum total serialized execution-snapshot bytes retained or in flight per worker. |
+| `LANGFLOW_WARM_REGISTRY_PRELOAD_LIMIT` | Integer | `0` | Maximum flows each worker eagerly preloads. |
+
+### Knowledge bases and file ingestion
+
+The following variables bound where knowledge-base folders may live on disk and how large an ingested file may be.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_DIRECTORY_COMPONENT_ALLOWED_ROOTS` | List[String] | `[]` | Additional directories the legacy Directory component may read from. The component always allows paths equal to or inside the process working directory. |
+| `LANGFLOW_KB_ALLOWED_FOLDER_ROOTS` | List[String] | `[]` | Allow-list of directories the folder-ingestion endpoint may read from. Comma-separated when set via env (`LANGFLOW_KB_ALLOWED_FOLDER_ROOTS`), e.g. `/srv/docs,/data/shared`. Empty by default — operators must opt in. |
+| `LANGFLOW_KB_DISK_RECONCILE_ENABLED` | Boolean | `False` | Whether startup scans `knowledge_bases_dir` for KB directories lacking a DB row. The `knowledge_base` table is the sole authority for KB metadata; the on-disk `embedding_metadata.json` sidecar is no longer written or read by any steady-state code path. |
+| `LANGFLOW_KB_FOLDER_MAX_FILE_SIZE_BYTES` | Integer | `25 * 1024 * 1024` | Maximum file size accepted by Knowledge Base folder ingestion. Set `LANGFLOW_KB_FOLDER_MAX_FILE_SIZE_BYTES` to an operator-chosen positive byte count. |
+| `LANGFLOW_MAX_INGESTION_TIMEOUT_SECS` | Integer | `600` | Timeout in seconds for the knowledge-base ingestion lock (default 600). |
+
+### Langflow Store
+
+The following variables configure the Langflow Store integration.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_STORE` | Boolean | `True` | Whether the Langflow Store integration is enabled (default true). Surfaced to the frontend as the store’s “enabled” flag. |
+| `LANGFLOW_STORE_URL` | String | `https://api.langflow.store` | Base URL the Store service talks to. Defaults to https://api.langflow.store. |
+| `LANGFLOW_DOWNLOAD_WEBHOOK_URL` | String | See code | Webhook the Store service calls when a component is downloaded. Defaults to a Langflow-hosted trigger URL; the call is skipped when the value is empty. |
+| `LANGFLOW_LIKE_WEBHOOK_URL` | String | See code | Webhook the Store service calls when a component is liked. Defaults to a Langflow-hosted trigger URL; the call is skipped when the value is empty. |
+
+### Serving plane and end-user identity
+
+The following variables configure how Langflow accepts an end-user identity from a trusted gateway. The feature is fail-closed: the identity header is honored only when proxy headers are explicitly trusted.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_SERVING_END_USER_HEADER` | String | Not set | Name of the trusted request header that carries the end-user identity on the serving plane (e.g. `X-End-User-Id`). |
+| `LANGFLOW_SERVING_END_USER_REQUIRED` | Boolean | `False` | Whether a serving request with no end-user identity is rejected. Only meaningful when the feature is on (`serving_end_user_header` set and `serving_trust_proxy_headers` True). |
+| `LANGFLOW_SERVING_INTERNAL_MCP_HOSTS` | String | Not set | Comma-separated allowlist of hosts (`host` or `host:port`) treated as INTERNAL for outbound MCP calls. |
+| `LANGFLOW_SERVING_TRACE_END_USER` | Boolean | `False` | Whether the serving-plane end-user id is forwarded to the configured tracing provider. The end-user id is PII (the same reason outbound MCP forwarding is allowlist-gated and fail-closed). |
+| `LANGFLOW_SERVING_TRUST_PROXY_HEADERS` | Boolean | `False` | Fail-closed opt-in for the serving-plane end-user identity header. The header named by `serving_end_user_header` is trusted ONLY when this is True. |
 
 ### Server
 
@@ -427,6 +527,13 @@ The following environment variables set base Langflow server configuration, such
 | `LANGFLOW_DEACTIVATE_TRACING` | Boolean | `False` | Deactivate tracing functionality. |
 | `LANGFLOW_CELERY_ENABLED` | Boolean | `False` | Enable Celery for distributed task processing. |
 | `LANGFLOW_ALEMBIC_LOG_TO_STDOUT` | Boolean | `False` | Whether to log Alembic database migration output to stdout instead of a log file. If `true`, Alembic logs to `stdout` and the default log file is ignored. |
+| `LANGFLOW_ROOT_PATH` | String | Not set | ASGI root_path for deployments behind a reverse proxy that strips a URL prefix (e.g. '/langflow'). When set, the MCP SSE transport includes this prefix in the POST-back URL so clients can reach the correct endpoint. |
+| `LANGFLOW_DEPLOYMENT_PROFILE` | String | `dev` | Deployment profile for this boot. 'prod' signals a production deployment and runs fail-loud infrastructure preflight checks before the server starts (aborting on missing required services). 'dev' (the default) skips those checks. |
+| `LANGFLOW_USER_AGENT` | String | `langflow` | User agent Langflow sends on outbound API calls (default “langflow”). Its validator also exports the value to the process-wide USER_AGENT environment variable, and an empty value becomes “Langflow”. |
+| `LANGFLOW_FRONTEND_TIMEOUT` | Integer | `0` | Timeout for the frontend API calls in seconds. |
+| `LANGFLOW_ENABLE_EXTENSION_RELOAD` | Boolean | `False` | If True, registers `POST /api/v1/extensions/{id}/bundles/{name}/reload` so authenticated users can hot-swap a Bundle's components in-process. This is a Mode A (local-dev / pip-installed) facility only. |
+| `LANGFLOW_ALLOW_PUBLIC_CUSTOM_COMPONENTS` | Boolean | `False` | If set to True, the unauthenticated public flow build path (`POST /api/v1/build_public_tmp/{flow_id}/flow`) honors allow_custom_components just like the authenticated build path, building the flow from the database as its owner. |
+| `LANGFLOW_TWEAKS_POLICY` | String | `permissive` | Which fields a run request may set through `tweaks`. `permissive` (default) preserves existing behavior: the protected-field floor refuses code fields and privileged sinks, and every other field accepts a tweak. |
 
 ### Storage
 
@@ -434,9 +541,41 @@ For file storage environment variables, see [File storage environment variables]
 
 For database environment variables, including PostgreSQL configuration, see [Memory management options](/memory#configure-external-memory).
 
+The following variables tune database connections and control which execution records Langflow persists.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_DB_DRIVER_CONNECTION_SETTINGS` | Dictionary | Not set | A dict of driver-level connect_args passed straight to the SQLAlchemy engine. When set it fully replaces the defaults Langflow would otherwise derive, including the SQLite check_same_thread/timeout pair. |
+| `LANGFLOW_MAX_OVERFLOW` | Integer | `30` | The number of connections to allow that can be opened beyond the pool size. Should be 2x the pool_size for optimal performance under load. |
+| `LANGFLOW_POOL_SIZE` | Integer | `20` | The number of connections to keep open in the connection pool. For high load scenarios, this should be increased based on expected concurrent users. |
+| `LANGFLOW_REDIS_URL` | String | Not set | Full Redis connection URL. When set it takes precedence over the separate host/port/db settings for both the Redis cache and the job-queue service; when unset those fall back to `LANGFLOW_REDIS_HOST` / _PORT / _DB. |
+| `LANGFLOW_SQLITE_PRAGMAS` | Dictionary | See code | SQLite pragmas to use when connecting to the database. |
+| `LANGFLOW_SYNC_RESULT_STORAGE_ENABLED` | Boolean | `False` | If set to True, a completed `mode=sync` workflow run caches its outputs to `Job.result` (and its session to `job_metadata`) so a later GET status on that job_id returns them. |
+| `LANGFLOW_TEST_REDIS_URL` | String | Not set | Redis URL used by tests that exercise the scaled background backend. Mirrors `LANGFLOW_TEST_DATABASE_URI`: when set, lease/watchdog/Streams/pubsub timing tests run against this real Redis; when unset they skip. |
+| `LANGFLOW_TRANSACTIONS_STORAGE_ENABLED` | Boolean | `True` | If set to True, Langflow will track transactions between flows. |
+| `LANGFLOW_VERTEX_BUILDS_STORAGE_ENABLED` | Boolean | `True` | If set to True, Langflow will keep track of each vertex builds (outputs) in the UI for any flow. |
+
 ### Telemetry
 
 See [Telemetry](/contributing-telemetry).
+
+The following variables control telemetry collection and the on-disk outbox the telemetry writer uses.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_TELEMETRY_BASE_URL` | String | `https://langflow.gateway.scarf.sh` | Base URL the telemetry service posts to. Defaults to the Scarf gateway at https://langflow.gateway.scarf.sh. |
+| `LANGFLOW_TELEMETRY_WRITER_BATCH_SIZE` | Integer | `200` | Maximum rows per batched INSERT executed by the telemetry writer. |
+| `LANGFLOW_TELEMETRY_WRITER_BATCH_SIZE_BYTES` | Integer | `262144` | Cap on per-flush batch size in *encoded JSON bytes*. Consulted when `telemetry_writer_size_strategy` is 'bytes' or 'either'. Sized around a single TCP frame so individual INSERTs stay below DB packet limits. |
+| `LANGFLOW_TELEMETRY_WRITER_CLEANUP_INTERVAL_S` | Integer | `60` | Cadence (seconds) of the retention sweeper that enforces max_transactions_to_keep and max_vertex_builds_to_keep. Retention is amortized rather than per-row to avoid inflating per-write cost. |
+| `LANGFLOW_TELEMETRY_WRITER_ENABLED` | Boolean | `True` | Route transaction and vertex_build writes through an async batched writer backed by a disk-persisted outbox and a dedicated database connection. |
+| `LANGFLOW_TELEMETRY_WRITER_FLUSH_INTERVAL_S` | Float | `0.5` | Maximum seconds the writer waits before flushing a partial batch. |
+| `LANGFLOW_TELEMETRY_WRITER_MAX_QUEUE` | Integer | `100000` | Per-outbox cap. When exceeded, oldest entries are dropped and a counter is incremented. Bounds disk usage in pathological backlog scenarios. |
+| `LANGFLOW_TELEMETRY_WRITER_MAX_QUEUE_BYTES` | Integer | `209715200` | Per-outbox cap in *encoded JSON bytes*. When exceeded under 'bytes' or 'either' strategy, oldest entries are dropped until the buffer fits. Defaults to ~200MB so a single worker's telemetry buffer can't dominate container memory. |
+| `LANGFLOW_TELEMETRY_WRITER_ORPHAN_MAX_AGE_S` | Float | `3600.0` | Cross-host orphan outboxes (e.g. dead pods on a shared volume) are pruned when their owner file hasn't been heartbeated within this many seconds. Same-host orphans are adopted regardless of age via owner-file identity. |
+| `LANGFLOW_TELEMETRY_WRITER_OUTBOX_DIR` | String | Not set | Directory for the disk-backed outbox. Defaults to `<tempdir>/langflow_telemetry_outbox`. Each worker process uses an isolated subdirectory keyed by PID; sibling subdirectories from crashed workers are automatically adopted on startup. |
+| `LANGFLOW_TELEMETRY_WRITER_SHUTDOWN_DRAIN_S` | Float | `5.0` | Maximum seconds the writer waits to drain in-flight batches on shutdown before disposing the dedicated engine. |
+| `LANGFLOW_TELEMETRY_WRITER_SIZE_STRATEGY` | String | `count` | How the writer bounds memory and flushes. - 'count' (default): preserve legacy row-count semantics. `batch_size` and `max_queue` are the only thresholds. - 'bytes': bound by the byte thresholds below; row caps are ignored. |
+| `LANGFLOW_DO_NOT_TRACK` | Boolean | `False` | If set to True, Langflow will not track telemetry. |
 
 ### Visual editor and Playground behavior
 
@@ -479,6 +618,10 @@ See [Telemetry](/contributing-telemetry).
 | `LANGFLOW_MAX_VERTEX_BUILDS_PER_VERTEX` | Integer | `2` | Maximum number of builds to keep per vertex. Older builds are deleted. Relates to [Playground](/concepts-playground) functionality. |
 | `LANGFLOW_PUBLIC_FLOW_CLEANUP_INTERVAL` | Integer | `3600` | The interval in seconds at which data for [shared Playground](/concepts-playground#share-a-flows-playground) flows are cleaned up. Default: 3600 seconds (1 hour). Minimum: 600 seconds (10 minutes). |
 | `LANGFLOW_PUBLIC_FLOW_EXPIRATION` | Integer | `86400` | The time in seconds after which a [shared Playground](/concepts-playground#share-a-flows-playground) flow is considered expired and eligible for cleanup. Default: 86400 seconds (24 hours). Minimum: 600 seconds (10 minutes). |
+| `LANGFLOW_FS_FLOWS_POLLING_INTERVAL` | Integer | `10000` | The polling interval in milliseconds for synchronizing flows from the file system. |
+| `LANGFLOW_WEBHOOK_POLLING_INTERVAL` | Integer | `0` | The polling interval for the webhook in ms. Set to 0 to disable (SSE provides real-time updates). |
+| `LANGFLOW_MAX_FLOW_VERSION_ENTRIES_PER_FLOW` | Integer | `50` | Max version history entries per flow. Oldest entries pruned on next snapshot. If retroactively lowered below the current count for a flow, the oldest entries are deleted only when the next entry is created. |
+| `LANGFLOW_MODEL_PROVIDER_POLICY_REFRESH_INTERVAL_S` | Float | `10.0` | How often each backend worker refreshes the install-wide model-provider policy. A several-second default limits steady-state database traffic while still converging policy updates promptly across workers. |
 
 ### Hide UI elements with embedded mode {#embedded-mode}
 
