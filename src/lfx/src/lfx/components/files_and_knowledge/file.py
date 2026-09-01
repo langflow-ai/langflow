@@ -628,12 +628,21 @@ class FileComponent(BaseFileComponent):
                         display_name="Structured Content",
                         name="dataframe",
                         method="load_files_structured",
+                        types=["Table"],
+                        selected="Table",
                         tool_mode=True,
                     ),
                 )
             elif file_path.endswith(".json"):
                 frontend_node["outputs"].append(
-                    Output(display_name="Structured Content", name="json", method="load_files_json", tool_mode=True),
+                    Output(
+                        display_name="Structured Content",
+                        name="json",
+                        method="load_files_json",
+                        types=["JSON"],
+                        selected="JSON",
+                        tool_mode=True,
+                    ),
                 )
 
             advanced_mode = frontend_node.get("template", {}).get("advanced_mode", {}).get("value", False)
@@ -643,28 +652,73 @@ class FileComponent(BaseFileComponent):
                         display_name="Structured Output",
                         name="advanced_dataframe",
                         method="load_files_dataframe",
+                        types=["Table"],
+                        selected="Table",
                         tool_mode=True,
                     ),
                 )
                 frontend_node["outputs"].append(
                     Output(
-                        display_name="Markdown", name="advanced_markdown", method="load_files_markdown", tool_mode=True
+                        display_name="Markdown",
+                        name="advanced_markdown",
+                        method="load_files_markdown",
+                        types=["Message"],
+                        selected="Message",
+                        tool_mode=True,
                     ),
                 )
                 frontend_node["outputs"].append(
-                    Output(display_name="File Path", name="path", method="load_files_path", tool_mode=True),
+                    Output(
+                        display_name="File Path",
+                        name="path",
+                        method="load_files_path",
+                        types=["Message"],
+                        selected="Message",
+                        tool_mode=True,
+                    ),
                 )
             else:
                 frontend_node["outputs"].append(
-                    Output(display_name="Raw Content", name="message", method="load_files_message", tool_mode=True),
+                    Output(
+                        display_name="Raw Content",
+                        name="message",
+                        method="load_files_message",
+                        types=["Message"],
+                        selected="Message",
+                        tool_mode=True,
+                    ),
                 )
                 frontend_node["outputs"].append(
-                    Output(display_name="File Path", name="path", method="load_files_path", tool_mode=True),
+                    Output(
+                        display_name="File Path",
+                        name="path",
+                        method="load_files_path",
+                        types=["Message"],
+                        selected="Message",
+                        tool_mode=True,
+                    ),
                 )
         else:
             # Multiple files => DataFrame and Message outputs; advanced parser disabled
             frontend_node["outputs"].append(
-                Output(display_name="Files", name="dataframe", method="load_files", tool_mode=True)
+                Output(
+                    display_name="Files",
+                    name="dataframe",
+                    method="load_files",
+                    types=["Table"],
+                    selected="Table",
+                    tool_mode=True,
+                )
+            )
+            frontend_node["outputs"].append(
+                Output(
+                    display_name="Raw Content",
+                    name="message",
+                    method="load_files_message",
+                    types=["Message"],
+                    selected="Message",
+                    tool_mode=True,
+                )
             )
             frontend_node["outputs"].append(
                 Output(display_name="Raw Content", name="message", method="load_files_message", tool_mode=True)

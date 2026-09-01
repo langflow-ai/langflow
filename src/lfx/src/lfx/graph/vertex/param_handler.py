@@ -293,10 +293,7 @@ class ParameterHandler:
     def process_runtime_params(self, params: dict[str, Any]) -> dict[str, Any]:
         """Resolve and contain FileInput values supplied as runtime tweaks."""
         processed = params.copy()
-        # Runtime tweaks were historically passed through unchanged. Preserve
-        # that behavior when the operator has explicitly disabled containment.
-        if not is_local_file_access_restricted():
-            return processed
+        restricted = is_local_file_access_restricted()
 
         for field_name, value in processed.items():
             request_field = self.template_dict.get(field_name, {})
@@ -313,11 +310,33 @@ class ParameterHandler:
                 else:
                     msg = "Runtime FileInput tweaks must provide a file path."
                     raise LocalFileAccessError(msg)
-            processed[field_name] = self.process_file_value(
-                file_value,
-                is_list=bool(field.get("list")) or isinstance(file_value, list),
-            )
+            if file_value is None or (isinstance(file_value, str | list) and not file_value):
+                continue
+
+            is_list = bool(field.get("list")) or isinstance(file_value, list)
+            if restricted:
+                processed[field_name] = self.process_file_value(file_value, is_list=is_list)
+            else:
+                # Unrestricted local paths are a documented single-tenant feature. Inspect
+                # their storage-key shape without resolving or rewriting the caller's value.
+                self._validate_unrestricted_file_value(file_value, is_list=is_list)
         return processed
+
+    def _validate_unrestricted_file_value(self, file_path: Any, *, is_list: bool) -> None:
+        """Validate an unrestricted FileInput value without changing its representation."""
+        if is_list:
+            paths = [file_path] if isinstance(file_path, str) else file_path
+            if not isinstance(paths, list) or not all(isinstance(path, str) for path in paths):
+                msg = "FileInput values must be file path strings."
+                raise LocalFileAccessError(msg)
+        else:
+            if not isinstance(file_path, str):
+                msg = "FileInput values must be file path strings."
+                raise LocalFileAccessError(msg)
+            paths = [file_path]
+
+        for path in paths:
+            self._validate_unrestricted_file_path(path)
 
     def _scoped_storage_key(self, file_path: str) -> str:
         """Reject a logical storage key whose namespace is outside the executing graph.
@@ -328,25 +347,33 @@ class ParameterHandler:
         tweak, so it has to be checked *before* it is resolved — afterwards the component only
         sees an already-resolved path and the shape of the input has decided access on its own.
 
-        Two cases are deliberately left alone:
+        These cases are deliberately left alone:
 
-        * Absolute paths and values without a separator are not storage keys. Reading a local
-          server file by absolute path is the documented single-tenant behavior that
+        * Absolute paths are not storage keys. Reading a local server file by absolute path is
+          the documented single-tenant behavior that
           ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` governs, so they stay with
           ``_enforce_file_paths``. Absoluteness is tested against both flavours: a Windows
           drive-letter path written with forward slashes ("C:/data/report.csv") is not
           POSIX-absolute, so testing only ``PurePosixPath`` would split it into namespace
-          "C:" and reject a legitimate local path -- while the backslash spelling of the
-          same path was already exempt for having no "/" at all.
+          "C:" and reject a legitimate local path -- while the backslash spelling must remain
+          legitimate too.
+        * Separatorless relative values are local file names, not storage keys.
         * Restricted mode, where ``_enforce_file_paths`` already pins the resolved local path and
           the S3 logical key to the graph's own scopes. This check exists to close the
           unrestricted default, and skipping it keeps restricted behavior byte-identical.
         """
         if is_local_file_access_restricted():
             return file_path
-        if "/" not in file_path or PurePosixPath(file_path).is_absolute():
+        return self._validate_unrestricted_file_path(file_path)
+
+    def _validate_unrestricted_file_path(self, file_path: str) -> str:
+        """Validate a path's storage-key shape without resolving or rewriting it."""
+        if PurePosixPath(file_path).is_absolute() or PureWindowsPath(file_path).is_absolute():
             return file_path
-        if PureWindowsPath(file_path).is_absolute():
+        if "\\" in file_path:
+            msg = "Relative FileInput paths must not contain backslash separators or traversal sequences."
+            raise StorageNamespaceError(msg)
+        if "/" not in file_path:
             return file_path
         enforce_storage_key_scope(file_path, self._file_access_scopes())
         return file_path

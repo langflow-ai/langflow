@@ -158,6 +158,7 @@ export const mutateTemplate = async (
             const newNode = cloneDeep(node);
             const newTemplate = await postTemplateValue.mutateAsync({
               value: newValue,
+              template: node.template,
               field_name: parameterName,
               tool_mode: toolMode ?? node.tool_mode,
               is_refresh: isRefresh ?? false,

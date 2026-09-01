@@ -145,6 +145,36 @@ async def _register_job_owner_or_cancel(queue_service: JobQueueService, job_id: 
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
 
+def _compiled_from(graph: object, graph_data: dict) -> bool:
+    """Whether this compilation was produced from exactly this payload.
+
+    ``raw_graph_data`` is part of ``Graph.__getstate__``, so this survives a serialized
+    cache — a marker attribute would be dropped there and silently reintroduce the
+    rebuild-per-request behaviour on Redis-backed deployments only.
+    """
+    raw = getattr(graph, "raw_graph_data", None)
+    if not isinstance(raw, dict):
+        return False
+    return raw.get("nodes") == graph_data.get("nodes") and raw.get("edges") == graph_data.get("edges")
+
+
+async def _trusted_stored_graph(flow_data, *, is_superuser: bool) -> dict | None:
+    """Run the caller-aware component policy over a STORED graph.
+
+    The stored graph is caller-controlled -- any user who can write a flow can persist
+    component source through the ordinary flow API -- and the global validator does not
+    know who is asking, so it cannot enforce ``custom_component_admin_only`` on its own.
+    Returns the trusted copy to build from, or ``None`` when the policy is permissive and
+    the stored graph stands. The status mapping matches the whole-flow build seam.
+    """
+    try:
+        return await prepare_flow_build_for_user(flow_data, is_superuser=is_superuser)
+    except CustomComponentValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @router.post(
     "/build/{flow_id}/vertices",
     deprecated=True,
@@ -201,9 +231,15 @@ async def retrieve_vertices_order(
     run_id = str(uuid.uuid4())
     try:
         if not data:
-            graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
+            trusted_data = await _trusted_stored_graph(flow.data, is_superuser=current_user.is_superuser)
+            if trusted_data is not None:
+                graph = await build_and_cache_graph_from_data(
+                    flow_id=flow_id, graph_data=trusted_data, chat_service=chat_service
+                )
+            else:
+                graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
         else:
-            sanitized_data = await prepare_flow_build_for_user(
+            sanitized_data = await _trusted_stored_graph(
                 data.model_dump(),
                 is_superuser=current_user.is_superuser,
             )
@@ -242,6 +278,10 @@ async def retrieve_vertices_order(
                 playground_run_id=run_id,
             ),
         )
+        # A policy refusal already carries its status; re-wrapping it as 500 would report
+        # an authorization decision as a server fault. Telemetry above still records it.
+        if isinstance(exc, HTTPException):
+            raise
         if "stream or streaming set to True" in str(exc):
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         if isinstance(exc, CustomComponentValidationError):
@@ -535,6 +575,8 @@ async def build_vertex(
         folder_id=flow.folder_id,
     )
 
+    sanitized_data = await _trusted_stored_graph(flow.data, is_superuser=current_user.is_superuser)
+
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
     flow_id_str = str(flow_id)
@@ -551,7 +593,23 @@ async def build_vertex(
 
     try:
         cache = await chat_service.get_cache(flow_id_str)
-        if isinstance(cache, CacheMiss):
+        cached_graph = None if isinstance(cache, CacheMiss) else cache.get("result")
+        # This seam is incremental: it is called once per vertex and carries built state in
+        # the cache between calls. The policy hands back a copy on EVERY request from a
+        # non-superuser, so rebuilding on that alone discarded the previous vertex's result
+        # and the next one reported its upstream as unbuilt. Rebuild only when the cached
+        # compilation did not come from this copy — which still covers the case the rebuild
+        # exists for, a graph compiled while the policy was off.
+        needs_initialize_run = True
+        if sanitized_data is not None and not _compiled_from(cached_graph, sanitized_data):
+            graph = await build_and_cache_graph_from_data(
+                flow_id=flow_id_str,
+                chat_service=chat_service,
+                graph_data=sanitized_data,
+            )
+            run_id = str(uuid.uuid4())
+            graph.set_run_id(run_id)
+        elif cached_graph is None:
             # If there's no cache
             await logger.awarning(f"No cache found for {flow_id_str}. Building graph starting at {vertex_id}")
             async with session_scope() as session:
@@ -562,6 +620,8 @@ async def build_vertex(
                 )
             run_id = str(uuid.uuid4())
             graph.set_run_id(run_id)
+            # build_graph_from_db initializes the run itself.
+            needs_initialize_run = False
         else:
             graph = cache.get("result")
         try:

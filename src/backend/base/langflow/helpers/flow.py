@@ -609,19 +609,114 @@ def _get_flow_input_nodes(flow: Flow) -> list[Vertex]:
     return [vertex for vertex in graph.vertices if vertex.is_input]
 
 
-def _is_mcp_input_field(field_data: Any) -> bool:
+def _is_visible_input_field(field_data: Any) -> bool:
     return isinstance(field_data, dict) and field_data.get("show", False) and not field_data.get("advanced", False)
+
+
+# ``input_value`` carries the flow's chat message. ``handle_call_tool`` pops it before the tweak
+# filter runs and forwards it as ``SimplifiedAPIRequest.input_value``, so the runtime accepts it
+# whatever the allowlist says. Withholding it from the advertised schema publishes a contract
+# narrower than the one actually served, and a caller obeying that schema sends no message at all.
+_ALWAYS_EXPOSED_INPUT_FIELDS = frozenset({"input_value"})
+
+
+def _input_nodes_declare_api_allowlist(input_nodes: list[Vertex]) -> bool:
+    """Return whether any input node marks a template field ``api_editable``.
+
+    This mirrors ``lfx.utils.flow_validation.flow_declares_api_editable`` and the reasoning
+    recorded there: a flow whose author toggled at least one field has declared an allowlist, so
+    the untoggled fields close. A flow with no toggles has declared nothing and keeps its previous
+    permissive contract. ``api_editable`` defaults to ``False``, is written only by the Inspector's
+    API toggle, and has no backfill, so without this fallback the flag empties the advertised schema
+    of every flow nobody hand-prepared -- including every flow the UI creates from a template.
+
+    Scoped to input nodes because those are the only fields MCP can advertise. A toggle elsewhere in
+    the flow is an API-snippet concern and must not reshape the MCP contract.
+    """
+    for node in input_nodes:
+        template = node.data.get("node", {}).get("template")
+        if not isinstance(template, dict):
+            continue
+        if any(isinstance(field, dict) and field.get("api_editable") is True for field in template.values()):
+            return True
+    return False
+
+
+def _is_exposed_input_field(field_name: str, field_data: Any, *, honor_allowlist: bool) -> bool:
+    """Return whether an input node's field belongs in the advertised input contract."""
+    if not _is_visible_input_field(field_data):
+        return False
+    if not honor_allowlist or field_name in _ALWAYS_EXPOSED_INPUT_FIELDS:
+        return True
+    return field_data.get("api_editable") is True
+
+
+_JSON_SCHEMA_TYPE_BY_FIELD_TYPE = {
+    "str": "string",
+    "string": "string",
+    "int": "integer",
+    "integer": "integer",
+    "float": "number",
+    "number": "number",
+    "slider": "number",
+    "bool": "boolean",
+    "boolean": "boolean",
+    "dict": "object",
+    "NestedDict": "object",
+    "duration": "object",
+    "auth": "object",
+    "mcp": "object",
+    "data_display": "object",
+    "object": "object",
+    "array": "array",
+    "connect": "string",
+    "file": "string",
+    "prompt": "string",
+    "mustache": "string",
+    "code": "string",
+    "other": "string",
+    "link": "string",
+    "tab": "string",
+    "query": "string",
+    "knowledge_backend": "string",
+}
+
+_JSON_SCHEMA_ARRAY_ITEM_TYPE_BY_FIELD_TYPE = {
+    "sortableList": "object",
+    "actionPicker": "string",
+    "table": "object",
+    "tools": "object",
+    "model": "object",
+}
+
+
+def _json_schema_type_for_field(field_data: dict[str, Any]) -> dict[str, Any]:
+    field_type = field_data.get("type", "string")
+    array_item_type = _JSON_SCHEMA_ARRAY_ITEM_TYPE_BY_FIELD_TYPE.get(field_type)
+    if array_item_type is not None:
+        return {"type": "array", "items": {"type": array_item_type}}
+
+    json_schema_type = _JSON_SCHEMA_TYPE_BY_FIELD_TYPE.get(field_type)
+    if json_schema_type is None:
+        logger.warning(f"Unknown field type: {field_type} defaulting to string")
+        json_schema_type = "string"
+
+    if field_data.get("list") is True or field_data.get("is_list") is True:
+        return {"type": "array", "items": {"type": json_schema_type}}
+    return {"type": json_schema_type}
 
 
 def get_flow_input_tweaks(flow: Flow, inputs: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Map advertised MCP inputs to node-scoped flow tweaks."""
     tweaks: dict[str, dict[str, Any]] = {}
-    for node in _get_flow_input_nodes(flow):
+    input_nodes = _get_flow_input_nodes(flow)
+    honor_allowlist = _input_nodes_declare_api_allowlist(input_nodes)
+    for node in input_nodes:
         template = node.data["node"]["template"]
         node_tweaks = {
             field_name: inputs[field_name]
             for field_name, field_data in template.items()
-            if field_name in inputs and _is_mcp_input_field(field_data)
+            if field_name in inputs and _is_exposed_input_field(field_name, field_data, honor_allowlist=honor_allowlist)
         }
         if node_tweaks:
             tweaks[node.id] = node_tweaks
@@ -629,34 +724,26 @@ def get_flow_input_tweaks(flow: Flow, inputs: dict[str, Any]) -> dict[str, dict[
     return tweaks
 
 
-def json_schema_from_flow(flow: Flow) -> dict:
-    """Generate JSON schema from flow input nodes."""
+def json_schema_from_flow(flow: Flow, *, require_api_editable: bool = True) -> dict:
+    """Generate JSON schema from flow input nodes.
+
+    MCP schemas honor a flow's API exposure allowlist once the flow declares one. Other consumers,
+    such as A2A, include every visible, non-advanced field in their input contract.
+    """
     properties = {}
     required = []
-    for node in _get_flow_input_nodes(flow):
+    input_nodes = _get_flow_input_nodes(flow)
+    honor_allowlist = require_api_editable and _input_nodes_declare_api_allowlist(input_nodes)
+    for node in input_nodes:
         node_data = node.data["node"]
         template = node_data["template"]
 
         for field_name, field_data in template.items():
-            if _is_mcp_input_field(field_data):
-                field_type = field_data.get("type", "string")
+            if _is_exposed_input_field(field_name, field_data, honor_allowlist=honor_allowlist):
                 properties[field_name] = {
-                    "type": field_type,
+                    **_json_schema_type_for_field(field_data),
                     "description": field_data.get("info", f"Input for {field_name}"),
                 }
-                # Update field_type in properties after determining the JSON Schema type
-                if field_type == "str":
-                    field_type = "string"
-                elif field_type == "int":
-                    field_type = "integer"
-                elif field_type == "float":
-                    field_type = "number"
-                elif field_type == "bool":
-                    field_type = "boolean"
-                else:
-                    logger.warning(f"Unknown field type: {field_type} defaulting to string")
-                    field_type = "string"
-                properties[field_name]["type"] = field_type
 
                 if field_data.get("required", False):
                     required.append(field_name)

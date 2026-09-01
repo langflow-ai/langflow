@@ -1142,9 +1142,7 @@
       "crewai",
       {
         "CrewAIAgentComponent": {
-          "base_classes": [
-            "NoneType"
-          ],
+          "base_classes": [],
           "beta": false,
           "conditional_paths": [],
           "custom_fields": {},
@@ -1194,11 +1192,8 @@
               "group_outputs": false,
               "method": "build_output",
               "name": "output",
-              "selected": "NoneType",
               "tool_mode": true,
-              "types": [
-                "NoneType"
-              ],
+              "types": [],
               "value": "__UNDEFINED__"
             }
           ],
