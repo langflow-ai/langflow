@@ -1,0 +1,14 @@
+{
+  "folder_name": "API fixture project",
+  "folder_description": "Imported via docs API examples",
+  "flows": [
+    {
+      "name": "Fixture Flow",
+      "description": "Fixture flow used by project import examples",
+      "data": {
+        "nodes": [],
+        "edges": []
+      }
+    }
+  ]
+}
