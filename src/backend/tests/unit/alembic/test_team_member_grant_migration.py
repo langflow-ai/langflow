@@ -73,6 +73,11 @@ def test_upgrade_backfills_manual_and_unresolved_legacy_without_name_linking(mon
         assert by_membership[legacy_id]["legacy_source"] == "engineering-group-name"
         assert by_membership[legacy_id]["provider_id"] is None
         assert by_membership[legacy_id]["external_group_id"] is None
+        membership_sources = {
+            UUID(str(row["id"])): row["source"]
+            for row in connection.execute(sa.select(membership.c.id, membership.c.source)).mappings()
+        }
+        assert membership_sources == {manual_id: "manual", legacy_id: "legacy"}
 
         _MIGRATION.downgrade()
         assert "authz_team_member_grant" not in sa.inspect(connection).get_table_names()

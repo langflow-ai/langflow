@@ -54,6 +54,12 @@ langflow admin teams members list|add|remove
 langflow admin roles list|get|create|update|delete
 langflow admin role-assignments list|grant|revoke
 langflow admin export|diff|apply
+langflow admin directory connection get|configure|validate|enable|disable
+langflow admin directory users list|get
+langflow admin directory groups list|get|members|link|unlink
+langflow admin directory role-mappings list|grant|revoke
+langflow admin directory reconcile preview|activate|status|retry
+langflow admin directory export|diff|apply
 ```
 
 `groups` is an alias of `teams`. API paths, manifests, and JSON output always use `team` or `teams`.
@@ -123,6 +129,32 @@ assignments:
 `apply` resolves and validates the entire manifest before it writes. It then applies changes in dependency order: roles, users, teams, memberships, and assignments. The default is create/update-only. `--prune` removes only absent **manual** memberships and assignments for subjects and teams named in the manifest. IdP-owned records are reported as skipped and are never removed. Non-interactive pruning also requires `--yes`.
 
 There is no server-side bulk transaction. If an operation fails, apply stops and reports applied, skipped, failed, and pending operations. Rerun the same manifest after correcting the failure; successful operations converge and are not repeated.
+
+## Declarative Enterprise directory state
+
+When an installed Enterprise authorization plugin advertises directory support, `langflow admin directory export|diff|apply` uses the credential-free `langflow.ai/v1` `DirectoryState` contract:
+
+```yaml
+apiVersion: langflow.ai/v1
+kind: DirectoryState
+connection:
+  tenant_id: tenant-a
+  issuer: https://issuer.example.com
+  audience: api://langflow-scim
+  jwks_url: https://issuer.example.com/jwks
+  allowed_client_id: langflow-scim
+teamLinks:
+  - group_id: 00000000-0000-0000-0000-000000000001
+    team_id: 00000000-0000-0000-0000-000000000002
+    origin: linked
+roleMappings:
+  - group_id: 00000000-0000-0000-0000-000000000001
+    role_id: 00000000-0000-0000-0000-000000000003
+    domain:
+      type: global
+```
+
+The document contains reviewed trust metadata and mapping intent only. It rejects credentials and provisioned user or group catalog data. `diff` is read-only. `apply` validates the complete plan before writing, and `--prune --yes` removes only absent directory-owned links and mappings. Reconciliation remains in preview until it is explicitly activated with `langflow admin directory reconcile activate RUN_ID --yes`.
 
 ## REST administration routes
 

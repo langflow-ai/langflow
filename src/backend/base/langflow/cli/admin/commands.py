@@ -22,7 +22,7 @@ from langflow.cli.admin.config import (
     ConnectionConfigurationError,
     resolve_connection,
 )
-from langflow.cli.admin.directory_reconcile import DirectoryReconciler
+from langflow.cli.admin.directory_reconcile import DirectoryReconciler, DirectoryResolutionError
 from langflow.cli.admin.manifest import (
     dump_admin_state,
     dump_directory_state,
@@ -777,7 +777,10 @@ def directory_diff_state(
     prune: Annotated[bool, typer.Option("--prune")] = False,
 ) -> None:
     state = _load_directory_manifest_or_fail(file)
-    drift = _api_call(lambda: _directory_reconciler_from_context(ctx).diff(state, prune=prune))
+    try:
+        drift = _api_call(lambda: _directory_reconciler_from_context(ctx).diff(state, prune=prune))
+    except DirectoryResolutionError as exc:
+        _fail(exc, usage=True)
     _emit(ctx, drift)
     if drift:
         raise typer.Exit(code=3)
@@ -793,7 +796,10 @@ def directory_apply_state(
     if prune and not yes:
         _fail(ValueError("directory --prune requires --yes"), usage=True)
     state = _load_directory_manifest_or_fail(file)
-    report = _api_call(lambda: _directory_reconciler_from_context(ctx).apply(state, prune=prune))
+    try:
+        report = _api_call(lambda: _directory_reconciler_from_context(ctx).apply(state, prune=prune))
+    except DirectoryResolutionError as exc:
+        _fail(exc, usage=True)
     _emit(ctx, report)
     if report["status"] != "success":
         raise typer.Exit(code=1)

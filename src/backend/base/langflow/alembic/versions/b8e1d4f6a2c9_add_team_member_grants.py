@@ -142,6 +142,9 @@ def _backfill(conn) -> None:
                 for row in rows
             ],
         )
+        legacy_membership_ids = [row["id"] for row in rows if row["source"] != "manual"]
+        if legacy_membership_ids:
+            conn.execute(membership.update().where(membership.c.id.in_(legacy_membership_ids)).values(source="legacy"))
         last_id = rows[-1]["id"]
 
 

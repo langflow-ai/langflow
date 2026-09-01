@@ -21,6 +21,10 @@ if TYPE_CHECKING:
 _TRUST_FIELDS = ("tenant_id", "issuer", "audience", "jwks_url", "allowed_client_id")
 
 
+class DirectoryResolutionError(ValueError):
+    """Raised before writes when reviewed directory intent cannot be resolved."""
+
+
 @dataclass(frozen=True, slots=True)
 class _Operation:
     action: str
@@ -115,7 +119,7 @@ class DirectoryReconciler:
         if current_connection is None:
             if has_desired_mappings:
                 msg = "Configure the directory connection and provision its SCIM catalog before applying mappings"
-                raise ValueError(msg)
+                raise DirectoryResolutionError(msg)
             groups: list[dict[str, Any]] = []
             mappings: list[dict[str, Any]] = []
         else:
@@ -147,7 +151,7 @@ class DirectoryReconciler:
         unknown_groups = sorted(set(desired_links) - group_ids)
         if unknown_groups:
             msg = f"Directory group {unknown_groups[0]} is not provisioned on this target"
-            raise ValueError(msg)
+            raise DirectoryResolutionError(msg)
         for group_id, desired in sorted(desired_links.items()):
             current = current_links.get(group_id)
             if current is None or (str(current["team_id"]), current["origin"]) != (
@@ -193,7 +197,7 @@ class DirectoryReconciler:
         unknown_mapping_groups = sorted({key[0] for key in desired_mappings} - group_ids)
         if unknown_mapping_groups:
             msg = f"Directory group {unknown_mapping_groups[0]} is not provisioned on this target"
-            raise ValueError(msg)
+            raise DirectoryResolutionError(msg)
         for key, mapping in sorted(desired_mappings.items()):
             if key not in current_mappings:
                 operations.append(
@@ -245,4 +249,4 @@ class DirectoryReconciler:
             self.client.create_directory_role_mapping(**payload)
 
 
-__all__ = ["DirectoryReconciler"]
+__all__ = ["DirectoryReconciler", "DirectoryResolutionError"]

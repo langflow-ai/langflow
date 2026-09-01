@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-import pytest
 from langflow.api.v1 import authz_capabilities
+
+if TYPE_CHECKING:
+    import pytest
 
 
 class _CapabilityService:
@@ -31,7 +34,6 @@ class _CapabilityService:
         }
 
 
-@pytest.mark.asyncio
 async def test_capabilities_include_plugin_owned_directory_actions(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(authz_capabilities, "get_authorization_service", _CapabilityService)
     user = SimpleNamespace(id=uuid4(), is_superuser=False)

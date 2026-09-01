@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from copy import deepcopy
 from http import HTTPStatus
 from typing import Any
@@ -10,7 +11,7 @@ import httpx
 import pytest
 from langflow.__main__ import app
 from langflow.cli.admin.client import AdminAPIError, AdminClient
-from langflow.cli.admin.directory_reconcile import DirectoryReconciler
+from langflow.cli.admin.directory_reconcile import DirectoryReconciler, DirectoryResolutionError
 from langflow.cli.admin.manifest import DirectoryState
 from pydantic import ValidationError
 from typer.testing import CliRunner
@@ -60,7 +61,7 @@ def test_directory_command_tree_is_registered() -> None:
 
 
 def test_directory_manifest_is_credential_free_and_excludes_catalog_state() -> None:
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError, match="client_secret"):
         DirectoryState.model_validate(
             {
                 "apiVersion": "langflow.ai/v1",
@@ -71,7 +72,7 @@ def test_directory_manifest_is_credential_free_and_excludes_catalog_state() -> N
                 },
             }
         )
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError, match="users"):
         DirectoryState.model_validate(
             {
                 "apiVersion": "langflow.ai/v1",
@@ -83,6 +84,7 @@ def test_directory_manifest_is_credential_free_and_excludes_catalog_state() -> N
 
 def test_directory_client_uses_v1_contract_and_page_totals() -> None:
     requests: list[httpx.Request] = []
+    bodies: list[bytes] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
         requests.append(request)
@@ -91,7 +93,7 @@ def test_directory_client_uses_v1_contract_and_page_totals() -> None:
             items = [{"id": str(index)} for index in range(offset, min(offset + 200, 205))]
             return httpx.Response(200, json={"items": items, "total": 205, "offset": offset, "limit": 200})
         if request.url.path.endswith("/groups/group-1/team-link"):
-            request.read()
+            bodies.append(request.read())
             return httpx.Response(200, json={"id": "link-1"})
         raise AssertionError(request.url)
 
@@ -111,6 +113,7 @@ def test_directory_client_uses_v1_contract_and_page_totals() -> None:
     ]
     assert requests[-1].method == "PUT"
     assert requests[-1].url.path == "/api/v1/authz/directory/groups/group-1/team-link"
+    assert json.loads(bodies[-1]) == {"team_id": "team-1", "origin": "linked"}
 
 
 class _FakeDirectoryClient:
@@ -253,3 +256,32 @@ def test_initial_connection_only_apply_does_not_require_a_provisioned_catalog() 
     assert [item["action"] for item in reconciler.diff(desired)] == ["configure", "validate", "enable"]
     assert reconciler.apply(desired)["status"] == "success"
     assert client.calls == ["connection:configure", "connection:validate", "connection:enable"]
+
+
+@pytest.mark.parametrize("command", ["diff", "apply"])
+def test_directory_resolution_errors_use_stable_cli_output(monkeypatch, tmp_path, command: str) -> None:
+    manifest = tmp_path / "directory-state.json"
+    manifest.write_text(
+        json.dumps(_state().model_dump(mode="json", by_alias=True, exclude_none=True)),
+        encoding="utf-8",
+    )
+
+    error_message = "Directory group is not provisioned on this target"
+
+    class UnresolvedDirectory:
+        def diff(self, _state, *, prune: bool = False):  # noqa: ARG002
+            raise DirectoryResolutionError(error_message)
+
+        def apply(self, _state, *, prune: bool = False):  # noqa: ARG002
+            raise DirectoryResolutionError(error_message)
+
+    monkeypatch.setattr(
+        "langflow.cli.admin.commands._directory_reconciler_from_context",
+        lambda _ctx: UnresolvedDirectory(),
+    )
+
+    result = CliRunner().invoke(app, ["admin", "directory", command, str(manifest)])
+
+    assert result.exit_code == 2
+    assert error_message in result.output
+    assert "Traceback" not in result.output

@@ -1007,10 +1007,9 @@ async def test_create_assignment_emits_lifecycle_for_target_user(stub_authz, aud
     assert audit_calls[0]["result"] == "allow"
     assert audit_calls[0]["details"]["event"] == AUDIT_EVENT_MUTATION
     assert audit_calls[0]["details"]["user_id"] == str(target_user.id)
-    assert response.headers["Location"] == f"/api/v1/authz/role-assignments?user_id={target_user.id}"
+    assert response.headers["Location"] == f"/api/v1/authz/role-assignments/{session.added[0].id}"
 
 
-@pytest.mark.asyncio
 async def test_create_assignment_enforces_plugin_access_ceiling(stub_authz):
     from langflow.api.v1 import authz_role_assignments
     from langflow.api.v1.schemas.authz_role_assignments import RoleAssignmentCreate
@@ -1476,7 +1475,6 @@ async def test_create_team_requires_superuser(stub_authz):
     assert excinfo.value.status_code == 403
 
 
-@pytest.mark.asyncio
 async def test_delegated_team_administrator_can_create_team(stub_authz):
     from langflow.api.v1 import authz_teams
     from langflow.api.v1.schemas.authz_teams import TeamCreate
@@ -1495,7 +1493,6 @@ async def test_delegated_team_administrator_can_create_team(stub_authz):
     assert created.adom_name == "engineering"
 
 
-@pytest.mark.asyncio
 async def test_delegated_team_administrator_cannot_create_roles(stub_authz):
     from langflow.api.v1 import authz_roles
     from langflow.api.v1.schemas.authz_roles import RoleCreate
@@ -1521,7 +1518,6 @@ def test_team_membership_mutations_accept_manual_source_only():
         TeamMemberCreate(user_id=uuid4(), source="sso")
 
 
-@pytest.mark.asyncio
 async def test_idp_team_membership_cannot_be_removed(stub_authz):
     from langflow.api.v1 import authz_teams
 
@@ -1579,7 +1575,7 @@ async def test_add_member_emits_lifecycle_for_target_user(stub_authz, audit_call
     assert audit_calls[0]["action"] == "team_member:create"
     assert audit_calls[0]["obj"] == f"team:{team.id}"
     assert audit_calls[0]["details"]["event"] == AUDIT_EVENT_MUTATION
-    assert response.headers["Location"] == f"/api/v1/authz/teams/{team.id}/members"
+    assert response.headers["Location"] == f"/api/v1/authz/teams/{team.id}/members/{target_user.id}"
 
 
 @pytest.mark.asyncio
@@ -1611,14 +1607,13 @@ async def test_add_member_duplicate_returns_409(stub_authz):
     assert "already a member" in excinfo.value.detail
 
 
-@pytest.mark.asyncio
 async def test_add_member_adds_manual_grant_to_directory_membership(stub_authz):
     from langflow.api.v1 import authz_teams
     from langflow.api.v1.schemas.authz_teams import TeamMemberCreate
     from langflow.services.database.models.auth import AuthzTeam, AuthzTeamMember, AuthzTeamMemberGrant
     from langflow.services.database.models.user.model import User
 
-    stub_authz()
+    authz = stub_authz()
     team = SimpleNamespace(id=uuid4(), team_name="Eng")
     target_user = SimpleNamespace(id=uuid4())
     member = AuthzTeamMember(team_id=team.id, user_id=target_user.id, source="directory")
@@ -1638,9 +1633,11 @@ async def test_add_member_adds_manual_grant_to_directory_membership(stub_authz):
     assert result.id == member.id
     assert member.source == "manual"
     assert len([item for item in session.added if isinstance(item, AuthzTeamMemberGrant)]) == 1
+    assert authz.validated_mutations == []
+    assert authz.staged_mutations == []
+    assert authz.committed_mutations == []
 
 
-@pytest.mark.asyncio
 async def test_remove_manual_grant_preserves_directory_membership(stub_authz):
     from langflow.api.v1 import authz_teams
 
@@ -2203,7 +2200,6 @@ def test_list_endpoint_pagination_bounds_match_convention(endpoint_module):
     assert module._LIST_DEFAULT_LIMIT == 100
 
 
-@pytest.mark.asyncio
 async def test_team_list_supports_exact_adom_name_filter(stub_authz):
     from langflow.api.v1 import authz_teams
 
@@ -2224,7 +2220,6 @@ async def test_team_list_supports_exact_adom_name_filter(stub_authz):
     assert "authz_team.adom_name = 'engineering'" in compiled
 
 
-@pytest.mark.asyncio
 async def test_role_list_supports_exact_name_filter(stub_authz):
     from langflow.api.v1 import authz_roles
 

@@ -513,7 +513,8 @@ async def add_member(
         policy_relevant_fields=("team_id", "user_id", "source"),
     )
     try:
-        await validate_identity_mutation(authorization_service, session, mutation)
+        if member_is_new:
+            await validate_identity_mutation(authorization_service, session, mutation)
         change = await ensure_team_member_grant(
             session,
             team_id=team_id,
@@ -524,7 +525,8 @@ async def add_member(
             membership_is_new=member_is_new,
         )
         member = change.membership
-        await stage_identity_mutation(authorization_service, session, mutation)
+        if member_is_new:
+            await stage_identity_mutation(authorization_service, session, mutation)
         await session.commit()
     except AuthorizationMutationRejected as exc:
         await _audit_deny(
@@ -554,7 +556,8 @@ async def add_member(
             status_code=status.HTTP_409_CONFLICT,
             detail="User is already a member of this team",
         ) from exc
-    await safe_identity_mutation_committed(authorization_service, mutation)
+    if member_is_new:
+        await safe_identity_mutation_committed(authorization_service, mutation)
     await session.refresh(member)
     await audit_decision(
         user_id=current_user.id,
@@ -566,7 +569,7 @@ async def add_member(
             operation_id=operation_id,
         ),
     )
-    response.headers["Location"] = f"/api/v1/authz/teams/{team_id}/members"
+    response.headers["Location"] = f"/api/v1/authz/teams/{team_id}/members/{payload.user_id}"
     logger.info("Added user=%s to team=%s", payload.user_id, team_id)
     return TeamMemberRead.model_validate(member)
 

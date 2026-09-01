@@ -378,7 +378,7 @@ async def create_assignment(
             operation_id=operation_id,
         ),
     )
-    response.headers["Location"] = f"/api/v1/authz/role-assignments?user_id={payload.user_id}"
+    response.headers["Location"] = f"/api/v1/authz/role-assignments/{assignment.id}"
     logger.info(
         "Assigned role=%s to user=%s (domain=%s/%s)",
         role.name,

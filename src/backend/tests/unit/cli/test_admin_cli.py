@@ -195,7 +195,7 @@ def test_api_validation_errors_do_not_reflect_secret_inputs() -> None:
 
 
 def test_manifest_rejects_plaintext_passwords_and_invalid_domains() -> None:
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError, match="password"):
         AdminState.model_validate(
             {
                 "apiVersion": "langflow.ai/v1",
