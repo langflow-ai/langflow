@@ -77,6 +77,7 @@ export interface CreateMemoryPayload {
   name: string;
   flow_id: string;
   embedding_model: string;
+  embedding_provider?: string;
   threshold?: number;
   auto_capture?: boolean;
   preprocessing?: boolean;

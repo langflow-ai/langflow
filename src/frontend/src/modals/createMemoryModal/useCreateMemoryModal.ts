@@ -243,6 +243,7 @@ export function useCreateMemoryModal({
       name: name.trim(),
       flow_id: flowId,
       embedding_model: embeddingSelection?.name,
+      embedding_provider: embeddingSelection?.provider,
       auto_capture: true,
       threshold: parsedThreshold,
       preprocessing: preprocessingEnabled,

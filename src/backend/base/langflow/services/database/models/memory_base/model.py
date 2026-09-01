@@ -41,6 +41,14 @@ class MemoryBase(MemoryBaseBase, table=True):  # type: ignore[call-arg]
 class MemoryBaseCreate(MemoryBaseBase):
     user_id: UUID | None = None  # Derived from auth token in the endpoint; not required in request body
 
+    # Optional explicit provider for the embedding model. When supplied (e.g.
+    # from the UI's selected ModelOption.provider), it is authoritative and
+    # avoids the heuristic inference in ``infer_embedding_provider``. This
+    # makes OpenAI Compatible and other bundle providers with overlapping model
+    # names (like ``text-embedding-3-small``) unambiguous. Falls back to
+    # inference when omitted for backward compatibility with older clients.
+    embedding_provider: str | None = None
+
     # Vector-store selection for the Memory Base's backing KB. Declared on the
     # create payload rather than on ``MemoryBaseBase`` so no column is added to
     # the ``memory_base`` table: the values are persisted on the
