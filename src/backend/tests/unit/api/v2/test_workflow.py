@@ -485,6 +485,7 @@ class TestWorkflowStop:
         mock_job.status = JobStatus.CANCELLED
         mock_job.type = JobType.WORKFLOW
         mock_job.user_id = None
+        mock_job.job_metadata = {"request": {"mode": "background"}}
 
         with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
             mock_service = MagicMock()
@@ -643,6 +644,7 @@ class TestWorkflowIDORProtection:
                 status=JobStatus.CANCELLED,
                 type=JobType.WORKFLOW,
                 user_id=owner_user_id,
+                job_metadata={"request": {"mode": "background"}},
             )
             session.add(job)
             await session.flush()

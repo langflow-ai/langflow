@@ -1055,14 +1055,6 @@ async def stop_workflow(
         )
 
     job_mode = _workflow_job_mode(job)
-    if job.status == JobStatus.CANCELLED and job_mode not in {"sync", "stream"}:
-        return WorkflowStopResponse(job_id=str(job_id), message=f"Job {job_id} is already cancelled.")
-    # A late stop on a job that already finished must not rewrite its terminal
-    # status: flipping a COMPLETED/FAILED/TIMED_OUT row to CANCELLED would strand
-    # the result/error blob the run already wrote. Report the existing state.
-    if job.status in _TERMINAL_JOB_STATUSES:
-        return WorkflowStopResponse(job_id=str(job_id), message=f"Job {job_id} already finished ({job.status.value}).")
-
     if job_mode != "background":
         display_mode = job_mode or "unknown"
         await logger.ainfo("Rejected stop for workflow job %s in non-cancellable mode %s", job_id, display_mode)
@@ -1076,6 +1068,14 @@ async def stop_workflow(
                 "mode": display_mode,
             },
         )
+
+    if job.status == JobStatus.CANCELLED:
+        return WorkflowStopResponse(job_id=str(job_id), message=f"Job {job_id} is already cancelled.")
+    # A late stop on a job that already finished must not rewrite its terminal
+    # status: flipping a COMPLETED/FAILED/TIMED_OUT row to CANCELLED would strand
+    # the result/error blob the run already wrote. Report the existing state.
+    if job.status in _TERMINAL_JOB_STATUSES:
+        return WorkflowStopResponse(job_id=str(job_id), message=f"Job {job_id} already finished ({job.status.value}).")
 
     try:
         revoked = await task_service.revoke_task(job_id)
