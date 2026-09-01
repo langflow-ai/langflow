@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Textarea } from "@/components/ui/textarea";
 import { parseString, sanitizeMcpName } from "@/utils/stringManipulation";
+import { AccessHintBadge } from "./AccessHintBadge";
 import { RequiresApprovalToggle } from "./RequiresApprovalToggle";
 
 export default function ToolsTable({
@@ -115,8 +116,13 @@ export default function ToolsTable({
       return;
     }
 
+    // Selection is applied through node.setSelected, which ignores
+    // suppressRowClickSelection: ag-grid reads that option only when handling a real
+    // row click. So this must not touch it. The grid is configured to suppress click
+    // selection for the whole modal, and overriding it here left click selection live,
+    // which made a click on any already-selected row collapse the selection to that
+    // one row and silently disable every other tool.
     applyingSelection.current = true;
-    agGrid.current.api.setGridOption("suppressRowClickSelection", true);
 
     const selectedIds = new Set(selectedRows.map((row) => row.name));
     agGrid.current.api.forEachNode((node) => {
@@ -126,7 +132,6 @@ export default function ToolsTable({
       }
     });
 
-    agGrid.current.api.setGridOption("suppressRowClickSelection", false);
     setTimeout(() => {
       applyingSelection.current = false;
     }, 50);
@@ -190,6 +195,8 @@ export default function ToolsTable({
     }
   }, [focusedRow]);
 
+  const hasAccessHints = rows.some((row) => Boolean(row?.access_hint));
+
   const columnDefs: ColDef[] = [
     {
       field: isAction ? "display_name" : "name",
@@ -239,6 +246,28 @@ export default function ToolsTable({
               ]),
       cellClass: "text-muted-foreground",
     },
+    // Only MCP servers declare behavior hints, so the column is dropped entirely rather
+    // than standing empty in every other component's tool table. It sits next to
+    // Requires Approval because it is the input to that decision.
+    ...(hasAccessHints
+      ? [
+          {
+            field: "access_hint",
+            headerName: t("toolsModal.columnAccess", "Access"),
+            width: 120,
+            flex: 0,
+            resizable: false,
+            sortable: false,
+            cellRenderer: (params: {
+              data?: { access_hint?: string | null };
+            }) => (
+              <div className="flex h-full items-center">
+                <AccessHintBadge hint={params.data?.access_hint} />
+              </div>
+            ),
+          },
+        ]
+      : []),
     {
       field: "approval_actions",
       headerName: t("toolsModal.columnApproval", "Requires Approval"),
