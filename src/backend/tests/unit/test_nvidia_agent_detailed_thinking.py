@@ -38,6 +38,7 @@ def test_agent_component_has_detailed_thinking_default():
 @pytest.mark.asyncio
 async def test_lc_model_get_chat_result_handles_missing_detailed_thinking():
     """LCModelComponent.get_chat_result must not raise when detailed_thinking is absent."""
+
     # Create minimal concrete subclass
     class DummyModel(LCModelComponent):
         def build_model(self):
@@ -60,9 +61,7 @@ async def test_lc_model_get_chat_result_handles_missing_detailed_thinking():
     object.__setattr__(comp, "_get_chat_result", fake_get_chat_result)
     mock_runnable = MockLanguageModel()
 
-    result = await comp.get_chat_result(
-        runnable=mock_runnable, stream=False, input_value="Hi", system_message="hi"
-    )
+    result = await comp.get_chat_result(runnable=mock_runnable, stream=False, input_value="Hi", system_message="hi")
     assert result.text == "ok"
     assert called["system_message"] == "hi"
 
@@ -91,9 +90,7 @@ async def test_lc_model_prefixes_system_message_when_detailed_thinking_true():
     object.__setattr__(comp, "_get_chat_result", fake_get_chat_result)
     mock_runnable = MockLanguageModel()
 
-    result = await comp.get_chat_result(
-        runnable=mock_runnable, stream=False, input_value="Hi", system_message="orig"
-    )
+    result = await comp.get_chat_result(runnable=mock_runnable, stream=False, input_value="Hi", system_message="orig")
     assert result.text == "ok"
     assert called["system_message"] == DETAILED_THINKING_PREFIX + "orig"
     assert called["system_message"].startswith("detailed thinking on")

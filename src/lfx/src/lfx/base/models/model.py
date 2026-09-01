@@ -73,6 +73,7 @@ class LCModelComponent(Component):
         if "_attributes" not in self.__dict__:
             self.__dict__["_attributes"] = {}
         self.__dict__["_attributes"]["detailed_thinking"] = bool(value)
+
     trace_type = "llm"
     metadata = {
         "keywords": [
