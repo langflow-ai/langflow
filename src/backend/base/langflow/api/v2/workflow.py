@@ -641,6 +641,11 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 # ``Job.result`` — protocol-neutral, so agui-protocol runs get a
                 # populated GET-status result too (not just langflow).
                 emit_output_capture=True,
+                # No client is waiting on a background run, so the sync HTTP ceiling is the wrong
+                # budget for it: nesting it inside the runner's asyncio.wait_for capped every
+                # background job at workflow_execution_timeout and made the documented
+                # background_job_timeout=None ("no timeout") unreachable. JobRunner owns it.
+                execution_timeout=None,
             ):
                 if terminal_error_type is not None and event_type == terminal_error_type:
                     errored = True
