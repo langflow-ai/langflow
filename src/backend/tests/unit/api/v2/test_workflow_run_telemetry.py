@@ -77,7 +77,7 @@ async def test_live_stream_uses_one_run_id_for_adapter_graph_and_telemetry(monke
     from langflow.api.v2 import workflow_execution as wf_exec
     from langflow.services import deps
 
-    captured: dict[str, str | None] = {}
+    captured: dict[str, object] = {}
     telemetry = SimpleNamespace(log_package_run=AsyncMock())
     original_get_stream_adapter = workflow_api.get_stream_adapter
 
@@ -87,6 +87,7 @@ async def test_live_stream_uses_one_run_id_for_adapter_graph_and_telemetry(monke
 
     async def fake_generate_flow_events(**kwargs):
         captured["graph_run_id"] = kwargs["run_id"]
+        captured["log_builds"] = kwargs["log_builds"]
         await kwargs["event_manager"].queue.put((None, None, time.time()))
 
     monkeypatch.setattr(workflow_api, "_apply_execution_gates", lambda parsed, *_args: parsed)
@@ -107,6 +108,7 @@ async def test_live_stream_uses_one_run_id_for_adapter_graph_and_telemetry(monke
 
     payload = telemetry.log_package_run.await_args.args[0]
     assert captured["adapter_run_id"] == captured["graph_run_id"] == payload.run_id
+    assert captured["log_builds"] is False
 
 
 async def test_stream_pause_does_not_emit_terminal_run_telemetry(monkeypatch):
