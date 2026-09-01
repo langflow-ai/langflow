@@ -111,6 +111,23 @@ from langflow.services.warm_registry.resolver import resolve_warm_flow_for_execu
 # with its own idempotent early return).
 _TERMINAL_JOB_STATUSES = frozenset({JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.TIMED_OUT})
 
+
+def _workflow_job_mode(job: Job) -> str | None:
+    """Return the persisted execution mode for a workflow job, if recognized.
+
+    Durable background submissions store their sanitized request under
+    ``job_metadata["request"]``. Sync and live-stream rows do not have that
+    durable execution handle, so missing or malformed metadata intentionally
+    resolves to ``None`` and is treated as non-cancellable.
+    """
+    metadata = job.job_metadata if isinstance(job.job_metadata, dict) else {}
+    request = metadata.get("request")
+    if not isinstance(request, dict):
+        return None
+    mode = request.get("mode")
+    return mode if mode in {"background", "stream", "sync"} else None
+
+
 # The langflow durable background routes (GET status, POST /stop, GET /pending,
 # POST /{job_id}/resume, GET /{job_id}/events). The POST run path is contributed
 # by the shared lfx router (``lfx.workflow.router.create_workflow_router``)
@@ -957,16 +974,18 @@ async def get_workflow_status(
 @router.post(
     "/stop",
     summary="Stop Workflow",
-    description="Stop a running workflow execution",
+    description="Stop a running background workflow execution",
 )
 async def stop_workflow(
     request: WorkflowStopRequest,
     http_request: Request,
     current_user: Annotated[UserRead, Depends(get_current_user_for_workflow)],
 ) -> WorkflowStopResponse:
-    """Stop a running workflow execution by job_id.
+    """Stop a running background workflow execution by job_id.
 
-    This endpoint allows clients to gracefully or forcefully stop a running workflow.
+    Sync and live-stream runs execute inside their caller's request and cannot be
+    interrupted by the durable background executor. Those modes are rejected
+    instead of reporting a cancellation that did not happen.
 
     Args:
         request: Stop request containing job_id and optional force flag
@@ -980,6 +999,7 @@ async def stop_workflow(
         HTTPException:
             - 403: Developer API disabled or unauthorized
             - 404: Job ID not found
+            - 409: Job is not a cancellable background run
             - 500: Internal server error
     """
     job_id = request.job_id
@@ -1033,6 +1053,21 @@ async def stop_workflow(
                 "code": "JOB_NOT_FOUND",
                 "message": f"Job {job_id} not found",
                 "job_id": str(job_id),
+            },
+        )
+
+    job_mode = _workflow_job_mode(job)
+    if job_mode != "background":
+        display_mode = job_mode or "unknown"
+        await logger.ainfo("Rejected stop for workflow job %s in non-cancellable mode %s", job_id, display_mode)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Job cannot be stopped",
+                "code": "JOB_NOT_CANCELLABLE",
+                "message": "Only background workflow jobs can be stopped.",
+                "job_id": str(job_id),
+                "mode": display_mode,
             },
         )
 
