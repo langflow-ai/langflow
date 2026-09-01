@@ -142,4 +142,14 @@ describe("LanguageFormComponent", () => {
     expect(mockLoadLanguage).toHaveBeenCalledWith("fr");
     expect(mockChangeLanguage).toHaveBeenCalledWith("fr");
   });
+
+  it("loads Swedish when Swedish is selected", async () => {
+    const user = userEvent.setup();
+    render(<LanguageFormComponent />);
+
+    await user.selectOptions(screen.getByRole("combobox"), "sv");
+
+    expect(mockLoadLanguage).toHaveBeenCalledWith("sv");
+    expect(mockChangeLanguage).toHaveBeenCalledWith("sv");
+  });
 });
