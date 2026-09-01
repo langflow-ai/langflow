@@ -221,7 +221,7 @@ def _scope_roots(
 
 
 def package_resource_root() -> Path | None:
-    """Root of the installed lfx package, or None when it cannot be resolved.
+    """The installed lfx component library, or None when it cannot be resolved.
 
     The packaged assistant flow reads its own component library off disk to
     answer questions about components. That path is outside every user's storage scope,
@@ -230,9 +230,11 @@ def package_resource_root() -> Path | None:
     Read access is granted for this root ONLY while a packaged first-party flow is running
     AND the caller did not declare ``for_write``. It is the product's own source: no tenant
     data, no uploads, and none of the reserved secret/key/DB files, which live under
-    config_dir. Constraining the exemption this way is what keeps the marker safe even
-    though it stays set while the flow runs -- a FileSystemTool inside that flow still
-    cannot reach anything else, and nothing can write into the package.
+    config_dir. Scoped to ``components`` rather than the package root: that is the only
+    directory the packaged flow reads, and a narrower root is a smaller blast radius.
+    Constraining the exemption this way is what keeps the marker safe even though it stays
+    set while the flow runs -- a FileSystemTool inside that flow still cannot reach anything
+    else, and nothing can write into the package.
     """
     try:
         import lfx
@@ -240,7 +242,7 @@ def package_resource_root() -> Path | None:
         package_file = getattr(lfx, "__file__", None)
         if not package_file:
             return None
-        return Path(package_file).parent.resolve()
+        return (Path(package_file).parent / "components").resolve()
     except (ImportError, OSError, ValueError):
         return None
 

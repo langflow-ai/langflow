@@ -92,7 +92,9 @@ class FaissVectorStoreComponent(LCVectorStoreComponent):
         directory is confined to the storage dir before the per-user FAISS scope is appended.
         """
         path = (
-            enforce_local_file_access(self.resolve_path(self.persist_directory)) if self.persist_directory else Path()
+            enforce_local_file_access(self.resolve_path(self.persist_directory), for_write=True)
+            if self.persist_directory
+            else Path()
         )
         if user_scope := self._user_scope(self.user_id):
             return path / ".langflow_faiss" / "users" / user_scope
