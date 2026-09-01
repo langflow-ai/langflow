@@ -115,6 +115,20 @@ class TestSQLComponent(ComponentTestBaseWithoutClient):
         assert result.iloc[0]["id"] == 1
         assert result.iloc[0]["name"] == "name_test"
 
+    def test_run_sql_query_without_returned_rows(self, component_class: type[SQLComponent], default_kwargs):
+        """Test successful SQL statements that do not produce a result set."""
+        component = component_class(**default_kwargs)
+        component.db = Mock()
+        component.db.run.return_value = []
+
+        with patch.object(component, "maybe_create_db"):
+            result = component.run_sql_query()
+
+        assert isinstance(result, DataFrame)
+        assert result.empty
+        assert component.status is result
+        component.db.run.assert_called_once_with(component.query, fetch="cursor")
+
     def test_maybe_create_db_reuses_cached_database(self, component_class: type[SQLComponent], default_kwargs):
         """Test cached database reuse without creating a new engine."""
         cached_db = Mock()
