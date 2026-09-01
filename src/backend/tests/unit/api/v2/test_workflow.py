@@ -389,11 +389,15 @@ class TestWorkflowStop:
             mock_job_service.update_job_status.assert_awaited_once_with(UUID(job_id), JobStatus.CANCELLED)
 
     @pytest.mark.parametrize(
-        ("job_metadata", "expected_mode"),
+        ("job_metadata", "job_status", "expected_mode"),
         [
-            ({"request": {"mode": "sync"}}, "sync"),
-            ({"request": {"mode": "stream"}}, "stream"),
-            (None, "unknown"),
+            ({"request": {"mode": "sync"}}, JobStatus.IN_PROGRESS, "sync"),
+            ({"request": {"mode": "stream"}}, JobStatus.IN_PROGRESS, "stream"),
+            (None, JobStatus.IN_PROGRESS, "unknown"),
+            (None, JobStatus.CANCELLED, "unknown"),
+            ({"request": {"mode": "sync"}}, JobStatus.COMPLETED, "sync"),
+            ({"request": {"mode": "stream"}}, JobStatus.FAILED, "stream"),
+            ({"request": {"mode": "sync"}}, JobStatus.TIMED_OUT, "sync"),
         ],
     )
     async def test_stop_workflow_rejects_non_background_jobs(
@@ -401,13 +405,14 @@ class TestWorkflowStop:
         client: AsyncClient,
         created_api_key,
         job_metadata,
+        job_status,
         expected_mode,
     ):
-        """Active jobs not owned by the background executor must not report cancellation."""
+        """Jobs not owned by the background executor must not report cancellation."""
         job_id = uuid4()
         mock_job = MagicMock(
             job_id=job_id,
-            status=JobStatus.IN_PROGRESS,
+            status=job_status,
             type=JobType.WORKFLOW,
             user_id=None,
             job_metadata=job_metadata,
