@@ -8,7 +8,7 @@ from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
 from pathlib import Path
 from textwrap import dedent
-from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
+from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple
 from uuid import UUID
 
 import nanoid
@@ -22,6 +22,9 @@ from lfx.base.tools.constants import (
     TOOL_OUTPUT_NAME,
     TOOLS_METADATA_INFO,
     TOOLS_METADATA_INPUT_NAME,
+)
+from lfx.custom.annotation_validation import (
+    resolve_method_return_annotation,
 )
 from lfx.custom.tree_visitor import RequiredInputsVisitor
 from lfx.exceptions.component import StreamingError
@@ -1141,11 +1144,11 @@ class Component(CustomComponent):
                 raise ValueError(msg) from e
 
     def _get_method_return_type(self, method_name: str) -> list[str]:
-        method = getattr(self, method_name)
-        try:
-            return_type = get_type_hints(method).get("return")
-        except TypeError:
-            return []
+        return_type = resolve_method_return_annotation(
+            component_class=type(self),
+            method_name=method_name,
+            method_getter=lambda: getattr(self, method_name),
+        )
         if return_type is None:
             return []
         extracted_return_types = self._extract_return_type(return_type)

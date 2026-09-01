@@ -7,6 +7,7 @@ from json_repair import repair_json
 from pydantic import BaseModel
 
 from lfx.graph.vertex.base import Vertex
+from lfx.graph.vertex.param_handler import ParameterHandler
 from lfx.log.logger import logger
 from lfx.schema.graph import InputValue, Tweaks
 from lfx.schema.schema import INPUT_FIELD_NAME, InputValueRequest
@@ -550,6 +551,21 @@ def process_tweaks_on_graph(graph: Graph, tweaks: dict[str, dict[str, Any]], *, 
     if refused:
         reason = _refusal_reason(policy, flow_declares_allowlist=flow_declares_allowlist)
         raise TweakRefusedError(sorted(set(refused)), reason=reason)
+
+    # Validate every declared runtime parameter before mutating any cached
+    # vertex. In particular, a bad FileInput on a later vertex must not leave
+    # earlier vertices half-updated for the next run.
+    for vertex, node_tweaks in pending:
+        template_data = vertex.data.get("node", {}).get("template", {})
+        if not isinstance(template_data, dict):
+            continue
+        declared_tweaks = {
+            tweak_name: tweak_value
+            for tweak_name, tweak_value in node_tweaks.items()
+            if isinstance(template_data.get(tweak_name), dict)
+        }
+        if declared_tweaks:
+            ParameterHandler(vertex, storage_service=None).process_runtime_params(declared_tweaks)
 
     for vertex, node_tweaks in pending:
         apply_tweaks_on_vertex(

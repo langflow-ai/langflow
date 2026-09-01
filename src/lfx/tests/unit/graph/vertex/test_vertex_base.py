@@ -1063,16 +1063,26 @@ class TestFileInputStorageNamespaceOwnership:
         monkeypatch.setattr("lfx.utils.file_path_security.get_settings_service", lambda: settings_service)
         return LocalStorageService(Mock(), settings_service)
 
-    def _handler(self, storage, *, user_id, flow_id):
+    def _handler(self, storage, *, user_id, flow_id, source_flow_id=None):
         vertex = Mock(spec=Vertex)
         graph = Mock()
         graph.user_id = user_id
         graph.flow_id = flow_id
-        graph.source_flow_id = None
+        graph.source_flow_id = source_flow_id
         vertex.graph = graph
         vertex.data = {"node": {"template": {}}}
         vertex.display_name = "File"
         return ParameterHandler(vertex, storage)
+
+    def _runtime_handler(self, storage, *, user_id=ATTACKER_ID, flow_id=FLOW_ID, source_flow_id=None):
+        handler = self._handler(
+            storage,
+            user_id=user_id,
+            flow_id=flow_id,
+            source_flow_id=source_flow_id,
+        )
+        handler.template_dict = {"path": {"type": "file", "_input_type": "FileInput", "list": False, "value": None}}
+        return handler
 
     def test_foreign_namespace_is_rejected_before_resolution(self, unrestricted_storage):
         handler = self._handler(unrestricted_storage, user_id=self.ATTACKER_ID, flow_id=self.FLOW_ID)
@@ -1178,6 +1188,83 @@ class TestFileInputStorageNamespaceOwnership:
         )
 
         assert params["path"] == str(tmp_path / "config" / self.VICTIM_ID / "secret.txt")
+
+    @pytest.mark.parametrize(
+        "runtime_value",
+        [
+            pytest.param(f"{ATTACKER_ID}/own.txt", id="owned-user-storage-key"),
+            pytest.param(f"{FLOW_ID}/flow.txt", id="executing-flow-storage-key"),
+            pytest.param("/srv/langflow/report.csv", id="posix-absolute-path"),
+            pytest.param("C:/data/report.csv", id="windows-drive-forward-slashes"),
+            pytest.param(r"C:\data\report.csv", id="windows-drive-backslashes"),
+            pytest.param(r"\\fileserver\share\report.csv", id="windows-unc-backslashes"),
+            pytest.param("//fileserver/share/report.csv", id="windows-unc-forward-slashes"),
+            pytest.param("report.csv", id="separatorless-local-path"),
+            pytest.param([f"{ATTACKER_ID}/own.txt", f"{FLOW_ID}/flow.txt"], id="list"),
+            pytest.param({"file_path": f"{ATTACKER_ID}/own.txt"}, id="file-path-wrapper"),
+            pytest.param({"value": f"{FLOW_ID}/flow.txt"}, id="value-wrapper"),
+        ],
+    )
+    def test_unrestricted_runtime_file_values_are_validated_without_rewriting(
+        self,
+        unrestricted_storage,
+        runtime_value,
+        monkeypatch,
+    ):
+        """Runtime validation must not resolve or otherwise rewrite unrestricted local paths."""
+        handler = self._runtime_handler(unrestricted_storage)
+        original = copy.deepcopy(runtime_value)
+
+        def _unexpected_resolution(_path):
+            msg = "unrestricted runtime validation must not resolve FileInput values"
+            raise AssertionError(msg)
+
+        monkeypatch.setattr(unrestricted_storage, "resolve_component_path", _unexpected_resolution)
+
+        result = handler.process_runtime_params({"path": runtime_value})
+
+        assert result["path"] == original
+        assert runtime_value == original
+
+    def test_unrestricted_runtime_file_value_allows_trusted_source_flow_key(self, unrestricted_storage):
+        handler = self._runtime_handler(unrestricted_storage, source_flow_id="trusted-source-flow")
+        runtime_value = "trusted-source-flow/source.txt"
+
+        assert handler.process_runtime_params({"path": runtime_value}) == {"path": runtime_value}
+
+    @pytest.mark.parametrize(
+        "runtime_value",
+        [
+            pytest.param(f"{VICTIM_ID}/secret.txt", id="foreign-scalar"),
+            pytest.param(
+                [f"{ATTACKER_ID}/own.txt", f"{VICTIM_ID}/secret.txt"],
+                id="mixed-list",
+            ),
+            pytest.param({"file_path": f"{VICTIM_ID}/secret.txt"}, id="file-path-wrapper"),
+            pytest.param({"value": f"{VICTIM_ID}/secret.txt"}, id="value-wrapper"),
+            pytest.param(
+                f"{ATTACKER_ID}/../{VICTIM_ID}/secret.txt",
+                id="forward-slash-traversal",
+            ),
+            pytest.param(r"attacker\..\outside.txt", id="relative-backslash-traversal"),
+        ],
+    )
+    def test_unrestricted_runtime_file_values_reject_traversal_and_foreign_namespaces(
+        self,
+        unrestricted_storage,
+        runtime_value,
+    ):
+        handler = self._runtime_handler(unrestricted_storage)
+
+        with pytest.raises(LocalFileAccessError):
+            handler.process_runtime_params({"path": runtime_value})
+
+    def test_unscoped_runtime_graph_keeps_standalone_storage_key_behavior(self, unrestricted_storage):
+        """Standalone lfx graphs have no tenant scope, so foreign-looking keys remain usable."""
+        handler = self._runtime_handler(unrestricted_storage, user_id=None, flow_id=None)
+        runtime_value = f"{self.VICTIM_ID}/secret.txt"
+
+        assert handler.process_runtime_params({"path": runtime_value}) == {"path": runtime_value}
 
 
 class TestStorageNamespaceDenialIsNotDowngraded(TestFileInputStorageNamespaceOwnership):

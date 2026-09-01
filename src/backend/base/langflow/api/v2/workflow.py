@@ -90,6 +90,10 @@ from langflow.services.auth.utils import get_current_user_for_workflow
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import deny_to_404_unless_readable
 from langflow.services.authorization.flow_data_override import resolve_flow_data_override
+from langflow.services.background_execution.service import (
+    InvalidRequestOverridesError,
+    RequestOverridesUnavailableError,
+)
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.jobs.model import Job, JobType
 from langflow.services.database.models.user.model import UserRead
@@ -406,6 +410,27 @@ async def submit_background_with_mapping(
             stream_protocol=stream_protocol,
             idempotency_key=getattr(parsed, "idempotency_key", None),
         )
+    except InvalidRequestOverridesError as err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "error": "Invalid request overrides",
+                "code": "INVALID_REQUEST_OVERRIDES",
+                "message": "globals and tweaks must contain JSON-compatible values.",
+                "field": err.field,
+                "flow_id": parsed.flow_id,
+            },
+        ) from err
+    except RequestOverridesUnavailableError as err:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "Service unavailable",
+                "code": "REQUEST_OVERRIDES_UNAVAILABLE",
+                "message": "Background request overrides are temporarily unavailable. Please try again.",
+                "flow_id": parsed.flow_id,
+            },
+        ) from err
     except WorkflowServiceUnavailableError as err:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -1144,12 +1169,23 @@ async def resume_workflow(
     # Snapshot the card id before the continuation runs: it may reach another pause and
     # overwrite job metadata, and this decision must never stamp that later card.
     card_message_id = (job.job_metadata or {}).get("card_message_id")
-    accepted = await service.resume_job(
-        parsed_job_id,
-        current_user,
-        request_id=request.request_id,
-        decision=request.decision or {},
-    )
+    try:
+        accepted = await service.resume_job(
+            parsed_job_id,
+            current_user,
+            request_id=request.request_id,
+            decision=request.decision or {},
+        )
+    except RequestOverridesUnavailableError as err:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "Service unavailable",
+                "code": "REQUEST_OVERRIDES_UNAVAILABLE",
+                "message": "Background request overrides are temporarily unavailable. Please try again.",
+                "job_id": job_id,
+            },
+        ) from err
     if not accepted:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

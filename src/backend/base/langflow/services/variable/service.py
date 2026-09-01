@@ -8,6 +8,7 @@ from uuid import UUID
 from lfx.log.logger import logger
 from lfx.services.authorization.base import ResourceVisibilityScope
 from lfx.services.settings.constants import AGENTIC_VARIABLES
+from lfx.services.variable import VariableNotFoundError
 from sqlmodel import col, select
 
 from langflow.services.auth import utils as auth_utils
@@ -164,7 +165,7 @@ class DatabaseVariableService(VariableService, Service):
 
         if not variable or not variable.value:
             msg = f"{name} variable not found."
-            raise ValueError(msg)
+            raise VariableNotFoundError(msg)
 
         return variable
 

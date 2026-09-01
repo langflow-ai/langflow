@@ -17,6 +17,9 @@ import { UseRequestProcessor } from "../../services/request-processor";
 
 interface IPostTemplateValue {
   value: unknown;
+  // A discrete edit can run before this hook re-renders, so prefer the
+  // caller's mutated template over the node snapshot captured by the hook.
+  template?: APIClassType["template"];
   tool_mode?: boolean;
   // the dropdown input re-gathers all
   // dropdown items each time a single
@@ -50,7 +53,7 @@ export const usePostTemplateValue: useMutationFunctionType<
   const postTemplateValueFn = async (
     payload: IPostTemplateValue,
   ): Promise<APIClassType | undefined> => {
-    const template = node.template;
+    const template = payload.template ?? node.template;
 
     if (!template) return;
 

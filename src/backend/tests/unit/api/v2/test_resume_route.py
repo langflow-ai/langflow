@@ -63,6 +63,35 @@ async def test_resume_stale_request_id_409(client, created_api_key, suspended_jo
     assert resp.status_code == 409
 
 
+async def test_resume_crypto_unavailable_returns_503_and_preserves_suspension(
+    client,
+    created_api_key,
+    suspended_job,
+):
+    """Unreadable encrypted overrides fail before resume claims or decision writes."""
+    async with session_scope() as session:
+        job = await session.get(Job, suspended_job)
+        job.job_metadata = {
+            **(job.job_metadata or {}),
+            "request_overrides_format": "fernet-json-v1",
+            "request_overrides": "authenticated-token-unavailable",
+        }
+        session.add(job)
+        await session.flush()
+
+    body = {"request_id": "req-1", "decision": {"action_id": "approve"}}
+    resp = await client.post(f"api/v2/workflows/{suspended_job}/resume", json=body, headers=_headers(created_api_key))
+
+    assert resp.status_code == 503, resp.text
+    assert resp.json()["detail"]["code"] == "REQUEST_OVERRIDES_UNAVAILABLE"
+    async with session_scope() as session:
+        job = await session.get(Job, suspended_job)
+        assert job.status == JobStatus.SUSPENDED
+    from langflow.services.deps import get_job_service
+
+    assert await get_job_service().unconsumed_signals(suspended_job) == []
+
+
 async def test_resume_unknown_job_404(client, created_api_key):
     body = {"request_id": "req-1", "decision": {}}
     resp = await client.post(f"api/v2/workflows/{uuid4()}/resume", json=body, headers=_headers(created_api_key))
