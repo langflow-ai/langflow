@@ -226,11 +226,11 @@ async def execute_public_workflow(
             UnknownStreamProtocolError(request.stream_protocol, available_protocols())
         )
 
-    job_id = uuid4()
+    run_id = str(uuid4())
     adapter = get_stream_adapter(
         request.stream_protocol,
         StreamAdapterContext(
-            run_id=str(job_id),
+            run_id=run_id,
             thread_id=scoped_session or str(virtual_flow_id),
         ),
     )
@@ -263,6 +263,7 @@ async def execute_public_workflow(
             provider_policy_flow=flow,
             source_flow_id=real_flow_id,
             source_flow_owner_id=source_flow_owner_id,
+            run_id=run_id,
             # Anonymous shared-link traffic, kept apart from signed-in v2 runs the same way
             # playground.public is kept apart from playground.
             protocol="v2.public",
