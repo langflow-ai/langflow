@@ -1,3 +1,4 @@
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 from fastapi import status
@@ -151,6 +152,7 @@ async def test_add_user(client: AsyncClient, logged_in_headers_super_user):
     assert "store_api_key" in result, "The result must have an 'store_api_key' key"
     assert "updated_at" in result, "The result must have an 'updated_at' key"
     assert "username" in result, "The result must have an 'username' key"
+    assert response.headers["location"] == f"/api/v1/users/{result['id']}"
 
 
 async def test_read_current_user(client: AsyncClient, logged_in_headers):
@@ -177,6 +179,68 @@ async def test_read_all_users(client: AsyncClient, logged_in_headers_super_user)
     assert isinstance(result, dict), "The result must be a dictionary"
     assert "total_count" in result, "The result must have an 'total_count' key"
     assert "users" in result, "The result must have an 'users' key"
+
+
+async def test_read_all_users_denial_preserves_legacy_detail_and_adds_error_code(
+    client: AsyncClient, logged_in_headers
+):
+    response = await client.get("api/v1/users/", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json() == {"detail": "The user doesn't have enough privileges"}
+    assert response.headers["X-Langflow-Error-Code"] == "administration_denied"
+
+
+async def test_read_user_by_id(client: AsyncClient, logged_in_headers_super_user):
+    create_response = await client.post(
+        "api/v1/users/",
+        json={"username": "read-user-by-id", "password": "password123"},
+        headers=logged_in_headers_super_user,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    user_id = create_response.json()["id"]
+
+    try:
+        response = await client.get(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["username"] == "read-user-by-id"
+    finally:
+        await client.delete(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
+
+
+async def test_read_all_users_exact_username_filter(client: AsyncClient, logged_in_headers_super_user):
+    created_ids = []
+    try:
+        for username in ("exact-user", "exact-user-suffix"):
+            response = await client.post(
+                "api/v1/users/",
+                json={"username": username, "password": "password123"},
+                headers=logged_in_headers_super_user,
+            )
+            assert response.status_code == status.HTTP_201_CREATED
+            created_ids.append(response.json()["id"])
+
+        response = await client.get(
+            "api/v1/users/?username=exact-user",
+            headers=logged_in_headers_super_user,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert [row["username"] for row in response.json()["users"]] == ["exact-user"]
+    finally:
+        for user_id in created_ids:
+            await client.delete(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
+
+
+async def test_authz_capabilities_are_fail_closed_in_oss(client: AsyncClient, logged_in_headers):
+    response = await client.get("api/v1/authz/capabilities", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {
+        "administration": {"user": False, "team": False, "role": False},
+        "features": {"team_role_assignments": False},
+    }
 
 
 async def test_patch_user(client: AsyncClient, logged_in_headers_super_user):
@@ -301,6 +365,37 @@ async def test_patch_user_self_deactivation_forbidden(client: AsyncClient, logge
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
     assert "can't deactivate your own user account" in result["detail"]
+
+
+async def test_patch_user_password_denial_is_audited(client: AsyncClient, logged_in_headers, active_user, monkeypatch):
+    from langflow.api.v1 import users
+
+    audit = AsyncMock()
+    monkeypatch.setattr(users, "audit_decision", audit)
+    headers = {**logged_in_headers, "X-Langflow-Operation-ID": "cli-password-denial"}
+
+    response = await client.patch(
+        f"api/v1/users/{active_user.id}",
+        json={"password": "replacement-password"},  # pragma: allowlist secret
+        headers=headers,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {"detail": "You can't change your password here"}
+    audit.assert_awaited_once_with(
+        user_id=active_user.id,
+        action="user:update",
+        obj=f"user:{active_user.id}",
+        result="deny",
+        details={
+            "event": "access",
+            "status_code": 400,
+            "reason": "password_update_forbidden",
+            "fields_changed": ["password"],
+            "source": "manual",
+            "operation_id": "cli-password-denial",
+        },
+    )
 
 
 async def test_patch_user_self_deactivation_forbidden_superuser(

@@ -85,3 +85,9 @@ class ShareAction(str, Enum):
     CREATE = "create"
     DELETE = "delete"
     UPDATE = "update"
+
+
+class AdministrationAction(str, Enum):
+    """Actions authorized on user, team, and role administration resources."""
+
+    MANAGE = "manage"

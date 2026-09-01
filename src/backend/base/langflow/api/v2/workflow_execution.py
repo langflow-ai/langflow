@@ -23,6 +23,7 @@ import json
 import time
 from collections.abc import AsyncIterator
 from copy import deepcopy
+from typing import Final
 from uuid import UUID, uuid4
 
 from ag_ui.core import CustomEvent
@@ -52,6 +53,7 @@ from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_job_service, get_memory_base_service, get_settings_service, get_task_service
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 from langflow.services.warm_registry.service import flow_version
 
 # Configuration constants
@@ -74,6 +76,19 @@ def _resolve_execution_timeout() -> int:
 # so a slow consumer applies backpressure to the build loop instead of
 # letting frames accumulate without bound when the network is slow.
 _EVENT_QUEUE_MAX_SIZE = 256
+
+
+class _CeilingFromSettings:
+    """Sentinel type for ``_stream_event_frames(execution_timeout=...)``.
+
+    Its own class rather than a bare ``object()`` so the parameter carries a real
+    static type and an ``isinstance`` check narrows the remaining value to
+    ``float | None`` for ``asyncio.wait_for``. Distinct from ``None`` so a caller
+    can ask for "unbounded" without it collapsing into "use the default".
+    """
+
+
+_CEILING_FROM_SETTINGS: Final = _CeilingFromSettings()
 
 
 async def generate_flow_events(*args, **kwargs) -> None:
@@ -206,6 +221,7 @@ async def _stream_event_frames(
     background_tasks: BackgroundTasks,
     parsed: ParsedWorkflowRun,
     current_user: UserRead,
+    provider_policy_flow: FlowRead | None = None,
     source_flow_id: UUID | None = None,
     source_flow_owner_id: UUID | None = None,
     run_id: str | None = None,
@@ -217,6 +233,7 @@ async def _stream_event_frames(
     protocol: str,
     emit_output_capture: bool = False,
     expose_error_details: bool = False,
+    execution_timeout: float | None | _CeilingFromSettings = _CEILING_FROM_SETTINGS,
 ) -> AsyncIterator[tuple[bytes, str]]:
     """Run a flow via the v1 build-vertex loop, dispatch its events through ``adapter``.
 
@@ -234,6 +251,14 @@ async def _stream_event_frames(
     the raw Langflow payload alongside the AG-UI translation for the
     playground's chat-view. A follow-up retires this once chat-view
     consumes the AG-UI ``TEXT_MESSAGE_*`` lifecycle directly.
+
+    ``execution_timeout`` bounds the run. It defaults to the settings ceiling,
+    which is the right budget for a caller with a waiting HTTP client (stream,
+    public). Background runs pass ``None``: nothing is waiting on them, and their
+    budget is ``background_job_timeout``, enforced by ``JobRunner`` one layer out.
+    Resolving the ceiling here for them too nested two budgets, and the inner one
+    always wins, which made the documented ``background_job_timeout=None``
+    ("no timeout") silently cap at the sync ceiling instead.
     """
     # EventManager uses put_nowait(), so a plain bounded asyncio.Queue would
     # silently drop frames via QueueFull. This adapter keeps memory bounded and
@@ -242,9 +267,11 @@ async def _stream_event_frames(
     event_manager = create_default_event_manager(queue)
     input_request = _single_input_value_request(parsed)
     flow_data = FlowDataRequest(**parsed.data) if parsed.data else None
-    # Single wall-clock ceiling for every mode that drives this loop (stream,
-    # background, public). Sync uses its own asyncio.wait_for upstream.
-    execution_timeout = _resolve_execution_timeout()
+    # Ceiling for the modes whose caller is waiting on a socket (stream, public).
+    # Sync uses its own asyncio.wait_for upstream; background passes None and is
+    # bounded by JobRunner instead. wait_for(timeout=None) simply awaits.
+    if isinstance(execution_timeout, _CeilingFromSettings):
+        execution_timeout = _resolve_execution_timeout()
 
     # Captured from drive()'s exception path so the consumer can yield a
     # guaranteed adapter.error_events(...) fallback after the queue loop ends.
@@ -273,10 +300,19 @@ async def _stream_event_frames(
             # The queued-run link rides alongside for the same reason and in the same place. It
             # is None for a run with a live request above it, and the context manager is a no-op
             # then, so this costs a synchronous path nothing.
-            with execution_protocol(protocol), queued_trace_link(await _queued_trace_link_for(job_id)):
+            with (
+                scoped_model_provider_policy_for_flow(
+                    provider_policy_flow,
+                    user_id=current_user.id,
+                    is_superuser=bool(getattr(current_user, "is_superuser", False)),
+                ),
+                execution_protocol(protocol),
+                queued_trace_link(await _queued_trace_link_for(job_id)),
+            ):
                 await asyncio.wait_for(
                     generate_flow_events(
                         flow_id=flow_id,
+                        provider_policy_flow=provider_policy_flow,
                         background_tasks=background_tasks,
                         event_manager=event_manager,
                         inputs=input_request,
@@ -284,10 +320,10 @@ async def _stream_event_frames(
                         files=parsed.files,
                         stop_component_id=parsed.stop_component_id,
                         start_component_id=parsed.start_component_id,
-                        # Persist vertex builds (keyed by ``run_id``) only for job-tracked
-                        # runs so a background job's status can be reconstructed later. Live
-                        # streams pass no ``run_id`` and keep the no-persist behavior.
-                        log_builds=run_id is not None,
+                        # Persist vertex builds only for durable/background jobs. Live streams
+                        # carry a ``run_id`` for job/trace/telemetry correlation, but keep the
+                        # existing no-build-persistence behavior because they pass no ``job_id``.
+                        log_builds=job_id is not None,
                         current_user=current_user,
                         flow_name=flow_name,
                         source_flow_id=source_flow_id,
@@ -463,6 +499,7 @@ async def _stream_event_frames(
 def _execute_streaming_workflow(
     *,
     adapter: StreamAdapter,
+    run_id: str,
     parsed: ParsedWorkflowRun,
     flow: FlowRead,
     current_user: UserRead,
@@ -484,7 +521,9 @@ def _execute_streaming_workflow(
             background_tasks=background_tasks,
             parsed=parsed,
             current_user=current_user,
+            provider_policy_flow=flow,
             source_flow_owner_id=flow.user_id,
+            run_id=run_id,
             # The live v2 stream. Which client sent it is a separate attribute, read from the
             # X-Langflow-Client header, because the playground calls this same public endpoint.
             protocol="v2",
@@ -668,24 +707,33 @@ async def execute_sync_workflow(
         # instead of rebuilding. Cold-fall-back (None) for tweaks, request context/globals,
         # or a HITL/checkpointed run — none of which fit a shared user-agnostic template.
         graph = None
-        if sanitized_flow_data is None and not tweaks and context is None and checkpoint_store is None:
-            graph = await warm_deepcopy(
-                flow_id_str,
-                expected_version=flow_version(flow.updated_at),
-                user_id=user_id,
-                session_id=session_id,
-                stream=False,
-            )
-        if graph is None:
-            # Use deepcopy to prevent mutation of the original flow.data
-            # process_tweaks modifies nested dictionaries in-place
-            graph_data = deepcopy(sanitized_flow_data if sanitized_flow_data is not None else flow.data)
-            graph_data = process_tweaks(graph_data, tweaks, stream=False)
-            # Pass context to graph (similar to V1's simple_run_flow)
-            # This allows components to access request metadata via graph.context
-            graph = Graph.from_payload(
-                graph_data, flow_id=flow_id_str, user_id=user_id, flow_name=flow.name, context=context
-            )
+        with scoped_model_provider_policy_for_flow(
+            flow,
+            user_id=current_user.id,
+            is_superuser=bool(getattr(current_user, "is_superuser", False)),
+        ):
+            if sanitized_flow_data is None and not tweaks and context is None and checkpoint_store is None:
+                graph = await warm_deepcopy(
+                    flow_id_str,
+                    expected_version=flow_version(flow.updated_at),
+                    user_id=user_id,
+                    session_id=session_id,
+                    stream=False,
+                )
+            if graph is None:
+                # Use deepcopy to prevent mutation of the original flow.data
+                # process_tweaks modifies nested dictionaries in-place
+                graph_data = deepcopy(sanitized_flow_data if sanitized_flow_data is not None else flow.data)
+                graph_data = process_tweaks(graph_data, tweaks, stream=False)
+                # Pass context to graph (similar to V1's simple_run_flow)
+                # This allows components to access request metadata via graph.context
+                graph = Graph.from_payload(
+                    graph_data,
+                    flow_id=flow_id_str,
+                    user_id=user_id,
+                    flow_name=flow.name,
+                    context=context,
+                )
         # Serving-plane end-user scoping: an anonymous run is ephemeral, so mark the
         # graph non-persisting (astore_message honors this per component). Defaults
         # True for every other run.
@@ -731,7 +779,14 @@ async def execute_sync_workflow(
     _sync_run_error: str = ""
     _run_start = time.perf_counter()
     try:
-        with execution_protocol("v2"):
+        with (
+            scoped_model_provider_policy_for_flow(
+                flow,
+                user_id=current_user.id,
+                is_superuser=bool(getattr(current_user, "is_superuser", False)),
+            ),
+            execution_protocol("v2"),
+        ):
             task_result, execution_session_id = await job_service.execute_with_status(
                 job_id=job_id,
                 run_coro_func=run_graph_internal,

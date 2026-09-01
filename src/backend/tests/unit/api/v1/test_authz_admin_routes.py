@@ -16,7 +16,7 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi import HTTPException
+from fastapi import HTTPException, Response
 from sqlalchemy.exc import IntegrityError
 
 # --- shared fakes ----------------------------------------------------- #
@@ -91,8 +91,9 @@ class _ExecResult:
 
 
 class _StubAuthz:
-    def __init__(self, *, allow: bool = True) -> None:
+    def __init__(self, *, allow: bool = True, admin_resources: set[str] | None = None) -> None:
         self._allow = allow
+        self._admin_resources = admin_resources or set()
         self.invalidate_user_calls: list[UUID] = []
         self.invalidate_role_calls: list[UUID] = []
         self.invalidate_all_calls = 0
@@ -104,6 +105,13 @@ class _StubAuthz:
         self._staged_session: _FakeAsyncSession | None = None
 
     async def supports_cross_user_fetch(self) -> bool:
+        return False
+
+    async def can_administer(self, *, user_id: UUID, resource: str) -> bool:
+        del user_id
+        return resource in self._admin_resources
+
+    async def supports_team_role_assignments(self) -> bool:
         return False
 
     async def is_enabled(self) -> bool:
@@ -184,13 +192,27 @@ def _make_role_row(
 def stub_authz(monkeypatch):
     from langflow.api.v1 import authz_me, authz_role_assignments, authz_roles, authz_teams
 
-    def _apply(*, allow: bool = True) -> _StubAuthz:
-        stub = _StubAuthz(allow=allow)
+    def _apply(*, allow: bool = True, admin_resources: set[str] | None = None) -> _StubAuthz:
+        stub = _StubAuthz(allow=allow, admin_resources=admin_resources)
         for module in (authz_roles, authz_role_assignments, authz_teams, authz_me):
             monkeypatch.setattr(module, "get_authorization_service", lambda s=stub: s)
         return stub
 
     return _apply
+
+
+@pytest.fixture
+def audit_calls(monkeypatch):
+    from langflow.api.v1 import authz_role_assignments, authz_roles, authz_teams
+
+    calls: list[dict[str, Any]] = []
+
+    async def capture_audit(**kwargs):
+        calls.append(kwargs)
+
+    for module in (authz_roles, authz_role_assignments, authz_teams):
+        monkeypatch.setattr(module, "audit_decision", capture_audit)
+    return calls
 
 
 # =====================================================================
@@ -216,6 +238,14 @@ def test_role_create_accepts_canonical_permission_slugs():
     )
     # Wildcard action survives intact, no normalization surprises.
     assert payload.permissions[-1] == "file:*"
+
+
+def test_role_create_accepts_administration_permission_slugs():
+    """Delegated administration uses the canonical resource:manage vocabulary."""
+    from langflow.api.v1.schemas.authz_roles import RoleCreate
+
+    payload = RoleCreate(name="delegated-admin", permissions=["user:manage", "team:manage", "role:manage"])
+    assert payload.permissions == ["user:manage", "team:manage", "role:manage"]
 
 
 @pytest.mark.parametrize(
@@ -344,16 +374,17 @@ async def test_create_role_requires_superuser(stub_authz):
     payload = RoleCreate(name="custom", description=None, permissions=["flow:read"])
 
     with pytest.raises(HTTPException) as excinfo:
-        await authz_roles.create_role(payload=payload, current_user=user, session=session)
+        await authz_roles.create_role(payload=payload, current_user=user, session=session, response=Response())
     assert excinfo.value.status_code == 403
     assert session.added == []
     assert session.committed == 0
 
 
 @pytest.mark.asyncio
-async def test_create_role_persists_and_emits_lifecycle(stub_authz):
+async def test_create_role_persists_and_emits_lifecycle(stub_authz, audit_calls):
     from langflow.api.v1 import authz_roles
     from langflow.api.v1.schemas.authz_roles import RoleCreate
+    from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION
     from langflow.services.database.models.auth import AuthzRole  # noqa: F401 — keeps import path live
 
     authz = stub_authz()
@@ -361,36 +392,115 @@ async def test_create_role_persists_and_emits_lifecycle(stub_authz):
     user = _make_user(is_superuser=True)
     payload = RoleCreate(name="runner", description="x", permissions=["flow:execute"])
 
-    result = await authz_roles.create_role(payload=payload, current_user=user, session=session)
+    result = await authz_roles.create_role(payload=payload, current_user=user, session=session, response=Response())
     assert result.name == "runner"
     assert result.is_system is False
     assert len(session.added) == 1
     assert session.committed == 1
     assert authz.staged_mutations == authz.committed_mutations
     assert len(authz.staged_mutations) == 1
+    assert audit_calls == [
+        {
+            "user_id": user.id,
+            "action": "role:create",
+            "obj": f"role:{result.id}",
+            "result": "allow",
+            "details": {
+                "event": AUDIT_EVENT_MUTATION,
+                "role_name": "runner",
+                "permissions": ["flow:execute"],
+                "parent_role_id": None,
+                "source": "manual",
+            },
+        }
+    ]
 
 
 @pytest.mark.asyncio
-async def test_create_role_409_on_name_conflict(stub_authz):
+async def test_create_role_409_on_name_conflict(stub_authz, audit_calls):
     from langflow.api.v1 import authz_roles
     from langflow.api.v1.schemas.authz_roles import RoleCreate
+    from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS
 
     stub_authz()
-    session = _FakeAsyncSession(commit_raises=IntegrityError("dup", {}, Exception()))
+    session = _FakeAsyncSession(
+        commit_raises=IntegrityError(
+            "insert",
+            {},
+            Exception("UNIQUE constraint failed: authz_role.name"),
+        )
+    )
     user = _make_user(is_superuser=True)
     payload = RoleCreate(name="viewer", permissions=[])
 
     with pytest.raises(HTTPException) as excinfo:
-        await authz_roles.create_role(payload=payload, current_user=user, session=session)
+        await authz_roles.create_role(payload=payload, current_user=user, session=session, response=Response())
     assert excinfo.value.status_code == 409
     assert "already exists" in excinfo.value.detail
     assert session.rolled_back == 1
+    assert audit_calls == [
+        {
+            "user_id": user.id,
+            "action": "role:create",
+            "obj": "role:*",
+            "result": "deny",
+            "details": {
+                "event": AUDIT_EVENT_ACCESS,
+                "status_code": 409,
+                "reason": "role_name_conflict",
+                "source": "manual",
+            },
+        }
+    ]
 
 
 @pytest.mark.asyncio
-async def test_update_role_blocks_system_role(stub_authz):
+async def test_create_role_does_not_mislabel_unrelated_integrity_error(stub_authz, audit_calls):
+    from langflow.api.v1 import authz_roles
+    from langflow.api.v1.schemas.authz_roles import RoleCreate
+    from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS
+
+    stub_authz()
+    session = _FakeAsyncSession(
+        commit_raises=IntegrityError(
+            "insert",
+            {},
+            Exception("FOREIGN KEY constraint failed"),
+        )
+    )
+    user = _make_user(is_superuser=True)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await authz_roles.create_role(
+            payload=RoleCreate(name="custom", permissions=[]),
+            current_user=user,
+            session=session,
+            response=Response(),
+        )
+
+    assert excinfo.value.status_code == 409
+    assert excinfo.value.detail == "Role data conflicts with the current database state"
+    assert audit_calls == [
+        {
+            "user_id": user.id,
+            "action": "role:create",
+            "obj": "role:*",
+            "result": "deny",
+            "details": {
+                "event": AUDIT_EVENT_ACCESS,
+                "status_code": 409,
+                "reason": "role_integrity_conflict",
+                "source": "manual",
+            },
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_update_role_blocks_system_role(stub_authz, audit_calls):
     from langflow.api.v1 import authz_roles
     from langflow.api.v1.schemas.authz_roles import RoleUpdate
+    from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS
     from langflow.services.database.models.auth import AuthzRole
 
     stub_authz()
@@ -416,6 +526,20 @@ async def test_update_role_blocks_system_role(stub_authz):
         )
     assert excinfo.value.status_code == 400
     assert "System roles" in excinfo.value.detail
+    assert audit_calls == [
+        {
+            "user_id": user.id,
+            "action": "role:update",
+            "obj": f"role:{role_id}",
+            "result": "deny",
+            "details": {
+                "event": AUDIT_EVENT_ACCESS,
+                "status_code": 400,
+                "reason": "system_role_read_only",
+                "source": "manual",
+            },
+        }
+    ]
 
 
 @pytest.mark.asyncio
@@ -834,15 +958,17 @@ async def test_create_assignment_invalid_user_404(stub_authz):
             payload=payload,
             current_user=user,
             session=session,
+            response=Response(),
         )
     assert excinfo.value.status_code == 404
     assert "user_id" in excinfo.value.detail
 
 
 @pytest.mark.asyncio
-async def test_create_assignment_emits_lifecycle_for_target_user(stub_authz):
+async def test_create_assignment_emits_lifecycle_for_target_user(stub_authz, audit_calls):
     from langflow.api.v1 import authz_role_assignments
     from langflow.api.v1.schemas.authz_role_assignments import RoleAssignmentCreate
+    from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION
     from langflow.services.database.models.auth import AuthzRole
     from langflow.services.database.models.user.model import User
 
@@ -859,13 +985,14 @@ async def test_create_assignment_emits_lifecycle_for_target_user(stub_authz):
         payload=payload,
         current_user=actor,
         session=session,
+        response=Response(),
     )
     assert len(session.added) == 2
     assert session.added[1].source_kind == "manual"
     assert session.added[1].assignment_id == session.added[0].id
     assert session.committed == 1
     assert authz.staged_mutations == authz.committed_mutations
-    assert authz.validated_mutations == []
+    assert authz.validated_mutations == authz.staged_mutations
     assert len(authz.lock_requests) == 1
     assert authz.lock_requests[0]["affected_user_ids"] == (target_user.id,)
     assert authz.staged_mutations[0].affected_user_ids == (target_user.id,)
@@ -873,7 +1000,49 @@ async def test_create_assignment_emits_lifecycle_for_target_user(stub_authz):
     assert authz.staged_mutations[0].domain_type == "global"
     assert authz.staged_mutations[0].domain_id is None
     assert session.events.index("lock") < session.events.index("exec")
-    assert session.events.index("lock") < session.events.index("flush")
+    assert session.events.index("lock") < session.events.index("validate") < session.events.index("flush")
+    assert audit_calls[0]["action"] == "role_assignment:create"
+    assert audit_calls[0]["obj"] == f"role_assignment:{session.added[0].id}"
+    assert audit_calls[0]["result"] == "allow"
+    assert audit_calls[0]["details"]["event"] == AUDIT_EVENT_MUTATION
+    assert audit_calls[0]["details"]["user_id"] == str(target_user.id)
+
+
+@pytest.mark.asyncio
+async def test_create_assignment_enforces_plugin_access_ceiling(stub_authz):
+    from langflow.api.v1 import authz_role_assignments
+    from langflow.api.v1.schemas.authz_role_assignments import RoleAssignmentCreate
+    from langflow.services.database.models.auth import AuthzRole
+    from langflow.services.database.models.user.model import User
+    from lfx.services.authorization import AuthorizationMutationRejected
+
+    authz = stub_authz(admin_resources={"role"})
+
+    async def reject_assignment(*, session, mutation) -> None:  # noqa: ARG001
+        detail = "Assignment exceeds the actor's access ceiling"
+        raise AuthorizationMutationRejected(detail)
+
+    authz.validate_identity_mutation = reject_assignment
+    target_user = SimpleNamespace(id=uuid4())
+    role = SimpleNamespace(id=uuid4(), name="admin")
+    session = _FakeAsyncSession(
+        {(User, target_user.id): target_user, (AuthzRole, role.id): role},
+    )
+    actor = _make_user(is_superuser=False)
+    payload = RoleAssignmentCreate(user_id=target_user.id, role_id=role.id)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await authz_role_assignments.create_assignment(
+            payload=payload,
+            current_user=actor,
+            session=session,
+            response=Response(),
+        )
+
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.headers == {"X-Langflow-Error-Code": "access_ceiling"}
+    assert session.committed == 0
+    assert authz.staged_mutations == []
 
 
 @pytest.mark.asyncio
@@ -903,6 +1072,7 @@ async def test_create_assignment_duplicate_manual_source_is_409(stub_authz):
             payload=RoleAssignmentCreate(user_id=target_user.id, role_id=role.id),
             current_user=actor,
             session=session,
+            response=Response(),
         )
 
     assert excinfo.value.status_code == 409
@@ -951,6 +1121,7 @@ async def test_create_assignment_adds_manual_source_to_idp_assignment_without_li
         payload=RoleAssignmentCreate(user_id=target_user.id, role_id=role.id),
         current_user=actor,
         session=session,
+        response=Response(),
     )
 
     assert len(session.added) == 1
@@ -1058,8 +1229,12 @@ async def test_delete_assignment_returns_surviving_idp_assignment(stub_authz, mo
     assert authz.validated_mutations == []
     assert authz.staged_mutations == []
     assert audit_calls[0]["action"] == "role_assignment:delete_manual_source"
+    assert audit_calls[0]["obj"] == f"role_assignment:{assignment.id}"
     assert audit_calls[0]["details"] == {
+        "event": "mutation",
         "assignment_id": str(assignment.id),
+        "subject_type": "user",
+        "user_id": str(assignment.user_id),
         "role_id": str(assignment.role_id),
         "domain_type": "workspace",
         "domain_id": str(domain_id),
@@ -1071,12 +1246,14 @@ async def test_delete_assignment_returns_surviving_idp_assignment(stub_authz, mo
                 "external_group": "corp-dev",
             }
         ],
+        "source": "manual",
     }
 
 
 @pytest.mark.asyncio
-async def test_delete_assignment_manual_only_returns_204(stub_authz):
+async def test_delete_assignment_manual_only_returns_204(stub_authz, audit_calls):
     from langflow.api.v1 import authz_role_assignments
+    from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION
     from langflow.services.database.models.auth import AuthzRoleAssignment, AuthzRoleAssignmentGrant
 
     authz = stub_authz()
@@ -1103,6 +1280,10 @@ async def test_delete_assignment_manual_only_returns_204(stub_authz):
     assert len(authz.lock_requests) == 1
     assert len(authz.validated_mutations) == 1
     assert authz.staged_mutations == authz.committed_mutations
+    assert audit_calls[0]["action"] == "role_assignment:delete"
+    assert audit_calls[0]["obj"] == f"role_assignment:{assignment.id}"
+    assert audit_calls[0]["details"]["event"] == AUDIT_EVENT_MUTATION
+    assert audit_calls[0]["details"]["user_id"] == str(assignment.user_id)
 
 
 @pytest.mark.asyncio
@@ -1289,14 +1470,83 @@ async def test_create_team_requires_superuser(stub_authz):
     payload = TeamCreate(team_name="Eng", adom_name="eng")
 
     with pytest.raises(HTTPException) as excinfo:
-        await authz_teams.create_team(payload=payload, current_user=user, session=session)
+        await authz_teams.create_team(payload=payload, current_user=user, session=session, response=Response())
     assert excinfo.value.status_code == 403
 
 
 @pytest.mark.asyncio
-async def test_add_member_emits_lifecycle_for_target_user(stub_authz):
+async def test_delegated_team_administrator_can_create_team(stub_authz):
+    from langflow.api.v1 import authz_teams
+    from langflow.api.v1.schemas.authz_teams import TeamCreate
+
+    stub_authz(admin_resources={"team"})
+    session = _FakeAsyncSession()
+    user = _make_user(is_superuser=False)
+
+    created = await authz_teams.create_team(
+        payload=TeamCreate(team_name="Engineering", adom_name="engineering"),
+        current_user=user,
+        session=session,
+        response=Response(),
+    )
+
+    assert created.adom_name == "engineering"
+
+
+@pytest.mark.asyncio
+async def test_delegated_team_administrator_cannot_create_roles(stub_authz):
+    from langflow.api.v1 import authz_roles
+    from langflow.api.v1.schemas.authz_roles import RoleCreate
+
+    stub_authz(admin_resources={"team"})
+    user = _make_user(is_superuser=False)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await authz_roles.create_role(
+            payload=RoleCreate(name="ops", permissions=["flow:read"]),
+            current_user=user,
+            session=_FakeAsyncSession(),
+            response=Response(),
+        )
+    assert excinfo.value.status_code == 403
+
+
+def test_team_membership_mutations_accept_manual_source_only():
+    from langflow.api.v1.schemas.authz_teams import TeamMemberCreate
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        TeamMemberCreate(user_id=uuid4(), source="sso")
+
+
+@pytest.mark.asyncio
+async def test_idp_team_membership_cannot_be_removed(stub_authz):
+    from langflow.api.v1 import authz_teams
+
+    stub_authz()
+    team_id = uuid4()
+    target_user_id = uuid4()
+    membership = SimpleNamespace(id=uuid4(), team_id=team_id, user_id=target_user_id, source="sso")
+    session = _FakeAsyncSession(exec_results=[[membership]])
+
+    with pytest.raises(HTTPException) as excinfo:
+        await authz_teams.remove_member(
+            team_id=team_id,
+            user_id=target_user_id,
+            current_user=_make_user(is_superuser=True),
+            session=session,
+        )
+
+    assert excinfo.value.status_code == 409
+    assert excinfo.value.detail == "Externally managed memberships cannot be removed through the manual membership API"
+    assert session.deleted == []
+
+
+@pytest.mark.asyncio
+async def test_add_member_emits_lifecycle_for_target_user(stub_authz, audit_calls):
     from langflow.api.v1 import authz_teams
     from langflow.api.v1.schemas.authz_teams import TeamMemberCreate
+    from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION
     from langflow.services.database.models.auth import AuthzTeam
     from langflow.services.database.models.user.model import User
 
@@ -1314,10 +1564,14 @@ async def test_add_member_emits_lifecycle_for_target_user(stub_authz):
         payload=payload,
         current_user=actor,
         session=session,
+        response=Response(),
     )
     assert len(session.added) == 1
     assert authz.staged_mutations == authz.committed_mutations
     assert authz.staged_mutations[0].affected_user_ids == (target_user.id,)
+    assert audit_calls[0]["action"] == "team_member:create"
+    assert audit_calls[0]["obj"] == f"team:{team.id}"
+    assert audit_calls[0]["details"]["event"] == AUDIT_EVENT_MUTATION
 
 
 @pytest.mark.asyncio
@@ -1343,6 +1597,7 @@ async def test_add_member_duplicate_returns_409(stub_authz):
             payload=payload,
             current_user=actor,
             session=session,
+            response=Response(),
         )
     assert excinfo.value.status_code == 409
     assert "already a member" in excinfo.value.detail
@@ -1618,6 +1873,7 @@ async def test_create_assignment_succeeds_when_committed_hook_fails(failing_comm
         payload=payload,
         current_user=actor,
         session=session,
+        response=Response(),
     )
     assert session.committed == 1
     assert authz.staged_mutations == authz.committed_attempts
@@ -1688,7 +1944,7 @@ async def test_remove_member_succeeds_when_committed_hook_fails(failing_committe
     authz = failing_committed_hook_authz()
     team_id = uuid4()
     user_id = uuid4()
-    member = SimpleNamespace(id=uuid4(), team_id=team_id, user_id=user_id)
+    member = SimpleNamespace(id=uuid4(), team_id=team_id, user_id=user_id, source="manual")
     session = _FakeAsyncSession(exec_results=[[member]])
     actor = _make_user(is_superuser=True)
 
@@ -1885,3 +2141,45 @@ def test_list_endpoint_pagination_bounds_match_convention(endpoint_module):
     module = importlib.import_module(endpoint_module)
     assert module._LIST_MAX_LIMIT == 200
     assert module._LIST_DEFAULT_LIMIT == 100
+
+
+@pytest.mark.asyncio
+async def test_team_list_supports_exact_adom_name_filter(stub_authz):
+    from langflow.api.v1 import authz_teams
+
+    stub_authz()
+    captured: dict[str, Any] = {}
+
+    class _RecordingSession(_FakeAsyncSession):
+        async def exec(self, stmt):  # type: ignore[override]
+            captured["stmt"] = stmt
+            return _ExecResult([])
+
+    await authz_teams.list_teams(
+        session=_RecordingSession(),
+        current_user=_make_user(),
+        adom_name="engineering",
+    )
+    compiled = str(captured["stmt"].compile(compile_kwargs={"literal_binds": True}))
+    assert "authz_team.adom_name = 'engineering'" in compiled
+
+
+@pytest.mark.asyncio
+async def test_role_list_supports_exact_name_filter(stub_authz):
+    from langflow.api.v1 import authz_roles
+
+    stub_authz()
+    captured: dict[str, Any] = {}
+
+    class _RecordingSession(_FakeAsyncSession):
+        async def exec(self, stmt):  # type: ignore[override]
+            captured["stmt"] = stmt
+            return _ExecResult([])
+
+    await authz_roles.list_roles(
+        session=_RecordingSession(),
+        current_user=_make_user(),
+        exact_name="administrator",
+    )
+    compiled = str(captured["stmt"].compile(compile_kwargs={"literal_binds": True}))
+    assert "authz_role.name = 'administrator'" in compiled

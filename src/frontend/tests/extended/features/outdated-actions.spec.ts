@@ -5,174 +5,190 @@ import { openFlowsList } from "../../utils/flow/open-flows-list";
 
 test.describe.configure({ mode: "serial" });
 
-test("user must be able to update outdated components by update all button", {
-  tag: ["@release"],
-}, async ({ page }) => {
-  const dropTarget = await openFlowsList(page);
+test(
+  "user must be able to update outdated components by update all button",
+  { tag: ["@release"] },
+  async ({ page }) => {
+    const dropTarget = await openFlowsList(page);
 
-  await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
-  // Read the asset and rename the flow uniquely so we can wait for THIS
-  // upload to appear in the list — avoids racing against the bootstrap-seeded
-  // "Basic Prompting" card or stale "Memory Chatbot" entries from sibling tests.
-  const rawJson = readFileSync("tests/assets/outdated_flow.json", "utf-8");
-  const flowName = `Outdated Test Flow ${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2, 8)}`;
-  const jsonContent = JSON.stringify({
-    ...JSON.parse(rawJson),
-    name: flowName,
-  });
-
-  // Create the DataTransfer and File
-  const dataTransfer = await page.evaluateHandle((data) => {
-    const dt = new DataTransfer();
-    // Convert the buffer to a hex array
-    const file = new File([data], "outdated_flow.json", {
-      type: "application/json",
+    await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
+    // Read the asset and rename the flow uniquely so we can wait for THIS
+    // upload to appear in the list — avoids racing against the bootstrap-seeded
+    // "Basic Prompting" card or stale "Memory Chatbot" entries from sibling tests.
+    const rawJson = readFileSync("tests/assets/outdated_flow.json", "utf-8");
+    const flowName = `Outdated Test Flow ${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+    const jsonContent = JSON.stringify({
+      ...JSON.parse(rawJson),
+      name: flowName,
     });
-    dt.items.add(file);
-    return dt;
-  }, jsonContent);
 
-  // Now dispatch
-  await dropTarget.dispatchEvent("drop", {
-    dataTransfer,
-  });
+    // Create the DataTransfer and File
+    const dataTransfer = await page.evaluateHandle((data) => {
+      const dt = new DataTransfer();
+      // Convert the buffer to a hex array
+      const file = new File([data], "outdated_flow.json", {
+        type: "application/json",
+      });
+      dt.items.add(file);
+      return dt;
+    }, jsonContent);
 
-  // Wait for the freshly-dropped flow card (by unique name) to appear, then click it.
-  const droppedCard = page
-    .getByTestId("list-card")
-    .filter({ hasText: flowName });
-  await droppedCard.waitFor({ state: "visible", timeout: 30000 });
-  await droppedCard.click();
-
-  await expect(page.getByText(/\d+ components? needs? updates?/)).toBeVisible({
-    timeout: 30000,
-  });
-
-  const outdatedComponents = await page.getByTestId("update-button").count();
-  expect(outdatedComponents).toBe(0);
-
-  const outdatedBreakingComponents = await page
-    .getByTestId("review-button")
-    .count();
-  expect(outdatedBreakingComponents).toBeGreaterThan(0);
-
-  expect(await page.getByTestId("update-all-button")).toHaveText("Review All");
-
-  await page.getByTestId("update-all-button").click();
-
-  // Verify all component checkboxes start unchecked.
-  for (let i = 2; i < 2 + outdatedBreakingComponents; i++) {
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(i).isChecked(),
-    ).toBe(false);
-  }
-
-  await page
-    .getByRole("checkbox", { name: "Column with Header Selection" })
-    .check();
-
-  // Verify all component checkboxes are now checked.
-  for (let i = 2; i < 2 + outdatedBreakingComponents; i++) {
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(i).isChecked(),
-    ).toBe(true);
-  }
-
-  await expect(page.getByTestId("backup-flow-checkbox")).toBeChecked();
-  await page.getByTestId("backup-flow-checkbox").click();
-
-  await page.getByRole("button", { name: "Update Components" }).click();
-
-  // No explicit timeout: each component update is a validate/code round
-  // trip, so five of them blow a hardcoded 5s budget on Windows CI. The
-  // platform-aware expect timeout in playwright.config.ts is the right one.
-  await expect(page.getByTestId("update-button")).toHaveCount(0);
-
-  await expect(page.getByTestId("review-button")).toHaveCount(0);
-});
-
-test("user must be able to update outdated components by each outdated component", {
-  tag: ["@release"],
-}, async ({ page }) => {
-  const dropTarget = await openFlowsList(page);
-
-  await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
-  // Read the asset and rename the flow uniquely so we can wait for THIS
-  // upload to appear in the list — avoids racing against the bootstrap-seeded
-  // "Basic Prompting" card or stale "Memory Chatbot" entries from sibling tests.
-  const rawJson = readFileSync("tests/assets/outdated_flow.json", "utf-8");
-  const flowName = `Outdated Test Flow ${Date.now()}-${Math.random()
-    .toString(36)
-    .slice(2, 8)}`;
-  const jsonContent = JSON.stringify({
-    ...JSON.parse(rawJson),
-    name: flowName,
-  });
-
-  // Create the DataTransfer and File
-  const dataTransfer = await page.evaluateHandle((data) => {
-    const dt = new DataTransfer();
-    // Convert the buffer to a hex array
-    const file = new File([data], "outdated_flow.json", {
-      type: "application/json",
+    // Now dispatch
+    await dropTarget.dispatchEvent("drop", {
+      dataTransfer,
     });
-    dt.items.add(file);
-    return dt;
-  }, jsonContent);
 
-  // Now dispatch
-  await dropTarget.dispatchEvent("drop", {
-    dataTransfer,
-  });
+    // Wait for the freshly-dropped flow card (by unique name) to appear, then click it.
+    const droppedCard = page
+      .getByTestId("list-card")
+      .filter({ hasText: flowName });
+    await droppedCard.waitFor({ state: "visible", timeout: 30000 });
+    await droppedCard.click();
 
-  // Wait for the freshly-dropped flow card (by unique name) to appear, then click it.
-  const droppedCard = page
-    .getByTestId("list-card")
-    .filter({ hasText: flowName });
-  await droppedCard.waitFor({ state: "visible", timeout: 30000 });
-  await droppedCard.click();
+    await expect(page.getByText(/\d+ components? needs? updates?/)).toBeVisible(
+      {
+        timeout: 30000,
+      },
+    );
 
-  await expect(page.getByText(/\d+ components? needs? updates?/)).toBeVisible({
-    timeout: 30000,
-  });
+    const outdatedComponents = await page.getByTestId("update-button").count();
+    expect(outdatedComponents).toBe(0);
 
-  const outdatedComponents = await page.getByTestId("update-button").count();
-  expect(outdatedComponents).toBe(0);
+    const outdatedBreakingComponents = await page
+      .getByTestId("review-button")
+      .count();
+    expect(outdatedBreakingComponents).toBeGreaterThan(0);
 
-  const outdatedBreakingComponents = await page
-    .getByTestId("review-button")
-    .count();
-  expect(outdatedBreakingComponents).toBeGreaterThan(0);
+    expect(await page.getByTestId("update-all-button")).toHaveText(
+      "Review All",
+    );
 
-  expect(await page.getByTestId("update-all-button")).toHaveText("Review All");
+    await page.getByTestId("update-all-button").click();
 
-  await page.getByTestId("review-button").first().click();
+    // Verify all component checkboxes start unchecked.
+    for (let i = 2; i < 2 + outdatedBreakingComponents; i++) {
+      expect(
+        await page.locator('input[data-ref="eInput"]').nth(i).isChecked(),
+      ).toBe(false);
+    }
 
-  await page.waitForSelector("button[data-testid='backup-flow-checkbox']", {
-    timeout: 30000,
-  });
+    await page
+      .getByRole("checkbox", { name: "Column with Header Selection" })
+      .check();
 
-  await expect(page.getByTestId("backup-flow-checkbox")).toBeChecked();
+    // Verify all component checkboxes are now checked.
+    for (let i = 2; i < 2 + outdatedBreakingComponents; i++) {
+      expect(
+        await page.locator('input[data-ref="eInput"]').nth(i).isChecked(),
+      ).toBe(true);
+    }
 
-  await page.getByRole("button", { name: "Update Component" }).click();
+    await expect(page.getByTestId("backup-flow-checkbox")).toBeChecked();
+    await page.getByTestId("backup-flow-checkbox").click();
 
-  await expect(page.getByTestId("update-button")).toHaveCount(0);
+    await page.getByRole("button", { name: "Update Components" }).click();
 
-  await expect(page.getByTestId("review-button")).toHaveCount(
-    outdatedBreakingComponents - 1,
-  );
+    // No explicit timeout: each component update is a validate/code round
+    // trip, so five of them blow a hardcoded 5s budget on Windows CI. The
+    // platform-aware expect timeout in playwright.config.ts is the right one.
+    await expect(page.getByTestId("update-button")).toHaveCount(0);
 
-  await expect(page.getByText(/\d+ components? needs? updates?/)).toBeVisible();
+    await expect(page.getByTestId("review-button")).toHaveCount(0);
+  },
+);
 
-  expect(await page.getByTestId("update-all-button")).toHaveText("Review All");
+test(
+  "user must be able to update outdated components by each outdated component",
+  { tag: ["@release"] },
+  async ({ page }) => {
+    const dropTarget = await openFlowsList(page);
 
-  await openFlowsList(page);
+    await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
+    // Read the asset and rename the flow uniquely so we can wait for THIS
+    // upload to appear in the list — avoids racing against the bootstrap-seeded
+    // "Basic Prompting" card or stale "Memory Chatbot" entries from sibling tests.
+    const rawJson = readFileSync("tests/assets/outdated_flow.json", "utf-8");
+    const flowName = `Outdated Test Flow ${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+    const jsonContent = JSON.stringify({
+      ...JSON.parse(rawJson),
+      name: flowName,
+    });
 
-  // The backup flow row renders after the list refetch settles; a bare
-  // count() snapshot races it on slow runners.
-  await expect(page.getByText("Backup").first()).toBeVisible({
-    timeout: TIMEOUTS.medium,
-  });
-});
+    // Create the DataTransfer and File
+    const dataTransfer = await page.evaluateHandle((data) => {
+      const dt = new DataTransfer();
+      // Convert the buffer to a hex array
+      const file = new File([data], "outdated_flow.json", {
+        type: "application/json",
+      });
+      dt.items.add(file);
+      return dt;
+    }, jsonContent);
+
+    // Now dispatch
+    await dropTarget.dispatchEvent("drop", {
+      dataTransfer,
+    });
+
+    // Wait for the freshly-dropped flow card (by unique name) to appear, then click it.
+    const droppedCard = page
+      .getByTestId("list-card")
+      .filter({ hasText: flowName });
+    await droppedCard.waitFor({ state: "visible", timeout: 30000 });
+    await droppedCard.click();
+
+    await expect(page.getByText(/\d+ components? needs? updates?/)).toBeVisible(
+      {
+        timeout: 30000,
+      },
+    );
+
+    const outdatedComponents = await page.getByTestId("update-button").count();
+    expect(outdatedComponents).toBe(0);
+
+    const outdatedBreakingComponents = await page
+      .getByTestId("review-button")
+      .count();
+    expect(outdatedBreakingComponents).toBeGreaterThan(0);
+
+    expect(await page.getByTestId("update-all-button")).toHaveText(
+      "Review All",
+    );
+
+    await page.getByTestId("review-button").first().click();
+
+    await page.waitForSelector("button[data-testid='backup-flow-checkbox']", {
+      timeout: 30000,
+    });
+
+    await expect(page.getByTestId("backup-flow-checkbox")).toBeChecked();
+
+    await page.getByRole("button", { name: "Update Component" }).click();
+
+    await expect(page.getByTestId("update-button")).toHaveCount(0);
+
+    await expect(page.getByTestId("review-button")).toHaveCount(
+      outdatedBreakingComponents - 1,
+    );
+
+    await expect(
+      page.getByText(/\d+ components? needs? updates?/),
+    ).toBeVisible();
+
+    expect(await page.getByTestId("update-all-button")).toHaveText(
+      "Review All",
+    );
+
+    await openFlowsList(page);
+
+    // The backup flow row renders after the list refetch settles; a bare
+    // count() snapshot races it on slow runners.
+    await expect(page.getByText("Backup").first()).toBeVisible({
+      timeout: TIMEOUTS.medium,
+    });
+  },
+);

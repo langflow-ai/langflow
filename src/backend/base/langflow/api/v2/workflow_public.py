@@ -70,7 +70,7 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
 
-router = APIRouter(prefix="/workflows/public", tags=["Workflow (public)"])
+router = APIRouter(prefix="/workflows/public", tags=["Workflow (public)"], include_in_schema=False)
 
 
 def _enforce_public_rate_limit(http_request: Request) -> None:
@@ -226,11 +226,11 @@ async def execute_public_workflow(
             UnknownStreamProtocolError(request.stream_protocol, available_protocols())
         )
 
-    job_id = uuid4()
+    run_id = str(uuid4())
     adapter = get_stream_adapter(
         request.stream_protocol,
         StreamAdapterContext(
-            run_id=str(job_id),
+            run_id=run_id,
             thread_id=scoped_session or str(virtual_flow_id),
         ),
     )
@@ -260,8 +260,10 @@ async def execute_public_workflow(
             background_tasks=background_tasks,
             parsed=parsed,
             current_user=public_user,
+            provider_policy_flow=flow,
             source_flow_id=real_flow_id,
             source_flow_owner_id=source_flow_owner_id,
+            run_id=run_id,
             # Anonymous shared-link traffic, kept apart from signed-in v2 runs the same way
             # playground.public is kept apart from playground.
             protocol="v2.public",

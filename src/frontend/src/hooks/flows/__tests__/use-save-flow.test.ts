@@ -125,6 +125,9 @@ describe("useSaveFlow", () => {
         onError: expect.any(Function),
       }),
     );
+    expect(mockMutate.mock.calls[0][0]).not.toHaveProperty(
+      "providerScopeChanged",
+    );
     expect(mockSetSaveLoading).toHaveBeenCalledWith(true);
     expect(mockSetSaveLoading).toHaveBeenCalledWith(false);
     expect(mockSetCurrentFlow).toHaveBeenCalled();
@@ -388,6 +391,7 @@ describe("useSaveFlow", () => {
       expect.objectContaining({
         id: "flow-1",
         folder_id: "folder-B",
+        providerScopeChanged: true,
       }),
       expect.objectContaining({
         onSuccess: expect.any(Function),

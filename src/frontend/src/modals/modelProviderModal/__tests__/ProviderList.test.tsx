@@ -69,13 +69,14 @@ interface MockProviderListItemProps {
 jest.mock("../components/ProviderListItem", () => ({
   __esModule: true,
   default: ({ provider, isSelected, onSelect }: MockProviderListItemProps) => (
-    <div
+    <button
+      type="button"
       data-testid={`provider-item-${provider.provider}`}
       data-selected={isSelected}
       onClick={() => onSelect(provider)}
     >
       {provider.provider} - {provider.model_count} models
-    </div>
+    </button>
   ),
 }));
 
@@ -104,9 +105,88 @@ describe("ProviderList", () => {
       expect(screen.getByTestId("provider-list-loading")).toBeInTheDocument();
       expect(screen.getByText("Loading providers")).toBeInTheDocument();
     });
+
+    it("does not render stale provider cards during a scoped refetch", () => {
+      const useGetModelProvidersMock =
+        require("@/controllers/API/queries/models/use-get-model-providers").useGetModelProviders;
+      useGetModelProvidersMock.mockReturnValueOnce({
+        data: mockProviders,
+        isLoading: false,
+        isFetching: true,
+        isError: false,
+      });
+
+      render(<ProviderList modelType="all" flowId="flow-a" />);
+
+      expect(screen.getByTestId("provider-list-loading")).toBeInTheDocument();
+      expect(screen.queryByTestId("provider-list")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("provider-item-OpenAI"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("does not render stale provider cards while a scoped refetch is paused", () => {
+      const useGetModelProvidersMock =
+        require("@/controllers/API/queries/models/use-get-model-providers").useGetModelProviders;
+      useGetModelProvidersMock.mockReturnValueOnce({
+        data: mockProviders,
+        isLoading: false,
+        isFetching: false,
+        fetchStatus: "paused",
+        isError: false,
+      });
+
+      render(<ProviderList modelType="all" flowId="flow-a" />);
+
+      expect(screen.getByTestId("provider-list-loading")).toBeInTheDocument();
+      expect(screen.queryByTestId("provider-list")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("provider-item-OpenAI"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("does not render stale provider cards after a scoped refetch error", () => {
+      const useGetModelProvidersMock =
+        require("@/controllers/API/queries/models/use-get-model-providers").useGetModelProviders;
+      useGetModelProvidersMock.mockReturnValueOnce({
+        data: mockProviders,
+        isLoading: false,
+        isFetching: false,
+        isError: true,
+        error: new Error("scope refresh denied"),
+      });
+
+      render(<ProviderList modelType="all" flowId="flow-a" />);
+
+      expect(screen.getByTestId("provider-list-error")).toBeInTheDocument();
+      expect(screen.queryByTestId("provider-list")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("provider-item-OpenAI"),
+      ).not.toBeInTheDocument();
+    });
   });
 
   describe("Provider Display", () => {
+    it("requests only providers configurable in the active scope", () => {
+      const useGetModelProvidersMock =
+        require("@/controllers/API/queries/models/use-get-model-providers").useGetModelProviders;
+
+      render(
+        <ProviderList
+          modelType="all"
+          flowId="flow-one"
+          projectId="project-one"
+        />,
+      );
+
+      expect(useGetModelProvidersMock).toHaveBeenCalledWith({
+        includeDeprecated: true,
+        flowId: "flow-one",
+        projectId: "project-one",
+        purpose: "configure",
+      });
+    });
+
     it("should render provider list container", () => {
       render(<ProviderList modelType="all" />);
 

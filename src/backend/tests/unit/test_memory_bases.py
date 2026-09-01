@@ -16,10 +16,12 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import sqlite3
 import uuid
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import chromadb.errors
 import pytest
 from langflow.services.database.models.memory_base.model import (
     MemoryBase,
@@ -89,6 +91,14 @@ def _make_message(
         run_id=run_id,
         timestamp=datetime.now(timezone.utc),
     )
+
+
+def _owner_actor_fields(user_id: uuid.UUID | None = None) -> dict:
+    resolved_user_id = user_id or uuid.uuid4()
+    return {
+        "owner_user_id": resolved_user_id,
+        "actor_user_id": resolved_user_id,
+    }
 
 
 # ------------------------------------------------------------------ #
@@ -508,10 +518,11 @@ class TestMemoryBaseCreateFlowOwnership:
         from fastapi import HTTPException
         from langflow.api.v1.memories import create_memory_base
         from langflow.services.database.models.user.model import User
+        from langflow.services.memory_base.provider_scope import MemoryBaseFlowNotFoundError
 
         fake_user = User(id=uuid.uuid4(), username="alice")
         mock_service = MagicMock()
-        mock_service.create = AsyncMock(side_effect=PermissionError("Flow abc not found"))
+        mock_service.create = AsyncMock(side_effect=MemoryBaseFlowNotFoundError("Flow abc not found"))
 
         with (
             patch("langflow.api.v1.memories.get_memory_base_service", return_value=mock_service),
@@ -564,21 +575,25 @@ class TestMemoryBaseProviderPolicy:
         db = self._db_returning(object())
         initialize = AsyncMock()
         denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE)
+        policy = MagicMock()
+        policy.require.side_effect = denial
+        resolve_policy = AsyncMock(return_value=policy)
 
         with (
             patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
             patch("langflow.services.memory_base.service.infer_embedding_provider", return_value="Anthropic"),
-            patch("langflow.services.memory_base.service.require_model_provider", side_effect=denial) as require,
+            patch("langflow.services.memory_base.service.aresolve_model_provider_policy", resolve_policy),
             patch("langflow.services.memory_base.service.initialize_kb", initialize),
             pytest.raises(ModelProviderPolicyError),
         ):
             await service.create(payload, user_id=user_id)
 
-        require.assert_called_once_with(
+        resolve_policy.assert_awaited_once_with(
             user_id=user_id,
-            provider="Anthropic",
+            providers=["Anthropic"],
             purpose=ModelProviderPolicyPurpose.CONFIGURE,
         )
+        policy.require.assert_called_once_with("Anthropic")
         initialize.assert_not_awaited()
         db.add.assert_not_called()
         db.commit.assert_not_awaited()
@@ -599,26 +614,133 @@ class TestMemoryBaseProviderPolicy:
         initialize = AsyncMock()
         denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE)
 
-        def require_provider(*, provider, **_kwargs):
+        def require_provider(provider):
             if provider == "Anthropic":
                 raise denial
+
+        policy = MagicMock()
+        policy.require.side_effect = require_provider
+        resolve_policy = AsyncMock(return_value=policy)
 
         with (
             patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
             patch("langflow.services.memory_base.service.infer_llm_provider", return_value="Anthropic"),
-            patch(
-                "langflow.services.memory_base.service.require_model_provider",
-                side_effect=require_provider,
-            ) as require,
+            patch("langflow.services.memory_base.service.aresolve_model_provider_policy", resolve_policy),
             patch("langflow.services.memory_base.service.initialize_kb", initialize),
             pytest.raises(ModelProviderPolicyError),
         ):
             await service.create(payload, user_id=user_id)
 
-        assert require.call_args.kwargs["purpose"] is ModelProviderPolicyPurpose.CONFIGURE
+        assert resolve_policy.await_args.kwargs["purpose"] is ModelProviderPolicyPurpose.CONFIGURE
+        assert resolve_policy.await_args.kwargs["providers"][0] == "Anthropic"
+        policy.require.assert_called_once_with("Anthropic")
         initialize.assert_not_awaited()
         db.add.assert_not_called()
         db.commit.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_create_denied_embedding_precedes_preprocessing_secret_lookup(self, service):
+        """Every supplied provider is authorized before any credential is read."""
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        owner_user_id = uuid.uuid4()
+        payload = MemoryBaseCreate(
+            name="mb",
+            flow_id=uuid.uuid4(),
+            embedding_model="denied-embed",
+            preprocessing=True,
+            preproc_model="allowed-chat",
+        )
+        db = self._db_returning(object())
+        denial = ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.CONFIGURE)
+
+        def authorize_provider(provider):
+            if provider == "OpenAI":
+                raise denial
+
+        policy = MagicMock()
+        policy.require.side_effect = authorize_provider
+        resolve_policy = AsyncMock(return_value=policy)
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch("langflow.services.memory_base.service.infer_llm_provider", return_value="Anthropic"),
+            patch("langflow.services.memory_base.service.infer_embedding_provider", return_value="OpenAI"),
+            patch("langflow.services.memory_base.service.aresolve_model_provider_policy", resolve_policy),
+            patch("langflow.services.memory_base.service.get_api_key_for_provider", return_value="owner-secret") as key,
+            patch("langflow.services.memory_base.service.initialize_kb", AsyncMock()) as initialize,
+            pytest.raises(ModelProviderPolicyError),
+        ):
+            await service.create(payload, user_id=owner_user_id)
+
+        key.assert_not_called()
+        assert resolve_policy.await_args.kwargs["providers"] == ["Anthropic", "OpenAI"]
+        assert [call.args[0] for call in policy.require.call_args_list] == ["Anthropic", "OpenAI"]
+        initialize.assert_not_awaited()
+
+    @pytest.mark.parametrize("actor_is_superuser", [False, True], ids=["delegated-admin", "superadmin"])
+    @pytest.mark.asyncio
+    async def test_update_separates_actor_policy_from_owner_credentials(self, service, actor_is_superuser):
+        """Cross-user writes evaluate the actor while retaining owner-scoped secrets."""
+        from langflow.services.database.models.flow.model import Flow
+        from lfx.services.model_provider_policy import (
+            ModelProviderPolicyPurpose,
+            current_model_provider_policy_context,
+        )
+
+        owner_user_id = uuid.uuid4()
+        actor_user_id = uuid.uuid4()
+        mb = _make_mb(user_id=owner_user_id, threshold=10)
+        mb.preprocessing = True
+        mb.preproc_model = "allowed-chat"
+        flow = Flow(id=mb.flow_id, user_id=owner_user_id, name="owner flow")
+        mb_result = MagicMock()
+        mb_result.first.return_value = mb
+        flow_result = MagicMock()
+        flow_result.first.return_value = flow
+        db = AsyncMock()
+        db.exec = AsyncMock(side_effect=[mb_result, flow_result])
+        db.add = MagicMock()
+        policy_calls = []
+        policy = MagicMock()
+
+        async def authorize_providers(*, user_id, providers, purpose):
+            context = current_model_provider_policy_context()
+            assert context is not None
+            assert context.user_id == actor_user_id
+            assert context.attributes["is_superuser"] is actor_is_superuser
+            policy_calls.append((user_id, tuple(providers), purpose))
+            return policy
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch("langflow.services.memory_base.service.infer_embedding_provider", return_value="OpenAI"),
+            patch("langflow.services.memory_base.service.infer_llm_provider", return_value="Anthropic"),
+            patch(
+                "langflow.services.memory_base.service.aresolve_model_provider_policy",
+                side_effect=authorize_providers,
+            ),
+            patch(
+                "langflow.services.memory_base.service.get_api_key_for_provider",
+                return_value="owner-secret",
+            ) as key,
+        ):
+            updated = await service.update(
+                mb.id,
+                owner_user_id=owner_user_id,
+                patch=MemoryBaseUpdate(threshold=99),
+                actor_user_id=actor_user_id,
+                actor_is_superuser=actor_is_superuser,
+            )
+
+        assert updated is mb
+        assert policy_calls == [
+            (actor_user_id, ("Anthropic", "OpenAI"), ModelProviderPolicyPurpose.CONFIGURE),
+        ]
+        assert [call.args[0] for call in policy.require.call_args_list] == ["Anthropic", "OpenAI"]
+        key.assert_called_once_with(owner_user_id, "Anthropic")
+        assert all(call[0] != owner_user_id for call in policy_calls)
+        assert key.call_args.args[0] != actor_user_id
 
     @pytest.mark.asyncio
     async def test_update_denied_embedding_provider_stops_before_mutation_or_persist(self, service):
@@ -629,21 +751,176 @@ class TestMemoryBaseProviderPolicy:
         mb.embedding_model = "denied-embed"
         db = self._db_returning(mb)
         denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE)
+        policy = MagicMock()
+        policy.require.side_effect = denial
+        resolve_policy = AsyncMock(return_value=policy)
 
         with (
             patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
             patch("langflow.services.memory_base.service.infer_embedding_provider", return_value="Anthropic"),
-            patch("langflow.services.memory_base.service.require_model_provider", side_effect=denial) as require,
+            patch("langflow.services.memory_base.service.aresolve_model_provider_policy", resolve_policy),
             pytest.raises(ModelProviderPolicyError),
         ):
-            await service.update(mb.id, user_id, MemoryBaseUpdate(threshold=99))
+            await service.update(
+                mb.id,
+                owner_user_id=user_id,
+                patch=MemoryBaseUpdate(threshold=99),
+                actor_user_id=user_id,
+            )
 
-        require.assert_called_once_with(
+        resolve_policy.assert_awaited_once_with(
             user_id=user_id,
-            provider="Anthropic",
+            providers=["Anthropic"],
             purpose=ModelProviderPolicyPurpose.CONFIGURE,
         )
+        policy.require.assert_called_once_with("Anthropic")
         assert mb.threshold == 10
+        db.add.assert_not_called()
+        db.commit.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_create_uses_stored_project_scope_when_global_access_is_denied(self, service):
+        """A project grant must be evaluated in the stored Flow's current domain."""
+        from langflow.services.database.models.flow.model import Flow
+        from lfx.services.model_provider_policy import current_model_provider_policy_context
+
+        user_id = uuid.uuid4()
+        flow_id = uuid.uuid4()
+        project_id = uuid.uuid4()
+        workspace_id = uuid.uuid4()
+        flow = Flow(
+            id=flow_id,
+            user_id=user_id,
+            name="scoped flow",
+            folder_id=project_id,
+            workspace_id=workspace_id,
+        )
+        payload = MemoryBaseCreate(name="mb", flow_id=flow_id, embedding_model="text-embedding-3-small")
+
+        flow_result = MagicMock()
+        flow_result.first.return_value = flow
+        missing_result = MagicMock()
+        missing_result.first.return_value = None
+        db = AsyncMock()
+        db.exec = AsyncMock(side_effect=[flow_result, missing_result, missing_result])
+        db.add = MagicMock()
+        db.commit = AsyncMock()
+        db.refresh = AsyncMock()
+        observed_contexts = []
+
+        async def allow_only_current_project(**_kwargs):
+            context = current_model_provider_policy_context()
+            observed_contexts.append(context)
+            assert context is not None
+            assert context.attributes["project_id"] == project_id
+            assert context.attributes["workspace_id"] == workspace_id
+            assert context.attributes["provider_scope_required"] is True
+            return MagicMock()
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch("langflow.services.memory_base.service.resolve_kb_username", AsyncMock(return_value="testuser")),
+            patch(
+                "langflow.services.memory_base.service.aresolve_model_provider_policy",
+                side_effect=allow_only_current_project,
+                create=True,
+            ),
+            patch("langflow.services.memory_base.service.initialize_kb", AsyncMock()),
+            patch("langflow.services.memory_base.service._create_kb_record_for_memory_base", AsyncMock()),
+        ):
+            created = await service.create(payload, user_id=user_id)
+
+        assert created.flow_id == flow_id
+        assert observed_contexts
+
+    @pytest.mark.asyncio
+    async def test_update_reloads_moved_flow_and_project_deny_precedes_secrets_and_network(self, service):
+        """A current project denial wins over a stale/global grant before provider work."""
+        from langflow.services.database.models.flow.model import Flow
+        from lfx.services.model_provider_policy import (
+            ModelProviderPolicyError,
+            ModelProviderPolicyPurpose,
+            current_model_provider_policy_context,
+        )
+
+        user_id = uuid.uuid4()
+        moved_project_id = uuid.uuid4()
+        moved_workspace_id = uuid.uuid4()
+        mb = _make_mb(user_id=user_id, threshold=10)
+        mb.preprocessing = True
+        mb.preproc_model = "gpt-4o-mini"
+        flow = Flow(
+            id=mb.flow_id,
+            user_id=user_id,
+            name="moved flow",
+            folder_id=moved_project_id,
+            workspace_id=moved_workspace_id,
+        )
+        mb_result = MagicMock()
+        mb_result.first.return_value = mb
+        flow_result = MagicMock()
+        flow_result.first.return_value = flow
+        db = AsyncMock()
+        db.exec = AsyncMock(side_effect=[mb_result, flow_result])
+        db.add = MagicMock()
+        denial = ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.CONFIGURE)
+
+        async def deny_current_project(**_kwargs):
+            context = current_model_provider_policy_context()
+            assert context is not None
+            assert context.attributes["project_id"] == moved_project_id
+            assert context.attributes["workspace_id"] == moved_workspace_id
+            raise denial
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch(
+                "langflow.services.memory_base.service.aresolve_model_provider_policy",
+                side_effect=deny_current_project,
+                create=True,
+            ),
+            patch("langflow.services.memory_base.service.get_api_key_for_provider") as get_api_key,
+            pytest.raises(ModelProviderPolicyError),
+        ):
+            await service.update(
+                mb.id,
+                owner_user_id=user_id,
+                patch=MemoryBaseUpdate(threshold=99),
+                actor_user_id=user_id,
+            )
+
+        assert mb.threshold == 10
+        get_api_key.assert_not_called()
+        db.add.assert_not_called()
+        db.commit.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_update_missing_stored_flow_fails_before_provider_or_persistence(self, service):
+        user_id = uuid.uuid4()
+        mb = _make_mb(user_id=user_id, threshold=10)
+        mb_result = MagicMock()
+        mb_result.first.return_value = mb
+        missing_flow = MagicMock()
+        missing_flow.first.return_value = None
+        db = AsyncMock()
+        db.exec = AsyncMock(side_effect=[mb_result, missing_flow])
+        db.add = MagicMock()
+
+        with (
+            patch("langflow.services.memory_base.service.session_scope", self._fake_scope(db)),
+            patch("langflow.services.memory_base.service.require_model_provider") as require,
+            patch("langflow.services.memory_base.service.get_api_key_for_provider") as get_api_key,
+            pytest.raises(PermissionError, match=r"Flow .* not found"),
+        ):
+            await service.update(
+                mb.id,
+                owner_user_id=user_id,
+                patch=MemoryBaseUpdate(threshold=99),
+                actor_user_id=user_id,
+            )
+
+        require.assert_not_called()
+        get_api_key.assert_not_called()
         db.add.assert_not_called()
         db.commit.assert_not_awaited()
 
@@ -689,6 +966,42 @@ class TestMemoryBaseGuardPassesRealKbIdentity:
         assert captured["kb_id"] == mb.id
         assert captured["kb_user_id"] == owner_id, "guard must receive the real owner, not the actor"
         assert captured["kb_name"] == mb.kb_name
+
+    @pytest.mark.parametrize("actor_is_superuser", [False, True], ids=["delegated-admin", "superadmin"])
+    @pytest.mark.asyncio
+    async def test_update_routes_actor_and_owner_identities_separately(self, actor_is_superuser):
+        from langflow.api.v1.memories import update_memory_base
+        from langflow.services.database.models.user.model import User
+
+        owner_id = uuid.uuid4()
+        mb = _make_mb(user_id=owner_id)
+        actor = User(id=uuid.uuid4(), username="actor", is_superuser=actor_is_superuser)
+        patch_payload = MemoryBaseUpdate(threshold=99)
+
+        mock_service = MagicMock()
+        mock_service.get = AsyncMock(return_value=mb)
+        mock_service.update = AsyncMock(return_value=mb)
+
+        async def _allow_guard(*_args, **_kwargs):
+            return None
+
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=mock_service),
+            patch("langflow.api.v1.memories.ensure_knowledge_base_permission", _allow_guard),
+        ):
+            await update_memory_base(
+                memory_base_id=mb.id,
+                current_user=actor,
+                patch=patch_payload,
+            )
+
+        mock_service.update.assert_awaited_once_with(
+            mb.id,
+            owner_user_id=owner_id,
+            patch=patch_payload,
+            actor_user_id=actor.id,
+            actor_is_superuser=actor_is_superuser,
+        )
 
     async def test_shared_memory_base_falls_back_to_unscoped_id_lookup(self):
         from langflow.api.v1.memories import _get_memory_base_for_action
@@ -817,6 +1130,12 @@ class TestMemoryBaseGuardPassesRealKbIdentity:
         assert captured["kb_id"] == mb.id
         assert captured["kb_user_id"] == owner_id
         assert captured["kb_name"] == mb.kb_name
+        mock_service.trigger_ingestion.assert_awaited_once_with(
+            memory_base_id=mb.id,
+            owner_user_id=owner_id,
+            actor_user_id=actor.id,
+            session_id="sess-1",
+        )
 
     @pytest.mark.asyncio
     async def test_regenerate_passes_real_kb_identity_to_guard(self):
@@ -844,6 +1163,11 @@ class TestMemoryBaseGuardPassesRealKbIdentity:
         assert captured["kb_id"] == mb.id
         assert captured["kb_user_id"] == owner_id
         assert captured["kb_name"] == mb.kb_name
+        mock_service.regenerate.assert_awaited_once_with(
+            memory_base_id=mb.id,
+            owner_user_id=owner_id,
+            actor_user_id=actor.id,
+        )
 
     @pytest.mark.asyncio
     async def test_update_returns_404_when_memory_base_not_found(self):
@@ -914,6 +1238,10 @@ class TestMemoryBaseServiceConcurrency:
             patch.object(service, "get_memory_base_or_404", AsyncMock(return_value=mb)),
             patch.object(service, "_get_or_create_session", AsyncMock(return_value=mbs)),
             patch(
+                "langflow.services.memory_base.ingestion.resolve_memory_provider_scope",
+                AsyncMock(return_value=MagicMock(memory_base=mb)),
+            ),
+            patch(
                 "langflow.services.memory_base.ingestion._get_latest_pending_workflow_job_id",
                 AsyncMock(return_value=uuid.uuid4()),
             ),
@@ -922,10 +1250,16 @@ class TestMemoryBaseServiceConcurrency:
                 "langflow.services.memory_base.ingestion.resolve_embedding_selection",
                 AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
             ),
+            patch("langflow.services.memory_base.ingestion.preflight_memory_provider_use"),
             patch("langflow.services.memory_base.ingestion.get_job_service", return_value=mock_job_svc),
             pytest.raises(DuplicateJobError),
         ):
-            await service.trigger_ingestion(mb.id, mb.user_id, "sess-1")
+            await service.trigger_ingestion(
+                memory_base_id=mb.id,
+                owner_user_id=mb.user_id,
+                actor_user_id=mb.user_id,
+                session_id="sess-1",
+            )
 
     @pytest.mark.asyncio
     async def test_trigger_succeeds_when_no_active_job(self, service):
@@ -943,6 +1277,10 @@ class TestMemoryBaseServiceConcurrency:
             patch.object(service, "get_memory_base_or_404", AsyncMock(return_value=mb)),
             patch.object(service, "_get_or_create_session", AsyncMock(return_value=mbs)),
             patch(
+                "langflow.services.memory_base.ingestion.resolve_memory_provider_scope",
+                AsyncMock(return_value=MagicMock(memory_base=mb)),
+            ),
+            patch(
                 "langflow.services.memory_base.ingestion._get_latest_pending_workflow_job_id",
                 AsyncMock(return_value=uuid.uuid4()),
             ),
@@ -951,14 +1289,69 @@ class TestMemoryBaseServiceConcurrency:
                 "langflow.services.memory_base.ingestion.resolve_embedding_selection",
                 AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
             ),
+            patch("langflow.services.memory_base.ingestion.preflight_memory_provider_use"),
             patch("langflow.services.memory_base.ingestion.get_job_service", return_value=mock_job_svc),
             patch("langflow.services.memory_base.ingestion.get_task_service", return_value=mock_task_svc),
         ):
-            job_id = await service.trigger_ingestion(mb.id, mb.user_id, "sess-1")
+            job_id = await service.trigger_ingestion(
+                memory_base_id=mb.id,
+                owner_user_id=mb.user_id,
+                actor_user_id=mb.user_id,
+                session_id="sess-1",
+            )
 
         assert isinstance(job_id, str)
         mock_job_svc.create_job.assert_awaited_once()
         mock_task_svc.fire_and_forget_task.assert_awaited_once()
+        request = mock_task_svc.fire_and_forget_task.call_args.kwargs["request"]
+        assert request.owner_user_id == mb.user_id
+        assert request.actor_user_id == mb.user_id
+
+    @pytest.mark.asyncio
+    async def test_manual_trigger_denial_precedes_session_job_secrets_and_network(self, service):
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        mb = _make_mb()
+        mb.preprocessing = True
+        mb.preproc_model = "claude-test"
+        actor_user_id = uuid.uuid4()
+        mock_db = AsyncMock()
+        get_or_create = AsyncMock()
+        job_service = MagicMock()
+        job_service.create_job = AsyncMock()
+
+        with (
+            patch("langflow.services.memory_base.ingestion.session_scope", self._fake_scope(mock_db)),
+            patch.object(service, "get_memory_base_or_404", AsyncMock(return_value=mb)),
+            patch.object(service, "_get_or_create_session", get_or_create),
+            patch(
+                "langflow.services.memory_base.ingestion.resolve_memory_provider_scope",
+                AsyncMock(return_value=MagicMock(memory_base=mb)),
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.resolve_embedding_selection",
+                AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.preflight_memory_provider_use",
+                AsyncMock(side_effect=ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.USE)),
+            ),
+            patch("langflow.services.memory_base.ingestion.resolve_kb_username") as resolve_username,
+            patch("langflow.services.memory_base.ingestion.get_job_service", return_value=job_service),
+            patch("langflow.services.memory_base.ingestion.get_task_service") as task_service,
+            pytest.raises(ModelProviderPolicyError),
+        ):
+            await service.trigger_ingestion(
+                memory_base_id=mb.id,
+                owner_user_id=mb.user_id,
+                actor_user_id=actor_user_id,
+                session_id="sess-1",
+            )
+
+        get_or_create.assert_not_awaited()
+        resolve_username.assert_not_awaited()
+        job_service.create_job.assert_not_awaited()
+        task_service.assert_not_called()
 
 
 class TestMemoryBaseServiceThreshold:
@@ -1013,12 +1406,15 @@ class TestMemoryBaseServiceMismatch:
             patch(
                 "langflow.services.memory_base.ingestion.resolve_embedding_selection",
                 AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
-            ),
+            ) as resolve_embedding,
             patch(
-                "langflow.services.memory_base.ingestion.KBIngestionHelper.build_embeddings",
+                "langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings",
                 AsyncMock(return_value=MagicMock()),
-            ),
-            patch("langflow.services.memory_base.ingestion.create_backend", return_value=fake_backend),
+            ) as build_embeddings,
+            patch(
+                "langflow.services.memory_base.ingestion.create_backend",
+                return_value=fake_backend,
+            ) as backend_factory,
         ):
             # Simulate session_scope returns total_processed=10
             mock_db = AsyncMock()
@@ -1040,6 +1436,9 @@ class TestMemoryBaseServiceMismatch:
             result = await service.check_mismatch(mb.id, mb.user_id)
 
         assert result is True
+        resolve_embedding.assert_not_awaited()
+        build_embeddings.assert_not_awaited()
+        assert backend_factory.call_args.kwargs["embedding_function"] is None
 
     async def test_no_mismatch_when_nothing_processed(self, service):
         mb = _make_mb()
@@ -1140,13 +1539,13 @@ class TestMemoryBaseServicePurgeSessionData:
                 return_value=kb_root,
             ),
             patch(
-                "langflow.services.memory_base.ingestion.KBIngestionHelper.build_embeddings",
+                "langflow.api.utils.kb_helpers.KBIngestionHelper.build_embeddings",
                 AsyncMock(return_value=MagicMock()),
-            ),
+            ) as build_embeddings,
             patch(
                 "langflow.services.memory_base.ingestion.resolve_embedding_selection",
                 AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
-            ),
+            ) as resolve_embedding,
             patch(
                 "langflow.services.memory_base.ingestion.resolve_backend_selection",
                 AsyncMock(return_value=("chroma", {})),
@@ -1154,7 +1553,7 @@ class TestMemoryBaseServicePurgeSessionData:
             patch(
                 "langflow.services.memory_base.ingestion.create_backend",
                 return_value=fake_backend,
-            ),
+            ) as backend_factory,
             patch("langflow.services.memory_base.ingestion._sync_metrics_after_purge", AsyncMock()),
         ):
             result = await service.purge_session_data(mb.user_id, ["sess-x"])
@@ -1164,6 +1563,9 @@ class TestMemoryBaseServicePurgeSessionData:
         # {"$eq": ...} operator dict is not portable — a remote backend treats it
         # as a literal value and silently matches nothing.
         fake_backend.delete_by.assert_awaited_once_with({"session_id": "sess-x"})
+        resolve_embedding.assert_not_awaited()
+        build_embeddings.assert_not_awaited()
+        assert backend_factory.call_args.kwargs["embedding_function"] is None
         # Tracking-row deletes were committed.
         assert second_db.commit.await_count == 1
 
@@ -1233,13 +1635,25 @@ class TestMemoryBaseServiceRegenerate:
 
         triggered_sessions: list[str] = []
 
-        async def fake_trigger(_mb_id, _user_id, session_id):
+        async def fake_trigger(*, memory_base_id, owner_user_id, actor_user_id, session_id):
+            assert memory_base_id == mb.id
+            assert owner_user_id == mb.user_id
+            assert actor_user_id == mb.user_id
             triggered_sessions.append(session_id)
             return str(uuid.uuid4())
 
         with (
             patch("langflow.services.memory_base.ingestion.session_scope") as mock_scope,
             patch.object(service, "trigger_ingestion", side_effect=fake_trigger),
+            patch(
+                "langflow.services.memory_base.ingestion.resolve_memory_provider_scope",
+                AsyncMock(return_value=MagicMock(memory_base=mb)),
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.resolve_embedding_selection",
+                AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
+            ),
+            patch("langflow.services.memory_base.ingestion.preflight_memory_provider_use"),
         ):
             mock_db = AsyncMock()
             mock_mb_result = MagicMock()
@@ -1259,13 +1673,68 @@ class TestMemoryBaseServiceRegenerate:
 
             mock_scope.return_value = FakeCtx()
 
-            job_ids = await service.regenerate(mb.id, mb.user_id)
+            job_ids = await service.regenerate(
+                memory_base_id=mb.id,
+                owner_user_id=mb.user_id,
+                actor_user_id=mb.user_id,
+            )
 
         assert len(job_ids) == 2
         assert set(triggered_sessions) == {"s1", "s2"}
         # Verify cursors were reset
         assert mbs1.cursor_id is None
         assert mbs2.cursor_id is None
+
+    @pytest.mark.asyncio
+    async def test_regenerate_denial_precedes_cursor_and_record_mutation(self, service):
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        mb = _make_mb()
+        mb.preprocessing = True
+        mb.preproc_model = "claude-test"
+        actor_user_id = uuid.uuid4()
+        session = _make_session(memory_base_id=mb.id, cursor_id=uuid.uuid4())
+        original_cursor = session.cursor_id
+        mock_db = AsyncMock()
+        session_result = MagicMock()
+        session_result.all.return_value = [session]
+        mock_db.exec = AsyncMock(return_value=session_result)
+
+        class FakeCtx:
+            async def __aenter__(self):
+                return mock_db
+
+            async def __aexit__(self, *args):
+                return None
+
+        with (
+            patch("langflow.services.memory_base.ingestion.session_scope", return_value=FakeCtx()),
+            patch.object(service, "get_memory_base_or_404", AsyncMock(return_value=mb)),
+            patch(
+                "langflow.services.memory_base.ingestion.resolve_memory_provider_scope",
+                AsyncMock(return_value=MagicMock(memory_base=mb)),
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.resolve_embedding_selection",
+                AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
+            ),
+            patch(
+                "langflow.services.memory_base.ingestion.preflight_memory_provider_use",
+                AsyncMock(side_effect=ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.USE)),
+            ),
+            patch.object(service, "trigger_ingestion", AsyncMock()) as trigger,
+            pytest.raises(ModelProviderPolicyError),
+        ):
+            await service.regenerate(
+                memory_base_id=mb.id,
+                owner_user_id=mb.user_id,
+                actor_user_id=actor_user_id,
+            )
+
+        assert session.cursor_id == original_cursor
+        mock_db.add.assert_not_called()
+        mock_db.commit.assert_not_awaited()
+        trigger.assert_not_awaited()
 
 
 # ------------------------------------------------------------------ #
@@ -1274,6 +1743,30 @@ class TestMemoryBaseServiceRegenerate:
 
 
 class TestIngestMemoryTask:
+    @pytest.fixture(autouse=True)
+    def _stored_flow_scope(self, monkeypatch):
+        import langflow.services.memory_base.task as task_module
+        from langflow.services.database.models.flow.model import Flow
+        from langflow.services.database.models.memory_base.model import MemoryBase
+        from langflow.services.memory_base.provider_scope import MemoryProviderScope
+
+        async def resolve_scope(_db, *, memory_base_id, owner_user_id, actor_user_id):
+            flow = Flow(id=uuid.uuid4(), user_id=owner_user_id, name="stored test flow")
+            return MemoryProviderScope(
+                memory_base=MemoryBase(
+                    id=memory_base_id,
+                    name="memory",
+                    flow_id=flow.id,
+                    user_id=owner_user_id,
+                    kb_name="kb",
+                ),
+                flow=flow,
+                actor_user_id=actor_user_id,
+                is_superuser=False,
+            )
+
+        monkeypatch.setattr(task_module, "resolve_memory_provider_scope", resolve_scope)
+
     async def test_no_op_when_no_pending_messages(self, tmp_path):
         from langflow.services.memory_base.task import IngestionRequest, ingest_memory_task
 
@@ -1303,7 +1796,7 @@ class TestIngestMemoryTask:
                     flow_id=uuid.uuid4(),
                     kb_name="kb",
                     kb_username="user",
-                    user_id=uuid.uuid4(),
+                    **_owner_actor_fields(),
                     embedding_provider="OpenAI",
                     embedding_model="text-embedding-3-small",
                     cursor_id=None,
@@ -1385,7 +1878,7 @@ class TestIngestMemoryTask:
                     flow_id=flow_id,
                     kb_name="kb",
                     kb_username="user",
-                    user_id=uuid.uuid4(),
+                    **_owner_actor_fields(),
                     embedding_provider="OpenAI",
                     embedding_model="text-embedding-3-small",
                     cursor_id=old_cursor,
@@ -1464,7 +1957,7 @@ class TestIngestMemoryTask:
                     flow_id=flow_id,
                     kb_name="kb",
                     kb_username="user",
-                    user_id=uuid.uuid4(),
+                    **_owner_actor_fields(),
                     embedding_provider="OpenAI",
                     embedding_model="text-embedding-3-small",
                     cursor_id=None,
@@ -1540,7 +2033,7 @@ class TestIngestMemoryTask:
                     flow_id=flow_id,
                     kb_name="kb",
                     kb_username="user",
-                    user_id=uuid.uuid4(),
+                    **_owner_actor_fields(),
                     embedding_provider="OpenAI",
                     embedding_model="text-embedding-3-small",
                     cursor_id=None,
@@ -1618,7 +2111,7 @@ class TestIngestMemoryTask:
                     flow_id=flow_id,
                     kb_name="kb",
                     kb_username="user",
-                    user_id=uuid.uuid4(),
+                    **_owner_actor_fields(),
                     embedding_provider="OpenAI",
                     embedding_model="text-embedding-3-small",
                     cursor_id=None,
@@ -1737,13 +2230,16 @@ class TestOnFlowOutputHook:
                 "langflow.services.memory_base.ingestion._get_latest_pending_workflow_job_id",
                 AsyncMock(return_value=uuid.uuid4()),
             ),
+            patch("langflow.services.memory_base.ingestion.resolve_kb_username", AsyncMock(return_value="testuser")),
             patch(
-                "langflow.services.memory_base.kb_path_helpers.resolve_kb_username", AsyncMock(return_value="testuser")
+                "langflow.services.memory_base.ingestion.resolve_memory_provider_scope",
+                AsyncMock(return_value=MagicMock(memory_base=mb)),
             ),
             patch(
                 "langflow.services.memory_base.ingestion.resolve_embedding_selection",
                 AsyncMock(return_value=("OpenAI", "text-embedding-3-small")),
             ),
+            patch("langflow.services.memory_base.ingestion.preflight_memory_provider_use"),
             patch("langflow.services.memory_base.ingestion.get_job_service", return_value=mock_job_svc),
             patch("langflow.services.memory_base.ingestion.get_task_service", return_value=mock_task_svc),
         ):
@@ -1753,6 +2249,9 @@ class TestOnFlowOutputHook:
 
         mock_job_svc.create_job.assert_awaited_once()
         mock_task_svc.fire_and_forget_task.assert_awaited_once()
+        request = mock_task_svc.fire_and_forget_task.call_args.kwargs["request"]
+        assert request.owner_user_id == mb.user_id
+        assert request.actor_user_id == mb.user_id
 
     @pytest.mark.asyncio
     async def test_on_flow_output_is_silent_on_error(self, service):
@@ -2060,6 +2559,25 @@ class TestMemoriesAPIHandlers:
             await create_memory_base(current_user=mock_user, payload=payload)
 
         assert exc_info.value.status_code == 409
+
+    @pytest.mark.asyncio
+    async def test_create_provider_policy_denial_returns_404(self, mock_user):
+        from fastapi import HTTPException
+        from langflow.api.v1.memories import create_memory_base
+        from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+        payload = MemoryBaseCreate(name="mb", flow_id=uuid.uuid4(), user_id=mock_user.id, kb_name="kb")
+        svc = MagicMock()
+        svc.create = AsyncMock(side_effect=ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE))
+
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await create_memory_base(current_user=mock_user, payload=payload)
+
+        assert exc_info.value.status_code == 404
+        assert exc_info.value.detail == "Model provider not found"
 
     @pytest.mark.asyncio
     async def test_create_missing_api_key_returns_422(self, mock_user):
@@ -2712,8 +3230,9 @@ class TestPreprocessingApiKeyValidation:
         ):
             await service.update(
                 mb.id,
-                user_id,
-                MemoryBaseUpdate(threshold=10),
+                owner_user_id=user_id,
+                patch=MemoryBaseUpdate(threshold=10),
+                actor_user_id=user_id,
             )
 
 
@@ -2753,7 +3272,12 @@ class TestMemoryBaseSecurityAdversarial:
         exec_result.first.return_value = None
         mock_db.exec = AsyncMock(return_value=exec_result)
         with patch("langflow.services.memory_base.service.session_scope", self._fake_scope(mock_db)):
-            result = await service.update(mb.id, user_b, MemoryBaseUpdate(threshold=5))
+            result = await service.update(
+                mb.id,
+                owner_user_id=user_b,
+                patch=MemoryBaseUpdate(threshold=5),
+                actor_user_id=user_b,
+            )
         assert result is None
 
     @pytest.mark.asyncio
@@ -2779,7 +3303,11 @@ class TestMemoryBaseSecurityAdversarial:
             patch("langflow.services.memory_base.ingestion.session_scope", self._fake_scope(mock_db)),
             pytest.raises(ValueError, match="not found"),
         ):
-            await service.regenerate(mb_id, user_b)
+            await service.regenerate(
+                memory_base_id=mb_id,
+                owner_user_id=user_b,
+                actor_user_id=user_b,
+            )
 
     @pytest.mark.asyncio
     async def test_check_mismatch_rejects_unowned_memory_base(self, service):
@@ -2943,6 +3471,72 @@ class TestMemoryBaseCreateAtomicity:
 class TestInitializeKbConnectivity:
     """initialize_kb surfaces remote-backend misconfig; local Chroma stays lazy."""
 
+    @pytest.mark.parametrize(
+        ("name", "expected_prefix"),
+        [
+            ("catálogo memória", "catlogo_memria"),
+            ("ação", "ao"),
+            ("José", "jos"),
+            ("日本語 base", "base"),
+            ("日本語", "memory"),
+            ("R&D docs", "rd_docs"),
+            ("___private", "private"),
+        ],
+    )
+    def test_memory_base_name_is_sanitized_to_chroma_safe_ascii(self, name, expected_prefix):
+        from langflow.services.memory_base.kb_path_helpers import sanitize_kb_name
+        from lfx.base.knowledge_bases.validation import validate_collection_name
+
+        prefix = sanitize_kb_name(name)
+
+        assert prefix == expected_prefix
+        validate_collection_name(f"{prefix}_deadbeef", local=True)
+
+    def test_memory_base_name_is_capped_for_local_chroma(self):
+        from langflow.services.memory_base.kb_path_helpers import sanitize_kb_name
+        from lfx.base.knowledge_bases.validation import MAX_LOCAL_COLLECTION_NAME_LENGTH, validate_collection_name
+
+        generated_name = f"{sanitize_kb_name('a' * 1000)}_deadbeef"
+
+        assert len(generated_name) == MAX_LOCAL_COLLECTION_NAME_LENGTH
+        validate_collection_name(generated_name, local=True)
+
+    @pytest.mark.asyncio
+    async def test_non_ascii_memory_base_name_provisions_local_chroma(self, tmp_path):
+        from langflow.services.memory_base.kb_path_helpers import initialize_kb, sanitize_kb_name
+
+        generated_name = f"{sanitize_kb_name('catálogo memória')}_deadbeef"
+
+        with patch(
+            "langflow.services.memory_base.kb_path_helpers.KBStorageHelper.get_root_path",
+            return_value=tmp_path,
+        ):
+            await initialize_kb(kb_name=generated_name, kb_username="testuser", backend_type="chroma")
+
+        database_path = tmp_path / "testuser" / generated_name / "chroma.sqlite3"
+        with sqlite3.connect(database_path) as database:
+            collection_names = [row[0] for row in database.execute("SELECT name FROM collections")]
+
+        assert collection_names == [generated_name]
+
+    async def test_local_chroma_rejects_invalid_collection_name(self, tmp_path):
+        from langflow.services.memory_base.kb_path_helpers import BackendProvisioningError, initialize_kb
+
+        with (
+            patch(
+                "langflow.services.memory_base.kb_path_helpers.KBStorageHelper.get_root_path",
+                return_value=tmp_path,
+            ),
+            pytest.raises(BackendProvisioningError) as exc_info,
+        ):
+            await initialize_kb(
+                kb_name="catálogo_memória_deadbeef",
+                kb_username="testuser",
+                backend_type="chroma",
+            )
+
+        assert isinstance(exc_info.value.__cause__, chromadb.errors.InvalidArgumentError)
+
     @pytest.mark.asyncio
     async def test_unreachable_remote_backend_raises(self, tmp_path):
         from langflow.services.memory_base.kb_path_helpers import BackendProvisioningError, initialize_kb
@@ -2982,6 +3576,22 @@ class TestInitializeKbConnectivity:
         ):
             # Must NOT raise.
             await initialize_kb(kb_name="mb_kb", kb_username="testuser", backend_type="chroma", backend_config=None)
+        backend.teardown.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_local_chroma_validation_failure_is_raised(self, tmp_path):
+        from langflow.services.memory_base.kb_path_helpers import BackendProvisioningError, initialize_kb
+
+        backend = AsyncMock()
+        backend.ensure_ready = AsyncMock(side_effect=chromadb.errors.InvalidArgumentError("invalid collection name"))
+        backend.teardown = AsyncMock()
+
+        with (
+            patch("langflow.services.memory_base.kb_path_helpers.KBStorageHelper.get_root_path", return_value=tmp_path),
+            patch("langflow.services.memory_base.kb_path_helpers.create_backend", MagicMock(return_value=backend)),
+            pytest.raises(BackendProvisioningError, match="invalid collection name"),
+        ):
+            await initialize_kb(kb_name="invalid", kb_username="testuser", backend_type="chroma")
         backend.teardown.assert_awaited_once()
 
     @pytest.mark.asyncio

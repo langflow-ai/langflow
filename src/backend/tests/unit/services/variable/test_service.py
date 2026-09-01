@@ -8,7 +8,7 @@ from cryptography.fernet import Fernet
 from langflow.services.auth.service import AuthService
 from langflow.services.auth.utils import ensure_fernet_key
 from langflow.services.database.models.user.model import User
-from langflow.services.database.models.variable.model import VariableUpdate
+from langflow.services.database.models.variable.model import Variable, VariableUpdate
 from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService, has_variable_value
@@ -107,6 +107,58 @@ async def test_initialize_user_variables__not_found_variable(service, session: A
         m.side_effect = Exception()
         await service.initialize_user_variables(uuid4(), session=session)
     assert True
+
+
+async def test_get_default_field_bindings_never_decrypts_values(service, session: AsyncSession):
+    user_id = uuid4()
+    session.add(
+        Variable(
+            user_id=user_id,
+            name="OPENAI_API_KEY",
+            value="encrypted-secret",  # pragma: allowlist secret
+            type=CREDENTIAL_TYPE,
+            default_fields=["OpenAI API Key"],
+        )
+    )
+    await session.flush()
+
+    with patch(
+        "langflow.services.auth.utils.decrypt_api_key",
+        side_effect=AssertionError("default-field lookup must not decrypt values"),
+    ):
+        result = await service.get_default_field_bindings(user_id, session)
+
+    assert result == [("OPENAI_API_KEY", ["OpenAI API Key"])]
+
+
+async def test_default_field_binding_order_matches_variable_list(service, session: AsyncSession):
+    user_id = uuid4()
+    session.add_all(
+        [
+            Variable(
+                user_id=user_id,
+                name="Z_LAST",
+                value="encrypted-secret",  # pragma: allowlist secret
+                type=CREDENTIAL_TYPE,
+                default_fields=["Shared Field"],
+            ),
+            Variable(
+                user_id=user_id,
+                name="A_FIRST",
+                value="encrypted-secret",  # pragma: allowlist secret
+                type=CREDENTIAL_TYPE,
+                default_fields=["Shared Field"],
+            ),
+        ]
+    )
+    await session.flush()
+
+    bindings = await service.get_default_field_bindings(user_id, session)
+    with patch("langflow.services.auth.utils.decrypt_api_key", return_value="secret"):
+        variables = await service.get_all(user_id, session)
+
+    assert [name for name, _default_fields in bindings] == ["A_FIRST", "Z_LAST"]
+    assert [variable.name for variable in variables] == ["A_FIRST", "Z_LAST"]
 
 
 async def test_initialize_user_variables__skipping_environment_variable_storage(service, session: AsyncSession):
@@ -318,7 +370,7 @@ async def test_get_variable_fails_closed_for_domain_only_runtime_scope(service, 
 
     with (
         patch("langflow.services.deps.get_authorization_service", return_value=authz),
-        pytest.raises(ValueError, match="DOMAIN_ONLY_TOKEN variable not found"),
+        pytest.raises(VariableNotFoundError, match="DOMAIN_ONLY_TOKEN variable not found"),
     ):
         await service.get_variable(actor_id, "DOMAIN_ONLY_TOKEN", "", session=session)
 
@@ -683,6 +735,47 @@ async def test_get_all__empty_value_warns_and_skips(service, session: AsyncSessi
     warning_calls = [str(c) for c in mock_logger.awarning.call_args_list]
     assert any("EMPTY_VAR" in c for c in warning_calls)
     assert any("no stored value" in c for c in warning_calls)
+
+
+async def test_get_all__empty_provider_setting_preserves_row_identity(service, session: AsyncSession):
+    """Cleared provider settings remain addressable so later edits reuse their UUID."""
+    user_id = uuid4()
+    variable = await service.create_variable(
+        user_id,
+        "OPENAI_BASE_URL",
+        "https://example.com/v1",
+        type_=GENERIC_TYPE,
+        session=session,
+    )
+    variable.value = ""
+    session.add(variable)
+    await session.flush()
+
+    result = await service.get_all(user_id, session=session, include_empty_names={"OPENAI_BASE_URL"})
+    cleared = next(item for item in result if item.name == "OPENAI_BASE_URL")
+
+    assert cleared.id == variable.id
+    assert cleared.value == ""
+    assert cleared.has_value is False
+
+
+async def test_get_all__empty_required_provider_variable_stays_hidden(service, session: AsyncSession):
+    """An empty required provider row must not make the provider look configured."""
+    user_id = uuid4()
+    variable = await service.create_variable(
+        user_id,
+        "WATSONX_PROJECT_ID",
+        "project-id",
+        type_=GENERIC_TYPE,
+        session=session,
+    )
+    variable.value = ""
+    session.add(variable)
+    await session.flush()
+
+    result = await service.get_all(user_id, session=session)
+
+    assert not any(item.name == "WATSONX_PROJECT_ID" for item in result)
 
 
 async def test_get_all__empty_agentic_placeholder_is_debug_only(service, session: AsyncSession):

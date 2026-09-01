@@ -1,6 +1,6 @@
 [project]
 name = "lfx-toolguard"
-version = "0.1.1"
+version = "0.1.2"
 description = "Langflow Policies component powered by ToolGuard."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -10,7 +10,7 @@ authors = [
 ]
 keywords = ["langflow", "lfx", "extension", "policies", "toolguard"]
 dependencies = [
-    "lfx>=1.12.0.dev0,<2.0.0",
+    "lfx>=1.13.0.dev0,<2.0.0",
     "toolguard>=0.2.20,<1.0.0",
 ]
 

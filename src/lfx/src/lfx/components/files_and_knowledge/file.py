@@ -720,9 +720,6 @@ class FileComponent(BaseFileComponent):
                     tool_mode=True,
                 )
             )
-            frontend_node["outputs"].append(
-                Output(display_name="Raw Content", name="message", method="load_files_message", tool_mode=True)
-            )
 
         return frontend_node
 

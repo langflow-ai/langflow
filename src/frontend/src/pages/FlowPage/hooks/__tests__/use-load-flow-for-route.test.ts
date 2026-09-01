@@ -111,6 +111,147 @@ describe("useLoadFlowForRoute", () => {
     expect(applyFlowToCanvas).toHaveBeenCalledWith(FLOW);
   });
 
+  it("fires a single request when the navigate identity changes every render", async () => {
+    const pending = deferred<FlowType>();
+    const getFlow = jest.fn().mockReturnValue(pending.promise);
+    const applyFlowToCanvas = jest.fn();
+    const flows: FlowType[] = [];
+    const types = { flow: "Flow" };
+
+    const { rerender } = renderHook(() =>
+      useLoadFlowForRoute({
+        id: FLOW.id,
+        flows,
+        currentFlowId: "",
+        types,
+        getFlow,
+        applyFlowToCanvas,
+        // An unmemoized navigate is what turned this effect into a request
+        // storm: a new identity per render re-ran it while the first response
+        // was still in flight.
+        navigate: () => {},
+      }),
+    );
+
+    await waitFor(() => expect(getFlow).toHaveBeenCalledTimes(1));
+    Array.from({ length: 20 }).forEach(() => rerender());
+
+    expect(getFlow).toHaveBeenCalledTimes(1);
+    await act(async () => pending.resolve(FLOW));
+    expect(applyFlowToCanvas).toHaveBeenCalledTimes(1);
+  });
+
+  it("requests the new id exactly once when the route changes flow", async () => {
+    const otherFlow: FlowType = { ...FLOW, id: "other-flow" };
+    const getFlow = jest
+      .fn()
+      .mockImplementation(({ id }: { id: string }) =>
+        Promise.resolve(id === FLOW.id ? FLOW : otherFlow),
+      );
+    const applyFlowToCanvas = jest.fn();
+    const flows: FlowType[] = [];
+    const types = { flow: "Flow" };
+
+    const { rerender } = renderHook(
+      ({ id }: { id: string }) =>
+        useLoadFlowForRoute({
+          id,
+          flows,
+          currentFlowId: "",
+          types,
+          getFlow,
+          applyFlowToCanvas,
+          navigate: () => {},
+        }),
+      { initialProps: { id: FLOW.id } },
+    );
+
+    await waitFor(() => expect(getFlow).toHaveBeenCalledWith({ id: FLOW.id }));
+
+    rerender({ id: otherFlow.id });
+
+    await waitFor(() =>
+      expect(getFlow).toHaveBeenCalledWith({ id: otherFlow.id }),
+    );
+    Array.from({ length: 10 }).forEach(() => rerender({ id: otherFlow.id }));
+
+    expect(getFlow).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores an older request after revisiting the same flow id", async () => {
+    const firstFlowRequest = deferred<FlowType>();
+    const otherFlowRequest = deferred<FlowType>();
+    const secondFlowRequest = deferred<FlowType>();
+    const otherFlow: FlowType = { ...FLOW, id: "other-flow" };
+    const error = new Error("older request failed");
+    const getFlow = jest
+      .fn()
+      .mockReturnValueOnce(firstFlowRequest.promise)
+      .mockReturnValueOnce(otherFlowRequest.promise)
+      .mockReturnValueOnce(secondFlowRequest.promise);
+    const applyFlowToCanvas = jest.fn();
+    const navigate = jest.fn();
+    const flows: FlowType[] = [];
+    const types = { flow: "Flow" };
+
+    const { rerender } = renderHook(
+      ({ id }: { id: string }) =>
+        useLoadFlowForRoute({
+          id,
+          flows,
+          currentFlowId: "",
+          types,
+          getFlow,
+          applyFlowToCanvas,
+          navigate,
+        }),
+      { initialProps: { id: FLOW.id } },
+    );
+
+    await waitFor(() => expect(getFlow).toHaveBeenCalledTimes(1));
+    rerender({ id: otherFlow.id });
+    await waitFor(() => expect(getFlow).toHaveBeenCalledTimes(2));
+    rerender({ id: FLOW.id });
+    await waitFor(() => expect(getFlow).toHaveBeenCalledTimes(3));
+
+    await act(async () => secondFlowRequest.resolve(FLOW));
+    expect(applyFlowToCanvas).toHaveBeenCalledWith(FLOW);
+
+    await act(async () => firstFlowRequest.reject(error));
+    expect(navigate).not.toHaveBeenCalled();
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  it("allows a retry after a failed confirmation", async () => {
+    const error = new Error("network unavailable");
+    const getFlow = jest
+      .fn()
+      .mockRejectedValueOnce(error)
+      .mockResolvedValue(FLOW);
+    const applyFlowToCanvas = jest.fn();
+    const flows: FlowType[] = [];
+    const types = { flow: "Flow" };
+
+    const { rerender } = renderHook(() =>
+      useLoadFlowForRoute({
+        id: FLOW.id,
+        flows,
+        currentFlowId: "",
+        types,
+        getFlow,
+        applyFlowToCanvas,
+        navigate: () => {},
+      }),
+    );
+
+    await waitFor(() => expect(getFlow).toHaveBeenCalledTimes(1));
+
+    rerender();
+
+    await waitFor(() => expect(applyFlowToCanvas).toHaveBeenCalledWith(FLOW));
+    expect(getFlow).toHaveBeenCalledTimes(2);
+  });
+
   it("logs and redirects when the server cannot confirm the flow", async () => {
     const error = new Error("network unavailable");
     const getFlow = jest.fn().mockRejectedValue(error);

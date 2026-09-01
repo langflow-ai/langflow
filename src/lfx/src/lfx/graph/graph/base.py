@@ -41,6 +41,7 @@ from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, Stat
 from lfx.log.logger import LogConfig, configure, logger
 from lfx.observability import (
     APPLICATION_TRACER_NAME,
+    _root_error_type,
     get_execution_client,
     get_execution_protocol,
     get_queued_trace_link,
@@ -1052,8 +1053,9 @@ class Graph:
             raise
         except Exception as exc:
             status = "error"
-            span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, type(exc).__name__))
-            span.set_attribute("error.type", type(exc).__name__)
+            error_type = _root_error_type(exc)
+            span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, error_type))
+            span.set_attribute("error.type", error_type)
             raise
         finally:
             if self.flow_id:
@@ -2275,6 +2277,10 @@ class Graph:
             if not vertex.frozen or is_loop_component:
                 should_build = True
             else:
+                # Frozen results can outlive a role or provider-policy change.
+                # Reauthorize before even consulting the result cache so a
+                # revoked provider cannot reuse output from an earlier run.
+                await vertex.arequire_model_provider_policy(user_id, event_manager=event_manager)
                 # Check the cache for the vertex
                 if get_cache is not None:
                     cached_result = await get_cache(key=vertex.id)

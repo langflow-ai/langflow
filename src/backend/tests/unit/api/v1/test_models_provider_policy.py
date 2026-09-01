@@ -9,6 +9,9 @@ from uuid import uuid4
 
 import pytest
 from fastapi import status
+from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.folder.model import Folder
+from langflow.services.deps import session_scope
 from lfx.base.models.provider_registry import resolve_provider_id
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyContext,
@@ -46,9 +49,45 @@ async def _aopenai_only_policy(**kwargs):
     return _openai_only_policy(**kwargs)
 
 
+async def _aallow_all_policy(**kwargs):
+    return _allow_all_policy(**kwargs)
+
+
+@pytest.fixture
+async def scoped_flow(active_user):
+    workspace_id = uuid4()
+    folder = Folder(
+        name=f"provider-policy-project-{uuid4()}",
+        user_id=active_user.id,
+        workspace_id=workspace_id,
+    )
+    flow = Flow(
+        name=f"provider-policy-flow-{uuid4()}",
+        data={},
+        user_id=active_user.id,
+        folder=folder,
+        workspace_id=workspace_id,
+    )
+    async with session_scope() as session:
+        session.add(flow)
+        await session.flush()
+        await session.refresh(flow)
+        flow_id = flow.id
+        project_id = folder.id
+
+    yield SimpleNamespace(id=flow_id, project_id=project_id, workspace_id=workspace_id)
+
+    async with session_scope() as session:
+        stored_flow = await session.get(Flow, flow_id)
+        if stored_flow is not None:
+            await session.delete(stored_flow)
+        stored_folder = await session.get(Folder, project_id)
+        if stored_folder is not None:
+            await session.delete(stored_folder)
+
+
 @pytest.fixture(autouse=True)
 def _restrict_to_openai(monkeypatch):
-    monkeypatch.setattr("langflow.api.v1.models.resolve_model_provider_policy", _openai_only_policy)
     monkeypatch.setattr("langflow.api.v1.models.aresolve_model_provider_policy", _aopenai_only_policy)
     monkeypatch.setattr("langflow.api.v1.model_options.aresolve_model_provider_policy", _aopenai_only_policy)
 
@@ -128,7 +167,10 @@ async def test_provider_descriptors_union_stamped_palette_ids_without_duplicates
     monkeypatch.setattr(models_module, "get_model_providers", lambda: ["OpenAI"])
     monkeypatch.setattr(models_module, "get_and_cache_all_types_dict", AsyncMock(return_value=palette))
 
-    descriptors = await models_module.list_model_provider_descriptors(SimpleNamespace(id="user-1"))
+    descriptors = await models_module.list_model_provider_descriptors(
+        SimpleNamespace(id="user-1"),
+        {"is_superuser": False},
+    )
 
     assert [descriptor.model_dump() for descriptor in descriptors] == [
         {"provider_id": "mistral", "display_name": "Mistral", "provider": "mistral"},
@@ -377,6 +419,149 @@ async def test_provider_read_purpose_defaults_and_overrides(client: AsyncClient,
 
 
 @pytest.mark.usefixtures("active_user")
+@pytest.mark.parametrize(
+    "path",
+    [
+        "api/v1/models/providers",
+        "api/v1/models",
+        "api/v1/models/provider-variable-mapping",
+        "api/v1/models/enabled_providers",
+        "api/v1/models/enabled_models",
+        "api/v1/model_options/language",
+    ],
+)
+async def test_provider_reads_use_server_resolved_flow_scope(
+    client: AsyncClient,
+    logged_in_headers,
+    scoped_flow,
+    monkeypatch,
+    path,
+):
+    captured_attributes = []
+
+    async def _capture_policy(**kwargs):
+        captured_attributes.append(kwargs.get("attributes"))
+        return _allow_all_policy(**kwargs)
+
+    monkeypatch.setattr("langflow.api.v1.models.aresolve_model_provider_policy", _capture_policy)
+    monkeypatch.setattr("langflow.api.v1.model_options.aresolve_model_provider_policy", _capture_policy)
+
+    response = await client.get(path, headers=logged_in_headers, params={"flow_id": str(scoped_flow.id)})
+
+    assert response.status_code == status.HTTP_200_OK
+    assert captured_attributes
+    assert all(
+        attributes["project_id"] == scoped_flow.project_id and attributes["workspace_id"] == scoped_flow.workspace_id
+        for attributes in captured_attributes
+    )
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_global_provider_settings_remain_unscoped(client: AsyncClient, logged_in_headers, monkeypatch):
+    captured_attributes = []
+
+    async def _capture_policy(**kwargs):
+        captured_attributes.append(kwargs.get("attributes"))
+        return _allow_all_policy(**kwargs)
+
+    monkeypatch.setattr("langflow.api.v1.models.aresolve_model_provider_policy", _capture_policy)
+
+    response = await client.get("api/v1/models/providers", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert captured_attributes == [{"is_superuser": False}]
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_provider_reads_accept_authorized_project_scope_and_resolve_workspace_server_side(
+    client: AsyncClient,
+    logged_in_headers,
+    scoped_flow,
+    monkeypatch,
+):
+    captured_attributes = []
+
+    async def _capture_policy(**kwargs):
+        captured_attributes.append(kwargs.get("attributes"))
+        return _allow_all_policy(**kwargs)
+
+    monkeypatch.setattr("langflow.api.v1.models.aresolve_model_provider_policy", _capture_policy)
+
+    response = await client.get(
+        "api/v1/models/providers",
+        headers=logged_in_headers,
+        params={"project_id": str(scoped_flow.project_id)},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert captured_attributes == [
+        {
+            "is_superuser": False,
+            "project_id": scoped_flow.project_id,
+            "workspace_id": scoped_flow.workspace_id,
+        }
+    ]
+
+
+@pytest.mark.usefixtures("active_user")
+@pytest.mark.parametrize(
+    ("params", "expected_status"),
+    [
+        ({"flow_id": str(uuid4()), "project_id": str(uuid4())}, status.HTTP_422_UNPROCESSABLE_CONTENT),
+        ({"project_id": str(uuid4())}, status.HTTP_404_NOT_FOUND),
+    ],
+)
+async def test_provider_scope_rejects_conflicts_and_inaccessible_targets(
+    client: AsyncClient,
+    logged_in_headers,
+    params,
+    expected_status,
+):
+    response = await client.get("api/v1/models/providers", headers=logged_in_headers, params=params)
+
+    assert response.status_code == expected_status
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_provider_credential_check_uses_server_resolved_flow_scope_before_validation(
+    client: AsyncClient,
+    logged_in_headers,
+    scoped_flow,
+    monkeypatch,
+):
+    captured_attributes = []
+    validation_called = False
+
+    async def _capture_policy(**kwargs):
+        captured_attributes.append(kwargs.get("attributes"))
+        return _allow_all_policy(**kwargs)
+
+    def _validate(*_args, **_kwargs):
+        nonlocal validation_called
+        validation_called = True
+
+    monkeypatch.setattr("langflow.api.v1.models.aresolve_model_provider_policy", _capture_policy)
+    monkeypatch.setattr("lfx.base.models.unified_models.validate_model_provider_key", _validate)
+
+    response = await client.post(
+        "api/v1/models/validate-provider",
+        headers=logged_in_headers,
+        params={"flow_id": str(scoped_flow.id)},
+        json={"provider": "OpenAI", "variables": {}},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert validation_called is True
+    assert captured_attributes == [
+        {
+            "is_superuser": False,
+            "project_id": scoped_flow.project_id,
+            "workspace_id": scoped_flow.workspace_id,
+        }
+    ]
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_provider_read_purpose_can_narrow_but_never_widen_endpoint_policy(
     client: AsyncClient,
     logged_in_headers,
@@ -515,7 +700,7 @@ async def test_model_catalog_uses_configure_policy_for_configuration_status(
 async def test_hidden_provider_variables_are_omitted_but_can_be_deleted(
     client: AsyncClient, logged_in_headers, monkeypatch
 ):
-    monkeypatch.setattr("langflow.api.v1.models.resolve_model_provider_policy", _allow_all_policy)
+    monkeypatch.setattr("langflow.api.v1.models.aresolve_model_provider_policy", _aallow_all_policy)
     existing_response = await client.get("api/v1/variables/", headers=logged_in_headers)
     for variable in existing_response.json():
         if variable["name"] == "ANTHROPIC_API_KEY":
@@ -535,7 +720,7 @@ async def test_hidden_provider_variables_are_omitted_but_can_be_deleted(
     assert create_response.status_code == status.HTTP_201_CREATED
     variable_id = create_response.json()["id"]
 
-    monkeypatch.setattr("langflow.api.v1.models.resolve_model_provider_policy", _openai_only_policy)
+    monkeypatch.setattr("langflow.api.v1.models.aresolve_model_provider_policy", _aopenai_only_policy)
     hidden_response = await client.get("api/v1/variables/", headers=logged_in_headers)
     delete_response = await client.delete(f"api/v1/variables/{variable_id}", headers=logged_in_headers)
 

@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.12.0"
+version = "1.13.0"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base~=1.12.0",
+    "langflow-base~=1.13.0",
     # langflow-extensions:bundle-deps-start
     # Release coordination: langflow declares BOUNDED ranges (>=A,<B) for every
     # curated lfx-* package, never exact pins -- exact pins in reusable library
@@ -28,20 +28,20 @@ dependencies = [
     # default langflow dependency.
     # The cross-bundle CI matrix verifies these ranges resolve together across
     # the supported lfx axis.
-    "lfx-ibm>=0.2.1,<1.0.0",
-    "lfx-docling>=0.1.0,<1.0.0",
-    "lfx-datastax>=0.1.5,<1.0.0",
-    "lfx-toolguard>=0.1.1,<1.0.0",
-    "lfx-openai>=0.1.2,<1.0.0",
-    "lfx-anthropic>=0.1.5,<1.0.0",
+    "lfx-ibm>=0.2.3,<1.0.0",
+    "lfx-docling>=0.1.6,<1.0.0",
+    "lfx-datastax>=0.1.8,<1.0.0",
+    "lfx-toolguard>=0.1.2,<1.0.0",
+    "lfx-openai>=0.1.4,<1.0.0",
+    "lfx-anthropic>=0.1.7,<1.0.0",
     "lfx-azure>=0.1.0,<1.0.0",
-    "lfx-ollama>=0.1.0,<1.0.0",
-    "lfx-amazon>=0.1.3,<1.0.0",
-    "lfx-cohere>=0.1.0,<1.0.0",
-    "lfx-oracle>=0.1.0,<1.0.0",
-    "lfx-vllm>=0.1.0,<1.0.0",
-    "lfx-openai-compatible>=0.1.2,<1.0.0",
-    "lfx-google>=0.1.0,<1.0.0",
+    "lfx-ollama>=0.1.1,<1.0.0",
+    "lfx-amazon>=0.1.6,<1.0.0",
+    "lfx-cohere>=0.1.3,<1.0.0",
+    "lfx-oracle>=0.1.3,<1.0.0",
+    "lfx-vllm>=0.1.3,<1.0.0",
+    "lfx-openai-compatible>=0.1.5,<1.0.0",
+    "lfx-google>=0.1.1,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -171,32 +171,32 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.1.16,<2.0",
-    "lfx-arxiv>=0.1.0,<1.0.0",
+    "lfx-bundles[all-no-torch]>=1.1.20,<2.0",
+    "lfx-arxiv>=0.1.5,<1.0.0",
     "lfx-confluent>=0.1.0,<1.0.0",
-    "lfx-duckduckgo>=0.1.0,<1.0.0",
-    "lfx-empiriolabs>=0.1.0,<1.0.0",
-    "lfx-exa>=0.1.0,<1.0.0",
-    "lfx-firecrawl>=0.1.0,<1.0.0",
-    "lfx-nextplaid>=0.1.4,<1.0.0",
-    "lfx-paddle>=0.1.0,<1.0.0",
-    "lfx-valkey>=0.1.0,<1.0.0",
+    "lfx-duckduckgo>=0.1.5,<1.0.0",
+    "lfx-empiriolabs>=0.1.3,<1.0.0",
+    "lfx-exa>=0.1.3,<1.0.0",
+    "lfx-firecrawl>=0.1.3,<1.0.0",
+    "lfx-nextplaid>=0.1.6,<1.0.0",
+    "lfx-paddle>=0.1.4,<1.0.0",
+    "lfx-valkey>=0.1.3,<1.0.0",
 ]
 
 docling = [
-    "lfx-docling[local]>=0.1.0,<1.0.0",
+    "lfx-docling[local]>=0.1.6,<1.0.0",
 ]
 
 docling-chunking = [
-    "lfx-docling[chunking]>=0.1.0,<1.0.0",
+    "lfx-docling[chunking]>=0.1.6,<1.0.0",
 ]
 
 docling-image-description = [
-    "lfx-docling[image-description]>=0.1.0,<1.0.0",
+    "lfx-docling[image-description]>=0.1.6,<1.0.0",
 ]
 
 audio = [
-    "langflow-base[audio]~=1.12.0",
+    "langflow-base[audio]~=1.13.0",
 ]
 
 # Opt-in microVM sandbox backend for code-execution components
@@ -204,7 +204,7 @@ audio = [
 # and QEMU 8+ on the host; on older Pythons the extra installs nothing and the
 # backend fails closed at use time.
 sandbox = [
-    "langflow-base[sandbox]~=1.12.0",
+    "langflow-base[sandbox]~=1.13.0",
 ]
 
 
@@ -228,15 +228,15 @@ nv-ingest = [
 ]
 
 postgresql = [
-    "langflow-base[postgresql]~=1.12.0",
+    "langflow-base[postgresql]~=1.13.0",
 ]
 
 pgvector = [
-    "langflow-base[pgvector]~=1.12.0",
+    "langflow-base[pgvector]~=1.13.0",
 ]
 
 opensearch = [
-    "langflow-base[opensearch]~=1.12.0",
+    "langflow-base[opensearch]~=1.13.0",
 ]
 
 [tool.uv]
@@ -428,6 +428,13 @@ external = ["RUF027"]
 ]
 "src/backend/base/langflow/__main__.py" = [
     "B008",  # Typer CLI requires function calls in defaults
+]
+"src/backend/base/langflow/cli/admin/commands.py" = [
+    "B008",   # Typer CLI requires function calls in argument defaults
+    "FBT001", # Bool flags are the standard typer pattern
+    "FBT002", # Bool flags are the standard typer pattern
+    "FBT003", # Boolean positional values in typer.Option() calls
+    "TC003",  # Typer resolves Path annotations at runtime
 ]
 "src/backend/base/langflow/services/cache/*" = [
     "S301",  # Pickle usage is intentional for caching
