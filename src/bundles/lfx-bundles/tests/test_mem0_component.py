@@ -83,10 +83,11 @@ from lfx.components.mem0.mem0_chat_memory import Mem0MemoryComponent
             # Regression guard for the credential-bleed bug: never pollute os.environ.
             assert "OPENAI_API_KEY" not in os.environ
 
-    
     @patch("lfx_bundles.mem0.mem0_chat_memory.logger.warning")
     @patch("lfx_bundles.mem0.mem0_chat_memory.importlib.import_module")
-    def test_build_mem0_with_api_key_does_not_call_memory_client_from_config(self, mock_import_module, mock_logger_warning):
+    def test_build_mem0_with_api_key_does_not_call_memory_client_from_config(
+        self, mock_import_module, mock_logger_warning
+    ):
         """MemoryClient has no from_config classmethod; build_mem0 must not call it.
 
         Regression test for https://github.com/langflow-ai/langflow/issues/8555:
