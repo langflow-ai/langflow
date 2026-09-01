@@ -35,6 +35,24 @@ For those controls, see [Catalog and model policy](./api-governance-policy).
 
 To mark fields that `declared` should allow, see [Tweaks (API inputs)](/concepts-publish#input-schema).
 
+## Refused tweaks with `TWEAKS_REFUSED` {#tweaks-refused}
+
+A refused tweak fails the run with `422 Unprocessable Entity`. The extra keys are not applied.
+`input_value` and `session_id` are not tweaks, so both values are still accepted.
+
+```json
+{
+  "detail": {
+    "error": "Refused tweaks",
+    "code": "TWEAKS_REFUSED",
+    "message": "This flow declares which fields the API may set. Only fields marked editable via API accept a tweak.",
+    "fields": ["temperature"]
+  }
+}
+```
+
+Returned from `POST /api/v1/run`, `/run/advanced`, `/build/{flow_id}/flow`, and `/api/v2/workflows`.
+
 For more information, see:
 
 * [Environment variables](/environment-variables#visual-editor-and-playground-behavior)
