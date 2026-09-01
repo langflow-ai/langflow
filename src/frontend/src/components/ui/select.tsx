@@ -36,9 +36,7 @@ const SelectTrigger = React.forwardRef<
       {...props}
     >
       {children}
-      {variant === "plain" ? (
-        <SelectPrimitive.Icon asChild></SelectPrimitive.Icon>
-      ) : (
+      {variant === "plain" ? null : (
         <SelectPrimitive.Icon asChild>
           {direction === "up" ? (
             <ChevronUp className="h-4 w-4" />
