@@ -1,5 +1,35 @@
 import { render, screen } from "@testing-library/react";
+import type * as ReactTypes from "react";
 import { Select, SelectTrigger, SelectValue } from "../select";
+
+// Exercise the Slot 1.3+ `asChild` contract without updating the full Radix
+// dependency graph locked for the release branch.
+jest.mock("@radix-ui/react-select", () => {
+  const actual = jest.requireActual<typeof import("@radix-ui/react-select")>(
+    "@radix-ui/react-select",
+  );
+  const React = jest.requireActual<typeof import("react")>("react");
+
+  const StrictIcon = React.forwardRef<
+    ReactTypes.ElementRef<typeof actual.Icon>,
+    ReactTypes.ComponentPropsWithoutRef<typeof actual.Icon>
+  >(({ asChild, children, ...props }, ref) => {
+    if (asChild && !React.isValidElement(children)) {
+      throw new Error(
+        "Primitive.span failed to slot onto its children. Expected a single React element child or `Slottable`.",
+      );
+    }
+
+    return (
+      <actual.Icon {...props} asChild={asChild} ref={ref}>
+        {children}
+      </actual.Icon>
+    );
+  });
+  StrictIcon.displayName = "StrictSelectIcon";
+
+  return { ...actual, Icon: StrictIcon };
+});
 
 const renderTrigger = (triggerProps: Record<string, unknown> = {}) =>
   render(
