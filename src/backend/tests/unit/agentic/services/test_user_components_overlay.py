@@ -438,13 +438,7 @@ class TestRegistryOverlay:
         from langflow.agentic.services.user_components import _resolve_components_dir
 
         components_dir = _resolve_components_dir(user_id="user-alice")
-        unsafe_code = (
-            "import os\n"
-            "from lfx.custom import Component\n"
-            "class UnsafeComponent(Component):\n"
-            "    def run(self):\n"
-            "        os.spawnv()\n"
-        )
+        unsafe_code = "import os\nos.spawnv()\nclass UnsafeComponent:\n    pass\n"
         (components_dir / "UnsafeComponent.py").write_text(unsafe_code, encoding="utf-8")
 
         with patch.object(lfx_utils, "build_custom_component_template") as mock_build:

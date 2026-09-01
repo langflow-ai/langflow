@@ -23,6 +23,7 @@ from lfx.base.models.unified_models import (
 )
 from lfx.log.logger import logger
 from lfx.services.deps import get_settings_service
+from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from langflow.agentic.api.deps import require_agentic_experience
@@ -45,8 +46,9 @@ from langflow.agentic.services.provider_service import (
     list_installed_tool_calling_models,
 )
 from langflow.api.utils.core import CurrentActiveUser, DbSession, release_db_transaction
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 
-router = APIRouter(prefix="/agentic", tags=["Agentic"])
+router = APIRouter(prefix="/agentic", tags=["Agentic"], include_in_schema=False)
 
 
 @dataclass(frozen=True)
@@ -71,7 +73,11 @@ async def _resolve_assistant_context(
     Raises:
         HTTPException: If provider is not configured or API key is missing.
     """
-    enabled_providers, _ = await get_enabled_providers_for_user(user_id, session)
+    enabled_providers, _ = await get_enabled_providers_for_user(
+        user_id,
+        session,
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
 
     if not enabled_providers:
         raise HTTPException(
@@ -144,7 +150,7 @@ async def _resolve_assistant_context(
     )
 
 
-async def _validate_flow_access(flow_id: str | None, user_id: UUID, session: AsyncSession) -> None:
+async def _validate_flow_access(flow_id: str | None, user_id: UUID, session: AsyncSession):
     """Reject an unknown or not-owned flow_id before the model is invoked.
 
     A missing flow_id is allowed (the assistant runs with no canvas context).
@@ -152,8 +158,8 @@ async def _validate_flow_access(flow_id: str | None, user_id: UUID, session: Asy
     per-user 404 of the /run and webhook endpoints; not-found and cross-user
     both surface 404 so a flow's existence is not leaked by id.
     """
-    if not flow_id:
-        return
+    if flow_id is None:
+        return None
 
     from langflow.services.database.models.flow import Flow
 
@@ -165,6 +171,7 @@ async def _validate_flow_access(flow_id: str | None, user_id: UUID, session: Asy
     flow = await session.get(Flow, flow_uuid)
     if flow is None or (flow.user_id is not None and str(flow.user_id) != str(user_id)):
         raise HTTPException(status_code=404, detail="Flow not found.")
+    return flow
 
 
 @router.post("/execute/{flow_name}", dependencies=[Depends(require_agentic_experience)])
@@ -180,29 +187,35 @@ async def execute_named_flow(
     context. Resolving it here (instead of running the raw file) turns a
     silent 500 into a successful run, or a clear 4xx when no provider is set.
     """
-    ctx = await _resolve_assistant_context(request, current_user.id, session)
+    flow = await _validate_flow_access(request.flow_id, current_user.id, session)
+    with scoped_model_provider_policy_for_flow(
+        flow,
+        user_id=current_user.id,
+        is_superuser=bool(current_user.is_superuser),
+    ):
+        ctx = await _resolve_assistant_context(request, current_user.id, session)
 
-    # The flow run below can wait on a model for minutes; don't hold the
-    # request transaction (and its pooled connection) open across it (#14445).
-    await release_db_transaction(session)
+        # The flow run below can wait on a model for minutes; don't hold the
+        # request transaction (and its pooled connection) open across it (#14445).
+        await release_db_transaction(session)
 
-    global_vars = dict(ctx.global_vars)
-    if request.component_id:
-        global_vars["COMPONENT_ID"] = request.component_id
-    if request.field_name:
-        global_vars["FIELD_NAME"] = request.field_name
+        global_vars = dict(ctx.global_vars)
+        if request.component_id:
+            global_vars["COMPONENT_ID"] = request.component_id
+        if request.field_name:
+            global_vars["FIELD_NAME"] = request.field_name
 
-    return await execute_flow_file(
-        flow_filename=f"{flow_name}.json",
-        input_value=request.input_value,
-        global_variables=global_vars,
-        verbose=True,
-        user_id=str(current_user.id),
-        session_id=ctx.session_id,
-        provider=ctx.provider,
-        model_name=ctx.model_name,
-        api_key_var=ctx.api_key_name,
-    )
+        return await execute_flow_file(
+            flow_filename=f"{flow_name}.json",
+            input_value=request.input_value,
+            global_variables=global_vars,
+            verbose=True,
+            user_id=str(current_user.id),
+            session_id=ctx.session_id,
+            provider=ctx.provider,
+            model_name=ctx.model_name,
+            api_key_var=ctx.api_key_name,
+        )
 
 
 @router.get("/check-config")
@@ -220,7 +233,11 @@ async def check_assistant_config(
     """
     user_id = current_user.id
     enabled = get_settings_service().settings.agentic_experience
-    enabled_providers, _ = await get_enabled_providers_for_user(user_id, session)
+    enabled_providers, _ = await get_enabled_providers_for_user(
+        user_id,
+        session,
+        purpose=ModelProviderPolicyPurpose.CONFIGURE,
+    )
 
     all_providers = []
 
@@ -317,26 +334,33 @@ async def assist(
     session: DbSession,
 ) -> dict:
     """Chat with the Langflow Assistant."""
-    await _validate_flow_access(request.flow_id, current_user.id, session)
-    ctx = await _resolve_assistant_context(request, current_user.id, session)
+    flow = await _validate_flow_access(request.flow_id, current_user.id, session)
+    with scoped_model_provider_policy_for_flow(
+        flow,
+        user_id=current_user.id,
+        is_superuser=bool(current_user.is_superuser),
+    ):
+        # Scope is bound before provider discovery so a denial cannot inspect
+        # provider variables, load credentials, or probe a live catalog.
+        ctx = await _resolve_assistant_context(request, current_user.id, session)
 
-    logger.info(f"Executing {LANGFLOW_ASSISTANT_FLOW} with {ctx.provider}/{ctx.model_name}")
+        logger.info(f"Executing {LANGFLOW_ASSISTANT_FLOW} with {ctx.provider}/{ctx.model_name}")
 
-    # The assistant run below can wait on a model for minutes; don't hold the
-    # request transaction (and its pooled connection) open across it (#14445).
-    await release_db_transaction(session)
+        # The assistant run below can wait on a model for minutes; don't hold the
+        # request transaction (and its pooled connection) open across it (#14445).
+        await release_db_transaction(session)
 
-    return await execute_flow_with_validation(
-        flow_filename=LANGFLOW_ASSISTANT_FLOW,
-        input_value=request.input_value or "",
-        global_variables=ctx.global_vars,
-        max_retries=ctx.max_retries,
-        user_id=str(current_user.id),
-        session_id=ctx.session_id,
-        provider=ctx.provider,
-        model_name=ctx.model_name,
-        api_key_var=ctx.api_key_name,
-    )
+        return await execute_flow_with_validation(
+            flow_filename=LANGFLOW_ASSISTANT_FLOW,
+            input_value=request.input_value or "",
+            global_variables=ctx.global_vars,
+            max_retries=ctx.max_retries,
+            user_id=str(current_user.id),
+            session_id=ctx.session_id,
+            provider=ctx.provider,
+            model_name=ctx.model_name,
+            api_key_var=ctx.api_key_name,
+        )
 
 
 @router.post("/assist/stream", dependencies=[Depends(require_agentic_experience)])
@@ -347,30 +371,44 @@ async def assist_stream(
     session: DbSession,
 ) -> StreamingResponse:
     """Chat with the Langflow Assistant with streaming progress updates."""
-    await _validate_flow_access(request.flow_id, current_user.id, session)
-    ctx = await _resolve_assistant_context(request, current_user.id, session)
+    flow = await _validate_flow_access(request.flow_id, current_user.id, session)
+    with scoped_model_provider_policy_for_flow(
+        flow,
+        user_id=current_user.id,
+        is_superuser=bool(current_user.is_superuser),
+    ):
+        ctx = await _resolve_assistant_context(request, current_user.id, session)
 
     # Dependency teardown only runs after the SSE stream finishes, so without
     # this commit the request transaction (and its pooled connection) would
     # stay open for the assistant's whole streaming run (#14445).
     await release_db_transaction(session)
 
-    return StreamingResponse(
-        execute_flow_with_validation_streaming(
-            flow_filename=LANGFLOW_ASSISTANT_FLOW,
-            input_value=request.input_value or "",
-            global_variables=ctx.global_vars,
-            max_retries=ctx.max_retries,
-            user_id=str(current_user.id),
-            session_id=ctx.session_id,
-            provider=ctx.provider,
-            model_name=ctx.model_name,
-            api_key_var=ctx.api_key_name,
-            is_disconnected=http_request.is_disconnected,
+    async def _scoped_stream() -> AsyncIterator[str]:
+        with scoped_model_provider_policy_for_flow(
+            flow,
+            user_id=current_user.id,
             is_superuser=bool(current_user.is_superuser),
-            history_limit=request.history_limit,
-            iterations_limit=request.iterations_limit,
-        ),
+        ):
+            async for event in execute_flow_with_validation_streaming(
+                flow_filename=LANGFLOW_ASSISTANT_FLOW,
+                input_value=request.input_value or "",
+                global_variables=ctx.global_vars,
+                max_retries=ctx.max_retries,
+                user_id=str(current_user.id),
+                session_id=ctx.session_id,
+                provider=ctx.provider,
+                model_name=ctx.model_name,
+                api_key_var=ctx.api_key_name,
+                is_disconnected=http_request.is_disconnected,
+                is_superuser=bool(current_user.is_superuser),
+                history_limit=request.history_limit,
+                iterations_limit=request.iterations_limit,
+            ):
+                yield event
+
+    return StreamingResponse(
+        _scoped_stream(),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",
@@ -379,7 +417,7 @@ async def assist_stream(
     )
 
 
-@router.post("/assist/run", dependencies=[Depends(require_agentic_experience)])
+@router.post("/assist/run", dependencies=[Depends(require_agentic_experience)], include_in_schema=False)
 async def assist_headless(
     request: HeadlessAssistantRequest,
     current_user: CurrentActiveUser,

@@ -12,6 +12,7 @@ import { getRandomPlaceholderMessage } from "../helpers/messages";
 import { useAssistantSelectedModel } from "../hooks/use-assistant-selected-model";
 import { useAutoGrowTextarea } from "../hooks/use-auto-grow-textarea";
 import { useComponentMentions } from "../hooks/use-component-mentions";
+import { useEnabledModels } from "../hooks/use-enabled-models";
 import { useInputHistory } from "../hooks/use-input-history";
 import { AssistantMentionPopover } from "./assistant-mention-popover";
 import { ModelSelector } from "./model-selector";
@@ -123,6 +124,7 @@ export function AssistantInput({
     !GENERATING_STEPS.includes(currentStep);
   const animatedPlaceholder = useAnimatedPlaceholder(isPostGenerationStep);
   const [selectedModel, setSelectedModel] = useAssistantSelectedModel();
+  const { isCatalogReady, isModelEnabled } = useEnabledModels();
   const limitHintId = useId();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inputHistory = useInputHistory();
@@ -154,6 +156,7 @@ export function AssistantInput({
     const trimmedMessage = message.trim();
     if (!trimmedMessage || disabled || isProcessing) return;
     if (trimmedMessage.length > maxMessageLength) return;
+    if (!isCatalogReady || !isModelEnabled(selectedModel)) return;
     inputHistory.push(trimmedMessage);
     onSend(trimmedMessage, selectedModel);
     updateMessage("");
@@ -228,7 +231,10 @@ export function AssistantInput({
   // Gate on selectedModel too: a fast click during the model selector's
   // auto-select window would fire with a null model and drop the message.
   const canSend =
-    message.trim().length > 0 && !disabled && selectedModel !== null;
+    message.trim().length > 0 &&
+    !disabled &&
+    isCatalogReady &&
+    isModelEnabled(selectedModel);
 
   return (
     <div className="relative px-2 pb-2">

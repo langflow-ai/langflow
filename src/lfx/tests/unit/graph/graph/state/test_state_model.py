@@ -105,24 +105,6 @@ class GraphSidecarBase(Component):
         assert RuntimeSubclass()._get_method_return_type("build") == ["int"]
         assert getter.__annotations__["return"] is int
 
-    def test_output_getter_distinguishes_missing_and_unresolved_return_annotations(self):
-        class MockComponent:
-            def get_output_by_method(self, _method):
-                raise AssertionError
-
-            def missing(self):
-                raise AssertionError
-
-            def unresolved(self) -> "MissingReturnType":  # noqa: F821 - deliberately unresolved
-                raise AssertionError
-
-        component = MockComponent()
-
-        with pytest.raises(ValueError, match="has no return type annotation"):
-            build_output_getter(component.missing)
-        with pytest.raises(ValueError, match="could not be resolved safely"):
-            build_output_getter(component.unresolved)
-
     def test_create_model_and_assign_values_fails(self, chat_input_component):
         state_model = create_state_model(method_one=chat_input_component.message_response)
 

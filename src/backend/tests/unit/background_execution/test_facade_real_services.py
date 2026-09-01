@@ -969,7 +969,6 @@ async def test_startup_releases_lease_for_transient_authenticated_parser_failure
     real_services_job_service, monkeypatch
 ):
     """Transient parser resource failures keep an authenticated job queued for retry."""
-    from langflow.services.background_execution import service as service_module
     from langflow.services.background_execution.service import BackgroundExecutionService
     from langflow.services.deps import get_settings_service
 
@@ -991,11 +990,10 @@ async def test_startup_releases_lease_for_transient_authenticated_parser_failure
         },
         user=_StubUser(user_id),
     )
-    isolated_json = SimpleNamespace(
-        dumps=json.dumps,
-        loads=lambda _plaintext: (_ for _ in ()).throw(MemoryError),
+    monkeypatch.setattr(
+        "langflow.services.background_execution.service.json.loads",
+        lambda _plaintext: (_ for _ in ()).throw(MemoryError),
     )
-    monkeypatch.setattr(service_module, "json", isolated_json)
 
     ran: list[dict] = []
     restart = BackgroundExecutionService(

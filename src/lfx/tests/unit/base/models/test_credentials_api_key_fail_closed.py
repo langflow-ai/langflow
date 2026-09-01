@@ -29,7 +29,7 @@ class _FailingVariableService:
 
 
 def _configure_lookup(monkeypatch, error: Exception) -> None:
-    monkeypatch.setattr(credentials, "get_model_provider_variable_mapping", lambda: {"OpenAI": "OPENAI_API_KEY"})
+    monkeypatch.setattr(credentials, "get_provider_secret_variable_key", lambda _provider: "OPENAI_API_KEY")
     monkeypatch.setattr(credentials, "get_provider_all_variables", lambda _provider: [])
     monkeypatch.setattr(credentials, "get_variable_service", lambda: _FailingVariableService(error))
     monkeypatch.setattr(credentials, "session_scope", _session_scope)
@@ -45,9 +45,16 @@ def test_api_key_read_error_does_not_fall_back_to_env(monkeypatch):
 
 
 @pytest.mark.parametrize("api_key", [None, "OPENAI_API_KEY"], ids=["primary", "named"])
-def test_api_key_value_error_does_not_fall_back_to_env(monkeypatch, api_key):
+@pytest.mark.parametrize(
+    "error_message",
+    [
+        "Could not decrypt credential variable 'OPENAI_API_KEY'.",
+        "Multiple shared variables named 'OPENAI_API_KEY' are visible.",
+    ],
+    ids=["decrypt-failure", "ambiguous-shares"],
+)
+def test_api_key_value_error_does_not_fall_back_to_env(monkeypatch, api_key, error_message):
     """A non-missing ValueError must propagate instead of resolving the process-wide env key."""
-    error_message = "Could not decrypt credential variable 'OPENAI_API_KEY'."
     _configure_lookup(monkeypatch, ValueError(error_message))
 
     with pytest.raises(ValueError, match=re.escape(error_message)):

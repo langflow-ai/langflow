@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import keyword
 import re
+from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from lfx.log.logger import logger
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlalchemy.orm import aliased
@@ -16,7 +17,7 @@ from langflow.services.database.models.flow.model import Flow, FlowRead, FlowTyp
 from langflow.services.deps import get_settings_service, session_scope
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import AsyncIterator, Awaitable, Callable
 
     from lfx.graph.graph.base import Graph
     from lfx.graph.schema import RunOutputs
@@ -217,13 +218,12 @@ async def get_flow_by_id_or_name(
 
 async def _build_graph_from_authorized_flow(
     *,
-    caller: User,  # noqa: ARG001
     flow: Flow,
     flow_id: str,
     user_id: str,
     tweaks: dict | None,
 ) -> Graph:
-    """Build a Graph from an already-loaded flow row (permission enforced by decorator)."""
+    """Build a Graph from an already-authorized target flow row."""
     from lfx.graph.graph.base import Graph
 
     from langflow.processing.process import process_tweaks
@@ -242,26 +242,34 @@ async def _build_graph_from_authorized_flow(
     return Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
 
 
-async def load_flow(
-    user_id: str, flow_id: str | None = None, flow_name: str | None = None, tweaks: dict | None = None
-) -> Graph:
-    """Load a flow graph after authorizing EXECUTE for the caller."""
-    from langflow.services.authorization import FlowAction
-    from langflow.services.authorization.decorators import requires_flow_permission
+async def _resolve_authorized_target_flow(
+    *,
+    user_id: str | UUID,
+    flow_id: str | UUID | None = None,
+    flow_name: str | None = None,
+) -> tuple[User, Flow]:
+    """Freshly load and authorize a nested target flow for the calling user."""
+    from langflow.services.authorization import FlowAction, ensure_flow_permission
     from langflow.services.authorization.fetch import authorized_or_owner_scoped
     from langflow.services.database.models.user.model import User
 
+    if not user_id:
+        msg = "Session is invalid"
+        raise ValueError(msg)
     if not flow_id and not flow_name:
         msg = "Flow ID or Flow Name is required"
         raise ValueError(msg)
     if not flow_id and flow_name:
-        flow_id = await find_flow(flow_name, user_id)
+        flow_id = await find_flow(flow_name, str(user_id))
         if not flow_id:
             msg = f"Flow {flow_name} not found"
             raise ValueError(msg)
 
     uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
     uuid_flow_id = UUID(flow_id) if isinstance(flow_id, str) else flow_id
+    if uuid_flow_id is None:
+        msg = "Flow ID or Flow Name is required"
+        raise ValueError(msg)
 
     async with session_scope() as session:
         flow = await authorized_or_owner_scoped(
@@ -281,21 +289,67 @@ async def load_flow(
             msg = "Session is invalid"
             raise ValueError(msg)
 
-    build_graph = requires_flow_permission(
-        FlowAction.EXECUTE,
-        user_param="caller",
-        flow_param="flow",
-        forbidden_as_not_found=True,
-        not_found_template=f"Flow {flow_id} not found",
-    )(_build_graph_from_authorized_flow)
+        try:
+            await ensure_flow_permission(
+                caller,
+                FlowAction.EXECUTE,
+                flow_id=flow.id,
+                flow_user_id=flow.user_id,
+                workspace_id=flow.workspace_id,
+                folder_id=flow.folder_id,
+            )
+        except HTTPException as exc:
+            if exc.status_code == status.HTTP_403_FORBIDDEN:
+                msg = f"Flow {flow_id} not found"
+                raise ValueError(msg) from exc
+            raise
 
-    return await build_graph(
-        caller=caller,
-        flow=flow,
-        flow_id=flow_id,
+    return caller, flow
+
+
+@asynccontextmanager
+async def scoped_model_provider_policy_for_target_flow(
+    *,
+    user_id: str | UUID,
+    flow_id: str | UUID | None = None,
+    flow_name: str | None = None,
+) -> AsyncIterator[Flow]:
+    """Bind a freshly resolved nested target scope for build and execution.
+
+    The target row is reloaded on every entry, including cache hits, so role
+    revocation and project moves take effect immediately. ContextVar nesting
+    restores the caller's scope on success, failure, and concurrent tasks.
+    """
+    from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
+
+    caller, flow = await _resolve_authorized_target_flow(
         user_id=user_id,
-        tweaks=tweaks,
+        flow_id=flow_id,
+        flow_name=flow_name,
     )
+    with scoped_model_provider_policy_for_flow(
+        flow,
+        user_id=caller.id,
+        is_superuser=bool(caller.is_superuser),
+    ):
+        yield flow
+
+
+async def load_flow(
+    user_id: str, flow_id: str | None = None, flow_name: str | None = None, tweaks: dict | None = None
+) -> Graph:
+    """Load a flow graph after authorizing EXECUTE for the caller."""
+    async with scoped_model_provider_policy_for_target_flow(
+        user_id=user_id,
+        flow_id=flow_id,
+        flow_name=flow_name,
+    ) as flow:
+        return await _build_graph_from_authorized_flow(
+            flow=flow,
+            flow_id=str(flow.id),
+            user_id=str(user_id),
+            tweaks=tweaks,
+        )
 
 
 async def find_flow(flow_name: str, user_id: str) -> str | None:
@@ -320,50 +374,67 @@ async def run_flow(
     if user_id is None:
         msg = "Session is invalid"
         raise ValueError(msg)
-    if graph is None:
-        graph = await load_flow(user_id, flow_id, flow_name, tweaks)
-    if run_id:
-        graph.set_run_id(UUID(run_id))
-    if session_id:
-        graph.session_id = session_id
-    if user_id:
-        graph.user_id = user_id
 
-    if inputs is None:
-        inputs = []
-    if isinstance(inputs, dict):
-        inputs = [inputs]
-    inputs_list = []
-    inputs_components = []
-    types = []
-    for input_dict in inputs:
-        inputs_list.append({INPUT_FIELD_NAME: cast("str", input_dict.get("input_value"))})
-        inputs_components.append(input_dict.get("components", []))
-        types.append(input_dict.get("type", "chat"))
+    graph_flow_id = getattr(graph, "flow_id", None) if graph is not None else None
+    if flow_id is not None and graph_flow_id is not None and str(flow_id) != str(graph_flow_id):
+        msg = "Provided flow ID does not match the graph's target flow"
+        raise ValueError(msg)
+    target_flow_id = flow_id or graph_flow_id
+    target_flow_name = flow_name or (getattr(graph, "flow_name", None) if graph is not None else None)
 
-    outputs = [
-        vertex.id
-        for vertex in graph.vertices
-        if output_type == "debug"
-        or (
-            vertex.is_output and (output_type == "any" or output_type in vertex.id.lower())  # type: ignore[operator]
+    async with scoped_model_provider_policy_for_target_flow(
+        user_id=user_id,
+        flow_id=target_flow_id,
+        flow_name=target_flow_name,
+    ) as target_flow:
+        if graph is None:
+            graph = await _build_graph_from_authorized_flow(
+                flow=target_flow,
+                flow_id=str(target_flow.id),
+                user_id=str(user_id),
+                tweaks=tweaks,
+            )
+        if run_id:
+            graph.set_run_id(UUID(run_id))
+        if session_id:
+            graph.session_id = session_id
+        graph.user_id = str(user_id)
+
+        if inputs is None:
+            inputs = []
+        if isinstance(inputs, dict):
+            inputs = [inputs]
+        inputs_list = []
+        inputs_components = []
+        types = []
+        for input_dict in inputs:
+            inputs_list.append({INPUT_FIELD_NAME: cast("str", input_dict.get("input_value"))})
+            inputs_components.append(input_dict.get("components", []))
+            types.append(input_dict.get("type", "chat"))
+
+        outputs = [
+            vertex.id
+            for vertex in graph.vertices
+            if output_type == "debug"
+            or (
+                vertex.is_output and (output_type == "any" or output_type in vertex.id.lower())  # type: ignore[operator]
+            )
+        ]
+
+        fallback_to_env_vars = get_settings_service().settings.fallback_to_env_var
+
+        from lfx.run.hitl import raise_if_nested_hitl_unsupported
+
+        # A nested run cannot pause: a Human Input in here would silently not pause. Fail loud instead.
+        raise_if_nested_hitl_unsupported(graph)
+
+        return await graph.arun(
+            inputs_list,
+            outputs=outputs,
+            inputs_components=inputs_components,
+            types=types,
+            fallback_to_env_vars=fallback_to_env_vars,
         )
-    ]
-
-    fallback_to_env_vars = get_settings_service().settings.fallback_to_env_var
-
-    from lfx.run.hitl import raise_if_nested_hitl_unsupported
-
-    # A nested run cannot pause: a Human Input in here would silently not pause. Fail loud instead.
-    raise_if_nested_hitl_unsupported(graph)
-
-    return await graph.arun(
-        inputs_list,
-        outputs=outputs,
-        inputs_components=inputs_components,
-        types=types,
-        fallback_to_env_vars=fallback_to_env_vars,
-    )
 
 
 def generate_function_for_flow(
@@ -428,7 +499,7 @@ async def flow_function({func_args}):
                     data.extend(build_data_from_result_data(output))
         return format_flow_output_data(data)
     except Exception as e:
-        raise ToolException(f'Error running flow: ' + e)
+        raise ToolException(f'Error running flow: {{e}}') from e
 """
 
     compiled_func = compile(func_body, "<string>", "exec")

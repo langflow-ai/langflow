@@ -42,6 +42,19 @@ class DatabaseVariableService(VariableService, Service):
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
 
+    async def get_default_field_bindings(
+        self,
+        user_id: UUID | str,
+        session: AsyncSession,
+    ) -> list[tuple[str, list[str] | None]]:
+        """Read only names and default fields; never materialize variable values."""
+        stmt = (
+            select(Variable.name, Variable.default_fields)
+            .where(Variable.user_id == user_id)
+            .order_by(col(Variable.name), col(Variable.id))
+        )
+        return [(name, default_fields) for name, default_fields in (await session.exec(stmt)).all() if name]
+
     async def initialize_user_variables(self, user_id: UUID | str, session: AsyncSession) -> None:
         if not self.settings_service.settings.store_environment_variables:
             await logger.adebug("Skipping environment variable storage.")
@@ -180,7 +193,7 @@ class DatabaseVariableService(VariableService, Service):
         # credential = session.query(Variable).filter(Variable.user_id == user_id, Variable.name == name).first()
         try:
             variable = await self.get_variable_object(user_id, name, session)
-        except ValueError as owned_lookup_error:
+        except VariableNotFoundError as owned_lookup_error:
             # Runtime resolution may use an explicitly shared variable, but it
             # must never broaden administrative get/update/delete lookups. An
             # owned variable wins on name collisions; otherwise require one
@@ -258,8 +271,9 @@ class DatabaseVariableService(VariableService, Service):
         session: AsyncSession,
         *,
         visibility: ResourceVisibilityScope | None = None,
+        include_empty_names: set[str] | None = None,
     ) -> list[VariableRead]:
-        stmt = select(Variable)
+        stmt = select(Variable).order_by(col(Variable.name), col(Variable.id))
         if visibility is None:
             stmt = stmt.where(Variable.user_id == user_id)
         else:
@@ -274,12 +288,13 @@ class DatabaseVariableService(VariableService, Service):
                 visibility=visibility,
             )
         variables = list((await session.exec(stmt)).all())
+        include_empty_names = include_empty_names or set()
         variables_read = []
         for variable in variables:
             is_owner = str(variable.user_id) == str(user_id)
             value = None
             if variable.type == GENERIC_TYPE and is_owner:
-                if not variable.value:
+                if not variable.value and variable.name not in include_empty_names:
                     if variable.name in AGENTIC_VARIABLES:
                         await logger.adebug(
                             "Agentic placeholder variable '%s' has no stored value — skipping.", variable.name
@@ -287,24 +302,29 @@ class DatabaseVariableService(VariableService, Service):
                     else:
                         await logger.awarning("Variable '%s' has no stored value — skipping.", variable.name)
                     continue
-                # Security defense-in-depth: a GENERIC variable is stored as plain text, so its
-                # value must never be a Fernet token. If it is (e.g. a CREDENTIAL row that was
-                # relabeled GENERIC), do NOT decrypt-and-return it — that would leak the secret.
-                if isinstance(variable.value, str) and variable.value.startswith("gAAAAA"):
-                    await logger.awarning(
-                        "Skipping variable '%s': a GENERIC variable holds ciphertext "
-                        "(likely a CREDENTIAL row relabeled GENERIC); not decrypting or returning it.",
-                        variable.name,
-                    )
-                    continue
-                value = auth_utils.decrypt_api_key(variable.value)
-                if not value:
-                    await logger.awarning(
-                        "Variable '%s' could not be decrypted — likely encrypted with a different "
-                        "LANGFLOW_SECRET_KEY. Skipping.",
-                        variable.name,
-                    )
-                    continue
+                if variable.value:
+                    # Security defense-in-depth: a GENERIC variable is stored as plain text, so its
+                    # value must never be a Fernet token. If it is (e.g. a CREDENTIAL row that was
+                    # relabeled GENERIC), do NOT decrypt-and-return it — that would leak the secret.
+                    if isinstance(variable.value, str) and variable.value.startswith("gAAAAA"):
+                        await logger.awarning(
+                            "Skipping variable '%s': a GENERIC variable holds ciphertext "
+                            "(likely a CREDENTIAL row relabeled GENERIC); not decrypting or returning it.",
+                            variable.name,
+                        )
+                        continue
+                    value = auth_utils.decrypt_api_key(variable.value)
+                    if not value:
+                        await logger.awarning(
+                            "Variable '%s' could not be decrypted — likely encrypted with a different "
+                            "LANGFLOW_SECRET_KEY. Skipping.",
+                            variable.name,
+                        )
+                        continue
+                else:
+                    # Optional settings use an empty value as a meaningful reset
+                    # while retaining the row UUID.
+                    value = ""
 
             # Model validate will set value to None if credential type
             variable_read = VariableRead.model_validate(variable, from_attributes=True)

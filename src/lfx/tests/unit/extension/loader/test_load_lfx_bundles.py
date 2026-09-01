@@ -115,6 +115,60 @@ def test_root_registers_each_provider_at_official(tmp_path: Path) -> None:
             assert comp.namespaced_id == f"ext:{bundle}:{comp.class_name}@official"
 
 
+def test_mrscraper_provider_loads_with_production_bundle_loader(monkeypatch) -> None:
+    """The checked-in MrScraper provider registers all components at @official."""
+    repo_root = Path(__file__).resolve().parents[6]
+    bundles_source = repo_root / "src" / "bundles" / "lfx-bundles" / "src"
+    provider = bundles_source / "lfx_bundles" / "mrscraper"
+    result = LoadResult(
+        slot=SLOT_OFFICIAL,
+        source_path=provider,
+        bundle="mrscraper",
+        extension_id="lfx-bundles",
+        extension_version="1.0.0",
+        manifestless=True,
+    )
+    module_prefixes = ("_lfx_ext.official.mrscraper", "lfx_bundles")
+    prior_modules = {
+        name: module
+        for name, module in sys.modules.items()
+        if name == "lfx_bundles" or name.startswith(tuple(f"{prefix}." for prefix in module_prefixes))
+    }
+    for name in prior_modules:
+        sys.modules.pop(name, None)
+
+    monkeypatch.syspath_prepend(str(bundles_source))
+    importlib.invalidate_caches()
+    try:
+        _load_bundle_directory(
+            bundle_root=provider,
+            bundle_name="mrscraper",
+            extension_id="lfx-bundles",
+            extension_version="1.0.0",
+            slot=SLOT_OFFICIAL,
+            distribution=None,
+            result=result,
+        )
+    finally:
+        for name in list(sys.modules):
+            if name == "lfx_bundles" or name.startswith(tuple(f"{prefix}." for prefix in module_prefixes)):
+                sys.modules.pop(name, None)
+        sys.modules.update(prior_modules)
+        importlib.invalidate_caches()
+
+    assert result.ok, [(error.code, error.message) for error in result.errors]
+    assert {component.class_name for component in result.components} == {
+        "MrscraperAiScraper",
+        "MrscraperBatchScrape",
+        "MrscraperCrawlWebsite",
+        "MrscraperFetchHtml",
+        "MrscraperGetResult",
+        "MrscraperGetResults",
+        "MrscraperRunAiScraper",
+        "MrscraperRunManualScraper",
+    }
+
+
 def test_invalid_provider_name_emits_typed_warning_and_skips(tmp_path: Path) -> None:
     """A provider folder that is not lowercase snake_case is surfaced, not silently dropped.
 

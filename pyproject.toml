@@ -28,20 +28,20 @@ dependencies = [
     # default langflow dependency.
     # The cross-bundle CI matrix verifies these ranges resolve together across
     # the supported lfx axis.
-    "lfx-ibm>=0.2.1,<1.0.0",
-    "lfx-docling>=0.1.0,<1.0.0",
-    "lfx-datastax>=0.1.5,<1.0.0",
-    "lfx-toolguard>=0.1.1,<1.0.0",
-    "lfx-openai>=0.1.2,<1.0.0",
-    "lfx-anthropic>=0.1.5,<1.0.0",
+    "lfx-ibm>=0.2.3,<1.0.0",
+    "lfx-docling>=0.1.6,<1.0.0",
+    "lfx-datastax>=0.1.8,<1.0.0",
+    "lfx-toolguard>=0.1.2,<1.0.0",
+    "lfx-openai>=0.1.4,<1.0.0",
+    "lfx-anthropic>=0.1.7,<1.0.0",
     "lfx-azure>=0.1.0,<1.0.0",
-    "lfx-ollama>=0.1.0,<1.0.0",
-    "lfx-amazon>=0.1.3,<1.0.0",
-    "lfx-cohere>=0.1.0,<1.0.0",
-    "lfx-oracle>=0.1.0,<1.0.0",
-    "lfx-vllm>=0.1.0,<1.0.0",
-    "lfx-openai-compatible>=0.1.2,<1.0.0",
-    "lfx-google>=0.1.0,<1.0.0",
+    "lfx-ollama>=0.1.1,<1.0.0",
+    "lfx-amazon>=0.1.6,<1.0.0",
+    "lfx-cohere>=0.1.3,<1.0.0",
+    "lfx-oracle>=0.1.3,<1.0.0",
+    "lfx-vllm>=0.1.3,<1.0.0",
+    "lfx-openai-compatible>=0.1.5,<1.0.0",
+    "lfx-google>=0.1.1,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -171,28 +171,28 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.1.16,<2.0",
-    "lfx-arxiv>=0.1.0,<1.0.0",
+    "lfx-bundles[all-no-torch]>=1.1.20,<2.0",
+    "lfx-arxiv>=0.1.5,<1.0.0",
     "lfx-confluent>=0.1.0,<1.0.0",
-    "lfx-duckduckgo>=0.1.0,<1.0.0",
-    "lfx-empiriolabs>=0.1.0,<1.0.0",
-    "lfx-exa>=0.1.0,<1.0.0",
-    "lfx-firecrawl>=0.1.0,<1.0.0",
-    "lfx-nextplaid>=0.1.4,<1.0.0",
-    "lfx-paddle>=0.1.0,<1.0.0",
-    "lfx-valkey>=0.1.0,<1.0.0",
+    "lfx-duckduckgo>=0.1.5,<1.0.0",
+    "lfx-empiriolabs>=0.1.3,<1.0.0",
+    "lfx-exa>=0.1.3,<1.0.0",
+    "lfx-firecrawl>=0.1.3,<1.0.0",
+    "lfx-nextplaid>=0.1.6,<1.0.0",
+    "lfx-paddle>=0.1.4,<1.0.0",
+    "lfx-valkey>=0.1.3,<1.0.0",
 ]
 
 docling = [
-    "lfx-docling[local]>=0.1.0,<1.0.0",
+    "lfx-docling[local]>=0.1.6,<1.0.0",
 ]
 
 docling-chunking = [
-    "lfx-docling[chunking]>=0.1.0,<1.0.0",
+    "lfx-docling[chunking]>=0.1.6,<1.0.0",
 ]
 
 docling-image-description = [
-    "lfx-docling[image-description]>=0.1.0,<1.0.0",
+    "lfx-docling[image-description]>=0.1.6,<1.0.0",
 ]
 
 audio = [

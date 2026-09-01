@@ -11,11 +11,11 @@ from disk: only a local-Chroma Memory Base resolves a filesystem path at all.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
 from langflow.api.utils.kb_helpers import (
-    KBIngestionHelper,
     resolve_backend_selection,
     resolve_embedding_selection,
     resolve_local_store_path,
@@ -138,6 +138,70 @@ class MemoryBaseComponent(Component):
         ),
     ]
 
+    async def _policy_embedding_selection(self, selected: str) -> tuple[str, str]:
+        """Resolve an attached Memory Base's non-secret embedding metadata."""
+        flow_id = _coerce_uuid(self._get_runtime_or_frontend_node_attr("flow_id"))
+        if flow_id is None:
+            msg = "flow_id is not available on the graph context; Memory Base retrieval is unavailable."
+            raise ValueError(msg)
+
+        owner_user_id = _coerce_uuid(self.user_id)
+        if owner_user_id is None:
+            msg = "user_id is not available on the graph context; Memory Base retrieval is unavailable."
+            raise ValueError(msg)
+
+        async with session_scope() as db:
+            memory_base = (
+                await db.exec(
+                    select(MemoryBase).where(
+                        MemoryBase.name == selected,
+                        MemoryBase.flow_id == flow_id,
+                        MemoryBase.user_id == owner_user_id,
+                    )
+                )
+            ).first()
+        if memory_base is None:
+            msg = f"Memory Base '{selected}' is not attached to this flow."
+            raise ValueError(msg)
+        return await resolve_embedding_selection(user_id=memory_base.user_id, kb_name=memory_base.kb_name)
+
+    async def _additional_model_provider_policy_ids(self, purpose, parameters=None) -> tuple[str, ...]:
+        """Discover the persisted embedding provider before runtime input hydration."""
+        from lfx.base.models.provider_registry import resolve_provider_id
+        from lfx.services.model_provider_policy import ModelProviderPolicyError
+
+        effective_parameters = parameters if isinstance(parameters, Mapping) else getattr(self, "_parameters", None)
+        if not isinstance(effective_parameters, Mapping):
+            effective_parameters = {}
+        selected = effective_parameters.get("memory_base", getattr(self, "memory_base", None))
+        if not isinstance(selected, str) or not selected.strip():
+            return ()
+
+        provider, _model = await self._policy_embedding_selection(selected.strip())
+        if not isinstance(provider, str) or not provider.strip():
+            unknown_provider = "unknown"
+            raise ModelProviderPolicyError(unknown_provider, purpose)
+        return (resolve_provider_id(provider),)
+
+    async def arequire_model_provider_policy(self, purpose, *, user_id=None, parameters=None) -> None:
+        """Capture the trusted actor context after the shared pre-hydration gate."""
+        await super().arequire_model_provider_policy(
+            purpose,
+            user_id=user_id,
+            parameters=parameters,
+        )
+
+        from lfx.services.model_provider_policy import current_model_provider_policy_context
+
+        actor_user_id = self.user_id if user_id is None else user_id
+        policy_context = current_model_provider_policy_context()
+        self._runtime_provider_policy_actor_id = actor_user_id
+        self._runtime_provider_policy_attributes = (
+            dict(policy_context.attributes)
+            if policy_context is not None and str(policy_context.user_id) == str(actor_user_id)
+            else {}
+        )
+
     def _build_where_clause(self, *, session_id: str | None = None, end_user_id: str | None = None) -> dict | None:
         """Compose the metadata filter based on opt-in filters and manual params.
 
@@ -231,9 +295,16 @@ class MemoryBaseComponent(Component):
         Memory Base be queried — with the right embedding model — from a replica
         whose local disk never held the KB directory.
         """
-        # Resolve where this Memory Base lives first: containment is a cheap
-        # local check, and a request that will be refused shouldn't first pay for
-        # a credential lookup and a provider client.
+        # Re-resolve the persisted selection and actor policy immediately before
+        # owner credential access. The graph-level preflight runs before input
+        # hydration; this repeat also closes a metadata-change race between that
+        # boundary and backend construction.
+        provider, model = await resolve_embedding_selection(user_id=owner.id, kb_name=kb_name)
+        provider_policy = await self._resolve_runtime_embedding_policy(provider, owner.id)
+
+        # Resolve where this Memory Base lives before constructing a provider
+        # client. Path containment and backend metadata do not read embedding
+        # credentials.
         backend_type, backend_config = await resolve_backend_selection(user_id=owner.id, kb_name=kb_name)
         try:
             kb_path = resolve_local_store_path(
@@ -246,8 +317,12 @@ class MemoryBaseComponent(Component):
             msg = "Memory Base path is not accessible."
             raise ValueError(msg) from exc
 
-        provider, model = await resolve_embedding_selection(user_id=owner.id, kb_name=kb_name)
-        embedding_function = await KBIngestionHelper.build_embeddings(provider, model, owner)
+        embedding_function = self._build_embeddings_with_policy(
+            provider,
+            model,
+            owner_user_id=owner.id,
+            provider_policy=provider_policy,
+        )
 
         backend = create_backend(
             backend_type,
@@ -259,6 +334,65 @@ class MemoryBaseComponent(Component):
         )
         await backend.ensure_ready()
         return backend
+
+    async def _resolve_runtime_embedding_policy(self, provider: str, owner_user_id: uuid.UUID):
+        """Refresh actor-scoped provider policy before owner credential lookup."""
+        from lfx.services.model_provider_policy import (
+            ModelProviderPolicyPurpose,
+            aresolve_model_provider_policy,
+            current_model_provider_policy_context,
+        )
+
+        actor_user_id = getattr(self, "_runtime_provider_policy_actor_id", None)
+        attributes = getattr(self, "_runtime_provider_policy_attributes", None)
+        if actor_user_id is None:
+            policy_context = current_model_provider_policy_context()
+            if policy_context is not None:
+                actor_user_id = policy_context.user_id
+                attributes = dict(policy_context.attributes)
+            else:
+                actor_user_id = owner_user_id
+                attributes = {}
+
+        snapshot = await aresolve_model_provider_policy(
+            user_id=actor_user_id,
+            providers=[provider],
+            purpose=ModelProviderPolicyPurpose.USE,
+            attributes=attributes,
+        )
+        snapshot.require(provider)
+        return snapshot
+
+    @staticmethod
+    def _build_embeddings_with_policy(provider: str, model: str, *, owner_user_id, provider_policy):
+        """Build with owner credentials while reusing the actor's trusted decision."""
+        from lfx.base.models.unified_models import get_embeddings
+        from lfx.base.models.unified_models.class_registry import (
+            EMBEDDING_PARAM_MAPPINGS,
+            EMBEDDING_PROVIDER_CLASS_MAPPING,
+        )
+
+        embedding_class = EMBEDDING_PROVIDER_CLASS_MAPPING.get(provider)
+        param_mapping = EMBEDDING_PARAM_MAPPINGS.get(provider)
+        if not embedding_class or not param_mapping:
+            msg = f"Embedding provider '{provider}' is not registered"
+            raise ValueError(msg)
+        selected_option = {
+            "name": model,
+            "provider": provider,
+            "category": provider,
+            "icon": provider,
+            "metadata": {
+                "embedding_class": embedding_class,
+                "param_mapping": param_mapping,
+                "model_type": "embeddings",
+            },
+        }
+        return get_embeddings(
+            model=[selected_option],
+            user_id=owner_user_id,
+            provider_policy=provider_policy,
+        )
 
     def _format_results(self, results: list[tuple], backend: BaseVectorStoreBackend) -> DataFrame:
         """Convert backend ``(doc, score)`` tuples into the component's DataFrame output.

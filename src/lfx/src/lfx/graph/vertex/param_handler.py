@@ -355,8 +355,8 @@ class ParameterHandler:
           ``_enforce_file_paths``. Absoluteness is tested against both flavours: a Windows
           drive-letter path written with forward slashes ("C:/data/report.csv") is not
           POSIX-absolute, so testing only ``PurePosixPath`` would split it into namespace
-          "C:" and reject a legitimate local path -- while the backslash spelling must remain
-          legitimate too.
+          "C:" and reject a legitimate local path -- while the backslash spelling of the
+          same path must remain legitimate too.
         * Separatorless relative values are local file names, not storage keys.
         * Restricted mode, where ``_enforce_file_paths`` already pins the resolved local path and
           the S3 logical key to the graph's own scopes. This check exists to close the

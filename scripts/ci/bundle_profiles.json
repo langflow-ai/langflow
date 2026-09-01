@@ -31,7 +31,7 @@
         {
           "distribution": "lfx-ibm",
           "extras": [],
-          "version": ">=0.2.1,<1.0.0",
+          "version": ">=0.2.3,<1.0.0",
           "providers": [
             "lfx-ibm"
           ]
@@ -39,7 +39,7 @@
         {
           "distribution": "lfx-docling",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.6,<1.0.0",
           "providers": [
             "lfx-docling"
           ]
@@ -47,7 +47,7 @@
         {
           "distribution": "lfx-datastax",
           "extras": [],
-          "version": ">=0.1.5,<1.0.0",
+          "version": ">=0.1.8,<1.0.0",
           "providers": [
             "lfx-datastax"
           ]
@@ -55,7 +55,7 @@
         {
           "distribution": "lfx-toolguard",
           "extras": [],
-          "version": ">=0.1.1,<1.0.0",
+          "version": ">=0.1.2,<1.0.0",
           "providers": [
             "lfx-toolguard"
           ]
@@ -63,7 +63,7 @@
         {
           "distribution": "lfx-openai",
           "extras": [],
-          "version": ">=0.1.2,<1.0.0",
+          "version": ">=0.1.4,<1.0.0",
           "providers": [
             "lfx-openai"
           ]
@@ -71,7 +71,7 @@
         {
           "distribution": "lfx-anthropic",
           "extras": [],
-          "version": ">=0.1.5,<1.0.0",
+          "version": ">=0.1.7,<1.0.0",
           "providers": [
             "lfx-anthropic"
           ]
@@ -87,7 +87,7 @@
         {
           "distribution": "lfx-ollama",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.1,<1.0.0",
           "providers": [
             "lfx-ollama"
           ]
@@ -95,7 +95,7 @@
         {
           "distribution": "lfx-amazon",
           "extras": [],
-          "version": ">=0.1.3,<1.0.0",
+          "version": ">=0.1.6,<1.0.0",
           "providers": [
             "lfx-amazon"
           ]
@@ -103,7 +103,7 @@
         {
           "distribution": "lfx-cohere",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.3,<1.0.0",
           "providers": [
             "lfx-cohere"
           ]
@@ -111,7 +111,7 @@
         {
           "distribution": "lfx-oracle",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.3,<1.0.0",
           "providers": [
             "lfx-oracle"
           ]
@@ -119,7 +119,7 @@
         {
           "distribution": "lfx-vllm",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.3,<1.0.0",
           "providers": [
             "lfx-vllm"
           ]
@@ -127,7 +127,7 @@
         {
           "distribution": "lfx-openai-compatible",
           "extras": [],
-          "version": ">=0.1.2,<1.0.0",
+          "version": ">=0.1.5,<1.0.0",
           "providers": [
             "lfx-openai-compatible"
           ]
@@ -135,7 +135,7 @@
         {
           "distribution": "lfx-google",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.1,<1.0.0",
           "providers": [
             "lfx-google"
           ]
