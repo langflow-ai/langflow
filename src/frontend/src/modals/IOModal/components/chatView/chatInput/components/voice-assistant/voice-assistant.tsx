@@ -117,6 +117,12 @@ export function VoiceAssistant({
     );
   }, [globalVariables]);
 
+  const gandrApiKeyGlobalVariable = useMemo(() => {
+    return globalVariables?.find(
+      (variable) => variable.name === "GANDR_API_KEY",
+    );
+  }, [globalVariables]);
+
   const hasElevenLabsApiKeyEnv = useMemo(() => {
     return Boolean(import.meta?.env?.ELEVENLABS_API_KEY);
   }, [variables, addKey]);
@@ -234,20 +240,23 @@ export function VoiceAssistant({
   const handleSaveApiKey = async (
     apiKey: string,
     variableName: string,
-    elevenLabsKey: boolean,
+    providerKey: boolean,
   ) => {
+    const providerKeyGlobalVariable =
+      variableName === "GANDR_API_KEY"
+        ? gandrApiKeyGlobalVariable
+        : elevenLabsApiKeyGlobalVariable;
     const updateOpenAiKey =
       isEditingOpenAIKey && openaiApiKeyGlobalVariable?.id;
-    const updateElevenLabsApiKey =
-      elevenLabsApiKeyGlobalVariable?.id && elevenLabsKey;
+    const updateProviderApiKey = providerKeyGlobalVariable?.id && providerKey;
 
-    if (updateOpenAiKey || updateElevenLabsApiKey) {
+    if (updateOpenAiKey || updateProviderApiKey) {
       await updateVariable.mutateAsync(
         {
           name: variableName,
           value: apiKey,
-          id: elevenLabsKey
-            ? elevenLabsApiKeyGlobalVariable?.id!
+          id: providerKey
+            ? providerKeyGlobalVariable?.id!
             : openaiApiKeyGlobalVariable?.id!,
         },
         {
@@ -310,10 +319,12 @@ export function VoiceAssistant({
     open: boolean,
     openaiApiKey: string,
     elevenLabsApiKey: string,
+    gandrApiKey: string,
   ) => {
     const saveApiKey = openaiApiKey && openaiApiKey !== "OPENAI_API_KEY";
     const saveElevenLabsApiKey =
       elevenLabsApiKey && elevenLabsApiKey !== "ELEVENLABS_API_KEY";
+    const saveGandrApiKey = gandrApiKey && gandrApiKey !== "GANDR_API_KEY";
 
     if (open) {
       stopRecording();
@@ -347,6 +358,10 @@ export function VoiceAssistant({
 
     if (saveElevenLabsApiKey && !open) {
       await handleSaveApiKey(elevenLabsApiKey, "ELEVENLABS_API_KEY", true);
+    }
+
+    if (saveGandrApiKey && !open) {
+      await handleSaveApiKey(gandrApiKey, "GANDR_API_KEY", true);
     }
   };
 
@@ -436,6 +451,7 @@ export function VoiceAssistant({
             <SettingsVoiceModal
               userOpenaiApiKey={openaiApiKey}
               userElevenLabsApiKey={elevenLabsApiKeyGlobalVariable?.name}
+              userGandrApiKey={gandrApiKeyGlobalVariable?.name}
               hasElevenLabsApiKeyEnv={hasElevenLabsApiKeyEnv}
               setShowSettingsModal={handleSetShowSettingsModal}
               hasOpenAIAPIKey={hasOpenAIAPIKey}

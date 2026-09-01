@@ -35,6 +35,8 @@ Voice mode requires the following:
 
 * Optional: An [ElevenLabs](https://elevenlabs.io) API key to enable more voice options for the LLM's response.
 
+* Optional: A [Gandr](https://gandr.ai) API key to enable Gandr voices for the LLM's response. The free tier is 50,000 tokens.
+
 * A microphone and speakers.
 
     A high quality microphone and minimal background noise are recommended for optimal voice comprehension.
@@ -60,8 +62,8 @@ If microphone access is blocked, you won't be able to provide verbal input.
 
 7. For **Audio Input**, select the input device to use with voice mode.
 
-8. Optional: Add an ElevenLabs API key to enable more voices for the LLM's response.
-Langflow saves this key as a global variable.
+8. Optional: Add an ElevenLabs or Gandr API key to enable more voices for the LLM's response.
+Langflow saves these keys as global variables.
 
 9. For **Preferred Language**, select the language you want to use for your conversations with the LLM.
 This option changes both the expected input language and the response language.
@@ -75,7 +77,7 @@ This option changes both the expected input language and the response language.
 Langflow exposes an OpenAI Realtime API-compatible websocket endpoint for your flows.
 You can build applications against this endpoint the same way you would build against [OpenAI Realtime API websockets](https://platform.openai.com/docs/guides/realtime#connect-with-websockets).
 
-The Langflow API's websocket endpoint requires an [OpenAI API key](https://platform.openai.com/docs/overview) for authentication, and supports an optional [ElevenLabs](https://elevenlabs.io) integration with an ElevenLabs API key.
+The Langflow API's websocket endpoint requires an [OpenAI API key](https://platform.openai.com/docs/overview) for authentication, and supports optional [ElevenLabs](https://elevenlabs.io) and [Gandr](https://gandr.ai) integrations with the matching API key.
 
 Additionally, the endpoint requires that you provide the flow ID in the endpoint path.
 
@@ -84,6 +86,23 @@ Additionally, the endpoint requires that you provide the flow ID in the endpoint
 The `/ws/flow_tts/$FLOW_ID` endpoint converts audio to text using [OpenAI Realtime voice transcription](https://platform.openai.com/docs/guides/realtime-transcription), and then directly invokes the specified flow for each transcript.
 
 This is the mode used in the Langflow **Playground**.
+
+### Gandr text-to-speech
+
+Gandr is an OpenAI compatible text-to-speech provider.
+To use it, store your Gandr API key in the `GANDR_API_KEY` global variable or environment variable, and send the following message over the websocket connection:
+
+```json
+{
+  "type": "langflow.gandr.config",
+  "enabled": true,
+  "voice_id": "gandr-mia"
+}
+```
+
+The available voices are `gandr-mia`, `gandr-ava`, `gandr-jenny`, `gandr-dane`, `gandr-leo`, and `gandr-lewis`.
+Gandr supports 23 languages, and every render is watermarked.
+Keys are available at [gandr.ai](https://gandr.ai), and the free tier is 50,000 tokens.
 
 ### Session IDs for websockets endpoints
 

@@ -47,8 +47,20 @@ export const useStartConversation = (
           }),
         );
 
+        wsRef.current.send(
+          JSON.stringify({
+            type: "langflow.gandr.config",
+            enabled: audioSettings.provider === "gandr",
+            voice_id:
+              audioSettings.provider === "gandr" ? audioSettings.voice : "",
+          }),
+        );
+
         // For flow_tts endpoint, we need to use the proper session update format
-        if (audioSettings.provider !== "elevenlabs") {
+        if (
+          audioSettings.provider !== "elevenlabs" &&
+          audioSettings.provider !== "gandr"
+        ) {
           wsRef.current.send(
             JSON.stringify({
               type: "voice.settings",

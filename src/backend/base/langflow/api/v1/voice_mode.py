@@ -52,6 +52,14 @@ SILENCE_THRESHOLD = 0.1
 PREFIX_PADDING_MS = 100
 SILENCE_DURATION_MS = 300
 AUDIO_SAMPLE_THRESHOLD = 100
+
+# Gandr text to speech. Gandr exposes an OpenAI compatible speech endpoint,
+# so the OpenAI SDK is reused with a base_url override.
+GANDR_BASE_URL = "https://tts.gandr.ai/v1"
+GANDR_TTS_MODEL = "tts-1"
+GANDR_DEFAULT_VOICE = "gandr-mia"
+# Gandr caps each speech request at 2000 characters of input text.
+GANDR_MAX_INPUT_CHARS = 2000
 SESSION_INSTRUCTIONS = """
 Your instructions will be divided into three mutually exclusive sections: "Permanent", "Default", and "Additional".
 "Permanent" instructions are to never be overrided, superceded or otherwise ignored.
@@ -160,6 +168,8 @@ class VoiceConfig:
         self.elevenlabs_model = "eleven_multilingual_v2"
         self.elevenlabs_client = None
         self.elevenlabs_key = None
+        self.use_gandr = False
+        self.gandr_voice = GANDR_DEFAULT_VOICE
         self._barge_in_enabled = False
         self.progress_enabled = True
 
@@ -219,6 +229,8 @@ class TTSConfig:
         self.elevenlabs_voice = "JBFqnCBsd6RMkjVDRZzb"
         self.elevenlabs_model = "eleven_multilingual_v2"
         self.elevenlabs_client = None
+        self.use_gandr = False
+        self.gandr_voice = GANDR_DEFAULT_VOICE
         self.default_tts_session = {
             "type": "transcription_session.update",
             "session": {
@@ -410,7 +422,7 @@ def get_create_response(send_handler: SendQueues, session_id, user_id=None):
             msg = original
         msg["type"] = "response.create"
         voice_config = get_voice_config(session_id, user_id)
-        if voice_config.use_elevenlabs:
+        if voice_config.use_elevenlabs or voice_config.use_gandr:
             response = msg.setdefault("response", {})
             response["modalities"] = ["text"]
         send_handler.openai_send(payload=msg, is_blocking=True)
@@ -591,6 +603,62 @@ async def get_or_create_elevenlabs_client(user_id=None, session=None):
         await logger.aerror("ElevenLabs API key not found")
         return None
     return ElevenLabs(api_key=api_key)
+
+
+async def get_or_create_gandr_client(user_id=None, session=None):
+    """Build a Gandr client scoped to the requesting user.
+
+    Gandr exposes an OpenAI compatible speech endpoint, so the OpenAI SDK is
+    reused with a base_url override. The key is read from the user's
+    GANDR_API_KEY variable, falling back to the environment. Mirrors
+    get_or_create_elevenlabs_client: a fresh client per call, never cached
+    on a module global, so keys are never shared across tenants.
+    """
+    if not (user_id and session):
+        return None
+    try:
+        from openai import OpenAI
+    except ImportError as exc:
+        msg = "Voice mode requires the OpenAI SDK. Install it with `pip install 'langflow-base[audio]'`."
+        raise ImportError(msg) from exc
+    variable_service = get_variable_service()
+    try:
+        api_key = await variable_service.get_variable(
+            user_id=user_id,
+            name="GANDR_API_KEY",
+            field="gandr_api_key",
+            session=session,
+        )
+        api_key = secret_value_to_str(api_key)
+    except (InvalidToken, ValueError) as e:
+        await logger.aerror(f"Error with Gandr API key: {e}")
+        api_key = os.getenv("GANDR_API_KEY", "")
+    except (KeyError, AttributeError, sqlalchemy.exc.SQLAlchemyError) as e:
+        await logger.aerror(f"Exception getting Gandr API key: {e}")
+        return None
+    if not api_key:
+        await logger.aerror("Gandr API key not found")
+        return None
+    return OpenAI(api_key=api_key, base_url=GANDR_BASE_URL)
+
+
+def split_text_for_gandr(text: str, limit: int = GANDR_MAX_INPUT_CHARS) -> list[str]:
+    """Split text into chunks within the Gandr per request character cap.
+
+    Prefers whitespace boundaries and falls back to a hard split for an
+    unbroken run longer than the cap.
+    """
+    chunks = []
+    remaining = text
+    while len(remaining) > limit:
+        split_at = remaining.rfind(" ", 0, limit)
+        if split_at <= 0:
+            split_at = limit
+        chunks.append(remaining[:split_at])
+        remaining = remaining[split_at:].lstrip()
+    if remaining:
+        chunks.append(remaining)
+    return chunks
 
 
 def pcm16_to_float_array(pcm_data):
@@ -917,13 +985,24 @@ async def flow_as_tool_websocket(
                 return new_session
 
             class Response:
-                def __init__(self, response_id: str, *, use_elevenlabs: bool | None = None):
+                def __init__(
+                    self,
+                    response_id: str,
+                    *,
+                    use_elevenlabs: bool | None = None,
+                    use_gandr: bool | None = None,
+                ):
                     if use_elevenlabs is None:
                         use_elevenlabs = False
+                    if use_gandr is None:
+                        use_gandr = False
                     self.response_id = response_id
                     if use_elevenlabs:
                         self.text_delta_queue: asyncio.Queue = asyncio.Queue()
                         self.text_delta_task = asyncio.create_task(process_text_deltas(self))
+                    elif use_gandr:
+                        self.text_delta_queue = asyncio.Queue()
+                        self.text_delta_task = asyncio.create_task(process_text_deltas_gandr(self))
 
             responses = {}
 
@@ -988,6 +1067,64 @@ async def flow_as_tool_websocket(
                 except Exception:  # noqa: BLE001
                     await logger.aerror(traceback.format_exc())
 
+            async def process_text_deltas_gandr(rsp: Response):
+                """Consume text deltas and synthesize them with the Gandr speech endpoint.
+
+                Audio is requested as pcm, which Gandr returns as headerless s16le
+                mono at 24000 Hz, the same stream format the client already plays
+                for the other providers.
+                """
+                try:
+                    gandr_client = await get_or_create_gandr_client(current_user.id, session)
+                    if gandr_client is None:
+                        return
+
+                    async def get_chunks(q: asyncio.Queue):
+                        delims = [".", "?", ";", "!"]
+                        buf: str = ""
+                        while True:
+                            text = await q.get()
+                            if text is None:
+                                if len(buf) > 0:
+                                    yield buf
+                                return
+                            buf += text
+                            delim_locs = []
+                            for delim in delims:
+                                i = buf.find(delim)
+                                while i != -1:
+                                    delim_locs.append(i)
+                                    i = buf.find(delim, i + 1)
+                            substr_begin = 0
+                            for delim_loc in delim_locs:
+                                chunk = buf[substr_begin : delim_loc + 1]
+                                substr_begin = delim_loc + 1
+                                yield chunk
+                            buf = buf[substr_begin:]
+
+                    chunk_gen = get_chunks(rsp.text_delta_queue)
+
+                    async for text_chunk in chunk_gen:
+                        for gandr_chunk in split_text_for_gandr(text_chunk):
+                            speech_response = gandr_client.audio.speech.create(
+                                model=GANDR_TTS_MODEL,
+                                voice=voice_config.gandr_voice,
+                                input=gandr_chunk,
+                                response_format="pcm",
+                            )
+                            base64_audio = base64.b64encode(speech_response.content).decode("utf-8")
+                            event = {
+                                "type": "response.audio.delta",
+                                "delta": base64_audio,
+                                "response_id": rsp.response_id,
+                            }
+                            msg_handler.client_send(event)
+
+                    event = {"type": "response.audio.done", "response_id": rsp.response_id}
+                    msg_handler.client_send(event)
+                except Exception:  # noqa: BLE001
+                    await logger.aerror(traceback.format_exc())
+
             async def forward_to_openai() -> None:
                 nonlocal openai_realtime_session
                 create_response = get_create_response(msg_handler, session_id, current_user.id)
@@ -1023,7 +1160,21 @@ async def flow_as_tool_websocket(
                             voice_config.elevenlabs_voice = msg.get("voice_id", voice_config.elevenlabs_voice)
 
                             # Update modalities based on TTS choice
-                            modalities = ["text"] if voice_config.use_elevenlabs else ["audio", "text"]
+                            use_server_tts = voice_config.use_elevenlabs or voice_config.use_gandr
+                            modalities = ["text"] if use_server_tts else ["audio", "text"]
+                            openai_realtime_session["modalities"] = modalities
+                            session_update = {"type": "session.update", "session": openai_realtime_session}
+                            msg_handler.openai_send(session_update)
+                        elif msg.get("type") == "langflow.gandr.config":
+                            await logger.ainfo(f"langflow.gandr.config {msg}")
+                            voice_config.use_gandr = msg["enabled"]
+                            voice_config.gandr_voice = msg.get("voice_id") or voice_config.gandr_voice
+                            if voice_config.use_gandr:
+                                voice_config.use_elevenlabs = False
+
+                            # Update modalities based on TTS choice
+                            use_server_tts = voice_config.use_elevenlabs or voice_config.use_gandr
+                            modalities = ["text"] if use_server_tts else ["audio", "text"]
                             openai_realtime_session["modalities"] = modalities
                             session_update = {"type": "session.update", "session": openai_realtime_session}
                             msg_handler.openai_send(session_update)
@@ -1052,13 +1203,19 @@ async def flow_as_tool_websocket(
                         response_id = event.get("response_id", None) or event.get("response", {}).get("id", None)
 
                         do_forward = True
-                        do_forward = do_forward and not (event_type == "response.done" and voice_config.use_elevenlabs)
+                        do_forward = do_forward and not (
+                            event_type == "response.done" and (voice_config.use_elevenlabs or voice_config.use_gandr)
+                        )
                         do_forward = do_forward and event_type.find("flow.") != 0
 
                         if do_forward:
                             msg_handler.client_send(event)
                         if event_type == "response.created":
-                            responses[response_id] = Response(response_id, use_elevenlabs=voice_config.use_elevenlabs)
+                            responses[response_id] = Response(
+                                response_id,
+                                use_elevenlabs=voice_config.use_elevenlabs,
+                                use_gandr=voice_config.use_gandr,
+                            )
                             if function_call:
                                 if function_call.is_prog_enabled and not function_call.prog_rsp_id:
                                     function_call.prog_rsp_id = response_id
@@ -1066,12 +1223,12 @@ async def flow_as_tool_websocket(
                                     function_call.func_rsp_id = response_id
                         elif event_type == "response.text.delta":
                             rsp = responses[response_id]
-                            if voice_config.use_elevenlabs:
+                            if voice_config.use_elevenlabs or voice_config.use_gandr:
                                 delta = event.get("delta", "")
                                 await rsp.text_delta_queue.put(delta)
                         elif event_type == "response.text.done":
                             rsp = responses[response_id]
-                            if voice_config.use_elevenlabs:
+                            if voice_config.use_elevenlabs or voice_config.use_gandr:
                                 await rsp.text_delta_queue.put(None)
                                 if rsp.text_delta_task and not rsp.text_delta_task.done():
                                     await rsp.text_delta_task
@@ -1306,6 +1463,12 @@ async def flow_tts_websocket(
                             await logger.ainfo(f"langflow.elevenlabs.config {event}")
                             tts_config.use_elevenlabs = event["enabled"]
                             tts_config.elevenlabs_voice = event.get("voice_id", tts_config.elevenlabs_voice)
+                        elif event.get("type") == "langflow.gandr.config":
+                            await logger.ainfo(f"langflow.gandr.config {event}")
+                            tts_config.use_gandr = event["enabled"]
+                            tts_config.gandr_voice = event.get("voice_id") or tts_config.gandr_voice
+                            if tts_config.use_gandr:
+                                tts_config.use_elevenlabs = False
                         elif event.get("type") == "voice.settings":
                             # Store the voice setting
                             if event.get("voice"):
@@ -1367,6 +1530,20 @@ async def flow_tts_websocket(
                                         )
                                         for chunk in audio_stream:
                                             base64_audio = base64.b64encode(chunk).decode("utf-8")
+                                            audio_event = {"type": "response.audio.delta", "delta": base64_audio}
+                                            client_send(audio_event)
+                                    elif tts_config.use_gandr:
+                                        gandr_client = await get_or_create_gandr_client(current_user.id, session)
+                                        if gandr_client is None:
+                                            return
+                                        for gandr_chunk in split_text_for_gandr(result):
+                                            speech_response = gandr_client.audio.speech.create(
+                                                model=GANDR_TTS_MODEL,
+                                                voice=tts_config.gandr_voice,
+                                                input=gandr_chunk,
+                                                response_format="pcm",
+                                            )
+                                            base64_audio = base64.b64encode(speech_response.content).decode("utf-8")
                                             audio_event = {"type": "response.audio.delta", "delta": base64_audio}
                                             client_send(audio_event)
                                     else:
