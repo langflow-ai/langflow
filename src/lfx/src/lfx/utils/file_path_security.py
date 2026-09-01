@@ -214,9 +214,7 @@ def _scope_roots(
         roots.append(data_dir)
 
     if not roots:
-        logger.warning(
-            "Local-file access denied: no user or flow scope (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true)."
-        )
+        logger.warning("Local-file access denied: no user or flow scope (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true).")
         msg = "Local-file access requires an authenticated user or flow scope."
         raise LocalFileAccessError(msg)
     return tuple(roots)
