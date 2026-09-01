@@ -47,6 +47,7 @@ def _source(adapter, *, mode: str, background: bool):
             background_tasks=SimpleNamespace(add_task=lambda *_a, **_k: None),
             parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode=mode),
             current_user=SimpleNamespace(id=uuid4()),
+            protocol="v2.background" if background else "v2",
             expose_error_details=True,
             **extra,
         ):
