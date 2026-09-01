@@ -178,6 +178,50 @@ describe("useLoadFlowForRoute", () => {
     expect(getFlow).toHaveBeenCalledTimes(2);
   });
 
+  it("ignores an older request after revisiting the same flow id", async () => {
+    const firstFlowRequest = deferred<FlowType>();
+    const otherFlowRequest = deferred<FlowType>();
+    const secondFlowRequest = deferred<FlowType>();
+    const otherFlow: FlowType = { ...FLOW, id: "other-flow" };
+    const error = new Error("older request failed");
+    const getFlow = jest
+      .fn()
+      .mockReturnValueOnce(firstFlowRequest.promise)
+      .mockReturnValueOnce(otherFlowRequest.promise)
+      .mockReturnValueOnce(secondFlowRequest.promise);
+    const applyFlowToCanvas = jest.fn();
+    const navigate = jest.fn();
+    const flows: FlowType[] = [];
+    const types = { flow: "Flow" };
+
+    const { rerender } = renderHook(
+      ({ id }: { id: string }) =>
+        useLoadFlowForRoute({
+          id,
+          flows,
+          currentFlowId: "",
+          types,
+          getFlow,
+          applyFlowToCanvas,
+          navigate,
+        }),
+      { initialProps: { id: FLOW.id } },
+    );
+
+    await waitFor(() => expect(getFlow).toHaveBeenCalledTimes(1));
+    rerender({ id: otherFlow.id });
+    await waitFor(() => expect(getFlow).toHaveBeenCalledTimes(2));
+    rerender({ id: FLOW.id });
+    await waitFor(() => expect(getFlow).toHaveBeenCalledTimes(3));
+
+    await act(async () => secondFlowRequest.resolve(FLOW));
+    expect(applyFlowToCanvas).toHaveBeenCalledWith(FLOW);
+
+    await act(async () => firstFlowRequest.reject(error));
+    expect(navigate).not.toHaveBeenCalled();
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
   it("allows a retry after a failed confirmation", async () => {
     const error = new Error("network unavailable");
     const getFlow = jest
