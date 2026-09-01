@@ -1,6 +1,6 @@
 [project]
 name = "lfx-duckduckgo"
-version = "0.1.2"
+version = "0.1.4"
 description = "DuckDuckGo Search component as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -12,13 +12,13 @@ keywords = ["langflow", "lfx", "extension", "bundle", "duckduckgo", "search"]
 
 # Runtime deps: lfx (the BUNDLE_API surface) and the langchain-community
 # binding that wraps the duckduckgo-search Python client.  lfx is floored at
-# the current major.minor line (>=1.10.0) and capped below the next lfx major
-# (<2.0.0) so the bundle resolves a compatible lfx; fine-grained BUNDLE_API
+# the 1.11 maintenance line (>=1.11.6) and capped below the next lfx minor
+# (<1.12) so the bundle resolves a compatible lfx; fine-grained BUNDLE_API
 # compatibility is enforced separately via extension.json's
 # "lfx": {"compat": [...]} contract.  langchain-community uses the same
 # range the lfx tree does to keep co-installation lockstep.
 dependencies = [
-    "lfx>=1.11.0.dev0,<2.0.0",
+    "lfx>=1.11.6,<1.12",
     "langchain-community>=0.4.1,<1.0.0",
     "ddgs>=9.0.0",
 ]

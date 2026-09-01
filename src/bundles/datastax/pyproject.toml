@@ -1,6 +1,6 @@
 [project]
 name = "lfx-datastax"
-version = "0.1.2"
+version = "0.1.7"
 description = "DataStax component(s) as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -14,12 +14,12 @@ keywords = ["langflow", "lfx", "extension", "bundle", "datastax"]
 # the bundle's components rely on.  REVIEW THIS LIST -- the script ports
 # only ``lfx``; add any other deps the moved component(s) import.
 # lfx is floored at the current major.minor line and capped below the next
-# lfx major (e.g. "lfx>=1.11.0,<2.0.0"); the floor is read from
+# lfx major (e.g. "lfx>=1.11.6,<1.12"); the floor is read from
 # src/lfx/pyproject.toml at port time and re-synced on ``make patch`` via
 # scripts/ci/sync_bundle_lfx_pin.py.  Fine-grained BUNDLE_API compatibility
 # is enforced via extension.json's lfx.compat list against BUNDLE_API_VERSION.
 dependencies = [
-    "lfx>=1.11.0.dev0,<2.0.0",
+    "lfx>=1.11.6,<1.12",
     "langchain-astradb~=1.0.0",
     # Imported directly (astrapy.DataAPIClient/Database) by the astra components,
     # not just transitively via langchain-astradb; pin matches langflow-base's
