@@ -257,6 +257,7 @@
         "faiss",
         "git",
         "glean",
+        "governance",
         "groq",
         "homeassistant",
         "huggingface",
