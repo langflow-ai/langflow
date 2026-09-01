@@ -65,12 +65,21 @@ jobs:
           done
           echo "bundles-found=1" >> $GITHUB_OUTPUT
           ls -la bundles-dist/
-      # Bundles floor lfx at >=0.5.0 (no upper bound). The smoke test below
-      # installs the bundles in a fresh venv, so it needs an lfx wheel that
-      # satisfies the floor available locally — PyPI may not yet have a
-      # matching lfx published when bundles are released ahead of a main
-      # release. We build the lfx wheel from the current ref so the smoke
-      # test resolves against it; this artifact is not published.
+      # Bundles floor lfx at the release line they were cut from (e.g.
+      # ">=1.11.6,<1.12"). The smoke test below installs the bundles into a
+      # fresh venv, so it needs an lfx satisfying that floor to be resolvable
+      # — PyPI may not yet have a matching lfx published when bundles are
+      # released ahead of a main release. We build an lfx wheel from the
+      # current ref and hand it to the smoke test via --find-links so it can
+      # serve as a *fallback* source; this artifact is not published.
+      #
+      # Do not pass this wheel as an explicit path argument: a wheel path is a
+      # direct-file requirement, which pins lfx to exactly that file's version
+      # and removes the registry as a source for it. If the ref's lfx version
+      # lags the bundles' floor (the source tree says 1.11.5 while the bundles
+      # require >=1.11.6), the resolve fails even when a satisfying lfx is
+      # published. --find-links keeps the local wheel as a candidate without
+      # excluding PyPI.
       - name: Build langflow-sdk wheel for smoke test
         if: steps.build.outputs.bundles-found == '1'
         run: |
@@ -173,7 +182,7 @@ jobs:
             exit 1
           fi
           printf 'Installing: %s\n' "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
-          uv pip install --prerelease=if-necessary-or-explicit --python ./test-env/bin/python "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
+          uv pip install --prerelease=if-necessary-or-explicit --python ./test-env/bin/python --find-links ./lfx-dist "${SDK_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
         shell: bash
       - name: Install lfx + bundle wheels (Windows)
         if: matrix.os == 'windows'
@@ -195,7 +204,7 @@ jobs:
             exit 1
           fi
           printf 'Installing: %s\n' "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
-          uv pip install --prerelease=if-necessary-or-explicit --python ./test-env/Scripts/python.exe "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
+          uv pip install --prerelease=if-necessary-or-explicit --python ./test-env/Scripts/python.exe --find-links ./lfx-dist "${SDK_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
         shell: bash
 
   publish-bundles:
