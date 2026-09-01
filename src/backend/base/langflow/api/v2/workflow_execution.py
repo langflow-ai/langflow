@@ -295,10 +295,10 @@ async def _stream_event_frames(
                         files=parsed.files,
                         stop_component_id=parsed.stop_component_id,
                         start_component_id=parsed.start_component_id,
-                        # Persist vertex builds (keyed by ``run_id``) only for job-tracked
-                        # runs so a background job's status can be reconstructed later. Live
-                        # streams pass no ``run_id`` and keep the no-persist behavior.
-                        log_builds=run_id is not None,
+                        # Persist vertex builds only for durable/background jobs. Live streams
+                        # carry a ``run_id`` for job/trace/telemetry correlation, but keep the
+                        # existing no-build-persistence behavior because they pass no ``job_id``.
+                        log_builds=job_id is not None,
                         current_user=current_user,
                         flow_name=flow_name,
                         source_flow_id=source_flow_id,
@@ -474,6 +474,7 @@ async def _stream_event_frames(
 def _execute_streaming_workflow(
     *,
     adapter: StreamAdapter,
+    run_id: str,
     parsed: ParsedWorkflowRun,
     flow: FlowRead,
     current_user: UserRead,
@@ -497,6 +498,7 @@ def _execute_streaming_workflow(
             current_user=current_user,
             provider_policy_flow=flow,
             source_flow_owner_id=flow.user_id,
+            run_id=run_id,
             # The live v2 stream. Which client sent it is a separate attribute, read from the
             # X-Langflow-Client header, because the playground calls this same public endpoint.
             protocol="v2",

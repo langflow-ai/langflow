@@ -378,15 +378,17 @@ def build_stream_response(
     before the response is constructed so a bad request fails before streaming.
     """
     parsed = _apply_execution_gates(parsed, flow, current_user)
+    run_id = str(uuid4())
     adapter = get_stream_adapter(
         stream_protocol,
         StreamAdapterContext(
-            run_id=str(uuid4()),
+            run_id=run_id,
             thread_id=parsed.session_id or str(flow.id),
         ),
     )
     return _execute_streaming_workflow(
         adapter=adapter,
+        run_id=run_id,
         parsed=parsed,
         flow=flow,
         current_user=current_user,
