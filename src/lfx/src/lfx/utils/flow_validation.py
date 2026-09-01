@@ -8,10 +8,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
-from lfx.utils.component_aliases import (
-    ComponentIdentityIndex,
-    get_component_type_aliases,
-)
+from lfx.utils.component_aliases import ComponentIdentityIndex, get_component_type_aliases
 
 if TYPE_CHECKING:
     from lfx.services.catalog_policy import CatalogPolicySnapshot
@@ -703,9 +700,7 @@ def get_trusted_code_for_validation(code: str) -> str | None:
         return code_by_hash.get(code_hash)
 
 
-def get_trusted_code_and_hashes_for_validation(
-    code: str,
-) -> tuple[str | None, dict[str, set[str]] | None]:
+def get_trusted_code_and_hashes_for_validation(code: str) -> tuple[str | None, dict[str, set[str]] | None]:
     """Return trusted source and type hashes from one component-registry generation."""
     from lfx.interface.components import _build_code_hash_lookups, component_cache
 
@@ -717,10 +712,7 @@ def get_trusted_code_and_hashes_for_validation(
             if component_cache.type_to_current_hash is None:
                 _build_code_hash_lookups(component_cache)
         code_by_hash = component_cache.code_by_hash
-        return (
-            code_by_hash.get(code_hash) if code_by_hash else None,
-            component_cache.type_to_current_hash,
-        )
+        return (code_by_hash.get(code_hash) if code_by_hash else None, component_cache.type_to_current_hash)
 
 
 def _substitute_trusted_code_by_hash(nodes: list[dict]) -> list[str]:
@@ -978,14 +970,7 @@ def validate_flow_for_current_settings(
 ) -> None:
     """Enforce catalog and custom-component policy for a payload or graph-like object."""
     from lfx.services.deps import get_catalog_policy_service, get_settings_service
-    from lfx.utils.trusted_flow import packaged_flow_is_active
-
-    # A packaged first-party flow is product code, not tenant content. It is
-    # marked only by flow_executor, and only for artifacts resolved inside the packaged
-    # flows directory -- see lfx.utils.trusted_flow for why this is bound to the artifact
-    # rather than to "an assistant request is in flight".
-    if packaged_flow_is_active():
-        return
+    from lfx.utils.trusted_flow import packaged_flow_load_is_active
 
     settings_service = get_settings_service()
     if settings_service is None:
@@ -1032,6 +1017,14 @@ def validate_flow_for_current_settings(
             if substitution_lookups
             else get_component_hash_lookups_for_validation()
         )
+
+    # LE-2321: only the unregistered-component gate is exempted for a packaged first-party
+    # flow, and only while its graph is being constructed. The catalog policy and
+    # code-interpreter blocks above still apply -- an operator who disabled code
+    # interpreters disabled them for the assistant too. The load scope closes before the
+    # flow runs, so a tenant flow built later in the turn reaches this gate normally.
+    if packaged_flow_load_is_active():
+        return
 
     check_flow_and_raise(
         normalized_flow_data,
@@ -1350,10 +1343,7 @@ async def _ensure_public_component_lookup_snapshot(
         try:
             await get_and_cache_all_types_dict(settings_service)
         except Exception as exc:
-            logger.warning(
-                "Failed to load component templates for public flow sanitization",
-                exc_info=exc,
-            )
+            logger.warning("Failed to load component templates for public flow sanitization", exc_info=exc)
             raise
 
     # Publication and invalidation replace all derived indexes under this RLock. Keep it across
@@ -1560,9 +1550,7 @@ def _collect_blocked_components(
             if isinstance(nested_nodes, list) and nested_nodes:
                 found.extend(
                     _collect_blocked_components(
-                        nested_nodes,
-                        blocked_types=blocked_types,
-                        blocked_hashes=blocked_hashes,
+                        nested_nodes, blocked_types=blocked_types, blocked_hashes=blocked_hashes
                     )
                 )
     return found

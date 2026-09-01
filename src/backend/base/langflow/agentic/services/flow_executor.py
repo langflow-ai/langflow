@@ -18,7 +18,7 @@ from lfx.mcp.flow_builder_tools import set_tool_start_listener
 from lfx.observability import execution_protocol
 from lfx.schema.schema import InputValueRequest
 from lfx.utils.flow_validation import CustomComponentValidationError
-from lfx.utils.trusted_flow import packaged_flow_scope
+from lfx.utils.trusted_flow import packaged_flow_load_scope, packaged_flow_run_scope
 
 from langflow.agentic.services.flow_run import extract_graph_token_usage
 from langflow.agentic.services.flow_types import (
@@ -27,10 +27,7 @@ from langflow.agentic.services.flow_types import (
     FlowExecutionResult,
 )
 from langflow.agentic.services.helpers.event_consumer import consume_streaming_events
-from langflow.agentic.services.helpers.flow_loader import (
-    load_graph_for_execution,
-    resolve_flow_path,
-)
+from langflow.agentic.services.helpers.flow_loader import load_graph_for_execution, resolve_flow_path
 
 if TYPE_CHECKING:
     from lfx.graph.graph.base import Graph
@@ -76,10 +73,7 @@ async def _run_graph_with_events(
             results = [
                 payload
                 async for payload in coordinator.stream(
-                    graph,
-                    initial_inputs=inputs,
-                    event_manager=event_manager,
-                    open_flow_span=False,
+                    graph, initial_inputs=inputs, event_manager=event_manager, open_flow_span=False
                 )
             ]
         execution_result.result = extract_structured_result(results)
@@ -130,16 +124,19 @@ async def execute_flow_file(
 
     try:
         # resolve_flow_path confines flow_path to the packaged flows directory: this is
-        # first-party product code, not tenant content.
-        with packaged_flow_scope():
-            graph = await load_graph_for_execution(
-                flow_path,
-                flow_type,
-                provider,
-                model_name,
-                api_key_var,
-                provider_vars=global_variables,
-            )
+        # first-party product code, not tenant content. The run scope covers file access
+        # for the whole run; the load scope closes as soon as the graph is built, so a
+        # tenant flow built later in this turn is validated normally.
+        with packaged_flow_run_scope():
+            with packaged_flow_load_scope():
+                graph = await load_graph_for_execution(
+                    flow_path,
+                    flow_type,
+                    provider,
+                    model_name,
+                    api_key_var,
+                    provider_vars=global_variables,
+                )
 
             if user_id:
                 graph.user_id = user_id
@@ -174,10 +171,7 @@ async def execute_flow_file(
         raise HTTPException(status_code=500, detail="An error occurred while executing the flow.") from e
     except Exception as e:
         logger.error(f"Flow execution error: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail="An internal error occurred while executing the flow.",
-        ) from e
+        raise HTTPException(status_code=500, detail="An internal error occurred while executing the flow.") from e
     else:
         if isinstance(flow_result, dict):
             flow_result["_metrics"] = extract_graph_token_usage(graph)
@@ -227,20 +221,21 @@ async def execute_flow_file_streaming(
     """
     flow_path, flow_type = resolve_flow_path(flow_filename)
 
-    # resolve_flow_path confines flow_path to the packaged flows directory, so everything
-    # loaded here is first-party product code. Bound inside the generator
-    # body and closed before the first yield: asyncio.create_task copies the context at
-    # creation, so the run inherits the marker without it straddling a suspension point.
-    with packaged_flow_scope():
+    # resolve_flow_path confines flow_path to the packaged flows directory. Bound inside
+    # the generator body and closed before the first yield: asyncio.create_task copies the
+    # context at creation, so the run inherits the run scope without it straddling a
+    # suspension point. The load scope closes with the graph build.
+    with packaged_flow_run_scope():
         try:
-            graph = await load_graph_for_execution(
-                flow_path,
-                flow_type,
-                provider,
-                model_name,
-                api_key_var,
-                provider_vars=global_variables,
-            )
+            with packaged_flow_load_scope():
+                graph = await load_graph_for_execution(
+                    flow_path,
+                    flow_type,
+                    provider,
+                    model_name,
+                    api_key_var,
+                    provider_vars=global_variables,
+                )
         except CustomComponentValidationError as e:
             logger.error(f"Flow preparation error: {e}")
             raise HTTPException(status_code=400, detail=str(e)) from e

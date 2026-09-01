@@ -214,7 +214,9 @@ def _scope_roots(
         roots.append(data_dir)
 
     if not roots:
-        logger.warning("Local-file access denied: no user or flow scope (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true).")
+        logger.warning(
+            "Local-file access denied: no user or flow scope (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true)."
+        )
         msg = "Local-file access requires an authenticated user or flow scope."
         raise LocalFileAccessError(msg)
     return tuple(roots)
@@ -227,11 +229,12 @@ def package_resource_root() -> Path | None:
     answer questions about components. That path is outside every user's storage scope,
     so restricted mode denied it and the assistant blocked itself.
 
-    Read access is granted for this root ONLY while a packaged first-party flow is
-    active. It is the product's own source: no tenant data, no uploads, and none of the
-    reserved secret/key/DB files, which live under config_dir. Constraining the
-    exemption to this root is what keeps the marker safe even though it stays set while
-    the flow runs -- a FileSystemTool inside that flow still cannot reach anything else.
+    Read access is granted for this root ONLY while a packaged first-party flow is running
+    AND the caller did not declare ``for_write``. It is the product's own source: no tenant
+    data, no uploads, and none of the reserved secret/key/DB files, which live under
+    config_dir. Constraining the exemption this way is what keeps the marker safe even
+    though it stays set while the flow runs -- a FileSystemTool inside that flow still
+    cannot reach anything else, and nothing can write into the package.
     """
     try:
         import lfx
@@ -249,6 +252,7 @@ def enforce_local_file_access(
     *,
     scope_ids: Iterable[object] | None = None,
     allow_storage_root: bool = False,
+    for_write: bool = False,
 ) -> Path:
     """Ensure a local path is inside the current user/flow storage scope when restricted.
 
@@ -260,6 +264,10 @@ def enforce_local_file_access(
             symlinks are followed before the containment check; the caller need not pre-resolve it.
         scope_ids: Authenticated user id and/or executing flow id. At least one valid scope is
             required in restricted mode; paths under other storage subdirectories are denied.
+        for_write: The caller intends to write to this path, not just read it. Callers that
+            create or overwrite a file MUST pass True: it withholds the packaged-flow package
+            read exemption, because a write into the installed package directory is code
+            execution on the next component discovery.
         allow_storage_root: Widen the containment boundary to ``config_dir`` itself and stop
             requiring a scope. This is a defense-in-depth FLOOR, not tenant isolation: it keeps
             arbitrary server files (and the reserved secret/key/DB files) out of reach but does
@@ -287,9 +295,12 @@ def enforce_local_file_access(
         raise LocalFileAccessError(msg) from e
 
     if not any(candidate == root or candidate.is_relative_to(root) for root in allowed_roots):
-        from lfx.utils.trusted_flow import packaged_flow_is_active
+        from lfx.utils.trusted_flow import packaged_flow_run_is_active
 
-        package_root = package_resource_root() if packaged_flow_is_active() else None
+        # Reads only: this gate also fronts writes (save_file.py), and a write into the
+        # package directory would be code execution on the next component discovery.
+        allow_package_read = packaged_flow_run_is_active() and not for_write
+        package_root = package_resource_root() if allow_package_read else None
         if package_root is None or not (candidate == package_root or candidate.is_relative_to(package_root)):
             logger.warning(
                 "Local-file access denied for %s: outside the caller's storage scope "
