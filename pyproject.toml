@@ -34,11 +34,11 @@ dependencies = [
     # all-no-torch == all minus the torch-pulling providers (cuga, codeagents),
     # so the default install is torch-free. Users who want those two components
     # opt in with: pip install "lfx-bundles[all]" (or the per-provider extra).
-    "lfx-bundles[all-no-torch]>=1.1,<2.0",
-    "lfx-datastax>=0.1.0,<1.0.0",
+    "lfx-bundles[all-no-torch]>=1.1.2,<2.0",
+    "lfx-datastax>=0.1.2,<1.0.0",
     "lfx-openai>=0.1.0,<1.0.0",
     "lfx-anthropic>=0.1.0,<1.0.0",
-    "lfx-amazon>=0.1.0,<1.0.0",
+    "lfx-amazon>=0.1.2,<1.0.0",
     "lfx-cohere>=0.1.0,<1.0.0",
     "lfx-oracle>=0.1.0,<1.0.0",
     "lfx-firecrawl>=0.1.0,<1.0.0",
@@ -46,7 +46,7 @@ dependencies = [
     "lfx-paddle>=0.1.0,<1.0.0",
     "lfx-vllm>=0.1.0,<1.0.0",
     "lfx-empiriolabs>=0.1.0,<1.0.0",
-    "lfx-openai-compatible>=0.1.0,<1.0.0",
+    "lfx-openai-compatible>=0.1.1,<1.0.0",
     "lfx-exa>=0.1.0,<1.0.0",
     "lfx-valkey>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end

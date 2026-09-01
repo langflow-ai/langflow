@@ -105,12 +105,13 @@ async def test_get_agent_card_returns_valid_card(client: AsyncClient, active_use
 
     input_schema = body["skills"][0]["inputSchema"]
     assert input_schema["type"] == "object"
+    assert input_schema["properties"]["input_value"]["type"] == "string"
     assert input_schema["properties"]["session_id"]["type"] == "string"
 
     # The published schema matches what json_schema_from_flow computes directly.
     async with session_scope() as session:
         flow = await session.get(Flow, flow_id)
-        assert input_schema == json_schema_from_flow(flow)
+        assert input_schema == json_schema_from_flow(flow, require_api_editable=False)
 
 
 @pytest.mark.usefixtures("a2a_flag_on")

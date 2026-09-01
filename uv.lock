@@ -9095,7 +9095,7 @@ integration = [
 
 [[package]]
 name = "lfx-amazon"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "src/bundles/amazon" }
 dependencies = [
     { name = "boto3" },
@@ -9144,7 +9144,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.1.1"
+version = "1.1.2"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -9807,7 +9807,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-datastax"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "src/bundles/datastax" }
 dependencies = [
     { name = "astrapy" },
@@ -10023,16 +10023,18 @@ requires-dist = [
 
 [[package]]
 name = "lfx-openai-compatible"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/openai-compatible" }
 dependencies = [
     { name = "httpx" },
+    { name = "langchain-openai" },
     { name = "lfx" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
+    { name = "langchain-openai", specifier = ">=1.1.6" },
     { name = "lfx", editable = "src/lfx" },
 ]
 

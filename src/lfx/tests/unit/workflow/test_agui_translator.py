@@ -25,7 +25,16 @@ from ag_ui.core import (
     ToolCallResultEvent,
     ToolCallStartEvent,
 )
+from lfx.schema.content_types import ContentBlock, JSONContent, TextContent, ToolContent
+from lfx.schema.message import Message
 from lfx.workflow.agui_translator import AGUITranslator
+
+
+def _fire_add_message(translator: AGUITranslator, message: Message, message_id: str) -> list:
+    """Feed a real ``Message`` the way ``_send_message_event`` does."""
+    data = message.model_dump()
+    data["id"] = message_id
+    return translator.translate("add_message", data)
 
 
 def test_run_lifecycle_emits_started_and_finished():
@@ -781,6 +790,85 @@ def test_repeated_add_message_does_not_re_emit_flat_tool_call():
     assert len([e for e in second if isinstance(e, ToolCallStartEvent)]) == 0
 
 
+def test_repeated_add_message_after_text_consolidation_does_not_duplicate_tool_call():
+    """A tool call must not re-emit under a new id when a later add_message reindexes content_blocks.
+
+    Reproduces the reported AG-UI duplication bug: ``ChatOutput.message_response()``
+    sets ``message.text`` on an already-streamed Agent message, and ``Message.text``'s
+    setter drops the message's ``TextContent`` blocks and appends one consolidated
+    block at the end. When narration text precedes a tool call, that shifts the
+    tool_use block's absolute list index between the two ``add_message`` firings. A
+    position-derived tool-call id treated the shifted block as a brand-new call and
+    re-emitted its whole START/ARGS/END/RESULT quartet under a fresh id, with the
+    same tool name/input/output and near-zero duration.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    # First firing: narration text precedes the tool call, so the tool_use leaf
+    # sits at absolute index 1.
+    first = t.translate(
+        "add_message",
+        {
+            "id": "m1",
+            "text": "",
+            "properties": {"state": "partial"},
+            "content_blocks": [
+                {"type": "text", "contents": [], "text": "Let me check that..."},
+                {
+                    "type": "tool_use",
+                    "contents": [],
+                    "name": "search",
+                    "tool_input": {"q": "weather"},
+                    "output": "sunny",
+                    "error": None,
+                },
+            ],
+        },
+    )
+
+    # Second firing simulates ``Message.text``'s setter: the TextContent block is
+    # dropped and a consolidated one appended at the end, shifting the tool_use
+    # leaf's absolute index from 1 to 0. Same message id, same tool call.
+    second = t.translate(
+        "add_message",
+        {
+            "id": "m1",
+            "text": "Let me check that...",
+            "properties": {"state": "complete"},
+            "content_blocks": [
+                {
+                    "type": "tool_use",
+                    "contents": [],
+                    "name": "search",
+                    "tool_input": {"q": "weather"},
+                    "output": "sunny",
+                    "error": None,
+                },
+                {"type": "text", "contents": [], "text": "Let me check that..."},
+            ],
+        },
+    )
+
+    def _tool_events(events):
+        return {
+            event_type: [e for e in events if isinstance(e, event_type)]
+            for event_type in (ToolCallStartEvent, ToolCallArgsEvent, ToolCallEndEvent, ToolCallResultEvent)
+        }
+
+    first_tool_events = _tool_events(first)
+    second_tool_events = _tool_events(second)
+
+    # The first firing emits exactly one full START/ARGS/END/RESULT quartet.
+    for event_type, events in first_tool_events.items():
+        assert len(events) == 1, f"expected exactly one {event_type.__name__} on first firing, got {events}"
+
+    # The second firing must re-emit nothing: same tool call, same id, already
+    # started and resolved — not a new quartet under a shifted id.
+    for event_type, events in second_tool_events.items():
+        assert events == [], f"tool call re-emitted {event_type.__name__} after content_blocks reindexing: {events}"
+
+
 def test_tool_use_error_is_reported_via_tool_call_result():
     t = AGUITranslator(run_id="r1", thread_id="t1")
     t.start()
@@ -1076,3 +1164,165 @@ def test_ai_add_message_still_emits_text_message():
 
     assert any(isinstance(e, TextMessageStartEvent) for e in out)
     assert any(isinstance(e, TextMessageContentEvent) and e.delta == "done" for e in out)
+
+
+# The two tests below drive the real ``Message.text`` setter instead of re-firing a
+# hand-built payload. That setter is what ``ChatOutput.message_response()`` triggers on
+# an Agent message that already finished streaming, and it is the step that reindexes
+# ``content_blocks`` — the existing re-fire tests replay an identical payload, so they
+# never exercised it.
+def test_chat_output_text_consolidation_does_not_duplicate_tool_calls():
+    """Two real tool calls must stay two after Chat Output consolidates the text."""
+    message = Message(
+        text="",
+        content_blocks=[
+            TextContent(text="Let me check that for you..."),
+            ToolContent(name="search", tool_input={"q": "weather"}, output="sunny", duration=1200),
+            TextContent(text="Now let me compute it..."),
+            ToolContent(name="calculator", tool_input={"expr": "2+2"}, output="4", duration=800),
+            TextContent(text="Done."),
+        ],
+    )
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    first = _fire_add_message(t, message, "m1")
+    assert [b.type for b in message.content_blocks] == ["text", "tool_use", "text", "tool_use", "text"]
+
+    # ChatOutput.message_response(): message = self.input_value; message.text = text
+    message.text = "It is sunny and 2+2 = 4."
+    assert [b.type for b in message.content_blocks] == ["tool_use", "tool_use", "text"]
+
+    second = _fire_add_message(t, message, "m1")
+
+    starts = [e for e in first if isinstance(e, ToolCallStartEvent)]
+    results = [e for e in first if isinstance(e, ToolCallResultEvent)]
+    assert len(starts) == 2
+    assert len({e.tool_call_id for e in starts}) == 2
+    assert len(results) == 2
+    assert not any(isinstance(e, (ToolCallStartEvent, ToolCallResultEvent)) for e in second)
+
+
+def test_chat_output_text_consolidation_does_not_duplicate_custom_content():
+    """A custom content block is keyed the same way, so it must not re-emit either."""
+    message = Message(
+        text="",
+        content_blocks=[
+            TextContent(text="Here is what I found..."),
+            JSONContent(data={"city": "Lisbon", "temp": 21}),
+        ],
+    )
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    first = _fire_add_message(t, message, "m2")
+    message.text = "Lisbon is 21 degrees."
+    assert [b.type for b in message.content_blocks] == ["json", "text"]
+
+    second = _fire_add_message(t, message, "m2")
+
+    customs = [e for e in first if isinstance(e, CustomEvent)]
+    assert len(customs) == 1
+    assert customs[0].name == "langflow.content.json"
+    assert not any(isinstance(e, CustomEvent) for e in second)
+
+
+def test_custom_content_still_re_emits_when_the_block_changes():
+    """Dedup must not swallow a genuine in-place update to a custom block."""
+    message = Message(text="", content_blocks=[JSONContent(data={"status": "running"})])
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    first = _fire_add_message(t, message, "m3")
+    message.content_blocks = [JSONContent(data={"status": "done"})]
+    second = _fire_add_message(t, message, "m3")
+
+    customs = [e for e in first + second if isinstance(e, CustomEvent)]
+    assert len(customs) == 2
+    assert [c.value["content"]["data"]["status"] for c in customs] == ["running", "done"]
+
+
+# A message can mix producer-stamped and unstamped leaves, so the stable-id and
+# ordinal fallbacks must not share a key namespace.
+def test_mixed_stamped_and_unstamped_tool_ids_do_not_collide():
+    """A stamped id of "1" must not swallow the leaf whose ordinal is 1."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    events = t.translate(
+        "add_message",
+        {
+            "id": "m1",
+            "text": "",
+            "properties": {"state": "partial"},
+            "content_blocks": [
+                {
+                    "type": "tool_use",
+                    "contents": [],
+                    "id": "1",
+                    "name": "alpha",
+                    "tool_input": {"a": 1},
+                    "output": "A",
+                    "error": None,
+                },
+                {
+                    "type": "tool_use",
+                    "contents": [],
+                    "name": "beta",
+                    "tool_input": {"b": 2},
+                    "output": "B",
+                    "error": None,
+                },
+            ],
+        },
+    )
+
+    starts = [e for e in events if isinstance(e, ToolCallStartEvent)]
+    assert [e.tool_call_name for e in starts] == ["alpha", "beta"]
+    assert len({e.tool_call_id for e in starts}) == 2
+
+
+def test_mixed_stamped_and_unstamped_custom_ids_do_not_re_emit():
+    """Colliding keys used to overwrite each other's fingerprint, re-emitting forever."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+    blocks = [
+        {"type": "json", "contents": [], "id": "1", "data": {"k": "first"}},
+        {"type": "json", "contents": [], "data": {"k": "second"}},
+    ]
+    payload = {"id": "m2", "text": "", "properties": {"state": "partial"}, "content_blocks": blocks}
+
+    first = [e for e in t.translate("add_message", payload) if isinstance(e, CustomEvent)]
+    second = [e for e in t.translate("add_message", payload) if isinstance(e, CustomEvent)]
+
+    assert len(first) == 2
+    assert second == []
+
+
+def test_grouped_leaves_survive_text_consolidation():
+    """Nested tool_use / custom leaves are keyed by the same traversal ordinal."""
+    message = Message(
+        text="",
+        content_blocks=[
+            TextContent(text="Working on it..."),
+            ContentBlock(
+                title="Agent steps",
+                contents=[
+                    ToolContent(name="search", tool_input={"q": "weather"}, output="sunny"),
+                    JSONContent(data={"city": "Lisbon"}),
+                ],
+            ),
+        ],
+    )
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    first = _fire_add_message(t, message, "m3")
+    message.text = "It is sunny in Lisbon."
+    assert [b.type for b in message.content_blocks] == ["group", "text"]
+
+    second = _fire_add_message(t, message, "m3")
+
+    assert len([e for e in first if isinstance(e, ToolCallStartEvent)]) == 1
+    assert len([e for e in first if isinstance(e, CustomEvent)]) == 1
+    assert not any(isinstance(e, (ToolCallStartEvent, CustomEvent)) for e in second)
