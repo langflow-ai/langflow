@@ -713,6 +713,7 @@ class TestWorkflowIDORProtection:
                 status=JobStatus.IN_PROGRESS,
                 type=JobType.WORKFLOW,
                 user_id=None,
+                job_metadata={"request": {"mode": "background"}},
             )
             session.add(job)
             await session.flush()
