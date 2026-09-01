@@ -225,7 +225,7 @@ def _scope_roots(
 def package_resource_root() -> Path | None:
     """Root of the installed lfx package, or None when it cannot be resolved.
 
-    LE-2322: the packaged assistant flow reads its own component library off disk to
+    The packaged assistant flow reads its own component library off disk to
     answer questions about components. That path is outside every user's storage scope,
     so restricted mode denied it and the assistant blocked itself.
 

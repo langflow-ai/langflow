@@ -1018,7 +1018,7 @@ def validate_flow_for_current_settings(
             else get_component_hash_lookups_for_validation()
         )
 
-    # LE-2321: only the unregistered-component gate is exempted for a packaged first-party
+    # Only the unregistered-component gate is exempted for a packaged first-party
     # flow, and only while its graph is being constructed. The catalog policy and
     # code-interpreter blocks above still apply -- an operator who disabled code
     # interpreters disabled them for the assistant too. The load scope closes before the

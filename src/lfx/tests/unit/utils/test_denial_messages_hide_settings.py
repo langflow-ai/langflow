@@ -1,6 +1,6 @@
 """Policy denials must not name operator-only settings in the message they raise.
 
-Reproduced from LE-2322 (Verizon alpha feedback): a non-admin evaluator who had
+Reproduced from alpha customer feedback: a non-admin evaluator who had
 uploaded no file was shown
 
     Access to local file paths outside the authenticated user's storage scope is
@@ -63,7 +63,7 @@ class TestLocalFileDenials:
         assert "LANGFLOW_" not in str(exc.value)
 
     def test_denial_stays_short_enough_to_survive_downstream_truncation(self):
-        """LE-2322: the assistant truncates at 150 chars, which used to eat the remediation."""
+        """The assistant truncates at 150 chars, which used to eat the remediation."""
         with pytest.raises(LocalFileAccessError) as exc:
             enforce_local_file_access("/etc/passwd", scope_ids=(SCOPE,))
         assert len(str(exc.value)) <= 150

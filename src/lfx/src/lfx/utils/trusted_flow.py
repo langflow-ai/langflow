@@ -3,14 +3,14 @@
 The custom-component and local-file policies exist to constrain *tenant-supplied*
 flows. The Langflow Assistant is itself implemented as a flow, shipped inside the
 package, and it is loaded through the same seams — so those policies applied to it
-too, and it blocked itself (LE-2321 / LE-2322).
+too, and it blocked itself.
 
 Two markers, not one, because the two exemptions need different lifetimes and
 conflating them makes the wider one ambient over the narrower one's work:
 
 ``packaged_flow_load_scope``
     Wraps graph *construction* only. Exempts the unregistered-component gate,
-    which is the whole of LE-2321. Deliberately closed before the flow runs: the
+    which is the whole of the bug. Deliberately closed before the flow runs: the
     assistant builds and runs tenant flows during a turn (``run_working_flow``,
     ``flow_graph_build_check``), and each of those reaches
     ``validate_flow_for_current_settings`` through ``Graph.from_payload``. A
@@ -19,7 +19,7 @@ conflating them makes the wider one ambient over the narrower one's work:
 
 ``packaged_flow_run_scope``
     Spans the run, because the packaged flow's Directory node reads its component
-    library at execution time (LE-2322). Read by ``file_path_security`` alone, and
+    library at execution time. Read by ``file_path_security`` alone, and
     clamped there to the installed package directory for reads only — so even
     though this marker is live while the agent's tools run, nothing gains reach
     over tenant uploads, reserved secret/key/DB files, or arbitrary server paths.

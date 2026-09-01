@@ -1,7 +1,6 @@
 """The shipped Langflow Assistant flow must run under the hardened enterprise settings.
 
-Reproduced from LE-2321 / LE-2322 (Verizon alpha feedback). ``LangflowAssistant.json``
-is first-party content, but it was loaded through the same gates as tenant-supplied
+``LangflowAssistant.json`` is first-party content, but it was loaded through the same gates as tenant-supplied
 flows and did not satisfy them:
 
 * ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`` blocked the flow's own inline
@@ -94,13 +93,13 @@ def hardened_settings(tmp_path):
 @pytest.mark.usefixtures("hardened_settings")
 class TestShippedAssistantFlowRunsHardened:
     async def test_should_build_the_shipped_flow(self):
-        """LE-2321: the assistant must not be blocked by its own component policy."""
+        """The assistant must not be blocked by its own component policy."""
         await get_and_cache_all_types_dict(get_settings_service())
         with packaged_flow_load_scope():
             validate_flow_for_current_settings(_prepared_flow())
 
     def test_should_read_its_own_component_library(self):
-        """LE-2322: the Directory node's package path must be readable during the run."""
+        """The Directory node's package path must be readable during the run."""
         with packaged_flow_run_scope():
             enforce_local_file_access(LFX_COMPONENTS_DIR, scope_ids=(SCOPE,))
 
