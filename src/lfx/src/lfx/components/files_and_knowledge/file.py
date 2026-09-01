@@ -201,26 +201,26 @@ class FileComponent(BaseFileComponent):
         SecretStrInput(
             name="aws_access_key_id",
             display_name="AWS Access Key ID",
-            info="AWS Access key ID.",
+            info="Optional. Falls back to the AWS_ACCESS_KEY_ID environment variable.",
             show=False,
             advanced=False,
-            required=True,
+            required=False,
         ),
         SecretStrInput(
             name="aws_secret_access_key",
             display_name="AWS Secret Key",
-            info="AWS Secret Key.",
+            info="Optional. Falls back to the AWS_SECRET_ACCESS_KEY environment variable.",
             show=False,
             advanced=False,
-            required=True,
+            required=False,
         ),
         StrInput(
             name="bucket_name",
             display_name="S3 Bucket Name",
-            info="Enter the name of the S3 bucket.",
+            info="Optional. Falls back to the configured object storage bucket.",
             show=False,
             advanced=False,
-            required=True,
+            required=False,
         ),
         StrInput(
             name="aws_region",
@@ -802,7 +802,7 @@ class FileComponent(BaseFileComponent):
 
     def _read_from_aws_s3(self) -> list[BaseFileComponent.BaseFile]:
         """Read file from AWS S3."""
-        from lfx.base.data.cloud_storage_utils import create_s3_client, validate_aws_credentials
+        from lfx.base.data.cloud_storage_utils import create_s3_client, get_s3_bucket_name, validate_aws_credentials
 
         # Validate AWS credentials
         validate_aws_credentials(self)
@@ -812,6 +812,7 @@ class FileComponent(BaseFileComponent):
 
         # Create S3 client
         s3_client = create_s3_client(self)
+        bucket_name = get_s3_bucket_name(self)
 
         # Download file to temp location
         import tempfile
@@ -822,7 +823,7 @@ class FileComponent(BaseFileComponent):
         with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
             temp_file_path = temp_file.name
             try:
-                s3_client.download_fileobj(self.bucket_name, self.s3_file_key, temp_file)
+                s3_client.download_fileobj(bucket_name, self.s3_file_key, temp_file)
             except Exception as e:
                 # Clean up temp file on failure
                 with contextlib.suppress(OSError):
