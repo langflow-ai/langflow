@@ -196,9 +196,8 @@ class JobService(Service):
                 asset_type=asset_type,
                 user_id=user_id,
                 dedupe_key=dedupe_key,
-                # Two things stamped atomically with the insert, for the same reason: a later
-                # shallow update_job_metadata (e.g. submit's persisted request) preserves what
-                # is already on the row.
+                # Job-owned context is stamped atomically with the insert. A later shallow
+                # update_job_metadata preserves what is already on the row.
                 #
                 # The end user, so serving rows carry who the run was for.
                 #

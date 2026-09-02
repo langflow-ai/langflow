@@ -7,9 +7,7 @@ test.describe.configure({ mode: "serial" });
 
 test(
   "user must be able to update outdated components by update all button",
-  {
-    tag: ["@release"],
-  },
+  { tag: ["@release"] },
   async ({ page }) => {
     const dropTarget = await openFlowsList(page);
 
@@ -103,9 +101,7 @@ test(
 
 test(
   "user must be able to update outdated components by each outdated component",
-  {
-    tag: ["@release"],
-  },
+  { tag: ["@release"] },
   async ({ page }) => {
     const dropTarget = await openFlowsList(page);
 

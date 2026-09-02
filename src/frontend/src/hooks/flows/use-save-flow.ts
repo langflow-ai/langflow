@@ -98,6 +98,15 @@ const useSaveFlow = () => {
             endpoint_name,
             locked,
           } = flow;
+          const persistedFlowForScope =
+            currentSavedFlow?.id === id
+              ? currentSavedFlow
+              : useFlowsManagerStore
+                  .getState()
+                  .flows?.find((savedFlow) => savedFlow.id === id);
+          const providerScopeChanged =
+            persistedFlowForScope !== undefined &&
+            persistedFlowForScope.folder_id !== folder_id;
           const updatePayload = {
             id,
             name,
@@ -106,6 +115,7 @@ const useSaveFlow = () => {
             folder_id,
             endpoint_name,
             locked,
+            ...(providerScopeChanged && { providerScopeChanged: true }),
           };
           // biome-ignore lint/suspicious/noExplicitAny: legacy
           const handleError = (e: any) => {

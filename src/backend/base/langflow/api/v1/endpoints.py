@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
-from collections.abc import AsyncGenerator, Collection
+from collections.abc import AsyncGenerator, Collection, Mapping
 from copy import deepcopy
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated, Any
@@ -29,9 +29,10 @@ from lfx.observability import execution_protocol
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
 from lfx.services.model_provider_policy import (
+    ModelProviderPolicyError,
     ModelProviderPolicyPurpose,
+    aresolve_model_provider_policy,
     reset_current_model_provider_policy_context,
-    resolve_model_provider_policy,
     set_current_model_provider_policy_context,
 )
 from lfx.services.settings.service import SettingsService
@@ -63,6 +64,11 @@ from langflow.api.v1.custom_component_policy import (
 )
 from langflow.api.v1.files import get_flow
 from langflow.api.v1.global_variable_defaults import apply_global_variable_defaults
+from langflow.api.v1.model_provider_policy_scope import (
+    ProviderPolicyAttributesDependency,
+    provider_policy_attributes_for_flow,
+    scoped_model_provider_policy_for_flow,
+)
 from langflow.api.v1.run_validation import raise_if_hitl_unsupported
 from langflow.api.v1.schemas import (
     ConfigResponse,
@@ -228,7 +234,13 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
 
 
 @router.get("/all")
-async def get_all(request: Request, current_user: CurrentActiveUser, *, include_blocked: bool = False):
+async def get_all(
+    request: Request,
+    current_user: CurrentActiveUser,
+    provider_policy_attributes: ProviderPolicyAttributesDependency,
+    *,
+    include_blocked: bool = False,
+):
     """Retrieve all component types with compression for better performance.
 
     Returns a compressed response containing all available component types,
@@ -247,10 +259,10 @@ async def get_all(request: Request, current_user: CurrentActiveUser, *, include_
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
         all_types_en = await get_and_cache_all_types_dict(settings_service=get_settings_service())
         component_identity_index = get_component_identity_index(all_types_en)
-        visible_types_en = _filter_component_palette_by_provider_policy(
+        visible_types_en = await _filter_component_palette_by_provider_policy(
             all_types_en,
             user_id=current_user.id,
-            attributes={"is_superuser": bool(current_user.is_superuser)},
+            attributes=provider_policy_attributes,
         )
         if not include_blocked:
             visible_types_en = _filter_component_palette_by_catalog_policy(
@@ -269,7 +281,7 @@ async def get_all(request: Request, current_user: CurrentActiveUser, *, include_
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-def _filter_component_palette_by_provider_policy(
+async def _filter_component_palette_by_provider_policy(
     all_types: dict[str, dict[str, dict]],
     *,
     user_id: UUID | str | None,
@@ -291,7 +303,7 @@ def _filter_component_palette_by_provider_policy(
         and isinstance((provider_id := metadata.get("model_provider_id")), str)
         and provider_id
     }
-    policy = resolve_model_provider_policy(
+    policy = await aresolve_model_provider_policy(
         user_id=user_id,
         providers=provider_ids,
         purpose=ModelProviderPolicyPurpose.DISCOVER,
@@ -382,7 +394,11 @@ async def simple_run_flow(
     validate_input_and_tweaks(input_request)
     policy_context_token = set_current_model_provider_policy_context(
         user_id=getattr(api_key_user, "id", None),
-        attributes={"is_superuser": bool(getattr(api_key_user, "is_superuser", False))},
+        attributes=provider_policy_attributes_for_flow(
+            flow,
+            is_superuser=bool(getattr(api_key_user, "is_superuser", False)),
+            required=True,
+        ),
     )
     try:
         task_result: list[RunOutputs] = []
@@ -1535,12 +1551,17 @@ async def experimental_run_flow(
             graph_data = deepcopy(sanitized_flow_data if sanitized_flow_data is not None else flow.data)
             graph_data = process_tweaks(graph_data, tweaks or {})
             raise_if_hitl_unsupported(graph_data)
-            graph = Graph.from_payload(
-                graph_data,
-                flow_id=flow_id_str,
-                user_id=str(api_key_user.id),
-                flow_name=flow.name,
-            )
+            with scoped_model_provider_policy_for_flow(
+                flow,
+                user_id=api_key_user.id,
+                is_superuser=bool(getattr(api_key_user, "is_superuser", False)),
+            ):
+                graph = Graph.from_payload(
+                    graph_data,
+                    flow_id=flow_id_str,
+                    user_id=str(api_key_user.id),
+                    flow_name=flow.name,
+                )
         except CustomComponentValidationError as exc:
             await logger.aexception("Advanced-run flow validation failed for flow %s", flow.id)
             http_error = HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
@@ -1569,7 +1590,14 @@ async def experimental_run_flow(
     await release_db_transaction(session)
 
     try:
-        with execution_protocol("v1.advanced"):
+        with (
+            scoped_model_provider_policy_for_flow(
+                flow,
+                user_id=api_key_user.id,
+                is_superuser=bool(getattr(api_key_user, "is_superuser", False)),
+            ),
+            execution_protocol("v1.advanced"),
+        ):
             task_result, session_id = await run_graph_internal(
                 graph=graph,
                 flow_id=flow_id_str,
@@ -1578,6 +1606,9 @@ async def experimental_run_flow(
                 outputs=outputs,
                 stream=stream,
             )
+    except TweakRefusedError:
+        # Let the app-level handler return the documented structured 422.
+        raise
     except Exception as exc:
         await logger.aexception("Advanced-run execution failed for flow %s", flow.id)
         if isinstance(exc, HTTPException):
@@ -1700,11 +1731,34 @@ async def get_version():
     return get_version_info()
 
 
+def _raw_component_parameters(
+    template: Mapping[str, Any] | None,
+    *,
+    field: str | None = None,
+    field_value: Any = None,
+) -> dict[str, Any]:
+    """Parse non-secret component form values for provider preflight."""
+    params: dict[str, Any] = {}
+    if isinstance(template, Mapping):
+        for key, value_dict in template.items():
+            if isinstance(value_dict, Mapping):
+                params[key] = parse_value(value_dict.get("value"), str(value_dict.get("_input_type")))
+
+    # A real-time-refresh event can be newer than the template snapshot sent
+    # beside it, so its value wins for the changed field.
+    if field:
+        field_template = template.get(field) if isinstance(template, Mapping) else None
+        field_input_type = str(field_template.get("_input_type")) if isinstance(field_template, Mapping) else "None"
+        params[field] = parse_value(field_value, field_input_type)
+    return params
+
+
 @router.post("/custom_component", status_code=HTTPStatus.OK, include_in_schema=False)
 async def custom_component(
     raw_code: CustomComponentRequest,
     user: CurrentActiveUser,
     request: Request,
+    provider_policy_attributes: ProviderPolicyAttributesDependency,
 ) -> CustomComponentResponse:
     # Building a custom component instantiates (and partially executes) posted
     # code. That is a create/write-class action, so enforce the external access
@@ -1731,21 +1785,47 @@ async def custom_component(
         admin_only_detail="Custom component creation is restricted to administrators",
     )
 
-    component = Component(_code=effective_code)
+    policy_context_token = set_current_model_provider_policy_context(
+        user_id=user.id,
+        attributes=provider_policy_attributes,
+    )
+    try:
+        component = Component(_code=effective_code)
 
-    built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
-    type_ = get_instance_name(component_instance)
-    enforce_catalog_policy_for_component_type(type_, snapshot=catalog_policy_snapshot)
-    if raw_code.frontend_node is not None:
-        built_frontend_node = await component_instance.update_frontend_node(built_frontend_node, raw_code.frontend_node)
+        built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
+        type_ = get_instance_name(component_instance)
+        enforce_catalog_policy_for_component_type(type_, snapshot=catalog_policy_snapshot)
+        if isinstance(component_instance, Component):
+            # Dynamic configuration may resolve DB-backed credentials or call
+            # provider APIs. Refresh the active hierarchy before either hook
+            # runs so moved-project and newly inherited grants are current.
+            current_template = (
+                raw_code.frontend_node.get("template") if isinstance(raw_code.frontend_node, Mapping) else None
+            )
+            await component_instance.arequire_model_provider_policy(
+                ModelProviderPolicyPurpose.CONFIGURE,
+                user_id=user.id,
+                parameters=_raw_component_parameters(current_template),
+            )
+        if raw_code.frontend_node is not None:
+            built_frontend_node = await component_instance.update_frontend_node(
+                built_frontend_node,
+                raw_code.frontend_node,
+            )
 
-    tool_mode: bool = built_frontend_node.get("tool_mode", False)
-    if isinstance(component_instance, Component):
-        await component_instance.run_and_validate_update_outputs(
-            frontend_node=built_frontend_node,
-            field_name="tool_mode",
-            field_value=tool_mode,
-        )
+        tool_mode: bool = built_frontend_node.get("tool_mode", False)
+        if isinstance(component_instance, Component):
+            await component_instance.run_and_validate_update_outputs(
+                frontend_node=built_frontend_node,
+                field_name="tool_mode",
+                field_value=tool_mode,
+            )
+    except ModelProviderPolicyError as exc:
+        # Keep scoped denials indistinguishable from unavailable providers and
+        # avoid surfacing an authorization decision as a retryable server error.
+        raise HTTPException(status_code=404, detail="Model provider not found") from exc
+    finally:
+        reset_current_model_provider_policy_context(policy_context_token)
     locale = getattr(request.state, "locale", "en")
     if locale != "en":
         from langflow.utils.i18n import translate_component_node
@@ -1762,6 +1842,7 @@ async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
     user: CurrentActiveUser,
     request: Request,
+    provider_policy_attributes: ProviderPolicyAttributesDependency,
 ):
     """Update an existing custom component with new code and configuration.
 
@@ -1797,7 +1878,7 @@ async def custom_component_update(
 
     policy_context_token = set_current_model_provider_policy_context(
         user_id=user.id,
-        attributes={"is_superuser": bool(user.is_superuser)},
+        attributes=provider_policy_attributes,
     )
     try:
         component = Component(_code=effective_code)
@@ -1808,24 +1889,26 @@ async def custom_component_update(
         component_type = get_instance_name(cc_instance)
         enforce_catalog_policy_for_component_type(component_type, snapshot=catalog_policy_snapshot)
 
+        template = code_request.get_template()
+        params = _raw_component_parameters(template)
+        policy_params = _raw_component_parameters(
+            template,
+            field=code_request.field,
+            field_value=code_request.field_value,
+        )
+
         if isinstance(cc_instance, Component):
-            # Dynamic configuration may resolve DB-backed credentials or call
-            # provider APIs. Apply the same standalone-component policy before
-            # either can happen.
-            cc_instance.require_model_provider_policy(ModelProviderPolicyPurpose.CONFIGURE)
+            # Authorize both fixed-provider components and the raw selected
+            # ModelInput provider before load_from_db can hydrate any secret.
+            await cc_instance.arequire_model_provider_policy(
+                ModelProviderPolicyPurpose.CONFIGURE,
+                user_id=user.id,
+                parameters=policy_params,
+            )
 
         component_node["tool_mode"] = code_request.tool_mode
 
         if hasattr(cc_instance, "set_attributes"):
-            template = code_request.get_template()
-            params = {}
-
-            for key, value_dict in template.items():
-                if isinstance(value_dict, dict):
-                    value = value_dict.get("value")
-                    input_type = str(value_dict.get("_input_type"))
-                    params[key] = parse_value(value, input_type)
-
             load_from_db_fields = [
                 field_name
                 for field_name, field_dict in template.items()
@@ -1877,6 +1960,8 @@ async def custom_component_update(
 
     except CatalogPolicyHTTPException:
         raise
+    except ModelProviderPolicyError as exc:
+        raise HTTPException(status_code=404, detail="Model provider not found") from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     finally:

@@ -10,7 +10,9 @@ import hashlib
 import re
 from typing import TYPE_CHECKING
 
+import chromadb.errors
 from lfx.base.knowledge_bases.backends import create_backend, is_local_chroma
+from lfx.base.knowledge_bases.validation import MAX_LOCAL_COLLECTION_NAME_LENGTH
 from lfx.log.logger import logger
 from sqlmodel import select
 
@@ -24,12 +26,13 @@ if TYPE_CHECKING:
 
 
 class BackendProvisioningError(ValueError):
-    """Raised when a non-local vector-store backend fails its create-time check.
+    """Raised when a vector-store backend fails a non-retryable create-time check.
 
     A remote backend (OpenSearch / Chroma Cloud / Mongo / Astra / Postgres) with
     a bad URL or wrong credentials would otherwise be swallowed and produce a
     Memory Base that only errors later on every ingest and retrieval. Surfacing
-    it here lets the create path reject the misconfiguration up front.
+    it here lets the create path reject the misconfiguration up front. Local
+    Chroma validation failures are surfaced for the same reason.
     """
 
 
@@ -53,12 +56,16 @@ def hash_session_id(session_id: str) -> str:
     return hashlib.sha256(session_id.encode()).hexdigest()[:12]
 
 
+_KB_NAME_SUFFIX_LENGTH = 9  # underscore + 8 hex characters, added by MemoryBaseService
+_MAX_KB_NAME_PREFIX_LENGTH = MAX_LOCAL_COLLECTION_NAME_LENGTH - _KB_NAME_SUFFIX_LENGTH
+
+
 def sanitize_kb_name(name: str) -> str:
-    """Lowercase, replace spaces/hyphens with underscores, strip non-alphanum."""
+    """Return an ASCII-safe prefix for a generated Memory Base collection name."""
     sanitized = name.strip().lower()
     sanitized = re.sub(r"[\s\-]+", "_", sanitized)
-    sanitized = re.sub(r"[^\w]", "", sanitized)
-    return sanitized or "memory"
+    sanitized = re.sub(r"[^\w]", "", sanitized, flags=re.ASCII).lstrip("_")
+    return sanitized[:_MAX_KB_NAME_PREFIX_LENGTH] or "memory"
 
 
 async def resolve_kb_username(db: AsyncSession, user_id: uuid.UUID) -> str:
@@ -102,10 +109,10 @@ async def initialize_kb(
 
     Failure handling depends on the backend:
 
-    * **Local Chroma (default):** best-effort. The Chroma client creates its own
-      persistence directory and the collection is created lazily on first write,
-      so a provisioning hiccup here must not block Memory Base creation — it is
-      logged and swallowed.
+    * **Local Chroma (default):** transient provisioning failures remain
+      best-effort because the collection is created lazily on first write.
+      Deterministic Chroma validation failures are raised, since retrying can
+      never make the collection usable.
     * **Remote backends (OpenSearch / Chroma Cloud / Mongo / Astra / Postgres):**
       a bad URL or wrong credentials is a real misconfiguration that would make
       the Memory Base silently dead — every later ingest and retrieval would
@@ -146,7 +153,7 @@ async def initialize_kb(
         raise
     except Exception as exc:
         await logger.awarning("Initial %s setup for %s failed: %s", backend_type, kb_name, exc)
-        if not local:
+        if not local or isinstance(exc, chromadb.errors.InvalidArgumentError):
             msg = f"Could not initialize the '{backend_type}' vector store for this Memory Base: {exc}"
             raise BackendProvisioningError(msg) from exc
     finally:

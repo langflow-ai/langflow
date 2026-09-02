@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Mapping
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, cast
@@ -327,6 +328,49 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         ),
     ]
 
+    async def _additional_model_provider_policy_ids(self, purpose, parameters=None) -> tuple[str, ...]:
+        """Gate the provider selector retained by legacy Agent/ALTK flows."""
+        _ = purpose
+        from lfx.base.models.provider_registry import resolve_provider_id
+
+        effective_parameters = parameters if isinstance(parameters, Mapping) else getattr(self, "_parameters", None)
+        if not isinstance(effective_parameters, Mapping):
+            effective_parameters = {}
+        selected_model = effective_parameters.get("model", getattr(self, "model", None))
+        if selected_model:
+            # The shared Component hook already handles a selected ModelInput;
+            # connected model objects are gated by their upstream vertex.
+            return ()
+        legacy_provider = effective_parameters.get("agent_llm", getattr(self, "agent_llm", None))
+        if not isinstance(legacy_provider, str) or not legacy_provider.strip() or legacy_provider == "Custom":
+            return ()
+        return (resolve_provider_id(legacy_provider),)
+
+    async def _filter_legacy_provider_options(self, build_config: Mapping[str, Any]) -> None:
+        """Filter ALTK/legacy Agent provider choices through the active scope."""
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, aresolve_model_provider_policy
+
+        provider_field = build_config.get("agent_llm")
+        if not isinstance(provider_field, dict):
+            return
+        options = provider_field.get("options")
+        if not isinstance(options, list):
+            return
+        candidates = [option for option in options if isinstance(option, str) and option != "Custom"]
+        if not candidates:
+            return
+        snapshot = await aresolve_model_provider_policy(
+            user_id=self.user_id,
+            providers=candidates,
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
+        allowed = set(snapshot.filter(candidates))
+        keep_indexes = [index for index, option in enumerate(options) if option == "Custom" or option in allowed]
+        provider_field["options"] = [options[index] for index in keep_indexes]
+        metadata = provider_field.get("options_metadata")
+        if isinstance(metadata, list) and len(metadata) == len(options):
+            provider_field["options_metadata"] = [metadata[index] for index in keep_indexes]
+
     def _resolve_selected_model(self):
         """Resolve the selected model, including legacy agent_llm/model_name inputs."""
         try:
@@ -391,6 +435,10 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
     async def get_agent_requirements(self):
         """Get the agent requirements for the agent."""
         from langchain_core.tools import StructuredTool
+
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        await self.arequire_model_provider_policy(ModelProviderPolicyPurpose.USE)
 
         selected_model = self._resolve_selected_model()
         try:
@@ -978,6 +1026,15 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         field_value: list[dict],
         field_name: str | None = None,
     ) -> dotdict:
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        policy_parameters = dict(getattr(self, "_parameters", {}) or {})
+        if field_name:
+            policy_parameters[field_name] = field_value
+        await self.arequire_model_provider_policy(
+            ModelProviderPolicyPurpose.CONFIGURE,
+            parameters=policy_parameters,
+        )
         # Update model options with caching (for all field changes).
         # The tool-calling constraint lives on the ModelInput's ``filters``
         # field (declared above); ``handle_model_input_update`` reads it
@@ -1015,6 +1072,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             if missing_keys:
                 msg = f"Missing required keys in build_config: {missing_keys}"
                 raise ValueError(msg)
+        await self._filter_legacy_provider_options(build_config)
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
 
     async def _get_tools(self) -> list[Tool]:

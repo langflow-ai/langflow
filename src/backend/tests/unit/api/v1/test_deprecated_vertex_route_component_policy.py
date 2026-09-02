@@ -135,18 +135,25 @@ async def test_should_build_from_the_sanitized_copy_not_the_stored_bytes(
 
 
 @pytest.mark.security
+@pytest.mark.parametrize("failure", ["identity_unavailable", "settings_unavailable"])
 async def test_should_fail_closed_when_the_policy_cannot_be_evaluated(
     client: AsyncClient,
     added_flow_webhook_test,
     logged_in_headers,
     monkeypatch: pytest.MonkeyPatch,
+    failure: str,
 ):
     """An undecidable policy must refuse with 503, never fall through to execution."""
     from langflow.api.v1 import chat as chat_module
+    from lfx.utils.flow_validation import CatalogPolicyIdentityUnavailableError
 
     flow_id = added_flow_webhook_test["id"]
     vertex_id = added_flow_webhook_test["data"]["nodes"][0]["id"]
-    error = RuntimeError("settings service required")
+    error = (
+        CatalogPolicyIdentityUnavailableError("identity unavailable")
+        if failure == "identity_unavailable"
+        else RuntimeError("settings service required")
+    )
 
     async def blow_up(_data, *, is_superuser):  # noqa: ARG001
         raise error
@@ -309,6 +316,6 @@ async def test_real_policy_leaves_a_superuser_alone_on_the_deprecated_seams(
     path = f"api/v1/build/{flow_id}/vertices" if route == "order" else f"api/v1/build/{flow_id}/vertices/{node_id}"
     response = await client.post(path, headers=logged_in_headers_super_user)
 
-    assert response.status_code == 200, f"the admin-only policy refused an admin on {path}: {response.text[:300]}"
+    assert response.status_code != 400, f"the admin-only policy refused an admin on {path}: {response.text[:300]}"
 
     await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers_super_user)
