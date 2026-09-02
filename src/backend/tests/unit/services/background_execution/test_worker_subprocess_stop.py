@@ -54,7 +54,7 @@ async def test_real_worker_subprocess_honors_durable_stop():
 
         # Wait until the SEPARATE worker has started the job (IN_PROGRESS).
         await harness.wait_for_status(
-            job_id, {JobStatus.IN_PROGRESS, JobStatus.COMPLETED, JobStatus.CANCELLED}, timeout=90.0
+            job_id, {JobStatus.IN_PROGRESS, JobStatus.COMPLETED, JobStatus.CANCELLED}, timeout=80.0
         )
         job = await harness.job_service.get_job_by_job_id(job_id)
         if job.status != JobStatus.IN_PROGRESS:

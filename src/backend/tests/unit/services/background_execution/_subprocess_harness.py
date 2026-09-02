@@ -22,8 +22,10 @@ from __future__ import annotations
 import contextlib
 import os
 import subprocess
+import tempfile
 import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
 
 # Async driver the project actually ships for Postgres (see pyproject:
 # sqlalchemy[postgresql_psycopg]). psycopg v3 accepts the ``options`` connect
@@ -48,6 +50,7 @@ class WorkerHarness:
     db_url: str
     job_service: object
     procs: list[subprocess.Popen] = field(default_factory=list)
+    _out_paths: dict[int, str] = field(default_factory=dict)
     _prior_db_env: str | None = None
     _prior_db_env_set: bool = False
     _prior_db_service: object | None = None
@@ -131,13 +134,24 @@ class WorkerHarness:
         # worker in its OWN process group: ``uv run`` spawns a child python that
         # does NOT inherit a SIGTERM sent to ``uv``, so we signal the whole
         # group (see ``signal_group``) to avoid leaking workers.
+        #
+        # Output goes to a FILE, never a pipe: nothing drains the worker's
+        # output until a failure dump, and a chatty boot (a fresh database logs
+        # the whole alembic run) fills a 64KB pipe buffer, blocking the worker
+        # on a log write mid-boot so it never claims anything. Proven with a
+        # process sample: the hung worker sat in write(2) on stdout.
+        out_file = tempfile.NamedTemporaryFile(  # noqa: SIM115 - closed in drain/teardown
+            mode="w+b", prefix="worker_out_", suffix=".log", delete=False
+        )
         proc = subprocess.Popen(  # noqa: S603
             ["uv", "run", "langflow", "worker", "--idle-block-ms", str(idle_block_ms)],  # noqa: S607
             env=env,
-            stdout=subprocess.PIPE,
+            stdout=out_file,
             stderr=subprocess.STDOUT,
             start_new_session=True,
         )
+        out_file.close()
+        self._out_paths[proc.pid] = out_file.name
         self.procs.append(proc)
         return proc
 
@@ -152,7 +166,9 @@ class WorkerHarness:
 
         Raises AssertionError on timeout so a regression fails loudly. The worker
         subprocess output is included in the failure message so a worker that
-        failed to boot or claim is diagnosable.
+        failed to boot or claim is diagnosable. Keep waits under the suite's
+        90s pytest-timeout soft cap so THIS assertion (which carries the worker
+        output) fires before the plugin's bare stack dump does.
         """
         import asyncio
 
@@ -172,15 +188,16 @@ class WorkerHarness:
         raise AssertionError(msg)
 
     def drain_worker_output(self) -> str:
-        """Return any buffered stdout/stderr from the worker subprocesses (best-effort)."""
+        """Return the captured output files of the worker subprocesses (best-effort)."""
         chunks = []
         for proc in self.procs:
-            if proc.stdout is None:
+            path = self._out_paths.get(proc.pid)
+            if path is None:
                 continue
             with contextlib.suppress(Exception):
                 if proc.poll() is None:
                     proc.terminate()
-                out = proc.stdout.read()
+                out = Path(path).read_bytes()
                 if out:
                     chunks.append(f"--- worker pid={proc.pid} output ---\n{out.decode(errors='replace')[-4000:]}")
         return "\n".join(chunks) if chunks else "(no worker output captured)"
@@ -199,6 +216,10 @@ class WorkerHarness:
                 self.signal_group(proc, signal.SIGKILL)
                 with contextlib.suppress(Exception):
                     proc.wait(timeout=5)
+        for path in self._out_paths.values():
+            with contextlib.suppress(OSError):
+                Path(path).unlink()
+        self._out_paths.clear()
         # Tear down the pg engine and restore the manager's DB service + settings
         # url + env var so this harness does not leak state to later tests.
         from langflow.services.deps import get_settings_service
