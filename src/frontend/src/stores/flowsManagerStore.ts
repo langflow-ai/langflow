@@ -1,6 +1,6 @@
 import { cloneDeep } from "lodash";
 import { create } from "zustand";
-import { SAVE_DEBOUNCE_TIME } from "@/constants/constants";
+import { AUTOSAVE_DEBOUNCE_TIME } from "@/constants/constants";
 import type { FlowType } from "../types/flow";
 import type {
   FlowsManagerStoreType,
@@ -54,7 +54,7 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     set({ healthCheckMaxRetries }),
   autoSaving: true,
   setAutoSaving: (autoSaving: boolean) => set({ autoSaving }),
-  autoSavingInterval: SAVE_DEBOUNCE_TIME,
+  autoSavingInterval: AUTOSAVE_DEBOUNCE_TIME,
   setAutoSavingInterval: (autoSavingInterval: number) =>
     set({ autoSavingInterval }),
   examples: [],

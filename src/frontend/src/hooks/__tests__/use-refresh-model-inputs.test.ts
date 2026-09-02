@@ -462,6 +462,40 @@ describe("refreshAllModelInputs", () => {
     expect(mockSetNode).toHaveBeenCalled();
   });
 
+  it("should not autosave the flow it refreshes", async () => {
+    // The refresh runs on every flow open. Autosaving it writes the flow
+    // nobody edited (#8995), which under an edit precondition also takes the
+    // first writer's turn.
+    mockNodes = [createMockModelNode("node-1")];
+
+    (api.post as jest.Mock).mockResolvedValue({
+      data: {
+        template: {
+          model: {
+            type: "model",
+            value: "gpt-4",
+            options: ["gpt-4"],
+            required: true,
+            list: false,
+            show: true,
+            readonly: false,
+          },
+        },
+      },
+    });
+
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
+    await refreshAllModelInputs(mockQueryClient as any);
+
+    expect(mockSetNode).toHaveBeenCalledWith(
+      "node-1",
+      expect.any(Function),
+      false,
+      undefined,
+      { autoSave: false },
+    );
+  });
+
   it("should handle API errors gracefully", async () => {
     mockNodes = [createMockModelNode("node-1")];
 

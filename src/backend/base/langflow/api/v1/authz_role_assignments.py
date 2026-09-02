@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from lfx.log.logger import logger
 from lfx.services.authorization import (
     AuthorizationMutation,
@@ -27,6 +27,12 @@ from langflow.api.v1.schemas.authz_role_assignments import (
     RoleAssignmentCreate,
     RoleAssignmentGrantSummary,
     RoleAssignmentRead,
+)
+from langflow.services.authorization.admin import (
+    ADMINISTRATION_REQUIRED_REASON,
+    administration_audit_details,
+    administration_denied,
+    is_administrator,
 )
 from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS, AUDIT_EVENT_MUTATION
 from langflow.services.authorization.lifecycle import (
@@ -45,40 +51,57 @@ router = APIRouter(prefix="/authz/role-assignments", tags=["Authorization"], inc
 # See ``authz_roles._LIST_MAX_LIMIT`` — same bound, applied to assignments.
 _LIST_MAX_LIMIT = 200
 _LIST_DEFAULT_LIMIT = 100
+OperationId = Annotated[str | None, Header(alias="X-Langflow-Operation-ID", max_length=128)]
+_LEGACY_SUPERUSER_DENIAL = "Superuser required to administer role assignments."
 
 
-async def _audit_deny(*, user_id: UUID, action: str, obj: str, status_code: int, reason: str) -> None:
+async def _audit_deny(
+    *,
+    user_id: UUID,
+    action: str,
+    obj: str,
+    status_code: int,
+    reason: str,
+    operation_id: str | None = None,
+) -> None:
     await audit_decision(
         user_id=user_id,
         action=action,
         obj=obj,
         result="deny",
-        details={"event": AUDIT_EVENT_ACCESS, "status_code": status_code, "reason": reason},
+        details=administration_audit_details(
+            {"event": AUDIT_EVENT_ACCESS, "status_code": status_code, "reason": reason},
+            operation_id=operation_id,
+        ),
     )
 
 
-async def _require_superuser(user, *, action: str, obj: str) -> None:
-    if not getattr(user, "is_superuser", False):
-        await _audit_deny(
-            user_id=user.id,
-            action=action,
-            obj=obj,
-            status_code=status.HTTP_403_FORBIDDEN,
-            reason="superuser_required",
-        )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Superuser required to administer role assignments.",
-        )
+async def _require_role_administrator(user, *, action: str, obj: str, operation_id: str | None = None) -> None:
+    """Allow superusers or a plugin-delegated ``role:manage`` administrator."""
+    if await is_administrator(user, resource="role", authorization_service=get_authorization_service()):
+        return
+    await _audit_deny(
+        user_id=user.id,
+        action=action,
+        obj=obj,
+        status_code=status.HTTP_403_FORBIDDEN,
+        reason=ADMINISTRATION_REQUIRED_REASON,
+        operation_id=operation_id,
+    )
+    raise administration_denied(_LEGACY_SUPERUSER_DENIAL, resource="role")
 
 
-async def _require_superuser_dependency(request: Request, current_user: CurrentActiveUser) -> None:
-    """Run the superuser gate as a route dependency, i.e. before body validation.
+async def _require_role_administrator_dependency(
+    request: Request,
+    current_user: CurrentActiveUser,
+    operation_id: OperationId = None,
+) -> None:
+    """Run the role-administrator gate as a route dependency, i.e. before body validation.
 
     FastAPI solves a route's ``dependencies`` before validating that route's own
     body, so an unauthorised caller is refused whatever they post. Gated only in
     the endpoint body, they first receive the same 422 field names and enum
-    values a superuser would, which lets them map the request contract of a
+    values an administrator would, which lets them map the request contract of a
     route they cannot invoke.
 
     The in-body call is kept as well: it is the gate for anything that reaches
@@ -86,10 +109,15 @@ async def _require_superuser_dependency(request: Request, current_user: CurrentA
     """
     assignment_id = request.path_params.get("assignment_id", "*")
     action = "role_assignment:create" if request.method == "POST" else "role_assignment:delete"
-    await _require_superuser(current_user, action=action, obj=f"role_assignment:{assignment_id}")
+    await _require_role_administrator(
+        current_user,
+        action=action,
+        obj=f"role_assignment:{assignment_id}",
+        operation_id=operation_id,
+    )
 
 
-SUPERUSER_ONLY = [Depends(_require_superuser_dependency)]
+ROLE_ADMINISTRATOR_ONLY = [Depends(_require_role_administrator_dependency)]
 
 
 async def _assignment_reads(session, assignments: list[AuthzRoleAssignment]) -> list[RoleAssignmentRead]:
@@ -147,12 +175,13 @@ async def list_assignments(
     domain_id: Annotated[UUID | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=_LIST_MAX_LIMIT)] = _LIST_DEFAULT_LIMIT,
     offset: Annotated[int, Query(ge=0)] = 0,
+    operation_id: OperationId = None,
 ) -> list[RoleAssignmentRead]:
     """List role assignments scoped to one user.
 
     * Omitting ``user_id`` defaults to the caller — no superuser needed.
     * Passing ``user_id == self.id`` is the same as omitting it.
-    * Passing a different ``user_id`` requires superuser; otherwise 403.
+    * Passing a different ``user_id`` requires ``role:manage``; otherwise 403.
 
     Results are always filtered by the resolved ``user_id``. Admins who need
     cross-user lookups make one call per user. Paginated via ``limit`` /
@@ -161,10 +190,11 @@ async def list_assignments(
     if user_id is None:
         user_id = current_user.id
     elif user_id != current_user.id:
-        await _require_superuser(
+        await _require_role_administrator(
             current_user,
             action="role_assignment:read",
             obj=f"user:{user_id}",
+            operation_id=operation_id,
         )
     stmt = select(AuthzRoleAssignment).where(AuthzRoleAssignment.user_id == user_id)
     if role_id is not None:
@@ -178,15 +208,32 @@ async def list_assignments(
     return await _assignment_reads(session, list(rows))
 
 
-@router.post("", response_model=RoleAssignmentRead, status_code=status.HTTP_201_CREATED, dependencies=SUPERUSER_ONLY)
-@router.post("/", response_model=RoleAssignmentRead, status_code=status.HTTP_201_CREATED, dependencies=SUPERUSER_ONLY)
+@router.post(
+    "",
+    response_model=RoleAssignmentRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=ROLE_ADMINISTRATOR_ONLY,
+)
+@router.post(
+    "/",
+    response_model=RoleAssignmentRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=ROLE_ADMINISTRATOR_ONLY,
+)
 async def create_assignment(
     payload: RoleAssignmentCreate,
     current_user: CurrentActiveUser,
     session: DbSession,
+    response: Response,
+    operation_id: OperationId = None,
 ) -> RoleAssignmentRead:
-    """Assign a role to a user. Superuser-only."""
-    await _require_superuser(current_user, action="role_assignment:create", obj="role_assignment:*")
+    """Assign a role to a user as a role administrator."""
+    await _require_role_administrator(
+        current_user,
+        action="role_assignment:create",
+        obj="role_assignment:*",
+        operation_id=operation_id,
+    )
     authorization_service = get_authorization_service()
     # Let authorization plugins acquire their transaction-scoped policy-write
     # lock before the first canonical identity read or write. An external
@@ -206,6 +253,7 @@ async def create_assignment(
             obj="role_assignment:*",
             status_code=status.HTTP_404_NOT_FOUND,
             reason="user_not_found",
+            operation_id=operation_id,
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user_id not found")
     role = await session.get(AuthzRole, payload.role_id)
@@ -216,6 +264,7 @@ async def create_assignment(
             obj="role_assignment:*",
             status_code=status.HTTP_404_NOT_FOUND,
             reason="role_not_found",
+            operation_id=operation_id,
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="role_id not found")
 
@@ -232,7 +281,6 @@ async def create_assignment(
     if assignment is None:
         assignment = candidate
         session.add(assignment)
-        await session.flush()
     else:
         existing_manual = (
             await session.exec(
@@ -249,6 +297,7 @@ async def create_assignment(
                 obj="role_assignment:*",
                 status_code=status.HTTP_409_CONFLICT,
                 reason="manual_assignment_already_exists",
+                operation_id=operation_id,
             )
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -273,10 +322,26 @@ async def create_assignment(
         policy_relevant_fields=("user_id", "role_id", "domain_type", "domain_id"),
     )
     try:
+        if effective_assignment_created:
+            await validate_identity_mutation(authorization_service, session, mutation)
         await session.flush()
         if effective_assignment_created:
             await stage_identity_mutation(authorization_service, session, mutation)
         await session.commit()
+    except AuthorizationMutationRejected as exc:
+        await _audit_deny(
+            user_id=current_user.id,
+            action="role_assignment:create",
+            obj="role_assignment:*",
+            status_code=status.HTTP_409_CONFLICT,
+            reason="access_ceiling",
+            operation_id=operation_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=exc.public_detail,
+            headers={"X-Langflow-Error-Code": "access_ceiling"},
+        ) from exc
     except IntegrityError as exc:
         await session.rollback()
         await _audit_deny(
@@ -285,6 +350,7 @@ async def create_assignment(
             obj="role_assignment:*",
             status_code=status.HTTP_409_CONFLICT,
             reason="assignment_conflict",
+            operation_id=operation_id,
         )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -298,17 +364,21 @@ async def create_assignment(
         action="role_assignment:create",
         obj=f"role_assignment:{assignment.id}",
         result="allow",
-        details={
-            "event": AUDIT_EVENT_MUTATION,
-            "assignment_id": str(assignment.id),
-            "subject_type": "user",
-            "user_id": str(payload.user_id),
-            "role_id": str(payload.role_id),
-            "role_name": role.name,
-            "domain_type": payload.domain_type,
-            "domain_id": str(payload.domain_id) if payload.domain_id else None,
-        },
+        details=administration_audit_details(
+            {
+                "event": AUDIT_EVENT_MUTATION,
+                "assignment_id": str(assignment.id),
+                "subject_type": "user",
+                "user_id": str(payload.user_id),
+                "role_id": str(payload.role_id),
+                "role_name": role.name,
+                "domain_type": payload.domain_type,
+                "domain_id": str(payload.domain_id) if payload.domain_id else None,
+            },
+            operation_id=operation_id,
+        ),
     )
+    response.headers["Location"] = f"/api/v1/authz/role-assignments/{assignment.id}"
     logger.info(
         "Assigned role=%s to user=%s (domain=%s/%s)",
         role.name,
@@ -324,18 +394,20 @@ async def create_assignment(
     response_model=RoleAssignmentRead,
     status_code=status.HTTP_200_OK,
     responses={status.HTTP_204_NO_CONTENT: {"description": "Manual assignment fully revoked."}},
-    dependencies=SUPERUSER_ONLY,
+    dependencies=ROLE_ADMINISTRATOR_ONLY,
 )
 async def delete_assignment(
     assignment_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
+    operation_id: OperationId = None,
 ) -> RoleAssignmentRead | Response:
     """Remove a manual grant, returning the assignment when another source preserves it."""
-    await _require_superuser(
+    await _require_role_administrator(
         current_user,
         action="role_assignment:delete",
         obj=f"role_assignment:{assignment_id}",
+        operation_id=operation_id,
     )
 
     authorization_service = get_authorization_service()
@@ -363,6 +435,7 @@ async def delete_assignment(
             obj=f"role_assignment:{assignment_id}",
             status_code=status.HTTP_404_NOT_FOUND,
             reason="assignment_not_found",
+            operation_id=operation_id,
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
     grants = (
@@ -381,10 +454,12 @@ async def delete_assignment(
             obj=f"role_assignment:{assignment_id}",
             status_code=status.HTTP_409_CONFLICT,
             reason="idp_assignment_delete_forbidden",
+            operation_id=operation_id,
         )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="IdP-derived assignments cannot be deleted through the manual assignment API",
+            headers={"X-Langflow-Error-Code": "externally_managed"},
         )
     if manual_grant is not None and len(grants) > 1:
         surviving_grants = [grant for grant in grants if grant is not manual_grant]
@@ -395,24 +470,27 @@ async def delete_assignment(
             action="role_assignment:delete_manual_source",
             obj=f"role_assignment:{assignment_id}",
             result="allow",
-            details={
-                "event": AUDIT_EVENT_MUTATION,
-                "assignment_id": str(assignment_id),
-                "subject_type": "user",
-                "user_id": str(assignment.user_id),
-                "role_id": str(assignment.role_id),
-                "domain_type": assignment.domain_type,
-                "domain_id": str(assignment.domain_id) if assignment.domain_id else None,
-                "effective_assignment_preserved": True,
-                "surviving_grant_sources": [
-                    {
-                        "source_kind": grant.source_kind,
-                        "provider_id": grant.provider_id,
-                        "external_group": grant.external_group,
-                    }
-                    for grant in surviving_grants
-                ],
-            },
+            details=administration_audit_details(
+                {
+                    "event": AUDIT_EVENT_MUTATION,
+                    "assignment_id": str(assignment_id),
+                    "subject_type": "user",
+                    "user_id": str(assignment.user_id),
+                    "role_id": str(assignment.role_id),
+                    "domain_type": assignment.domain_type,
+                    "domain_id": str(assignment.domain_id) if assignment.domain_id else None,
+                    "effective_assignment_preserved": True,
+                    "surviving_grant_sources": [
+                        {
+                            "source_kind": grant.source_kind,
+                            "provider_id": grant.provider_id,
+                            "external_group": grant.external_group,
+                        }
+                        for grant in surviving_grants
+                    ],
+                },
+                operation_id=operation_id,
+            ),
         )
         return RoleAssignmentRead.model_validate(assignment).model_copy(
             update={"grant_sources": [RoleAssignmentGrantSummary.model_validate(grant) for grant in surviving_grants]}
@@ -435,7 +513,19 @@ async def delete_assignment(
     try:
         await validate_identity_mutation(authorization_service, session, mutation)
     except AuthorizationMutationRejected as exc:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=exc.public_detail) from exc
+        await _audit_deny(
+            user_id=current_user.id,
+            action="role_assignment:delete",
+            obj=f"role_assignment:{assignment_id}",
+            status_code=status.HTTP_409_CONFLICT,
+            reason="access_ceiling",
+            operation_id=operation_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=exc.public_detail,
+            headers={"X-Langflow-Error-Code": "access_ceiling"},
+        ) from exc
 
     await session.delete(assignment)
     await session.flush()
@@ -447,15 +537,18 @@ async def delete_assignment(
         action="role_assignment:delete",
         obj=f"role_assignment:{assignment_id}",
         result="allow",
-        details={
-            "event": AUDIT_EVENT_MUTATION,
-            "assignment_id": str(assignment_id),
-            "subject_type": "user",
-            "user_id": str(user_id),
-            "role_id": str(role_id),
-            "domain_type": domain_type,
-            "domain_id": str(domain_id) if domain_id else None,
-        },
+        details=administration_audit_details(
+            {
+                "event": AUDIT_EVENT_MUTATION,
+                "assignment_id": str(assignment_id),
+                "subject_type": "user",
+                "user_id": str(user_id),
+                "role_id": str(role_id),
+                "domain_type": domain_type,
+                "domain_id": str(domain_id) if domain_id else None,
+            },
+            operation_id=operation_id,
+        ),
     )
     logger.info("Revoked role assignment id=%s (user=%s)", assignment_id, user_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)

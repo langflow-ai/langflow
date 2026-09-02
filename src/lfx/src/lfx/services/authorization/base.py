@@ -5,7 +5,7 @@ from __future__ import annotations
 import abc
 from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, ClassVar, TypedDict
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, TypedDict
 from uuid import NAMESPACE_URL, uuid5
 from uuid import UUID as _UUID
 
@@ -40,6 +40,8 @@ class AuthzContext(TypedDict, total=False):
 
 
 PUBLIC_ANONYMOUS_ACTOR_ID = uuid5(NAMESPACE_URL, "urn:langflow:principal:anonymous-public")
+
+AdministrationResource = Literal["user", "team", "role"]
 
 
 class PublicResourceAction(str, Enum):
@@ -306,6 +308,41 @@ class BaseAuthorizationService(Service, abc.ABC):
     async def supports_public_principals(self) -> bool:
         """Return whether this service can safely authorize anonymous principals."""
         return self.SUPPORTS_PUBLIC_PRINCIPALS
+
+    async def can_administer(self, *, user_id: UUID, resource: AdministrationResource) -> bool:
+        """Return whether ``user_id`` may administer a canonical identity resource.
+
+        This contract is deliberately separate from the OSS pass-through
+        ``enforce`` seam. Its default is deny so enabling routes or installing
+        an older authorization plugin cannot accidentally grant administrative
+        access to every authenticated user.
+        """
+        _ = (user_id, resource)
+        return False
+
+    async def supports_team_role_assignments(self) -> bool:
+        """Return whether the installed implementation supports team subjects."""
+        return False
+
+    async def get_feature_capabilities(self, *, user_id: UUID, is_superuser: bool) -> dict[str, Any]:
+        """Return caller-specific, plugin-owned feature capabilities.
+
+        The OSS contract is empty and therefore cannot advertise an installed
+        Enterprise surface accidentally. Plugins may add bounded, credential-
+        free capability documents that the shared discovery route exposes.
+        """
+        _ = (user_id, is_superuser)
+        return {}
+
+    async def is_user_credentials_managed_externally(self, *, session: Any, user_id: UUID) -> bool:
+        """Return whether local password creation and reset must be blocked.
+
+        The OSS default keeps credentials locally managed. Enterprise identity
+        providers opt individual linked users into source protection without
+        teaching the shared user routes about provider-owned persistence.
+        """
+        _ = (session, user_id)
+        return False
 
     async def resolve_public_tenant(self, request: PublicAuthorizationRequest) -> str | None:
         """Resolve the trusted tenant for an anonymous request, or deny by returning ``None``.

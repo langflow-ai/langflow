@@ -49,6 +49,7 @@ export default function PublishDropdown({
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
+  const pendingAutoSave = useFlowStore((state) => state.autoSaveFlow);
   const isPublished = currentFlow?.access_type === "PUBLIC";
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
@@ -62,6 +63,10 @@ export default function PublishDropdown({
 
   const handlePublishedSwitch = async (checked: boolean) => {
     try {
+      // Publishing reads the persisted graph in a new tab. Drain any pending
+      // canvas save before changing access so the access-only response cannot
+      // replace the unsaved graph baseline and make that save look complete.
+      await pendingAutoSave?.flush();
       await mutateAsync(
         {
           id: flowId ?? "",

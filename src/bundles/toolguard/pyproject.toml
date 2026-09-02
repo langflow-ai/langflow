@@ -10,7 +10,7 @@ authors = [
 ]
 keywords = ["langflow", "lfx", "extension", "policies", "toolguard"]
 dependencies = [
-    "lfx>=1.12.0.dev0,<2.0.0",
+    "lfx>=1.13.0.dev0,<2.0.0",
     "toolguard>=0.2.20,<1.0.0",
 ]
 

@@ -1,11 +1,9 @@
 import type { Page, Request, Response } from "@playwright/test";
 import { TIMEOUTS } from "./constants/timeouts";
 import {
-  canTrackFullFlowAutosavePayload,
-  isFlowPersistenceBarrierSatisfied,
+  isModelRefreshBarrierSatisfied,
   isModelRefreshBody,
   modelRefreshNodeCount,
-  requiresPostRefreshAutosave,
 } from "./flow-editor-persistence-policy.mjs";
 
 type FlowNode = {
@@ -111,15 +109,15 @@ async function cancelPendingFlowAutosave(page: Page): Promise<void> {
 }
 
 /**
- * Reload a flow and wait for its model refreshes and their exact full-flow
+ * Reload a directly patched flow and wait for every expected model refresh.
+ * The PATCH is already durable, and mount refreshes deliberately no longer
  * autosave. The listener is armed before navigation so fast CI responses cannot
- * escape the barrier. A data-only fixture PATCH cannot satisfy this matcher.
+ * escape the barrier.
  */
-export async function reloadAndWaitForFlowPersistence(
+export async function reloadAndWaitForFlowRefresh(
   page: Page,
   flowId: string,
   data: FlowData,
-  matchesPersistedData: (persistedData: FlowData) => boolean,
 ): Promise<void> {
   const flowPath = `/api/v1/flows/${flowId}`;
   const expectedModelRefreshes = modelRefreshNodeCount(data);
@@ -127,15 +125,13 @@ export async function reloadAndWaitForFlowPersistence(
   // fixture's direct PATCH. Cancel that pending debounce before navigation so
   // it cannot overwrite the configured graph during reload.
   await cancelPendingFlowAutosave(page);
-  if (!requiresPostRefreshAutosave(data)) {
+  if (expectedModelRefreshes === 0) {
     await page.reload();
     return;
   }
 
   const trackedModelRefreshes = new Set<Request>();
-  const trackedAutosaves = new Set<Request>();
   let completedModelRefreshes = 0;
-  let autosaveFinished = false;
   let sawReloadNavigation = false;
   let sawReloadFlowRead = false;
   let dispose = () => {};
@@ -155,10 +151,9 @@ export async function reloadAndWaitForFlowPersistence(
 
     const maybeFinish = () => {
       if (
-        isFlowPersistenceBarrierSatisfied(
-          autosaveFinished,
+        isModelRefreshBarrierSatisfied(
           completedModelRefreshes,
-          trackedModelRefreshes.size,
+          expectedModelRefreshes,
         )
       ) {
         finish();
@@ -185,20 +180,6 @@ export async function reloadAndWaitForFlowPersistence(
 
       if (isModelRefreshRequest(request)) {
         trackedModelRefreshes.add(request);
-        return;
-      }
-      if (request.method() !== "PATCH" || pathname !== flowPath) return;
-
-      const body = requestBody(request);
-      if (
-        canTrackFullFlowAutosavePayload(
-          body,
-          matchesPersistedData,
-          trackedModelRefreshes.size,
-          expectedModelRefreshes,
-        )
-      ) {
-        trackedAutosaves.add(request);
       }
     };
 
@@ -211,16 +192,7 @@ export async function reloadAndWaitForFlowPersistence(
             maybeFinish();
           })
           .catch(finish);
-        return;
       }
-      if (!trackedAutosaves.has(request)) return;
-
-      void assertFinishedResponse(response, `Autosave for flow ${flowId}`)
-        .then(() => {
-          autosaveFinished = true;
-          maybeFinish();
-        })
-        .catch(finish);
     };
 
     dispose = () => {
@@ -231,8 +203,8 @@ export async function reloadAndWaitForFlowPersistence(
     page.on("response", onResponse);
   });
   let persistenceTimeout: ReturnType<typeof setTimeout> | undefined;
-  // The budget covers the model refresh and its autosave, not the page load
-  // that precedes them. Playwright serves the editor from a Vite dev server, so
+  // The budget covers the model refreshes, not the page load that precedes
+  // them. Playwright serves the editor from a Vite dev server, so
   // a reload replays ~3.5k unbundled module requests; on Windows CI that alone
   // measures 19-35s. Arming the deadline before the reload spent the entire
   // budget before the first tracked request was even sent.
@@ -241,7 +213,7 @@ export async function reloadAndWaitForFlowPersistence(
       persistenceTimeout = setTimeout(() => {
         reject(
           new Error(
-            `Flow ${flowId} did not finish model refresh and autosave persistence within ${TIMEOUTS.long}ms after reload`,
+            `Flow ${flowId} did not finish ${expectedModelRefreshes} model refresh response(s) within ${TIMEOUTS.long}ms after reload`,
           ),
         );
       }, TIMEOUTS.long);

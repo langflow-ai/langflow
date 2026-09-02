@@ -14,7 +14,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "ollama", "local-models"]
 # Language Model / Embedding Model provider paths. httpx is imported directly
 # by the components for SSRF-safe model discovery and validation.
 dependencies = [
-    "lfx>=1.12.0.dev0,<2.0.0",
+    "lfx>=1.13.0.dev0,<2.0.0",
     "httpx>=0.24.0,<1.0.0",
     "langchain-ollama~=0.3.10",
 ]

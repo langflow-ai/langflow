@@ -29,7 +29,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "valkey"]
 #   Store (which imports ``ValkeyVectorStore`` lazily) is the only path that
 #   requires Glide and is unsupported on Windows.
 dependencies = [
-    "lfx>=1.12.0.dev0,<2.0.0",
+    "lfx>=1.13.0.dev0,<2.0.0",
     "langchain-aws[valkey]>=1.4.1,<2.0.0; sys_platform != 'win32'",
     "langchain-aws>=1.4.1,<2.0.0; sys_platform == 'win32'",
     "langchain-community>=0.4.1,<1.0.0",
