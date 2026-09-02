@@ -79,7 +79,16 @@ async def test_response_below_the_threshold_is_not_compressed(client: AsyncClien
     assert "content-encoding" not in response.headers
 
 
-EXCLUDED_UNDER_TEST = ("application/octet-stream", "application/zip", "text/event-stream", "image/png")
+EXCLUDED_UNDER_TEST = (
+    "application/octet-stream",
+    "application/zip",
+    "text/event-stream",
+    "image/png",
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+)
 
 
 def _app_with_the_same_middleware() -> FastAPI:

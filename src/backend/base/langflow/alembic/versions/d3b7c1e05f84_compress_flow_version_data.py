@@ -57,6 +57,32 @@ def _set_external_storage(conn) -> None:
         op.execute("ALTER TABLE flow_version ALTER COLUMN data_gz SET STORAGE EXTERNAL")
 
 
+def _backfill(conn, source: sa.Column, target: sa.Column, convert) -> int:
+    written = 0
+    for batch in _rows(conn, source):
+        for row in batch:
+            value = convert(getattr(row, source.name))
+            result = conn.execute(
+                _flow_version.update().where(_flow_version.c.id == row.id).values({target.name: value})
+            )
+            written += result.rowcount
+    return written
+
+
+def _drop_when_nothing_is_pending(conn, source: sa.Column, target: sa.Column, written: int) -> None:
+    pending = conn.execute(
+        sa.select(sa.func.count()).select_from(_flow_version).where(source.is_not(None), target.is_(None))
+    ).scalar_one()
+    if pending:
+        msg = (
+            f"{pending} flow_version rows still hold data in {source.name} after backfilling "
+            f"{written} into {target.name}"
+        )
+        raise RuntimeError(msg)
+    with op.batch_alter_table("flow_version") as batch_op:
+        batch_op.drop_column(source.name)
+
+
 def upgrade() -> None:
     conn = op.get_bind()
     if not migration.table_exists("flow_version", conn):
@@ -67,27 +93,15 @@ def upgrade() -> None:
     _set_external_storage(conn)
 
     if migration.column_exists("flow_version", "data", conn):
-        migrated = 0
-        for batch in _rows(conn, _flow_version.c.data):
-            for row in batch:
-                payload = gzip.compress(
-                    json.dumps(row.data, separators=(",", ":"), ensure_ascii=False).encode("utf-8"),
-                    COMPRESS_LEVEL,
-                )
-                result = conn.execute(
-                    _flow_version.update().where(_flow_version.c.id == row.id).values(data_gz=payload)
-                )
-                migrated += result.rowcount
-        pending = conn.execute(
-            sa.select(sa.func.count())
-            .select_from(_flow_version)
-            .where(_flow_version.c.data.is_not(None), _flow_version.c.data_gz.is_(None))
-        ).scalar_one()
-        if pending:
-            msg = f"{pending} flow_version rows still hold uncompressed data after backfilling {migrated}"
-            raise RuntimeError(msg)
-        with op.batch_alter_table("flow_version") as batch_op:
-            batch_op.drop_column("data")
+        written = _backfill(
+            conn,
+            _flow_version.c.data,
+            _flow_version.c.data_gz,
+            lambda data: gzip.compress(
+                json.dumps(data, separators=(",", ":"), ensure_ascii=False).encode("utf-8"), COMPRESS_LEVEL
+            ),
+        )
+        _drop_when_nothing_is_pending(conn, _flow_version.c.data, _flow_version.c.data_gz, written)
 
 
 def downgrade() -> None:
@@ -99,9 +113,10 @@ def downgrade() -> None:
         op.add_column("flow_version", sa.Column("data", sa.JSON(), nullable=True))
 
     if migration.column_exists("flow_version", "data_gz", conn):
-        for batch in _rows(conn, _flow_version.c.data_gz):
-            for row in batch:
-                payload = json.loads(gzip.decompress(row.data_gz))
-                conn.execute(_flow_version.update().where(_flow_version.c.id == row.id).values(data=payload))
-        with op.batch_alter_table("flow_version") as batch_op:
-            batch_op.drop_column("data_gz")
+        written = _backfill(
+            conn,
+            _flow_version.c.data_gz,
+            _flow_version.c.data,
+            lambda blob: json.loads(gzip.decompress(blob)),
+        )
+        _drop_when_nothing_is_pending(conn, _flow_version.c.data_gz, _flow_version.c.data, written)

@@ -96,8 +96,21 @@ def test_upgrade_refuses_to_drop_the_column_when_a_row_was_not_migrated(monkeypa
     engine = _engine_before_the_migration()
     monkeypatch.setattr(_MIGRATION, "_rows", lambda *_: iter(()))
 
-    with pytest.raises(RuntimeError, match="still hold uncompressed data"):
+    with pytest.raises(RuntimeError, match="still hold data in data"):
         _run(engine, "upgrade")
+
+    assert "data" in _columns(engine)
+
+
+def test_downgrade_refuses_to_drop_the_column_when_a_row_was_not_restored(monkeypatch):
+    engine = _engine_before_the_migration()
+    _run(engine, "upgrade")
+    monkeypatch.setattr(_MIGRATION, "_rows", lambda *_: iter(()))
+
+    with pytest.raises(RuntimeError, match="still hold data in data_gz"):
+        _run(engine, "downgrade")
+
+    assert "data_gz" in _columns(engine)
 
 
 def test_upgrade_is_a_noop_without_the_table():

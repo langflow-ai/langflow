@@ -80,7 +80,14 @@ _tasks: list[asyncio.Task] = []
 MAX_PORT = 65535
 GZIP_MINIMUM_SIZE = 1000
 GZIP_COMPRESS_LEVEL = 6
-GZIP_EXCLUDED_CONTENT_TYPES = (*DEFAULT_EXCLUDED_CONTENT_TYPES, "application/octet-stream")
+GZIP_ALREADY_COMPRESSED_CONTENT_TYPES = (
+    "application/octet-stream",
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+)
+GZIP_EXCLUDED_CONTENT_TYPES = (*DEFAULT_EXCLUDED_CONTENT_TYPES, *GZIP_ALREADY_COMPRESSED_CONTENT_TYPES)
 
 # Enterprise lifespan hook registry. Enterprise plugins append async callables
 # at app-construction time (plugin registration runs before the lifespan
