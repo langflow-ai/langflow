@@ -22,7 +22,13 @@ from langflow.cli.admin.config import (
     ConnectionConfigurationError,
     resolve_connection,
 )
-from langflow.cli.admin.manifest import dump_admin_state, load_admin_state
+from langflow.cli.admin.directory_reconcile import DirectoryReconciler, DirectoryResolutionError
+from langflow.cli.admin.manifest import (
+    dump_admin_state,
+    dump_directory_state,
+    load_admin_state,
+    load_directory_state,
+)
 from langflow.cli.admin.reconcile import AdminReconciler, ManifestResolutionError
 
 OutputFormat = Literal["table", "json"]
@@ -33,6 +39,12 @@ teams_app = typer.Typer(no_args_is_help=True, help="Manage teams.")
 members_app = typer.Typer(no_args_is_help=True, help="Manage team membership.")
 roles_app = typer.Typer(no_args_is_help=True, help="Manage roles.")
 assignments_app = typer.Typer(no_args_is_help=True, help="Manage user and team role assignments.")
+directory_app = typer.Typer(no_args_is_help=True, help="Manage Enterprise directory mapping.")
+directory_connection_app = typer.Typer(no_args_is_help=True, help="Manage directory trust.")
+directory_users_app = typer.Typer(no_args_is_help=True, help="Read provisioned directory users.")
+directory_groups_app = typer.Typer(no_args_is_help=True, help="Read and map provisioned directory groups.")
+directory_role_mappings_app = typer.Typer(no_args_is_help=True, help="Manage directory group role mappings.")
+directory_reconcile_app = typer.Typer(no_args_is_help=True, help="Preview and operate directory reconciliation.")
 
 
 @dataclass
@@ -85,6 +97,10 @@ def _client_from_context(ctx: typer.Context) -> AdminClient:
 
 def _reconciler_from_context(ctx: typer.Context) -> AdminReconciler:
     return AdminReconciler(_client_from_context(ctx))
+
+
+def _directory_reconciler_from_context(ctx: typer.Context) -> DirectoryReconciler:
+    return DirectoryReconciler(_client_from_context(ctx))
 
 
 def _emit(ctx: typer.Context, value: Any, *, stderr: bool = False) -> None:
@@ -543,6 +559,8 @@ def apply_state(
             drift = reconciler.diff(state, prune=True)
         except ManifestResolutionError as exc:
             _fail(exc, usage=True)
+        except (AdminAPIError, httpx.HTTPError, ConnectionConfigurationError) as exc:
+            _fail(exc, usage=isinstance(exc, ConnectionConfigurationError))
         _emit(ctx, drift, stderr=True)
         if not yes:
             if not sys.stdin.isatty():
@@ -560,9 +578,242 @@ def apply_state(
         raise typer.Exit(code=1)
 
 
+@directory_connection_app.command("get")
+def directory_connection_get(ctx: typer.Context) -> None:
+    _emit(ctx, _api_call(lambda: _client_from_context(ctx).get_directory_connection()))
+
+
+@directory_connection_app.command("configure")
+def directory_connection_configure(
+    ctx: typer.Context,
+    tenant_id: Annotated[str, typer.Option("--tenant-id")],
+    issuer: Annotated[str, typer.Option("--issuer")],
+    audience: Annotated[str, typer.Option("--audience")],
+    jwks_url: Annotated[str, typer.Option("--jwks-url")],
+    allowed_client_id: Annotated[str, typer.Option("--allowed-client-id")],
+) -> None:
+    _emit(
+        ctx,
+        _api_call(
+            lambda: _client_from_context(ctx).configure_directory_connection(
+                tenant_id=tenant_id,
+                issuer=issuer,
+                audience=audience,
+                jwks_url=jwks_url,
+                allowed_client_id=allowed_client_id,
+            )
+        ),
+    )
+
+
+@directory_connection_app.command("validate")
+def directory_connection_validate(ctx: typer.Context) -> None:
+    _emit(ctx, _api_call(lambda: _client_from_context(ctx).validate_directory_connection()))
+
+
+@directory_connection_app.command("enable")
+def directory_connection_enable(ctx: typer.Context) -> None:
+    _emit(ctx, _api_call(lambda: _client_from_context(ctx).enable_directory_connection()))
+
+
+@directory_connection_app.command("disable")
+def directory_connection_disable(ctx: typer.Context) -> None:
+    _emit(ctx, _api_call(lambda: _client_from_context(ctx).disable_directory_connection()))
+
+
+@directory_users_app.command("list")
+def directory_users_list(
+    ctx: typer.Context,
+    query: Annotated[str | None, typer.Option("--query")] = None,
+) -> None:
+    _emit(ctx, _api_call(lambda: _client_from_context(ctx).list_directory_users(query=query)))
+
+
+@directory_users_app.command("get")
+def directory_users_get(ctx: typer.Context, user_id: Annotated[str, typer.Argument()]) -> None:
+    _emit(ctx, _api_call(lambda: _client_from_context(ctx).get_directory_user(user_id)))
+
+
+@directory_groups_app.command("list")
+def directory_groups_list(
+    ctx: typer.Context,
+    query: Annotated[str | None, typer.Option("--query")] = None,
+) -> None:
+    _emit(ctx, _api_call(lambda: _client_from_context(ctx).list_directory_groups(query=query)))
+
+
+@directory_groups_app.command("get")
+def directory_groups_get(ctx: typer.Context, group_id: Annotated[str, typer.Argument()]) -> None:
+    _emit(ctx, _api_call(lambda: _client_from_context(ctx).get_directory_group(group_id)))
+
+
+@directory_groups_app.command("members")
+def directory_groups_members(
+    ctx: typer.Context,
+    group_id: Annotated[str, typer.Argument()],
+    query: Annotated[str | None, typer.Option("--query")] = None,
+) -> None:
+    _emit(
+        ctx,
+        _api_call(lambda: _client_from_context(ctx).list_directory_group_members(group_id, query=query)),
+    )
+
+
+@directory_groups_app.command("link")
+def directory_groups_link(
+    ctx: typer.Context,
+    group_id: Annotated[str, typer.Argument()],
+    team: Annotated[str, typer.Option("--team", help="Team UUID or adom_name.")],
+    origin: Annotated[Literal["created", "linked"], typer.Option("--origin")] = "linked",
+) -> None:
+    client = _api_call(lambda: _client_from_context(ctx))
+    team_id = _api_call(lambda: client.get_team(team)["id"])
+    _emit(
+        ctx,
+        _api_call(lambda: client.link_directory_group(group_id, team_id=str(team_id), origin=origin)),
+    )
+
+
+@directory_groups_app.command("unlink")
+def directory_groups_unlink(ctx: typer.Context, group_id: Annotated[str, typer.Argument()]) -> None:
+    _api_call(lambda: _client_from_context(ctx).unlink_directory_group(group_id))
+    _emit(ctx, {"unlinked": group_id})
+
+
+@directory_role_mappings_app.command("list")
+def directory_role_mappings_list(ctx: typer.Context) -> None:
+    _emit(ctx, _api_call(lambda: _client_from_context(ctx).list_directory_role_mappings()))
+
+
+@directory_role_mappings_app.command("grant")
+def directory_role_mappings_grant(
+    ctx: typer.Context,
+    group_id: Annotated[str, typer.Option("--group-id")],
+    role: Annotated[str, typer.Option("--role", help="Role UUID or name.")],
+    domain: Annotated[Literal["global", "workspace", "project"], typer.Option("--domain")] = "global",
+    domain_id: Annotated[str | None, typer.Option("--domain-id")] = None,
+) -> None:
+    if (domain == "global") == (domain_id is not None):
+        msg = "--domain-id is required for workspace/project and forbidden for global"
+        raise typer.BadParameter(msg)
+    client = _api_call(lambda: _client_from_context(ctx))
+    role_id = _api_call(lambda: client.get_role(role)["id"])
+    _emit(
+        ctx,
+        _api_call(
+            lambda: client.create_directory_role_mapping(
+                group_id=group_id,
+                role_id=str(role_id),
+                domain_type=domain,
+                domain_id=domain_id,
+            )
+        ),
+    )
+
+
+@directory_role_mappings_app.command("revoke")
+def directory_role_mappings_revoke(ctx: typer.Context, mapping_id: Annotated[str, typer.Argument()]) -> None:
+    _api_call(lambda: _client_from_context(ctx).delete_directory_role_mapping(mapping_id))
+    _emit(ctx, {"revoked": mapping_id})
+
+
+@directory_reconcile_app.command("preview")
+def directory_reconcile_preview(ctx: typer.Context) -> None:
+    _emit(ctx, _api_call(lambda: _client_from_context(ctx).preview_directory_reconciliation()))
+
+
+@directory_reconcile_app.command("activate")
+def directory_reconcile_activate(
+    ctx: typer.Context,
+    run_id: Annotated[str, typer.Argument()],
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Confirm authorization activation.")] = False,
+) -> None:
+    if not yes:
+        _fail(ValueError("directory reconciliation activation requires --yes"), usage=True)
+    _emit(ctx, _api_call(lambda: _client_from_context(ctx).activate_directory_reconciliation(run_id)))
+
+
+@directory_reconcile_app.command("status")
+def directory_reconcile_status(ctx: typer.Context) -> None:
+    _emit(ctx, _api_call(lambda: _client_from_context(ctx).directory_reconciliation_status()))
+
+
+@directory_reconcile_app.command("retry")
+def directory_reconcile_retry(ctx: typer.Context, event_id: Annotated[str, typer.Argument()]) -> None:
+    _emit(ctx, _api_call(lambda: _client_from_context(ctx).retry_directory_reconciliation(event_id)))
+
+
+@directory_app.command("export")
+def directory_export_state(
+    ctx: typer.Context,
+    format_name: Annotated[Literal["yaml", "json"], typer.Option("--format")] = "yaml",
+    file: Annotated[Path | None, typer.Option("--file")] = None,
+) -> None:
+    state = _api_call(lambda: _directory_reconciler_from_context(ctx).export_state())
+    rendered = dump_directory_state(state, format_name=format_name)
+    if file is not None:
+        file.write_text(rendered, encoding="utf-8")
+        return
+    typer.echo(rendered, nl=False)
+
+
+def _load_directory_manifest_or_fail(file: Path):
+    try:
+        return load_directory_state(file)
+    except ValidationError as exc:
+        messages = []
+        for error in exc.errors(include_input=False, include_url=False):
+            location = ".".join(str(part) for part in error["loc"])
+            messages.append(f"{location}: {error['msg']}")
+        _fail(ValueError("; ".join(messages)), usage=True)
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        _fail(exc, usage=True)
+
+
+@directory_app.command("diff")
+def directory_diff_state(
+    ctx: typer.Context,
+    file: Annotated[Path, typer.Argument(exists=True, dir_okay=False)],
+    prune: Annotated[bool, typer.Option("--prune")] = False,
+) -> None:
+    state = _load_directory_manifest_or_fail(file)
+    try:
+        drift = _api_call(lambda: _directory_reconciler_from_context(ctx).diff(state, prune=prune))
+    except DirectoryResolutionError as exc:
+        _fail(exc, usage=True)
+    _emit(ctx, drift)
+    if drift:
+        raise typer.Exit(code=3)
+
+
+@directory_app.command("apply")
+def directory_apply_state(
+    ctx: typer.Context,
+    file: Annotated[Path, typer.Argument(exists=True, dir_okay=False)],
+    prune: Annotated[bool, typer.Option("--prune")] = False,
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Confirm unlinking absent directory mappings.")] = False,
+) -> None:
+    if prune and not yes:
+        _fail(ValueError("directory --prune requires --yes"), usage=True)
+    state = _load_directory_manifest_or_fail(file)
+    try:
+        report = _api_call(lambda: _directory_reconciler_from_context(ctx).apply(state, prune=prune))
+    except DirectoryResolutionError as exc:
+        _fail(exc, usage=True)
+    _emit(ctx, report)
+    if report["status"] != "success":
+        raise typer.Exit(code=1)
+
+
 teams_app.add_typer(members_app, name="members")
 admin_app.add_typer(users_app, name="users")
 admin_app.add_typer(teams_app, name="teams")
 admin_app.add_typer(teams_app, name="groups", help="Alias for teams.")
 admin_app.add_typer(roles_app, name="roles")
 admin_app.add_typer(assignments_app, name="role-assignments")
+directory_app.add_typer(directory_connection_app, name="connection")
+directory_app.add_typer(directory_users_app, name="users")
+directory_app.add_typer(directory_groups_app, name="groups")
+directory_app.add_typer(directory_role_mappings_app, name="role-mappings")
+directory_app.add_typer(directory_reconcile_app, name="reconcile")
+admin_app.add_typer(directory_app, name="directory")
