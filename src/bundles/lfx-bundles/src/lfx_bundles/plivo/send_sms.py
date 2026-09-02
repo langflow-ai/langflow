@@ -33,7 +33,7 @@ class PlivoSendSMSComponent(Component):
         MessageTextInput(
             name="src",
             display_name="From Number",
-            info="Sender ID: a Plivo phone number, short code, or alphanumeric sender ID in E.164 format.",
+            info="Sender ID: a Plivo phone number in E.164 format, a short code, or an alphanumeric sender ID.",
             value=os.getenv("PLIVO_SRC", ""),
             required=True,
         ),
@@ -71,7 +71,7 @@ class PlivoSendSMSComponent(Component):
 
             url = f"https://api.plivo.com/v1/Account/{auth_id}/Message/"
 
-            await logger.ainfo("Sending Plivo SMS with payload: %s", payload)
+            await logger.ainfo("Sending Plivo SMS")
 
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -82,7 +82,7 @@ class PlivoSendSMSComponent(Component):
                 )
                 response.raise_for_status()
                 response_data = response.json()
-                await logger.ainfo("Plivo SMS queued: %s", response_data)
+                await logger.ainfo("Plivo SMS queued")
 
         except httpx.HTTPStatusError as http_err:
             await logger.aexception("HTTP error occurred")

@@ -1,9 +1,10 @@
-import type React from "react";
-import { forwardRef } from "react";
+import { forwardRef, type SVGProps } from "react";
 import Plivo from "./Plivo";
 
-export const PlivoIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(
-  (props, ref) => {
-    return <Plivo ref={ref} {...props} />;
-  },
+type PlivoIconProps = SVGProps<SVGSVGElement> & {
+  isDark?: boolean;
+};
+
+export const PlivoIcon = forwardRef<SVGSVGElement, PlivoIconProps>(
+  ({ isDark: _isDark, ...props }, ref) => <Plivo ref={ref} {...props} />,
 );

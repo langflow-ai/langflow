@@ -11,7 +11,7 @@ from lfx.schema.data import Data
 class PlivoMakeCallComponent(Component):
     display_name = "Plivo Make Call"
     description = "Place an outbound phone call through the Plivo Voice API."
-    documentation: str = "https://www.plivo.com/docs/voice/api/call"
+    documentation: str = "https://www.plivo.com/docs/voice/api/calls"
     icon = "Plivo"
     name = "PlivoMakeCallComponent"
 
@@ -54,7 +54,7 @@ class PlivoMakeCallComponent(Component):
                 "what the call says."
             ),
             value="https://s3.amazonaws.com/static.plivo.com/answer.xml",
-            required=False,
+            required=True,
         ),
         DropdownInput(
             name="answer_method",
@@ -86,7 +86,7 @@ class PlivoMakeCallComponent(Component):
 
             url = f"https://api.plivo.com/v1/Account/{auth_id}/Call/"
 
-            await logger.ainfo("Placing Plivo call with payload: %s", payload)
+            await logger.ainfo("Placing Plivo call")
 
             async with httpx.AsyncClient() as client:
                 response = await client.post(
@@ -97,7 +97,7 @@ class PlivoMakeCallComponent(Component):
                 )
                 response.raise_for_status()
                 response_data = response.json()
-                await logger.ainfo("Plivo call fired: %s", response_data)
+                await logger.ainfo("Plivo call fired")
 
         except httpx.HTTPStatusError as http_err:
             await logger.aexception("HTTP error occurred")

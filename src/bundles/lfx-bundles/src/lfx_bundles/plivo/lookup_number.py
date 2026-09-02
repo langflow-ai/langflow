@@ -11,7 +11,7 @@ from lfx.schema.data import Data
 class PlivoLookupNumberComponent(Component):
     display_name = "Plivo Lookup Number"
     description = "Look up carrier and formatting details for a phone number through the Plivo Lookup API."
-    documentation: str = "https://www.plivo.com/docs/lookup/api/number"
+    documentation: str = "https://www.plivo.com/docs/lookup/overview"
     icon = "Plivo"
     name = "PlivoLookupNumberComponent"
 
@@ -60,7 +60,7 @@ class PlivoLookupNumberComponent(Component):
             url = f"https://lookup.plivo.com/v1/Number/{number}"
             params = {} if self.type == "none" else {"type": self.type}
 
-            await logger.ainfo("Looking up Plivo number: %s", number)
+            await logger.ainfo("Looking up Plivo number")
 
             async with httpx.AsyncClient() as client:
                 response = await client.get(
@@ -71,7 +71,7 @@ class PlivoLookupNumberComponent(Component):
                 )
                 response.raise_for_status()
                 response_data = response.json()
-                await logger.ainfo("Plivo lookup result: %s", response_data)
+                await logger.ainfo("Plivo lookup completed")
 
         except httpx.HTTPStatusError as http_err:
             await logger.aexception("HTTP error occurred")

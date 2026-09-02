@@ -14,7 +14,7 @@ For more information, see the [Plivo API documentation](https://www.plivo.com/do
 
 ## Plivo Send SMS
 
-The **Plivo Send SMS** component sends an SMS message through the [Plivo Messaging API](https://www.plivo.com/docs/messaging/api/message?utm_source=github&utm_medium=oss&utm_campaign=langflow-plivo).
+The **Plivo Send SMS** component sends an SMS message through the [Plivo Messaging API](https://www.plivo.com/docs/messaging/api/messages?utm_source=github&utm_medium=oss&utm_campaign=langflow-plivo).
 
 1. Add the **Plivo Send SMS** component to your flow, and then configure it as follows:
 
@@ -32,7 +32,7 @@ The component can be used as a standalone step in a flow or as a tool for an age
 
 ## Plivo Make Call
 
-The **Plivo Make Call** component places an outbound phone call through the [Plivo Voice API](https://www.plivo.com/docs/voice/api/call?utm_source=github&utm_medium=oss&utm_campaign=langflow-plivo).
+The **Plivo Make Call** component places an outbound phone call through the [Plivo Voice API](https://www.plivo.com/docs/voice/api/calls?utm_source=github&utm_medium=oss&utm_campaign=langflow-plivo).
 
 1. Add the **Plivo Make Call** component to your flow, and then configure it as follows:
 
@@ -40,6 +40,7 @@ The **Plivo Make Call** component places an outbound phone call through the [Pli
     * **From Number**: Enter the caller ID. This is a Plivo phone number in E.164 format.
     * **To Number**: Enter the destination phone number in E.164 format, such as `+14150000001`.
     * **Answer URL**: Enter a publicly reachable URL that returns Plivo answer XML, such as a `<Speak>` element, when the call is answered. A default public URL is provided, so a basic call needs no additional setup.
+    * **Answer Method**: Keep `GET` for the default Answer URL. Use `POST` only if your custom endpoint accepts POST requests.
 
 2. Connect the component to other components in your flow.
 The component can be used as a standalone step in a flow or as a tool for an agent.
@@ -50,7 +51,7 @@ The component can be used as a standalone step in a flow or as a tool for an age
 
 ## Plivo Lookup Number
 
-The **Plivo Lookup Number** component looks up carrier and formatting details for a phone number through the [Plivo Lookup API](https://www.plivo.com/docs/lookup/api/number?utm_source=github&utm_medium=oss&utm_campaign=langflow-plivo).
+The **Plivo Lookup Number** component looks up carrier and formatting details for a phone number through the [Plivo Lookup API](https://www.plivo.com/docs/lookup/overview?utm_source=github&utm_medium=oss&utm_campaign=langflow-plivo).
 
 1. Add the **Plivo Lookup Number** component to your flow, and then configure it as follows:
 
