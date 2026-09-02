@@ -52,6 +52,7 @@ from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
 
+from langflow.cli.admin import admin_app
 from langflow.cli.progress import create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.main import setup_app
@@ -92,6 +93,7 @@ except ImportError:
 from lfx.cli._observability_commands import observability_app  # noqa: E402
 
 app.add_typer(observability_app, name="observability")
+app.add_typer(admin_app, name="admin")
 
 
 class ProcessManager:

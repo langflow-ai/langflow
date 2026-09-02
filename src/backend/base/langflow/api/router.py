@@ -9,6 +9,7 @@ from langflow.api.v1 import (
     a2a_router,
     api_key_router,
     authz_audit_router,
+    authz_capabilities_router,
     authz_me_router,
     authz_role_assignments_router,
     authz_roles_router,
@@ -100,6 +101,7 @@ router_v1.include_router(model_provider_policy_router)
 router_v1.include_router(policy_bundle_router)
 router_v1.include_router(authz_shares_router)
 router_v1.include_router(authz_audit_router)
+router_v1.include_router(authz_capabilities_router)
 router_v1.include_router(authz_roles_router)
 router_v1.include_router(authz_role_assignments_router)
 router_v1.include_router(authz_teams_router)

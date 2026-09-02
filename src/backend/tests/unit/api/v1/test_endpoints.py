@@ -1094,6 +1094,14 @@ async def test_get_config_authenticated_returns_full_config(client: AsyncClient,
     # The Assistant panel reads this to explain, rather than 404, when the experience is off.
     assert "agentic_experience" in result, "Authenticated response must expose the agentic experience flag"
 
+    # The autosave interval the client actually uses comes from here, not from
+    # the frontend constant, which only covers the moments before this response
+    # lands. Every save is a full-graph overwrite, so this number is the window
+    # in which two people editing one flow can diverge unnoticed.
+    assert result["auto_saving_interval"] == 2000, (
+        "The autosave debounce must stay at 2000ms; the frontend's AUTOSAVE_DEBOUNCE_TIME fallback has to match it"
+    )
+
 
 async def test_get_config_exposes_outdated_component_substitution_policy(
     client: AsyncClient, logged_in_headers: dict, monkeypatch

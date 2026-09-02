@@ -48,6 +48,30 @@ async def test_is_enabled_returns_false(service: AuthorizationService) -> None:
     assert await service.is_enabled() is False
 
 
+@pytest.mark.parametrize("resource", ["user", "team", "role"])
+async def test_administration_is_fail_closed_by_default(
+    service: AuthorizationService,
+    resource: str,
+) -> None:
+    """The OSS allow-all seam must never imply delegated administration."""
+    assert await service.can_administer(user_id=uuid4(), resource=resource) is False
+
+
+async def test_team_role_assignments_are_not_advertised_by_default(service: AuthorizationService) -> None:
+    """Team-role assignments are an Enterprise capability, not an OSS promise."""
+    assert await service.supports_team_role_assignments() is False
+
+
+async def test_optional_feature_capabilities_are_empty_by_default(service: AuthorizationService) -> None:
+    """OSS does not advertise plugin-owned administration surfaces."""
+    assert await service.get_feature_capabilities(user_id=uuid4(), is_superuser=False) == {}
+
+
+async def test_user_credentials_are_locally_managed_by_default(service: AuthorizationService) -> None:
+    """Plugins must opt individual identities out of local credential mutation."""
+    assert await service.is_user_credentials_managed_externally(session=object(), user_id=uuid4()) is False
+
+
 async def test_enforce_returns_true_for_any_input(service: AuthorizationService) -> None:
     """Default enforce permits every request regardless of arguments."""
     user_id = uuid4()
