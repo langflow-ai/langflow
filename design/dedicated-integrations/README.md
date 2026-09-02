@@ -1,6 +1,6 @@
 # Dedicated Integrations (1.13): discovery gate records
 
-Status: Phases 3 and 4 drafted at `proposed` (substrate and restricted-scope decisions await the release owner). Nothing in this directory is approved yet.
+Status: every artifact drafted; decision records at `proposed` await the release owner; gate close pending. Nothing in this directory is approved yet.
 Jira: LE-2398 "Dedicated Integrations", ticket INT-1.
 Last updated: 2026-09-01
 
@@ -19,9 +19,9 @@ these files are the historical record the checker keeps guarding.
 | 4 | INT-2 connection-resolution contract signed off by lfx, langflow-base, Enterprise owners | `connection-contract.md` | none (PR approval) | drafted 2026-09-01; 12 sections, owner questions in section 12 |
 | 5 | Frontend surface list | `frontend-surfaces.md` | none | drafted 2026-09-01; 14 extend + 8 new, MVP/defer split |
 | 6 | Trigger/webhook track recorded as deferred | `triggers-deferred.md` | none | placeholder, no findings folded in |
-| 7 | Re-issued estimate | `estimate.md` | none | not started |
-| + | KB OAuth connector adoption decision (added by the release owner) | `decisions/kb-oauth-connector-adoption.md` | none | not started |
-| + | Palette naming next to Composio components (added by the release owner) | `decisions/palette-naming.md` | none | not started |
+| 7 | Re-issued estimate | `estimate.md` | none | drafted 2026-09-01: 51 engineer-weeks under the proposed decisions (47 if Slack is Web API throughout) |
+| + | KB OAuth connector adoption decision (added by the release owner) | `decisions/kb-oauth-connector-adoption.md` | none | proposed: defer to 1.14, keep the contract compatible |
+| + | Palette naming next to Composio components (added by the release owner) | `decisions/palette-naming.md` | none | proposed: 'Product: Verb Object' names, new Microsoft 365 and Slack groups, Composio unchanged |
 
 Gate close means: every row above is done, every referenced decision record is `Status: accepted`, and
 `python scripts/ci/check_capability_matrices.py --require-accepted` exits 0.
@@ -158,6 +158,6 @@ cited source in Phase 1 or 2.
 | 3 | substrate decisions to `proposed` (drafted 2026-09-01) | yes: confirm Google sdk, Microsoft rest, Slack mixed vs Web API only |
 | 4 | `google-restricted-scopes.md` (drafted 2026-09-01, recommends avoid); rows flip on acceptance | yes: CASA or avoid |
 | 5 | `connection-contract.md` (drafted 2026-09-01) | review by lfx, langflow-base, Enterprise owners |
-| 6 | KB connector and palette naming decisions | yes |
+| 6 | KB connector and palette naming decisions (drafted 2026-09-01) | yes |
 | 7 | `frontend-surfaces.md` (drafted 2026-09-01) | no |
-| 8 | `estimate.md`; records to `accepted`; gate close | yes |
+| 8 | `estimate.md` (drafted 2026-09-01); records to `accepted`; gate close | yes |
