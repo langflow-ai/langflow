@@ -16,6 +16,12 @@
     "desktop": "customer",
     "headless": "customer"
   },
+  "oauth_client_type_by_context": {
+    "hosted": "confidential",
+    "self_managed": "confidential",
+    "desktop": "public",
+    "headless": "external"
+  },
   "substrate_decision": {
     "chosen": [
       "sdk"

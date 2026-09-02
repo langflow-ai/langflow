@@ -7,7 +7,8 @@
   "additionalProperties": false,
   "required": [
     "schema_version", "provider", "display_name", "bundle", "wave", "max_included_actions", "verified_on",
-    "oauth_app_owner_by_context", "substrate_decision", "restricted_scope_decisions", "sources",
+    "oauth_app_owner_by_context", "oauth_client_type_by_context", "substrate_decision",
+    "restricted_scope_decisions", "sources",
     "verification_programs", "actions"
   ],
   "properties": {
@@ -36,6 +37,17 @@
         "self_managed": { "$ref": "#/$defs/oauth_app_owner" },
         "desktop": { "$ref": "#/$defs/oauth_app_owner" },
         "headless": { "$ref": "#/$defs/oauth_app_owner" }
+      }
+    },
+    "oauth_client_type_by_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hosted", "self_managed", "desktop", "headless"],
+      "properties": {
+        "hosted": { "$ref": "#/$defs/oauth_client_type" },
+        "self_managed": { "$ref": "#/$defs/oauth_client_type" },
+        "desktop": { "$ref": "#/$defs/oauth_client_type" },
+        "headless": { "$ref": "#/$defs/oauth_client_type" }
       }
     },
     "substrate_decision": {
@@ -98,6 +110,8 @@
     },
     "restricted_scope_decision": { "enum": ["avoid", "accept_with_casa", "accept_exempt", "defer"] },
     "oauth_app_owner": { "enum": ["langflow", "customer", "either"] },
+    "oauth_client_type": { "enum": ["confidential", "public", "external"] },
+    "scope_condition_kind": { "enum": ["input_present", "input_truthy"] },
     "source_kind": { "enum": ["provider_docs", "provider_changelog", "provider_console", "mcp_tools_list"] },
     "source": {
       "type": "object",
@@ -137,8 +151,17 @@
         "provider_classification": { "type": "string", "minLength": 1 },
         "source": { "$ref": "#/$defs/source_id" },
         "role": { "$ref": "#/$defs/scope_role" },
-        "condition": { "type": "string", "minLength": 1 },
+        "condition": { "$ref": "#/$defs/scope_condition" },
         "notes": { "type": "string" }
+      }
+    },
+    "scope_condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "input"],
+      "properties": {
+        "kind": { "$ref": "#/$defs/scope_condition_kind" },
+        "input": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
       }
     },
     "sourced_text": {

@@ -16,9 +16,14 @@
     "desktop": "customer",
     "headless": "customer"
   },
+  "oauth_client_type_by_context": {
+    "hosted": "confidential",
+    "self_managed": "confidential",
+    "desktop": "public",
+    "headless": "external"
+  },
   "substrate_decision": {
     "chosen": [
-      "mcp",
       "rest"
     ],
     "decision_record": "decisions/substrate-slack.md"
@@ -167,12 +172,8 @@
       "display_name": "Slack: Search (as user)",
       "component_class": "SlackSearchComponent",
       "decision": "include",
-      "confidence": "medium",
-      "open_questions": [
-        "Confirm the exact tool name and argument schema the MCP server exposes for search before pinning the action-to-tool mapping (INT-9).",
-        "INT-9 day one: capture the server's tools/list and pin this action's tool identifier and argument schema; the docs name the capability but not the identifier."
-      ],
-      "rationale": "search.messages is user-token only, which matches the MCP server's identity model; the MCP path also avoids the non-Marketplace Web API rate reduction. Included in wave 1 by the release owner on 2026-09-01.",
+      "confidence": "high",
+      "rationale": "Web API search.messages is GA, user-token only, and has a published request and response contract. The undocumented MCP tool identifier cannot satisfy the discovery gate, so MCP adoption is deferred. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {
@@ -226,37 +227,8 @@
           "classification": "sensitive",
           "provider_classification": "User token scope; content reading",
           "source": "slack-search-messages",
-          "role": "alternative",
-          "condition": "substrate rest: requested instead of the granular scopes only if INT-9's tools/list capture leaves this action uncovered and it moves to the Web API search.messages method.",
-          "notes": "Required by the Web API search.messages fallback; user token only."
-        },
-        {
-          "scope": "search:read.public",
-          "classification": "sensitive",
-          "provider_classification": "Granular user search scope requested by the MCP server",
-          "source": "slack-mcp-server",
-          "role": "required"
-        },
-        {
-          "scope": "search:read.private",
-          "classification": "sensitive",
-          "provider_classification": "Granular user search scope requested by the MCP server",
-          "source": "slack-mcp-server",
-          "role": "required"
-        },
-        {
-          "scope": "search:read.mpim",
-          "classification": "sensitive",
-          "provider_classification": "Granular user search scope requested by the MCP server",
-          "source": "slack-mcp-server",
-          "role": "required"
-        },
-        {
-          "scope": "search:read.im",
-          "classification": "sensitive",
-          "provider_classification": "Granular user search scope requested by the MCP server",
-          "source": "slack-mcp-server",
-          "role": "required"
+          "role": "required",
+          "notes": "Required by Web API search.messages; user token only."
         }
       ],
       "consent": "user",
@@ -281,30 +253,27 @@
         "behavior": "The app revokes its own token with auth.revoke (Tier 3). A Workspace Owner removes the app under Manage apps, which revokes its tokens; an individual member revokes their own authorization under the app's Authorized members list.",
         "source": "slack-auth-revoke"
       },
-      "substrate": "mcp",
+      "substrate": "rest",
       "substrate_ga_status": "ga",
-      "substrate_notes": "Official Slack MCP server at https://mcp.slack.com/mcp in pinned mode (INT-9); Web API search.messages is the REST fallback. GA announced by Slack on 2026-02-17 (sources slack-mcp-ga-announcement, slack-mcp-changelog); the exact tool identifier for this action is not enumerated in the server docs and must be captured from tools/list at the start of INT-9.",
-      "substrate_source": "slack-mcp-ga-announcement",
+      "substrate_notes": "Slack Web API search.messages (GA) via slack_sdk. MCP adoption is deferred until a dated tools/list capture freezes the exact tool identifier and schema.",
+      "substrate_source": "slack-search-messages",
       "rate_limit": {
-        "summary": "Web API search.messages is Tier 2 (20+ per minute per workspace per app); MCP server tools carry their own tiers from Tier 2 to Tier 4 with a special limit for search.",
+        "summary": "Web API search.messages is Tier 2 (20+ per minute per workspace per app).",
         "source": "slack-search-messages",
-        "confidence": "medium"
+        "confidence": "high"
       },
-      "verification_dependencies": [
-        "slack-directory-publication"
-      ]
+      "verification_dependencies": []
     },
     {
       "action_id": "slack.user.read_thread",
       "display_name": "Slack: Read Thread (as user)",
       "component_class": "SlackReadThreadComponent",
       "decision": "include",
-      "confidence": "medium",
+      "confidence": "high",
       "open_questions": [
-        "If the Web API path is used, a Langflow-owned hosted app must be Marketplace-approved or it gets 1 request per minute with 15 messages.",
-        "INT-9 day one: capture the server's tools/list and pin this action's tool identifier and argument schema; the docs name the capability but not the identifier."
+        "A Langflow-owned hosted app must be Marketplace-approved or conversations.replies gets 1 request per minute with a 15-message limit."
       ],
-      "rationale": "conversations.replies scoped to the connected user's visibility; the MCP path sidesteps the non-Marketplace Web API limit. Included in wave 1 by the release owner on 2026-09-01.",
+      "rationale": "Web API conversations.replies is GA, scoped to the connected user's visibility, and has a published request and response contract. The hosted Marketplace review remains a calendar dependency. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {
@@ -368,7 +337,7 @@
           "provider_classification": "User token scope; content reading",
           "source": "slack-scopes",
           "role": "required",
-          "notes": "The MCP server lists all four history scopes for its read-history capability, so every one is required regardless of channel type."
+          "notes": "Wave 1 requests all four history scopes so one stable connection profile can read threads across every supported conversation type."
         },
         {
           "scope": "groups:history",
@@ -414,17 +383,16 @@
         "behavior": "The app revokes its own token with auth.revoke (Tier 3). A Workspace Owner removes the app under Manage apps, which revokes its tokens; an individual member revokes their own authorization under the app's Authorized members list.",
         "source": "slack-auth-revoke"
       },
-      "substrate": "mcp",
+      "substrate": "rest",
       "substrate_ga_status": "ga",
-      "substrate_notes": "Official Slack MCP server in pinned mode; conversations.replies is the REST fallback. GA announced by Slack on 2026-02-17 (sources slack-mcp-ga-announcement, slack-mcp-changelog); the exact tool identifier for this action is not enumerated in the server docs and must be captured from tools/list at the start of INT-9.",
-      "substrate_source": "slack-mcp-ga-announcement",
+      "substrate_notes": "Slack Web API conversations.replies (GA) via slack_sdk. MCP adoption is deferred until a dated tools/list capture freezes the exact tool identifier and schema.",
+      "substrate_source": "slack-conversations-replies",
       "rate_limit": {
-        "summary": "Web API conversations.replies is Tier 3 (50+ per minute) for Marketplace apps and 1 request per minute with limit 15 for commercially distributed non-Marketplace apps created after 2025-05-29; MCP tools carry their own tiers.",
+        "summary": "Web API conversations.replies is Tier 3 (50+ per minute) for Marketplace apps and 1 request per minute with limit 15 for commercially distributed non-Marketplace apps created after 2025-05-29.",
         "source": "slack-conversations-replies",
         "confidence": "high"
       },
       "verification_dependencies": [
-        "slack-directory-publication",
         "slack-marketplace-rate-tier"
       ]
     },
@@ -433,11 +401,8 @@
       "display_name": "Slack: Send Message (as user)",
       "component_class": "SlackSendAsUserComponent",
       "decision": "include",
-      "confidence": "medium",
-      "open_questions": [
-        "INT-9 day one: capture the server's tools/list and pin this action's tool identifier and argument schema; the docs name the capability but not the identifier."
-      ],
-      "rationale": "Posts as the connected user; distinct from posting as the app. Works on Desktop because user scopes are allowed on desktop redirects. Included in wave 1 by the release owner on 2026-09-01.",
+      "confidence": "high",
+      "rationale": "Web API chat.postMessage is GA and posts as the connected user, distinct from posting as the app. It works on Desktop because user scopes are allowed on desktop redirects. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {
@@ -511,18 +476,16 @@
         "behavior": "The app revokes its own token with auth.revoke (Tier 3). A Workspace Owner removes the app under Manage apps, which revokes its tokens; an individual member revokes their own authorization under the app's Authorized members list.",
         "source": "slack-auth-revoke"
       },
-      "substrate": "mcp",
+      "substrate": "rest",
       "substrate_ga_status": "ga",
-      "substrate_notes": "Official Slack MCP server in pinned mode; chat.postMessage with the user token is the REST fallback. GA announced by Slack on 2026-02-17 (sources slack-mcp-ga-announcement, slack-mcp-changelog); the exact tool identifier for this action is not enumerated in the server docs and must be captured from tools/list at the start of INT-9.",
-      "substrate_source": "slack-mcp-ga-announcement",
+      "substrate_notes": "Slack Web API chat.postMessage (GA) via slack_sdk with the connected user's token. MCP adoption is deferred until a dated tools/list capture freezes the exact tool identifier and schema.",
+      "substrate_source": "slack-chat-postmessage",
       "rate_limit": {
         "summary": "chat.postMessage special tier: about 1 message per second per channel with burst allowance; 40,000-character truncation.",
         "source": "slack-chat-postmessage",
         "confidence": "high"
       },
-      "verification_dependencies": [
-        "slack-directory-publication"
-      ]
+      "verification_dependencies": []
     },
     {
       "action_id": "slack.user.canvas",
@@ -531,11 +494,9 @@
       "decision": "include",
       "confidence": "medium",
       "open_questions": [
-        "Confirm the MCP server's canvas tool coverage (create, read, edit) before deciding the action's output set.",
-        "Free teams cannot create standalone canvases; decide whether the action requires channel_id.",
-        "INT-9 day one: capture the server's tools/list and pin this action's tool identifier and argument schema; the docs name the capability but not the identifier."
+        "Free teams cannot create standalone canvases; decide whether the UI requires channel_id for that plan type."
       ],
-      "rationale": "Canvas is a documented MCP server capability. Likely the lowest-demand user action and the first to prune if the include set must shrink. Included in wave 1 by the release owner on 2026-09-01.",
+      "rationale": "Web API canvases.create is GA with a published request and response contract. It is the lowest-demand user action and the first to prune if the include set must shrink. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {
@@ -575,15 +536,6 @@
           "provider_classification": "User token scope",
           "source": "slack-scopes",
           "role": "required"
-        },
-        {
-          "scope": "canvases:read",
-          "classification": "sensitive",
-          "provider_classification": "User token scope; content reading",
-          "source": "slack-scopes",
-          "role": "optional",
-          "condition": "the action reads back the canvas it created; whether the output set needs it is decided by INT-9's tools/list capture.",
-          "notes": "Only if the action also reads canvases."
         }
       ],
       "consent": "user",
@@ -608,18 +560,16 @@
         "behavior": "The app revokes its own token with auth.revoke (Tier 3). A Workspace Owner removes the app under Manage apps, which revokes its tokens; an individual member revokes their own authorization under the app's Authorized members list.",
         "source": "slack-auth-revoke"
       },
-      "substrate": "mcp",
+      "substrate": "rest",
       "substrate_ga_status": "ga",
-      "substrate_notes": "Official Slack MCP server in pinned mode; canvases.create is the REST fallback. GA announced by Slack on 2026-02-17 (sources slack-mcp-ga-announcement, slack-mcp-changelog); the exact tool identifier for this action is not enumerated in the server docs and must be captured from tools/list at the start of INT-9.",
-      "substrate_source": "slack-mcp-ga-announcement",
+      "substrate_notes": "Slack Web API canvases.create (GA) via slack_sdk. MCP adoption is deferred until a dated tools/list capture freezes the exact tool identifier and schema.",
+      "substrate_source": "slack-canvases-create",
       "rate_limit": {
         "summary": "canvases.create is Tier 2 (20+ per minute per workspace per app).",
         "source": "slack-canvases-create",
         "confidence": "high"
       },
-      "verification_dependencies": [
-        "slack-directory-publication"
-      ]
+      "verification_dependencies": []
     },
     {
       "action_id": "slack.bot.post",
@@ -815,6 +765,12 @@
             "required": true
           },
           {
+            "name": "channel_is_private",
+            "type": "bool",
+            "required": false,
+            "description": "Requests groups:read for a private channel"
+          },
+          {
             "name": "limit",
             "type": "int",
             "required": false
@@ -862,7 +818,10 @@
           "provider_classification": "Bot token scope",
           "source": "slack-scopes",
           "role": "optional",
-          "condition": "channel is a private channel."
+          "condition": {
+            "kind": "input_truthy",
+            "input": "channel_is_private"
+          }
         },
         {
           "scope": "users:read",
@@ -870,7 +829,10 @@
           "provider_classification": "Bot token scope",
           "source": "slack-scopes",
           "role": "optional",
-          "condition": "resolve_names is true.",
+          "condition": {
+            "kind": "input_truthy",
+            "input": "resolve_names"
+          },
           "notes": "Only when resolving display names."
         }
       ],

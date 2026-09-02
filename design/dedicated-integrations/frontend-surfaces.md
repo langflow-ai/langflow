@@ -38,6 +38,7 @@ whether it is an extension of something that exists or net new. Paths are under 
 | B6 | Token-expiry and re-consent notification through `alertStore` | no expiry concept exists; nothing feeds token lifecycle events | INT-8 |
 | B7 | Connection choice per node when a user has two accounts for one provider | global variables have `PermissionsProvider` sharing but no account-selection-per-node concept | INT-8 |
 | B8 | Connectors sidebar section with live connection state (grey out unconnected providers, inline connect) | `SIDEBAR_BUNDLES` entries are static records with no runtime binding; `extension_id` is not populated, which is also why bundle reload is flagged off | INT-8 (MVP: none; defer to 1.14) |
+| B9 | Operator integration-policy panel within `/settings/connections`: provider enable/disable, allowed capability ids, allowed connection owner kinds, and hosted-registration readiness; hidden from non-operators and backed by the governance service rather than frontend-only flags | no current settings surface exposes provider/capability policy; the model-provider policy precedent is API and plugin wiring, not a reusable integration-policy UI | INT-7 |
 
 ## Constraints the design must record
 
@@ -55,10 +56,13 @@ whether it is an extension of something that exists or net new. Paths are under 
    registration (`decisions/substrate-slack.md` fact 9).
 4. A11y is a review gate here: every settings page ships an axe baseline spec, and `NodeStatus`,
    `GlobalVariablesPage`, and `MCPServersPage` carry explicit WCAG comments. B1, B2, and B5 need keyboard-only paths.
+5. B9 is an operator control, not a substitute for backend enforcement. The API returns effective policy and rejects
+   forbidden provider, capability, owner-kind, and registration-mode combinations; hiding a control in React is
+   only presentation.
 
 ## MVP versus defer
 
-MVP for 1.13: A1, A2, A3 (sibling renderer), A6, A7, A8, A9, A12 (layout reuse), A14, B1, B2, B3, B4, B5.
+MVP for 1.13: A1, A2, A3 (sibling renderer), A6, A7, A8, A9, A12 (layout reuse), A14, B1, B2, B3, B4, B5, B9.
 Defer: B6 (surface expiry only through B5 at first), B7 (one connection per provider per user in wave 1; a second
 account becomes a second named connection selectable in the picker), B8.
 

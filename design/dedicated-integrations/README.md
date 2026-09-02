@@ -1,6 +1,10 @@
 # Dedicated Integrations (1.13): discovery gate records
 
-Status: gate artifacts complete on 2026-09-01. Every decision record is `accepted` by the release owner and `check_capability_matrices.py --require-accepted` passes. Wave 1 = Google 5, Microsoft 8, Slack 7 actions. Remaining: role-owner sign-offs in PR review (lfx, langflow-base, Enterprise, frontend, hosted-app), tracked in the table below.
+Status: gate artifacts complete on 2026-09-01; the gate remains open pending role-owner sign-offs. Every decision
+record is `accepted` by the release owner and the structural checker passes. Gate-close mode
+(`check_capability_matrices.py --require-accepted`) intentionally remains red until every declared owner's Name,
+Date, and PR cells are complete in both the aggregate table and each record. Wave 1 = Google 5, Microsoft 8, Slack
+7 actions.
 Jira: LE-2398 "Dedicated Integrations", ticket INT-1.
 Last updated: 2026-09-01
 
@@ -13,28 +17,28 @@ these files are the historical record the checker keeps guarding.
 
 | # | Exit criterion (from INT-1) | Artifact | Machine check | Status |
 |---|---|---|---|---|
-| 1 | Three approved matrices, at most 8 actions each | `matrices/google.json`, `matrices/microsoft.json`, `matrices/slack.json` | `check_capability_matrices.py`: JSON Schema, included-action cap, required fields, enums | Google 5 included (Gmail search excluded), Microsoft 8 included, Slack 7 included (4 MCP, 3 Web API) |
-| 2 | Every scope classified; every restricted scope has a written decision | scope entries in the matrices; `decisions/google-restricted-scopes.md` | classification present and sourced; every scope on an included action tagged `required`, `optional`, or `alternative` (with a condition for the last two) and at least one required; restricted scopes need a `restricted_scope_decisions` entry pointing at an existing record | accepted: avoid on the hosted app; Gmail search excluded, Drive on drive.file |
-| 3 | Substrate decision per provider with the server's GA status | `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`; `substrate_decision` in each matrix | included actions must use a chosen substrate; non-GA MCP rows cannot be high confidence | accepted: Google sdk, Microsoft rest, Slack mixed (identifier capture is INT-9 day one) |
+| 1 | Three approved matrices, at most 8 actions each | `matrices/google.json`, `matrices/microsoft.json`, `matrices/slack.json` | `check_capability_matrices.py`: JSON Schema, included-action cap, required fields, enums | Google 5 included (Gmail search excluded), Microsoft 8 included, Slack 7 included (all Web API) |
+| 2 | Every scope classified; every restricted scope has a written decision | scope entries in the matrices; `decisions/google-restricted-scopes.md` | classification present and sourced; every scope on an included action tagged `required`, `optional`, or `alternative`; conditional rows carry a structured predicate naming a real action input; at least one scope is required; restricted scopes need a `restricted_scope_decisions` entry pointing at an existing record | accepted: avoid on the hosted app; Gmail search excluded, Drive on drive.file |
+| 3 | Substrate decision per provider with the server's GA status | `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`; `substrate_decision` in each matrix | included actions must use a chosen substrate; non-GA MCP rows cannot be high confidence | accepted: Google sdk, Microsoft rest, Slack rest; Slack MCP deferred to 1.14 pending exact tool evidence |
 | 4 | INT-2 connection-resolution contract signed off by lfx, langflow-base, Enterprise owners | `connection-contract.md` | sign-off coverage: every declared owner role has a row in the sign-off table below that lists the record | drafted 2026-09-01; 12 sections, owner questions in section 12 |
-| 5 | Frontend surface list | `frontend-surfaces.md` | none | drafted 2026-09-01; 14 extend + 8 new, MVP/defer split |
-| 6 | Trigger/webhook track recorded as deferred | `triggers-deferred.md` | none | placeholder, no findings folded in |
-| 7 | Re-issued estimate | `estimate.md` | none | re-issued 2026-09-01: 52.5 engineer-weeks under the confirmed decisions (48.5 if Slack is Web API throughout) |
+| 5 | Frontend surface list | `frontend-surfaces.md` | none | drafted 2026-09-01; 14 extend + 9 new, including the operator governance surface; MVP/defer split |
+| 6 | Trigger/webhook track recorded as deferred | `triggers-deferred.md` | none | governing-plan findings folded in; provider transport and delivery discovery remains deferred |
+| 7 | Re-issued estimate | `estimate.md` | none | re-issued 2026-09-01: 48.5 engineer-weeks under the confirmed decisions |
 | + | KB OAuth connector adoption decision (added by the release owner) | `decisions/kb-oauth-connector-adoption.md` | none | accepted: adopt in 1.13 (release owner overrode the gate's defer recommendation); +1.5 engineer-weeks |
 | + | Palette naming next to Composio components (added by the release owner) | `decisions/palette-naming.md` | none | accepted: 'Product: Verb Object' names, new Microsoft 365 and Slack groups, Composio unchanged |
 
 Gate close means: every row above is done, every record under `decisions/` is `Status: accepted` (the checker walks
-them all, not only the ones a matrix references), and
+them all, not only the ones a matrix references), every declared owner has completed both sign-off tables, and
 `uv run python scripts/ci/check_capability_matrices.py --require-accepted` exits 0.
 
 ## Sign-off
 
-Acceptance rule: `Status: accepted` on a record means the release owner accepted it; that is the gate-close condition
-the checker enforces. Every other role a record names in its `Owners (sign-off roles):` line signs off in PR review
+Acceptance rule: `Status: accepted` on a record means the release owner accepted it; it is necessary but not
+sufficient for gate close. Every other role a record names in its `Owners (sign-off roles):` line signs off in PR review
 by approving and filling in its row below and in the record's own sign-off table. The checker
 (`validate_sign_offs`) fails when a record names a role that has no row here, when that row does not list the
-record, or when the record's own sign-off table is missing a declared role. Role placeholders until the release
-owner assigns names.
+record, or when the record's own sign-off table is missing a declared role. In `--require-accepted` mode it also
+fails blank or invalid Name, Date, and PR cells. Role placeholders remain until the release owner assigns names.
 
 | Role | Signs off on | Name | Date | PR |
 |---|---|---|---|---|
@@ -88,14 +92,16 @@ estimate.md                        (Phase 8)
 
 Every claim-bearing value carries a `source` id that resolves in the matrix's top-level `sources` registry, and every
 source carries the URL, a title, a kind, and the `verified_on` date it was last read. Verification for this gate is
-documentation-only: no live tenants were exercised. A dated `mcp_tools_list` capture may be cited as supplementary
-evidence but never as the sole source for a claim.
+documentation-only: no live tenants were exercised. Provider documentation remains authoritative for availability,
+auth, and policy. A dated authenticated `mcp_tools_list` capture is authoritative for the exact tool identifiers and
+schemas it enumerates and must be paired with provider documentation before an MCP substrate is selected.
 
 Top level: `provider`, `display_name`, `bundle` (extension id, bundle name, distribution), `wave`,
 `max_included_actions` (at most 8), `verified_on`, `oauth_app_owner_by_context` (who owns the OAuth registration in
-each of `hosted`, `self_managed`, `desktop`, `headless`), `substrate_decision` (`chosen` substrates and the decision
-record), `restricted_scope_decisions` (one entry per restricted scope any included or deferred action carries),
-`sources`, `verification_programs` (external verification or licensing programs an action depends on), `actions`.
+each of `hosted`, `self_managed`, `desktop`, `headless`), `oauth_client_type_by_context` (`confidential`, `public`,
+or externally provisioned per context), `substrate_decision` (`chosen` substrates and the decision record),
+`restricted_scope_decisions` (one entry per restricted scope any included or deferred action carries), `sources`,
+`verification_programs` (external verification or licensing programs an action depends on), `actions`.
 
 Per action:
 
@@ -108,7 +114,7 @@ Per action:
 | `schema` | Proposed inputs and outputs, with the provider API page they map to. Required for included actions |
 | `auth_mode` | How credentials are obtained: authorization code, client credentials, device code, service account, domain-wide delegation, bot install, API key |
 | `identity` | Who executes: `user_delegated` (connected user), `bot` (app identity), `service` (service account or application permission) |
-| `scopes[]` | Each with `classification`, the provider's own term in `provider_classification`, and a source. On included actions each scope also carries a `role`: `required` (always requested; becomes the manifest's `required_scopes`), `optional` (requested for a stated `condition`, an input or mode; becomes `optional_scopes`), or `alternative` (requested instead of another scope under a stated `condition`, such as a substrate fallback). At least one scope is required |
+| `scopes[]` | Each with `classification`, the provider's own term in `provider_classification`, and a source. On included actions each scope also carries a `role`: `required` (always requested; becomes the manifest's `required_scopes`), `optional`, or `alternative`. Conditional roles become manifest `conditional_scopes` and carry a structured `condition` (`input_present` or `input_truthy`) that must name a declared action input. At least one scope is required |
 | `consent` | `user`, `admin`, or `both`; with notes and a source. Required for included actions |
 | `reach` | Effective resource and tenant reach. Required for included actions |
 | `deployment_contexts` | Map of context to callback mechanism: `server_redirect`, `loopback_redirect`, `device_code`, `app_install_redirect`, `manual_token`, `none`. A context that is absent is unsupported |
@@ -145,7 +151,7 @@ cited source in Phase 1 or 2.
   "schema": { "inputs": [ { "name": "to", "type": "list[str]", "required": true } ], "outputs": [ { "name": "message", "type": "Data" } ], "source": "gmail-messages-send" },
   "auth_mode": "oauth2_authorization_code",
   "identity": "user_delegated",
-  "scopes": [ { "scope": "https://www.googleapis.com/auth/gmail.send", "classification": "sensitive", "provider_classification": "...", "source": "gmail-scopes" } ],
+  "scopes": [ { "scope": "https://www.googleapis.com/auth/gmail.send", "classification": "sensitive", "provider_classification": "...", "source": "gmail-scopes", "role": "required" } ],
   "consent": "user",
   "consent_source": "...",
   "reach": { "resource": "...", "tenant": "...", "source": "..." },
@@ -167,9 +173,9 @@ cited source in Phase 1 or 2.
 | 0 | this scaffold, checker, seed rows | no |
 | 1 | `matrices/google.json` fully sourced (done 2026-09-01) | no |
 | 2 | `matrices/microsoft.json`, `matrices/slack.json` fully sourced (done 2026-09-01) | no |
-| 3 | substrate decisions to `proposed` (drafted 2026-09-01) | yes: confirm Google sdk, Microsoft rest, Slack mixed vs Web API only |
+| 3 | substrate decisions to `proposed` (drafted 2026-09-01) | yes: confirm Google sdk, Microsoft rest, Slack rest for 1.13 |
 | 4 | `google-restricted-scopes.md` (drafted 2026-09-01, recommends avoid); rows flip on acceptance | yes: CASA or avoid |
 | 5 | `connection-contract.md` (drafted 2026-09-01) | review by lfx, langflow-base, Enterprise owners |
 | 6 | KB connector and palette naming decisions (drafted 2026-09-01) | yes |
 | 7 | `frontend-surfaces.md` (drafted 2026-09-01) | no |
-| 8 | `estimate.md` re-issued; all records `accepted`; `--require-accepted` green (2026-09-01); owner sign-offs in PR review | done, pending sign-offs |
+| 8 | `estimate.md` re-issued; all records `accepted`; owner sign-offs in PR review; `--require-accepted` turns green only after signatures are complete | estimate done; pending sign-offs |

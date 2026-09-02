@@ -6,14 +6,14 @@ discovery-gate contract: at most eight included actions per provider, every
 scope classified and sourced, every restricted scope decided, and every
 substrate choice recorded in a decision record. ``--require-accepted`` is the
 gate-close mode: every referenced decision record must carry
-``Status: accepted``.
+``Status: accepted`` and every declared owner must have a completed signature.
 
 Every matrix is first validated against ``schema/capability_matrix.schema.json``
 (Draft 2020-12, via ``jsonschema``), then the gate rules that a schema cannot
 express are applied. Every scope on an included action carries a ``role``
 (``required``, ``optional``, or ``alternative``) so the manifest's
-``required_scopes`` and ``optional_scopes`` can be lifted mechanically, and at
-least one scope is required. ``--require-accepted`` walks every record under
+``required_scopes`` and conditional scope requirements can be lifted
+mechanically, and at least one scope is required. ``--require-accepted`` walks every record under
 ``decisions/`` (``TEMPLATE.md`` aside), not only the ones a matrix references.
 
 Sign-off coverage is checked alongside the matrices: every record under the
@@ -53,6 +53,8 @@ DECISION_HEADING_RE = re.compile(r"^## Decision\s*$", re.MULTILINE)
 OWNERS_RE = re.compile(r"^Owners \(sign-off roles\):\s*(.+?)\s*$", re.MULTILINE)
 SIGN_OFF_HEADING = "## Sign-off"
 ROLE_RE = re.compile(r"^[A-Za-z][A-Za-z-]* owner$")
+SIGNATURE_FIELD_COUNT = 3
+MIN_SIGN_OFF_ROW_CELLS = 4
 # The release owner's acceptance is the Status line itself; the README row for that role says "every record".
 ROLES_COVERING_EVERY_RECORD = frozenset({"release owner"})
 # Files that carry an Owners line but are not sign-off records themselves.
@@ -84,6 +86,8 @@ VALID_VALUES: dict[str, frozenset[str]] = {
     ),
     "restricted_scope_decision": frozenset({"avoid", "accept_with_casa", "accept_exempt", "defer"}),
     "oauth_app_owner": frozenset({"langflow", "customer", "either"}),
+    "oauth_client_type": frozenset({"confidential", "public", "external"}),
+    "scope_condition_kind": frozenset({"input_present", "input_truthy"}),
     "source_kind": frozenset({"provider_docs", "provider_changelog", "provider_console", "mcp_tools_list"}),
 }
 
@@ -97,6 +101,7 @@ REQUIRED_TOP_LEVEL = frozenset(
         "max_included_actions",
         "verified_on",
         "oauth_app_owner_by_context",
+        "oauth_client_type_by_context",
         "substrate_decision",
         "restricted_scope_decisions",
         "sources",
@@ -265,6 +270,17 @@ def _validate_top_level(matrix: dict[str, Any], stem: str, errors: list[str]) ->
     else:
         for context, owner in owners.items():
             _check_enum(owner, "oauth_app_owner", f"oauth_app_owner_by_context.{context}", errors)
+    client_types = matrix.get("oauth_client_type_by_context")
+    if not isinstance(client_types, dict) or set(client_types) != DEPLOYMENT_CONTEXTS:
+        errors.append(f"oauth_client_type_by_context must cover exactly {sorted(DEPLOYMENT_CONTEXTS)}")
+    else:
+        for context, client_type in client_types.items():
+            _check_enum(
+                client_type,
+                "oauth_client_type",
+                f"oauth_client_type_by_context.{context}",
+                errors,
+            )
 
 
 def _validate_substrate_decision(
@@ -314,7 +330,14 @@ def _validate_restricted_decisions(
     return decisions
 
 
-def _check_scope_role(scope: dict[str, Any], scope_label: str, *, included: bool, errors: list[str]) -> str | None:
+def _check_scope_role(
+    scope: dict[str, Any],
+    scope_label: str,
+    *,
+    included: bool,
+    input_names: set[str],
+    errors: list[str],
+) -> str | None:
     """Enforce the role grammar: included actions tag every scope; conditional roles say when they apply."""
     role = scope.get("role")
     if role is None:
@@ -324,11 +347,15 @@ def _check_scope_role(scope: dict[str, Any], scope_label: str, *, included: bool
             )
         return None
     _check_enum(role, "scope_role", scope_label, errors)
-    condition = str(scope.get("condition", "")).strip()
-    if role in CONDITIONAL_SCOPE_ROLES and not condition:
+    condition = scope.get("condition")
+    if role in CONDITIONAL_SCOPE_ROLES and not isinstance(condition, dict):
         errors.append(f"{scope_label} is {role} and must state the condition under which it is requested")
-    elif role == "required" and condition:
+    elif role == "required" and condition is not None:
         errors.append(f"{scope_label} is required and must not carry a condition; make it optional or alternative")
+    elif isinstance(condition, dict):
+        kind = condition.get("kind")
+        if kind in {"input_present", "input_truthy"} and condition.get("input") not in input_names:
+            errors.append(f"{scope_label} condition references unknown action input {condition.get('input')!r}")
     return str(role)
 
 
@@ -341,6 +368,9 @@ def _validate_scopes(
         return []
     restricted: list[str] = []
     roles: list[str | None] = []
+    schema = action.get("schema")
+    inputs = schema.get("inputs", []) if isinstance(schema, dict) else []
+    input_names = {field["name"] for field in inputs if isinstance(field, dict) and isinstance(field.get("name"), str)}
     for scope in scopes:
         if not isinstance(scope, dict) or not isinstance(scope.get("scope"), str) or not scope["scope"]:
             errors.append(f"{label} has a scope entry without a scope string")
@@ -355,7 +385,15 @@ def _validate_scopes(
         if not str(scope.get("provider_classification", "")).strip():
             errors.append(f"{scope_label} must record the provider's own classification term")
         _check_source_ref(scope.get("source"), sources, scope_label, errors)
-        roles.append(_check_scope_role(scope, scope_label, included=included, errors=errors))
+        roles.append(
+            _check_scope_role(
+                scope,
+                scope_label,
+                included=included,
+                input_names=input_names,
+                errors=errors,
+            )
+        )
     if included and "required" not in roles:
         errors.append(f"{label} is included but declares no required scope")
     return restricted
@@ -526,7 +564,7 @@ def _sign_off_section(text: str) -> str | None:
     return text.split(SIGN_OFF_HEADING, 1)[1].split("\n## ", 1)[0]
 
 
-def _readme_sign_off_rows(design_root: Path, errors: list[str]) -> dict[str, str]:
+def _readme_sign_off_rows(design_root: Path, errors: list[str]) -> dict[str, list[str]]:
     readme = design_root / "README.md"
     if not readme.is_file():
         errors.append(f"sign-off: {readme} does not exist")
@@ -535,7 +573,7 @@ def _readme_sign_off_rows(design_root: Path, errors: list[str]) -> dict[str, str
     if section is None:
         errors.append("sign-off: README.md lacks a '## Sign-off' table")
         return {}
-    return {row[0]: row[1] for row in _table_rows(section) if len(row) > 1}
+    return {row[0]: row for row in _table_rows(section) if len(row) > 1}
 
 
 def _declared_roles(text: str, label: str, errors: list[str]) -> list[str]:
@@ -548,8 +586,17 @@ def _declared_roles(text: str, label: str, errors: list[str]) -> list[str]:
     return roles
 
 
-def validate_sign_offs(design_root: Path = DESIGN_ROOT) -> list[str]:
-    """Require every declared owner role to be tracked in the README table and in the record's own table."""
+def _validate_completed_signature(row: list[str], label: str, errors: list[str]) -> None:
+    """Require non-empty Name, Date, and PR cells after the role or record-list columns."""
+    signature = row[-SIGNATURE_FIELD_COUNT:] if len(row) >= MIN_SIGN_OFF_ROW_CELLS else []
+    if len(signature) != SIGNATURE_FIELD_COUNT or any(not cell.strip() for cell in signature):
+        errors.append(f"sign-off: {label} must complete Name, Date, and PR")
+        return
+    _check_date(signature[1], f"sign-off: {label} Date", errors)
+
+
+def validate_sign_offs(design_root: Path = DESIGN_ROOT, *, require_complete: bool = False) -> list[str]:
+    """Require every owner role to be tracked; gate close also requires completed signatures."""
     errors: list[str] = []
     readme_rows = _readme_sign_off_rows(design_root, errors)
     if errors:
@@ -565,21 +612,30 @@ def validate_sign_offs(design_root: Path = DESIGN_ROOT) -> list[str]:
                 if role not in readme_rows:
                     errors.append(f"sign-off: README.md table has no row for {role!r}")
                 continue
-            cell = readme_rows.get(role)
-            if cell is None:
+            row = readme_rows.get(role)
+            if row is None:
                 errors.append(f"sign-off: README.md table has no row for {role!r}, declared by {label}")
-            elif f"`{label}`" not in cell:
+            elif f"`{label}`" not in row[1]:
                 errors.append(f"sign-off: README.md row for {role!r} does not list `{label}`")
         section = _sign_off_section(text)
         if section is None:
             if set(roles) - ROLES_COVERING_EVERY_RECORD:
                 errors.append(f"sign-off: {label} declares {sorted(roles)} but has no '{SIGN_OFF_HEADING}' table")
             continue
-        table_roles = {row[0] for row in _table_rows(section) if row}
+        table_rows = {row[0]: row for row in _table_rows(section) if row}
+        table_roles = set(table_rows)
         errors.extend(f"sign-off: {label} table lacks a row for {role!r}" for role in roles if role not in table_roles)
         errors.extend(
             f"sign-off: {label} table row {role!r} is not a declared owner" for role in sorted(table_roles - set(roles))
         )
+        if require_complete:
+            for role in roles:
+                row = table_rows.get(role)
+                if row is not None:
+                    _validate_completed_signature(row, f"{label} row {role!r}", errors)
+    if require_complete:
+        for role, row in readme_rows.items():
+            _validate_completed_signature(row, f"README.md row {role!r}", errors)
     return errors
 
 
@@ -607,11 +663,11 @@ def main() -> int:
     parser.add_argument(
         "--require-accepted",
         action="store_true",
-        help="gate-close mode: every referenced decision record must be 'Status: accepted'",
+        help="gate-close mode: every decision must be accepted and every declared owner signature complete",
     )
     args = parser.parse_args()
     errors = validate_all(args.matrix_dir, require_accepted=args.require_accepted)
-    errors.extend(validate_sign_offs(args.matrix_dir.resolve().parent))
+    errors.extend(validate_sign_offs(args.matrix_dir.resolve().parent, require_complete=args.require_accepted))
     if errors:
         print("Capability matrix validation failed:")
         for error in errors:

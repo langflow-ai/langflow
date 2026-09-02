@@ -92,11 +92,12 @@ string is simpler for tweaks, env, and manifest sorting; the dict is the parsed 
 
 - `ConnectionRefInput(BaseInputMixin, ConnectionRefMixin, MetadataTraceMixin)` in
   `src/lfx/src/lfx/inputs/inputs.py`; `ConnectionRefMixin` in `input_mixin.py` declares `provider: str` (required),
-  `required_scopes: list[str]`, `optional_scopes: list[str]`, `identity_kind: Literal["user", "instance", "any"] =
-  "any"`, `capabilities: list[str] = []` (INT-3 capability ids). `track_in_telemetry = False`; `CONNECTION_REF` joins
-  `SENSITIVE_FIELD_TYPES` (`input_mixin.py:53`). No `ToolModeMixin`, mirroring `SecretStrInput`: an agent must never
-  choose a connection at tool-call time, and a validator rejects `tool_mode=True`. `password=False`; no
-  `load_from_db`.
+  `auth_profile_id: str`, `required_scopes: list[str]`,
+  `conditional_scopes: list[ConditionalScopeRequirement]`,
+  `identity_kind: Literal["user", "instance", "any"] = "any"`, `capabilities: list[str] = []` (INT-3 capability
+  ids). `track_in_telemetry = False`; `CONNECTION_REF` joins `SENSITIVE_FIELD_TYPES` (`input_mixin.py:53`). No
+  `ToolModeMixin`, mirroring `SecretStrInput`: an agent must never choose a connection at tool-call time, and a
+  validator rejects `tool_mode=True`. `password=False`; no `load_from_db`.
 - Registered in the `InputTypes` union (`inputs.py:1064`) and `lfx.io.__init__`; `InputTypesMap` picks it up for
   `instantiate_input`.
 - Frontend: an additive `case "connection_ref"` in
@@ -271,22 +272,26 @@ dataclass (not an `Exception`; loader-specific code namespace).
 **Decision: frozen Pydantic models in `lfx/integrations/capabilities.py`; reserve `ExtensionManifest.integrations`
 now.**
 
-- `IntegrationProvider{provider_id, display_name, icon, auth: OAuthProfile, capabilities, docs_url}`;
-  `OAuthProfile{kind, authorization_url, token_url, supports_pkce, supports_refresh, scope_separator,
-  default_scopes, identity_kinds, desktop_loopback_ok, tenant_param}`, where `kind` is the matrix schema's
+- `IntegrationProvider{provider_id, display_name, icon, auth_profiles: tuple[OAuthProfile, ...], capabilities,
+  docs_url}`. A provider may expose more than one named profile; Slack has `slack-user-oauth` and
+  `slack-bot-install`, so bot-token capabilities can never be resolved through a user-token connection by accident.
+- `OAuthProfile{id, kind, identity, authorization_url, token_url, supports_pkce, supports_refresh, scope_separator,
+  default_scopes, client_type_by_context, owner_by_context, tenant_param}`, where `kind` is the matrix schema's
   `auth_mode` enum verbatim (`oauth2_authorization_code`, `oauth2_client_credentials`, `oauth2_device_code`,
-  `service_account`, `service_account_domain_wide_delegation`, `bot_token_install`, `api_key`;
-  `design/dedicated-integrations/schema/capability_matrix.schema.json`), so every documented authentication mode has
-  a manifest representation; wave 1 uses `oauth2_authorization_code` and, for the Slack bot actions,
-  `bot_token_install` (`token_url` then names the install exchange and `supports_refresh` is false); the profile
-  also covers the Tauri public-client loopback and Microsoft's `{tenant}` authority;
-  `IntegrationCapability{id, display_name, required_scopes, optional_scopes, risk: read | write | destructive,
-  component_ref, mcp_tool}`; `ScopeSet.covers(required, granted) -> missing` with provider-aware normalization
-  (Google URL scopes, Graph short names, Slack bot versus user scopes), used by both the resolver's `scope-missing`
-  check and the picker API. The capability ids are the matrices' `action_id` values, and `required_scopes` and
-  `optional_scopes` are lifted from the matrices' scope roles: `required` rows become `required_scopes`; `optional`
-  and `alternative` rows become `optional_scopes`, each carrying the matrix `condition` (an input name, a mode, or a
-  substrate) that the picker shows and the resolver's `scope-missing` error names when a run needs it.
+  `service_account`, `service_account_domain_wide_delegation`, `bot_token_install`, `api_key`). The
+  `client_type_by_context` values are `confidential`, `public`, or `external` and are lifted from each matrix's
+  `oauth_client_type_by_context`; profiles may omit an unsupported context. This represents both Tauri public-client
+  loopback and Microsoft's `{tenant}` authority without pretending one provider-wide auth object fits every action.
+- `IntegrationCapability{id, display_name, auth_profile_id, identity, required_scopes, conditional_scopes,
+  risk: read | write | destructive, component_ref, mcp_tool}`. `ConditionalScopeRequirement{scope, role,
+  condition}` preserves `optional` versus `alternative`; `ScopeCondition{kind: input_present | input_truthy,
+  input}` is evaluated against the action's declared input schema. The matrix checker rejects a condition that
+  names a missing input. `ScopeSet.covers(capability, inputs, granted) -> missing` first activates conditional
+  requirements, then performs provider-aware normalization (Google URL scopes, Graph short names, Slack bot versus
+  user scopes). The picker and resolver therefore apply the same executable rule instead of interpreting prose.
+- Capability ids are the matrices' `action_id` values. `required` rows become `required_scopes`; `optional` and
+  `alternative` rows become `conditional_scopes` without losing their role or predicate. The capability's
+  `auth_profile_id` and `identity` must match the selected connection before scope coverage is evaluated.
 - `ExtensionManifest.integrations: tuple[IntegrationProvider, ...] | None` is added as an optional field (additive;
   `manifest.py` is in the changelog gate); loader wiring is INT-3.
 

@@ -16,6 +16,12 @@
     "desktop": "customer",
     "headless": "customer"
   },
+  "oauth_client_type_by_context": {
+    "hosted": "confidential",
+    "self_managed": "confidential",
+    "desktop": "public",
+    "headless": "external"
+  },
   "substrate_decision": {
     "chosen": [
       "rest"
@@ -294,7 +300,7 @@
       "component_class": "OutlookSearchComponent",
       "decision": "include",
       "confidence": "medium",
-      "rationale": "Read action on delegated mail permissions without admin consent; the only question is which of Mail.ReadBasic or Mail.Read the component requests. Included in wave 1 by the release owner on 2026-09-01.",
+      "rationale": "Read action on delegated mail permissions without admin consent. Wave 1 requests Mail.Read because the component can return message bodies; Mail.ReadBasic cannot. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {
@@ -351,15 +357,6 @@
       "identity": "user_delegated",
       "identity_notes": "Reads the signed-in user's mailbox and folders shared with that user.",
       "scopes": [
-        {
-          "scope": "Mail.ReadBasic",
-          "classification": "non_sensitive",
-          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
-          "source": "graph-permissions-reference",
-          "role": "alternative",
-          "condition": "Not requested in wave 1. Would replace Mail.Read only for a listing profile without bodies; the include_body input returns bodies, which ReadBasic excludes, so the action requests Mail.Read (resolved 2026-09-01).",
-          "notes": "'Read user basic mail': excludes body, previewBody, attachments, extended properties."
-        },
         {
           "scope": "Mail.Read",
           "classification": "non_sensitive",
@@ -944,7 +941,10 @@
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
           "role": "optional",
-          "condition": "drive_id names a drive other than the user's OneDrive (a shared library).",
+          "condition": {
+            "kind": "input_present",
+            "input": "drive_id"
+          },
           "notes": "'Read all files that user can access', including SharePoint libraries."
         },
         {
@@ -953,7 +953,10 @@
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
           "role": "optional",
-          "condition": "site_id is set (the /sites/{site-id}/drive path).",
+          "condition": {
+            "kind": "input_present",
+            "input": "site_id"
+          },
           "notes": "'Read items in all site collections' on behalf of the user; needed for /sites/{site-id}/drive."
         },
         {
@@ -1065,7 +1068,10 @@
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
           "role": "optional",
-          "condition": "drive_id names a drive other than the user's OneDrive (a shared library)."
+          "condition": {
+            "kind": "input_present",
+            "input": "drive_id"
+          }
         },
         {
           "scope": "Sites.Read.All",
@@ -1073,7 +1079,10 @@
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
           "role": "optional",
-          "condition": "site_id is set (the /sites/{site-id}/drive path).",
+          "condition": {
+            "kind": "input_present",
+            "input": "site_id"
+          },
           "notes": "Needed for the /sites/{site-id}/drive download path behind the site_id input; same permission set as microsoft.files.list."
         },
         {

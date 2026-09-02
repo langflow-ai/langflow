@@ -9,19 +9,31 @@ Last verified: 2026-09-01
 The 1.13 plan separates actions from triggers (Scope Boundary 1). Persistent listeners, polling, durable delivery,
 replay, deployment binding, conversation correlation, and trigger-driven pause/resume are not 1.13 requirements.
 The discovery gate's exit criterion "fold in the trigger/webhook findings as a separate, deferred track" is met by
-this record, which fixes the boundary and the re-open conditions. No findings have been folded in yet: the
-trigger/webhook investigation is not written up in a form this gate could cite, and the release owner chose to
-record the track as deferred rather than block the gate on it.
+this record, which carries the findings available in the governing plan, fixes the boundary, and states what still
+needs provider-specific discovery. It does not claim that the deferred provider transport investigation is done.
 
-## What was not evaluated
+## Findings carried from the governing plan
+
+- Request/response actions and persistent triggers are separate lifecycle and delivery products. No wave-1 action
+  may open a listener, create a subscription, or imply durable event delivery.
+- Persistent listeners, polling, durable delivery, replay, deployment binding, conversation correlation, and
+  trigger-driven pause/resume remain deferred.
+- The executing-identity rule is binding for future triggers: interactive user connections resolve only for the
+  owner or an explicit share; flow-owner, deployment-owner, and other non-interactive execution may use a user
+  connection only with that connection's explicit opt-in; anonymous execution never resolves a user connection.
+- OAuth for an unauthenticated public-flow caller is a separate initiative. It requires one-time state and PKCE,
+  tenant and execution binding, and an explicit end-user identity model rather than borrowing the flow owner's
+  connection.
+- Provider event transports must be discovered independently and must not be pre-empted by fields added for the
+  action release.
+
+## What remains for deferred discovery
 
 - Provider event sources: Gmail push notifications (Pub/Sub), Microsoft Graph change notifications and
   subscriptions, Slack Events API and Socket Mode.
 - Delivery semantics: at-least-once vs exactly-once, replay windows, dead-lettering.
 - Binding a trigger to a deployment or flow version, and correlating a triggered run to a conversation.
-- Executing identity for trigger-initiated runs. Note: the connection contract (`connection-contract.md`) already
-  makes non-interactive use of a user connection a per-connection opt-in; a trigger-initiated run must reuse that
-  rule rather than define a new one.
+- Provider subscription ownership, renewal, public-ingress requirements, and tenant-specific rate limits.
 
 ## Interaction with the actions release
 

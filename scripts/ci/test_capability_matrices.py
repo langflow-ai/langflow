@@ -194,8 +194,10 @@ def test_checker_rejects_included_scope_without_role(tmp_path: Path) -> None:
 def test_checker_rejects_included_action_without_required_scope(tmp_path: Path) -> None:
     root = _copy_design(tmp_path)
     matrix = _load(root, "google")
-    for scope in _included_action(matrix)["scopes"]:
-        scope.update({"role": "optional", "condition": "only when asked"})
+    action = _included_action(matrix)
+    input_name = action["schema"]["inputs"][0]["name"]
+    for scope in action["scopes"]:
+        scope.update({"role": "optional", "condition": {"kind": "input_present", "input": input_name}})
 
     errors = validate_matrix(_save(root, "google", matrix))
 
@@ -217,11 +219,39 @@ def test_checker_rejects_conditional_scope_without_condition(tmp_path: Path) -> 
 def test_checker_rejects_required_scope_with_condition(tmp_path: Path) -> None:
     root = _copy_design(tmp_path)
     matrix = _load(root, "google")
-    _included_action(matrix)["scopes"][0]["condition"] = "never"
+    action = _included_action(matrix)
+    action["scopes"][0]["condition"] = {
+        "kind": "input_present",
+        "input": action["schema"]["inputs"][0]["name"],
+    }
 
     errors = validate_matrix(_save(root, "google", matrix))
 
     assert any("must not carry a condition" in error for error in errors)
+
+
+def test_schema_rejects_prose_scope_condition(tmp_path: Path) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "microsoft")
+    action = next(action for action in matrix["actions"] if action["action_id"] == "microsoft.files.list")
+    conditional_scope = next(scope for scope in action["scopes"] if scope["role"] == "optional")
+    conditional_scope["condition"] = "drive_id is set"
+
+    errors = validate_matrix(_save(root, "microsoft", matrix))
+
+    assert any("is not of type 'object'" in error for error in errors)
+
+
+def test_checker_rejects_scope_condition_for_unknown_input(tmp_path: Path) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "microsoft")
+    action = next(action for action in matrix["actions"] if action["action_id"] == "microsoft.files.list")
+    conditional_scope = next(scope for scope in action["scopes"] if scope["role"] == "optional")
+    conditional_scope["condition"]["input"] = "missing_input"
+
+    errors = validate_matrix(_save(root, "microsoft", matrix))
+
+    assert any("condition references unknown action input 'missing_input'" in error for error in errors)
 
 
 def test_schema_validation_rejects_empty_outputs(tmp_path: Path) -> None:
@@ -309,6 +339,27 @@ def test_validate_all_reports_missing_provider(tmp_path: Path) -> None:
 
 def test_every_declared_owner_is_tracked_in_sign_off_tables() -> None:
     assert validate_sign_offs() == []
+
+
+def test_gate_close_rejects_blank_owner_signatures() -> None:
+    errors = validate_sign_offs(require_complete=True)
+
+    assert "sign-off: README.md row 'lfx owner' must complete Name, Date, and PR" in errors
+    assert any(
+        "decisions/substrate-google.md row 'lfx owner' must complete Name, Date, and PR" in error for error in errors
+    )
+
+
+def test_gate_close_accepts_completed_owner_signatures(tmp_path: Path) -> None:
+    root = _copy_design_tree(tmp_path)
+    for record in root.rglob("*.md"):
+        text = record.read_text(encoding="utf-8")
+        record.write_text(
+            text.replace("| | | |", "| Test Owner | 2026-09-01 | #14906 |"),
+            encoding="utf-8",
+        )
+
+    assert validate_sign_offs(root, require_complete=True) == []
 
 
 def test_sign_off_check_rejects_owner_missing_from_readme_and_record_tables(tmp_path: Path) -> None:

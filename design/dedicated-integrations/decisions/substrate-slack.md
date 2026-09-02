@@ -9,9 +9,10 @@ Last verified: 2026-09-01
 ## Context
 
 Decides whether wave-1 Slack runs mixed (official MCP server for user-identity actions, Web API for bot actions) or
-Web API throughout, and how Slack's PKCE rule constrains Desktop. Blocks INT-9 and INT-12. This is the one provider
-where the strategic MCP substrate is plausibly production-ready today, so it is also the decision that determines
-whether INT-9 (pinned MCP mode) is built in 1.13 at all.
+Web API throughout, and how Slack's PKCE rule constrains Desktop. The governing plan requires the discovery gate to
+freeze the MCP source and version plus an explicit action-to-tool mapping before implementation. The provider docs
+name capabilities but not the exact tool identifiers or schemas for the four candidate user actions, and this gate
+has no authenticated, dated `tools/list` capture. That evidence boundary blocks MCP—not the Slack actions—from 1.13.
 
 ## Facts (with citations)
 
@@ -29,7 +30,7 @@ whether INT-9 (pinned MCP mode) is built in 1.13 at all.
 
 ## Options
 
-### Option A: Mixed, MCP for user-identity actions and Web API for bot actions (recommended, conditional)
+### Option A: Mixed, MCP for user-identity actions and Web API for bot actions
 
 Pros: exercises the strategic substrate where it is closest to production; user-identity reads on MCP are not
 subject to the non-Marketplace Web API reduction (fact 6); Slack maintains the tool schemas.
@@ -37,10 +38,10 @@ Cons: two auth and error paths in one bundle; requires INT-9 pinned mode (3 engi
 Langflow-owned app must be directory-published (fact 2), which is a Slack review with its own lead time; GA is now cited (fact 3); tool identifiers for the four user actions are not in the docs (fact 8).
 Cost: INT-9 plus the Marketplace listing lead time for hosted.
 
-### Option B: Web API throughout
+### Option B: Web API throughout (selected for 1.13)
 
-Pros: one auth path (OAuth v2 with `scope` and `user_scope` in a single install), one error normalizer, no INT-9 in
-1.13; every method is GA (fact 7).
+Pros: one provider API substrate, one OAuth install exchange carrying `scope` and `user_scope`, one error
+normalizer, no INT-9 in 1.13; every method is GA (fact 7).
 Cons: the hosted app still needs Marketplace approval or read actions fall to 1 request per minute (fact 6); the
 strategic substrate is not exercised in 1.13 and the GA-swap procedure has no live example.
 Cost: none beyond INT-12; INT-9 deferred to 1.14 with no sample action.
@@ -52,38 +53,32 @@ bot use cases (post as app, react, list members) disappear from wave 1. Not reco
 
 ## Decision
 
-Option A, confirmed by the release owner on 2026-09-01 with the identifier capture as INT-9's first task. User-identity actions (`slack.user.*`) run on the official Slack MCP server in pinned mode;
-bot actions (`slack.bot.*`) run on the Web API with a bot token from the workspace installation. Desktop exposes
-user-identity actions only, and reaches the MCP server as a PKCE public client with a loopback redirect (fact 9)
-through a customer-owned, PKCE-enabled Slack app (`oauth_app_owner_by_context.desktop` is `customer`); the hosted
-Langflow-owned app stays a confidential client with `client_id` and `client_secret`. Dynamic Client Registration is
-not available, so every context hard-codes its app ID. `substrate_decision.chosen` in `matrices/slack.json` is
-`["mcp", "rest"]`.
+Option B for 1.13. Every `slack.user.*` and `slack.bot.*` action runs on the documented Slack Web API. User actions
+use a user-token authorization-code profile; bot actions use the workspace-install bot-token profile and remain
+unavailable on Desktop (fact 5). Hosted and self-managed registrations are confidential clients; Desktop user
+actions use a customer-owned public client with PKCE and loopback redirect; headless credentials are externally
+provisioned. `substrate_decision.chosen` in `matrices/slack.json` is `["rest"]`.
 
-Condition status on 2026-09-01: (1) GA is cited (fact 3): met. (2) Tool names: the docs confirm that every wave-1
-user action is a documented server capability (search, read thread via channel history, send message, canvas) but
-enumerate identifiers only for the file-upload tools (fact 8). The exact identifiers and argument schemas can only
-come from a dated `tools/list` capture, which the gate's docs-only rule admits as supplementary evidence, never as
-the sole source. Resolution accepted by the release owner on 2026-09-01: the identifier capture is the first task of INT-9, keeping the fallback that if the capture shows any of the four actions is not covered, that
-action moves to the Web API and, if none are covered, INT-9 defers to 1.14 and Slack runs Web API throughout. The
-same capture exercises the PKCE exchange against the authorization server the MCP server advertises
-(`/.well-known/oauth-authorization-server`); if the MCP token endpoint rejects a public-client exchange, Desktop
-`slack.user.*` fall back to the Web API, where PKCE for user scopes is documented (fact 5).
+The strategic MCP path is deferred to the 1.14 planning gate. It may replace a REST action only after a dated
+`tools/list` capture records the server URL/version, exact tool identifier, input schema, output schema, and
+authorization exchange for that action. A future adoption changes this decision and the matrix before component
+implementation; INT-9 is not a post-gate discovery task for 1.13.
 
 ## Consequences
 
-- INT-9 stays in 1.13 (3 engineer-weeks) and INT-12 depends on it.
-- The hosted Slack app needs a Slack Marketplace listing in either option; the estimate records it as calendar risk.
+- INT-9 moves to 1.14; INT-12 has no MCP implementation dependency in 1.13.
+- The hosted Slack app still needs a Slack Marketplace listing to avoid the reduced
+  `conversations.replies` rate tier; the estimate records it as calendar risk.
 - Desktop hides bot actions in both options (fact 5).
-- Desktop Slack needs a customer-owned, PKCE-enabled app registration; because PKCE opt-in is one-way and marks the
-  app public (fact 9), it cannot share a registration with the confidential-client hosted install. INT-5 records this
-  per provider through `OAuthProfile.supports_pkce` and `desktop_loopback_ok` (`connection-contract.md` section 8).
+- Desktop Slack user actions need a customer-owned, PKCE-enabled app registration; because PKCE opt-in is one-way
+  and marks the app public (fact 9), it cannot share a registration with the confidential-client hosted install.
+  INT-5 records client type per context through the named OAuth profiles in `connection-contract.md` section 8.
 
 ## Re-open trigger
 
-- Slack documents bot-token support on the MCP server, or
-- Slack labels the MCP server preview or deprecated, or
-- Slack changes the directory-published requirement.
+- A dated authenticated `tools/list` capture freezes exact identifiers and schemas for candidate actions, or
+- Slack documents those identifiers and schemas itself, or
+- Slack changes the directory-published requirement or the MCP server's availability status.
 
 Re-verify by: the 1.14 planning gate.
 
