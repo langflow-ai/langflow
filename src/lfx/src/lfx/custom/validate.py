@@ -576,6 +576,13 @@ def _compile_component_artifacts(code: str) -> _ComponentCompileArtifacts:
         elif isinstance(node, ast.ImportFrom) and node.module is not None:
             import_froms.append(node)
         elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef | ast.Assign | ast.AnnAssign):
+            # Skip the component class itself: it is compiled separately into
+            # class_code_obj and exec'd by build_class_constructor. Including it
+            # here as well built the class TWICE per instantiation -- the first
+            # one immediately discarded -- and cached two code objects where one
+            # is needed.
+            if isinstance(node, ast.ClassDef) and node.name == class_name:
+                continue
             definitions.append(node)
 
     # Read-only walk of the parsed tree into plain, unambiguously-immutable
