@@ -110,11 +110,24 @@ def cleanup_telemetry():
 
 
 def test_init(opentelemetry_instance):
+    # The background job metrics, keyed by the type they must be registered as. Observable
+    # counters have to stay counters: the collector feeds cumulative values, and a gauge would
+    # make rate() read them as a level.
+    expected_bg_metrics = {
+        "langflow_bg_jobs": MetricType.OBSERVABLE_GAUGE,
+        "langflow_bg_oldest_queued_seconds": MetricType.OBSERVABLE_GAUGE,
+        "langflow_bg_jobs_started_total": MetricType.OBSERVABLE_COUNTER,
+        "langflow_bg_jobs_completed_total": MetricType.OBSERVABLE_COUNTER,
+        "langflow_bg_jobs_failed_total": MetricType.OBSERVABLE_COUNTER,
+        "langflow_bg_job_duration_p50_seconds": MetricType.OBSERVABLE_GAUGE,
+        "langflow_bg_job_duration_p95_seconds": MetricType.OBSERVABLE_GAUGE,
+    }
     expected_metrics = {
         "file_uploads",
         "num_files_uploaded",
         "langflow_job_queue_cancel_events_total",
         "langflow_job_queue_active_jobs",
+        *expected_bg_metrics,
     }
 
     assert isinstance(opentelemetry_instance, OpenTelemetry)
@@ -126,6 +139,12 @@ def test_init(opentelemetry_instance):
     active_jobs = opentelemetry_instance._metrics_registry["langflow_job_queue_active_jobs"]
     assert active_jobs.type is MetricType.UP_DOWN_COUNTER
     assert active_jobs.labels == {"backend": True}
+    for name, metric_type in expected_bg_metrics.items():
+        registered = opentelemetry_instance._metrics_registry[name]
+        assert registered.type is metric_type, f"{name} is registered as {registered.type}"
+        # Every background metric is per-backend, so a deployment running more than one can
+        # tell them apart rather than reading one summed series.
+        assert registered.labels.get("backend") is True, f"{name} must carry a mandatory backend label"
 
 
 def test_prometheus_exports_job_queue_metrics():

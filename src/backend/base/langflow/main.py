@@ -361,11 +361,13 @@ def get_lifespan(*, fix_migration=False, version=None):
             except Exception as exc:  # noqa: BLE001
                 await logger.awarning("Memory Base row reconciliation skipped after startup error: %s", exc)
 
+            prometheus_started = False
             if get_settings_service().settings.prometheus_enabled:
                 try:
                     from prometheus_client import start_http_server
 
                     start_http_server(get_settings_service().settings.prometheus_port)
+                    prometheus_started = True
                     await logger.adebug(
                         f"Started Prometheus server on port {get_settings_service().settings.prometheus_port}"
                     )
@@ -383,6 +385,15 @@ def get_lifespan(*, fix_migration=False, version=None):
                         )
                     else:
                         await logger.awarning(f"Failed to start Prometheus server: {e}")
+
+            # Only the process that actually bound the Prometheus port runs the DB-derived
+            # collector, so `gunicorn -w N` does not spawn N collectors all querying the
+            # database while only one of them exposes anything to scrape.
+            from langflow.services.background_execution.metrics_collector import maybe_start_metrics_collector
+
+            await maybe_start_metrics_collector(
+                _app, get_settings_service().settings, prometheus_started=prometheus_started
+            )
 
             telemetry_service = get_telemetry_service()
 
@@ -689,6 +700,13 @@ def get_lifespan(*, fix_migration=False, version=None):
             # CRITICAL: Cleanup MCP sessions FIRST, before any other shutdown logic.
             # This ensures MCP subprocesses are killed even if shutdown is interrupted.
             await cleanup_mcp_sessions()
+
+            # Stop the background-execution metrics collector. No-op when it never
+            # started, and it swallows its own errors: a collector that fails to stop
+            # must not be the reason shutdown does not finish.
+            from langflow.services.background_execution.metrics_collector import stop_metrics_collector
+
+            await stop_metrics_collector(_app)
 
             # Enterprise shutdown hooks run before service teardown so they can
             # still flush through live services. Also reached when startup

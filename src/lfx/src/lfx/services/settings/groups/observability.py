@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ObservabilitySettings(BaseModel):
@@ -8,6 +8,12 @@ class ObservabilitySettings(BaseModel):
     """If set to True, Langflow will expose Prometheus metrics."""
     prometheus_port: int = 9090
     """The port on which Langflow will expose Prometheus metrics. 9090 is the default port."""
+
+    background_metrics_interval: int = Field(default=15, gt=0)
+    """Seconds between background-execution DB-derived metric collector ticks.
+
+    Must be > 0. ``asyncio.sleep`` returns immediately for zero or a negative value, which
+    would turn the collector into a tight database-polling loop rather than a slow one."""
 
     max_transactions_to_keep: int = 3000
     """The maximum number of transactions to keep in the database."""
