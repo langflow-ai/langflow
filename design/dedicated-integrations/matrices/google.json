@@ -1,0 +1,291 @@
+{
+  "schema_version": 1,
+  "provider": "google",
+  "display_name": "Google Workspace",
+  "bundle": {
+    "extension_id": "lfx-google",
+    "bundle_name": "google",
+    "distribution": "lfx-google"
+  },
+  "wave": 1,
+  "max_included_actions": 8,
+  "verified_on": "2026-09-01",
+  "oauth_app_owner_by_context": {
+    "hosted": "langflow",
+    "self_managed": "customer",
+    "desktop": "customer",
+    "headless": "customer"
+  },
+  "substrate_decision": {
+    "chosen": [
+      "sdk"
+    ],
+    "decision_record": "decisions/substrate-google.md"
+  },
+  "restricted_scope_decisions": [
+    {
+      "scope": "https://www.googleapis.com/auth/gmail.readonly",
+      "decision": "defer",
+      "rationale": "Phase 4 decides CASA-or-avoid for the Langflow-owned hosted app; gmail.readonly is the scope Gmail search needs.",
+      "decision_record": "decisions/google-restricted-scopes.md"
+    },
+    {
+      "scope": "https://www.googleapis.com/auth/drive.readonly",
+      "decision": "defer",
+      "rationale": "Phase 4 decides CASA-or-avoid; drive.readonly is needed to fetch files the app did not create. drive.file is the non-restricted alternative.",
+      "decision_record": "decisions/google-restricted-scopes.md"
+    },
+    {
+      "scope": "https://www.googleapis.com/auth/drive.metadata.readonly",
+      "decision": "defer",
+      "rationale": "Phase 4 decides CASA-or-avoid; listing arbitrary Drive files needs a metadata scope beyond drive.file.",
+      "decision_record": "decisions/google-restricted-scopes.md"
+    }
+  ],
+  "sources": {
+    "gmail-scopes": {
+      "url": "https://developers.google.com/workspace/gmail/api/auth/scopes",
+      "title": "Gmail API: Choose Gmail API scopes",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01"
+    },
+    "drive-scopes": {
+      "url": "https://developers.google.com/workspace/drive/api/guides/api-specific-auth",
+      "title": "Google Drive API: Choose Google Drive API scopes",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01"
+    },
+    "calendar-scopes": {
+      "url": "https://developers.google.com/workspace/calendar/api/auth",
+      "title": "Google Calendar API: Choose Calendar API scopes",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01"
+    },
+    "google-scope-classification": {
+      "url": "https://support.google.com/cloud/answer/13464321",
+      "title": "Google Cloud: Sensitive and restricted OAuth scopes (classification list)",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01"
+    },
+    "google-restricted-scope-verification": {
+      "url": "https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification",
+      "title": "Google Identity: Restricted scope verification (CASA)",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01"
+    },
+    "google-workspace-mcp": {
+      "url": "https://developers.google.com/workspace/guides/configure-mcp-servers",
+      "title": "Google Workspace: Configure MCP servers (Developer Preview)",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01"
+    }
+  },
+  "verification_programs": {
+    "google-oauth-app-verification": {
+      "description": "Brand and scope verification for a Langflow-owned OAuth client that requests sensitive scopes; required before the consent screen leaves Testing.",
+      "source": "google-restricted-scope-verification",
+      "blocking_for_contexts": [
+        "hosted"
+      ]
+    },
+    "google-casa": {
+      "description": "Cloud Application Security Assessment required for any OAuth client requesting restricted scopes, with annual recertification.",
+      "source": "google-restricted-scope-verification",
+      "blocking_for_contexts": [
+        "hosted"
+      ],
+      "recurring": "annual"
+    }
+  },
+  "actions": [
+    {
+      "action_id": "google.gmail.send",
+      "display_name": "Gmail: Send Email",
+      "component_class": "GmailSendComponent",
+      "decision": "defer",
+      "rationale": "Highest-demand write action; believed to need only a sensitive scope so it does not depend on the CASA decision.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
+      ],
+      "identity": "user_delegated",
+      "auth_mode": "oauth2_authorization_code",
+      "substrate": "sdk",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "https://www.googleapis.com/auth/gmail.send",
+          "classification": "sensitive",
+          "provider_classification": "Sensitive (to verify)",
+          "source": "gmail-scopes"
+        }
+      ]
+    },
+    {
+      "action_id": "google.gmail.search",
+      "display_name": "Gmail: Search Messages",
+      "component_class": "GmailSearchComponent",
+      "decision": "defer",
+      "rationale": "Read action on the restricted Gmail scope; its fate is the Phase 4 CASA decision.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed.",
+        "Is gmail.metadata (headers only) an acceptable narrower scope for search, and is it also restricted?"
+      ],
+      "identity": "user_delegated",
+      "auth_mode": "oauth2_authorization_code",
+      "substrate": "sdk",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "https://www.googleapis.com/auth/gmail.readonly",
+          "classification": "restricted",
+          "provider_classification": "Restricted (to verify)",
+          "source": "gmail-scopes"
+        }
+      ]
+    },
+    {
+      "action_id": "google.drive.list",
+      "display_name": "Drive: List Files",
+      "component_class": "GoogleDriveListComponent",
+      "decision": "defer",
+      "rationale": "Listing arbitrary files needs a restricted scope; a drive.file-only variant is the non-CASA alternative.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed.",
+        "Does a drive.file-only list satisfy the customer use case, or is it effectively useless without the Picker?"
+      ],
+      "identity": "user_delegated",
+      "auth_mode": "oauth2_authorization_code",
+      "substrate": "sdk",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "https://www.googleapis.com/auth/drive.metadata.readonly",
+          "classification": "restricted",
+          "provider_classification": "Restricted (to verify)",
+          "source": "drive-scopes"
+        },
+        {
+          "scope": "https://www.googleapis.com/auth/drive.file",
+          "classification": "non_sensitive",
+          "provider_classification": "Non-sensitive / recommended (to verify)",
+          "source": "drive-scopes",
+          "notes": "Alternative: lists only files the app created or the user opened with it."
+        }
+      ]
+    },
+    {
+      "action_id": "google.drive.fetch",
+      "display_name": "Drive: Fetch File",
+      "component_class": "GoogleDriveFetchComponent",
+      "decision": "defer",
+      "rationale": "Fetching a file by id that the app did not create needs drive.readonly (restricted); drive.file covers app-created or user-picked files.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
+      ],
+      "identity": "user_delegated",
+      "auth_mode": "oauth2_authorization_code",
+      "substrate": "sdk",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "https://www.googleapis.com/auth/drive.readonly",
+          "classification": "restricted",
+          "provider_classification": "Restricted (to verify)",
+          "source": "drive-scopes"
+        },
+        {
+          "scope": "https://www.googleapis.com/auth/drive.file",
+          "classification": "non_sensitive",
+          "provider_classification": "Non-sensitive / recommended (to verify)",
+          "source": "drive-scopes"
+        }
+      ]
+    },
+    {
+      "action_id": "google.calendar.list",
+      "display_name": "Calendar: List Events",
+      "component_class": "GoogleCalendarListComponent",
+      "decision": "defer",
+      "rationale": "Read action believed to be sensitive, not restricted.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
+      ],
+      "identity": "user_delegated",
+      "auth_mode": "oauth2_authorization_code",
+      "substrate": "sdk",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "https://www.googleapis.com/auth/calendar.events.readonly",
+          "classification": "sensitive",
+          "provider_classification": "Sensitive (to verify)",
+          "source": "calendar-scopes"
+        }
+      ]
+    },
+    {
+      "action_id": "google.calendar.create",
+      "display_name": "Calendar: Create Event",
+      "component_class": "GoogleCalendarCreateComponent",
+      "decision": "defer",
+      "rationale": "Write action believed to be sensitive, not restricted.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
+      ],
+      "identity": "user_delegated",
+      "auth_mode": "oauth2_authorization_code",
+      "substrate": "sdk",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "https://www.googleapis.com/auth/calendar.events",
+          "classification": "sensitive",
+          "provider_classification": "Sensitive (to verify)",
+          "source": "calendar-scopes"
+        }
+      ]
+    }
+  ]
+}

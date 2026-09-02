@@ -1,0 +1,287 @@
+{
+  "schema_version": 1,
+  "provider": "slack",
+  "display_name": "Slack",
+  "bundle": {
+    "extension_id": "lfx-slack",
+    "bundle_name": "slack",
+    "distribution": "lfx-slack"
+  },
+  "wave": 1,
+  "max_included_actions": 8,
+  "verified_on": "2026-09-01",
+  "oauth_app_owner_by_context": {
+    "hosted": "langflow",
+    "self_managed": "customer",
+    "desktop": "customer",
+    "headless": "customer"
+  },
+  "substrate_decision": {
+    "chosen": [
+      "mcp",
+      "rest"
+    ],
+    "decision_record": "decisions/substrate-slack.md"
+  },
+  "restricted_scope_decisions": [],
+  "sources": {
+    "slack-scopes": {
+      "url": "https://docs.slack.dev/reference/scopes",
+      "title": "Slack: Permission scopes reference",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01"
+    },
+    "slack-mcp-server": {
+      "url": "https://docs.slack.dev/ai/slack-mcp-server/",
+      "title": "Slack: Slack MCP server overview (GA, user tokens only)",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01"
+    },
+    "slack-pkce": {
+      "url": "https://docs.slack.dev/authentication/using-pkce/",
+      "title": "Slack: Using PKCE (desktop redirects may not request bot scopes)",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01"
+    }
+  },
+  "verification_programs": {},
+  "actions": [
+    {
+      "action_id": "slack.user.search",
+      "display_name": "Slack: Search (as user)",
+      "component_class": "SlackSearchComponent",
+      "decision": "defer",
+      "rationale": "search.messages is user-token only, which matches the MCP server's identity model.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed.",
+        "Confirm the Slack MCP server exposes a search tool and which scopes it requests at install."
+      ],
+      "identity": "user_delegated",
+      "auth_mode": "oauth2_authorization_code",
+      "substrate": "mcp",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "search:read",
+          "classification": "sensitive",
+          "provider_classification": "User token scope; content reading (to verify)",
+          "source": "slack-scopes"
+        }
+      ]
+    },
+    {
+      "action_id": "slack.user.read_thread",
+      "display_name": "Slack: Read Thread (as user)",
+      "component_class": "SlackReadThreadComponent",
+      "decision": "defer",
+      "rationale": "conversations.replies scoped to the connected user's visibility.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
+      ],
+      "identity": "user_delegated",
+      "auth_mode": "oauth2_authorization_code",
+      "substrate": "mcp",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "channels:history",
+          "classification": "sensitive",
+          "provider_classification": "User token scope; content reading (to verify)",
+          "source": "slack-scopes"
+        },
+        {
+          "scope": "groups:history",
+          "classification": "sensitive",
+          "provider_classification": "User token scope; content reading (to verify)",
+          "source": "slack-scopes"
+        },
+        {
+          "scope": "im:history",
+          "classification": "sensitive",
+          "provider_classification": "User token scope; content reading (to verify)",
+          "source": "slack-scopes"
+        },
+        {
+          "scope": "mpim:history",
+          "classification": "sensitive",
+          "provider_classification": "User token scope; content reading (to verify)",
+          "source": "slack-scopes"
+        }
+      ]
+    },
+    {
+      "action_id": "slack.user.send",
+      "display_name": "Slack: Send Message (as user)",
+      "component_class": "SlackSendAsUserComponent",
+      "decision": "defer",
+      "rationale": "Posts as the connected user; distinct from posting as the app.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
+      ],
+      "identity": "user_delegated",
+      "auth_mode": "oauth2_authorization_code",
+      "substrate": "mcp",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "chat:write",
+          "classification": "non_sensitive",
+          "provider_classification": "User token scope (to verify)",
+          "source": "slack-scopes"
+        }
+      ]
+    },
+    {
+      "action_id": "slack.user.canvas",
+      "display_name": "Slack: Read/Write Canvas (as user)",
+      "component_class": "SlackCanvasComponent",
+      "decision": "defer",
+      "rationale": "Canvas is a documented MCP server capability; likely the lowest-demand user action and first to prune.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
+      ],
+      "identity": "user_delegated",
+      "auth_mode": "oauth2_authorization_code",
+      "substrate": "mcp",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "canvases:read",
+          "classification": "sensitive",
+          "provider_classification": "User token scope; content reading (to verify)",
+          "source": "slack-scopes"
+        },
+        {
+          "scope": "canvases:write",
+          "classification": "non_sensitive",
+          "provider_classification": "User token scope (to verify)",
+          "source": "slack-scopes"
+        }
+      ]
+    },
+    {
+      "action_id": "slack.bot.post",
+      "display_name": "Slack: Post Message (as app)",
+      "component_class": "SlackPostAsAppComponent",
+      "decision": "defer",
+      "rationale": "Bot identity is excluded from the MCP server, so this runs on the Web API; desktop excluded because desktop redirects may not request bot scopes.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
+      ],
+      "identity": "bot",
+      "auth_mode": "bot_token_install",
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "app_install_redirect",
+        "self_managed": "app_install_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "chat:write",
+          "classification": "non_sensitive",
+          "provider_classification": "Bot token scope (to verify)",
+          "source": "slack-scopes"
+        }
+      ]
+    },
+    {
+      "action_id": "slack.bot.add_reaction",
+      "display_name": "Slack: Add Reaction (as app)",
+      "component_class": "SlackAddReactionComponent",
+      "decision": "defer",
+      "rationale": "Low-risk bot write; candidate to prune if the bot set must shrink.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
+      ],
+      "identity": "bot",
+      "auth_mode": "bot_token_install",
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "app_install_redirect",
+        "self_managed": "app_install_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "reactions:write",
+          "classification": "non_sensitive",
+          "provider_classification": "Bot token scope (to verify)",
+          "source": "slack-scopes"
+        }
+      ]
+    },
+    {
+      "action_id": "slack.bot.list_channel_members",
+      "display_name": "Slack: List Channel Members (as app)",
+      "component_class": "SlackListChannelMembersComponent",
+      "decision": "defer",
+      "rationale": "conversations.members plus users.info for display names.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
+      ],
+      "identity": "bot",
+      "auth_mode": "bot_token_install",
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "app_install_redirect",
+        "self_managed": "app_install_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "channels:read",
+          "classification": "non_sensitive",
+          "provider_classification": "Bot token scope (to verify)",
+          "source": "slack-scopes"
+        },
+        {
+          "scope": "groups:read",
+          "classification": "non_sensitive",
+          "provider_classification": "Bot token scope (to verify)",
+          "source": "slack-scopes"
+        },
+        {
+          "scope": "users:read",
+          "classification": "non_sensitive",
+          "provider_classification": "Bot token scope (to verify)",
+          "source": "slack-scopes"
+        }
+      ]
+    }
+  ]
+}

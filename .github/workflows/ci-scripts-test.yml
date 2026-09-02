@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "scripts/ci/**"
+      - "design/dedicated-integrations/**"
       - ".github/workflows/ci-scripts-test.yml"
       - "pyproject.toml"
       - "src/bundles/*/pyproject.toml"

@@ -1,0 +1,284 @@
+{
+  "schema_version": 1,
+  "provider": "microsoft",
+  "display_name": "Microsoft 365 and Teams",
+  "bundle": {
+    "extension_id": "lfx-microsoft",
+    "bundle_name": "microsoft",
+    "distribution": "lfx-microsoft"
+  },
+  "wave": 1,
+  "max_included_actions": 8,
+  "verified_on": "2026-09-01",
+  "oauth_app_owner_by_context": {
+    "hosted": "langflow",
+    "self_managed": "customer",
+    "desktop": "customer",
+    "headless": "customer"
+  },
+  "substrate_decision": {
+    "chosen": [
+      "rest"
+    ],
+    "decision_record": "decisions/substrate-microsoft.md"
+  },
+  "restricted_scope_decisions": [],
+  "sources": {
+    "graph-permissions-reference": {
+      "url": "https://learn.microsoft.com/en-us/graph/permissions-reference",
+      "title": "Microsoft Graph permissions reference",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01"
+    },
+    "work-iq-mcp": {
+      "url": "https://learn.microsoft.com/en-us/microsoft-agent-365/tooling-servers-overview",
+      "title": "Microsoft Agent 365: Work IQ MCP tooling servers overview (preview)",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01"
+    }
+  },
+  "verification_programs": {},
+  "actions": [
+    {
+      "action_id": "microsoft.outlook.send",
+      "display_name": "Outlook: Send Mail",
+      "component_class": "OutlookSendComponent",
+      "decision": "defer",
+      "rationale": "Highest-demand write action on Graph delegated permissions.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
+      ],
+      "identity": "user_delegated",
+      "auth_mode": "oauth2_authorization_code",
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "Mail.Send",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (to verify)",
+          "source": "graph-permissions-reference"
+        }
+      ]
+    },
+    {
+      "action_id": "microsoft.outlook.search",
+      "display_name": "Outlook: Search Mail",
+      "component_class": "OutlookSearchComponent",
+      "decision": "defer",
+      "rationale": "Read action; Mail.ReadBasic may be a narrower alternative.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed.",
+        "Does Mail.ReadBasic support $search, or is Mail.Read required?"
+      ],
+      "identity": "user_delegated",
+      "auth_mode": "oauth2_authorization_code",
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "Mail.Read",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (to verify)",
+          "source": "graph-permissions-reference"
+        }
+      ]
+    },
+    {
+      "action_id": "microsoft.calendar.list",
+      "display_name": "Outlook Calendar: List Events",
+      "component_class": "OutlookCalendarListComponent",
+      "decision": "defer",
+      "rationale": "Read action on delegated calendar permission.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
+      ],
+      "identity": "user_delegated",
+      "auth_mode": "oauth2_authorization_code",
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "Calendars.Read",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (to verify)",
+          "source": "graph-permissions-reference"
+        }
+      ]
+    },
+    {
+      "action_id": "microsoft.calendar.create",
+      "display_name": "Outlook Calendar: Create Event",
+      "component_class": "OutlookCalendarCreateComponent",
+      "decision": "defer",
+      "rationale": "Write action on delegated calendar permission.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
+      ],
+      "identity": "user_delegated",
+      "auth_mode": "oauth2_authorization_code",
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "Calendars.ReadWrite",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (to verify)",
+          "source": "graph-permissions-reference"
+        }
+      ]
+    },
+    {
+      "action_id": "microsoft.teams.chat_post",
+      "display_name": "Teams: Post Chat Message",
+      "component_class": "TeamsChatPostComponent",
+      "decision": "defer",
+      "rationale": "Sends as the connected user into a 1:1 or group chat.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
+      ],
+      "identity": "user_delegated",
+      "auth_mode": "oauth2_authorization_code",
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "ChatMessage.Send",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (to verify)",
+          "source": "graph-permissions-reference"
+        }
+      ]
+    },
+    {
+      "action_id": "microsoft.teams.channel_post",
+      "display_name": "Teams: Post Channel Message",
+      "component_class": "TeamsChannelPostComponent",
+      "decision": "defer",
+      "rationale": "Sends as the connected user into a team channel.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed.",
+        "Confirm ChannelMessage.Send delegated does not require admin consent in a default tenant."
+      ],
+      "identity": "user_delegated",
+      "auth_mode": "oauth2_authorization_code",
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "ChannelMessage.Send",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (to verify)",
+          "source": "graph-permissions-reference"
+        }
+      ]
+    },
+    {
+      "action_id": "microsoft.files.list",
+      "display_name": "SharePoint/OneDrive: List Items",
+      "component_class": "SharePointListComponent",
+      "decision": "defer",
+      "rationale": "Lists drive items the connected user can reach; Sites.Read.All widens to SharePoint sites.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed.",
+        "Is Files.Read (own OneDrive only) sufficient for wave 1, or is Sites.Read.All needed for SharePoint libraries?"
+      ],
+      "identity": "user_delegated",
+      "auth_mode": "oauth2_authorization_code",
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "Files.Read.All",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (to verify)",
+          "source": "graph-permissions-reference"
+        },
+        {
+          "scope": "Sites.Read.All",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (to verify)",
+          "source": "graph-permissions-reference"
+        }
+      ]
+    },
+    {
+      "action_id": "microsoft.files.fetch",
+      "display_name": "SharePoint/OneDrive: Fetch Item",
+      "component_class": "SharePointFetchComponent",
+      "decision": "defer",
+      "rationale": "Fetches a drive item by id or path.",
+      "confidence": "low",
+      "open_questions": [
+        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
+      ],
+      "identity": "user_delegated",
+      "auth_mode": "oauth2_authorization_code",
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "scopes": [
+        {
+          "scope": "Files.Read.All",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (to verify)",
+          "source": "graph-permissions-reference"
+        }
+      ]
+    }
+  ]
+}
