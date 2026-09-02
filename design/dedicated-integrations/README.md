@@ -1,6 +1,6 @@
 # Dedicated Integrations (1.13): discovery gate records
 
-Status: release-owner decisions applied 2026-09-01 (Google 5 actions on SDK, Microsoft 8 on Graph REST, hosted app avoids restricted scopes, KB connectors adopt in 1.13, palette naming fixed). Slack substrate is accepted conditionally and its rows stay deferred until the GA source and tool names are cited. Gate close pending that condition and owner sign-offs.
+Status: gate artifacts complete on 2026-09-01. Every decision record is `accepted` by the release owner and `check_capability_matrices.py --require-accepted` passes. Wave 1 = Google 5, Microsoft 8, Slack 7 actions. Remaining: role-owner sign-offs in PR review (lfx, langflow-base, Enterprise, frontend, hosted-app), tracked in the table below.
 Jira: LE-2398 "Dedicated Integrations", ticket INT-1.
 Last updated: 2026-09-01
 
@@ -13,9 +13,9 @@ these files are the historical record the checker keeps guarding.
 
 | # | Exit criterion (from INT-1) | Artifact | Machine check | Status |
 |---|---|---|---|---|
-| 1 | Three approved matrices, at most 8 actions each | `matrices/google.json`, `matrices/microsoft.json`, `matrices/slack.json` | `check_capability_matrices.py`: included-action cap, required fields, enums | Google 5 included (Gmail search excluded), Microsoft 8 included, Slack 7 deferred pending the substrate condition |
+| 1 | Three approved matrices, at most 8 actions each | `matrices/google.json`, `matrices/microsoft.json`, `matrices/slack.json` | `check_capability_matrices.py`: included-action cap, required fields, enums | Google 5 included (Gmail search excluded), Microsoft 8 included, Slack 7 included (4 MCP, 3 Web API) |
 | 2 | Every scope classified; every restricted scope has a written decision | scope entries in the matrices; `decisions/google-restricted-scopes.md` | classification present and sourced; restricted scopes need a `restricted_scope_decisions` entry pointing at an existing record | accepted: avoid on the hosted app; Gmail search excluded, Drive on drive.file |
-| 3 | Substrate decision per provider with the server's GA status | `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`; `substrate_decision` in each matrix | included actions must use a chosen substrate; non-GA MCP rows cannot be high confidence | accepted: Google sdk, Microsoft rest; Slack mixed accepted conditionally |
+| 3 | Substrate decision per provider with the server's GA status | `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`; `substrate_decision` in each matrix | included actions must use a chosen substrate; non-GA MCP rows cannot be high confidence | accepted: Google sdk, Microsoft rest, Slack mixed (identifier capture is INT-9 day one) |
 | 4 | INT-2 connection-resolution contract signed off by lfx, langflow-base, Enterprise owners | `connection-contract.md` | none (PR approval) | drafted 2026-09-01; 12 sections, owner questions in section 12 |
 | 5 | Frontend surface list | `frontend-surfaces.md` | none | drafted 2026-09-01; 14 extend + 8 new, MVP/defer split |
 | 6 | Trigger/webhook track recorded as deferred | `triggers-deferred.md` | none | placeholder, no findings folded in |
@@ -37,7 +37,7 @@ Role placeholders until the release owner assigns names.
 | Enterprise owner | `connection-contract.md`, restricted-scope decision | | | |
 | frontend owner | `frontend-surfaces.md`, `decisions/palette-naming.md` | | | |
 | hosted-app owner | `decisions/google-restricted-scopes.md`, hosted rows of every matrix | | | |
-| release owner | all matrices, `estimate.md`, gate close | | | |
+| release owner | all matrices, `estimate.md`, gate close | Eric Hare | 2026-09-01 | #14906 |
 
 ## Running the checker
 
@@ -160,4 +160,4 @@ cited source in Phase 1 or 2.
 | 5 | `connection-contract.md` (drafted 2026-09-01) | review by lfx, langflow-base, Enterprise owners |
 | 6 | KB connector and palette naming decisions (drafted 2026-09-01) | yes |
 | 7 | `frontend-surfaces.md` (drafted 2026-09-01) | no |
-| 8 | `estimate.md` (drafted 2026-09-01); records to `accepted`; gate close | yes |
+| 8 | `estimate.md` re-issued; all records `accepted`; `--require-accepted` green (2026-09-01); owner sign-offs in PR review | done, pending sign-offs |

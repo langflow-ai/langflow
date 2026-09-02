@@ -1,6 +1,6 @@
 # Substrate decision: Slack
 
-Status: proposed
+Status: accepted
 Decision ID: substrate-slack
 Applies to: matrices/slack.json, all actions; identity split user vs bot
 Owners (sign-off roles): lfx owner, langflow-base owner, Enterprise owner, hosted-app owner, release owner
@@ -51,7 +51,7 @@ bot use cases (post as app, react, list members) disappear from wave 1. Not reco
 
 ## Decision
 
-Proposed: Option A. User-identity actions (`slack.user.*`) run on the official Slack MCP server in pinned mode;
+Option A, confirmed by the release owner on 2026-09-01 with the identifier capture as INT-9's first task. User-identity actions (`slack.user.*`) run on the official Slack MCP server in pinned mode;
 bot actions (`slack.bot.*`) run on the Web API with a bot token from the workspace installation. Desktop exposes
 user-identity actions only. `substrate_decision.chosen` in `matrices/slack.json` is `["mcp", "rest"]`.
 
@@ -59,8 +59,7 @@ Condition status on 2026-09-01: (1) GA is cited (fact 3): met. (2) Tool names: t
 user action is a documented server capability (search, read thread via channel history, send message, canvas) but
 enumerate identifiers only for the file-upload tools (fact 8). The exact identifiers and argument schemas can only
 come from a dated `tools/list` capture, which the gate's docs-only rule admits as supplementary evidence, never as
-the sole source. Proposed resolution, for the release owner: accept the record with the identifier capture as the
-first task of INT-9, keeping the fallback that if the capture shows any of the four actions is not covered, that
+the sole source. Resolution accepted by the release owner on 2026-09-01: the identifier capture is the first task of INT-9, keeping the fallback that if the capture shows any of the four actions is not covered, that
 action moves to the Web API and, if none are covered, INT-9 defers to 1.14 and Slack runs Web API throughout.
 
 ## Consequences

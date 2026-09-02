@@ -166,13 +166,13 @@
       "action_id": "slack.user.search",
       "display_name": "Slack: Search (as user)",
       "component_class": "SlackSearchComponent",
-      "decision": "defer",
+      "decision": "include",
       "confidence": "medium",
       "open_questions": [
         "Confirm the exact tool name and argument schema the MCP server exposes for search before pinning the action-to-tool mapping (INT-9).",
         "INT-9 day one: capture the server's tools/list and pin this action's tool identifier and argument schema; the docs name the capability but not the identifier."
       ],
-      "rationale": "search.messages is user-token only, which matches the MCP server's identity model; the MCP path also avoids the non-Marketplace Web API rate reduction.",
+      "rationale": "search.messages is user-token only, which matches the MCP server's identity model; the MCP path also avoids the non-Marketplace Web API rate reduction. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {
@@ -292,13 +292,13 @@
       "action_id": "slack.user.read_thread",
       "display_name": "Slack: Read Thread (as user)",
       "component_class": "SlackReadThreadComponent",
-      "decision": "defer",
+      "decision": "include",
       "confidence": "medium",
       "open_questions": [
         "If the Web API path is used, a Langflow-owned hosted app must be Marketplace-approved or it gets 1 request per minute with 15 messages.",
         "INT-9 day one: capture the server's tools/list and pin this action's tool identifier and argument schema; the docs name the capability but not the identifier."
       ],
-      "rationale": "conversations.replies scoped to the connected user's visibility; the MCP path sidesteps the non-Marketplace Web API limit.",
+      "rationale": "conversations.replies scoped to the connected user's visibility; the MCP path sidesteps the non-Marketplace Web API limit. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {
@@ -421,12 +421,12 @@
       "action_id": "slack.user.send",
       "display_name": "Slack: Send Message (as user)",
       "component_class": "SlackSendAsUserComponent",
-      "decision": "defer",
+      "decision": "include",
       "confidence": "medium",
       "open_questions": [
         "INT-9 day one: capture the server's tools/list and pin this action's tool identifier and argument schema; the docs name the capability but not the identifier."
       ],
-      "rationale": "Posts as the connected user; distinct from posting as the app. Works on Desktop because user scopes are allowed on desktop redirects.",
+      "rationale": "Posts as the connected user; distinct from posting as the app. Works on Desktop because user scopes are allowed on desktop redirects. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {
@@ -516,14 +516,14 @@
       "action_id": "slack.user.canvas",
       "display_name": "Slack: Create Canvas (as user)",
       "component_class": "SlackCanvasComponent",
-      "decision": "defer",
+      "decision": "include",
       "confidence": "medium",
       "open_questions": [
         "Confirm the MCP server's canvas tool coverage (create, read, edit) before deciding the action's output set.",
         "Free teams cannot create standalone canvases; decide whether the action requires channel_id.",
         "INT-9 day one: capture the server's tools/list and pin this action's tool identifier and argument schema; the docs name the capability but not the identifier."
       ],
-      "rationale": "Canvas is a documented MCP server capability. Likely the lowest-demand user action and the first to prune if the include set must shrink.",
+      "rationale": "Canvas is a documented MCP server capability. Likely the lowest-demand user action and the first to prune if the include set must shrink. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {
@@ -610,9 +610,9 @@
       "action_id": "slack.bot.post",
       "display_name": "Slack: Post Message (as app)",
       "component_class": "SlackPostAsAppComponent",
-      "decision": "defer",
+      "decision": "include",
       "confidence": "high",
-      "rationale": "Bot identity is excluded from the MCP server, so this runs on the Web API with a bot token from a workspace installation. Desktop is excluded because desktop redirects may not request bot scopes.",
+      "rationale": "Bot identity is excluded from the MCP server, so this runs on the Web API with a bot token from a workspace installation. Desktop is excluded because desktop redirects may not request bot scopes. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {
@@ -708,9 +708,9 @@
       "action_id": "slack.bot.add_reaction",
       "display_name": "Slack: Add Reaction (as app)",
       "component_class": "SlackAddReactionComponent",
-      "decision": "defer",
+      "decision": "include",
       "confidence": "high",
-      "rationale": "Low-risk bot write; candidate to prune if the bot set must shrink.",
+      "rationale": "Low-risk bot write; candidate to prune if the bot set must shrink. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {
@@ -787,9 +787,9 @@
       "action_id": "slack.bot.list_channel_members",
       "display_name": "Slack: List Channel Members (as app)",
       "component_class": "SlackListChannelMembersComponent",
-      "decision": "defer",
+      "decision": "include",
       "confidence": "high",
-      "rationale": "conversations.members returns user ids; users:read is needed only if the action resolves display names.",
+      "rationale": "conversations.members returns user ids; users:read is needed only if the action resolves display names. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {

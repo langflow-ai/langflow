@@ -1,6 +1,6 @@
 # Re-issued estimate for INT-2 through INT-14
 
-Status: re-issued 2026-09-01 under the release owner's confirmed decisions (Slack still conditional)
+Status: re-issued 2026-09-01 under the release owner's confirmed decisions
 Owners (sign-off roles): release owner
 Last verified: 2026-09-01
 
@@ -22,7 +22,7 @@ Google app avoids restricted scopes, KB connectors adopt the contract in 1.13 pe
 | INT-6 Executing identity | 3 | 3 | 0 | the allow/deny table is already written per family in the contract |
 | INT-7 Governance | 3 | 3 | 0 | mirrors the model-provider policy pattern as planned |
 | INT-8 Frontend Connections UX | 5 | 6 | +1 | OAuth return handling (popup plus `postMessage` or callback route) is greenfield; scope-coverage picker; a11y baseline spec; i18n in seven locales (`frontend-surfaces.md` B3, B5, A14) |
-| INT-9 MCP pinned mode | 3 | 3 | 0 | needed only if Slack stays mixed; 0 in 1.13 if Slack goes Web API throughout |
+| INT-9 MCP pinned mode | 3 | 3 | 0 | Slack is mixed; day one is a dated tools/list capture against mcp.slack.com to pin the four user-action identifiers (`decisions/substrate-slack.md`) |
 | INT-10 lfx-google wave 1 | 5 | 4.75 | -0.25 | include set shrinks to five SDK actions with no restricted scope and no MCP (-1); the `GoogleOAuthToken` deprecation and upgrade-checker rule remain; KB Drive ingestion source on connections (+0.75, `decisions/kb-oauth-connector-adoption.md`) |
 | INT-11 lfx-microsoft | 5 | 5.75 | +0.75 | eight Graph actions, a new bundle's eight registration points, the Entra guide; KB OneDrive, SharePoint, and Graph ingestion sources on connections plus the KB connector picker (`decisions/kb-oauth-connector-adoption.md`) |
 | INT-12 lfx-slack | 4 | 4 | 0 | mixed: pinned MCP for four user actions plus Web API for three bot actions; 3 if Web API throughout |
@@ -43,7 +43,7 @@ and an annual recurring assessment that no ticket currently carries.
 | Google CASA | hosted, only if the restricted-scope decision flips to accept | several weeks, then annual | `google-restricted-scope-verification` |
 | Microsoft publisher verification | hosted | minutes once a verified Cloud Partner Program account exists; obtaining and verifying that account is the real lead time | `matrices/microsoft.json` source `entra-publisher-verification` |
 | Slack Marketplace (directory) listing | hosted, required for MCP use and to lift the non-Marketplace rate reduction | Slack review; weeks, not documented | `matrices/slack.json` sources `slack-mcp-server`, `slack-rate-limits` |
-| Slack MCP GA confirmation | all, if Slack stays mixed | none if a citable source exists; otherwise fall back to Web API | `decisions/substrate-slack.md` condition |
+| Slack MCP tool identifiers | all | INT-9 day one tools/list capture; an uncovered action moves to the Web API | `decisions/substrate-slack.md` |
 
 ## What the estimate does not include
 
