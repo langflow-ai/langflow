@@ -1,0 +1,86 @@
+import json
+
+import pytest
+from httpx import AsyncClient
+from langflow.main import GZIP_EXCLUDED_CONTENT_TYPES, GZIP_MINIMUM_SIZE
+
+LARGE_NODE_COUNT = 40
+
+
+def _large_flow_payload() -> dict:
+    nodes = [
+        {
+            "id": f"node-{index}",
+            "data": {"node": {"template": {"code": {"value": "from lfx.custom import Component\n" * 12}}}},
+        }
+        for index in range(LARGE_NODE_COUNT)
+    ]
+    return {
+        "name": "compression fixture",
+        "description": "flow large enough to cross the compression threshold",
+        "data": {"nodes": nodes, "edges": []},
+        "is_component": False,
+        "webhook": False,
+    }
+
+
+async def _create_large_flow(client: AsyncClient, headers: dict) -> str:
+    payload = _large_flow_payload()
+    assert len(json.dumps(payload).encode()) > GZIP_MINIMUM_SIZE
+    response = await client.post("api/v1/flows/", json=payload, headers=headers)
+    assert response.status_code == 201
+    return response.json()["id"]
+
+
+@pytest.mark.asyncio
+async def test_flow_read_is_compressed_when_the_client_accepts_gzip(client: AsyncClient, logged_in_headers):
+    flow_id = await _create_large_flow(client, logged_in_headers)
+
+    response = await client.get(f"api/v1/flows/{flow_id}", headers={**logged_in_headers, "Accept-Encoding": "gzip"})
+
+    assert response.status_code == 200
+    assert response.headers["content-encoding"] == "gzip"
+    assert "accept-encoding" in response.headers["vary"].lower()
+    assert response.json()["id"] == flow_id
+
+
+@pytest.mark.asyncio
+async def test_flow_read_is_untouched_when_the_client_does_not_accept_gzip(client: AsyncClient, logged_in_headers):
+    flow_id = await _create_large_flow(client, logged_in_headers)
+
+    response = await client.get(f"api/v1/flows/{flow_id}", headers={**logged_in_headers, "Accept-Encoding": "identity"})
+
+    assert response.status_code == 200
+    assert "content-encoding" not in response.headers
+    assert json.loads(response.content)["id"] == flow_id
+
+
+@pytest.mark.asyncio
+async def test_flow_update_echo_is_compressed(client: AsyncClient, logged_in_headers):
+    flow_id = await _create_large_flow(client, logged_in_headers)
+    payload = _large_flow_payload()
+    payload["name"] = "compression fixture renamed"
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json=payload,
+        headers={**logged_in_headers, "Accept-Encoding": "gzip"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-encoding"] == "gzip"
+    assert response.json()["name"] == "compression fixture renamed"
+
+
+@pytest.mark.asyncio
+async def test_response_below_the_threshold_is_not_compressed(client: AsyncClient, logged_in_headers):
+    response = await client.get("api/v1/version", headers={**logged_in_headers, "Accept-Encoding": "gzip"})
+
+    assert response.status_code == 200
+    assert len(response.content) < GZIP_MINIMUM_SIZE
+    assert "content-encoding" not in response.headers
+
+
+def test_binary_and_streaming_content_types_are_excluded():
+    for content_type in ("application/octet-stream", "application/zip", "text/event-stream", "image/png"):
+        assert content_type in GZIP_EXCLUDED_CONTENT_TYPES
