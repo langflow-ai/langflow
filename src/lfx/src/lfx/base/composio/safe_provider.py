@@ -12,6 +12,17 @@ We sanitize ``tool.input_parameters`` in-place at wrap time, and also patch
 both the FileHelper file-substitution helpers and the pydantic schema builder
 so the agent path, the direct ``execute_action`` path, and the legacy
 ``tools.get`` path all see a schema with a ``"type"`` for every node.
+
+We also strip blank optional arguments before an agent's tool call reaches
+Composio (see ``_drop_blank_optional_arguments``). Tool-calling models
+routinely populate every property they see in a schema, including optional
+ones, with empty placeholders (e.g. Gmail's consolidated ``attachment`` field
+as ``{"name": "", "data": ""}`` when no attachment was requested). Composio's
+backend rejects that blank value with "Tool input validation error" (issue
+#14715). ``ComposioBaseComponent.execute_action`` already drops blank
+optional values for direct component runs; this mirrors that behavior for
+the agent ``configure_tools``/Tool-calling path, which otherwise forwards the
+model's raw arguments untouched.
 """
 
 from __future__ import annotations
@@ -99,6 +110,38 @@ def _sanitize_schema(schema: Any) -> None:
                 _sanitize_schema(sub)
 
 
+def _is_blank_value(value: Any) -> bool:
+    """Return True if ``value`` is empty/blank all the way down.
+
+    Covers ``None``, empty strings/collections, and objects whose every leaf
+    value is itself blank (e.g. ``{"name": "", "data": ""}``) — the shape an
+    LLM produces for an optional field it filled in without real content.
+    """
+    if value is None:
+        return True
+    if isinstance(value, str):
+        return value == ""
+    if isinstance(value, (list, tuple, set)):
+        return len(value) == 0
+    if isinstance(value, dict):
+        return len(value) == 0 or all(_is_blank_value(sub_value) for sub_value in value.values())
+    return False
+
+
+def _drop_blank_optional_arguments(arguments: Any, input_parameters: Any) -> Any:
+    """Strip blank optional arguments an LLM filled in just because the schema listed them.
+
+    Required fields are always forwarded untouched, even if blank, so this
+    never hides a genuinely missing required value from Composio's own
+    validation.
+    """
+    if not isinstance(arguments, dict) or not isinstance(input_parameters, dict):
+        return arguments
+
+    required = set(input_parameters.get("required") or [])
+    return {key: value for key, value in arguments.items() if key in required or not _is_blank_value(value)}
+
+
 if _COMPOSIO_AVAILABLE:
 
     class SafeLangchainProvider(LangchainProvider, name="langchain"):
@@ -106,7 +149,12 @@ if _COMPOSIO_AVAILABLE:
 
         def wrap_tool(self, tool: Tool, execute_tool: Callable[..., Any]) -> StructuredTool:
             _sanitize_schema(tool.input_parameters)
-            return super().wrap_tool(tool=tool, execute_tool=execute_tool)
+            input_parameters = tool.input_parameters
+
+            def execute_tool_without_blank_optionals(slug: str, arguments: dict) -> Any:
+                return execute_tool(slug, _drop_blank_optional_arguments(arguments, input_parameters))
+
+            return super().wrap_tool(tool=tool, execute_tool=execute_tool_without_blank_optionals)
 
 
 def _extract_schema_arg(args: tuple, kwargs: dict, positional_index: int, keyword: str) -> Any:
