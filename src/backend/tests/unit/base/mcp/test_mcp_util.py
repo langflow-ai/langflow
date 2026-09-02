@@ -1355,6 +1355,36 @@ class TestUpdateToolsPerToolResilience:
         assert "bad_linear_like" in joined, f"failing tool name must appear in log; got: {joined!r}"
 
     @pytest.mark.asyncio
+    async def test_non_object_input_schema_skips_one_tool_not_the_whole_server(self):
+        """A ValueError from schema conversion must skip that tool, not abort the listing.
+
+        ``create_input_schema_from_json_schema`` raises ``ValueError("Root schema must be
+        type 'object'")`` for any tool whose ``inputSchema`` is empty or not an object.
+        That is reachable from a real server, and it used to be in the fatal except tuple,
+        so one such tool dropped every other tool on the same server.
+        """
+        good_a = self._make_tool("good_a", {"type": "object", "properties": {"q": {"type": "string"}}})
+        # Empty schema: a real, common shape for a no-argument tool.
+        bad = self._make_tool("bad_empty_schema", {})
+        good_b = self._make_tool("good_b", {"type": "object", "properties": {"n": {"type": "integer"}}})
+
+        mock_stdio = AsyncMock(spec=MCPStdioClient)
+        mock_stdio.connect_to_server.return_value = [good_a, bad, good_b]
+        mock_stdio._connected = True
+
+        _mode, tool_list, tool_cache = await update_tools(
+            server_name="empty-schema-server",
+            server_config={"command": "uvx", "args": []},
+            mcp_stdio_client=mock_stdio,
+        )
+
+        loaded_names = [t.name for t in tool_list]
+        assert "good_a" in loaded_names
+        assert "good_b" in loaded_names
+        assert "bad_empty_schema" not in loaded_names
+        assert set(tool_cache.keys()) == {"good_a", "good_b"}
+
+    @pytest.mark.asyncio
     async def test_resilience_under_many_mixed_tools(self):
         """Stress: 20 tools, 10 healthy + 10 broken with varied error types — all 10 good survive."""
         from lfx.schema.json_schema import create_input_schema_from_json_schema as real_converter
@@ -4137,16 +4167,6 @@ class TestStreamableHttpTransportPolicy:
         finally:
             await manager.cleanup_all()
 
-    @pytest.mark.asyncio
-    async def test_validate_connectivity_mcp_session_terminated_returns_false(self):
-        manager = MCPSessionManager()
-        try:
-            mock_session = AsyncMock()
-            mock_session.list_tools = AsyncMock(side_effect=RuntimeError("Session terminated"))
-            assert await manager._validate_session_connectivity(mock_session) is False
-        finally:
-            await manager.cleanup_all()
-
     def test_classify_transient_includes_connection_and_taskgroup_hints(self):
         assert _is_transient_streamable_http_error(ConnectionError("x")) is True
         assert _is_transient_streamable_http_error(RuntimeError("unhandled errors in a TaskGroup")) is True
@@ -4241,9 +4261,9 @@ class TestCleanupTaskStartup:
 class TestGetSessionNoBlockingHealthCheck:
     """get_session() must NOT call list_tools() on the hot path.
 
-    Before the fix, every get_session() called _validate_session_connectivity()
-    which did a list_tools() RPC (~3 s timeout). With 10 sessions that added
-    ~30 s of blocking to every single tool invocation.
+    Before the fix, every get_session() ran a connectivity check that did a
+    list_tools() RPC (~3 s timeout). With 10 sessions that added ~30 s of
+    blocking to every single tool invocation.
     """
 
     @pytest.fixture
@@ -4269,9 +4289,7 @@ class TestGetSessionNoBlockingHealthCheck:
                 # First call creates the session.
                 s1 = await manager.get_session("ctx_1", connection_params, "streamable_http")
                 # Second call must reuse it — list_tools must never be called.
-                with patch.object(manager, "_validate_session_connectivity") as mock_validate:
-                    s2 = await manager.get_session("ctx_2", connection_params, "streamable_http")
-                    mock_validate.assert_not_called()
+                s2 = await manager.get_session("ctx_2", connection_params, "streamable_http")
             assert s1 is mock_session
             assert s2 is mock_session
             mock_session.list_tools.assert_not_awaited()
@@ -4316,11 +4334,11 @@ class TestGetSessionNoBlockingHealthCheck:
                 }
                 manager._session_id_counters[server_key] = 1
 
-                with patch.object(manager, "_validate_session_connectivity") as mock_validate:
-                    result = await manager.get_session("ctx_new", connection_params, "streamable_http")
-                    mock_validate.assert_not_called()
+                result = await manager.get_session("ctx_new", connection_params, "streamable_http")
 
             assert result is mock_session_2
+            mock_session_1.list_tools.assert_not_awaited()
+            mock_session_2.list_tools.assert_not_awaited()
         finally:
             await manager.cleanup_all()
 

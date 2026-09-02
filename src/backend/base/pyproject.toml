@@ -374,7 +374,6 @@ langchain-huggingface = ["langchain-huggingface~=1.2.0; sys_platform != 'darwin'
 langchain-unstructured = ["langchain-unstructured~=1.0.0"]
 # graph-retriever graduated to the standalone lfx-datastax bundle (a regular
 # dep of langflow); langchain-graph-retriever / graph-retriever live there now.
-langchain-mcp-adapters = ["langchain-mcp-adapters>=0.1.14,<0.2.0"]
 
 # Additional monitoring
 opik = ["opik>=2.0.0,<3.0.0"]
@@ -421,9 +420,6 @@ mlx = [
     "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
     "mlx-vlm~=0.3.9; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
 ]
-
-# MCP
-fastmcp = ["fastmcp>=3.2.0"]
 
 # AWS async client. S3 storage uses aiobotocore directly so boto3 is no longer
 # constrained by aioboto3's exact pin to aiobotocore 2.25.1.

@@ -11,7 +11,7 @@ Langflow integrates with the [Model Context Protocol (MCP)](https://modelcontext
 
 This page describes how to use Langflow as an MCP server that exposes your flows as [tools](https://modelcontextprotocol.io/docs/concepts/tools) that [MCP clients](https://modelcontextprotocol.io/clients) can use when generating responses.
 
-Langflow MCP servers support both the **streamable HTTP** transport and **Server-Sent Events (SSE)** as a fallback.
+Langflow MCP servers support the **streamable HTTP** transport and, for backward compatibility, the legacy **Server-Sent Events (SSE)** transport.
 The default project MCP server configuration uses streamable HTTP transport at the URL path `/streamable`.
 To serve only streamable HTTP, see [Disable the legacy MCP SSE transport](#disable-legacy-sse).
 
@@ -389,7 +389,7 @@ The default address is `http://localhost:6274`.
       </TabItem>
       <TabItem value="None" label="None">
 
-        - **Transport Type**: Select **SSE**.
+        - **Transport Type**: Select **Streamable HTTP**.
         - **URL**: Enter the Langflow MCP server's endpoint. For example:
             ```bash
             http://localhost:7860/api/v1/mcp/project/d359cbd4-6fa2-4002-9d53-fa05c645319c/streamable
