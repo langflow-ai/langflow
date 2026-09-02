@@ -6,13 +6,15 @@ provider API keys that ride in request URLs cannot leak the way they did through
 path (removed from the export allowlist in :mod:`lfx.observability`).
 
 The instruments are created from the allowlisted "langflow" meter, so they export through the
-same application-only filter as the rest of the runtime's own metrics. When no provider is
-installed yet ``metrics.get_meter`` hands back a proxy meter that records nowhere until the
-bootstrap installs the real one, so creating the handler early is safe under ``lfx serve``.
+same application-only filter as the rest of the runtime's own metrics. That meter comes from
+:func:`lfx.observability.application_meter`, never from the global API: with nothing configured
+the API hands back a proxy meter, and a proxy meter is not a no-op. Its instruments resolve onto
+whichever MeterProvider is registered next, so an LLM tracing SDK installing one on the first
+flow run would adopt this provider and model data and ship it to the vendor's endpoint.
 
 OpenTelemetry is an optional lfx extra (``lfx[otel]``). When it is absent there is no meter to
-record on, so :func:`get_llm_provider_metrics_handler` returns None and the callback is simply
-not attached, keeping bare lfx importable.
+record on, ``application_meter`` returns None, so :func:`get_llm_provider_metrics_handler`
+returns None and the callback is simply not attached, keeping bare lfx importable.
 """
 
 from __future__ import annotations
@@ -25,14 +27,7 @@ from typing import TYPE_CHECKING, Any
 from langchain_core.callbacks import BaseCallbackHandler
 
 from lfx.base.models.llm_callback_utils import detect_provider_from_model, extract_llm_model_name
-from lfx.observability import APPLICATION_METER_NAME
-
-try:
-    from opentelemetry import metrics
-
-    _OTEL_AVAILABLE = True
-except ImportError:
-    _OTEL_AVAILABLE = False
+from lfx.observability import application_meter
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -55,7 +50,7 @@ class LLMProviderMetricsCallbackHandler(BaseCallbackHandler):
 
     def __init__(self) -> None:
         super().__init__()
-        meter = metrics.get_meter(APPLICATION_METER_NAME)
+        meter = application_meter()
         # gen_ai.client.operation.duration is the OTel GenAI semconv metric; on failure it carries
         # error.type, recorded on both the success and error paths so failed-call latency is visible.
         self._duration = meter.create_histogram(
@@ -141,7 +136,12 @@ def get_llm_provider_metrics_handler() -> LLMProviderMetricsCallbackHandler | No
 
     run_ids are unique UUIDs, so one lazily-created shared instance safely serves every flow.
     lru_cache gives the thread-safe lazy singleton in one line.
+
+    Called from component execution, so the bootstrap has always run by this point and the
+    instruments bind to the provider it installed. Constructing the handler before the
+    bootstrap would bind them to a no-op meter for the life of the process, which is the
+    trade for never binding them to a provider the operator did not choose.
     """
-    if not _OTEL_AVAILABLE:
+    if application_meter() is None:
         return None
     return LLMProviderMetricsCallbackHandler()
