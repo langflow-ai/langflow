@@ -46,7 +46,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: pip install orjson packaging pytest requests
+        run: pip install jsonschema orjson packaging pytest requests
 
       - name: Run CI script tests
         run: python -m pytest scripts/ci/ -v

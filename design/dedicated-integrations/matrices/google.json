@@ -309,6 +309,7 @@
           "classification": "sensitive",
           "provider_classification": "Sensitive",
           "source": "gmail-scopes",
+          "role": "required",
           "notes": "'Send email on your behalf.'"
         }
       ],
@@ -423,6 +424,7 @@
           "classification": "restricted",
           "provider_classification": "Restricted",
           "source": "gmail-scopes",
+          "role": "required",
           "notes": "'View your email messages and settings.' Needed for messages.list with q and for messages.get bodies."
         }
       ],
@@ -535,6 +537,7 @@
           "classification": "non_sensitive",
           "provider_classification": "Non-sensitive (recommended)",
           "source": "drive-scopes",
+          "role": "required",
           "notes": "Wave 1 requests drive.file only; the restricted scope alternative is recorded in decisions/google-restricted-scopes.md."
         }
       ],
@@ -623,6 +626,7 @@
           "classification": "non_sensitive",
           "provider_classification": "Non-sensitive (recommended)",
           "source": "drive-scopes",
+          "role": "required",
           "notes": "Wave 1 requests drive.file only; the restricted scope alternative is recorded in decisions/google-restricted-scopes.md."
         }
       ],
@@ -749,6 +753,7 @@
           "classification": "sensitive",
           "provider_classification": "Sensitive",
           "source": "google-sensitive-scope-verification",
+          "role": "required",
           "notes": "Scope text 'View events on all your calendars' from the Calendar scopes page; Google's sensitive-scope guide names reading Calendar events as a sensitive scope and Calendar is not on any restricted list."
         }
       ],
@@ -871,6 +876,7 @@
           "classification": "sensitive",
           "provider_classification": "Sensitive",
           "source": "google-sensitive-scope-verification",
+          "role": "required",
           "notes": "Scope text 'View and edit events on all your calendars' from the Calendar scopes page; classified sensitive per the sensitive-scope guide."
         }
       ],

@@ -15,6 +15,7 @@ from check_capability_matrices import (
     SCHEMA_PATH,
     VALID_VALUES,
     validate_all,
+    validate_decision_records,
     validate_matrix,
     validate_sign_offs,
 )
@@ -165,6 +166,87 @@ def test_checker_rejects_include_on_avoided_restricted_scope(tmp_path: Path) -> 
     assert any("contradiction" in error for error in errors)
 
 
+def _included_action(matrix: dict) -> dict:
+    return next(action for action in matrix["actions"] if action["decision"] == "include")
+
+
+def test_every_included_scope_carries_a_role() -> None:
+    for provider in REQUIRED_PROVIDERS:
+        matrix = _load(DESIGN_ROOT, provider)
+        for action in matrix["actions"]:
+            if action["decision"] != "include":
+                continue
+            roles = [scope.get("role") for scope in action["scopes"]]
+            assert None not in roles, f"{action['action_id']} has an untagged scope"
+            assert "required" in roles, f"{action['action_id']} has no required scope"
+
+
+def test_checker_rejects_included_scope_without_role(tmp_path: Path) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "microsoft")
+    _included_action(matrix)["scopes"][0].pop("role")
+
+    errors = validate_matrix(_save(root, "microsoft", matrix))
+
+    assert any("must declare a role" in error for error in errors)
+
+
+def test_checker_rejects_included_action_without_required_scope(tmp_path: Path) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "google")
+    for scope in _included_action(matrix)["scopes"]:
+        scope.update({"role": "optional", "condition": "only when asked"})
+
+    errors = validate_matrix(_save(root, "google", matrix))
+
+    assert any("declares no required scope" in error for error in errors)
+
+
+def test_checker_rejects_conditional_scope_without_condition(tmp_path: Path) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "slack")
+    scope = _included_action(matrix)["scopes"][0]
+    scope["role"] = "alternative"
+    scope.pop("condition", None)
+
+    errors = validate_matrix(_save(root, "slack", matrix))
+
+    assert any("must state the condition" in error for error in errors)
+
+
+def test_checker_rejects_required_scope_with_condition(tmp_path: Path) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "google")
+    _included_action(matrix)["scopes"][0]["condition"] = "never"
+
+    errors = validate_matrix(_save(root, "google", matrix))
+
+    assert any("must not carry a condition" in error for error in errors)
+
+
+def test_schema_validation_rejects_empty_outputs(tmp_path: Path) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "google")
+    _included_action(matrix)["schema"]["outputs"] = []
+
+    errors = validate_matrix(_save(root, "google", matrix))
+
+    assert any(
+        error.startswith("schema: actions/") and error.endswith("/schema/outputs: [] should be non-empty")
+        for error in errors
+    )
+
+
+def test_schema_validation_rejects_unknown_action_field(tmp_path: Path) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "slack")
+    matrix["actions"][0]["scope_notes"] = "typo for notes"
+
+    errors = validate_matrix(_save(root, "slack", matrix))
+
+    assert any(error.startswith("schema: actions/0:") and "'scope_notes' was unexpected" in error for error in errors)
+
+
 def test_checker_rejects_unsourced_claim(tmp_path: Path) -> None:
     root = _copy_design(tmp_path)
     matrix = _load(root, "slack")
@@ -271,6 +353,39 @@ def test_sign_off_check_rejects_undeclared_row_in_record_table(tmp_path: Path) -
     errors = validate_sign_offs(root)
 
     assert "sign-off: decisions/palette-naming.md table row 'lfx owner' is not a declared owner" in errors
+
+
+def test_sign_off_check_rejects_record_without_sign_off_table(tmp_path: Path) -> None:
+    root = _copy_design_tree(tmp_path)
+    record = root / "frontend-surfaces.md"
+    record.write_text(record.read_text(encoding="utf-8").split("## Sign-off", 1)[0], encoding="utf-8")
+
+    errors = validate_sign_offs(root)
+
+    assert (
+        "sign-off: frontend-surfaces.md declares ['frontend owner', 'release owner'] but has no '## Sign-off' table"
+        in errors
+    )
+
+
+def test_sign_off_check_reports_deleted_readme(tmp_path: Path) -> None:
+    root = _copy_design_tree(tmp_path)
+    (root / "README.md").unlink()
+
+    assert validate_sign_offs(root) == [f"sign-off: {root / 'README.md'} does not exist"]
+
+
+def test_require_accepted_walks_every_decision_record(tmp_path: Path) -> None:
+    root = _copy_design(tmp_path)
+    # palette-naming.md is not referenced from any matrix; gate close must still require it to be accepted.
+    record = root / "decisions" / "palette-naming.md"
+    text = re.sub(r"^Status:.*$", "Status: draft", record.read_text(encoding="utf-8"), count=1, flags=re.MULTILINE)
+    record.write_text(text, encoding="utf-8")
+
+    assert validate_decision_records(root) == []
+    assert validate_all(root / "matrices") == []
+    errors = validate_all(root / "matrices", require_accepted=True)
+    assert "gate decision record 'decisions/palette-naming.md' is draft, not accepted" in errors
 
 
 def test_require_accepted_fails_on_draft_record(tmp_path: Path) -> None:

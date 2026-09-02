@@ -36,3 +36,10 @@ connection record must not grow trigger-specific fields in 1.13.
   a public ingress (otherwise the hosted-only constraint changes the design).
 
 Re-verify by: the 1.14 planning gate.
+
+## Sign-off
+
+| Role | Name | Date | PR |
+|------|------|------|----|
+| platform owner | | | |
+| release owner | Eric Hare | 2026-09-01 | #14906 (confirmed in the planning session) |

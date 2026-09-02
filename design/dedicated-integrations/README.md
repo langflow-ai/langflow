@@ -13,8 +13,8 @@ these files are the historical record the checker keeps guarding.
 
 | # | Exit criterion (from INT-1) | Artifact | Machine check | Status |
 |---|---|---|---|---|
-| 1 | Three approved matrices, at most 8 actions each | `matrices/google.json`, `matrices/microsoft.json`, `matrices/slack.json` | `check_capability_matrices.py`: included-action cap, required fields, enums | Google 5 included (Gmail search excluded), Microsoft 8 included, Slack 7 included (4 MCP, 3 Web API) |
-| 2 | Every scope classified; every restricted scope has a written decision | scope entries in the matrices; `decisions/google-restricted-scopes.md` | classification present and sourced; restricted scopes need a `restricted_scope_decisions` entry pointing at an existing record | accepted: avoid on the hosted app; Gmail search excluded, Drive on drive.file |
+| 1 | Three approved matrices, at most 8 actions each | `matrices/google.json`, `matrices/microsoft.json`, `matrices/slack.json` | `check_capability_matrices.py`: JSON Schema, included-action cap, required fields, enums | Google 5 included (Gmail search excluded), Microsoft 8 included, Slack 7 included (4 MCP, 3 Web API) |
+| 2 | Every scope classified; every restricted scope has a written decision | scope entries in the matrices; `decisions/google-restricted-scopes.md` | classification present and sourced; every scope on an included action tagged `required`, `optional`, or `alternative` (with a condition for the last two) and at least one required; restricted scopes need a `restricted_scope_decisions` entry pointing at an existing record | accepted: avoid on the hosted app; Gmail search excluded, Drive on drive.file |
 | 3 | Substrate decision per provider with the server's GA status | `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`; `substrate_decision` in each matrix | included actions must use a chosen substrate; non-GA MCP rows cannot be high confidence | accepted: Google sdk, Microsoft rest, Slack mixed (identifier capture is INT-9 day one) |
 | 4 | INT-2 connection-resolution contract signed off by lfx, langflow-base, Enterprise owners | `connection-contract.md` | sign-off coverage: every declared owner role has a row in the sign-off table below that lists the record | drafted 2026-09-01; 12 sections, owner questions in section 12 |
 | 5 | Frontend surface list | `frontend-surfaces.md` | none | drafted 2026-09-01; 14 extend + 8 new, MVP/defer split |
@@ -23,7 +23,8 @@ these files are the historical record the checker keeps guarding.
 | + | KB OAuth connector adoption decision (added by the release owner) | `decisions/kb-oauth-connector-adoption.md` | none | accepted: adopt in 1.13 (release owner overrode the gate's defer recommendation); +1.5 engineer-weeks |
 | + | Palette naming next to Composio components (added by the release owner) | `decisions/palette-naming.md` | none | accepted: 'Product: Verb Object' names, new Microsoft 365 and Slack groups, Composio unchanged |
 
-Gate close means: every row above is done, every referenced decision record is `Status: accepted`, and
+Gate close means: every row above is done, every record under `decisions/` is `Status: accepted` (the checker walks
+them all, not only the ones a matrix references), and
 `uv run python scripts/ci/check_capability_matrices.py --require-accepted` exits 0.
 
 ## Sign-off
@@ -60,8 +61,10 @@ uv run python scripts/ci/check_capability_matrices.py --require-accepted
 uv run pytest scripts/ci/test_capability_matrices.py
 ```
 
-The checker is stdlib-only and runs in the `CI Scripts Tests` workflow on any change under this directory. Besides
-the matrices it validates sign-off coverage: every `Owners (sign-off roles):` line under this directory must be
+The checker validates every matrix against `schema/capability_matrix.schema.json` (Draft 2020-12 through
+`jsonschema`, which the `CI Scripts Tests` workflow installs and the workspace environment already carries) before
+applying the gate rules a schema cannot express, and runs on any change under this directory. Besides the matrices it
+validates sign-off coverage: every `Owners (sign-off roles):` line under this directory must be
 mirrored by the sign-off table above and by the record's own table.
 
 ## Directory map
@@ -105,7 +108,7 @@ Per action:
 | `schema` | Proposed inputs and outputs, with the provider API page they map to. Required for included actions |
 | `auth_mode` | How credentials are obtained: authorization code, client credentials, device code, service account, domain-wide delegation, bot install, API key |
 | `identity` | Who executes: `user_delegated` (connected user), `bot` (app identity), `service` (service account or application permission) |
-| `scopes[]` | Each with `classification`, the provider's own term in `provider_classification`, and a source |
+| `scopes[]` | Each with `classification`, the provider's own term in `provider_classification`, and a source. On included actions each scope also carries a `role`: `required` (always requested; becomes the manifest's `required_scopes`), `optional` (requested for a stated `condition`, an input or mode; becomes `optional_scopes`), or `alternative` (requested instead of another scope under a stated `condition`, such as a substrate fallback). At least one scope is required |
 | `consent` | `user`, `admin`, or `both`; with notes and a source. Required for included actions |
 | `reach` | Effective resource and tenant reach. Required for included actions |
 | `deployment_contexts` | Map of context to callback mechanism: `server_redirect`, `loopback_redirect`, `device_code`, `app_install_redirect`, `manual_token`, `none`. A context that is absent is unsupported |

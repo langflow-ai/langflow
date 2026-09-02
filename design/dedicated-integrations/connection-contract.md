@@ -283,7 +283,10 @@ now.**
   `IntegrationCapability{id, display_name, required_scopes, optional_scopes, risk: read | write | destructive,
   component_ref, mcp_tool}`; `ScopeSet.covers(required, granted) -> missing` with provider-aware normalization
   (Google URL scopes, Graph short names, Slack bot versus user scopes), used by both the resolver's `scope-missing`
-  check and the picker API. The capability ids are the matrices' `action_id` values.
+  check and the picker API. The capability ids are the matrices' `action_id` values, and `required_scopes` and
+  `optional_scopes` are lifted from the matrices' scope roles: `required` rows become `required_scopes`; `optional`
+  and `alternative` rows become `optional_scopes`, each carrying the matrix `condition` (an input name, a mode, or a
+  substrate) that the picker shows and the resolver's `scope-missing` error names when a run needs it.
 - `ExtensionManifest.integrations: tuple[IntegrationProvider, ...] | None` is added as an optional field (additive;
   `manifest.py` is in the changelog gate); loader wiring is INT-3.
 

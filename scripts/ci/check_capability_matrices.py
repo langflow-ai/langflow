@@ -8,6 +8,14 @@ substrate choice recorded in a decision record. ``--require-accepted`` is the
 gate-close mode: every referenced decision record must carry
 ``Status: accepted``.
 
+Every matrix is first validated against ``schema/capability_matrix.schema.json``
+(Draft 2020-12, via ``jsonschema``), then the gate rules that a schema cannot
+express are applied. Every scope on an included action carries a ``role``
+(``required``, ``optional``, or ``alternative``) so the manifest's
+``required_scopes`` and ``optional_scopes`` can be lifted mechanically, and at
+least one scope is required. ``--require-accepted`` walks every record under
+``decisions/`` (``TEMPLATE.md`` aside), not only the ones a matrix references.
+
 Sign-off coverage is checked alongside the matrices: every record under the
 design directory that declares ``Owners (sign-off roles):`` must be listed in
 the README sign-off table under each of those roles, and its own ``## Sign-off``
@@ -22,6 +30,11 @@ import re
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
+
+try:
+    from jsonschema import Draft202012Validator
+except ImportError:  # pragma: no cover - exercised only when the dependency is missing
+    Draft202012Validator = None  # type: ignore[assignment,misc]
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DESIGN_ROOT = REPO_ROOT / "design" / "dedicated-integrations"
@@ -64,6 +77,7 @@ VALID_VALUES: dict[str, frozenset[str]] = {
         }
     ),
     "classification": frozenset({"non_sensitive", "sensitive", "restricted"}),
+    "scope_role": frozenset({"required", "optional", "alternative"}),
     "consent": frozenset({"user", "admin", "both"}),
     "callback": frozenset(
         {"server_redirect", "loopback_redirect", "device_code", "app_install_redirect", "manual_token", "none"}
@@ -120,6 +134,7 @@ REQUIRED_INCLUDE_FIELDS = frozenset(
         "verification_dependencies",
     }
 )
+CONDITIONAL_SCOPE_ROLES = frozenset({"optional", "alternative"})
 SOURCED_BLOCKS = ("schema", "reach", "refresh", "revocation", "rate_limit")
 SOURCED_SCALARS = ("consent_source", "substrate_source")
 
@@ -149,6 +164,18 @@ def _check_enum(value: Any, dimension: str, label: str, errors: list[str]) -> No
 def _check_source_ref(source_id: Any, sources: dict[str, Any], label: str, errors: list[str]) -> None:
     if not isinstance(source_id, str) or source_id not in sources:
         errors.append(f"{label} references unknown source {source_id!r}")
+
+
+def _schema_errors(matrix: dict[str, Any], schema_path: Path = SCHEMA_PATH) -> list[str]:
+    """Validate the matrix against the published JSON Schema; a missing validator is an error, not a skip."""
+    if Draft202012Validator is None:
+        return ["jsonschema is not installed; install it (the CI Scripts Tests workflow does) to validate matrices"]
+    try:
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return [f"could not load schema {schema_path}: {exc}"]
+    found = sorted(Draft202012Validator(schema).iter_errors(matrix), key=lambda error: list(map(str, error.path)))
+    return [f"schema: {'/'.join(str(part) for part in error.path) or '<root>'}: {error.message}" for error in found]
 
 
 def _validate_sources(matrix: dict[str, Any], errors: list[str]) -> dict[str, Any]:
@@ -287,12 +314,33 @@ def _validate_restricted_decisions(
     return decisions
 
 
-def _validate_scopes(action: dict[str, Any], sources: dict[str, Any], label: str, errors: list[str]) -> list[str]:
+def _check_scope_role(scope: dict[str, Any], scope_label: str, *, included: bool, errors: list[str]) -> str | None:
+    """Enforce the role grammar: included actions tag every scope; conditional roles say when they apply."""
+    role = scope.get("role")
+    if role is None:
+        if included:
+            errors.append(
+                f"{scope_label} must declare a role (required, optional, or alternative) on an included action"
+            )
+        return None
+    _check_enum(role, "scope_role", scope_label, errors)
+    condition = str(scope.get("condition", "")).strip()
+    if role in CONDITIONAL_SCOPE_ROLES and not condition:
+        errors.append(f"{scope_label} is {role} and must state the condition under which it is requested")
+    elif role == "required" and condition:
+        errors.append(f"{scope_label} is required and must not carry a condition; make it optional or alternative")
+    return str(role)
+
+
+def _validate_scopes(
+    action: dict[str, Any], sources: dict[str, Any], label: str, errors: list[str], *, included: bool
+) -> list[str]:
     scopes = action.get("scopes")
     if not isinstance(scopes, list):
         errors.append(f"{label} scopes must be a list")
         return []
     restricted: list[str] = []
+    roles: list[str | None] = []
     for scope in scopes:
         if not isinstance(scope, dict) or not isinstance(scope.get("scope"), str) or not scope["scope"]:
             errors.append(f"{label} has a scope entry without a scope string")
@@ -307,6 +355,9 @@ def _validate_scopes(action: dict[str, Any], sources: dict[str, Any], label: str
         if not str(scope.get("provider_classification", "")).strip():
             errors.append(f"{scope_label} must record the provider's own classification term")
         _check_source_ref(scope.get("source"), sources, scope_label, errors)
+        roles.append(_check_scope_role(scope, scope_label, included=included, errors=errors))
+    if included and "required" not in roles:
+        errors.append(f"{label} is included but declares no required scope")
     return restricted
 
 
@@ -379,7 +430,7 @@ def _validate_action(
     if action["confidence"] == "low" and not action.get("open_questions"):
         errors.append(f"{label} is low confidence and must list open_questions")
 
-    restricted = _validate_scopes(action, sources, label, errors)
+    restricted = _validate_scopes(action, sources, label, errors, included=decision == "include")
     if decision in {"include", "defer"}:
         for scope in restricted:
             if scope not in restricted_decisions:
@@ -404,7 +455,7 @@ def validate_matrix(matrix_path: Path, *, require_accepted: bool = False) -> lis
         return [f"capability matrix {matrix_path} must be a JSON object"]
 
     design_root = matrix_path.resolve().parent.parent
-    errors: list[str] = []
+    errors: list[str] = _schema_errors(matrix)
     _validate_top_level(matrix, matrix_path.stem, errors)
     sources = _validate_sources(matrix, errors)
     programs = _validate_verification_programs(matrix, sources, errors)
@@ -441,6 +492,20 @@ def validate_matrix(matrix_path: Path, *, require_accepted: bool = False) -> lis
     max_included = matrix.get("max_included_actions")
     if isinstance(max_included, int) and included > max_included:
         errors.append(f"{provider} includes {included} actions, exceeding max_included_actions={max_included}")
+    return errors
+
+
+def validate_decision_records(design_root: Path = DESIGN_ROOT, *, require_accepted: bool = False) -> list[str]:
+    """Walk every record under decisions/ (TEMPLATE.md aside); gate close requires each one to be accepted."""
+    decisions_dir = design_root / "decisions"
+    if not decisions_dir.is_dir():
+        return [f"decision records directory {decisions_dir} does not exist"]
+    errors: list[str] = []
+    for record in sorted(decisions_dir.glob("*.md")):
+        if record.name in SIGN_OFF_EXEMPT_FILES:
+            continue
+        relative = record.relative_to(design_root).as_posix()
+        errors.extend(_decision_record_errors(relative, design_root, "gate", require_accepted=require_accepted))
     return errors
 
 
@@ -487,6 +552,9 @@ def validate_sign_offs(design_root: Path = DESIGN_ROOT) -> list[str]:
     """Require every declared owner role to be tracked in the README table and in the record's own table."""
     errors: list[str] = []
     readme_rows = _readme_sign_off_rows(design_root, errors)
+    if errors:
+        # Without the README table every declared role would fail; one error says what is actually missing.
+        return errors
     records = sorted(path for path in design_root.rglob("*.md") if path.name not in SIGN_OFF_EXEMPT_FILES)
     for record in records:
         label = record.relative_to(design_root).as_posix()
@@ -504,6 +572,8 @@ def validate_sign_offs(design_root: Path = DESIGN_ROOT) -> list[str]:
                 errors.append(f"sign-off: README.md row for {role!r} does not list `{label}`")
         section = _sign_off_section(text)
         if section is None:
+            if set(roles) - ROLES_COVERING_EVERY_RECORD:
+                errors.append(f"sign-off: {label} declares {sorted(roles)} but has no '{SIGN_OFF_HEADING}' table")
             continue
         table_roles = {row[0] for row in _table_rows(section) if row}
         errors.extend(f"sign-off: {label} table lacks a row for {role!r}" for role in roles if role not in table_roles)
@@ -527,6 +597,7 @@ def validate_all(matrix_dir: Path = DEFAULT_MATRIX_DIR, *, require_accepted: boo
         )
     for stem in sorted(present & REQUIRED_PROVIDERS):
         errors.extend(validate_matrix(matrix_dir / f"{stem}.json", require_accepted=require_accepted))
+    errors.extend(validate_decision_records(matrix_dir.resolve().parent, require_accepted=require_accepted))
     return errors
 
 
@@ -540,9 +611,7 @@ def main() -> int:
     )
     args = parser.parse_args()
     errors = validate_all(args.matrix_dir, require_accepted=args.require_accepted)
-    design_root = args.matrix_dir.resolve().parent
-    if (design_root / "README.md").is_file():
-        errors.extend(validate_sign_offs(design_root))
+    errors.extend(validate_sign_offs(args.matrix_dir.resolve().parent))
     if errors:
         print("Capability matrix validation failed:")
         for error in errors:

@@ -84,6 +84,7 @@
     "substrate": { "enum": ["sdk", "rest", "mcp"] },
     "substrate_ga_status": { "enum": ["ga", "preview", "developer_preview", "beta", "deprecated"] },
     "identity": { "enum": ["user_delegated", "bot", "service"] },
+    "scope_role": { "enum": ["required", "optional", "alternative"] },
     "auth_mode": {
       "enum": [
         "oauth2_authorization_code", "oauth2_client_credentials", "oauth2_device_code", "service_account",
@@ -135,6 +136,8 @@
         "classification": { "$ref": "#/$defs/classification" },
         "provider_classification": { "type": "string", "minLength": 1 },
         "source": { "$ref": "#/$defs/source_id" },
+        "role": { "$ref": "#/$defs/scope_role" },
+        "condition": { "type": "string", "minLength": 1 },
         "notes": { "type": "string" }
       }
     },

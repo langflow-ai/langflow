@@ -226,31 +226,37 @@
           "classification": "sensitive",
           "provider_classification": "User token scope; content reading",
           "source": "slack-search-messages",
+          "role": "alternative",
+          "condition": "substrate rest: requested instead of the granular scopes only if INT-9's tools/list capture leaves this action uncovered and it moves to the Web API search.messages method.",
           "notes": "Required by the Web API search.messages fallback; user token only."
         },
         {
           "scope": "search:read.public",
           "classification": "sensitive",
           "provider_classification": "Granular user search scope requested by the MCP server",
-          "source": "slack-mcp-server"
+          "source": "slack-mcp-server",
+          "role": "required"
         },
         {
           "scope": "search:read.private",
           "classification": "sensitive",
           "provider_classification": "Granular user search scope requested by the MCP server",
-          "source": "slack-mcp-server"
+          "source": "slack-mcp-server",
+          "role": "required"
         },
         {
           "scope": "search:read.mpim",
           "classification": "sensitive",
           "provider_classification": "Granular user search scope requested by the MCP server",
-          "source": "slack-mcp-server"
+          "source": "slack-mcp-server",
+          "role": "required"
         },
         {
           "scope": "search:read.im",
           "classification": "sensitive",
           "provider_classification": "Granular user search scope requested by the MCP server",
-          "source": "slack-mcp-server"
+          "source": "slack-mcp-server",
+          "role": "required"
         }
       ],
       "consent": "user",
@@ -360,25 +366,30 @@
           "scope": "channels:history",
           "classification": "sensitive",
           "provider_classification": "User token scope; content reading",
-          "source": "slack-scopes"
+          "source": "slack-scopes",
+          "role": "required",
+          "notes": "The MCP server lists all four history scopes for its read-history capability, so every one is required regardless of channel type."
         },
         {
           "scope": "groups:history",
           "classification": "sensitive",
           "provider_classification": "User token scope; content reading",
-          "source": "slack-scopes"
+          "source": "slack-scopes",
+          "role": "required"
         },
         {
           "scope": "im:history",
           "classification": "sensitive",
           "provider_classification": "User token scope; content reading",
-          "source": "slack-scopes"
+          "source": "slack-scopes",
+          "role": "required"
         },
         {
           "scope": "mpim:history",
           "classification": "sensitive",
           "provider_classification": "User token scope; content reading",
-          "source": "slack-scopes"
+          "source": "slack-scopes",
+          "role": "required"
         }
       ],
       "consent": "user",
@@ -474,6 +485,7 @@
           "classification": "non_sensitive",
           "provider_classification": "User token scope",
           "source": "slack-scopes",
+          "role": "required",
           "notes": "Also available as a bot scope; here requested as a user scope."
         }
       ],
@@ -561,13 +573,16 @@
           "scope": "canvases:write",
           "classification": "non_sensitive",
           "provider_classification": "User token scope",
-          "source": "slack-scopes"
+          "source": "slack-scopes",
+          "role": "required"
         },
         {
           "scope": "canvases:read",
           "classification": "sensitive",
           "provider_classification": "User token scope; content reading",
           "source": "slack-scopes",
+          "role": "optional",
+          "condition": "the action reads back the canvas it created; whether the output set needs it is decided by INT-9's tools/list capture.",
           "notes": "Only if the action also reads canvases."
         }
       ],
@@ -669,7 +684,8 @@
           "scope": "chat:write",
           "classification": "non_sensitive",
           "provider_classification": "Bot token scope",
-          "source": "slack-scopes"
+          "source": "slack-scopes",
+          "role": "required"
         }
       ],
       "consent": "user",
@@ -748,7 +764,8 @@
           "scope": "reactions:write",
           "classification": "non_sensitive",
           "provider_classification": "Bot token scope",
-          "source": "slack-scopes"
+          "source": "slack-scopes",
+          "role": "required"
         }
       ],
       "consent": "user",
@@ -836,19 +853,24 @@
           "scope": "channels:read",
           "classification": "non_sensitive",
           "provider_classification": "Bot token scope",
-          "source": "slack-scopes"
+          "source": "slack-scopes",
+          "role": "required"
         },
         {
           "scope": "groups:read",
           "classification": "non_sensitive",
           "provider_classification": "Bot token scope",
-          "source": "slack-scopes"
+          "source": "slack-scopes",
+          "role": "optional",
+          "condition": "channel is a private channel."
         },
         {
           "scope": "users:read",
           "classification": "non_sensitive",
           "provider_classification": "Bot token scope",
           "source": "slack-scopes",
+          "role": "optional",
+          "condition": "resolve_names is true.",
           "notes": "Only when resolving display names."
         }
       ],

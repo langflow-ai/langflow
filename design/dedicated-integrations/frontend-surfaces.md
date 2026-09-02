@@ -61,3 +61,10 @@ whether it is an extension of something that exists or net new. Paths are under 
 MVP for 1.13: A1, A2, A3 (sibling renderer), A6, A7, A8, A9, A12 (layout reuse), A14, B1, B2, B3, B4, B5.
 Defer: B6 (surface expiry only through B5 at first), B7 (one connection per provider per user in wave 1; a second
 account becomes a second named connection selectable in the picker), B8.
+
+## Sign-off
+
+| Role | Name | Date | PR |
+|------|------|------|----|
+| frontend owner | | | |
+| release owner | Eric Hare | 2026-09-01 | #14906 (confirmed in the planning session) |

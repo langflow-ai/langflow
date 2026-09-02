@@ -241,6 +241,7 @@
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
+          "role": "required",
           "notes": "'Send mail as a user'; application variant requires admin consent and is excluded."
         },
         {
@@ -248,6 +249,7 @@
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
+          "role": "required",
           "notes": "Required to receive a refresh token."
         }
       ],
@@ -292,9 +294,6 @@
       "component_class": "OutlookSearchComponent",
       "decision": "include",
       "confidence": "medium",
-      "open_questions": [
-        "Does $search work under Mail.ReadBasic, or does a search-with-bodies action need Mail.Read? The List messages page lists ReadBasic as least privileged but excludes body and attachments from it."
-      ],
       "rationale": "Read action on delegated mail permissions without admin consent; the only question is which of Mail.ReadBasic or Mail.Read the component requests. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
@@ -357,6 +356,8 @@
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
+          "role": "alternative",
+          "condition": "Not requested in wave 1. Would replace Mail.Read only for a listing profile without bodies; the include_body input returns bodies, which ReadBasic excludes, so the action requests Mail.Read (resolved 2026-09-01).",
           "notes": "'Read user basic mail': excludes body, previewBody, attachments, extended properties."
         },
         {
@@ -364,13 +365,15 @@
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
-          "notes": "'Read user mail': full message including body."
+          "role": "required",
+          "notes": "'Read user mail': full message including body. Requested in wave 1: the action returns bodies through include_body, which ReadBasic excludes (resolved 2026-09-01)."
         },
         {
           "scope": "offline_access",
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
-          "source": "graph-permissions-reference"
+          "source": "graph-permissions-reference",
+          "role": "required"
         }
       ],
       "consent": "user",
@@ -414,9 +417,6 @@
       "component_class": "OutlookCalendarListComponent",
       "decision": "include",
       "confidence": "medium",
-      "open_questions": [
-        "Calendars.ReadBasic is the least-privileged permission for calendarView; confirm whether wave 1 needs body and attendee detail (Calendars.Read) or can ship on ReadBasic."
-      ],
       "rationale": "Read action on a delegated calendar permission without admin consent. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
@@ -477,13 +477,15 @@
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
-          "notes": "'Read user calendars'; Calendars.ReadBasic is the narrower least-privileged option for calendarView."
+          "role": "required",
+          "notes": "'Read user calendars'; Calendars.ReadBasic is the narrower least-privileged option for calendarView. Wave 1 requests Calendars.Read because the events output carries body and attendee detail, which Calendars.ReadBasic excludes (resolved 2026-09-01)."
         },
         {
           "scope": "offline_access",
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
-          "source": "graph-permissions-reference"
+          "source": "graph-permissions-reference",
+          "role": "required"
         }
       ],
       "consent": "user",
@@ -607,13 +609,15 @@
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
+          "role": "required",
           "notes": "'Have full access to user calendars'."
         },
         {
           "scope": "offline_access",
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
-          "source": "graph-permissions-reference"
+          "source": "graph-permissions-reference",
+          "role": "required"
         }
       ],
       "consent": "user",
@@ -706,13 +710,15 @@
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
+          "role": "required",
           "notes": "'Send user chat messages'; no application variant."
         },
         {
           "scope": "offline_access",
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
-          "source": "graph-permissions-reference"
+          "source": "graph-permissions-reference",
+          "role": "required"
         }
       ],
       "consent": "user",
@@ -810,13 +816,15 @@
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
+          "role": "required",
           "notes": "'Send channel messages'; no application variant outside migration."
         },
         {
           "scope": "offline_access",
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
-          "source": "graph-permissions-reference"
+          "source": "graph-permissions-reference",
+          "role": "required"
         }
       ],
       "consent": "user",
@@ -860,9 +868,6 @@
       "component_class": "SharePointListComponent",
       "decision": "include",
       "confidence": "medium",
-      "open_questions": [
-        "Files.Read covers the user's own OneDrive; listing SharePoint document libraries needs Files.Read.All or Sites.Read.All. Decide in Phase 4 whether wave 1 requests the wider permission by default or only when a site is given."
-      ],
       "rationale": "Lists drive items the signed-in user can reach; all candidate permissions are delegated without admin consent, so the choice is about reach, not consent. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
@@ -930,13 +935,16 @@
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
-          "notes": "'Read user files': the user's own OneDrive; least privileged for list children."
+          "role": "required",
+          "notes": "'Read user files': the user's own OneDrive; least privileged for list children. Wave 1 default (resolved 2026-09-01): the wider scopes below are optional and granted when the user enables SharePoint or shared-library access on the connection; a run that sets site_id or a foreign drive_id against a connection without them fails with scope-missing (connection-contract.md section 7)."
         },
         {
           "scope": "Files.Read.All",
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
+          "role": "optional",
+          "condition": "drive_id names a drive other than the user's OneDrive (a shared library).",
           "notes": "'Read all files that user can access', including SharePoint libraries."
         },
         {
@@ -944,13 +952,16 @@
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
+          "role": "optional",
+          "condition": "site_id is set (the /sites/{site-id}/drive path).",
           "notes": "'Read items in all site collections' on behalf of the user; needed for /sites/{site-id}/drive."
         },
         {
           "scope": "offline_access",
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
-          "source": "graph-permissions-reference"
+          "source": "graph-permissions-reference",
+          "role": "required"
         }
       ],
       "consent": "user",
@@ -1044,26 +1055,33 @@
           "scope": "Files.Read",
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
-          "source": "graph-permissions-reference"
+          "source": "graph-permissions-reference",
+          "role": "required",
+          "notes": "'Read user files': the user's own OneDrive; wave 1 default, same profile as microsoft.files.list (resolved 2026-09-01)."
         },
         {
           "scope": "Files.Read.All",
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
-          "source": "graph-permissions-reference"
+          "source": "graph-permissions-reference",
+          "role": "optional",
+          "condition": "drive_id names a drive other than the user's OneDrive (a shared library)."
         },
         {
           "scope": "Sites.Read.All",
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
+          "role": "optional",
+          "condition": "site_id is set (the /sites/{site-id}/drive path).",
           "notes": "Needed for the /sites/{site-id}/drive download path behind the site_id input; same permission set as microsoft.files.list."
         },
         {
           "scope": "offline_access",
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
-          "source": "graph-permissions-reference"
+          "source": "graph-permissions-reference",
+          "role": "required"
         }
       ],
       "consent": "user",
