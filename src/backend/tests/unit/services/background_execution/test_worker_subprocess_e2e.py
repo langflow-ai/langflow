@@ -56,7 +56,7 @@ async def test_real_worker_subprocess_runs_job_and_facade_reattaches():
         assert proc.poll() is None, "worker subprocess failed to start"
 
         # The SEPARATE process claims + builds + completes the real graph.
-        job = await harness.wait_for_status(job_id, {JobStatus.COMPLETED}, timeout=90.0)
+        job = await harness.wait_for_status(job_id, {JobStatus.COMPLETED}, timeout=80.0)
         assert job.status == JobStatus.COMPLETED
         assert job.result is not None
 
@@ -105,7 +105,7 @@ async def test_real_worker_kill9_midjob_reconciled_by_watchdog():
 
         # Wait until the worker has CLAIMED + started the job (IN_PROGRESS), then
         # kill -9 it so it cannot finalize the row (true worker death mid-flight).
-        await harness.wait_for_status(job_id, {JobStatus.IN_PROGRESS, JobStatus.COMPLETED}, timeout=90.0)
+        await harness.wait_for_status(job_id, {JobStatus.IN_PROGRESS, JobStatus.COMPLETED}, timeout=80.0)
         job = await harness.job_service.get_job_by_job_id(job_id)
         if job.status == JobStatus.COMPLETED:
             pytest.skip("graph completed before we could kill the worker mid-flight (too fast on this host)")
