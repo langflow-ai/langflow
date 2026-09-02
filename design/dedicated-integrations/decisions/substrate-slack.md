@@ -56,8 +56,9 @@ bot use cases (post as app, react, list members) disappear from wave 1. Not reco
 Option B for 1.13. Every `slack.user.*` and `slack.bot.*` action runs on the documented Slack Web API. User actions
 use a user-token authorization-code profile; bot actions use the workspace-install bot-token profile and remain
 unavailable on Desktop (fact 5). Hosted and self-managed registrations are confidential clients; Desktop user
-actions use a customer-owned public client with PKCE and loopback redirect; headless credentials are externally
-provisioned. `substrate_decision.chosen` in `matrices/slack.json` is `["rest"]`.
+actions use a Langflow-owned, PKCE-enabled public client with loopback redirect (a second Slack app, with a
+customer-owned registration as the override; `decisions/desktop-oauth-ownership.md`); headless credentials are
+externally provisioned. `substrate_decision.chosen` in `matrices/slack.json` is `["rest"]`.
 
 The strategic MCP path is deferred to the 1.14 planning gate. It may replace a REST action only after a dated
 `tools/list` capture records the server URL/version, exact tool identifier, input schema, output schema, and
@@ -70,9 +71,10 @@ implementation; INT-9 is not a post-gate discovery task for 1.13.
 - The hosted Slack app still needs a Slack Marketplace listing to avoid the reduced
   `conversations.replies` rate tier; the estimate records it as calendar risk.
 - Desktop hides bot actions in both options (fact 5).
-- Desktop Slack user actions need a customer-owned, PKCE-enabled app registration; because PKCE opt-in is one-way
-  and marks the app public (fact 9), it cannot share a registration with the confidential-client hosted install.
-  INT-5 records client type per context through the named OAuth profiles in `connection-contract.md` section 8.
+- Desktop Slack user actions use a second, Langflow-owned, PKCE-enabled Slack app; because PKCE opt-in is one-way
+  and marks the app public (fact 9), it cannot share a registration with the confidential-client hosted install. A
+  customer-owned PKCE app remains the override (`decisions/desktop-oauth-ownership.md`). INT-5 records client type
+  and owner per context through the named OAuth profiles in `connection-contract.md` section 8.
 
 ## Re-open trigger
 

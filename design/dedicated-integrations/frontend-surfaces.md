@@ -51,9 +51,10 @@ whether it is an extension of something that exists or net new. Paths are under 
    rows and so existing sharing tooling is not assumed to cover them.
 3. Desktop (Tauri) runs the backend on `localhost:7860`, so the OAuth return is the same callback route as
    self-managed with a public client and loopback redirect; the frontend needs no Tauri-specific bridge for the
-   return, only for opening the system browser. Slack's MCP server documents PKCE for desktop clients, and enabling
-   PKCE marks the Slack app a public client, one-way, so Desktop Slack uses a customer-owned, PKCE-enabled app
-   registration (`decisions/substrate-slack.md` fact 9).
+   return, only for opening the system browser. Desktop defaults to Langflow-owned public clients, so the connect
+   flow has no registration step; the customer-owned registration form is the one self-managed uses and is the
+   override (`decisions/desktop-oauth-ownership.md`). Slack's PKCE opt-in marks the app a public client, one-way,
+   so Desktop Slack uses a second, Langflow-owned, PKCE-enabled Slack app (`decisions/substrate-slack.md` fact 9).
 4. A11y is a review gate here: every settings page ships an axe baseline spec, and `NodeStatus`,
    `GlobalVariablesPage`, and `MCPServersPage` carry explicit WCAG comments. B1, B2, and B5 need keyboard-only paths.
 5. B9 is an operator control, not a substitute for backend enforcement. The API returns effective policy and rejects

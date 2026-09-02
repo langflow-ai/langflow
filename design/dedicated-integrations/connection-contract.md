@@ -378,8 +378,9 @@ identifiers.**
 5. Encryption envelope: extend the `sso_secret.py` HKDF scheme with a new info label, or the Fernet
    `encrypt_api_key` path used by MCP and variables.
 6. Artifact manifest schema version for `required_connections`.
-7. Desktop: the same `GET /api/v1/connections/{provider}/callback` on `localhost:7860` with a PKCE public client,
-   and the redirect allowlist.
+7. Desktop: the same `GET /api/v1/connections/{provider}/callback` on `localhost:7860` with a PKCE public client
+   that is Langflow-owned by default and customer-owned as the override (`decisions/desktop-oauth-ownership.md`),
+   and the redirect allowlist (`127.0.0.1` loopback; Microsoft ignores the port when matching localhost redirects).
 8. Frontend export keeps handles.
 
 ### c. Enterprise owner

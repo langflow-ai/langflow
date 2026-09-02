@@ -6,7 +6,7 @@ record is `accepted` by the release owner and the structural checker passes. Gat
 Date, and PR cells are complete in both the aggregate table and each record. Wave 1 = Google 5, Microsoft 8, Slack
 7 actions.
 Jira: LE-2398 "Dedicated Integrations", ticket INT-1.
-Last updated: 2026-09-01
+Last updated: 2026-09-02 (Desktop OAuth registration ownership decision added)
 
 This directory holds the outputs of INT-1, the discovery gate that every other Dedicated Integrations ticket
 (INT-2 through INT-14) blocks on. It freezes what 1.13 ships before any provider code is written. The records are
@@ -23,9 +23,10 @@ these files are the historical record the checker keeps guarding.
 | 4 | INT-2 connection-resolution contract signed off by lfx, langflow-base, Enterprise owners | `connection-contract.md` | sign-off coverage: every declared owner role has a row in the sign-off table below that lists the record | drafted 2026-09-01; 12 sections, owner questions in section 12 |
 | 5 | Frontend surface list | `frontend-surfaces.md` | none | drafted 2026-09-01; 14 extend + 9 new, including the operator governance surface; MVP/defer split |
 | 6 | Trigger/webhook track recorded as deferred | `triggers-deferred.md` | none | governing-plan findings folded in; provider transport and delivery discovery remains deferred |
-| 7 | Re-issued estimate | `estimate.md` | none | re-issued 2026-09-01: 48.5 engineer-weeks under the confirmed decisions |
+| 7 | Re-issued estimate | `estimate.md` | none | re-issued 2026-09-01 and amended 2026-09-02: 48.75 engineer-weeks under the confirmed decisions |
 | + | KB OAuth connector adoption decision (added by the release owner) | `decisions/kb-oauth-connector-adoption.md` | none | accepted: adopt in 1.13 (release owner overrode the gate's defer recommendation); +1.5 engineer-weeks |
 | + | Palette naming next to Composio components (added by the release owner) | `decisions/palette-naming.md` | none | accepted: 'Product: Verb Object' names, new Microsoft 365 and Slack groups, Composio unchanged |
+| + | Desktop OAuth registration ownership (added by the release owner, 2026-09-02) | `decisions/desktop-oauth-ownership.md` | none | accepted: Langflow-owned public clients on Desktop, customer-owned registrations remain the override; +0.25 engineer-weeks |
 
 Gate close means: every row above is done, every record under `decisions/` is `Status: accepted` (the checker walks
 them all, not only the ones a matrix references), every declared owner has completed both sign-off tables, and
@@ -43,10 +44,10 @@ fails blank or invalid Name, Date, and PR cells. Role placeholders remain until 
 | Role | Signs off on | Name | Date | PR |
 |---|---|---|---|---|
 | lfx owner | `connection-contract.md`, `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`, `decisions/kb-oauth-connector-adoption.md` | | | |
-| langflow-base owner | `connection-contract.md`, `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`, `decisions/google-restricted-scopes.md`, `decisions/kb-oauth-connector-adoption.md` | | | |
+| langflow-base owner | `connection-contract.md`, `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`, `decisions/google-restricted-scopes.md`, `decisions/kb-oauth-connector-adoption.md`, `decisions/desktop-oauth-ownership.md` | | | |
 | Enterprise owner | `connection-contract.md`, `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`, `decisions/google-restricted-scopes.md` | | | |
 | frontend owner | `connection-contract.md` (section 12.d), `frontend-surfaces.md`, `decisions/palette-naming.md` | | | |
-| hosted-app owner | `decisions/google-restricted-scopes.md`, `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`, hosted rows of every matrix | | | |
+| hosted-app owner | `decisions/google-restricted-scopes.md`, `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`, `decisions/desktop-oauth-ownership.md`, hosted and desktop rows of every matrix | | | |
 | product owner | `decisions/palette-naming.md` | | | |
 | platform owner | `triggers-deferred.md` | | | |
 | release owner | every record in this directory, all matrices, `estimate.md`, gate close | Eric Hare | 2026-09-01 | #14906 |
@@ -82,6 +83,7 @@ decisions/substrate-*.md           official MCP vs SDK/REST per provider
 decisions/google-restricted-scopes.md   CASA-or-avoid for the Langflow-owned hosted Google app, one subsection per restricted scope
 decisions/kb-oauth-connector-adoption.md   (Phase 6)
 decisions/palette-naming.md        (Phase 6)
+decisions/desktop-oauth-ownership.md   Desktop registrations: Langflow-owned public clients by default, customer-owned override (2026-09-02)
 connection-contract.md             (Phase 5) INT-2 design for sign-off
 frontend-surfaces.md               (Phase 7)
 triggers-deferred.md               deferred track with re-open trigger

@@ -13,7 +13,7 @@
   "oauth_app_owner_by_context": {
     "hosted": "langflow",
     "self_managed": "customer",
-    "desktop": "customer",
+    "desktop": "langflow",
     "headless": "customer"
   },
   "oauth_client_type_by_context": {

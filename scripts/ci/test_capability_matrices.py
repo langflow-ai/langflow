@@ -448,3 +448,19 @@ def test_require_accepted_fails_on_draft_record(tmp_path: Path) -> None:
     assert validate_matrix(root / "matrices" / "google.json") == []
     errors = validate_matrix(root / "matrices" / "google.json", require_accepted=True)
     assert any("is draft, not accepted" in error for error in errors)
+
+
+def test_desktop_uses_langflow_owned_public_clients() -> None:
+    """decisions/desktop-oauth-ownership.md: Desktop defaults to a Langflow-owned PKCE public client."""
+    for provider in REQUIRED_PROVIDERS:
+        matrix = _load(DESIGN_ROOT, provider)
+        assert matrix["oauth_app_owner_by_context"]["desktop"] == "langflow", provider
+        assert matrix["oauth_client_type_by_context"]["desktop"] == "public", provider
+        for action in matrix["actions"]:
+            if action["decision"] != "include":
+                continue
+            contexts = action["deployment_contexts"]
+            if action["identity"] == "bot":
+                assert "desktop" not in contexts, f"{action['action_id']} offers bot scopes on Desktop"
+            else:
+                assert contexts.get("desktop") == "loopback_redirect", action["action_id"]

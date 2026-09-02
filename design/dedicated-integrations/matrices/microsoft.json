@@ -13,7 +13,7 @@
   "oauth_app_owner_by_context": {
     "hosted": "langflow",
     "self_managed": "customer",
-    "desktop": "customer",
+    "desktop": "langflow",
     "headless": "customer"
   },
   "oauth_client_type_by_context": {
@@ -155,6 +155,13 @@
       "kind": "provider_docs",
       "verified_on": "2026-09-01",
       "notes": "GET /me/drive/items/{item-id}/content and drives/sites/groups forms; least privileged Files.Read; returns 302 to a preauthenticated @microsoft.graph.downloadUrl valid for minutes and requiring no Authorization header; Range header for partial downloads."
+    },
+    "entra-public-client-apps": {
+      "url": "https://learn.microsoft.com/en-us/entra/identity-platform/msal-client-applications",
+      "title": "Public and confidential client apps (MSAL)",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-02",
+      "notes": "Public client applications (desktop, mobile, browserless) 'can't have client secrets'; an app registration that serves a public client must enable the public client flow. Together with entra-reply-url (one registration carries redirect URIs for the Web and the Mobile and desktop applications platforms; http://localhost is valid and the port is ignored when matching localhost redirect URIs; 127.0.0.1 is preferred and an http loopback URI is added through the manifest replyUrlsWithType), this is the basis for the Langflow-owned Desktop public client in decisions/desktop-oauth-ownership.md."
     }
   },
   "verification_programs": {
