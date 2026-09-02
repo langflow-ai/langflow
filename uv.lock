@@ -10334,7 +10334,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-openai"
-version = "0.1.4"
+version = "0.1.5"
 source = { editable = "src/bundles/openai" }
 dependencies = [
     { name = "langchain-openai" },

@@ -28,8 +28,6 @@ class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
             info="Default query parameters to use for the API request.",
         ),
         IntInput(name="chunk_size", display_name="Chunk Size", advanced=True, value=1000),
-        MessageTextInput(name="client", display_name="Client", advanced=True),
-        MessageTextInput(name="deployment", display_name="Deployment", advanced=True),
         IntInput(name="embedding_ctx_length", display_name="Embedding Context Length", advanced=True, value=1536),
         IntInput(name="max_retries", display_name="Max Retries", value=3, advanced=True),
         DropdownInput(
@@ -80,11 +78,16 @@ class OpenAIEmbeddingsComponent(LCEmbeddingsModel):
         # through DNS-pinned, redirect-free clients. No-op for the default OpenAI endpoint.
         ssrf_client_kwargs = openai_compatible_client_kwargs(self.openai_api_base, default_url=DEFAULT_OPENAI_API_BASE)
 
+        # ``client`` is deliberately not passed: OpenAIEmbeddings only builds its own SDK client —
+        # and only applies api_key, base_url, organization, timeout, max_retries, default_headers,
+        # default_query and the SSRF-pinned http_client above — inside ``if not self.client``. Any
+        # value here skips all of that, and the field could only ever hold a string, so the very
+        # next call raises ``AttributeError: 'str' object has no attribute 'create'``.
+        # ``deployment`` is likewise dropped: it is stored but never read; the request is issued
+        # against ``model``.
         return OpenAIEmbeddings(
-            client=self.client or None,
             model=self.model,
             dimensions=self.dimensions or None,
-            deployment=self.deployment or None,
             api_version=self.openai_api_version or None,
             base_url=self.openai_api_base or None,
             openai_api_type=self.openai_api_type or None,
