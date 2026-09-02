@@ -855,6 +855,29 @@ class TestProductionObservability:
         assert "version" not in rec
         assert "environment" not in rec
 
+    def test_pretty_console_hides_default_service_field(self, capsys, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_PRETTY_LOGS", "true")
+        configure(log_env="", log_level="DEBUG", cache=False)
+        log = structlog.get_logger("svc.pretty")
+
+        log.info("console hi")
+
+        out = capsys.readouterr().out
+        assert "console hi" in out
+        assert "service=langflow" not in out
+
+    def test_pretty_console_preserves_custom_service_field(self, capsys, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_PRETTY_LOGS", "true")
+        monkeypatch.setenv("LANGFLOW_SERVICE_NAME", "custom-service")
+        configure(log_env="", log_level="DEBUG", cache=False)
+        log = structlog.get_logger("svc.pretty")
+
+        log.info("console hi")
+
+        out = capsys.readouterr().out
+        assert "console hi" in out
+        assert "custom-service" in out
+
     def test_service_info_from_env_appears_in_records(self, capsys, monkeypatch):
         monkeypatch.setenv("LANGFLOW_SERVICE_NAME", "lfx-runner")
         monkeypatch.setenv("LANGFLOW_VERSION", "1.2.3")

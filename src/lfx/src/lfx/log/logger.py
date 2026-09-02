@@ -209,6 +209,16 @@ def _get_service_info() -> dict[str, str]:
     return info
 
 
+def _hide_default_service_for_pretty_console(
+    _logger: Any,
+    _method_name: str,
+    event_dict: dict[str, Any],
+) -> dict[str, Any]:
+    if event_dict.get("service") == "langflow":
+        event_dict.pop("service", None)
+    return event_dict
+
+
 # Default keys whose values are redacted before rendering. Production logs leak
 # auth tokens, cookies, and API keys with surprising regularity (third-party
 # clients log request bodies, dict reprs, kwargs, etc.); a cheap, default-on
@@ -1145,6 +1155,7 @@ def configure(
                 processors.append(structlog.processors.format_exc_info)
                 processors.append(structlog.processors.KeyValueRenderer())
             else:
+                processors.append(_hide_default_service_for_pretty_console)
                 processors.append(structlog.dev.ConsoleRenderer(colors=True))
         else:
             _append_json_tail()
