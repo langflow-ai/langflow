@@ -1,8 +1,10 @@
 import json
 
 import pytest
-from httpx import AsyncClient
-from langflow.main import GZIP_EXCLUDED_CONTENT_TYPES, GZIP_MINIMUM_SIZE
+from fastapi import FastAPI, Response
+from httpx import ASGITransport, AsyncClient
+from langflow.main import GZIP_COMPRESS_LEVEL, GZIP_EXCLUDED_CONTENT_TYPES, GZIP_MINIMUM_SIZE
+from starlette.middleware.gzip import GZipMiddleware
 
 LARGE_NODE_COUNT = 40
 
@@ -32,7 +34,6 @@ async def _create_large_flow(client: AsyncClient, headers: dict) -> str:
     return response.json()["id"]
 
 
-@pytest.mark.asyncio
 async def test_flow_read_is_compressed_when_the_client_accepts_gzip(client: AsyncClient, logged_in_headers):
     flow_id = await _create_large_flow(client, logged_in_headers)
 
@@ -44,7 +45,6 @@ async def test_flow_read_is_compressed_when_the_client_accepts_gzip(client: Asyn
     assert response.json()["id"] == flow_id
 
 
-@pytest.mark.asyncio
 async def test_flow_read_is_untouched_when_the_client_does_not_accept_gzip(client: AsyncClient, logged_in_headers):
     flow_id = await _create_large_flow(client, logged_in_headers)
 
@@ -55,7 +55,6 @@ async def test_flow_read_is_untouched_when_the_client_does_not_accept_gzip(clien
     assert json.loads(response.content)["id"] == flow_id
 
 
-@pytest.mark.asyncio
 async def test_flow_update_echo_is_compressed(client: AsyncClient, logged_in_headers):
     flow_id = await _create_large_flow(client, logged_in_headers)
     payload = _large_flow_payload()
@@ -72,7 +71,6 @@ async def test_flow_update_echo_is_compressed(client: AsyncClient, logged_in_hea
     assert response.json()["name"] == "compression fixture renamed"
 
 
-@pytest.mark.asyncio
 async def test_response_below_the_threshold_is_not_compressed(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/version", headers={**logged_in_headers, "Accept-Encoding": "gzip"})
 
@@ -81,6 +79,48 @@ async def test_response_below_the_threshold_is_not_compressed(client: AsyncClien
     assert "content-encoding" not in response.headers
 
 
-def test_binary_and_streaming_content_types_are_excluded():
-    for content_type in ("application/octet-stream", "application/zip", "text/event-stream", "image/png"):
+EXCLUDED_UNDER_TEST = ("application/octet-stream", "application/zip", "text/event-stream", "image/png")
+
+
+def _app_with_the_same_middleware() -> FastAPI:
+    app = FastAPI()
+    app.add_middleware(
+        GZipMiddleware,
+        minimum_size=GZIP_MINIMUM_SIZE,
+        compresslevel=GZIP_COMPRESS_LEVEL,
+        exclude_content_types=GZIP_EXCLUDED_CONTENT_TYPES,
+    )
+
+    @app.get("/payload")
+    async def payload(content_type: str) -> Response:
+        return Response(content=b"x" * (GZIP_MINIMUM_SIZE * 4), media_type=content_type)
+
+    return app
+
+
+def test_binary_and_streaming_content_types_are_configured_as_excluded():
+    for content_type in EXCLUDED_UNDER_TEST:
         assert content_type in GZIP_EXCLUDED_CONTENT_TYPES
+
+
+@pytest.mark.parametrize("content_type", EXCLUDED_UNDER_TEST)
+async def test_excluded_content_types_are_not_compressed(content_type):
+    transport = ASGITransport(app=_app_with_the_same_middleware())
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get(
+            "/payload", params={"content_type": content_type}, headers={"Accept-Encoding": "gzip"}
+        )
+
+    assert response.status_code == 200
+    assert "content-encoding" not in response.headers
+    assert len(response.content) == GZIP_MINIMUM_SIZE * 4
+
+
+async def test_a_compressible_type_on_the_same_app_is_compressed():
+    transport = ASGITransport(app=_app_with_the_same_middleware())
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get(
+            "/payload", params={"content_type": "application/json"}, headers={"Accept-Encoding": "gzip"}
+        )
+
+    assert response.headers["content-encoding"] == "gzip"
