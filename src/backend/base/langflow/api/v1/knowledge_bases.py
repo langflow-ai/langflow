@@ -22,6 +22,7 @@ from lfx.base.knowledge_bases.ingestion_sources import (
     get_source_class,
     registered_sources,
 )
+from lfx.base.knowledge_bases.validation import validate_collection_name
 from lfx.base.models.provider_registry import provider_id_for
 from lfx.base.vectorstores.chroma_security import chroma_client_create_collection_kwargs
 from lfx.log import logger
@@ -297,6 +298,14 @@ def _validate_kb_name_or_403(kb_name: str, owner_user) -> None:
             status_code=403,
             detail=f"Access denied for knowledge base '{kb_name}'.",
         ) from exc
+
+
+def _validate_collection_name_or_400(kb_name: str, *, local: bool) -> None:
+    """Reject a name the vector-store collection cannot represent."""
+    try:
+        validate_collection_name(kb_name, resource="Knowledge base", local=local)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 async def _require_kb_record(kb_name: str, owner_user, guard: _KbGuardResult | None = None):
@@ -745,7 +754,6 @@ async def create_knowledge_base(
         # guard below never runs for them — this is what keeps a name like
         # ``../victim_user/evil_kb`` from being persisted on a remote backend.
         _validate_kb_name_or_403(kb_name, current_user)
-
         # The ``knowledge_base`` row is the authority on existence, and
         # ``uq_knowledge_base_user_name`` is the real guard against duplicates.
         existing_record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
@@ -758,6 +766,11 @@ async def create_knowledge_base(
         backend_type_value = request.backend_type or resolve_default_kb_backend()
         backend_config_value = request.backend_config or {}
         _reject_local_chroma_in_prod(backend_type_value, backend_config_value, resource="knowledge base")
+        if backend_type_value == BackendType.CHROMA.value:
+            _validate_collection_name_or_400(
+                kb_name,
+                local=is_local_chroma(backend_type_value, backend_config_value),
+            )
 
         # ``None`` for every remote backend: no path is resolved and the
         # filesystem is never consulted. Traversal-checked for local Chroma
@@ -807,6 +820,9 @@ async def create_knowledge_base(
             try:
                 client = KBStorageHelper.get_fresh_chroma_client(kb_path)
                 client.create_collection(name=kb_name, **chroma_client_create_collection_kwargs())
+            except chromadb.errors.InvalidArgumentError as e:
+                KBStorageHelper.delete_storage(kb_path, kb_name)
+                raise HTTPException(status_code=400, detail=f"Invalid knowledge base name: {e}") from e
             except (OSError, ValueError, chromadb.errors.ChromaError) as e:
                 logger.warning("Initial Chroma setup for %s failed: %s", kb_name, e)
             finally:

@@ -344,6 +344,8 @@ class CustomComponent(BaseComponent):
         if not build_method or not build_method.get("has_return"):
             return []
         return_type = build_method["return_type"]
+        if return_type is None:
+            return []
 
         return self._extract_return_type(return_type)
 

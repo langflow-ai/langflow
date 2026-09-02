@@ -403,7 +403,10 @@ For multi-worker tuning—including the Redis job queue and Gunicorn worker sett
 
 ### Monitoring and metrics
 
-For environment variables for specific monitoring service providers, see the Langflow monitoring integration guides, such as [Langfuse](/integrations-langfuse) and [Best practices for Langflow on Kubernetes](/deployment-prod-best-practices).
+For OpenTelemetry traces, metrics, and logs that describe Langflow service health, including `LANGFLOW_OTEL_*` and `OTEL_EXPORTER_OTLP_*`, see [OpenTelemetry](./observability-opentelemetry.mdx).
+
+For prompt-level LLM tracing, see [Langfuse](/integrations-langfuse) and the other monitoring integrations.
+For Prometheus on Kubernetes, see [Best practices for Langflow on Kubernetes](/deployment-prod-best-practices).
 
 ### Server
 
@@ -415,6 +418,7 @@ The following environment variables set base Langflow server configuration, such
 | `LANGFLOW_PORT` | Integer | `7860` | The port on which the Langflow server runs. The server automatically selects a free port if the specified port is in use. |
 | `LANGFLOW_BACKEND_ONLY` | Boolean | `False` | Run only the Langflow backend service (no frontend). |
 | `LANGFLOW_DEV` | Boolean | `False` | Whether to run Langflow in development mode (may contain bugs). |
+| `LANGFLOW_DEPLOYMENT_PROFILE` | String | `dev` | Deployment profile. `dev` skips production checks. `prod` runs [production preflight](/deployment-prod-best-practices#production-preflight) before the server starts and aborts boot if a required service is missing. |
 | `LANGFLOW_OPEN_BROWSER` | Boolean | `False` | Open the system web browser on startup. |
 | `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for Langflow's server status health checks. |
 | `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes. See [Deploy Langflow with multiple workers](./deployment-multi-worker#recommended-gunicorn-settings). |
@@ -434,9 +438,45 @@ For file storage environment variables, see [File storage environment variables]
 
 For database environment variables, including PostgreSQL configuration, see [Memory management options](/memory#configure-external-memory).
 
-### Telemetry
+### Telemetry {#telemetry}
 
-See [Telemetry](/contributing-telemetry).
+Anonymous product usage telemetry is separate from OpenTelemetry export.
+
+See [Telemetry](/contributing-telemetry) to opt out with `DO_NOT_TRACK`.
+
+### OpenTelemetry {#opentelemetry}
+
+Langflow can export service-health traces, metrics, and logs over OTLP to **your** backend.
+This is not LLM tracing and is not the anonymous product telemetry above.
+
+Set `OTEL_EXPORTER_OTLP_ENDPOINT` to enable export. If it is unset, Langflow installs no providers.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | String | Not set | OTLP collector or APM endpoint. Required to enable export. |
+| `LANGFLOW_OTEL_DB_SPANS` | Boolean | `True` | Whether to export SQLAlchemy database spans. Set to `false` to send flow and request spans only. |
+| `LANGFLOW_OTEL_LOG_LEVEL` | String | `INFO` | Minimum severity exported over OTLP. `DEBUG` exports more records (flow inputs and outputs are logged at `DEBUG`) but withholds their bodies unless `LANGFLOW_OTEL_LOG_BODIES=all` is also set. |
+| `LANGFLOW_OTEL_LOG_BODIES` | String | `allowlist` | Set to `all` to export log message bodies, including completions and chat history. |
+
+Standard OpenTelemetry SDK variables such as `OTEL_SERVICE_NAME` and `OTEL_EXPORTER_OTLP_HEADERS` also apply.
+To verify the pipeline, run [`langflow observability doctor`](/configuration-cli#langflow-observability-doctor).
+
+For the full list, what Langflow does and does not export, and vendor setup, see [OpenTelemetry](./observability-opentelemetry.mdx).
+
+### Sandbox backends {#langflow-sandbox}
+
+These variables control optional execution backends for the [**Python Interpreter** Component](/python-interpreter#sandbox) and the legacy Python REPL tool.
+The `exec-sandbox` backend is not included in a default `uv pip install langflow` installation; install `langflow[sandbox]` to use it.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_SANDBOX_BACKEND` | String | `none` | Name of the execution backend for the code-execution components (Python Interpreter and the legacy Python REPL tool). Any registered backend name is accepted — see [Sandbox backends](../Deployment/sandbox-backends.mdx). Set to `exec-sandbox` to run user code in a dedicated QEMU microVM per execution on this host. Requires `uv pip install 'langflow[sandbox]'`, Python 3.12 or later, and QEMU 8+ with hardware virtualization (KVM on Linux, HVF on macOS). When a configured backend is unavailable, execution fails with an error instead of falling back to in-process execution. |
+| `LANGFLOW_SANDBOX_TIMEOUT_SECONDS` | Integer | `30` | Wall-clock limit for one sandboxed execution (1-300 seconds). The selected backend can declare a lower cap, and a value above that cap is refused even inside this range — see [Sandbox backends](../Deployment/sandbox-backends.mdx). Only used when `LANGFLOW_SANDBOX_BACKEND` is not `none`. |
+| `LANGFLOW_SANDBOX_MEMORY_MB` | Integer | `192` | Guest VM memory for sandboxed executions, in MB (minimum 128). Only used when `LANGFLOW_SANDBOX_BACKEND` is not `none`. |
+| `LANGFLOW_SANDBOX_ALLOW_NETWORK` | Boolean | `False` | Whether sandboxed code may access the network. The default runs the microVM fully offline. When enabled without `LANGFLOW_SANDBOX_ALLOWED_DOMAINS`, exec-sandbox reaches only its package-registry defaults (PyPI). Only used when `LANGFLOW_SANDBOX_BACKEND` is not `none`. |
+| `LANGFLOW_SANDBOX_ALLOWED_DOMAINS` | String | Not set | Comma-separated list of domains sandboxed code may reach when network access is enabled. Treat like an SSRF allow-list: prefer narrow, fully-qualified domains. Only used when `LANGFLOW_SANDBOX_BACKEND` is not `none`. |
+| `LANGFLOW_SANDBOX_ALLOW_SOFTWARE_EMULATION` | Boolean | `False` | Permit the sandbox to run without a hardware hypervisor, letting QEMU fall back to TCG software emulation. Upstream documents TCG as not security-supported, so enable only for trusted/development workloads. Only used when `LANGFLOW_SANDBOX_BACKEND` is not `none`. |
+| `LANGFLOW_SANDBOX_BACKEND_PLUGINS` | String | Not set | Comma-separated names of out-of-tree sandbox backends that may load, from the `lfx.sandbox_backends` entry point group — see [Sandbox backends](../Deployment/sandbox-backends.mdx). Empty (default) means no third-party backend code is imported at all. Loading a plugin imports its code into the Langflow process on the path that decides whether user code is isolated, and a backend's declared capabilities are configuration metadata rather than proof it enforces them, so naming one here is a statement that you trust that package. A name already used by a built-in backend is refused rather than replaced. |
 
 ### Visual editor and Playground behavior
 
@@ -450,19 +490,17 @@ See [Telemetry](/contributing-telemetry).
 | `LANGFLOW_AGENTIC_EXPERIENCE` | Boolean | `True` | Whether [Langflow Assistant](/langflow-assistant) is available. Set to `false` to turn it off for a deployment, for example if you don't want model-generated component code running on your server. The Assistant's endpoints then return `404` and its `run_assistant` MCP tool is unavailable, but the rest of the MCP toolkit at `/api/v1/agentic/mcp` is unaffected. To block code execution itself, including hand-written custom components, use `LANGFLOW_ALLOW_CUSTOM_COMPONENTS`. |
 | `LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH` | Integer | `2000` | Maximum length, in characters, of a single message sent to [Langflow Assistant](/langflow-assistant). The limit is enforced by the Assistant API and mirrored to the visual editor, which blocks sending a longer message instead of truncating it. Raise it for users who paste long specifications into the Assistant; longer messages cost more per turn. |
 | `LANGFLOW_ASSISTANT_HISTORY_TURNS` | Integer | `6` | How many prior conversation turns [Langflow Assistant](/langflow-assistant) injects into its prompt. The block is re-sent on every agent iteration, so this is a direct per-request token-cost lever: raise it for longer memory and accept the cost, or set `0` to inject no history. Values that aren't a number fall back to the default. |
+| `LANGFLOW_ASSISTANT_ITERATIONS` | Integer | `30` | The step budget (`max_iterations`) each [Langflow Assistant](/langflow-assistant) agent runs with, which also derives LangGraph's recursion limit (`max_iterations * 2 + 5`). Raise it when your flows are multi-stage by nature and the Assistant keeps reporting that it ran out of steps; a larger budget raises the worst-case token spend per turn. A user's `/iterations N` command overrides it for their session, and values are clamped to `1`-`200`. Values that aren't a number fall back to the default. |
 | `LANGFLOW_ASSISTANT_VERIFY_FLOWS` | Boolean | `True` | Whether [Langflow Assistant](/langflow-assistant) runs a flow it just built before presenting it, repairing fixable failures and adding a caveat to the reply when it can't. Set to `false` to deliver flows unverified, which is faster and cheaper but removes the guarantee that a delivered flow ran at least once. |
 | `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` | Boolean | `True` | If `false`, disables custom components, in-editor editing of component code, and registered built-in code-execution components at runtime. This feature is in beta. For more information, see [Block custom components](/deployment-block-custom-components) and [Component hardening for untrusted users](/api-keys-and-authentication#multi-tenant-component-hardening). |
+| `LANGFLOW_ALLOW_PUBLIC_CUSTOM_COMPONENTS` | Boolean | `False` | Whether flows shared through the **Shareable Playground** can run custom component code. By default, an unauthenticated public flow build runs only the server's own copy of each component, and a flow containing a custom component is refused with `This flow cannot be executed.` Set to `true` to build public flows from the database as their owner. This requires `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true`, and it lets every node in a public flow run the code stored in that flow, not only the custom ones. To run a custom component in a shared **Playground** without relaxing that, install the component on the server with `LANGFLOW_COMPONENTS_PATH` instead. For more information, see [Custom components in publicly shared flows](/deployment-block-custom-components#public-flow-custom-components). |
 | `LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE` | Boolean | `True` | When `false` alongside `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`, components contributed by `LANGFLOW_COMPONENTS_PATH` and `LANGFLOW_COMPONENTS_INDEX_PATH` no longer bypass the block. Has no effect when `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true`. For more information, see [Block custom components](/deployment-block-custom-components). |
 | `LANGFLOW_SUBSTITUTE_OUTDATED_COMPONENT_CODE` | Boolean | `True` | Only applies when `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`, where a flow's stored component code never runs anyway. By default, a node whose component type this server knows but whose stored code has drifted across an upgrade is rebuilt with this server's copy of that component, and the substitution is logged. Set to `false` to refuse those flows until each component is updated. Unrecognized component types are refused either way. For more information, see [Block custom components](/deployment-block-custom-components#upgrading-with-custom-components-blocked). |
 | `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` | Boolean | `False` | If `true`, blocks built-in code-execution components (Python Interpreter, REPL/Code tools, Smart Transform, and code-running agents). See [Component hardening for untrusted users](/api-keys-and-authentication#multi-tenant-component-hardening). |
 | `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS` | Boolean | `False` | If `true`, confines built-in file components to the upload storage directory and blocks local-file SQL dialects and local Git clones. See [Component hardening for untrusted users](/api-keys-and-authentication#multi-tenant-component-hardening). |
 | `LANGFLOW_MCP_SERVER_DOCKER_HARDENING` | Boolean | `False` | If `true`, applies a strict Docker-argument policy to MCP stdio servers that use the `docker` transport. See [Component hardening for untrusted users](/api-keys-and-authentication#multi-tenant-component-hardening). |
-| `LANGFLOW_SANDBOX_BACKEND` | String | `none` | Execution backend for the code-execution components (Python Interpreter and the legacy Python REPL tool). Set to `exec-sandbox` to run user code in a dedicated QEMU microVM per execution instead of in-process. Requires `pip install 'langflow[sandbox]'`, Python 3.12 or later, and QEMU 8+ with hardware virtualization (KVM on Linux, HVF on macOS). When configured but unavailable — including hosts without a hardware hypervisor — execution fails with an error instead of falling back to in-process execution. |
-| `LANGFLOW_SANDBOX_TIMEOUT_SECONDS` | Integer | `30` | Wall-clock limit for one sandboxed execution (1-300 seconds). Only used when `LANGFLOW_SANDBOX_BACKEND` is not `none`. |
-| `LANGFLOW_SANDBOX_MEMORY_MB` | Integer | `192` | Guest VM memory for sandboxed executions, in MB (minimum 128). Only used when `LANGFLOW_SANDBOX_BACKEND` is not `none`. |
-| `LANGFLOW_SANDBOX_ALLOW_NETWORK` | Boolean | `False` | Whether sandboxed code may access the network. The default runs the microVM fully offline. When enabled without `LANGFLOW_SANDBOX_ALLOWED_DOMAINS`, only exec-sandbox's package-registry defaults (PyPI) are reachable. Only used when `LANGFLOW_SANDBOX_BACKEND` is not `none`. |
-| `LANGFLOW_SANDBOX_ALLOWED_DOMAINS` | String | Not set | Comma-separated list of domains sandboxed code may reach when network access is enabled. Treat like an SSRF allow-list: prefer narrow, fully-qualified domains. Only used when `LANGFLOW_SANDBOX_BACKEND` is not `none`. |
-| `LANGFLOW_SANDBOX_ALLOW_SOFTWARE_EMULATION` | Boolean | `False` | Permit the sandbox to run without a hardware hypervisor, letting QEMU fall back to TCG software emulation. Upstream documents TCG as not security-supported, so enable only for trusted/development workloads. Only used when `LANGFLOW_SANDBOX_BACKEND` is not `none`. |
+| `LANGFLOW_MCP_SERVER_ENV_ALLOWLIST` | String | Not set | Comma-separated allowlist of environment-variable names an MCP stdio config may set. Production preflight warns when this is unset. An empty value blocks all tenant-supplied environment variables. See [MCP server environment variables](/mcp-server#mcp-server-environment-variables). |
+| `LANGFLOW_TWEAKS_POLICY` | String | `permissive` | Which component fields a run request may set through `tweaks`. For more information, see [Restrict API tweaks](./deployment-tweaks-policy). |
 | `LANGFLOW_LOAD_FLOWS_PATH` | String | Not set | Path to a directory containing flow JSON files to be loaded on startup. Typically used when creating a Docker image with prepackaged flows. Requires `LANGFLOW_AUTO_LOGIN=True`. |
 | `LANGFLOW_LOAD_FLOWS_OVERWRITE_ON_NAME_MATCH` | Boolean | `False` | When a flow file in `LANGFLOW_LOAD_FLOWS_PATH` shares a name with an existing DB row but has a different `id`, controls whether to overwrite the existing row. `False` (default) skips with a warning so UI edits are preserved on restart when file UUIDs regenerate. Set to `True` to opt into prepackaged-flows-are-source-of-truth semantics, typically for CI/CD pipelines. |
 | `LANGFLOW_LOAD_FLOWS_PRESERVE_VARIABLE_BINDINGS` | Boolean | `True` | Preserve global-variable bindings configured in the visual editor when an existing flow is reloaded from `LANGFLOW_LOAD_FLOWS_PATH`. Bindings explicitly configured in the flow file still take precedence. Set to `False` to restore blind replacement of the flow data on restart. |

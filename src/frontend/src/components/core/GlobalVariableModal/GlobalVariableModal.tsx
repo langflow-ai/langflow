@@ -10,6 +10,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs-button";
 import { PROVIDER_VARIABLE_MAPPING } from "@/constants/providerConstants";
+import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import {
   useGetGlobalVariables,
@@ -35,6 +36,7 @@ export default function GlobalVariableModal({
   open: myOpen,
   setOpen: mySetOpen,
   disabled = false,
+  providerScope,
 }: {
   children?: JSX.Element;
   asChild?: boolean;
@@ -43,6 +45,7 @@ export default function GlobalVariableModal({
   open?: boolean;
   setOpen?: (a: boolean | ((o?: boolean) => boolean)) => void;
   disabled?: boolean;
+  providerScope?: ProviderScopeParams;
 }): JSX.Element {
   const [key, setKey] = useState(initialData?.name ?? "");
   const [value, setValue] = useState(initialData?.value ?? "");
@@ -62,11 +65,11 @@ export default function GlobalVariableModal({
   // (WCAG 3.3.1) instead of living only in the transient toast.
   const [serverError, setServerError] = useState<string | null>(null);
   const componentFields = useTypesStore((state) => state.ComponentFields);
+  const { data: globalVariables } = useGetGlobalVariables(providerScope);
   const { upsertGlobalVariable, updateGlobalVariable } =
-    useGlobalVariableUpsert();
-  const { data: globalVariables } = useGetGlobalVariables();
+    useGlobalVariableUpsert(providerScope, globalVariables);
   const [availableFields, setAvailableFields] = useState<string[]>([]);
-  useGetTypes({ checkCache: true, enabled: !!globalVariables });
+  useGetTypes({ ...providerScope, enabled: !!globalVariables });
 
   // The component stays mounted behind its trigger, so a rejection from a
   // previous session would otherwise re-announce (role="alert") on reopen.

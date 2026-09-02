@@ -1,14 +1,8 @@
-"""Bug 5 [P2] — agentic routers must be visible in /openapi.json.
+"""Agentic routers must stay hidden from /openapi.json.
 
-PR-12575 hides most agentic endpoints from the OpenAPI schema by
-setting ``include_in_schema=False`` on the API routers (router.py:39 and
-files_router.py:49). External clients, SDK generators, and Swagger UI
-therefore can't discover them.
-
-Bug-fix scope: the assistant and files endpoints are GA-quality surfaces
-(authenticated, documented in ``docs/features/langflow-assistant.md``,
-covered by extensive tests). They must appear in the published schema so
-clients can integrate without reading source code.
+The assistant and files HTTP surfaces are internal. They are mounted with
+``include_in_schema=False`` so they do not appear in the published OpenAPI
+spec, Swagger UI, or generated SDKs.
 """
 
 from __future__ import annotations
@@ -17,6 +11,14 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from langflow.agentic.api.files_router import router as files_router
 from langflow.agentic.api.router import router as assistant_router
+
+HIDDEN_AGENTIC_PATHS = (
+    "/agentic/assist",
+    "/agentic/assist/stream",
+    "/agentic/check-config",
+    "/agentic/files",
+    "/agentic/execute/{flow_name}",
+)
 
 
 def _build_schema() -> dict:
@@ -30,36 +32,37 @@ def _build_schema() -> dict:
     return response.json()
 
 
-class TestAgenticRoutersAppearInOpenApi:
-    """Bug 5 — every GA agentic endpoint must be discoverable via the OpenAPI schema."""
+class TestAgenticRoutersHiddenFromOpenApi:
+    """Agentic endpoints are internal and must not appear in the OpenAPI schema."""
 
-    def test_should_expose_assist_endpoint(self):
-        """RED before fix: ``/agentic/assist`` is missing from the schema."""
+    def test_should_hide_assist_endpoint(self):
         paths = _build_schema().get("paths", {})
-        assert "/agentic/assist" in paths, f"Expected /agentic/assist to be in schema, got paths: {sorted(paths)}"
+        assert "/agentic/assist" not in paths, f"Expected /agentic/assist to be hidden, got paths: {sorted(paths)}"
 
-    def test_should_expose_assist_stream_endpoint(self):
-        """RED before fix: ``/agentic/assist/stream`` is missing from the schema."""
+    def test_should_hide_assist_stream_endpoint(self):
         paths = _build_schema().get("paths", {})
-        assert "/agentic/assist/stream" in paths, (
-            f"Expected /agentic/assist/stream to be in schema, got paths: {sorted(paths)}"
+        assert "/agentic/assist/stream" not in paths, (
+            f"Expected /agentic/assist/stream to be hidden, got paths: {sorted(paths)}"
         )
 
-    def test_should_expose_check_config_endpoint(self):
-        """RED before fix: ``/agentic/check-config`` is missing from the schema."""
+    def test_should_hide_check_config_endpoint(self):
         paths = _build_schema().get("paths", {})
-        assert "/agentic/check-config" in paths, (
-            f"Expected /agentic/check-config to be in schema, got paths: {sorted(paths)}"
+        assert "/agentic/check-config" not in paths, (
+            f"Expected /agentic/check-config to be hidden, got paths: {sorted(paths)}"
         )
 
-    def test_should_expose_files_endpoint(self):
-        """RED before fix: ``/agentic/files`` is missing from the schema."""
+    def test_should_hide_files_endpoint(self):
         paths = _build_schema().get("paths", {})
-        assert "/agentic/files" in paths, f"Expected /agentic/files to be in schema, got paths: {sorted(paths)}"
+        assert "/agentic/files" not in paths, f"Expected /agentic/files to be hidden, got paths: {sorted(paths)}"
 
-    def test_should_expose_execute_endpoint(self):
-        """RED before fix: ``/agentic/execute/{flow_name}`` is missing from the schema."""
+    def test_should_hide_execute_endpoint(self):
         paths = _build_schema().get("paths", {})
-        assert "/agentic/execute/{flow_name}" in paths, (
-            f"Expected /agentic/execute/{{flow_name}} to be in schema, got paths: {sorted(paths)}"
+        assert "/agentic/execute/{flow_name}" not in paths, (
+            f"Expected /agentic/execute/{{flow_name}} to be hidden, got paths: {sorted(paths)}"
         )
+
+    def test_schema_contains_no_agentic_paths(self):
+        paths = _build_schema().get("paths", {})
+        leaked = [path for path in HIDDEN_AGENTIC_PATHS if path in paths]
+        assert leaked == [], f"Agentic endpoints leaked into OpenAPI: {leaked}"
+        assert paths == {}, f"Agentic routers must be hidden from OpenAPI, got paths: {sorted(paths)}"
