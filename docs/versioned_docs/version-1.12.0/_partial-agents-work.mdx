@@ -1,0 +1,18 @@
+<details>
+<summary>How do agents work?</summary>
+
+Agents extend Large Language Models (LLMs) by integrating _tools_, which are functions that provide additional context and enable autonomous task execution.
+These integrations make agents more specialized and powerful than standalone LLMs.
+
+Whereas an LLM might generate acceptable, inert responses to general queries and tasks, an agent can leverage the integrated context and tools to provide more relevant responses and even take action.
+For example, you might create an agent that can access your company's documentation, repositories, and other resources to help your team with tasks that require knowledge of your specific products, customers, and code.
+
+Agents use LLMs as a reasoning engine to process input, determine which actions to take to address the query, and then generate a response.
+The response could be a typical text-based LLM response, or it could involve an action, like editing a file, running a script, or calling an external API.
+
+In an agentic context, tools are functions that the agent can run to perform tasks or access external resources.
+A function is wrapped as a `Tool` object with a common interface that the agent understands.
+Agents become aware of tools through tool registration, which is when the agent is provided a list of available tools typically at agent initialization.
+The `Tool` object's description tells the agent what the tool can do so that it can decide whether the tool is appropriate for a given request.
+
+</details>

@@ -1,0 +1,143 @@
+---
+title: Bundle list
+slug: /extensions-bundle-list
+---
+
+import PartialOptInBundles from '@site/docs/_partial-opt-in-bundles.mdx';
+
+This page lists every official Langflow bundle and the pip **extension** package that ships it.
+Bundle names are stable identifiers used in saved flows (`ext:<bundle>:<Class>@official`).
+The pip install command is what you run when a bundle is missing from your environment.
+
+This list reflects the bundles included with Langflow 1.12.0.
+Providers can graduate from `lfx-bundles` to a standalone `lfx-<provider>` package without changing the bundle name in your flows.
+
+## Additional bundles {#additional-bundles}
+
+<PartialOptInBundles />
+
+## Standalone packages included by default
+
+These providers ship as their own pip packages, each on its own release cadence.
+The default `uv pip install langflow` includes the following curated standalone packages.
+
+| Bundle | Install command |
+| --- | --- |
+| [`amazon`](/bundles-amazon) (Amazon) | `uv pip install lfx-amazon` |
+| [`anthropic`](/bundles-anthropic) (Anthropic) | `uv pip install lfx-anthropic` |
+| [`azure`](/bundles-azure) (Azure) | `uv pip install lfx-azure` |
+| [`cohere`](/bundles-cohere) (Cohere) | `uv pip install lfx-cohere` |
+| [`datastax`](/bundles-datastax) (DataStax) | `uv pip install lfx-datastax` |
+| [`docling`](/bundles-docling) (Docling) | `uv pip install lfx-docling` |
+| [`google`](/bundles-google) (Google components) | `uv pip install lfx-google` |
+| [`ibm`](/bundles-ibm) (IBM) | `uv pip install lfx-ibm` |
+| [`ollama`](/bundles-ollama) (Ollama) | `uv pip install lfx-ollama` |
+| [`openai`](/bundles-openai) (OpenAI) | `uv pip install lfx-openai` |
+| [`openai-compatible`](/bundles-openai-compatible) (OpenAI Compatible) | `uv pip install lfx-openai-compatible` |
+| [`oracle`](/bundles-oracle) (Oracle) | `uv pip install lfx-oracle` |
+| [`vllm`](/bundles-vllm) (vLLM) | `uv pip install lfx-vllm` |
+
+## Opt-in standalone packages
+
+These providers are available as standalone `lfx-*` packages, but they are **not** included in `uv pip install langflow`.
+Install one package, or install all of them together with the non-PyTorch providers in `lfx-bundles` by using
+`uv pip install "langflow[bundles]"`.
+
+| Bundle | Install command |
+| --- | --- |
+| [`arxiv`](/bundles-arxiv) (arXiv) | `uv pip install lfx-arxiv` |
+| [`confluent`](./bundles-confluent) (IBM Confluent) | `uv pip install lfx-confluent` |
+| [`duckduckgo`](/bundles-duckduckgo) (DuckDuckGo) | `uv pip install lfx-duckduckgo` |
+| [`empiriolabs`](/bundles-empiriolabs) (EmpirioLabs) | `uv pip install lfx-empiriolabs` |
+| [`exa`](/bundles-exa) (Exa) | `uv pip install lfx-exa` |
+| [`firecrawl`](/bundles-firecrawl) (Firecrawl) | `uv pip install lfx-firecrawl` |
+| [`nextplaid`](/bundles-nextplaid) (NextPlaid) | `uv pip install lfx-nextplaid` |
+| [`paddle`](/bundles-paddle) (Paddle) | `uv pip install lfx-paddle` |
+| [`valkey`](/bundles-valkey) (Valkey) | `uv pip install lfx-valkey` |
+
+## Providers in `lfx-bundles` {#lfx-bundles}
+
+These providers do not have their own `lfx-<provider>` package.
+
+To install one provider and its SDK, run `uv pip install "lfx-bundles[<bundle-name>]"`.
+To install every provider in `lfx-bundles`, run `uv pip install "lfx[bundles]"`.
+
+To install every provider, including providers that require PyTorch as a dependency, run `uv pip install "lfx-bundles[all]"`.
+
+| Bundle | Install command |
+| --- | --- |
+| `agentql` | `uv pip install "lfx-bundles[agentql]"` |
+| [`aiml`](/bundles-aiml) (AI/ML API) | `uv pip install "lfx-bundles[aiml]"` |
+| [`altk`](/bundles-altk) (ALTK) | `uv pip install "lfx-bundles[altk]"` |
+| [`apify`](/bundles-apify) (Apify) | `uv pip install "lfx-bundles[apify]"` |
+| [`assemblyai`](/bundles-assemblyai) (AssemblyAI) | `uv pip install "lfx-bundles[assemblyai]"` |
+| [`baidu`](/bundles-baidu) (Baidu) | `uv pip install "lfx-bundles[baidu]"` |
+| [`bing`](/bundles-bing) (Bing) | `uv pip install "lfx-bundles[bing]"` |
+| [`chroma`](/bundles-chroma) (Chroma) | `uv pip install "lfx-bundles[chroma]"` |
+| [`cleanlab`](/bundles-cleanlab) (Cleanlab) | `uv pip install "lfx-bundles[cleanlab]"` |
+| [`clickhouse`](/bundles-clickhouse) (ClickHouse) | `uv pip install "lfx-bundles[clickhouse]"` |
+| [`cloudflare`](/bundles-cloudflare) (Cloudflare) | `uv pip install "lfx-bundles[cloudflare]"` |
+| [`codeagents`](/bundles-codeagents) (Code Agents) | `uv pip install "lfx-bundles[codeagents]"` |
+| [`cometapi`](/bundles-cometapi) (CometAPI) | `uv pip install "lfx-bundles[cometapi]"` |
+| [`composio`](/bundles-composio) (Composio) | `uv pip install "lfx-bundles[composio]"` |
+| `confluence` | `uv pip install "lfx-bundles[confluence]"` |
+| [`couchbase`](/bundles-couchbase) (Couchbase) | `uv pip install "lfx-bundles[couchbase]"` |
+| [`cuga`](/bundles-cuga) (CUGA) | `uv pip install "lfx-bundles[cuga]"` |
+| [`deepseek`](/bundles-deepseek) (DeepSeek) | `uv pip install "lfx-bundles[deepseek]"` |
+| [`elastic`](/bundles-elastic) (Elastic) | `uv pip install "lfx-bundles[elastic]"` |
+| [`faiss`](/bundles-faiss) (FAISS) | `uv pip install "lfx-bundles[faiss]"` |
+| `git` | `uv pip install "lfx-bundles[git]"` |
+| [`glean`](/bundles-glean) (Glean) | `uv pip install "lfx-bundles[glean]"` |
+| [`groq`](/bundles-groq) (Groq) | `uv pip install "lfx-bundles[groq]"` |
+| `homeassistant` | `uv pip install "lfx-bundles[homeassistant]"` |
+| [`huggingface`](/bundles-huggingface) (Hugging Face) | `uv pip install "lfx-bundles[huggingface]"` |
+| [`icosacomputing`](/bundles-icosacomputing) (Icosa Computing) | `uv pip install "lfx-bundles[icosacomputing]"` |
+| `jigsawstack` | `uv pip install "lfx-bundles[jigsawstack]"` |
+| `langwatch` | `uv pip install "lfx-bundles[langwatch]"` |
+| `litellm` | `uv pip install "lfx-bundles[litellm]"` |
+| [`lmstudio`](/bundles-lmstudio) (LM Studio) | `uv pip install "lfx-bundles[lmstudio]"` |
+| [`maritalk`](/bundles-maritalk) (MariTalk) | `uv pip install "lfx-bundles[maritalk]"` |
+| [`mem0`](/bundles-mem0) (Mem0) | `uv pip install "lfx-bundles[mem0]"` |
+| [`milvus`](/bundles-milvus) (Milvus) | `uv pip install "lfx-bundles[milvus]"` |
+| [`mistral`](/bundles-mistralai) (MistralAI) | `uv pip install "lfx-bundles[mistral]"` |
+| [`mongodb`](/bundles-mongodb) (MongoDB) | `uv pip install "lfx-bundles[mongodb]"` |
+| [`mrscraper`](./bundles-mrscraper) (MrScraper) | `uv pip install "lfx-bundles[mrscraper]"` |
+| `needle` | `uv pip install "lfx-bundles[needle]"` |
+| `notdiamond` | `uv pip install "lfx-bundles[notdiamond]"` |
+| [`notion`](/bundles-notion) (Notion) | `uv pip install "lfx-bundles[notion]"` |
+| [`novita`](/bundles-novita) (Novita) | `uv pip install "lfx-bundles[novita]"` |
+| [`nvidia`](/bundles-nvidia) (NVIDIA) | `uv pip install "lfx-bundles[nvidia]"` |
+| `olivya` | `uv pip install "lfx-bundles[olivya]"` |
+| [`openrouter`](/bundles-openrouter) (OpenRouter) | `uv pip install "lfx-bundles[openrouter]"` |
+| [`orcarouter`](./bundles-orcarouter) (OrcaRouter) | `uv pip install "lfx-bundles[orcarouter]"` |
+| [`perplexity`](/bundles-perplexity) (Perplexity) | `uv pip install "lfx-bundles[perplexity]"` |
+| [`pgvector`](/bundles-pgvector) (pgvector) | `uv pip install "lfx-bundles[pgvector]"` |
+| [`pinecone`](/bundles-pinecone) (Pinecone) | `uv pip install "lfx-bundles[pinecone]"` |
+| [`qdrant`](/bundles-qdrant) (Qdrant) | `uv pip install "lfx-bundles[qdrant]"` |
+| [`redis`](/bundles-redis) (Redis) | `uv pip install "lfx-bundles[redis]"` |
+| [`sambanova`](/bundles-sambanova) (SambaNova) | `uv pip install "lfx-bundles[sambanova]"` |
+| `scrapegraph` | `uv pip install "lfx-bundles[scrapegraph]"` |
+| [`searchapi`](/bundles-searchapi) (SearchApi) | `uv pip install "lfx-bundles[searchapi]"` |
+| `serpapi` | `uv pip install "lfx-bundles[serpapi]"` |
+| `spider` | `uv pip install "lfx-bundles[spider]"` |
+| [`supabase`](/bundles-supabase) (Supabase) | `uv pip install "lfx-bundles[supabase]"` |
+| `tavily` | `uv pip install "lfx-bundles[tavily]"` |
+| `twelvelabs` | `uv pip install "lfx-bundles[twelvelabs]"` |
+| `unstructured` | `uv pip install "lfx-bundles[unstructured]"` |
+| [`upstash`](/bundles-upstash) (Upstash) | `uv pip install "lfx-bundles[upstash]"` |
+| [`vectara`](/bundles-vectara) (Vectara) | `uv pip install "lfx-bundles[vectara]"` |
+| [`vertexai`](/bundles-vertexai) (Vertex AI) | `uv pip install "lfx-bundles[vertexai]"` |
+| `vlmrun` | `uv pip install "lfx-bundles[vlmrun]"` |
+| [`weaviate`](/bundles-weaviate) (Weaviate) | `uv pip install "lfx-bundles[weaviate]"` |
+| [`wikipedia`](/bundles-wikipedia) (Wikipedia) | `uv pip install "lfx-bundles[wikipedia]"` |
+| `wolframalpha` | `uv pip install "lfx-bundles[wolframalpha]"` |
+| [`xai`](/bundles-xai) (xAI) | `uv pip install "lfx-bundles[xai]"` |
+| `yahoosearch` | `uv pip install "lfx-bundles[yahoosearch]"` |
+| `youtube` | `uv pip install "lfx-bundles[youtube]"` |
+| `zep` | `uv pip install "lfx-bundles[zep]"` |
+
+## See also
+
+- [Extensions overview](./extensions-overview)
+- [Install LFX](./lfx-install)
+- [About bundles](/components-bundle-components)

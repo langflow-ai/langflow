@@ -1,0 +1,39 @@
+---
+title: OrcaRouter
+slug: /bundles-orcarouter
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **OrcaRouter** bundle.
+
+To configure OrcaRouter once for all flows, you can also use the [**OpenAI Compatible**](./bundles-openai-compatible) model provider with the base URL `https://api.orcarouter.ai/v1`.
+
+For more information about OrcaRouter features and functionality used by OrcaRouter components, see the [OrcaRouter documentation](https://www.orcarouter.ai).
+
+## OrcaRouter text generation
+
+This component generates text using OrcaRouter's unified API for multiple AI models from different providers.
+
+It can output either a **Model Response** ([`Message`](/data-types#message)) or a **Language Model** ([`LanguageModel`](/data-types#languagemodel)).
+
+Use the **Language Model** output when you want to use an OrcaRouter model as the LLM for another LLM-driven component, such as an **Agent** or **Smart Transform** component.
+
+For more information, see [Language model components](/components-models).
+
+### OrcaRouter text generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your OrcaRouter API key for authentication. |
+| model_name | Dropdown | Input parameter. The model to use for chat completion. Options are fetched live from the OrcaRouter model catalog. |
+| temperature | Float | Input parameter. Controls randomness in the output. Range: [0.0, 2.0]. Default: 0.7. |
+| max_tokens | Integer | Input parameter. The maximum number of tokens to generate. |
