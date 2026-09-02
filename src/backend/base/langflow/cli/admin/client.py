@@ -91,7 +91,7 @@ class AdminClient:
             result = self.request("GET", path, params=page_query)
             if result_key is not None:
                 page = result[result_key]
-                total = int(result.get("total_count", len(page)))
+                total = int(result.get("total", result.get("total_count", len(page))))
             else:
                 page = result
                 total = None
@@ -290,6 +290,78 @@ class AdminClient:
         collection = "team-role-assignments" if team else "role-assignments"
         prefix = "authz/admin" if team else "authz"
         return self.request("DELETE", f"{prefix}/{collection}/{assignment_id}")
+
+    def get_directory_connection(self) -> dict[str, Any]:
+        return self.request("GET", "authz/directory/connection")
+
+    def configure_directory_connection(self, **trust: str) -> dict[str, Any]:
+        return self.request("PUT", "authz/directory/connection", json=trust)
+
+    def validate_directory_connection(self) -> dict[str, Any]:
+        return self.request("POST", "authz/directory/connection/validate")
+
+    def enable_directory_connection(self) -> dict[str, Any]:
+        return self.request("POST", "authz/directory/connection/enable")
+
+    def disable_directory_connection(self) -> dict[str, Any]:
+        return self.request("POST", "authz/directory/connection/disable")
+
+    def directory_status(self) -> dict[str, Any]:
+        return self.request("GET", "authz/directory/status")
+
+    def list_directory_users(self, *, query: str | None = None) -> list[dict[str, Any]]:
+        return self._list_collection("authz/directory/users", params={"query": query}, result_key="items")
+
+    def get_directory_user(self, user_id: str) -> dict[str, Any]:
+        return self.request("GET", f"authz/directory/users/{user_id}")
+
+    def list_directory_groups(self, *, query: str | None = None) -> list[dict[str, Any]]:
+        return self._list_collection("authz/directory/groups", params={"query": query}, result_key="items")
+
+    def get_directory_group(self, group_id: str) -> dict[str, Any]:
+        return self.request("GET", f"authz/directory/groups/{group_id}")
+
+    def list_directory_group_members(self, group_id: str, *, query: str | None = None) -> list[dict[str, Any]]:
+        return self._list_collection(
+            f"authz/directory/groups/{group_id}/members",
+            params={"query": query},
+            result_key="items",
+        )
+
+    def link_directory_group(self, group_id: str, *, team_id: str, origin: str = "linked") -> dict[str, Any]:
+        return self.request(
+            "PUT",
+            f"authz/directory/groups/{group_id}/team-link",
+            json={"team_id": team_id, "origin": origin},
+        )
+
+    def unlink_directory_group(self, group_id: str) -> None:
+        self.request("DELETE", f"authz/directory/groups/{group_id}/team-link")
+
+    def list_directory_role_mappings(self) -> list[dict[str, Any]]:
+        return self.request("GET", "authz/directory/role-mappings")
+
+    def create_directory_role_mapping(self, **payload: Any) -> dict[str, Any]:
+        return self.request("POST", "authz/directory/role-mappings", json=payload)
+
+    def delete_directory_role_mapping(self, mapping_id: str) -> None:
+        self.request("DELETE", f"authz/directory/role-mappings/{mapping_id}")
+
+    def preview_directory_reconciliation(self) -> dict[str, Any]:
+        return self.request("POST", "authz/directory/reconcile/preview")
+
+    def activate_directory_reconciliation(self, run_id: str) -> dict[str, Any]:
+        return self.request(
+            "POST",
+            "authz/directory/reconcile/activate",
+            json={"run_id": run_id, "confirm": True},
+        )
+
+    def directory_reconciliation_status(self) -> dict[str, Any]:
+        return self.request("GET", "authz/directory/reconcile/status")
+
+    def retry_directory_reconciliation(self, event_id: str) -> dict[str, Any]:
+        return self.request("POST", "authz/directory/reconcile/retry", json={"event_id": event_id})
 
 
 def _without_none(values: dict[str, Any]) -> dict[str, Any]:

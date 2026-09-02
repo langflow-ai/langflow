@@ -62,7 +62,7 @@ Superusers can use every administration route. An installed authorization plugin
 
 Delegated user administrators cannot promote or demote platform superusers. IdP-derived memberships and grants remain read-only through the manual administration API.
 
-Use `GET /api/v1/authz/capabilities` to discover the caller's administration resources and whether the installed plugin supports team-role assignments. For complete REST and CLI usage, see [Administer users and teams with the API and CLI](./admin-api-cli).
+Use `GET /api/v1/authz/capabilities` to discover the caller's administration resources and whether the installed plugin supports team-role assignments. An installed plugin may also return `features.directory`, a caller-specific capability document whose provider and action fields describe the directory operations available to that caller. The field is omitted when no directory integration is installed; OSS never advertises it. For the directory command tree and credential-free `DirectoryState` contract, see [Administer users and teams with the API and CLI](./admin-api-cli#declarative-enterprise-directory-state).
 
 ## Authorization API reference
 
