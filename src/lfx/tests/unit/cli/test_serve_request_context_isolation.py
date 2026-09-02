@@ -22,8 +22,6 @@ import lfx.cli.commands
 import pytest
 import uvicorn
 
-pytest.importorskip("gunicorn", reason="the gunicorn worker path is Unix-only")
-
 
 def test_the_gunicorn_worker_resets_the_context_and_keeps_its_inherited_options():
     """Asserted through a real ``uvicorn.Config``, so a renamed or rejected option fails here.
@@ -31,6 +29,8 @@ def test_the_gunicorn_worker_resets_the_context_and_keeps_its_inherited_options(
     The inherited keys matter too: ``CONFIG_KWARGS`` is spread over the base class's, and
     replacing it outright would silently drop uvicorn's loop and http selection.
     """
+    pytest.importorskip("gunicorn", reason="the gunicorn worker path is Unix-only")
+
     from lfx.cli.serve_gunicorn import LFXUvicornWorker
     from uvicorn.workers import UvicornWorker
 
