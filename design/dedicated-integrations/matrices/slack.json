@@ -37,7 +37,7 @@
       "title": "Slack: Slack MCP server",
       "kind": "provider_docs",
       "verified_on": "2026-09-01",
-      "notes": "Endpoint https://mcp.slack.com/mcp, JSON-RPC 2.0 over Streamable HTTP; 'Slack supports confidential OAuth for MCP clients'; user tokens; 'Only directory-published apps or internal apps may use MCP'; workspace admins approve and manage MCP client integrations; tools cover search, retrieving and sending messages, canvases, users, files, lists; per-tool rate tiers from Tier 2 to Tier 4 with special limits for search and posting. The page carries no availability label (no preview or beta marker)."
+      "notes": "Endpoint https://mcp.slack.com/mcp, JSON-RPC 2.0 over Streamable HTTP; 'Slack supports confidential OAuth for MCP clients'; user tokens; 'Only directory-published apps or internal apps may use MCP'; workspace admins approve and manage MCP client integrations; tools cover search, retrieving and sending messages, canvases, users, files, lists; per-tool rate tiers from Tier 2 to Tier 4 with special limits for search and posting. The page carries no availability label (no preview or beta marker). The page names capabilities (search messages and files, read channel history and send messages, create/update/read canvases, fetch user info, list channel members, file upload via the slack_get_file_upload_url and slack_complete_file_upload tools, lists) and requests the granular search scopes search:read.public, search:read.private, search:read.mpim, search:read.im; it does not enumerate the tool identifiers for search, messages, or canvases."
     },
     "slack-pkce": {
       "url": "https://docs.slack.dev/authentication/using-pkce/",
@@ -129,6 +129,20 @@
       "kind": "provider_docs",
       "verified_on": "2026-09-01",
       "notes": "canvases:write with bot or user token; title, document_content of type markdown up to 1 MiB, channel_id (required for free teams); returns canvas_id; Tier 2; free teams cannot create standalone canvases."
+    },
+    "slack-mcp-ga-announcement": {
+      "url": "https://slack.com/blog/news/mcp-real-time-search-api-now-available",
+      "title": "Slack blog (2026-02-17): Slack securely powers your third-party agents with your business context",
+      "kind": "provider_changelog",
+      "verified_on": "2026-09-01",
+      "notes": "Announces 'the general availability of Slack's Real-Time Search (RTS) API and Model Context Protocol (MCP) server' on February 17, 2026; names Claude, ChatGPT, Perplexity, Google, Cursor, and Marketplace agents as connecting clients."
+    },
+    "slack-mcp-changelog": {
+      "url": "https://docs.slack.dev/changelog/2026/02/17/slack-mcp/",
+      "title": "Slack Developer changelog (2026-02-17): Announcing the Slack MCP server and Real-time Search API",
+      "kind": "provider_changelog",
+      "verified_on": "2026-09-01",
+      "notes": "Companion changelog entry; states the server exposes tools 'designed for LLM-driven discovery, configuration, and execution' and points to the server documentation."
     }
   },
   "verification_programs": {
@@ -155,8 +169,8 @@
       "decision": "defer",
       "confidence": "medium",
       "open_questions": [
-        "Confirm the Slack MCP server's GA status from a Slack changelog or announcement; the server documentation carries no availability label.",
-        "Confirm the exact tool name and argument schema the MCP server exposes for search before pinning the action-to-tool mapping (INT-9)."
+        "Confirm the exact tool name and argument schema the MCP server exposes for search before pinning the action-to-tool mapping (INT-9).",
+        "INT-9 day one: capture the server's tools/list and pin this action's tool identifier and argument schema; the docs name the capability but not the identifier."
       ],
       "rationale": "search.messages is user-token only, which matches the MCP server's identity model; the MCP path also avoids the non-Marketplace Web API rate reduction.",
       "schema": {
@@ -211,8 +225,32 @@
           "scope": "search:read",
           "classification": "sensitive",
           "provider_classification": "User token scope; content reading",
-          "source": "slack-scopes",
-          "notes": "Required by search.messages; user token only."
+          "source": "slack-search-messages",
+          "notes": "Required by the Web API search.messages fallback; user token only."
+        },
+        {
+          "scope": "search:read.public",
+          "classification": "sensitive",
+          "provider_classification": "Granular user search scope requested by the MCP server",
+          "source": "slack-mcp-server"
+        },
+        {
+          "scope": "search:read.private",
+          "classification": "sensitive",
+          "provider_classification": "Granular user search scope requested by the MCP server",
+          "source": "slack-mcp-server"
+        },
+        {
+          "scope": "search:read.mpim",
+          "classification": "sensitive",
+          "provider_classification": "Granular user search scope requested by the MCP server",
+          "source": "slack-mcp-server"
+        },
+        {
+          "scope": "search:read.im",
+          "classification": "sensitive",
+          "provider_classification": "Granular user search scope requested by the MCP server",
+          "source": "slack-mcp-server"
         }
       ],
       "consent": "user",
@@ -239,8 +277,8 @@
       },
       "substrate": "mcp",
       "substrate_ga_status": "ga",
-      "substrate_notes": "Official Slack MCP server at https://mcp.slack.com/mcp in pinned mode (INT-9); Web API search.messages is the REST fallback.",
-      "substrate_source": "slack-mcp-server",
+      "substrate_notes": "Official Slack MCP server at https://mcp.slack.com/mcp in pinned mode (INT-9); Web API search.messages is the REST fallback. GA announced by Slack on 2026-02-17 (sources slack-mcp-ga-announcement, slack-mcp-changelog); the exact tool identifier for this action is not enumerated in the server docs and must be captured from tools/list at the start of INT-9.",
+      "substrate_source": "slack-mcp-ga-announcement",
       "rate_limit": {
         "summary": "Web API search.messages is Tier 2 (20+ per minute per workspace per app); MCP server tools carry their own tiers from Tier 2 to Tier 4 with a special limit for search.",
         "source": "slack-search-messages",
@@ -257,8 +295,8 @@
       "decision": "defer",
       "confidence": "medium",
       "open_questions": [
-        "Confirm the MCP server's GA status and the tool that returns thread replies.",
-        "If the Web API path is used, a Langflow-owned hosted app must be Marketplace-approved or it gets 1 request per minute with 15 messages."
+        "If the Web API path is used, a Langflow-owned hosted app must be Marketplace-approved or it gets 1 request per minute with 15 messages.",
+        "INT-9 day one: capture the server's tools/list and pin this action's tool identifier and argument schema; the docs name the capability but not the identifier."
       ],
       "rationale": "conversations.replies scoped to the connected user's visibility; the MCP path sidesteps the non-Marketplace Web API limit.",
       "schema": {
@@ -367,8 +405,8 @@
       },
       "substrate": "mcp",
       "substrate_ga_status": "ga",
-      "substrate_notes": "Official Slack MCP server in pinned mode; conversations.replies is the REST fallback.",
-      "substrate_source": "slack-mcp-server",
+      "substrate_notes": "Official Slack MCP server in pinned mode; conversations.replies is the REST fallback. GA announced by Slack on 2026-02-17 (sources slack-mcp-ga-announcement, slack-mcp-changelog); the exact tool identifier for this action is not enumerated in the server docs and must be captured from tools/list at the start of INT-9.",
+      "substrate_source": "slack-mcp-ga-announcement",
       "rate_limit": {
         "summary": "Web API conversations.replies is Tier 3 (50+ per minute) for Marketplace apps and 1 request per minute with limit 15 for commercially distributed non-Marketplace apps created after 2025-05-29; MCP tools carry their own tiers.",
         "source": "slack-conversations-replies",
@@ -386,7 +424,7 @@
       "decision": "defer",
       "confidence": "medium",
       "open_questions": [
-        "Confirm the MCP server's GA status and its send-message tool schema."
+        "INT-9 day one: capture the server's tools/list and pin this action's tool identifier and argument schema; the docs name the capability but not the identifier."
       ],
       "rationale": "Posts as the connected user; distinct from posting as the app. Works on Desktop because user scopes are allowed on desktop redirects.",
       "schema": {
@@ -463,8 +501,8 @@
       },
       "substrate": "mcp",
       "substrate_ga_status": "ga",
-      "substrate_notes": "Official Slack MCP server in pinned mode; chat.postMessage with the user token is the REST fallback.",
-      "substrate_source": "slack-mcp-server",
+      "substrate_notes": "Official Slack MCP server in pinned mode; chat.postMessage with the user token is the REST fallback. GA announced by Slack on 2026-02-17 (sources slack-mcp-ga-announcement, slack-mcp-changelog); the exact tool identifier for this action is not enumerated in the server docs and must be captured from tools/list at the start of INT-9.",
+      "substrate_source": "slack-mcp-ga-announcement",
       "rate_limit": {
         "summary": "chat.postMessage special tier: about 1 message per second per channel with burst allowance; 40,000-character truncation.",
         "source": "slack-chat-postmessage",
@@ -482,7 +520,8 @@
       "confidence": "medium",
       "open_questions": [
         "Confirm the MCP server's canvas tool coverage (create, read, edit) before deciding the action's output set.",
-        "Free teams cannot create standalone canvases; decide whether the action requires channel_id."
+        "Free teams cannot create standalone canvases; decide whether the action requires channel_id.",
+        "INT-9 day one: capture the server's tools/list and pin this action's tool identifier and argument schema; the docs name the capability but not the identifier."
       ],
       "rationale": "Canvas is a documented MCP server capability. Likely the lowest-demand user action and the first to prune if the include set must shrink.",
       "schema": {
@@ -556,8 +595,8 @@
       },
       "substrate": "mcp",
       "substrate_ga_status": "ga",
-      "substrate_notes": "Official Slack MCP server in pinned mode; canvases.create is the REST fallback.",
-      "substrate_source": "slack-mcp-server",
+      "substrate_notes": "Official Slack MCP server in pinned mode; canvases.create is the REST fallback. GA announced by Slack on 2026-02-17 (sources slack-mcp-ga-announcement, slack-mcp-changelog); the exact tool identifier for this action is not enumerated in the server docs and must be captured from tools/list at the start of INT-9.",
+      "substrate_source": "slack-mcp-ga-announcement",
       "rate_limit": {
         "summary": "canvases.create is Tier 2 (20+ per minute per workspace per app).",
         "source": "slack-canvases-create",

@@ -19,10 +19,11 @@ whether INT-9 (pinned MCP mode) is built in 1.13 at all.
 |---|------|------------|-------------|------------|
 | 1 | Slack MCP server at `https://mcp.slack.com/mcp`, JSON-RPC 2.0 over Streamable HTTP; "Slack supports confidential OAuth for MCP clients"; user tokens | https://docs.slack.dev/ai/slack-mcp-server/ | 2026-09-01 | high |
 | 2 | "Only directory-published apps or internal apps may use MCP"; workspace admins approve and manage MCP client integrations | same | 2026-09-01 | high |
-| 3 | The MCP server page carries no availability label (no preview or beta marker); GA status is asserted by Slack announcements not cited here | same | 2026-09-01 | medium |
+| 3 | GA: Slack's blog of 2026-02-17 announces 'the general availability of Slack's Real-Time Search (RTS) API and Model Context Protocol (MCP) server', with a companion developer changelog entry the same day; the server docs page itself carries no availability label | https://slack.com/blog/news/mcp-real-time-search-api-now-available and https://docs.slack.dev/changelog/2026/02/17/slack-mcp/ | 2026-09-01 | high |
 | 4 | Bot tokens are not issued through the MCP server; bot and channel actions need the Web API | same | 2026-09-01 | high |
 | 5 | "Desktop redirects are not allowed to request bot scopes"; PKCE with S256; custom URI schemes and PKCE-opted localhost count as desktop | https://docs.slack.dev/authentication/using-pkce/ | 2026-09-01 | high |
 | 6 | Since 2025-05-29 commercially distributed non-Marketplace apps get 1 request per minute with a 15-message cap on conversations.replies (and conversations.history) | https://docs.slack.dev/reference/methods/conversations.replies | 2026-09-01 | high |
+| 8 | The server docs enumerate capabilities (search messages and files; read channel history and send messages; create, update, read canvases; fetch user info; list channel members; upload files via `slack_get_file_upload_url` and `slack_complete_file_upload`; lists) and the granular search scopes `search:read.public`, `.private`, `.mpim`, `.im`, but name tool identifiers only for file upload | https://docs.slack.dev/ai/slack-mcp-server/ | 2026-09-01 | high |
 | 7 | Web API methods for every wave-1 action are GA with published tiers (search.messages Tier 2 user-token only; chat.postMessage special ~1 per second per channel; reactions.add Tier 3; conversations.members Tier 4; canvases.create Tier 2) | method pages under https://docs.slack.dev/reference/methods/ | 2026-09-01 | high |
 
 ## Options
@@ -32,8 +33,7 @@ whether INT-9 (pinned MCP mode) is built in 1.13 at all.
 Pros: exercises the strategic substrate where it is closest to production; user-identity reads on MCP are not
 subject to the non-Marketplace Web API reduction (fact 6); Slack maintains the tool schemas.
 Cons: two auth and error paths in one bundle; requires INT-9 pinned mode (3 engineer-weeks) in 1.13; the hosted
-Langflow-owned app must be directory-published (fact 2), which is a Slack review with its own lead time; GA status
-needs a citable source before the substrate row can be high confidence (fact 3).
+Langflow-owned app must be directory-published (fact 2), which is a Slack review with its own lead time; GA is now cited (fact 3); tool identifiers for the four user actions are not in the docs (fact 8).
 Cost: INT-9 plus the Marketplace listing lead time for hosted.
 
 ### Option B: Web API throughout
@@ -55,9 +55,13 @@ Proposed: Option A. User-identity actions (`slack.user.*`) run on the official S
 bot actions (`slack.bot.*`) run on the Web API with a bot token from the workspace installation. Desktop exposes
 user-identity actions only. `substrate_decision.chosen` in `matrices/slack.json` is `["mcp", "rest"]`.
 
-Condition: before the record moves to `accepted`, cite a Slack source for the MCP server's GA status and confirm the
-tool names for search, thread replies, send, and canvas so the INT-9 action-to-tool mapping can be pinned. If either
-cannot be confirmed by gate close, fall back to Option B and defer INT-9 to 1.14.
+Condition status on 2026-09-01: (1) GA is cited (fact 3): met. (2) Tool names: the docs confirm that every wave-1
+user action is a documented server capability (search, read thread via channel history, send message, canvas) but
+enumerate identifiers only for the file-upload tools (fact 8). The exact identifiers and argument schemas can only
+come from a dated `tools/list` capture, which the gate's docs-only rule admits as supplementary evidence, never as
+the sole source. Proposed resolution, for the release owner: accept the record with the identifier capture as the
+first task of INT-9, keeping the fallback that if the capture shows any of the four actions is not covered, that
+action moves to the Web API and, if none are covered, INT-9 defers to 1.14 and Slack runs Web API throughout.
 
 ## Consequences
 
