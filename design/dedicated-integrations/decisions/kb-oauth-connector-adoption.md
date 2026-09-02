@@ -1,6 +1,6 @@
 # Knowledge-base OAuth connectors: adopt the connection contract in 1.13 or defer
 
-Status: proposed
+Status: accepted
 Decision ID: kb-oauth-connector-adoption
 Applies to: src/lfx/src/lfx/base/knowledge_bases/ingestion_sources/ (OAuthConnectorBase and the Google Drive, OneDrive, SharePoint, Microsoft Graph sources); INT-2, INT-10, INT-11
 Owners (sign-off roles): lfx owner, langflow-base owner, release owner
@@ -24,7 +24,7 @@ KB sources adopt the contract in 1.13 or stay on their bring-your-own-refresh-to
 
 ## Options
 
-### Option A: Adopt in 1.13
+### Option A: Adopt in 1.13 (chosen)
 
 `KBConnectorSource` accepts a `ConnectionRef`; `OAuthConnectorBase` becomes a thin adapter over
 `Component.resolve_connection`; the four stubbed sources are re-registered against the Google and Microsoft
@@ -35,7 +35,7 @@ Drive ingestion beyond app-scoped files needs a restricted scope the hosted app 
 the KB UI has its own connector picker (`GET /api/v1/knowledge_bases/connectors`) that would need the connection
 picker. Cost: roughly 1.5 engineer-weeks across INT-10 and INT-11 plus KB UI work not in any ticket.
 
-### Option B: Defer to 1.14, keep the contract compatible (recommended)
+### Option B: Defer to 1.14, keep the contract compatible (recommended by the gate, not chosen)
 
 The KB sources stay disabled in 1.13; `OAuthConnectorBase` keeps bring-your-own refresh tokens for any customer who
 already uses it. INT-2 keeps `KBConnectorSource` able to accept a `ConnectionRef` later without a breaking change
@@ -45,16 +45,23 @@ Cost: none in 1.13.
 
 ## Decision
 
-Option B. KB OAuth connectors do not adopt the connection contract in 1.13. INT-2 records the compatibility
-requirement: `KBConnectorSource` must be able to take a connection handle in a later release without changing the
-`source_config` shape for existing sources.
+Option A, chosen by the release owner on 2026-09-01 against the gate's recommendation. The knowledge-base OAuth
+connectors adopt the connection contract in 1.13: `KBConnectorSource` accepts a connection handle, `OAuthConnectorBase`
+becomes a thin adapter over `Component.resolve_connection`, and the Google Drive, OneDrive, SharePoint, and
+Microsoft Graph sources are re-registered against the Google and Microsoft connections.
 
 ## Consequences
 
-- No change to INT-10 or INT-11 scope; no KB UI work in 1.13.
-- `connection-contract.md` section 6 keeps the migration note for `OAuthConnectorBase`.
-- The 1.14 candidate list gains "KB ingestion on connections" with OneDrive and SharePoint first (no restricted
-  scope) and Drive second (depends on the restricted-scope decision).
+- INT-10 gains the Drive ingestion source and INT-11 gains the OneDrive, SharePoint, and Graph sources; the KB
+  connector picker (`GET /api/v1/knowledge_bases/connectors`) gains the connection picker. Roughly 1.5 engineer-weeks
+  across INT-10 and INT-11 plus KB UI work, now carried in `estimate.md`.
+- KB ingestion runs as a background job, so it is the first day-one consumer of the per-connection
+  `allow_non_interactive` opt-in and the job-owner principal from INT-6; INT-6 must land before the KB sources are
+  enabled, and the ingestion source must surface the typed `connection-not-authorized` error when the opt-in is off.
+- On hosted, Drive ingestion is limited to `drive.file` (files the app created or the user picked) under
+  `decisions/google-restricted-scopes.md`; OneDrive and SharePoint ingestion are unaffected.
+- The `source_config` shape for existing FILE_UPLOAD and FOLDER sources does not change; the connection handle is an
+  additional field on the cloud sources only.
 
 ## Re-open trigger
 
@@ -68,4 +75,4 @@ requirement: `KBConnectorSource` must be able to take a connection handle in a l
 |------|------|------|----|
 | lfx owner | | | |
 | langflow-base owner | | | |
-| release owner | | | |
+| release owner | Eric Hare | 2026-09-01 | #14906 (confirmed in the planning session) |

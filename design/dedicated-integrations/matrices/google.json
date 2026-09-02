@@ -25,20 +25,20 @@
   "restricted_scope_decisions": [
     {
       "scope": "https://www.googleapis.com/auth/gmail.readonly",
-      "decision": "defer",
-      "rationale": "Phase 4 decides CASA-or-avoid for the Langflow-owned hosted app. gmail.readonly is the narrowest scope that supports users.messages.list with a q filter plus users.messages.get for bodies; gmail.metadata is restricted as well and cannot be used with q, so it is not a narrower alternative for search.",
+      "decision": "avoid",
+      "rationale": "Release owner decision 2026-09-01 (decisions/google-restricted-scopes.md Option B): the Langflow-owned hosted app requests no restricted scope in 1.13. gmail.readonly is the narrowest scope that supports users.messages.list with a q filter plus users.messages.get for bodies; gmail.metadata is restricted as well and cannot be used with q, so it is not a narrower alternative for search.",
       "decision_record": "decisions/google-restricted-scopes.md"
     },
     {
       "scope": "https://www.googleapis.com/auth/drive.readonly",
-      "decision": "defer",
-      "rationale": "Phase 4 decides CASA-or-avoid. drive.readonly is needed to fetch files the app did not create and the user did not pick; drive.file (non-sensitive) is the alternative and limits fetch to app-created or user-picked files.",
+      "decision": "avoid",
+      "rationale": "Release owner decision 2026-09-01 (decisions/google-restricted-scopes.md Option B): the Langflow-owned hosted app requests no restricted scope in 1.13. drive.readonly is needed to fetch files the app did not create and the user did not pick; drive.file (non-sensitive) is the alternative and limits fetch to app-created or user-picked files.",
       "decision_record": "decisions/google-restricted-scopes.md"
     },
     {
       "scope": "https://www.googleapis.com/auth/drive.metadata.readonly",
-      "decision": "defer",
-      "rationale": "Phase 4 decides CASA-or-avoid. Listing arbitrary Drive files needs a metadata scope beyond drive.file; drive.file-only listing returns only files the app created or the user opened with it.",
+      "decision": "avoid",
+      "rationale": "Release owner decision 2026-09-01 (decisions/google-restricted-scopes.md Option B): the Langflow-owned hosted app requests no restricted scope in 1.13. Listing arbitrary Drive files needs a metadata scope beyond drive.file; drive.file-only listing returns only files the app created or the user opened with it.",
       "decision_record": "decisions/google-restricted-scopes.md"
     }
   ],
@@ -240,8 +240,8 @@
       "action_id": "google.gmail.send",
       "display_name": "Gmail: Send Email",
       "component_class": "GmailSendComponent",
-      "decision": "defer",
-      "rationale": "Highest-demand write action. Needs only gmail.send, which Google classifies as sensitive, so it does not depend on the CASA decision. Decision flips to include in Phase 4 once the Google include set is fixed.",
+      "decision": "include",
+      "rationale": "Highest-demand write action. Needs only gmail.send, which Google classifies as sensitive, so it does not depend on the CASA decision. Included in wave 1 by the release owner on 2026-09-01.",
       "confidence": "high",
       "schema": {
         "inputs": [
@@ -352,11 +352,11 @@
       "action_id": "google.gmail.search",
       "display_name": "Gmail: Search Messages",
       "component_class": "GmailSearchComponent",
-      "decision": "defer",
-      "rationale": "Read action on a restricted Gmail scope; whether it ships in wave 1 is the Phase 4 CASA decision. gmail.metadata is also restricted and rejects the q parameter, so there is no narrower search scope.",
+      "decision": "exclude",
+      "rationale": "Excluded from wave 1 by the release owner on 2026-09-01: gmail.readonly is restricted and the hosted app avoids restricted scopes; gmail.metadata is also restricted and rejects the q parameter, so there is no narrower search scope. Carried to the 1.14 candidate list under the self-managed restricted-scope profile option.",
       "confidence": "high",
       "open_questions": [
-        "Phase 4: accept CASA for the hosted app or exclude this action from wave 1 (self-managed Internal-user-type customers could still use it without CASA)."
+        "1.14: size the self-managed restricted-scope profile (decisions/google-restricted-scopes.md Option C)."
       ],
       "schema": {
         "inputs": [
@@ -464,14 +464,11 @@
     },
     {
       "action_id": "google.drive.list",
-      "display_name": "Drive: List Files",
+      "display_name": "Drive: List Files (app files)",
       "component_class": "GoogleDriveListComponent",
-      "decision": "defer",
-      "rationale": "Listing arbitrary files needs drive.metadata.readonly (restricted). A drive.file-only variant is non-sensitive but returns only files the app created or the user opened with it. Phase 4 picks the scope, which decides whether this row depends on CASA.",
+      "decision": "include",
+      "rationale": "Ships on drive.file only (non-sensitive): lists files the app created or the user opened with it. Restricted-scope reach is deferred per decisions/google-restricted-scopes.md. Included in wave 1 by the release owner on 2026-09-01.",
       "confidence": "high",
-      "open_questions": [
-        "Phase 4: is a drive.file-only listing useful without the Google Picker, or does wave 1 need drive.metadata.readonly and therefore CASA?"
-      ],
       "schema": {
         "inputs": [
           {
@@ -534,25 +531,18 @@
       "identity_notes": "Lists files visible to the connected user, including shared drives when requested.",
       "scopes": [
         {
-          "scope": "https://www.googleapis.com/auth/drive.metadata.readonly",
-          "classification": "restricted",
-          "provider_classification": "Restricted",
-          "source": "drive-scopes",
-          "notes": "'View metadata for files in your Drive.' Required to list files the app did not create."
-        },
-        {
           "scope": "https://www.googleapis.com/auth/drive.file",
           "classification": "non_sensitive",
           "provider_classification": "Non-sensitive (recommended)",
           "source": "drive-scopes",
-          "notes": "Alternative: lists only files created by the app or opened with it via the Picker."
+          "notes": "Wave 1 requests drive.file only; the restricted scope alternative is recorded in decisions/google-restricted-scopes.md."
         }
       ],
       "consent": "user",
       "consent_notes": "User consent on the OAuth consent screen. Google Workspace admins govern third-party access through API controls: Trusted (all services), Limited (unrestricted services only), Specific Google data (listed scopes only), or Blocked; by default users can sign in with Google to any third-party app. Admins can also trust internal apps built by their own organization for restricted Workspace APIs.",
       "consent_source": "workspace-admin-app-access",
       "reach": {
-        "resource": "Metadata of every Drive file the user can see (restricted scope) or only app-visible files (drive.file).",
+        "resource": "Metadata of files the app created or the user opened with it.",
         "tenant": "Single user; shared drives the user belongs to when includeItemsFromAllDrives is set.",
         "source": "drive-files-list"
       },
@@ -580,20 +570,16 @@
         "confidence": "high"
       },
       "verification_dependencies": [
-        "google-brand-verification",
-        "google-casa"
+        "google-brand-verification"
       ]
     },
     {
       "action_id": "google.drive.fetch",
-      "display_name": "Drive: Fetch File",
+      "display_name": "Drive: Fetch File (app files)",
       "component_class": "GoogleDriveFetchComponent",
-      "decision": "defer",
-      "rationale": "Fetching a file by id that the app did not create needs drive.readonly (restricted); drive.file covers app-created or user-picked files. Same Phase 4 dependency as Drive list.",
+      "decision": "include",
+      "rationale": "Ships on drive.file only (non-sensitive): fetches files the app created or the user opened with it. Restricted-scope reach is deferred per decisions/google-restricted-scopes.md. Included in wave 1 by the release owner on 2026-09-01.",
       "confidence": "high",
-      "open_questions": [
-        "Phase 4: same scope choice as google.drive.list; the two rows should land on the same decision."
-      ],
       "schema": {
         "inputs": [
           {
@@ -633,25 +619,18 @@
       "identity_notes": "Reads a file the connected user can access.",
       "scopes": [
         {
-          "scope": "https://www.googleapis.com/auth/drive.readonly",
-          "classification": "restricted",
-          "provider_classification": "Restricted",
-          "source": "drive-scopes",
-          "notes": "'View and download all your Drive files.'"
-        },
-        {
           "scope": "https://www.googleapis.com/auth/drive.file",
           "classification": "non_sensitive",
           "provider_classification": "Non-sensitive (recommended)",
           "source": "drive-scopes",
-          "notes": "Alternative: fetches only files created by the app or opened with it."
+          "notes": "Wave 1 requests drive.file only; the restricted scope alternative is recorded in decisions/google-restricted-scopes.md."
         }
       ],
       "consent": "user",
       "consent_notes": "User consent on the OAuth consent screen. Google Workspace admins govern third-party access through API controls: Trusted (all services), Limited (unrestricted services only), Specific Google data (listed scopes only), or Blocked; by default users can sign in with Google to any third-party app. Admins can also trust internal apps built by their own organization for restricted Workspace APIs.",
       "consent_source": "workspace-admin-app-access",
       "reach": {
-        "resource": "Content of any Drive file the user can access (restricted scope) or only app-visible files (drive.file).",
+        "resource": "Content of files the app created or the user opened with it.",
         "tenant": "Single user.",
         "source": "drive-files-get"
       },
@@ -679,16 +658,15 @@
         "confidence": "high"
       },
       "verification_dependencies": [
-        "google-brand-verification",
-        "google-casa"
+        "google-brand-verification"
       ]
     },
     {
       "action_id": "google.calendar.list",
       "display_name": "Calendar: List Events",
       "component_class": "GoogleCalendarListComponent",
-      "decision": "defer",
-      "rationale": "Read action on a sensitive Calendar scope; independent of the CASA decision. Expected to flip to include in Phase 4.",
+      "decision": "include",
+      "rationale": "Read action on a sensitive Calendar scope; independent of the CASA decision. Included in wave 1 by the release owner on 2026-09-01.",
       "confidence": "high",
       "schema": {
         "inputs": [
@@ -814,8 +792,8 @@
       "action_id": "google.calendar.create",
       "display_name": "Calendar: Create Event",
       "component_class": "GoogleCalendarCreateComponent",
-      "decision": "defer",
-      "rationale": "Write action on a sensitive Calendar scope; independent of the CASA decision. Expected to flip to include in Phase 4.",
+      "decision": "include",
+      "rationale": "Write action on a sensitive Calendar scope; independent of the CASA decision. Included in wave 1 by the release owner on 2026-09-01.",
       "confidence": "high",
       "schema": {
         "inputs": [

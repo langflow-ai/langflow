@@ -1,6 +1,6 @@
 # Google restricted scopes on the Langflow-owned hosted app: CASA or avoid
 
-Status: proposed
+Status: accepted
 Decision ID: google-restricted-scopes
 Applies to: matrices/google.json; scopes gmail.readonly, drive.readonly, drive.metadata.readonly; actions google.gmail.search, google.drive.list, google.drive.fetch
 Owners (sign-off roles): hosted-app owner, release owner, Enterprise owner, langflow-base owner
@@ -60,6 +60,8 @@ INT-10 and is not sized. Proposed as the first 1.14 candidate, not as 1.13 scope
 
 ## Decision
 
+Option B, confirmed by the release owner on 2026-09-01.
+
 ### https://www.googleapis.com/auth/gmail.readonly
 
 Not requested by the Langflow-owned hosted application in 1.13. `google.gmail.search` is excluded from wave 1 and
@@ -101,5 +103,5 @@ Re-verify by: the 1.14 planning gate, or earlier if Option A is triggered.
 | Role | Name | Date | PR |
 |------|------|------|----|
 | hosted-app owner | | | |
-| release owner | | | |
+| release owner | Eric Hare | 2026-09-01 | #14906 (confirmed in the planning session) |
 | Enterprise owner | | | |

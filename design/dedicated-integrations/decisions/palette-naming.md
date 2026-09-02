@@ -1,6 +1,6 @@
 # Palette naming and sidebar grouping for native connectors next to Composio components
 
-Status: proposed
+Status: accepted
 Decision ID: palette-naming
 Applies to: display names and component classes in matrices/*.json; SIDEBAR_BUNDLES in src/frontend/src/utils/styleUtils.ts; INT-10, INT-11, INT-12
 Owners (sign-off roles): frontend owner, product owner, release owner
@@ -77,4 +77,4 @@ Option B, with these sidebar rules:
 |------|------|------|----|
 | frontend owner | | | |
 | product owner | | | |
-| release owner | | | |
+| release owner | Eric Hare | 2026-09-01 | #14906 (confirmed in the planning session) |

@@ -1,6 +1,6 @@
 # Substrate decision: Google Workspace
 
-Status: proposed
+Status: accepted
 Decision ID: substrate-google
 Applies to: matrices/google.json, all actions
 Owners (sign-off roles): lfx owner, langflow-base owner, Enterprise owner, hosted-app owner, release owner

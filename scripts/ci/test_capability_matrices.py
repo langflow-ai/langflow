@@ -126,6 +126,10 @@ def test_checker_rejects_unclassified_scope(tmp_path: Path) -> None:
 def test_checker_rejects_restricted_scope_without_decision(tmp_path: Path) -> None:
     root = _copy_design(tmp_path)
     matrix = _load(root, "google")
+    # The rule applies to included and deferred rows; an excluded row may carry an undecided restricted scope.
+    for action in matrix["actions"]:
+        if any(scope.get("classification") == "restricted" for scope in action["scopes"]):
+            action["decision"] = "defer"
     matrix["restricted_scope_decisions"] = []
 
     errors = validate_matrix(_save(root, "google", matrix))

@@ -1,6 +1,6 @@
 # Substrate decision: Microsoft 365 and Teams
 
-Status: proposed
+Status: accepted
 Decision ID: substrate-microsoft
 Applies to: matrices/microsoft.json, all actions
 Owners (sign-off roles): lfx owner, langflow-base owner, Enterprise owner, hosted-app owner, release owner

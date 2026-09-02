@@ -175,9 +175,9 @@
       "action_id": "microsoft.outlook.send",
       "display_name": "Outlook: Send Mail",
       "component_class": "OutlookSendComponent",
-      "decision": "defer",
+      "decision": "include",
       "confidence": "high",
-      "rationale": "Highest-demand write action; single delegated permission with no admin consent. Expected to flip to include in Phase 4.",
+      "rationale": "Highest-demand write action; single delegated permission with no admin consent. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {
@@ -290,12 +290,12 @@
       "action_id": "microsoft.outlook.search",
       "display_name": "Outlook: Search Mail",
       "component_class": "OutlookSearchComponent",
-      "decision": "defer",
+      "decision": "include",
       "confidence": "medium",
       "open_questions": [
         "Does $search work under Mail.ReadBasic, or does a search-with-bodies action need Mail.Read? The List messages page lists ReadBasic as least privileged but excludes body and attachments from it."
       ],
-      "rationale": "Read action on delegated mail permissions without admin consent; the only question is which of Mail.ReadBasic or Mail.Read the component requests.",
+      "rationale": "Read action on delegated mail permissions without admin consent; the only question is which of Mail.ReadBasic or Mail.Read the component requests. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {
@@ -412,12 +412,12 @@
       "action_id": "microsoft.calendar.list",
       "display_name": "Outlook Calendar: List Events",
       "component_class": "OutlookCalendarListComponent",
-      "decision": "defer",
+      "decision": "include",
       "confidence": "medium",
       "open_questions": [
         "Calendars.ReadBasic is the least-privileged permission for calendarView; confirm whether wave 1 needs body and attendee detail (Calendars.Read) or can ship on ReadBasic."
       ],
-      "rationale": "Read action on a delegated calendar permission without admin consent. Expected to flip to include in Phase 4.",
+      "rationale": "Read action on a delegated calendar permission without admin consent. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {
@@ -525,9 +525,9 @@
       "action_id": "microsoft.calendar.create",
       "display_name": "Outlook Calendar: Create Event",
       "component_class": "OutlookCalendarCreateComponent",
-      "decision": "defer",
+      "decision": "include",
       "confidence": "high",
-      "rationale": "Write action on a delegated calendar permission without admin consent. Expected to flip to include in Phase 4.",
+      "rationale": "Write action on a delegated calendar permission without admin consent. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {
@@ -655,9 +655,9 @@
       "action_id": "microsoft.teams.chat_post",
       "display_name": "Teams: Post Chat Message",
       "component_class": "TeamsChatPostComponent",
-      "decision": "defer",
+      "decision": "include",
       "confidence": "high",
-      "rationale": "Posts as the signed-in user into an existing 1:1 or group chat. Only a delegated permission exists (application permission is migration-only), which matches the user-delegated default.",
+      "rationale": "Posts as the signed-in user into an existing 1:1 or group chat. Only a delegated permission exists (application permission is migration-only), which matches the user-delegated default. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {
@@ -754,9 +754,9 @@
       "action_id": "microsoft.teams.channel_post",
       "display_name": "Teams: Post Channel Message",
       "component_class": "TeamsChannelPostComponent",
-      "decision": "defer",
+      "decision": "include",
       "confidence": "high",
-      "rationale": "Posts as the signed-in user into a team channel; delegated-only permission. Candidate to merge with chat_post into one component with two outputs if the include set must shrink.",
+      "rationale": "Posts as the signed-in user into a team channel; delegated-only permission. Candidate to merge with chat_post into one component with two outputs if the include set must shrink. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {
@@ -858,12 +858,12 @@
       "action_id": "microsoft.files.list",
       "display_name": "SharePoint/OneDrive: List Items",
       "component_class": "SharePointListComponent",
-      "decision": "defer",
+      "decision": "include",
       "confidence": "medium",
       "open_questions": [
         "Files.Read covers the user's own OneDrive; listing SharePoint document libraries needs Files.Read.All or Sites.Read.All. Decide in Phase 4 whether wave 1 requests the wider permission by default or only when a site is given."
       ],
-      "rationale": "Lists drive items the signed-in user can reach; all candidate permissions are delegated without admin consent, so the choice is about reach, not consent.",
+      "rationale": "Lists drive items the signed-in user can reach; all candidate permissions are delegated without admin consent, so the choice is about reach, not consent. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {
@@ -992,9 +992,9 @@
       "action_id": "microsoft.files.fetch",
       "display_name": "SharePoint/OneDrive: Fetch Item",
       "component_class": "SharePointFetchComponent",
-      "decision": "defer",
+      "decision": "include",
       "confidence": "high",
-      "rationale": "Downloads a drive item the signed-in user can access. Same permission choice as files.list; the two rows should land on the same decision.",
+      "rationale": "Downloads a drive item the signed-in user can access. Same permission choice as files.list; the two rows should land on the same decision. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
         "inputs": [
           {
