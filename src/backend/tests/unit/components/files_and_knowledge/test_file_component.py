@@ -862,7 +862,7 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
 
     @patch("lfx.base.data.cloud_storage_utils.create_s3_client")
     @patch("lfx.base.data.cloud_storage_utils.validate_aws_credentials")
-    def test_s3_temp_file_cleanup_on_download_failure(self, mock_validate, mock_create_client):  # noqa: ARG002
+    def test_s3_temp_file_cleanup_on_download_failure(self, mock_validate, mock_create_client, tmp_path):  # noqa: ARG002
         """Test that temp file is cleaned up when S3 download fails."""
         from pathlib import Path
 
@@ -877,24 +877,37 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
             }
         )
 
-        # Mock S3 client to raise an exception during download
         mock_s3_client = MagicMock()
         mock_s3_client.download_fileobj.side_effect = Exception("S3 download failed")
         mock_create_client.return_value = mock_s3_client
 
-        # Track temp files created
-        temp_dir = Path(tempfile.gettempdir())
-        temp_files_before = set(temp_dir.glob("tmp*.txt")) if temp_dir.exists() else set()
+        temp_state = {"handle": None, "path": None}
+        original_named_temporary_file = tempfile.NamedTemporaryFile
+        original_unlink = Path.unlink
 
-        # Attempt to read from S3 - should fail and clean up temp file
-        with pytest.raises(RuntimeError, match="Failed to download file from S3"):
+        def tracked_named_temporary_file(*args, **kwargs):
+            kwargs.setdefault("dir", tmp_path)
+            kwargs["delete"] = False
+            handle = original_named_temporary_file(*args, **kwargs)
+            temp_state["handle"] = handle
+            temp_state["path"] = Path(handle.name)
+            return handle
+
+        def guarded_unlink(self, *args, **kwargs):
+            if temp_state["path"] == self and temp_state["handle"] is not None and not temp_state["handle"].closed:
+                msg = "temp file still open"
+                raise PermissionError(msg)
+            return original_unlink(self, *args, **kwargs)
+
+        with (
+            patch("tempfile.NamedTemporaryFile", side_effect=tracked_named_temporary_file),
+            patch.object(Path, "unlink", autospec=True, side_effect=guarded_unlink),
+            pytest.raises(RuntimeError, match="Failed to download file from S3"),
+        ):
             component._read_from_aws_s3()
 
-        # Verify no new temp files are left behind
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_files_after = set(Path(temp_dir).glob("tmp*.txt"))
-        new_temp_files = temp_files_after - temp_files_before
-        assert len(new_temp_files) == 0, f"Temp files not cleaned up: {new_temp_files}"
+        assert temp_state["path"] is not None
+        assert not temp_state["path"].exists()
 
     @patch("lfx.base.data.cloud_storage_utils.create_s3_client")
     @patch("lfx.base.data.cloud_storage_utils.validate_aws_credentials")
@@ -923,7 +936,7 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
 
     @patch("lfx.base.data.cloud_storage_utils.create_google_drive_service")
     @pytest.mark.usefixtures("fake_googleapiclient")
-    def test_google_drive_temp_file_cleanup_on_download_failure(self, mock_create_service):
+    def test_google_drive_temp_file_cleanup_on_download_failure(self, mock_create_service, tmp_path):
         """Test that temp file is cleaned up when Google Drive download fails."""
         from pathlib import Path
 
@@ -936,29 +949,38 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
             }
         )
 
-        # Mock Google Drive service
         mock_drive_service = MagicMock()
-        # Metadata call succeeds
         mock_drive_service.files().get().execute.return_value = {"name": "test-file.txt"}
-        # Media download fails
         mock_drive_service.files().get_media.side_effect = Exception("Drive download failed")
         mock_create_service.return_value = mock_drive_service
 
-        # Track temp files created
-        temp_files_before = (
-            set(Path(tempfile.gettempdir()).glob("tmp*.txt")) if Path(tempfile.gettempdir()).exists() else set()
-        )
+        temp_state = {"handle": None, "path": None}
+        original_named_temporary_file = tempfile.NamedTemporaryFile
+        original_unlink = Path.unlink
 
-        # Attempt to read from Google Drive - should fail and clean up temp file
-        with pytest.raises(RuntimeError, match="Failed to download file from Google Drive"):
+        def tracked_named_temporary_file(*args, **kwargs):
+            kwargs.setdefault("dir", tmp_path)
+            kwargs["delete"] = False
+            handle = original_named_temporary_file(*args, **kwargs)
+            temp_state["handle"] = handle
+            temp_state["path"] = Path(handle.name)
+            return handle
+
+        def guarded_unlink(self, *args, **kwargs):
+            if temp_state["path"] == self and temp_state["handle"] is not None and not temp_state["handle"].closed:
+                msg = "temp file still open"
+                raise PermissionError(msg)
+            return original_unlink(self, *args, **kwargs)
+
+        with (
+            patch("tempfile.NamedTemporaryFile", side_effect=tracked_named_temporary_file),
+            patch.object(Path, "unlink", autospec=True, side_effect=guarded_unlink),
+            pytest.raises(RuntimeError, match="Failed to download file from Google Drive"),
+        ):
             component._read_from_google_drive()
 
-        # Verify no new temp files are left behind
-        temp_files_after = (
-            set(Path(tempfile.gettempdir()).glob("tmp*.txt")) if Path(tempfile.gettempdir()).exists() else set()
-        )
-        new_temp_files = temp_files_after - temp_files_before
-        assert len(new_temp_files) == 0, f"Temp files not cleaned up: {new_temp_files}"
+        assert temp_state["path"] is not None
+        assert not temp_state["path"].exists()
 
     @patch("googleapiclient.http.MediaIoBaseDownload")
     @patch("lfx.base.data.cloud_storage_utils.create_google_drive_service")

@@ -815,17 +815,20 @@ class FileComponent(BaseFileComponent):
 
         # Get file extension from S3 key
         file_extension = Path(self.s3_file_key).suffix or ""
-
+        temp_file_path = None
+        download_error = None
         with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
             temp_file_path = temp_file.name
             try:
                 s3_client.download_fileobj(self.bucket_name, self.s3_file_key, temp_file)
-            except Exception as e:
-                # Clean up temp file on failure
-                with contextlib.suppress(OSError):
-                    Path(temp_file_path).unlink()
-                msg = f"Failed to download file from S3: {e}"
-                raise RuntimeError(msg) from e
+            except Exception as e:  # noqa: BLE001
+                download_error = e
+
+        if download_error is not None:
+            with contextlib.suppress(OSError):
+                Path(temp_file_path).unlink()
+            msg = f"Failed to download file from S3: {download_error}"
+            raise RuntimeError(msg) from download_error
 
         # Create BaseFile object
         from lfx.schema.data import Data
@@ -877,6 +880,8 @@ class FileComponent(BaseFileComponent):
 
         # Download file to temp location
         file_extension = Path(file_name).suffix or ""
+        temp_file_path = None
+        download_error = None
         with tempfile.NamedTemporaryFile(mode="wb", suffix=file_extension, delete=False) as temp_file:
             temp_file_path = temp_file.name
             try:
@@ -885,12 +890,14 @@ class FileComponent(BaseFileComponent):
                 done = False
                 while not done:
                     _status, done = downloader.next_chunk()
-            except Exception as e:
-                # Clean up temp file on failure
-                with contextlib.suppress(OSError):
-                    Path(temp_file_path).unlink()
-                msg = f"Failed to download file from Google Drive: {e}"
-                raise RuntimeError(msg) from e
+            except Exception as e:  # noqa: BLE001
+                download_error = e
+
+        if download_error is not None:
+            with contextlib.suppress(OSError):
+                Path(temp_file_path).unlink()
+            msg = f"Failed to download file from Google Drive: {download_error}"
+            raise RuntimeError(msg) from download_error
 
         # Create BaseFile object
         from lfx.schema.data import Data
