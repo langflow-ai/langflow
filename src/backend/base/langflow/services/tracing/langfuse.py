@@ -340,6 +340,7 @@ class LangFuseTracer(BaseTracer):
     """
 
     flow_id: str
+    flow_name: str
     _trace_context: TraceContext
     langfuse_trace_id: str | None
 
@@ -362,7 +363,8 @@ class LangFuseTracer(BaseTracer):
         self.user_id = user_id
         self.tracing_user_id = tracing_user_id
         self.session_id = session_id
-        self.flow_id = trace_name.split(" - ")[-1]
+        self.flow_id = trace_name.rsplit(" - ", maxsplit=1)[-1]
+        self.flow_name = trace_name.rsplit(" - ", maxsplit=1)[0]
         self.spans: dict[str, LangfuseSpan] = OrderedDict()
         self._input_trace_names: dict[str, str] = {}
         self._output_trace_names: dict[str, str] = {}
@@ -413,7 +415,7 @@ class LangFuseTracer(BaseTracer):
 
             # Create root span for the flow - this also creates the trace implicitly
             self._root_span = self._client.start_span(
-                name=self.flow_id,
+                name=self.flow_name,
                 trace_context=self._trace_context,
                 metadata={"flow_id": self.flow_id, "project_name": self.project_name},
             )
@@ -424,7 +426,7 @@ class LangFuseTracer(BaseTracer):
             # ``langflow.tracing_user_id`` so it is still recoverable from trace
             # metadata without changing the meaning of ``trace.userId``.
             trace_kwargs: dict[str, Any] = {
-                "name": self.flow_id,
+                "name": self.flow_name,
                 "user_id": self.user_id,
                 "session_id": self.session_id,
             }
