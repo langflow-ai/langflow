@@ -1053,6 +1053,13 @@
           "source": "graph-permissions-reference"
         },
         {
+          "scope": "Sites.Read.All",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference",
+          "notes": "Needed for the /sites/{site-id}/drive download path behind the site_id input; same permission set as microsoft.files.list."
+        },
+        {
           "scope": "offline_access",
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",

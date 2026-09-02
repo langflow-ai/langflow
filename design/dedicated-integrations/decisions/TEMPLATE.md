@@ -9,7 +9,9 @@ Last verified: YYYY-MM-DD
 <!--
 Status is parsed by scripts/ci/check_capability_matrices.py and must be one of
 draft | proposed | accepted | superseded. `--require-accepted` (gate close) fails on anything but accepted.
-The "## Decision" heading is also required by the checker.
+The "## Decision" heading is also required by the checker, and so is sign-off coverage: every role named on the
+Owners line must have a row in the "## Sign-off" table below and in the README sign-off table, which must list this
+file. `Status: accepted` records the release owner's decision; the other roles sign off in PR review.
 -->
 
 ## Context
@@ -53,3 +55,5 @@ requirement", "mcp.slack.com documents bot-token support", "Google reclassifies 
 | lfx owner | | | |
 | langflow-base owner | | | |
 | Enterprise owner | | | |
+| frontend owner | | | |
+| product owner | | | |

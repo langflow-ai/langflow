@@ -650,7 +650,7 @@
       },
       "substrate": "sdk",
       "substrate_ga_status": "ga",
-      "substrate_notes": "google-api-python-client files().get(alt='media') and files().export(). Workspace Drive MCP server requests the same drive.readonly scope.",
+      "substrate_notes": "google-api-python-client files().get(alt='media') and files().export(). The Workspace Drive MCP server (Developer Preview) requests drive.readonly and drive.file, so MCP would not avoid the restricted tier either.",
       "substrate_source": "drive-files-get",
       "rate_limit": {
         "summary": "files.get costs 5 quota units and a content download 200; per user per project 325,000 units per minute, per project 1,000,000 per minute.",

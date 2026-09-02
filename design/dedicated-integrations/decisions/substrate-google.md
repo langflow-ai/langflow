@@ -2,7 +2,7 @@
 
 Status: accepted
 Decision ID: substrate-google
-Applies to: matrices/google.json, all actions
+Applies to: matrices/google.json, the five included actions (google.gmail.send, google.drive.list, google.drive.fetch, google.calendar.list, google.calendar.create); google.gmail.search is excluded by decisions/google-restricted-scopes.md and is not covered here
 Owners (sign-off roles): lfx owner, langflow-base owner, Enterprise owner, hosted-app owner, release owner
 Last verified: 2026-09-01
 
@@ -10,8 +10,9 @@ Last verified: 2026-09-01
 
 The plan keeps MCP as the strategic substrate but adopts a provider's official server only when it is generally
 available with an identity model and scope set that fit the approved matrix. This record decides which substrate
-the six wave-1 Google actions run on. It blocks INT-10 and decides whether INT-9 (pinned MCP mode) is needed for
-Google in 1.13.
+the five included wave-1 Google actions run on (Gmail search is excluded by `google-restricted-scopes.md`; if that
+record is re-opened, the excluded action follows this decision). It blocks INT-10 and decides whether INT-9 (pinned
+MCP mode) is needed for Google in 1.13.
 
 ## Facts (with citations)
 
@@ -39,7 +40,7 @@ rate limits or GA date. Cost: blocks INT-10 until an unknown GA date.
 Pros: every substrate is GA today (fact 5); scope tiers are chosen per action, so Gmail send stays sensitive; no
 dependency on the preview program; INT-9 pinned mode is not needed for Google in 1.13. The component identity and
 saved-flow schema are Langflow-owned, so a later swap to the MCP server changes only the adapter.
-Cons: Langflow maintains thin adapters over google-api-python-client for six methods.
+Cons: Langflow maintains thin adapters over google-api-python-client for five methods.
 Cost: inside the INT-10 estimate (5 engineer-weeks); no external lead time.
 
 ### Option C: Mixed (MCP for Calendar, SDK for Gmail and Drive)
@@ -73,3 +74,5 @@ Re-verify by: the 1.14 planning gate.
 | lfx owner | | | |
 | langflow-base owner | | | |
 | Enterprise owner | | | |
+| hosted-app owner | | | |
+| release owner | Eric Hare | 2026-09-01 | #14906 (confirmed in the planning session) |

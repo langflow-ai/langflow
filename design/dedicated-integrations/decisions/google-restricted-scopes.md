@@ -105,3 +105,4 @@ Re-verify by: the 1.14 planning gate, or earlier if Option A is triggered.
 | hosted-app owner | | | |
 | release owner | Eric Hare | 2026-09-01 | #14906 (confirmed in the planning session) |
 | Enterprise owner | | | |
+| langflow-base owner | | | |

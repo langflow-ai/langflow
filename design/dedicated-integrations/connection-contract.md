@@ -49,8 +49,10 @@ authorization.
 **Decision: a new parallel channel for semantics, with a variable-compatible encoding for headless transport.**
 
 - Flow JSON stores a string handle `<provider_id>/<name>`, for example `google_workspace/work`. `provider_id`
-  reuses `_PROVIDER_ID_RE` from `src/lfx/src/lfx/extension/manifest.py`; `name` is `[A-Za-z0-9_-]{1,64}`. Parsed form
-  is a frozen Pydantic `ConnectionRef(provider, name)` with `parse()`, `to_handle()`, `env_key()`.
+  reuses `_PROVIDER_ID_RE` from `src/lfx/src/lfx/extension/manifest.py`; `name` is `[a-z0-9]+(_[a-z0-9]+)*`, at most
+  64 characters: lowercase so the uppercased env form is invertible, no hyphen so `-` and `_` cannot collide, no
+  doubled underscore so the `__` separator stays unambiguous. Parsed form is a frozen Pydantic
+  `ConnectionRef(provider, name)` with `parse()`, `to_handle()`, `env_key()`.
 - The handle is owner-kind-neutral. Resolution tries the dependency principal's user connection with that provider
   and name, then an instance connection with the same name only if host policy allows the fallback (langflow-base
   default: only when the instance connection is flagged referenceable; question 12.b.1).
@@ -61,7 +63,11 @@ authorization.
   (`src/lfx/src/lfx/cli/validation/_env_validation.py:30`) rejects `/`.
 - Headless transport reuses the flat map unchanged: `ConnectionRef.env_key()` is
   `LF_CONNECTION__<PROVIDER>__<NAME>` (uppercase, non-alphanumerics to `_`, double underscore separator so
-  `google_workspace/work` and `google/workspace_work` cannot collide). It is a valid env name, so
+  `google_workspace/work` and `google/workspace_work` cannot collide). The encoding must be injective over every
+  handle that can exist: the `name` pattern above guarantees it for names, and provider ids, which may contain `.`,
+  `-`, and `_` under `_PROVIDER_ID_RE`, are checked at registration, where the INT-3 loader rejects a manifest whose
+  provider id maps to the same env segment as an already registered provider. Env keys are only ever derived from
+  handles and never parsed back into them. It is a valid env name, so
   `VariableService.get_variable` (`src/lfx/src/lfx/services/variable/service.py:63-110`) already resolves it through
   the five-step order including the `x-langflow-global-var-*` alias and `no_env_fallback`.
 - Export and import: handles are portable, non-secret text. `strip_secret_field_values_in_place`
@@ -167,7 +173,7 @@ defense in depth and pre-flight in interactive routes for UX.**
 | workflow_hitl_v2 | job_owner | as the job owner who started it; re-resolved on the worker, never persisted | per policy |
 | legacy_public_chat, a2a (anonymous), workflow_public_v2 | anonymous_public | never | deny by default; Enterprise policy may allow flagged instance connections |
 | a2a authenticated sub-path | actor | owner only | per policy |
-| lfx run, embedded, lfx serve | headless_operator | not applicable (no database) | environment-provisioned only |
+| lfx run, embedded, lfx serve | headless_operator | not applicable (no database) | environment- or request-provisioned only (section 5) |
 
 ## 5. Headless implementations
 
@@ -180,6 +186,16 @@ request scope is already a ContextVar the variable service reads.**
   `runtime_variables.py`, the `x-langflow-global-var-*` alias), then `safe_getenv` with reserved names denied,
   skipped under `no_env_fallback`. No new ContextVar. If the owners want the ticket's two names,
   `RequestScopedConnectionResolver` is a trivial subclass (question 12.a.1).
+- Trust boundary: in standalone lfx the request scope is the intended injection channel, not a bypass. There is no
+  database, no user, and no connection-provisioning permission to enforce; the only principal is the serve caller,
+  who is authenticated by the serve API key and already controls the flow's inputs. A caller can substitute only a
+  credential they hold, and only for their own request (the scope is a ContextVar, so it never reaches another
+  caller's request or the process environment); this is exactly how every API key supplied through
+  `x-langflow-global-var-*` works today. What a caller cannot do is read the operator's environment-provisioned
+  token, because resolution hands a `ResolvedCredential` to the component and never to the caller, and the
+  reserved-name denial and `no_env_fallback` rules still apply. If the lfx owner wants operators to be able to pin a
+  served flow to environment-provisioned connections, `EnvConnectionResolver` gains an `LFX_CONNECTIONS_ENV_ONLY`
+  switch that skips the request-scoped lookups for `LF_CONNECTION__*` keys (question 12.a.8).
 - Wire format for the value: a bare access token (`scopes_verified=False`, `expires_at=None`) or a JSON object
   `{"access_token", "token_type", "expires_at", "scopes", "account": {"id", "display", "tenant_id"}}`;
   `normalize_parsed_variables` (`request_scope.py:28`) already serializes nested JSON, so detection is "starts with
@@ -200,11 +216,15 @@ happens in `update_params_with_load_from_db_fields`.**
   frozenset`, `scopes_verified`, `account: ConnectionAccount | None`, `connection_id`, `owner_kind: user | instance |
   env`, `provider`, `name`. `__repr__` redacts; `__reduce__` raises so it can never be pickled into a job payload or
   cache.
-- `CredentialLease` (mutable, in-process): `await lease.get_token()` re-calls the resolver when `expires_at - now <
-  60s` (constants from `OAuthConnectorBase`: `MIN_EXPIRES_IN_SECONDS` and the 60-second margin in
+- `CredentialLease` (mutable, in-process): `await lease.get_token()` returns the cached token while it is valid and
+  re-calls the resolver only when `expires_at` is set and `expires_at - now < 60s` (constants from
+  `OAuthConnectorBase`: `MIN_EXPIRES_IN_SECONDS` and the 60-second margin in
   `src/lfx/src/lfx/base/knowledge_bases/ingestion_sources/connector_base.py:140-260`); in-process single flight via
   `asyncio.Lock`. Cross-worker single flight is the host's refresh coordinator (langflow-base), triggered by
-  `resolve()`.
+  `resolve()`. `expires_at=None` is the no-expiry path (bare env tokens, Slack tokens without rotation, API keys):
+  the lease never computes a delta and never refreshes proactively, `get_token()` always succeeds with the cached
+  value, and the only recovery is reactive: when the provider answers with `AuthExpiredError` (section 7) the
+  component re-resolves once through the lease and, if that fails too, raises the typed error.
 - `Component.resolve_connection(field_name) -> CredentialLease` (additive method on `Component`) reads the handle
   from the input, builds the request from `self.graph.execution_principal`, and calls
   `get_connection_resolver()`. Lazy because `set_attributes(params)` would put the value in `_inputs[...].value`
@@ -252,9 +272,14 @@ dataclass (not an `Exception`; loader-specific code namespace).
 now.**
 
 - `IntegrationProvider{provider_id, display_name, icon, auth: OAuthProfile, capabilities, docs_url}`;
-  `OAuthProfile{kind: oauth2_auth_code | oauth2_client_credentials | api_key, authorization_url, token_url,
-  supports_pkce, supports_refresh, scope_separator, default_scopes, identity_kinds, desktop_loopback_ok,
-  tenant_param}` (covers the Tauri public-client loopback and Microsoft's `{tenant}` authority);
+  `OAuthProfile{kind, authorization_url, token_url, supports_pkce, supports_refresh, scope_separator,
+  default_scopes, identity_kinds, desktop_loopback_ok, tenant_param}`, where `kind` is the matrix schema's
+  `auth_mode` enum verbatim (`oauth2_authorization_code`, `oauth2_client_credentials`, `oauth2_device_code`,
+  `service_account`, `service_account_domain_wide_delegation`, `bot_token_install`, `api_key`;
+  `design/dedicated-integrations/schema/capability_matrix.schema.json`), so every documented authentication mode has
+  a manifest representation; wave 1 uses `oauth2_authorization_code` and, for the Slack bot actions,
+  `bot_token_install` (`token_url` then names the install exchange and `supports_refresh` is false); the profile
+  also covers the Tauri public-client loopback and Microsoft's `{tenant}` authority;
   `IntegrationCapability{id, display_name, required_scopes, optional_scopes, risk: read | write | destructive,
   component_ref, mcp_tool}`; `ScopeSet.covers(required, granted) -> missing` with provider-aware normalization
   (Google URL scopes, Graph short names, Slack bot versus user scopes), used by both the resolver's `scope-missing`
@@ -297,7 +322,10 @@ identifiers.**
 ## 11. Test plan for INT-2
 
 - `src/lfx/tests/unit/integrations/`: `ConnectionRef` parse, handle, and `env_key` round trips including
-  `is_valid_env_var_name`; `ConnectionRefInput` wire type, `tool_mode` rejection, `SENSITIVE_FIELD_TYPES` membership,
+  `is_valid_env_var_name`; `env_key` injectivity (the name pattern rejects `Work`, `work-a`, and `work__a`, and a
+  table of distinct handles maps to distinct keys, including a provider-id pair that differs only in `.` versus
+  `_`); `OAuthProfile.kind` equals the schema's `$defs/auth_mode` enum; `ConnectionRefInput` wire type,
+  `tool_mode` rejection, `SENSITIVE_FIELD_TYPES` membership,
   `instantiate_input` round trip, exclusion from `create_input_schema`; `INTEGRATION_ERROR_CODES` snapshot and
   `normalize_integration_error` status mapping including ExceptionGroup unwrapping and URL and email redaction;
   `ScopeSet.covers` per provider; manifest `integrations` validation under `extra="forbid"`; `integration_action`
@@ -305,7 +333,8 @@ identifiers.**
 - `src/lfx/tests/unit/services/connection/`: env resolver bare versus JSON value; request scope beats env (extend
   `test_request_scope_isolation.py`); `no_env_fallback` blocks env (extend `test_no_env_fallback_credentials.py`);
   reserved names denied; the unresolved error contains no value; `ResolvedCredential` repr and pickle refusal;
-  `CredentialLease` refresh-before-expiry with a fake clock and in-process single flight; table-driven
+  `CredentialLease` refresh-before-expiry with a fake clock and in-process single flight, and `expires_at=None`
+  never refreshes, never raises, and re-resolves exactly once on `AuthExpiredError`; table-driven
   `authorize_principal` over the 13 families times owner kind times opt-in, loading
   `execution_principal_matrix.json` so every family must appear.
 - CLI: `lfx run` pre-flight fails with the typed error before execution; `lfx serve` error events are sanitized
@@ -328,6 +357,8 @@ identifiers.**
 5. Extend `IN_SCOPE_PATHS` to `lfx/integrations` and the input modules.
 6. Package name `lfx.integrations` versus `lfx.services.connection`.
 7. An MCP `session_scope` key so token rotation does not orphan sessions.
+8. Whether operators need an `LFX_CONNECTIONS_ENV_ONLY` switch so served flows ignore request-scoped
+   `LF_CONNECTION__*` keys (section 5 trust boundary).
 
 ### b. langflow-base owner
 

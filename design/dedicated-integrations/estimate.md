@@ -1,10 +1,10 @@
-# Re-issued estimate for INT-2 through INT-14
+# Re-issued estimate for INT-1 through INT-14
 
 Status: re-issued 2026-09-01 under the release owner's confirmed decisions
 Owners (sign-off roles): release owner
 Last verified: 2026-09-01
 
-The gate's last exit criterion is a re-issued estimate. The original ticket breakdown summed to roughly 48
+The gate's last exit criterion is a re-issued estimate. The original ticket breakdown summed to 49
 engineer-weeks including INT-1. The numbers below apply the gate's findings ticket by ticket; every delta names the
 decision or fact that caused it. Assumptions: one engineer per stream; INT-10, INT-11, INT-12 run in parallel once
 INT-3 and INT-5 land; the proposed decisions in `decisions/` hold (Google sdk, Microsoft rest, Slack mixed, hosted

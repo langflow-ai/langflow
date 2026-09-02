@@ -17,8 +17,8 @@ whether it is an extension of something that exists or net new. Paths are under 
 | A4 | Action pickers | `sortableListComponent/`, `actionPickerComponent/`, `ListSelectionComponent/` | reuse for per-action selection driven by `search_category`; no change expected | INT-10 to INT-12 |
 | A5 | Dynamic field refresh | `CustomNodes/helpers/mutate-template.ts`, `controllers/API/queries/nodes/use-post-template-value.ts`, `use-handle-new-value.ts`, `use-fetch-data-on-mount.ts` | no change; `update_build_config`, `refresh_button`, `real_time_refresh` already work | none |
 | A6 | Secret input and global-variable picker | `parameterRenderComponent/components/inputGlobalComponent/`, `components/core/GlobalVariableModal/GlobalVariableModal.tsx` | reuse for API-key-mode connectors; add a read-only "managed by connection" state for fields a connection supersedes | INT-8 |
-| A7 | Sidebar catalog | `utils/styleUtils.ts` (`SIDEBAR_CATEGORIES` line 314, `SIDEBAR_BUNDLES` line 418), `pages/FlowPage/components/flowSidebarComponent/components/sidebar-nav-items.ts`, `categoryGroup.tsx` | add `Microsoft` and `Slack` bundle groups; decide the fate of the existing `Gmail` and `Google` groups per `decisions/palette-naming.md`; `McpSidebarGroup.tsx` is the template for a group with an empty state and an add modal | INT-11, INT-12 |
-| A8 | Icon registry | `icons/lazyIconImports.ts`, `icons/eagerIconImports.ts` | `Gmail`, `GoogleDrive`, `Googlecalendar` exist; add Slack, Teams, Outlook, OneDrive, SharePoint | INT-11, INT-12 |
+| A7 | Sidebar catalog | `utils/styleUtils.ts` (`SIDEBAR_CATEGORIES` line 314, `SIDEBAR_BUNDLES` line 418), `pages/FlowPage/components/flowSidebarComponent/components/sidebar-nav-items.ts`, `categoryGroup.tsx` | add `Microsoft 365` and `Slack` bundle groups and fold the existing `Gmail` group into `Google` per `decisions/palette-naming.md` (`GmailLoaderComponent` is re-grouped only); `McpSidebarGroup.tsx` is the template for a group with an empty state and an add modal | INT-11, INT-12 |
+| A8 | Icon registry | `icons/lazyIconImports.ts`, `icons/eagerIconImports.ts` | `Gmail`, `GoogleDrive`, `Googlecalendar` exist; add `Microsoft`, `Slack`, `Teams`, `Outlook`, `OneDrive`, `SharePoint` | INT-11, INT-12 |
 | A9 | Feature gating | `customization/feature-flags.ts` | `ENABLE_INTEGRATIONS = false` is declared and referenced nowhere; use it, mirrored at runtime through `GET /api/v1/config` like `enable_extension_reload` | INT-8 |
 | A10 | OAuth field layout | `modals/authModal/index.tsx` | the richest OAuth form in the codebase, but it configures Langflow as an OAuth *server* (project MCP); harvest layout and the host/port to callback-URL derivation, do not reuse the component | INT-8 |
 | A11 | MCP server headers | `modals/addMcpServerModal/index.tsx` (`IOKeyPairInputWithVariables`) | already binds header values to global variables; the path for hand-configured token auth to remote MCP servers stays as is | none |
@@ -50,7 +50,9 @@ whether it is an extension of something that exists or net new. Paths are under 
    rows and so existing sharing tooling is not assumed to cover them.
 3. Desktop (Tauri) runs the backend on `localhost:7860`, so the OAuth return is the same callback route as
    self-managed with a public client and loopback redirect; the frontend needs no Tauri-specific bridge for the
-   return, only for opening the system browser.
+   return, only for opening the system browser. Slack's MCP server documents PKCE for desktop clients, and enabling
+   PKCE marks the Slack app a public client, one-way, so Desktop Slack uses a customer-owned, PKCE-enabled app
+   registration (`decisions/substrate-slack.md` fact 9).
 4. A11y is a review gate here: every settings page ships an axe baseline spec, and `NodeStatus`,
    `GlobalVariablesPage`, and `MCPServersPage` carry explicit WCAG comments. B1, B2, and B5 need keyboard-only paths.
 

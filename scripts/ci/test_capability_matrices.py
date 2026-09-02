@@ -16,6 +16,7 @@ from check_capability_matrices import (
     VALID_VALUES,
     validate_all,
     validate_matrix,
+    validate_sign_offs,
 )
 
 CI_SCRIPTS_WORKFLOW = DESIGN_ROOT.parents[1] / ".github" / "workflows" / "ci-scripts-test.yml"
@@ -53,6 +54,13 @@ def _copy_design(tmp_path: Path) -> Path:
     root = tmp_path / "dedicated-integrations"
     shutil.copytree(DESIGN_ROOT / "matrices", root / "matrices")
     shutil.copytree(DESIGN_ROOT / "decisions", root / "decisions")
+    return root
+
+
+def _copy_design_tree(tmp_path: Path) -> Path:
+    """Copy the whole design directory (README, records, matrices) for sign-off coverage tests."""
+    root = tmp_path / "dedicated-integrations"
+    shutil.copytree(DESIGN_ROOT, root)
     return root
 
 
@@ -215,6 +223,54 @@ def test_validate_all_reports_missing_provider(tmp_path: Path) -> None:
     (root / "matrices" / "slack.json").unlink()
 
     assert any("missing capability matrices for ['slack']" in error for error in validate_all(root / "matrices"))
+
+
+def test_every_declared_owner_is_tracked_in_sign_off_tables() -> None:
+    assert validate_sign_offs() == []
+
+
+def test_sign_off_check_rejects_owner_missing_from_readme_and_record_tables(tmp_path: Path) -> None:
+    root = _copy_design_tree(tmp_path)
+    record = root / "decisions" / "substrate-google.md"
+    text = record.read_text(encoding="utf-8").replace(
+        "Owners (sign-off roles): lfx owner,", "Owners (sign-off roles): platform owner, lfx owner,", 1
+    )
+    record.write_text(text, encoding="utf-8")
+
+    errors = validate_sign_offs(root)
+
+    assert "sign-off: README.md row for 'platform owner' does not list `decisions/substrate-google.md`" in errors
+    assert "sign-off: decisions/substrate-google.md table lacks a row for 'platform owner'" in errors
+
+
+def test_sign_off_check_rejects_record_dropped_from_readme_row(tmp_path: Path) -> None:
+    root = _copy_design_tree(tmp_path)
+    readme = root / "README.md"
+    # The record is also cited in the exit-criteria table above the sign-off section; only the sign-off rows change.
+    head, sign_off = readme.read_text(encoding="utf-8").split("## Sign-off", 1)
+    sign_off = sign_off.replace("`decisions/kb-oauth-connector-adoption.md`", "")
+    readme.write_text(head + "## Sign-off" + sign_off, encoding="utf-8")
+
+    errors = validate_sign_offs(root)
+
+    assert "sign-off: README.md row for 'lfx owner' does not list `decisions/kb-oauth-connector-adoption.md`" in errors
+    assert (
+        "sign-off: README.md row for 'langflow-base owner' does not list `decisions/kb-oauth-connector-adoption.md`"
+        in errors
+    )
+
+
+def test_sign_off_check_rejects_undeclared_row_in_record_table(tmp_path: Path) -> None:
+    root = _copy_design_tree(tmp_path)
+    record = root / "decisions" / "palette-naming.md"
+    text = record.read_text(encoding="utf-8").replace(
+        "| product owner | | | |", "| product owner | | | |\n| lfx owner | | | |", 1
+    )
+    record.write_text(text, encoding="utf-8")
+
+    errors = validate_sign_offs(root)
+
+    assert "sign-off: decisions/palette-naming.md table row 'lfx owner' is not a declared owner" in errors
 
 
 def test_require_accepted_fails_on_draft_record(tmp_path: Path) -> None:

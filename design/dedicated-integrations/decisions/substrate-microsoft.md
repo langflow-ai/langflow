@@ -63,3 +63,5 @@ Re-verify by: the 1.14 planning gate.
 | lfx owner | | | |
 | langflow-base owner | | | |
 | Enterprise owner | | | |
+| hosted-app owner | | | |
+| release owner | Eric Hare | 2026-09-01 | #14906 (confirmed in the planning session) |

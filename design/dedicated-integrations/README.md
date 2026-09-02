@@ -16,7 +16,7 @@ these files are the historical record the checker keeps guarding.
 | 1 | Three approved matrices, at most 8 actions each | `matrices/google.json`, `matrices/microsoft.json`, `matrices/slack.json` | `check_capability_matrices.py`: included-action cap, required fields, enums | Google 5 included (Gmail search excluded), Microsoft 8 included, Slack 7 included (4 MCP, 3 Web API) |
 | 2 | Every scope classified; every restricted scope has a written decision | scope entries in the matrices; `decisions/google-restricted-scopes.md` | classification present and sourced; restricted scopes need a `restricted_scope_decisions` entry pointing at an existing record | accepted: avoid on the hosted app; Gmail search excluded, Drive on drive.file |
 | 3 | Substrate decision per provider with the server's GA status | `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`; `substrate_decision` in each matrix | included actions must use a chosen substrate; non-GA MCP rows cannot be high confidence | accepted: Google sdk, Microsoft rest, Slack mixed (identifier capture is INT-9 day one) |
-| 4 | INT-2 connection-resolution contract signed off by lfx, langflow-base, Enterprise owners | `connection-contract.md` | none (PR approval) | drafted 2026-09-01; 12 sections, owner questions in section 12 |
+| 4 | INT-2 connection-resolution contract signed off by lfx, langflow-base, Enterprise owners | `connection-contract.md` | sign-off coverage: every declared owner role has a row in the sign-off table below that lists the record | drafted 2026-09-01; 12 sections, owner questions in section 12 |
 | 5 | Frontend surface list | `frontend-surfaces.md` | none | drafted 2026-09-01; 14 extend + 8 new, MVP/defer split |
 | 6 | Trigger/webhook track recorded as deferred | `triggers-deferred.md` | none | placeholder, no findings folded in |
 | 7 | Re-issued estimate | `estimate.md` | none | re-issued 2026-09-01: 52.5 engineer-weeks under the confirmed decisions (48.5 if Slack is Web API throughout) |
@@ -24,20 +24,27 @@ these files are the historical record the checker keeps guarding.
 | + | Palette naming next to Composio components (added by the release owner) | `decisions/palette-naming.md` | none | accepted: 'Product: Verb Object' names, new Microsoft 365 and Slack groups, Composio unchanged |
 
 Gate close means: every row above is done, every referenced decision record is `Status: accepted`, and
-`python scripts/ci/check_capability_matrices.py --require-accepted` exits 0.
+`uv run python scripts/ci/check_capability_matrices.py --require-accepted` exits 0.
 
 ## Sign-off
 
-Role placeholders until the release owner assigns names.
+Acceptance rule: `Status: accepted` on a record means the release owner accepted it; that is the gate-close condition
+the checker enforces. Every other role a record names in its `Owners (sign-off roles):` line signs off in PR review
+by approving and filling in its row below and in the record's own sign-off table. The checker
+(`validate_sign_offs`) fails when a record names a role that has no row here, when that row does not list the
+record, or when the record's own sign-off table is missing a declared role. Role placeholders until the release
+owner assigns names.
 
 | Role | Signs off on | Name | Date | PR |
 |---|---|---|---|---|
-| lfx owner | `connection-contract.md`, substrate decisions | | | |
-| langflow-base owner | `connection-contract.md`, substrate decisions | | | |
-| Enterprise owner | `connection-contract.md`, restricted-scope decision | | | |
-| frontend owner | `frontend-surfaces.md`, `decisions/palette-naming.md` | | | |
-| hosted-app owner | `decisions/google-restricted-scopes.md`, hosted rows of every matrix | | | |
-| release owner | all matrices, `estimate.md`, gate close | Eric Hare | 2026-09-01 | #14906 |
+| lfx owner | `connection-contract.md`, `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`, `decisions/kb-oauth-connector-adoption.md` | | | |
+| langflow-base owner | `connection-contract.md`, `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`, `decisions/google-restricted-scopes.md`, `decisions/kb-oauth-connector-adoption.md` | | | |
+| Enterprise owner | `connection-contract.md`, `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`, `decisions/google-restricted-scopes.md` | | | |
+| frontend owner | `connection-contract.md` (section 12.d), `frontend-surfaces.md`, `decisions/palette-naming.md` | | | |
+| hosted-app owner | `decisions/google-restricted-scopes.md`, `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`, hosted rows of every matrix | | | |
+| product owner | `decisions/palette-naming.md` | | | |
+| platform owner | `triggers-deferred.md` | | | |
+| release owner | every record in this directory, all matrices, `estimate.md`, gate close | Eric Hare | 2026-09-01 | #14906 |
 
 ## Running the checker
 
@@ -53,11 +60,13 @@ uv run python scripts/ci/check_capability_matrices.py --require-accepted
 uv run pytest scripts/ci/test_capability_matrices.py
 ```
 
-The checker is stdlib-only and runs in the `CI Scripts Tests` workflow on any change under this directory.
+The checker is stdlib-only and runs in the `CI Scripts Tests` workflow on any change under this directory. Besides
+the matrices it validates sign-off coverage: every `Owners (sign-off roles):` line under this directory must be
+mirrored by the sign-off table above and by the record's own table.
 
 ## Directory map
 
-```
+```text
 README.md                          this file
 schema/capability_matrix.schema.json   JSON Schema for one provider matrix; its enums are asserted equal to the checker's
 matrices/<provider>.json           one capability matrix per wave-1 provider

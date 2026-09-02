@@ -7,6 +7,11 @@ scope classified and sourced, every restricted scope decided, and every
 substrate choice recorded in a decision record. ``--require-accepted`` is the
 gate-close mode: every referenced decision record must carry
 ``Status: accepted``.
+
+Sign-off coverage is checked alongside the matrices: every record under the
+design directory that declares ``Owners (sign-off roles):`` must be listed in
+the README sign-off table under each of those roles, and its own ``## Sign-off``
+table must carry a row per declared role.
 """
 
 from __future__ import annotations
@@ -32,6 +37,13 @@ COMPONENT_CLASS_RE = re.compile(r"^[A-Z][A-Za-z0-9]+Component$")
 SOURCE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 STATUS_RE = re.compile(r"^Status:\s*(draft|proposed|accepted|superseded)\b", re.MULTILINE)
 DECISION_HEADING_RE = re.compile(r"^## Decision\s*$", re.MULTILINE)
+OWNERS_RE = re.compile(r"^Owners \(sign-off roles\):\s*(.+?)\s*$", re.MULTILINE)
+SIGN_OFF_HEADING = "## Sign-off"
+ROLE_RE = re.compile(r"^[A-Za-z][A-Za-z-]* owner$")
+# The release owner's acceptance is the Status line itself; the README row for that role says "every record".
+ROLES_COVERING_EVERY_RECORD = frozenset({"release owner"})
+# Files that carry an Owners line but are not sign-off records themselves.
+SIGN_OFF_EXEMPT_FILES = frozenset({"README.md", "TEMPLATE.md"})
 
 VALID_VALUES: dict[str, frozenset[str]] = {
     "provider": REQUIRED_PROVIDERS,
@@ -432,6 +444,75 @@ def validate_matrix(matrix_path: Path, *, require_accepted: bool = False) -> lis
     return errors
 
 
+def _table_rows(section: str) -> list[list[str]]:
+    """Return the cells of every pipe-table body row in a Markdown section (header and rule rows dropped)."""
+    rows: list[list[str]] = []
+    for line in section.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|") or re.match(r"^\|\s*-", stripped):
+            continue
+        rows.append([cell.strip() for cell in stripped.strip("|").split("|")])
+    return rows[1:]
+
+
+def _sign_off_section(text: str) -> str | None:
+    if SIGN_OFF_HEADING not in text:
+        return None
+    return text.split(SIGN_OFF_HEADING, 1)[1].split("\n## ", 1)[0]
+
+
+def _readme_sign_off_rows(design_root: Path, errors: list[str]) -> dict[str, str]:
+    readme = design_root / "README.md"
+    if not readme.is_file():
+        errors.append(f"sign-off: {readme} does not exist")
+        return {}
+    section = _sign_off_section(readme.read_text(encoding="utf-8"))
+    if section is None:
+        errors.append("sign-off: README.md lacks a '## Sign-off' table")
+        return {}
+    return {row[0]: row[1] for row in _table_rows(section) if len(row) > 1}
+
+
+def _declared_roles(text: str, label: str, errors: list[str]) -> list[str]:
+    match = OWNERS_RE.search(text)
+    if match is None:
+        errors.append(f"sign-off: {label} lacks an 'Owners (sign-off roles):' line")
+        return []
+    roles = [role.strip() for role in match.group(1).split(",") if role.strip()]
+    errors.extend(f"sign-off: {label} declares malformed role {role!r}" for role in roles if not ROLE_RE.match(role))
+    return roles
+
+
+def validate_sign_offs(design_root: Path = DESIGN_ROOT) -> list[str]:
+    """Require every declared owner role to be tracked in the README table and in the record's own table."""
+    errors: list[str] = []
+    readme_rows = _readme_sign_off_rows(design_root, errors)
+    records = sorted(path for path in design_root.rglob("*.md") if path.name not in SIGN_OFF_EXEMPT_FILES)
+    for record in records:
+        label = record.relative_to(design_root).as_posix()
+        text = record.read_text(encoding="utf-8")
+        roles = _declared_roles(text, label, errors)
+        for role in roles:
+            if role in ROLES_COVERING_EVERY_RECORD:
+                if role not in readme_rows:
+                    errors.append(f"sign-off: README.md table has no row for {role!r}")
+                continue
+            cell = readme_rows.get(role)
+            if cell is None:
+                errors.append(f"sign-off: README.md table has no row for {role!r}, declared by {label}")
+            elif f"`{label}`" not in cell:
+                errors.append(f"sign-off: README.md row for {role!r} does not list `{label}`")
+        section = _sign_off_section(text)
+        if section is None:
+            continue
+        table_roles = {row[0] for row in _table_rows(section) if row}
+        errors.extend(f"sign-off: {label} table lacks a row for {role!r}" for role in roles if role not in table_roles)
+        errors.extend(
+            f"sign-off: {label} table row {role!r} is not a declared owner" for role in sorted(table_roles - set(roles))
+        )
+    return errors
+
+
 def validate_all(matrix_dir: Path = DEFAULT_MATRIX_DIR, *, require_accepted: bool = False) -> list[str]:
     """Validate every provider matrix and require one file per wave-1 provider."""
     errors: list[str] = []
@@ -459,6 +540,9 @@ def main() -> int:
     )
     args = parser.parse_args()
     errors = validate_all(args.matrix_dir, require_accepted=args.require_accepted)
+    design_root = args.matrix_dir.resolve().parent
+    if (design_root / "README.md").is_file():
+        errors.extend(validate_sign_offs(design_root))
     if errors:
         print("Capability matrix validation failed:")
         for error in errors:
