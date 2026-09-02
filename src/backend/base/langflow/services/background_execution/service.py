@@ -711,12 +711,23 @@ class BackgroundExecutionService(Service):
             return False
         await job_service.write_signal(job_id, SignalType.RESUME, {"decision": decision, "request_id": request_id})
         try:
-            await self._enqueue(
-                job_id=job_id,
-                flow_id=job.flow_id,
-                request=request,
-                user=self._user_stub(job.user_id),
-            )
+            if self._scaled:
+                # Scaled mode: the API must not run the job — hand the row back
+                # to the queue (QUEUED, lease cleared) so a worker claims it.
+                # The RESUME signal is already durable, so a worker that claims
+                # immediately still sees the decision. The IN_PROGRESS hop above
+                # is what keeps the single-flight: workers cannot claim the row
+                # between the SUSPENDED flip and the signal write.
+                if not await job_service.requeue_resumed_job(job_id, owner=self._owner):
+                    msg = f"resume requeue lost its claim for job {job_id}"
+                    raise RuntimeError(msg)
+            else:
+                await self._enqueue(
+                    job_id=job_id,
+                    flow_id=job.flow_id,
+                    request=request,
+                    user=self._user_stub(job.user_id),
+                )
         except Exception:
             # Why: claim already flipped SUSPENDED→IN_PROGRESS; a failed enqueue would strand the job
             # and lose the decision — roll back to SUSPENDED (clearing RESUME) so it can be retried.

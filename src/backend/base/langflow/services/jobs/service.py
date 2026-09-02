@@ -818,6 +818,40 @@ class JobService(Service):
         msg = f"fail_queued_job exhausted {_APPEND_EVENT_MAX_RETRIES} retries for job {job_id} (event seq contention)"
         raise RuntimeError(msg) from last_exc
 
+    async def requeue_resumed_job(self, job_id: UUID, *, owner: str) -> bool:
+        """Hand this owner's resumed IN_PROGRESS claim back to the queue. True iff we won.
+
+        Scaled-mode resume: the API wins the SUSPENDED->IN_PROGRESS flip and writes
+        the durable RESUME signal, but must NOT run the job itself — a worker does.
+        This flips the row to QUEUED and clears the resume claim's lease so
+        ``claim_next_queued_lease`` picks it up. Guarded on status AND the exact
+        owner token, so it can never demote a run some worker already owns.
+        """
+        from sqlmodel import update
+
+        owner_expr = col(Job.job_metadata)["owner"].as_string()
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None or job.status != JobStatus.IN_PROGRESS:
+                return False
+            metadata = dict(job.job_metadata or {})
+            if metadata.get("owner") != owner:
+                return False
+            metadata.pop("owner", None)
+            metadata.pop("heartbeat_at", None)
+            stmt = (
+                update(Job)
+                .where(
+                    Job.job_id == job_id,
+                    Job.status == JobStatus.IN_PROGRESS,
+                    owner_expr == owner,
+                )
+                .values(status=JobStatus.QUEUED, job_metadata=metadata or None)
+            )
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            await session.flush()
+            return result.rowcount == 1
+
     async def claim_suspended_for_resume(self, job_id: UUID, *, owner: str | None = None) -> bool:
         """Atomically flip SUSPENDED->IN_PROGRESS for resume; True iff this caller won.
 
