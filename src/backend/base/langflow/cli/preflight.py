@@ -4,9 +4,13 @@ When Langflow boots with ``--deployment-profile prod`` (or
 ``LANGFLOW_DEPLOYMENT_PROFILE=prod``), this module runs a set of fail-loud
 infrastructure checks in the CLI parent process *before* any worker is spawned:
 
-- **Required** checks (database, file storage, encryption secret key, pgVector)
-  abort the boot when they fail — the process exits non-zero and no worker
-  starts, so a misconfigured production deployment never comes up "half working".
+- **Required** checks (database, file storage, encryption secret key, vector
+  backend) abort the boot when they fail — the process exits non-zero and no
+  worker starts, so a misconfigured production deployment never comes up "half
+  working". The vector-backend check is satisfied by *any* reachable backend
+  (pgVector, OpenSearch, or Chroma Cloud): each backend configured via the
+  environment is actively probed, and the check fails only when nothing is
+  configured or every configured backend is unreachable.
 - **Degraded** checks (telemetry, cache, shared queue) surface reduced
   capabilities. Telemetry only ever warns. Cache and shared queue warn when they
   fall back to their in-process default, but *abort* when an external backend is
@@ -60,6 +64,18 @@ Severity = Literal["required", "degraded"]
 # external backend (e.g. redis) whose reachability is then required.
 _IN_MEMORY_CACHE_TYPES = frozenset({"async", "memory"})
 _IN_PROCESS_QUEUE_TYPES = frozenset({"asyncio"})
+
+# Default env vars that signal an alternative (non-pgVector) vector backend is
+# provisioned at boot. These mirror the default *variable names* the OpenSearch
+# and Chroma Cloud backends resolve (OPENSEARCH_URL / CHROMA_API_KEY): those
+# backends fall back to an env var of the same name when no per-KB Langflow
+# variable is set, and the environment is the only signal available this early —
+# the preflight runs before the database (and therefore the variable service)
+# exists, so DB-stored credentials or custom variable-name overrides are not
+# visible here. An operator who provisions either backend for the whole
+# deployment sets these, exactly as pgVector uses PGVECTOR_CONNECTION_STRING.
+_OPENSEARCH_ENV_VAR = "OPENSEARCH_URL"
+_CHROMA_CLOUD_ENV_VAR = "CHROMA_API_KEY"  # pragma: allowlist secret
 
 # Probe timeouts (seconds). ``_PROBE_CONNECT_TIMEOUT`` is handed to the database
 # driver (libpq ``connect_timeout``) so a black-holed host fails fast at the
@@ -355,6 +371,218 @@ async def probe_pgvector(_settings_service: SettingsService) -> CheckResult:
     return CheckResult("ok", "reachable, 'vector' extension present")
 
 
+class _OptionalDependencyMissingError(Exception):
+    """Raised when an env-configured backend's client library is not installed.
+
+    Carries the pip-installable name so the probe can render a precise
+    remediation ("configured but the client isn't installed").
+    """
+
+
+async def probe_opensearch() -> CheckResult | None:
+    """Active probe of an OpenSearch cluster configured via env, or ``None``.
+
+    Returns ``None`` when ``OPENSEARCH_URL`` is unset — the orchestrator reads
+    that as "not configured". When it is set, a throwaway ``opensearch-py``
+    client runs ``client.info()`` (the same liveness call the backend's
+    ``test_connection`` uses) and is closed before returning, so no socket is
+    inherited across the gunicorn fork.
+
+    Only the default env-var names are read (``OPENSEARCH_URL`` +
+    ``OPENSEARCH_USERNAME`` / ``OPENSEARCH_PASSWORD``): the variable service and
+    per-KB ``backend_config`` overrides do not exist this early in boot.
+    """
+    url = os.environ.get(_OPENSEARCH_ENV_VAR, "").strip()
+    if not url:
+        return None
+
+    username = os.environ.get("OPENSEARCH_USERNAME", "").strip() or None
+    password = os.environ.get("OPENSEARCH_PASSWORD", "").strip() or None
+    # Mirror the backend's default: the URL scheme implies SSL, and cert
+    # verification tracks SSL. There is no backend_config to override it here.
+    scheme = url.split("://", 1)[0].lower() if "://" in url else ""
+    use_ssl = scheme != "http"
+
+    def _probe() -> None:
+        try:
+            from opensearchpy import OpenSearch
+            from opensearchpy.exceptions import AuthorizationException
+        except ImportError as exc:
+            msg = "opensearch-py"
+            raise _OptionalDependencyMissingError(msg) from exc
+
+        http_auth = (username, password) if username and password else None
+        client = OpenSearch(
+            hosts=[url],
+            http_auth=http_auth,
+            use_ssl=use_ssl,
+            verify_certs=use_ssl,
+            timeout=_PROBE_CONNECT_TIMEOUT,
+        )
+        try:
+            # A 403 on cluster:monitor/main (AuthorizationException) still proves
+            # DNS, TLS, the connection, and credential auth all succeeded — a
+            # least-privilege, index-scoped account is reachable. A bad password
+            # raises AuthenticationException instead, which propagates as a fail.
+            with contextlib.suppress(AuthorizationException):
+                client.info()
+        finally:
+            with contextlib.suppress(Exception):
+                client.close()
+
+    try:
+        await asyncio.wait_for(asyncio.to_thread(_probe), timeout=_PROBE_TIMEOUT)
+    except _OptionalDependencyMissingError as exc:
+        return CheckResult(
+            "fail",
+            f"OPENSEARCH_URL is set but the OpenSearch client is not installed ({exc})",
+            "Install the 'opensearch' extras (opensearch-py), or unset OPENSEARCH_URL if this "
+            "deployment does not use OpenSearch.",
+        )
+    except asyncio.TimeoutError:
+        return CheckResult(
+            "fail",
+            f"could not reach OpenSearch (timed out after {_PROBE_TIMEOUT}s)",
+            "Verify OPENSEARCH_URL (host, port, network) and the OPENSEARCH_USERNAME/PASSWORD credentials.",
+        )
+    except Exception as exc:  # noqa: BLE001 — any driver/network/TLS error is a failed check
+        return CheckResult(
+            "fail",
+            f"could not reach OpenSearch ({_short_exc(exc)})",
+            "Verify OPENSEARCH_URL, credentials, and the TLS configuration (scheme and certificates).",
+        )
+    return CheckResult("ok", "OpenSearch reachable")
+
+
+async def probe_chroma_cloud() -> CheckResult | None:
+    """Active probe of Chroma Cloud configured via env, or ``None``.
+
+    Returns ``None`` when ``CHROMA_API_KEY`` is unset. When set, a throwaway
+    ``chromadb.CloudClient`` runs ``heartbeat()`` (the backend's own liveness
+    call) and the reference is dropped before returning. Tenant / database are
+    optional — chromadb infers them from the API key when absent.
+
+    Only the default env-var names are read; the variable service and per-KB
+    overrides are unavailable this early in boot.
+    """
+    api_key = os.environ.get(_CHROMA_CLOUD_ENV_VAR, "").strip()
+    if not api_key:
+        return None
+
+    tenant = os.environ.get("CHROMA_TENANT", "").strip() or None
+    database = os.environ.get("CHROMA_DATABASE", "").strip() or None
+
+    def _probe() -> None:
+        try:
+            import chromadb
+        except ImportError as exc:
+            msg = "chromadb"
+            raise _OptionalDependencyMissingError(msg) from exc
+
+        kwargs: dict[str, str] = {"api_key": api_key}
+        if tenant:
+            kwargs["tenant"] = tenant
+        if database:
+            kwargs["database"] = database
+        client = chromadb.CloudClient(**kwargs)
+        try:
+            client.heartbeat()
+        finally:
+            # CloudClient holds an httpx session; drop the reference and collect
+            # so nothing fork-unsafe lingers in the parent (mirrors the backend's
+            # own teardown).
+            del client
+            import gc
+
+            gc.collect()
+
+    try:
+        await asyncio.wait_for(asyncio.to_thread(_probe), timeout=_PROBE_TIMEOUT)
+    except _OptionalDependencyMissingError as exc:
+        return CheckResult(
+            "fail",
+            f"CHROMA_API_KEY is set but the Chroma client is not installed ({exc})",
+            "Install chromadb, or unset CHROMA_API_KEY if this deployment does not use Chroma Cloud.",
+        )
+    except asyncio.TimeoutError:
+        return CheckResult(
+            "fail",
+            f"could not reach Chroma Cloud (timed out after {_PROBE_TIMEOUT}s)",
+            "Verify CHROMA_API_KEY (and CHROMA_TENANT / CHROMA_DATABASE if set) and network egress.",
+        )
+    except Exception as exc:  # noqa: BLE001 — any client/network/auth error is a failed check
+        return CheckResult(
+            "fail",
+            f"could not reach Chroma Cloud ({_short_exc(exc)})",
+            "Verify CHROMA_API_KEY (and CHROMA_TENANT / CHROMA_DATABASE if set) and network egress.",
+        )
+    return CheckResult("ok", "Chroma Cloud reachable")
+
+
+async def probe_vector_backend(settings_service: SettingsService) -> CheckResult:
+    """Require at least one *reachable* vector-store backend in prod.
+
+    pgVector is Langflow's default, owned production vector store, but it is no
+    longer *mandatory*: a deployment that targets OpenSearch or Chroma Cloud
+    instead should boot without a pgVector connection string. Every backend
+    configured via the server environment is actively probed (throwaway client,
+    torn down before returning), and the aggregate verdict is:
+
+    - **No backend configured** → ``fail``: a prod boot with no vector backend is
+      a misconfiguration.
+    - **At least one configured backend reachable** → ``ok``, or ``warn`` when
+      another configured backend failed its probe (the boot proceeds on the
+      working one, but the operator still sees the broken sibling).
+    - **All configured backends unreachable** → ``fail`` (this is what makes a
+      sole configured-but-unreachable backend abort the boot).
+
+    Detection is env-only: the probe runs before the database — and therefore the
+    variable service — exists, so DB-stored credentials and per-KB
+    ``backend_config`` variable-name overrides are invisible here. A backend
+    provisioned only through the UI variable store must still keep its default
+    env var set (or keep pgVector configured) to be verified at boot.
+    """
+    from lfx.base.knowledge_bases.backends.postgres import read_connection_string_from_env
+
+    # (display name, CheckResult) for each backend that is configured via env.
+    results: list[tuple[str, CheckResult]] = []
+    if read_connection_string_from_env():
+        results.append(("pgVector", await probe_pgvector(settings_service)))
+    for name, probe in (("OpenSearch", probe_opensearch), ("Chroma Cloud", probe_chroma_cloud)):
+        result = await probe()
+        if result is not None:
+            results.append((name, result))
+
+    if not results:
+        return CheckResult(
+            "fail",
+            "no vector backend configured",
+            "Configure at least one vector backend before booting in prod: set "
+            "PGVECTOR_CONNECTION_STRING (pgVector), OPENSEARCH_URL (OpenSearch), or "
+            "CHROMA_API_KEY (Chroma Cloud).",
+        )
+
+    healthy = [name for name, result in results if result.status == "ok"]
+    unhealthy = [(name, result) for name, result in results if result.status != "ok"]
+
+    if not healthy:
+        # Every configured backend failed its probe — abort. Aggregate each
+        # backend's detail and de-duplicated remediation so the operator sees
+        # exactly which ones are broken and why.
+        detail = "; ".join(f"{name} ({result.detail})" for name, result in unhealthy)
+        remediation = " ".join(dict.fromkeys(result.remediation for _, result in unhealthy if result.remediation))
+        return CheckResult("fail", f"all configured vector backends are unreachable: {detail}", remediation)
+
+    if unhealthy:
+        # A working backend exists, so the boot may proceed, but surface the
+        # broken sibling(s) as a warning rather than hiding them.
+        broken = "; ".join(f"{name} unhealthy ({result.detail})" for name, result in unhealthy)
+        remediation = " ".join(dict.fromkeys(result.remediation for _, result in unhealthy if result.remediation))
+        return CheckResult("warn", f"{', '.join(healthy)} reachable; {broken}", remediation)
+
+    return CheckResult("ok", f"{', '.join(healthy)} reachable")
+
+
 # ---------------------------------------------------------------------------
 # Degraded checks (warn only)
 # ---------------------------------------------------------------------------
@@ -515,7 +743,7 @@ REQUIRED_CHECKS: list[PreflightCheck] = [
     PreflightCheck("database", "Database service", "required", probe_database),
     PreflightCheck("storage", "File storage", "required", probe_storage),
     PreflightCheck("secret_key", "Encryption secret key", "required", probe_secret_key),
-    PreflightCheck("pgvector", "Vector backend (pgVector)", "required", probe_pgvector),
+    PreflightCheck("vector_backend", "Vector backend", "required", probe_vector_backend),
 ]
 
 DEGRADED_CHECKS: list[PreflightCheck] = [
