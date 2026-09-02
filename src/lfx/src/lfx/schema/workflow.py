@@ -226,6 +226,20 @@ class WorkflowRunRequest(BaseModel):
             "values return 422 with the available list. Ignored when mode=sync."
         ),
     )
+    expose_graph_state: bool = Field(
+        default=True,
+        description=(
+            "Whether the stream may describe the flow's internal graph. When "
+            "``false``, the AG-UI stream omits ``STEP_STARTED``/``STEP_FINISHED`` "
+            "(whose step name is the component id) and the ``STATE_SNAPSHOT``/"
+            "``STATE_DELTA`` events that carry every component's status and output "
+            "payload, leaving only messages and tool calls. Set it ``false`` when "
+            "the stream is exposed to end users so the flow's topology and "
+            "intermediate outputs stay private. Defaults to ``true`` for backward "
+            "compatibility and because the Langflow canvas renders node status "
+            "from those events. Only the ``agui`` protocol honors it."
+        ),
+    )
     data: dict[str, Any] | None = Field(
         None,
         description=(
@@ -348,6 +362,20 @@ class PublicWorkflowRunRequest(BaseModel):
             "Wire protocol for streaming events. Defaults to ``langflow`` "
             "(raw EventManager payloads). ``agui`` emits AG-UI events. Unknown "
             "values return 422 with the available list."
+        ),
+    )
+    expose_graph_state: bool = Field(
+        default=True,
+        description=(
+            "Whether the stream may describe the flow's internal graph. When "
+            "``false``, the AG-UI stream omits ``STEP_STARTED``/``STEP_FINISHED`` "
+            "(whose step name is the component id) and the ``STATE_SNAPSHOT``/"
+            "``STATE_DELTA`` events that carry every component's status and output "
+            "payload, leaving only messages and tool calls. Set it ``false`` when "
+            "the stream is exposed to end users so the flow's topology and "
+            "intermediate outputs stay private. Defaults to ``true`` for backward "
+            "compatibility and because the Langflow canvas renders node status "
+            "from those events. Only the ``agui`` protocol honors it."
         ),
     )
     files: list[str] | None = Field(

@@ -279,6 +279,7 @@ async def _buffer_background_run(
             StreamAdapterContext(
                 run_id=parsed.run_id or job_id,
                 thread_id=parsed.session_id or str(flow.id),
+                expose_graph_state=parsed.expose_graph_state,
             ),
         )
     except UnknownStreamProtocolError:

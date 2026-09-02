@@ -232,6 +232,7 @@ async def execute_public_workflow(
         StreamAdapterContext(
             run_id=run_id,
             thread_id=scoped_session or str(virtual_flow_id),
+            expose_graph_state=request.expose_graph_state,
         ),
     )
 
@@ -250,6 +251,7 @@ async def execute_public_workflow(
         # opt-in preserves approved code without restoring owner credentials.
         data=sanitized_public_data,
         files=request.files,
+        expose_graph_state=request.expose_graph_state,
     )
 
     async def _frames_only() -> AsyncIterator[bytes]:
