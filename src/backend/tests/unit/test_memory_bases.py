@@ -2801,6 +2801,34 @@ class TestMemoriesAPIHandlers:
         assert "API key" in exc_info.value.detail
 
     @pytest.mark.asyncio
+    async def test_create_unusable_embedding_provider_returns_422(self, mock_user):
+        from fastapi import HTTPException
+        from langflow.api.v1.memories import create_memory_base
+        from langflow.services.memory_base.service import EmbeddingProviderValidationError
+
+        payload = MemoryBaseCreate(
+            name="mb",
+            flow_id=uuid.uuid4(),
+            user_id=mock_user.id,
+            kb_name="kb",
+            embedding_model="text-embedding-3-small",
+            embedding_provider="OpenAl",
+        )
+
+        svc = MagicMock()
+        svc.create = AsyncMock(
+            side_effect=EmbeddingProviderValidationError("Embedding provider 'OpenAl' is not available for embeddings.")
+        )
+        with (
+            patch("langflow.api.v1.memories.get_memory_base_service", return_value=svc),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await create_memory_base(current_user=mock_user, payload=payload)
+
+        assert exc_info.value.status_code == 422
+        assert "OpenAl" in exc_info.value.detail
+
+    @pytest.mark.asyncio
     async def test_update_missing_api_key_returns_403(self, mock_user):
         from fastapi import HTTPException
         from langflow.api.v1.memories import update_memory_base
