@@ -28,44 +28,262 @@
       "url": "https://learn.microsoft.com/en-us/graph/permissions-reference",
       "title": "Microsoft Graph permissions reference",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01"
+      "verified_on": "2026-09-01",
+      "notes": "Delegated AdminConsentRequired = No for Mail.Send, Mail.Read, Mail.ReadBasic, Calendars.Read, Calendars.ReadWrite, ChatMessage.Send, ChannelMessage.Send, Files.Read, Files.Read.All, Sites.Read.All, offline_access, User.Read. Application-permission variants of the mail, calendar, files, and sites permissions require admin consent; ChatMessage.Send and ChannelMessage.Send have no application variant."
+    },
+    "graph-throttling-limits": {
+      "url": "https://learn.microsoft.com/en-us/graph/throttling-limits",
+      "title": "Microsoft Graph throttling limits",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Global: 130,000 requests per 10 seconds per app across all tenants. Outlook: 10,000 requests per 10 minutes and 4 concurrent requests per app per mailbox, 150 MB upload per 5 minutes. Teams: POST /chats/{id}/messages 200 rps per app, 20 rps per app per tenant, 1 rps per chat, 1 rps per user; POST /teams/{id}/channels/{id}/messages 500 rps per app, 50 rps per app per tenant, 1 rps per channel, 1 rps per user; a sustained rate of about 83 percent of the listed value is also enforced. Files and lists defer to the SharePoint throttling page."
+    },
+    "sharepoint-throttling": {
+      "url": "https://learn.microsoft.com/en-us/sharepoint/dev/general-development/how-to-avoid-getting-throttled-or-blocked-in-sharepoint-online",
+      "title": "Avoid getting throttled or blocked in SharePoint Online",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "429 or 503 with Retry-After; resource-unit costs (1 single-item or download, 2 list children or writes, 5 permission operations); per-user 3,000 requests per 5 minutes; per-app-per-tenant RU limits by license band; no IETF RateLimit headers; User-Agent decoration NONISV|CompanyName|AppName/Version."
+    },
+    "exchange-online-limits": {
+      "url": "https://learn.microsoft.com/en-us/office365/servicedescriptions/exchange-online-service-description/exchange-online-limits",
+      "title": "Exchange Online limits",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Default maximum message size is 35 MB for sending and 36 MB for receiving; admins may configure 1 MB to 150 MB; messages routed outside Microsoft datacenters are capped at 112 MB after encoding."
     },
     "work-iq-mcp": {
       "url": "https://learn.microsoft.com/en-us/microsoft-agent-365/tooling-servers-overview",
-      "title": "Microsoft Agent 365: Work IQ MCP tooling servers overview (preview)",
+      "title": "Work IQ MCP overview (preview)",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01"
+      "verified_on": "2026-09-01",
+      "notes": "'This is a preview feature. Preview features aren't meant for production use.' 'You must have a Microsoft 365 Copilot license to use Work IQ MCP servers.' Tenant-scoped endpoint https://agent365.svc.cloud.microsoft/agents/tenants/{tenantId}/servers/mcp_MailTools; a customer enterprise app with WorkIQ-* permissions; admins allow or block servers in the Microsoft 365 admin center; servers for Mail, Calendar, Teams, SharePoint, OneDrive, User, Word."
+    },
+    "entra-auth-code-flow": {
+      "url": "https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow",
+      "title": "Microsoft identity platform: OAuth 2.0 authorization code flow",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "PKCE (code_challenge S256) recommended for all clients and required for single-page apps; public clients must not use secrets when redeeming codes; http://localhost is the recommended redirect for system-browser native apps; offline_access yields a refresh token; each refresh returns a new refresh token and the old one must be discarded; authority /common, /organizations, or /{tenant}; admin-restricted permissions return an error for non-admin users."
+    },
+    "entra-refresh-tokens": {
+      "url": "https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens",
+      "title": "Refresh tokens in the Microsoft identity platform",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Default lifetime 90 days (24 hours for SPAs and email OTP flows); refresh tokens replace themselves on every use; revocation table by credential change, user action, and admin action; B2B users must be revoked in the home tenant."
+    },
+    "entra-reply-url": {
+      "url": "https://learn.microsoft.com/en-us/entra/identity-platform/reply-url",
+      "title": "Redirect URI (reply URL) best practices and limitations",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "https required except localhost; the port is ignored when matching localhost redirects; IPv6 loopback [::1] unsupported; Microsoft recommends 127.0.0.1 over localhost but an http loopback URI must be added through the application manifest; at most 256 redirect URIs of 256 characters each."
+    },
+    "entra-user-consent": {
+      "url": "https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent",
+      "title": "Configure how users consent to applications",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "'By default, all users are allowed to consent to applications for permissions that don't require administrator consent.' Recommended policy: allow user consent only for verified publishers and low-impact permissions; admin consent workflow lets users request approval."
+    },
+    "entra-publisher-verification": {
+      "url": "https://learn.microsoft.com/en-us/entra/identity-platform/publisher-verification-overview",
+      "title": "Publisher verification overview",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Requires a verified Microsoft AI Cloud Partner Program account (Partner One ID) associated with the app's tenant and a matching publisher domain; free; 'Beginning November 2020, if risk-based step-up consent is enabled, users can't consent to most newly registered multitenant apps that aren't publisher verified' when the app requests permissions beyond basic sign-in from users in other tenants."
+    },
+    "graph-user-sendmail": {
+      "url": "https://learn.microsoft.com/en-us/graph/api/user-sendmail",
+      "title": "Microsoft Graph: user: sendMail",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "POST /me/sendMail; least privileged Mail.Send for delegated (work or school and personal) and application; JSON body {message{subject, body{contentType, content}, toRecipients, ccRecipients, bccRecipients, attachments}, saveToSentItems} or base64 MIME; 202 Accepted with empty body; delivery subject to Exchange Online limits."
+    },
+    "graph-user-list-messages": {
+      "url": "https://learn.microsoft.com/en-us/graph/api/user-list-messages",
+      "title": "Microsoft Graph: List messages",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "GET /me/messages and /me/mailFolders/{id}/messages; least privileged Mail.ReadBasic (excludes body, previewBody, attachments), higher Mail.Read or Mail.ReadWrite; supports OData query parameters; $top 1 to 1000 with default 10; $orderby properties must also appear in $filter; bodies returned as HTML unless Prefer: outlook.body-content-type=text."
+    },
+    "graph-user-list-calendarview": {
+      "url": "https://learn.microsoft.com/en-us/graph/api/user-list-calendarview",
+      "title": "Microsoft Graph: List calendarView",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "GET /me/calendarView?startDateTime=...&endDateTime=... (also per calendar); least privileged Calendars.ReadBasic, higher Calendars.Read or Calendars.ReadWrite; expands recurring events into instances; Prefer: outlook.timezone header; startDateTime and endDateTime are required ISO 8601 values."
+    },
+    "graph-user-post-events": {
+      "url": "https://learn.microsoft.com/en-us/graph/api/user-post-events",
+      "title": "Microsoft Graph: Create event",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "POST /me/events or /me/calendars/{id}/events; Calendars.ReadWrite for delegated and application; body is an event resource (subject, body, start and end dateTimeTimeZone, location, attendees, isOnlineMeeting, recurrence); Prefer: outlook.timezone; transactionId to make retries idempotent; 201 Created."
+    },
+    "graph-chat-post-messages": {
+      "url": "https://learn.microsoft.com/en-us/graph/api/chat-post-messages",
+      "title": "Microsoft Graph: Send message in a chat",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "POST /chats/{chat-id}/messages; delegated least privileged ChatMessage.Send, higher Chat.ReadWrite; personal Microsoft accounts not supported; application permission only Teamwork.Migrate.All for migration; 201 Created; 'It's a violation of the terms of use to use Microsoft Teams as a log file.'"
+    },
+    "graph-channel-post-messages": {
+      "url": "https://learn.microsoft.com/en-us/graph/api/channel-post-messages",
+      "title": "Microsoft Graph: Send chatMessage in a channel",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "POST /teams/{team-id}/channels/{channel-id}/messages; delegated least privileged ChannelMessage.Send; personal accounts not supported; application permissions only for migration; only body is mandatory; 201 Created."
+    },
+    "graph-driveitem-list-children": {
+      "url": "https://learn.microsoft.com/en-us/graph/api/driveitem-list-children",
+      "title": "Microsoft Graph: List children of a driveItem",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "GET /me/drive/root/children, /drives/{drive-id}/items/{item-id}/children, /sites/{site-id}/drive/items/{item-id}/children; least privileged Files.Read, higher Files.ReadWrite, Files.Read.All, Files.ReadWrite.All, Sites.Read.All, Sites.ReadWrite.All; $expand, $select, $skipToken, $top, $orderby; default page 200 with @odata.nextLink."
+    },
+    "graph-driveitem-get-content": {
+      "url": "https://learn.microsoft.com/en-us/graph/api/driveitem-get-content",
+      "title": "Microsoft Graph: Download driveItem content",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "GET /me/drive/items/{item-id}/content and drives/sites/groups forms; least privileged Files.Read; returns 302 to a preauthenticated @microsoft.graph.downloadUrl valid for minutes and requiring no Authorization header; Range header for partial downloads."
     }
   },
-  "verification_programs": {},
+  "verification_programs": {
+    "entra-publisher-verification": {
+      "description": "Publisher verification of the Langflow-owned multitenant Entra application via a verified Microsoft AI Cloud Partner Program account and matching publisher domain. Without it, users in customer tenants that keep the default risk-based step-up consent cannot consent to the hosted app. Free; minutes once the partner account is verified.",
+      "source": "entra-publisher-verification",
+      "blocking_for_contexts": [
+        "hosted"
+      ]
+    },
+    "m365-copilot-license": {
+      "description": "A Microsoft 365 Copilot license per tenant is required to use the Work IQ MCP servers, which are also preview and not meant for production. Blocks every context while the servers stay pre-GA and license-gated; only relevant if a Microsoft action chooses the MCP substrate.",
+      "source": "work-iq-mcp",
+      "blocking_for_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ]
+    }
+  },
   "actions": [
     {
       "action_id": "microsoft.outlook.send",
       "display_name": "Outlook: Send Mail",
       "component_class": "OutlookSendComponent",
       "decision": "defer",
-      "rationale": "Highest-demand write action on Graph delegated permissions.",
-      "confidence": "low",
-      "open_questions": [
-        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
-      ],
-      "identity": "user_delegated",
+      "confidence": "high",
+      "rationale": "Highest-demand write action; single delegated permission with no admin consent. Expected to flip to include in Phase 4.",
+      "schema": {
+        "inputs": [
+          {
+            "name": "to",
+            "type": "list[str]",
+            "required": true
+          },
+          {
+            "name": "cc",
+            "type": "list[str]",
+            "required": false
+          },
+          {
+            "name": "bcc",
+            "type": "list[str]",
+            "required": false
+          },
+          {
+            "name": "subject",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "body",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "body_is_html",
+            "type": "bool",
+            "required": false
+          },
+          {
+            "name": "attachments",
+            "type": "list[File]",
+            "required": false,
+            "description": "fileAttachment entries"
+          },
+          {
+            "name": "save_to_sent_items",
+            "type": "bool",
+            "required": false
+          }
+        ],
+        "outputs": [
+          {
+            "name": "result",
+            "type": "Data",
+            "required": true,
+            "description": "202 Accepted; no body, so the output carries the request echo and status"
+          }
+        ],
+        "source": "graph-user-sendmail"
+      },
       "auth_mode": "oauth2_authorization_code",
-      "substrate": "rest",
-      "substrate_ga_status": "ga",
+      "identity": "user_delegated",
+      "identity_notes": "Sends as the signed-in user (/me/sendMail). Sending as another mailbox needs the Mail.Send application permission with admin consent, excluded from wave 1.",
+      "scopes": [
+        {
+          "scope": "Mail.Send",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference",
+          "notes": "'Send mail as a user'; application variant requires admin consent and is excluded."
+        },
+        {
+          "scope": "offline_access",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference",
+          "notes": "Required to receive a refresh token."
+        }
+      ],
+      "consent": "user",
+      "consent_notes": "User consent on the Entra consent prompt. By default all users may consent to permissions that do not require admin consent; tenants may restrict user consent to verified publishers and low-impact permissions, or disable it and route requests through the admin consent workflow. A multitenant app registered after November 2020 that is not publisher verified cannot be consented to by users in other tenants when risk-based step-up consent is enabled.",
+      "consent_source": "entra-user-consent",
+      "reach": {
+        "resource": "The signed-in user's mailbox; any recipient; message size default 35 MB, configurable up to 150 MB by the tenant.",
+        "tenant": "Single user.",
+        "source": "exchange-online-limits"
+      },
       "deployment_contexts": {
         "hosted": "server_redirect",
         "self_managed": "server_redirect",
         "desktop": "loopback_redirect",
         "headless": "manual_token"
       },
-      "scopes": [
-        {
-          "scope": "Mail.Send",
-          "classification": "non_sensitive",
-          "provider_classification": "Delegated; admin consent required: No (to verify)",
-          "source": "graph-permissions-reference"
-        }
+      "refresh": {
+        "behavior": "Request offline_access to receive a refresh token; the default refresh-token lifetime is 90 days (24 hours for single-page apps), and every refresh returns a new refresh token that must replace the old one. Refresh tokens are revoked when the user or an admin revokes all refresh tokens, when an admin resets the password from the Entra or M365 admin center, and for password-based public-client tokens when the user changes their password; confidential-client tokens survive a user password change. Access tokens are short-lived (expires_in is 3599 seconds in the reference example).",
+        "source": "entra-refresh-tokens"
+      },
+      "revocation": {
+        "behavior": "There is no RFC 7009 revoke endpoint; revocation happens server-side when the user revokes their refresh tokens, an admin revokes all refresh tokens for the user, or a credential change matches the revocation table. Langflow deletes its stored refresh token on disconnect and the next refresh attempt fails with an interaction_required or invalid_grant error.",
+        "source": "entra-refresh-tokens"
+      },
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "Microsoft Graph v1.0 REST (GA) via msgraph-sdk or httpx. Work IQ Mail MCP is preview, not for production, and needs a Copilot license.",
+      "substrate_source": "graph-user-sendmail",
+      "rate_limit": {
+        "summary": "Outlook service: 10,000 requests per 10-minute period and four concurrent requests per app per mailbox; 150 MB of uploads (PATCH, POST, PUT) per 5 minutes; global Graph limit 130,000 requests per 10 seconds per app across all tenants; 429 with Retry-After.",
+        "source": "graph-throttling-limits",
+        "confidence": "high"
+      },
+      "verification_dependencies": [
+        "entra-publisher-verification"
       ]
     },
     {
@@ -73,29 +291,121 @@
       "display_name": "Outlook: Search Mail",
       "component_class": "OutlookSearchComponent",
       "decision": "defer",
-      "rationale": "Read action; Mail.ReadBasic may be a narrower alternative.",
-      "confidence": "low",
+      "confidence": "medium",
       "open_questions": [
-        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed.",
-        "Does Mail.ReadBasic support $search, or is Mail.Read required?"
+        "Does $search work under Mail.ReadBasic, or does a search-with-bodies action need Mail.Read? The List messages page lists ReadBasic as least privileged but excludes body and attachments from it."
       ],
-      "identity": "user_delegated",
+      "rationale": "Read action on delegated mail permissions without admin consent; the only question is which of Mail.ReadBasic or Mail.Read the component requests.",
+      "schema": {
+        "inputs": [
+          {
+            "name": "search",
+            "type": "str",
+            "required": false,
+            "description": "$search expression"
+          },
+          {
+            "name": "filter",
+            "type": "str",
+            "required": false,
+            "description": "$filter expression"
+          },
+          {
+            "name": "folder_id",
+            "type": "str",
+            "required": false,
+            "description": "mailFolders/{id} scope"
+          },
+          {
+            "name": "top",
+            "type": "int",
+            "required": false,
+            "description": "1 to 1000, default 10"
+          },
+          {
+            "name": "select",
+            "type": "list[str]",
+            "required": false
+          },
+          {
+            "name": "include_body",
+            "type": "bool",
+            "required": false,
+            "description": "Requires Mail.Read"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "messages",
+            "type": "list[Data]",
+            "required": true
+          },
+          {
+            "name": "next_link",
+            "type": "str",
+            "required": false
+          }
+        ],
+        "source": "graph-user-list-messages"
+      },
       "auth_mode": "oauth2_authorization_code",
-      "substrate": "rest",
-      "substrate_ga_status": "ga",
+      "identity": "user_delegated",
+      "identity_notes": "Reads the signed-in user's mailbox and folders shared with that user.",
+      "scopes": [
+        {
+          "scope": "Mail.ReadBasic",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference",
+          "notes": "'Read user basic mail': excludes body, previewBody, attachments, extended properties."
+        },
+        {
+          "scope": "Mail.Read",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference",
+          "notes": "'Read user mail': full message including body."
+        },
+        {
+          "scope": "offline_access",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference"
+        }
+      ],
+      "consent": "user",
+      "consent_notes": "User consent on the Entra consent prompt. By default all users may consent to permissions that do not require admin consent; tenants may restrict user consent to verified publishers and low-impact permissions, or disable it and route requests through the admin consent workflow. A multitenant app registered after November 2020 that is not publisher verified cannot be consented to by users in other tenants when risk-based step-up consent is enabled.",
+      "consent_source": "entra-user-consent",
+      "reach": {
+        "resource": "Every message in the signed-in user's mailbox including Deleted Items and Clutter; bodies when Mail.Read is granted.",
+        "tenant": "Single user; shared folders only where another user delegated access.",
+        "source": "graph-user-list-messages"
+      },
       "deployment_contexts": {
         "hosted": "server_redirect",
         "self_managed": "server_redirect",
         "desktop": "loopback_redirect",
         "headless": "manual_token"
       },
-      "scopes": [
-        {
-          "scope": "Mail.Read",
-          "classification": "non_sensitive",
-          "provider_classification": "Delegated; admin consent required: No (to verify)",
-          "source": "graph-permissions-reference"
-        }
+      "refresh": {
+        "behavior": "Request offline_access to receive a refresh token; the default refresh-token lifetime is 90 days (24 hours for single-page apps), and every refresh returns a new refresh token that must replace the old one. Refresh tokens are revoked when the user or an admin revokes all refresh tokens, when an admin resets the password from the Entra or M365 admin center, and for password-based public-client tokens when the user changes their password; confidential-client tokens survive a user password change. Access tokens are short-lived (expires_in is 3599 seconds in the reference example).",
+        "source": "entra-refresh-tokens"
+      },
+      "revocation": {
+        "behavior": "There is no RFC 7009 revoke endpoint; revocation happens server-side when the user revokes their refresh tokens, an admin revokes all refresh tokens for the user, or a credential change matches the revocation table. Langflow deletes its stored refresh token on disconnect and the next refresh attempt fails with an interaction_required or invalid_grant error.",
+        "source": "entra-refresh-tokens"
+      },
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "Microsoft Graph v1.0 REST (GA).",
+      "substrate_source": "graph-user-list-messages",
+      "rate_limit": {
+        "summary": "Outlook service: 10,000 requests per 10-minute period and four concurrent requests per app per mailbox; 150 MB of uploads (PATCH, POST, PUT) per 5 minutes; global Graph limit 130,000 requests per 10 seconds per app across all tenants; 429 with Retry-After.",
+        "source": "graph-throttling-limits",
+        "confidence": "high"
+      },
+      "verification_dependencies": [
+        "entra-publisher-verification"
       ]
     },
     {
@@ -103,28 +413,112 @@
       "display_name": "Outlook Calendar: List Events",
       "component_class": "OutlookCalendarListComponent",
       "decision": "defer",
-      "rationale": "Read action on delegated calendar permission.",
-      "confidence": "low",
+      "confidence": "medium",
       "open_questions": [
-        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
+        "Calendars.ReadBasic is the least-privileged permission for calendarView; confirm whether wave 1 needs body and attendee detail (Calendars.Read) or can ship on ReadBasic."
       ],
-      "identity": "user_delegated",
+      "rationale": "Read action on a delegated calendar permission without admin consent. Expected to flip to include in Phase 4.",
+      "schema": {
+        "inputs": [
+          {
+            "name": "start",
+            "type": "datetime",
+            "required": true
+          },
+          {
+            "name": "end",
+            "type": "datetime",
+            "required": true
+          },
+          {
+            "name": "calendar_id",
+            "type": "str",
+            "required": false,
+            "description": "Default calendar when omitted"
+          },
+          {
+            "name": "top",
+            "type": "int",
+            "required": false
+          },
+          {
+            "name": "select",
+            "type": "list[str]",
+            "required": false
+          },
+          {
+            "name": "time_zone",
+            "type": "str",
+            "required": false,
+            "description": "Prefer: outlook.timezone"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "events",
+            "type": "list[Data]",
+            "required": true,
+            "description": "Recurring events expanded into instances"
+          },
+          {
+            "name": "next_link",
+            "type": "str",
+            "required": false
+          }
+        ],
+        "source": "graph-user-list-calendarview"
+      },
       "auth_mode": "oauth2_authorization_code",
-      "substrate": "rest",
-      "substrate_ga_status": "ga",
+      "identity": "user_delegated",
+      "identity_notes": "Reads calendars of the signed-in user.",
+      "scopes": [
+        {
+          "scope": "Calendars.Read",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference",
+          "notes": "'Read user calendars'; Calendars.ReadBasic is the narrower least-privileged option for calendarView."
+        },
+        {
+          "scope": "offline_access",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference"
+        }
+      ],
+      "consent": "user",
+      "consent_notes": "User consent on the Entra consent prompt. By default all users may consent to permissions that do not require admin consent; tenants may restrict user consent to verified publishers and low-impact permissions, or disable it and route requests through the admin consent workflow. A multitenant app registered after November 2020 that is not publisher verified cannot be consented to by users in other tenants when risk-based step-up consent is enabled.",
+      "consent_source": "entra-user-consent",
+      "reach": {
+        "resource": "Events in the signed-in user's calendars within the requested window.",
+        "tenant": "Single user.",
+        "source": "graph-user-list-calendarview"
+      },
       "deployment_contexts": {
         "hosted": "server_redirect",
         "self_managed": "server_redirect",
         "desktop": "loopback_redirect",
         "headless": "manual_token"
       },
-      "scopes": [
-        {
-          "scope": "Calendars.Read",
-          "classification": "non_sensitive",
-          "provider_classification": "Delegated; admin consent required: No (to verify)",
-          "source": "graph-permissions-reference"
-        }
+      "refresh": {
+        "behavior": "Request offline_access to receive a refresh token; the default refresh-token lifetime is 90 days (24 hours for single-page apps), and every refresh returns a new refresh token that must replace the old one. Refresh tokens are revoked when the user or an admin revokes all refresh tokens, when an admin resets the password from the Entra or M365 admin center, and for password-based public-client tokens when the user changes their password; confidential-client tokens survive a user password change. Access tokens are short-lived (expires_in is 3599 seconds in the reference example).",
+        "source": "entra-refresh-tokens"
+      },
+      "revocation": {
+        "behavior": "There is no RFC 7009 revoke endpoint; revocation happens server-side when the user revokes their refresh tokens, an admin revokes all refresh tokens for the user, or a credential change matches the revocation table. Langflow deletes its stored refresh token on disconnect and the next refresh attempt fails with an interaction_required or invalid_grant error.",
+        "source": "entra-refresh-tokens"
+      },
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "Microsoft Graph v1.0 REST (GA).",
+      "substrate_source": "graph-user-list-calendarview",
+      "rate_limit": {
+        "summary": "Outlook service: 10,000 requests per 10-minute period and four concurrent requests per app per mailbox; 150 MB of uploads (PATCH, POST, PUT) per 5 minutes; global Graph limit 130,000 requests per 10 seconds per app across all tenants; 429 with Retry-After.",
+        "source": "graph-throttling-limits",
+        "confidence": "high"
+      },
+      "verification_dependencies": [
+        "entra-publisher-verification"
       ]
     },
     {
@@ -132,28 +526,129 @@
       "display_name": "Outlook Calendar: Create Event",
       "component_class": "OutlookCalendarCreateComponent",
       "decision": "defer",
-      "rationale": "Write action on delegated calendar permission.",
-      "confidence": "low",
-      "open_questions": [
-        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
-      ],
-      "identity": "user_delegated",
+      "confidence": "high",
+      "rationale": "Write action on a delegated calendar permission without admin consent. Expected to flip to include in Phase 4.",
+      "schema": {
+        "inputs": [
+          {
+            "name": "subject",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "start",
+            "type": "datetime",
+            "required": true
+          },
+          {
+            "name": "end",
+            "type": "datetime",
+            "required": true
+          },
+          {
+            "name": "time_zone",
+            "type": "str",
+            "required": false,
+            "description": "dateTimeTimeZone.timeZone"
+          },
+          {
+            "name": "body",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "location",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "attendees",
+            "type": "list[str]",
+            "required": false
+          },
+          {
+            "name": "is_online_meeting",
+            "type": "bool",
+            "required": false
+          },
+          {
+            "name": "recurrence",
+            "type": "Data",
+            "required": false
+          },
+          {
+            "name": "calendar_id",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "transaction_id",
+            "type": "str",
+            "required": false,
+            "description": "Idempotent retries"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "event",
+            "type": "Data",
+            "required": true,
+            "description": "201 Created event resource"
+          }
+        ],
+        "source": "graph-user-post-events"
+      },
       "auth_mode": "oauth2_authorization_code",
-      "substrate": "rest",
-      "substrate_ga_status": "ga",
+      "identity": "user_delegated",
+      "identity_notes": "Creates the event as the signed-in user; invitations go out from that user.",
+      "scopes": [
+        {
+          "scope": "Calendars.ReadWrite",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference",
+          "notes": "'Have full access to user calendars'."
+        },
+        {
+          "scope": "offline_access",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference"
+        }
+      ],
+      "consent": "user",
+      "consent_notes": "User consent on the Entra consent prompt. By default all users may consent to permissions that do not require admin consent; tenants may restrict user consent to verified publishers and low-impact permissions, or disable it and route requests through the admin consent workflow. A multitenant app registered after November 2020 that is not publisher verified cannot be consented to by users in other tenants when risk-based step-up consent is enabled.",
+      "consent_source": "entra-user-consent",
+      "reach": {
+        "resource": "Creates events in the signed-in user's calendars; may invite any attendee.",
+        "tenant": "Single user.",
+        "source": "graph-user-post-events"
+      },
       "deployment_contexts": {
         "hosted": "server_redirect",
         "self_managed": "server_redirect",
         "desktop": "loopback_redirect",
         "headless": "manual_token"
       },
-      "scopes": [
-        {
-          "scope": "Calendars.ReadWrite",
-          "classification": "non_sensitive",
-          "provider_classification": "Delegated; admin consent required: No (to verify)",
-          "source": "graph-permissions-reference"
-        }
+      "refresh": {
+        "behavior": "Request offline_access to receive a refresh token; the default refresh-token lifetime is 90 days (24 hours for single-page apps), and every refresh returns a new refresh token that must replace the old one. Refresh tokens are revoked when the user or an admin revokes all refresh tokens, when an admin resets the password from the Entra or M365 admin center, and for password-based public-client tokens when the user changes their password; confidential-client tokens survive a user password change. Access tokens are short-lived (expires_in is 3599 seconds in the reference example).",
+        "source": "entra-refresh-tokens"
+      },
+      "revocation": {
+        "behavior": "There is no RFC 7009 revoke endpoint; revocation happens server-side when the user revokes their refresh tokens, an admin revokes all refresh tokens for the user, or a credential change matches the revocation table. Langflow deletes its stored refresh token on disconnect and the next refresh attempt fails with an interaction_required or invalid_grant error.",
+        "source": "entra-refresh-tokens"
+      },
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "Microsoft Graph v1.0 REST (GA).",
+      "substrate_source": "graph-user-post-events",
+      "rate_limit": {
+        "summary": "Outlook service: 10,000 requests per 10-minute period and four concurrent requests per app per mailbox; 150 MB of uploads (PATCH, POST, PUT) per 5 minutes; global Graph limit 130,000 requests per 10 seconds per app across all tenants; 429 with Retry-After.",
+        "source": "graph-throttling-limits",
+        "confidence": "high"
+      },
+      "verification_dependencies": [
+        "entra-publisher-verification"
       ]
     },
     {
@@ -161,28 +656,98 @@
       "display_name": "Teams: Post Chat Message",
       "component_class": "TeamsChatPostComponent",
       "decision": "defer",
-      "rationale": "Sends as the connected user into a 1:1 or group chat.",
-      "confidence": "low",
-      "open_questions": [
-        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
-      ],
-      "identity": "user_delegated",
+      "confidence": "high",
+      "rationale": "Posts as the signed-in user into an existing 1:1 or group chat. Only a delegated permission exists (application permission is migration-only), which matches the user-delegated default.",
+      "schema": {
+        "inputs": [
+          {
+            "name": "chat_id",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "content",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "content_type",
+            "type": "str",
+            "required": false,
+            "description": "text or html"
+          },
+          {
+            "name": "mentions",
+            "type": "list[Data]",
+            "required": false
+          },
+          {
+            "name": "attachments",
+            "type": "list[Data]",
+            "required": false
+          }
+        ],
+        "outputs": [
+          {
+            "name": "message",
+            "type": "Data",
+            "required": true,
+            "description": "201 Created chatMessage"
+          }
+        ],
+        "source": "graph-chat-post-messages"
+      },
       "auth_mode": "oauth2_authorization_code",
-      "substrate": "rest",
-      "substrate_ga_status": "ga",
+      "identity": "user_delegated",
+      "identity_notes": "Message appears from the signed-in user; personal Microsoft accounts are not supported; cannot create a chat, only post into one.",
+      "scopes": [
+        {
+          "scope": "ChatMessage.Send",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference",
+          "notes": "'Send user chat messages'; no application variant."
+        },
+        {
+          "scope": "offline_access",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference"
+        }
+      ],
+      "consent": "user",
+      "consent_notes": "User consent on the Entra consent prompt. By default all users may consent to permissions that do not require admin consent; tenants may restrict user consent to verified publishers and low-impact permissions, or disable it and route requests through the admin consent workflow. A multitenant app registered after November 2020 that is not publisher verified cannot be consented to by users in other tenants when risk-based step-up consent is enabled.",
+      "consent_source": "entra-user-consent",
+      "reach": {
+        "resource": "Chats the signed-in user is a member of.",
+        "tenant": "Single user; the user's tenant and any tenant the chat spans.",
+        "source": "graph-chat-post-messages"
+      },
       "deployment_contexts": {
         "hosted": "server_redirect",
         "self_managed": "server_redirect",
         "desktop": "loopback_redirect",
         "headless": "manual_token"
       },
-      "scopes": [
-        {
-          "scope": "ChatMessage.Send",
-          "classification": "non_sensitive",
-          "provider_classification": "Delegated; admin consent required: No (to verify)",
-          "source": "graph-permissions-reference"
-        }
+      "refresh": {
+        "behavior": "Request offline_access to receive a refresh token; the default refresh-token lifetime is 90 days (24 hours for single-page apps), and every refresh returns a new refresh token that must replace the old one. Refresh tokens are revoked when the user or an admin revokes all refresh tokens, when an admin resets the password from the Entra or M365 admin center, and for password-based public-client tokens when the user changes their password; confidential-client tokens survive a user password change. Access tokens are short-lived (expires_in is 3599 seconds in the reference example).",
+        "source": "entra-refresh-tokens"
+      },
+      "revocation": {
+        "behavior": "There is no RFC 7009 revoke endpoint; revocation happens server-side when the user revokes their refresh tokens, an admin revokes all refresh tokens for the user, or a credential change matches the revocation table. Langflow deletes its stored refresh token on disconnect and the next refresh attempt fails with an interaction_required or invalid_grant error.",
+        "source": "entra-refresh-tokens"
+      },
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "Microsoft Graph v1.0 REST (GA). Work IQ Teams MCP is preview and license-gated.",
+      "substrate_source": "graph-chat-post-messages",
+      "rate_limit": {
+        "summary": "POST /chats/{chat-id}/messages: 200 rps per app across tenants, 20 rps per app per tenant, 1 rps per chat, 1 rps per user; sustained traffic above about 83 percent of the limit is also throttled.",
+        "source": "graph-throttling-limits",
+        "confidence": "high"
+      },
+      "verification_dependencies": [
+        "entra-publisher-verification"
       ]
     },
     {
@@ -190,29 +755,103 @@
       "display_name": "Teams: Post Channel Message",
       "component_class": "TeamsChannelPostComponent",
       "decision": "defer",
-      "rationale": "Sends as the connected user into a team channel.",
-      "confidence": "low",
-      "open_questions": [
-        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed.",
-        "Confirm ChannelMessage.Send delegated does not require admin consent in a default tenant."
-      ],
-      "identity": "user_delegated",
+      "confidence": "high",
+      "rationale": "Posts as the signed-in user into a team channel; delegated-only permission. Candidate to merge with chat_post into one component with two outputs if the include set must shrink.",
+      "schema": {
+        "inputs": [
+          {
+            "name": "team_id",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "channel_id",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "content",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "content_type",
+            "type": "str",
+            "required": false,
+            "description": "text or html"
+          },
+          {
+            "name": "mentions",
+            "type": "list[Data]",
+            "required": false
+          },
+          {
+            "name": "attachments",
+            "type": "list[Data]",
+            "required": false
+          }
+        ],
+        "outputs": [
+          {
+            "name": "message",
+            "type": "Data",
+            "required": true,
+            "description": "201 Created chatMessage with webUrl"
+          }
+        ],
+        "source": "graph-channel-post-messages"
+      },
       "auth_mode": "oauth2_authorization_code",
-      "substrate": "rest",
-      "substrate_ga_status": "ga",
+      "identity": "user_delegated",
+      "identity_notes": "Message appears from the signed-in user; personal Microsoft accounts are not supported.",
+      "scopes": [
+        {
+          "scope": "ChannelMessage.Send",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference",
+          "notes": "'Send channel messages'; no application variant outside migration."
+        },
+        {
+          "scope": "offline_access",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference"
+        }
+      ],
+      "consent": "user",
+      "consent_notes": "User consent on the Entra consent prompt. By default all users may consent to permissions that do not require admin consent; tenants may restrict user consent to verified publishers and low-impact permissions, or disable it and route requests through the admin consent workflow. A multitenant app registered after November 2020 that is not publisher verified cannot be consented to by users in other tenants when risk-based step-up consent is enabled.",
+      "consent_source": "entra-user-consent",
+      "reach": {
+        "resource": "Channels of teams the signed-in user belongs to.",
+        "tenant": "Single user.",
+        "source": "graph-channel-post-messages"
+      },
       "deployment_contexts": {
         "hosted": "server_redirect",
         "self_managed": "server_redirect",
         "desktop": "loopback_redirect",
         "headless": "manual_token"
       },
-      "scopes": [
-        {
-          "scope": "ChannelMessage.Send",
-          "classification": "non_sensitive",
-          "provider_classification": "Delegated; admin consent required: No (to verify)",
-          "source": "graph-permissions-reference"
-        }
+      "refresh": {
+        "behavior": "Request offline_access to receive a refresh token; the default refresh-token lifetime is 90 days (24 hours for single-page apps), and every refresh returns a new refresh token that must replace the old one. Refresh tokens are revoked when the user or an admin revokes all refresh tokens, when an admin resets the password from the Entra or M365 admin center, and for password-based public-client tokens when the user changes their password; confidential-client tokens survive a user password change. Access tokens are short-lived (expires_in is 3599 seconds in the reference example).",
+        "source": "entra-refresh-tokens"
+      },
+      "revocation": {
+        "behavior": "There is no RFC 7009 revoke endpoint; revocation happens server-side when the user revokes their refresh tokens, an admin revokes all refresh tokens for the user, or a credential change matches the revocation table. Langflow deletes its stored refresh token on disconnect and the next refresh attempt fails with an interaction_required or invalid_grant error.",
+        "source": "entra-refresh-tokens"
+      },
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "Microsoft Graph v1.0 REST (GA).",
+      "substrate_source": "graph-channel-post-messages",
+      "rate_limit": {
+        "summary": "POST /teams/{team-id}/channels/{channel-id}/messages: 500 rps per app across tenants, 50 rps per app per tenant, 1 rps per channel, 1 rps per user.",
+        "source": "graph-throttling-limits",
+        "confidence": "high"
+      },
+      "verification_dependencies": [
+        "entra-publisher-verification"
       ]
     },
     {
@@ -220,35 +859,133 @@
       "display_name": "SharePoint/OneDrive: List Items",
       "component_class": "SharePointListComponent",
       "decision": "defer",
-      "rationale": "Lists drive items the connected user can reach; Sites.Read.All widens to SharePoint sites.",
-      "confidence": "low",
+      "confidence": "medium",
       "open_questions": [
-        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed.",
-        "Is Files.Read (own OneDrive only) sufficient for wave 1, or is Sites.Read.All needed for SharePoint libraries?"
+        "Files.Read covers the user's own OneDrive; listing SharePoint document libraries needs Files.Read.All or Sites.Read.All. Decide in Phase 4 whether wave 1 requests the wider permission by default or only when a site is given."
       ],
-      "identity": "user_delegated",
+      "rationale": "Lists drive items the signed-in user can reach; all candidate permissions are delegated without admin consent, so the choice is about reach, not consent.",
+      "schema": {
+        "inputs": [
+          {
+            "name": "drive_id",
+            "type": "str",
+            "required": false,
+            "description": "Default: the user's OneDrive"
+          },
+          {
+            "name": "site_id",
+            "type": "str",
+            "required": false,
+            "description": "SharePoint site drive"
+          },
+          {
+            "name": "item_id",
+            "type": "str",
+            "required": false,
+            "description": "Default: root"
+          },
+          {
+            "name": "path",
+            "type": "str",
+            "required": false,
+            "description": "Path relative to root"
+          },
+          {
+            "name": "top",
+            "type": "int",
+            "required": false
+          },
+          {
+            "name": "select",
+            "type": "list[str]",
+            "required": false
+          },
+          {
+            "name": "order_by",
+            "type": "str",
+            "required": false
+          }
+        ],
+        "outputs": [
+          {
+            "name": "items",
+            "type": "list[Data]",
+            "required": true,
+            "description": "driveItem resources"
+          },
+          {
+            "name": "next_link",
+            "type": "str",
+            "required": false
+          }
+        ],
+        "source": "graph-driveitem-list-children"
+      },
       "auth_mode": "oauth2_authorization_code",
-      "substrate": "rest",
-      "substrate_ga_status": "ga",
+      "identity": "user_delegated",
+      "identity_notes": "Reads what the signed-in user can access.",
+      "scopes": [
+        {
+          "scope": "Files.Read",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference",
+          "notes": "'Read user files': the user's own OneDrive; least privileged for list children."
+        },
+        {
+          "scope": "Files.Read.All",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference",
+          "notes": "'Read all files that user can access', including SharePoint libraries."
+        },
+        {
+          "scope": "Sites.Read.All",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference",
+          "notes": "'Read items in all site collections' on behalf of the user; needed for /sites/{site-id}/drive."
+        },
+        {
+          "scope": "offline_access",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference"
+        }
+      ],
+      "consent": "user",
+      "consent_notes": "User consent on the Entra consent prompt. By default all users may consent to permissions that do not require admin consent; tenants may restrict user consent to verified publishers and low-impact permissions, or disable it and route requests through the admin consent workflow. A multitenant app registered after November 2020 that is not publisher verified cannot be consented to by users in other tenants when risk-based step-up consent is enabled.",
+      "consent_source": "entra-user-consent",
+      "reach": {
+        "resource": "Folder listings in the user's OneDrive (Files.Read) or any drive and site the user can access (Files.Read.All, Sites.Read.All).",
+        "tenant": "Single user's effective permissions.",
+        "source": "graph-driveitem-list-children"
+      },
       "deployment_contexts": {
         "hosted": "server_redirect",
         "self_managed": "server_redirect",
         "desktop": "loopback_redirect",
         "headless": "manual_token"
       },
-      "scopes": [
-        {
-          "scope": "Files.Read.All",
-          "classification": "non_sensitive",
-          "provider_classification": "Delegated; admin consent required: No (to verify)",
-          "source": "graph-permissions-reference"
-        },
-        {
-          "scope": "Sites.Read.All",
-          "classification": "non_sensitive",
-          "provider_classification": "Delegated; admin consent required: No (to verify)",
-          "source": "graph-permissions-reference"
-        }
+      "refresh": {
+        "behavior": "Request offline_access to receive a refresh token; the default refresh-token lifetime is 90 days (24 hours for single-page apps), and every refresh returns a new refresh token that must replace the old one. Refresh tokens are revoked when the user or an admin revokes all refresh tokens, when an admin resets the password from the Entra or M365 admin center, and for password-based public-client tokens when the user changes their password; confidential-client tokens survive a user password change. Access tokens are short-lived (expires_in is 3599 seconds in the reference example).",
+        "source": "entra-refresh-tokens"
+      },
+      "revocation": {
+        "behavior": "There is no RFC 7009 revoke endpoint; revocation happens server-side when the user revokes their refresh tokens, an admin revokes all refresh tokens for the user, or a credential change matches the revocation table. Langflow deletes its stored refresh token on disconnect and the next refresh attempt fails with an interaction_required or invalid_grant error.",
+        "source": "entra-refresh-tokens"
+      },
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "Microsoft Graph v1.0 REST (GA). Work IQ SharePoint and OneDrive MCP are preview and license-gated.",
+      "substrate_source": "graph-driveitem-list-children",
+      "rate_limit": {
+        "summary": "SharePoint and OneDrive throttle in resource units: 1 RU for a single-item get or download, 2 RU for list children, create, update; per user 3,000 requests per 5 minutes; per app per tenant 1,250 to 6,250 RU per minute and 1.2M to 6M RU per 24 hours depending on tenant license count; 429 or 503 with Retry-After; decorate traffic with a NONISV|Company|App/Version User-Agent.",
+        "source": "sharepoint-throttling",
+        "confidence": "high"
+      },
+      "verification_dependencies": [
+        "entra-publisher-verification"
       ]
     },
     {
@@ -256,28 +993,105 @@
       "display_name": "SharePoint/OneDrive: Fetch Item",
       "component_class": "SharePointFetchComponent",
       "decision": "defer",
-      "rationale": "Fetches a drive item by id or path.",
-      "confidence": "low",
-      "open_questions": [
-        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
-      ],
-      "identity": "user_delegated",
+      "confidence": "high",
+      "rationale": "Downloads a drive item the signed-in user can access. Same permission choice as files.list; the two rows should land on the same decision.",
+      "schema": {
+        "inputs": [
+          {
+            "name": "item_id",
+            "type": "str",
+            "required": false,
+            "description": "driveItem id"
+          },
+          {
+            "name": "path",
+            "type": "str",
+            "required": false,
+            "description": "Path relative to root"
+          },
+          {
+            "name": "drive_id",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "site_id",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "range",
+            "type": "str",
+            "required": false,
+            "description": "Optional byte range"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "file",
+            "type": "Data",
+            "required": true,
+            "description": "driveItem metadata plus downloaded bytes"
+          }
+        ],
+        "source": "graph-driveitem-get-content"
+      },
       "auth_mode": "oauth2_authorization_code",
-      "substrate": "rest",
-      "substrate_ga_status": "ga",
+      "identity": "user_delegated",
+      "identity_notes": "Reads what the signed-in user can access; the 302 download URL is preauthenticated and expires within minutes, so the component must consume it immediately and never store it.",
+      "scopes": [
+        {
+          "scope": "Files.Read",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference"
+        },
+        {
+          "scope": "Files.Read.All",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference"
+        },
+        {
+          "scope": "offline_access",
+          "classification": "non_sensitive",
+          "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
+          "source": "graph-permissions-reference"
+        }
+      ],
+      "consent": "user",
+      "consent_notes": "User consent on the Entra consent prompt. By default all users may consent to permissions that do not require admin consent; tenants may restrict user consent to verified publishers and low-impact permissions, or disable it and route requests through the admin consent workflow. A multitenant app registered after November 2020 that is not publisher verified cannot be consented to by users in other tenants when risk-based step-up consent is enabled.",
+      "consent_source": "entra-user-consent",
+      "reach": {
+        "resource": "Content of files the user can access.",
+        "tenant": "Single user's effective permissions.",
+        "source": "graph-driveitem-get-content"
+      },
       "deployment_contexts": {
         "hosted": "server_redirect",
         "self_managed": "server_redirect",
         "desktop": "loopback_redirect",
         "headless": "manual_token"
       },
-      "scopes": [
-        {
-          "scope": "Files.Read.All",
-          "classification": "non_sensitive",
-          "provider_classification": "Delegated; admin consent required: No (to verify)",
-          "source": "graph-permissions-reference"
-        }
+      "refresh": {
+        "behavior": "Request offline_access to receive a refresh token; the default refresh-token lifetime is 90 days (24 hours for single-page apps), and every refresh returns a new refresh token that must replace the old one. Refresh tokens are revoked when the user or an admin revokes all refresh tokens, when an admin resets the password from the Entra or M365 admin center, and for password-based public-client tokens when the user changes their password; confidential-client tokens survive a user password change. Access tokens are short-lived (expires_in is 3599 seconds in the reference example).",
+        "source": "entra-refresh-tokens"
+      },
+      "revocation": {
+        "behavior": "There is no RFC 7009 revoke endpoint; revocation happens server-side when the user revokes their refresh tokens, an admin revokes all refresh tokens for the user, or a credential change matches the revocation table. Langflow deletes its stored refresh token on disconnect and the next refresh attempt fails with an interaction_required or invalid_grant error.",
+        "source": "entra-refresh-tokens"
+      },
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "Microsoft Graph v1.0 REST (GA).",
+      "substrate_source": "graph-driveitem-get-content",
+      "rate_limit": {
+        "summary": "SharePoint and OneDrive throttle in resource units: 1 RU for a single-item get or download, 2 RU for list children, create, update; per user 3,000 requests per 5 minutes; per app per tenant 1,250 to 6,250 RU per minute and 1.2M to 6M RU per 24 hours depending on tenant license count; 429 or 503 with Retry-After; decorate traffic with a NONISV|Company|App/Version User-Agent.",
+        "source": "sharepoint-throttling",
+        "confidence": "high"
+      },
+      "verification_dependencies": [
+        "entra-publisher-verification"
       ]
     }
   ]

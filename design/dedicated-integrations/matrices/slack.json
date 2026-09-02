@@ -29,51 +29,225 @@
       "url": "https://docs.slack.dev/reference/scopes",
       "title": "Slack: Permission scopes reference",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01"
+      "verified_on": "2026-09-01",
+      "notes": "Descriptions: search:read 'Search a workspace's content'; channels:history / groups:history / im:history / mpim:history 'View messages and other content in ... that your Slack app has been added to'; chat:write 'Send messages as your Slack app'; canvases:read 'Access contents of canvases created inside Slack'; canvases:write 'Create, edit and remove canvases'; reactions:write 'Add and edit emoji reactions'; channels:read / groups:read 'View basic information about ... channels'; users:read 'View people in a workspace'. Token-type availability is taken from each method page."
     },
     "slack-mcp-server": {
       "url": "https://docs.slack.dev/ai/slack-mcp-server/",
-      "title": "Slack: Slack MCP server overview (GA, user tokens only)",
+      "title": "Slack: Slack MCP server",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01"
+      "verified_on": "2026-09-01",
+      "notes": "Endpoint https://mcp.slack.com/mcp, JSON-RPC 2.0 over Streamable HTTP; 'Slack supports confidential OAuth for MCP clients'; user tokens; 'Only directory-published apps or internal apps may use MCP'; workspace admins approve and manage MCP client integrations; tools cover search, retrieving and sending messages, canvases, users, files, lists; per-tool rate tiers from Tier 2 to Tier 4 with special limits for search and posting. The page carries no availability label (no preview or beta marker)."
     },
     "slack-pkce": {
       "url": "https://docs.slack.dev/authentication/using-pkce/",
-      "title": "Slack: Using PKCE (desktop redirects may not request bot scopes)",
+      "title": "Slack: Using PKCE",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01"
+      "verified_on": "2026-09-01",
+      "notes": "code_challenge_method must be S256; custom URI schemes are always treated as desktop redirects and localhost redirects are desktop when the app opts into PKCE; 'Desktop redirects are not allowed to request bot scopes'; the token exchange omits client_secret and sends code_verifier."
+    },
+    "slack-rate-limits": {
+      "url": "https://docs.slack.dev/apis/web-api/rate-limits",
+      "title": "Slack: Web API rate limits",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Tier 1: 1+ per minute; Tier 2: 20+ per minute; Tier 3: 50+ per minute; Tier 4: 100+ per minute; Special tier per method; limits apply per API method per workspace per app; 429 with Retry-After in seconds; since May 29, 2025 newly created commercially distributed non-Marketplace apps have reduced limits on conversations.history and conversations.replies."
+    },
+    "slack-oauth-install": {
+      "url": "https://docs.slack.dev/authentication/installing-with-oauth",
+      "title": "Slack: Installing with OAuth",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "https://slack.com/oauth/v2/authorize with scope (bot) and user_scope (user); oauth.v2.access exchange requires client_id and client_secret (or PKCE); response carries the bot access_token and optionally authed_user.access_token; 'The redirect_uri must use HTTPS'; 'OAuth tokens do not expire' unless rotation is enabled."
+    },
+    "slack-token-rotation": {
+      "url": "https://docs.slack.dev/authentication/using-token-rotation/",
+      "title": "Slack: Using token rotation",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Rotation 'may not be turned off once it's turned on'; access tokens expire every 12 hours (43,200 seconds); refresh with oauth.v2.access grant_type=refresh_token; refresh tokens are single-use and revoked after a grace period; applies to bot and user tokens."
+    },
+    "slack-auth-revoke": {
+      "url": "https://docs.slack.dev/reference/methods/auth.revoke",
+      "title": "Slack: auth.revoke",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Revokes the calling token (bot or user); test=1 dry run; Tier 3."
+    },
+    "slack-remove-apps": {
+      "url": "https://slack.com/help/articles/360003125231-Remove-apps-and-custom-integrations-from-your-workspace",
+      "title": "Slack Help: Remove apps and custom integrations from your workspace",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Owners remove an app via Tools & settings > Manage apps > Installed Apps > Configuration > Remove App; members revoke their own authorization under Authorized members > Revoke; with app approval enabled only owners and app managers can remove apps."
+    },
+    "slack-app-approval": {
+      "url": "https://slack.com/help/articles/222386767-Manage-app-approval-for-your-workspace",
+      "title": "Slack Help: Manage app approval for your workspace",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "By default members can install apps without Workspace Owner approval; owners can enable app approval and pre-approve or restrict apps; members then request apps; an Enterprise org app management policy enables approval automatically."
+    },
+    "slack-search-messages": {
+      "url": "https://docs.slack.dev/reference/methods/search.messages",
+      "title": "Slack: search.messages",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "User token with search:read; query required; count max 100 default 20; page or cursor; sort score or timestamp; response messages.matches with pagination and total_count; Tier 2."
+    },
+    "slack-conversations-replies": {
+      "url": "https://docs.slack.dev/reference/methods/conversations.replies",
+      "title": "Slack: conversations.replies",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "channels:history, groups:history, im:history, mpim:history; bot or user token; channel and ts required; cursor, limit, oldest, latest, inclusive; Tier 3 for Marketplace apps; commercially distributed non-Marketplace apps created after May 29, 2025 get 1 request per minute with limit capped at 15."
+    },
+    "slack-chat-postmessage": {
+      "url": "https://docs.slack.dev/reference/methods/chat.postMessage",
+      "title": "Slack: chat.postMessage",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "chat:write with bot or user token; channel required; text, blocks, attachments, thread_ts, reply_broadcast, unfurl_links; username and icon need chat:write.customize; response ok, channel, ts, message; special rate limit of about 1 message per second per channel with burst allowance; 40,000-character truncation."
+    },
+    "slack-reactions-add": {
+      "url": "https://docs.slack.dev/reference/methods/reactions.add",
+      "title": "Slack: reactions.add",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "reactions:write with bot or user token; channel, name, timestamp; errors already_reacted and too_many_reactions; Tier 3."
+    },
+    "slack-conversations-members": {
+      "url": "https://docs.slack.dev/reference/methods/conversations.members",
+      "title": "Slack: conversations.members",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "channels:read, groups:read, im:read, mpim:read with bot or user token; channel required; cursor and limit; returns members[] of user ids and response_metadata.next_cursor; Tier 4."
+    },
+    "slack-canvases-create": {
+      "url": "https://docs.slack.dev/reference/methods/canvases.create",
+      "title": "Slack: canvases.create",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "canvases:write with bot or user token; title, document_content of type markdown up to 1 MiB, channel_id (required for free teams); returns canvas_id; Tier 2; free teams cannot create standalone canvases."
     }
   },
-  "verification_programs": {},
+  "verification_programs": {
+    "slack-directory-publication": {
+      "description": "The Slack MCP server admits only directory-published (Marketplace) apps or internal apps. A Langflow-owned hosted Slack app that uses the MCP substrate must be published to the Slack Marketplace; self-managed customers can instead register an internal app in their own workspace.",
+      "source": "slack-mcp-server",
+      "blocking_for_contexts": [
+        "hosted"
+      ]
+    },
+    "slack-marketplace-rate-tier": {
+      "description": "Since May 29, 2025 commercially distributed apps that are not approved for the Slack Marketplace get reduced limits on conversations.history and conversations.replies (1 request per minute, 15 messages). Marketplace approval restores the standard tiers for the Web API path of read actions.",
+      "source": "slack-rate-limits",
+      "blocking_for_contexts": [
+        "hosted"
+      ]
+    }
+  },
   "actions": [
     {
       "action_id": "slack.user.search",
       "display_name": "Slack: Search (as user)",
       "component_class": "SlackSearchComponent",
       "decision": "defer",
-      "rationale": "search.messages is user-token only, which matches the MCP server's identity model.",
-      "confidence": "low",
+      "confidence": "medium",
       "open_questions": [
-        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed.",
-        "Confirm the Slack MCP server exposes a search tool and which scopes it requests at install."
+        "Confirm the Slack MCP server's GA status from a Slack changelog or announcement; the server documentation carries no availability label.",
+        "Confirm the exact tool name and argument schema the MCP server exposes for search before pinning the action-to-tool mapping (INT-9)."
       ],
-      "identity": "user_delegated",
+      "rationale": "search.messages is user-token only, which matches the MCP server's identity model; the MCP path also avoids the non-Marketplace Web API rate reduction.",
+      "schema": {
+        "inputs": [
+          {
+            "name": "query",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "count",
+            "type": "int",
+            "required": false,
+            "description": "Max 100, default 20"
+          },
+          {
+            "name": "sort",
+            "type": "str",
+            "required": false,
+            "description": "score or timestamp"
+          },
+          {
+            "name": "sort_dir",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "cursor",
+            "type": "str",
+            "required": false
+          }
+        ],
+        "outputs": [
+          {
+            "name": "matches",
+            "type": "list[Data]",
+            "required": true
+          },
+          {
+            "name": "pagination",
+            "type": "Data",
+            "required": false
+          }
+        ],
+        "source": "slack-search-messages"
+      },
       "auth_mode": "oauth2_authorization_code",
-      "substrate": "mcp",
-      "substrate_ga_status": "ga",
+      "identity": "user_delegated",
+      "identity_notes": "Searches with the connected user's visibility; user token only.",
+      "scopes": [
+        {
+          "scope": "search:read",
+          "classification": "sensitive",
+          "provider_classification": "User token scope; content reading",
+          "source": "slack-scopes",
+          "notes": "Required by search.messages; user token only."
+        }
+      ],
+      "consent": "user",
+      "consent_notes": "The installing user authorizes the requested user_scope on the Slack OAuth screen. By default members can install apps without Workspace Owner approval; owners can enable app approval, and an Enterprise Grid org policy enables it automatically. Workspace admins can also approve and manage MCP client integrations.",
+      "consent_source": "slack-app-approval",
+      "reach": {
+        "resource": "Messages and files visible to the connected user across the workspace.",
+        "tenant": "One workspace per installation.",
+        "source": "slack-search-messages"
+      },
       "deployment_contexts": {
         "hosted": "server_redirect",
         "self_managed": "server_redirect",
         "desktop": "loopback_redirect",
         "headless": "manual_token"
       },
-      "scopes": [
-        {
-          "scope": "search:read",
-          "classification": "sensitive",
-          "provider_classification": "User token scope; content reading (to verify)",
-          "source": "slack-scopes"
-        }
+      "refresh": {
+        "behavior": "Slack OAuth tokens do not expire by default. If the app opts into token rotation (irreversible once enabled), access tokens expire every 12 hours (expires_in 43,200) and are refreshed with oauth.v2.access grant_type=refresh_token; refresh tokens are single-use and revoked after a short grace period; rotation applies to both bot and user tokens.",
+        "source": "slack-token-rotation"
+      },
+      "revocation": {
+        "behavior": "The app revokes its own token with auth.revoke (Tier 3). A Workspace Owner removes the app under Manage apps, which revokes its tokens; an individual member revokes their own authorization under the app's Authorized members list.",
+        "source": "slack-auth-revoke"
+      },
+      "substrate": "mcp",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "Official Slack MCP server at https://mcp.slack.com/mcp in pinned mode (INT-9); Web API search.messages is the REST fallback.",
+      "substrate_source": "slack-mcp-server",
+      "rate_limit": {
+        "summary": "Web API search.messages is Tier 2 (20+ per minute per workspace per app); MCP server tools carry their own tiers from Tier 2 to Tier 4 with a special limit for search.",
+        "source": "slack-search-messages",
+        "confidence": "medium"
+      },
+      "verification_dependencies": [
+        "slack-directory-publication"
       ]
     },
     {
@@ -81,46 +255,128 @@
       "display_name": "Slack: Read Thread (as user)",
       "component_class": "SlackReadThreadComponent",
       "decision": "defer",
-      "rationale": "conversations.replies scoped to the connected user's visibility.",
-      "confidence": "low",
+      "confidence": "medium",
       "open_questions": [
-        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
+        "Confirm the MCP server's GA status and the tool that returns thread replies.",
+        "If the Web API path is used, a Langflow-owned hosted app must be Marketplace-approved or it gets 1 request per minute with 15 messages."
       ],
-      "identity": "user_delegated",
+      "rationale": "conversations.replies scoped to the connected user's visibility; the MCP path sidesteps the non-Marketplace Web API limit.",
+      "schema": {
+        "inputs": [
+          {
+            "name": "channel",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "ts",
+            "type": "str",
+            "required": true,
+            "description": "Parent message timestamp"
+          },
+          {
+            "name": "limit",
+            "type": "int",
+            "required": false
+          },
+          {
+            "name": "cursor",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "oldest",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "latest",
+            "type": "str",
+            "required": false
+          }
+        ],
+        "outputs": [
+          {
+            "name": "messages",
+            "type": "list[Data]",
+            "required": true
+          },
+          {
+            "name": "has_more",
+            "type": "bool",
+            "required": false
+          },
+          {
+            "name": "next_cursor",
+            "type": "str",
+            "required": false
+          }
+        ],
+        "source": "slack-conversations-replies"
+      },
       "auth_mode": "oauth2_authorization_code",
-      "substrate": "mcp",
-      "substrate_ga_status": "ga",
+      "identity": "user_delegated",
+      "identity_notes": "Reads only conversations the connected user can see.",
+      "scopes": [
+        {
+          "scope": "channels:history",
+          "classification": "sensitive",
+          "provider_classification": "User token scope; content reading",
+          "source": "slack-scopes"
+        },
+        {
+          "scope": "groups:history",
+          "classification": "sensitive",
+          "provider_classification": "User token scope; content reading",
+          "source": "slack-scopes"
+        },
+        {
+          "scope": "im:history",
+          "classification": "sensitive",
+          "provider_classification": "User token scope; content reading",
+          "source": "slack-scopes"
+        },
+        {
+          "scope": "mpim:history",
+          "classification": "sensitive",
+          "provider_classification": "User token scope; content reading",
+          "source": "slack-scopes"
+        }
+      ],
+      "consent": "user",
+      "consent_notes": "The installing user authorizes the requested user_scope on the Slack OAuth screen. By default members can install apps without Workspace Owner approval; owners can enable app approval, and an Enterprise Grid org policy enables it automatically. Workspace admins can also approve and manage MCP client integrations.",
+      "consent_source": "slack-app-approval",
+      "reach": {
+        "resource": "Thread replies in public channels, private channels, DMs, and group DMs the user belongs to.",
+        "tenant": "One workspace per installation.",
+        "source": "slack-conversations-replies"
+      },
       "deployment_contexts": {
         "hosted": "server_redirect",
         "self_managed": "server_redirect",
         "desktop": "loopback_redirect",
         "headless": "manual_token"
       },
-      "scopes": [
-        {
-          "scope": "channels:history",
-          "classification": "sensitive",
-          "provider_classification": "User token scope; content reading (to verify)",
-          "source": "slack-scopes"
-        },
-        {
-          "scope": "groups:history",
-          "classification": "sensitive",
-          "provider_classification": "User token scope; content reading (to verify)",
-          "source": "slack-scopes"
-        },
-        {
-          "scope": "im:history",
-          "classification": "sensitive",
-          "provider_classification": "User token scope; content reading (to verify)",
-          "source": "slack-scopes"
-        },
-        {
-          "scope": "mpim:history",
-          "classification": "sensitive",
-          "provider_classification": "User token scope; content reading (to verify)",
-          "source": "slack-scopes"
-        }
+      "refresh": {
+        "behavior": "Slack OAuth tokens do not expire by default. If the app opts into token rotation (irreversible once enabled), access tokens expire every 12 hours (expires_in 43,200) and are refreshed with oauth.v2.access grant_type=refresh_token; refresh tokens are single-use and revoked after a short grace period; rotation applies to both bot and user tokens.",
+        "source": "slack-token-rotation"
+      },
+      "revocation": {
+        "behavior": "The app revokes its own token with auth.revoke (Tier 3). A Workspace Owner removes the app under Manage apps, which revokes its tokens; an individual member revokes their own authorization under the app's Authorized members list.",
+        "source": "slack-auth-revoke"
+      },
+      "substrate": "mcp",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "Official Slack MCP server in pinned mode; conversations.replies is the REST fallback.",
+      "substrate_source": "slack-mcp-server",
+      "rate_limit": {
+        "summary": "Web API conversations.replies is Tier 3 (50+ per minute) for Marketplace apps and 1 request per minute with limit 15 for commercially distributed non-Marketplace apps created after 2025-05-29; MCP tools carry their own tiers.",
+        "source": "slack-conversations-replies",
+        "confidence": "high"
+      },
+      "verification_dependencies": [
+        "slack-directory-publication",
+        "slack-marketplace-rate-tier"
       ]
     },
     {
@@ -128,63 +384,187 @@
       "display_name": "Slack: Send Message (as user)",
       "component_class": "SlackSendAsUserComponent",
       "decision": "defer",
-      "rationale": "Posts as the connected user; distinct from posting as the app.",
-      "confidence": "low",
+      "confidence": "medium",
       "open_questions": [
-        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
+        "Confirm the MCP server's GA status and its send-message tool schema."
       ],
-      "identity": "user_delegated",
-      "auth_mode": "oauth2_authorization_code",
-      "substrate": "mcp",
-      "substrate_ga_status": "ga",
-      "deployment_contexts": {
-        "hosted": "server_redirect",
-        "self_managed": "server_redirect",
-        "desktop": "loopback_redirect",
-        "headless": "manual_token"
+      "rationale": "Posts as the connected user; distinct from posting as the app. Works on Desktop because user scopes are allowed on desktop redirects.",
+      "schema": {
+        "inputs": [
+          {
+            "name": "channel",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "text",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "thread_ts",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "blocks",
+            "type": "list[Data]",
+            "required": false
+          },
+          {
+            "name": "unfurl_links",
+            "type": "bool",
+            "required": false
+          }
+        ],
+        "outputs": [
+          {
+            "name": "message",
+            "type": "Data",
+            "required": true,
+            "description": "channel, ts, message"
+          }
+        ],
+        "source": "slack-chat-postmessage"
       },
+      "auth_mode": "oauth2_authorization_code",
+      "identity": "user_delegated",
+      "identity_notes": "Message is attributed to the connected user.",
       "scopes": [
         {
           "scope": "chat:write",
           "classification": "non_sensitive",
-          "provider_classification": "User token scope (to verify)",
-          "source": "slack-scopes"
+          "provider_classification": "User token scope",
+          "source": "slack-scopes",
+          "notes": "Also available as a bot scope; here requested as a user scope."
         }
-      ]
-    },
-    {
-      "action_id": "slack.user.canvas",
-      "display_name": "Slack: Read/Write Canvas (as user)",
-      "component_class": "SlackCanvasComponent",
-      "decision": "defer",
-      "rationale": "Canvas is a documented MCP server capability; likely the lowest-demand user action and first to prune.",
-      "confidence": "low",
-      "open_questions": [
-        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
       ],
-      "identity": "user_delegated",
-      "auth_mode": "oauth2_authorization_code",
-      "substrate": "mcp",
-      "substrate_ga_status": "ga",
+      "consent": "user",
+      "consent_notes": "The installing user authorizes the requested user_scope on the Slack OAuth screen. By default members can install apps without Workspace Owner approval; owners can enable app approval, and an Enterprise Grid org policy enables it automatically. Workspace admins can also approve and manage MCP client integrations.",
+      "consent_source": "slack-app-approval",
+      "reach": {
+        "resource": "Any channel or conversation the user can post to.",
+        "tenant": "One workspace per installation.",
+        "source": "slack-chat-postmessage"
+      },
       "deployment_contexts": {
         "hosted": "server_redirect",
         "self_managed": "server_redirect",
         "desktop": "loopback_redirect",
         "headless": "manual_token"
       },
+      "refresh": {
+        "behavior": "Slack OAuth tokens do not expire by default. If the app opts into token rotation (irreversible once enabled), access tokens expire every 12 hours (expires_in 43,200) and are refreshed with oauth.v2.access grant_type=refresh_token; refresh tokens are single-use and revoked after a short grace period; rotation applies to both bot and user tokens.",
+        "source": "slack-token-rotation"
+      },
+      "revocation": {
+        "behavior": "The app revokes its own token with auth.revoke (Tier 3). A Workspace Owner removes the app under Manage apps, which revokes its tokens; an individual member revokes their own authorization under the app's Authorized members list.",
+        "source": "slack-auth-revoke"
+      },
+      "substrate": "mcp",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "Official Slack MCP server in pinned mode; chat.postMessage with the user token is the REST fallback.",
+      "substrate_source": "slack-mcp-server",
+      "rate_limit": {
+        "summary": "chat.postMessage special tier: about 1 message per second per channel with burst allowance; 40,000-character truncation.",
+        "source": "slack-chat-postmessage",
+        "confidence": "high"
+      },
+      "verification_dependencies": [
+        "slack-directory-publication"
+      ]
+    },
+    {
+      "action_id": "slack.user.canvas",
+      "display_name": "Slack: Create Canvas (as user)",
+      "component_class": "SlackCanvasComponent",
+      "decision": "defer",
+      "confidence": "medium",
+      "open_questions": [
+        "Confirm the MCP server's canvas tool coverage (create, read, edit) before deciding the action's output set.",
+        "Free teams cannot create standalone canvases; decide whether the action requires channel_id."
+      ],
+      "rationale": "Canvas is a documented MCP server capability. Likely the lowest-demand user action and the first to prune if the include set must shrink.",
+      "schema": {
+        "inputs": [
+          {
+            "name": "title",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "markdown",
+            "type": "str",
+            "required": true,
+            "description": "document_content type markdown, up to 1 MiB"
+          },
+          {
+            "name": "channel_id",
+            "type": "str",
+            "required": false,
+            "description": "Required for free teams"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "canvas_id",
+            "type": "str",
+            "required": true
+          }
+        ],
+        "source": "slack-canvases-create"
+      },
+      "auth_mode": "oauth2_authorization_code",
+      "identity": "user_delegated",
+      "identity_notes": "Canvas is owned by the connected user.",
       "scopes": [
-        {
-          "scope": "canvases:read",
-          "classification": "sensitive",
-          "provider_classification": "User token scope; content reading (to verify)",
-          "source": "slack-scopes"
-        },
         {
           "scope": "canvases:write",
           "classification": "non_sensitive",
-          "provider_classification": "User token scope (to verify)",
+          "provider_classification": "User token scope",
           "source": "slack-scopes"
+        },
+        {
+          "scope": "canvases:read",
+          "classification": "sensitive",
+          "provider_classification": "User token scope; content reading",
+          "source": "slack-scopes",
+          "notes": "Only if the action also reads canvases."
         }
+      ],
+      "consent": "user",
+      "consent_notes": "The installing user authorizes the requested user_scope on the Slack OAuth screen. By default members can install apps without Workspace Owner approval; owners can enable app approval, and an Enterprise Grid org policy enables it automatically. Workspace admins can also approve and manage MCP client integrations.",
+      "consent_source": "slack-app-approval",
+      "reach": {
+        "resource": "Canvases the user can create or read; free teams limited to one canvas tab per channel.",
+        "tenant": "One workspace per installation.",
+        "source": "slack-canvases-create"
+      },
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "refresh": {
+        "behavior": "Slack OAuth tokens do not expire by default. If the app opts into token rotation (irreversible once enabled), access tokens expire every 12 hours (expires_in 43,200) and are refreshed with oauth.v2.access grant_type=refresh_token; refresh tokens are single-use and revoked after a short grace period; rotation applies to both bot and user tokens.",
+        "source": "slack-token-rotation"
+      },
+      "revocation": {
+        "behavior": "The app revokes its own token with auth.revoke (Tier 3). A Workspace Owner removes the app under Manage apps, which revokes its tokens; an individual member revokes their own authorization under the app's Authorized members list.",
+        "source": "slack-auth-revoke"
+      },
+      "substrate": "mcp",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "Official Slack MCP server in pinned mode; canvases.create is the REST fallback.",
+      "substrate_source": "slack-mcp-server",
+      "rate_limit": {
+        "summary": "canvases.create is Tier 2 (20+ per minute per workspace per app).",
+        "source": "slack-canvases-create",
+        "confidence": "high"
+      },
+      "verification_dependencies": [
+        "slack-directory-publication"
       ]
     },
     {
@@ -192,96 +572,278 @@
       "display_name": "Slack: Post Message (as app)",
       "component_class": "SlackPostAsAppComponent",
       "decision": "defer",
-      "rationale": "Bot identity is excluded from the MCP server, so this runs on the Web API; desktop excluded because desktop redirects may not request bot scopes.",
-      "confidence": "low",
-      "open_questions": [
-        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
-      ],
-      "identity": "bot",
+      "confidence": "high",
+      "rationale": "Bot identity is excluded from the MCP server, so this runs on the Web API with a bot token from a workspace installation. Desktop is excluded because desktop redirects may not request bot scopes.",
+      "schema": {
+        "inputs": [
+          {
+            "name": "channel",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "text",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "thread_ts",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "reply_broadcast",
+            "type": "bool",
+            "required": false
+          },
+          {
+            "name": "blocks",
+            "type": "list[Data]",
+            "required": false
+          },
+          {
+            "name": "attachments",
+            "type": "list[Data]",
+            "required": false
+          },
+          {
+            "name": "unfurl_links",
+            "type": "bool",
+            "required": false
+          }
+        ],
+        "outputs": [
+          {
+            "name": "message",
+            "type": "Data",
+            "required": true,
+            "description": "channel, ts, message"
+          }
+        ],
+        "source": "slack-chat-postmessage"
+      },
       "auth_mode": "bot_token_install",
-      "substrate": "rest",
-      "substrate_ga_status": "ga",
+      "identity": "bot",
+      "identity_notes": "Message is attributed to the app's bot user; the bot must be a member of the channel.",
+      "scopes": [
+        {
+          "scope": "chat:write",
+          "classification": "non_sensitive",
+          "provider_classification": "Bot token scope",
+          "source": "slack-scopes"
+        }
+      ],
+      "consent": "user",
+      "consent_notes": "A workspace installation by a member (or an owner where app approval is enabled) grants the bot scopes; the bot token belongs to the workspace, not the installing user.",
+      "consent_source": "slack-app-approval",
+      "reach": {
+        "resource": "Channels the bot has been added to.",
+        "tenant": "One workspace per installation.",
+        "source": "slack-chat-postmessage"
+      },
       "deployment_contexts": {
         "hosted": "app_install_redirect",
         "self_managed": "app_install_redirect",
         "headless": "manual_token"
       },
-      "scopes": [
-        {
-          "scope": "chat:write",
-          "classification": "non_sensitive",
-          "provider_classification": "Bot token scope (to verify)",
-          "source": "slack-scopes"
-        }
-      ]
+      "refresh": {
+        "behavior": "Slack OAuth tokens do not expire by default. If the app opts into token rotation (irreversible once enabled), access tokens expire every 12 hours (expires_in 43,200) and are refreshed with oauth.v2.access grant_type=refresh_token; refresh tokens are single-use and revoked after a short grace period; rotation applies to both bot and user tokens.",
+        "source": "slack-token-rotation"
+      },
+      "revocation": {
+        "behavior": "The app revokes its own token with auth.revoke (Tier 3). A Workspace Owner removes the app under Manage apps, which revokes its tokens; an individual member revokes their own authorization under the app's Authorized members list.",
+        "source": "slack-auth-revoke"
+      },
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "Slack Web API chat.postMessage (GA) via slack_sdk; the MCP server does not issue bot tokens.",
+      "substrate_source": "slack-chat-postmessage",
+      "rate_limit": {
+        "summary": "chat.postMessage special tier: about 1 message per second per channel with burst allowance; workspace-level caps of several hundred per minute; 40,000-character truncation.",
+        "source": "slack-chat-postmessage",
+        "confidence": "high"
+      },
+      "verification_dependencies": []
     },
     {
       "action_id": "slack.bot.add_reaction",
       "display_name": "Slack: Add Reaction (as app)",
       "component_class": "SlackAddReactionComponent",
       "decision": "defer",
+      "confidence": "high",
       "rationale": "Low-risk bot write; candidate to prune if the bot set must shrink.",
-      "confidence": "low",
-      "open_questions": [
-        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
-      ],
-      "identity": "bot",
+      "schema": {
+        "inputs": [
+          {
+            "name": "channel",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "timestamp",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "name",
+            "type": "str",
+            "required": true,
+            "description": "Emoji name without colons"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "result",
+            "type": "Data",
+            "required": true,
+            "description": "ok"
+          }
+        ],
+        "source": "slack-reactions-add"
+      },
       "auth_mode": "bot_token_install",
-      "substrate": "rest",
-      "substrate_ga_status": "ga",
+      "identity": "bot",
+      "identity_notes": "Reaction is attributed to the bot user.",
+      "scopes": [
+        {
+          "scope": "reactions:write",
+          "classification": "non_sensitive",
+          "provider_classification": "Bot token scope",
+          "source": "slack-scopes"
+        }
+      ],
+      "consent": "user",
+      "consent_notes": "A workspace installation by a member (or an owner where app approval is enabled) grants the bot scopes; the bot token belongs to the workspace, not the installing user.",
+      "consent_source": "slack-app-approval",
+      "reach": {
+        "resource": "Messages in channels the bot can see.",
+        "tenant": "One workspace per installation.",
+        "source": "slack-reactions-add"
+      },
       "deployment_contexts": {
         "hosted": "app_install_redirect",
         "self_managed": "app_install_redirect",
         "headless": "manual_token"
       },
-      "scopes": [
-        {
-          "scope": "reactions:write",
-          "classification": "non_sensitive",
-          "provider_classification": "Bot token scope (to verify)",
-          "source": "slack-scopes"
-        }
-      ]
+      "refresh": {
+        "behavior": "Slack OAuth tokens do not expire by default. If the app opts into token rotation (irreversible once enabled), access tokens expire every 12 hours (expires_in 43,200) and are refreshed with oauth.v2.access grant_type=refresh_token; refresh tokens are single-use and revoked after a short grace period; rotation applies to both bot and user tokens.",
+        "source": "slack-token-rotation"
+      },
+      "revocation": {
+        "behavior": "The app revokes its own token with auth.revoke (Tier 3). A Workspace Owner removes the app under Manage apps, which revokes its tokens; an individual member revokes their own authorization under the app's Authorized members list.",
+        "source": "slack-auth-revoke"
+      },
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "Slack Web API reactions.add (GA).",
+      "substrate_source": "slack-reactions-add",
+      "rate_limit": {
+        "summary": "reactions.add is Tier 3 (50+ per minute per workspace per app); errors already_reacted and too_many_reactions.",
+        "source": "slack-reactions-add",
+        "confidence": "high"
+      },
+      "verification_dependencies": []
     },
     {
       "action_id": "slack.bot.list_channel_members",
       "display_name": "Slack: List Channel Members (as app)",
       "component_class": "SlackListChannelMembersComponent",
       "decision": "defer",
-      "rationale": "conversations.members plus users.info for display names.",
-      "confidence": "low",
-      "open_questions": [
-        "Phase 1/2: verify every scope classification and the substrate GA status against the cited source; this row is a Phase 0 seed."
-      ],
-      "identity": "bot",
-      "auth_mode": "bot_token_install",
-      "substrate": "rest",
-      "substrate_ga_status": "ga",
-      "deployment_contexts": {
-        "hosted": "app_install_redirect",
-        "self_managed": "app_install_redirect",
-        "headless": "manual_token"
+      "confidence": "high",
+      "rationale": "conversations.members returns user ids; users:read is needed only if the action resolves display names.",
+      "schema": {
+        "inputs": [
+          {
+            "name": "channel",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "limit",
+            "type": "int",
+            "required": false
+          },
+          {
+            "name": "cursor",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "resolve_names",
+            "type": "bool",
+            "required": false,
+            "description": "Calls users.info per id; needs users:read"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "members",
+            "type": "list[Data]",
+            "required": true
+          },
+          {
+            "name": "next_cursor",
+            "type": "str",
+            "required": false
+          }
+        ],
+        "source": "slack-conversations-members"
       },
+      "auth_mode": "bot_token_install",
+      "identity": "bot",
+      "identity_notes": "Bot must be a member of private channels to list them.",
       "scopes": [
         {
           "scope": "channels:read",
           "classification": "non_sensitive",
-          "provider_classification": "Bot token scope (to verify)",
+          "provider_classification": "Bot token scope",
           "source": "slack-scopes"
         },
         {
           "scope": "groups:read",
           "classification": "non_sensitive",
-          "provider_classification": "Bot token scope (to verify)",
+          "provider_classification": "Bot token scope",
           "source": "slack-scopes"
         },
         {
           "scope": "users:read",
           "classification": "non_sensitive",
-          "provider_classification": "Bot token scope (to verify)",
-          "source": "slack-scopes"
+          "provider_classification": "Bot token scope",
+          "source": "slack-scopes",
+          "notes": "Only when resolving display names."
         }
-      ]
+      ],
+      "consent": "user",
+      "consent_notes": "A workspace installation by a member (or an owner where app approval is enabled) grants the bot scopes; the bot token belongs to the workspace, not the installing user.",
+      "consent_source": "slack-app-approval",
+      "reach": {
+        "resource": "Membership of public channels and private channels the bot belongs to.",
+        "tenant": "One workspace per installation.",
+        "source": "slack-conversations-members"
+      },
+      "deployment_contexts": {
+        "hosted": "app_install_redirect",
+        "self_managed": "app_install_redirect",
+        "headless": "manual_token"
+      },
+      "refresh": {
+        "behavior": "Slack OAuth tokens do not expire by default. If the app opts into token rotation (irreversible once enabled), access tokens expire every 12 hours (expires_in 43,200) and are refreshed with oauth.v2.access grant_type=refresh_token; refresh tokens are single-use and revoked after a short grace period; rotation applies to both bot and user tokens.",
+        "source": "slack-token-rotation"
+      },
+      "revocation": {
+        "behavior": "The app revokes its own token with auth.revoke (Tier 3). A Workspace Owner removes the app under Manage apps, which revokes its tokens; an individual member revokes their own authorization under the app's Authorized members list.",
+        "source": "slack-auth-revoke"
+      },
+      "substrate": "rest",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "Slack Web API conversations.members (GA).",
+      "substrate_source": "slack-conversations-members",
+      "rate_limit": {
+        "summary": "conversations.members is Tier 4 (100+ per minute per workspace per app); cursor pagination.",
+        "source": "slack-conversations-members",
+        "confidence": "high"
+      },
+      "verification_dependencies": []
     }
   ]
 }
