@@ -21,6 +21,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 import structlog
+from gunicorn.config import Config
+from langflow.server import Logger as GunicornLogger
 from lfx.log.logger import (
     LOG_LEVEL_MAP,
     VALID_LOG_LEVELS,
@@ -29,6 +31,7 @@ from lfx.log.logger import (
     add_serialized,
     buffer_writer,
     configure,
+    is_file_logging_configured,
     log_buffer,
     setup_gunicorn_logger,
     setup_uvicorn_logger,
@@ -553,6 +556,79 @@ class TestSetupFunctions:
         assert mock_error_logger.propagate is True
         assert mock_access_logger.handlers == []
         assert mock_access_logger.propagate is True
+
+
+class TestGunicornLoggerFileMode:
+    """Gunicorn must follow logging-mode transitions without stale handlers."""
+
+    def test_file_mode_propagates_gunicorn_logs_to_root_handler(self, capsys):
+        """Write once in file mode, then switch cleanly back to stdout JSON."""
+        root = logging.getLogger()
+        original_root_handlers = root.handlers[:]
+        original_root_level = root.level
+        gunicorn_loggers = (logging.getLogger("gunicorn.error"), logging.getLogger("gunicorn.access"))
+        original_gunicorn_state = [
+            (gunicorn_logger.handlers[:], gunicorn_logger.propagate, gunicorn_logger.level)
+            for gunicorn_logger in gunicorn_loggers
+        ]
+
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                log_file_path = Path(temp_dir) / "langflow.log"
+                configure(log_env="container", log_level="INFO", cache=False)
+                assert any(isinstance(handler, InterceptHandler) for handler in root.handlers)
+
+                configure(log_env="container", log_level="INFO", log_file=log_file_path, cache=False)
+                assert not any(isinstance(handler, InterceptHandler) for handler in root.handlers)
+
+                cfg = Config()
+                cfg.set("loglevel", "warning")
+                cfg.set("errorlog", "-")
+                logger = GunicornLogger(cfg)
+
+                assert logger.error_log.handlers == []
+                assert logger.access_log.handlers == []
+                assert logger.error_log.propagate is True
+                assert logger.access_log.propagate is True
+
+                logger.error("file mode gunicorn error")
+                for handler in root.handlers:
+                    if hasattr(handler, "flush"):
+                        handler.flush()
+
+                records = [json.loads(line) for line in log_file_path.read_text().splitlines() if line.strip()]
+                gunicorn_records = [record for record in records if record.get("logger") == "gunicorn.error"]
+                assert [record["event"] for record in gunicorn_records] == ["file mode gunicorn error"]
+
+                configure(log_env="container", log_level="INFO", cache=False)
+                assert not is_file_logging_configured()
+
+                stdout_logger = GunicornLogger(cfg)
+                assert all(
+                    len(logger.handlers) == 1 and isinstance(logger.handlers[0], InterceptHandler)
+                    for logger in (stdout_logger.error_log, stdout_logger.access_log)
+                )
+                stdout_logger.error("stdout gunicorn error")
+                stdout_records = [
+                    json.loads(line) for line in capsys.readouterr().out.splitlines() if line.strip().startswith("{")
+                ]
+                assert [record["event"] for record in stdout_records] == ["stdout gunicorn error"]
+                assert "stdout gunicorn error" not in log_file_path.read_text()
+        finally:
+            for handler in root.handlers[:]:
+                if handler not in original_root_handlers:
+                    root.removeHandler(handler)
+                    handler.close()
+            root.handlers[:] = original_root_handlers
+            root.setLevel(original_root_level)
+            for gunicorn_logger, (handlers, propagate, level) in zip(
+                gunicorn_loggers, original_gunicorn_state, strict=True
+            ):
+                gunicorn_logger.handlers = handlers
+                gunicorn_logger.propagate = propagate
+                gunicorn_logger.setLevel(level)
+            structlog.reset_defaults()
+            structlog.configure()
 
 
 class TestLogProcessors:

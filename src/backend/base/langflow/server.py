@@ -6,7 +6,7 @@ from typing import Any
 
 from gunicorn import glogging
 from gunicorn.app.base import BaseApplication
-from lfx.log.logger import InterceptHandler
+from lfx.log.logger import InterceptHandler, is_file_logging_configured, setup_gunicorn_logger
 from uvicorn.workers import UvicornWorker
 
 
@@ -57,20 +57,22 @@ class LangflowUvicornWorker(UvicornWorker):
 
 
 class Logger(glogging.Logger):
-    """Implements and overrides the gunicorn logging interface.
-
-    This class inherits from the standard gunicorn logger and overrides it by
-    replacing the handlers with `InterceptHandler` in order to route the
-    gunicorn logs to loguru.
-    """
+    """Configure Gunicorn logging to use Langflow's logging pipeline."""
 
     def __init__(self, cfg) -> None:
+        """Route Gunicorn records through the active Langflow output mode."""
         super().__init__(cfg)
-        logging.getLogger("gunicorn.error").setLevel(logging.WARNING)
-        logging.getLogger("gunicorn.access").setLevel(logging.WARNING)
+        gunicorn_loggers = (self.error_log, self.access_log)
+        for gunicorn_logger in gunicorn_loggers:
+            gunicorn_logger.setLevel(logging.WARNING)
 
-        logging.getLogger("gunicorn.error").handlers = [InterceptHandler()]
-        logging.getLogger("gunicorn.access").handlers = [InterceptHandler()]
+        if is_file_logging_configured():
+            # File mode uses structlog's stdlib logger factory. Routing a Gunicorn
+            # record through InterceptHandler would send it back to this same logger.
+            setup_gunicorn_logger()
+        else:
+            for gunicorn_logger in gunicorn_loggers:
+                gunicorn_logger.handlers = [InterceptHandler()]
 
     def error(self, msg, *args, **kwargs):
         """Override error method to filter out SIGSEGV messages."""
