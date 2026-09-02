@@ -9,14 +9,18 @@ import orjson
 import pytest
 from httpx import AsyncClient
 from langflow.api.v1.schemas import FlowListCreate, ResultDataResponse
+from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import filter_starter_projects_by_available_components, load_starter_projects
 from langflow.interface.components import get_and_cache_all_types_dict
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow import Flow, FlowCreate, FlowUpdate
-from langflow.services.database.models.folder.model import FolderCreate
+from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
+from langflow.services.database.models.folder.model import Folder, FolderCreate
+from langflow.services.database.models.user.model import User
 from langflow.services.database.utils import session_getter
-from langflow.services.deps import get_db_service, get_settings_service
+from langflow.services.deps import get_auth_service, get_db_service, get_settings_service, session_scope
 from lfx.graph.utils import log_transaction, log_vertex_build
+from sqlmodel import select
 
 
 @pytest.fixture(scope="module")
@@ -176,6 +180,94 @@ async def test_read_flows_no_pagination_params(client: AsyncClient, logged_in_he
     assert response.json()["pages"] == 1
     assert response.json()["total"] == number_of_flows
     assert len(response.json()["items"]) == number_of_flows
+
+
+async def test_read_flows_paginated_resolves_the_callers_default_project(client: AsyncClient):
+    """Each user's paginated list must fall back to the default project *they* own.
+
+    ``read_flows`` fills in a missing ``folder_id`` by looking the default project up by
+    name. Every user owns a folder with that name, so an unscoped lookup picks an
+    arbitrary one and the owner-scoped query then intersects a stranger's folder id with
+    ``Flow.user_id == current_user.id`` — which matches nothing.
+
+    Both users are asserted, so the test fails whichever folder the unscoped ``.first()``
+    happens to return.
+    """
+    password = "testpassword"  # noqa: S105 — test-only credential
+
+    async def register_and_log_in(username: str) -> dict[str, str]:
+        async with session_scope() as session:
+            session.add(
+                User(username=username, password=get_auth_service().get_password_hash(password), is_active=True)
+            )
+            await session.commit()
+        # Logging in also provisions the user's own default project.
+        response = await client.post("api/v1/login", data={"username": username, "password": password})
+        assert response.status_code == 200, response.text
+        return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+    async def default_project_id(headers: dict[str, str]) -> UUID:
+        response = await client.get("api/v1/projects/", headers=headers)
+        assert response.status_code == 200, response.text
+        owned = [project for project in response.json() if project["name"] == DEFAULT_FOLDER_NAME]
+        assert owned, f"expected a {DEFAULT_FOLDER_NAME!r} project, got {response.json()}"
+        return UUID(owned[0]["id"])
+
+    async def create_flow(headers: dict[str, str], name: str, folder_id: UUID) -> UUID:
+        flow = FlowCreate(name=name, description="description", data={}, folder_id=folder_id)
+        response = await client.post("api/v1/flows/", json=flow.model_dump(mode="json"), headers=headers)
+        assert response.status_code == 201, response.text
+        return UUID(response.json()["id"])
+
+    owners = {}
+    for label in ("first", "second"):
+        headers = await register_and_log_in(f"{label}_{uuid4().hex}")
+        flow_id = await create_flow(headers, f"{label} flow", await default_project_id(headers))
+        owners[label] = (headers, flow_id)
+
+    for label, (headers, flow_id) in owners.items():
+        response = await client.get("api/v1/flows/", headers=headers, params={"get_all": False})
+        assert response.status_code == 200, response.text
+        listed = {UUID(flow["id"]) for flow in response.json()["items"]}
+        assert listed == {flow_id}, f"the {label} user should see only their own flow, got {listed}"
+
+
+async def test_read_flows_serves_a_caller_who_renamed_their_default_project(client: AsyncClient, logged_in_headers):
+    """Scoping the default-project lookup must not turn a working request into an error.
+
+    The 404 in ``read_flows`` reports an instance that was never set up, so it stays keyed on
+    any default project existing rather than the caller's. Otherwise a user who renamed their
+    own default project would start getting an error instead of their flows, on an instance
+    where the shared starter project is absent.
+    """
+    password = "testpassword"  # noqa: S105 — test-only credential
+
+    response = await client.get("api/v1/projects/", headers=logged_in_headers)
+    assert response.status_code == 200, response.text
+    mine_id = next(UUID(p["id"]) for p in response.json() if p["name"] == DEFAULT_FOLDER_NAME)
+
+    # A second user keeps a project under the default name, so the instance is still set up.
+    other = f"other_{uuid4().hex}"
+    async with session_scope() as session:
+        session.add(User(username=other, password=get_auth_service().get_password_hash(password), is_active=True))
+        await session.commit()
+    response = await client.post("api/v1/login", data={"username": other, "password": password})
+    assert response.status_code == 200, response.text
+
+    async with session_scope() as session:
+        starter = (
+            await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME, Folder.user_id.is_(None)))
+        ).first()
+        if starter is not None:
+            await session.delete(starter)
+        mine = await session.get(Folder, mine_id)
+        mine.name = "My Flows"
+        session.add(mine)
+        await session.commit()
+
+    for params in ({"get_all": True}, {"get_all": False}):
+        response = await client.get("api/v1/flows/", headers=logged_in_headers, params=params)
+        assert response.status_code == 200, f"{params} -> {response.status_code}: {response.text}"
 
 
 async def test_read_flows_components_only_paginated(client: AsyncClient, logged_in_headers):
