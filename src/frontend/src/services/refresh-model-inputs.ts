@@ -228,11 +228,14 @@ async function refreshSingleNode(
       return;
     }
 
+    // Runs on every flow open, so the user has not asked for this write.
     setNode(
       node.id,
       (currentNode) =>
         createUpdatedNode(currentNode, validatedTemplate, responseData.outputs),
       false,
+      undefined,
+      { autoSave: false },
     );
   } catch (error) {
     console.warn(`Failed to refresh model node ${node.id}:`, error);

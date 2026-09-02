@@ -23,7 +23,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "empiriolabs", "openai", "
 # Fine-grained BUNDLE_API compatibility is enforced via extension.json's
 # lfx.compat list against BUNDLE_API_VERSION.
 dependencies = [
-    "lfx>=1.12.0.dev0,<2.0.0",
+    "lfx>=1.13.0.dev0,<2.0.0",
     "langchain-openai>=1.1.6",
     "requests>=2.32.0",
 ]

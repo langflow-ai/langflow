@@ -255,6 +255,7 @@
         "deepseek",
         "elastic",
         "faiss",
+        "funasr",
         "git",
         "glean",
         "groq",
