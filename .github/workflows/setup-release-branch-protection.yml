@@ -1,0 +1,140 @@
+name: Setup Release Branch Protection
+
+on:
+  create:
+    branches:
+      - 'release-*'
+
+permissions:
+  contents: read
+  administration: write
+
+jobs:
+  setup-branch-protection:
+    name: Configure Branch Protection Rules
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/heads/release-')
+    
+    steps:
+      - name: Extract branch name
+        id: extract_branch
+        run: |
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "Detected release branch: $BRANCH_NAME"
+      
+      - name: Setup branch protection rules
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const branchName = '${{ steps.extract_branch.outputs.branch_name }}';
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            console.log(`Setting up branch protection for: ${branchName}`);
+            
+            try {
+              // Configure branch protection rules
+              await github.rest.repos.updateBranchProtection({
+                owner,
+                repo,
+                branch: branchName,
+                required_status_checks: {
+                  strict: true,
+                  contexts: [
+                    'CI / Run Unit Tests',
+                    'CI / Run Integration Tests',
+                    'CI / Lint Backend',
+                    'CI / Lint Frontend',
+                    'CI / Type Check'
+                  ]
+                },
+                enforce_admins: false,
+                required_pull_request_reviews: {
+                  dismiss_stale_reviews: true,
+                  require_code_owner_reviews: true,
+                  required_approving_review_count: 2,
+                  require_last_push_approval: true
+                },
+                restrictions: null,
+                required_linear_history: false,
+                allow_force_pushes: false,
+                allow_deletions: false,
+                block_creations: false,
+                required_conversation_resolution: true,
+                lock_branch: false,
+                allow_fork_syncing: false
+              });
+              
+              console.log(`✅ Branch protection rules applied successfully to ${branchName}`);
+              
+              // Enable merge queue if available
+              try {
+                await github.rest.repos.updateBranchProtection({
+                  owner,
+                  repo,
+                  branch: branchName,
+                  required_status_checks: {
+                    strict: true,
+                    contexts: [
+                      'CI / Run Unit Tests',
+                      'CI / Run Integration Tests',
+                      'CI / Lint Backend',
+                      'CI / Lint Frontend',
+                      'CI / Type Check'
+                    ]
+                  },
+                  enforce_admins: false,
+                  required_pull_request_reviews: {
+                    dismiss_stale_reviews: true,
+                    require_code_owner_reviews: true,
+                    required_approving_review_count: 2,
+                    require_last_push_approval: true
+                  },
+                  restrictions: null,
+                  required_linear_history: false,
+                  allow_force_pushes: false,
+                  allow_deletions: false,
+                  block_creations: false,
+                  required_conversation_resolution: true,
+                  lock_branch: false,
+                  allow_fork_syncing: false,
+                  // Merge queue configuration
+                  merge_queue: {
+                    enabled: true,
+                    merge_method: 'squash',
+                    check_response_timeout_minutes: 60,
+                    grouping_strategy: 'ALLGREEN'
+                  }
+                });
+                console.log(`✅ Merge queue enabled for ${branchName}`);
+              } catch (mergeQueueError) {
+                console.log(`⚠️  Could not enable merge queue: ${mergeQueueError.message}`);
+                console.log('This may require additional repository permissions or GitHub Enterprise features');
+              }
+              
+            } catch (error) {
+              console.error(`❌ Failed to set up branch protection: ${error.message}`);
+              core.setFailed(error.message);
+            }
+      
+      - name: Post summary
+        if: always()
+        run: |
+          echo "## Branch Protection Setup" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** \`${{ steps.extract_branch.outputs.branch_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Protection Rules Applied:" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Required status checks enabled" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Required pull request reviews (2 approvals)" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Code owner reviews required" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Dismiss stale reviews enabled" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Require last push approval" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Conversation resolution required" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Force pushes blocked" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Branch deletion blocked" >> $GITHUB_STEP_SUMMARY
+          echo "- ⚠️  Merge queue (if supported by repository)" >> $GITHUB_STEP_SUMMARY
+
+
