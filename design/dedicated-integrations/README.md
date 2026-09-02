@@ -1,6 +1,6 @@
 # Dedicated Integrations (1.13): discovery gate records
 
-Status: Phase 2 complete (all three matrices fully sourced). Nothing in this directory is approved yet.
+Status: Phases 3 and 4 drafted at `proposed` (substrate and restricted-scope decisions await the release owner). Nothing in this directory is approved yet.
 Jira: LE-2398 "Dedicated Integrations", ticket INT-1.
 Last updated: 2026-09-01
 
@@ -14,8 +14,8 @@ these files are the historical record the checker keeps guarding.
 | # | Exit criterion (from INT-1) | Artifact | Machine check | Status |
 |---|---|---|---|---|
 | 1 | Three approved matrices, at most 8 actions each | `matrices/google.json`, `matrices/microsoft.json`, `matrices/slack.json` | `check_capability_matrices.py`: included-action cap, required fields, enums | all three fully sourced (Google 6 rows / 22 sources, Microsoft 8 / 18, Slack 7 / 15); include set pending Phases 3 and 4 |
-| 2 | Every scope classified; every restricted scope has a written decision | scope entries in the matrices; `decisions/google-restricted-scopes.md` | classification present and sourced; restricted scopes need a `restricted_scope_decisions` entry pointing at an existing record | stub record |
-| 3 | Substrate decision per provider with the server's GA status | `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`; `substrate_decision` in each matrix | included actions must use a chosen substrate; non-GA MCP rows cannot be high confidence | stub records |
+| 2 | Every scope classified; every restricted scope has a written decision | scope entries in the matrices; `decisions/google-restricted-scopes.md` | classification present and sourced; restricted scopes need a `restricted_scope_decisions` entry pointing at an existing record | proposed: avoid on the hosted app; Gmail search excluded, Drive on drive.file |
+| 3 | Substrate decision per provider with the server's GA status | `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`; `substrate_decision` in each matrix | included actions must use a chosen substrate; non-GA MCP rows cannot be high confidence | proposed: Google sdk, Microsoft rest, Slack mixed (conditional) |
 | 4 | INT-2 connection-resolution contract signed off by lfx, langflow-base, Enterprise owners | `connection-contract.md` | none (PR approval) | not started |
 | 5 | Frontend surface list | `frontend-surfaces.md` | none | not started |
 | 6 | Trigger/webhook track recorded as deferred | `triggers-deferred.md` | none | placeholder, no findings folded in |
@@ -155,8 +155,8 @@ cited source in Phase 1 or 2.
 | 0 | this scaffold, checker, seed rows | no |
 | 1 | `matrices/google.json` fully sourced (done 2026-09-01) | no |
 | 2 | `matrices/microsoft.json`, `matrices/slack.json` fully sourced (done 2026-09-01) | no |
-| 3 | substrate decisions to `proposed` | yes: per provider, especially Slack mixed vs Web API only |
-| 4 | `google-restricted-scopes.md`; rows flipped | yes: CASA or avoid |
+| 3 | substrate decisions to `proposed` (drafted 2026-09-01) | yes: confirm Google sdk, Microsoft rest, Slack mixed vs Web API only |
+| 4 | `google-restricted-scopes.md` (drafted 2026-09-01, recommends avoid); rows flip on acceptance | yes: CASA or avoid |
 | 5 | `connection-contract.md` | review by lfx, langflow-base, Enterprise owners |
 | 6 | KB connector and palette naming decisions | yes |
 | 7 | `frontend-surfaces.md` | no |
