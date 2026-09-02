@@ -4,6 +4,7 @@ import json
 import pytest
 from langflow.services.database.models.flow_version.exceptions import FlowVersionSerializationError
 from langflow.services.database.models.flow_version.serialization import pack, unpack
+from sqlalchemy import Integer
 
 GRAPH = {
     "nodes": [{"id": "node-1", "data": {"node": {"template": {"code": {"value": "from lfx import x\n"}}}}}],
@@ -55,3 +56,25 @@ def test_unpack_rejects_gzip_that_is_not_json():
 def test_pack_rejects_a_document_json_cannot_encode():
     with pytest.raises(FlowVersionSerializationError):
         pack({"nodes": {object()}})
+
+
+def test_the_column_stores_gzip_bytes_and_reads_back_a_dict():
+    from langflow.services.database.models.flow_version.serialization import GzippedJSON
+    from sqlalchemy import Column, MetaData, Table, create_engine, select
+
+    metadata = MetaData()
+    table = Table("sample", metadata, Column("id", Integer, primary_key=True), Column("payload", GzippedJSON))
+    engine = create_engine("sqlite://")
+    metadata.create_all(engine)
+
+    with engine.begin() as conn:
+        conn.execute(table.insert().values(id=1, payload=GRAPH))
+        conn.execute(table.insert().values(id=2, payload=None))
+
+    with engine.connect() as conn:
+        assert conn.execute(select(table.c.payload).where(table.c.id == 1)).scalar_one() == GRAPH
+        assert conn.execute(select(table.c.payload).where(table.c.id == 2)).scalar_one() is None
+        raw = conn.exec_driver_sql("SELECT payload FROM sample WHERE id = 1").scalar_one()
+
+    assert raw[:2] == b"\x1f\x8b"
+    assert b"lfx" not in raw
