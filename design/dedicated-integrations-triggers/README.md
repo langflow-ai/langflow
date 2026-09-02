@@ -18,7 +18,8 @@ pulling triggers into 1.13 invalidates the 48.75 engineer-week estimate.
 ## Why a separate initiative
 
 - Request/response actions and persistent triggers are different lifecycle and delivery products (governing plan,
-  Scope Boundary 1; `triggers-deferred.md`). No wave-1 action opens a listener or creates a subscription.
+  Scope Boundary 1; `../dedicated-integrations/triggers-deferred.md`). No wave-1 action opens a listener or creates a
+  subscription.
 - Listening cannot run inside the API process. The platform owner's position (Gabriel Almeida, 2026-09-02): a
   listener needs a separate service or a subprocess supervisor, one instance per bot, so that API replicas,
   restarts, and autoscaling neither duplicate nor drop connections. Nothing in the repo supervises a long-lived
@@ -28,7 +29,7 @@ pulling triggers into 1.13 invalidates the 48.75 engineer-week estimate.
 - The deferred record's re-open triggers, as of 2026-09-02: (1) a written findings document: requested from the
   platform owner, pending; (2) a customer commitment naming a trigger-driven flow for a dated release: none
   recorded; (3) two of three providers' event delivery confirmed usable from a self-managed instance without public
-  ingress: Slack Socket Mode is documented as such (one of two); whether a Gmail Pub/Sub pull subscription and a
+  ingress: Slack Socket Mode is documented as such (one of three); whether a Gmail Pub/Sub pull subscription and a
   Microsoft Graph delivery alternative qualify is a Phase 2 question.
 
 ## Boundary with 1.13
@@ -38,9 +39,9 @@ What 1.13 owes this initiative, and nothing more:
 | Obligation | Where it lives | Status |
 |---|---|---|
 | The INT-2 connection resolver is callable from a non-API process: a sidecar resolves connections through the registered `BaseConnectionResolverService`, not through HTTP routes | `../dedicated-integrations/connection-contract.md` section 3; question 12.a.2 | in the 1.13 contract, unsigned |
-| INT-5 single-flight refresh coordinates across processes, not only across uvicorn workers | `connection-contract.md` section 6; question 12.b.4 | in the 1.13 contract, unsigned |
-| INT-6 rules for non-interactive execution apply verbatim to trigger-driven runs: the `flow_owner` and `deployment_owner` families resolve a user connection only with the per-connection `allow_non_interactive` opt-in, and anonymous execution never does | `connection-contract.md` section 4; `scripts/ci/execution_principal_matrix.json` | in the 1.13 contract |
-| The connection record carries no trigger-specific fields, and the INT-3 manifest `integrations` field reserves no event fields | `triggers-deferred.md`, "Interaction with the actions release" | recorded |
+| INT-5 single-flight refresh coordinates across processes, not only across uvicorn workers | `../dedicated-integrations/connection-contract.md` section 6; question 12.b.4 | in the 1.13 contract, unsigned |
+| INT-6 rules for non-interactive execution apply verbatim to trigger-driven runs: the `flow_owner` and `deployment_owner` families resolve a user connection only with the per-connection `allow_non_interactive` opt-in, and anonymous execution never does | `../dedicated-integrations/connection-contract.md` section 4; `scripts/ci/execution_principal_matrix.json` | in the 1.13 contract |
+| The connection record carries no trigger-specific fields, and the INT-3 manifest `integrations` field reserves no event fields | `../dedicated-integrations/triggers-deferred.md`, "Interaction with the actions release" | recorded |
 
 What this gate must not do: reopen a 1.13 decision, add to the 1.13 estimate, or block a 1.13 sign-off.
 
@@ -75,8 +76,8 @@ frontend. Track A can ship before Track B; the gate decides whether it should.
 | 8 | Frontend surface list: trigger node, subscription status, event log and replay, operator controls | `frontend-surfaces.md` | none | not started |
 | 9 | Estimate and ticket breakdown, TRG-2 onward | `estimate.md` | none | not started |
 
-Gate close means: every row above is done, every record under `decisions/` is `Status: accepted`, and every
-declared owner has completed both sign-off tables.
+Gate close means: every row above is done, every instantiated decision record under `decisions/` except
+`TEMPLATE.md` is `Status: accepted`, and every declared owner has completed both sign-off tables.
 
 ## Precedents (verified against the branches on 2026-09-02)
 
