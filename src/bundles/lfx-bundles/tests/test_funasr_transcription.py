@@ -44,7 +44,7 @@ def test_component_contract() -> None:
 
     assert component.display_name == "FunASR Transcription"
     assert component.icon == "AudioLines"
-    assert component.documentation == "https://www.funasr.com/openai-api.html"
+    assert component.documentation == "https://github.com/modelscope/FunASR/tree/main/examples/openai_api"
     assert inputs["audio_file"].required is True
     assert inputs["base_url"].value == "http://127.0.0.1:8000/v1"
     assert inputs["model"].value == "sensevoice"
@@ -204,7 +204,7 @@ def test_rejects_untrusted_audio_before_request(
     [
         ("", "FunASR Base URL is required"),
         ("ftp://example.com/v1", "must use http or https"),
-        ("http://user:pass@example.com/v1", "must not contain embedded credentials"),
+        ("http://user:pass@example.com/v1", "must not contain embedded credentials"),  # pragma: allowlist secret
     ],
 )
 def test_rejects_invalid_base_url(

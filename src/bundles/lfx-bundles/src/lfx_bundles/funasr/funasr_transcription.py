@@ -18,7 +18,7 @@ from lfx.utils.ssrf_httpx import ssrf_safe_httpx_post
 class FunASRTranscriptionComponent(Component):
     display_name = "FunASR Transcription"
     description = "Transcribe audio with a self-hosted FunASR OpenAI-compatible endpoint."
-    documentation = "https://www.funasr.com/openai-api.html"
+    documentation = "https://github.com/modelscope/FunASR/tree/main/examples/openai_api"
     icon = "AudioLines"
 
     inputs = [

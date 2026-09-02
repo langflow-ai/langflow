@@ -153,5 +153,10 @@ def test_funasr_import_paths_have_migration_targets() -> None:
         "lfx_bundles.funasr.FunASRTranscriptionComponent",
     }
     target = "ext:funasr:FunASRTranscriptionComponent@official"
-    observed = {entry.import_path: entry.target for entry in table.entries if entry.import_path in import_paths}
-    assert observed == dict.fromkeys(import_paths, target)
+    observed = {
+        entry.import_path: (entry.target, entry.added_in)
+        for entry in table.entries
+        if entry.import_path in import_paths
+    }
+    assert observed == dict.fromkeys(import_paths, (target, "1.13.0"))
+    assert {entry.added_in for entry in table.entries if entry.target == target} == {"1.13.0"}
