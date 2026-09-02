@@ -35,22 +35,6 @@ PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE = "This flow is temporarily unavailabl
 #
 # Keeping these enforcement points on the same set prevents code-execution aliases from
 # drifting between the multi-tenant hardening and public-build hardening paths.
-# Inline components shipped inside Langflow's own packaged flows (langflow/agentic/flows).
-# These are first-party product code with no registered server counterpart, so the
-# unregistered-component gate would block the flow that ships them -- the assistant blocked
-# itself this way for every user on every message.
-#
-# Identity, not ambient state: an entry is (component type, sha256-12 of the exact shipped
-# source). Nothing is exempt by virtue of *when* it runs or *who* loaded it, so a bypass
-# cannot be inherited by a tenant flow, widened by a refactor, or opened by a new caller.
-# Editing the shipped flow changes the hash and fails
-# test_packaged_flow_inline_components_are_allowlisted, which prints the value to update.
-PACKAGED_FLOW_TRUSTED_CODE: frozenset[tuple[str, str]] = frozenset(
-    {
-        ("DataFrameKeywordSearch", "d365dfceabd1"),  # LangflowAssistant.json component search
-    }
-)
-
 CODE_EXECUTION_COMPONENT_TYPES: frozenset[str] = frozenset(
     {
         "CSVAgent",  # LangChain CSV agent can execute Python when allow_dangerous_code is enabled
@@ -569,15 +553,11 @@ def _get_invalid_components(
             # allow_custom_components gate while its stored code still executed at
             # build time (instantiate_class runs the node's stored code, which
             # does not consult the type).
-            node_hash = _compute_code_hash(node_code)
-            if (component_type, node_hash) in PACKAGED_FLOW_TRUSTED_CODE:
-                # Exact first-party source; see PACKAGED_FLOW_TRUSTED_CODE.
-                continue
-
             expected_hashes = type_to_current_hash.get(component_type) if isinstance(component_type, str) else None
             if expected_hashes is None:
                 blocked.append(label)
             else:
+                node_hash = _compute_code_hash(node_code)
                 is_substitutable = substitutable_types is not None and component_type in substitutable_types
                 if node_hash not in expected_hashes and not is_substitutable:
                     outdated.append(label)

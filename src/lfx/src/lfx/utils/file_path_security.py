@@ -214,50 +214,10 @@ def _scope_roots(
         roots.append(data_dir)
 
     if not roots:
-        logger.warning(
-            "Local-file access denied: no user or flow scope (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true)."
-        )
+        logger.warning("Local-file access denied: no user or flow scope (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true).")
         msg = "Local-file access requires an authenticated user or flow scope."
         raise LocalFileAccessError(msg)
     return tuple(roots)
-
-
-PACKAGED_FIRST_PARTY_GRAPH_ATTR = "is_packaged_first_party_flow"
-
-
-def package_resource_root() -> Path | None:
-    """The installed lfx component library, or None when it cannot be resolved.
-
-    The packaged assistant flow reads its own component library off disk to answer
-    questions about components. That path is outside every user's storage scope, so
-    restricted mode denied it and the assistant blocked itself.
-
-    Scoped to ``components`` rather than the package root: that is the only directory the
-    packaged flow reads, and a narrower root is a smaller blast radius. It holds the
-    product's own source -- no tenant data, no uploads, and none of the reserved
-    secret/key/DB files, which live under config_dir.
-    """
-    try:
-        import lfx
-
-        package_file = getattr(lfx, "__file__", None)
-        if not package_file:
-            return None
-        return (Path(package_file).parent / "components").resolve()
-    except (ImportError, OSError, ValueError):
-        return None
-
-
-def component_may_read_package_resources(component: object) -> bool:
-    """Whether *component* belongs to a graph built from a packaged first-party flow.
-
-    Bound to the graph OBJECT, not to a time window. A tenant flow dispatched during the
-    packaged flow's run is a different Graph, so it cannot inherit this the way an ambient
-    context variable would. Only ``flow_executor`` sets the attribute, and only on a graph
-    it built from a path ``resolve_flow_path`` confined to the packaged flows directory.
-    """
-    graph = getattr(getattr(component, "_vertex", None), "graph", None)
-    return bool(getattr(graph, PACKAGED_FIRST_PARTY_GRAPH_ATTR, False))
 
 
 def enforce_local_file_access(
@@ -265,8 +225,6 @@ def enforce_local_file_access(
     *,
     scope_ids: Iterable[object] | None = None,
     allow_storage_root: bool = False,
-    for_write: bool = False,
-    allow_package_read: bool = False,
 ) -> Path:
     """Ensure a local path is inside the current user/flow storage scope when restricted.
 
@@ -278,14 +236,6 @@ def enforce_local_file_access(
             symlinks are followed before the containment check; the caller need not pre-resolve it.
         scope_ids: Authenticated user id and/or executing flow id. At least one valid scope is
             required in restricted mode; paths under other storage subdirectories are denied.
-        for_write: The caller intends to write to this path, not just read it. Callers that
-            create or overwrite a file MUST pass True: it withholds the package read exemption,
-            because a write into the installed component library is code execution on the next
-            component discovery.
-        allow_package_read: Permit reads under the installed component library. Set ONLY from
-            ``component_may_read_package_resources``, which requires the component's own graph to
-            be the one built from a packaged first-party flow. Never derive this from ambient
-            state: a request-scoped flag would be inherited by tenant flows dispatched mid-run.
         allow_storage_root: Widen the containment boundary to ``config_dir`` itself and stop
             requiring a scope. This is a defense-in-depth FLOOR, not tenant isolation: it keeps
             arbitrary server files (and the reserved secret/key/DB files) out of reach but does
@@ -313,20 +263,16 @@ def enforce_local_file_access(
         raise LocalFileAccessError(msg) from e
 
     if not any(candidate == root or candidate.is_relative_to(root) for root in allowed_roots):
-        # Reads only: this gate also fronts writes (save_file.py), and a write into the
-        # package directory would be code execution on the next component discovery.
-        package_root = package_resource_root() if (allow_package_read and not for_write) else None
-        if package_root is None or not (candidate == package_root or candidate.is_relative_to(package_root)):
-            logger.warning(
-                "Local-file access denied for %s: outside the caller's storage scope "
-                "(LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true).",
-                candidate,
-            )
-            msg = (
-                "Access to local file paths outside the authenticated user's storage scope is disabled. "
-                "Use an uploaded file, or ask your administrator."
-            )
-            raise LocalFileAccessError(msg)
+        logger.warning(
+            "Local-file access denied for %s: outside the caller's storage scope "
+            "(LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true).",
+            candidate,
+        )
+        msg = (
+            "Access to local file paths outside the authenticated user's storage scope is disabled. "
+            "Use an uploaded file, or ask your administrator."
+        )
+        raise LocalFileAccessError(msg)
 
     # The storage dir is config_dir, which also holds server-managed secret/key/DB files as
     # siblings of the upload subdirs. Scope containment rejects them only when a scope narrows

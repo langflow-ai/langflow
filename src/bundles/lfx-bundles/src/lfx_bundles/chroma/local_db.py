@@ -220,9 +220,7 @@ class LocalDBComponent(LCVectorStoreComponent):
             # Confine the on-disk store to the storage dir when LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS
             # is on so a tenant cannot write Chroma's sqlite store to an arbitrary host path
             # (no-op by default).
-            safe_dir = enforce_local_file_access(
-                Path(base_dir) / "vector_stores" / self.collection_name, for_write=True
-            )
+            safe_dir = enforce_local_file_access(Path(base_dir) / "vector_stores" / self.collection_name)
             safe_dir.mkdir(parents=True, exist_ok=True)
             persist_directory = str(safe_dir)
             logger.debug(f"Using custom persist directory: {persist_directory}")

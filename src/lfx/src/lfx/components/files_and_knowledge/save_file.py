@@ -688,7 +688,7 @@ class SaveToFileComponent(Component):
             scope_root = Path(scope_ids[0]) if scope_ids else Path()
             file_path = Path(settings.config_dir) / scope_root / file_path
         file_path = self._adjust_file_path_with_format(file_path, file_format)
-        file_path = enforce_local_file_access(file_path, scope_ids=scope_ids, for_write=True)
+        file_path = enforce_local_file_access(file_path, scope_ids=scope_ids)
         if not file_path.parent.exists():
             file_path.parent.mkdir(parents=True, exist_ok=True)
 

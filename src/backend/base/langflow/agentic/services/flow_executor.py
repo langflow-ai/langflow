@@ -17,7 +17,6 @@ from lfx.log.logger import logger
 from lfx.mcp.flow_builder_tools import set_tool_start_listener
 from lfx.observability import execution_protocol
 from lfx.schema.schema import InputValueRequest
-from lfx.utils.file_path_security import PACKAGED_FIRST_PARTY_GRAPH_ATTR
 from lfx.utils.flow_validation import CustomComponentValidationError
 
 from langflow.agentic.services.flow_run import extract_graph_token_usage
@@ -131,11 +130,6 @@ async def execute_flow_file(
             api_key_var,
             provider_vars=global_variables,
         )
-        # resolve_flow_path confined flow_path to the packaged flows directory, so this graph
-        # was built from first-party product code. Marking the graph OBJECT rather than setting
-        # ambient state is what keeps the file-read exemption from reaching tenant flows
-        # dispatched during this run: those are different Graph objects and cannot inherit it.
-        setattr(graph, PACKAGED_FIRST_PARTY_GRAPH_ATTR, True)
 
         if user_id:
             graph.user_id = user_id
@@ -229,11 +223,6 @@ async def execute_flow_file_streaming(
             api_key_var,
             provider_vars=global_variables,
         )
-        # resolve_flow_path confined flow_path to the packaged flows directory, so this graph
-        # was built from first-party product code. Marking the graph OBJECT rather than setting
-        # ambient state is what keeps the file-read exemption from reaching tenant flows
-        # dispatched during this run: those are different Graph objects and cannot inherit it.
-        setattr(graph, PACKAGED_FIRST_PARTY_GRAPH_ATTR, True)
     except CustomComponentValidationError as e:
         logger.error(f"Flow preparation error: {e}")
         raise HTTPException(status_code=400, detail=str(e)) from e

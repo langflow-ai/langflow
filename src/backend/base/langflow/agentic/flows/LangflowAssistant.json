@@ -90,35 +90,8 @@
         "animated": false,
         "data": {
           "sourceHandle": {
-            "dataType": "Directory",
-            "id": "Directory-JiAX8",
-            "name": "dataframe",
-            "output_types": [
-              "Table"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "dataframe",
-            "id": "DataFrameKeywordSearch-b8MUN",
-            "inputTypes": [
-              "DataFrame"
-            ],
-            "type": "other"
-          }
-        },
-        "id": "reactflow__edge-Directory-JiAX8{œdataTypeœ:œDirectoryœ,œidœ:œDirectory-JiAX8œ,œnameœ:œdataframeœ,œoutput_typesœ:[œTableœ]}-DataFrameKeywordSearch-b8MUN{œfieldNameœ:œdataframeœ,œidœ:œDataFrameKeywordSearch-b8MUNœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}",
-        "selected": false,
-        "source": "Directory-JiAX8",
-        "sourceHandle": "{œdataTypeœ:œDirectoryœ,œidœ:œDirectory-JiAX8œ,œnameœ:œdataframeœ,œoutput_typesœ:[œTableœ]}",
-        "target": "DataFrameKeywordSearch-b8MUN",
-        "targetHandle": "{œfieldNameœ:œdataframeœ,œidœ:œDataFrameKeywordSearch-b8MUNœ,œinputTypesœ:[œDataFrameœ],œtypeœ:œotherœ}"
-      },
-      {
-        "animated": false,
-        "data": {
-          "sourceHandle": {
-            "dataType": "DataFrameKeywordSearch",
-            "id": "DataFrameKeywordSearch-b8MUN",
+            "dataType": "ComponentLibrarySearch",
+            "id": "ComponentLibrarySearch-b8MUN",
             "name": "component_as_tool",
             "output_types": [
               "Tool"
@@ -133,10 +106,10 @@
             "type": "other"
           }
         },
-        "id": "reactflow__edge-DataFrameKeywordSearch-b8MUN{œdataTypeœ:œDataFrameKeywordSearchœ,œidœ:œDataFrameKeywordSearch-b8MUNœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-M69JY{œfieldNameœ:œtoolsœ,œidœ:œAgent-M69JYœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
+        "id": "reactflow__edge-ComponentLibrarySearch-b8MUN{œdataTypeœ:œComponentLibrarySearchœ,œidœ:œComponentLibrarySearch-b8MUNœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}-Agent-M69JY{œfieldNameœ:œtoolsœ,œidœ:œAgent-M69JYœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}",
         "selected": false,
-        "source": "DataFrameKeywordSearch-b8MUN",
-        "sourceHandle": "{œdataTypeœ:œDataFrameKeywordSearchœ,œidœ:œDataFrameKeywordSearch-b8MUNœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
+        "source": "ComponentLibrarySearch-b8MUN",
+        "sourceHandle": "{œdataTypeœ:œComponentLibrarySearchœ,œidœ:œComponentLibrarySearch-b8MUNœ,œnameœ:œcomponent_as_toolœ,œoutput_typesœ:[œToolœ]}",
         "target": "Agent-M69JY",
         "targetHandle": "{œfieldNameœ:œtoolsœ,œidœ:œAgent-M69JYœ,œinputTypesœ:[œToolœ],œtypeœ:œotherœ}"
       },
@@ -2049,301 +2022,7 @@
       },
       {
         "data": {
-          "id": "Directory-JiAX8",
-          "node": {
-            "base_classes": [
-              "Table"
-            ],
-            "beta": false,
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Recursively load files from a directory.",
-            "display_name": "Directory",
-            "documentation": "https://docs.langflow.org/directory",
-            "edited": false,
-            "field_order": [
-              "path",
-              "types",
-              "depth",
-              "max_concurrency",
-              "load_hidden",
-              "recursive",
-              "silent_errors",
-              "use_multithreading"
-            ],
-            "frozen": false,
-            "icon": "folder",
-            "legacy": true,
-            "metadata": {
-              "code_hash": "e05a90393ad4",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "custom_components.directory"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Loaded Files",
-                "group_outputs": false,
-                "loop_types": null,
-                "method": "as_dataframe",
-                "name": "dataframe",
-                "options": null,
-                "required_inputs": null,
-                "selected": "Table",
-                "tool_mode": true,
-                "types": [
-                  "Table"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "replacement": [
-              "data.File"
-            ],
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from pathlib import Path, PurePath, PureWindowsPath\n\nfrom lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data, retrieve_file_paths\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import BoolInput, IntInput, MessageTextInput, MultiselectInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.services.deps import get_settings_service\nfrom lfx.template.field.base import Output\nfrom lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access\n\n\nclass DirectoryComponent(Component):\n    display_name = \"Directory\"\n    description = \"Recursively load files from a directory.\"\n    documentation: str = \"https://docs.langflow.org/directory\"\n    icon = \"folder\"\n    name = \"Directory\"\n    legacy = True\n    replacement = [\"data.File\"]\n\n    inputs = [\n        MessageTextInput(\n            name=\"path\",\n            display_name=\"Path\",\n            info=\"Path to the directory to load files from. Defaults to current directory ('.')\",\n            value=\".\",\n            tool_mode=True,\n        ),\n        MultiselectInput(\n            name=\"types\",\n            display_name=\"File Types\",\n            info=\"File types to load. Select one or more types or leave empty to load all supported types.\",\n            options=TEXT_FILE_TYPES,\n            value=[],\n        ),\n        IntInput(\n            name=\"depth\",\n            display_name=\"Depth\",\n            info=\"Depth to search for files.\",\n            value=0,\n        ),\n        IntInput(\n            name=\"max_concurrency\",\n            display_name=\"Max Concurrency\",\n            advanced=True,\n            info=\"Maximum concurrency for loading files.\",\n            value=2,\n        ),\n        BoolInput(\n            name=\"load_hidden\",\n            display_name=\"Load Hidden\",\n            advanced=True,\n            info=\"If true, hidden files will be loaded.\",\n        ),\n        BoolInput(\n            name=\"recursive\",\n            display_name=\"Recursive\",\n            advanced=True,\n            info=\"If true, the search will be recursive.\",\n        ),\n        BoolInput(\n            name=\"silent_errors\",\n            display_name=\"Silent Errors\",\n            advanced=True,\n            info=\"If true, errors will not raise an exception.\",\n        ),\n        BoolInput(\n            name=\"use_multithreading\",\n            display_name=\"Use Multithreading\",\n            advanced=True,\n            info=\"If true, multithreading will be used.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Loaded Files\", name=\"dataframe\", method=\"as_dataframe\"),\n    ]\n\n    @staticmethod\n    def _has_parent_reference(path: str) -> bool:\n        path_parts = (*PurePath(path).parts, *PureWindowsPath(path).parts)\n        return any(part == \"..\" for part in path_parts)\n\n    def _allowed_roots(self) -> list[Path]:\n        roots = {Path.cwd().resolve()}\n        configured_roots = getattr(get_settings_service().settings, \"directory_component_allowed_roots\", []) or []\n        for root in configured_roots:\n            if root:\n                roots.add(Path(root).expanduser().resolve())\n        return list(roots)\n\n    def _resolve_directory_path(self, path: str) -> str:\n        path = str(path or \".\").strip()\n        # Reject null bytes and parent references outright. A drive-absolute or UNC\n        # path (e.g. ``D:\\\\shared\\\\docs``) is NOT blanket-rejected here: canonicalization\n        # plus the ``_allowed_roots()`` containment check below decides whether it is\n        # allowed, so operator-configured roots on another drive remain reachable.\n        if \"\\x00\" in path or self._has_parent_reference(path):\n            msg = \"Directory path escapes the allowed root.\"\n            raise ValueError(msg)\n\n        resolved_path = Path(self.resolve_path(path)).expanduser().resolve()\n        if not any(resolved_path == root or resolved_path.is_relative_to(root) for root in self._allowed_roots()):\n            msg = \"Directory path escapes the allowed root.\"\n            raise ValueError(msg)\n        return str(resolved_path)\n\n    def load_directory(self) -> list[Data]:\n        path = self.path\n        types = self.types\n        depth = self.depth\n        max_concurrency = self.max_concurrency\n        load_hidden = self.load_hidden\n        recursive = self.recursive\n        silent_errors = self.silent_errors\n        use_multithreading = self.use_multithreading\n\n        resolved_path = self._resolve_directory_path(path)\n\n        # Security: confine directory reads to the storage dir in restricted (multi-tenant)\n        # mode so a tenant cannot recursively read arbitrary server directories.\n        resolved_path = str(enforce_local_file_access(resolved_path, scope_ids=component_file_access_scopes(self)))\n\n        # If no types are specified, use all supported types\n        if not types:\n            types = TEXT_FILE_TYPES\n\n        # Check if all specified types are valid\n        invalid_types = [t for t in types if t not in TEXT_FILE_TYPES]\n        if invalid_types:\n            msg = f\"Invalid file types specified: {invalid_types}. Valid types are: {TEXT_FILE_TYPES}\"\n            raise ValueError(msg)\n\n        valid_types = types\n\n        file_paths = retrieve_file_paths(\n            resolved_path, load_hidden=load_hidden, recursive=recursive, depth=depth, types=valid_types\n        )\n\n        loaded_data = []\n        if use_multithreading:\n            loaded_data = parallel_load_data(file_paths, silent_errors=silent_errors, max_concurrency=max_concurrency)\n        else:\n            loaded_data = [parse_text_file_to_data(file_path, silent_errors=silent_errors) for file_path in file_paths]\n\n        valid_data = [x for x in loaded_data if x is not None and isinstance(x, Data)]\n        self.status = valid_data\n        return valid_data\n\n    def as_dataframe(self) -> DataFrame:\n        return DataFrame(self.load_directory())\n"
-              },
-              "depth": {
-                "_input_type": "IntInput",
-                "advanced": false,
-                "display_name": "Depth",
-                "dynamic": false,
-                "info": "Depth to search for files.",
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "depth",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "int",
-                "value": 2
-              },
-              "load_hidden": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Load Hidden",
-                "dynamic": false,
-                "info": "If true, hidden files will be loaded.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "load_hidden",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
-              },
-              "max_concurrency": {
-                "_input_type": "IntInput",
-                "advanced": true,
-                "display_name": "Max Concurrency",
-                "dynamic": false,
-                "info": "Maximum concurrency for loading files.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "max_concurrency",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "int",
-                "value": 2
-              },
-              "path": {
-                "_input_type": "MessageTextInput",
-                "advanced": false,
-                "display_name": "Path",
-                "dynamic": false,
-                "info": "Path to the directory to load files from. Defaults to current directory ('.')",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "path",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": true,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "track_in_telemetry": false,
-                "type": "str",
-                "value": "./src/lfx/src/lfx/components/"
-              },
-              "recursive": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Recursive",
-                "dynamic": false,
-                "info": "If true, the search will be recursive.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "recursive",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
-              },
-              "silent_errors": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Silent Errors",
-                "dynamic": false,
-                "info": "If true, errors will not raise an exception.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "silent_errors",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
-              },
-              "types": {
-                "_input_type": "MultiselectInput",
-                "advanced": false,
-                "combobox": false,
-                "display_name": "File Types",
-                "dynamic": false,
-                "info": "File types to load. Select one or more types or leave empty to load all supported types.",
-                "list": true,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "name": "types",
-                "options": [
-                  "csv",
-                  "json",
-                  "pdf",
-                  "txt",
-                  "md",
-                  "mdx",
-                  "yaml",
-                  "yml",
-                  "xml",
-                  "html",
-                  "htm",
-                  "docx",
-                  "py",
-                  "sh",
-                  "sql",
-                  "js",
-                  "ts",
-                  "tsx"
-                ],
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "toggle": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": false,
-                "type": "str",
-                "value": [
-                  "py"
-                ]
-              },
-              "use_multithreading": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Multithreading",
-                "dynamic": false,
-                "info": "If true, multithreading will be used.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_multithreading",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
-              }
-            },
-            "tool_mode": false
-          },
-          "showNode": true,
-          "type": "Directory"
-        },
-        "id": "Directory-JiAX8",
-        "measured": {
-          "height": 448,
-          "width": 320
-        },
-        "position": {
-          "x": 1326,
-          "y": 1101.5263019016602
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
-      {
-        "data": {
-          "id": "DataFrameKeywordSearch-b8MUN",
+          "id": "ComponentLibrarySearch-b8MUN",
           "node": {
             "base_classes": [
               "DataFrame"
@@ -2351,12 +2030,11 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Search for keywords in a DataFrame column using any/all/coverage matching",
-            "display_name": "Keyword Search",
+            "description": "Search for keywords in the installed component library using any/all/coverage matching",
+            "display_name": "Component Library Search",
             "documentation": "",
-            "edited": true,
+            "edited": false,
             "field_order": [
-              "dataframe",
               "column",
               "keywords",
               "match_type",
@@ -2369,11 +2047,10 @@
             "legacy": false,
             "lf_version": "1.8.0",
             "metadata": {
-              "code_hash": "972eaf9de4dc",
               "dependencies": {
                 "dependencies": [
                   {
-                    "name": "langflow",
+                    "name": "lfx",
                     "version": null
                   },
                   {
@@ -2383,7 +2060,7 @@
                 ],
                 "total_dependencies": 2
               },
-              "module": "custom_components.keyword_search"
+              "module": "lfx.components.processing.component_library_search.ComponentLibrarySearch"
             },
             "minimized": false,
             "output_types": [],
@@ -2452,7 +2129,7 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from langflow.custom import Component\nfrom langflow.io import DataFrameInput, MessageTextInput, DropdownInput, BoolInput, Output\nfrom langflow.schema import DataFrame\nimport pandas as pd\n\n\nclass DataFrameKeywordSearch(Component):\n    display_name = \"Keyword Search\"\n    description = \"Search for keywords in a DataFrame column using any/all/coverage matching\"\n    icon = \"Search\"\n\n    inputs = [\n        DataFrameInput(\n            name=\"dataframe\",\n            display_name=\"DataFrame\",\n            info=\"Input DataFrame to search\",\n        ),\n        MessageTextInput(\n            name=\"column\",\n            display_name=\"Column\",\n            info=\"Column name to search in. Valid columns: 'file_path' (component file path) and 'text' (component source code).\",\n            tool_mode=True,\n        ),\n        MessageTextInput(\n            name=\"keywords\",\n            display_name=\"Keywords\",\n            info=\"Keywords to search for\",\n            is_list=True,\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"match_type\",\n            display_name=\"Match Type\",\n            options=[\"any\", \"all\", \"coverage\"],\n            value=\"any\",\n            info=\"'any' = OR logic, 'all' = AND logic, 'coverage' = keyword coverage ranking\",\n        ),\n        BoolInput(\n            name=\"case_sensitive\",\n            display_name=\"Case Sensitive\",\n            value=False,\n            advanced=True,\n            info=\"Whether search is case-sensitive\",\n        ),\n        IntInput(\n            name=\"number_candidates\",\n            display_name=\"Number of Candidates\",\n            value=10,\n            info=\"The number of candidates to filter and return in the dataframe output\")\n    ]\n\n    outputs = [\n        Output(name=\"result\", display_name=\"Filtered DataFrame\", method=\"search\"),\n    ]\n\n    def search(self) -> DataFrame:\n        df = self.dataframe\n        column = self.column\n        keywords = self.keywords if isinstance(self.keywords, list) else []\n        match_type = self.match_type\n        case_sensitive = self.case_sensitive\n\n        if df is None or len(df) == 0:\n            return DataFrame(pd.DataFrame())\n\n        if column not in df.columns:\n            available = \", \".join(str(c) for c in df.columns)\n            msg = f\"Column '{column}' not found. Available columns: {available}\"\n            raise ValueError(msg)\n\n        keywords = [str(k).strip() for k in keywords if k]\n        if not keywords:\n            return DataFrame(df)\n\n        text_series = df[column].fillna(\"\").astype(str)\n\n        if not case_sensitive:\n            text_series = text_series.str.lower()\n            keywords = [k.lower() for k in keywords]\n\n        if match_type == \"any\":\n            mask = pd.Series([False] * len(df), index=df.index)\n            for keyword in keywords:\n                mask = mask | text_series.str.contains(keyword, regex=False)\n            result = df[mask]\n\n        elif match_type == \"all\":\n            mask = pd.Series([True] * len(df), index=df.index)\n            for keyword in keywords:\n                mask = mask & text_series.str.contains(keyword, regex=False)\n            result = df[mask]\n\n        elif match_type == \"coverage\":\n            scores = []\n            total_keywords = len(keywords)\n\n            for text in text_series:\n                keywords_found = sum(1 for keyword in keywords if keyword in text)\n                score = keywords_found / total_keywords\n                scores.append(score)\n\n            result = df.copy()\n            result[\"_score\"] = scores\n            result = result[result[\"_score\"] > 0].sort_values(\"_score\", ascending=False)\n\n        return DataFrame(result.reset_index(drop=True)).head(self.number_candidates)"
+                "value": "from pathlib import Path\n\nimport pandas as pd\n\nimport lfx\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output\nfrom lfx.schema.dataframe import DataFrame\n\n\nclass ComponentLibrarySearch(Component):\n    \"\"\"Keyword search over the installed Langflow component library.\n\n    The packaged assistant flow used to build this table with a ``Directory`` node pointed at\n    the installed ``lfx/components`` directory. That path is outside every user's storage\n    scope, so ``restrict_local_file_access`` denied it, and the node's search partner was\n    inline flow code with no registered server counterpart, so ``allow_custom_components``\n    denied that. Both denials were about the flow reaching for tenant-gated machinery to read\n    first-party product source.\n\n    Reading the library here removes the need for either exemption. There is no path input --\n    the root is derived from this package -- so no tenant-controlled path exists for\n    ``enforce_local_file_access`` to gate, and the component is registered like any other, so\n    the custom-component gate resolves it normally. The source it returns is the same source\n    ``GET /api/v1/all`` already serves to every authenticated user.\n    \"\"\"\n\n    display_name = \"Component Library Search\"\n    description = \"Search for keywords in the installed component library using any/all/coverage matching\"\n    icon = \"Search\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"column\",\n            display_name=\"Column\",\n            info=\"Column name to search in. Valid columns: 'file_path' (component file path) \"\n            \"and 'text' (component source code).\",\n            value=\"file_path\",\n            tool_mode=True,\n        ),\n        MessageTextInput(\n            name=\"keywords\",\n            display_name=\"Keywords\",\n            info=\"Keywords to search for\",\n            is_list=True,\n            tool_mode=True,\n        ),\n        DropdownInput(\n            name=\"match_type\",\n            display_name=\"Match Type\",\n            options=[\"any\", \"all\", \"coverage\"],\n            value=\"any\",\n            info=\"'any' = OR logic, 'all' = AND logic, 'coverage' = keyword coverage ranking\",\n        ),\n        BoolInput(\n            name=\"case_sensitive\",\n            display_name=\"Case Sensitive\",\n            value=False,\n            advanced=True,\n            info=\"Whether search is case-sensitive\",\n        ),\n        IntInput(\n            name=\"number_candidates\",\n            display_name=\"Number of Candidates\",\n            value=10,\n            info=\"The number of candidates to filter and return in the dataframe output\",\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"result\", display_name=\"Filtered DataFrame\", method=\"search\"),\n    ]\n\n    def _component_library(self) -> pd.DataFrame:\n        \"\"\"Read the installed component library into ``file_path`` / ``text`` columns.\n\n        Mirrors what the flow's ``Directory`` node read before: the same ``*/*.py`` shape at\n        depth 2, minus package ``__init__`` files, which carry only re-export boilerplate.\n        Errors propagate rather than yielding a partial table -- an unreadable component file\n        means a broken install, and a silently short search result reads as \"no such\n        component\", which is a wrong answer rather than a visible failure.\n        \"\"\"\n        root = (Path(lfx.__file__).parent / \"components\").resolve()\n        if not root.is_dir():\n            msg = f\"Component library not found at {root}.\"\n            raise ValueError(msg)\n\n        rows = []\n        for path in sorted(root.glob(\"*/*.py\")):\n            if path.name == \"__init__.py\":\n                continue\n            # ``glob`` follows symlinks, so a link named ``*.py`` inside the package would be\n            # read from wherever it points. Nothing ships one, and creating one needs write\n            # access to site-packages -- which is already game over -- but staying inside the\n            # root we advertise is a one-line invariant rather than a trusted assumption.\n            if not path.resolve().is_relative_to(root):\n                continue\n            rows.append({\"file_path\": str(path), \"text\": path.read_text(encoding=\"utf-8\")})\n        return pd.DataFrame(rows, columns=[\"file_path\", \"text\"])\n\n    def search(self) -> DataFrame:\n        df = self._component_library()\n        column = self.column\n        keywords = self.keywords if isinstance(self.keywords, list) else []\n        match_type = self.match_type\n        case_sensitive = self.case_sensitive\n\n        if df is None or len(df) == 0:\n            return DataFrame(pd.DataFrame())\n\n        if column not in df.columns:\n            available = \", \".join(str(c) for c in df.columns)\n            msg = f\"Column '{column}' not found. Available columns: {available}\"\n            raise ValueError(msg)\n\n        keywords = [str(k).strip() for k in keywords if k]\n        if not keywords:\n            return DataFrame(df)\n\n        text_series = df[column].fillna(\"\").astype(str)\n\n        if not case_sensitive:\n            text_series = text_series.str.lower()\n            keywords = [k.lower() for k in keywords]\n\n        if match_type == \"any\":\n            mask = pd.Series([False] * len(df), index=df.index)\n            for keyword in keywords:\n                mask = mask | text_series.str.contains(keyword, regex=False)\n            result = df[mask]\n\n        elif match_type == \"all\":\n            mask = pd.Series([True] * len(df), index=df.index)\n            for keyword in keywords:\n                mask = mask & text_series.str.contains(keyword, regex=False)\n            result = df[mask]\n\n        elif match_type == \"coverage\":\n            scores = []\n            total_keywords = len(keywords)\n\n            for text in text_series:\n                keywords_found = sum(1 for keyword in keywords if keyword in text)\n                score = keywords_found / total_keywords\n                scores.append(score)\n\n            result = df.copy()\n            result[\"_score\"] = scores\n            result = result[result[\"_score\"] > 0].sort_values(\"_score\", ascending=False)\n\n        else:\n            # Unreachable through the tool, which exposes only column and keywords, but a hand\n            # edited flow can set anything. Say so rather than raising UnboundLocalError below.\n            msg = f\"Unknown match_type '{match_type}'. Expected one of: any, all, coverage.\"\n            raise ValueError(msg)\n\n        return DataFrame(result.reset_index(drop=True)).head(self.number_candidates)\n"
               },
               "column": {
                 "_input_type": "MessageTextInput",
@@ -2478,30 +2155,6 @@
                 "track_in_telemetry": false,
                 "type": "str",
                 "value": "file_path"
-              },
-              "dataframe": {
-                "_input_type": "DataFrameInput",
-                "advanced": false,
-                "display_name": "DataFrame",
-                "dynamic": false,
-                "info": "Input DataFrame to search",
-                "input_types": [
-                  "DataFrame"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "dataframe",
-                "override_skip": false,
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "track_in_telemetry": false,
-                "type": "other",
-                "value": ""
               },
               "is_refresh": false,
               "keywords": {
@@ -2620,7 +2273,7 @@
                       }
                     },
                     "description": "Search for Langflow component code to use as reference based on keyword matching. Use at least 3 keywords.",
-                    "display_description": "Search for keywords in a DataFrame column using any/all/coverage matching",
+                    "display_description": "Search for keywords in the installed component library using any/all/coverage matching",
                     "display_name": "search",
                     "name": "component_code_search",
                     "readonly": false,
@@ -2635,9 +2288,9 @@
             "tool_mode": true
           },
           "showNode": true,
-          "type": "DataFrameKeywordSearch"
+          "type": "ComponentLibrarySearch"
         },
-        "id": "DataFrameKeywordSearch-b8MUN",
+        "id": "ComponentLibrarySearch-b8MUN",
         "measured": {
           "height": 435,
           "width": 320

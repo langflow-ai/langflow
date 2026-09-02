@@ -119,7 +119,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
         # path to the storage dir when LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS is on so a tenant
         # cannot point Chroma's on-disk sqlite store at an arbitrary host path (no-op by default).
         persist_directory = (
-            str(enforce_local_file_access(self.resolve_path(self.persist_directory), for_write=True))
+            str(enforce_local_file_access(self.resolve_path(self.persist_directory)))
             if self.persist_directory is not None
             else None
         )
