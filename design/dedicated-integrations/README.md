@@ -16,8 +16,8 @@ these files are the historical record the checker keeps guarding.
 | 1 | Three approved matrices, at most 8 actions each | `matrices/google.json`, `matrices/microsoft.json`, `matrices/slack.json` | `check_capability_matrices.py`: included-action cap, required fields, enums | all three fully sourced (Google 6 rows / 22 sources, Microsoft 8 / 18, Slack 7 / 15); include set pending Phases 3 and 4 |
 | 2 | Every scope classified; every restricted scope has a written decision | scope entries in the matrices; `decisions/google-restricted-scopes.md` | classification present and sourced; restricted scopes need a `restricted_scope_decisions` entry pointing at an existing record | proposed: avoid on the hosted app; Gmail search excluded, Drive on drive.file |
 | 3 | Substrate decision per provider with the server's GA status | `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`; `substrate_decision` in each matrix | included actions must use a chosen substrate; non-GA MCP rows cannot be high confidence | proposed: Google sdk, Microsoft rest, Slack mixed (conditional) |
-| 4 | INT-2 connection-resolution contract signed off by lfx, langflow-base, Enterprise owners | `connection-contract.md` | none (PR approval) | not started |
-| 5 | Frontend surface list | `frontend-surfaces.md` | none | not started |
+| 4 | INT-2 connection-resolution contract signed off by lfx, langflow-base, Enterprise owners | `connection-contract.md` | none (PR approval) | drafted 2026-09-01; 12 sections, owner questions in section 12 |
+| 5 | Frontend surface list | `frontend-surfaces.md` | none | drafted 2026-09-01; 14 extend + 8 new, MVP/defer split |
 | 6 | Trigger/webhook track recorded as deferred | `triggers-deferred.md` | none | placeholder, no findings folded in |
 | 7 | Re-issued estimate | `estimate.md` | none | not started |
 | + | KB OAuth connector adoption decision (added by the release owner) | `decisions/kb-oauth-connector-adoption.md` | none | not started |
@@ -157,7 +157,7 @@ cited source in Phase 1 or 2.
 | 2 | `matrices/microsoft.json`, `matrices/slack.json` fully sourced (done 2026-09-01) | no |
 | 3 | substrate decisions to `proposed` (drafted 2026-09-01) | yes: confirm Google sdk, Microsoft rest, Slack mixed vs Web API only |
 | 4 | `google-restricted-scopes.md` (drafted 2026-09-01, recommends avoid); rows flip on acceptance | yes: CASA or avoid |
-| 5 | `connection-contract.md` | review by lfx, langflow-base, Enterprise owners |
+| 5 | `connection-contract.md` (drafted 2026-09-01) | review by lfx, langflow-base, Enterprise owners |
 | 6 | KB connector and palette naming decisions | yes |
-| 7 | `frontend-surfaces.md` | no |
+| 7 | `frontend-surfaces.md` (drafted 2026-09-01) | no |
 | 8 | `estimate.md`; records to `accepted`; gate close | yes |
