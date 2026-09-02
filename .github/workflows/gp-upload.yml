@@ -14,9 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     name: Upload frontend strings to GP
     environment: GP-test
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      contains(toJSON(github.event.commits.*.modified), 'src/frontend/src/locales/en.json')
+    # No file-specific gate here: github.event.commits[].modified is unreliable for
+    # squash-merge commits (GitHub doesn't consistently populate it for the merge-button
+    # commit), which silently skipped this job on nearly every real push. The top-level
+    # `on.push.paths` filter already restricts triggering to relevant pushes, computed by
+    # GitHub from an actual before/after diff rather than the commit payload, so it's safe
+    # to just run whenever the workflow triggers. Upload is idempotent.
 
     steps:
       - name: Checkout repository
@@ -63,11 +66,11 @@ jobs:
     runs-on: ubuntu-latest
     name: Upload backend strings to GP
     environment: GP-test
-    if: >-
-      github.actor != 'github-actions[bot]' && (
-        github.event_name == 'workflow_dispatch' ||
-        contains(toJSON(github.event.commits.*.modified), 'src/backend/base/langflow/locales/en.json')
-      )
+    # See upload-frontend above for why this no longer checks
+    # github.event.commits[].modified. The bot-actor guard stays: it exists to stop the
+    # GP Backend Auto-update Strings workflow's own en.json regeneration commits from
+    # re-triggering this upload.
+    if: github.actor != 'github-actions[bot]'
 
     steps:
       - name: Checkout repository
