@@ -417,13 +417,14 @@ async def test_event_class_filter_selects_and_never_hides_untagged_rows():
         # Hiding permission checks drops the check and keeps every other row,
         # including the two written before classification existed.
         hide_checks = select(AuthzAuditLog).where(
-            or_(event_class.not_in([audit_module.AUDIT_EVENT_DECISION]), event_class.is_(None))
+            or_(event_class.not_in([audit_module.AUDIT_EVENT_DECISION]), event_class.is_(None)),
+            col(AuthzAuditLog.action).not_in(["audit:read"]),
         )
-        assert await actions(hide_checks) == ["audit:read", "flow:read", "flow:write", "share:create"]
+        assert await actions(hide_checks) == ["flow:read", "flow:write", "share:create"]
 
         # The count the route reports comes off the same filtered subquery, so
         # pagination cannot disagree with the rows.
         total = int((await session.exec(select(sa.func.count()).select_from(hide_checks.subquery()))).first() or 0)
-        assert total == 4
+        assert total == 3
 
     await engine.dispose()

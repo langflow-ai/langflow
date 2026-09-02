@@ -1,6 +1,6 @@
 [project]
 name = "lfx-ibm"
-version = "0.2.1"
+version = "0.2.3"
 description = "IBM components (Db2 Vector Store, watsonx.ai LLM and embeddings, watsonx.data Presto and MCP) as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"

@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from lfx.log.logger import logger
 from lfx.services.authorization import (
     AuthorizationMutation,
@@ -28,6 +28,7 @@ from langflow.api.v1.schemas.authz_role_assignments import (
     RoleAssignmentGrantSummary,
     RoleAssignmentRead,
 )
+from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS, AUDIT_EVENT_MUTATION
 from langflow.services.authorization.lifecycle import (
     acquire_identity_mutation_lock,
     safe_identity_mutation_committed,
@@ -39,22 +40,39 @@ from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignmen
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_authorization_service
 
-router = APIRouter(prefix="/authz/role-assignments", tags=["Authorization"])
+router = APIRouter(prefix="/authz/role-assignments", tags=["Authorization"], include_in_schema=False)
 
 # See ``authz_roles._LIST_MAX_LIMIT`` — same bound, applied to assignments.
 _LIST_MAX_LIMIT = 200
 _LIST_DEFAULT_LIMIT = 100
 
 
-def _require_superuser(user) -> None:
+async def _audit_deny(*, user_id: UUID, action: str, obj: str, status_code: int, reason: str) -> None:
+    await audit_decision(
+        user_id=user_id,
+        action=action,
+        obj=obj,
+        result="deny",
+        details={"event": AUDIT_EVENT_ACCESS, "status_code": status_code, "reason": reason},
+    )
+
+
+async def _require_superuser(user, *, action: str, obj: str) -> None:
     if not getattr(user, "is_superuser", False):
+        await _audit_deny(
+            user_id=user.id,
+            action=action,
+            obj=obj,
+            status_code=status.HTTP_403_FORBIDDEN,
+            reason="superuser_required",
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Superuser required to administer role assignments.",
         )
 
 
-async def _require_superuser_dependency(current_user: CurrentActiveUser) -> None:
+async def _require_superuser_dependency(request: Request, current_user: CurrentActiveUser) -> None:
     """Run the superuser gate as a route dependency, i.e. before body validation.
 
     FastAPI solves a route's ``dependencies`` before validating that route's own
@@ -66,7 +84,9 @@ async def _require_superuser_dependency(current_user: CurrentActiveUser) -> None
     The in-body call is kept as well: it is the gate for anything that reaches
     the endpoint function without FastAPI resolving dependencies.
     """
-    _require_superuser(current_user)
+    assignment_id = request.path_params.get("assignment_id", "*")
+    action = "role_assignment:create" if request.method == "POST" else "role_assignment:delete"
+    await _require_superuser(current_user, action=action, obj=f"role_assignment:{assignment_id}")
 
 
 SUPERUSER_ONLY = [Depends(_require_superuser_dependency)]
@@ -141,7 +161,11 @@ async def list_assignments(
     if user_id is None:
         user_id = current_user.id
     elif user_id != current_user.id:
-        _require_superuser(current_user)
+        await _require_superuser(
+            current_user,
+            action="role_assignment:read",
+            obj=f"user:{user_id}",
+        )
     stmt = select(AuthzRoleAssignment).where(AuthzRoleAssignment.user_id == user_id)
     if role_id is not None:
         stmt = stmt.where(AuthzRoleAssignment.role_id == role_id)
@@ -162,7 +186,7 @@ async def create_assignment(
     session: DbSession,
 ) -> RoleAssignmentRead:
     """Assign a role to a user. Superuser-only."""
-    _require_superuser(current_user)
+    await _require_superuser(current_user, action="role_assignment:create", obj="role_assignment:*")
     authorization_service = get_authorization_service()
     # Let authorization plugins acquire their transaction-scoped policy-write
     # lock before the first canonical identity read or write. An external
@@ -176,9 +200,23 @@ async def create_assignment(
 
     user = await session.get(User, payload.user_id)
     if user is None:
+        await _audit_deny(
+            user_id=current_user.id,
+            action="role_assignment:create",
+            obj="role_assignment:*",
+            status_code=status.HTTP_404_NOT_FOUND,
+            reason="user_not_found",
+        )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user_id not found")
     role = await session.get(AuthzRole, payload.role_id)
     if role is None:
+        await _audit_deny(
+            user_id=current_user.id,
+            action="role_assignment:create",
+            obj="role_assignment:*",
+            status_code=status.HTTP_404_NOT_FOUND,
+            reason="role_not_found",
+        )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="role_id not found")
 
     candidate = AuthzRoleAssignment(
@@ -205,6 +243,13 @@ async def create_assignment(
             )
         ).first()
         if existing_manual is not None:
+            await _audit_deny(
+                user_id=current_user.id,
+                action="role_assignment:create",
+                obj="role_assignment:*",
+                status_code=status.HTTP_409_CONFLICT,
+                reason="manual_assignment_already_exists",
+            )
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Manual assignment already exists for this user/role/domain",
@@ -234,6 +279,13 @@ async def create_assignment(
         await session.commit()
     except IntegrityError as exc:
         await session.rollback()
+        await _audit_deny(
+            user_id=current_user.id,
+            action="role_assignment:create",
+            obj="role_assignment:*",
+            status_code=status.HTTP_409_CONFLICT,
+            reason="assignment_conflict",
+        )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Assignment already exists for this user/role/domain",
@@ -244,10 +296,13 @@ async def create_assignment(
     await audit_decision(
         user_id=current_user.id,
         action="role_assignment:create",
-        obj=f"user:{payload.user_id}",
+        obj=f"role_assignment:{assignment.id}",
         result="allow",
         details={
+            "event": AUDIT_EVENT_MUTATION,
             "assignment_id": str(assignment.id),
+            "subject_type": "user",
+            "user_id": str(payload.user_id),
             "role_id": str(payload.role_id),
             "role_name": role.name,
             "domain_type": payload.domain_type,
@@ -277,7 +332,11 @@ async def delete_assignment(
     session: DbSession,
 ) -> RoleAssignmentRead | Response:
     """Remove a manual grant, returning the assignment when another source preserves it."""
-    _require_superuser(current_user)
+    await _require_superuser(
+        current_user,
+        action="role_assignment:delete",
+        obj=f"role_assignment:{assignment_id}",
+    )
 
     authorization_service = get_authorization_service()
     await acquire_identity_mutation_lock(
@@ -298,6 +357,13 @@ async def delete_assignment(
         with_for_update=True,
     )
     if assignment is None:
+        await _audit_deny(
+            user_id=current_user.id,
+            action="role_assignment:delete",
+            obj=f"role_assignment:{assignment_id}",
+            status_code=status.HTTP_404_NOT_FOUND,
+            reason="assignment_not_found",
+        )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
     grants = (
         await session.exec(
@@ -309,6 +375,13 @@ async def delete_assignment(
     ).all()
     manual_grant = next((grant for grant in grants if grant.source_kind == "manual"), None)
     if grants and manual_grant is None:
+        await _audit_deny(
+            user_id=current_user.id,
+            action="role_assignment:delete",
+            obj=f"role_assignment:{assignment_id}",
+            status_code=status.HTTP_409_CONFLICT,
+            reason="idp_assignment_delete_forbidden",
+        )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="IdP-derived assignments cannot be deleted through the manual assignment API",
@@ -320,10 +393,13 @@ async def delete_assignment(
         await audit_decision(
             user_id=current_user.id,
             action="role_assignment:delete_manual_source",
-            obj=f"user:{assignment.user_id}",
+            obj=f"role_assignment:{assignment_id}",
             result="allow",
             details={
+                "event": AUDIT_EVENT_MUTATION,
                 "assignment_id": str(assignment_id),
+                "subject_type": "user",
+                "user_id": str(assignment.user_id),
                 "role_id": str(assignment.role_id),
                 "domain_type": assignment.domain_type,
                 "domain_id": str(assignment.domain_id) if assignment.domain_id else None,
@@ -369,10 +445,13 @@ async def delete_assignment(
     await audit_decision(
         user_id=current_user.id,
         action="role_assignment:delete",
-        obj=f"user:{user_id}",
+        obj=f"role_assignment:{assignment_id}",
         result="allow",
         details={
+            "event": AUDIT_EVENT_MUTATION,
             "assignment_id": str(assignment_id),
+            "subject_type": "user",
+            "user_id": str(user_id),
             "role_id": str(role_id),
             "domain_type": domain_type,
             "domain_id": str(domain_id) if domain_id else None,

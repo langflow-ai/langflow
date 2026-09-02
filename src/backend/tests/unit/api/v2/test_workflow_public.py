@@ -307,6 +307,7 @@ async def test_public_endpoint_namespaces_caller_session(client: AsyncClient, pu
     assert sent_inputs is not None
     assert sent_inputs.session == f"{expected_namespace}:{victim_session}"
     assert sent_inputs.session != victim_session
+    assert captured["run_id"] is not None
 
 
 @pytest.mark.benchmark

@@ -178,7 +178,7 @@ The following example is truncated to illustrate a series of `token` events as w
 | input_type | string | Optional. JSON body field. Input type ("chat" or "text"). Default: `"chat"` |
 | output_type | string | Optional. JSON body field. Output type ("chat", "any", "debug"). Default: `"chat"` |
 | output_component | string | Optional. JSON body field. Target component for output. Default: `""` |
-| tweaks | object | Optional. JSON body field. Component adjustments. Default: `null` |
+| tweaks | object | Optional. JSON body field. Component adjustments. Default: `null`. Refused keys return `422` with `TWEAKS_REFUSED`. See [Refused tweaks](/deployment-tweaks-policy#tweaks-refused). |
 | session_id | string | Optional. JSON body field. Conversation context ID. See [Session ID](/session-id). Default: `null` |
 
 ### Request example with all headers and parameters

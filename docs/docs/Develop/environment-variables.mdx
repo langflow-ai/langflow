@@ -463,19 +463,20 @@ To verify the pipeline, run [`langflow observability doctor`](/configuration-cli
 
 For the full list, what Langflow does and does not export, and vendor setup, see [OpenTelemetry](./observability-opentelemetry.mdx).
 
-### Python Interpreter sandbox {#langflow-sandbox}
+### Sandbox backends {#langflow-sandbox}
 
-These variables control the optional QEMU microVM backend for the [**Python Interpreter** component](/python-interpreter#sandbox).
-They are not included in a default `uv pip install langflow` installation. Install `langflow[sandbox]` first.
+These variables control optional execution backends for the [**Python Interpreter** Component](/python-interpreter#sandbox) and the legacy Python REPL tool.
+The `exec-sandbox` backend is not included in a default `uv pip install langflow` installation; install `langflow[sandbox]` to use it.
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
-| `LANGFLOW_SANDBOX_BACKEND` | String | `none` | Execution backend for the code-execution components (Python Interpreter and the legacy Python REPL tool). Set to `exec-sandbox` to run user code in a dedicated QEMU microVM per execution instead of in-process. Requires `uv pip install 'langflow[sandbox]'`, Python 3.12 or later, and QEMU 8+ with hardware virtualization (KVM on Linux, HVF on macOS). When configured but unavailable — including hosts without a hardware hypervisor — execution fails with an error instead of falling back to in-process execution. |
-| `LANGFLOW_SANDBOX_TIMEOUT_SECONDS` | Integer | `30` | Wall-clock limit for one sandboxed execution (1-300 seconds). Only used when `LANGFLOW_SANDBOX_BACKEND` is not `none`. |
+| `LANGFLOW_SANDBOX_BACKEND` | String | `none` | Name of the execution backend for the code-execution components (Python Interpreter and the legacy Python REPL tool). Any registered backend name is accepted — see [Sandbox backends](../Deployment/sandbox-backends.mdx). Set to `exec-sandbox` to run user code in a dedicated QEMU microVM per execution on this host. Requires `uv pip install 'langflow[sandbox]'`, Python 3.12 or later, and QEMU 8+ with hardware virtualization (KVM on Linux, HVF on macOS). When a configured backend is unavailable, execution fails with an error instead of falling back to in-process execution. |
+| `LANGFLOW_SANDBOX_TIMEOUT_SECONDS` | Integer | `30` | Wall-clock limit for one sandboxed execution (1-300 seconds). The selected backend can declare a lower cap, and a value above that cap is refused even inside this range — see [Sandbox backends](../Deployment/sandbox-backends.mdx). Only used when `LANGFLOW_SANDBOX_BACKEND` is not `none`. |
 | `LANGFLOW_SANDBOX_MEMORY_MB` | Integer | `192` | Guest VM memory for sandboxed executions, in MB (minimum 128). Only used when `LANGFLOW_SANDBOX_BACKEND` is not `none`. |
-| `LANGFLOW_SANDBOX_ALLOW_NETWORK` | Boolean | `False` | Whether sandboxed code may access the network. The default runs the microVM fully offline. When enabled without `LANGFLOW_SANDBOX_ALLOWED_DOMAINS`, only exec-sandbox's package-registry defaults (PyPI) are reachable. Only used when `LANGFLOW_SANDBOX_BACKEND` is not `none`. |
+| `LANGFLOW_SANDBOX_ALLOW_NETWORK` | Boolean | `False` | Whether sandboxed code may access the network. The default runs the microVM fully offline. When enabled without `LANGFLOW_SANDBOX_ALLOWED_DOMAINS`, exec-sandbox reaches only its package-registry defaults (PyPI). Only used when `LANGFLOW_SANDBOX_BACKEND` is not `none`. |
 | `LANGFLOW_SANDBOX_ALLOWED_DOMAINS` | String | Not set | Comma-separated list of domains sandboxed code may reach when network access is enabled. Treat like an SSRF allow-list: prefer narrow, fully-qualified domains. Only used when `LANGFLOW_SANDBOX_BACKEND` is not `none`. |
 | `LANGFLOW_SANDBOX_ALLOW_SOFTWARE_EMULATION` | Boolean | `False` | Permit the sandbox to run without a hardware hypervisor, letting QEMU fall back to TCG software emulation. Upstream documents TCG as not security-supported, so enable only for trusted/development workloads. Only used when `LANGFLOW_SANDBOX_BACKEND` is not `none`. |
+| `LANGFLOW_SANDBOX_BACKEND_PLUGINS` | String | Not set | Comma-separated names of out-of-tree sandbox backends that may load, from the `lfx.sandbox_backends` entry point group — see [Sandbox backends](../Deployment/sandbox-backends.mdx). Empty (default) means no third-party backend code is imported at all. Loading a plugin imports its code into the Langflow process on the path that decides whether user code is isolated, and a backend's declared capabilities are configuration metadata rather than proof it enforces them, so naming one here is a statement that you trust that package. A name already used by a built-in backend is refused rather than replaced. |
 
 ### Visual editor and Playground behavior
 

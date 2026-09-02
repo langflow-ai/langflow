@@ -1,6 +1,6 @@
 [project]
 name = "lfx-openai"
-version = "0.1.2"
+version = "0.1.4"
 description = "OpenAI component(s) as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"

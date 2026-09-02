@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import importlib.util
 import sys
 import typing
 from types import ModuleType
@@ -8,16 +9,19 @@ from typing import TypeVar, get_args
 
 import pytest
 from lfx.components.processing.output_parser import OutputParserComponent
+from lfx.custom import annotation_validation
 from lfx.custom.annotation_validation import (
     UnsafeReturnAnnotationError,
     is_safe_return_annotation,
     resolve_callable_return_annotation,
     resolve_compiled_method_return_annotation,
     resolve_type_annotation,
+    snapshot_trusted_class_method_returns,
     validate_return_annotations,
 )
 from lfx.custom.code_parser.code_parser import CodeParser
 from lfx.custom.eval import eval_custom_component_code
+from lfx.custom.validate import create_class
 from lfx.field_typing.constants import OutputParser
 from lfx.helpers.custom import format_type
 from lfx.schema import Data
@@ -295,6 +299,10 @@ def test_runtime_resolver_does_not_trust_user_output_parser_typevar() -> None:
 
 def test_format_type_preserves_generic_alias_origin_name() -> None:
     assert format_type(dict[str, str]) == "dict"
+
+
+def test_format_type_preserves_typing_generic_alias_origin_name() -> None:
+    assert format_type(typing.AsyncIterator[str]) == "AsyncIterator"
 
 
 def test_runtime_resolver_does_not_invoke_user_generic_or_union_hooks() -> None:
@@ -698,6 +706,204 @@ class ConditionalMethodComponent(Component):
     assert component_class()._get_method_return_type("build") == []
 
 
+def test_compiled_target_inherits_plain_same_source_base_return() -> None:
+    code = """\
+from lfx.custom import Component
+from lfx.schema import Data
+
+class SameSourceBase:
+    def build(self) -> Data:
+        return Data(data={})
+
+class InheritedSameSourceComponent(SameSourceBase, Component):
+    pass
+"""
+
+    component_class = eval_custom_component_code(code)
+
+    assert component_class()._get_method_return_type("build") == ["JSON"]
+
+
+def test_compiled_target_inherits_snapshotted_server_base_return() -> None:
+    code = """\
+from lfx.components.processing.output_parser import OutputParserComponent
+
+class InheritedOutputParserComponent(OutputParserComponent):
+    pass
+"""
+
+    component_class = eval_custom_component_code(code)
+
+    assert component_class()._get_method_return_type("build_parser") == ["OutputParser"]
+    assert component_class()._get_method_return_type("format_instructions") == ["Message"]
+
+
+@pytest.mark.parametrize(
+    ("import_code", "base_name"),
+    [
+        (
+            "import lfx.components.processing.output_parser as output_parser",
+            "output_parser.OutputParserComponent",
+        ),
+        (
+            "import lfx.components.processing.output_parser",
+            "lfx.components.processing.output_parser.OutputParserComponent",
+        ),
+    ],
+)
+def test_compiled_target_inherits_module_qualified_server_base_return(import_code: str, base_name: str) -> None:
+    code = f"""\
+{import_code}
+
+class QualifiedInheritedComponent({base_name}):
+    pass
+"""
+
+    component_class = create_class(code, "QualifiedInheritedComponent")
+
+    assert component_class()._get_method_return_type("build_parser") == ["OutputParser"]
+    assert component_class()._get_method_return_type("format_instructions") == ["Message"]
+
+
+def test_same_name_rebinding_cannot_register_forged_server_sidecar() -> None:
+    original_name = OutputParserComponent.__name__
+    original_module = OutputParserComponent.__module__
+    before = resolve_compiled_method_return_annotation(OutputParserComponent, "build_parser")
+    code = """\
+from lfx.components.processing.output_parser import OutputParserComponent as TrustedBase
+
+class OutputParserComponent:
+    def build_parser(self) -> str:
+        return "forged"
+
+OutputParserComponent = TrustedBase
+OutputParserComponent.__name__ = "OutputParserComponent"
+OutputParserComponent.__module__ = __name__
+
+class ReboundOutputParserComponent(OutputParserComponent):
+    pass
+"""
+
+    try:
+        component_class = eval_custom_component_code(code)
+
+        assert component_class()._get_method_return_type("build_parser") == []
+        assert resolve_compiled_method_return_annotation(OutputParserComponent, "build_parser") == before
+    finally:
+        OutputParserComponent.__name__ = original_name
+        OutputParserComponent.__module__ = original_module
+
+
+def test_custom_metaclass_cannot_register_forged_server_sidecar() -> None:
+    original_name = OutputParserComponent.__name__
+    original_qualname = OutputParserComponent.__qualname__
+    original_module = OutputParserComponent.__module__
+    before = resolve_compiled_method_return_annotation(OutputParserComponent, "build_parser")
+    code = """\
+from lfx.components.processing.output_parser import OutputParserComponent as TrustedBase
+
+def substitute_class(name, bases, namespace):
+    TrustedBase.__name__ = name
+    TrustedBase.__qualname__ = name
+    TrustedBase.__module__ = namespace["__module__"]
+    return TrustedBase
+
+class ForgedBase(metaclass=substitute_class):
+    def build_parser(self) -> str:
+        return "forged"
+
+class MetaclassTargetComponent(ForgedBase):
+    pass
+"""
+
+    try:
+        component_class = create_class(code, "MetaclassTargetComponent")
+
+        assert component_class()._get_method_return_type("build_parser") == []
+        assert resolve_compiled_method_return_annotation(OutputParserComponent, "build_parser") == before
+    finally:
+        OutputParserComponent.__name__ = original_name
+        OutputParserComponent.__qualname__ = original_qualname
+        OutputParserComponent.__module__ = original_module
+
+
+@pytest.mark.skipif(sys.version_info < (3, 14), reason="PEP 649 deferred annotations require Python 3.14")
+def test_server_snapshot_does_not_evaluate_deferred_annotations(tmp_path) -> None:
+    module_path = tmp_path / "deferred_annotations.py"
+    module_path.write_text(
+        """\
+calls = []
+
+def side_effect():
+    calls.append("evaluated")
+    return str
+
+class DeferredBase:
+    def build(self) -> side_effect():
+        return "value"
+""",
+        encoding="utf-8",
+    )
+    module_name = "_lfx_deferred_annotation_test"
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    try:
+        spec.loader.exec_module(module)
+        assert module.calls == []
+
+        snapshots = snapshot_trusted_class_method_returns([module.DeferredBase])
+
+        assert snapshots == {}
+        assert module.calls == []
+    finally:
+        sys.modules.pop(module_name, None)
+
+
+def test_server_snapshot_indexes_each_source_file_once(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    module_path = tmp_path / "multiple_methods.py"
+    module_path.write_text(
+        """\
+class MultipleMethodsBase:
+    def build_text(self) -> str:
+        return "value"
+
+    def build_number(self) -> int:
+        return 1
+""",
+        encoding="utf-8",
+    )
+    module_name = "_lfx_multiple_method_annotation_test"
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    assert spec is not None
+    assert spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    original_walk = ast.walk
+    walk_calls = 0
+
+    def counted_walk(node):
+        nonlocal walk_calls
+        walk_calls += 1
+        return original_walk(node)
+
+    try:
+        spec.loader.exec_module(module)
+        annotation_validation._source_function_returns.cache_clear()
+        monkeypatch.setattr(annotation_validation.ast, "walk", counted_walk)
+
+        snapshots = snapshot_trusted_class_method_returns([module.MultipleMethodsBase])
+
+        assert (id(module.MultipleMethodsBase), "build_text") in snapshots
+        assert (id(module.MultipleMethodsBase), "build_number") in snapshots
+        assert walk_calls == 1
+    finally:
+        annotation_validation._source_function_returns.cache_clear()
+        sys.modules.pop(module_name, None)
+
+
 def test_compiled_target_fails_closed_for_inherited_unregistered_decorated_method() -> None:
     code = """\
 from lfx.custom import Component
@@ -726,6 +932,78 @@ class InheritedUserBaseComponent(UserBase, Component):
 
     assert component_class()._get_method_return_type("build") == []
     assert component_class.build.__globals__["annotation_calls"] == []
+
+
+def test_compiled_target_fails_closed_when_snapshotted_server_annotation_is_replaced(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_annotations = OutputParserComponent.build_parser.__annotations__
+    monkeypatch.setattr(OutputParserComponent.build_parser, "__annotations__", original_annotations)
+    code = """\
+from lfx.components.processing.output_parser import OutputParserComponent
+
+annotation_calls = []
+
+class PoisonAnnotations(dict):
+    def get(self, key, default=None):
+        annotation_calls.append(key)
+        return str
+
+OutputParserComponent.build_parser.__annotations__ = PoisonAnnotations()
+
+class MutatedOutputParserComponent(OutputParserComponent):
+    pass
+"""
+
+    component_class = eval_custom_component_code(code)
+
+    assert component_class()._get_method_return_type("build_parser") == []
+    annotations = OutputParserComponent.build_parser.__annotations__
+    assert type(annotations).get.__globals__["annotation_calls"] == []
+
+
+def test_compiled_target_fails_closed_when_snapshotted_server_method_is_replaced(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    original_method = OutputParserComponent.build_parser
+    monkeypatch.setattr(OutputParserComponent, "build_parser", original_method)
+    code = """\
+from lfx.components.processing.output_parser import OutputParserComponent
+
+def replacement(self) -> str:
+    return "replacement"
+
+OutputParserComponent.build_parser = replacement
+
+class ReplacedOutputParserComponent(OutputParserComponent):
+    pass
+"""
+
+    component_class = eval_custom_component_code(code)
+
+    assert component_class()._get_method_return_type("build_parser") == []
+
+
+def test_unregistered_mixin_before_trusted_base_remains_fail_closed() -> None:
+    code = """\
+from lfx.components.processing.output_parser import OutputParserComponent
+
+def preserve_class(component_class):
+    return component_class
+
+@preserve_class
+class UnregisteredMixin:
+    @property
+    def build_parser(self):
+        raise AssertionError("descriptor must not execute")
+
+class MixedOutputParserComponent(UnregisteredMixin, OutputParserComponent):
+    pass
+"""
+
+    component_class = eval_custom_component_code(code)
+
+    assert component_class()._get_method_return_type("build_parser") == []
 
 
 def test_runtime_subclass_fails_closed_after_compiled_sidecar_boundary() -> None:

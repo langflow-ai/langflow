@@ -193,6 +193,7 @@ async def test_audit_query_filters_skipped_reconciliation_results():
         resource_type=None,
         resource_id=None,
         action="directory_membership:reconcile",
+        exclude_action=["audit:read"],
         result="skip",
         since=None,
         until=None,
@@ -203,6 +204,7 @@ async def test_audit_query_filters_skipped_reconciliation_results():
     assert result.items[0].result == "skip"
     assert result.items[0].details == {"reason": "overage"}
     assert "authz_audit_log.action" in str(session.statements[0])
+    assert "authz_audit_log.action NOT IN" in str(session.statements[0])
     assert "authz_audit_log.result" in str(session.statements[0])
 
 

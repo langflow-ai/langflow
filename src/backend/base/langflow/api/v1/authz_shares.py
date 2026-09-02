@@ -36,7 +36,7 @@ from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import get_authorization_service
 
-router = APIRouter(prefix="/authz/shares", tags=["Authorization"])
+router = APIRouter(prefix="/authz/shares", tags=["Authorization"], include_in_schema=False)
 
 _SHARE_POLICY_HOOK_TIMEOUT_SECONDS = 5.0
 

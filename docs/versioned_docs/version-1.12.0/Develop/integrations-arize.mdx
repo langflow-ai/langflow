@@ -1,0 +1,129 @@
+---
+title: Arize
+slug: /integrations-arize
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+[Arize AI](https://arize.com/?utm_source=langflow-docs&utm_medium=partner&utm_campaign=partner-docs&utm_content=integrations-arize) provides observability and evaluation for LLM applications and AI agents using [OpenTelemetry](https://opentelemetry.io/) and [OpenInference](https://docs.arize.com/phoenix/reference/open-inference). Use [Arize AX](https://arize.com/products/ax/) for managed cloud or enterprise self-hosted production observability. Use [Arize Phoenix](https://arize.com/phoenix/) when you want an open-source option you can run locally or self-host.
+
+To enable Arize tracing, set the required Arize environment variables in your Langflow deployment.
+Arize begins monitoring and collecting telemetry data from your LLM applications automatically.
+
+For evaluation workflows that build on traces, see the [Arize agent evaluation guide](https://arize.com/guides/ai-agent-handbook/agent-evaluation/) and [LLM evaluation guide](https://arize.com/resources/llm-evaluation/).
+
+:::tip
+Instructions for integrating Langflow and Arize are also available in the Arize documentation:
+
+* [Langflow tracing with Arize AX](https://arize.com/docs/ax/integrations/platforms/langflow/langflow-tracing)
+* [Langflow tracing with Arize Phoenix](https://arize.com/docs/phoenix/integrations/platforms/langflow/langflow-tracing)
+:::
+
+## Prerequisites
+
+* If you are using [Arize AX](https://arize.com/products/ax/), you need an **Arize Space ID** and **Arize API Key**. Self-hosted deployments also need the base URL of their OTLP collector.
+* If you are using [Arize Phoenix](https://arize.com/phoenix/), you need a running Phoenix instance. Local Phoenix can run without authentication, but Langflow requires a **Phoenix API key** for non-local endpoints.
+
+## Connect Arize to Langflow
+
+<Tabs>
+<TabItem value="platform" label="Arize AX" default>
+
+1. In your [Arize AX dashboard](https://app.arize.com/), copy your **Space ID** and [**API Key (Ingestion Service Account Key)**](https://arize.com/docs/ax/security-and-settings/api-keys). For self-hosted AX, use your deployment's dashboard instead.
+
+2. In the root of your Langflow application, edit your existing Langflow `.env` file or create a new one.
+
+3. Add `ARIZE_SPACE_ID` and `ARIZE_API_KEY` environment variables:
+
+    ```bash
+    ARIZE_SPACE_ID=SPACE_ID
+    ARIZE_API_KEY=API_KEY
+    ```
+
+    Replace `SPACE_ID` and `API_KEY` with the values you copied from Arize AX.
+
+    For self-hosted AX, also add the base URL of your deployment's OTLP collector:
+
+    ```bash
+    ARIZE_COLLECTOR_ENDPOINT=https://arize-otlp.example.com
+    ```
+
+    Replace the example with your collector base URL. Don't include a trailing slash or `/v1`; Langflow appends `/v1` to the endpoint.
+
+    You don't need to specify the Arize project name if you're using Arize AX.
+
+4. Start your Langflow application with your `.env` file:
+
+    ```bash
+    uv run langflow run --env-file .env
+    ```
+
+</TabItem>
+<TabItem value="phoenix" label="Arize Phoenix">
+
+1. Start Phoenix locally or connect to your self-hosted Phoenix instance.
+
+2. In the root of your Langflow application, edit your existing Langflow `.env` file or create a new one.
+
+3. Add your Phoenix endpoint. For local Phoenix, use:
+
+    ```bash
+    PHOENIX_COLLECTOR_ENDPOINT=http://localhost:6006
+    ```
+
+    For a remote Phoenix deployment, replace the endpoint with your instance's base URL. Langflow also requires `PHOENIX_API_KEY` for non-local endpoints:
+
+    ```bash
+    PHOENIX_API_KEY=API_KEY
+    ```
+
+4. Start your Langflow application with your `.env` file:
+
+    ```bash
+    uv run langflow run --env-file .env
+    ```
+
+</TabItem>
+</Tabs>
+
+## Run a flow and view traces in Arize
+
+1. In Langflow, run a flow that has an LLM-driven component, such as an **Agent** component or any language model component.
+You must chat with the flow or trigger the LLM to produce traffic for Arize to trace.
+
+    For example, you can create a flow with the **Simple Agent** template, add your OpenAI API key to the **Agent** component, and then click **Playground** to chat with the flow and generate traffic.
+
+2. Open the project that receives your Langflow traces.
+For Arize AX, open your project dashboard in AX.
+For Phoenix, open the Phoenix project attached to your configured endpoint.
+Then wait for Arize to process the data.
+This can take a few minutes.
+
+3. To view trace data for your flows, open the tracing view for your project.
+In Arize AX, go to the **LLM Tracing** tab.
+In Phoenix, go to the project traces view.
+
+    Each Langflow execution generates two traces in Arize:
+
+    * The `AgentExecutor` trace is the Arize trace of LangChain's `AgentExecutor`.
+    * The `UUID` trace is the trace of the Langflow components.
+
+4. To view traces, go to the **Traces** tab.
+
+    A _trace_ is the complete journey of a request, made of multiple _spans_.
+
+5. To view spans, go to the **Spans** tab.
+
+    A _span_ is a single operation within a trace.
+    For example, a _span_ could be a single API call to OpenAI or a single function call to a custom tool.
+
+    For more information, see the [Arize AX tracing documentation](https://arize.com/docs/ax/observe/tracing) or the [Arize Phoenix tracing documentation](https://arize.com/docs/phoenix/integrations/platforms/langflow/langflow-tracing).
+
+6. To add a span to a dataset, click **Add to Dataset**.
+
+    For more information, see the [Arize AX dataset documentation](https://arize.com/docs/ax/develop/datasets) or the [Arize Phoenix dataset documentation](https://arize.com/docs/phoenix/datasets-and-experiments/how-to-datasets/creating-datasets).
+
+    In Arize AX, all metrics on the **LLM Tracing** tab can be added to datasets.
+
+7. To view a dataset, click the **Datasets** tab, and then select your dataset.

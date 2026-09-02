@@ -1,0 +1,188 @@
+---
+title: macOS Support
+sidebar_position: 18
+slug: /deployment-macos-support
+---
+
+# macOS Support Matrix
+
+Langflow supports both Apple Silicon (ARM64) and Intel (x86_64) Macs, but with different feature availability due to hardware capabilities and upstream dependency support.
+
+## Quick Reference
+
+| Feature Category | Apple Silicon (M1/M2/M3) | Intel (x86_64) |
+|-----------------|--------------------------|----------------|
+| **Core Langflow** | ✅ Full support | ✅ Full support |
+| **ML/AI Components** | ✅ Full support | ❌ Limited/Unavailable |
+| **GPU Acceleration** | ✅ Metal support | ❌ Not available |
+| **Native OCR** | ✅ Full support | ✅ Full support |
+
+## Detailed Feature Support
+
+### Core Functionality (Both Architectures)
+
+The following features work on **both Apple Silicon and Intel Macs**:
+
+- ✅ Flow builder and visual editor
+- ✅ API server and endpoints
+- ✅ Database operations (SQLite, PostgreSQL)
+- ✅ Authentication and user management
+- ✅ All non-ML components (text processing, API calls, data transformations)
+- ✅ Native OCR via `ocrmac` (uses macOS Vision framework)
+- ✅ Vector stores and embeddings (when using API-based providers)
+- ✅ LangChain integrations (non-ML components)
+
+### ML/AI Features (Apple Silicon Only)
+
+The following features require **Apple Silicon (ARM64)** and are **not available on Intel Macs**:
+
+#### ❌ Not Available on Intel
+
+- **ALTK (Agent Lifecycle Toolkit)** - Requires PyTorch
+- **HuggingFace Transformers** - Requires PyTorch
+- **Sentence Transformers** - Requires PyTorch
+- **EasyOCR** - Requires PyTorch
+- **Docling (binary processing)** - Requires PyTorch
+  - Note: `docling-core` (metadata-only) works on Intel
+- **MLX and MLX-VLM** - Apple Silicon exclusive framework
+- **Metal GPU acceleration** - Requires Apple Silicon hardware
+- **CUGA** - Apple Silicon only
+
+## Why the Difference?
+
+### PyTorch Deprecation
+
+PyTorch dropped support for macOS Intel (x86_64) starting with version 2.3.0 (April 2024). The last version with Intel Mac support was PyTorch 2.2.2, which only supports Python 3.10-3.12.
+
+Since many ML components depend on PyTorch, they are automatically excluded on Intel Macs to prevent installation failures.
+
+### Hardware Limitations
+
+Intel Macs lack the specialized hardware that makes ML workloads performant:
+- No Neural Engine
+- No Metal 3 GPU acceleration
+- Limited memory bandwidth compared to Apple Silicon's unified memory architecture
+
+## Installation Recommendations
+
+### For Apple Silicon Users
+
+Install Langflow normally with all features:
+
+```bash
+pip install langflow
+```
+
+Or with specific ML extras:
+
+```bash
+pip install langflow[altk,langchain-huggingface,easyocr]
+```
+
+### For Intel Mac Users
+
+Install the base package for core functionality:
+
+```bash
+pip install langflow
+```
+
+**Note:** Attempting to install ML-dependent extras on Intel Macs will be automatically skipped due to platform markers in the package configuration.
+
+## Python Version Support
+
+| Python Version | Apple Silicon | Intel Mac |
+|---------------|---------------|-----------|
+| 3.10 | ✅ Supported | ✅ Supported |
+| 3.11 | ✅ Supported | ✅ Supported |
+| 3.12 | ✅ Supported | ✅ Supported |
+| 3.13 | ✅ Supported | ⚠️ Limited (no PyTorch) |
+| 3.14 | ✅ Supported | ⚠️ Limited (no PyTorch) |
+
+:::note
+Python 3.13+ on Intel Macs cannot use PyTorch-dependent features due to the lack of PyTorch wheels for macOS x86_64. This affects ML components like ALTK, HuggingFace, EasyOCR, and Docling.
+:::
+
+## Workarounds for Intel Mac Users
+
+If you need ML features on an Intel Mac, consider these alternatives:
+
+### 1. Use API-Based Providers
+
+Instead of local models, use API-based services:
+- OpenAI API for embeddings and completions
+- Cohere API for embeddings
+- Anthropic API for Claude models
+- HuggingFace Inference API
+
+### 2. Remote Inference
+
+Run ML workloads on a remote server:
+- Deploy Langflow on a cloud instance with GPU support
+- Use the Langflow API to connect from your Intel Mac
+- Keep the UI/development on your Mac, inference in the cloud
+
+### 3. Docker with Rosetta 2
+
+For some workloads, you can use Docker with ARM64 images via Rosetta 2:
+
+```bash
+docker run --platform linux/arm64 langflowai/langflow:latest
+```
+
+**Note:** Performance will be slower than native, and not all features may work correctly.
+
+## Future Support
+
+### Intel Mac Deprecation Timeline
+
+Apple and the broader ecosystem are phasing out Intel Mac support:
+
+- **2022:** Last Intel MacBook Pro shipped
+- **2024:** PyTorch dropped Intel Mac support
+- **2026-2027:** Expected end of macOS updates for Intel Macs
+
+Langflow will continue to support core functionality on Intel Macs as long as Python and essential dependencies remain available, but ML features will remain Apple Silicon exclusive.
+
+### Recommended Migration Path
+
+If you rely on ML features, consider upgrading to Apple Silicon hardware:
+- M1/M2/M3 MacBook Air (cost-effective)
+- M1/M2/M3 MacBook Pro (for intensive workloads)
+- Mac Mini with M2/M3 (desktop option)
+
+## Troubleshooting
+
+### "No matching distribution found" Errors
+
+If you see errors about missing packages on Intel Mac:
+
+1. **Expected behavior** - ML packages are intentionally excluded
+2. **Solution** - Use core Langflow features or API-based alternatives
+3. **Verify architecture:**
+   ```bash
+   python -c "import platform; print(platform.machine())"
+   # x86_64 = Intel, arm64 = Apple Silicon
+   ```
+
+### Performance Issues
+
+If Langflow feels slow on Intel Mac:
+
+1. Ensure you're not trying to run ML workloads locally
+2. Use API-based providers for embeddings/completions
+3. Consider upgrading to Apple Silicon for better performance
+
+## Related Documentation
+
+- [Deployment Overview](/deployment-overview)
+- [Docker Deployment](/deployment-docker)
+- [Production Best Practices](/deployment-prod-best-practices)
+
+## Need Help?
+
+If you have questions about macOS support:
+
+- [GitHub Discussions](https://github.com/langflow-ai/langflow/discussions)
+- [Discord Community](https://discord.gg/EqksyE2EX9)
+- [Documentation](https://docs.langflow.org)

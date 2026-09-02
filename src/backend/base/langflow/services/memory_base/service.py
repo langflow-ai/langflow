@@ -17,7 +17,9 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 
+from lfx.base.knowledge_bases.backends import is_local_chroma
 from lfx.base.knowledge_bases.backends.postgres import resolve_default_kb_backend
+from lfx.base.knowledge_bases.validation import validate_collection_name
 from lfx.base.models.provider_registry import is_api_key_optional
 from lfx.base.models.unified_models import get_api_key_for_provider
 from lfx.services.model_provider_policy import (
@@ -255,6 +257,11 @@ class MemoryBaseService(Service):
 
         # 3. Auto-generate kb_name: sanitized_name_<8hex>
         kb_name = f"{sanitize_kb_name(payload.name)}_{uuid.uuid4().hex[:8]}"
+        validate_collection_name(
+            kb_name,
+            resource="Memory Base",
+            local=is_local_chroma(backend_type, backend_config),
+        )
 
         # 4-5. Provision the backing KB (vector-store collection + ``knowledge_base``
         # row) then insert the memory_base row. These span independent sessions and

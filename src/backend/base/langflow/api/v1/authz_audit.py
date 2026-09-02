@@ -23,7 +23,7 @@ from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.database.models.auth import AuthzAuditLog
 from langflow.services.database.models.user.model import User
 
-router = APIRouter(prefix="/authz/audit", tags=["Authorization"])
+router = APIRouter(prefix="/authz/audit", tags=["Authorization"], include_in_schema=False)
 
 _MAX_PAGE_SIZE = 200
 
@@ -77,6 +77,10 @@ async def list_audit_log(
     action: Annotated[
         str | None,
         Query(description="Filter by action string, e.g. ``flow:read`` or ``share:create``."),
+    ] = None,
+    exclude_action: Annotated[
+        list[str] | None,
+        Query(description="Exclude rows whose action exactly matches any supplied value."),
     ] = None,
     result: Annotated[
         str | None,
@@ -138,6 +142,8 @@ async def list_audit_log(
         base = base.where(AuthzAuditLog.resource_id == resource_id)
     if action is not None:
         base = base.where(AuthzAuditLog.action == action)
+    if exclude_action:
+        base = base.where(col(AuthzAuditLog.action).not_in(exclude_action))
     if result is not None:
         base = base.where(AuthzAuditLog.result == result)
     # ``details`` is a JSON column; SQLAlchemy renders the index access as

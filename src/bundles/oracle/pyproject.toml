@@ -1,6 +1,6 @@
 [project]
 name = "lfx-oracle"
-version = "0.1.1"
+version = "0.1.3"
 description = "Oracle Database components (Doc Loader, Autonomous Database Loader, Embeddings, Vector Store) as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"

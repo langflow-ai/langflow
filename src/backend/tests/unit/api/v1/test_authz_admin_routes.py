@@ -193,6 +193,20 @@ def stub_authz(monkeypatch):
     return _apply
 
 
+@pytest.fixture
+def audit_calls(monkeypatch):
+    from langflow.api.v1 import authz_role_assignments, authz_roles, authz_teams
+
+    calls: list[dict[str, Any]] = []
+
+    async def capture_audit(**kwargs):
+        calls.append(kwargs)
+
+    for module in (authz_roles, authz_role_assignments, authz_teams):
+        monkeypatch.setattr(module, "audit_decision", capture_audit)
+    return calls
+
+
 # =====================================================================
 # /authz/roles
 # =====================================================================
@@ -351,9 +365,10 @@ async def test_create_role_requires_superuser(stub_authz):
 
 
 @pytest.mark.asyncio
-async def test_create_role_persists_and_emits_lifecycle(stub_authz):
+async def test_create_role_persists_and_emits_lifecycle(stub_authz, audit_calls):
     from langflow.api.v1 import authz_roles
     from langflow.api.v1.schemas.authz_roles import RoleCreate
+    from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION
     from langflow.services.database.models.auth import AuthzRole  # noqa: F401 — keeps import path live
 
     authz = stub_authz()
@@ -368,15 +383,36 @@ async def test_create_role_persists_and_emits_lifecycle(stub_authz):
     assert session.committed == 1
     assert authz.staged_mutations == authz.committed_mutations
     assert len(authz.staged_mutations) == 1
+    assert audit_calls == [
+        {
+            "user_id": user.id,
+            "action": "role:create",
+            "obj": f"role:{result.id}",
+            "result": "allow",
+            "details": {
+                "event": AUDIT_EVENT_MUTATION,
+                "role_name": "runner",
+                "permissions": ["flow:execute"],
+                "parent_role_id": None,
+            },
+        }
+    ]
 
 
 @pytest.mark.asyncio
-async def test_create_role_409_on_name_conflict(stub_authz):
+async def test_create_role_409_on_name_conflict(stub_authz, audit_calls):
     from langflow.api.v1 import authz_roles
     from langflow.api.v1.schemas.authz_roles import RoleCreate
+    from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS
 
     stub_authz()
-    session = _FakeAsyncSession(commit_raises=IntegrityError("dup", {}, Exception()))
+    session = _FakeAsyncSession(
+        commit_raises=IntegrityError(
+            "insert",
+            {},
+            Exception("UNIQUE constraint failed: authz_role.name"),
+        )
+    )
     user = _make_user(is_superuser=True)
     payload = RoleCreate(name="viewer", permissions=[])
 
@@ -385,12 +421,66 @@ async def test_create_role_409_on_name_conflict(stub_authz):
     assert excinfo.value.status_code == 409
     assert "already exists" in excinfo.value.detail
     assert session.rolled_back == 1
+    assert audit_calls == [
+        {
+            "user_id": user.id,
+            "action": "role:create",
+            "obj": "role:*",
+            "result": "deny",
+            "details": {
+                "event": AUDIT_EVENT_ACCESS,
+                "status_code": 409,
+                "reason": "role_name_conflict",
+            },
+        }
+    ]
 
 
 @pytest.mark.asyncio
-async def test_update_role_blocks_system_role(stub_authz):
+async def test_create_role_does_not_mislabel_unrelated_integrity_error(stub_authz, audit_calls):
+    from langflow.api.v1 import authz_roles
+    from langflow.api.v1.schemas.authz_roles import RoleCreate
+    from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS
+
+    stub_authz()
+    session = _FakeAsyncSession(
+        commit_raises=IntegrityError(
+            "insert",
+            {},
+            Exception("FOREIGN KEY constraint failed"),
+        )
+    )
+    user = _make_user(is_superuser=True)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await authz_roles.create_role(
+            payload=RoleCreate(name="custom", permissions=[]),
+            current_user=user,
+            session=session,
+        )
+
+    assert excinfo.value.status_code == 409
+    assert excinfo.value.detail == "Role data conflicts with the current database state"
+    assert audit_calls == [
+        {
+            "user_id": user.id,
+            "action": "role:create",
+            "obj": "role:*",
+            "result": "deny",
+            "details": {
+                "event": AUDIT_EVENT_ACCESS,
+                "status_code": 409,
+                "reason": "role_integrity_conflict",
+            },
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_update_role_blocks_system_role(stub_authz, audit_calls):
     from langflow.api.v1 import authz_roles
     from langflow.api.v1.schemas.authz_roles import RoleUpdate
+    from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS
     from langflow.services.database.models.auth import AuthzRole
 
     stub_authz()
@@ -416,6 +506,19 @@ async def test_update_role_blocks_system_role(stub_authz):
         )
     assert excinfo.value.status_code == 400
     assert "System roles" in excinfo.value.detail
+    assert audit_calls == [
+        {
+            "user_id": user.id,
+            "action": "role:update",
+            "obj": f"role:{role_id}",
+            "result": "deny",
+            "details": {
+                "event": AUDIT_EVENT_ACCESS,
+                "status_code": 400,
+                "reason": "system_role_read_only",
+            },
+        }
+    ]
 
 
 @pytest.mark.asyncio
@@ -840,9 +943,10 @@ async def test_create_assignment_invalid_user_404(stub_authz):
 
 
 @pytest.mark.asyncio
-async def test_create_assignment_emits_lifecycle_for_target_user(stub_authz):
+async def test_create_assignment_emits_lifecycle_for_target_user(stub_authz, audit_calls):
     from langflow.api.v1 import authz_role_assignments
     from langflow.api.v1.schemas.authz_role_assignments import RoleAssignmentCreate
+    from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION
     from langflow.services.database.models.auth import AuthzRole
     from langflow.services.database.models.user.model import User
 
@@ -874,6 +978,11 @@ async def test_create_assignment_emits_lifecycle_for_target_user(stub_authz):
     assert authz.staged_mutations[0].domain_id is None
     assert session.events.index("lock") < session.events.index("exec")
     assert session.events.index("lock") < session.events.index("flush")
+    assert audit_calls[0]["action"] == "role_assignment:create"
+    assert audit_calls[0]["obj"] == f"role_assignment:{session.added[0].id}"
+    assert audit_calls[0]["result"] == "allow"
+    assert audit_calls[0]["details"]["event"] == AUDIT_EVENT_MUTATION
+    assert audit_calls[0]["details"]["user_id"] == str(target_user.id)
 
 
 @pytest.mark.asyncio
@@ -1058,8 +1167,12 @@ async def test_delete_assignment_returns_surviving_idp_assignment(stub_authz, mo
     assert authz.validated_mutations == []
     assert authz.staged_mutations == []
     assert audit_calls[0]["action"] == "role_assignment:delete_manual_source"
+    assert audit_calls[0]["obj"] == f"role_assignment:{assignment.id}"
     assert audit_calls[0]["details"] == {
+        "event": "mutation",
         "assignment_id": str(assignment.id),
+        "subject_type": "user",
+        "user_id": str(assignment.user_id),
         "role_id": str(assignment.role_id),
         "domain_type": "workspace",
         "domain_id": str(domain_id),
@@ -1075,8 +1188,9 @@ async def test_delete_assignment_returns_surviving_idp_assignment(stub_authz, mo
 
 
 @pytest.mark.asyncio
-async def test_delete_assignment_manual_only_returns_204(stub_authz):
+async def test_delete_assignment_manual_only_returns_204(stub_authz, audit_calls):
     from langflow.api.v1 import authz_role_assignments
+    from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION
     from langflow.services.database.models.auth import AuthzRoleAssignment, AuthzRoleAssignmentGrant
 
     authz = stub_authz()
@@ -1103,6 +1217,10 @@ async def test_delete_assignment_manual_only_returns_204(stub_authz):
     assert len(authz.lock_requests) == 1
     assert len(authz.validated_mutations) == 1
     assert authz.staged_mutations == authz.committed_mutations
+    assert audit_calls[0]["action"] == "role_assignment:delete"
+    assert audit_calls[0]["obj"] == f"role_assignment:{assignment.id}"
+    assert audit_calls[0]["details"]["event"] == AUDIT_EVENT_MUTATION
+    assert audit_calls[0]["details"]["user_id"] == str(assignment.user_id)
 
 
 @pytest.mark.asyncio
@@ -1294,9 +1412,10 @@ async def test_create_team_requires_superuser(stub_authz):
 
 
 @pytest.mark.asyncio
-async def test_add_member_emits_lifecycle_for_target_user(stub_authz):
+async def test_add_member_emits_lifecycle_for_target_user(stub_authz, audit_calls):
     from langflow.api.v1 import authz_teams
     from langflow.api.v1.schemas.authz_teams import TeamMemberCreate
+    from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION
     from langflow.services.database.models.auth import AuthzTeam
     from langflow.services.database.models.user.model import User
 
@@ -1318,6 +1437,9 @@ async def test_add_member_emits_lifecycle_for_target_user(stub_authz):
     assert len(session.added) == 1
     assert authz.staged_mutations == authz.committed_mutations
     assert authz.staged_mutations[0].affected_user_ids == (target_user.id,)
+    assert audit_calls[0]["action"] == "team_member:create"
+    assert audit_calls[0]["obj"] == f"team:{team.id}"
+    assert audit_calls[0]["details"]["event"] == AUDIT_EVENT_MUTATION
 
 
 @pytest.mark.asyncio

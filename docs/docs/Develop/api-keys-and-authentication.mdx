@@ -541,6 +541,12 @@ Pair these settings with the [SSRF settings](#ssrf-protection) to reduce common 
 
 These settings **do not** provide full user isolation. For more information, see [Security](/security).
 
+The flags above decide *whether* code is allowed to run. They do not constrain what it does once it runs, so they are authorization controls rather than an isolation boundary.
+
+To run permitted executions behind a kernel boundary instead of blocking them outright, set a [sandbox backend](./environment-variables.mdx). The built-in `exec-sandbox` backend runs code in a QEMU microVM on this host. Trusted third-party packages can register other backends.
+
+A sandbox backend covers the [**Python Interpreter**](/python-interpreter) and the legacy Python REPL tool only — the other surfaces listed above still need the blocking flags.
+
 :::tip
 Do not enable a shared tracer when users are untrusted. Instead, use [built-in local tracing](/traces).
 External tracing integrations such as Langfuse and Arize are _process-wide_, not per user, so on a shared server, every user's flow inputs and outputs will go to the same tracing project.

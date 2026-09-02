@@ -1,6 +1,6 @@
 [project]
 name = "lfx-nextplaid"
-version = "0.1.4"
+version = "0.1.6"
 description = "NextPlaid multi-vector vector store (+ vLLM multivector embeddings) as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"

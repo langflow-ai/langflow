@@ -173,10 +173,10 @@ def test_a_failing_component_puts_its_message_in_no_event():
     assert len(flow_spans) == 1, spans
     assert flow_spans[0]["attributes"].get("status") == "error", flow_spans[0]["attributes"]
     # The type is the whole point: it is what an operator gets instead of the message. arun wraps
-    # the component failure as ValueError("Error running graph: Error building Component
-    # Passthrough: <the component's message>"), so the message carries component output and only
-    # the type may cross.
-    assert flow_spans[0]["attributes"].get("error.type") == "ValueError"
+    # the RuntimeError as ValueError("Error running graph: Error building Component Passthrough:
+    # <the component's message>"), so telemetry must follow the exception cause without exporting
+    # either message.
+    assert flow_spans[0]["attributes"].get("error.type") == "RuntimeError"
 
     assert flow_spans[0]["events"] == [], flow_spans[0]["events"]
     assert EXC_MESSAGE not in json.dumps(spans)

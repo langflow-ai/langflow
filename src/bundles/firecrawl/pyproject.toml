@@ -1,6 +1,6 @@
 [project]
 name = "lfx-firecrawl"
-version = "0.1.1"
+version = "0.1.3"
 description = "Firecrawl components (Scrape, Crawl, Map, and Search APIs) as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"

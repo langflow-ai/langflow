@@ -31,6 +31,7 @@ def test_voice_mode_requires_openai_sdk(monkeypatch: pytest.MonkeyPatch) -> None
     real_import = builtins.__import__
 
     def import_without_openai(name, *args, **kwargs):
+        """Return a stub for webrtcvad and raise ModuleNotFoundError for openai."""
         if name == "webrtcvad":
             return object()
         if name == "openai" or name.startswith("openai."):
