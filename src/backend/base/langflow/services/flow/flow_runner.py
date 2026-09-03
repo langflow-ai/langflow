@@ -217,6 +217,8 @@ class LangflowRunnerExperimental:
 
     @staticmethod
     async def clear_flow_state(flow_dict: dict):
+        from langflow.services.memory_base.flow_cleanup import finalize_flow_memory_base_cleanup
+
         cache_service = get_cache_service()
         if isinstance(cache_service, AsyncBaseCacheService):
             await cache_service.clear()
@@ -225,17 +227,27 @@ class LangflowRunnerExperimental:
         async with session_scope() as session:
             flow_id = flow_dict["id"]
             uuid_obj = flow_id if isinstance(flow_id, UUID) else UUID(str(flow_id))
-            await cascade_delete_flow(session, uuid_obj)
+            memory_base_cleanups = await cascade_delete_flow(session, uuid_obj)
+        # session_scope committed on exit; drop the external resources now.
+        await finalize_flow_memory_base_cleanup(memory_base_cleanups)
 
     @staticmethod
     async def clear_user_state(user_id: str):
+        from langflow.services.memory_base.flow_cleanup import (
+            FlowMemoryBaseCleanup,
+            finalize_flow_memory_base_cleanup,
+        )
+
+        memory_base_cleanups: list[FlowMemoryBaseCleanup] = []
         async with session_scope() as session:
             flows = await session.exec(select(Flow.id).where(Flow.user_id == user_id))
             flow_ids: list[UUID] = [fid for fid in flows.scalars().all() if fid is not None]
             for flow_id in flow_ids:
-                await cascade_delete_flow(session, flow_id)
+                memory_base_cleanups.extend(await cascade_delete_flow(session, flow_id))
             await session.exec(delete(Variable).where(Variable.user_id == user_id))
             await session.exec(delete(User).where(User.id == user_id))
+        # session_scope committed on exit; drop the external resources now.
+        await finalize_flow_memory_base_cleanup(memory_base_cleanups)
 
     async def init_db_if_needed(self):
         if not await self.database_exists_check() and self.should_initialize_db:
