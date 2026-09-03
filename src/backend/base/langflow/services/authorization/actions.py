@@ -72,6 +72,16 @@ class ProviderAccountAction(str, Enum):
     DELETE = "delete"
 
 
+class ConnectionAction(str, Enum):
+    """Actions authorized on a persisted integration connection."""
+
+    READ = "read"
+    WRITE = "write"
+    CREATE = "create"
+    DELETE = "delete"
+    EXECUTE = "execute"
+
+
 class VoiceAction(str, Enum):
     """Actions authorized on credential-backed voice resources."""
 

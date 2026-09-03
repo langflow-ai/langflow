@@ -30,6 +30,7 @@ class AuthzContext(TypedDict, total=False):
     file_user_id: _UUID | None
     share_user_id: _UUID | None
     provider_account_user_id: _UUID | None
+    connection_owner_id: _UUID | None
     voice_user_id: _UUID | None
     workspace_id: _UUID | None
     folder_id: _UUID | None

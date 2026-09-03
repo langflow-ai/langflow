@@ -18,6 +18,7 @@ from langflow.services.authorization.access_ceiling import (
     set_current_external_access_context,
 )
 from langflow.services.authorization.actions import (
+    ConnectionAction,
     DeploymentAction,
     FileAction,
     FlowAction,
@@ -35,6 +36,52 @@ from ._common import (
     install_authz,
     install_settings,
 )
+
+# ----------------------------------------------------------------------------- #
+# ensure_connection_permission
+# ----------------------------------------------------------------------------- #
+
+
+@pytest.mark.anyio
+async def test_connection_owner_and_scoped_api_key_personas(monkeypatch, fake_user):
+    """Connection use honors owner override but not a narrower API-key policy."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False, supports_api_key_scopes=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+    connection_id = uuid4()
+
+    await authz_guards.ensure_connection_permission(
+        fake_user,
+        ConnectionAction.EXECUTE,
+        connection_id=connection_id,
+        connection_owner_id=fake_user.id,
+    )
+    assert service.calls == []
+
+    set_current_auth_context(
+        AuthCredentialContext(
+            method=AUTH_METHOD_API_KEY,
+            api_key_id=uuid4(),
+            api_key_source="db",  # pragma: allowlist secret
+        )
+    )
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await authz_guards.ensure_connection_permission(
+                fake_user,
+                ConnectionAction.EXECUTE,
+                connection_id=connection_id,
+                connection_owner_id=fake_user.id,
+            )
+    finally:
+        clear_current_auth_context()
+
+    assert exc_info.value.status_code == 403
+    assert service.calls[-1]["obj"] == f"connection:{connection_id}"
+    assert service.calls[-1]["act"] == "execute"
+    assert service.calls[-1]["context"]["connection_owner_id"] == fake_user.id
+
 
 # ----------------------------------------------------------------------------- #
 # ensure_permission
