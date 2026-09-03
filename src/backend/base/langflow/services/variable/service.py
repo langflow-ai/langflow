@@ -397,6 +397,32 @@ class DatabaseVariableService(VariableService, Service):
         variables = await self.get_all(user_id=user_id, session=session)
         return [variable.name for variable in variables if variable]
 
+    async def get_available_variable_names(
+        self,
+        user_id: UUID | str,
+        names: set[str],
+        session: AsyncSession,
+    ) -> set[str]:
+        """Return requested variable names that have a usable owned value.
+
+        Args:
+            user_id: The user whose variables should be checked.
+            names: Variable names to check.
+            session: Database session.
+
+        Returns:
+            Names whose stored values are non-empty and, for credentials, decryptable.
+        """
+        if not names:
+            return set()
+
+        stmt = select(Variable).where(
+            Variable.user_id == user_id,
+            col(Variable.name).in_(names),
+        )
+        variables = (await session.exec(stmt)).all()
+        return {variable.name for variable in variables if has_variable_value(variable)}
+
     async def update_variable(
         self,
         user_id: UUID | str,

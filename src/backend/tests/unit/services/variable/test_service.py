@@ -481,6 +481,66 @@ async def test_list_variables__empty(service, session: AsyncSession):
     assert isinstance(result, list)
 
 
+async def test_get_available_variable_names_only_checks_requested_owned_rows(service, session: AsyncSession):
+    user_id = uuid4()
+    other_user_id = uuid4()
+    session.add_all(
+        [
+            Variable(
+                user_id=user_id,
+                name="REQUESTED_VALID",
+                value="valid-ciphertext",
+                type=CREDENTIAL_TYPE,
+                default_fields=[],
+            ),
+            Variable(
+                user_id=user_id,
+                name="REQUESTED_BROKEN",
+                value="broken-ciphertext",
+                type=CREDENTIAL_TYPE,
+                default_fields=[],
+            ),
+            Variable(
+                user_id=user_id,
+                name="UNRELATED",
+                value="unrelated-ciphertext",
+                type=CREDENTIAL_TYPE,
+                default_fields=[],
+            ),
+            Variable(
+                user_id=other_user_id,
+                name="OTHER_USER_KEY",
+                value="other-user-ciphertext",
+                type=CREDENTIAL_TYPE,
+                default_fields=[],
+            ),
+        ]
+    )
+    await session.flush()
+
+    checked_values = []
+
+    def decrypt_requested_value(value: str) -> str:
+        checked_values.append(value)
+        return {
+            "valid-ciphertext": "usable-secret",
+            "broken-ciphertext": "",
+        }[value]
+
+    with patch(
+        "langflow.services.variable.service.auth_utils.decrypt_api_key",
+        side_effect=decrypt_requested_value,
+    ):
+        result = await service.get_available_variable_names(
+            user_id=user_id,
+            names={"REQUESTED_VALID", "REQUESTED_BROKEN", "OTHER_USER_KEY"},
+            session=session,
+        )
+
+    assert result == {"REQUESTED_VALID"}
+    assert set(checked_values) == {"valid-ciphertext", "broken-ciphertext"}
+
+
 async def test_update_variable(service, session: AsyncSession):
     user_id = uuid4()
     name = "name"

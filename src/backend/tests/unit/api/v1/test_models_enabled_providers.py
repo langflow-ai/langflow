@@ -113,6 +113,21 @@ async def test_enabled_providers_after_credential_creation(client: AsyncClient, 
 
 
 @pytest.mark.usefixtures("active_user")
+async def test_models_reuses_enabled_provider_status(client: AsyncClient, logged_in_headers):
+    """The models response should not query provider configuration twice."""
+    provider_result = {"enabled_providers": [], "provider_status": {}}
+    with mock.patch(
+        "langflow.api.v1.models._get_enabled_providers_result",
+        new_callable=mock.AsyncMock,
+        return_value=provider_result,
+    ) as get_enabled_providers:
+        response = await client.get("api/v1/models", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    get_enabled_providers.assert_awaited_once()
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_undecryptable_credential_does_not_configure_provider_or_trigger_live_discovery(
     client: AsyncClient, openai_credential, logged_in_headers
 ):
