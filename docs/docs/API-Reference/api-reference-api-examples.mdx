@@ -377,6 +377,16 @@ The following endpoints are most often used when contributing to the Langflow co
   * PATCH `/v1/variables/{variable_id}`: Update a variable.
   * DELETE `/v1/variables/{variable_id}`: Delete a variable.
 
+* Connections:
+  * GET `/v1/connections`: List owned, instance-owned, and explicitly shared connection metadata. Use the optional `provider` query parameter to filter the list for a connection picker.
+  * POST `/v1/connections`: Create connection metadata and optionally provide credentials for encrypted storage.
+  * POST `/v1/connections/{connection_id}/test`: Test the stored credential and required scope coverage.
+  * POST `/v1/connections/{connection_id}/health`: Refresh the stored connection health.
+  * POST `/v1/connections/{connection_id}/revoke`: Remove stored credentials and mark the connection revoked.
+  * DELETE `/v1/connections/{connection_id}`: Delete a connection.
+
+  Connection responses contain metadata, status, health, granted scopes, and a `has_credentials` flag. They never contain access tokens, refresh tokens, or encrypted credential payloads. User-owned connections can be used non-interactively only when `allow_non_interactive` is enabled; connections cannot be shared publicly.
+
 * [Use voice mode](/concepts-voice-mode):
   * WS `/v1/voice/ws/flow_tts/{flow_id}`: Speech-to-text session that runs a flow and returns TTS.
   * WS `/v1/voice/ws/flow_tts/{flow_id}/{session_id}`: Same as above with explicit session ID.

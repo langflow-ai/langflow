@@ -438,6 +438,28 @@
       ]
     },
     {
+      "family": "connections",
+      "source": "api/v1/connections.py",
+      "resource": "connection",
+      "domain": "caller-global owner or explicit share scope",
+      "privacy": "connection identifier denials are returned as 404; responses contain metadata and health only",
+      "side_effects": "authorize before credential decryption, health checks, revocation, or deletion",
+      "frontend": "connection pickers list only owned, instance, or explicitly shared metadata and never receive token material",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_connections.py::test_non_owner_cannot_test_or_delete_connection",
+        "src/backend/tests/unit/api/v1/test_connections.py::test_connection_responses_never_include_tokens"
+      ],
+      "routes": [
+        "GET||list_connections|read|authenticated",
+        "POST||create_connection|create|authenticated",
+        "POST|/{connection_id}/test|test_connection|execute|authenticated",
+        "POST|/{connection_id}/health|refresh_connection_health|execute|authenticated",
+        "POST|/{connection_id}/revoke|revoke_connection|write|authenticated",
+        "DELETE|/{connection_id}|delete_connection|delete|authenticated"
+      ]
+    },
+    {
       "family": "workflow_public_v2",
       "source": "api/v2/workflow_public.py",
       "resource": "flow",

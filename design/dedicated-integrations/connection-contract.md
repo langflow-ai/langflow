@@ -5,7 +5,7 @@ Decision ID: connection-contract
 Applies to: INT-2 (lfx), with the langflow-base obligations INT-4 and INT-5 must meet and the Enterprise seams
 Owners (sign-off roles): lfx owner, langflow-base owner, Enterprise owner, frontend owner
 Last verified: 2026-09-01
-Last amended: 2026-09-03 (INT-2 implementation review)
+Last amended: 2026-09-03 (connection persistence implementation review)
 
 This document is the INT-2 design that the discovery gate asks the lfx, langflow-base, and Enterprise owners to sign
 off before INT-2 is built. Each section states the recommended decision, why, and what was rejected. Section 12
@@ -78,8 +78,8 @@ authorization.
   account identity is ever stored in flow JSON.
 - `required_connections`: the deployment artifact manifest adds `required_connections: [{provider, name, scopes}]`
   per flow and aggregated, beside `required_variables`
-  (`src/backend/base/langflow/services/deployment_artifacts/builder.py:347`); scopes come from the input's declared
-  `required_scopes`. The manifest `schema_version` bump is an INT-4 decision.
+  (`src/backend/base/langflow/services/deployment_artifacts/builder.py`); scopes come from the input's declared
+  `required_scopes`. Artifacts with connection requirements use manifest `schema_version: 4`.
 
 Rejected: an opaque connection UUID (does not survive export or `lfx run`, and the UI needs a lookup to display it);
 a `SecretStrInput` subclass with a synthetic variable name (password rendering, `load_from_db=True` from
@@ -385,9 +385,9 @@ identifiers.**
 3. Per-connection `allow_non_interactive` semantics, including `mcp_projects` with auth `none`.
 4. Cross-worker single-flight refresh: a DB lease column versus a Redis lock; the `background_execution`
    lease-claim code is the precedent.
-5. Encryption envelope: extend the `sso_secret.py` HKDF scheme with a new info label, or the Fernet
-   `encrypt_api_key` path used by MCP and variables.
-6. Artifact manifest schema version for `required_connections`.
+5. Encryption envelope decision: use the existing Fernet `encrypt_api_key` path used by MCP and variables, and
+   isolate the encrypted envelope in `connection_secret` so metadata queries never load credential material.
+6. Artifact manifest schema decision: use version 4 when `required_connections` is non-empty.
 7. Desktop: the same `GET /api/v1/connections/{provider}/callback` on `localhost:7860` with a PKCE public client
    that is Langflow-owned by default and customer-owned as the override (`decisions/desktop-oauth-ownership.md`),
    and the redirect allowlist (`127.0.0.1` loopback; Microsoft ignores the port when matching localhost redirects).

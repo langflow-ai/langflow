@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from functools import partial
 from typing import TYPE_CHECKING, Any, TypeVar
 
+from lfx.integrations.models import ConnectionRef
 from sqlmodel import col, select
 
 from langflow.services.authorization import (
@@ -102,6 +103,16 @@ class ProjectArtifactFlow:
     sha256: str
     size: int
     required_variables: tuple[str, ...]
+    required_connections: tuple[ProjectArtifactRequiredConnection, ...]
+
+
+@dataclass(frozen=True, order=True, slots=True)
+class ProjectArtifactRequiredConnection:
+    """One non-secret connection handle and its static scope requirements."""
+
+    provider: str
+    name: str
+    scopes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -154,7 +165,65 @@ def _zip_info(path: str) -> zipfile.ZipInfo:
     return info
 
 
-def _normalized_flow_bytes(snapshot: _FlowSnapshot) -> tuple[bytes, tuple[str, ...]]:
+def _collect_required_connections(flow_data: object) -> tuple[ProjectArtifactRequiredConnection, ...]:
+    """Collect connection refs from regular and grouped nodes without recursion."""
+    if not isinstance(flow_data, dict):
+        return ()
+    nodes = flow_data.get("nodes")
+    if not isinstance(nodes, list):
+        return ()
+    collected: dict[tuple[str, str], set[str]] = {}
+    node_frames = [iter(nodes)]
+    while node_frames:
+        try:
+            node = next(node_frames[-1])
+        except StopIteration:
+            node_frames.pop()
+            continue
+        if not isinstance(node, dict):
+            continue
+        node_inner = node.get("data", {}).get("node") if isinstance(node.get("data"), dict) else None
+        if not isinstance(node_inner, dict):
+            continue
+        template = node_inner.get("template")
+        if isinstance(template, dict):
+            for field_value in template.values():
+                if not isinstance(field_value, dict) or field_value.get("type") != "connection_ref":
+                    continue
+                value = field_value.get("value")
+                if value in (None, ""):
+                    continue
+                try:
+                    ref = ConnectionRef.parse(value)
+                except ValueError as exc:
+                    msg = "project artifact contains an invalid connection reference"
+                    raise ProjectArtifactError(msg) from exc
+                declared_provider = field_value.get("provider")
+                if not isinstance(declared_provider, str) or declared_provider != ref.provider:
+                    msg = "project artifact connection reference does not match its declared provider"
+                    raise ProjectArtifactError(msg)
+                raw_scopes = field_value.get("required_scopes", [])
+                if not isinstance(raw_scopes, list) or any(
+                    not isinstance(scope, str) or not scope.strip() for scope in raw_scopes
+                ):
+                    msg = f"connection {ref.to_handle()!r} has invalid required scopes"
+                    raise ProjectArtifactError(msg)
+                collected.setdefault((ref.provider, ref.name), set()).update(scope.strip() for scope in raw_scopes)
+        nested_flow = node_inner.get("flow")
+        if isinstance(nested_flow, dict):
+            nested_data = nested_flow.get("data")
+            nested_nodes = nested_data.get("nodes") if isinstance(nested_data, dict) else None
+            if isinstance(nested_nodes, list):
+                node_frames.append(iter(nested_nodes))
+    return tuple(
+        ProjectArtifactRequiredConnection(provider=provider, name=name, scopes=tuple(sorted(scopes)))
+        for (provider, name), scopes in sorted(collected.items())
+    )
+
+
+def _normalized_flow_bytes(
+    snapshot: _FlowSnapshot,
+) -> tuple[bytes, tuple[str, ...], tuple[ProjectArtifactRequiredConnection, ...]]:
     # Scrubbing and volatile-field removal mutate nested values in place. Copy
     # first so aliases held by the snapshot or persisted Flow data stay intact.
     scrubbed = deepcopy(snapshot.payload)
@@ -162,6 +231,7 @@ def _normalized_flow_bytes(snapshot: _FlowSnapshot) -> tuple[bytes, tuple[str, .
     # the serving side can provision credentials under the same names; the
     # collected names feed the manifest's required-variables listing.
     variable_references: set[str] = set()
+    required_connections = _collect_required_connections(scrubbed.get("data"))
     scrubbed["data"] = strip_secret_field_values_in_place(scrubbed.get("data"), variable_references=variable_references)
     # Deployment packages retain runtime-native code strings. The normal git
     # export path splits code into one list element per line, which is useful
@@ -177,7 +247,7 @@ def _normalized_flow_bytes(snapshot: _FlowSnapshot) -> tuple[bytes, tuple[str, .
                 if isinstance(node, dict):
                     for key in _VOLATILE_NODE_FIELDS:
                         node.pop(key, None)
-    return _canonical_json_bytes(scrubbed), tuple(sorted(variable_references))
+    return _canonical_json_bytes(scrubbed), tuple(sorted(variable_references)), required_connections
 
 
 def _json_string_size(value: str) -> int:
@@ -317,7 +387,7 @@ def _build_archive(
 
     for snapshot in snapshots:
         path = f"flows/{snapshot.flow_id}.json"
-        content, required_variables = _normalized_flow_bytes(snapshot)
+        content, required_variables, required_connections = _normalized_flow_bytes(snapshot)
         size = len(content)
         if size > limits.max_flow_bytes:
             msg = f"flow file {snapshot.flow_id} is {size} bytes, exceeding the {limits.max_flow_bytes}-byte limit"
@@ -335,14 +405,25 @@ def _build_archive(
                 sha256=hashlib.sha256(content).hexdigest(),
                 size=size,
                 required_variables=required_variables,
+                required_connections=required_connections,
             )
         )
 
-    manifest = {
-        # v2 is already assigned to flows[].version_id. Dependencies therefore
-        # use v3 so an older reader refuses them instead of deploying without
-        # provisioning resources the packaged flows require.
-        "schema_version": 3 if dependencies else 1,
+    required_connections_by_handle: dict[tuple[str, str], set[str]] = {}
+    for flow in flow_entries:
+        for connection in flow.required_connections:
+            required_connections_by_handle.setdefault((connection.provider, connection.name), set()).update(
+                connection.scopes
+            )
+    manifest_required_connections = [
+        {"provider": provider, "name": name, "scopes": sorted(scopes)}
+        for (provider, name), scopes in sorted(required_connections_by_handle.items())
+    ]
+    manifest: dict[str, Any] = {
+        # v2 is already assigned to flows[].version_id. Dependencies use v3,
+        # and connection requirements use v4, so an older reader refuses an
+        # artifact instead of deploying without provisioning required resources.
+        "schema_version": 4 if manifest_required_connections else (3 if dependencies else 1),
         "project": {"id": str(project_id), "name": project_name},
         # Names of every load_from_db-bound global variable the packaged flows
         # reference; the deploy target must provision each name before serving.
@@ -355,10 +436,22 @@ def _build_archive(
                 "sha256": flow.sha256,
                 "size": flow.size,
                 "required_variables": list(flow.required_variables),
+                **(
+                    {
+                        "required_connections": [
+                            {"provider": item.provider, "name": item.name, "scopes": list(item.scopes)}
+                            for item in flow.required_connections
+                        ]
+                    }
+                    if flow.required_connections
+                    else {}
+                ),
             }
             for flow in flow_entries
         ],
     }
+    if manifest_required_connections:
+        manifest["required_connections"] = manifest_required_connections
     if dependencies:
         manifest["dependencies"] = dependencies
     manifest_bytes = _canonical_json_bytes(manifest)

@@ -290,6 +290,22 @@ def _strip_table_rows_in_place(field: dict, reference_columns: frozenset[str], v
 
 def _strip_template_field_value(field: dict, variable_references: set[str] | None = None) -> None:
     """Strip a template field according to metadata and value shape."""
+    field_type = str(field.get("type") or "").lower()
+    if field_type == "connection_ref":
+        # Connection handles are non-secret deployment references. Validate the
+        # shape before preserving one so a malformed legacy value does not get
+        # mistaken for a deployable connection requirement.
+        value = field.get("value")
+        if value in (None, ""):
+            return
+        try:
+            from lfx.integrations.models import ConnectionRef
+
+            field["value"] = ConnectionRef.parse(value).to_handle()
+        except (TypeError, ValueError):
+            field["value"] = None
+        return
+
     if (
         variable_references is not None
         and field.get("load_from_db")
@@ -309,7 +325,6 @@ def _strip_template_field_value(field: dict, variable_references: set[str] | Non
         field["value"] = None
         return
 
-    field_type = str(field.get("type") or "").lower()
     input_type = str(field.get("_input_type") or "").lower()
     if field_type == "mcp" or input_type == "mcpinput":
         value = field.get("value")

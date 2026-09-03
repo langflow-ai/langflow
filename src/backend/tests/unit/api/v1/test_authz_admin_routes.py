@@ -305,6 +305,7 @@ def test_role_create_rejects_other_nested_component_permissions(permission):
         "share:write",  # write isn't a share action
         "variable:execute",  # variables aren't executed
         "voice:execute",  # websocket execution is governed by flow:execute
+        "connection:ingest",  # ingest is knowledge_base-only
     ],
 )
 def test_role_create_rejects_non_canonical_permission_slugs(bad_slug):
@@ -333,6 +334,7 @@ def test_role_create_rejects_non_canonical_permission_slugs(bad_slug):
         "variable:write",
         "project:delete",
         "voice:read",
+        "connection:execute",
         # Wildcard remains valid on every resource.
         "flow:*",
         "share:*",

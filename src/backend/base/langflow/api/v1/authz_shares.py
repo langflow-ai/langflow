@@ -26,6 +26,7 @@ from langflow.services.database.models.auth import (
     SharePermissionLevel,
     ShareScope,
 )
+from langflow.services.database.models.connection import Connection
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.flow.model import Flow
@@ -49,6 +50,7 @@ _RESOURCE_OWNER_LOOKUPS: dict[str, tuple[type, str]] = {
     "knowledge_base": (KnowledgeBaseRecord, "user_id"),
     "variable": (Variable, "user_id"),
     "file": (UserFile, "user_id"),
+    "connection": (Connection, "owner_id"),
 }
 
 
@@ -291,6 +293,11 @@ async def _ensure_can_administer_share(
 
 def _ensure_supported_share_permission(*, resource_type: str, scope: str, permission_level: str) -> None:
     """Reject share levels that have no matching public flow product behavior."""
+    if resource_type == "connection" and scope == ShareScope.PUBLIC.value:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Connections cannot be shared publicly.",
+        )
     if resource_type != "flow" or scope != ShareScope.PUBLIC.value:
         return
     if permission_level == SharePermissionLevel.EXECUTE.value:
