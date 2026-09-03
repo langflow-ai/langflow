@@ -6,6 +6,8 @@ export type FlowVersionEntry = {
   version_tag: string;
   description: string | null;
   created_at: string;
+  /** Resolved server-side; absent for versions whose author was deleted. */
+  username?: string | null;
 };
 
 export type FlowVersionEntryWithData = FlowVersionEntry & {

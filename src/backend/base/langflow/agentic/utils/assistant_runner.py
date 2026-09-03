@@ -13,7 +13,7 @@ import copy
 import json
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import HTTPException
 from lfx.log.logger import logger
@@ -24,6 +24,7 @@ from langflow.agentic.api.schemas import AssistantRequest
 from langflow.agentic.services.assistant_service import execute_flow_with_validation_streaming
 from langflow.agentic.services.flow_types import LANGFLOW_ASSISTANT_FLOW
 from langflow.api.utils.core import release_db_transaction
+from langflow.api.v1.flow_conflict import claim_version_token
 from langflow.api.v1.flows import _new_flow, _save_flow_to_fs, _validate_catalog_policy_for_write
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.flow.guards import ensure_flow_unlocked, lock_flow_for_update
@@ -200,6 +201,7 @@ async def run_assistant_and_persist(
     ``session_id``, ``provider`` and ``model_name``.
     """
     flow, created_new = await _ensure_flow(session, user_id, flow_id)
+    reviewed_version_token = None if created_new else flow.version_token
     if not created_new:
         # Fail before invoking the model. Locked flows are read-only to the
         # headless assistant just as they are to direct MCP edit tools.
@@ -257,6 +259,13 @@ async def run_assistant_and_persist(
             # concurrent lock toggle and this write are ordered atomically.
             await lock_flow_for_update(session, flow)
             ensure_flow_unlocked(flow)
+            # Take the writer's turn against the version this run started from.
+            # A run can take minutes, and without this the assistant wrote over
+            # whatever a person saved in the meantime and told nobody -- measured:
+            # a human saved, the run finished, and the human's edit was simply
+            # gone. Refusing instead turns silent loss into something the caller
+            # can see and re-run.
+            claimed = await claim_version_token(session, flow, reviewed_version_token)
         flow_data = working_snapshot["data"] if working_snapshot else canvas.data
         # Headless MCP has no UI to apply an edit_field review proposal, so apply
         # each to the working flow here or the text edit is dropped (Bug #13641).
@@ -277,6 +286,14 @@ async def run_assistant_and_persist(
             raise
         flow.data = flow_data
         flow.updated_at = datetime.now(timezone.utc)
+        # Take the writer's turn like any other graph write. Persisting without
+        # rotating leaves every open editor holding a token that still matches,
+        # so their next save silently overwrites what the assistant just wrote
+        # and no one is told -- the lost update the token exists to prevent.
+        # ``claimed`` is None for a flow this run created, or a legacy row with no
+        # token to compare; either way a fresh one is what the editors need.
+        flow.version_token = claimed if not created_new and claimed else uuid4()
+        flow.last_modified_by = user_id
         if created_new and canvas.name:
             flow.name = canvas.name
         session.add(flow)

@@ -3,10 +3,20 @@ import { useTranslation } from "react-i18next";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import useAlertStore from "@/stores/alertStore";
+import useAuthStore from "@/stores/authStore";
+import useFlowConflictStore, {
+  type ConflictDetail,
+} from "@/stores/flowConflictStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
+import { saveConflictDraft } from "@/utils/conflict-draft";
 import { customStringify } from "@/utils/reactflowUtils";
+import {
+  attachTheirFlow,
+  fetchAndAdoptServerVersion,
+  registerConflictState,
+} from "./conflict-actions";
 
 // Opt-out for callers that recover from a save failure themselves.
 export type SaveFlowOptions = { suppressErrorToast?: boolean };
@@ -21,6 +31,49 @@ const useSaveFlow = () => {
   const { mutate: getFlow } = useGetFlow();
   const { mutate } = usePatchUpdateFlow();
 
+  const registerConflict = (flowId: string, detail: ConflictDetail) => {
+    const currentUserId = useAuthStore.getState().userData?.id ?? null;
+    const authorId = detail.modified_by?.id ?? null;
+
+    // Nothing of mine is at risk, so there is nothing to resolve. Raising a banner
+    // here produced a dialog with no changes on either side and no honest exit;
+    // taking their version is the whole answer.
+    if (!useFlowStore.getState().userEditedSinceLoad) {
+      void fetchAndAdoptServerVersion(flowId);
+      return;
+    }
+    registerConflictState({
+      flowId,
+      authorId,
+      authorName: detail.modified_by?.username ?? null,
+      modifiedAt: detail.modified_at ?? null,
+      expectedToken: detail.expected_version_token ?? null,
+      currentToken: detail.current_version_token ?? null,
+      currentUserId,
+    });
+    // The refused work now lives only in this tab, and the person may take minutes
+    // deciding. Persist it so a reload does not do the losing for them.
+    const liveFlow = useFlowStore.getState().currentFlow;
+    if (liveFlow?.id === flowId) {
+      saveConflictDraft(
+        currentUserId,
+        {
+          ...liveFlow,
+          data: {
+            ...liveFlow.data,
+            nodes: useFlowStore.getState().nodes,
+            edges: useFlowStore.getState().edges,
+          },
+        } as FlowType,
+        detail.expected_version_token ?? null,
+      );
+    }
+
+    // Fetched now, not when the dialog opens: a third save in between would make
+    // the diff describe a version this conflict was never about.
+    void attachTheirFlow(flowId);
+  };
+
   const saveFlow = async (
     flow?: FlowType,
     options?: SaveFlowOptions,
@@ -28,6 +81,17 @@ const useSaveFlow = () => {
     const currentFlow = useFlowStore.getState().currentFlow;
     const currentSavedFlow = useFlowsManagerStore.getState().currentFlow;
     const requestedFlow = flow || currentFlow;
+
+    // Saving to the original is over once refused; retrying can only fail forever.
+    const conflictState = useFlowConflictStore.getState();
+    const requestedId = requestedFlow?.id;
+    if (
+      requestedId &&
+      (conflictState.conflict?.flowId === requestedId ||
+        conflictState.abandonedFlowIds.has(requestedId))
+    ) {
+      return;
+    }
     const isCurrentEditorFlowLocked =
       currentFlow?.id === requestedFlow?.id && currentFlow?.locked === true;
     const isPersistedFlowLocked =
@@ -98,6 +162,12 @@ const useSaveFlow = () => {
             endpoint_name,
             locked,
           } = flow;
+          // The last applied server response, never the canvas, which can hold a
+          // token from a response this save has not adopted.
+          const versionToken =
+            currentSavedFlow?.id === id
+              ? currentSavedFlow?.version_token
+              : null;
           const persistedFlowForScope =
             currentSavedFlow?.id === id
               ? currentSavedFlow
@@ -115,13 +185,24 @@ const useSaveFlow = () => {
             folder_id,
             endpoint_name,
             locked,
+            versionToken,
             ...(providerScopeChanged && { providerScopeChanged: true }),
           };
           // biome-ignore lint/suspicious/noExplicitAny: legacy
           const handleError = (e: any) => {
-            reportSaveError(
-              e.response?.data?.detail || e.message || "Unknown error",
-            );
+            const detail = e.response?.data?.detail;
+            if (
+              e.response?.status === 409 &&
+              detail?.code === "flow_version_conflict"
+            ) {
+              // Not an error the user can retry away: the flow moved on without
+              // them, so the banner takes over and the toast would only add noise.
+              registerConflict(id, detail);
+              setSaveLoading(false);
+              reject(e);
+              return;
+            }
+            reportSaveError(detail || e.message || "Unknown error");
             setSaveLoading(false);
             reject(e);
           };

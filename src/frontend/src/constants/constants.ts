@@ -822,7 +822,7 @@ export const SAVE_DEBOUNCE_TIME = 300;
 // diverge; n8n settled on the same 2s after attributing their false-conflict
 // problem to a more eager autosave. Deliberately not the template-refresh
 // delay above: holding a field's refresh back only leaves the user waiting.
-export const AUTOSAVE_DEBOUNCE_TIME = 2000;
+export const AUTOSAVE_DEBOUNCE_TIME = 5000;
 
 export const IS_MAC =
   typeof navigator !== "undefined" &&

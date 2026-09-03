@@ -7,6 +7,7 @@ import {
   LANGFLOW_REFRESH_TOKEN,
 } from "@/constants/constants";
 import type { AuthStoreType } from "@/types/zustand/auth";
+import { clearAllConflictDrafts } from "@/utils/conflict-draft";
 import { cookieManager, getCookiesInstance } from "@/utils/cookie-manager";
 
 const useAuthStore = create<AuthStoreType>((set, get) => ({
@@ -33,6 +34,9 @@ const useAuthStore = create<AuthStoreType>((set, get) => ({
     localStorage.removeItem(LANGFLOW_ACCESS_TOKEN);
     localStorage.removeItem(LANGFLOW_API_TOKEN);
     localStorage.removeItem(LANGFLOW_REFRESH_TOKEN);
+    // Unsaved work is this person's; the next person on this browser must never
+    // be offered it back.
+    clearAllConflictDrafts();
 
     cookieManager.clearAuthCookies();
 

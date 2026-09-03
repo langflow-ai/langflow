@@ -1,17 +1,18 @@
 import copy
 from datetime import datetime, timezone
 from typing import Annotated
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Header, HTTPException, Query
 from lfx.log import logger
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlmodel import select
+from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.utils.core import strip_secret_field_values
+from langflow.api.v1.flow_conflict import ensure_version_precondition, parse_if_match
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.mappers.deployments.helpers import get_owned_provider_account_or_404
 from langflow.api.v1.mappers.deployments.sync import sync_flow_version_attachments
@@ -38,6 +39,7 @@ from langflow.services.database.models.flow_version.model import (
     FlowVersionRead,
     FlowVersionReadWithData,
 )
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_catalog_policy_service, get_settings_service
 
 router = APIRouter(prefix="/flows/{flow_id}/versions", tags=["Flow Versions"], include_in_schema=False)
@@ -111,6 +113,22 @@ def _ensure_deployments_enabled_for_provider_id(deployment_provider_id: UUID | N
 # it to omit `is_deployed` unless deployment status is explicitly requested.
 # If future nullable fields must be returned as explicit null, prefer splitting
 # response schemas/routes and disabling this global exclude-none behavior.
+async def _attach_usernames(session: AsyncSession, entries: list[FlowVersionRead]) -> list[FlowVersionRead]:
+    """Resolve every author in one query.
+
+    The history panel names who made each version, and a per-entry lookup would be
+    a query per row on a list that can hold fifty.
+    """
+    user_ids = {entry.user_id for entry in entries if entry.user_id is not None}
+    if not user_ids:
+        return entries
+    rows = (await session.exec(select(User.id, User.username).where(col(User.id).in_(user_ids)))).all()
+    names = dict(rows)
+    for entry in entries:
+        entry.username = names.get(entry.user_id) if entry.user_id else None
+    return entries
+
+
 @router.get("/", response_model_exclude_none=True)
 async def list_flow_versions(
     flow_id: UUID,
@@ -169,7 +187,7 @@ async def list_flow_versions(
 
     max_entries = get_settings_service().settings.max_flow_version_entries_per_flow
     return FlowVersionListResponse(
-        entries=entries,
+        entries=await _attach_usernames(session, entries),
         max_entries=max_entries,
     )
 
@@ -245,8 +263,10 @@ async def activate_version(
     session: DbSession,
     *,
     save_draft: Annotated[bool, Query()] = True,
+    if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ) -> FlowRead:
     flow = await _get_user_flow(session, flow_id, current_user.id)
+    await ensure_version_precondition(session, flow, parse_if_match(if_match))
     await ensure_flow_permission(
         current_user,
         FlowAction.WRITE,
@@ -297,6 +317,10 @@ async def activate_version(
 
             flow.data = target_data
             flow.updated_at = datetime.now(timezone.utc)
+            # Not routed through _patch_flow, so it rotates the token itself: otherwise a
+            # restore leaves open editors holding a token that still looks current.
+            flow.version_token = uuid4()
+            flow.last_modified_by = current_user.id
 
             session.add(flow)
             await session.flush()

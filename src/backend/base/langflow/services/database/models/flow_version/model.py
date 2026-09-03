@@ -45,6 +45,10 @@ class FlowVersionRead(BaseModel):
     version_number: int = PydanticField(ge=1)
     description: str | None
     created_at: datetime
+    username: str | None = PydanticField(
+        default=None,
+        description="Display name of whoever authored this version, resolved from user_id.",
+    )
     is_deployed: bool | None = PydanticField(
         default=None,
         description=(

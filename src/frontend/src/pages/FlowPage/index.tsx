@@ -23,6 +23,7 @@ import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
+import useFlowConflictStore from "@/stores/flowConflictStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { useTypesStore } from "@/stores/typesStore";
@@ -136,6 +137,14 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   useWebhookEvents();
 
   const handleSave = () => {
+    // Leaving during a conflict is a discard: the save on the way out cannot
+    // succeed and the blocker's autosave branch proceeds regardless.
+    const conflictState = useFlowConflictStore.getState();
+    if (conflictState.conflict?.flowId === currentFlowId) {
+      blocker.reset?.();
+      conflictState.openDialog();
+      return;
+    }
     void saveBeforeLeaving({
       saveFlow,
       autoSaving,

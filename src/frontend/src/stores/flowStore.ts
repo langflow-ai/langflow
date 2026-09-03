@@ -22,6 +22,7 @@ import { getGlobalVariablesQueryKey } from "@/controllers/API/helpers/global-var
 import { getSettledSuccessfulQueryData } from "@/controllers/API/helpers/query-cache";
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import { track, trackFlowBuild } from "@/customization/utils/analytics";
+import { checkFlowVersion } from "@/hooks/flows/use-check-flow-version";
 import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
 import type { GlobalVariable } from "@/types/global_variables";
 import { brokenEdgeMessage } from "@/utils/utils";
@@ -60,6 +61,7 @@ import { getInputsAndOutputs } from "../utils/storeUtils";
 import useAlertStore from "./alertStore";
 import useAuthStore from "./authStore";
 import { useDarkStore } from "./darkStore";
+import useFlowConflictStore from "./flowConflictStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useTweaksStore } from "./tweaksStore";
 import { useTypesStore } from "./typesStore";
@@ -340,7 +342,15 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setPending: (isPending) => {
     set({ isPending });
   },
+  userEditedSinceLoad: false,
   resetFlow: (flow) => {
+    // Abandonment silences the stale token of a flow being walked away from. It
+    // must not outlive that: reopening loads a current baseline, and leaving the
+    // mark in place left the flow permanently unsaveable for the rest of the
+    // session — edits made on returning to it were dropped, not just undetected.
+    if (flow?.id) {
+      useFlowConflictStore.getState().resumeFlow(flow.id);
+    }
     const nodes = flow?.data?.nodes ?? [];
     const edges = flow?.data?.edges ?? [];
     const { edges: newEdges, brokenEdges } = cleanEdges(nodes, edges);
@@ -354,6 +364,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const { inputs, outputs } = getInputsAndOutputs(nodes);
     get().updateComponentsToUpdate(nodes);
     set({
+      // A freshly loaded flow carries no edits of the user's, whatever hydration
+      // does to the nodes on the way in.
+      userEditedSinceLoad: false,
       dismissedNodes: JSON.parse(
         localStorage.getItem(`dismiss_${flow?.id}`) ?? "[]",
       ) as string[],
@@ -851,6 +864,44 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     stream?: boolean;
     eventDelivery?: EventDeliveryType;
   }) => {
+    // Running a flow whose save was refused executes a graph the server has already
+    // moved past, and writes build results back into it — manufacturing new changes
+    // on top of a conflict nobody has resolved yet. The exit has to come first.
+    // None of this belongs on the shared playground: a visitor there is running
+    // somebody else's published flow, has nothing to save and no dialog to be
+    // sent to, so a staleness check could only refuse a run for no reason.
+    const isEditor = !get().playgroundPage;
+    const conflictState = useFlowConflictStore.getState();
+    const conflictedFlowId = useFlowsManagerStore.getState().currentFlowId;
+    if (isEditor && conflictState.conflict?.flowId === conflictedFlowId) {
+      conflictState.openDialog();
+      return;
+    }
+
+    // A save is not the only way to learn the flow moved on, and running a stale
+    // one is worse than failing to save it: the result looks current and is not.
+    if (isEditor && conflictedFlowId) {
+      const check = await checkFlowVersion(
+        conflictedFlowId,
+        useAuthStore.getState().userData?.id ?? null,
+      );
+      if (check.outcome === "conflict") {
+        useFlowConflictStore.getState().openDialog();
+        return;
+      }
+      if (check.outcome === "adopted") {
+        // Stop here rather than build on the graph we just swapped in. Running
+        // would execute something the person has not seen, and starting a build
+        // while the canvas is being replaced races the two against each other.
+        useAlertStore.getState().setNoticeData({
+          title: check.author
+            ? `${check.author} updated this flow. The canvas now shows the latest version — run again to execute it.`
+            : "This flow was updated. The canvas now shows the latest version — run again to execute it.",
+        });
+        return;
+      }
+    }
+
     set({
       pastBuildFlowParams: {
         startNodeId,

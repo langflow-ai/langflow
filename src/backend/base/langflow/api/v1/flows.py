@@ -9,7 +9,7 @@ from typing import Annotated
 from uuid import UUID
 
 import orjson
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
@@ -46,6 +46,10 @@ from langflow.api.v1.authz_route_dependencies import (
     AuthorizedReadFlow,
     AuthorizedWriteFlow,
     RequireFlowCreate,
+)
+from langflow.api.v1.flow_conflict import (
+    ensure_version_precondition,
+    parse_if_match,
 )
 from langflow.api.v1.flows_helpers import (
     _build_flows_download_response,
@@ -578,9 +582,11 @@ async def update_flow(
     flow: FlowUpdate,
     current_user: CurrentActiveUser,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ):
     """Update a flow."""
     actor = UserRead.model_validate(current_user, from_attributes=True)
+    expected_version_token = parse_if_match(if_match)
     try:
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
         # Destination check: resolve the actual owner-folder/workspace tuple
@@ -632,6 +638,9 @@ async def update_flow(
             )
             if not db_flow_for_attempt:
                 raise HTTPException(status_code=404, detail="Flow not found")
+            # Compared against the row we just re-read under lock, so a writer that
+            # committed between the client's read and this attempt is still caught.
+            await ensure_version_precondition(session, db_flow_for_attempt, expected_version_token)
             # TOCTOU: a concurrent PATCH could have moved this flow to a
             # different workspace/folder between the destination check above
             # and this retry attempt. Re-authorize against the freshly
@@ -688,6 +697,7 @@ async def update_flow(
                 flow=flow,
                 user_id=actor.id,
                 storage_service=storage_service,
+                expected_version_token=expected_version_token,
             )
 
         async def update_attempt(_attempt: int) -> FlowRead:

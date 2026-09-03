@@ -9,6 +9,14 @@ import type { FlowType } from "@/types/flow";
 import { useDebounce } from "../use-debounce";
 import useSaveFlow from "./use-save-flow";
 
+/**
+ * How much longer than the debounce a continuous burst may defer its save.
+ *
+ * Bounds both the work at risk in a crash and how late a conflict can surface,
+ * neither of which a trailing debounce limits on its own.
+ */
+const AUTOSAVE_MAX_WAIT_FACTOR = 3;
+
 type PendingAutoSave = {
   flow?: FlowType;
   flowId: string | undefined;
@@ -89,30 +97,44 @@ const useAutoSaveFlow = () => {
     [saveFlow],
   );
 
-  const debouncedAutoSave = useDebounce((flow?: FlowType) => {
-    const flowId = flow?.id ?? currentFlowId;
-    if (!autoSaving) {
-      pendingAutoSaveRef.current = null;
-      return;
-    }
-    if (isLoading) {
-      pendingAutoSaveRef.current = { flow, flowId };
-      return;
-    }
-    if (pauseForBlockedComponents()) {
-      // Hold the edit rather than discard it, so it still lands once the
-      // blocking component is removed.
-      pendingAutoSaveRef.current = { flow, flowId };
-      return;
-    }
-    if (can(flowId, "write")) {
-      pendingAutoSaveRef.current = null;
-      return enqueueSave(flow);
-    }
-  }, autoSavingInterval);
+  const debouncedAutoSave = useDebounce(
+    (flow?: FlowType) => {
+      const flowId = flow?.id ?? currentFlowId;
+      if (!autoSaving) {
+        pendingAutoSaveRef.current = null;
+        return;
+      }
+      if (isLoading) {
+        pendingAutoSaveRef.current = { flow, flowId };
+        return;
+      }
+      if (pauseForBlockedComponents()) {
+        // Hold the edit rather than discard it, so it still lands once the
+        // blocking component is removed.
+        pendingAutoSaveRef.current = { flow, flowId };
+        return;
+      }
+      if (can(flowId, "write")) {
+        pendingAutoSaveRef.current = null;
+        return enqueueSave(flow);
+      }
+    },
+    autoSavingInterval,
+    // Cap how long a burst may defer the write. A plain trailing debounce has no
+    // ceiling: measured against a real server, a ten-second interval held 23
+    // seconds of continuous editing entirely in memory, and the conflict that
+    // work had collided with surfaced only once the person stopped.
+    { maxWait: autoSavingInterval * AUTOSAVE_MAX_WAIT_FACTOR },
+  );
 
   const autoSaveFlow = useMemo(() => {
-    const queuedAutoSave = (flow?: FlowType) => debouncedAutoSave(flow);
+    const queuedAutoSave = (flow?: FlowType) => {
+      // Asking for a save is the definition of a user-originated change, and the
+      // only signal that covers every one of them: drags and keyboard moves call
+      // this directly, never through the store setters.
+      useFlowStore.setState({ userEditedSinceLoad: true });
+      return debouncedAutoSave(flow);
+    };
     queuedAutoSave.cancel = () => debouncedAutoSave.cancel?.();
     queuedAutoSave.flush = async (): Promise<void> => {
       // flush() invokes a pending debounce callback synchronously, which adds
