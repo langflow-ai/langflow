@@ -292,6 +292,71 @@ describe("useProviderConfiguration.handleDisconnect", () => {
     );
   });
 
+  it("does not refetch provider data when only the selected provider changes", () => {
+    const openAIProvider: Provider = {
+      provider: "OpenAI",
+      icon: "OpenAI",
+      is_enabled: true,
+      is_configured: true,
+      models: [],
+    };
+    const anthropicProvider: Provider = {
+      provider: "Anthropic",
+      icon: "Anthropic",
+      is_enabled: true,
+      is_configured: true,
+      models: [],
+    };
+    mockModelProviders = [openAIProvider, anthropicProvider];
+
+    const { rerender } = renderScopedProviderConfiguration(
+      openAIProvider,
+      "flow-one",
+      "project-one",
+    );
+    mockInvalidateQueries.mockClear();
+    mockRefetchQueries.mockClear();
+
+    rerender({
+      provider: anthropicProvider,
+      flow: "flow-one",
+      project: "project-one",
+    });
+
+    expect(mockInvalidateQueries).not.toHaveBeenCalled();
+    expect(mockRefetchQueries).not.toHaveBeenCalled();
+  });
+
+  it("still refetches provider data when the authorization scope changes", async () => {
+    const selectedProvider: Provider = {
+      provider: "OpenAI",
+      icon: "OpenAI",
+      is_enabled: true,
+      is_configured: true,
+      models: [],
+    };
+    mockModelProviders = [selectedProvider];
+
+    const { rerender } = renderScopedProviderConfiguration(
+      selectedProvider,
+      "flow-one",
+      "project-one",
+    );
+    mockInvalidateQueries.mockClear();
+
+    rerender({
+      provider: selectedProvider,
+      flow: "flow-two",
+      project: "project-one",
+    });
+
+    await waitFor(() =>
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["useGetModelProviders"],
+      }),
+    );
+  });
+
   it("deletes every variable for a multi-variable provider (OpenRouter)", async () => {
     // OpenRouter is the canonical multi-variable provider: API key + two
     // attribution headers. The pre-fix implementation looked up the variable

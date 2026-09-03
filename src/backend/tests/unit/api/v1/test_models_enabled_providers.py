@@ -113,6 +113,38 @@ async def test_enabled_providers_after_credential_creation(client: AsyncClient, 
 
 
 @pytest.mark.usefixtures("active_user")
+async def test_undecryptable_credential_does_not_configure_provider_or_trigger_live_discovery(
+    client: AsyncClient, openai_credential, logged_in_headers
+):
+    """A credential encrypted with another secret key must behave as unavailable."""
+    all_vars = await client.get("api/v1/variables/", headers=logged_in_headers)
+    openai_var_name = _provider_variable_mapping.get("OpenAI")
+    for var in all_vars.json():
+        if var.get("name") == openai_var_name:
+            await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
+
+    variable_payload = _create_variable_payload(openai_credential["provider"], openai_credential["value"])
+    with mock.patch("langflow.api.v1.variable.validate_model_provider_key", return_value=None):
+        create_response = await client.post("api/v1/variables/", json=variable_payload, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+
+    with (
+        mock.patch("langflow.services.auth.utils.decrypt_api_key", return_value=""),
+        mock.patch("lfx.base.models.model_utils.get_live_models_for_provider") as live_models,
+    ):
+        enabled_response = await client.get("api/v1/models/enabled_providers", headers=logged_in_headers)
+        models_response = await client.get("api/v1/models", headers=logged_in_headers)
+
+    assert enabled_response.status_code == status.HTTP_200_OK
+    assert enabled_response.json()["provider_status"]["OpenAI"] is False
+    assert "OpenAI" not in enabled_response.json()["enabled_providers"]
+    assert models_response.status_code == status.HTTP_200_OK
+    openai = next(provider for provider in models_response.json() if provider["provider"] == "OpenAI")
+    assert openai["is_configured"] is False
+    live_models.assert_not_called()
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_enabled_providers_multiple_credentials(
     client: AsyncClient, openai_credential, anthropic_credential, google_credential, logged_in_headers
 ):

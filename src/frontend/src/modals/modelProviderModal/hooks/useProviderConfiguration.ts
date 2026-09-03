@@ -101,8 +101,10 @@ export const useProviderConfiguration = ({
   const _validationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
+  const providerScopeKey = `${flowId ?? ""}\0${projectId ?? ""}`;
   const configurationContextKey = `${flowId ?? ""}\0${projectId ?? ""}\0${selectedProvider?.provider ?? ""}`;
   const previousConfigurationContextRef = useRef(configurationContextKey);
+  const previousProviderScopeRef = useRef(providerScopeKey);
   const activeConfigurationContextRef = useRef<string | null>(
     configurationContextKey,
   );
@@ -249,7 +251,10 @@ export const useProviderConfiguration = ({
   useEffect(() => {
     const didConfigurationContextChange =
       configurationContextKey !== previousConfigurationContextRef.current;
+    const didProviderScopeChange =
+      providerScopeKey !== previousProviderScopeRef.current;
     previousConfigurationContextRef.current = configurationContextKey;
+    previousProviderScopeRef.current = providerScopeKey;
 
     if (didConfigurationContextChange) {
       setVariableValues({});
@@ -265,10 +270,14 @@ export const useProviderConfiguration = ({
         _validationTimeoutRef.current = null;
       }
 
-      // Force refetch models when switching provider or authorization scope.
-      void invalidateProviderQueries();
+      // A provider selection only changes local form state. The cached catalog,
+      // variables, and enabled-model status are shared across every provider in
+      // the same authorization scope, so refetch them only when that scope moves.
+      if (didProviderScopeChange) {
+        void invalidateProviderQueries();
+      }
     }
-  }, [configurationContextKey, invalidateProviderQueries]);
+  }, [configurationContextKey, invalidateProviderQueries, providerScopeKey]);
 
   // Calculate provider variables
   const providerVariables = useMemo((): ProviderVariable[] => {

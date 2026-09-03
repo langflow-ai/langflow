@@ -502,8 +502,11 @@ async def _get_enabled_providers_result(
         # Get all variables (VariableRead objects)
         all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
 
-        # Build a set of all variable names we have
-        all_variable_names = {var.name for var in all_variables}
+        # A stored credential can become unreadable after LANGFLOW_SECRET_KEY
+        # changes. DatabaseVariableService exposes that as has_value=False; do
+        # not treat the row's mere presence as configured or trigger live model
+        # discovery with an unusable credential.
+        available_variable_names = {var.name for var in all_variables if var.has_value}
 
         provider_variable_map = get_model_provider_variable_mapping()
         provider_candidates = [
@@ -530,7 +533,7 @@ async def _get_enabled_providers_result(
             all_required_present = (
                 is_api_key_optional(provider)
                 if not provider_vars
-                else all(v.get("variable_key") in all_variable_names for v in required_vars)
+                else all(v.get("variable_key") in available_variable_names for v in required_vars)
             )
 
             provider_status[provider] = all_required_present
