@@ -30,9 +30,17 @@ interface CompareVersionsDialogProps {
   onSwap: () => void;
 }
 
+/**
+ * The removed side needs a per-theme red: `destructive` clears AA on the light
+ * surface but only reaches 3.9:1 on the dark one, and `accent-red-foreground`
+ * is the reverse. The added side needs none — `accent-emerald-foreground` is
+ * already authored per theme for this.
+ */
+const REMOVED_TEXT = "text-destructive dark:text-accent-red-foreground";
+
 const TONE_CLASSES: Record<string, string> = {
   added: "bg-accent-emerald text-accent-emerald-foreground",
-  removed: "bg-destructive/10 text-destructive",
+  removed: `bg-destructive/10 ${REMOVED_TEXT}`,
   modified: "bg-accent-amber text-accent-amber-foreground",
   secret: "bg-muted text-muted-foreground",
 };
@@ -86,7 +94,12 @@ function FieldChangeRow({ change }: { change: FlowVersionDiffFieldChange }) {
       ) : (
         <>
           <td className="py-1.5 pr-3">
-            <pre className="whitespace-pre-wrap break-all font-mono text-xs text-destructive">
+            <pre
+              className={cn(
+                "whitespace-pre-wrap break-all font-mono text-xs",
+                REMOVED_TEXT,
+              )}
+            >
               {formatDiffValue(change.before)}
             </pre>
           </td>
@@ -113,7 +126,7 @@ function CodeChangeBlock({ change }: { change: FlowVersionDiffCodeChange }) {
         <span className="text-xs text-accent-emerald-foreground">
           +{change.added_lines}
         </span>
-        <span className="text-xs text-destructive">
+        <span className={cn("text-xs", REMOVED_TEXT)}>
           -{change.removed_lines}
         </span>
         {change.redacted && (
@@ -137,7 +150,7 @@ function CodeChangeBlock({ change }: { change: FlowVersionDiffCodeChange }) {
               className={cn(
                 line.kind === "add" &&
                   "bg-accent-emerald text-accent-emerald-foreground",
-                line.kind === "del" && "bg-destructive/10 text-destructive",
+                line.kind === "del" && `bg-destructive/10 ${REMOVED_TEXT}`,
                 line.kind === "meta" && "text-muted-foreground",
               )}
             >
