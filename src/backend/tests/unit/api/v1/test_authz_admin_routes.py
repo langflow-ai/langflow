@@ -12,12 +12,16 @@ authz service installed via monkeypatch.
 from __future__ import annotations
 
 from types import SimpleNamespace
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
+import anyio
 import pytest
 from fastapi import HTTPException, Response
 from sqlalchemy.exc import IntegrityError
+
+if TYPE_CHECKING:
+    from httpx import AsyncClient
 
 # --- shared fakes ----------------------------------------------------- #
 
@@ -159,6 +163,11 @@ class _StubAuthz:
 
 def _make_user(*, is_superuser: bool = False) -> SimpleNamespace:
     return SimpleNamespace(id=uuid4(), is_superuser=is_superuser, username="u")
+
+
+async def _request_without_hanging(client: AsyncClient, method: str, url: str, **kwargs):
+    with anyio.fail_after(5):
+        return await client.request(method, url, **kwargs)
 
 
 def _make_role_row(
@@ -2238,3 +2247,103 @@ async def test_role_list_supports_exact_name_filter(stub_authz):
     )
     compiled = str(captured["stmt"].compile(compile_kwargs={"literal_binds": True}))
     assert "authz_role.name = 'administrator'" in compiled
+
+
+@pytest.mark.asyncio
+async def test_bearer_authenticated_admin_conflicts_return_without_hanging(
+    client: AsyncClient,
+    logged_in_headers_super_user,
+    active_super_user,
+):
+    """Every documented uniqueness conflict must answer session-JWT callers."""
+    from langflow.services.deps import get_settings_service
+
+    headers = logged_in_headers_super_user
+    user_payload = {"username": "conflict-user", "password": "password123"}  # pragma: allowlist secret
+    role_one = await client.post(
+        "api/v1/authz/roles",
+        json={"name": "conflict-role", "permissions": ["flow:read"]},
+        headers=headers,
+    )
+    role_two = await client.post(
+        "api/v1/authz/roles",
+        json={"name": "rename-role", "permissions": ["flow:read"]},
+        headers=headers,
+    )
+    team_one = await client.post(
+        "api/v1/authz/teams",
+        json={"team_name": "Conflict Team", "adom_name": "conflict-team"},
+        headers=headers,
+    )
+    team_two = await client.post(
+        "api/v1/authz/teams",
+        json={"team_name": "Rename Team", "adom_name": "rename-team"},
+        headers=headers,
+    )
+    user_one = await client.post("api/v1/users/", json=user_payload, headers=headers)
+    assert [
+        role_one.status_code,
+        role_two.status_code,
+        team_one.status_code,
+        team_two.status_code,
+        user_one.status_code,
+    ] == [
+        201,
+        201,
+        201,
+        201,
+        201,
+    ]
+
+    membership = await client.post(
+        f"api/v1/authz/teams/{team_one.json()['id']}/members",
+        json={"user_id": str(active_super_user.id)},
+        headers=headers,
+    )
+    assert membership.status_code == 201
+
+    auth_settings = get_settings_service().auth_settings
+    original_audit_enabled = auth_settings.AUTHZ_AUDIT_ENABLED
+    original_audit_durable = auth_settings.AUTHZ_AUDIT_DURABLE
+    auth_settings.AUTHZ_AUDIT_ENABLED = True
+    auth_settings.AUTHZ_AUDIT_DURABLE = True
+    try:
+        requests = [
+            ("POST", "api/v1/users/", {"json": user_payload}, 400),
+            (
+                "POST",
+                "api/v1/authz/roles",
+                {"json": {"name": "conflict-role", "permissions": ["flow:read"]}},
+                409,
+            ),
+            (
+                "PATCH",
+                f"api/v1/authz/roles/{role_two.json()['id']}",
+                {"json": {"name": "conflict-role"}},
+                409,
+            ),
+            (
+                "POST",
+                "api/v1/authz/teams",
+                {"json": {"team_name": "Duplicate Team", "adom_name": "conflict-team"}},
+                409,
+            ),
+            (
+                "PATCH",
+                f"api/v1/authz/teams/{team_two.json()['id']}",
+                {"json": {"adom_name": "conflict-team"}},
+                409,
+            ),
+            (
+                "POST",
+                f"api/v1/authz/teams/{team_one.json()['id']}/members",
+                {"json": {"user_id": str(active_super_user.id)}},
+                409,
+            ),
+        ]
+        for method, url, kwargs, expected_status in requests:
+            response = await _request_without_hanging(client, method, url, headers=headers, **kwargs)
+            assert response.status_code == expected_status, response.text
+    finally:
+        auth_settings.AUTHZ_AUDIT_ENABLED = original_audit_enabled
+        auth_settings.AUTHZ_AUDIT_DURABLE = original_audit_durable
