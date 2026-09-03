@@ -1704,6 +1704,8 @@
   "node.updateRequiredLabel": "Actualización necesaria",
   "node.upgradeRequiredMessage": "Es necesario actualizar para ejecutar el flujo",
   "node.viewCode": "Ver código",
+  "nodeToolbar.moveTo": "Mover a…",
+  "nodeToolbar.moveToArmed": "Haga clic en un punto del lienzo para colocar el nodo. Pulse Escape para cancelar.",
   "nodeToolbar.code": "Código",
   "nodeToolbar.copy": "Copiar",
   "nodeToolbar.delete": "Suprimir",

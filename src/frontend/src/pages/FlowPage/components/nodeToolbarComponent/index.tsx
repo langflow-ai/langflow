@@ -31,6 +31,7 @@ import {
   buildToolbarActionMap,
   type ToolbarActionEvent,
 } from "./helpers/build-toolbar-action-map";
+import { useMoveNodeToClick } from "./hooks/use-move-node-to-click";
 import useShortcuts from "./hooks/use-shortcuts";
 import { useToolbarNodeState } from "./hooks/use-toolbar-node-state";
 
@@ -147,6 +148,10 @@ const NodeToolbarComponent = memo(
         newValue,
       );
     };
+
+    // WCAG 2.5.7: single-pointer, non-drag alternative to dragging a node —
+    // arm here, then one click on the pane places the node.
+    const armMoveNodeToClick = useMoveNodeToClick(data.id);
 
     // LE-1810: any component can be minimized, regardless of how many
     // input/output handles it has.
@@ -341,6 +346,7 @@ const NodeToolbarComponent = memo(
             );
           },
           toolMode: handleActivateToolMode,
+          moveTo: armMoveNodeToClick,
         }),
       [
         saveComponent,
@@ -360,6 +366,7 @@ const NodeToolbarComponent = memo(
         setLastCopiedSelection,
         paste,
         handleActivateToolMode,
+        armMoveNodeToClick,
       ],
     );
 
