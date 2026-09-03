@@ -1,4 +1,4 @@
-"""Tests for SafeLangchainProvider schema sanitization (issues #12894/#12895).
+"""Tests for SafeLangchainProvider schema and argument hardening.
 
 Composio's ``_substitute_file_uploads_recursively`` and
 ``pydantic_model_from_param_schema`` raw-subscript ``properties[name]["type"]``,
@@ -6,14 +6,25 @@ so any tool whose ``input_parameters`` schema has a property without an explicit
 ``"type"`` (Gmail/Calendar actions hit this) raises ``KeyError: 'type'`` at
 execute time. ``_sanitize_schema`` injects a sensible ``type`` for every node so
 those raw subscripts succeed.
+
+Optional nested action inputs can also arrive as Pydantic models whose leaves
+are empty strings. The provider omits those empty optional containers before
+Composio validation while preserving required and meaningful values (#14715).
 """
 
+from types import SimpleNamespace
+
 import pytest
+from pydantic import BaseModel
 
 composio = pytest.importorskip("composio", reason="composio extra not installed in this env")
 pytest.importorskip("composio_langchain", reason="composio extra not installed in this env")
 
-from lfx.base.composio.safe_provider import SafeLangchainProvider, _sanitize_schema  # noqa: E402
+from lfx.base.composio.safe_provider import (  # noqa: E402
+    SafeLangchainProvider,
+    _omit_empty_optional_containers,
+    _sanitize_schema,
+)
 
 
 class TestSanitizeSchema:
@@ -170,6 +181,107 @@ class TestSafeLangchainProviderRegression:
         model = pydantic_model_from_param_schema(schema)
         # Defaulted type is "string", which maps to ``str`` in Composio's type table.
         assert "payload" in model.model_fields
+
+
+class TestOptionalContainerNormalization:
+    """Empty optional objects should not become invalid Composio action input."""
+
+    attachment_schema = {
+        "type": "object",
+        "properties": {
+            "attachment": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "data": {"type": "string"},
+                },
+            }
+        },
+    }
+
+    def test_empty_optional_attachment_is_omitted(self):
+        arguments = {"to": "recipient@example.com", "attachment": {"name": "", "data": ""}}
+
+        result = _omit_empty_optional_containers(arguments, self.attachment_schema)
+
+        assert result == {"to": "recipient@example.com"}
+        assert arguments["attachment"] == {"name": "", "data": ""}
+
+    def test_nonempty_attachment_is_preserved(self):
+        arguments = {"attachment": {"name": "report.pdf", "data": "base64-data"}}
+
+        result = _omit_empty_optional_containers(arguments, self.attachment_schema)
+
+        assert result == arguments
+
+    def test_required_empty_attachment_is_preserved_for_validation(self):
+        schema = {**self.attachment_schema, "required": ["attachment"]}
+        arguments = {"attachment": {"name": "", "data": ""}}
+
+        result = _omit_empty_optional_containers(arguments, schema)
+
+        assert result == arguments
+
+    def test_valid_falsy_values_keep_optional_object(self):
+        schema = {
+            "type": "object",
+            "properties": {
+                "options": {
+                    "type": "object",
+                    "properties": {
+                        "enabled": {"type": "boolean"},
+                        "retry_count": {"type": "integer"},
+                    },
+                }
+            },
+        }
+        arguments = {"options": {"enabled": False, "retry_count": 0}}
+
+        result = _omit_empty_optional_containers(arguments, schema)
+
+        assert result == arguments
+
+    def test_provider_omits_empty_pydantic_attachment_before_execute(self):
+        captured = {}
+
+        def execute_tool(slug, arguments):
+            captured.update(slug=slug, arguments=arguments)
+            return {"ok": True}
+
+        tool = SimpleNamespace(
+            slug="GMAIL_CREATE_EMAIL_DRAFT",
+            description="Create a Gmail draft",
+            input_parameters={"title": "GmailDraftInput", **self.attachment_schema},
+        )
+
+        wrapped = SafeLangchainProvider().wrap_tool(tool, execute_tool)
+        result = wrapped.invoke({"attachment": {"name": "", "data": ""}})
+
+        assert result == {"ok": True}
+        assert captured == {"slug": "GMAIL_CREATE_EMAIL_DRAFT", "arguments": {}}
+
+    def test_pydantic_list_item_drops_nested_empty_attachment(self):
+        class Attachment(BaseModel):
+            name: str
+            data: str
+
+        class Draft(BaseModel):
+            subject: str
+            attachment: Attachment
+
+        draft_schema = {
+            "type": "object",
+            "properties": {
+                "subject": {"type": "string"},
+                "attachment": self.attachment_schema["properties"]["attachment"],
+            },
+        }
+        schema = {"type": "object", "properties": {"drafts": {"type": "array", "items": draft_schema}}}
+        draft = Draft(subject="test", attachment=Attachment(name="", data=""))
+
+        result = _omit_empty_optional_containers({"drafts": [draft]}, schema)
+
+        assert result == {"drafts": [{"subject": "test"}]}
 
 
 class TestNoOpOnAlreadyTypedSchemas:
