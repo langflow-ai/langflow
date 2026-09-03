@@ -78,7 +78,9 @@ def import_all_services_into_a_dict():
 
             # Shared services live in lfx so both the standalone runtime and
             # the Langflow application use the same contract and instance.
-            if service_name in {"mcp_composer", "model_provider_policy", "policy_bundle"}:
+            if service_name == "connection_resolver":
+                module_name = "lfx.services.connection.env_resolver"
+            elif service_name in {"mcp_composer", "model_provider_policy", "policy_bundle"}:
                 module_name = f"lfx.services.{service_name}.service"
             else:
                 module_name = f"langflow.services.{service_name}.service"

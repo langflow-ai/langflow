@@ -43,6 +43,21 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | `DictInput` / `NestedDictInput` | `lfx.io` |
 | `FileInput` / `LinkInput` | `lfx.io` |
 | `HandleInput` | `lfx.io` |
+| `ConnectionInput` (legacy Composio connection flow) | `lfx.inputs` |
+| `ConnectionRefInput` (portable host-resolved reference) | `lfx.io` |
+
+### Integrations
+
+| Symbol | Source |
+| --- | --- |
+| `ConnectionRef` / `ResolvedCredential` / `CredentialLease` | `lfx.integrations` |
+| `ConnectionResolutionRequest` / `ConnectionStatus` | `lfx.integrations` |
+| `IntegrationError` and typed subclasses / `INTEGRATION_ERROR_CODES` | `lfx.integrations` |
+| `normalize_integration_error()` / `register_error_normalizer()` | `lfx.integrations` |
+| `IntegrationProvider` / `OAuthProfile` / `IntegrationCapability` / `ScopeSet` | `lfx.integrations` |
+| `integration_action()` | `lfx.integrations` |
+| `Component.resolve_connection(field_name)` | `lfx.custom.custom_component.component.Component` |
+| `BaseConnectionResolverService` | `lfx.services.connection` |
 
 ### Outputs
 
@@ -71,6 +86,7 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | Manifest schema (`extension.json` / `[tool.langflow.extension]`) | `lfx.extension.manifest.ExtensionManifest` |
 | `BundleRef` (one entry in optional `bundles[]`; bundle names must be unique) | `lfx.extension.manifest.BundleRef` |
 | `ProviderManifestEntry` (one entry in the optional `providers[]`) | `lfx.extension.manifest.ProviderManifestEntry` |
+| `IntegrationProvider` entries in optional `integrations[]` | `lfx.integrations.IntegrationProvider` |
 | `LfxCompat` (declared as `manifest.lfx`) | `lfx.extension.manifest.LfxCompat` |
 | `BUNDLE_API_VERSION` (the integer this lfx ships) | `lfx.extension.manifest` |
 | `EXTENSION_SCHEMA_URL` / `SCHEMA_VERSION` | `lfx.extension.manifest` |
@@ -190,6 +206,10 @@ the deserialize half is covered by
 ### v0 (this release)
 
 - Initial surface enumerated above.  Frozen as `BUNDLE_API_VERSION = 1`.
+- Added the provider-neutral connection-reference, resolver, capability,
+  integration-error, and telemetry contracts used by dedicated integration
+  bundles. This is an additive surface change and does not change
+  `BUNDLE_API_VERSION`.
 - `ExtensionManifest.version` now accepts the canonical PEP 440 stable, dev,
   alpha, beta, and release-candidate forms emitted by the repository's bundle
   release pipeline, in addition to the existing SemVer 2.0.0 forms.  Runtime

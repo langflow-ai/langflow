@@ -18,6 +18,7 @@ class ServiceType(str, Enum):
     TASK_SERVICE = "task_service"
     STORE_SERVICE = "store_service"
     VARIABLE_SERVICE = "variable_service"
+    CONNECTION_RESOLVER_SERVICE = "connection_resolver_service"
     STORAGE_SERVICE = "storage_service"
     STATE_SERVICE = "state_service"
     TRACING_SERVICE = "tracing_service"

@@ -430,6 +430,12 @@ class ServiceManager:
         except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
             logger.debug(f"BaseAuthorizationService unavailable; entry-point validation skipped: {exc}")
         try:
+            from lfx.services.connection.base import BaseConnectionResolverService
+
+            expected_bases[ServiceType.CONNECTION_RESOLVER_SERVICE] = BaseConnectionResolverService
+        except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
+            logger.debug(f"BaseConnectionResolverService unavailable; entry-point validation skipped: {exc}")
+        try:
             from lfx.services.catalog_policy.base import BaseCatalogPolicyService
 
             expected_bases[ServiceType.CATALOG_POLICY_SERVICE] = BaseCatalogPolicyService
@@ -457,6 +463,12 @@ class ServiceManager:
                 if expected_base is not None and not (
                     isinstance(service_class, type) and issubclass(service_class, expected_base)
                 ):
+                    if service_type == ServiceType.CONNECTION_RESOLVER_SERVICE:
+                        msg = (
+                            "Connection resolver entry point must subclass "
+                            f"{expected_base.__name__}; refusing to use the environment fallback"
+                        )
+                        raise RuntimeError(msg)
                     logger.warning(
                         f"Entry point {ep.name} resolved to {service_class!r}, "
                         f"which is not a subclass of {expected_base.__name__}. "
@@ -466,12 +478,22 @@ class ServiceManager:
                     continue
                 self.register_service_class(service_type, service_class, override=False)
                 logger.debug(f"Loaded service from entry point: {ep.name}")
+            except RuntimeError as exc:
+                if ep.name == ServiceType.CONNECTION_RESOLVER_SERVICE.value:
+                    raise
+                logger.warning(f"Error loading entry point {ep.name}: {exc}")
             except (ValueError, AttributeError) as exc:
+                if ep.name == ServiceType.CONNECTION_RESOLVER_SERVICE.value:
+                    msg = "Connection resolver entry point failed to load; refusing to use the environment fallback"
+                    raise RuntimeError(msg) from exc
                 logger.warning(f"Failed to load entry point {ep.name}: {exc}")
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 # Authz plugin failures are operator-visible — silent
                 # degradation to the OSS pass-through is exactly the kind
                 # of behavior change we want noisy.
+                if ep.name == ServiceType.CONNECTION_RESOLVER_SERVICE.value:
+                    msg = "Connection resolver entry point failed to load; refusing to use the environment fallback"
+                    raise RuntimeError(msg) from exc
                 logger.warning(f"Error loading entry point {ep.name}: {exc}")
 
     def _discover_from_config(self, config_dir: Path) -> None:
@@ -518,6 +540,12 @@ class ServiceManager:
             object_key=service_key,
         )
         if service_class is None:
+            if service_type == ServiceType.CONNECTION_RESOLVER_SERVICE:
+                msg = (
+                    "Configured connection resolver service could not be loaded; "
+                    "refusing to use the environment fallback"
+                )
+                raise RuntimeError(msg)
             if service_type == ServiceType.MODEL_PROVIDER_POLICY_SERVICE:
                 msg = (
                     "Configured model provider policy service could not be loaded; "
@@ -532,6 +560,12 @@ class ServiceManager:
                 raise RuntimeError(msg)
             return
 
+        if service_type == ServiceType.CONNECTION_RESOLVER_SERVICE:
+            from lfx.services.connection.base import BaseConnectionResolverService
+
+            if not isinstance(service_class, type) or not issubclass(service_class, BaseConnectionResolverService):
+                msg = "Configured connection resolver service must subclass BaseConnectionResolverService"
+                raise RuntimeError(msg)
         if service_type == ServiceType.MODEL_PROVIDER_POLICY_SERVICE:
             from lfx.services.model_provider_policy.base import BaseModelProviderPolicyService
 

@@ -57,6 +57,7 @@ if TYPE_CHECKING:
     from lfx.graph.edge.schema import EdgeData
     from lfx.graph.vertex.base import Vertex
     from lfx.inputs.inputs import InputTypes
+    from lfx.integrations.models import CredentialLease
     from lfx.schema.dataframe import DataFrame
     from lfx.schema.log import LoggableType
     from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
@@ -603,6 +604,37 @@ class Component(CustomComponent):
             return self._inputs[name]
         msg = f"Input {name} not found in {self.__class__.__name__}"
         raise ValueError(msg)
+
+    def resolve_connection(self, field_name: str) -> CredentialLease:
+        """Create a lazy credential lease for a declared connection-reference input."""
+        from lfx.inputs.inputs import ConnectionRefInput
+        from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest, CredentialLease
+        from lfx.services.authorization.base import ExecutionPrincipal
+        from lfx.services.deps import get_connection_resolver
+
+        input_model = self._inputs.get(field_name)
+        if not isinstance(input_model, ConnectionRefInput):
+            msg = f"Input {field_name!r} is not a ConnectionRefInput"
+            raise TypeError(msg)
+        value = getattr(self, field_name, input_model.value)
+        ref = ConnectionRef.parse(value)
+        if ref.provider != input_model.provider:
+            msg = (
+                f"Connection reference provider {ref.provider!r} does not match "
+                f"declared provider {input_model.provider!r}"
+            )
+            raise ValueError(msg)
+        graph = getattr(self, "graph", None)
+        principal = getattr(graph, "execution_principal", ExecutionPrincipal.unknown())
+        request = ConnectionResolutionRequest(
+            ref=ref,
+            principal=principal,
+            required_scopes=frozenset(input_model.required_scopes),
+            component_id=self.get_id(),
+            flow_id=str(graph.flow_id) if graph is not None and graph.flow_id is not None else None,
+            run_id=str(graph.run_id) if graph is not None and graph.run_id else None,
+        )
+        return CredentialLease(get_connection_resolver(), request)
 
     def get_output(self, name: str) -> Any:
         """Retrieves the output with the specified name.

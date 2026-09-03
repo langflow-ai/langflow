@@ -42,6 +42,15 @@ class AuthzContext(TypedDict, total=False):
 PUBLIC_ANONYMOUS_ACTOR_ID = uuid5(NAMESPACE_URL, "urn:langflow:principal:anonymous-public")
 
 AdministrationResource = Literal["user", "team", "role"]
+ExecutionPrincipalKind = Literal[
+    "actor",
+    "flow_owner",
+    "deployment_owner",
+    "job_owner",
+    "anonymous_public",
+    "headless_operator",
+    "unknown",
+]
 
 
 class PublicResourceAction(str, Enum):
@@ -68,6 +77,24 @@ class AuthorizationPrincipal:
     def public_anonymous(cls) -> AuthorizationPrincipal:
         """Return the stable, non-user identity used by anonymous direct links."""
         return cls(actor_type="anonymous_public", actor_id=PUBLIC_ANONYMOUS_ACTOR_ID)
+
+
+@dataclass(frozen=True, slots=True)
+class ExecutionPrincipal:
+    """Identity and route family used for dependency credential resolution."""
+
+    kind: ExecutionPrincipalKind
+    user_id: str | None = None
+    actor_id: str | None = None
+    family: str | None = None
+    interactive: bool = False
+    end_user_id: str | None = None
+    actor_label: str | None = None
+
+    @classmethod
+    def unknown(cls) -> ExecutionPrincipal:
+        """Return the fail-closed principal for unstamped execution paths."""
+        return cls(kind="unknown")
 
 
 @dataclass(frozen=True, slots=True)
