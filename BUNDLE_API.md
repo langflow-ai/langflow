@@ -86,7 +86,8 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | Manifest schema (`extension.json` / `[tool.langflow.extension]`) | `lfx.extension.manifest.ExtensionManifest` |
 | `BundleRef` (one entry in optional `bundles[]`; bundle names must be unique) | `lfx.extension.manifest.BundleRef` |
 | `ProviderManifestEntry` (one entry in the optional `providers[]`) | `lfx.extension.manifest.ProviderManifestEntry` |
-| `IntegrationProvider` entries in optional `integrations[]` | `lfx.integrations.IntegrationProvider` |
+| `IntegrationManifestRef` entries in optional `integrations[]` | `lfx.extension.manifest.IntegrationManifestRef` |
+| `IntegrationCapabilityManifest` (bundle-owned versioned provider catalog) | `lfx.integrations.IntegrationCapabilityManifest` |
 | `LfxCompat` (declared as `manifest.lfx`) | `lfx.extension.manifest.LfxCompat` |
 | `BUNDLE_API_VERSION` (the integer this lfx ships) | `lfx.extension.manifest` |
 | `EXTENSION_SCHEMA_URL` / `SCHEMA_VERSION` | `lfx.extension.manifest` |
@@ -105,6 +106,7 @@ Component IDs at runtime are `ext:<bundle>:<Class>@<slot>`.
 | `discover_inline_bundles()` | `lfx.extension.loader` |
 | `discover_installed_extensions()` / `discover_seed_extensions()` / `discover_all_extensions()` | `lfx.extension.discovery` |
 | `LoadedComponent` | `lfx.extension.loader` (frozen dataclass; what the registry stores) |
+| `LoadedIntegration` | `lfx.extension.loader` (validated capability metadata for discovery and policy) |
 | `LoadResult` | `lfx.extension.loader` |
 | `SLOT_OFFICIAL` / `SLOT_EXTRA` | `lfx.extension.loader` |
 
@@ -113,8 +115,8 @@ Component IDs at runtime are `ext:<bundle>:<Class>@<slot>`.
 | Symbol | Source |
 | --- | --- |
 | `reload_bundle(registry, bundle_name)` | `lfx.extension.reload` |
-| `BundleRegistry` | `lfx.extension.bundle_registry` |
-| `BundleRecord` | `lfx.extension.bundle_registry` |
+| `BundleRegistry` (`list_components()`, `list_integrations()`) | `lfx.extension.bundle_registry` |
+| `BundleRecord` (components plus validated integration metadata) | `lfx.extension.bundle_registry` |
 | `ReloadInProgressError` | `lfx.extension.bundle_registry` |
 | `POST /api/v1/extensions/{id}/bundles/{name}/reload` | `langflow.api.v1.extensions` |
 
@@ -204,6 +206,19 @@ the deserialize half is covered by
 ## Changelog
 
 ### v0 (this release)
+
+- **Bundle-owned integration capability manifests (additive).**
+  `ExtensionManifest.integrations[]` now carries `IntegrationManifestRef`
+  values (`provider_id`, owning `bundle`, relative JSON `path`). The referenced
+  `IntegrationCapabilityManifest` is versioned with `schema_version=1` and
+  declares authentication profiles plus executable actions, required and
+  conditional scopes, policy keys, substrate, maturity, deployment contexts,
+  risk, and execution targets. The loader validates bundle ownership and
+  provider identity and exposes the parsed catalog as `LoadedIntegration` in
+  `LoadResult.integrations` and retains it in `BundleRecord.integrations` for
+  process-wide discovery and policy reads through
+  `BundleRegistry.list_integrations()`. Manifests that omit `integrations`
+  still load with an empty list; `BUNDLE_API_VERSION` remains `1`.
 
 - Initial surface enumerated above.  Frozen as `BUNDLE_API_VERSION = 1`.
 - Added the provider-neutral connection-reference, resolver, capability,

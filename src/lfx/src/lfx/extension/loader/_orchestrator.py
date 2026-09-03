@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Literal
 
 from lfx.extension._paths import SKIP_DIR_NAMES, is_within
 from lfx.extension.errors import ExtensionError
+from lfx.extension.integration_manifest import resolve_integration_manifest
 from lfx.extension.loader._detection import collect_component_classes
 from lfx.extension.loader._discovery import (
     DEFAULT_MODULE_NAMESPACE,
@@ -38,6 +39,7 @@ from lfx.extension.loader._types import (
     SLOT_OFFICIAL,
     SLOT_VALUES,
     LoadedComponent,
+    LoadedIntegration,
     LoadResult,
 )
 from lfx.extension.manifest import (
@@ -126,6 +128,36 @@ def _resolve_bundle_path(root: Path, bundle: BundleRef) -> tuple[Path | None, Ex
             hint="Point bundles[].path at a directory, not a file.",
         )
     return resolved, None
+
+
+def _load_bundle_integrations(
+    *,
+    bundle_root: Path,
+    bundle: BundleRef,
+    manifest: ExtensionManifest,
+    result: LoadResult,
+) -> bool:
+    """Attach this bundle's validated capability catalogs to ``result``."""
+    for reference in manifest.integrations:
+        if reference.bundle != bundle.name:
+            continue
+        resolved, error = resolve_integration_manifest(bundle_root, reference)
+        if error is not None or resolved is None:
+            if error is not None:
+                result.errors.append(error)
+            continue
+        result.integrations.append(
+            LoadedIntegration(
+                extension_id=manifest.id,
+                extension_version=manifest.version,
+                bundle=bundle.name,
+                provider_id=reference.provider_id,
+                manifest_path=resolved.path,
+                capability_manifest=resolved.manifest,
+                distribution=result.distribution,
+            )
+        )
+    return not result.errors
 
 
 # ---------------------------------------------------------------------------
@@ -466,12 +498,6 @@ def load_extension(
         )
         return result
 
-    # Register any model providers this extension declares before touching the
-    # component bundle: providers are independent of components, and a
-    # provider-only extension ships providers with no bundle.
-    if _register_providers:
-        _register_manifest_providers(manifest, source, result)
-
     if bundle_name is None and len(manifest.bundles) > 1:
         result.errors.append(
             ExtensionError(
@@ -486,9 +512,10 @@ def load_extension(
         )
         return result
 
-    # Provider-only extension: no component bundle to load. Providers (if any)
-    # were registered above; nothing else to do.
+    # Provider-only extension: no component or integration bundle to load.
     if not manifest.bundles:
+        if _register_providers:
+            _register_manifest_providers(manifest, source, result)
         return result
 
     if bundle_name is None:
@@ -513,6 +540,14 @@ def load_extension(
         if path_error is not None:
             result.errors.append(path_error)
         return result
+
+    if not _load_bundle_integrations(bundle_root=bundle_root, bundle=bundle, manifest=manifest, result=result):
+        return result
+
+    # Avoid a partial registry side effect when bundle-owned integration
+    # metadata is missing or malformed.
+    if _register_providers:
+        _register_manifest_providers(manifest, source, result)
 
     _load_bundle_directory(
         bundle_root=bundle_root,

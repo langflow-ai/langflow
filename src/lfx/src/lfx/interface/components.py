@@ -1098,6 +1098,7 @@ def _resolve_bundle_shadowing(
             # Drop components so the registry-population and palette-construction
             # loops naturally skip this result; the typed warning still emits.
             result.components = []
+            result.integrations = []
 
     return extension_results, seed_results, lfx_bundles_results, dev_results, inline_results
 
@@ -1230,6 +1231,7 @@ async def import_extension_components(
             extension_version=result.extension_version or "0.0.0",
             slot=result.slot,
             components=tuple(result.components),
+            integrations=tuple(result.integrations),
             distribution=result.distribution,
             source_path=result.source_path,
             manifestless=result.manifestless,

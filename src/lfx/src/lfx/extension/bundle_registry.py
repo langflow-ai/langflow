@@ -55,7 +55,7 @@ if TYPE_CHECKING:
     from pathlib import Path
     from typing import Literal
 
-    from lfx.extension.loader import LoadedComponent
+    from lfx.extension.loader import LoadedComponent, LoadedIntegration
 
 
 # ---------------------------------------------------------------------------
@@ -96,6 +96,7 @@ class BundleRecord:
     extension_version: str
     slot: Literal["official", "extra"]
     components: tuple[LoadedComponent, ...] = ()
+    integrations: tuple[LoadedIntegration, ...] = ()
     distribution: str | None = None
     source_path: Path | None = None
     # Provenance: True for manifest-less lfx.bundles metapackage providers.
@@ -166,6 +167,14 @@ class BundleRegistry:
         out: list[LoadedComponent] = []
         for name in sorted(snap):
             out.extend(snap[name].components)
+        return out
+
+    def list_integrations(self) -> list[LoadedIntegration]:
+        """Flatten validated integration metadata for discovery and policy consumers."""
+        snap = self.snapshot()
+        out: list[LoadedIntegration] = []
+        for name in sorted(snap):
+            out.extend(snap[name].integrations)
         return out
 
     # -- write paths ---------------------------------------------------------
