@@ -5,6 +5,7 @@ Decision ID: connection-contract
 Applies to: INT-2 (lfx), with the langflow-base obligations INT-4 and INT-5 must meet and the Enterprise seams
 Owners (sign-off roles): lfx owner, langflow-base owner, Enterprise owner, frontend owner
 Last verified: 2026-09-01
+Last amended: 2026-09-03 (INT-2 implementation review)
 
 This document is the INT-2 design that the discovery gate asks the lfx, langflow-base, and Enterprise owners to sign
 off before INT-2 is built. Each section states the recommended decision, why, and what was rejected. Section 12
@@ -62,12 +63,12 @@ authorization.
   (`api/v1/global_variable_defaults.py:107`) would try to bind `default_fields` onto it; and `is_valid_env_var_name`
   (`src/lfx/src/lfx/cli/validation/_env_validation.py:30`) rejects `/`.
 - Headless transport reuses the flat map unchanged: `ConnectionRef.env_key()` is
-  `LF_CONNECTION__<PROVIDER>__<NAME>` (uppercase, non-alphanumerics to `_`, double underscore separator so
-  `google_workspace/work` and `google/workspace_work` cannot collide). The encoding must be injective over every
-  handle that can exist: the `name` pattern above guarantees it for names, and provider ids, which may contain `.`,
-  `-`, and `_` under `_PROVIDER_ID_RE`, are checked at registration, where the INT-3 loader rejects a manifest whose
-  provider id maps to the same env segment as an already registered provider. Env keys are only ever derived from
-  handles and never parsed back into them. It is a valid env name, so
+  `LF_CONNECTION__<PROVIDER>__<NAME>`. Provider ASCII alphanumerics are uppercased and each allowed punctuation
+  character is escaped as underscore plus its two-digit ASCII hex value (`.` -> `_2E`, `-` -> `_2D`, `_` ->
+  `_5F`); the connection name is uppercased unchanged. Thus `a.b/work`, `a-b/work`, and `a_b/work` map to distinct
+  valid environment names without a cross-manifest registry check, while the double-underscore separator still
+  keeps `google_workspace/work` distinct from `google/workspace_work`. Env keys are only ever derived from handles
+  and never parsed back into them. It is a valid env name, so
   `VariableService.get_variable` (`src/lfx/src/lfx/services/variable/service.py:63-110`) already resolves it through
   the five-step order including the `x-langflow-global-var-*` alias and `no_env_fallback`.
 - Export and import: handles are portable, non-secret text. `strip_secret_field_values_in_place`
@@ -225,7 +226,8 @@ happens in `update_params_with_load_from_db_fields`.**
   `resolve()`. `expires_at=None` is the no-expiry path (bare env tokens, Slack tokens without rotation, API keys):
   the lease never computes a delta and never refreshes proactively, `get_token()` always succeeds with the cached
   value, and the only recovery is reactive: when the provider answers with `AuthExpiredError` (section 7) the
-  component re-resolves once through the lease and, if that fails too, raises the typed error.
+  component re-resolves once through the lease and, if that attempt fails too, raises the typed error without
+  permitting another refresh attempt on that lease.
 - `Component.resolve_connection(field_name) -> CredentialLease` (additive method on `Component`) reads the handle
   from the input, builds the request from `self.graph.execution_principal`, and calls
   `get_connection_resolver()`. Lazy because `set_attributes(params)` would put the value in `_inputs[...].value`
@@ -255,7 +257,8 @@ construction.**
   `ERROR_CODES` in `extension/errors.py`: adding is additive, removing bumps `BUNDLE_API_VERSION`.
 - `normalize_integration_error(exc, *, provider)` maps HTTP status via `extract_http_status` (already unwraps anyio
   ExceptionGroups, `base/mcp/util.py`), scrubs with `redact_urls_in_text`, and consults
-  `register_error_normalizer(provider, fn)` so bundles map SDK exceptions without lfx depending on SDKs.
+  `register_error_normalizer(provider, fn)` so bundles map SDK exceptions without lfx depending on SDKs. String
+  values in `details` are scrubbed by the same boundary before the error can reach a client or trace.
 - UI and HTTP mapping: `error_details_for_client`
   (`src/backend/base/langflow/api/utils/execution_errors.py:20`) gains an `IntegrationError` branch that always emits
   `{code, safe_message, hint, provider, retryable, retry_after}` under every `error_policy`
@@ -292,7 +295,7 @@ now.**
 - Capability ids are the matrices' `action_id` values. `required` rows become `required_scopes`; `optional` and
   `alternative` rows become `conditional_scopes` without losing their role or predicate. The capability's
   `auth_profile_id` and `identity` must match the selected connection before scope coverage is evaluated.
-- `ExtensionManifest.integrations: tuple[IntegrationProvider, ...] | None` is added as an optional field (additive;
+- `ExtensionManifest.integrations: tuple[IntegrationProvider, ...] = ()` is added as an optional field (additive;
   `manifest.py` is in the changelog gate); loader wiring is INT-3.
 
 Rejected: reusing `ProviderManifestEntry` (model-provider registry semantics would route integrations into
@@ -332,7 +335,7 @@ identifiers.**
 - `src/lfx/tests/unit/integrations/`: `ConnectionRef` parse, handle, and `env_key` round trips including
   `is_valid_env_var_name`; `env_key` injectivity (the name pattern rejects `Work`, `work-a`, and `work__a`, and a
   table of distinct handles maps to distinct keys, including a provider-id pair that differs only in `.` versus
-  `_`); `OAuthProfile.kind` equals the schema's `$defs/auth_mode` enum; `ConnectionRefInput` wire type,
+  `-` versus `_`); `OAuthProfile.kind` equals the schema's `$defs/auth_mode` enum; `ConnectionRefInput` wire type,
   `tool_mode` rejection, `SENSITIVE_FIELD_TYPES` membership,
   `instantiate_input` round trip, exclusion from `create_input_schema`; `INTEGRATION_ERROR_CODES` snapshot and
   `normalize_integration_error` status mapping including ExceptionGroup unwrapping and URL and email redaction;
