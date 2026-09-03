@@ -139,7 +139,8 @@ string is simpler for tweaks, env, and manifest sorting; the dict is the parsed 
   allow_non_interactive) -> None | IntegrationError` implementing the section 4 table; the langflow-base service
   asks `BaseAuthorizationService.enforce` for resource `connection`, action `execute`, when
   `supports_cross_user_fetch()` is true, matching `get_flow_by_id_or_endpoint_name(widen_for_shares=True)`
-  (`helpers/flow.py:580-611`).
+  (`helpers/flow.py:580-611`). A `user` owner kind without an owner id fails closed; host implementations must not
+  treat missing ownership metadata as an implicit match.
 
 Rejected: piggybacking on `VARIABLE_SERVICE` (string-only; the DB variant has no share semantics; a variable named
 `LF_CONNECTION__X` could impersonate a connection in DB mode); a callable in `graph.context` (not picklable, copied
@@ -162,8 +163,8 @@ defense in depth and pre-flight in interactive routes for UX.**
   family. Unset resolves to `ExecutionPrincipal.unknown()`, which denies user connections. Today `graph.user_id`
   already is the execution principal id per family (the `PUBLIC_ANONYMOUS_ACTOR_ID` check at `graph/base.py:1858`;
   webhook uses `flow.user_id`), so this formalizes rather than re-plumbs.
-- The table below is encoded once and added to `execution_principal_matrix.json` as a `connection_resolution`
-  dimension with a checker update:
+- The table below is the normative input for the later `execution_principal_matrix.json` `connection_resolution`
+  dimension and checker update (deferred as recorded in section 11):
 
 | Family | Dependency principal | User connections | Instance connections |
 |---|---|---|---|
@@ -346,8 +347,8 @@ identifiers.**
   reserved names denied; the unresolved error contains no value; `ResolvedCredential` repr and pickle refusal;
   `CredentialLease` refresh-before-expiry with a fake clock and in-process single flight, and `expires_at=None`
   never refreshes, never raises, and re-resolves exactly once on `AuthExpiredError`; table-driven
-  `authorize_principal` over the 13 families times owner kind times opt-in, loading
-  `execution_principal_matrix.json` so every family must appear.
+  `authorize_principal` coverage for headless, actor, non-interactive, anonymous, and unknown principals across
+  owner kind, owner match, missing-owner metadata, and opt-in.
 - CLI: `lfx run` pre-flight fails with the typed error before execution; `lfx serve` error events are sanitized
   (extend `test_serve_app.py`).
 - Specified here, built in INT-4 and INT-5: the matrix JSON `connection_resolution` dimension and checker update;
