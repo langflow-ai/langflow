@@ -51,8 +51,20 @@ _REQUIRED_DATA_KEYS = {"nodes", "edges"}
 # ---------------------------------------------------------------------------
 
 
-def _check_structural(flow: dict[str, Any], result: ValidationResult) -> bool:
+def _check_structural(flow: Any, result: ValidationResult) -> bool:
     """Return False if the flow is so broken that further checks cannot run."""
+    if not isinstance(flow, dict):
+        result.issues.append(
+            _make_issue(
+                level=_LEVEL_STRUCTURAL,
+                severity="error",
+                node_id=None,
+                node_name=None,
+                message="Flow must be a JSON object",
+            )
+        )
+        return False
+
     ok = True
     missing_top = _REQUIRED_TOP_LEVEL - set(flow.keys())
     for key in sorted(missing_top):
