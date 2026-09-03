@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator, model_validator
 
 from lfx.integrations.models import PROVIDER_ID_PATTERN
 
@@ -19,6 +19,8 @@ OAuthKind = Literal[
 ]
 IntegrationIdentity = Literal["user_delegated", "bot", "service"]
 DeploymentContext = Literal["hosted", "self_managed", "desktop", "headless"]
+ExecutionSubstrate = Literal["sdk", "rest", "mcp"]
+CapabilityMaturity = Literal["ga", "preview", "developer_preview", "beta", "deprecated"]
 
 
 class ScopeCondition(BaseModel):
@@ -77,9 +79,24 @@ class IntegrationCapability(BaseModel):
     identity: IntegrationIdentity
     required_scopes: tuple[StrictStr, ...] = ()
     conditional_scopes: tuple[ConditionalScopeRequirement, ...] = ()
+    policy_keys: tuple[StrictStr, ...] = Field(min_length=1)
+    substrate: ExecutionSubstrate
+    maturity: CapabilityMaturity
+    deployment_contexts: tuple[DeploymentContext, ...] = Field(min_length=1)
     risk: Literal["read", "write", "destructive"]
-    component_ref: StrictStr | None = None
-    mcp_tool: StrictStr | None = None
+    component_ref: StrictStr | None = Field(default=None, min_length=1)
+    mcp_tool: StrictStr | None = Field(default=None, min_length=1)
+
+    @field_validator("required_scopes", "policy_keys", "deployment_contexts")
+    @classmethod
+    def _values_are_unique(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        if len(set(value)) != len(value):
+            msg = "Integration capability lists must not contain duplicate values"
+            raise ValueError(msg)
+        if any(not item.strip() for item in value):
+            msg = "Integration capability values must not be blank"
+            raise ValueError(msg)
+        return value
 
     @model_validator(mode="after")
     def _has_an_execution_target(self) -> IntegrationCapability:
@@ -111,6 +128,15 @@ class IntegrationProvider(BaseModel):
         if len(set(capability_ids)) != len(capability_ids):
             msg = f"Integration provider {self.provider_id!r} has duplicate capability ids"
             raise ValueError(msg)
+        wrong_provider = sorted(
+            capability.id for capability in self.capabilities if not capability.id.startswith(f"{self.provider_id}.")
+        )
+        if wrong_provider:
+            msg = (
+                f"Integration provider {self.provider_id!r} has capability ids outside its provider namespace: "
+                f"{', '.join(wrong_provider)}"
+            )
+            raise ValueError(msg)
         unknown = sorted({cap.auth_profile_id for cap in self.capabilities} - set(profile_ids))
         if unknown:
             msg = f"Integration provider {self.provider_id!r} references unknown auth profiles: {', '.join(unknown)}"
@@ -126,6 +152,22 @@ class IntegrationProvider(BaseModel):
                 f"Integration provider {self.provider_id!r} has capabilities whose identity does not match "
                 f"their auth profile: {', '.join(mismatched)}"
             )
+            raise ValueError(msg)
+        return self
+
+
+class IntegrationCapabilityManifest(IntegrationProvider):
+    """Versioned provider capability catalog stored inside an extension bundle."""
+
+    schema_version: Literal[1]
+
+    @model_validator(mode="after")
+    def _has_profiles_and_capabilities(self) -> IntegrationCapabilityManifest:
+        if not self.auth_profiles:
+            msg = "An integration capability manifest must declare at least one auth profile"
+            raise ValueError(msg)
+        if not self.capabilities:
+            msg = "An integration capability manifest must declare at least one capability"
             raise ValueError(msg)
         return self
 

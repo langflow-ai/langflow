@@ -43,6 +43,7 @@ from lfx.extension.errors import (
     ExtensionError,
     ExtensionErrorCollection,
 )
+from lfx.extension.integration_manifest import resolve_integration_manifest
 from lfx.extension.manifest import (
     DEFERRED_FIELDS,
     ExtensionManifest,
@@ -870,6 +871,12 @@ def validate_extension(
             if path_error is not None:
                 report.errors.add_error(path_error)
             continue
+        for reference in manifest.integrations:
+            if reference.bundle != bundle.name:
+                continue
+            _, integration_error = resolve_integration_manifest(resolved, reference)
+            if integration_error is not None:
+                report.errors.add_error(integration_error)
         summary = _scan_bundle(bundle.name, resolved, report.errors)
         # Count files we actually scanned for ``bundle_files_scanned`` stat.
         report.bundle_files_scanned += sum(1 for _ in summary.bundle_root.rglob("*.py") if _.is_file())

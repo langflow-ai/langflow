@@ -119,6 +119,30 @@ def test_schema_validates_v0_example() -> None:
     _validator().validate(_VALID)
 
 
+def test_schema_validates_integrations_reference() -> None:
+    _validator().validate(
+        {
+            **_VALID,
+            "integrations": [{"provider_id": "google", "bundle": "openai", "path": "capabilities.v1.json"}],
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    "integration",
+    [
+        {"provider_id": "google", "bundle": "openai"},
+        {"provider_id": "Google", "bundle": "openai", "path": "capabilities.v1.json"},
+        {"provider_id": "google", "bundle": "openai", "path": "../capabilities.json"},
+        {"provider_id": "google", "bundle": "openai", "path": "capabilities\u0000.json"},
+        {"provider_id": "google", "bundle": "openai", "path": "capabilities.yaml"},
+        {"provider_id": "google", "bundle": "openai", "path": "capabilities.json", "extra": True},
+    ],
+)
+def test_schema_rejects_malformed_integrations_reference(integration: dict[str, Any]) -> None:
+    assert list(_validator().iter_errors({**_VALID, "integrations": [integration]}))
+
+
 @pytest.mark.parametrize(
     "version",
     ["1.2.3", "1.2.3-alpha.1+build.5", "1.2.3.dev0", "1.2.3a1", "1.2.3b2", "1.2.3rc3"],

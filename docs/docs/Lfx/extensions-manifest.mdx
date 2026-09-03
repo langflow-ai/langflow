@@ -40,6 +40,7 @@ Use the `$schema` reference in your manifest so editors can autocomplete and val
 | `bundles` | array | no | [Bundle list](#bundles). v0 accepts at most one bundle; omit it for a provider-only extension. |
 | `providers` | array | no | [Model providers](#providers) contributed to the unified model-provider registry. |
 | `capabilities` | object | no | [Optional capability flags](#capabilities). Defaults to all-false. |
+| `integrations` | array | no | [Bundle-owned integration capability manifests](#integrations). Defaults to an empty list. |
 | `$schema` | string | no | Optional pointer to this JSON Schema; editors use it for autocomplete. |
 
 `additionalProperties: false` — any field not listed here is rejected with a typed error. Reserved names (`services`, `routes`, `hooks`, `starterProjects`, `userConfig`) are documented under [Deferred fields](#deferred-fields) and surface a more specific error code.
@@ -142,6 +143,72 @@ Optional. Defaults to `{ "requiresCredentials": false }`.
 
 Additional capability keys are rejected with `extra="forbid"` so a misspelled key surfaces immediately rather than silently turning a feature off.
 
+## `integrations`
+
+Integration bundles publish provider capabilities in a separate, versioned JSON file owned by the bundle. The extension manifest points to that file:
+
+```json
+"integrations": [
+  {
+    "provider_id": "google",
+    "bundle": "google",
+    "path": "capabilities.v1.json"
+  }
+]
+```
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `provider_id` | string | yes | Stable lowercase provider key used by discovery, policy, and connection resolution. |
+| `bundle` | string | yes | Name of the bundle that owns the capability manifest. It must match an entry in `bundles[]`. |
+| `path` | string | yes | JSON file path relative to that bundle's directory. Absolute paths, `..`, and symlink escapes are rejected. |
+
+The referenced file uses this shape:
+
+```json
+{
+  "schema_version": 1,
+  "provider_id": "google",
+  "display_name": "Google Workspace",
+  "auth_profiles": [
+    {
+      "id": "user",
+      "kind": "oauth2_authorization_code",
+      "identity": "user_delegated",
+      "supports_pkce": true,
+      "supports_refresh": true
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "google.drive.files.search",
+      "display_name": "Drive: Search Files",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": ["drive.file"],
+      "policy_keys": ["integrations.google.drive.search"],
+      "substrate": "sdk",
+      "maturity": "ga",
+      "deployment_contexts": ["hosted", "self_managed", "desktop", "headless"],
+      "risk": "read",
+      "component_ref": "GoogleDriveSearchComponent"
+    }
+  ]
+}
+```
+
+`schema_version` is currently `1`. Authentication modes are declared by `auth_profiles[].kind`; actions reference a profile through `auth_profile_id`. Each action declares scopes, policy keys, execution substrate (`sdk`, `rest`, or `mcp`), maturity, supported deployment contexts, risk, and at least one execution target (`component_ref` or `mcp_tool`). Unknown fields are rejected throughout.
+
+During loading, each valid file is exposed as a `LoadedIntegration` in `LoadResult.integrations` and retained in `BundleRecord.integrations`. Discovery and policy code can consume the parsed `capability_manifest` from the load result or call `BundleRegistry.list_integrations()` for the process-wide snapshot. Extensions that omit `integrations` continue to load with an empty list.
+
+After adding an integration manifest on a release branch, synchronize bundle dependency floors with the repository script instead of editing `pyproject.toml` by hand:
+
+```bash
+uv run python scripts/ci/sync_bundle_lfx_pin.py 1.13.0
+```
+
+The command is idempotent and applies the canonical `lfx>=1.13.0.dev0,<2.0.0` floor to bundles that need an update.
+
 ## Deferred fields
 
 The schema strips these names from the published `properties` map but reserves them via [`x-deferred-fields`](https://schemas.langflow.org/extension/v1.json), so a manifest that sets one gets a specific error code instead of the generic "additional property" message.
@@ -182,7 +249,7 @@ The loader and validator both emit typed errors keyed by the manifest field that
 
 | Code | Cause |
 | --- | --- |
-| `manifest-invalid` | Schema validation failed; the message names the field. |
+| `manifest-invalid` | The extension manifest or a referenced integration capability manifest fails schema validation. |
 | `manifest-not-found` | No `extension.json` and no `[tool.langflow.extension]` section at the extension root. |
 | `version-constraint-unsatisfied` | `lfx.compat` does not include this Langflow's `BUNDLE_API_VERSION`. |
 | `field-deferred-in-this-milestone` | A reserved field was set to a non-null value. |

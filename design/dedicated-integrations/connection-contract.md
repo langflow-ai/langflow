@@ -273,8 +273,8 @@ dataclass (not an `Exception`; loader-specific code namespace).
 
 ## 8. Capability metadata types shared with INT-3
 
-**Decision: frozen Pydantic models in `lfx/integrations/capabilities.py`; reserve `ExtensionManifest.integrations`
-now.**
+**Decision: frozen Pydantic models in `lfx/integrations/capabilities.py`; `ExtensionManifest.integrations`
+references bundle-owned, versioned capability manifests.**
 
 - `IntegrationProvider{provider_id, display_name, icon, auth_profiles: tuple[OAuthProfile, ...], capabilities,
   docs_url}`. A provider may expose more than one named profile; Slack has `slack-user-oauth` and
@@ -287,7 +287,9 @@ now.**
   `oauth_client_type_by_context`; profiles may omit an unsupported context. This represents both Tauri public-client
   loopback and Microsoft's `{tenant}` authority without pretending one provider-wide auth object fits every action.
 - `IntegrationCapability{id, display_name, auth_profile_id, identity, required_scopes, conditional_scopes,
-  risk: read | write | destructive, component_ref, mcp_tool}`. `ConditionalScopeRequirement{scope, role,
+  policy_keys, substrate: sdk | rest | mcp, maturity: ga | preview | developer_preview | beta | deprecated,
+  deployment_contexts, risk: read | write | destructive, component_ref, mcp_tool}`.
+  `ConditionalScopeRequirement{scope, role,
   condition}` preserves `optional` versus `alternative`; `ScopeCondition{kind: input_present | input_truthy,
   input}` is evaluated against the action's declared input schema. The matrix checker rejects a condition that
   names a missing input. `ScopeSet.covers(capability, inputs, granted) -> missing` first activates conditional
@@ -296,8 +298,12 @@ now.**
 - Capability ids are the matrices' `action_id` values. `required` rows become `required_scopes`; `optional` and
   `alternative` rows become `conditional_scopes` without losing their role or predicate. The capability's
   `auth_profile_id` and `identity` must match the selected connection before scope coverage is evaluated.
-- `ExtensionManifest.integrations: tuple[IntegrationProvider, ...] = ()` is added as an optional field (additive;
-  `manifest.py` is in the changelog gate); loader wiring is INT-3.
+- `ExtensionManifest.integrations: tuple[IntegrationManifestRef, ...] = ()`, where each reference declares
+  `{provider_id, bundle, path}` and `path` is relative to the named bundle. The referenced
+  `IntegrationCapabilityManifest` extends `IntegrationProvider` with `schema_version: Literal[1]`. Validation
+  rejects missing, malformed, provider-mismatched, or bundle-escaping files; the loader exposes successful records
+  through `LoadResult.integrations` as `LoadedIntegration` values and retains them in the process-wide
+  `BundleRegistry` for discovery and policy consumers.
 
 Rejected: reusing `ProviderManifestEntry` (model-provider registry semantics would route integrations into
 model-provider policy); JSON-schema only (the resolver and the picker need the same scope math in Python).

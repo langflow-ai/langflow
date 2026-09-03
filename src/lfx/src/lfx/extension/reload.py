@@ -505,6 +505,7 @@ def _run_pipeline_body(
         extension_version=staging.extension_version or (previous.extension_version if previous else "0.0.0"),
         slot=effective_slot,
         components=new_components,
+        integrations=tuple(staging.integrations),
         distribution=staging.distribution,
         source_path=effective_source,
     )
