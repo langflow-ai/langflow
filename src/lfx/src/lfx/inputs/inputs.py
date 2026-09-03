@@ -14,6 +14,7 @@ from .input_mixin import (
     AuthMixin,
     BaseInputMixin,
     ConnectionMixin,
+    ConnectionRefMixin,
     DatabaseLoadMixin,
     DropDownMixin,
     FieldTypes,
@@ -852,6 +853,34 @@ class ConnectionInput(BaseInputMixin, ConnectionMixin, MetadataTraceMixin, ToolM
     track_in_telemetry: CoalesceBool = False  # Never track connection strings (may contain credentials)
 
 
+class ConnectionRefInput(BaseInputMixin, ConnectionRefMixin, MetadataTraceMixin):
+    """Portable, non-secret reference resolved by the execution host."""
+
+    field_type: SerializableFieldTypes = FieldTypes.CONNECTION_REF
+    password: CoalesceBool = False
+    load_from_db: CoalesceBool = False
+    track_in_telemetry: CoalesceBool = False
+
+    @model_validator(mode="before")
+    @classmethod
+    def _validate_connection_ref(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        if data.get("tool_mode"):
+            msg = "Connection references cannot be exposed as tool-call inputs"
+            raise ValueError(msg)
+        value = data.get("value")
+        if value is not None and value != "":
+            from lfx.integrations.models import ConnectionRef
+
+            ref = ConnectionRef.parse(value)
+            provider = data.get("provider")
+            if provider and ref.provider != provider:
+                msg = f"Connection reference provider {ref.provider!r} does not match declared provider {provider!r}"
+                raise ValueError(msg)
+        return data
+
+
 class AuthInput(BaseInputMixin, AuthMixin, MetadataTraceMixin):
     """Represents an authentication input field.
 
@@ -1074,6 +1103,7 @@ InputTypes: TypeAlias = (
     | MultiselectInput
     | SortableListInput
     | ConnectionInput
+    | ConnectionRefInput
     | FileInput
     | FloatInput
     | HandleInput

@@ -28,6 +28,18 @@ class DeploymentPayload(BasePayload):
     wxo_tenant_id: str | None = Field(default=None, serialization_alias="wxoTenantId")
 
 
+class IntegrationActionPayload(BasePayload):
+    """Low-cardinality integration action event with no connection identifiers."""
+
+    provider: str
+    capability: str
+    ms: int
+    success: bool
+    error_code: str | None = Field(None, serialization_alias="errorCode")
+    owner_kind: str = Field(serialization_alias="ownerKind")
+    principal_kind: str = Field(serialization_alias="principalKind")
+
+
 class ShutdownPayload(BasePayload):
     time_running: int = Field(serialization_alias="timeRunning")
 

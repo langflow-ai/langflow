@@ -14,7 +14,7 @@ from lfx.cli.script_loader import (
     find_graph_variable,
     load_graph_from_script,
 )
-from lfx.cli.validation import validate_global_variables_for_env
+from lfx.cli.validation import validate_connection_refs_for_env, validate_global_variables_for_env
 from lfx.execution import aget_default_coordinator
 from lfx.log.logger import logger
 from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars, validate_provided_id
@@ -458,6 +458,11 @@ async def run_flow(
                     logger.debug(f"Validation error: {error}")
                 output_error(error_details, verbose=verbose)
                 raise RunError(error_details, None)
+            connection_errors = validate_connection_refs_for_env(graph)
+            if connection_errors:
+                error = connection_errors[0]
+                output_error(str(error), verbose=verbose, exception=error)
+                raise RunError(str(error), error)
             logger.info("Global variable validation passed")
         else:
             logger.info("Global variable validation skipped")

@@ -24,6 +24,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
+from lfx.services.authorization.base import ExecutionPrincipal
 from lfx.services.deps import get_settings_service
 
 if TYPE_CHECKING:
@@ -89,6 +90,14 @@ def apply_run_defaults(
     else:
         # Caller-supplied None plus an existing graph.user_id: preserve the existing.
         user_id = graph.user_id
+    graph.execution_principal = ExecutionPrincipal(
+        kind="headless_operator",
+        user_id=str(user_id),
+        actor_id=str(user_id),
+        family="lfx_headless",
+        interactive=True,
+        actor_label=str(user_id),
+    )
 
     if not session_id:
         session_id = uuid.uuid4().hex

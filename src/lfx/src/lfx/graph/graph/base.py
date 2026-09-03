@@ -48,6 +48,7 @@ from lfx.observability import (
 )
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
+from lfx.services.authorization.base import ExecutionPrincipal
 from lfx.services.cache.utils import CacheMiss
 from lfx.services.deps import get_chat_service, get_tracing_service
 from lfx.utils.async_helpers import run_until_complete
@@ -162,6 +163,7 @@ class Graph:
         self.flow_name = flow_name
         self.description = description
         self.user_id = user_id
+        self.execution_principal = ExecutionPrincipal.unknown()
         # Warm-registry templates need the parsed graph structure without
         # executing component constructors at preload/reconcile time. Normal
         # graphs keep the historical eager-instantiation behavior.
@@ -1680,6 +1682,7 @@ class Graph:
                 before_initialize(new_graph)
 
         new_graph.requires_extension_event_replay = self.requires_extension_event_replay
+        new_graph.execution_principal = self.execution_principal
 
         # Store the newly created object in memo
         memo[id(self)] = new_graph
@@ -1724,6 +1727,7 @@ class Graph:
         # Graphs cached before source-flow provenance was introduced remain
         # loadable and simply have no additional trusted storage namespace.
         state.setdefault("source_flow_id", None)
+        state.setdefault("execution_principal", ExecutionPrincipal.unknown())
         run_manager = state["run_manager"]
         if isinstance(run_manager, RunnableVerticesManager):
             state["run_manager"] = run_manager

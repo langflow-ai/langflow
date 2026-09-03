@@ -49,6 +49,9 @@ from pydantic import (
     model_validator,
 )
 
+from lfx.integrations.capabilities import IntegrationProvider
+from lfx.integrations.models import provider_env_segment
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -480,7 +483,7 @@ class ExtensionManifest(BaseModel):
     Required fields:
         - id, version, name, bundles, lfx
     Optional:
-        - description, capabilities, schema (``$schema``)
+        - description, capabilities, integrations, schema (``$schema``)
     Deferred (rejected with ``field-deferred-in-this-milestone`` when set):
         - services, routes, hooks, starter_projects, userConfig
     """
@@ -553,6 +556,11 @@ class ExtensionManifest(BaseModel):
         description="Optional declared capabilities (v0: requiresCredentials only).",
     )
 
+    integrations: tuple[IntegrationProvider, ...] = Field(
+        default=(),
+        description="Provider authentication profiles and executable integration capabilities.",
+    )
+
     # ------------------------------------------------------------------
     # Deferred fields.  We model them as ``None``-only so that downstream
     # tooling can distinguish "absent" from "explicitly set to a value the
@@ -611,6 +619,18 @@ class ExtensionManifest(BaseModel):
         names = [p.name for p in self.providers]
         if len(set(names)) != len(names):
             msg = "Provider names must be unique within an extension"
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_integration_provider_uniqueness(self) -> ExtensionManifest:
+        provider_ids = [provider.provider_id for provider in self.integrations]
+        if len(set(provider_ids)) != len(provider_ids):
+            msg = "Integration provider ids must be unique within an extension"
+            raise ValueError(msg)
+        env_segments = [provider_env_segment(provider_id) for provider_id in provider_ids]
+        if len(set(env_segments)) != len(env_segments):
+            msg = "Integration provider ids must map to unique environment-key segments"
             raise ValueError(msg)
         return self
 
