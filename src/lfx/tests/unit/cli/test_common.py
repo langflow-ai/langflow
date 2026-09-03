@@ -84,6 +84,15 @@ class TestPortUtilities:
             assert free_port != occupied_port
             assert not is_port_in_use(free_port)
 
+    def test_get_free_port_checks_highest_valid_port(self):
+        """Test that port 65535 is considered before reporting exhaustion."""
+        with patch("socket.socket") as mock_socket:
+            mock_bind = mock_socket.return_value.__enter__.return_value.bind
+            mock_bind.side_effect = [OSError, None]
+
+            assert get_free_port(65534) == 65535
+            assert [args[0][0] for args in mock_bind.call_args_list] == [("", 65534), ("", 65535)]
+
     def test_get_free_port_no_ports_available(self):
         """Test error when no free ports are available."""
         with patch("socket.socket") as mock_socket:
