@@ -26,10 +26,14 @@ def test_conversion_to_document():
 
 
 def test_conversion_from_document():
-    document = Document(page_content="Doc content", metadata={"meta": "info"})
+    document = Document(page_content="Doc content", metadata={"meta": "info", "text": "Metadata text"})
+    original_metadata = document.metadata.copy()
+
     record = Data.from_document(document)
+
     assert record.text == "Doc content"
     assert record.meta == "info"
+    assert document.metadata == original_metadata
 
 
 def test_add_method_for_strings():

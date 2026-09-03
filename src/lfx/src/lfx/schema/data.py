@@ -127,7 +127,7 @@ class JSON(CrossModuleModel):
         Returns:
             JSON: The converted JSON.
         """
-        data = document.metadata
+        data = document.metadata.copy()
         data["text"] = document.page_content
         return cls(data=data, text_key="text")
 
