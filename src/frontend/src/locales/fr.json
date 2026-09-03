@@ -991,6 +991,7 @@
   "flowVersion.comparePickTarget": "Choisissez une version à comparer avec {{versionTag}}",
   "flowVersion.compareCancel": "Annuler la comparaison",
   "flowVersion.compareSwap": "Inverser les côtés",
+  "flowVersion.compareSwapUnavailable": "Le brouillon actuel ne peut être que le côté droit",
   "flowVersion.compareLoading": "Comparaison…",
   "flowVersion.failedToLoadDiff": "Échec du chargement de la comparaison",
   "flowVersion.noDifferences": "Aucune différence",

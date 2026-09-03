@@ -207,13 +207,24 @@ describe("CompareVersionsDialog", () => {
     expect(screen.getByText("-old")).toBeInTheDocument();
   });
 
-  it("invokes the swap handler from the header control", () => {
+  it("invokes the swap handler when both sides are versions", () => {
     const onSwap = jest.fn();
-    renderDialog({ data: buildDiff() }, { onSwap });
+    renderDialog({ data: buildDiff() }, { onSwap, against: "version-2" });
 
     fireEvent.click(screen.getByLabelText("Swap sides"));
 
     expect(onSwap).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables swapping against the draft rather than leaving a dead button", () => {
+    const onSwap = jest.fn();
+    renderDialog({ data: buildDiff() }, { onSwap, against: "draft" });
+
+    const swap = screen.getByLabelText("Swap sides");
+
+    expect(swap).toBeDisabled();
+    fireEvent.click(swap);
+    expect(onSwap).not.toHaveBeenCalled();
   });
 
   it("requests the diff for the supplied base and target", () => {

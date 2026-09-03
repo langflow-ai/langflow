@@ -991,6 +991,7 @@
   "flowVersion.comparePickTarget": "Version zum Vergleich mit {{versionTag}} auswählen",
   "flowVersion.compareCancel": "Vergleich abbrechen",
   "flowVersion.compareSwap": "Seiten tauschen",
+  "flowVersion.compareSwapUnavailable": "Der aktuelle Entwurf kann nur die rechte Seite sein",
   "flowVersion.compareLoading": "Wird verglichen…",
   "flowVersion.failedToLoadDiff": "Vergleich konnte nicht geladen werden",
   "flowVersion.noDifferences": "Keine Unterschiede",

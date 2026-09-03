@@ -12,6 +12,7 @@ import type {
   FlowVersionDiffNodeRef,
 } from "@/types/flow/version";
 import { cn } from "@/utils/utils";
+import { COMPARE_DRAFT_TARGET } from "../constants";
 import {
   buildSummaryChips,
   describeDiffSide,
@@ -261,6 +262,7 @@ export default function CompareVersionsDialog({
     isError,
   } = useGetFlowVersionDiff({ flowId, versionId: baseVersionId, against });
 
+  const canSwap = against !== COMPARE_DRAFT_TARGET;
   const draftLabel = t("flowVersion.currentDraft");
   const baseLabel = describeDiffSide(diff?.base, draftLabel);
   const targetLabel = describeDiffSide(diff?.target, draftLabel);
@@ -286,7 +288,14 @@ export default function CompareVersionsDialog({
               variant="ghost"
               size="iconMd"
               onClick={onSwap}
-              title={t("flowVersion.compareSwap")}
+              // The draft has no version id and the endpoint takes the base as a
+              // path parameter, so it can only ever be the right-hand side.
+              disabled={!canSwap}
+              title={
+                canSwap
+                  ? t("flowVersion.compareSwap")
+                  : t("flowVersion.compareSwapUnavailable")
+              }
               aria-label={t("flowVersion.compareSwap")}
             >
               <ForwardedIconComponent

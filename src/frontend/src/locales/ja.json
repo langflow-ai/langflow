@@ -991,6 +991,7 @@
   "flowVersion.comparePickTarget": "{{versionTag}} と比較するバージョンを選択",
   "flowVersion.compareCancel": "比較をキャンセル",
   "flowVersion.compareSwap": "左右を入れ替え",
+  "flowVersion.compareSwapUnavailable": "現在のドラフトは右側にのみ配置できます",
   "flowVersion.compareLoading": "比較中…",
   "flowVersion.failedToLoadDiff": "比較の読み込みに失敗しました",
   "flowVersion.noDifferences": "差分はありません",

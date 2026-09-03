@@ -358,6 +358,9 @@ def _code_change(
     )
     change["added_lines"] = sum(1 for line in diff_lines if line.startswith("+") and not line.startswith("+++"))
     change["removed_lines"] = sum(1 for line in diff_lines if line.startswith("-") and not line.startswith("---"))
+    # Drop the ``---``/``+++`` file headers. A template field has no filename, so
+    # they carry no information and only add two blank-looking rows to the UI.
+    diff_lines = [line for line in diff_lines if not line.startswith(("---", "+++"))]
     if len(diff_lines) > MAX_CODE_DIFF_LINES:
         diff_lines = diff_lines[:MAX_CODE_DIFF_LINES]
         change["truncated"] = True

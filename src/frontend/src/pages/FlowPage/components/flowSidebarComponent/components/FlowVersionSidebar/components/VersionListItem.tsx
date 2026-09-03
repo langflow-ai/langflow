@@ -93,7 +93,14 @@ export default function VersionListItem({
               </DropdownMenuTrigger>
               <DropdownMenuContent side="right" align="start" className="w-40">
                 <DropdownMenuItem
-                  onClick={() => onCompareClick(entry)}
+                  // The menu content sits inside the row button, so the click
+                  // also reaches onSelect unless it is stopped here — which
+                  // would swap the canvas to this version the moment compare
+                  // mode is entered.
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onCompareClick(entry);
+                  }}
                   className="cursor-pointer"
                 >
                   <ForwardedIconComponent

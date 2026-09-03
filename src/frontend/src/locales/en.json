@@ -1803,6 +1803,7 @@
   "flowVersion.comparePickTarget": "Pick a version to compare with {{versionTag}}",
   "flowVersion.compareCancel": "Cancel comparison",
   "flowVersion.compareSwap": "Swap sides",
+  "flowVersion.compareSwapUnavailable": "The current draft can only be the right-hand side",
   "flowVersion.compareLoading": "Comparing…",
   "flowVersion.failedToLoadDiff": "Failed to load comparison",
   "flowVersion.noDifferences": "No differences",

@@ -991,6 +991,7 @@
   "flowVersion.comparePickTarget": "选择要与 {{versionTag}} 比较的版本",
   "flowVersion.compareCancel": "取消比较",
   "flowVersion.compareSwap": "交换两侧",
+  "flowVersion.compareSwapUnavailable": "当前草稿只能位于右侧",
   "flowVersion.compareLoading": "正在比较…",
   "flowVersion.failedToLoadDiff": "加载比较失败",
   "flowVersion.noDifferences": "没有差异",

@@ -229,6 +229,22 @@ def test_code_change_reports_line_counts_and_a_unified_diff() -> None:
     assert diff["summary"]["code_fields_changed"] == 1
 
 
+def test_code_diff_omits_the_empty_file_headers() -> None:
+    """A template field has no filename, so ``---``/``+++`` would render as blank rows."""
+    before = {"_type": "C", "code": {"name": "code", "type": "code", "value": "a = 1\n"}}
+    after = {"_type": "C", "code": {"name": "code", "type": "code", "value": "a = 2\n"}}
+
+    diff = _diff(_flow([_node(template=before)]), _flow([_node(template=after)]))
+
+    unified = _only_modified(diff)["code_changes"][0]["unified_diff"]
+    lines = unified.split("\n")
+    assert not any(line.startswith(("---", "+++")) for line in lines)
+    assert lines[0].startswith("@@")
+    # Counts are taken before the headers are dropped, so they stay correct.
+    assert _only_modified(diff)["code_changes"][0]["added_lines"] == 1
+    assert _only_modified(diff)["code_changes"][0]["removed_lines"] == 1
+
+
 def test_oversized_code_field_reports_the_change_without_a_diff() -> None:
     big = "x = 1\n" * (MAX_CODE_FIELD_CHARS // 4)
     before = {"_type": "C", "code": {"name": "code", "type": "code", "value": big}}

@@ -991,6 +991,7 @@
   "flowVersion.comparePickTarget": "Elige una versión para comparar con {{versionTag}}",
   "flowVersion.compareCancel": "Cancelar comparación",
   "flowVersion.compareSwap": "Intercambiar lados",
+  "flowVersion.compareSwapUnavailable": "El borrador actual solo puede ser el lado derecho",
   "flowVersion.compareLoading": "Comparando…",
   "flowVersion.failedToLoadDiff": "No se pudo cargar la comparación",
   "flowVersion.noDifferences": "Sin diferencias",
