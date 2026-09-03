@@ -477,9 +477,33 @@ class KnowledgeComponent(Component):
         canvas could land with both outputs visible.
         """
         await super().update_frontend_node(new_frontend_node, current_frontend_node)
-        mode_value = new_frontend_node.get("template", {}).get("mode", {}).get("value", MODE_INGEST)
+        template = new_frontend_node.get("template", {})
+        mode_value = template.get("mode", {}).get("value", MODE_INGEST)
         self.update_outputs(new_frontend_node, "mode", mode_value)
+        # LE-2504: the rebuilt template carries class-default (Ingest) ``show`` flags,
+        # so a saved Retrieve node returned ``search_query`` hidden and the canvas
+        # silently dropped the edge feeding it.
+        self._apply_mode_visibility(template)
         return new_frontend_node
+
+    def _apply_mode_visibility(self, build_config, field_name: str | None = None, field_value: Any = None):
+        """Show only the inputs that belong to the effective mode."""
+        current_mode = build_config.get("mode", {}).get("value") if isinstance(build_config, dict) else None
+        if field_name == "mode":
+            current_mode = field_value
+        # Map legacy/emoji-prefixed labels onto the current canonical values so
+        # flows saved before the label change still toggle visibility correctly.
+        if _is_retrieve_mode(current_mode):
+            current_mode = MODE_RETRIEVE
+        elif current_mode not in self.mode_config:
+            current_mode = MODE_INGEST
+        return set_current_fields(
+            build_config=build_config if isinstance(build_config, dotdict) else dotdict(build_config),
+            action_fields=self.mode_config,
+            selected_action=current_mode,
+            default_fields=self.default_keys,
+            func=set_field_display,
+        )
 
     def update_outputs(self, frontend_node: dict, field_name: str, field_value: Any) -> dict:
         """Filter visible outputs to match the selected mode.
@@ -617,23 +641,7 @@ class KnowledgeComponent(Component):
                 build_config["knowledge_base"]["value"] = None
 
         # Honor the current mode regardless of which field triggered the refresh.
-        # Falls back to MODE_INGEST when ``mode`` is missing (legacy nodes).
-        current_mode = build_config.get("mode", {}).get("value") if isinstance(build_config, dict) else None
-        if field_name == "mode":
-            current_mode = field_value
-        # Map legacy/emoji-prefixed labels onto the current canonical values so
-        # flows saved before the label change still toggle visibility correctly.
-        if _is_retrieve_mode(current_mode):
-            current_mode = MODE_RETRIEVE
-        elif current_mode not in self.mode_config:
-            current_mode = MODE_INGEST
-        return set_current_fields(
-            build_config=build_config if isinstance(build_config, dotdict) else dotdict(build_config),
-            action_fields=self.mode_config,
-            selected_action=current_mode,
-            default_fields=self.default_keys,
-            func=set_field_display,
-        )
+        return self._apply_mode_visibility(build_config, field_name, field_value)
 
     # =====================================================================
     #                       INGESTION CODE PATH

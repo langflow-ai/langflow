@@ -1,5 +1,6 @@
 import math
 from collections import Counter
+from typing import Any
 from uuid import UUID
 
 
@@ -105,8 +106,14 @@ def compute_bm25(documents: list[str], query_terms: list[str], k1: float = 1.2, 
     return scores
 
 
-async def get_knowledge_bases(user_id: UUID | str) -> list[str]:
+async def get_knowledge_bases(*args: Any, user_id: UUID | str | None = None) -> list[str]:
     """Retrieve a list of available knowledge bases for ``user_id``.
+
+    Accepts a stray leading positional argument because saved flows embed a frozen
+    copy of their component code, and 1.11.x Knowledge components call
+    ``get_knowledge_bases(kb_root, user_id=...)``. Dropping that parameter made
+    every such flow fail to open with "got multiple values for argument 'user_id'"
+    (LE-2504); the value is ignored, the KB list is read from the database.
 
     Reads ``knowledge_base`` rows only, matching the ``GET /knowledge_bases/``
     endpoint that backs the Knowledge management page, so the canvas component
@@ -134,6 +141,8 @@ async def get_knowledge_bases(user_id: UUID | str) -> list[str]:
     from langflow.services.deps import session_scope
     from sqlmodel import select
 
+    if user_id is None and args:
+        user_id = args[1] if len(args) > 1 else args[0]
     if not user_id:
         msg = "User ID is required for fetching knowledge bases."
         raise ValueError(msg)
