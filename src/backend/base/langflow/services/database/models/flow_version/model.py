@@ -6,9 +6,7 @@ from uuid import UUID, uuid4
 from pydantic import BaseModel, computed_field, field_serializer
 from pydantic import Field as PydanticField
 from sqlalchemy import CheckConstraint, Column, DateTime, ForeignKey, UniqueConstraint, func
-from sqlmodel import Field, SQLModel
-
-from langflow.services.database.models.flow_version.serialization import GzippedJSON
+from sqlmodel import JSON, Field, SQLModel
 
 
 class FlowVersion(SQLModel, table=True):  # type: ignore[call-arg]
@@ -22,7 +20,7 @@ class FlowVersion(SQLModel, table=True):  # type: ignore[call-arg]
     user_id: UUID | None = Field(
         sa_column=Column(ForeignKey("user.id", ondelete="SET NULL"), index=True, nullable=True),
     )
-    data: dict | None = Field(default=None, sa_column=Column("data_gz", GzippedJSON))
+    data: dict | None = Field(default=None, sa_column=Column(JSON))
     version_number: int = Field(nullable=False, ge=1)
     description: str | None = Field(default=None, nullable=True, max_length=500)
     created_at: datetime = Field(
