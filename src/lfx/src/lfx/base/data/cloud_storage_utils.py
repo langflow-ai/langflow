@@ -99,15 +99,7 @@ def parse_google_service_account_key(service_account_key: Any) -> dict:
         except json.JSONDecodeError as e:
             parse_errors.append(f"Stripped parse: {e!s}")
 
-    # Strategy 3: Check if it's double-encoded (JSON string of a JSON string)
-    if credentials_dict is None:
-        try:
-            decoded_once = json.loads(service_account_key, strict=False)
-            credentials_dict = json.loads(decoded_once, strict=False) if isinstance(decoded_once, str) else decoded_once
-        except json.JSONDecodeError as e:
-            parse_errors.append(f"Double-encoded parse: {e!s}")
-
-    # Strategy 4: Try to fix common issues with newlines in the private_key field
+    # Strategy 3: Try to fix common issues with newlines in the private_key field
     if credentials_dict is None:
         try:
             # Replace literal \n with actual newlines which is common in pasted JSON
@@ -115,6 +107,18 @@ def parse_google_service_account_key(service_account_key: Any) -> dict:
             credentials_dict = json.loads(fixed_key, strict=False)
         except json.JSONDecodeError as e:
             parse_errors.append(f"Newline-fixed parse: {e!s}")
+
+    # A JSON string containing JSON is valid at the outer layer, so decode its contents separately.
+    if isinstance(credentials_dict, str):
+        try:
+            credentials_dict = json.loads(credentials_dict, strict=False)
+        except json.JSONDecodeError as e:
+            parse_errors.append(f"Double-encoded parse: {e!s}")
+            credentials_dict = None
+
+    if credentials_dict is not None and not isinstance(credentials_dict, dict):
+        parse_errors.append(f"Parsed value must be an object, got {type(credentials_dict).__name__}")
+        credentials_dict = None
 
     if credentials_dict is None:
         error_details = "; ".join(parse_errors)
