@@ -1,0 +1,926 @@
+{
+  "schema_version": 1,
+  "provider": "google",
+  "display_name": "Google Workspace",
+  "bundle": {
+    "extension_id": "lfx-google",
+    "bundle_name": "google",
+    "distribution": "lfx-google"
+  },
+  "wave": 1,
+  "max_included_actions": 8,
+  "verified_on": "2026-09-01",
+  "oauth_app_owner_by_context": {
+    "hosted": "langflow",
+    "self_managed": "customer",
+    "desktop": "langflow",
+    "headless": "customer"
+  },
+  "oauth_client_type_by_context": {
+    "hosted": "confidential",
+    "self_managed": "confidential",
+    "desktop": "public",
+    "headless": "external"
+  },
+  "substrate_decision": {
+    "chosen": [
+      "sdk"
+    ],
+    "decision_record": "decisions/substrate-google.md"
+  },
+  "restricted_scope_decisions": [
+    {
+      "scope": "https://www.googleapis.com/auth/gmail.readonly",
+      "decision": "avoid",
+      "rationale": "Release owner decision 2026-09-01 (decisions/google-restricted-scopes.md Option B): the Langflow-owned hosted app requests no restricted scope in 1.13. gmail.readonly is the narrowest scope that supports users.messages.list with a q filter plus users.messages.get for bodies; gmail.metadata is restricted as well and cannot be used with q, so it is not a narrower alternative for search.",
+      "decision_record": "decisions/google-restricted-scopes.md"
+    },
+    {
+      "scope": "https://www.googleapis.com/auth/drive.readonly",
+      "decision": "avoid",
+      "rationale": "Release owner decision 2026-09-01 (decisions/google-restricted-scopes.md Option B): the Langflow-owned hosted app requests no restricted scope in 1.13. drive.readonly is needed to fetch files the app did not create and the user did not pick; drive.file (non-sensitive) is the alternative and limits fetch to app-created or user-picked files.",
+      "decision_record": "decisions/google-restricted-scopes.md"
+    },
+    {
+      "scope": "https://www.googleapis.com/auth/drive.metadata.readonly",
+      "decision": "avoid",
+      "rationale": "Release owner decision 2026-09-01 (decisions/google-restricted-scopes.md Option B): the Langflow-owned hosted app requests no restricted scope in 1.13. Listing arbitrary Drive files needs a metadata scope beyond drive.file; drive.file-only listing returns only files the app created or the user opened with it.",
+      "decision_record": "decisions/google-restricted-scopes.md"
+    }
+  ],
+  "sources": {
+    "gmail-scopes": {
+      "url": "https://developers.google.com/workspace/gmail/api/auth/scopes",
+      "title": "Gmail API: Choose Gmail API scopes",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Table classifies gmail.labels and the add-on compose/action scopes as non-sensitive; gmail.send and the add-on metadata/readonly scopes as sensitive; mail.google.com, gmail.readonly, gmail.compose, gmail.insert, gmail.modify, gmail.metadata, gmail.settings.* as restricted."
+    },
+    "drive-scopes": {
+      "url": "https://developers.google.com/workspace/drive/api/guides/api-specific-auth",
+      "title": "Google Drive API: Choose Google Drive API scopes",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "drive.file, drive.appdata, drive.install are non-sensitive; drive.apps.readonly is sensitive; drive, drive.readonly, drive.metadata, drive.metadata.readonly, drive.activity*, drive.meet.readonly, drive.scripts are restricted. 'If you store restricted scope data on servers (or transmit), then you must go through a security assessment.'"
+    },
+    "calendar-scopes": {
+      "url": "https://developers.google.com/workspace/calendar/api/auth",
+      "title": "Google Calendar API: Choose Calendar API scopes",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Lists every Calendar scope with its consent-screen text; the page itself carries no classification column."
+    },
+    "google-sensitive-scope-verification": {
+      "url": "https://developers.google.com/identity/protocols/oauth2/production-readiness/sensitive-scope-verification",
+      "title": "Google Identity: Sensitive scope verification",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Names 'reading events stored in Google Calendar' as an example of a sensitive scope. 'The sensitive scope verification process typically takes 3-5 business days to complete.' Exemptions: personal use, testing projects, service-account-only data, Internal Workspace/Cloud Identity use, domain-wide installation."
+    },
+    "google-restricted-scope-verification": {
+      "url": "https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification",
+      "title": "Google Identity: Restricted scope verification (CASA)",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Brand verification first (typically 2-3 business days). Security assessment under the App Defense Alliance CASA framework by Google-empanelled assessors is mandatory for apps that access restricted data from or through a third-party server; it 'can potentially take several weeks to complete'; apps must be reverified at least every 12 months after the Letter of Assessment date. Unverified apps face a user cap and an unverified-app screen. Internal user type projects owned by the organization are exempt from verification but may need admin approval."
+    },
+    "google-oauth-app-audience": {
+      "url": "https://support.google.com/cloud/answer/15549945",
+      "title": "Google Cloud: Manage OAuth app audience (user type and publishing status)",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Internal user type is available only to projects in a Google Cloud Organization and limits authorization to organization members. Testing publishing status is limited to 100 test users and authorizations expire seven days from consent, including refresh tokens."
+    },
+    "google-oauth-verification-requirements": {
+      "url": "https://support.google.com/cloud/answer/13464321",
+      "title": "Google Cloud: OAuth app verification requirements",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Brand verification for all apps; use-case justification and demonstration video for sensitive and restricted scopes; annual external security assessment for restricted scopes."
+    },
+    "google-oauth2-overview": {
+      "url": "https://developers.google.com/identity/protocols/oauth2",
+      "title": "Google Identity: Using OAuth 2.0 to access Google APIs",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Refresh token expiration reasons, the 7-day Testing expiry, the limit of 100 refresh tokens per Google Account per OAuth client, and incremental authorization guidance."
+    },
+    "google-oauth2-web-server": {
+      "url": "https://developers.google.com/identity/protocols/oauth2/web-server",
+      "title": "Google Identity: OAuth 2.0 for web server applications",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Revoke endpoint https://oauth2.googleapis.com/revoke; access_type=offline; refresh_token only returned on first authorization unless prompt=consent; redirect URIs must use https except localhost and loopback IPs."
+    },
+    "google-oauth2-native-app": {
+      "url": "https://developers.google.com/identity/protocols/oauth2/native-app",
+      "title": "Google Identity: OAuth 2.0 for mobile and desktop apps",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Desktop app client type; client secret is not treated as confidential; PKCE recommended; loopback redirect http://127.0.0.1:port or http://[::1]:port with a random available port; custom URI schemes and the OOB copy/paste flow are no longer supported."
+    },
+    "workspace-admin-app-access": {
+      "url": "https://knowledge.workspace.google.com/admin/apps/control-which-apps-access-google-workspace-data",
+      "title": "Google Workspace Admin Help: Control which third-party and internal apps access Google Workspace data",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Access levels Trusted, Limited, Specific Google data, Blocked; Limited apps cannot reach services an admin marks Restricted; by default users can sign in with Google to any third-party app; 'Trust internal apps' allows apps from the organization's own Cloud project to access restricted Workspace APIs."
+    },
+    "google-workspace-mcp": {
+      "url": "https://developers.google.com/workspace/guides/configure-mcp-servers",
+      "title": "Google Workspace: Configure MCP servers (Developer Preview)",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Eight remote servers (Gmail https://gmailmcp.googleapis.com/mcp/v1, Drive https://drivemcp.googleapis.com/mcp/v1, Docs, Sheets, Slides, Calendar https://calendarmcp.googleapis.com/mcp/v1, Chat, People). Users bring their own Google Cloud OAuth client. Gmail server requests gmail.readonly and gmail.compose; Drive server requests drive.readonly and drive.file. No rate limits or GA timeline stated."
+    },
+    "google-workspace-preview-program": {
+      "url": "https://developers.google.com/workspace/preview",
+      "title": "Google Workspace Developer Preview Program",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Preview features 'may not be included in public applications prior to the General Availability (GA) announcement' and end users outside the developer's own domain may not be granted access before GA; pre-GA APIs are provided as is with no guarantee of reaching GA; features usually stay in preview 3-6 months."
+    },
+    "gmail-quota": {
+      "url": "https://developers.google.com/workspace/gmail/api/reference/quota",
+      "title": "Gmail API: Usage limits",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Per project 1,200,000 quota units per minute; per user per project 6,000 quota units per minute; daily billing threshold 80,000,000 units per project; messages.send 100 units, messages.list 5 units, messages.get 20 units; 500 recipients per message. Quotas updated 2026-05-01."
+    },
+    "drive-limits": {
+      "url": "https://developers.google.com/workspace/drive/api/guides/limits",
+      "title": "Google Drive API: Usage limits",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Per project 1,000,000 quota units per minute; per user per project 325,000 quota units per minute; files.get 5 units, files.list 100 units, download 200 units; 403 'User rate limit exceeded' and 429 'Rate limit exceeded'; truncated exponential backoff."
+    },
+    "calendar-quota": {
+      "url": "https://developers.google.com/workspace/calendar/api/guides/quota",
+      "title": "Google Calendar API: Manage quotas",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "Per project 10,000 requests per minute; per user per project 600 requests per minute; daily billing threshold 1,000,000 requests; 403 or 429 usageLimits on exceed; the Calendar MCP server shares the same per-minute allocation as query cost."
+    },
+    "gmail-messages-send": {
+      "url": "https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/send",
+      "title": "Gmail API: users.messages.send",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "POST https://gmail.googleapis.com/gmail/v1/users/{userId}/messages/send (or /upload/...). Body: Message with raw base64url RFC 2822, optional threadId and labelIds. Response: Message with id, threadId, labelIds. Scopes: mail.google.com, gmail.modify, gmail.compose, gmail.send."
+    },
+    "gmail-messages-list": {
+      "url": "https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/list",
+      "title": "Gmail API: users.messages.list",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "GET .../users/{userId}/messages with q, labelIds, maxResults (default 100, max 500), pageToken, includeSpamTrash. Returns messages[] {id, threadId}, nextPageToken, resultSizeEstimate. Scopes: mail.google.com, gmail.modify, gmail.readonly, gmail.metadata; q 'cannot be used when accessing the api using the gmail.metadata scope'."
+    },
+    "drive-files-list": {
+      "url": "https://developers.google.com/workspace/drive/api/reference/rest/v3/files/list",
+      "title": "Google Drive API: files.list",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "GET https://www.googleapis.com/drive/v3/files with q, pageSize (max 1000), pageToken, corpora, driveId, includeItemsFromAllDrives, supportsAllDrives, orderBy, spaces, fields. Returns files[], nextPageToken, incompleteSearch. Scopes include drive, drive.file, drive.metadata, drive.metadata.readonly, drive.readonly; 'Some scopes are restricted and require a security assessment'."
+    },
+    "drive-files-get": {
+      "url": "https://developers.google.com/workspace/drive/api/reference/rest/v3/files/get",
+      "title": "Google Drive API: files.get",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "GET https://www.googleapis.com/drive/v3/files/{fileId}; alt=media downloads content; acknowledgeAbuse; supportsAllDrives. Google Docs, Sheets, Slides must be exported with files.export instead. Same scope list as files.list."
+    },
+    "calendar-events-list": {
+      "url": "https://developers.google.com/workspace/calendar/api/v3/reference/events/list",
+      "title": "Google Calendar API: Events.list",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "GET .../calendars/{calendarId}/events; 'primary' for the user's primary calendar; timeMin, timeMax, q, maxResults (default 250, max 2500), singleEvents, orderBy, pageToken, syncToken, showDeleted. Returns items[], nextPageToken, nextSyncToken, timeZone. Scopes include calendar.readonly, calendar, calendar.events.readonly, calendar.events, calendar.events.owned(.readonly), calendar.events.freebusy, calendar.events.public.readonly, calendar.app.created."
+    },
+    "calendar-events-insert": {
+      "url": "https://developers.google.com/workspace/calendar/api/v3/reference/events/insert",
+      "title": "Google Calendar API: Events.insert",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-01",
+      "notes": "POST .../calendars/{calendarId}/events; sendUpdates, conferenceDataVersion, supportsAttachments, maxAttendees; required start and end; optional summary, description, attendees[], location, reminders, recurrence[], conferenceData. Returns an Events resource. Scopes: calendar, calendar.events, calendar.app.created, calendar.events.owned."
+    }
+  },
+  "verification_programs": {
+    "google-brand-verification": {
+      "description": "Brand verification of the OAuth consent screen (app name, logo, homepage, privacy policy, domain ownership via Search Console). Required for any External app before sensitive or restricted verification; typically 2-3 business days.",
+      "source": "google-restricted-scope-verification",
+      "blocking_for_contexts": [
+        "hosted"
+      ],
+      "lead_time": "2-3 business days"
+    },
+    "google-sensitive-scope-verification": {
+      "description": "Google review of each requested sensitive scope with a written justification and a demonstration video. Required for the Langflow-owned External hosted app. A self-managed customer whose project uses the Internal user type is exempt; a self-managed External project must complete it itself.",
+      "source": "google-sensitive-scope-verification",
+      "blocking_for_contexts": [
+        "hosted"
+      ],
+      "lead_time": "3-5 business days"
+    },
+    "google-casa": {
+      "description": "Cloud Application Security Assessment under the App Defense Alliance framework by a Google-empanelled assessor, mandatory when restricted-scope data is accessed from or through a third-party server (a hosted Langflow backend is one). Annual reverification within 12 months of the Letter of Assessment. Internal user type projects are exempt from verification; app verification is still required for domain-wide installations that use restricted or sensitive scopes.",
+      "source": "google-restricted-scope-verification",
+      "blocking_for_contexts": [
+        "hosted"
+      ],
+      "lead_time": "several weeks",
+      "recurring": "every 12 months"
+    },
+    "google-workspace-developer-preview": {
+      "description": "Membership in the Workspace Developer Preview Program is required to use the Workspace MCP servers, and the program terms forbid including preview features in public applications or granting end users outside the developer's domain access before the GA announcement. Blocks every deployment context while the servers remain pre-GA.",
+      "source": "google-workspace-preview-program",
+      "blocking_for_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ]
+    }
+  },
+  "actions": [
+    {
+      "action_id": "google.gmail.send",
+      "display_name": "Gmail: Send Email",
+      "component_class": "GmailSendComponent",
+      "decision": "include",
+      "rationale": "Highest-demand write action. Needs only gmail.send, which Google classifies as sensitive, so it does not depend on the CASA decision. Included in wave 1 by the release owner on 2026-09-01.",
+      "confidence": "high",
+      "schema": {
+        "inputs": [
+          {
+            "name": "to",
+            "type": "list[str]",
+            "required": true,
+            "description": "Recipient addresses"
+          },
+          {
+            "name": "cc",
+            "type": "list[str]",
+            "required": false
+          },
+          {
+            "name": "bcc",
+            "type": "list[str]",
+            "required": false
+          },
+          {
+            "name": "subject",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "body",
+            "type": "str",
+            "required": true,
+            "description": "Plain text or HTML body"
+          },
+          {
+            "name": "body_is_html",
+            "type": "bool",
+            "required": false
+          },
+          {
+            "name": "attachments",
+            "type": "list[File]",
+            "required": false,
+            "description": "Sent via the /upload variant when present"
+          },
+          {
+            "name": "thread_id",
+            "type": "str",
+            "required": false,
+            "description": "Reply into an existing thread"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "message",
+            "type": "Data",
+            "required": true,
+            "description": "users.messages.send response: id, threadId, labelIds"
+          }
+        ],
+        "source": "gmail-messages-send"
+      },
+      "auth_mode": "oauth2_authorization_code",
+      "identity": "user_delegated",
+      "identity_notes": "Sends from the connected user's own mailbox (userId=me). Sending as another user requires domain-wide delegation, which is excluded from wave 1.",
+      "scopes": [
+        {
+          "scope": "https://www.googleapis.com/auth/gmail.send",
+          "classification": "sensitive",
+          "provider_classification": "Sensitive",
+          "source": "gmail-scopes",
+          "role": "required",
+          "notes": "'Send email on your behalf.'"
+        }
+      ],
+      "consent": "user",
+      "consent_notes": "User consent on the OAuth consent screen. Google Workspace admins govern third-party access through API controls: Trusted (all services), Limited (unrestricted services only), Specific Google data (listed scopes only), or Blocked; by default users can sign in with Google to any third-party app. Admins can also trust internal apps built by their own organization for restricted Workspace APIs.",
+      "consent_source": "workspace-admin-app-access",
+      "reach": {
+        "resource": "The connected user's own mailbox; can address any recipient, up to 500 recipients per message.",
+        "tenant": "Single user. No cross-user or organization-wide reach without domain-wide delegation.",
+        "source": "gmail-messages-send"
+      },
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "refresh": {
+        "behavior": "Request access_type=offline to receive a refresh token on the first code exchange; a refresh token is only re-issued after the user revokes the grant or the app sends prompt=consent. Refresh tokens stop working when the user revokes access, after six months of non-use, when the user changes their password and the token carries Gmail scopes, when the account exceeds 100 live refresh tokens for the client, when a Workspace admin restricts the service, or when a time-based grant expires. A project in Testing publishing status issues refresh tokens that expire after 7 days.",
+        "source": "google-oauth2-overview"
+      },
+      "revocation": {
+        "behavior": "The app revokes programmatically by POSTing the access or refresh token to https://oauth2.googleapis.com/revoke; later refresh attempts fail with invalid_grant. The user can also revoke the grant from their Google Account, which the platform reports as the refresh token no longer working.",
+        "source": "google-oauth2-web-server"
+      },
+      "substrate": "sdk",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "google-api-python-client users().messages().send() (GA). The Workspace Gmail MCP server (Developer Preview) requests gmail.compose, which is restricted, and not gmail.send, so an MCP-backed send would raise this action's scope tier and trigger CASA.",
+      "substrate_source": "gmail-messages-send",
+      "rate_limit": {
+        "summary": "Per user per project 6,000 quota units per minute and per project 1,200,000 per minute; messages.send costs 100 units, so about 60 sends per user per minute; 500 recipients per message; daily billing threshold 80,000,000 units per project.",
+        "source": "gmail-quota",
+        "confidence": "high"
+      },
+      "verification_dependencies": [
+        "google-brand-verification",
+        "google-sensitive-scope-verification"
+      ]
+    },
+    {
+      "action_id": "google.gmail.search",
+      "display_name": "Gmail: Search Messages",
+      "component_class": "GmailSearchComponent",
+      "decision": "exclude",
+      "rationale": "Excluded from wave 1 by the release owner on 2026-09-01: gmail.readonly is restricted and the hosted app avoids restricted scopes; gmail.metadata is also restricted and rejects the q parameter, so there is no narrower search scope. Carried to the 1.14 candidate list under the self-managed restricted-scope profile option.",
+      "confidence": "high",
+      "open_questions": [
+        "1.14: size the self-managed restricted-scope profile (decisions/google-restricted-scopes.md Option C)."
+      ],
+      "schema": {
+        "inputs": [
+          {
+            "name": "query",
+            "type": "str",
+            "required": true,
+            "description": "Gmail search box syntax, passed as q"
+          },
+          {
+            "name": "max_results",
+            "type": "int",
+            "required": false,
+            "description": "Default 100, maximum 500"
+          },
+          {
+            "name": "label_ids",
+            "type": "list[str]",
+            "required": false
+          },
+          {
+            "name": "include_spam_trash",
+            "type": "bool",
+            "required": false
+          },
+          {
+            "name": "page_token",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "fetch_bodies",
+            "type": "bool",
+            "required": false,
+            "description": "When true, follow up with users.messages.get per id"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "messages",
+            "type": "list[Data]",
+            "required": true,
+            "description": "id, threadId, and fetched message fields"
+          },
+          {
+            "name": "next_page_token",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "result_size_estimate",
+            "type": "int",
+            "required": false
+          }
+        ],
+        "source": "gmail-messages-list"
+      },
+      "auth_mode": "oauth2_authorization_code",
+      "identity": "user_delegated",
+      "identity_notes": "Searches only the connected user's mailbox.",
+      "scopes": [
+        {
+          "scope": "https://www.googleapis.com/auth/gmail.readonly",
+          "classification": "restricted",
+          "provider_classification": "Restricted",
+          "source": "gmail-scopes",
+          "role": "required",
+          "notes": "'View your email messages and settings.' Needed for messages.list with q and for messages.get bodies."
+        }
+      ],
+      "consent": "user",
+      "consent_notes": "User consent on the OAuth consent screen. Google Workspace admins govern third-party access through API controls: Trusted (all services), Limited (unrestricted services only), Specific Google data (listed scopes only), or Blocked; by default users can sign in with Google to any third-party app. Admins can also trust internal apps built by their own organization for restricted Workspace APIs. Restricted Gmail scopes are additionally subject to the admin's Restricted-service setting: Limited apps cannot reach them.",
+      "consent_source": "workspace-admin-app-access",
+      "reach": {
+        "resource": "Every message in the connected user's mailbox, including bodies when fetched.",
+        "tenant": "Single user.",
+        "source": "gmail-scopes"
+      },
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "refresh": {
+        "behavior": "Request access_type=offline to receive a refresh token on the first code exchange; a refresh token is only re-issued after the user revokes the grant or the app sends prompt=consent. Refresh tokens stop working when the user revokes access, after six months of non-use, when the user changes their password and the token carries Gmail scopes, when the account exceeds 100 live refresh tokens for the client, when a Workspace admin restricts the service, or when a time-based grant expires. A project in Testing publishing status issues refresh tokens that expire after 7 days.",
+        "source": "google-oauth2-overview"
+      },
+      "revocation": {
+        "behavior": "The app revokes programmatically by POSTing the access or refresh token to https://oauth2.googleapis.com/revoke; later refresh attempts fail with invalid_grant. The user can also revoke the grant from their Google Account, which the platform reports as the refresh token no longer working.",
+        "source": "google-oauth2-web-server"
+      },
+      "substrate": "sdk",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "google-api-python-client users().messages().list() plus get(). The Workspace Gmail MCP server (Developer Preview) requests the same gmail.readonly scope, so MCP does not change the scope tier for this action.",
+      "substrate_source": "gmail-messages-list",
+      "rate_limit": {
+        "summary": "messages.list costs 5 quota units and each messages.get 20; per user per project 6,000 units per minute, per project 1,200,000 per minute.",
+        "source": "gmail-quota",
+        "confidence": "high"
+      },
+      "verification_dependencies": [
+        "google-brand-verification",
+        "google-casa"
+      ]
+    },
+    {
+      "action_id": "google.drive.list",
+      "display_name": "Drive: List Files (app files)",
+      "component_class": "GoogleDriveListComponent",
+      "decision": "include",
+      "rationale": "Ships on drive.file only (non-sensitive): lists files the app created or the user opened with it. Restricted-scope reach is deferred per decisions/google-restricted-scopes.md. Included in wave 1 by the release owner on 2026-09-01.",
+      "confidence": "high",
+      "schema": {
+        "inputs": [
+          {
+            "name": "query",
+            "type": "str",
+            "required": false,
+            "description": "Drive q syntax"
+          },
+          {
+            "name": "page_size",
+            "type": "int",
+            "required": false,
+            "description": "Maximum 1000"
+          },
+          {
+            "name": "page_token",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "order_by",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "include_shared_drives",
+            "type": "bool",
+            "required": false,
+            "description": "Sets includeItemsFromAllDrives and supportsAllDrives"
+          },
+          {
+            "name": "fields",
+            "type": "str",
+            "required": false,
+            "description": "Partial response selector"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "files",
+            "type": "list[Data]",
+            "required": true,
+            "description": "File resources"
+          },
+          {
+            "name": "next_page_token",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "incomplete_search",
+            "type": "bool",
+            "required": false
+          }
+        ],
+        "source": "drive-files-list"
+      },
+      "auth_mode": "oauth2_authorization_code",
+      "identity": "user_delegated",
+      "identity_notes": "Lists files visible to the connected user, including shared drives when requested.",
+      "scopes": [
+        {
+          "scope": "https://www.googleapis.com/auth/drive.file",
+          "classification": "non_sensitive",
+          "provider_classification": "Non-sensitive (recommended)",
+          "source": "drive-scopes",
+          "role": "required",
+          "notes": "Wave 1 requests drive.file only; the restricted scope alternative is recorded in decisions/google-restricted-scopes.md."
+        }
+      ],
+      "consent": "user",
+      "consent_notes": "User consent on the OAuth consent screen. Google Workspace admins govern third-party access through API controls: Trusted (all services), Limited (unrestricted services only), Specific Google data (listed scopes only), or Blocked; by default users can sign in with Google to any third-party app. Admins can also trust internal apps built by their own organization for restricted Workspace APIs.",
+      "consent_source": "workspace-admin-app-access",
+      "reach": {
+        "resource": "Metadata of files the app created or the user opened with it.",
+        "tenant": "Single user; shared drives the user belongs to when includeItemsFromAllDrives is set.",
+        "source": "drive-files-list"
+      },
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "refresh": {
+        "behavior": "Request access_type=offline to receive a refresh token on the first code exchange; a refresh token is only re-issued after the user revokes the grant or the app sends prompt=consent. Refresh tokens stop working when the user revokes access, after six months of non-use, when the user changes their password and the token carries Gmail scopes, when the account exceeds 100 live refresh tokens for the client, when a Workspace admin restricts the service, or when a time-based grant expires. A project in Testing publishing status issues refresh tokens that expire after 7 days.",
+        "source": "google-oauth2-overview"
+      },
+      "revocation": {
+        "behavior": "The app revokes programmatically by POSTing the access or refresh token to https://oauth2.googleapis.com/revoke; later refresh attempts fail with invalid_grant. The user can also revoke the grant from their Google Account, which the platform reports as the refresh token no longer working.",
+        "source": "google-oauth2-web-server"
+      },
+      "substrate": "sdk",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "google-api-python-client files().list(). The Workspace Drive MCP server (Developer Preview) requests drive.readonly and drive.file, so MCP would not avoid the restricted tier either.",
+      "substrate_source": "drive-files-list",
+      "rate_limit": {
+        "summary": "files.list costs 100 quota units; per user per project 325,000 units per minute, per project 1,000,000 per minute; 403 'User rate limit exceeded' or 429 on exceed, truncated exponential backoff recommended.",
+        "source": "drive-limits",
+        "confidence": "high"
+      },
+      "verification_dependencies": [
+        "google-brand-verification"
+      ]
+    },
+    {
+      "action_id": "google.drive.fetch",
+      "display_name": "Drive: Fetch File (app files)",
+      "component_class": "GoogleDriveFetchComponent",
+      "decision": "include",
+      "rationale": "Ships on drive.file only (non-sensitive): fetches files the app created or the user opened with it. Restricted-scope reach is deferred per decisions/google-restricted-scopes.md. Included in wave 1 by the release owner on 2026-09-01.",
+      "confidence": "high",
+      "schema": {
+        "inputs": [
+          {
+            "name": "file_id",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "export_mime_type",
+            "type": "str",
+            "required": false,
+            "description": "Uses files.export for Docs, Sheets, Slides"
+          },
+          {
+            "name": "acknowledge_abuse",
+            "type": "bool",
+            "required": false
+          },
+          {
+            "name": "supports_all_drives",
+            "type": "bool",
+            "required": false
+          }
+        ],
+        "outputs": [
+          {
+            "name": "file",
+            "type": "Data",
+            "required": true,
+            "description": "File metadata plus content (alt=media) or exported bytes"
+          }
+        ],
+        "source": "drive-files-get"
+      },
+      "auth_mode": "oauth2_authorization_code",
+      "identity": "user_delegated",
+      "identity_notes": "Reads a file the connected user can access.",
+      "scopes": [
+        {
+          "scope": "https://www.googleapis.com/auth/drive.file",
+          "classification": "non_sensitive",
+          "provider_classification": "Non-sensitive (recommended)",
+          "source": "drive-scopes",
+          "role": "required",
+          "notes": "Wave 1 requests drive.file only; the restricted scope alternative is recorded in decisions/google-restricted-scopes.md."
+        }
+      ],
+      "consent": "user",
+      "consent_notes": "User consent on the OAuth consent screen. Google Workspace admins govern third-party access through API controls: Trusted (all services), Limited (unrestricted services only), Specific Google data (listed scopes only), or Blocked; by default users can sign in with Google to any third-party app. Admins can also trust internal apps built by their own organization for restricted Workspace APIs.",
+      "consent_source": "workspace-admin-app-access",
+      "reach": {
+        "resource": "Content of files the app created or the user opened with it.",
+        "tenant": "Single user.",
+        "source": "drive-files-get"
+      },
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "refresh": {
+        "behavior": "Request access_type=offline to receive a refresh token on the first code exchange; a refresh token is only re-issued after the user revokes the grant or the app sends prompt=consent. Refresh tokens stop working when the user revokes access, after six months of non-use, when the user changes their password and the token carries Gmail scopes, when the account exceeds 100 live refresh tokens for the client, when a Workspace admin restricts the service, or when a time-based grant expires. A project in Testing publishing status issues refresh tokens that expire after 7 days.",
+        "source": "google-oauth2-overview"
+      },
+      "revocation": {
+        "behavior": "The app revokes programmatically by POSTing the access or refresh token to https://oauth2.googleapis.com/revoke; later refresh attempts fail with invalid_grant. The user can also revoke the grant from their Google Account, which the platform reports as the refresh token no longer working.",
+        "source": "google-oauth2-web-server"
+      },
+      "substrate": "sdk",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "google-api-python-client files().get(alt='media') and files().export(). The Workspace Drive MCP server (Developer Preview) requests drive.readonly and drive.file, so MCP would not avoid the restricted tier either.",
+      "substrate_source": "drive-files-get",
+      "rate_limit": {
+        "summary": "files.get costs 5 quota units and a content download 200; per user per project 325,000 units per minute, per project 1,000,000 per minute.",
+        "source": "drive-limits",
+        "confidence": "high"
+      },
+      "verification_dependencies": [
+        "google-brand-verification"
+      ]
+    },
+    {
+      "action_id": "google.calendar.list",
+      "display_name": "Calendar: List Events",
+      "component_class": "GoogleCalendarListComponent",
+      "decision": "include",
+      "rationale": "Read action on a sensitive Calendar scope; independent of the CASA decision. Included in wave 1 by the release owner on 2026-09-01.",
+      "confidence": "high",
+      "schema": {
+        "inputs": [
+          {
+            "name": "calendar_id",
+            "type": "str",
+            "required": false,
+            "description": "Default 'primary'"
+          },
+          {
+            "name": "time_min",
+            "type": "datetime",
+            "required": false
+          },
+          {
+            "name": "time_max",
+            "type": "datetime",
+            "required": false
+          },
+          {
+            "name": "query",
+            "type": "str",
+            "required": false,
+            "description": "Free-text q"
+          },
+          {
+            "name": "max_results",
+            "type": "int",
+            "required": false,
+            "description": "Default 250, maximum 2500"
+          },
+          {
+            "name": "single_events",
+            "type": "bool",
+            "required": false,
+            "description": "Expand recurring events"
+          },
+          {
+            "name": "order_by",
+            "type": "str",
+            "required": false,
+            "description": "startTime or updated"
+          },
+          {
+            "name": "page_token",
+            "type": "str",
+            "required": false
+          }
+        ],
+        "outputs": [
+          {
+            "name": "events",
+            "type": "list[Data]",
+            "required": true
+          },
+          {
+            "name": "next_page_token",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "next_sync_token",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "time_zone",
+            "type": "str",
+            "required": false
+          }
+        ],
+        "source": "calendar-events-list"
+      },
+      "auth_mode": "oauth2_authorization_code",
+      "identity": "user_delegated",
+      "identity_notes": "Reads calendars the connected user can access.",
+      "scopes": [
+        {
+          "scope": "https://www.googleapis.com/auth/calendar.events.readonly",
+          "classification": "sensitive",
+          "provider_classification": "Sensitive",
+          "source": "google-sensitive-scope-verification",
+          "role": "required",
+          "notes": "Scope text 'View events on all your calendars' from the Calendar scopes page; Google's sensitive-scope guide names reading Calendar events as a sensitive scope and Calendar is not on any restricted list."
+        }
+      ],
+      "consent": "user",
+      "consent_notes": "User consent on the OAuth consent screen. Google Workspace admins govern third-party access through API controls: Trusted (all services), Limited (unrestricted services only), Specific Google data (listed scopes only), or Blocked; by default users can sign in with Google to any third-party app. Admins can also trust internal apps built by their own organization for restricted Workspace APIs.",
+      "consent_source": "workspace-admin-app-access",
+      "reach": {
+        "resource": "Events on every calendar the user can access, or one calendar by id.",
+        "tenant": "Single user.",
+        "source": "calendar-events-list"
+      },
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "refresh": {
+        "behavior": "Request access_type=offline to receive a refresh token on the first code exchange; a refresh token is only re-issued after the user revokes the grant or the app sends prompt=consent. Refresh tokens stop working when the user revokes access, after six months of non-use, when the user changes their password and the token carries Gmail scopes, when the account exceeds 100 live refresh tokens for the client, when a Workspace admin restricts the service, or when a time-based grant expires. A project in Testing publishing status issues refresh tokens that expire after 7 days.",
+        "source": "google-oauth2-overview"
+      },
+      "revocation": {
+        "behavior": "The app revokes programmatically by POSTing the access or refresh token to https://oauth2.googleapis.com/revoke; later refresh attempts fail with invalid_grant. The user can also revoke the grant from their Google Account, which the platform reports as the refresh token no longer working.",
+        "source": "google-oauth2-web-server"
+      },
+      "substrate": "sdk",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "google-api-python-client events().list(). The Workspace Calendar MCP server (Developer Preview) exists and shares the Calendar quota, but is pre-GA.",
+      "substrate_source": "calendar-events-list",
+      "rate_limit": {
+        "summary": "Per user per project 600 requests per minute; per project 10,000 per minute; daily billing threshold 1,000,000 requests; 403 or 429 usageLimits on exceed.",
+        "source": "calendar-quota",
+        "confidence": "high"
+      },
+      "verification_dependencies": [
+        "google-brand-verification",
+        "google-sensitive-scope-verification"
+      ]
+    },
+    {
+      "action_id": "google.calendar.create",
+      "display_name": "Calendar: Create Event",
+      "component_class": "GoogleCalendarCreateComponent",
+      "decision": "include",
+      "rationale": "Write action on a sensitive Calendar scope; independent of the CASA decision. Included in wave 1 by the release owner on 2026-09-01.",
+      "confidence": "high",
+      "schema": {
+        "inputs": [
+          {
+            "name": "calendar_id",
+            "type": "str",
+            "required": false,
+            "description": "Default 'primary'"
+          },
+          {
+            "name": "summary",
+            "type": "str",
+            "required": true
+          },
+          {
+            "name": "start",
+            "type": "datetime",
+            "required": true
+          },
+          {
+            "name": "end",
+            "type": "datetime",
+            "required": true
+          },
+          {
+            "name": "description",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "location",
+            "type": "str",
+            "required": false
+          },
+          {
+            "name": "attendees",
+            "type": "list[str]",
+            "required": false
+          },
+          {
+            "name": "send_updates",
+            "type": "str",
+            "required": false,
+            "description": "all, externalOnly, none"
+          },
+          {
+            "name": "recurrence",
+            "type": "list[str]",
+            "required": false,
+            "description": "RRULE lines"
+          },
+          {
+            "name": "conference_data_version",
+            "type": "int",
+            "required": false,
+            "description": "0 or 1"
+          }
+        ],
+        "outputs": [
+          {
+            "name": "event",
+            "type": "Data",
+            "required": true,
+            "description": "Created Events resource"
+          }
+        ],
+        "source": "calendar-events-insert"
+      },
+      "auth_mode": "oauth2_authorization_code",
+      "identity": "user_delegated",
+      "identity_notes": "Creates the event as the connected user; attendees are invited from that user.",
+      "scopes": [
+        {
+          "scope": "https://www.googleapis.com/auth/calendar.events",
+          "classification": "sensitive",
+          "provider_classification": "Sensitive",
+          "source": "google-sensitive-scope-verification",
+          "role": "required",
+          "notes": "Scope text 'View and edit events on all your calendars' from the Calendar scopes page; classified sensitive per the sensitive-scope guide."
+        }
+      ],
+      "consent": "user",
+      "consent_notes": "User consent on the OAuth consent screen. Google Workspace admins govern third-party access through API controls: Trusted (all services), Limited (unrestricted services only), Specific Google data (listed scopes only), or Blocked; by default users can sign in with Google to any third-party app. Admins can also trust internal apps built by their own organization for restricted Workspace APIs.",
+      "consent_source": "workspace-admin-app-access",
+      "reach": {
+        "resource": "Creates events on calendars the user can write to; can invite any attendee.",
+        "tenant": "Single user.",
+        "source": "calendar-events-insert"
+      },
+      "deployment_contexts": {
+        "hosted": "server_redirect",
+        "self_managed": "server_redirect",
+        "desktop": "loopback_redirect",
+        "headless": "manual_token"
+      },
+      "refresh": {
+        "behavior": "Request access_type=offline to receive a refresh token on the first code exchange; a refresh token is only re-issued after the user revokes the grant or the app sends prompt=consent. Refresh tokens stop working when the user revokes access, after six months of non-use, when the user changes their password and the token carries Gmail scopes, when the account exceeds 100 live refresh tokens for the client, when a Workspace admin restricts the service, or when a time-based grant expires. A project in Testing publishing status issues refresh tokens that expire after 7 days.",
+        "source": "google-oauth2-overview"
+      },
+      "revocation": {
+        "behavior": "The app revokes programmatically by POSTing the access or refresh token to https://oauth2.googleapis.com/revoke; later refresh attempts fail with invalid_grant. The user can also revoke the grant from their Google Account, which the platform reports as the refresh token no longer working.",
+        "source": "google-oauth2-web-server"
+      },
+      "substrate": "sdk",
+      "substrate_ga_status": "ga",
+      "substrate_notes": "google-api-python-client events().insert().",
+      "substrate_source": "calendar-events-insert",
+      "rate_limit": {
+        "summary": "Per user per project 600 requests per minute; per project 10,000 per minute; daily billing threshold 1,000,000 requests.",
+        "source": "calendar-quota",
+        "confidence": "high"
+      },
+      "verification_dependencies": [
+        "google-brand-verification",
+        "google-sensitive-scope-verification"
+      ]
+    }
+  ]
+}
