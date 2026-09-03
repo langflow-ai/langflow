@@ -113,7 +113,7 @@ async def get_knowledge_bases(*args: Any, user_id: UUID | str | None = None) -> 
     copy of their component code, and 1.11.x Knowledge components call
     ``get_knowledge_bases(kb_root, user_id=...)``. Dropping that parameter made
     every such flow fail to open with "got multiple values for argument 'user_id'"
-    (LE-2504); the value is ignored, the KB list is read from the database.
+    The value is ignored; the KB list is read from the database.
 
     Reads ``knowledge_base`` rows only, matching the ``GET /knowledge_bases/``
     endpoint that backs the Knowledge management page, so the canvas component

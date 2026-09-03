@@ -1,6 +1,6 @@
 /**
- * Reproduction for LE-2504: updating a migrated component after a 1.11.x -> 1.12
- * upgrade must not drop the component's connections.
+ * Updating a migrated component after a 1.11.x -> 1.12 upgrade must not drop the
+ * component's connections.
  *
  * The fixture is the shipped Vector Store RAG flow saved by 1.11.6, paired with the
  * real /api/v1/custom_component responses a 1.12 server returns for it, so the test
@@ -9,7 +9,7 @@
  * Two independent mechanisms dropped an edge:
  *   - Knowledge came back with its saved mode=Retrieve but ingest-mode `show` flags,
  *     so search_query was hidden and filterHiddenFieldsEdges deleted its edge with no
- *     entry in brokenEdges — the silent loss the ticket reports.
+ *     entry in brokenEdges — the loss reached the user with no feedback at all.
  *   - Updating Prompt rewrites data.type to the component's current name
  *     ("Prompt" -> "Prompt Template"), leaving every outgoing edge holding the old
  *     dataType, which handlesMatch rejected outright.
@@ -24,7 +24,7 @@ import {
   filterHiddenFieldsEdges,
   scapeJSONParse,
 } from "../reactflowUtils";
-import fixture from "./le2504.fixture.json";
+import fixture from "./upgradeComponentEdgeLoss.fixture.json";
 
 type UpdateResponse = { data: APIClassType; type?: string };
 
@@ -54,7 +54,7 @@ function applyComponentUpdates(): { nodes: AllNodeType[]; edges: EdgeType[] } {
 const describeEdge = (edge: EdgeType) =>
   `${edge.source} -> ${edge.target} [${edge.data?.targetHandle?.fieldName}]`;
 
-describe("LE-2504: component update after a 1.11.x -> 1.12 upgrade", () => {
+describe("component update after a 1.11.x -> 1.12 upgrade", () => {
   it("should keep every connection when the updated components are applied", () => {
     const { nodes, edges } = applyComponentUpdates();
 

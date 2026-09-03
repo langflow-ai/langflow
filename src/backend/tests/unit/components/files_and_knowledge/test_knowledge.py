@@ -764,7 +764,7 @@ class TestOutputHandleTypesMatchStarterEdges:
 
 
 class TestUpdateFrontendNodeRestoresModeVisibility:
-    """A saved node must come back with the ``show`` flags of *its* mode (LE-2504).
+    """A saved node must come back with the ``show`` flags of *its* mode.
 
     ``update_frontend_node`` rebuilds the template from the class defaults, which
     are ingest-shaped. Before the fix it re-synced only the outputs, so a saved
@@ -808,7 +808,7 @@ class TestUpdateFrontendNodeRestoresModeVisibility:
 
 
 class TestKbPathsBackwardCompatibleSymbols:
-    """Frozen 1.11.x component code imports these at module scope (LE-2504).
+    """Frozen 1.11.x component code imports these at module scope.
 
     A saved flow embeds the component code it was built with, so removing a name
     from ``_kb_paths`` makes every flow holding that code fail to build with

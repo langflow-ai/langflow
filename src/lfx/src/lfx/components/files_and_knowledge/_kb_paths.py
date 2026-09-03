@@ -56,7 +56,7 @@ class KBKeyDecryptError(Exception):
     Kept for backward compatibility only. Saved flows embed a frozen copy of the
     component code they were built with, and 1.11.x Knowledge components import
     this name at module scope — removing it made those flows unopenable with
-    ``ImportError: Cannot import name 'KBKeyDecryptError'`` (LE-2504). Current
+    ``ImportError: Cannot import name 'KBKeyDecryptError'``. Current
     code resolves embedding config from the ``knowledge_base`` row instead.
     """
 
@@ -70,7 +70,7 @@ def load_kb_metadata(
     """Load the legacy ``embedding_metadata.json`` sidecar from a KB directory.
 
     Kept for backward compatibility with the frozen 1.11.x component code saved
-    inside existing flows (LE-2504). The sidecar is no longer written, so this
+    inside existing flows. The sidecar is no longer written, so this
     returns ``{}`` for any KB created by a current version; the
     ``knowledge_base`` row is the sole authority now.
     """

@@ -480,7 +480,7 @@ class KnowledgeComponent(Component):
         template = new_frontend_node.get("template", {})
         mode_value = template.get("mode", {}).get("value", MODE_INGEST)
         self.update_outputs(new_frontend_node, "mode", mode_value)
-        # LE-2504: the rebuilt template carries class-default (Ingest) ``show`` flags,
+        # The rebuilt template carries class-default (Ingest) ``show`` flags,
         # so a saved Retrieve node returned ``search_query`` hidden and the canvas
         # silently dropped the edge feeding it.
         self._apply_mode_visibility(template)

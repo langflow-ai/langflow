@@ -278,7 +278,7 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             expectedSourceHandle,
             sourceHandle,
           );
-          // LE-2504: "Update Component" rewrites data.type to the component's
+          // "Update Component" rewrites data.type to the component's
           // current `name`, so a component renamed upstream (Prompt ->
           // Prompt Template) leaves every outgoing edge holding the old
           // dataType. The node id and output already matched here, so the
@@ -394,7 +394,7 @@ export function filterHiddenFieldsEdges(
     if (nodeTemplates[fieldName]?.show === false) {
       const removed = newEdges.some((e) => e.id === edge.id);
       newEdges = newEdges.filter((e) => e.id !== edge.id);
-      // LE-2504: dropping a connection because its target field went hidden used
+      // Dropping a connection because its target field went hidden used
       // to leave no trace at all, so an upgrade could quietly unwire a flow.
       if (removed) onRemoved?.(edge);
     }
