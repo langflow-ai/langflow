@@ -20,6 +20,10 @@ describe("loadLanguage", () => {
     });
   });
 
+  afterEach(async () => {
+    await i18n.changeLanguage("en");
+  });
+
   it("does not call addResourceBundle for 'en' (already statically loaded)", async () => {
     const spy = jest.spyOn(i18n, "addResourceBundle");
     await loadLanguage("en");
@@ -41,6 +45,21 @@ describe("loadLanguage", () => {
     expect(i18n.hasResourceBundle("ru", "translation")).toBe(false);
     await loadLanguage("ru");
     expect(i18n.hasResourceBundle("ru", "translation")).toBe(true);
+  });
+
+  it("uses Russian plural forms", async () => {
+    await loadLanguage("ru");
+    await i18n.changeLanguage("ru");
+
+    expect(i18n.t("chat.deleteSessionsCount", { count: 1 })).toBe(
+      "Удалить 1 сессию",
+    );
+    expect(i18n.t("chat.deleteSessionsCount", { count: 2 })).toBe(
+      "Удалить 2 сессии",
+    );
+    expect(i18n.t("chat.deleteSessionsCount", { count: 5 })).toBe(
+      "Удалить 5 сессий",
+    );
   });
 
   it("does not call addResourceBundle if language is already cached", async () => {

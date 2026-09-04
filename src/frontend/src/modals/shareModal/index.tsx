@@ -111,7 +111,7 @@ export default function ShareModal({
       }
       setSuccessData({
         title: t("share.sharedSuccessfully", {
-          type: is_component ? t("deleteModal.component") : "Flow",
+          type: t(is_component ? "deleteModal.component" : "deleteModal.flow"),
         }),
       });
     }
@@ -126,7 +126,7 @@ export default function ShareModal({
           title:
             t("errors.errorSharing") +
             " " +
-            (is_component ? "component" : "flow"),
+            t(is_component ? "deleteModal.component" : "deleteModal.flow"),
           list: [err["response"]["data"]["detail"]],
         });
       });
@@ -141,7 +141,7 @@ export default function ShareModal({
           title:
             t("errors.errorSharing") +
             " " +
-            (is_component ? "component" : "flow"),
+            t(is_component ? "deleteModal.component" : "deleteModal.flow"),
           list: [err["response"]["data"]["detail"]],
         });
       });

@@ -35,7 +35,11 @@ const DropdownComponent = ({
     handleDuplicate().then(() =>
       setSuccessData({
         title: t("flow.duplicatedSuccess", {
-          type: flowData.is_component ? "Component" : "Flow",
+          type: t(
+            flowData.is_component
+              ? "deleteModal.component"
+              : "deleteModal.flow",
+          ),
         }),
       }),
     );
