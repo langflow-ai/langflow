@@ -66,6 +66,9 @@ describe("loadLanguage", () => {
     expect(i18n.t("mcp.toolCount", { count: 1 })).toBe("1 инструмент");
     expect(i18n.t("mcp.toolCount", { count: 2 })).toBe("2 инструмента");
     expect(i18n.t("mcp.toolCount", { count: 5 })).toBe("5 инструментов");
+    expect(i18n.t("agentTab.turns", { count: 1 })).toBe("1 запрос");
+    expect(i18n.t("agentTab.turns", { count: 2 })).toBe("2 запроса");
+    expect(i18n.t("agentTab.turns", { count: 5 })).toBe("5 запросов");
   });
 
   it("does not call addResourceBundle if language is already cached", async () => {
