@@ -24,12 +24,13 @@ from pydantic import BaseModel, Field, ValidationError
 
 
 @pytest.mark.parametrize("by_alias", [True, False])
-def test_multiselect_serialized_field_names_round_trip(by_alias):
-    original = MultiselectInput(name="checks", options=["PII"], value=["PII"])
+@pytest.mark.parametrize("is_list", [True, False])
+def test_multiselect_serialized_field_names_round_trip(by_alias, is_list):
+    original = MultiselectInput(name="checks", options=["PII"], value=["PII"], is_list=is_list)
     payload = original.model_dump(by_alias=by_alias)
     payload.pop("_input_type", None)
     restored = instantiate_input("MultiselectInput", payload)
-    assert restored.is_list is True
+    assert restored.is_list is is_list
     assert restored.value == ["PII"]
 
 

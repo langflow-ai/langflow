@@ -4,7 +4,8 @@ import os
 from unittest.mock import MagicMock
 
 import pytest
-from langchain_core.language_models.fake_chat_models import FakeListChatModel
+from langchain_core.language_models.fake_chat_models import FakeListChatModel, FakeMessagesListChatModel
+from langchain_core.messages import AIMessage
 from lfx.components.input_output import TextInputComponent, TextOutputComponent
 from lfx.components.llm_operations.guardrails_v2 import GuardrailsV2Component
 from lfx.graph import Graph
@@ -325,6 +326,32 @@ class TestGuardrailsV2Component(ComponentTestBaseWithoutClient):
         assert verdict["action"] == "block"
         assert model.calls == 0
 
+    @pytest.mark.parametrize("mixed_blocks", [False, True])
+    def test_model_content_blocks_are_parsed(self, default_kwargs, mixed_blocks):
+        response = verdict_json(["Offensive Content"])
+        content = (
+            [response[:20], {"type": "text", "text": response[20:]}]
+            if mixed_blocks
+            else [{"type": "reasoning", "reasoning": "not a verdict"}, {"type": "text", "text": response}]
+        )
+        model = FakeMessagesListChatModel(responses=[AIMessage(content=content)])
+        verdict = self._verdict(
+            default_kwargs, enabled_guardrails=["Offensive Content"], llm_mode="always", model=model
+        )
+        assert verdict["action"] == "pass"
+        assert verdict["llm_used"] is True
+        assert verdict["llm_error"] is None
+
+    def test_nontext_model_blocks_do_not_supply_a_verdict(self, default_kwargs):
+        model = FakeMessagesListChatModel(
+            responses=[AIMessage(content=[{"type": "reasoning", "reasoning": verdict_json(["Offensive Content"])}])]
+        )
+        verdict = self._verdict(
+            default_kwargs, enabled_guardrails=["Offensive Content"], llm_mode="always", model=model
+        )
+        assert verdict["action"] == "block"
+        assert verdict["llm_error"] == "LLM returned an empty response"
+
     @pytest.mark.parametrize("category", ["Offensive Content", "PII", "Prompt Injection"])
     def test_semantic_medium_risk_is_not_reported_as_sanitized(self, default_kwargs, category):
         model = RecordingChatModel(responses=[verdict_json([category], detected=True, confidence=0.5)])
@@ -445,6 +472,19 @@ class TestGuardrailsV2Component(ComponentTestBaseWithoutClient):
     def test_formatted_phone_numbers_are_redacted(self, default_kwargs, raw):
         component = self._build(default_kwargs, input_text=f"Call {raw}", enabled_guardrails=["PII"])
         assert component.pass_message().text == "Call [REDACTED:PHONE]"
+
+    @pytest.mark.parametrize("raw", ["5242880KB", "1048576MB", "4194304GB", "Part 1234567AB"])
+    def test_sizes_and_part_numbers_are_not_ppsns(self, default_kwargs, raw):
+        verdict = self._verdict(default_kwargs, input_text=raw, enabled_guardrails=["PII"])
+        assert verdict["action"] == "pass"
+        assert verdict["scores"]["PII"] == 0
+
+    @pytest.mark.parametrize("label", ["PPSN:", "PPS number is", "Personal Public Service Number ="])
+    def test_labeled_ppsn_is_decisive(self, default_kwargs, label):
+        verdict = self._verdict(default_kwargs, input_text=f"{label} 1234567AB", enabled_guardrails=["PII"])
+        assert verdict["action"] == "block"
+        assert verdict["scores"]["PII"] == 0.9
+        assert verdict["detail"]["PII"]["matches"] == {"PPSN_IE": 1}
 
     def test_jailbreak_does_not_score_prompt_injection_compact_patterns(self, default_kwargs):
         verdict = self._verdict(
