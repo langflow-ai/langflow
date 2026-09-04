@@ -7,8 +7,14 @@ import {
   VARIABLE_CATEGORY,
 } from "@/constants/providerConstants";
 import { getAxiosErrorMessage } from "@/controllers/API/helpers/get-axios-error-message";
-import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
-import { isSettledSuccessfulQuery } from "@/controllers/API/helpers/query-cache";
+import {
+  PROVIDER_POLICY_STALE_TIME_MS,
+  type ProviderScopeParams,
+} from "@/controllers/API/helpers/provider-scope";
+import {
+  isSettledSuccessfulQuery,
+  isStaleQuery,
+} from "@/controllers/API/helpers/query-cache";
 import {
   getModelProvidersQueryOptions,
   useGetModelProviders,
@@ -229,6 +235,27 @@ export const useProviderConfiguration = ({
     ],
   );
 
+  // True when the shared provider-policy snapshot has aged out, been
+  // invalidated, or was never fetched for this authorization scope. All three
+  // caches are scope-keyed, so a scope the user has not visited yet reports
+  // stale here and refetches on arrival.
+  const isProviderPolicyStale = useCallback(
+    (): boolean =>
+      [
+        providerCatalogQueryKey,
+        globalVariablesQueryKey,
+        providerVariablesQueryKey,
+      ].some((queryKey) =>
+        isStaleQuery(queryClient, queryKey, PROVIDER_POLICY_STALE_TIME_MS),
+      ),
+    [
+      globalVariablesQueryKey,
+      providerCatalogQueryKey,
+      providerVariablesQueryKey,
+      queryClient,
+    ],
+  );
+
   // Invalidate all provider-related caches after successful create/update
   const invalidateProviderQueries = useCallback(async (): Promise<void> => {
     await Promise.all([
@@ -265,10 +292,22 @@ export const useProviderConfiguration = ({
         _validationTimeoutRef.current = null;
       }
 
-      // Force refetch models when switching provider or authorization scope.
-      void invalidateProviderQueries();
+      // A provider selection only changes local form state: the catalog,
+      // variables, and enabled-model status are shared by every provider in the
+      // same authorization scope, so a switch does not need a fresh copy of
+      // data that was just fetched. It does need one once that shared snapshot
+      // has gone stale — the modal keeps its query observers mounted, so
+      // without this a credential revoked elsewhere would keep reading as
+      // configured until the modal is reopened or the window regains focus.
+      if (isProviderPolicyStale()) {
+        void invalidateProviderQueries();
+      }
     }
-  }, [configurationContextKey, invalidateProviderQueries]);
+  }, [
+    configurationContextKey,
+    invalidateProviderQueries,
+    isProviderPolicyStale,
+  ]);
 
   // Calculate provider variables
   const providerVariables = useMemo((): ProviderVariable[] => {
