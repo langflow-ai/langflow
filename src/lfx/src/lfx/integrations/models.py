@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Literal
 
@@ -125,6 +126,7 @@ class ConnectionResolutionRequest:
     component_id: str | None = None
     flow_id: str | None = None
     run_id: str | None = None
+    rejected_token_digest: str | None = field(default=None, repr=False)
 
 
 @dataclass(frozen=True, slots=True)
@@ -198,6 +200,11 @@ class CredentialLease:
             if self._reactive_refresh_completed:
                 raise error
             self._reactive_refresh_completed = True
-            self._credential = await self._resolver.resolve(self._request)
+            rejected = (
+                hashlib.sha256(self._credential.access_token.get_secret_value().encode()).hexdigest()
+                if self._credential is not None
+                else None
+            )
+            self._credential = await self._resolver.resolve(replace(self._request, rejected_token_digest=rejected))
             credential = self._credential
             return credential.access_token.get_secret_value()

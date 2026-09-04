@@ -448,7 +448,9 @@
       "personas": "canonical_v1",
       "test_references": [
         "src/backend/tests/unit/api/v1/test_connections.py::test_non_owner_cannot_test_or_delete_connection",
-        "src/backend/tests/unit/api/v1/test_connections.py::test_connection_responses_never_include_tokens"
+        "src/backend/tests/unit/api/v1/test_connections.py::test_connection_responses_never_include_tokens",
+        "src/backend/tests/unit/api/v1/test_connection_oauth.py::test_callback_pkce_storage_replay_and_revoke",
+        "src/backend/tests/unit/api/v1/test_connection_oauth.py::test_browser_binding_and_pending_callback_revocation"
       ],
       "routes": [
         "GET||list_connections|read|authenticated",
@@ -456,7 +458,9 @@
         "POST|/{connection_id}/test|test_connection|execute|authenticated",
         "POST|/{connection_id}/health|refresh_connection_health|execute|authenticated",
         "POST|/{connection_id}/revoke|revoke_connection|write|authenticated",
-        "DELETE|/{connection_id}|delete_connection|delete|authenticated"
+        "DELETE|/{connection_id}|delete_connection|delete|authenticated",
+        "POST|/{connection_id}/oauth/start|start_connection_oauth|write|authenticated",
+        "GET|/oauth/{provider}/callback|complete_connection_oauth|write|conditional"
       ]
     },
     {

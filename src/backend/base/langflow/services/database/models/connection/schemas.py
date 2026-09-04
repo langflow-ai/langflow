@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
+from typing import Literal
 from uuid import UUID
 
 from lfx.integrations.capabilities import IntegrationIdentity
@@ -106,6 +107,12 @@ class ConnectionRead(BaseModel):
     health_checked_at: datetime | None
     created_at: datetime
     updated_at: datetime
+
+
+class ConnectionRevokeRead(ConnectionRead):
+    """Local revocation always succeeds; report the separate provider outcome."""
+
+    provider_revocation: Literal["revoked", "unsupported", "failed", "not_applicable"]
 
 
 class ConnectionTestRequest(BaseModel):

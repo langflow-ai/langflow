@@ -1,0 +1,172 @@
+---
+title: Configure connection OAuth
+slug: /connection-oauth
+---
+
+Langflow's connection broker authorizes Google, Microsoft, and Slack registrations,
+stores tokens in encrypted connection records, and refreshes them in the worker that
+uses them. Configure registrations on the backend instance before connecting an account.
+
+## Instance configuration
+
+`LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS` is a JSON object keyed by registration name.
+Registration names, such as `google-work`, are selected when starting consent. They are
+separate from the portable connection handle, such as `google/work`, stored in a flow.
+The supported provider keys are `google`, `microsoft`, and `slack`.
+
+```json
+{
+  "google-work": {
+    "provider": "google",
+    "owner": "customer",
+    "context": "self_managed",
+    "client_type": "confidential",
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET",
+    "redirect_uri": "https://langflow.example/api/v1/connections/oauth/google/callback",
+    "scopes": ["https://www.googleapis.com/auth/calendar.events.readonly"]
+  }
+}
+```
+
+Load this JSON through your deployment's secret manager. Do not put registration
+secrets in flow inputs, global variables, source control, or frontend configuration.
+All `LANGFLOW_CONNECTION_OAUTH_` settings are covered by the existing protected
+environment-variable prefix. Registration JSON and individual secret fields are also
+redacted in structured logs. All workers must have the same registration configuration,
+database, and `LANGFLOW_SECRET_KEY`.
+
+The `scopes` array is an operator-controlled ceiling. The start request must select a
+nonempty subset; it cannot supply endpoints, a redirect URI, a client ID, or secrets.
+Changing a registration's provider, client ID, scopes, tenant restrictions, profile, or
+redirect invalidates its pending consent and requires affected connections to reconnect.
+Client secrets and certificates can rotate without changing that binding.
+
+`LANGFLOW_CONNECTION_OAUTH_CONTEXT` defaults to `self_managed`, which accepts customer-owned
+registrations. Set it to `hosted` for a hosted instance. A hosted registration with
+`owner: "langflow"` additionally requires `LANGFLOW_CONNECTION_OAUTH_HOSTED_ENABLED=true`.
+No provider registration is enabled without explicit configuration.
+
+For Desktop, set the context to `desktop`, configure a `public` client, and use the exact
+loopback callback, for example `http://localhost:7860/api/v1/connections/oauth/google/callback`.
+Public registrations cannot contain a client secret or private key. A Desktop distribution
+can provision Langflow-owned client IDs with `owner: "langflow"`; customer-owned registrations
+use the same configuration format. Register and configure the actual client IDs before
+shipping. The broker does not provide an OAuth redirect relay or provision provider apps.
+Use the same hostname in the browser and the redirect (`localhost` and `127.0.0.1` have
+different cookie origins). Both loopback IP families are supported.
+
+## Customer-owned Google registration
+
+1. In a Google Cloud project, enable the APIs needed by the selected actions, such as
+   Google Calendar API. Configure the OAuth consent screen, audience, and test users.
+2. Create a **Web application** OAuth client for a self-managed or hosted server. Add
+   `https://YOUR_INSTANCE/api/v1/connections/oauth/google/callback` as an authorized redirect.
+   For Desktop, create a **Desktop app** client and configure its loopback redirect.
+3. Add a registration with `provider: "google"`, the client ID, and the web client's
+   secret when using a confidential client. Set the allowed `scopes` explicitly.
+4. To restrict accounts to Workspace domains, set `allowed_tenants` to the permitted
+   domain names and include `openid` and `email` in both the configured and requested
+   scopes. The broker validates the signed ID token's issuer, audience, expiry, and
+   hosted-domain claim. A domain hint in the authorization URL is not sufficient.
+5. Run the consent check below. The broker requests offline access and consent; verify
+   refresh succeeds before using a connection for non-interactive execution.
+
+Sensitive and restricted scopes can require Google verification. Use an approved scope
+profile and test users until verification is complete. Follow Google's
+[web server registration guide](https://developers.google.com/identity/protocols/oauth2/web-server),
+[Desktop guide](https://developers.google.com/identity/protocols/oauth2/native-app), and
+[ID-token validation requirements](https://developers.google.com/identity/openid-connect/openid-connect).
+
+## Customer-owned Microsoft registration
+
+1. In Microsoft Entra, create an app registration for the intended tenant and record its
+   application ID and directory (tenant) UUID. This broker uses a fixed tenant authority;
+   `common` and `organizations` authorities are not accepted.
+2. Add a **Web** redirect for a server or **Mobile and desktop applications** redirect for
+   Desktop: `/api/v1/connections/oauth/microsoft/callback` on the configured instance.
+3. Add delegated Graph permissions for the selected actions. Grant administrator consent
+   where required by your organization's policy. Include `offline_access` when refresh is
+   required, and include it in both the configured and requested scopes.
+4. Configure `provider: "microsoft"`, `tenant`, `client_id`, `redirect_uri`, and `scopes`.
+   A confidential registration uses either `client_secret` or an RSA PEM `private_key`
+   with `certificate_thumbprint` (the certificate's SHA-256 digest as 64 hexadecimal
+   characters). Upload the matching certificate to the app registration. Assertions use
+   PS256, the token endpoint audience, and a five-minute lifetime.
+5. For Desktop, use `client_type: "public"` with no secret or private key. Run the consent
+   check below and verify a worker refresh after the initial access token expires.
+
+See Microsoft's [authorization code flow](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow),
+[redirect URI rules](https://learn.microsoft.com/en-us/entra/identity-platform/reply-url), and
+[certificate credential format](https://learn.microsoft.com/en-us/entra/identity-platform/certificate-credentials).
+
+Microsoft does not expose a standard per-grant token revocation endpoint for this flow.
+Langflow removes local credentials and returns `provider_revocation: "unsupported"`.
+An administrator or user must remove the app's consent in Entra when upstream revocation
+is required; already-issued access tokens follow Microsoft's lifetime and revocation rules.
+
+## Customer-owned Slack registration
+
+1. Create a Slack app in the target workspace. Under **OAuth & Permissions**, register
+   `https://YOUR_INSTANCE/api/v1/connections/oauth/slack/callback`.
+2. Configure **User Token Scopes** for a `profile: "user"` registration or **Bot Token
+   Scopes** for `profile: "bot"`. Use separate named registrations and connections for
+   these identity types; the broker selects and validates the corresponding token.
+3. Configure `provider: "slack"`, `client_id`, `client_secret`, `redirect_uri`, and `scopes`.
+   Set `allowed_tenants` to workspace IDs to restrict installation. The broker checks the
+   workspace returned by Slack before storing credentials.
+4. Enable token rotation if required. Refresh tokens are replaced atomically under the
+   connection lock, and the replacement stays in encrypted storage.
+5. For Desktop, use a separate app with PKCE enabled, `client_type: "public"`, no secret,
+   `profile: "user"`, and a localhost redirect. PKCE opt-in is one-way; Slack Desktop
+   redirects cannot request bot scopes. Run the consent check below.
+
+See Slack's [installation guide](https://docs.slack.dev/authentication/installing-with-oauth/),
+[PKCE requirements](https://docs.slack.dev/authentication/using-pkce/),
+[token rotation](https://docs.slack.dev/authentication/using-token-rotation/), and
+[token revocation](https://docs.slack.dev/reference/methods/auth.revoke/).
+
+## Consent and revocation check
+
+Use the browser logged in to the configured Langflow origin. The existing connections
+API creates metadata first; use `executing_identity.identity: "user_delegated"` for
+Google, Microsoft, and Slack user connections, or `"bot"` for Slack bot connections.
+Instance-owned connections require a superuser. Tokens are not part of these requests.
+
+From an authenticated browser API client, start consent:
+
+```http
+POST /api/v1/connections/CONNECTION_ID/oauth/start
+Content-Type: application/json
+
+{"registration_id":"google-work","scopes":["https://www.googleapis.com/auth/calendar.events.readonly"]}
+```
+
+Navigate that same browser to the returned `authorization_url`. Starting consent sets
+an HttpOnly, SameSite=Lax cookie. An authorization URL copied to another browser cannot
+complete the connection. The callback returns a static success or failure page and never
+tokens. State expires after ten minutes, is consumed once even when the provider rejects
+the code, and is invalidated by a newer consent attempt or revocation.
+
+Verify the connection's metadata and scopes using `GET /api/v1/connections`, then call
+`POST /api/v1/connections/CONNECTION_ID/test` with the required scopes. Verify non-owner
+access is denied under your authorization policy. Set `allow_non_interactive` explicitly
+when this connection may be used by background or serving workers.
+
+Refresh happens within the executing worker. Database transaction locks serialize refresh,
+consent completion, health checks, revoke, and delete. No token is placed in a job payload.
+When a provider rejects a cached token, the worker supplies only its digest to coordinate
+one replacement with other workers. A successful rotating-token exchange is committed even
+if subsequent scope validation rejects execution.
+
+`POST /api/v1/connections/CONNECTION_ID/revoke` always removes local credentials and
+invalidates pending consent. Its `provider_revocation` field reports `revoked`,
+`unsupported`, `failed`, or `not_applicable`. On `failed`, revoke access in the provider's
+account/app console too. Delete attempts the same provider revocation before removing the
+record. A previously issued credential already held by an in-flight provider request cannot
+be recalled locally; subsequent connection resolution fails after revoke.
+
+The backend removes callback query strings from its access-log request scope. Configure
+reverse proxies and external request tracing to omit callback query strings as well, because
+those systems observe requests before Langflow does. Avoid capturing browser callback URLs
+in screenshots or support logs.

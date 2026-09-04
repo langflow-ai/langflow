@@ -418,3 +418,17 @@ identifiers.**
 | langflow-base owner | | | |
 | Enterprise owner | | | |
 | frontend owner | | | |
+
+
+## OAuth broker implementation
+
+The backend broker and operator runbooks are documented in
+`docs/docs/Develop/connection-oauth.mdx`. Consent uses hashed one-time state, an encrypted
+PKCE verifier, browser binding, and a durable connection generation. The database lock is
+a transaction-scoped no-op update: PostgreSQL takes a row lock and SQLite reserves the
+writer. The worker re-reads encrypted credentials under that lock before deciding whether
+to exchange, and revoke/delete use the same lock.
+
+`ConnectionResolutionRequest.rejected_token_digest` is optional, non-secret, and excluded
+from repr. A lease supplies it only after an authentication error so concurrent workers
+reuse a token already replaced by another worker rather than rotating again.

@@ -207,6 +207,13 @@ the deserialize half is covered by
 
 ### v0 (this release)
 
+- **Optional rejected-token digest for connection refresh.**
+  `ConnectionResolutionRequest.rejected_token_digest` carries a SHA-256 digest only
+  after a provider rejects a cached credential. `CredentialLease` supplies it on
+  its single reactive retry so a host can coordinate replacement across workers
+  without transferring token material. Existing request construction and resolver
+  implementations remain compatible; `BUNDLE_API_VERSION` remains `1`.
+
 - **Bundle-owned integration capability manifests (additive).**
   `ExtensionManifest.integrations[]` now carries `IntegrationManifestRef`
   values (`provider_id`, owning `bundle`, relative JSON `path`). The referenced
