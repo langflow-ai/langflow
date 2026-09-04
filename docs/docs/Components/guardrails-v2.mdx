@@ -1,0 +1,51 @@
+---
+title: Guardrails V2
+slug: /guardrails-v2
+---
+
+**Guardrails V2** checks text using deterministic rules and, when configured, a single combined language-model evaluation. It is a separate component from [Guardrails](/guardrails); existing flows keep their original component and behavior.
+
+## Configure evaluation
+
+1. Connect a text source to **Input Text** and select the **Guardrails** to evaluate.
+2. Select **Direction**: `input` for user messages or `output` for assistant responses. Output direction also supports PII Solicitation and System Prompt Leak.
+3. Connect a **Language Model** for semantic coverage, including addresses, credentials written in prose, and violations that do not match a known pattern.
+4. Connect **Pass** and **Fail** to the corresponding downstream paths. Use **Result Data** to inspect scores, evaluation errors, and unverified categories.
+
+**LLM Second Opinion** controls model use:
+
+| Mode        | Behavior                                                                                                                            |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `env`       | Read `LANGFLOW_GUARDRAILS_LLM_MODE`, defaulting to `ambiguous`.                                                                     |
+| `ambiguous` | Skip the model when rules already block the message. Otherwise evaluate all enabled semantic categories together in one model call. |
+| `always`    | Evaluate all enabled semantic categories in one model call, including messages already blocked by rules.                            |
+| `off`       | Run deterministic rules only. No model calls are made.                                                                              |
+
+Without a configured model, the component runs rules only. Rule-only checks cover known patterns; they cannot establish that text is free of semantic violations. Result Data lists those categories in `unverified_categories`. Configure a model when broader detection is required. A custom guardrail requires a model and an LLM mode other than `off`.
+
+Scope checks always use configured topic rules. The model cannot override them or lower a rule score. Model-assisted results can vary between runs. Neither rule-based nor model-assisted detection guarantees detection of every violation.
+
+## Blocking and sanitization
+
+The default **Block Threshold** is `0.75`, and the default **Sanitize Threshold** is `0.35`.
+
+- Scores at or above the block threshold go to **Fail**.
+- Medium scores use **Medium Risk Action**: `sanitize` (default), `block`, or explicitly `pass_through`.
+- Sanitization removes supported directive lines or redacts identified PII, secrets, and enterprise markers. **Redaction Mode** controls masking, replacement tokens, or partial masking.
+- When a finding cannot be safely removed, the message goes to **Fail**. This includes unsupported categories, model findings without localized spans, and sensitive text detected only after normalization or decoding when its original span cannot be recovered.
+- **Fail Closed**, enabled by default, blocks incomplete model evaluations, including malformed responses and missing category verdicts. Disabling it permits fallback to the rule result and records the error and unverified categories.
+
+Pass and Fail share the same cached evaluation with Result Data, so connecting multiple outputs does not add model calls. Result Data can contain the original text; route it only to destinations appropriate for that data.
+
+## Scope and environment configuration
+
+Enable **Scope** and choose an allowlist, denylist, or both. Enter one topic per line in **Allowed Topics** and **Blocked Topics**. Topic matching is literal, case-insensitive, and uses word boundaries; include the synonyms and plural forms your application needs.
+
+Enterprise organization names, domains, internal host labels, and classification markers are opt-in. Environment settings override corresponding component fields:
+
+- `LANGFLOW_GUARDRAILS_BLOCK_THRESHOLD` and `LANGFLOW_GUARDRAILS_SANITIZE_THRESHOLD`: finite values from `0` through `1`.
+- `LANGFLOW_GUARDRAILS_SCOPE_MODE`: `off`, `allowlist`, `denylist`, or `both`.
+- `LANGFLOW_GUARDRAILS_ALLOWED_TOPICS`, `LANGFLOW_GUARDRAILS_BLOCKED_TOPICS`, `LANGFLOW_GUARDRAILS_ENTERPRISE_ORGS`, `LANGFLOW_GUARDRAILS_ENTERPRISE_DOMAINS`, `LANGFLOW_GUARDRAILS_INTERNAL_HOST_LABELS`, and `LANGFLOW_GUARDRAILS_CLASSIFICATION_MARKERS`: comma-separated values.
+- `LANGFLOW_GUARDRAILS_FAIL_CLOSED`: `true` or `false`.
+
+Input is limited to 64,000 characters for rule evaluation. A model evaluation accepts at most 12,000 characters; longer input produces an evaluation error instead of silently classifying only a prefix. Split long input into appropriately bounded messages before validation.
