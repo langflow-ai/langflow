@@ -100,8 +100,12 @@ class AmazonBedrockEmbeddingsComponent(LCModelComponent):
             client_params["region_name"] = self.region_name
 
         boto3_client = session.client("bedrock-runtime", **client_params)
+        # Pass only the pre-built client: ``BedrockEmbeddings`` applies
+        # ``credentials_profile_name`` solely when ``client is None``. The profile
+        # is already honored above when constructing the boto3 session, so passing
+        # it here as well would be a silent no-op. This mirrors the sibling
+        # ``AmazonBedrockComponent`` (LLM), which also passes only ``client``.
         return BedrockEmbeddings(
-            credentials_profile_name=self.credentials_profile_name,
             client=boto3_client,
             model_id=self.model_id,
             endpoint_url=self.endpoint_url,
