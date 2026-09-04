@@ -2544,6 +2544,39 @@ def _maybe_inject_end_user_header(headers: dict, url: str, end_user_id: str | No
     return validate_headers({**(headers or {}), header_name: end_user_id})
 
 
+ACCESS_HINT_READ_ONLY = "read_only"
+ACCESS_HINT_WRITE = "write"
+ACCESS_HINT_DESTRUCTIVE = "destructive"
+
+
+def _tool_access_hint(tool: Any) -> str | None:
+    """Classify an MCP tool from the server's ``ToolAnnotations`` behavior hints.
+
+    Returns ``None`` when the server declared neither hint. Applying the spec's
+    defaults (``readOnlyHint`` false, ``destructiveHint`` true) to a server that sent
+    no annotations at all would label every one of its tools destructive, which says
+    more about the server's age than about the tool. Once either hint is present the
+    defaults do apply, so ``readOnlyHint: false`` on its own reads as destructive.
+
+    These are hints from the server, and the MCP spec is explicit that a client must
+    not make tool-use decisions from annotations it does not trust. The result is
+    display-only: it tells the flow author which tools are worth gating, and nothing
+    downstream may gate, exempt, or execute a tool based on it.
+    """
+    annotations = getattr(tool, "annotations", None)
+    if annotations is None:
+        return None
+    read_only = getattr(annotations, "readOnlyHint", None)
+    destructive = getattr(annotations, "destructiveHint", None)
+    if read_only is None and destructive is None:
+        return None
+    if read_only:
+        return ACCESS_HINT_READ_ONLY
+    # destructiveHint is meaningful only for a non-read-only tool, and the spec defaults
+    # it to true, so an omitted hint on a writing tool stays destructive.
+    return ACCESS_HINT_WRITE if destructive is False else ACCESS_HINT_DESTRUCTIVE
+
+
 async def update_tools(
     server_name: str,
     server_config: dict,
@@ -2782,7 +2815,11 @@ async def update_tools(
                 func=create_tool_func(tool.name, args_schema, client),
                 coroutine=create_tool_coroutine(tool.name, args_schema, client),
                 tags=[tool.name],
-                metadata={"server_name": server_name, "output_schema": getattr(tool, "outputSchema", None)},
+                metadata={
+                    "server_name": server_name,
+                    "output_schema": getattr(tool, "outputSchema", None),
+                    "access_hint": _tool_access_hint(tool),
+                },
                 response_format="content_and_artifact",
             )
 

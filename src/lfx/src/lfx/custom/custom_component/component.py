@@ -1826,6 +1826,9 @@ class Component(CustomComponent):
             "tags": tool.tags if hasattr(tool, "tags") and tool.tags else [tool.name],
             "status": True,  # Initialize all tools with status True
             "approval_actions": tool.metadata.get("approval_actions") or [],  # HITL decisions per action (LE-1447)
+            # Server-declared MCP behavior hint, display-only: it tells the author which
+            # tools are worth gating. Absent for tools whose source declares nothing.
+            "access_hint": tool.metadata.get("access_hint"),
             "display_name": tool.metadata.get("display_name", tool.name),
             "display_description": tool.metadata.get("display_description", tool.description),
             "readonly": tool.metadata.get("readonly", False),
