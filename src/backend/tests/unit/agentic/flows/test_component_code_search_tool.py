@@ -86,3 +86,67 @@ class TestEnumerationCandidateCap:
         assert configured >= MIN_ENUMERATION_CANDIDATES, (
             f"number_candidates={configured} cannot answer enumeration questions over ~500 indexed files"
         )
+
+
+class TestMalformedToolCallsFailVisibly:
+    """A malformed call must raise so the agent can self-correct, never return arbitrary rows.
+
+    Each case below previously returned the *entire* library -- 158 rows of component source,
+    uncapped -- which the agent reads as a result set. That is the confidently-wrong failure
+    mode GH #13618 is about, and it also bypassed ``number_candidates`` straight into context.
+    """
+
+    def test_should_raise_when_keywords_are_empty(self):
+        instance = _component_instance()
+        instance.column = "text"
+        instance.keywords = []
+
+        with pytest.raises(ValueError, match="at least one non-empty search term"):
+            instance.search()
+
+    def test_should_raise_when_keywords_are_only_whitespace(self):
+        """A blank keyword strips to "" and ``str.contains("")`` matches every row."""
+        instance = _component_instance()
+        instance.column = "text"
+        instance.keywords = ["   "]
+
+        with pytest.raises(ValueError, match="at least one non-empty search term"):
+            instance.search()
+
+    def test_should_accept_a_bare_string_as_a_single_keyword(self):
+        """Models routinely send a string for a list argument; that is unambiguous, not an error."""
+        instance = _component_instance()
+        instance.column = "text"
+        instance.keywords = "ChatInput"
+
+        result = instance.search()
+
+        assert 0 < len(result) <= instance.number_candidates
+
+    def test_should_raise_on_a_keywords_type_it_cannot_interpret(self):
+        instance = _component_instance()
+        instance.column = "text"
+        instance.keywords = {"not": "a list"}
+
+        with pytest.raises(TypeError, match="must be a list of strings"):
+            instance.search()
+
+
+class TestOutputSchemaIsStable:
+    @pytest.mark.parametrize("match_type", ["any", "all", "coverage"])
+    def test_should_return_only_the_documented_columns(self, match_type):
+        """``coverage`` -- the mode the shipped flow uses -- leaked its internal ``_score``."""
+        instance = _component_instance()
+        instance.column = "text"
+        instance.keywords = ["Component"]
+        instance.match_type = match_type
+
+        assert list(instance.search().columns) == ["file_path", "text"]
+
+    def test_should_respect_the_candidate_cap(self):
+        instance = _component_instance()
+        instance.column = "text"
+        instance.keywords = ["a"]
+        instance.number_candidates = 3
+
+        assert len(instance.search()) <= 3

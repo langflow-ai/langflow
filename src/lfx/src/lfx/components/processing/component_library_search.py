@@ -96,26 +96,49 @@ class ComponentLibrarySearch(Component):
             if not path.resolve().is_relative_to(root):
                 continue
             rows.append({"file_path": str(path), "text": path.read_text(encoding="utf-8")})
+        if not rows:
+            # Reporting an empty library is the GH #13618 symptom this component exists to
+            # avoid: the agent reads it as "no such component" and says so confidently.
+            msg = f"Component library at {root} contains no readable component source."
+            raise ValueError(msg)
         return pd.DataFrame(rows, columns=["file_path", "text"])
+
+    @staticmethod
+    def _normalized_keywords(raw: object) -> list[str]:
+        """Coerce the tool's ``keywords`` argument to a non-empty list of search terms.
+
+        A model routinely passes a bare string for a list-typed argument, which is an
+        unambiguous single keyword rather than an error. Anything else is a malformed call:
+        raise so the agent can correct itself, as the invalid-column path already does.
+        Returning the unfiltered library instead would present arbitrary components as
+        matches -- a confidently wrong answer rather than a visible failure.
+        """
+        if isinstance(raw, str):
+            raw = [raw]
+        elif not isinstance(raw, list):
+            msg = f"keywords must be a list of strings, got {type(raw).__name__}."
+            raise TypeError(msg)
+
+        # Strip before testing for emptiness: a whitespace-only keyword strips to "" and
+        # ``str.contains("")`` matches every row.
+        keywords = [stripped for stripped in (str(k).strip() for k in raw) if stripped]
+        if not keywords:
+            msg = "keywords must contain at least one non-empty search term."
+            raise ValueError(msg)
+        return keywords
 
     def search(self) -> DataFrame:
         df = self._component_library()
         column = self.column
-        keywords = self.keywords if isinstance(self.keywords, list) else []
         match_type = self.match_type
         case_sensitive = self.case_sensitive
-
-        if df is None or len(df) == 0:
-            return DataFrame(pd.DataFrame())
 
         if column not in df.columns:
             available = ", ".join(str(c) for c in df.columns)
             msg = f"Column '{column}' not found. Available columns: {available}"
             raise ValueError(msg)
 
-        keywords = [str(k).strip() for k in keywords if k]
-        if not keywords:
-            return DataFrame(df)
+        keywords = self._normalized_keywords(self.keywords)
 
         text_series = df[column].fillna("").astype(str)
 
@@ -146,7 +169,11 @@ class ComponentLibrarySearch(Component):
 
             result = df.copy()
             result["_score"] = scores
+            # Rank by score, then drop it: the documented output columns are file_path and
+            # text, and coverage is the mode the shipped flow uses, so leaking the internal
+            # ranking artifact would spend agent context on every returned row.
             result = result[result["_score"] > 0].sort_values("_score", ascending=False)
+            result = result.drop(columns=["_score"])
 
         else:
             # Unreachable through the tool, which exposes only column and keywords, but a hand
