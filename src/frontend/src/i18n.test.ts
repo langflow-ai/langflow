@@ -60,6 +60,9 @@ describe("loadLanguage", () => {
     expect(i18n.t("chat.deleteSessionsCount", { count: 5 })).toBe(
       "Удалить 5 сессий",
     );
+    expect(i18n.t("mainPage.timeElapsed.year", { count: 1 })).toBe("1 год");
+    expect(i18n.t("mainPage.timeElapsed.year", { count: 2 })).toBe("2 года");
+    expect(i18n.t("mainPage.timeElapsed.year", { count: 5 })).toBe("5 лет");
   });
 
   it("does not call addResourceBundle if language is already cached", async () => {

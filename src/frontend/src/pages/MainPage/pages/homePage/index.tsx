@@ -37,6 +37,13 @@ const PAGE_TITLE_KEYS: Record<FlowTabType, string> = {
   mcp: "mainPage.mcpServer",
 };
 
+const FLOW_TYPE_LABEL_KEYS: Record<FlowTabType, string> = {
+  flows: "mainPage.flowType.flows",
+  deployments: "mainPage.tabDeployments",
+  components: "mainPage.flowType.components",
+  mcp: "mainPage.flowType.mcp",
+};
+
 const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const { t } = useTranslation();
   const [view, setView] = useState<"grid" | "list">(() => {
@@ -302,7 +309,9 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
       dragMessage={
         isEmptyFolder
           ? t("home.dragFlowsOrComponents")
-          : t("home.dragFlowType", { flowType })
+          : t("home.dragFlowType", {
+              flowType: t(FLOW_TYPE_LABEL_KEYS[flowType]),
+            })
       }
     >
       <div
@@ -391,7 +400,9 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                       )
                     ) : (
                       <div className="pt-24 text-center text-sm text-secondary-foreground">
-                        {t("home.flowTypeNotSupported", { flowType })}
+                        {t("home.flowTypeNotSupported", {
+                          flowType: t(FLOW_TYPE_LABEL_KEYS[flowType]),
+                        })}
                       </div>
                     )}
                   </div>
