@@ -340,6 +340,8 @@ class LangFuseTracer(BaseTracer):
     """
 
     flow_id: str
+    flow_name: str
+    flow_display_name: str
     _trace_context: TraceContext
     langfuse_trace_id: str | None
 
@@ -362,7 +364,13 @@ class LangFuseTracer(BaseTracer):
         self.user_id = user_id
         self.tracing_user_id = tracing_user_id
         self.session_id = session_id
-        self.flow_id = trace_name.split(" - ")[-1]
+        # ``trace_name`` arrives as ``f"{flow_name} - {flow_id}"`` (lfx graph/base.py). Split from the
+        # right so a display name that itself contains " - " survives intact.
+        self.flow_name, _, self.flow_id = trace_name.rpartition(" - ")
+        # The graph formats a missing flow name as the literal "None". Detect it like the LangWatch and
+        # Arize tracers do, but fall back to the flow id (not the project name) so the trace stays
+        # uniquely identifiable.
+        self.flow_display_name = self.flow_name if self.flow_name and self.flow_name != "None" else self.flow_id
         self.spans: dict[str, LangfuseSpan] = OrderedDict()
         self._input_trace_names: dict[str, str] = {}
         self._output_trace_names: dict[str, str] = {}
@@ -411,9 +419,10 @@ class LangFuseTracer(BaseTracer):
             # parent_span_id is NotRequired but ty doesn't fully support this yet
             self._trace_context = TraceContext(trace_id=langfuse_trace_id)  # type: ignore[call-arg]
 
-            # Create root span for the flow - this also creates the trace implicitly
+            # Create root span for the flow - this also creates the trace implicitly. It is named
+            # after the flow so traces can be found by name in Langfuse; the id stays in metadata.
             self._root_span = self._client.start_span(
-                name=self.flow_id,
+                name=self.flow_display_name,
                 trace_context=self._trace_context,
                 metadata={"flow_id": self.flow_id, "project_name": self.project_name},
             )
@@ -423,14 +432,18 @@ class LangFuseTracer(BaseTracer):
             # provides an override via ``tracing_user_id``, stamp it under
             # ``langflow.tracing_user_id`` so it is still recoverable from trace
             # metadata without changing the meaning of ``trace.userId``.
-            trace_kwargs: dict[str, Any] = {
-                "name": self.flow_id,
-                "user_id": self.user_id,
-                "session_id": self.session_id,
-            }
+            # ``flow_id`` is stamped on the trace up front so traces stay filterable
+            # by flow now that the trace name is the display name; ``end()`` later
+            # merges the graph metadata (which also carries it) on top.
+            trace_metadata: dict[str, Any] = {"flow_id": self.flow_id}
             if self.tracing_user_id and self.tracing_user_id != self.user_id:
-                trace_kwargs["metadata"] = {"langflow.tracing_user_id": self.tracing_user_id}
-            self._root_span.update_trace(**trace_kwargs)
+                trace_metadata["langflow.tracing_user_id"] = self.tracing_user_id
+            self._root_span.update_trace(
+                name=self.flow_display_name,
+                user_id=self.user_id,
+                session_id=self.session_id,
+                metadata=trace_metadata,
+            )
 
         except ImportError:
             logger.exception("Could not import langfuse. Please install it with `pip install langfuse`.")
