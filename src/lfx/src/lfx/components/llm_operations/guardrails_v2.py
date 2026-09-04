@@ -39,6 +39,8 @@ import unicodedata
 from functools import lru_cache
 from typing import Any
 
+from langchain_core.messages import BaseMessage
+
 from lfx.base.models.unified_models import (
     get_llm,
     handle_model_input_update,
@@ -466,7 +468,14 @@ _PII_PATTERNS: list[tuple[str, re.Pattern]] = [
         ),
     ),
     ("IPV4", re.compile(r"\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b")),
-    ("PPSN_IE", re.compile(r"\b\d{7}[A-Z]{1,2}\b")),
+    (
+        "PPSN_IE",
+        re.compile(
+            r"\b(?:PPSN|PPS\s+(?:number|no\.?)|Personal\s+Public\s+Service\s+Number)"
+            r"\s*(?::|=|\bis\b)?\s*\d{7}[A-Z]{1,2}\b",
+            re.IGNORECASE,
+        ),
+    ),
     ("NINO_UK", re.compile(r"\b[A-CEGHJ-PR-TW-Z]{2}\d{6}[A-D]\b", re.IGNORECASE)),
     ("PASSPORT", re.compile(r"\bpassport\s*(?:no\.?|number|#)?\s*[:=]?\s*[A-Z0-9]{6,9}\b", re.IGNORECASE)),
     ("DOB", re.compile(r"\b(?:dob|date of birth|born on)\b\s*[:=]?\s*\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4}", re.IGNORECASE)),
@@ -1688,7 +1697,10 @@ JSON:"""
             if hasattr(llm, "invoke"):
                 response = llm.invoke(prompt)
                 self._token_usage = accumulate_usage(self._token_usage, extract_usage_from_message(response))
-                text = response.content.strip() if hasattr(response, "content") else str(response).strip()
+                # LangChain messages may carry text alongside non-text blocks.
+                # Its text accessor joins only text content, excluding reasoning.
+                content = response.text if isinstance(response, BaseMessage) else getattr(response, "content", response)
+                text = str(content).strip()
             else:
                 text = str(llm(prompt)).strip()
             if not text:
