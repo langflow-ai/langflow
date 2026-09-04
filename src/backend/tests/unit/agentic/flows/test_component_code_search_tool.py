@@ -1,8 +1,8 @@
 """GH #13618 — component_code_search tool silently reports an empty library.
 
-The inline ``DataFrameKeywordSearch`` component in ``LangflowAssistant.json``
-combines three defects into a confidently wrong "the component library is
-empty" answer:
+The ``ComponentLibrarySearch`` component behind ``LangflowAssistant.json``'s
+component_code_search tool combined three defects into a confidently wrong
+"the component library is empty" answer:
 
 1. An unknown ``column`` returns an empty DataFrame instead of raising, so
    the agent cannot self-correct (the DataFrame has only ``file_path`` and
@@ -11,16 +11,16 @@ empty" answer:
 3. ``number_candidates`` ships as 2, making enumeration questions
    unanswerable over a ~500-file index with no truncation signal.
 
-These tests load the REAL inline code from the flow JSON (the same loader
-path production uses) and pin the corrected behavior.
+These tests load the REAL code from the flow JSON (the same loader path
+production uses) and pin the corrected behavior. The component sources the
+installed component library itself, so there is no DataFrame to inject --
+the search below runs against the real library.
 """
 
 import json
 from pathlib import Path
 
-import pandas as pd
 import pytest
-from langflow.schema import DataFrame
 from lfx.custom.eval import eval_custom_component_code
 
 FLOW_PATH = Path(__file__).parents[4] / "base" / "langflow" / "agentic" / "flows" / "LangflowAssistant.json"
@@ -32,24 +32,15 @@ def _keyword_search_template() -> dict:
     data = json.loads(FLOW_PATH.read_text(encoding="utf-8"))
     for node in data["data"]["nodes"]:
         node_data = node.get("data", {})
-        if node_data.get("type") == "DataFrameKeywordSearch":
+        if node_data.get("type") == "ComponentLibrarySearch":
             return node_data["node"]["template"]
-    msg = "DataFrameKeywordSearch node not found in LangflowAssistant.json"
+    msg = "ComponentLibrarySearch node not found in LangflowAssistant.json"
     raise AssertionError(msg)
 
 
 def _component_instance():
     component_class = eval_custom_component_code(_keyword_search_template()["code"]["value"])
     instance = component_class()
-    instance.dataframe = DataFrame(
-        pd.DataFrame(
-            [
-                {"file_path": "openai.py", "text": "class OpenAIModel(Component): build()..."},
-                {"file_path": "chat_input.py", "text": "class ChatInput(Component): build()..."},
-                {"file_path": "agent.py", "text": "class Agent(Component): tools..."},
-            ]
-        )
-    )
     instance.match_type = "any"
     instance.case_sensitive = False
     instance.number_candidates = 10
@@ -95,3 +86,67 @@ class TestEnumerationCandidateCap:
         assert configured >= MIN_ENUMERATION_CANDIDATES, (
             f"number_candidates={configured} cannot answer enumeration questions over ~500 indexed files"
         )
+
+
+class TestMalformedToolCallsFailVisibly:
+    """A malformed call must raise so the agent can self-correct, never return arbitrary rows.
+
+    Each case below previously returned the *entire* library -- 158 rows of component source,
+    uncapped -- which the agent reads as a result set. That is the confidently-wrong failure
+    mode GH #13618 is about, and it also bypassed ``number_candidates`` straight into context.
+    """
+
+    def test_should_raise_when_keywords_are_empty(self):
+        instance = _component_instance()
+        instance.column = "text"
+        instance.keywords = []
+
+        with pytest.raises(ValueError, match="at least one non-empty search term"):
+            instance.search()
+
+    def test_should_raise_when_keywords_are_only_whitespace(self):
+        """A blank keyword strips to "" and ``str.contains("")`` matches every row."""
+        instance = _component_instance()
+        instance.column = "text"
+        instance.keywords = ["   "]
+
+        with pytest.raises(ValueError, match="at least one non-empty search term"):
+            instance.search()
+
+    def test_should_accept_a_bare_string_as_a_single_keyword(self):
+        """Models routinely send a string for a list argument; that is unambiguous, not an error."""
+        instance = _component_instance()
+        instance.column = "text"
+        instance.keywords = "ChatInput"
+
+        result = instance.search()
+
+        assert 0 < len(result) <= instance.number_candidates
+
+    def test_should_raise_on_a_keywords_type_it_cannot_interpret(self):
+        instance = _component_instance()
+        instance.column = "text"
+        instance.keywords = {"not": "a list"}
+
+        with pytest.raises(TypeError, match="must be a list of strings"):
+            instance.search()
+
+
+class TestOutputSchemaIsStable:
+    @pytest.mark.parametrize("match_type", ["any", "all", "coverage"])
+    def test_should_return_only_the_documented_columns(self, match_type):
+        """``coverage`` -- the mode the shipped flow uses -- leaked its internal ``_score``."""
+        instance = _component_instance()
+        instance.column = "text"
+        instance.keywords = ["Component"]
+        instance.match_type = match_type
+
+        assert list(instance.search().columns) == ["file_path", "text"]
+
+    def test_should_respect_the_candidate_cap(self):
+        instance = _component_instance()
+        instance.column = "text"
+        instance.keywords = ["a"]
+        instance.number_candidates = 3
+
+        assert len(instance.search()) <= 3
