@@ -6,6 +6,7 @@ from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
     from lfx.components.llm_operations.batch_run import BatchRunComponent
+    from lfx.components.llm_operations.guardrails_v2 import GuardrailsV2Component
     from lfx.components.llm_operations.lambda_filter import SmartTransformComponent
     from lfx.components.llm_operations.llm_conditional_router import SmartRouterComponent
     from lfx.components.llm_operations.llm_selector import LLMSelectorComponent
@@ -13,6 +14,7 @@ if TYPE_CHECKING:
 
 _dynamic_imports = {
     "BatchRunComponent": "batch_run",
+    "GuardrailsV2Component": "guardrails_v2",
     "SmartTransformComponent": "lambda_filter",
     "SmartRouterComponent": "llm_conditional_router",
     "LLMSelectorComponent": "llm_selector",
@@ -21,6 +23,7 @@ _dynamic_imports = {
 
 __all__ = [
     "BatchRunComponent",
+    "GuardrailsV2Component",
     "LLMSelectorComponent",
     "SmartRouterComponent",
     "SmartTransformComponent",
