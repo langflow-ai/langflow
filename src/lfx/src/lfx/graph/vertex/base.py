@@ -22,6 +22,7 @@ from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.schema.properties import Usage
 from lfx.schema.schema import INPUT_FIELD_NAME, OutputValue, build_output_logs
+from lfx.utils.flow_validation import explain_restricted_component_mismatch
 from lfx.utils.schemas import ChatOutputResponse
 from lfx.utils.util import sync_to_async
 
@@ -795,6 +796,13 @@ class Vertex:
                     str(flow_id), source=self, target=None, status="error", error=str(exc)
                 )
             msg = f"Error building Component {self.display_name}: \n\n{exc}"
+            # In restricted mode this vertex may have been rebuilt with this server's component
+            # code rather than the code saved in the flow. When the saved component does not
+            # match the one that actually ran, say so: otherwise the policy that discarded it is
+            # invisible and only the substituted component's own complaint reaches the user.
+            mismatch = explain_restricted_component_mismatch(self.data.get("type"), self.data.get("node"))
+            if mismatch:
+                msg = f"{msg}\n\n{mismatch}"
             raise ComponentBuildError(msg, tb) from exc
 
     def _update_built_object_and_artifacts(self, result: Any | tuple[Any, dict] | tuple[Component, Any, dict]) -> None:
