@@ -19,6 +19,7 @@ maintainers = [
 dependencies = [
     "lfx~=1.13.0",
     "fastapi>=0.139.0,<1.0.0",
+    "starlette>=1.5.0",
     "slowapi>=0.1.9,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
     "h2>=4.4.1",

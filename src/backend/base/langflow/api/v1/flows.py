@@ -11,6 +11,7 @@ from uuid import UUID
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
@@ -106,7 +107,6 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_catalog_policy_service, get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
-from langflow.utils.compression import compress_response
 from langflow.utils.i18n import translate_flow_notes, translate_starter_flows
 
 # Re-export helpers so existing ``from langflow.api.v1.flows import ...`` still works.
@@ -447,13 +447,13 @@ async def read_flows(
                     act=FlowAction.READ,
                 )
             if header_flows:
-                # Convert to FlowHeader objects and compress the response
+                # Convert to FlowHeader objects
                 flow_headers = [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
-                return compress_response(flow_headers)
+                return JSONResponse(content=jsonable_encoder(flow_headers))
 
             # Convert to FlowRead while session is still active to avoid detached instance errors
             flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows]
-            return compress_response(flow_reads)
+            return JSONResponse(content=jsonable_encoder(flow_reads))
 
         stmt = stmt.where(Flow.folder_id == folder_id)
 
@@ -741,8 +741,6 @@ async def upsert_flow(
 
     Returns 201 for creation, 200 for update.  Returns 404 if owned by another user.
     """
-    from fastapi.responses import JSONResponse
-
     # Read once, outside the retry loop: a rollback between attempts expires the ORM User
     # and a later attribute read would lazy-load outside the greenlet.
     writer_id = current_user.id
@@ -1381,7 +1379,7 @@ async def read_basic_examples(
                 blocked_template_keys=catalog_policy_snapshot.blocked_template_keys,
             )
         )
-        return compress_response(visible_flows)
+        return JSONResponse(content=jsonable_encoder(visible_flows))
 
     async with _starter_flows_lock:
         # Double-check inside lock to prevent thundering herd
@@ -1395,7 +1393,7 @@ async def read_basic_examples(
                     blocked_template_keys=catalog_policy_snapshot.blocked_template_keys,
                 )
             )
-            return compress_response(visible_flows)
+            return JSONResponse(content=jsonable_encoder(visible_flows))
 
         # Ensure raw DB data is cached
         cached_flow_reads = _starter_flows_cache.get("starter_flows")
@@ -1408,7 +1406,7 @@ async def read_basic_examples(
                 ).first()
 
                 if not starter_folder:
-                    return compress_response([])
+                    return JSONResponse(content=jsonable_encoder([]))
 
                 all_starter_folder_flows = (
                     await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))
@@ -1449,7 +1447,7 @@ async def read_basic_examples(
             blocked_template_keys=catalog_policy_snapshot.blocked_template_keys,
         )
     )
-    return compress_response(visible_flows)
+    return JSONResponse(content=jsonable_encoder(visible_flows))
 
 
 @router.post("/expand/", status_code=200, dependencies=[Depends(get_current_active_user)], include_in_schema=False)
