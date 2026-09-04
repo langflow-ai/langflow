@@ -1322,6 +1322,102 @@ def _log_outdated_component_code_substitution(swapped: list[str]) -> None:
     )
 
 
+RESTRICTED_MODE_MISMATCH_HINT = (
+    "Note: custom components are disabled on this server (LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false), so "
+    'the build ran this server\'s "{component_type}" component instead of the component code saved in '
+    "the flow, and the saved component does not match it{missing_clause}. If the error above does not "
+    "match how this component is configured in the flow, that substitution is why: update the component "
+    "in the flow editor, or set LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true to run the flow's own code."
+)
+
+
+def _registry_entry_for_component_type(component_type: str) -> Mapping[str, Any] | None:
+    """Return this server's registry entry for ``component_type``, aliases included."""
+    from lfx.interface.components import component_cache
+    from lfx.upgrade.checker import build_registry_lookup
+
+    with component_cache.state_lock:
+        all_types_dict = component_cache.all_types_dict if component_cache.all_types_ready else None
+    if not all_types_dict:
+        return None
+    return build_registry_lookup(all_types_dict).get(component_type)
+
+
+def _unfillable_required_fields(registry_template: Mapping[str, Any], flow_template: Mapping[str, Any]) -> list[str]:
+    """Name the server inputs a saved node cannot supply, using the checker's own rule.
+
+    These are exactly the fields ``_template_keys_compatible`` refuses to introduce silently: a
+    required input the saved node has no key for and whose declared state cannot fill it.
+    """
+    from lfx.upgrade.checker import new_template_field_keys
+
+    missing = []
+    for key in new_template_field_keys(registry_template, flow_template):
+        field = registry_template.get(key)
+        if isinstance(field, Mapping) and field.get("required") and field.get("value") in (None, ""):
+            missing.append(key)
+    return sorted(missing)
+
+
+def describe_restricted_component_mismatch(component_type: Any, node_info: Any) -> str | None:
+    """Explain a build failure caused by restricted mode running server code for a saved component.
+
+    In restricted mode a node's stored code never runs: the build executes this server's
+    component of the same ``data.type`` instead (:func:`substitute_outdated_component_code_in_place`
+    for drifted built-ins, :func:`resolve_trusted_code_for_build` at instantiation). That is what
+    keeps a flow saved before an upgrade runnable, but it is silent — so a node that is a
+    *customized* copy of a built-in is quietly rebuilt as the stock component, and the build fails
+    with whatever that component complains about. A customized Agent surfaces as "No model
+    selected", naming neither the customization nor the policy that discarded it.
+
+    Returns a sentence to append to the build error when the saved component is structurally
+    incompatible with this server's component of the same type -- the same condition the upgrade
+    checker reports as a breaking change, and the frontend as "flow needs review". Returns ``None``
+    in permissive mode, for an unknown type (already refused by :func:`check_flow_and_raise`), when
+    the registry is unavailable, and for a node this server's component can still drive: a legacy
+    Agent carrying ``agent_llm``/``model_name`` runs fine after the swap and must not be blamed.
+    """
+    from lfx.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    if settings_service is None or getattr(settings_service.settings, "allow_custom_components", True):
+        return None
+    if not isinstance(component_type, str) or not component_type or not isinstance(node_info, Mapping):
+        return None
+
+    registry_entry = _registry_entry_for_component_type(component_type)
+    if registry_entry is None:
+        return None
+
+    from lfx.upgrade.checker import has_breaking_change
+
+    if not has_breaking_change(registry_entry, node_info):
+        return None
+
+    registry_template = registry_entry.get("template")
+    flow_template = node_info.get("template")
+    missing_clause = ""
+    if isinstance(registry_template, Mapping) and isinstance(flow_template, Mapping):
+        missing = _unfillable_required_fields(registry_template, flow_template)
+        if missing:
+            missing_clause = f" (missing required input: {', '.join(missing)})"
+
+    return RESTRICTED_MODE_MISMATCH_HINT.format(component_type=component_type, missing_clause=missing_clause)
+
+
+def explain_restricted_component_mismatch(component_type: Any, node_info: Any) -> str | None:
+    """Never-raising wrapper for :func:`describe_restricted_component_mismatch`.
+
+    The only caller is a build-error handler, where a diagnostic that raises would replace the
+    component's real error with an unrelated one.
+    """
+    try:
+        return describe_restricted_component_mismatch(component_type, node_info)
+    except Exception:  # noqa: BLE001 -- diagnosis is best effort; never mask the original failure
+        logger.debug("Could not diagnose restricted-mode component mismatch", exc_info=True)
+        return None
+
+
 async def _ensure_public_component_lookup_snapshot(
     settings_service: Any,
 ) -> tuple[dict[str, str], Mapping[str, set[str]]]:
