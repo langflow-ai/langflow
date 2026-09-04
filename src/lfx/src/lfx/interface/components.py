@@ -759,6 +759,15 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
     return (top_level, module_components)
 
 
+def _resolved_component_path(path: str | Path) -> Path:
+    """Resolve a component path for identity comparisons without requiring it to exist."""
+    candidate = Path(path)
+    try:
+        return candidate.resolve(strict=False)
+    except OSError:
+        return candidate
+
+
 async def _determine_loading_strategy(settings_service: "SettingsService") -> dict[str, Any]:
     """Determines and executes the appropriate component loading strategy.
 
@@ -773,7 +782,12 @@ async def _determine_loading_strategy(settings_service: "SettingsService") -> di
     # index by import_langflow_components, and _initialize_component_cache merges this result over
     # them -- so scanning BASE_COMPONENTS_PATH here does not add the built-ins, it REPLACES them
     # with whatever this scan produces, under directory-derived keys.
-    custom_paths = [p for p in (settings_service.settings.components_path or []) if p != BASE_COMPONENTS_PATH]
+    base_components_path = _resolved_component_path(BASE_COMPONENTS_PATH)
+    custom_paths = [
+        path
+        for path in (settings_service.settings.components_path or [])
+        if _resolved_component_path(path) != base_components_path
+    ]
     if settings_service.settings.lazy_load_components:
         # Partial loading mode - just load component metadata
         await logger.adebug("Using partial component loading")
@@ -869,17 +883,11 @@ def _components_path_extension_paths(settings_service: "SettingsService") -> lis
     components dir through as an inline-bundle root (which would produce
     duplicate / garbage palette entries from walking it as a bundle parent).
     """
-    try:
-        base_resolved = Path(BASE_COMPONENTS_PATH).resolve(strict=False)
-    except OSError:
-        base_resolved = Path(BASE_COMPONENTS_PATH)
+    base_resolved = _resolved_component_path(BASE_COMPONENTS_PATH)
     paths: list[Path] = []
     for raw in settings_service.settings.components_path or []:
         candidate = Path(raw)
-        try:
-            candidate_resolved = candidate.resolve(strict=False)
-        except OSError:
-            candidate_resolved = candidate
+        candidate_resolved = _resolved_component_path(candidate)
         if candidate_resolved == base_resolved:
             continue
         if candidate.is_dir():
@@ -1433,7 +1441,8 @@ def _finish_component_initialization_task(
 
 def _merge_component_sources(
     builtin: dict[str, Any],
-    *sources: dict[str, Any],
+    custom: dict[str, Any] | None = None,
+    extension: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Merge component sources per COMPONENT, later sources winning on a name collision.
 
@@ -1444,19 +1453,33 @@ def _merge_component_sources(
     components then had no registered hash, so ``allow_custom_components=false`` rejected every
     flow that used one -- reporting first-party built-ins as custom components.
 
-    Extension components still win over a same-named *component*, which is what
-    "a manifest-shipping bundle supersedes any same-named legacy entry" was meant to say.
+    Inline extension discovery is the canonical representation of components also found by the
+    legacy custom scanner. Its namespaced registry key differs from the legacy component name, so
+    replace that legacy copy by its ``name`` alias before publishing the extension. This prevents
+    one custom component from appearing twice while preserving unrelated built-in siblings.
 
     Empty categories are dropped: the lazy metadata scanner emits a fixed set of legacy category
     names whether or not anything was found in them, and they would otherwise surface as empty
     palette sections.
     """
+    custom = custom or {}
+    extension = extension or {}
     merged: dict[str, Any] = {category: dict(components) for category, components in builtin.items()}
-    for source in sources:
-        for category, components in source.items():
-            if not components:
-                continue
-            merged.setdefault(category, {}).update(components)
+    for category, components in custom.items():
+        if not components:
+            continue
+        merged.setdefault(category, {}).update(components)
+
+    for category, components in extension.items():
+        if not components:
+            continue
+        target = merged.setdefault(category, {})
+        custom_components = custom.get(category, {})
+        for component_id, component in components.items():
+            legacy_name = component.get("name") if isinstance(component, dict) else None
+            if isinstance(legacy_name, str) and legacy_name in custom_components:
+                target.pop(legacy_name, None)
+            target[component_id] = component
     return merged
 
 

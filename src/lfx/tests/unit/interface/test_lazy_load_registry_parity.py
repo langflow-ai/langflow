@@ -20,8 +20,11 @@ them. It only surfaced with the gate on, because that check returns early when c
 components are allowed.
 """
 
+from pathlib import Path
 from typing import Any
+from unittest.mock import AsyncMock
 
+import lfx.interface.components as components_module
 from lfx.interface.components import (
     BASE_COMPONENTS_PATH,
     _determine_loading_strategy,
@@ -63,6 +66,26 @@ class TestLazyLoadingSkipsTheBuiltInPath:
 
         assert _flatten(await _determine_loading_strategy(service)) == {}
 
+    async def test_lazy_branch_skips_an_equivalent_built_in_path(self, monkeypatch):
+        """Path spelling must not turn the built-in directory into a custom source."""
+        metadata_loader = AsyncMock(return_value={})
+        monkeypatch.setattr(components_module, "aget_component_metadata", metadata_loader)
+        service = _SettingsService(_Settings(lazy=True, components_path=[f"{BASE_COMPONENTS_PATH}/./"]))
+
+        assert _flatten(await _determine_loading_strategy(service)) == {}
+        metadata_loader.assert_not_awaited()
+
+    async def test_lazy_branch_skips_a_symlink_to_the_built_in_path(self, monkeypatch, tmp_path: Path):
+        """A symlink alias of the built-in directory must be filtered as the same source."""
+        alias = tmp_path / "components-link"
+        alias.symlink_to(Path(BASE_COMPONENTS_PATH), target_is_directory=True)
+        metadata_loader = AsyncMock(return_value={})
+        monkeypatch.setattr(components_module, "aget_component_metadata", metadata_loader)
+        service = _SettingsService(_Settings(lazy=True, components_path=[str(alias)]))
+
+        assert _flatten(await _determine_loading_strategy(service)) == {}
+        metadata_loader.assert_not_awaited()
+
 
 class TestCategoryMergePreservesBuiltIns:
     """A custom or extension category must supplement a built-in one, never replace it."""
@@ -92,6 +115,27 @@ class TestCategoryMergePreservesBuiltIns:
         merged = _merge_component_sources(builtin, {}, extension)
 
         assert merged["tools"]["Calculator"]["id"] == "extension"
+
+    def test_namespaced_extension_replaces_its_legacy_custom_copy(self):
+        builtin = {"tools": {"Calculator": {"id": "builtin"}, "SearchAPI": {"id": "builtin"}}}
+        custom = {"tools": {"MyTool": {"id": "custom"}}}
+        extension_id = "ext:tools:MyTool@extra"
+        extension = {"tools": {extension_id: {"id": "extension", "name": "MyTool"}}}
+
+        merged = _merge_component_sources(builtin, custom, extension)
+
+        assert set(merged["tools"]) == {"Calculator", "SearchAPI", extension_id}
+
+    def test_namespaced_custom_override_hides_the_same_named_builtin(self):
+        builtin = {"tools": {"Calculator": {"id": "builtin"}, "SearchAPI": {"id": "builtin"}}}
+        custom = {"tools": {"Calculator": {"id": "custom"}}}
+        extension_id = "ext:tools:CalculatorComponent@extra"
+        extension = {"tools": {extension_id: {"id": "extension", "name": "Calculator"}}}
+
+        merged = _merge_component_sources(builtin, custom, extension)
+
+        assert set(merged["tools"]) == {"SearchAPI", extension_id}
+        assert merged["tools"][extension_id]["id"] == "extension"
 
     def test_the_built_in_source_is_not_mutated(self):
         """The registry is a process-wide cache; merging must not write through to it."""
