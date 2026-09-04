@@ -2,6 +2,7 @@ import json
 
 import pytest
 from fastapi import FastAPI, Response
+from fastapi.responses import StreamingResponse
 from httpx import ASGITransport, AsyncClient
 from langflow.main import GZIP_COMPRESS_LEVEL, GZIP_EXCLUDED_CONTENT_TYPES, GZIP_MINIMUM_SIZE
 from starlette.middleware.gzip import GZipMiddleware
@@ -104,6 +105,14 @@ def _app_with_the_same_middleware() -> FastAPI:
     async def payload(content_type: str) -> Response:
         return Response(content=b"x" * (GZIP_MINIMUM_SIZE * 4), media_type=content_type)
 
+    @app.get("/stream")
+    async def stream(content_type: str, events: int) -> StreamingResponse:
+        async def emit():
+            for index in range(events):
+                yield (json.dumps({"event": "end_vertex", "id": index}) + "\n\n").encode()
+
+        return StreamingResponse(emit(), media_type=content_type)
+
     return app
 
 
@@ -133,3 +142,39 @@ async def test_a_compressible_type_on_the_same_app_is_compressed():
         )
 
     assert response.headers["content-encoding"] == "gzip"
+
+
+async def _stream_response(content_type: str, events: int):
+    transport = ASGITransport(app=_app_with_the_same_middleware())
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        return await client.get(
+            "/stream",
+            params={"content_type": content_type, "events": events},
+            headers={"Accept-Encoding": "gzip"},
+        )
+
+
+async def test_ndjson_event_streams_are_compressed():
+    response = await _stream_response("application/x-ndjson", events=200)
+
+    assert response.headers["content-encoding"] == "gzip"
+    assert "content-length" not in response.headers
+
+
+async def test_a_stream_under_the_size_floor_is_compressed_like_any_other():
+    response = await _stream_response("application/x-ndjson", events=1)
+
+    assert len(response.content) < GZIP_MINIMUM_SIZE
+    assert response.headers["content-encoding"] == "gzip"
+
+
+async def test_an_excluded_content_type_is_not_compressed_when_streamed():
+    response = await _stream_response("text/event-stream", events=200)
+
+    assert "content-encoding" not in response.headers
+
+
+def test_gzip_is_registered_innermost():
+    from langflow.main import create_app
+
+    assert create_app().user_middleware[-1].cls is GZipMiddleware

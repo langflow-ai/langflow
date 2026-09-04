@@ -80,6 +80,8 @@ _tasks: list[asyncio.Task] = []
 MAX_PORT = 65535
 GZIP_MINIMUM_SIZE = 1000
 GZIP_COMPRESS_LEVEL = 6
+# application/x-ndjson is deliberately absent: build event streams compress 78-99% and,
+# being streamed, bypass GZIP_MINIMUM_SIZE entirely.
 GZIP_ALREADY_COMPRESSED_CONTENT_TYPES = (
     "application/octet-stream",
     "application/pdf",
@@ -872,6 +874,8 @@ def create_app():
         lifespan=lifespan,
         root_path=settings.root_path,
     )
+    # Registered first so it sits innermost: the BaseHTTPMiddleware layers above turn every
+    # response into a stream, and a streamed response carries no Content-Length to test.
     app.add_middleware(
         GZipMiddleware,
         minimum_size=GZIP_MINIMUM_SIZE,
