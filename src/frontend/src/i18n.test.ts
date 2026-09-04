@@ -63,6 +63,9 @@ describe("loadLanguage", () => {
     expect(i18n.t("mainPage.timeElapsed.year", { count: 1 })).toBe("1 год");
     expect(i18n.t("mainPage.timeElapsed.year", { count: 2 })).toBe("2 года");
     expect(i18n.t("mainPage.timeElapsed.year", { count: 5 })).toBe("5 лет");
+    expect(i18n.t("mcp.toolCount", { count: 1 })).toBe("1 инструмент");
+    expect(i18n.t("mcp.toolCount", { count: 2 })).toBe("2 инструмента");
+    expect(i18n.t("mcp.toolCount", { count: 5 })).toBe("5 инструментов");
   });
 
   it("does not call addResourceBundle if language is already cached", async () => {
