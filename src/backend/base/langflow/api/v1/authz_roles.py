@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, Response, status
 from lfx.log.logger import logger
 from lfx.services.authorization import AuthorizationMutation, AuthorizationMutationKind
 from lfx.utils.util_strings import escape_like_pattern
@@ -15,6 +15,12 @@ from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas.authz_roles import RoleCreate, RoleRead, RoleUpdate
+from langflow.services.authorization.admin import (
+    ADMINISTRATION_REQUIRED_REASON,
+    administration_audit_details,
+    administration_denied,
+    is_administrator,
+)
 from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS, AUDIT_EVENT_MUTATION
 from langflow.services.authorization.lifecycle import (
     acquire_identity_mutation_lock,
@@ -35,15 +41,28 @@ _LIST_DEFAULT_LIMIT = 100
 _POSTGRES_UNIQUE_VIOLATION_SQLSTATE = "23505"
 _ROLE_NAME_UNIQUE_INDEX = "ix_authz_role_name"
 _SQLITE_ROLE_NAME_UNIQUE_MARKER = "UNIQUE constraint failed: authz_role.name"
+OperationId = Annotated[str | None, Header(alias="X-Langflow-Operation-ID", max_length=128)]
+_LEGACY_SUPERUSER_DENIAL = "Superuser required to administer roles."
 
 
-async def _audit_deny(*, user_id: UUID, action: str, obj: str, status_code: int, reason: str) -> None:
+async def _audit_deny(
+    *,
+    user_id: UUID,
+    action: str,
+    obj: str,
+    status_code: int,
+    reason: str,
+    operation_id: str | None = None,
+) -> None:
     await audit_decision(
         user_id=user_id,
         action=action,
         obj=obj,
         result="deny",
-        details={"event": AUDIT_EVENT_ACCESS, "status_code": status_code, "reason": reason},
+        details=administration_audit_details(
+            {"event": AUDIT_EVENT_ACCESS, "status_code": status_code, "reason": reason},
+            operation_id=operation_id,
+        ),
     )
 
 
@@ -67,29 +86,32 @@ def _is_role_name_conflict(exc: IntegrityError) -> bool:
     return is_unique_violation and constraint_name == _ROLE_NAME_UNIQUE_INDEX
 
 
-async def _require_superuser(user, *, action: str, obj: str) -> None:
-    """Superuser-only gate. Role admin is an operations action."""
-    if not getattr(user, "is_superuser", False):
-        await _audit_deny(
-            user_id=user.id,
-            action=action,
-            obj=obj,
-            status_code=status.HTTP_403_FORBIDDEN,
-            reason="superuser_required",
-        )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Superuser required to administer roles.",
-        )
+async def _require_role_administrator(user, *, action: str, obj: str, operation_id: str | None = None) -> None:
+    """Allow superusers or a plugin-delegated ``role:manage`` administrator."""
+    if await is_administrator(user, resource="role", authorization_service=get_authorization_service()):
+        return
+    await _audit_deny(
+        user_id=user.id,
+        action=action,
+        obj=obj,
+        status_code=status.HTTP_403_FORBIDDEN,
+        reason=ADMINISTRATION_REQUIRED_REASON,
+        operation_id=operation_id,
+    )
+    raise administration_denied(_LEGACY_SUPERUSER_DENIAL, resource="role")
 
 
-async def _require_superuser_dependency(request: Request, current_user: CurrentActiveUser) -> None:
-    """Run the superuser gate as a route dependency, i.e. before body validation.
+async def _require_role_administrator_dependency(
+    request: Request,
+    current_user: CurrentActiveUser,
+    operation_id: OperationId = None,
+) -> None:
+    """Run the role-administrator gate as a route dependency, i.e. before body validation.
 
     FastAPI solves a route's ``dependencies`` before validating that route's own
     body, so an unauthorised caller is refused whatever they post. Gated only in
     the endpoint body, they first receive the same 422 field names and enum
-    values a superuser would, which lets them map the request contract of a
+    values an administrator would, which lets them map the request contract of a
     route they cannot invoke.
 
     The in-body call is kept as well: it is the gate for anything that reaches
@@ -100,10 +122,10 @@ async def _require_superuser_dependency(request: Request, current_user: CurrentA
         request.method,
         "role:access",
     )
-    await _require_superuser(current_user, action=action, obj=f"role:{role_id}")
+    await _require_role_administrator(current_user, action=action, obj=f"role:{role_id}", operation_id=operation_id)
 
 
-SUPERUSER_ONLY = [Depends(_require_superuser_dependency)]
+ROLE_ADMINISTRATOR_ONLY = [Depends(_require_role_administrator_dependency)]
 
 
 async def _detect_parent_cycle(
@@ -137,6 +159,7 @@ async def list_roles(
     current_user: CurrentActiveUser,  # noqa: ARG001 — any authenticated user can list
     is_system: Annotated[bool | None, Query(description="Filter by is_system flag")] = None,
     name: Annotated[str | None, Query(description="Substring match on role name")] = None,
+    exact_name: Annotated[str | None, Query(description="Exact match on role name")] = None,
     limit: Annotated[int, Query(ge=1, le=_LIST_MAX_LIMIT)] = _LIST_DEFAULT_LIMIT,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[RoleRead]:
@@ -151,6 +174,8 @@ async def list_roles(
         stmt = stmt.where(AuthzRole.is_system == is_system)
     if name:
         stmt = stmt.where(AuthzRole.name.ilike(f"%{escape_like_pattern(name)}%", escape="\\"))
+    if exact_name is not None:
+        stmt = stmt.where(AuthzRole.name == exact_name)
     stmt = stmt.order_by(AuthzRole.name, AuthzRole.id).offset(offset).limit(limit)
     rows = (await session.exec(stmt)).all()
     return [RoleRead.model_validate(row) for row in rows]
@@ -168,15 +193,17 @@ async def read_role(
     return RoleRead.model_validate(role)
 
 
-@router.post("", response_model=RoleRead, status_code=status.HTTP_201_CREATED, dependencies=SUPERUSER_ONLY)
-@router.post("/", response_model=RoleRead, status_code=status.HTTP_201_CREATED, dependencies=SUPERUSER_ONLY)
+@router.post("", response_model=RoleRead, status_code=status.HTTP_201_CREATED, dependencies=ROLE_ADMINISTRATOR_ONLY)
+@router.post("/", response_model=RoleRead, status_code=status.HTTP_201_CREATED, dependencies=ROLE_ADMINISTRATOR_ONLY)
 async def create_role(
     payload: RoleCreate,
     current_user: CurrentActiveUser,
     session: DbSession,
+    response: Response,
+    operation_id: OperationId = None,
 ) -> RoleRead:
-    """Create a custom (non-system) role. Superuser-only."""
-    await _require_superuser(current_user, action="role:create", obj="role:*")
+    """Create a custom (non-system) role."""
+    await _require_role_administrator(current_user, action="role:create", obj="role:*", operation_id=operation_id)
     authorization_service = get_authorization_service()
     await acquire_identity_mutation_lock(
         authorization_service,
@@ -193,6 +220,7 @@ async def create_role(
                 obj="role:*",
                 status_code=status.HTTP_400_BAD_REQUEST,
                 reason="parent_role_not_found",
+                operation_id=operation_id,
             )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -228,6 +256,7 @@ async def create_role(
             obj="role:*",
             status_code=status.HTTP_409_CONFLICT,
             reason="role_name_conflict" if is_name_conflict else "role_integrity_conflict",
+            operation_id=operation_id,
         )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -244,26 +273,36 @@ async def create_role(
         action="role:create",
         obj=f"role:{role.id}",
         result="allow",
-        details={
-            "event": AUDIT_EVENT_MUTATION,
-            "role_name": role.name,
-            "permissions": list(role.permissions),
-            "parent_role_id": str(role.parent_role_id) if role.parent_role_id else None,
-        },
+        details=administration_audit_details(
+            {
+                "event": AUDIT_EVENT_MUTATION,
+                "role_name": role.name,
+                "permissions": list(role.permissions),
+                "parent_role_id": str(role.parent_role_id) if role.parent_role_id else None,
+            },
+            operation_id=operation_id,
+        ),
     )
+    response.headers["Location"] = f"/api/v1/authz/roles/{role.id}"
     logger.info("Created role %s (id=%s)", role.name, role.id)
     return RoleRead.model_validate(role)
 
 
-@router.patch("/{role_id}", response_model=RoleRead, dependencies=SUPERUSER_ONLY)
+@router.patch("/{role_id}", response_model=RoleRead, dependencies=ROLE_ADMINISTRATOR_ONLY)
 async def update_role(
     role_id: UUID,
     payload: RoleUpdate,
     current_user: CurrentActiveUser,
     session: DbSession,
+    operation_id: OperationId = None,
 ) -> RoleRead:
     """Update fields on a custom role. System roles are read-only."""
-    await _require_superuser(current_user, action="role:update", obj=f"role:{role_id}")
+    await _require_role_administrator(
+        current_user,
+        action="role:update",
+        obj=f"role:{role_id}",
+        operation_id=operation_id,
+    )
     authorization_service = get_authorization_service()
     await acquire_identity_mutation_lock(
         authorization_service,
@@ -280,6 +319,7 @@ async def update_role(
             obj=f"role:{role_id}",
             status_code=status.HTTP_404_NOT_FOUND,
             reason="role_not_found",
+            operation_id=operation_id,
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
     if role.is_system:
@@ -289,6 +329,7 @@ async def update_role(
             obj=f"role:{role_id}",
             status_code=status.HTTP_400_BAD_REQUEST,
             reason="system_role_read_only",
+            operation_id=operation_id,
         )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -312,6 +353,7 @@ async def update_role(
                     obj=f"role:{role_id}",
                     status_code=status.HTTP_400_BAD_REQUEST,
                     reason="self_parent_forbidden",
+                    operation_id=operation_id,
                 )
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -325,6 +367,7 @@ async def update_role(
                     obj=f"role:{role_id}",
                     status_code=status.HTTP_400_BAD_REQUEST,
                     reason="parent_role_not_found",
+                    operation_id=operation_id,
                 )
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -337,6 +380,7 @@ async def update_role(
                     obj=f"role:{role_id}",
                     status_code=status.HTTP_400_BAD_REQUEST,
                     reason="role_hierarchy_cycle",
+                    operation_id=operation_id,
                 )
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -359,6 +403,7 @@ async def update_role(
                 obj=f"role:{role_id}",
                 status_code=status.HTTP_400_BAD_REQUEST,
                 reason="null_name_forbidden",
+                operation_id=operation_id,
             )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -377,6 +422,7 @@ async def update_role(
                 obj=f"role:{role_id}",
                 status_code=status.HTTP_400_BAD_REQUEST,
                 reason="null_permissions_forbidden",
+                operation_id=operation_id,
             )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -406,6 +452,7 @@ async def update_role(
             obj=f"role:{role_id}",
             status_code=status.HTTP_409_CONFLICT,
             reason="role_name_conflict" if is_name_conflict else "role_integrity_conflict",
+            operation_id=operation_id,
         )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -422,28 +469,33 @@ async def update_role(
         action="role:update",
         obj=f"role:{role.id}",
         result="allow",
-        details={
-            "event": AUDIT_EVENT_MUTATION,
-            "role_name": role.name,
-            "fields_changed": sorted(fields_set),
-        },
+        details=administration_audit_details(
+            {"event": AUDIT_EVENT_MUTATION, "role_name": role.name, "fields_changed": sorted(fields_set)},
+            operation_id=operation_id,
+        ),
     )
     logger.info("Updated role %s (id=%s)", role.name, role.id)
     return RoleRead.model_validate(role)
 
 
-@router.delete("/{role_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=SUPERUSER_ONLY)
+@router.delete("/{role_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=ROLE_ADMINISTRATOR_ONLY)
 async def delete_role(
     role_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
+    operation_id: OperationId = None,
 ) -> None:
     """Delete a custom role.
 
     System roles cannot be deleted; roles with active assignments return 409
     (delete the assignments first).
     """
-    await _require_superuser(current_user, action="role:delete", obj=f"role:{role_id}")
+    await _require_role_administrator(
+        current_user,
+        action="role:delete",
+        obj=f"role:{role_id}",
+        operation_id=operation_id,
+    )
     authorization_service = get_authorization_service()
     await acquire_identity_mutation_lock(
         authorization_service,
@@ -460,6 +512,7 @@ async def delete_role(
             obj=f"role:{role_id}",
             status_code=status.HTTP_404_NOT_FOUND,
             reason="role_not_found",
+            operation_id=operation_id,
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
     if role.is_system:
@@ -469,6 +522,7 @@ async def delete_role(
             obj=f"role:{role_id}",
             status_code=status.HTTP_400_BAD_REQUEST,
             reason="system_role_read_only",
+            operation_id=operation_id,
         )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -485,6 +539,7 @@ async def delete_role(
             obj=f"role:{role_id}",
             status_code=status.HTTP_409_CONFLICT,
             reason="active_assignments_exist",
+            operation_id=operation_id,
         )
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -510,6 +565,9 @@ async def delete_role(
         action="role:delete",
         obj=f"role:{role_id}",
         result="allow",
-        details={"event": AUDIT_EVENT_MUTATION, "role_name": role_name},
+        details=administration_audit_details(
+            {"event": AUDIT_EVENT_MUTATION, "role_name": role_name},
+            operation_id=operation_id,
+        ),
     )
     logger.info("Deleted role id=%s", role_id)

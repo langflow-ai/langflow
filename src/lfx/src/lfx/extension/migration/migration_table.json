@@ -4955,6 +4955,81 @@
       "bare_class_name": "MrscraperRunManualScraper",
       "target": "ext:mrscraper:MrscraperRunManualScraper@official",
       "added_in": "1.12.0"
+    },
+    {
+      "bare_class_name": "FunASRTranscriptionComponent",
+      "target": "ext:funasr:FunASRTranscriptionComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.funasr.funasr_transcription.FunASRTranscriptionComponent",
+      "target": "ext:funasr:FunASRTranscriptionComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.funasr.FunASRTranscriptionComponent",
+      "target": "ext:funasr:FunASRTranscriptionComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "PlivoLookupNumberComponent",
+      "target": "ext:plivo:PlivoLookupNumberComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.plivo.lookup_number.PlivoLookupNumberComponent",
+      "target": "ext:plivo:PlivoLookupNumberComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.plivo.PlivoLookupNumberComponent",
+      "target": "ext:plivo:PlivoLookupNumberComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "legacy_slot": "ext:plivo:PlivoLookupNumberComponent@official-pre-a",
+      "target": "ext:plivo:PlivoLookupNumberComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "PlivoMakeCallComponent",
+      "target": "ext:plivo:PlivoMakeCallComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.plivo.make_call.PlivoMakeCallComponent",
+      "target": "ext:plivo:PlivoMakeCallComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.plivo.PlivoMakeCallComponent",
+      "target": "ext:plivo:PlivoMakeCallComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "legacy_slot": "ext:plivo:PlivoMakeCallComponent@official-pre-a",
+      "target": "ext:plivo:PlivoMakeCallComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "PlivoSendSMSComponent",
+      "target": "ext:plivo:PlivoSendSMSComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.plivo.send_sms.PlivoSendSMSComponent",
+      "target": "ext:plivo:PlivoSendSMSComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.plivo.PlivoSendSMSComponent",
+      "target": "ext:plivo:PlivoSendSMSComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "legacy_slot": "ext:plivo:PlivoSendSMSComponent@official-pre-a",
+      "target": "ext:plivo:PlivoSendSMSComponent@official",
+      "added_in": "1.13.0"
     }
   ],
   "ambiguous_bare_names": [
