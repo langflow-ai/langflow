@@ -330,6 +330,39 @@ def test_reload_missing_source_returns_typed_error(tmp_path: Path) -> None:
     assert any(e.code == "reload-source-missing" for e in result.errors)
 
 
+def test_reload_manifestless_record_refused_with_typed_error(tmp_path: Path) -> None:
+    """A manifest-less lfx.bundles provider record refuses hot reload.
+
+    There is no manifest for the pipeline's load_extension stage to consume,
+    so the refusal is a deliberate typed code -- not the misleading
+    manifest-not-found that routing it through load_extension would yield.
+    """
+    from lfx.extension.bundle_registry import BundleRecord
+    from lfx.extension.loader import SLOT_OFFICIAL
+
+    provider_dir = tmp_path / "claimedprov"
+    provider_dir.mkdir()
+    registry = BundleRegistry()
+    registry.install_bundle(
+        BundleRecord(
+            bundle="claimedprov",
+            extension_id="lfx-bundles",
+            extension_version="1.0.0",
+            slot=SLOT_OFFICIAL,
+            source_path=provider_dir,
+            manifestless=True,
+        )
+    )
+
+    result = reload_bundle(registry, "claimedprov")
+
+    assert not result.ok
+    assert [e.code for e in result.errors] == ["reload-manifestless-unsupported"]
+    # The live record stays in place as `previous`; nothing was staged or swapped.
+    assert result.record is not None
+    assert result.record.manifestless
+
+
 def test_reload_traversal_source_path_does_not_escape(tmp_path: Path) -> None:
     """A ``../``-laden source_path must surface a typed error, not touch /etc.
 

@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import random
 from typing import TYPE_CHECKING, Annotated, Final
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, MultiFernet
 from fastapi import Depends, HTTPException, Request, Security, WebSocket, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from fastapi.security.utils import get_authorization_scheme_param
 from lfx.log.logger import logger
-from lfx.services.deps import injectable_session_scope
+from lfx.services.deps import injectable_session_scope, session_scope
+from lfx.services.settings.constants import MINIMUM_SECRET_KEY_LENGTH
 
 from langflow.services.auth.exceptions import (
+    AuthBackendUnavailableError,
     AuthenticationError,
     InsufficientPermissionsError,
     InvalidCredentialsError,
@@ -158,10 +161,18 @@ async def ws_api_key_security(api_key: str | None) -> UserRead:
 
 
 def _auth_error_to_http(e: AuthenticationError) -> HTTPException:
-    """Map auth exceptions to 401 Unauthorized or 403 Forbidden.
+    """Map auth exceptions to 503 Service Unavailable, 403 Forbidden or 401 Unauthorized.
 
     Langflow returns 403 for missing/invalid credentials; 401 for invalid/expired tokens.
+    A backend failure never judged the credential, so it is reported as a
+    retryable 503 rather than as a verdict on the caller's token.
     """
+    if isinstance(e, AuthBackendUnavailableError):
+        return HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=e.message,
+            headers={"Retry-After": "1"},
+        )
     if isinstance(
         e,
         (MissingCredentialsError, InvalidCredentialsError, InsufficientPermissionsError),
@@ -235,6 +246,10 @@ async def get_current_user_for_websocket(
 
     try:
         return await _auth_service().get_current_user_for_websocket(token, api_key, db, external_token=external_token)
+    except AuthBackendUnavailableError as e:
+        # The credential was never judged, so closing as a policy violation
+        # would tell the client to fix a credential that is not the problem.
+        raise WebSocketException(code=status.WS_1013_TRY_AGAIN_LATER, reason=e.message) from e
     except AuthenticationError as e:
         raise WebSocketException(code=status.WS_1008_POLICY_VIOLATION, reason=WS_AUTH_REASON) from e
 
@@ -256,11 +271,43 @@ async def get_current_user_for_sse(
 
     try:
         return await _auth_service().get_current_user_for_sse(token, api_key, db, external_token=external_token)
+    except AuthBackendUnavailableError as e:
+        raise _auth_error_to_http(e) from e
     except AuthenticationError as e:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Missing or invalid credentials (cookie or API key).",
         ) from e
+
+
+async def get_current_user_for_workflow(
+    token: Annotated[str | None, Security(oauth2_login)],
+    query_param: Annotated[str | None, Security(api_key_query)],
+    header_param: Annotated[str | None, Security(api_key_header)],
+) -> UserRead:
+    """Combined session-or-API-key auth that does not hold a DB session.
+
+    Resolves the user from a session cookie/token *or* an API key inside a
+    short-lived session that is committed and closed before the path operation
+    runs. Unlike `get_current_active_user` (a generator dependency whose session
+    stays open for the whole request), this is required by endpoints that
+    execute a graph inline: a held auth connection contends with the run's own
+    writes (on SQLite it blocks the run's INSERTs with "database is locked").
+    """
+    from langflow.services.database.models.user.model import UserRead
+
+    async with session_scope() as db:
+        try:
+            user = await _auth_service().get_current_user(token, query_param, header_param, db)
+        except AuthenticationError as e:
+            raise _auth_error_to_http(e) from e
+        active_user = await _auth_service().get_current_active_user(user)
+        if active_user is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is inactive",
+            )
+        return UserRead.model_validate(active_user, from_attributes=True)
 
 
 async def get_optional_user(
@@ -369,30 +416,57 @@ def add_base64_padding(value: str) -> str:
 def ensure_fernet_key(secret_key: str) -> bytes:
     """Derive a valid Fernet key from a secret key string.
 
-    For short keys (< 32 chars), uses the key as a random seed to generate
-    a deterministic 32-byte key. For longer keys, adds base64 padding.
+    For short keys (< 32 chars), the 32-byte key is derived with SHA-256, a
+    cryptographic hash. For longer keys, base64 padding is added.
+
+    Security note: short keys previously seeded Python's ``random`` module to
+    generate key bytes. New encryption uses SHA-256 so it never depends on a
+    non-cryptographic PRNG or mutates global PRNG state. Short, guessable input
+    remains unsuitable for production; settings validation warns operators.
     """
-    MINIMUM_KEY_LENGTH = 32  # noqa: N806
-    if len(secret_key) < MINIMUM_KEY_LENGTH:
-        random.seed(secret_key)
-        key = bytes(random.getrandbits(8) for _ in range(32))
-        key = base64.urlsafe_b64encode(key)
+    if len(secret_key) < MINIMUM_SECRET_KEY_LENGTH:
+        digest = hashlib.sha256(secret_key.encode()).digest()  # 32 bytes
+        key = base64.urlsafe_b64encode(digest)
     else:
         key = add_base64_padding(secret_key).encode()
     return key
 
 
+def _ensure_legacy_fernet_key(secret_key: str) -> bytes:
+    """Reproduce the pre-1.10.1 short-secret key for decryption only.
+
+    This compatibility key must never be used for encryption. A local PRNG
+    instance reproduces the legacy bytes without mutating global random state.
+    """
+    legacy_random = random.Random(secret_key)  # noqa: S311
+    legacy_bytes = bytes(legacy_random.getrandbits(8) for _ in range(32))
+    return base64.urlsafe_b64encode(legacy_bytes)
+
+
 def get_fernet(settings_service: SettingsService) -> Fernet:
-    """Get a Fernet instance for encryption/decryption.
+    """Get the current Fernet instance used for encryption and decryption."""
+    secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
+    return Fernet(ensure_fernet_key(secret_key))
+
+
+def get_fernet_for_decryption(settings_service: SettingsService) -> Fernet | MultiFernet:
+    """Get a Fernet-compatible instance that can read legacy ciphertext.
 
     Args:
         settings_service: Settings service to get the secret key
 
     Returns:
-        Fernet instance for encryption/decryption
+        For short secrets, MultiFernet with the current key first and the
+        pre-1.10.1 key second. This function is used only for decryption; all
+        encryption goes through :func:`get_fernet` and the current key.
     """
     secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-    return Fernet(ensure_fernet_key(secret_key))
+    current_fernet = get_fernet(settings_service)
+    if len(secret_key) >= MINIMUM_SECRET_KEY_LENGTH:
+        return current_fernet
+
+    legacy_fernet = Fernet(_ensure_legacy_fernet_key(secret_key))
+    return MultiFernet([current_fernet, legacy_fernet])
 
 
 def encrypt_api_key(api_key: str, settings_service: SettingsService | None = None) -> str:  # noqa: ARG001

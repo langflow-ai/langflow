@@ -1,10 +1,14 @@
 from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock, patch
 
 import jwt
 import pytest
+from langflow.services.auth.exceptions import InvalidTokenError
 from langflow.services.database.models.auth import SSOUserProfile
 from langflow.services.database.models.user import User
-from langflow.services.deps import get_auth_service, get_settings_service, session_scope
+from langflow.services.deps import get_auth_service, get_db_service, get_settings_service, session_scope
+from lfx.services.settings.constants import DEFAULT_SUPERUSER, LEGACY_DEFAULT_SUPERUSER_PASSWORD
+from sqlalchemy import event
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 
@@ -115,9 +119,62 @@ async def test_login_unsuccessful_wrong_password(client, test_user, async_sessio
     assert response.json()["detail"] == "Incorrect username or password"
 
 
+async def test_login_rejects_legacy_default_superuser_password_when_auto_login_enabled(client):
+    settings = get_settings_service()
+    original_auto_login = settings.auth_settings.AUTO_LOGIN
+    original_superuser = settings.auth_settings.SUPERUSER
+    legacy_password = LEGACY_DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
+    settings.auth_settings.AUTO_LOGIN = True
+    settings.auth_settings.SUPERUSER = DEFAULT_SUPERUSER
+
+    async with session_scope() as session:
+        stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
+        user = (await session.exec(stmt)).first()
+        if user is None:
+            user = User(
+                username=DEFAULT_SUPERUSER,
+                password=get_auth_service().get_password_hash(legacy_password),
+                is_active=True,
+                is_superuser=True,
+            )
+            session.add(user)
+            await session.commit()
+        else:
+            user.password = get_auth_service().get_password_hash(legacy_password)
+            user.is_active = True
+            user.is_superuser = True
+            await session.commit()
+
+    try:
+        response = await client.post(
+            "api/v1/login",
+            data={"username": DEFAULT_SUPERUSER, "password": legacy_password},
+        )
+        assert response.status_code == 401
+        assert response.json()["detail"] == "Incorrect username or password"
+    finally:
+        settings.auth_settings.AUTO_LOGIN = original_auto_login
+        settings.auth_settings.SUPERUSER = original_superuser
+
+
 async def test_session_endpoint_unauthenticated(client):
     """Test /session endpoint returns authenticated=False for unauthenticated requests."""
     response = await client.get("api/v1/session")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["authenticated"] is False
+    assert data["user"] is None
+    assert data["store_api_key"] is None
+
+
+async def test_session_endpoint_invalid_token_returns_unauthenticated(client):
+    """Test /session endpoint handles invalid tokens as unauthenticated sessions."""
+    auth_service = AsyncMock()
+    auth_service.get_current_user_from_access_token.side_effect = InvalidTokenError("Invalid token")
+
+    with patch("langflow.api.v1.login.get_auth_service", return_value=auth_service):
+        response = await client.get("api/v1/session", headers={"Authorization": "Bearer invalid-token"})
+
     assert response.status_code == 200
     data = response.json()
     assert data["authenticated"] is False
@@ -185,6 +242,59 @@ async def test_session_endpoint_jit_creates_user_for_external_header(client, ext
     second_response = await client.get("api/v1/session", headers={_EXTERNAL_AUTH_HEADER: f"Bearer {token}"})
     assert second_response.status_code == 200
     assert second_response.json()["user"]["id"] == data["user"]["id"]
+
+
+async def test_jit_provisioning_orders_user_insert_before_profile_insert(client, external_auth_settings):  # noqa: ARG001
+    """Regression test for a ForeignKeyViolation seen on Postgres-backed instances.
+
+    SSOUserProfile.user_id (services/database/models/auth/sso.py) is a bare
+    SQLAlchemy FK column - no SQLModel Relationship() ties User and
+    SSOUserProfile together. Without a declared relationship, SQLAlchemy's
+    unit-of-work can't infer that the `user` row must be inserted before
+    `sso_user_profile` in the same flush, so the two INSERTs aren't
+    guaranteed to be ordered. On a backend that enforces FK constraints
+    immediately (Postgres), an unlucky order raises `ForeignKeyViolation` on
+    `sso_user_profile_user_id_fkey`. SQLite doesn't enforce FKs by default,
+    so the same misordering never surfaces there - this test asserts the
+    actual INSERT order at the engine level instead of relying on a
+    constraint violation, so it catches the regression on SQLite too.
+    """
+    token = _external_token(
+        sub="subject-order-check",
+        preferred_username="order-check-user",
+        email="order-check@example.com",
+        name="Order Check User",
+    )
+
+    insert_order = []
+
+    def _table_from_insert(statement: str) -> str | None:
+        normalized = " ".join(statement.split()).upper()
+        if not normalized.startswith("INSERT INTO"):
+            return None
+        target = normalized.removeprefix("INSERT INTO").strip().split(" ", 1)[0].strip('"')
+        return target.lower() if target.lower() in {"user", "sso_user_profile"} else None
+
+    def _before_cursor_execute(conn, cursor, statement, parameters, context, executemany):  # noqa: ARG001
+        table = _table_from_insert(statement)
+        if table is not None:
+            insert_order.append(table)
+
+    sync_engine = get_db_service().engine.sync_engine
+    event.listen(sync_engine, "before_cursor_execute", _before_cursor_execute)
+    try:
+        response = await client.get("api/v1/session", headers={_EXTERNAL_AUTH_HEADER: f"Bearer {token}"})
+    finally:
+        event.remove(sync_engine, "before_cursor_execute", _before_cursor_execute)
+
+    assert response.status_code == 200
+    assert response.json()["authenticated"] is True
+
+    assert "user" in insert_order
+    assert "sso_user_profile" in insert_order
+    assert insert_order.index("user") < insert_order.index("sso_user_profile"), (
+        f"Expected the 'user' INSERT to precede 'sso_user_profile', got order: {insert_order}"
+    )
 
 
 async def test_session_endpoint_accepts_external_cookie_with_custom_claim_mapping(client, external_auth_settings):

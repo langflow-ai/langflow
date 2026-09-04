@@ -8,6 +8,8 @@ import CustomChatInput from "@/customization/components/custom-chat-input";
 import useCustomUseFileHandler from "@/customization/hooks/use-custom-use-file-handler";
 import { track } from "@/customization/utils/analytics";
 import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
+import { ResponseCompleteStatus } from "@/shared/components/response-complete-status";
+import { useResponseCompleteCue } from "@/shared/hooks/use-response-complete-cue";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -117,6 +119,8 @@ export default function ChatView({
     setChatHistory(finalChatHistory);
   }, [messages, visibleSession]);
 
+  const responseCue = useResponseCompleteCue(isBuilding, chatHistory);
+
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -179,14 +183,24 @@ export default function ChatView({
       initial="instant"
     >
       <StickToBottom.Content className="flex flex-col min-h-full ">
-        <div className="flex flex-col flex-grow place-self-center w-5/6 max-w-[768px]">
+        {/* aria-live="off" neutralizes role="log"'s implicit politeness: React
+            remounts earlier messages on send (lastMessage flips), which a live
+            list region re-announces as additions — Safari/VoiceOver read the
+            whole history on every send (LE-2041 QA). The completion cue is
+            announced solely by ResponseCompleteStatus below. */}
+        <div
+          className="flex flex-col flex-grow place-self-center w-5/6 max-w-[768px]"
+          role="log"
+          aria-live="off"
+          aria-label={t("chat.messagesRegionLabel")}
+        >
           {chatHistory &&
             (isBuilding || chatHistory?.length > 0 ? (
               chatHistory?.map((chat, index) => (
                 <MemoizedChatMessage
                   chat={chat}
                   lastMessage={chatHistory.length - 1 === index}
-                  key={`${chat.id}-${index}`}
+                  key={chat.id}
                   updateChat={updateChat}
                   closeChat={closeChat}
                   playgroundPage={playgroundPage}
@@ -196,8 +210,8 @@ export default function ChatView({
               <div className="flex flex-grow w-full flex-col items-center justify-center">
                 <div className="flex flex-col items-center justify-center gap-4 p-8">
                   <LangflowLogo
-                    title={t("common.langflowLogo")}
                     className="h-10 w-10 scale-[1.5]"
+                    aria-hidden="true"
                   />
                   <div className="flex flex-col items-center justify-center">
                     <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
@@ -229,6 +243,11 @@ export default function ChatView({
             flowRunningSkeletonMemo}
         </div>
       </StickToBottom.Content>
+      <ResponseCompleteStatus
+        completedCount={responseCue.completedCount}
+        completedText={responseCue.completedText}
+        isAnnouncing={responseCue.isAnnouncing}
+      />
       <SafariScrollFix />
 
       <div className="m-auto w-full max-w-[768px] md:w-5/6">

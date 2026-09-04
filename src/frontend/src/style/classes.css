@@ -65,6 +65,9 @@ select:-webkit-autofill:focus {
   text-overflow: ellipsis;
 }
 
+/* Mouse-focus look for grid cells. The outline suppression is scoped to
+   :not(:focus-visible) so keyboard focus falls through to the grid ring in
+   ag-theme-shadcn.css (WCAG 2.4.7). */
 .ag-cell-focus {
   border-radius: 0.375rem;
   border: 1px solid #94a3b8 !important;
@@ -72,20 +75,17 @@ select:-webkit-autofill:focus {
   text-align: left;
   font-size: 0.875rem;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+.ag-cell-focus:not(:focus-visible) {
   outline: none !important;
   outline-color: transparent !important;
 }
 
-.ag-cell-focus:focus {
+.ag-cell-focus:focus:not(:focus-visible) {
   border-color: #94a3b8 !important;
   box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05) !important;
   background-color: transparent !important;
-  outline: none !important;
-  outline-color: transparent !important;
-}
-
-input .ag-cell-edit-input {
-  border: 1px solid transparent !important;
   outline: none !important;
   outline-color: transparent !important;
 }
@@ -110,20 +110,6 @@ textarea[class^="ag-"] {
   border: 1px solid transparent !important;
   outline: none !important;
   outline-color: transparent !important;
-  -webkit-box-shadow: none !important; /* Safari and older Chrome versions */
-  -moz-box-shadow: none !important; /* Older Firefox versions */
-  box-shadow: none !important; /* Standard syntax */
-}
-
-input[class^="ag-"][type="text"]:focus,
-input[class^="ag-"][type="number"]:focus,
-input[class^="ag-"][type="tel"]:focus,
-input[class^="ag-"][type="date"]:focus,
-input[class^="ag-"][type="datetime-local"]:focus,
-textarea[class^="ag-"]:focus {
-  border: 1px solid transparent !important;
-  outline-color: transparent !important;
-  outline: none !important;
   -webkit-box-shadow: none !important; /* Safari and older Chrome versions */
   -moz-box-shadow: none !important; /* Older Firefox versions */
   box-shadow: none !important; /* Standard syntax */
@@ -195,6 +181,30 @@ textarea[class^="ag-"]:focus {
 .react-flow__node-noteNode:not(.selected) {
   z-index: -1 !important;
 }
+
+/* A node awaiting human input paints above its neighbors (selected nodes sit at 1000),
+   so the inline decision card is never occluded by an overlapping node. */
+.react-flow__node:has([data-testid="human-input-node-badge"]) {
+  z-index: 1001 !important;
+}
+
+/* WCAG 2.4.7 — nodes and edges are tab stops, but React Flow's own stylesheet
+   clears their outline (.react-flow__node.selectable:focus-visible and
+   .react-flow__edge:focus-visible in @xyflow/react/dist/style.css), which also
+   suppresses the global :focus-visible fallback in index.css. That stylesheet is
+   imported from App.tsx and so lands after this file, hence the leading
+   .react-flow to out-specify it rather than !important.
+
+   Uses --ring, the app-wide focus token, not the --node-ring used for handle
+   halos: --node-ring is a light grey chosen to sit on a colored handle and does
+   not carry enough contrast to serve as a focus indicator on the canvas. */
+.react-flow .react-flow__node.selectable:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 3px;
+  border-radius: 0.75rem;
+}
+/* The matching edge indicator lives in App.css, next to the other
+   .react-flow__edge-path stroke rules it has to override. */
 
 .card-shine-effect {
   --shine-deg: 135deg;

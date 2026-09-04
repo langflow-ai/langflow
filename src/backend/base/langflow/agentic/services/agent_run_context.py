@@ -18,23 +18,40 @@ class AgentRunModel(TypedDict):
     provider: str | None
     model_name: str | None
     api_key_var: str | None
+    allow_configuration: bool
+
+
+class RequestedAgentModel(TypedDict):
+    provider: str
+    model_name: str
+    api_key_var: str | None
 
 
 _model_var: contextvars.ContextVar[AgentRunModel | None] = contextvars.ContextVar("agentic_run_model", default=None)
 
-# Separate from the run model above: this is the model the USER explicitly
-# named in their request (e.g. "use the OpenAI gpt-5.4 model"), extracted by
-# the TranslationFlow. When set it must WIN over both the LLM's choice and the
-# assistant's own runtime model — the canvas Agent has to reflect exactly what
-# the user asked for, never be silently swapped for the verified runtime model.
-_requested_model_var: contextvars.ContextVar[AgentRunModel | None] = contextvars.ContextVar(
+_requested_model_var: contextvars.ContextVar[RequestedAgentModel | None] = contextvars.ContextVar(
     "agentic_requested_model", default=None
 )
 
+_iterations_var: contextvars.ContextVar[int | None] = contextvars.ContextVar("agentic_run_iterations", default=None)
 
-def set_agent_run_model(provider: str | None, model_name: str | None, api_key_var: str | None) -> None:
-    """Bind the request's provider/model/api-key to the current context."""
-    _model_var.set({"provider": provider, "model_name": model_name, "api_key_var": api_key_var})
+
+def set_agent_run_model(
+    provider: str | None,
+    model_name: str | None,
+    api_key_var: str | None,
+    *,
+    allow_configuration: bool = True,
+) -> None:
+    """Bind the request model and whether it may be injected into the canvas."""
+    _model_var.set(
+        {
+            "provider": provider,
+            "model_name": model_name,
+            "api_key_var": api_key_var,
+            "allow_configuration": allow_configuration,
+        }
+    )
 
 
 def current_agent_run_model() -> AgentRunModel | None:
@@ -47,8 +64,35 @@ def reset_agent_run_model() -> None:
     _model_var.set(None)
 
 
+def set_agent_run_iterations(limit: int | None) -> None:
+    """Bind this turn's step budget (/iterations N) to the current context.
+
+    ``generate_component`` launches a nested assistant subflow mid agent loop;
+    without this binding that subflow keeps the default budget and the cost
+    cap only applies to the outer builder.
+    """
+    _iterations_var.set(limit)
+
+
+def current_agent_run_iterations() -> int | None:
+    """Return the bound step budget (or ``None`` when uncapped)."""
+    return _iterations_var.get()
+
+
+def reset_agent_run_iterations() -> None:
+    """Clear the binding. Idempotent; safe without a prior set."""
+    _iterations_var.set(None)
+
+
 def set_requested_agent_model(provider: str | None, model_name: str | None, api_key_var: str | None) -> None:
     """Bind the model the user EXPLICITLY named (or clear it when none was named).
+
+    Separate from the run model: this is the model the user named in their
+    request (e.g. "use the OpenAI gpt-5.4 model"), extracted by the
+    TranslationFlow. When set it must WIN over both the LLM's choice and the
+    assistant's own runtime model — the canvas Agent has to reflect exactly
+    what the user asked for, never be silently swapped for the verified
+    runtime model.
 
     Pass ``model_name=None`` to clear — the request named no model, so the
     normal fill-with-runtime-model behavior applies.
@@ -59,7 +103,7 @@ def set_requested_agent_model(provider: str | None, model_name: str | None, api_
         _requested_model_var.set(None)
 
 
-def current_requested_agent_model() -> AgentRunModel | None:
+def current_requested_agent_model() -> RequestedAgentModel | None:
     """Return the user's explicitly-requested model (or ``None`` when unset)."""
     return _requested_model_var.get()
 

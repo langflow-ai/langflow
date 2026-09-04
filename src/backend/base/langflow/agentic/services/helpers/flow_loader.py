@@ -9,7 +9,7 @@ import inspect
 import json
 import os
 import sys
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -110,6 +110,7 @@ async def _load_graph_from_python(
     provider: str | None = None,
     model_name: str | None = None,
     api_key_var: str | None = None,
+    provider_vars: dict[str, str] | None = None,
 ) -> "Graph":
     """Load a Graph from a Python flow file.
 
@@ -121,6 +122,8 @@ async def _load_graph_from_python(
         provider: Optional model provider (e.g., "OpenAI").
         model_name: Optional model name (e.g., "gpt-4o-mini").
         api_key_var: Optional API key variable name.
+        provider_vars: Resolved request variables; ``ITERATIONS_LIMIT`` is forwarded
+            to ``get_graph(iterations_limit=...)`` when the flow accepts it.
 
     Returns:
         Graph: The loaded and configured graph.
@@ -168,6 +171,12 @@ async def _load_graph_from_python(
         kwargs["model_name"] = model_name
     if "api_key_var" in sig.parameters and api_key_var:
         kwargs["api_key_var"] = api_key_var
+    # Python flows never pass through the JSON-side inject_iterations_into_flow,
+    # so the runtime step budget must be forwarded to get_graph explicitly.
+    raw_iterations = (provider_vars or {}).get("ITERATIONS_LIMIT")
+    if "iterations_limit" in sig.parameters and raw_iterations not in (None, ""):
+        with suppress(TypeError, ValueError):
+            kwargs["iterations_limit"] = int(raw_iterations)
 
     # Building the graph must not run inside the request's tracing context.
     # When trace_context_var is set, Component.get_langchain_callbacks() attaches
@@ -210,6 +219,7 @@ async def load_graph_for_execution(
     model_name: str | None = None,
     api_key_var: str | None = None,
     provider_vars: dict[str, str] | None = None,
+    history_limit: int | None = None,
 ) -> "Graph":
     """Load graph from either Python or JSON flow.
 
@@ -220,14 +230,15 @@ async def load_graph_for_execution(
         model_name: Model name for injection.
         api_key_var: API key variable name.
         provider_vars: Resolved provider variables (e.g., WATSONX_URL, WATSONX_PROJECT_ID).
+        history_limit: Optional Agent memory window (n_messages) for the /history command.
 
     Returns:
         Graph: Ready-to-execute graph instance.
     """
     if flow_type == "python":
-        return await _load_graph_from_python(flow_path, provider, model_name, api_key_var)
+        return await _load_graph_from_python(flow_path, provider, model_name, api_key_var, provider_vars)
 
     # JSON flow: use existing load_and_prepare_flow for model injection
-    flow_json = load_and_prepare_flow(flow_path, provider, model_name, api_key_var, provider_vars)
+    flow_json = load_and_prepare_flow(flow_path, provider, model_name, api_key_var, provider_vars, history_limit)
     flow_dict = json.loads(flow_json)
     return await aload_flow_from_json(flow_dict, disable_logs=True)

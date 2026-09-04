@@ -3,8 +3,8 @@ name: Release Bundles
 # Manually-triggered workflow for publishing stable `lfx-<name>` bundle wheels
 # from src/bundles/* to PyPI. Bundles change infrequently, so we release them
 # on demand rather than on a schedule. Re-running the workflow without a
-# version bump is a no-op (PyPI rejects the duplicate upload and we tolerate
-# the conflict).
+# version bump is a no-op only when the public wheel content matches the wheel
+# built by this run; an immutable-version/source mismatch fails actionably.
 
 on:
   workflow_dispatch:
@@ -34,12 +34,13 @@ jobs:
       bundles-found: ${{ steps.build.outputs.bundles-found }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ inputs.release_tag || github.ref }}
       - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
@@ -65,12 +66,40 @@ jobs:
           done
           echo "bundles-found=1" >> $GITHUB_OUTPUT
           ls -la bundles-dist/
-      # Bundles floor lfx at >=0.5.0 (no upper bound). The smoke test below
-      # installs the bundles in a fresh venv, so it needs an lfx wheel that
-      # satisfies the floor available locally — PyPI may not yet have a
-      # matching lfx published when bundles are released ahead of a main
-      # release. We build the lfx wheel from the current ref so the smoke
-      # test resolves against it; this artifact is not published.
+      - name: Generate reviewable bundle artifact plan
+        if: steps.build.outputs.bundles-found == '1'
+        run: |
+          python3 scripts/ci/bundle_release_plan.py artifacts \
+            --output bundle-artifact-plan.json \
+            bundles-dist/*.whl
+      - name: Upload bundle artifact plan
+        if: steps.build.outputs.bundles-found == '1'
+        uses: actions/upload-artifact@v7
+        with:
+          name: bundle-artifact-plan
+          path: bundle-artifact-plan.json
+      # Bundles floor lfx at the release line they were cut from (e.g.
+      # ">=1.11.6,<1.12"). The smoke test below installs the bundles into a
+      # fresh venv, so it needs an lfx satisfying that floor to be resolvable
+      # — PyPI may not yet have a matching lfx published when bundles are
+      # released ahead of a main release. We build an lfx wheel from the
+      # current ref and hand it to the smoke test via --find-links so it can
+      # serve as a *fallback* source; this artifact is not published.
+      #
+      # Do not pass this wheel as an explicit path argument: a wheel path is a
+      # direct-file requirement, which pins lfx to exactly that file's version
+      # and removes the registry as a source for it. If the ref's lfx version
+      # ever lags the bundles' floor, the resolve fails even when a satisfying
+      # lfx is published — that deadlocked every 1.11.x bundle release until
+      # the maintenance branch was bumped. --find-links keeps the local wheel
+      # as a candidate without excluding PyPI.
+      - name: Build langflow-sdk wheel for smoke test
+        if: steps.build.outputs.bundles-found == '1'
+        run: |
+          mkdir -p sdk-dist
+          SDK_DIST="$PWD/sdk-dist"
+          (cd src/sdk && uv build --wheel --out-dir "$SDK_DIST")
+          ls -la sdk-dist/
       - name: Build lfx wheel for smoke test
         if: steps.build.outputs.bundles-found == '1'
         run: |
@@ -80,16 +109,22 @@ jobs:
           ls -la lfx-dist/
       - name: Upload bundles artifact
         if: steps.build.outputs.bundles-found == '1'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dist-bundles
           path: bundles-dist
       - name: Upload lfx artifact (smoke-test only; not published)
         if: steps.build.outputs.bundles-found == '1'
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: dist-lfx-smoketest
           path: lfx-dist
+      - name: Upload langflow-sdk artifact (smoke-test only; not published)
+        if: steps.build.outputs.bundles-found == '1'
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist-sdk-smoketest
+          path: sdk-dist
 
   test-install:
     name: Install Smoke Test - ${{ matrix.os }} ${{ matrix.python-version }}
@@ -114,24 +149,30 @@ jobs:
             python-version: "3.12"
     steps:
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
       - name: Setup UV
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: false
           ignore-empty-workdir: true
       - name: Download bundles artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-bundles
           path: ./bundles-dist
       - name: Download lfx artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-lfx-smoketest
           path: ./lfx-dist
+      - name: Download langflow-sdk artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: dist-sdk-smoketest
+          path: ./sdk-dist
       - name: Create fresh virtual environment
         run: uv venv test-env --seed
         shell: bash
@@ -140,34 +181,44 @@ jobs:
         run: |
           shopt -s nullglob
           BUNDLE_WHEELS=(./bundles-dist/*.whl)
+          SDK_WHEELS=(./sdk-dist/*.whl)
           LFX_WHEELS=(./lfx-dist/*.whl)
           if [ ${#BUNDLE_WHEELS[@]} -eq 0 ]; then
             echo "No bundle wheels found in ./bundles-dist/"
+            exit 1
+          fi
+          if [ ${#SDK_WHEELS[@]} -eq 0 ]; then
+            echo "No langflow-sdk wheel found in ./sdk-dist/"
             exit 1
           fi
           if [ ${#LFX_WHEELS[@]} -eq 0 ]; then
             echo "No lfx wheel found in ./lfx-dist/"
             exit 1
           fi
-          printf 'Installing: %s\n' "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
-          uv pip install --prerelease=allow --python ./test-env/bin/python "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
+          printf 'Installing: %s\n' "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
+          uv pip install --prerelease=if-necessary-or-explicit --python ./test-env/bin/python --find-links ./lfx-dist "${SDK_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
         shell: bash
       - name: Install lfx + bundle wheels (Windows)
         if: matrix.os == 'windows'
         run: |
           shopt -s nullglob
           BUNDLE_WHEELS=(./bundles-dist/*.whl)
+          SDK_WHEELS=(./sdk-dist/*.whl)
           LFX_WHEELS=(./lfx-dist/*.whl)
           if [ ${#BUNDLE_WHEELS[@]} -eq 0 ]; then
             echo "No bundle wheels found in ./bundles-dist/"
+            exit 1
+          fi
+          if [ ${#SDK_WHEELS[@]} -eq 0 ]; then
+            echo "No langflow-sdk wheel found in ./sdk-dist/"
             exit 1
           fi
           if [ ${#LFX_WHEELS[@]} -eq 0 ]; then
             echo "No lfx wheel found in ./lfx-dist/"
             exit 1
           fi
-          printf 'Installing: %s\n' "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
-          uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
+          printf 'Installing: %s\n' "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
+          uv pip install --prerelease=if-necessary-or-explicit --python ./test-env/Scripts/python.exe --find-links ./lfx-dist "${SDK_WHEELS[@]}" "${BUNDLE_WHEELS[@]}"
         shell: bash
 
   publish-bundles:
@@ -182,42 +233,36 @@ jobs:
       needs.test-install.result == 'success'
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_tag || github.ref }}
       - name: Download bundles artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-bundles
           path: bundles-dist
       - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: false
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Publish bundles to PyPI
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          shopt -s nullglob
-          wheels=(bundles-dist/*.whl)
-          if [ ${#wheels[@]} -eq 0 ]; then
-            echo "No bundle wheels to publish."
-            exit 0
-          fi
-          failed=0
-          for wheel in "${wheels[@]}"; do
-            echo "Publishing $wheel"
-            # Capture stderr so we can tolerate "already exists" without failing
-            # the whole run — re-running this workflow without bumping a bundle
-            # version should be a no-op for that bundle.
-            if ! err=$(uv publish "$wheel" 2>&1); then
-              echo "$err"
-              if echo "$err" | grep -qiE 'already exists|file already exists|HTTP 400|duplicate'; then
-                echo "Skipping $wheel: already published."
-              else
-                echo "Publish failed for $wheel"
-                failed=1
-              fi
-            fi
-          done
-          if [ "$failed" = "1" ]; then
-            exit 1
-          fi
+          python3 scripts/ci/bundle_release_plan.py publish \
+            --publish-attempts 5 \
+            --publish-delay 60 \
+            --verify-attempts 10 \
+            --verify-delay 30 \
+            --output bundle-publish-result.json \
+            bundles-dist/*.whl
+      - name: Upload bundle publish result
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: bundle-publish-result
+          path: bundle-publish-result.json
+          if-no-files-found: ignore

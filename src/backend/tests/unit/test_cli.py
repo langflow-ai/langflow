@@ -8,6 +8,7 @@ import pytest
 import typer
 from langflow.__main__ import (
     DIRECT_UVICORN_PLATFORMS,
+    MULTI_WORKER_BYPASS_ENV_VAR,
     _create_superuser,
     api_key_banner,
     app,
@@ -15,6 +16,7 @@ from langflow.__main__ import (
     clamp_uvicorn_workers,
     ensure_multi_worker_safe,
     get_number_of_workers,
+    multi_worker_bypass_warning,
     use_direct_uvicorn,
 )
 from lfx.services import deps
@@ -131,8 +133,8 @@ class TestSuperuserCommand:
 
     @pytest.mark.skip(reason="Skip -- default superuser is created by initialize_services() function")
     @pytest.mark.asyncio
-    async def test_auto_login_forces_default_credentials(self, client):
-        """Test AUTO_LOGIN=true forces default credentials."""
+    async def test_auto_login_uses_bootstrap_superuser(self, client):
+        """Test AUTO_LOGIN=true bootstraps the configured superuser."""
         # Since client fixture already creates default user, we need to test in a clean DB scenario
         # But that's why this test is skipped - the behavior is already handled by initialize_services
 
@@ -263,6 +265,23 @@ def test_build_direct_uvicorn_kwargs_forwards_tls_paths():
     assert result["ssl_keyfile"] == "/etc/key.pem"
 
 
+def test_build_direct_uvicorn_kwargs_starts_each_request_task_from_a_clean_context():
+    """Direct-uvicorn startup must opt into uvicorn's per-request context reset.
+
+    Same reason as ``LangflowUvicornWorker.CONFIG_KWARGS`` on the Gunicorn path: a pipelined
+    request is started from inside the finishing request's task, and the copied context
+    otherwise carries that request's ended server span into the new one, which OpenTelemetry
+    reports as nesting. Kept on both paths so platform parity does not drift.
+
+    Asserted through a real ``uvicorn.Config`` so a renamed or rejected option fails here.
+    """
+    import uvicorn
+
+    config = uvicorn.Config("langflow.main:create_app", **build_direct_uvicorn_kwargs(**_kwargs()))
+
+    assert config.reset_contextvars is True
+
+
 def test_build_direct_uvicorn_kwargs_forwards_none_when_no_tls():
     # Plain HTTP startup: cert/key remain None so uvicorn doesn't try to load anything.
     result = build_direct_uvicorn_kwargs(**_kwargs())
@@ -331,6 +350,7 @@ def test_build_direct_uvicorn_kwargs_pins_full_shape():
         "ssl_certfile",
         "ssl_keyfile",
         "forwarded_allow_ips",
+        "reset_contextvars",
     }
     assert result["reload"] is False
 
@@ -348,8 +368,13 @@ def test_ensure_multi_worker_safe_allows_single_worker():
     ensure_multi_worker_safe(num_workers=1)
 
 
-def _settings_service_with_queue(queue_type: str) -> SimpleNamespace:
-    return SimpleNamespace(settings=SimpleNamespace(job_queue_type=queue_type))
+def _settings_service_with_queue(queue_type: str, *, bypass: bool = False) -> SimpleNamespace:
+    return SimpleNamespace(
+        settings=SimpleNamespace(
+            job_queue_type=queue_type,
+            dangerously_allow_multi_worker_without_shared_queue=bypass,
+        )
+    )
 
 
 def test_ensure_multi_worker_safe_refuses_multiple_workers():
@@ -387,3 +412,134 @@ def test_ensure_multi_worker_safe_allows_redis_queue():
     """Redis-backed job queue shares state across workers; multi-worker is safe."""
     with patch("langflow.__main__.get_settings_service", return_value=_settings_service_with_queue("redis")):
         ensure_multi_worker_safe(num_workers=4)
+
+
+# ---------------------------------------------------------------------------
+# ensure_multi_worker_safe: LANGFLOW_DANGEROUSLY_ALLOW_MULTI_WORKER_WITHOUT_SHARED_QUEUE
+# turns the refusal into a loud warning. The flag does not make multi-worker
+# safe — it only lets a headless deployment that never touches the UI or MCP
+# over SSE trade those features for worker throughput without standing up Redis.
+# ---------------------------------------------------------------------------
+
+
+def _capture_startup_warnings(monkeypatch) -> list[str]:
+    """Record ``logger.warning`` calls made by ``langflow.__main__``.
+
+    ``logger`` is a structlog BoundLogger that may be filtered out entirely at
+    the configured level, so asserting on caplog would make the test depend on
+    log configuration. Swapping the module-level symbol for a recorder captures
+    exactly what the guard emits.
+    """
+    captured: list[str] = []
+
+    class _Recorder:
+        def warning(self, msg: str, *args: object, **_kwargs: object) -> None:
+            captured.append(msg % args if args else msg)
+
+        def __getattr__(self, _name: str):  # pragma: no cover - swallow other levels
+            return lambda *_a, **_k: None
+
+    import langflow.__main__ as langflow_main
+
+    monkeypatch.setattr(langflow_main, "logger", _Recorder())
+    return captured
+
+
+def test_ensure_multi_worker_safe_bypass_allows_multiple_workers(monkeypatch):
+    """The opt-in flag must let the in-memory queue boot with workers > 1."""
+    _capture_startup_warnings(monkeypatch)
+    with patch(
+        "langflow.__main__.get_settings_service",
+        return_value=_settings_service_with_queue("asyncio", bypass=True),
+    ):
+        ensure_multi_worker_safe(num_workers=4)
+
+
+def test_ensure_multi_worker_safe_bypass_warns_about_ui_and_mcp_sse(monkeypatch):
+    """Booting under the bypass must name the two features it breaks outright."""
+    warnings = _capture_startup_warnings(monkeypatch)
+    with patch(
+        "langflow.__main__.get_settings_service",
+        return_value=_settings_service_with_queue("asyncio", bypass=True),
+    ):
+        ensure_multi_worker_safe(num_workers=4)
+
+    assert len(warnings) == 1
+    msg = warnings[0]
+    # The operator must be able to tie a broken editor/playground back to this flag.
+    assert "/build" in msg
+    assert "playground" in msg
+    # MCP over SSE needs the stream and its POST endpoint in one process; the
+    # warning has to point at the transport that does work.
+    assert "SSE" in msg
+    assert "Streamable HTTP" in msg
+    # ...and it must still name the supported alternative.
+    assert "LANGFLOW_JOB_QUEUE_TYPE=redis" in msg
+    # The flag that caused this is named so the config is greppable.
+    assert MULTI_WORKER_BYPASS_ENV_VAR in msg
+
+
+def test_multi_worker_bypass_warning_lists_the_degraded_subsystems():
+    """Every subsystem that silently degrades to per-worker must be spelled out.
+
+    These are not startup failures — they are behaviors that quietly change
+    meaning under multiple workers, so the boot warning is the only place an
+    operator learns about them.
+    """
+    from langflow.services.background_execution.live_bus import _DURABLE_POLL_INTERVAL_S
+
+    msg = multi_worker_bypass_warning(num_workers=4)
+
+    # Reattach falls back to polling the durable log; quote the real interval so
+    # the warning cannot drift from the constant the bus actually uses.
+    assert str(_DURABLE_POLL_INTERVAL_S) in msg
+    # Rate limits are counted per worker unless the storage URI is shared.
+    assert "LANGFLOW_RATE_LIMIT_STORAGE_URI" in msg
+    # The orphan-sweep lock is a file lock, so it is node-local, not cluster-wide.
+    assert "orphan-sweep" in msg
+    # Webhook UI feedback needs the browser and the request on the same worker.
+    assert "Webhook" in msg
+    assert "4 workers" in msg
+
+
+def test_ensure_multi_worker_safe_redis_never_warns_even_with_bypass_set(monkeypatch):
+    """A Redis queue is safe; a stale bypass flag must not produce scary output.
+
+    Redis short-circuits before the bypass is consulted, so a correctly
+    configured deployment that leaves the flag set in its environment sees
+    nothing at all.
+    """
+    warnings = _capture_startup_warnings(monkeypatch)
+    with patch(
+        "langflow.__main__.get_settings_service",
+        return_value=_settings_service_with_queue("redis", bypass=True),
+    ):
+        ensure_multi_worker_safe(num_workers=4)
+
+    assert warnings == []
+
+
+def test_ensure_multi_worker_safe_bypass_off_still_refuses(monkeypatch):
+    """The flag is opt-in: the default must keep refusing to boot."""
+    warnings = _capture_startup_warnings(monkeypatch)
+    with (
+        patch(
+            "langflow.__main__.get_settings_service",
+            return_value=_settings_service_with_queue("asyncio", bypass=False),
+        ),
+        pytest.raises(RuntimeError),
+    ):
+        ensure_multi_worker_safe(num_workers=4)
+
+    assert warnings == []
+
+
+def test_ensure_multi_worker_safe_error_points_at_the_bypass_flag():
+    """The refusal must tell headless operators the escape hatch exists."""
+    with (
+        patch("langflow.__main__.get_settings_service", return_value=_settings_service_with_queue("asyncio")),
+        pytest.raises(RuntimeError) as exc_info,
+    ):
+        ensure_multi_worker_safe(num_workers=3)
+
+    assert MULTI_WORKER_BYPASS_ENV_VAR in str(exc_info.value)

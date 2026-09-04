@@ -1,5 +1,5 @@
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -14,6 +14,10 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import {
+  PermissionsProvider,
+  usePermissions,
+} from "@/contexts/permissionsContext";
 import { useUpdateUser } from "@/controllers/API/queries/auth";
 import {
   usePatchFolders,
@@ -21,10 +25,8 @@ import {
   usePostUploadFolders,
 } from "@/controllers/API/queries/folders";
 import { useGetDownloadFolders } from "@/controllers/API/queries/folders/use-get-download-folders";
-import { CustomStoreButton } from "@/customization/components/custom-store-button";
 import {
   ENABLE_CUSTOM_PARAM,
-  ENABLE_DATASTAX_LANGFLOW,
   ENABLE_FILE_MANAGEMENT,
   ENABLE_KNOWLEDGE_BASES,
   ENABLE_MCP_NOTICE,
@@ -38,6 +40,8 @@ import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useIsMobile } from "@/hooks/use-mobile";
 import useAuthStore from "@/stores/authStore";
 import type { FlowType } from "@/types/flow";
+import { extractApiErrorMessages } from "@/utils/apiError";
+import { getProjectDisplayName } from "@/utils/project-display-name";
 import type { FolderType } from "../../../../../pages/MainPage/entities";
 import useAlertStore from "../../../../../stores/alertStore";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
@@ -58,6 +62,17 @@ type SideBarFoldersButtonsComponentProps = {
 };
 
 type UploadedFlowFile = FlowType | { flows: FlowType[] };
+
+const ProjectRenamePermission = ({
+  projectId,
+  children,
+}: {
+  projectId: string;
+  children: (canRename: boolean) => ReactNode;
+}) => {
+  const { can } = usePermissions();
+  return children(can(projectId, "write"));
+};
 
 const SideBarFoldersButtonsComponent = ({
   handleChangeFolder,
@@ -96,10 +111,31 @@ const SideBarFoldersButtonsComponent = ({
 
   const { dragOver, dragEnter, dragLeave, onDrop } = useFileDrop(folderId);
   const uploadFlow = useUploadFlow();
-  const [foldersNames, setFoldersNames] = useState({});
+  const [foldersNames, setFoldersNames] = useState<Record<string, string>>({});
   const [editFolders, setEditFolderName] = useState(
-    folders.map((obj) => ({ name: obj.name, edit: false })) ?? [],
+    folders.map((obj) => ({ id: obj.id!, edit: false })) ?? [],
   );
+
+  // Committing or cancelling a rename unmounts the input while it still holds
+  // focus, dropping focus to <body> and forcing a keyboard user to tab from the
+  // top of the page. Hand focus back to the project's nav item instead — but
+  // only when focus was actually lost, so clicking straight to another control
+  // isn't yanked back here.
+  const renamingFolderId =
+    editFolders.find((folder) => folder.edit)?.id ?? null;
+  const previousRenamingFolderId = useRef<string | null>(null);
+
+  useEffect(() => {
+    const justFinished = previousRenamingFolderId.current;
+    previousRenamingFolderId.current = renamingFolderId;
+
+    if (!justFinished || renamingFolderId) return;
+    if (document.activeElement && document.activeElement !== document.body) {
+      return;
+    }
+
+    document.getElementById(`sidebar-nav-${justFinished}`)?.focus();
+  }, [renamingFolderId]);
 
   const isFetchingFolders = !!useIsFetching({
     queryKey: ["useGetFolders"],
@@ -224,44 +260,48 @@ const SideBarFoldersButtonsComponent = ({
           track("Create New Project");
           handleChangeFolder!(folder.id);
         },
+        onError: (error) => {
+          setErrorData({
+            title: t("sidebar.projectCreateError"),
+            list: extractApiErrorMessages(error),
+          });
+        },
       },
     );
   }
 
-  function handleEditFolderName(e, name): void {
+  function handleEditFolderName(e, folderId): void {
     const {
       target: { value },
     } = e;
     setFoldersNames((old) => ({
       ...old,
-      [name]: value,
+      [folderId]: value,
     }));
   }
 
   useEffect(() => {
     if (folders && folders.length > 0) {
-      setEditFolderName(
-        folders.map((obj) => ({ name: obj.name, edit: false })),
-      );
+      setEditFolderName(folders.map((obj) => ({ id: obj.id!, edit: false })));
     }
   }, [folders]);
 
   const handleEditNameFolder = async (item) => {
     const newEditFolders = editFolders.map((obj) => {
-      if (obj.name === item.name) {
-        return { name: item.name, edit: false };
+      if (obj.id === item.id) {
+        return { id: item.id, edit: false };
       }
-      return { name: obj.name, edit: false };
+      return { id: obj.id, edit: false };
     });
     setEditFolderName(newEditFolders);
-    if (foldersNames[item.name].trim() !== "") {
+    if (foldersNames[item.id].trim() !== "") {
       setFoldersNames((old) => ({
         ...old,
-        [item.name]: foldersNames[item.name],
+        [item.id]: foldersNames[item.id],
       }));
       const body = {
         ...item,
-        name: foldersNames[item.name],
+        name: foldersNames[item.id],
         flows: item.flows?.length > 0 ? item.flows : [],
         components: item.components?.length > 0 ? item.components : [],
       };
@@ -283,7 +323,7 @@ const SideBarFoldersButtonsComponent = ({
             setFoldersNames({});
             setEditFolderName(
               folders.map((obj) => ({
-                name: obj.name,
+                id: obj.id!,
                 edit: false,
               })),
             );
@@ -293,7 +333,7 @@ const SideBarFoldersButtonsComponent = ({
     } else {
       setFoldersNames((old) => ({
         ...old,
-        [item.name]: item.name,
+        [item.id]: item.name,
       }));
     }
   };
@@ -306,26 +346,26 @@ const SideBarFoldersButtonsComponent = ({
   };
 
   const handleSelectFolderToRename = (item) => {
-    if (!foldersNames[item.name]) {
-      setFoldersNames({ [item.name]: item.name });
+    if (!foldersNames[item.id]) {
+      setFoldersNames({ [item.id]: item.name });
     }
 
-    if (editFolders.find((obj) => obj.name === item.name)?.name) {
+    if (editFolders.some((obj) => obj.id === item.id)) {
       const newEditFolders = editFolders.map((obj) => {
-        if (obj.name === item.name) {
-          return { name: item.name, edit: true };
+        if (obj.id === item.id) {
+          return { id: item.id, edit: true };
         }
-        return { name: obj.name, edit: false };
+        return { id: obj.id, edit: false };
       });
       setEditFolderName(newEditFolders);
       takeSnapshot();
       return;
     }
 
-    setEditFolderName((old) => [...old, { name: item.name, edit: true }]);
+    setEditFolderName((old) => [...old, { id: item.id, edit: true }]);
     setFoldersNames((oldFolder) => ({
       ...oldFolder,
-      [item.name]: item.name,
+      [item.id]: item.name,
     }));
     takeSnapshot();
   };
@@ -333,16 +373,16 @@ const SideBarFoldersButtonsComponent = ({
   const handleKeyDownFn = (e, item) => {
     if (e.key === "Escape") {
       const newEditFolders = editFolders.map((obj) => {
-        if (obj.name === item.name) {
-          return { name: item.name, edit: false };
+        if (obj.id === item.id) {
+          return { id: item.id, edit: false };
         }
-        return { name: obj.name, edit: false };
+        return { id: obj.id, edit: false };
       });
       setEditFolderName(newEditFolders);
       setFoldersNames({});
       setEditFolderName(
         folders.map((obj) => ({
-          name: obj.name,
+          id: obj.id!,
           edit: false,
         })),
       );
@@ -387,6 +427,7 @@ const SideBarFoldersButtonsComponent = ({
     <Sidebar
       collapsible={isMobile ? "offcanvas" : "none"}
       data-testid="project-sidebar"
+      aria-labelledby="project-sidebar-title"
     >
       <SidebarHeader className="px-4 py-1">
         <HeaderButtons
@@ -399,96 +440,119 @@ const SideBarFoldersButtonsComponent = ({
       <SidebarContent>
         <SidebarGroup className="p-4 py-2">
           <SidebarGroupContent>
-            <SidebarMenu>
-              {!loading ? (
-                folders.length === 0 ? (
-                  <div className="px-2 py-5 text-center text-sm text-muted-foreground">
-                    {t("sidebar.emptyMessage")}
-                  </div>
-                ) : (
-                  folders.map((item, index) => {
-                    const editFolderName = editFolders?.filter(
-                      (folder) => folder.name === item.name,
-                    )[0];
-                    return (
-                      <SidebarMenuItem
-                        key={index}
-                        className="group/menu-button"
-                        onMouseEnter={() => setHoveredFolderId(item.id!)}
-                        onMouseLeave={() => setHoveredFolderId(null)}
-                      >
-                        <div className="relative flex w-full">
-                          <SidebarMenuButton
-                            size="md"
-                            onDragOver={(e) => dragOver(e, item.id!)}
-                            onDragEnter={(e) => dragEnter(e, item.id!)}
-                            onDragLeave={dragLeave}
-                            onDrop={(e) => onDrop(e, item.id!)}
-                            key={item.id}
-                            data-testid={`sidebar-nav-${item.name}`}
-                            id={`sidebar-nav-${item.name}`}
-                            isActive={checkPathName(item.id!)}
-                            onClick={() => handleChangeFolder!(item.id!)}
-                            className={cn(
-                              "flex-grow pr-8",
-                              hoveredFolderId === item.id && "bg-accent",
-                              checkHoveringFolder(item.id!),
-                            )}
-                          >
-                            <div
-                              onDoubleClick={(event) => {
-                                handleDoubleClick(event, item);
-                              }}
-                              className="flex w-full items-center justify-between gap-2"
-                            >
-                              <div className="flex flex-1 items-center gap-2">
-                                {editFolderName?.edit && !isUpdatingFolder ? (
-                                  <InputEditFolderName
-                                    handleEditFolderName={handleEditFolderName}
-                                    item={item}
-                                    refInput={refInput}
-                                    handleKeyDownFn={handleKeyDownFn}
-                                    handleEditNameFolder={handleEditNameFolder}
-                                    editFolderName={editFolderName}
-                                    foldersNames={foldersNames}
-                                    handleKeyDown={handleKeyDown}
-                                  />
-                                ) : (
-                                  <span className="block w-0 grow truncate text-sm opacity-100">
-                                    {item.name}
-                                  </span>
-                                )}
-                              </div>
+            <PermissionsProvider
+              resourceType="project"
+              resourceIds={folders
+                .map((folder) => folder.id ?? "")
+                .filter(Boolean)}
+            >
+              <SidebarMenu>
+                {!loading ? (
+                  folders.length === 0 ? (
+                    <div className="px-2 py-5 text-center text-sm text-muted-foreground">
+                      {t("sidebar.emptyMessage")}
+                    </div>
+                  ) : (
+                    folders.map((item) => {
+                      const editFolderName = editFolders?.filter(
+                        (folder) => folder.id === item.id,
+                      )[0];
+                      return (
+                        <SidebarMenuItem
+                          key={item.id}
+                          className="group/menu-button"
+                          data-project-id={item.id}
+                          onMouseEnter={() => setHoveredFolderId(item.id!)}
+                          onMouseLeave={() => setHoveredFolderId(null)}
+                        >
+                          <div className="relative flex w-full">
+                            <ProjectRenamePermission projectId={item.id!}>
+                              {(canRename) => (
+                                <SidebarMenuButton
+                                  size="md"
+                                  onDragOver={(e) => dragOver(e, item.id!)}
+                                  onDragEnter={(e) => dragEnter(e, item.id!)}
+                                  onDragLeave={dragLeave}
+                                  onDrop={(e) => onDrop(e, item.id!)}
+                                  key={item.id}
+                                  data-testid={`sidebar-nav-${item.id}`}
+                                  id={`sidebar-nav-${item.id}`}
+                                  isActive={checkPathName(item.id!)}
+                                  onClick={() => handleChangeFolder!(item.id!)}
+                                  onDoubleClick={(event) => {
+                                    if (canRename) {
+                                      handleDoubleClick(event, item);
+                                    }
+                                  }}
+                                  className={cn(
+                                    "flex-grow pr-8",
+                                    hoveredFolderId === item.id && "bg-accent",
+                                    checkHoveringFolder(item.id!),
+                                  )}
+                                >
+                                  <div className="flex w-full items-center justify-between gap-2">
+                                    <div className="flex flex-1 items-center gap-2">
+                                      {editFolderName?.edit &&
+                                      !isUpdatingFolder ? (
+                                        <InputEditFolderName
+                                          handleEditFolderName={
+                                            handleEditFolderName
+                                          }
+                                          item={item}
+                                          refInput={refInput}
+                                          handleKeyDownFn={handleKeyDownFn}
+                                          handleEditNameFolder={
+                                            handleEditNameFolder
+                                          }
+                                          editFolderName={editFolderName}
+                                          foldersNames={foldersNames}
+                                          handleKeyDown={handleKeyDown}
+                                        />
+                                      ) : (
+                                        <span
+                                          className="block w-0 grow truncate text-sm opacity-100"
+                                          // The sidebar cannot be widened, so a
+                                          // truncated name is otherwise
+                                          // unreadable. With one default project
+                                          // per user the list fills with rows
+                                          // that differ only in the truncated
+                                          // part.
+                                          title={getProjectDisplayName(item, t)}
+                                        >
+                                          {getProjectDisplayName(item, t)}
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </SidebarMenuButton>
+                              )}
+                            </ProjectRenamePermission>
+                            <div className="absolute right-2 top-[0.45rem] flex items-center hover:text-foreground">
+                              <SelectOptions
+                                item={item}
+                                handleDeleteFolder={handleDeleteFolder}
+                                handleDownloadFolder={() =>
+                                  handleDownloadFolder(item.id!, item.name)
+                                }
+                                handleSelectFolderToRename={
+                                  handleSelectFolderToRename
+                                }
+                                checkPathName={checkPathName}
+                              />
                             </div>
-                          </SidebarMenuButton>
-                          <div
-                            className="absolute right-2 top-[0.45rem] flex items-center hover:text-foreground"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <SelectOptions
-                              item={item}
-                              handleDeleteFolder={handleDeleteFolder}
-                              handleDownloadFolder={() =>
-                                handleDownloadFolder(item.id!, item.name)
-                              }
-                              handleSelectFolderToRename={
-                                handleSelectFolderToRename
-                              }
-                              checkPathName={checkPathName}
-                            />
                           </div>
-                        </div>
-                      </SidebarMenuItem>
-                    );
-                  })
-                )
-              ) : (
-                <>
-                  <SidebarFolderSkeleton />
-                  <SidebarFolderSkeleton />
-                </>
-              )}
-            </SidebarMenu>
+                        </SidebarMenuItem>
+                      );
+                    })
+                  )
+                ) : (
+                  <>
+                    <SidebarFolderSkeleton />
+                    <SidebarFolderSkeleton />
+                  </>
+                )}
+              </SidebarMenu>
+            </PermissionsProvider>
           </SidebarGroupContent>
         </SidebarGroup>
         <div className="flex-1" />
@@ -502,8 +566,6 @@ const SideBarFoldersButtonsComponent = ({
       {ENABLE_FILE_MANAGEMENT && (
         <SidebarFooter className="border-t">
           <div className="grid w-full items-center gap-2 p-2">
-            {/* TODO: Remove this on cleanup */}
-            {ENABLE_DATASTAX_LANGFLOW && <CustomStoreButton />}{" "}
             {ENABLE_KNOWLEDGE_BASES && (
               <SidebarMenuButton
                 onClick={handleKnowledgeNavigation}

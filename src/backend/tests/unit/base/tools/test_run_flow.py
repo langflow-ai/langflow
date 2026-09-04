@@ -1,16 +1,25 @@
+from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, Mock, PropertyMock, patch
 from uuid import uuid4
 
 import pytest
 from lfx.base.tools.run_flow import RunFlowBaseComponent
+from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
 from lfx.interface.components import component_cache
+from lfx.processing.process import process_tweaks_on_graph
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.services.cache.utils import CacheMiss
 from lfx.template.field.base import Output
 from lfx.utils.flow_validation import CustomComponentValidationError
+
+
+@asynccontextmanager
+async def _authorized_target_scope(**_kwargs):
+    """Unit-test seam; target-scope behavior has dedicated DB-backed coverage."""
+    yield
 
 
 @pytest.fixture
@@ -68,6 +77,14 @@ class TestRunFlowBaseComponentInitialization:
 
 class TestRunFlowBaseComponentFlowRetrieval:
     """Test flow retrieval methods."""
+
+    @pytest.fixture(autouse=True)
+    def _target_scope(self):
+        with patch(
+            "lfx.base.tools.run_flow.scoped_model_provider_policy_for_target_flow",
+            _authorized_target_scope,
+        ):
+            yield
 
     @pytest.mark.asyncio
     async def test_get_flow_with_id(self):
@@ -141,6 +158,7 @@ class TestRunFlowBaseComponentFlowRetrieval:
         updated_at = "2024-01-01T00:00:00Z"
 
         mock_graph = MagicMock(spec=Graph)
+        mock_graph.flow_id = flow_id
         mock_graph.updated_at = updated_at
 
         with (
@@ -198,6 +216,7 @@ class TestRunFlowBaseComponentFlowRetrieval:
         new_updated_at = "2024-01-02T00:00:00Z"
 
         stale_graph = MagicMock(spec=Graph)
+        stale_graph.flow_id = flow_id
         stale_graph.updated_at = old_updated_at
 
         flow_data = Data(
@@ -873,25 +892,68 @@ class TestRunFlowBaseComponentUpdateOutputs:
 class TestRunFlowBaseComponentTweaks:
     """Test tweak processing methods."""
 
-    def test_process_tweaks_on_graph(self):
-        """Test _process_tweaks_on_graph applies tweaks to vertices."""
-        component = RunFlowBaseComponent()
+    def _graph_with(self, *vertices):
         graph = MagicMock(spec=Graph)
-        vertex1 = MagicMock(spec=Vertex)
-        vertex1.id = "vertex1"
-        vertex2 = MagicMock(spec=Vertex)
-        vertex2.id = "vertex2"
-        graph.vertices = [vertex1, vertex2]
+        graph.vertices = list(vertices)
+        return graph
+
+    def _vertex(self, vertex_id, template, node_type):
+        vertex = MagicMock(spec=Vertex)
+        vertex.id = vertex_id
+        vertex.data = {"type": node_type, "node": {"template": template}}
+        vertex.params = {}
+        vertex.load_from_db_fields = []
+        return vertex
+
+    def test_process_tweaks_on_graph_applies_declared_fields(self):
+        """An ordinary tweak reaches the vertex; unknown keys and ids are skipped.
+
+        The component no longer owns a private copy of this logic. It calls the
+        shared helper so the graph path enforces the same floor as the sync path.
+        """
+        vertex1 = self._vertex("vertex1", {"param": {"type": "str"}}, "TextInput")
+        vertex2 = self._vertex("vertex2", {"param": {"type": "str"}}, "TextInput")
+        graph = self._graph_with(vertex1, vertex2)
 
         tweaks = {
-            "vertex1": {"param": "value", "code": "ignored"},
+            "vertex1": {"param": "value", "undeclared": "ignored"},
             "vertex3": {"param": "ignored"},  # Not in graph
         }
 
-        component._process_tweaks_on_graph(graph, tweaks)
+        process_tweaks_on_graph(graph, tweaks)
 
         vertex1.update_raw_params.assert_called_once()
-        call_args = vertex1.update_raw_params.call_args[0][0]
-        assert call_args == {"param": "value"}
-        assert "code" not in call_args
+        assert vertex1.update_raw_params.call_args[0][0] == {"param": "value"}
         vertex2.update_raw_params.assert_not_called()
+
+    def test_process_tweaks_on_graph_refuses_protected_fields(self):
+        """A protected field is refused, and the refusal applies nothing at all.
+
+        ``function_code`` on a code-execution component is sandbox-widening. The
+        accepted sibling must not be written either: this graph is cached and
+        reused, so a partial write would survive into later runs.
+        """
+        vertex1 = self._vertex(
+            "vertex1",
+            {
+                "param": {"type": "str"},
+                "code": {"type": "code"},
+                "function_code": {"type": "str"},
+            },
+            "PythonFunction",
+        )
+        graph = self._graph_with(vertex1)
+
+        tweaks = {
+            "vertex1": {
+                "param": "value",
+                "code": "ignored",
+                "function_code": "def run():\n    return __import__('os').system('id')",
+            }
+        }
+
+        with pytest.raises(TweakRefusedError) as exc_info:
+            process_tweaks_on_graph(graph, tweaks)
+
+        assert set(exc_info.value.refused) == {"code", "function_code"}
+        vertex1.update_raw_params.assert_not_called()

@@ -24,13 +24,16 @@ compatibility is still enforced at load time by each ``extension.json``'s
 
 Idempotent: re-running with the same version is a no-op (so it is safe to call
 unconditionally from ``make patch``, including patch releases within a minor
-line where the floor does not move).  Only the bundle's ``"lfx<op>..."``
+line where the floor does not move).  Because it runs unconditionally, the
+rewrite is a RATCHET: a pin already narrower than the generated one is kept
+(see ``ratchet_spec``), so a hand-tightened maintenance pin survives a
+``make patch`` on its branch.  Only the bundle's ``"lfx<op>..."``
 runtime dependency is rewritten -- self-references such as
-``"lfx-docling[local]"`` and the nightly ``"lfx-nightly=="`` form are left
+``"lfx-docling[local]"`` and the legacy ``"lfx-nightly=="`` form are left
 untouched (neither has a bare version operator immediately after ``lfx``).
 
 Stdlib only, so it runs in any CI checkout (same constraint as the sibling
-``scripts/ci/update_bundle_versions.py`` and ``scripts/migrate/port_bundle.py``).
+``scripts/migrate/port_bundle.py``).
 
 Usage:
     python scripts/ci/sync_bundle_lfx_pin.py 1.10.0
@@ -47,7 +50,8 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 # Matches a bundle's ``"lfx<op>VERSION[,<UPPER]"`` runtime dependency. The
 # version operator immediately after ``lfx`` is what distinguishes the runtime
 # dep from self-refs like ``"lfx-docling[local]"`` (a ``-`` follows ``lfx``)
-# and the nightly ``"lfx-nightly=="`` rename produced by update_bundle_versions.
+# and the legacy ``"lfx-nightly=="`` form from the retired nightly bundle
+# rename track (see src/bundles/NIGHTLY.md).
 _LFX_DEP_PATTERN = re.compile(
     r'"lfx(?:>=|~=|==)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*'
     r'(?:,\s*<[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*)?"'
@@ -55,6 +59,67 @@ _LFX_DEP_PATTERN = re.compile(
 
 # Parses the leading ``X.Y`` out of an ``X.Y.Z`` (optionally ``vX.Y.Z``) version.
 _VERSION_RE = re.compile(r"^(\d+)\.(\d+)\.\d+")
+
+
+# Parses a PEP 440 version into a sortable key.  Stdlib only (no ``packaging``),
+# so this covers just the forms bundle pins actually use: a dotted release with
+# an optional ``dev``/``a``/``b``/``rc``/``post`` suffix.
+_PEP440_RE = re.compile(r"^(?P<rel>\d+(?:\.\d+)*)(?:\.?(?P<stage>post|dev|a|b|rc)(?P<n>\d+))?$")
+_STAGE_ORDER = {"dev": 0, "a": 1, "b": 2, "rc": 3, "": 4, "post": 5}
+
+# The canonical generated pin, ``lfx>=FLOOR,<CAP``.  Only pins already in this
+# exact shape are ratcheted; legacy forms (``~=``, ``==``, uncapped) are still
+# normalised wholesale.
+_CANONICAL_PIN_RE = re.compile(
+    r"^lfx>=(?P<floor>[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*)"
+    r",\s*<(?P<cap>[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*)$"
+)
+
+
+def _version_key(version: str) -> tuple[tuple[int, ...], int, int]:
+    """Sortable PEP 440 key.  ``1.12`` and ``1.12.0`` compare equal."""
+    match = _PEP440_RE.match(version)
+    if not match:
+        msg = f"Unparseable version {version!r} in an lfx pin"
+        raise ValueError(msg)
+    release = [int(part) for part in match.group("rel").split(".")]
+    release += [0] * (4 - len(release))
+    return tuple(release[:4]), _STAGE_ORDER[match.group("stage") or ""], int(match.group("n") or 0)
+
+
+def ratchet_spec(existing: str, generated: str) -> str:
+    """Tighten-only merge of a bundle's existing ``lfx`` pin with the generated one.
+
+    ``make patch`` calls this module unconditionally, so a hand-tightened pin
+    has to survive it.  The 1.11.x maintenance bundles are pinned
+    ``lfx>=1.11.6,<1.12`` -- deliberately narrower than the generated
+    ``lfx>=1.11.0.dev0,<2.0.0`` -- because the 1.11 and 1.12 lines publish
+    bundles into one PyPI name/number space.  Regenerating the coarse cap
+    there would let a 1.11-line bundle satisfy a 1.12 install, and since the
+    1.11 bundle numbers currently sort HIGHER, the resolver would prefer it:
+    ``langflow==1.12`` would silently install 1.11-line bundle code.  That is
+    the same defect that made ``langflow==1.11.6`` unresolvable, pointed the
+    other way, and it fails silently instead of loudly.
+
+    So take the intersection: the higher floor and the lower cap.
+
+    The exception is a line move.  When the existing cap excludes the target
+    line outright (a bundle pinned ``<1.12`` being synced to 1.12) the
+    intersection would be empty, so the generated pin supersedes instead.
+    """
+    existing_match = _CANONICAL_PIN_RE.match(existing)
+    generated_match = _CANONICAL_PIN_RE.match(generated)
+    if not existing_match or not generated_match:
+        return generated
+
+    generated_floor = generated_match.group("floor")
+    line_key = _version_key(".".join([*generated_floor.split(".")[:2], "0"]))
+    if _version_key(existing_match.group("cap")) <= line_key:
+        return generated
+
+    floor = max(existing_match.group("floor"), generated_floor, key=_version_key)
+    cap = min(existing_match.group("cap"), generated_match.group("cap"), key=_version_key)
+    return f"lfx>={floor},<{cap}"
 
 
 def lfx_floor_spec(version: str) -> str:
@@ -77,12 +142,29 @@ def lfx_floor_spec(version: str) -> str:
 
 
 def rewrite_lfx_dep(content: str, floor_spec: str) -> str:
-    """Rewrite the bundle's ``lfx`` runtime dep to ``floor_spec``. Idempotent.
+    """Rewrite the bundle's ``lfx`` runtime dep toward ``floor_spec``. Idempotent.
 
-    Only the first (runtime) ``"lfx<op>..."`` specifier is touched; self-refs
-    and the nightly form do not match ``_LFX_DEP_PATTERN``.
+    The write is ratcheted through ``ratchet_spec``, so an existing pin
+    narrower than ``floor_spec`` is preserved rather than widened.
+
+    Only the first (runtime) ``"lfx<op>..."`` specifier on a NON-comment line
+    is touched; self-refs and the nightly form do not match
+    ``_LFX_DEP_PATTERN``.  Comment lines are skipped because the
+    ``port_bundle.py`` pyproject template quotes an example pin in a comment
+    ABOVE the dependencies block -- a whole-text first-match rewrite would
+    update the example and silently leave the real dep stale.
     """
-    return _LFX_DEP_PATTERN.sub(f'"{floor_spec}"', content, count=1)
+    lines = content.splitlines(keepends=True)
+    for i, line in enumerate(lines):
+        if line.lstrip().startswith("#"):
+            continue
+        new_line, n = _LFX_DEP_PATTERN.subn(
+            lambda match: f'"{ratchet_spec(match.group(0)[1:-1], floor_spec)}"', line, count=1
+        )
+        if n:
+            lines[i] = new_line
+            return "".join(lines)
+    return content
 
 
 def sync_bundles(version: str, bundles_dir: Path) -> list[tuple[str, bool]]:

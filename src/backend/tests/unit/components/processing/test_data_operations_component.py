@@ -168,30 +168,6 @@ class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
         assert result.data["existing_key"] == "updated_value"
         assert result.data["new_key"] == "new_value"
 
-    def test_filter_values(self):
-        """Test the Filter Values operation."""
-        nested_data = {
-            "items": [
-                {"id": 1, "name": "Item 1"},
-                {"id": 2, "name": "Item 2"},
-                {"id": 3, "name": "Different Item"},
-            ]
-        }
-
-        component = DataOperationsComponent(
-            data=Data(data=nested_data),
-            operations=[{"name": "Filter Values"}],
-            filter_key=["items"],
-            filter_values={"name": "Item"},
-            operator="contains",
-        )
-
-        result = component.as_data()
-        assert isinstance(result, Data)
-        assert len(result.data["items"]) == 3
-        assert result.data["items"][0]["id"] == 1
-        assert result.data["items"][1]["id"] == 2
-
     def test_no_actions(self):
         """Test behavior when no actions are specified."""
         component = DataOperationsComponent(
@@ -231,6 +207,15 @@ class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(ValueError, match="Select Keys operation is not supported for multiple data objects"):
             component.as_data()
 
+    def test_removed_operation_raises_instead_of_returning_empty(self):
+        """A persisted flow referencing the removed 'Filter Values' op fails fast, not silently."""
+        component = DataOperationsComponent(
+            data=Data(data={"items": [{"name": "a"}]}),
+            operations=[{"name": "Filter Values"}],
+        )
+        with pytest.raises(ValueError, match="no longer supported"):
+            component.as_data()
+
     def test_update_build_config_clears_input_fields_when_operation_removed(self):
         """Test that removing the selected operation hides all operation-specific input fields."""
         from lfx.schema.dotdict import dotdict
@@ -239,23 +224,21 @@ class TestDataOperationsComponent(ComponentTestBaseWithoutClient):
             data=Data(data={"key1": "value1"}),
             operations=[],
         )
-        # Simulate build_config after "Filter Values" was selected (operation-specific fields visible)
+        # Simulate build_config after "Rename Keys" was selected (operation-specific fields visible)
         build_config = dotdict(
             {
                 "operations": {"value": [], "show": True},
                 "data": {"value": None, "show": True},
-                "filter_key": {"value": [], "show": True},
-                "operator": {"value": "equals", "show": True},
-                "filter_values": {"value": {}, "show": True},
+                "rename_keys_input": {"value": {"old_key": "new_key"}, "show": True},
+                "remove_keys_input": {"value": [], "show": True},
                 "select_keys_input": {"value": [], "show": False},
             }
         )
         result = component.update_build_config(build_config, [], "operations")
 
         # All operation-specific fields should be hidden when no operation is selected
-        assert result["filter_key"]["show"] is False
-        assert result["operator"]["show"] is False
-        assert result["filter_values"]["show"] is False
+        assert result["rename_keys_input"]["show"] is False
+        assert result["remove_keys_input"]["show"] is False
         assert result["select_keys_input"]["show"] is False
         # Default fields (operations, data) should remain visible
         assert result["operations"]["show"] is True

@@ -4,6 +4,30 @@ on:
   pull_request:
     paths:
       - "scripts/ci/**"
+      - ".github/workflows/ci-scripts-test.yml"
+      - "pyproject.toml"
+      - "src/bundles/*/pyproject.toml"
+      - "src/bundles/lfx-bundles/src/lfx_bundles/*/__init__.py"
+      - "src/backend/base/langflow/api/build.py"
+      - "src/backend/base/langflow/api/v1/a2a.py"
+      - "src/backend/base/langflow/api/v1/chat.py"
+      - "src/backend/base/langflow/api/v1/deployments.py"
+      - "src/backend/base/langflow/api/v1/endpoints.py"
+      - "src/backend/base/langflow/api/v1/mcp.py"
+      - "src/backend/base/langflow/api/v1/mcp_projects.py"
+      - "src/backend/base/langflow/api/v1/openai_responses.py"
+      - "src/backend/base/langflow/api/v1/voice_mode.py"
+      - "src/backend/base/langflow/api/v2/workflow*.py"
+      - "src/backend/base/langflow/api/utils/execution_errors.py"
+      - "src/backend/base/langflow/services/background_execution/**"
+      - "src/backend/base/langflow/services/job_queue/**"
+      - "src/backend/tests/unit/api/**"
+      - "src/backend/tests/unit/background_execution/**"
+      - "src/backend/tests/unit/services/background_execution/**"
+      - "src/backend/tests/unit/test_redis_job_queue_service.py"
+      - "src/lfx/src/lfx/schema/message.py"
+      - "src/lfx/tests/unit/schema/test_message_content_blocks.py"
+      - "src/lfx/src/lfx/workflow/**"
   workflow_dispatch:
 
 jobs:
@@ -13,15 +37,15 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.13"
 
       - name: Install dependencies
-        run: pip install pytest requests packaging
+        run: pip install orjson packaging pytest requests
 
       - name: Run CI script tests
         run: python -m pytest scripts/ci/ -v

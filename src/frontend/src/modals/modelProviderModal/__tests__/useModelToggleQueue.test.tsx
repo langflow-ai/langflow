@@ -1,7 +1,23 @@
 import { renderHook } from "@testing-library/react";
 import { act } from "react";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
+import type { ModelType } from "@/types/models";
 import { useModelToggleQueue } from "../hooks/useModelToggleQueue";
+
+type TypedModelToggle = (
+  modelName: string,
+  enabled: boolean,
+  modelType: ModelType,
+) => void;
+
+const invokeTypedToggle = (
+  toggle: TypedModelToggle,
+  modelName: string,
+  enabled: boolean,
+  modelType: ModelType,
+) => {
+  toggle(modelName, enabled, modelType);
+};
 
 // ---------------------------------------------------------------------------
 // React Query — capture invocation order on the shared mock so the test can
@@ -29,6 +45,11 @@ const trackingQueryClient = {
   getQueryData: jest.fn(() => ({
     enabled_models: { OpenAI: { "gpt-4": true } },
   })),
+  getQueryState: jest.fn(() => ({
+    status: "success",
+    fetchStatus: "idle",
+    isInvalidated: false,
+  })),
   invalidateQueries: jest.fn((...args: unknown[]) => {
     recordedCalls.push({ method: "invalidateQueries", args });
     return Promise.resolve();
@@ -43,8 +64,29 @@ jest.mock("@tanstack/react-query", () => ({
 // react when a refetch lands. The shared mock starts with the same baseline
 // the trackingQueryClient holds.
 jest.mock("@/controllers/API/queries/models/use-get-enabled-models", () => ({
+  getEnabledModelsQueryKey: jest.fn(
+    (params?: { flowId?: string; projectId?: string; purpose?: string }) =>
+      params?.flowId || params?.projectId || params?.purpose
+        ? [
+            "useGetEnabledModels",
+            params?.flowId,
+            params?.projectId,
+            params?.purpose,
+          ]
+        : ["useGetEnabledModels"],
+  ),
   useGetEnabledModels: jest.fn(() => ({
-    data: { enabled_models: { OpenAI: { "gpt-4": true } } },
+    data: {
+      enabled_models: {
+        OpenAI: { "gpt-4": true },
+        "Azure AI Foundry": { shared: true },
+        Anthropic: { "claude-3": true },
+      },
+    },
+    isSuccess: true,
+    isFetching: false,
+    isFetchedAfterMount: true,
+    fetchStatus: "idle",
   })),
 }));
 
@@ -52,7 +94,12 @@ jest.mock("@/controllers/API/queries/models/use-get-enabled-models", () => ({
 // flush sends ONLY the unsent slice, never re-sending an in-flight overlay,
 // and can drive ``onError`` / ``onSettled`` via the captured callbacks.
 const mutationCalls: Array<{
-  updates: { provider: string; model_id: string; enabled: boolean }[];
+  updates: {
+    provider: string;
+    model_id: string;
+    enabled: boolean;
+    model_type: ModelType;
+  }[];
 }> = [];
 const mutationCallbacks: Array<{
   onError?: (error: unknown) => void;
@@ -78,6 +125,10 @@ jest.mock("@/controllers/API/queries/models/use-update-enabled-models", () => ({
 // tests that exercise the awaitable ``flushPendingChanges`` path don't, so
 // ``unsentToggles`` is still populated when the explicit flush runs.
 let pendingDebouncedFns: Array<() => void> = [];
+let latestDebouncedCallback: (() => unknown) | undefined;
+let stableDebouncedFunction:
+  | (((...args: unknown[]) => void) & { cancel: jest.Mock })
+  | undefined;
 const runDebounced = () => {
   const fns = pendingDebouncedFns;
   pendingDebouncedFns = [];
@@ -85,13 +136,18 @@ const runDebounced = () => {
 };
 jest.mock("@/hooks/use-debounce", () => ({
   useDebounce: (fn: (...args: unknown[]) => unknown) => {
-    const wrapped = (..._args: unknown[]) => {
-      pendingDebouncedFns.push(() => fn());
-    };
-    (wrapped as unknown as { cancel: () => void }).cancel = jest.fn(() => {
-      pendingDebouncedFns = [];
-    });
-    return wrapped;
+    latestDebouncedCallback = fn;
+    if (!stableDebouncedFunction) {
+      const wrapped = (..._args: unknown[]) => {
+        pendingDebouncedFns.push(() => latestDebouncedCallback?.());
+      };
+      stableDebouncedFunction = Object.assign(wrapped, {
+        cancel: jest.fn(() => {
+          pendingDebouncedFns = [];
+        }),
+      });
+    }
+    return stableDebouncedFunction;
   },
 }));
 
@@ -118,29 +174,231 @@ describe("useModelToggleQueue", () => {
     mutationCalls.length = 0;
     mutationCallbacks.length = 0;
     pendingDebouncedFns = [];
+    latestDebouncedCallback = undefined;
+    stableDebouncedFunction = undefined;
     trackingQueryClient.cancelQueries.mockClear();
     trackingQueryClient.setQueryData.mockClear();
     trackingQueryClient.getQueryData.mockClear();
+    trackingQueryClient.getQueryState.mockReset();
+    trackingQueryClient.getQueryState.mockReturnValue({
+      status: "success",
+      fetchStatus: "idle",
+      isInvalidated: false,
+    });
     trackingQueryClient.invalidateQueries.mockClear();
+    const mockedEnabled = useGetEnabledModels as jest.MockedFunction<
+      typeof useGetEnabledModels
+    >;
+    mockedEnabled.mockReturnValue({
+      data: {
+        enabled_models: {
+          OpenAI: { "gpt-4": true },
+          "Azure AI Foundry": { shared: true },
+          Anthropic: { "claude-3": true },
+        },
+      },
+      isSuccess: true,
+      isFetching: false,
+      isFetchedAfterMount: true,
+      fetchStatus: "idle",
+    } as unknown as ReturnType<typeof useGetEnabledModels>);
     mockRefreshAllModelInputs.mockClear();
     mockSetErrorData.mockClear();
   });
 
+  it("loads toggle state with configuration authorization", () => {
+    renderHook(() =>
+      useModelToggleQueue({
+        providerName: "OpenAI",
+        flowId: "flow-one",
+        projectId: "project-one",
+      }),
+    );
+
+    expect(useGetEnabledModels).toHaveBeenCalledWith({
+      flowId: "flow-one",
+      projectId: "project-one",
+      purpose: "configure",
+    });
+  });
+
   describe("optimistic update", () => {
+    it("rejects a stale selected provider omitted from the fresh catalog", () => {
+      const mockedEnabled = useGetEnabledModels as jest.MockedFunction<
+        typeof useGetEnabledModels
+      >;
+      mockedEnabled.mockReturnValue({
+        data: { enabled_models: { Anthropic: { "claude-3": true } } },
+        isSuccess: true,
+        isFetching: false,
+        isFetchedAfterMount: true,
+        fetchStatus: "idle",
+      } as unknown as ReturnType<typeof useGetEnabledModels>);
+
+      const { result } = renderHook(() =>
+        useModelToggleQueue({ providerName: "OpenAI" }),
+      );
+
+      act(() => {
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          true,
+          "llm",
+        );
+        runDebounced();
+      });
+
+      expect(mutationCalls).toHaveLength(0);
+      expect(trackingQueryClient.setQueryData).not.toHaveBeenCalled();
+    });
+
+    it("discards a pending overlay instead of re-adding a revoked provider", () => {
+      const mockedEnabled = useGetEnabledModels as jest.MockedFunction<
+        typeof useGetEnabledModels
+      >;
+      const { result, rerender } = renderHook(() =>
+        useModelToggleQueue({ providerName: "OpenAI" }),
+      );
+
+      act(() => {
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
+      });
+      const callsBeforeRevocation =
+        trackingQueryClient.setQueryData.mock.calls.length;
+
+      mockedEnabled.mockReturnValue({
+        data: { enabled_models: { Anthropic: { "claude-3": true } } },
+        isSuccess: true,
+        isFetching: false,
+        isFetchedAfterMount: true,
+        fetchStatus: "idle",
+      } as unknown as ReturnType<typeof useGetEnabledModels>);
+      rerender();
+
+      const callsAfterRevocation =
+        trackingQueryClient.setQueryData.mock.calls.slice(
+          callsBeforeRevocation,
+        );
+      expect(callsAfterRevocation).not.toContainEqual([
+        ["useGetEnabledModels", undefined, undefined, "configure"],
+        expect.any(Function),
+      ]);
+      expect(trackingQueryClient.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["useGetEnabledModels", undefined, undefined, "configure"],
+        exact: true,
+      });
+      act(() => runDebounced());
+      expect(mutationCalls).toHaveLength(0);
+    });
+
+    it("discards a queued toggle when the selected provider changes", () => {
+      const { result, rerender } = renderHook(
+        ({ providerName }) => useModelToggleQueue({ providerName }),
+        { initialProps: { providerName: "OpenAI" } },
+      );
+
+      act(() => {
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "shared-model",
+          false,
+          "llm",
+        );
+      });
+      rerender({ providerName: "Anthropic" });
+      act(() => runDebounced());
+
+      expect(mutationCalls).toHaveLength(0);
+      expect(trackingQueryClient.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["useGetEnabledModels", undefined, undefined, "configure"],
+        exact: true,
+      });
+      expect(mockSetErrorData).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Error updating model status" }),
+      );
+    });
+
+    it("never sends an old flow toggle using a newly selected flow scope", () => {
+      const { result, rerender } = renderHook(
+        ({ flowId }) => useModelToggleQueue({ providerName: "OpenAI", flowId }),
+        { initialProps: { flowId: "flow-one" } },
+      );
+
+      act(() => {
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
+      });
+      rerender({ flowId: "flow-two" });
+      act(() => runDebounced());
+
+      expect(mutationCalls).toHaveLength(0);
+      expect(trackingQueryClient.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["useGetEnabledModels", "flow-one", undefined, "configure"],
+        exact: true,
+      });
+    });
+
+    it("cancels and discards a queued toggle when a scoped owner unmounts", () => {
+      const { result, unmount } = renderHook(() =>
+        useModelToggleQueue({
+          providerName: "OpenAI",
+          flowId: "flow-one",
+          projectId: "project-one",
+        }),
+      );
+
+      act(() => {
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
+      });
+      unmount();
+      act(() => runDebounced());
+
+      expect(mutationCalls).toHaveLength(0);
+      expect(trackingQueryClient.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: [
+          "useGetEnabledModels",
+          "flow-one",
+          "project-one",
+          "configure",
+        ],
+        exact: true,
+      });
+    });
+
     it("cancels in-flight useGetEnabledModels refetches before the optimistic cache update", () => {
       const { result } = renderHook(() =>
         useModelToggleQueue({ providerName: "OpenAI" }),
       );
 
       act(() => {
-        result.current.handleModelToggle("gpt-4", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
       });
 
       expect(trackingQueryClient.cancelQueries).toHaveBeenCalledWith({
-        queryKey: ["useGetEnabledModels"],
+        queryKey: ["useGetEnabledModels", undefined, undefined, "configure"],
       });
       expect(trackingQueryClient.setQueryData).toHaveBeenCalledWith(
-        ["useGetEnabledModels"],
+        ["useGetEnabledModels", undefined, undefined, "configure"],
         expect.any(Function),
       );
 
@@ -156,17 +414,167 @@ describe("useModelToggleQueue", () => {
       expect(cancelIdx).toBeLessThan(setIdx);
     });
 
+    it("disables only the selected type and keeps the flat union enabled", () => {
+      const { result } = renderHook(() =>
+        useModelToggleQueue({ providerName: "Azure AI Foundry" }),
+      );
+
+      act(() => {
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "shared",
+          false,
+          "llm",
+        );
+      });
+
+      const updater = trackingQueryClient.setQueryData.mock.calls[0][1] as (
+        old: unknown,
+      ) => unknown;
+      const updated = updater({
+        enabled_models: {
+          "Azure AI Foundry": { shared: true },
+        },
+        enabled_models_by_type: {
+          "Azure AI Foundry": {
+            llm: { shared: true },
+            embeddings: { shared: true },
+          },
+        },
+      }) as {
+        enabled_models: Record<string, Record<string, boolean>>;
+        enabled_models_by_type: Record<
+          string,
+          Record<ModelType, Record<string, boolean>>
+        >;
+      };
+
+      expect(
+        updated.enabled_models_by_type["Azure AI Foundry"].llm.shared,
+      ).toBe(false);
+      expect(
+        updated.enabled_models_by_type["Azure AI Foundry"].embeddings.shared,
+      ).toBe(true);
+      expect(updated.enabled_models["Azure AI Foundry"].shared).toBe(true);
+    });
+
+    it("falls back per provider when only another provider has typed status", () => {
+      const { result } = renderHook(() =>
+        useModelToggleQueue({ providerName: "OpenAI" }),
+      );
+
+      act(() => {
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
+      });
+
+      const updater = trackingQueryClient.setQueryData.mock.calls[0][1] as (
+        old: unknown,
+      ) => unknown;
+      const updated = updater({
+        enabled_models: {
+          OpenAI: { "gpt-4": true },
+          Anthropic: { "claude-3": true },
+        },
+        enabled_models_by_type: {
+          Anthropic: { llm: { "claude-3": true } },
+        },
+      }) as {
+        enabled_models: Record<string, Record<string, boolean>>;
+        enabled_models_by_type: Record<
+          string,
+          Partial<Record<ModelType, Record<string, boolean>>>
+        >;
+      };
+
+      expect(updated.enabled_models.OpenAI["gpt-4"]).toBe(false);
+      expect(updated.enabled_models_by_type.OpenAI).toBeUndefined();
+      expect(updated.enabled_models_by_type.Anthropic.llm?.["claude-3"]).toBe(
+        true,
+      );
+    });
+
     it("no-ops when no provider is selected", () => {
       const { result } = renderHook(() =>
         useModelToggleQueue({ providerName: null }),
       );
 
       act(() => {
-        result.current.handleModelToggle("gpt-4", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
       });
 
       expect(trackingQueryClient.cancelQueries).not.toHaveBeenCalled();
       expect(trackingQueryClient.setQueryData).not.toHaveBeenCalled();
+    });
+
+    it("no-ops while enabled-model status is still refetching", () => {
+      const mockedEnabled = useGetEnabledModels as jest.MockedFunction<
+        typeof useGetEnabledModels
+      >;
+      mockedEnabled.mockReturnValue({
+        data: { enabled_models: { OpenAI: { "gpt-4": true } } },
+        isSuccess: true,
+        isFetching: true,
+        isFetchedAfterMount: false,
+        fetchStatus: "fetching",
+      } as unknown as ReturnType<typeof useGetEnabledModels>);
+      trackingQueryClient.getQueryState.mockReturnValue({
+        status: "success",
+        fetchStatus: "fetching",
+        isInvalidated: false,
+      });
+
+      const { result } = renderHook(() =>
+        useModelToggleQueue({ providerName: "OpenAI" }),
+      );
+
+      act(() => {
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
+        runDebounced();
+      });
+
+      expect(trackingQueryClient.cancelQueries).not.toHaveBeenCalled();
+      expect(trackingQueryClient.setQueryData).not.toHaveBeenCalled();
+      expect(mutationCalls).toHaveLength(0);
+    });
+
+    it("re-checks the exact cache state and rejects an invalidated snapshot", () => {
+      trackingQueryClient.getQueryState.mockReturnValue({
+        status: "success",
+        fetchStatus: "idle",
+        isInvalidated: true,
+      });
+      const { result } = renderHook(() =>
+        useModelToggleQueue({ providerName: "OpenAI" }),
+      );
+
+      act(() => {
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
+        runDebounced();
+      });
+
+      expect(trackingQueryClient.cancelQueries).not.toHaveBeenCalled();
+      expect(trackingQueryClient.setQueryData).not.toHaveBeenCalled();
+      expect(mutationCalls).toHaveLength(0);
     });
   });
 
@@ -179,6 +587,10 @@ describe("useModelToggleQueue", () => {
       // Initial render: gpt-4 enabled on the server.
       mockedEnabled.mockReturnValue({
         data: { enabled_models: { OpenAI: { "gpt-4": true } } },
+        isSuccess: true,
+        isFetching: false,
+        isFetchedAfterMount: true,
+        fetchStatus: "idle",
       } as unknown as ReturnType<typeof useGetEnabledModels>);
 
       const { result, rerender } = renderHook(() =>
@@ -187,7 +599,12 @@ describe("useModelToggleQueue", () => {
 
       // User toggles gpt-4 off — overlay now holds {gpt-4: false}.
       act(() => {
-        result.current.handleModelToggle("gpt-4", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
       });
       expect(trackingQueryClient.setQueryData).toHaveBeenCalled();
 
@@ -199,12 +616,16 @@ describe("useModelToggleQueue", () => {
       // reports the still-stale server state (gpt-4: true).
       mockedEnabled.mockReturnValue({
         data: { enabled_models: { OpenAI: { "gpt-4": true } } },
+        isSuccess: true,
+        isFetching: true,
+        isFetchedAfterMount: false,
+        fetchStatus: "fetching",
       } as unknown as ReturnType<typeof useGetEnabledModels>);
       rerender();
 
       // The effect detects drift and re-applies the overlay.
       expect(trackingQueryClient.setQueryData).toHaveBeenCalledWith(
-        ["useGetEnabledModels"],
+        ["useGetEnabledModels", undefined, undefined, "configure"],
         expect.any(Function),
       );
 
@@ -224,6 +645,10 @@ describe("useModelToggleQueue", () => {
       >;
       mockedEnabled.mockReturnValue({
         data: { enabled_models: { OpenAI: { "gpt-4": true } } },
+        isSuccess: true,
+        isFetching: false,
+        isFetchedAfterMount: true,
+        fetchStatus: "idle",
       } as unknown as ReturnType<typeof useGetEnabledModels>);
 
       renderHook(() => useModelToggleQueue({ providerName: "OpenAI" }));
@@ -234,6 +659,70 @@ describe("useModelToggleQueue", () => {
   });
 
   describe("send buffer", () => {
+    it("re-checks cache trust before flushing an already queued toggle", () => {
+      const { result } = renderHook(() =>
+        useModelToggleQueue({ providerName: "OpenAI" }),
+      );
+
+      act(() => {
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
+      });
+      trackingQueryClient.getQueryState.mockReturnValue({
+        status: "success",
+        fetchStatus: "idle",
+        isInvalidated: true,
+      });
+
+      act(() => {
+        runDebounced();
+      });
+
+      expect(mutationCalls).toHaveLength(0);
+    });
+
+    it("preserves the same deployment name independently across model types", () => {
+      const { result } = renderHook(() =>
+        useModelToggleQueue({ providerName: "Azure AI Foundry" }),
+      );
+
+      act(() => {
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "shared",
+          false,
+          "llm",
+        );
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "shared",
+          true,
+          "embeddings",
+        );
+        runDebounced();
+      });
+
+      expect(mutationCalls).toHaveLength(1);
+      expect(mutationCalls[0].updates).toEqual([
+        {
+          provider: "Azure AI Foundry",
+          model_id: "shared",
+          enabled: false,
+          model_type: "llm",
+        },
+        {
+          provider: "Azure AI Foundry",
+          model_id: "shared",
+          enabled: true,
+          model_type: "embeddings",
+        },
+      ]);
+    });
+
     it("does not resend in-flight toggles when a new toggle is flushed", () => {
       const { result } = renderHook(() =>
         useModelToggleQueue({ providerName: "OpenAI" }),
@@ -241,24 +730,44 @@ describe("useModelToggleQueue", () => {
 
       // Toggle A → debounce schedules a flush; drive it to send mutation A.
       act(() => {
-        result.current.handleModelToggle("gpt-4", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
         runDebounced();
       });
       expect(mutationCalls).toHaveLength(1);
       expect(mutationCalls[0].updates).toEqual([
-        { provider: "OpenAI", model_id: "gpt-4", enabled: false },
+        {
+          provider: "OpenAI",
+          model_id: "gpt-4",
+          enabled: false,
+          model_type: "llm",
+        },
       ]);
 
       // Toggle B while A's mutation is still in flight (onSettled hasn't
       // fired). The next flush MUST send ONLY B — re-sending A would be a
       // duplicate request with non-deterministic ordering vs the original.
       act(() => {
-        result.current.handleModelToggle("gpt-3.5-turbo", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-3.5-turbo",
+          false,
+          "llm",
+        );
         runDebounced();
       });
       expect(mutationCalls).toHaveLength(2);
       expect(mutationCalls[1].updates).toEqual([
-        { provider: "OpenAI", model_id: "gpt-3.5-turbo", enabled: false },
+        {
+          provider: "OpenAI",
+          model_id: "gpt-3.5-turbo",
+          enabled: false,
+          model_type: "llm",
+        },
       ]);
     });
 
@@ -269,23 +778,43 @@ describe("useModelToggleQueue", () => {
 
       // Toggle A → false. Drive the debounce.
       act(() => {
-        result.current.handleModelToggle("gpt-4", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
         runDebounced();
       });
       expect(mutationCalls).toHaveLength(1);
       expect(mutationCalls[0].updates).toEqual([
-        { provider: "OpenAI", model_id: "gpt-4", enabled: false },
+        {
+          provider: "OpenAI",
+          model_id: "gpt-4",
+          enabled: false,
+          model_type: "llm",
+        },
       ]);
 
       // User re-toggles A → true before the first mutation settles. The
       // re-toggle is a fresh intent and must be sent.
       act(() => {
-        result.current.handleModelToggle("gpt-4", true);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          true,
+          "llm",
+        );
         runDebounced();
       });
       expect(mutationCalls).toHaveLength(2);
       expect(mutationCalls[1].updates).toEqual([
-        { provider: "OpenAI", model_id: "gpt-4", enabled: true },
+        {
+          provider: "OpenAI",
+          model_id: "gpt-4",
+          enabled: true,
+          model_type: "llm",
+        },
       ]);
     });
   });
@@ -297,7 +826,12 @@ describe("useModelToggleQueue", () => {
       );
 
       act(() => {
-        result.current.handleModelToggle("gpt-4", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
         runDebounced();
       });
       expect(mutationCallbacks).toHaveLength(1);
@@ -320,7 +854,12 @@ describe("useModelToggleQueue", () => {
         ([_, arg]) => typeof arg !== "function",
       );
       expect(rollbackCall).toBeDefined();
-      expect(rollbackCall?.[0]).toEqual(["useGetEnabledModels"]);
+      expect(rollbackCall?.[0]).toEqual([
+        "useGetEnabledModels",
+        undefined,
+        undefined,
+        "configure",
+      ]);
       expect(rollbackCall?.[1]).toEqual({
         enabled_models: { OpenAI: { "gpt-4": true } },
       });
@@ -341,6 +880,10 @@ describe("useModelToggleQueue", () => {
       >;
       mockedEnabled.mockReturnValue({
         data: { enabled_models: { OpenAI: { "gpt-4": true } } },
+        isSuccess: true,
+        isFetching: false,
+        isFetchedAfterMount: true,
+        fetchStatus: "idle",
       } as unknown as ReturnType<typeof useGetEnabledModels>);
 
       const { result, rerender } = renderHook(() =>
@@ -348,7 +891,12 @@ describe("useModelToggleQueue", () => {
       );
 
       act(() => {
-        result.current.handleModelToggle("gpt-4", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
         runDebounced();
       });
 
@@ -361,6 +909,10 @@ describe("useModelToggleQueue", () => {
       trackingQueryClient.setQueryData.mockClear();
       mockedEnabled.mockReturnValue({
         data: { enabled_models: { OpenAI: { "gpt-4": true } } },
+        isSuccess: true,
+        isFetching: false,
+        isFetchedAfterMount: true,
+        fetchStatus: "idle",
       } as unknown as ReturnType<typeof useGetEnabledModels>);
       rerender();
 
@@ -380,7 +932,12 @@ describe("useModelToggleQueue", () => {
       );
 
       act(() => {
-        result.current.handleModelToggle("gpt-4", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
         runDebounced();
       });
       expect(mutationCalls).toHaveLength(1);
@@ -388,7 +945,12 @@ describe("useModelToggleQueue", () => {
 
       // Re-toggle while first mutation is in flight.
       act(() => {
-        result.current.handleModelToggle("gpt-4", true);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          true,
+          "llm",
+        );
         runDebounced();
       });
       expect(mutationCalls).toHaveLength(2);
@@ -424,6 +986,57 @@ describe("useModelToggleQueue", () => {
   });
 
   describe("flushPendingChanges", () => {
+    it("rolls back and clears a queued toggle when close sees an untrusted cache", async () => {
+      const { result } = renderHook(() =>
+        useModelToggleQueue({ providerName: "OpenAI" }),
+      );
+
+      act(() => {
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
+      });
+      const callsBeforeClose =
+        trackingQueryClient.setQueryData.mock.calls.length;
+      trackingQueryClient.getQueryState.mockReturnValue({
+        status: "success",
+        fetchStatus: "fetching",
+        isInvalidated: true,
+      });
+
+      await act(async () => {
+        await result.current.flushPendingChanges();
+      });
+
+      expect(mutationCalls).toHaveLength(0);
+      expect(
+        trackingQueryClient.setQueryData.mock.calls.slice(callsBeforeClose),
+      ).toContainEqual([
+        ["useGetEnabledModels", undefined, undefined, "configure"],
+        { enabled_models: { OpenAI: { "gpt-4": true } } },
+      ]);
+      expect(mockSetErrorData).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Error updating model status" }),
+      );
+      expect(trackingQueryClient.invalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["useGetEnabledModels", undefined, undefined, "configure"],
+        exact: true,
+      });
+
+      trackingQueryClient.getQueryState.mockReturnValue({
+        status: "success",
+        fetchStatus: "idle",
+        isInvalidated: false,
+      });
+      await act(async () => {
+        await result.current.flushPendingChanges();
+      });
+      expect(mutationCalls).toHaveLength(0);
+    });
+
     it("invalidates useGetEnabledModels on success without relying on the caller", async () => {
       const { result } = renderHook(() =>
         useModelToggleQueue({ providerName: "OpenAI" }),
@@ -432,7 +1045,12 @@ describe("useModelToggleQueue", () => {
       // Toggle but DON'T run the debounced flush — leave the entry in
       // unsentToggles for the awaitable close handler to consume.
       act(() => {
-        result.current.handleModelToggle("gpt-4", false);
+        invokeTypedToggle(
+          result.current.handleModelToggle,
+          "gpt-4",
+          false,
+          "llm",
+        );
       });
 
       await act(async () => {

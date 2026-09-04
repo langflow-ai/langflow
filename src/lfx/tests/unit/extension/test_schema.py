@@ -38,6 +38,15 @@ def test_schema_metadata_published_form() -> None:
     assert "$defs" in schema
 
 
+def test_schema_documents_provider_base_url_suffix() -> None:
+    schema = build_schema()
+    metadata_schema = schema["$defs"]["ProviderManifestEntry"]["properties"]["metadata"]
+    suffix_schema = metadata_schema["properties"]["variables"]["items"]["properties"]["base_url_suffix"]
+
+    assert suffix_schema["type"] == "string"
+    assert suffix_schema["minLength"] == 1
+
+
 def _published_deferred_names() -> list[str]:
     """Resolve DEFERRED_FIELDS to the alias-aware names seen in the published schema."""
     fields = ExtensionManifest.model_fields
@@ -110,6 +119,27 @@ def test_schema_validates_v0_example() -> None:
     _validator().validate(_VALID)
 
 
+@pytest.mark.parametrize(
+    "version",
+    ["1.2.3", "1.2.3-alpha.1+build.5", "1.2.3.dev0", "1.2.3a1", "1.2.3b2", "1.2.3rc3"],
+)
+def test_schema_accepts_runtime_supported_versions(version: str) -> None:
+    _validator().validate({**_VALID, "version": version})
+
+
+@pytest.mark.parametrize("version", ["1.2.3\n", "1.2.3rc1\n"])
+def test_schema_rejects_trailing_newline_versions(version: str) -> None:
+    assert list(_validator().iter_errors({**_VALID, "version": version}))
+
+
+@pytest.mark.parametrize(
+    "version",
+    ["1.2.3a01", "1.2.3b01", "1.2.3rc01", "1.2.3.dev01", "1.2.\u0663", "\uff11.2.3"],
+)
+def test_schema_rejects_noncanonical_numeric_versions(version: str) -> None:
+    assert list(_validator().iter_errors({**_VALID, "version": version}))
+
+
 # ---------------------------------------------------------------------------
 # At least 10 malformed manifests with DISTINCT error paths.
 # ---------------------------------------------------------------------------
@@ -132,27 +162,18 @@ _MALFORMED_CASES: list[tuple[str, dict[str, Any]]] = [
     ("lfx", {**_VALID, "lfx": {"compat": []}}),
     # 8. lfx.compat wrong element type (must be a string, not int)
     ("lfx", {**_VALID, "lfx": {"compat": [1]}}),
-    # 9. bundles empty
-    ("bundles", {**_VALID, "bundles": []}),
+    # 9. provider entry missing the required ``metadata`` field. (Empty bundles
+    # is no longer schema-invalid: provider-only extensions ship no components,
+    # and "at least one of bundles/providers" is a model_validator the JSON
+    # Schema cannot express.)
+    ("providers", {**_VALID, "providers": [{"name": "X"}]}),
     # 10. bundles[0].path wrong type
     ("bundles", {**_VALID, "bundles": [{"name": "x", "path": 7}]}),
-    # 11. multi-bundle (must be encoded as maxItems in the published schema, not
-    # only as a model_validator that lives behind the JSON Schema export)
-    (
-        "bundles",
-        {
-            **_VALID,
-            "bundles": [
-                {"name": "a", "path": "a"},
-                {"name": "b", "path": "b"},
-            ],
-        },
-    ),
-    # 12. capabilities extra field
+    # 11. capabilities extra field
     ("capabilities", {**_VALID, "capabilities": {"requiresCredentials": True, "extra": 1}}),
-    # 13. id missing entirely
+    # 12. id missing entirely
     ("id", {k: v for k, v in _VALID.items() if k != "id"}),
-    # 14. deferred field set to a non-null value -- rejected via
+    # 13. deferred field set to a non-null value -- rejected via
     # ``additionalProperties: false`` rather than the older "expected null".
     ("(root)", {**_VALID, "services": {"foo": "bar"}}),
 ]

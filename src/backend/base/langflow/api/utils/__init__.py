@@ -35,7 +35,10 @@ from langflow.api.utils.core import (
     parse_exception,
     parse_value,
     raise_error_if_astra_cloud_env,
+    release_db_transaction,
     remove_api_keys,
+    strip_flow_secrets,
+    strip_secret_field_values_in_place,
     validate_is_component,
 )
 from langflow.api.utils.flow_utils import (
@@ -45,6 +48,7 @@ from langflow.api.utils.flow_utils import (
     build_graph_from_db_no_cache,
     cascade_delete_flow,
     scope_session_to_namespace,
+    validate_public_files,
     verify_public_flow_and_get_user,
 )
 
@@ -87,8 +91,12 @@ __all__ = [
     "parse_exception",
     "parse_value",
     "raise_error_if_astra_cloud_env",
+    "release_db_transaction",
     "remove_api_keys",
     "scope_session_to_namespace",
+    "strip_flow_secrets",
+    "strip_secret_field_values_in_place",
     "validate_is_component",
+    "validate_public_files",
     "verify_public_flow_and_get_user",
 ]

@@ -40,8 +40,19 @@ jest.mock("../../../ui/select", () => {
       children: React.ReactNode;
       value: string;
     }) => <option value={value}>{children}</option>,
-    SelectTrigger: ({ children }: { children: React.ReactNode }) => (
-      <>{children}</>
+    SelectTrigger: ({
+      children,
+      ...rest
+    }: {
+      children: React.ReactNode;
+      [key: string]: unknown;
+    }) => (
+      <div
+        data-testid="page-select-trigger"
+        aria-label={rest["aria-label"] as string}
+      >
+        {children}
+      </div>
     ),
     SelectValue: () => null,
   };
@@ -64,6 +75,16 @@ const renderPaginator = (
 };
 
 describe("PaginatorComponent", () => {
+  describe("accessibility", () => {
+    it("page select trigger has an aria-label", () => {
+      renderPaginator({ totalRowsCount: 45, pageIndex: 1 });
+      const trigger = screen.getByTestId("page-select-trigger");
+      // i18n resolves "paginator.pageLabel" → "Page"
+      expect(trigger).toHaveAttribute("aria-label");
+      expect(trigger.getAttribute("aria-label")).toBeTruthy();
+    });
+  });
+
   describe("empty state", () => {
     it("renders '0 items' instead of '1-0 of 0 items' when there are no rows", () => {
       renderPaginator({ totalRowsCount: 0 });

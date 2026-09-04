@@ -5,7 +5,6 @@ import tempfile
 import uuid
 from contextlib import suppress
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from http import HTTPStatus
 from pathlib import Path
 from typing import Annotated, Any
@@ -14,7 +13,8 @@ import chromadb.errors
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.base.data.utils import extract_text_from_bytes
-from lfx.base.knowledge_bases.backends import BackendType, create_backend
+from lfx.base.knowledge_bases.backends import BackendType, create_backend, is_local_chroma
+from lfx.base.knowledge_bases.backends.postgres import resolve_default_kb_backend
 from lfx.base.knowledge_bases.ingestion_sources import (
     FolderSource,
     SourceType,
@@ -22,12 +22,26 @@ from lfx.base.knowledge_bases.ingestion_sources import (
     get_source_class,
     registered_sources,
 )
+from lfx.base.knowledge_bases.validation import validate_collection_name
+from lfx.base.models.provider_registry import provider_id_for
 from lfx.base.vectorstores.chroma_security import chroma_client_create_collection_kwargs
 from lfx.log import logger
+from lfx.services.model_provider_policy import (
+    ModelProviderPolicyError,
+    ModelProviderPolicyPurpose,
+    require_model_provider,
+)
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import IntegrityError
 
 from langflow.api.utils import CurrentActiveUser, ingestion_run_service, knowledge_base_service
-from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBIngestionHelper, KBStorageHelper
+from langflow.api.utils.kb_helpers import (
+    KBIngestionHelper,
+    KBStorageHelper,
+    local_chroma_rejection_reason,
+    resolve_local_store_path,
+    validate_kb_name,
+)
 from langflow.api.utils.kb_metadata import parse_per_file_metadata, parse_user_metadata
 from langflow.api.v1.schemas import TaskResponse
 from langflow.schema.knowledge_base import (
@@ -50,12 +64,12 @@ from langflow.services.authorization import (
     KnowledgeBaseAction,
     ensure_knowledge_base_permission,
 )
+from langflow.services.authorization.listing import visible_scope_prefilter
 from langflow.services.database.models.jobs.model import JobStatus, JobType
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
 from langflow.services.deps import get_job_service, get_settings_service, get_task_service
 from langflow.services.jobs import DuplicateJobError
 from langflow.services.jobs.service import JobService
-from langflow.services.memory_base.kb_path_helpers import validate_kb_path
 from langflow.services.task.service import TaskService
 from langflow.utils.kb_constants import (
     CHUNK_PREVIEW_MULTIPLIER,
@@ -76,6 +90,41 @@ from langflow.utils.kb_constants import (
 KB_METADATA_KEYS_VALUES_CAP = 50
 
 router = APIRouter(tags=["Knowledge Bases"], prefix="/knowledge_bases", include_in_schema=False)
+
+
+def _provider_identity(provider: str) -> str:
+    """Return a stable identity for comparison without exposing registry state."""
+    normalized = provider.strip()
+    return provider_id_for(normalized) or normalized.casefold()
+
+
+def _require_create_embedding_provider(
+    request: CreateKnowledgeBaseRequest,
+    current_user: CurrentActiveUser,
+) -> str:
+    """Validate both provider representations and enforce CONFIGURE policy."""
+    flat_provider = request.embedding_provider.strip()
+    selected_provider = None
+    if request.model_selection is not None:
+        selected_provider = knowledge_base_service.get_embedding_provider(request.model_selection)
+    if not flat_provider or (
+        selected_provider is not None
+        and (
+            selected_provider == "Unknown" or _provider_identity(flat_provider) != _provider_identity(selected_provider)
+        )
+    ):
+        raise HTTPException(status_code=404, detail="Model provider not found")
+
+    try:
+        require_model_provider(
+            user_id=current_user.id,
+            provider=flat_provider,
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
+    except ModelProviderPolicyError as exc:
+        # Treat unknown, blocked, and conflicting provider identities alike.
+        raise HTTPException(status_code=404, detail="Model provider not found") from exc
+    return flat_provider
 
 
 @dataclass(frozen=True)
@@ -185,23 +234,42 @@ async def _guard_kb_action(
     return _KbGuardResult(record=resolved_record, owner_user=owner)
 
 
-def _validate_kb_path_containment(kb_user_path: Path, kb_path: Path, kb_name: str, username: str) -> None:
-    """Raise 403 if kb_path is not contained within kb_user_path.
+def _resolve_kb_store_path(
+    kb_name: str,
+    owner_user,
+    *,
+    backend_type: str | None,
+    backend_config: dict[str, Any] | None,
+    create: bool = False,
+) -> Path | None:
+    """Resolve the on-disk directory for a KB, or ``None`` when it needs no disk.
 
-    Delegates the actual containment check to
-    :func:`langflow.services.memory_base.kb_path_helpers.validate_kb_path`
-    (introduced in #12417) so the traversal guard is defined in one
-    place — but translates its ``ValueError`` into the 403 HTTPException
-    expected by the KB routes and keeps the high-signal log line.
+    ``owner_user`` is the User whose ``username`` roots the KB directory — for
+    owner-only requests this is ``current_user``; for cross-user share grants
+    ``_guard_kb_action`` returns the resolved KB owner so the route reads the KB
+    from the right user directory.
+
+    Returns ``None`` for every backend except local Chroma, without touching the
+    filesystem or reading ``knowledge_bases_dir`` at all. Whether the KB *exists*
+    is decided by its ``knowledge_base`` row before this is ever called, so unlike
+    the helper it replaces this never raises 404 on a missing directory: Chroma
+    creates its directory lazily, and a freshly created KB legitimately has none.
+
+    Raises 403 if path traversal is detected (kb_name or username escapes the root).
     """
     try:
-        validate_kb_path(kb_user_path, kb_path)
+        return resolve_local_store_path(
+            kb_name,
+            owner_user.username,
+            backend_type=backend_type,
+            backend_config=backend_config,
+            create=create,
+        )
     except ValueError as exc:
         logger.warning(
-            "Path traversal attempt blocked: user=%s kb_name=%r resolved_path=%s",
-            username,
+            "Path traversal attempt blocked: user=%s kb_name=%r",
+            owner_user.username,
             kb_name,
-            kb_path,
         )
         raise HTTPException(
             status_code=403,
@@ -209,28 +277,50 @@ def _validate_kb_path_containment(kb_user_path: Path, kb_path: Path, kb_name: st
         ) from exc
 
 
-def _resolve_kb_path(kb_name: str, owner_user) -> Path:
-    """Resolve and validate KB path against the KB *owner's* namespace.
+def _validate_kb_name_or_403(kb_name: str, owner_user) -> None:
+    """Reject a traversal-shaped KB name before it is persisted, for any backend.
 
-    ``owner_user`` is the User whose ``username`` roots the KB directory —
-    for owner-only requests this is ``current_user``; for cross-user share
-    grants ``_guard_kb_action`` returns the resolved KB owner so the route
-    reads the KB from the right user directory.
-
-    Raises 500 if root path not configured.
-    Raises 403 if path traversal is detected (kb_name escapes the user directory).
-    Raises 404 if the KB directory does not exist.
+    The path-containment guard in :func:`_resolve_kb_store_path` only runs for
+    local Chroma; a remote-backed create resolves no path, so this is the only
+    place a name like ``../victim_user/evil_kb`` is caught on those backends.
+    Mirrors the 403 + warning contract of the path guard so both traversal
+    surfaces log and respond identically.
     """
-    kb_root_path = KBStorageHelper.get_root_path()
-    kb_user = owner_user.username
-    kb_user_path = (kb_root_path / kb_user).resolve()
-    kb_path = (kb_user_path / kb_name).resolve()
+    try:
+        validate_kb_name(kb_name)
+    except ValueError as exc:
+        logger.warning(
+            "Path traversal attempt blocked: user=%s kb_name=%r",
+            owner_user.username,
+            kb_name,
+        )
+        raise HTTPException(
+            status_code=403,
+            detail=f"Access denied for knowledge base '{kb_name}'.",
+        ) from exc
 
-    _validate_kb_path_containment(kb_user_path, kb_path, kb_name, kb_user)
 
-    if not kb_path.exists() or not kb_path.is_dir():
+def _validate_collection_name_or_400(kb_name: str, *, local: bool) -> None:
+    """Reject a name the vector-store collection cannot represent."""
+    try:
+        validate_collection_name(kb_name, resource="Knowledge base", local=local)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+async def _require_kb_record(kb_name: str, owner_user, guard: _KbGuardResult | None = None):
+    """Return the KB's ``knowledge_base`` row, or 404.
+
+    The row is the authority on whether a KB exists — replacing the old
+    directory-existence probe, which 404'd remote-backed KBs on any replica whose
+    filesystem never held the directory.
+    """
+    record = (guard.record if guard is not None else None) or await knowledge_base_service.get_by_user_and_name(
+        owner_user.id, kb_name
+    )
+    if record is None:
         raise HTTPException(status_code=404, detail=f"Knowledge base '{kb_name}' not found")
-    return kb_path
+    return record
 
 
 def _build_connector_ingest_dedupe_key(
@@ -261,61 +351,83 @@ def _build_connector_ingest_dedupe_key(
     return f"kb_connector_ingest:{digest}"
 
 
+def _apply_folder_source_security_settings(source_config: dict[str, Any]) -> dict[str, Any]:
+    """Return folder config with request-controlled security fields overwritten.
+
+    Folder paths and traversal options are request inputs, but filesystem roots
+    and file-size limits are operator policy. Keep that trust boundary in one
+    helper so both public folder-ingestion routes enforce the same settings.
+    """
+    settings = get_settings_service().settings
+    secured_config = dict(source_config)
+    secured_config["allowed_roots"] = list(settings.kb_allowed_folder_roots or [])
+    secured_config["max_file_size_bytes"] = settings.kb_folder_max_file_size_bytes
+    return secured_config
+
+
 def _is_memory_base_associated(metadata: dict[str, Any]) -> bool:
     """Return True if the KB metadata indicates an association with a Memory Base."""
     source_types = metadata.get("source_types")
     return isinstance(source_types, list) and "memory" in source_types
 
 
-def _check_memory_base_association(kb_name: str, current_user: CurrentActiveUser) -> None:
+def _record_is_memory_base_associated(record) -> bool:
+    """Return True if a ``knowledge_base`` row is Memory-Base-managed.
+
+    Reads ``source_types`` straight off the row, which is where a Memory Base's
+    ``["memory"]`` marker is authoritatively recorded (``create_record`` /
+    ``_create_kb_record_for_memory_base``). No disk access — so the guard holds on
+    a replica whose local filesystem never held the KB directory.
+    """
+    return record is not None and isinstance(record.source_types, list) and "memory" in record.source_types
+
+
+async def _check_memory_base_association(kb_name: str, current_user: CurrentActiveUser) -> None:
     """Raise 403 if the KB is associated with a Memory Base (FastAPI dep).
 
     Owner-scoped early gate — runs as ``Depends(...)`` before the route
     body and only sees the actor. For shared KBs reached through an
-    shared grant the actor has no same-named local KB so this
+    shared grant the actor has no same-named ``knowledge_base`` row so this
     dep returns early; the route body then re-runs the check against the
     resolved owner via :func:`_assert_kb_not_memory_base` so a shared
     Memory-Base-managed KB still gets blocked.
 
-    A missing local directory is NOT treated as a 404 here because the
-    delete route handles the orphan-DB-row case downstream. This dep
-    only blocks Memory-Base-managed KBs from being touched; an
-    orphan row can't have Memory-Base metadata because that metadata
-    lives in the on-disk ``embedding_metadata.json`` which is gone.
+    The Memory-Base marker is read from the ``knowledge_base`` row's
+    ``source_types``, not the on-disk ``embedding_metadata.json`` — Memory Bases
+    no longer write a sidecar, and the row-based check works on any replica.
     """
-    try:
-        kb_path = _resolve_kb_path(kb_name, current_user)
-    except HTTPException as exc:
-        if exc.status_code == HTTPStatus.NOT_FOUND:
-            return  # Let the route body handle the missing-dir case.
-        raise
-
-    metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
-    if _is_memory_base_associated(metadata):
+    record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
+    if _record_is_memory_base_associated(record):
         raise HTTPException(
             status_code=403,
             detail=f"Access denied: knowledge base '{kb_name}' is managed by a Memory Base.",
         )
 
 
-def _assert_kb_not_memory_base(kb_name: str, owner_user) -> None:
+async def _kb_is_memory_base(kb_name: str, owner_user) -> bool:
+    """Non-raising DB-backed Memory-Base check for bulk operations.
+
+    Same authoritative source as :func:`_assert_kb_not_memory_base` (the
+    ``knowledge_base`` row's ``source_types``, not the on-disk sidecar Memory
+    Bases no longer write) but returns a bool so the bulk-delete loop can skip
+    and report Memory-Base-managed KBs instead of aborting the whole batch.
+    """
+    record = await knowledge_base_service.get_by_user_and_name(owner_user.id, kb_name)
+    return _record_is_memory_base_associated(record)
+
+
+async def _assert_kb_not_memory_base(kb_name: str, owner_user) -> None:
     """Post-resolution memory-base check.
 
     The FastAPI dep :func:`_check_memory_base_association` only sees the
     actor; for cross-user-reached KBs (a non-owner with a share grant) it
-    short-circuits because the actor has no same-named local KB. Route
-    bodies call this helper after :func:`_guard_kb_action` resolves the
+    short-circuits because the actor has no same-named ``knowledge_base`` row.
+    Route bodies call this helper after :func:`_guard_kb_action` resolves the
     real owner so Memory-Base-managed KBs are still blocked even when
-    reached through a share.
+    reached through a share. Reads ``source_types`` from the DB row (not disk).
     """
-    try:
-        kb_path = _resolve_kb_path(kb_name, owner_user)
-    except HTTPException as exc:
-        if exc.status_code == HTTPStatus.NOT_FOUND:
-            return
-        raise
-    metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
-    if _is_memory_base_associated(metadata):
+    record = await knowledge_base_service.get_by_user_and_name(owner_user.id, kb_name)
+    if _record_is_memory_base_associated(record):
         raise HTTPException(
             status_code=403,
             detail=f"Access denied: knowledge base '{kb_name}' is managed by a Memory Base.",
@@ -326,53 +438,22 @@ def _coerce_backend_config(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
-async def _resolve_kb_asset_id(
-    *,
-    kb_name: str,
-    current_user: CurrentActiveUser,
-    metadata: dict[str, Any],
-) -> uuid.UUID:
-    """Return the canonical ``asset_id`` for a KB.
+def _model_selection_from_record(record) -> dict[str, Any]:
+    """Return the KB's embedding selection, or 400 if it has none usable.
 
-    Prefers ``KnowledgeBaseRecord.id`` from the ``knowledge_base`` table —
-    a btree-indexed UUID column — so downstream Job lookups can use the
-    indexed ``Job.asset_id`` path instead of doing a JSON-extract on
-    ``Job.job_metadata.kb_name``.
-
-    Falls back to ``metadata['id']`` (and finally a fresh UUID) only for
-    legacy KBs that exist on disk but haven't been backfilled into the
-    ``knowledge_base`` table yet — startup runs ``backfill_all_users_from_disk``
-    so this fallback should be rare. The fallback also persists the
-    generated UUID into ``embedding_metadata.json`` so subsequent calls
-    return a stable id.
+    ``model_selection`` on the row is the canonical embedding config. The flat
+    ``embedding_provider`` / ``embedding_model`` fields are derived views kept for
+    API back-compat, so this reads the canonical form and synthesizes from the
+    derived one only for rows written before the unified-models work.
     """
-    kb_record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
-    if kb_record is not None:
-        return kb_record.id
-
-    # Legacy fallback: KB exists on disk only.
-    asset_id_str = metadata.get("id")
-    if asset_id_str:
-        try:
-            return uuid.UUID(asset_id_str)
-        except (ValueError, AttributeError):
-            pass
-
-    # No record, no metadata id — generate one and persist so the next
-    # request resolves to the same UUID. Best-effort write; failure
-    # falls through (the caller still gets a UUID, just one that won't
-    # round-trip).
-    asset_id = uuid.uuid4()
-    try:
-        kb_path = _resolve_kb_path(kb_name, current_user)
-        metadata_path = kb_path / "embedding_metadata.json"
-        if metadata_path.exists():
-            embedding_metadata = json.loads(metadata_path.read_text())
-            embedding_metadata["id"] = str(asset_id)
-            metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
-    except (OSError, json.JSONDecodeError, HTTPException):
-        await logger.awarning("Could not persist generated asset_id for kb=%r", kb_name)
-    return asset_id
+    metadata = knowledge_base_service.record_to_metadata_dict(record)
+    model_selection = metadata.get("model_selection") or {
+        "name": metadata.get("embedding_model"),
+        "provider": metadata.get("embedding_provider"),
+    }
+    if not model_selection.get("name") or not model_selection.get("provider"):
+        raise HTTPException(status_code=400, detail="Invalid embedding configuration")
+    return model_selection
 
 
 def _build_kb_info(
@@ -419,132 +500,65 @@ def _build_kb_info(
     )
 
 
-async def _resolve_backend_selection(
+def _reject_local_chroma_in_prod(
+    backend_type: str | None,
+    backend_config: dict[str, Any] | None,
     *,
-    kb_name: str,
-    kb_path: Path,
-    current_user: CurrentActiveUser,
-) -> tuple[str, dict[str, Any]]:
-    kb_record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
-    if kb_record is not None:
-        return (
-            kb_record.backend_type or BackendType.CHROMA.value,
-            _coerce_backend_config(kb_record.backend_config),
-        )
-
-    metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
-    return (
-        str(metadata.get("backend_type") or BackendType.CHROMA.value),
-        _coerce_backend_config(metadata.get("backend_config")),
-    )
+    resource: str = "knowledge base",
+) -> None:
+    """Surface :func:`local_chroma_rejection_reason` as a 422 for HTTP callers."""
+    reason = local_chroma_rejection_reason(backend_type, backend_config, resource=resource)
+    if reason is not None:
+        raise HTTPException(status_code=422, detail=reason)
 
 
-async def _cleanup_orphan_db_row(
-    *,
-    kb_name: str,
-    current_user: CurrentActiveUser,
-) -> tuple[bool, str | None]:
-    """Clean up a KB whose local directory is gone but whose DB row lingers.
+def _local_chroma_has_data(kb_path: Path) -> bool:
+    """True when a local-Chroma directory actually holds a persisted collection.
 
-    The usual delete flow requires the KB directory to exist — but
-    remote-backed KBs (Astra / Mongo / Postgres / OpenSearch) store
-    their vectors off-box, and the on-disk sidecar can go missing if
-    the filesystem was cleaned out of band or creation failed partway
-    through. Before this helper, such a KB would keep showing up in
-    the UI list forever because the list endpoint reads the DB row
-    while the delete endpoint 404s on the missing path.
+    Chroma creates its directory lazily, so a KB that was created but never
+    ingested into has an empty (or absent) directory. Opening a client against
+    one raises 'attempt to write a readonly database', so read paths check this
+    first and return an empty result instead.
 
-    Returns ``(True, warning_or_None)`` when a row was found and
-    deleted, ``(False, None)`` when no row exists (truly not found).
-    The remote-backend cleanup is best-effort just like the normal
-    delete path.
+    Only meaningful for local Chroma — callers reach it via a non-``None``
+    ``kb_path``, which by construction only local Chroma has.
     """
-    record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
-    if record is None:
-        return False, None
+    return any((kb_path / marker).exists() for marker in ("chroma", "chroma.sqlite3", "index"))
 
-    backend_type_value = record.backend_type or BackendType.CHROMA.value
-    backend_config = _coerce_backend_config(record.backend_config)
 
-    warning: str | None = None
-    if backend_type_value != BackendType.CHROMA.value:
-        backend = create_backend(
-            backend_type_value,
-            kb_name=kb_name,
-            kb_path=Path("/tmp"),  # noqa: S108 — unused; backend is remote-only
-            backend_config=backend_config,
-            user_id=current_user.id,
-        )
-        try:
-            await backend.ensure_ready()
-            await backend.delete_collection()
-        except Exception as exc:  # noqa: BLE001
-            await logger.aerror(
-                "Failed to delete remote backend resources for orphan KB %s (%s): %s",
-                kb_name,
-                backend_type_value,
-                exc,
-            )
-            warning = (
-                f"Remote {backend_type_value} resources for knowledge base "
-                f"'{kb_name}' could not be deleted ({exc}). The local record "
-                "has been removed; please clean up the remote collection manually."
-            )
-        finally:
-            await backend.teardown()
+def _backend_from_record(record) -> tuple[str, dict[str, Any]]:
+    """Read ``(backend_type, backend_config)`` off a ``knowledge_base`` row.
 
-    try:
-        await knowledge_base_service.delete_by_user_and_name(current_user.id, kb_name)
-    except Exception as exc:  # noqa: BLE001
-        await logger.awarning("KB DB delete lagged for orphan %s: %s", kb_name, exc)
-
-    return True, warning
+    The row is the sole authority for backend routing. Defaulting a missing
+    ``backend_type`` to Chroma covers rows written before the backend selector
+    existed, when local Chroma was the only option.
+    """
+    return (
+        record.backend_type or BackendType.CHROMA.value,
+        _coerce_backend_config(record.backend_config),
+    )
 
 
 async def _cancel_inflight_ingestion_for_kb(
     *,
     kb_name: str,
+    asset_id: uuid.UUID,
     current_user: CurrentActiveUser,
     job_service: JobService,
 ) -> None:
     """Cancel queued / in-progress ingestion jobs for the named KB.
 
-    Looks up the KB's ``asset_id`` (preferring the indexed
-    ``KnowledgeBaseRecord.id`` and falling back to disk metadata for
-    legacy KBs), then transitions every job with
-    ``asset_type='knowledge_base'`` and ``status in (QUEUED,
-    IN_PROGRESS)`` to ``CANCELLED``. The ingestion polls
-    :func:`KBIngestionHelper.is_job_cancelled` between batches and
-    bails out via :class:`IngestionCancelledError`, which prevents
-    chroma writes from auto-recreating the deleted KB directory.
+    Transitions every job with ``asset_type='knowledge_base'`` and
+    ``status in (QUEUED, IN_PROGRESS)`` to ``CANCELLED``. The ingestion polls
+    :func:`KBIngestionHelper.is_job_cancelled` between batches and bails out via
+    :class:`IngestionCancelledError`, which stops a local-Chroma writer from
+    auto-recreating the KB directory we are about to delete.
 
     Best-effort: surfacing a cancellation failure here would mask the
     user's actual delete intent. Failures are logged and the delete
     proceeds — the worst case is the same as before this helper
     existed.
     """
-    try:
-        record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
-    except Exception as exc:  # noqa: BLE001
-        await logger.awarning("KB lookup failed during cancel-on-delete for %s: %s", kb_name, exc)
-        record = None
-
-    asset_id: uuid.UUID | None = record.id if record is not None else None
-    if asset_id is None:
-        # Legacy disk-only KB: try to recover the id from the sidecar.
-        try:
-            kb_path = _resolve_kb_path(kb_name, current_user)
-        except HTTPException:
-            return
-        metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True) or {}
-        raw_id = metadata.get("id")
-        if not raw_id:
-            return
-        try:
-            asset_id = uuid.UUID(str(raw_id))
-        except (TypeError, ValueError):
-            return
-
     try:
         cancelled = await job_service.cancel_in_flight_jobs_by_asset(
             asset_id=asset_id,
@@ -566,7 +580,9 @@ async def _cancel_inflight_ingestion_for_kb(
 async def _delete_remote_backend_collection(
     *,
     kb_name: str,
-    kb_path: Path,
+    kb_path: Path | None,
+    backend_type_value: str,
+    backend_config: dict[str, Any],
     current_user: CurrentActiveUser,
 ) -> str | None:
     """Delete the remote vector-store collection on a best-effort basis.
@@ -574,23 +590,18 @@ async def _delete_remote_backend_collection(
     Returns a human-readable warning string when the remote cleanup
     failed so the caller can surface it alongside the (successful)
     local-storage + DB-row deletions; returns ``None`` on success or
-    when the backend is local-only (Chroma).
+    when the backend is local-only Chroma (whose vectors live in the
+    directory ``delete_storage`` removes).
 
     Rationale for best-effort: a stale Astra token / missing MongoDB
     credential / network blip should not leave the user unable to
     delete the KB from Langflow's UI at all. Before this, the backend
     ``ensure_ready()`` failure would abort the whole delete flow and
-    the row plus on-disk metadata would stay indefinitely. Remote
-    resources that linger are surfaced to the user through the
-    response warning and a high-severity log line so they can be
-    cleaned up out-of-band.
+    the row would stay indefinitely. Remote resources that linger are
+    surfaced to the user through the response warning and a
+    high-severity log line so they can be cleaned up out-of-band.
     """
-    backend_type_value, backend_config = await _resolve_backend_selection(
-        kb_name=kb_name,
-        kb_path=kb_path,
-        current_user=current_user,
-    )
-    if backend_type_value == BackendType.CHROMA.value and backend_config.get("mode") != "cloud":
+    if is_local_chroma(backend_type_value, backend_config):
         return None
 
     backend = create_backend(
@@ -680,6 +691,43 @@ async def test_backend_connection(
     )
 
 
+async def _validate_create_backend(
+    *,
+    backend_type: str,
+    backend_config: dict[str, Any],
+    kb_name: str,
+    kb_path: Path,
+    user_id: uuid.UUID,
+) -> None:
+    """Reject an unreachable remote backend before persisting a KB.
+
+    Local Chroma creates its store lazily on first write, so there is nothing to
+    probe. Every remote backend (Postgres / OpenSearch / Chroma Cloud / Mongo /
+    Astra) is connectivity-checked up front, mirroring the Memory Base path in
+    ``kb_path_helpers.provision_memory_base_collection`` so a KB and an MB
+    pointed at the same dead backend both fail the create with 422 instead of
+    persisting a resource that only errors on first use.
+    """
+    if is_local_chroma(backend_type, backend_config):
+        return
+
+    backend = create_backend(
+        backend_type,
+        kb_name=kb_name,
+        kb_path=kb_path,
+        backend_config=backend_config,
+        embedding_function=None,
+        user_id=user_id,
+    )
+    try:
+        result = await backend.test_connection()
+    finally:
+        with suppress(Exception):
+            await backend.teardown()
+    if not result.ok:
+        raise HTTPException(status_code=422, detail=result.message)
+
+
 @router.post("", status_code=HTTPStatus.CREATED)
 @router.post("/", status_code=HTTPStatus.CREATED)
 async def create_knowledge_base(
@@ -687,9 +735,10 @@ async def create_knowledge_base(
     current_user: CurrentActiveUser,
 ) -> KnowledgeBaseInfo:
     """Create a new knowledge base with embedding configuration."""
+    kb_path: Path | None = None
+    kb_name = ""
     try:
-        kb_root_path = KBStorageHelper.get_root_path()
-        kb_user = current_user.username
+        embedding_provider = _require_create_embedding_provider(request, current_user)
         kb_name = request.name.strip().replace(" ", "_")
         await _guard_kb_action(
             current_user=current_user,
@@ -700,25 +749,44 @@ async def create_knowledge_base(
         if not kb_name or len(kb_name) < MIN_KB_NAME_LENGTH:
             raise HTTPException(status_code=400, detail="Knowledge base name must be at least 3 characters")
 
-        # Security: resolve paths and validate containment to prevent path traversal attacks.
-        # A crafted kb_name like "../victim/evil" or an absolute path like "/tmp/evil" must be
-        # rejected before any directory is created.
-        kb_user_path = (kb_root_path / kb_user).resolve()
-        kb_path = (kb_user_path / kb_name).resolve()
-        _validate_kb_path_containment(kb_user_path, kb_path, kb_name, kb_user)
-
-        # Check both durable DB state and legacy disk state. During
-        # expand/contract rollout a KB row can exist even if its local
-        # sidecar directory was cleaned up out of band.
+        # Reject traversal-shaped names up front, before any backend is
+        # resolved. Remote backends resolve no local path, so the containment
+        # guard below never runs for them — this is what keeps a name like
+        # ``../victim_user/evil_kb`` from being persisted on a remote backend.
+        _validate_kb_name_or_403(kb_name, current_user)
+        # The ``knowledge_base`` row is the authority on existence, and
+        # ``uq_knowledge_base_user_name`` is the real guard against duplicates.
         existing_record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)
         if existing_record is not None:
             raise HTTPException(status_code=409, detail=f"Knowledge base '{kb_name}' already exists")
-        if kb_path.exists():
-            # No DB row but a directory survives.  Two paths fork here:
-            # the dir is a leftover from a previous failed delete (carries
-            # the .kb_deleted sentinel) -- in which case the user clearly
-            # wants to reuse the name -- vs. a legitimate orphan from a
-            # legacy export.  Only the sentinel case is safe to repurpose.
+
+        # Resolve the deployment default before creating any local state. An
+        # env-configured pgvector deployment therefore defaults on the server,
+        # while an explicit client selection continues to win.
+        backend_type_value = request.backend_type or resolve_default_kb_backend()
+        backend_config_value = request.backend_config or {}
+        _reject_local_chroma_in_prod(backend_type_value, backend_config_value, resource="knowledge base")
+        if backend_type_value == BackendType.CHROMA.value:
+            _validate_collection_name_or_400(
+                kb_name,
+                local=is_local_chroma(backend_type_value, backend_config_value),
+            )
+
+        # ``None`` for every remote backend: no path is resolved and the
+        # filesystem is never consulted. Traversal-checked for local Chroma
+        # before any directory is created.
+        kb_path = _resolve_kb_store_path(
+            kb_name,
+            current_user,
+            backend_type=backend_type_value,
+            backend_config=backend_config_value,
+        )
+
+        if kb_path is not None and kb_path.exists():
+            # No DB row but a directory survives. If it carries the
+            # ``.kb_deleted`` sentinel, a previous delete could not remove the
+            # bytes (typically a held Chroma SQLite lock) — reusing the name now
+            # would silently adopt the old collection's vectors.
             if KBStorageHelper.is_kb_dir_deleted(kb_path):
                 raise HTTPException(
                     status_code=409,
@@ -730,70 +798,45 @@ async def create_knowledge_base(
                 )
             raise HTTPException(status_code=409, detail=f"Knowledge base '{kb_name}' already exists")
 
-        # Create KB directory.  Clear any leftover sentinel just in case
-        # mkdir is racing with a sentinel write from a concurrent delete
-        # of the same name; ``clear_deletion_sentinel`` is a no-op when
-        # the marker is absent.
-        kb_path.mkdir(parents=True, exist_ok=True)
-        KBStorageHelper.clear_deletion_sentinel(kb_path)
+        await _validate_create_backend(
+            backend_type=backend_type_value,
+            backend_config=backend_config_value,
+            kb_name=kb_name,
+            kb_path=kb_path,
+            user_id=current_user.id,
+        )
+
         kb_id = uuid.uuid4()
 
-        # Initialize Chroma storage and collection immediately
-        # This ensures files exist for read operations and avoids 'readonly' errors later
-        try:
-            client = KBStorageHelper.get_fresh_chroma_client(kb_path)
-            client.create_collection(name=kb_name, **chroma_client_create_collection_kwargs())
-        except (OSError, ValueError, chromadb.errors.ChromaError) as e:
-            logger.warning("Initial Chroma setup for %s failed: %s", kb_name, e)
-        finally:
-            client = None
-            KBStorageHelper.release_chroma_resources(kb_path)
+        # Initialize only local Chroma immediately — it is the one backend with a
+        # directory to create. Remote providers create their per-KB collection
+        # lazily on first write.
+        if kb_path is not None:
+            # Clear any leftover sentinel in case mkdir raced a sentinel write
+            # from a concurrent delete; ``clear_deletion_sentinel`` no-ops when
+            # the marker is absent.
+            kb_path.mkdir(parents=True, exist_ok=True)
+            KBStorageHelper.clear_deletion_sentinel(kb_path)
+            try:
+                client = KBStorageHelper.get_fresh_chroma_client(kb_path)
+                client.create_collection(name=kb_name, **chroma_client_create_collection_kwargs())
+            except chromadb.errors.InvalidArgumentError as e:
+                KBStorageHelper.delete_storage(kb_path, kb_name)
+                raise HTTPException(status_code=400, detail=f"Invalid knowledge base name: {e}") from e
+            except (OSError, ValueError, chromadb.errors.ChromaError) as e:
+                logger.warning("Initial Chroma setup for %s failed: %s", kb_name, e)
+            finally:
+                client = None
+                KBStorageHelper.release_chroma_resources(kb_path)
 
         # Serialize column_config for persistence
         column_config_dicts = None
         if request.column_config:
             column_config_dicts = [item.model_dump() for item in request.column_config]
 
-        # Save full embedding metadata to prevent immediate backfill.
-        # ``backend_type``/``backend_config`` are persisted here too so
-        # a later ``backfill_from_disk`` reconstructs the correct
-        # backend routing even if the DB write below fails.
-        # ``backend_config`` holds only *variable names* (never raw
-        # secrets) per the credential-indirection contract.
-        backend_type_value = request.backend_type or "chroma"
-        backend_config_value = request.backend_config or {}
-        embedding_metadata = {
-            "id": str(kb_id),
-            "embedding_provider": request.embedding_provider,
-            "embedding_model": request.embedding_model,
-            "model_selection": request.model_selection,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "chunks": 0,
-            "words": 0,
-            "characters": 0,
-            "avg_chunk_size": 0.0,
-            "size": 0,
-            "column_config": column_config_dicts,
-            "backend_type": backend_type_value,
-            "backend_config": backend_config_value,
-        }
-        metadata_path = kb_path / "embedding_metadata.json"
-        metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
-
-        # Write schema.json for text-metric helpers (get_text_columns)
-        if column_config_dicts:
-            schema_data = [{**col, "data_type": "string"} for col in column_config_dicts]
-            schema_path = kb_path / "schema.json"
-            schema_path.write_text(json.dumps(schema_data, indent=2))
-
-        # Dual-write: persist the identity + config to the DB alongside
-        # the JSON file so older service versions still see the legacy
-        # on-disk view, while new code reads from the DB first.
-        #
-        # The DB row is now authoritative for list/detail reads, so a
-        # create that only reaches the filesystem is an inconsistent
-        # partial success. Roll back the on-disk state and surface a
-        # 500 regardless of backend type.
+        # The row is the only record of this KB's identity and config — no
+        # on-disk sidecar is written, so a create that fails here leaves nothing
+        # but (possibly) an empty Chroma directory, which the rollback removes.
         try:
             # ``model_selection`` is the canonical source of truth for
             # embedding config; the request still carries
@@ -803,7 +846,7 @@ async def create_knowledge_base(
             # when the request didn't carry one of its own.
             persisted_selection = request.model_selection or {
                 "name": request.embedding_model,
-                "provider": request.embedding_provider,
+                "provider": embedding_provider,
             }
             await knowledge_base_service.create_record(
                 user_id=current_user.id,
@@ -814,6 +857,14 @@ async def create_knowledge_base(
                 backend_config=backend_config_value,
                 record_id=kb_id,
             )
+        except IntegrityError as exc:
+            # Concurrent create for the same (user, name):
+            # ``uq_knowledge_base_user_name`` is the authoritative guard, and a
+            # duplicate is a 409, not a 500.
+            await logger.awarning("Concurrent KB create collided for %s: %s", kb_name, exc)
+            if kb_path is not None:
+                KBStorageHelper.delete_storage(kb_path, kb_name)
+            raise HTTPException(status_code=409, detail=f"Knowledge base '{kb_name}' already exists") from exc
         except Exception as exc:
             await logger.aerror(
                 "KB DB persist failed for backend %s (kb=%s): %s — rolling back",
@@ -821,7 +872,8 @@ async def create_knowledge_base(
                 kb_name,
                 exc,
             )
-            KBStorageHelper.delete_storage(kb_path, kb_name)
+            if kb_path is not None:
+                KBStorageHelper.delete_storage(kb_path, kb_name)
             raise HTTPException(
                 status_code=500,
                 detail=(
@@ -833,7 +885,7 @@ async def create_knowledge_base(
             id=str(kb_id),
             dir_name=kb_name,
             name=kb_name.replace("_", " "),
-            embedding_provider=request.embedding_provider,
+            embedding_provider=embedding_provider,
             embedding_model=request.embedding_model,
             size=0,
             words=0,
@@ -850,10 +902,26 @@ async def create_knowledge_base(
         raise
     except Exception as e:
         # Clean up if something went wrong
-        if kb_path.exists():
+        if kb_path is not None and kb_path.exists():
             KBStorageHelper.delete_storage(kb_path, kb_name)
         await logger.aerror("Error creating knowledge base: %s", e)
         raise HTTPException(status_code=500, detail="Internal error creating knowledge base") from e
+
+
+def _validate_chunk_params(chunk_size: int, chunk_overlap: int) -> None:
+    """Reject a chunk overlap larger than the chunk size before splitting runs.
+
+    ``RecursiveCharacterTextSplitter`` raises ``ValueError`` at construction when
+    ``chunk_overlap > chunk_size``. Left unguarded that surfaces as an opaque 500
+    on preview and as a failed background run on ingest, so validate it up front
+    on the request itself and return an actionable 422 the UI can show inline.
+    Both endpoints share this so their chunking contract cannot drift.
+    """
+    if chunk_overlap > chunk_size:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Chunk overlap ({chunk_overlap}) can't be larger than chunk size ({chunk_size}).",
+        )
 
 
 @router.post("/preview-chunks", status_code=HTTPStatus.OK)
@@ -876,6 +944,8 @@ async def preview_chunks(
     """
     await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.CREATE, kb_name=None)
     try:
+        _validate_chunk_params(chunk_size, chunk_overlap)
+
         if not files:
             raise HTTPException(status_code=400, detail="No files provided")
 
@@ -1009,8 +1079,12 @@ async def ingest_files_to_knowledge_base(
     so the UI can surface the rejection inline.
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.INGEST, kb_name=kb_name)
-    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
+    await _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     try:
+        # Reject an overlap larger than the chunk size before any upload work —
+        # the splitter would otherwise fail the background run with an opaque error.
+        _validate_chunk_params(chunk_size, chunk_overlap)
+
         settings = get_settings_service().settings
         max_file_size_upload = settings.max_file_size_upload
 
@@ -1032,56 +1106,30 @@ async def ingest_files_to_knowledge_base(
             content = await uploaded_file.read()
             files_data.append((uploaded_file.filename or "unknown", content))
 
-        kb_path = _resolve_kb_path(kb_name, _kb_guard.owner_user)
+        record = await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
+        kb_path = _resolve_kb_store_path(
+            kb_name,
+            _kb_guard.owner_user,
+            backend_type=record.backend_type,
+            backend_config=record.backend_config,
+        )
 
-        # Parse and persist column_config from FormData if provided
+        # Persist column_config from FormData onto the row — it is a property of
+        # the KB, not of a directory, so it lands in the database.
         if column_config:
             try:
                 column_config_parsed = json.loads(column_config)
                 if isinstance(column_config_parsed, list):
-                    # Update embedding_metadata.json
-                    cc_metadata_path = kb_path / "embedding_metadata.json"
-                    if cc_metadata_path.exists():
-                        existing_meta = json.loads(cc_metadata_path.read_text())
-                        existing_meta["column_config"] = column_config_parsed
-                        cc_metadata_path.write_text(json.dumps(existing_meta, indent=2))
-                    # Write schema.json for text-metric helpers
-                    schema_data = [{**col, "data_type": "string"} for col in column_config_parsed]
-                    schema_path = kb_path / "schema.json"
-                    schema_path.write_text(json.dumps(schema_data, indent=2))
+                    await knowledge_base_service.update_column_config(record.id, column_config_parsed)
             except (json.JSONDecodeError, TypeError):
                 await logger.awarning("Malformed column_config received, using existing schema")
 
-        # Read embedding metadata (Pass fast=False to ensure legacy KBs are migrated/detected)
-        metadata = KBAnalysisHelper.get_metadata(kb_path, fast=False)
-        if not metadata:
-            raise HTTPException(
-                status_code=400,
-                detail="Knowledge base missing embedding configuration. Please create a new KB or reconfigure it.",
-            )
+        model_selection = _model_selection_from_record(record)
 
-        # ``model_selection`` is the canonical embedding-config payload.
-        # Synthesize it from the legacy flat metadata fields when older
-        # KBs only carry those (``record_to_metadata_dict`` writes both
-        # forms for new KBs, so this branch is mainly for disk-only
-        # ones that haven't been backfilled yet).
-        model_selection = metadata.get("model_selection") or {
-            "name": metadata.get("embedding_model"),
-            "provider": metadata.get("embedding_provider"),
-        }
-        if not model_selection.get("name") or not model_selection.get("provider"):
-            raise HTTPException(status_code=400, detail="Invalid embedding configuration")
-
-        # Use ``KnowledgeBaseRecord.id`` (when present) as the Job's
-        # ``asset_id`` so the read path can hit the indexed
-        # ``Job.asset_id`` column instead of doing a JSON-extract on
-        # ``Job.job_metadata.kb_name``. Falls back to legacy
-        # ``metadata['id']`` for KBs that exist on disk only.
-        asset_id = await _resolve_kb_asset_id(
-            kb_name=kb_name,
-            current_user=current_user,
-            metadata=metadata,
-        )
+        # ``KnowledgeBaseRecord.id`` is the Job's ``asset_id`` so the read path
+        # hits the indexed ``Job.asset_id`` column instead of doing a JSON-extract
+        # on ``Job.job_metadata.kb_name``.
+        asset_id = record.id
 
         # Get services and create job before async/sync split
         job_service = get_job_service()
@@ -1130,9 +1178,8 @@ class IngestFolderRequest(BaseModel):
     """Body payload for ``POST /{kb_name}/ingest/folder``.
 
     Path is expanded (``~`` → user home) and resolved before being
-    checked against the settings allow-list. ``extensions`` and
-    ``max_file_size_bytes`` are optional — unset means "use the
-    FolderSource defaults".
+    checked against the settings allow-list. The per-file size limit is
+    operator-owned and is not exposed as a request field.
     """
 
     path: str = Field(..., description="Absolute or ~-expanded directory to walk.")
@@ -1141,7 +1188,6 @@ class IngestFolderRequest(BaseModel):
         None,
         description="Lowercase extensions without dot. None → defaults (txt, md, pdf, docx, …).",
     )
-    max_file_size_bytes: int | None = Field(None, description="Per-file size cap; None → 25 MB default.")
     source_name: str = Field("", description="Optional grouping label stamped on every chunk's 'source'.")
     chunk_size: int = Field(
         1000,
@@ -1188,11 +1234,8 @@ async def ingest_folder_to_knowledge_base(
     via ``/task/{id}`` or the ``GET /{kb_name}`` endpoint.
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.INGEST, kb_name=kb_name)
-    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
+    await _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     try:
-        settings = get_settings_service().settings
-        allowed_roots = settings.kb_allowed_folder_roots or []
-
         # Validate user-supplied metadata before resolving the KB path so a
         # malformed payload responds with 422 rather than 404 if the KB name
         # also happens to be wrong.
@@ -1213,26 +1256,15 @@ async def ingest_folder_to_knowledge_base(
                     )
                 per_file_user_metadata[filename] = _validate_user_metadata(dict(file_meta or {}))
 
-        kb_path = _resolve_kb_path(kb_name, _kb_guard.owner_user)
-        metadata = KBAnalysisHelper.get_metadata(kb_path, fast=False)
-        if not metadata:
-            raise HTTPException(
-                status_code=400,
-                detail="Knowledge base missing embedding configuration. Please create a new KB or reconfigure it.",
-            )
-
-        model_selection = metadata.get("model_selection") or {
-            "name": metadata.get("embedding_model"),
-            "provider": metadata.get("embedding_provider"),
-        }
-        if not model_selection.get("name") or not model_selection.get("provider"):
-            raise HTTPException(status_code=400, detail="Invalid embedding configuration")
-
-        asset_id = await _resolve_kb_asset_id(
-            kb_name=kb_name,
-            current_user=current_user,
-            metadata=metadata,
+        record = await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
+        kb_path = _resolve_kb_store_path(
+            kb_name,
+            _kb_guard.owner_user,
+            backend_type=record.backend_type,
+            backend_config=record.backend_config,
         )
+        model_selection = _model_selection_from_record(record)
+        asset_id = record.id
 
         # Build + validate the folder source up-front so invalid
         # configurations surface as a 4xx response before a background
@@ -1240,14 +1272,12 @@ async def ingest_folder_to_knowledge_base(
         source_config: dict[str, Any] = {
             "path": payload.path,
             "recursive": payload.recursive,
-            "allowed_roots": allowed_roots,
         }
         if payload.extensions is not None:
             source_config["extensions"] = payload.extensions
-        if payload.max_file_size_bytes is not None:
-            source_config["max_file_size_bytes"] = payload.max_file_size_bytes
         if per_file_user_metadata:
             source_config["per_file_metadata"] = per_file_user_metadata
+        source_config = _apply_folder_source_security_settings(source_config)
 
         folder_source = FolderSource(user_id=current_user.id, source_config=source_config)
         try:
@@ -1303,8 +1333,11 @@ async def list_knowledge_bases(
 ) -> list[KnowledgeBaseInfo]:
     """List all available knowledge bases.
 
-    Reads from ``knowledge_base`` rows first. A disk scan is only used
-    as a recovery fallback when the user has no KB rows yet.
+    Reads exclusively from ``knowledge_base`` rows. There is no disk scan: a
+    remote-backed KB has no local directory to find, and scanning would make the
+    list depend on which replica served the request. Directories left by a
+    version that predates the row are adopted via
+    ``langflow reconcile-kb-from-disk``.
     """
     # List-level guard: a viewer-role user may still see the KBs they own,
     # but a role with ``knowledge_base:read`` revoked entirely is rejected
@@ -1312,68 +1345,35 @@ async def list_knowledge_bases(
     # KB share grants exist.
     await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=None)
     try:
-        kb_root_path = KBStorageHelper.get_root_path()
-        # Resolve + containment-check on par with every other path
-        # construction in this file. A username containing path
-        # separators (from a compromised token, or a weird legacy
-        # account) would otherwise escape the root directory.
-        kb_user_path = (kb_root_path / current_user.username).resolve()
-        _validate_kb_path_containment(
-            kb_root_path.resolve(), kb_user_path, current_user.username, current_user.username
-        )
-        kb_path = kb_user_path
-
         knowledge_bases: list[KnowledgeBaseInfo] = []
         kb_ids_to_fetch: list[uuid.UUID] = []
 
-        rows = await knowledge_base_service.list_by_user(current_user.id)
+        visibility = await visible_scope_prefilter(
+            current_user,
+            resource_type="knowledge_base",
+            act=KnowledgeBaseAction.READ,
+        )
+        rows = (
+            await knowledge_base_service.list_by_user(current_user.id)
+            if visibility is None
+            else await knowledge_base_service.list_owned_or_visible(current_user.id, visibility)
+        )
 
-        if rows:
-            for row in rows:
-                metadata = knowledge_base_service.record_to_metadata_dict(row)
-                # Skip KBs that are managed by a Memory Base — those are
-                # exposed through the Memory Base APIs, not the generic KB list.
-                if _is_memory_base_associated(metadata):
-                    continue
-                kb_ids_to_fetch.append(row.id)
-                knowledge_bases.append(
-                    _build_kb_info(
-                        kb_name=row.name.replace("_", " "),
-                        dir_name=row.name,
-                        metadata=metadata,
-                        size=row.size_bytes,
-                    )
+        for row in rows:
+            metadata = knowledge_base_service.record_to_metadata_dict(row)
+            # Skip KBs that are managed by a Memory Base — those are
+            # exposed through the Memory Base APIs, not the generic KB list.
+            if _is_memory_base_associated(metadata):
+                continue
+            kb_ids_to_fetch.append(row.id)
+            knowledge_bases.append(
+                _build_kb_info(
+                    kb_name=row.name.replace("_", " "),
+                    dir_name=row.name,
+                    metadata=metadata,
+                    size=row.size_bytes,
                 )
-        elif kb_path.exists():
-            # Recovery-only fallback for legacy/exported KB directories
-            # that have not been reconciled into the DB yet.
-            for kb_dir in kb_path.iterdir():
-                if not kb_dir.is_dir() or kb_dir.name.startswith("."):
-                    continue
-                # Skip dirs whose row was deleted but whose bytes survived
-                # a locked-file rmtree.  Without this, a 0-row user (which
-                # is what triggers the disk-fallback path) would re-surface
-                # a "deleted" KB they previously cleaned up.
-                if KBStorageHelper.is_kb_dir_deleted(kb_dir):
-                    continue
-                try:
-                    metadata = knowledge_base_service.load_metadata_from_disk(kb_dir)
-                    kb_id_str = metadata.get("id")
-                    if kb_id_str:
-                        with suppress(ValueError, AttributeError, TypeError):
-                            kb_ids_to_fetch.append(uuid.UUID(str(kb_id_str)))
-
-                    knowledge_bases.append(
-                        _build_kb_info(
-                            kb_name=kb_dir.name.replace("_", " "),
-                            dir_name=kb_dir.name,
-                            metadata=metadata,
-                            size=KBStorageHelper.get_directory_size(kb_dir),
-                        )
-                    )
-                except OSError:
-                    await logger.aexception("Error reading knowledge base directory '%s'", kb_dir)
-                    continue
+            )
 
         # Second pass: Batch fetch all job statuses in a single query
         if kb_ids_to_fetch:
@@ -1443,26 +1443,16 @@ async def list_connectors(_current_user: CurrentActiveUser) -> list[ConnectorCat
 async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> KnowledgeBaseInfo:
     """Get detailed information about a specific knowledge base."""
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
-    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
+    await _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     try:
         # Use the resolved owner — a non-owner reaching this route via a
         # share grant must see the owner's KB row, not their own same-named.
-        record = _kb_guard.record or await knowledge_base_service.get_by_user_and_name(_kb_guard.owner_user.id, kb_name)
-        if record is not None:
-            return _build_kb_info(
-                kb_name=record.name.replace("_", " "),
-                dir_name=record.name,
-                metadata=knowledge_base_service.record_to_metadata_dict(record),
-                size=record.size_bytes,
-            )
-
-        kb_path = _resolve_kb_path(kb_name, _kb_guard.owner_user)
-        metadata = knowledge_base_service.load_metadata_from_disk(kb_path)
+        record = await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
         return _build_kb_info(
-            kb_name=kb_name.replace("_", " "),
-            dir_name=kb_name,
-            metadata=metadata,
-            size=KBStorageHelper.get_directory_size(kb_path),
+            kb_name=record.name.replace("_", " "),
+            dir_name=record.name,
+            metadata=knowledge_base_service.record_to_metadata_dict(record),
+            size=record.size_bytes,
         )
 
     except HTTPException:
@@ -1519,37 +1509,35 @@ async def get_knowledge_base_chunks(
     invasive middleware changes.
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
-    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
+    await _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     kb_path: Path | None = None
     backend = None
     backend_type_value: str = BackendType.CHROMA.value
     try:
-        kb_path = _resolve_kb_path(kb_name, _kb_guard.owner_user)
-
         # Backend selection + construction must resolve against the KB owner
         # so remote-backed shared KBs read the owner's credential variables,
         # not the actor's (the actor often has none of the right vars).
-        backend_type_value, backend_config = await _resolve_backend_selection(
-            kb_name=kb_name,
-            kb_path=kb_path,
-            current_user=_kb_guard.owner_user,
+        record = await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
+        backend_type_value, backend_config = _backend_from_record(record)
+        kb_path = _resolve_kb_store_path(
+            kb_name,
+            _kb_guard.owner_user,
+            backend_type=backend_type_value,
+            backend_config=backend_config,
         )
 
-        # Local-Chroma short-circuit: if the KB lives on disk and has no
-        # files yet, return empty without booting a Chroma client (which
-        # would otherwise hit 'readonly database' on the empty dir).
-        # Cloud KBs store nothing locally, so this check must be skipped for them.
-        chroma_mode = str((backend_config or {}).get("mode", "local")).lower()
-        if backend_type_value == BackendType.CHROMA.value and chroma_mode != "cloud":
-            has_data = any((kb_path / m).exists() for m in ["chroma", "chroma.sqlite3", "index"])
-            if not has_data:
-                return PaginatedChunkResponse(
-                    chunks=[],
-                    total=0,
-                    page=page,
-                    limit=limit,
-                    total_pages=0,
-                )
+        # Local-Chroma short-circuit: a KB whose directory has no Chroma files
+        # yet is empty, and booting a client against it would hit 'readonly
+        # database'. ``kb_path`` is None for every other backend, so this cannot
+        # misfire on a Chroma Cloud KB that legitimately stores nothing locally.
+        if kb_path is not None and not _local_chroma_has_data(kb_path):
+            return PaginatedChunkResponse(
+                chunks=[],
+                total=0,
+                page=page,
+                limit=limit,
+                total_pages=0,
+            )
 
         backend = create_backend(
             backend_type_value,
@@ -1699,27 +1687,29 @@ async def get_knowledge_base_metadata_keys(
     (same trade-off as the chunks-endpoint post-filter pass).
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
-    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
+    await _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     kb_path: Path | None = None
     backend = None
     backend_type_value: str = BackendType.CHROMA.value
     try:
-        kb_path = _resolve_kb_path(kb_name, _kb_guard.owner_user)
-
         # Backend selection + construction must use the KB owner so
         # remote-backed shared KBs read the owner's credential variables.
-        backend_type_value, backend_config = await _resolve_backend_selection(
-            kb_name=kb_name,
-            kb_path=kb_path,
-            current_user=_kb_guard.owner_user,
+        record = await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
+        backend_type_value, backend_config = _backend_from_record(record)
+        kb_path = _resolve_kb_store_path(
+            kb_name,
+            _kb_guard.owner_user,
+            backend_type=backend_type_value,
+            backend_config=backend_config,
         )
 
-        # Local-Chroma short-circuit: empty KB without a Chroma store on
-        # disk would otherwise hit 'readonly database' on the empty dir.
-        if backend_type_value == BackendType.CHROMA.value:
-            has_data = any((kb_path / m).exists() for m in ["chroma", "chroma.sqlite3", "index"])
-            if not has_data:
-                return KbMetadataKeysResponse(keys={}, truncated=False)
+        # Local-Chroma short-circuit: an empty KB directory would otherwise hit
+        # 'readonly database'. Gated on ``kb_path`` rather than on
+        # ``backend_type == CHROMA``, which used to match Chroma *Cloud* too and
+        # returned an empty key set for a perfectly healthy cloud collection
+        # whenever this box had no local directory for it.
+        if kb_path is not None and not _local_chroma_has_data(kb_path):
+            return KbMetadataKeysResponse(keys={}, truncated=False)
 
         backend = create_backend(
             backend_type_value,
@@ -1807,33 +1797,27 @@ async def ingest_via_connector(
     file-upload + folder already use.
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.INGEST, kb_name=kb_name)
-    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
+    await _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     try:
-        kb_path = _resolve_kb_path(kb_name, _kb_guard.owner_user)
-
-        metadata = KBAnalysisHelper.get_metadata(kb_path, fast=False)
-        if not metadata:
-            raise HTTPException(
-                status_code=400,
-                detail="Knowledge base missing embedding configuration. Please create a new KB or reconfigure it.",
-            )
-        model_selection = metadata.get("model_selection") or {
-            "name": metadata.get("embedding_model"),
-            "provider": metadata.get("embedding_provider"),
-        }
-        if not model_selection.get("name") or not model_selection.get("provider"):
-            raise HTTPException(status_code=400, detail="Invalid embedding configuration")
-        asset_id = await _resolve_kb_asset_id(
-            kb_name=kb_name,
-            current_user=current_user,
-            metadata=metadata,
+        record = await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
+        kb_path = _resolve_kb_store_path(
+            kb_name,
+            _kb_guard.owner_user,
+            backend_type=record.backend_type,
+            backend_config=record.backend_config,
         )
+        model_selection = _model_selection_from_record(record)
+        asset_id = record.id
+
+        source_config = dict(payload.source_config)
+        if payload.source_type == SourceType.FOLDER.value:
+            source_config = _apply_folder_source_security_settings(source_config)
 
         try:
             source = create_source(
                 payload.source_type,
                 user_id=current_user.id,
-                source_config=payload.source_config,
+                source_config=source_config,
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -1853,7 +1837,7 @@ async def ingest_via_connector(
             user_id=current_user.id,
             kb_name=kb_name,
             source_type=payload.source_type,
-            source_config=payload.source_config,
+            source_config=source_config,
         )
 
         job_service = get_job_service()
@@ -1919,10 +1903,10 @@ async def list_ingestion_runs(
     the detail endpoint for the drill-down.
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
-    # Verify the KB path exists + traversal-safe before exposing run
-    # history — otherwise a crafted ``kb_name`` could be used to probe
-    # for other users' KB existence by timing list_runs_for_kb.
-    _resolve_kb_path(kb_name, _kb_guard.owner_user)
+    # Verify the KB exists before exposing run history — otherwise a crafted
+    # ``kb_name`` could be used to probe for other users' KBs by timing
+    # list_runs_for_kb.
+    await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
 
     rows, total = await ingestion_run_service.list_runs_for_kb(
         kb_name=kb_name,
@@ -1949,7 +1933,7 @@ async def get_ingestion_run(
 ) -> IngestionRunDetail:
     """Full run detail including per-item breakdown + error messages."""
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
-    _resolve_kb_path(kb_name, _kb_guard.owner_user)
+    await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
 
     row = await ingestion_run_service.get_run(run_id, user_id=_kb_guard.owner_user.id)
     if row is None or row.kb_name != kb_name:
@@ -2019,42 +2003,31 @@ async def delete_knowledge_base(
 ) -> dict[str, str]:
     """Delete a specific knowledge base."""
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.DELETE, kb_name=kb_name)
-    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
+    await _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     # All KB data lives in the owner's namespace (disk path, DB row, remote
     # collection, in-flight job). Route the cleanup helpers through the
     # owner so a non-owner with a delete share grant actually clears the
     # owner's resources, not their own.
     kb_owner = _kb_guard.owner_user
     try:
-        try:
-            kb_path = _resolve_kb_path(kb_name, kb_owner)
-        except HTTPException as exc:
-            # The local directory is gone but a DB row may still be
-            # dangling (remote-backed KBs created without a sidecar,
-            # or a partially-cleaned-up delete from a prior attempt).
-            # Fall through to an orphan-row cleanup so the UI stops
-            # showing the KB.
-            if exc.status_code != HTTPStatus.NOT_FOUND:
-                raise
-            handled, orphan_warning = await _cleanup_orphan_db_row(
-                kb_name=kb_name,
-                current_user=kb_owner,
-            )
-            if not handled:
-                raise
-            response: dict[str, str] = {"message": f"Knowledge base '{kb_name}' deleted successfully"}
-            if orphan_warning:
-                response["warning"] = orphan_warning
-            return response
+        # The row is the authority on existence, so a KB is deletable whether or
+        # not it ever had a local directory. That is what makes a remote-backed
+        # KB removable from any replica.
+        record = await _require_kb_record(kb_name, kb_owner, _kb_guard)
+        backend_type_value, backend_config = _backend_from_record(record)
+        kb_path = _resolve_kb_store_path(
+            kb_name,
+            kb_owner,
+            backend_type=backend_type_value,
+            backend_config=backend_config,
+        )
 
-        # Cancel any in-flight ingestion before tearing down the KB.
-        # Without this, the background job keeps writing chunks via the
-        # backend's persistent client, which auto-recreates the kb
-        # directory after rmtree. The list endpoint's disk-fallback
-        # path then re-discovers the recreated dir and the KB
-        # reappears in the UI seconds after delete.
+        # Cancel any in-flight ingestion before tearing down the KB. Without
+        # this, a local-Chroma writer keeps going through its persistent client
+        # and recreates the directory right after rmtree.
         await _cancel_inflight_ingestion_for_kb(
             kb_name=kb_name,
+            asset_id=record.id,
             current_user=kb_owner,
             job_service=job_service,
         )
@@ -2062,6 +2035,8 @@ async def delete_knowledge_base(
         remote_warning = await _delete_remote_backend_collection(
             kb_name=kb_name,
             kb_path=kb_path,
+            backend_type_value=backend_type_value,
+            backend_config=backend_config,
             current_user=kb_owner,
         )
 
@@ -2070,16 +2045,16 @@ async def delete_knowledge_base(
         # Windows) physical removal can fail, but the user's intent was to
         # remove the KB.  By dropping the DB row first the row never lingers
         # past a partial cleanup, and KBStorageHelper.delete_storage() drops
-        # a sentinel inside any dir it could not remove so the listing layer
-        # treats it as gone until the next restart fully reaps it.
+        # a sentinel inside any dir it could not remove so a recreate under the
+        # same name refuses rather than adopting the stale collection.
         try:
-            await knowledge_base_service.delete_by_user_and_name(_kb_guard.owner_user.id, kb_name)
+            await knowledge_base_service.delete_by_user_and_name(kb_owner.id, kb_name)
         except Exception as exc:
             await logger.aerror("KB DB delete failed for %s: %s", kb_name, exc)
             raise HTTPException(status_code=500, detail="Error deleting knowledge base.") from exc
 
         storage_warning: str | None = None
-        if not KBStorageHelper.delete_storage(kb_path, kb_name):
+        if kb_path is not None and not KBStorageHelper.delete_storage(kb_path, kb_name):
             # Both physical removal AND the sentinel write failed.  This is
             # rare (would require the dir itself being unwritable) but we
             # still return 200 because the DB row is gone -- the user no
@@ -2136,37 +2111,33 @@ async def delete_knowledge_bases_bulk(
 
         for kb_name in request.kb_names:
             kb_guard = kb_guards[kb_name]
-            try:
-                kb_path = _resolve_kb_path(kb_name, kb_guard.owner_user)
-            except HTTPException as exc:
-                if exc.status_code == HTTPStatus.NOT_FOUND:
-                    # Try the orphan-row cleanup before declaring the
-                    # KB not found — a remote-backed KB (Astra /
-                    # Mongo / Postgres / OpenSearch) whose local dir
-                    # is missing must still be deletable so the UI
-                    # stops showing it. Owner-scoped: the orphan row
-                    # belongs to the KB owner, not the actor.
-                    handled, orphan_warning = await _cleanup_orphan_db_row(
-                        kb_name=kb_name,
-                        current_user=kb_guard.owner_user,
-                    )
-                    if handled:
-                        deleted_count += 1
-                        if orphan_warning:
-                            remote_warnings.append(orphan_warning)
-                    else:
-                        not_found_kbs.append(kb_name)
-                    continue
-                raise  # Re-raise 403 (traversal) and 500 errors
 
-            # Mirror the per-KB Memory-Base guard the single-delete /
-            # ingest / chunks routes apply via dependency. Memory-Base
-            # KBs are managed through the Memory Base APIs and must
-            # not be deletable through the generic bulk endpoint.
-            kb_metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
-            if _is_memory_base_associated(kb_metadata):
+            # DB-backed Memory-Base guard — mirrors the per-KB guard the
+            # single-delete / ingest / chunks routes apply, so Memory-Base KBs
+            # (managed through the Memory Base APIs) are not deletable through
+            # this generic endpoint. Runs FIRST so the bulk path can never delete
+            # an MB's KB row/storage and leave its memory_base record dangling.
+            if await _kb_is_memory_base(kb_name, kb_guard.owner_user):
                 memory_base_kbs.append(kb_name)
                 continue
+
+            record = kb_guard.record or await knowledge_base_service.get_by_user_and_name(
+                kb_guard.owner_user.id, kb_name
+            )
+            if record is None:
+                not_found_kbs.append(kb_name)
+                continue
+
+            backend_type_value, backend_config = _backend_from_record(record)
+            # Resolved OUTSIDE the per-KB try below: a containment failure is a
+            # 403 that must abort the whole request, not be downgraded to a
+            # per-item "failed" entry in a 200 response.
+            kb_path = _resolve_kb_store_path(
+                kb_name,
+                kb_guard.owner_user,
+                backend_type=backend_type_value,
+                backend_config=backend_config,
+            )
 
             try:
                 # Cancel any in-flight ingestion before tearing down
@@ -2175,12 +2146,15 @@ async def delete_knowledge_bases_bulk(
                 # scoped so a shared-KB delete clears the owner's job.
                 await _cancel_inflight_ingestion_for_kb(
                     kb_name=kb_name,
+                    asset_id=record.id,
                     current_user=kb_guard.owner_user,
                     job_service=job_service,
                 )
                 remote_warning = await _delete_remote_backend_collection(
                     kb_name=kb_name,
                     kb_path=kb_path,
+                    backend_type_value=backend_type_value,
+                    backend_config=backend_config,
                     current_user=kb_guard.owner_user,
                 )
                 if remote_warning:
@@ -2189,8 +2163,8 @@ async def delete_knowledge_bases_bulk(
                 # DB-first ordering, mirroring the single-delete endpoint:
                 # row goes first so a locked-storage cleanup leaves no
                 # stale row behind.  delete_storage() drops a sentinel
-                # inside any dir it could not remove so listing stays
-                # consistent.
+                # inside any dir it could not remove so a same-name recreate
+                # refuses rather than adopting the stale collection.
                 try:
                     await knowledge_base_service.delete_by_user_and_name(kb_guard.owner_user.id, kb_name)
                 except Exception as exc:  # noqa: BLE001 - DB delete failures shouldn't block remaining KBs in the bulk op
@@ -2198,7 +2172,7 @@ async def delete_knowledge_bases_bulk(
                     failed_kbs.append(kb_name)
                     continue
 
-                if not KBStorageHelper.delete_storage(kb_path, kb_name):
+                if kb_path is not None and not KBStorageHelper.delete_storage(kb_path, kb_name):
                     # Both rmtree and the sentinel write failed -- count
                     # this as deleted (the row is gone, the listing UI
                     # will not show the KB) but warn so the operator can
@@ -2250,19 +2224,19 @@ async def cancel_ingestion(
 ) -> dict[str, str]:
     """Cancel the ongoing ingestion task for a knowledge base."""
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.WRITE, kb_name=kb_name)
-    _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
+    await _assert_kb_not_memory_base(kb_name, _kb_guard.owner_user)
     try:
-        kb_path = _resolve_kb_path(kb_name, _kb_guard.owner_user)
-
-        # ``asset_id`` is now sourced from ``KnowledgeBaseRecord.id``
-        # (the indexed column on ``job.asset_id``); legacy KBs that
-        # only exist on disk fall back to ``metadata['id']``.
-        metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
-        asset_id = await _resolve_kb_asset_id(
-            kb_name=kb_name,
-            current_user=current_user,
-            metadata=metadata,
+        # ``asset_id`` is ``KnowledgeBaseRecord.id``, the indexed column behind
+        # ``job.asset_id``.
+        kb_record = await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
+        backend_type_value, backend_config = _backend_from_record(kb_record)
+        kb_path = _resolve_kb_store_path(
+            kb_name,
+            _kb_guard.owner_user,
+            backend_type=backend_type_value,
+            backend_config=backend_config,
         )
+        asset_id = kb_record.id
 
         # Fetch the latest ingestion job for this KB
         latest_jobs = await job_service.get_latest_jobs_by_asset_ids([asset_id])
@@ -2287,13 +2261,6 @@ async def cancel_ingestion(
         # credentials and delete against the right store — otherwise
         # cleanup silently falls back to Chroma and remote chunks
         # written before the cancel stick around.
-        kb_record = _kb_guard.record or await knowledge_base_service.get_by_user_and_name(
-            _kb_guard.owner_user.id, kb_name
-        )
-        backend_type_value = (
-            kb_record.backend_type if kb_record and kb_record.backend_type else BackendType.CHROMA.value
-        )
-        backend_config = (kb_record.backend_config or {}) if kb_record is not None else {}
         await KBIngestionHelper.cleanup_chroma_chunks_by_job(
             job.job_id,
             kb_path,

@@ -9,12 +9,14 @@ import {
   SimpleSidebar,
   SimpleSidebarProvider,
 } from "@/components/ui/simple-sidebar";
+import { useRestoreCanvasHitl } from "@/controllers/API/agui/use-restore-canvas-hitl";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { useGetTypes } from "@/controllers/API/queries/flows/use-get-types";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWebhookEvents } from "@/hooks/use-webhook-events";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
@@ -24,10 +26,12 @@ import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { useTypesStore } from "@/stores/typesStore";
+import { uiLocale } from "@/utils/format-date";
 import { customStringify } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
 import useFlowStore from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
+import AgentMainContent from "./components/AgentMainContent";
 import {
   FlowSearchProvider,
   FlowSidebarComponent,
@@ -35,6 +39,8 @@ import {
 import MemoriesMainContent from "./components/MemoriesMainContent";
 import Page from "./components/PageComponent";
 import { FlowInsightsContent } from "./components/TraceComponent/FlowInsightsContent";
+import useLoadFlowForRoute from "./hooks/use-load-flow-for-route";
+import { saveBeforeLeaving } from "./save-before-leaving";
 
 function FlowPageMainContent({
   flowId,
@@ -46,6 +52,14 @@ function FlowPageMainContent({
   const { activeSection } = useSidebar();
   const showTraces = ENABLE_NEW_SIDEBAR && activeSection === "traces";
   const showMemories = ENABLE_NEW_SIDEBAR && activeSection === "memories";
+  // The Agent tab is always available. It handles its own three states
+  // (ineligible / eligible-not-serving / serving) inside AgentMainContent, so
+  // there's nothing to fall back to the canvas for.
+  const showAgent = ENABLE_NEW_SIDEBAR && activeSection === "agent";
+
+  if (showAgent) {
+    return <AgentMainContent />;
+  }
 
   if (showTraces) {
     return (
@@ -71,10 +85,9 @@ function FlowPageMainContent({
 
 export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const types = useTypesStore((state) => state.types);
+  const { id } = useParams();
 
-  useGetTypes({
-    enabled: Object.keys(types).length <= 0,
-  });
+  useGetTypes({ flowId: id });
 
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
   const currentFlow = useFlowStore((state) => state.currentFlow);
@@ -82,6 +95,8 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
+
+  useDocumentTitle(currentSavedFlow?.name);
 
   const changesNotSaved =
     customStringify(currentFlow) !== customStringify(currentSavedFlow) &&
@@ -91,12 +106,14 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const blocker = useBlocker(changesNotSaved || isBuilding);
 
   const setOnFlowPage = useFlowStore((state) => state.setOnFlowPage);
-  const { id } = useParams();
   const navigate = useCustomNavigate();
   const saveFlow = useSaveFlow();
 
   const flows = useFlowsManagerStore((state) => state.flows);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+
+  // Restore the Human Input awaiting-input badge after a reload (LE-1603 reconnect).
+  useRestoreCanvasHitl(currentFlowId);
 
   const updatedAt = currentSavedFlow?.updated_at;
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
@@ -105,29 +122,30 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const { mutateAsync: getFlow } = useGetFlow();
   const applyFlowToCanvas = useApplyFlowToCanvas();
 
+  useLoadFlowForRoute({
+    id,
+    flows,
+    currentFlowId,
+    types,
+    getFlow,
+    applyFlowToCanvas,
+    navigate,
+  });
+
   // Connect to webhook events SSE for real-time feedback
   useWebhookEvents();
 
   const handleSave = () => {
-    let saving = true;
-    let proceed = false;
-    setTimeout(() => {
-      saving = false;
-      if (proceed) {
-        blocker.proceed && blocker.proceed();
+    void saveBeforeLeaving({
+      saveFlow,
+      autoSaving,
+      proceed: () => blocker.proceed?.(),
+      reset: () => blocker.reset?.(),
+      onSaved: () => {
         setSuccessData({
           title: t("flow.savedSuccessfully"),
         });
-      }
-    }, 1200);
-    saveFlow().then(() => {
-      if (!autoSaving || saving === false) {
-        blocker.proceed && blocker.proceed();
-        setSuccessData({
-          title: t("flow.savedSuccessfully"),
-        });
-      }
-      proceed = true;
+      },
     });
   };
 
@@ -155,25 +173,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [changesNotSaved, isBuilding]);
-
-  // Set flow tab id
-  useEffect(() => {
-    const awaitgetTypes = async () => {
-      if (flows && currentFlowId === "" && Object.keys(types).length > 0) {
-        const isAnExistingFlow = flows.find((flow) => flow.id === id);
-
-        if (!isAnExistingFlow) {
-          navigate("/all");
-          return;
-        }
-
-        const isAnExistingFlowId = isAnExistingFlow.id;
-
-        await getFlowToAddToCanvas(isAnExistingFlowId);
-      }
-    };
-    awaitgetTypes();
-  }, [id, flows, currentFlowId, types]);
 
   useEffect(() => {
     setOnFlowPage(true);
@@ -207,11 +206,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       }
     }
   }, [blocker.state, isBuilding]);
-
-  const getFlowToAddToCanvas = async (id: string) => {
-    const flow = await getFlow({ id });
-    applyFlowToCanvas(flow);
-  };
 
   const isMobile = useIsMobile();
   // When the welcome overlay is open, the FlowSidebarComponent should be
@@ -302,53 +296,59 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                 setSlidingContainerOpen(true);
               }}
             >
-              <SidebarProvider
-                width="17.5rem"
-                defaultOpen={!isMobile}
-                segmentedSidebar={ENABLE_NEW_SIDEBAR}
+              <div
+                className="contents"
+                inert={isSlidingContainerOpen && isFullscreen}
+                aria-hidden={isSlidingContainerOpen && isFullscreen}
               >
-                {/* Assistant Panel — single instance, mounted INSIDE the
+                <SidebarProvider
+                  width="17.5rem"
+                  defaultOpen={!isMobile}
+                  segmentedSidebar={ENABLE_NEW_SIDEBAR}
+                >
+                  {/* Assistant Panel — single instance, mounted INSIDE the
                     SidebarProvider so it can read sidebar open state via
                     ``useSidebar`` and shift its horizontal position when the
                     sidebar slides off-canvas. */}
-                <AssistantPanel
-                  isOpen={assistantOpen}
-                  onClose={() => setAssistantOpen(false)}
-                />
-                <FlowSearchProvider>
-                  {/* FlowSidebarComponent - stays in place. Wrapped in a
+                  <AssistantPanel
+                    isOpen={assistantOpen}
+                    onClose={() => setAssistantOpen(false)}
+                  />
+                  <FlowSearchProvider>
+                    {/* FlowSidebarComponent - stays in place. Wrapped in a
                       ``display: none`` container while the welcome is open
                       so it never paints on first render (and never flashes
                       while the welcome's open-effect catches up). The
                       wrapper uses ``display: contents`` when visible so it
                       doesn't break the parent flex layout. */}
-                  {!view && (
-                    <div
-                      style={{
-                        display: isWelcomeOpen ? "none" : "contents",
-                      }}
-                    >
-                      <FlowSidebarComponent isLoading={isLoading} />
-                    </div>
-                  )}
-
-                  <main
-                    className={cn(
-                      "flex flex-1 min-w-0 overflow-hidden transition-all duration-300",
-                      isSlidingContainerOpen &&
-                        !isFullscreen &&
-                        "rounded-xl m-2 mr-0",
+                    {!view && (
+                      <div
+                        style={{
+                          display: isWelcomeOpen ? "none" : "contents",
+                        }}
+                      >
+                        <FlowSidebarComponent isLoading={isLoading} />
+                      </div>
                     )}
-                  >
-                    <div className="h-full w-full">
-                      <FlowPageMainContent
-                        flowId={id}
-                        setIsLoading={setIsLoading}
-                      />
-                    </div>
-                  </main>
-                </FlowSearchProvider>
-              </SidebarProvider>
+
+                    <main
+                      className={cn(
+                        "flex flex-1 min-w-0 overflow-hidden transition-all duration-300",
+                        isSlidingContainerOpen &&
+                          !isFullscreen &&
+                          "rounded-xl m-2 mr-0",
+                      )}
+                    >
+                      <div className="h-full w-full">
+                        <FlowPageMainContent
+                          flowId={id}
+                          setIsLoading={setIsLoading}
+                        />
+                      </div>
+                    </main>
+                  </FlowSearchProvider>
+                </SidebarProvider>
+              </div>
               <SimpleSidebar resizable={!isFullscreen} className="h-full">
                 <FlowPageSlidingContainerContent
                   isFullscreen={isFullscreen}
@@ -369,7 +369,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
               flowName={currentSavedFlow.name}
               lastSaved={
                 updatedAt
-                  ? new Date(updatedAt).toLocaleString("en-US", {
+                  ? new Date(updatedAt).toLocaleString(uiLocale(), {
                       hour: "numeric",
                       minute: "numeric",
                       second: "numeric",

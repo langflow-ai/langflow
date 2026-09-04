@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH } from "@/constants/constants";
 import { EventDeliveryType } from "@/constants/enums";
 import type { Pagination, Tag } from "@/types/utils/types";
 import type { UtilityStoreType } from "@/types/zustand/utility";
@@ -64,11 +65,33 @@ export const useUtilityStore = create<UtilityStoreType>((set, get) => ({
   allowCustomComponents: true,
   setAllowCustomComponents: (allowCustomComponents: boolean) =>
     set({ allowCustomComponents }),
+  substituteOutdatedComponentCode: true,
+  setSubstituteOutdatedComponentCode: (
+    substituteOutdatedComponentCode: boolean,
+  ) => set({ substituteOutdatedComponentCode }),
+  catalogGovernanceEnabled: false,
+  setCatalogGovernanceEnabled: (catalogGovernanceEnabled: boolean) =>
+    set({ catalogGovernanceEnabled }),
+  blockedComponentTypes: new Set<string>(),
+  setBlockedComponentTypes: (blockedComponentTypes: Iterable<string>) =>
+    set({ blockedComponentTypes: new Set(blockedComponentTypes) }),
+  a2aEnabled: false,
+  setA2aEnabled: (a2aEnabled: boolean) => set({ a2aEnabled }),
+  // Default true (backend default) so the panel doesn't flash the disabled
+  // state before the /config reply lands.
+  agenticExperienceEnabled: true,
+  setAgenticExperienceEnabled: (agenticExperienceEnabled: boolean) =>
+    set({ agenticExperienceEnabled }),
+  assistantMaxMessageLength: DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH,
+  setAssistantMaxMessageLength: (assistantMaxMessageLength: number) =>
+    set({ assistantMaxMessageLength }),
+  localVectorStoreAvailable: true,
+  setLocalVectorStoreAvailable: (localVectorStoreAvailable: boolean) =>
+    set({ localVectorStoreAvailable }),
   mcpBaseUrl: "",
   setMcpBaseUrl: (mcpBaseUrl: string) => set({ mcpBaseUrl }),
-  // Default ``false`` so a misconfigured store (no ``/config`` reply yet)
-  // matches the backend default of "reload disabled".  The /config query
-  // overwrites this on first load.
+  // Default false to match the backend's "reload disabled" default until the
+  // /config query overwrites it on first load.
   enableExtensionReload: false,
   setEnableExtensionReload: (enableExtensionReload: boolean) =>
     set({ enableExtensionReload }),

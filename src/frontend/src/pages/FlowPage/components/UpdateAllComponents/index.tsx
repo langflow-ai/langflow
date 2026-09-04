@@ -113,7 +113,10 @@ export default function UpdateAllComponents() {
     (component) => component.breakingChange,
   );
 
-  const handleUpdateAllComponents = (confirmed?: boolean, ids?: string[]) => {
+  const handleUpdateAllComponents = async (
+    confirmed?: boolean,
+    ids?: string[],
+  ): Promise<void> => {
     if (updatableComponents.length === 0) {
       return;
     }
@@ -123,82 +126,71 @@ export default function UpdateAllComponents() {
     }
     startEdgesUpdateRef();
 
-    setLoadingUpdate(true);
-    takeSnapshot();
-
-    let updatedCount = 0;
-    const updates: UpdateNodesType[] = [];
-
     const nodesToUpdate = updatableComponents.filter(
       (component) => ids?.includes(component.id) ?? true,
     );
+    const registeredNodeIds: string[] = [];
+    let errorReported = false;
+    setLoadingUpdate(true);
 
-    // Register all pending updates so buildFlow will wait for them
-    for (const nodeUpdate of nodesToUpdate) {
-      registerNodeUpdate(nodeUpdate.id);
-    }
+    try {
+      takeSnapshot();
 
-    const updatePromises = nodesToUpdate.map((nodeUpdate) => {
-      const node = nodes.find((n) => n.id === nodeUpdate.id);
-      if (!node || node.type !== "genericNode") {
-        completeNodeUpdate(nodeUpdate.id);
-        return Promise.resolve();
+      // Register all pending updates so buildFlow will wait for them.
+      for (const nodeUpdate of nodesToUpdate) {
+        registerNodeUpdate(nodeUpdate.id);
+        registeredNodeIds.push(nodeUpdate.id);
       }
 
-      const thisNodeTemplate = templates[node.data.type]?.template;
-      if (!thisNodeTemplate?.code) {
-        completeNodeUpdate(nodeUpdate.id);
-        return Promise.resolve();
-      }
+      const updatePromises = nodesToUpdate.map(async (nodeUpdate) => {
+        const node = nodes.find((n) => n.id === nodeUpdate.id);
+        if (!node || node.type !== "genericNode") {
+          throw new Error(`Unable to find updatable node ${nodeUpdate.id}`);
+        }
 
-      const currentCode = thisNodeTemplate.code.value;
+        const thisNodeTemplate = templates[node.data.type]?.template;
+        if (!thisNodeTemplate?.code) {
+          throw new Error(`Unable to find template code for ${nodeUpdate.id}`);
+        }
 
-      return new Promise((resolve) => {
-        validateComponentCode({
+        const currentCode = thisNodeTemplate.code.value;
+        const validation = await validateComponentCode({
           code: currentCode,
           frontend_node: node.data.node!,
-        })
-          .then(({ data: resData, type }) => {
-            if (resData && type) {
-              const newNode = processNodeAdvancedFields(
-                resData,
-                edges,
-                nodeUpdate.id,
-              );
+        });
+        if (!validation) return undefined;
+        const { data: resData, type } = validation;
 
-              updates.push({
-                nodeId: nodeUpdate.id,
-                newNode,
-                code: currentCode,
-                name: "code",
-                type,
-              });
-
-              updatedCount++;
-            }
-            resolve(null);
-          })
-          .catch((error) => {
-            console.error(error);
-            resolve(null);
-          });
-      });
-    });
-
-    Promise.all(updatePromises)
-      .then(() => {
-        const updatedNodeIds = updates.map(({ nodeId }) => nodeId);
-
-        if (updatedNodeIds.length > 0) {
-          updateAllNodes(updates);
-          removeDismissedNodes(updatedNodeIds);
-
-          useAlertStore.getState().setSuccessData({
-            title: getSuccessTitle(updatedCount),
-          });
+        if (!resData || !type) {
+          throw new Error(`Validation returned no update for ${nodeUpdate.id}`);
         }
-      })
-      .catch((error) => {
+
+        return {
+          nodeId: nodeUpdate.id,
+          newNode: processNodeAdvancedFields(resData, edges, nodeUpdate.id),
+          code: currentCode,
+          name: "code",
+          type,
+        } satisfies UpdateNodesType;
+      });
+
+      const results = await Promise.allSettled(updatePromises);
+      const updates = results.flatMap((result) =>
+        result.status === "fulfilled" && result.value ? [result.value] : [],
+      );
+      const updatedNodeIds = updates.map(({ nodeId }) => nodeId);
+
+      if (updatedNodeIds.length > 0) {
+        updateAllNodes(updates);
+        removeDismissedNodes(updatedNodeIds);
+      }
+
+      const failedCount = results.filter(
+        (result) => result.status === "rejected",
+      ).length;
+      if (failedCount > 0) {
+        resetEdgesUpdateRef();
+        errorReported = true;
         setErrorData({
           title: t("errors.updateComponents"),
           list: [
@@ -206,15 +198,34 @@ export default function UpdateAllComponents() {
             t("errors.updateComponentsContact"),
           ],
         });
-        console.error(error);
-      })
-      .finally(() => {
-        // Complete all pending updates regardless of success/failure
-        for (const nodeUpdate of nodesToUpdate) {
-          completeNodeUpdate(nodeUpdate.id);
-        }
-        setLoadingUpdate(false);
-      });
+        throw new Error(
+          `Failed to update ${failedCount} of ${nodesToUpdate.length} components`,
+        );
+      }
+
+      if (updatedNodeIds.length > 0) {
+        useAlertStore.getState().setSuccessData({
+          title: getSuccessTitle(updatedNodeIds.length),
+        });
+      }
+    } catch (error) {
+      resetEdgesUpdateRef();
+      if (!errorReported) {
+        setErrorData({
+          title: t("errors.updateComponents"),
+          list: [
+            t("errors.updateComponentsList"),
+            t("errors.updateComponentsContact"),
+          ],
+        });
+      }
+      throw error;
+    } finally {
+      for (const nodeId of registeredNodeIds) {
+        completeNodeUpdate(nodeId);
+      }
+      setLoadingUpdate(false);
+    }
   };
 
   const resetEdgesUpdateRef = () => {
@@ -270,7 +281,7 @@ export default function UpdateAllComponents() {
             variants={CONTAINER_VARIANTS}
             transition={{ duration: 0.2, ease: "easeOut" }}
             className={cn(
-              "flex items-start justify-between gap-6 rounded-lg border bg-background px-4 py-3 text-sm shadow-md",
+              "flex items-center justify-between gap-6 rounded-lg border bg-background px-4 py-3 text-sm shadow-md",
               (showDismissedWarning ||
                 !allowCustomComponents ||
                 updatableComponents.some(
@@ -323,7 +334,9 @@ export default function UpdateAllComponents() {
                 <Button
                   size="sm"
                   className="shrink-0"
-                  onClick={() => handleUpdateAllComponents()}
+                  onClick={() =>
+                    void handleUpdateAllComponents().catch(() => undefined)
+                  }
                   loading={loadingUpdate}
                   data-testid="update-all-button"
                 >
@@ -333,14 +346,14 @@ export default function UpdateAllComponents() {
                 </Button>
               )}
             </div>
-            <UpdateComponentModal
-              isMultiple={true}
-              open={isOpen}
-              setOpen={setIsOpen}
-              onUpdateNode={(ids) => handleUpdateAllComponents(true, ids)}
-              components={updatableComponents}
-            />
           </motion.div>
+          <UpdateComponentModal
+            isMultiple={true}
+            open={isOpen}
+            setOpen={setIsOpen}
+            onUpdateNode={(ids) => handleUpdateAllComponents(true, ids)}
+            components={updatableComponents}
+          />
         </div>
       )}
     </AnimatePresence>

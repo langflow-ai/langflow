@@ -18,6 +18,7 @@ from fastapi import HTTPException, status
 from langflow.services.authorization.audit import (
     _AUDIT_BATCH_MAX,
     _AUDIT_QUEUE_MAX,
+    AuditPersistenceError,
     _audit_writer_loop,
     _AuditEntry,
     _ensure_audit_writer_started,
@@ -25,6 +26,7 @@ from langflow.services.authorization.audit import (
     _split_obj,
     audit_decision,
     drain_pending_audit_writes,
+    get_audit_producer_health,
 )
 from langflow.services.authorization.audit import (
     AUDIT_ALLOW as _AUDIT_ALLOW,
@@ -34,6 +36,9 @@ from langflow.services.authorization.audit import (
 )
 from langflow.services.authorization.audit import (
     AUDIT_OWNER_OVERRIDE as _AUDIT_OWNER_OVERRIDE,
+)
+from langflow.services.authorization.audit import (
+    AUDIT_SKIP as _AUDIT_SKIP,
 )
 from langflow.services.authorization.guards import (
     _ACTION_ENUMS,
@@ -46,11 +51,15 @@ from langflow.services.authorization.guards import (
     ensure_deployment_permission,
     ensure_file_permission,
     ensure_flow_permission,
+    ensure_flows_permission,
     ensure_knowledge_base_permission,
     ensure_permission,
     ensure_project_permission,
+    ensure_provider_account_permission,
     ensure_share_permission,
     ensure_variable_permission,
+    ensure_voice_permission,
+    should_apply_owner_override,
 )
 from langflow.services.authorization.listing import (
     _default_resource_id_getter,
@@ -77,7 +86,9 @@ __all__ = [
     "_AUDIT_DENY",
     "_AUDIT_OWNER_OVERRIDE",
     "_AUDIT_QUEUE_MAX",
+    "_AUDIT_SKIP",
     "_OWNER_CONTEXT_KEYS",
+    "AuditPersistenceError",
     "_AuditEntry",
     "_audit_writer_loop",
     "_auth_context",
@@ -95,13 +106,18 @@ __all__ = [
     "ensure_deployment_permission",
     "ensure_file_permission",
     "ensure_flow_permission",
+    "ensure_flows_permission",
     "ensure_knowledge_base_permission",
     "ensure_permission",
     "ensure_project_permission",
+    "ensure_provider_account_permission",
     "ensure_share_permission",
     "ensure_variable_permission",
+    "ensure_voice_permission",
     "filter_visible_resources",
+    "get_audit_producer_health",
     "get_authorization_service",
     "get_settings_service",
     "permission_denied_to_http",
+    "should_apply_owner_override",
 ]

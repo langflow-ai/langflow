@@ -1,13 +1,26 @@
 import re
+import sys
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
+
+pytest.importorskip("lfx_ollama")
+pytest.importorskip("langchain_ollama")
+
 from langchain_ollama import ChatOllama
 from lfx.base.models.ollama_constants import DEFAULT_OLLAMA_API_URL
 from lfx.components.ollama.ollama import ChatOllamaComponent
 from lfx.schema import Data, DataFrame
 
 from tests.base import ComponentTestBaseWithoutClient
+
+# The component moved into lfx-ollama, so ``ollama.py`` is reachable under several module
+# identities (the ``lfx.components.ollama.ollama`` shim, the canonical
+# ``lfx_ollama.components.ollama.ollama``, and the runtime ``_lfx_ext.*`` ext-loader copy). Patch on
+# the module the imported class actually lives in: a fixed string target like
+# "lfx.components.ollama.ollama.ChatOllama" misses (mock "called 0 times") when an earlier
+# test in the suite causes the class to resolve to a different identity.
+_OLLAMA_MODULE = sys.modules[ChatOllamaComponent.__module__]
 
 
 class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
@@ -49,7 +62,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         # Provide an empty list or the actual mapping if versioned files exist
         return []
 
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     async def test_build_model(self, mock_chat_ollama, component_class, default_kwargs):
         mock_instance = MagicMock()
         mock_chat_ollama.return_value = mock_instance
@@ -77,7 +90,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         )
         assert model == mock_instance
 
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     async def test_build_model_missing_base_url(self, mock_chat_ollama, component_class, default_kwargs):
         # Make the mock raise an exception to simulate connection failure
         mock_chat_ollama.side_effect = Exception("connection error")
@@ -86,7 +99,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         with pytest.raises(ValueError, match=re.escape("Unable to connect to the Ollama API.")):
             component.build_model()
 
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     async def test_build_model_with_mirostat_enabled(self, mock_chat_ollama, component_class):
         """Test that mirostat parameters are included when Mirostat is enabled."""
         mock_instance = MagicMock()
@@ -109,7 +122,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert call_kwargs["mirostat_tau"] == 5.0
         assert model == mock_instance
 
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     async def test_build_model_with_mirostat_2_enabled(self, mock_chat_ollama, component_class):
         """Test that mirostat parameters are included when Mirostat 2.0 is enabled."""
         mock_instance = MagicMock()
@@ -132,8 +145,8 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert model == mock_instance
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.post")
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    @patch("httpx.AsyncClient.post")
+    @patch("httpx.AsyncClient.get")
     async def test_get_models_success(self, mock_get, mock_post):
         component = ChatOllamaComponent()
         mock_get_response = AsyncMock()
@@ -161,8 +174,8 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert mock_post.call_count == 2
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.post")
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    @patch("httpx.AsyncClient.post")
+    @patch("httpx.AsyncClient.get")
     async def test_get_models_missing_capabilities_without_tool_model(self, mock_get, mock_post):
         """Test backwards compatibility: models without capabilities field are included.
 
@@ -197,8 +210,8 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert mock_post.call_count == 2
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.post")
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    @patch("httpx.AsyncClient.post")
+    @patch("httpx.AsyncClient.get")
     async def test_get_models_missing_capabilities_with_tool_model(self, mock_get, mock_post):
         """Test that models without capabilities field are excluded when tool_model_enabled=True."""
         component = ChatOllamaComponent()
@@ -230,8 +243,8 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert mock_post.call_count == 2
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.post")
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    @patch("httpx.AsyncClient.post")
+    @patch("httpx.AsyncClient.get")
     async def test_get_models_mixed_capabilities_response(self, mock_get, mock_post):
         """Test mixed scenario: some models have capabilities, some don't."""
         component = ChatOllamaComponent()
@@ -265,7 +278,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert mock_post.call_count == 3
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    @patch("httpx.AsyncClient.get")
     async def test_get_models_failure(self, mock_get):
         import httpx
 
@@ -305,7 +318,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert updated_config["mirostat_eta"]["value"] == 0.2
         assert updated_config["mirostat_tau"]["value"] == 10
 
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    @patch("httpx.AsyncClient.get")
     @pytest.mark.asyncio
     async def test_update_build_config_model_name(self, mock_get):
         component = ChatOllamaComponent()
@@ -360,7 +373,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
 
     @patch("socket.getaddrinfo")
     @patch("lfx.utils.util.Path")
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     def test_build_model_transforms_localhost_in_docker_container(
         self, mock_chat_ollama, mock_path_class, mock_getaddrinfo
     ):
@@ -396,7 +409,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert model == mock_model
 
     @patch("lfx.utils.util.Path")
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     def test_build_model_no_transform_outside_container(self, mock_chat_ollama, mock_path_class):
         """Test that localhost URLs are NOT transformed when running outside a container."""
         # Mock no container environment
@@ -421,7 +434,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
 
     @patch("socket.getaddrinfo")
     @patch("lfx.utils.util.Path")
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     def test_build_model_transforms_localhost_in_podman_container(
         self, mock_chat_ollama, mock_path_class, mock_getaddrinfo
     ):
@@ -463,7 +476,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
 
     @patch("socket.getaddrinfo")
     @patch("lfx.utils.util.Path")
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     def test_build_model_transforms_127_0_0_1_in_container(self, mock_chat_ollama, mock_path_class, mock_getaddrinfo):
         """Test that 127.0.0.1 URLs are also transformed in container."""
 
@@ -496,8 +509,8 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert call_args["base_url"] == "http://host.docker.internal:11434"
         assert model == mock_model
 
-    @patch("lfx.components.ollama.ollama.ChatOllama")
-    @patch("lfx.components.ollama.ollama.logger")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "logger")
     def test_build_model_strips_v1_suffix_and_logs_warning(self, mock_logger, mock_chat_ollama):
         """Test that /v1 suffix is automatically stripped and a warning is logged."""
         mock_model = MagicMock()
@@ -521,8 +534,8 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert call_args["base_url"] == "http://localhost:11434"
         assert model == mock_model
 
-    @patch("lfx.components.ollama.ollama.ChatOllama")
-    @patch("lfx.components.ollama.ollama.logger")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "logger")
     def test_build_model_strips_v1_trailing_slash(self, mock_logger, mock_chat_ollama):
         """Test that /v1/ suffix is also automatically stripped."""
         mock_model = MagicMock()
@@ -544,7 +557,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert model == mock_model
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    @patch("httpx.AsyncClient.get")
     async def test_is_valid_ollama_url_with_v1_suffix(self, mock_get):
         """Test that is_valid_ollama_url strips /v1 suffix when validating."""
         component = ChatOllamaComponent()
@@ -561,8 +574,8 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert result is True
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.post")
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    @patch("httpx.AsyncClient.post")
+    @patch("httpx.AsyncClient.get")
     async def test_get_models_with_v1_suffix(self, mock_get, mock_post):
         """Test that get_models strips /v1 suffix when fetching models."""
         component = ChatOllamaComponent()
@@ -590,7 +603,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert result == ["model1"]
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    @patch("httpx.AsyncClient.get")
     async def test_update_build_config_no_error_when_ollama_not_running(self, mock_get):
         """Test that update_build_config doesn't throw error when Ollama isn't running."""
         import httpx
@@ -612,7 +625,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         updated_config = await component.update_build_config(build_config, field_value, field_name)
         assert updated_config["model_name"]["options"] == []
 
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     def test_build_model_with_json_format_string(self, mock_chat_ollama, component_class, default_kwargs):
         """Test that the format field works with 'json' string value (backward compatibility)."""
         mock_instance = MagicMock()
@@ -627,7 +640,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert call_args["format"] == "json"
         assert model == mock_instance
 
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     def test_build_model_with_json_schema_dict(self, mock_chat_ollama, component_class, default_kwargs):
         """Test that the format field works with a JSON schema dictionary."""
         mock_instance = MagicMock()
@@ -656,7 +669,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert call_args["format"]["required"] == ["name"]
         assert model == mock_instance
 
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     def test_build_model_with_complex_json_schema(self, mock_chat_ollama, component_class, default_kwargs):
         """Test that the format field works with a complex/realistic JSON schema (e.g., from Pydantic)."""
         mock_instance = MagicMock()
@@ -701,7 +714,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert call_args["format"]["additionalProperties"] is False
         assert model == mock_instance
 
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     def test_build_model_with_pydantic_model_json_schema(self, mock_chat_ollama, component_class, default_kwargs):
         """Test that the format field works with a schema generated from Pydantic's model_json_schema() method.
 
@@ -798,7 +811,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
             await component._parse_json_response()
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.ChatOllamaComponent._parse_json_response")
+    @patch.object(ChatOllamaComponent, "_parse_json_response")
     async def test_build_data_output_with_dict(self, mock_parse_json, component_class, default_kwargs):
         """Test build_data_output with dict response."""
         mock_parse_json.return_value = {"name": "Alice", "city": "NYC"}
@@ -810,7 +823,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert result.data == {"name": "Alice", "city": "NYC"}
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.ChatOllamaComponent._parse_json_response")
+    @patch.object(ChatOllamaComponent, "_parse_json_response")
     async def test_build_data_output_with_list_single_item(self, mock_parse_json, component_class, default_kwargs):
         """Test build_data_output with single-item list response."""
         mock_parse_json.return_value = [{"id": 1, "value": "test"}]
@@ -822,7 +835,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert result.data == {"id": 1, "value": "test"}
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.ChatOllamaComponent._parse_json_response")
+    @patch.object(ChatOllamaComponent, "_parse_json_response")
     async def test_build_data_output_with_list_multiple_items(self, mock_parse_json, component_class, default_kwargs):
         """Test build_data_output with multiple-item list response."""
         mock_parse_json.return_value = [{"id": 1}, {"id": 2}, {"id": 3}]
@@ -834,7 +847,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert result.data == {"results": [{"id": 1}, {"id": 2}, {"id": 3}]}
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.ChatOllamaComponent._parse_json_response")
+    @patch.object(ChatOllamaComponent, "_parse_json_response")
     async def test_build_data_output_with_primitive(self, mock_parse_json, component_class, default_kwargs):
         """Test build_data_output with primitive value response."""
         mock_parse_json.return_value = "simple string"
@@ -846,7 +859,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert result.data == {"value": "simple string"}
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.ChatOllamaComponent._parse_json_response")
+    @patch.object(ChatOllamaComponent, "_parse_json_response")
     async def test_build_dataframe_output_with_list_of_dicts(self, mock_parse_json, component_class, default_kwargs):
         """Test build_dataframe_output with list of dicts."""
         mock_parse_json.return_value = [{"name": "Alice", "age": 30}, {"name": "Bob", "age": 25}]
@@ -859,7 +872,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert list(result.columns) == ["name", "age"]
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.ChatOllamaComponent._parse_json_response")
+    @patch.object(ChatOllamaComponent, "_parse_json_response")
     async def test_build_dataframe_output_with_empty_list(self, mock_parse_json, component_class, default_kwargs):
         """Test build_dataframe_output with empty list."""
         mock_parse_json.return_value = []
@@ -871,7 +884,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert len(result) == 0
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.ChatOllamaComponent._parse_json_response")
+    @patch.object(ChatOllamaComponent, "_parse_json_response")
     async def test_build_dataframe_output_with_single_dict(self, mock_parse_json, component_class, default_kwargs):
         """Test build_dataframe_output with single dict."""
         mock_parse_json.return_value = {"name": "Charlie", "score": 95}
@@ -885,7 +898,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert result.iloc[0]["score"] == 95
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.ChatOllamaComponent._parse_json_response")
+    @patch.object(ChatOllamaComponent, "_parse_json_response")
     async def test_build_dataframe_output_with_primitive(self, mock_parse_json, component_class, default_kwargs):
         """Test build_dataframe_output with primitive value."""
         mock_parse_json.return_value = 42
@@ -898,7 +911,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert result.iloc[0]["value"] == 42
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.ChatOllamaComponent._parse_json_response")
+    @patch.object(ChatOllamaComponent, "_parse_json_response")
     async def test_build_dataframe_output_with_invalid_list(self, mock_parse_json, component_class, default_kwargs):
         """Test build_dataframe_output with list of non-dicts raises ValueError."""
         mock_parse_json.return_value = [1, 2, 3, "string"]
@@ -936,7 +949,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         headers = component.headers
         assert headers is None
 
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     def test_build_model_with_cloud_api_and_headers(self, mock_chat_ollama):
         """Test that build_model passes headers for cloud API with API key."""
         mock_model = MagicMock()
@@ -959,7 +972,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert call_args["base_url"] == DEFAULT_OLLAMA_API_URL
         assert model == mock_model
 
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     def test_build_model_with_cloud_api_no_headers(self, mock_chat_ollama):
         """Test that build_model works for cloud API without API key."""
         mock_model = MagicMock()
@@ -978,7 +991,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert "client_kwargs" not in call_args
         assert model == mock_model
 
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     def test_build_model_local_no_headers(self, mock_chat_ollama):
         """Test that build_model doesn't pass headers for local instances."""
         mock_model = MagicMock()
@@ -998,7 +1011,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert model == mock_model
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    @patch("httpx.AsyncClient.get")
     async def test_is_valid_ollama_url_with_cloud_and_headers(self, mock_get):
         """Test that is_valid_ollama_url passes headers for cloud URL."""
         component = ChatOllamaComponent()
@@ -1019,7 +1032,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert result is True
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    @patch("httpx.AsyncClient.get")
     async def test_is_valid_ollama_url_local_no_headers(self, mock_get):
         """Test that is_valid_ollama_url doesn't pass headers for local URL."""
         component = ChatOllamaComponent()
@@ -1039,8 +1052,8 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert result is True
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.post")
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    @patch("httpx.AsyncClient.post")
+    @patch("httpx.AsyncClient.get")
     async def test_get_models_with_cloud_and_headers(self, mock_get, mock_post):
         """Test that get_models passes headers for cloud API."""
         component = ChatOllamaComponent()
@@ -1081,8 +1094,8 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert result == ["deepseek-v3.1:671b-cloud", "qwen3-coder:480b-cloud"]
 
     @pytest.mark.asyncio
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.post")
-    @patch("lfx.components.ollama.ollama.httpx.AsyncClient.get")
+    @patch("httpx.AsyncClient.post")
+    @patch("httpx.AsyncClient.get")
     async def test_get_models_local_no_headers(self, mock_get, mock_post):
         """Test that get_models doesn't pass headers for local instances (when api key is not provided)."""
         component = ChatOllamaComponent()
@@ -1123,7 +1136,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         result = transform_localhost_url(DEFAULT_OLLAMA_API_URL)
         assert result == DEFAULT_OLLAMA_API_URL
 
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     def test_build_model_cloud_with_v1_suffix_stripped(self, mock_chat_ollama):
         """Test that /v1 suffix is stripped from cloud URL."""
         mock_model = MagicMock()
@@ -1143,7 +1156,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert "/v1" not in call_args["base_url"]
         assert model == mock_model
 
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     def test_build_model_with_structured_output_disabled(self, mock_chat_ollama, component_class, default_kwargs):
         """Test that format field is NOT passed when enable_structured_output is False (default)."""
         mock_instance = MagicMock()
@@ -1162,7 +1175,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert "format" not in call_args, "format should not be passed when enable_structured_output is False"
         assert model == mock_instance
 
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     def test_build_model_with_structured_output_enabled_string_format(
         self, mock_chat_ollama, component_class, default_kwargs
     ):
@@ -1183,7 +1196,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert call_args["format"] == "json"
         assert model == mock_instance
 
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     def test_build_model_with_structured_output_enabled_dict_format(
         self, mock_chat_ollama, component_class, default_kwargs
     ):
@@ -1211,7 +1224,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert call_args["format"]["type"] == "object"
         assert model == mock_instance
 
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     def test_build_model_with_structured_output_enabled_no_format(
         self, mock_chat_ollama, component_class, default_kwargs
     ):
@@ -1231,7 +1244,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert "format" not in call_args, "format should not be passed when it's None"
         assert model == mock_instance
 
-    @patch("lfx.components.ollama.ollama.ChatOllama")
+    @patch.object(_OLLAMA_MODULE, "ChatOllama")
     def test_build_model_structured_output_toggle_behavior(self, mock_chat_ollama, component_class, default_kwargs):
         """Test toggling enable_structured_output affects format parameter passing."""
         mock_instance = MagicMock()
@@ -1260,3 +1273,7 @@ class TestChatOllamaComponent(ComponentTestBaseWithoutClient):
         assert "format" in call_args, "format should be in call when enabled"
         assert call_args["format"] == "json"
         assert model == mock_instance
+
+    @pytest.fixture(autouse=True)
+    def disable_ssrf_protection(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "false")

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import RenderKey from "@/components/common/renderIconComponent/components/renderKey";
 import ForwardedIconComponent from "../../../../../components/common/genericIconComponent";
@@ -12,6 +12,7 @@ import {
   findShortcutByName,
   getFixedCombination,
   isDuplicateCombination,
+  isModifierOnlyCombination,
   normalizeRecordedCombination,
 } from "./helpers";
 
@@ -48,6 +49,8 @@ export default function EditShortcutButton({
     shortcut[0],
   )?.shortcut;
   const [key, setKey] = useState<string | null>(null);
+  const recordingRef = useRef<HTMLDivElement>(null);
+  const triggerElementRef = useRef<HTMLElement | null>(null);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setShortcuts = useShortcutsStore((state) => state.setShortcuts);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -87,6 +90,18 @@ export default function EditShortcutButton({
       setErrorData({
         title: t("errors.errorSavingKeyCombination"),
         list: [t("shortcuts.noKeyCombination")],
+      });
+      return;
+    }
+    if (isModifierOnlyCombination(key)) {
+      setErrorData({
+        title: t("errors.errorSavingKeyCombination"),
+        list: [
+          t("shortcuts.modifierOnly", {
+            defaultValue:
+              "Add at least one non-modifier key (e.g. a letter or number).",
+          }),
+        ],
       });
       return;
     }
@@ -146,6 +161,21 @@ export default function EditShortcutButton({
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
+      const target = e.target;
+      if (
+        target instanceof HTMLElement &&
+        target.closest("button, input, textarea, select, a")
+      ) {
+        return;
+      }
+      if (e.key === "Tab") {
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        editCombination();
+        return;
+      }
       e.preventDefault();
       let fixedKey = e.key;
       if (e.key?.toLowerCase() === "control") {
@@ -168,10 +198,27 @@ export default function EditShortcutButton({
     return () => {
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [key, setKey]);
+  }, [key, setKey, editCombination]);
 
   return (
-    <BaseModal open={open} setOpen={setOpen} size="x-small" disable={disable}>
+    <BaseModal
+      open={open}
+      setOpen={setOpen}
+      size="x-small"
+      disable={disable}
+      onOpenAutoFocus={(e) => {
+        triggerElementRef.current = document.activeElement as HTMLElement;
+        e.preventDefault();
+        recordingRef.current?.focus();
+      }}
+      onCloseAutoFocus={(e) => {
+        const trigger = triggerElementRef.current;
+        if (trigger?.isConnected) {
+          e.preventDefault();
+          trigger.focus();
+        }
+      }}
+    >
       <BaseModal.Header description={t("settings.recordingKeyboard")}>
         <span className="pr-2">{t("modal.keyCombination")}</span>
         <ForwardedIconComponent
@@ -183,7 +230,14 @@ export default function EditShortcutButton({
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Content>
         <div className="align-center flex h-full w-full justify-center gap-4 rounded-md border border-border py-2">
-          <div className="flex items-center justify-center gap-0.5 text-center text-lg font-bold">
+          <div
+            ref={recordingRef}
+            className="flex items-center justify-center gap-0.5 text-center text-lg font-bold outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            role="status"
+            tabIndex={0}
+            aria-live="polite"
+            aria-label={t("settings.recordingKeyboard")}
+          >
             {(key ?? shortcutInitialValue ?? "").split("+").map((k, i) => (
               <RenderKey key={i} value={k} tableRender />
             ))}

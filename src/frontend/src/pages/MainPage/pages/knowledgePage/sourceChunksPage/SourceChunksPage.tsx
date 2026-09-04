@@ -1,7 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { RadixAriaControlsFix } from "@/components/common/radixAriaControlsFix";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Loading from "@/components/ui/loading";
@@ -15,6 +22,7 @@ import {
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useGetKnowledgeBaseChunks } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-base-chunks";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import ChunkCard from "./components/ChunkCard";
 import { ChunksMetadataFilter } from "./components/ChunksMetadataFilter";
 import { CHUNKS_PER_PAGE, PAGE_SIZE_OPTIONS } from "./constants";
@@ -22,6 +30,7 @@ import { CHUNKS_PER_PAGE, PAGE_SIZE_OPTIONS } from "./constants";
 export const SourceChunksPage = () => {
   const { t } = useTranslation();
   const { sourceId } = useParams<{ sourceId: string }>();
+  useDocumentTitle(sourceId);
   const navigate = useCustomNavigate();
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState("1");
@@ -33,6 +42,12 @@ export const SourceChunksPage = () => {
     Record<string, string[]>
   >({});
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [selectContainer, setSelectContainer] = useState<HTMLElement | null>(
+    null,
+  );
+  useLayoutEffect(() => {
+    setSelectContainer(document.querySelector<HTMLElement>("main"));
+  }, []);
 
   const removeMetadataChip = useCallback((key: string, value: string) => {
     setMetadataFilter((prev) => {
@@ -129,6 +144,7 @@ export const SourceChunksPage = () => {
       className="flex h-full w-full flex-col"
       data-testid="source-chunks-wrapper"
     >
+      <RadixAriaControlsFix />
       <div className="flex h-full w-full flex-col overflow-hidden pt-10 px-5">
         <div
           className="flex shrink-0 items-center pb-4 text-base h-[44px] font-semibold"
@@ -150,6 +166,7 @@ export const SourceChunksPage = () => {
               size="icon"
               onClick={handleBack}
               className="mr-2 h-8 w-8"
+              aria-label={t("knowledge.backToKnowledgeBases")}
             >
               <ForwardedIconComponent name="ArrowLeft" className="h-4 w-4" />
             </Button>
@@ -170,6 +187,7 @@ export const SourceChunksPage = () => {
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   data-testid="chunks-search-input"
+                  aria-label={t("knowledge.searchChunksLabel")}
                 />
               </div>
 
@@ -180,10 +198,14 @@ export const SourceChunksPage = () => {
                 <SelectTrigger
                   className="w-44 shrink-0"
                   data-testid="chunks-source-type-filter"
+                  aria-label={t("knowledge.sourceTypeFilterLabel")}
                 >
                   <SelectValue placeholder={t("knowledge.allSources")} />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent
+                  aria-label={t("knowledge.sourceTypeFilterLabel")}
+                  container={selectContainer ?? undefined}
+                >
                   <SelectItem value="all">
                     {t("knowledge.allSources")}
                   </SelectItem>
@@ -291,7 +313,10 @@ export const SourceChunksPage = () => {
                             >
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="min-w-[70px]">
+                            <SelectContent
+                              className="min-w-[70px]"
+                              container={selectContainer ?? undefined}
+                            >
                               {PAGE_SIZE_OPTIONS.map((opt) => (
                                 <SelectItem key={opt} value={String(opt)}>
                                   {opt}
@@ -318,6 +343,7 @@ export const SourceChunksPage = () => {
                             setPageInput("1");
                           }}
                           disabled={currentPage === 1}
+                          aria-label={t("knowledge.firstPage")}
                         >
                           <ForwardedIconComponent
                             name="ChevronsLeft"
@@ -334,6 +360,7 @@ export const SourceChunksPage = () => {
                             setPageInput(String(newPage));
                           }}
                           disabled={currentPage === 1}
+                          aria-label={t("knowledge.previousPage")}
                         >
                           <ForwardedIconComponent
                             name="ChevronLeft"
@@ -352,7 +379,8 @@ export const SourceChunksPage = () => {
                             }
                             onBlur={handlePageInputBlur}
                             onKeyDown={handlePageInputKeyDown}
-                            className="h-7 w-16 rounded border border-input bg-background px-2 text-center text-sm focus:outline-none focus:ring-1 focus:ring-ring [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-inner-spin-button]:opacity-100 [&::-webkit-inner-spin-button]:[filter:invert(1)] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-outer-spin-button]:opacity-100 [&::-webkit-outer-spin-button]:[filter:invert(1)]"
+                            aria-label={t("knowledge.pageNumberInput")}
+                            className="h-7 w-16 rounded border border-control bg-background px-2 text-center text-sm focus:outline-none focus:ring-1 focus:ring-ring [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-inner-spin-button]:opacity-100 [&::-webkit-inner-spin-button]:[filter:invert(1)] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-outer-spin-button]:opacity-100 [&::-webkit-outer-spin-button]:[filter:invert(1)]"
                           />
                           <span>
                             {t("knowledge.ofTotal", { total: totalPages })}
@@ -371,6 +399,7 @@ export const SourceChunksPage = () => {
                             setPageInput(String(newPage));
                           }}
                           disabled={currentPage === totalPages}
+                          aria-label={t("knowledge.nextPage")}
                         >
                           <ForwardedIconComponent
                             name="ChevronRight"
@@ -386,6 +415,7 @@ export const SourceChunksPage = () => {
                             setPageInput(String(totalPages));
                           }}
                           disabled={currentPage === totalPages}
+                          aria-label={t("knowledge.lastPage")}
                         >
                           <ForwardedIconComponent
                             name="ChevronsRight"

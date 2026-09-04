@@ -1,4 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
+import { v5 as uuidv5 } from "uuid";
+import { queryClient } from "@/contexts";
+import { getGlobalVariablesQueryKey } from "@/controllers/API/queries/variables";
 
 // Mock all the complex dependencies
 jest.mock("@xyflow/react", () => ({
@@ -13,6 +16,7 @@ jest.mock("lodash", () => ({
 }));
 
 jest.mock("@/CustomNodes/helpers/check-code-validity", () => ({
+  ...jest.requireActual("@/CustomNodes/helpers/check-code-validity"),
   checkCodeValidity: jest.fn(),
 }));
 
@@ -50,20 +54,38 @@ jest.mock("../darkStore", () => ({
   },
 }));
 
-jest.mock("../flowsManagerStore", () => ({
-  __esModule: true,
-  default: {
-    getState: () => ({
-      setCurrentFlow: jest.fn(),
-      takeSnapshot: jest.fn(),
-    }),
-  },
-}));
+jest.mock("../flowsManagerStore", () => {
+  const state: {
+    currentFlow: { id: string; name: string } | undefined;
+    currentFlowId: string | undefined;
+  } = {
+    currentFlow: undefined,
+    currentFlowId: undefined,
+  };
+  return {
+    __esModule: true,
+    default: {
+      getState: () => ({
+        ...state,
+        setCurrentFlow: jest.fn(),
+        takeSnapshot: jest.fn(),
+      }),
+      __setCurrentFlow: (flow: { id: string; name: string } | undefined) => {
+        state.currentFlow = flow;
+        state.currentFlowId = flow?.id;
+      },
+    },
+  };
+});
+
+let mockGlobalVariablesEntries: string[] | undefined;
+let mockUnavailableFields: Record<string, string> | undefined;
 
 jest.mock("../globalVariablesStore/globalVariables", () => ({
   useGlobalVariablesStore: {
     getState: () => ({
-      globalVariables: {},
+      globalVariablesEntries: mockGlobalVariablesEntries,
+      unavailableFields: mockUnavailableFields,
     }),
   },
 }));
@@ -76,10 +98,12 @@ jest.mock("../tweaksStore", () => ({
   },
 }));
 
+let mockTemplates: Record<string, unknown> = {};
+
 jest.mock("../typesStore", () => ({
   useTypesStore: {
     getState: () => ({
-      templates: {},
+      templates: mockTemplates,
       types: {},
     }),
   },
@@ -90,11 +114,34 @@ jest.mock("@/utils/utils", () => ({
   brokenEdgeMessage: jest.fn(),
 }));
 
+// runFlowAGUI is exercised end-to-end in its own bridge tests; here we just
+// need a controllable replacement so the buildFlow integration can be tested
+// without touching the network.
+jest.mock("@/controllers/API/agui/run-flow-bridge", () => ({
+  runFlowAGUI: jest.fn(),
+}));
+
+// Keep reactflowUtils' real behaviour for the rest of the suite; only flip
+// validateNodes / validateEdge to no-ops so the buildFlow analytics tests can
+// reach the runFlowAGUI call with an empty (test-fixture) graph.
+jest.mock("../../utils/reactflowUtils", () => {
+  const actual = jest.requireActual("../../utils/reactflowUtils");
+  return {
+    ...actual,
+    validateNodes: jest.fn(() => []),
+    validateEdge: jest.fn(() => []),
+  };
+});
+
 // Note: Some utility modules may not exist in test environment
 // The store should handle missing utilities gracefully
 
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
+import type { LogsLogType, VertexBuildTypeAPI } from "@/types/api";
 import type { AllNodeType, EdgeType } from "@/types/flow";
+import { scapedJSONStringfy } from "../../utils/reactflowUtils";
+import useAlertStore from "../alertStore";
+import useAuthStore from "../authStore";
 import useFlowStore, {
   completeNodeUpdate,
   recomputeComponentsToUpdateIfNeeded,
@@ -110,6 +157,7 @@ describe("useFlowStore", () => {
     type: "genericNode",
     position: { x: 100, y: 100 },
     data: {
+      type: "TestComponent",
       node: {
         display_name: "Test Node",
         icon: "test-icon",
@@ -123,13 +171,48 @@ describe("useFlowStore", () => {
     target: "node-2",
   } as EdgeType;
 
+  const createCredentialNode = (value: string): AllNodeType => ({
+    id: "credential-node",
+    type: "genericNode",
+    position: { x: 0, y: 0 },
+    data: {
+      id: "credential-node",
+      type: "CredentialComponent",
+      node: {
+        description: "",
+        display_name: "Credential",
+        documentation: "",
+        template: {
+          api_key: {
+            display_name: "API Key",
+            type: "str",
+            required: false,
+            list: false,
+            show: true,
+            readonly: false,
+            load_from_db: true,
+            value,
+          },
+        },
+      },
+    },
+  });
+
   beforeEach(() => {
     // Clear all mocks
     jest.clearAllMocks();
+    queryClient.clear();
+    mockGlobalVariablesEntries = undefined;
+    mockUnavailableFields = undefined;
 
     // Reset store state to basics
     act(() => {
-      useUtilityStore.setState({ allowCustomComponents: true });
+      mockTemplates = {};
+      useUtilityStore.setState({
+        blockedComponentTypes: new Set<string>(),
+        allowCustomComponents: true,
+        substituteOutdatedComponentCode: true,
+      });
       useFlowStore.setState({
         playgroundPage: false,
         positionDictionary: {},
@@ -166,6 +249,213 @@ describe("useFlowStore", () => {
       expect(result.current.inputs).toEqual([]);
       expect(result.current.outputs).toEqual([]);
       expect(result.current.hasIO).toBe(false);
+    });
+  });
+
+  describe("scoped global variables", () => {
+    it("preserves a project-only credential when copying and pasting within its flow", () => {
+      const flowsManager = jest.requireMock("../flowsManagerStore") as {
+        default: {
+          __setCurrentFlow: (
+            flow: { id: string; name: string } | undefined,
+          ) => void;
+        };
+      };
+      flowsManager.default.__setCurrentFlow({
+        id: "project-flow",
+        name: "Project Flow",
+      });
+      mockGlobalVariablesEntries = ["GLOBAL_KEY"];
+      mockUnavailableFields = {};
+      queryClient.setQueryData(
+        getGlobalVariablesQueryKey({ flowId: "project-flow" }),
+        [
+          {
+            id: "project-variable",
+            name: "PROJECT_KEY",
+            type: "Credential",
+            default_fields: ["API Key"],
+          },
+        ],
+      );
+
+      act(() => {
+        useFlowStore.setState({ currentFlow: undefined });
+        useFlowStore
+          .getState()
+          .paste(
+            { nodes: [createCredentialNode("PROJECT_KEY")], edges: [] },
+            { x: 0, y: 0, paneX: 1, paneY: 1 },
+          );
+      });
+
+      const pastedField =
+        useFlowStore.getState().nodes[0].data.node?.template.api_key;
+      expect(pastedField?.value).toBe("PROJECT_KEY");
+      expect(pastedField?.load_from_db).toBe(true);
+      flowsManager.default.__setCurrentFlow(undefined);
+    });
+
+    it("does not treat global or sibling-flow snapshots as authoritative", () => {
+      const flowsManager = jest.requireMock("../flowsManagerStore") as {
+        default: {
+          __setCurrentFlow: (
+            flow: { id: string; name: string } | undefined,
+          ) => void;
+        };
+      };
+      flowsManager.default.__setCurrentFlow({
+        id: "target-flow",
+        name: "Target Flow",
+      });
+      mockGlobalVariablesEntries = ["GLOBAL_KEY"];
+      mockUnavailableFields = { System: "GLOBAL_KEY" };
+      queryClient.setQueryData(getGlobalVariablesQueryKey(), [
+        {
+          id: "global-variable",
+          name: "GLOBAL_KEY",
+          type: "Credential",
+          default_fields: ["System"],
+        },
+      ]);
+      queryClient.setQueryData(
+        getGlobalVariablesQueryKey({ flowId: "sibling-flow" }),
+        [
+          {
+            id: "sibling-variable",
+            name: "SIBLING_KEY",
+            type: "Credential",
+            default_fields: ["API Key"],
+          },
+        ],
+      );
+
+      act(() => {
+        useFlowStore.setState({ currentFlow: undefined });
+        useFlowStore
+          .getState()
+          .paste(
+            { nodes: [createCredentialNode("PROJECT_KEY")], edges: [] },
+            { x: 0, y: 0, paneX: 1, paneY: 1 },
+          );
+      });
+
+      const pastedField =
+        useFlowStore.getState().nodes[0].data.node?.template.api_key;
+      expect(pastedField?.value).toBe("PROJECT_KEY");
+      expect(pastedField?.load_from_db).toBe(true);
+      flowsManager.default.__setCurrentFlow(undefined);
+    });
+
+    it("uses an exact empty flow snapshot to clear invalid references", () => {
+      const flowsManager = jest.requireMock("../flowsManagerStore") as {
+        default: {
+          __setCurrentFlow: (
+            flow: { id: string; name: string } | undefined,
+          ) => void;
+        };
+      };
+      flowsManager.default.__setCurrentFlow({
+        id: "target-flow",
+        name: "Target Flow",
+      });
+      mockGlobalVariablesEntries = ["PROJECT_KEY"];
+      mockUnavailableFields = { "API Key": "PROJECT_KEY" };
+      queryClient.setQueryData(
+        getGlobalVariablesQueryKey({ flowId: "target-flow" }),
+        [],
+      );
+
+      act(() => {
+        useFlowStore.setState({ currentFlow: undefined });
+        useFlowStore
+          .getState()
+          .paste(
+            { nodes: [createCredentialNode("PROJECT_KEY")], edges: [] },
+            { x: 0, y: 0, paneX: 1, paneY: 1 },
+          );
+      });
+
+      const pastedField =
+        useFlowStore.getState().nodes[0].data.node?.template.api_key;
+      expect(pastedField?.value).toBe("");
+      expect(pastedField?.load_from_db).toBe(false);
+      flowsManager.default.__setCurrentFlow(undefined);
+    });
+
+    it("does not trust invalidated flow-scoped credentials during paste", () => {
+      const flowsManager = jest.requireMock("../flowsManagerStore") as {
+        default: {
+          __setCurrentFlow: (
+            flow: { id: string; name: string } | undefined,
+          ) => void;
+        };
+      };
+      flowsManager.default.__setCurrentFlow({
+        id: "target-flow",
+        name: "Target Flow",
+      });
+      const scopedKey = getGlobalVariablesQueryKey({ flowId: "target-flow" });
+      queryClient.setQueryData(scopedKey, []);
+      void queryClient.invalidateQueries({
+        queryKey: scopedKey,
+        refetchType: "none",
+      });
+
+      act(() => {
+        useFlowStore.setState({ currentFlow: undefined });
+        useFlowStore
+          .getState()
+          .paste(
+            { nodes: [createCredentialNode("PROJECT_KEY")], edges: [] },
+            { x: 0, y: 0, paneX: 1, paneY: 1 },
+          );
+      });
+
+      const pastedField =
+        useFlowStore.getState().nodes[0].data.node?.template.api_key;
+      expect(pastedField?.value).toBe("PROJECT_KEY");
+      expect(pastedField?.load_from_db).toBe(true);
+      flowsManager.default.__setCurrentFlow(undefined);
+    });
+
+    it("does not trust a flow-scoped credential snapshot during refetch", () => {
+      const flowsManager = jest.requireMock("../flowsManagerStore") as {
+        default: {
+          __setCurrentFlow: (
+            flow: { id: string; name: string } | undefined,
+          ) => void;
+        };
+      };
+      flowsManager.default.__setCurrentFlow({
+        id: "target-flow",
+        name: "Target Flow",
+      });
+      const scopedKey = getGlobalVariablesQueryKey({ flowId: "target-flow" });
+      queryClient.setQueryData(scopedKey, []);
+      const scopedQuery = queryClient.getQueryCache().find({
+        queryKey: scopedKey,
+      });
+      scopedQuery?.setState({
+        ...scopedQuery.state,
+        fetchStatus: "fetching",
+      });
+
+      act(() => {
+        useFlowStore.setState({ currentFlow: undefined });
+        useFlowStore
+          .getState()
+          .paste(
+            { nodes: [createCredentialNode("PROJECT_KEY")], edges: [] },
+            { x: 0, y: 0, paneX: 1, paneY: 1 },
+          );
+      });
+
+      const pastedField =
+        useFlowStore.getState().nodes[0].data.node?.template.api_key;
+      expect(pastedField?.value).toBe("PROJECT_KEY");
+      expect(pastedField?.load_from_db).toBe(true);
+      flowsManager.default.__setCurrentFlow(undefined);
     });
   });
 
@@ -867,9 +1157,8 @@ describe("useFlowStore", () => {
     const createEdge = (
       id: string,
       sourceHandleId: string,
-      // biome-ignore lint/suspicious/noExplicitAny: legacy
-      overrides: Partial<any> = {},
-    ) =>
+      overrides: Partial<EdgeType> = {},
+    ): EdgeType =>
       ({
         id,
         source: `src-${id}`,
@@ -878,8 +1167,7 @@ describe("useFlowStore", () => {
         className: "",
         data: { sourceHandle: { id: sourceHandleId } },
         ...overrides,
-        // biome-ignore lint/suspicious/noExplicitAny: legacy
-      }) as any;
+      }) as unknown as EdgeType;
 
     it("should clear all edge animations when no nextIds provided", () => {
       const { result } = renderHook(() => useFlowStore());
@@ -988,15 +1276,13 @@ describe("useFlowStore", () => {
       id: "node-1",
       data: { results: {} },
       valid: true,
-      // biome-ignore lint/suspicious/noExplicitAny: legacy
-    } as any;
+    } as unknown as VertexBuildTypeAPI;
 
     const mockVertexData2 = {
       id: "node-1",
       data: { results: { other: true } },
       valid: true,
-      // biome-ignore lint/suspicious/noExplicitAny: legacy
-    } as any;
+    } as unknown as VertexBuildTypeAPI;
 
     it("should add data to new nodeId entry", () => {
       const { result } = renderHook(() => useFlowStore());
@@ -1043,14 +1329,16 @@ describe("useFlowStore", () => {
   });
 
   describe("appendLogToFlowPool", () => {
-    // biome-ignore lint/suspicious/noExplicitAny: legacy
-    const mockLog = { name: "Test Log", message: "hello", type: "info" } as any;
+    const mockLog = {
+      name: "Test Log",
+      message: "hello",
+      type: "info",
+    } as unknown as LogsLogType;
     const mockLog2 = {
       name: "Second Log",
       message: "world",
       type: "info",
-      // biome-ignore lint/suspicious/noExplicitAny: legacy
-    } as any;
+    } as unknown as LogsLogType;
 
     it("creates a new pool entry with the log when no entry exists for nodeId", () => {
       const { result } = renderHook(() => useFlowStore());
@@ -1106,6 +1394,590 @@ describe("useFlowStore", () => {
       const latest = result.current.flowPool["node-99"].at(-1)!.data.logs;
       expect(latest["output_a"]).toEqual([mockLog]);
       expect(latest["output_b"]).toEqual([mockLog2]);
+    });
+  });
+
+  describe("buildFlow analytics — trackFlowBuild integration", () => {
+    let mockedRunFlow: jest.Mock;
+    let trackFlowBuildMock: jest.Mock;
+
+    beforeAll(() => {
+      // Cast through unknown so the test does not depend on the bridge module's
+      // public type — we only care about controlling the side effect.
+      const bridge = jest.requireMock(
+        "@/controllers/API/agui/run-flow-bridge",
+      ) as { runFlowAGUI: jest.Mock };
+      mockedRunFlow = bridge.runFlowAGUI;
+
+      const analytics = jest.requireMock("@/customization/utils/analytics") as {
+        trackFlowBuild: jest.Mock;
+      };
+      trackFlowBuildMock = analytics.trackFlowBuild;
+
+      // Make `currentFlow` resolvable inside buildFlow.
+      const flowsManager = jest.requireMock("../flowsManagerStore") as {
+        default: {
+          __setCurrentFlow: (
+            flow: { id: string; name: string } | undefined,
+          ) => void;
+        };
+      };
+      flowsManager.default.__setCurrentFlow({
+        id: "flow-abc",
+        name: "Test Flow",
+      });
+    });
+
+    beforeEach(() => {
+      mockedRunFlow.mockReset();
+      trackFlowBuildMock.mockReset();
+      useAuthStore.setState({
+        isAuthenticated: false,
+        autoLogin: null,
+        userData: null,
+      });
+      useUtilityStore.setState({ clientId: "" });
+      act(() => {
+        useFlowStore.setState({
+          nodes: [],
+          edges: [],
+          buildInfo: null,
+          flowBuildStatus: {},
+          isBuilding: false,
+          componentsToUpdate: [],
+        });
+      });
+    });
+
+    it("fires trackFlowBuild with isError=false after a successful run", async () => {
+      mockedRunFlow.mockImplementation(async () => {
+        // The bridge writes success into the store on `RUN_FINISHED`.
+        useFlowStore.setState({ buildInfo: { success: true } });
+      });
+
+      await useFlowStore.getState().buildFlow({});
+
+      expect(mockedRunFlow).toHaveBeenCalledTimes(1);
+      expect(trackFlowBuildMock).toHaveBeenCalledWith("Test Flow", false, {
+        flowId: "flow-abc",
+      });
+    });
+
+    it("runs a drifted built-in when server-side substitution is enabled", async () => {
+      useUtilityStore.setState({
+        allowCustomComponents: false,
+        substituteOutdatedComponentCode: true,
+      });
+      (checkCodeValidity as jest.Mock).mockReturnValueOnce({
+        outdated: true,
+        blocked: false,
+        breakingChange: false,
+        userEdited: false,
+      });
+      useFlowStore.setState({ nodes: [mockNode] });
+      mockedRunFlow.mockResolvedValue(undefined);
+
+      await useFlowStore.getState().buildFlow({});
+
+      expect(mockedRunFlow).toHaveBeenCalledTimes(1);
+      expect(useFlowStore.getState().componentsToUpdate).toEqual([
+        expect.objectContaining({ outdated: true, blocked: false }),
+      ]);
+    });
+
+    it("keeps blocking drifted built-ins when server-side substitution is disabled", async () => {
+      useUtilityStore.setState({
+        allowCustomComponents: false,
+        substituteOutdatedComponentCode: false,
+      });
+      (checkCodeValidity as jest.Mock).mockReturnValueOnce({
+        outdated: true,
+        blocked: false,
+        breakingChange: false,
+        userEdited: false,
+      });
+      useFlowStore.setState({ nodes: [mockNode] });
+
+      await expect(useFlowStore.getState().buildFlow({})).rejects.toThrow(
+        "Outdated components must be updated",
+      );
+      expect(mockedRunFlow).not.toHaveBeenCalled();
+    });
+
+    it("blocks a run when a component was disabled by an administrator", async () => {
+      // The catalog drops a blocked component from /all, so its node loses its
+      // template. That used to be ignored unless custom components were off,
+      // leaving the run to fail server side with a generic error.
+      mockTemplates = { SomeKnownType: {} };
+      useUtilityStore.setState({
+        allowCustomComponents: true,
+        substituteOutdatedComponentCode: true,
+        blockedComponentTypes: new Set(["TestComponent"]),
+      });
+      (checkCodeValidity as jest.Mock).mockReturnValueOnce({
+        outdated: false,
+        blocked: true,
+        breakingChange: false,
+        userEdited: false,
+      });
+      useFlowStore.setState({ nodes: [mockNode] });
+
+      await expect(useFlowStore.getState().buildFlow({})).rejects.toThrow(
+        "Components disabled by an administrator must be removed before building",
+      );
+      expect(mockedRunFlow).not.toHaveBeenCalled();
+    });
+
+    describe("partial builds", () => {
+      // A partial build only executes the requested subgraph, so a blocked node
+      // outside it has nothing to do with the run and must not reject it.
+      const blockedNode = {
+        id: "node-blocked",
+        type: "genericNode",
+        position: { x: 0, y: 0 },
+        data: {
+          id: "node-blocked",
+          type: "BlockedComponent",
+          node: { display_name: "Blocked Node" },
+        },
+      } as unknown as AllNodeType;
+      const healthyNode = {
+        id: "node-healthy",
+        type: "genericNode",
+        position: { x: 200, y: 0 },
+        data: { id: "node-healthy", node: { display_name: "Healthy Node" } },
+      } as unknown as AllNodeType;
+      const edgeBlockedToHealthy = {
+        id: "edge-blocked-healthy",
+        source: "node-blocked",
+        target: "node-healthy",
+      } as EdgeType;
+
+      const validityByNodeId = (nodeId: string) => ({
+        outdated: false,
+        blocked: nodeId === "node-blocked",
+        breakingChange: false,
+        userEdited: false,
+      });
+
+      beforeEach(() => {
+        mockTemplates = { SomeKnownType: {} };
+        useUtilityStore.setState({
+          allowCustomComponents: true,
+          substituteOutdatedComponentCode: true,
+          blockedComponentTypes: new Set(["BlockedComponent"]),
+        });
+        (checkCodeValidity as jest.Mock).mockImplementation(
+          (data: { id: string }) => validityByNodeId(data.id),
+        );
+        mockedRunFlow.mockResolvedValue(undefined);
+      });
+
+      it("runs a downstream build that starts after the blocked component", async () => {
+        useFlowStore.setState({
+          nodes: [blockedNode, healthyNode],
+          edges: [edgeBlockedToHealthy],
+        });
+
+        await useFlowStore
+          .getState()
+          .buildFlow({ startNodeId: "node-healthy" });
+
+        expect(mockedRunFlow).toHaveBeenCalledTimes(1);
+        // The banner still reports the blocked node: only the preflight is scoped.
+        expect(useFlowStore.getState().componentsToUpdate).toEqual([
+          expect.objectContaining({ id: "node-blocked", blocked: true }),
+        ]);
+      });
+
+      it("runs an upstream build that stops before the blocked component", async () => {
+        useFlowStore.setState({
+          nodes: [healthyNode, blockedNode],
+          edges: [
+            {
+              id: "edge-healthy-blocked",
+              source: "node-healthy",
+              target: "node-blocked",
+            } as EdgeType,
+          ],
+        });
+
+        await useFlowStore.getState().buildFlow({ stopNodeId: "node-healthy" });
+
+        expect(mockedRunFlow).toHaveBeenCalledTimes(1);
+      });
+
+      it("blocks a downstream build that reaches the blocked component", async () => {
+        useFlowStore.setState({
+          nodes: [blockedNode, healthyNode],
+          edges: [edgeBlockedToHealthy],
+        });
+
+        await expect(
+          useFlowStore.getState().buildFlow({ startNodeId: "node-blocked" }),
+        ).rejects.toThrow(
+          "Components disabled by an administrator must be removed before building",
+        );
+        expect(mockedRunFlow).not.toHaveBeenCalled();
+      });
+
+      it("blocks an upstream build that reaches the blocked component", async () => {
+        useFlowStore.setState({
+          nodes: [blockedNode, healthyNode],
+          edges: [edgeBlockedToHealthy],
+        });
+
+        await expect(
+          useFlowStore.getState().buildFlow({ stopNodeId: "node-healthy" }),
+        ).rejects.toThrow(
+          "Components disabled by an administrator must be removed before building",
+        );
+        expect(mockedRunFlow).not.toHaveBeenCalled();
+      });
+    });
+
+    it("still runs an outdated component while custom components are allowed", async () => {
+      // Only a missing template is newly enforced; drift keeps its old behavior.
+      useUtilityStore.setState({
+        allowCustomComponents: true,
+        substituteOutdatedComponentCode: false,
+      });
+      (checkCodeValidity as jest.Mock).mockReturnValueOnce({
+        outdated: true,
+        blocked: false,
+        breakingChange: false,
+        userEdited: false,
+      });
+      useFlowStore.setState({ nodes: [mockNode] });
+
+      await useFlowStore.getState().buildFlow({});
+
+      expect(mockedRunFlow).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps blocking unknown components when server-side substitution is enabled", async () => {
+      useUtilityStore.setState({
+        allowCustomComponents: false,
+        substituteOutdatedComponentCode: true,
+      });
+      (checkCodeValidity as jest.Mock).mockReturnValueOnce({
+        outdated: false,
+        blocked: true,
+        breakingChange: false,
+        userEdited: false,
+      });
+      useFlowStore.setState({ nodes: [mockNode] });
+
+      await expect(useFlowStore.getState().buildFlow({})).rejects.toThrow(
+        "Custom components are blocked while custom components are disabled",
+      );
+      expect(mockedRunFlow).not.toHaveBeenCalled();
+    });
+
+    it("builds a component the policy does not name", async () => {
+      // LE-2226: a policy blocking some other component — or only a starter
+      // template — must not stop this run. A missing template is equally an
+      // uninstalled bundle, an imported flow, or the user's own component.
+      mockTemplates = { SomeKnownType: {} };
+      useUtilityStore.setState({
+        allowCustomComponents: true,
+        substituteOutdatedComponentCode: true,
+        blockedComponentTypes: new Set(["SomeOtherComponent"]),
+      });
+      (checkCodeValidity as jest.Mock).mockReturnValueOnce({
+        outdated: false,
+        blocked: true,
+        breakingChange: false,
+        userEdited: false,
+      });
+      useFlowStore.setState({ nodes: [mockNode] });
+      mockedRunFlow.mockResolvedValue(undefined);
+
+      await useFlowStore.getState().buildFlow({});
+
+      expect(mockedRunFlow).toHaveBeenCalledTimes(1);
+    });
+
+    it("builds a user-authored component when no policy is in force", async () => {
+      // A component someone wrote themselves carries code and has no registry
+      // template, which is indistinguishable from a policy-blocked one. With
+      // custom components allowed and no policy set it is legitimate, so
+      // rejecting the build would stop people running their own work.
+      mockTemplates = { SomeKnownType: {} };
+      useUtilityStore.setState({
+        allowCustomComponents: true,
+        substituteOutdatedComponentCode: true,
+        blockedComponentTypes: new Set<string>(),
+      });
+      (checkCodeValidity as jest.Mock).mockReturnValueOnce({
+        outdated: false,
+        blocked: true,
+        breakingChange: false,
+        userEdited: false,
+      });
+      useFlowStore.setState({ nodes: [mockNode] });
+      mockedRunFlow.mockResolvedValue(undefined);
+
+      await useFlowStore.getState().buildFlow({});
+
+      expect(mockedRunFlow).toHaveBeenCalledTimes(1);
+    });
+
+    it("delegates component policy to the backend on a cold public Playground", async () => {
+      const { checkCodeValidity: realCheckCodeValidity } = jest.requireActual(
+        "@/CustomNodes/helpers/check-code-validity",
+      ) as typeof import("@/CustomNodes/helpers/check-code-validity");
+      useUtilityStore.setState({
+        allowCustomComponents: false,
+        substituteOutdatedComponentCode: false,
+      });
+      (checkCodeValidity as jest.Mock).mockImplementationOnce(
+        realCheckCodeValidity,
+      );
+      const codeBearingNode = {
+        ...mockNode,
+        data: {
+          ...mockNode.data,
+          type: "ChatInput",
+          node: {
+            ...mockNode.data.node,
+            template: { code: { value: "# stored ChatInput code" } },
+          },
+        },
+      } as AllNodeType;
+      useFlowStore.setState({
+        nodes: [codeBearingNode],
+        playgroundPage: true,
+      });
+      mockedRunFlow.mockResolvedValue(undefined);
+
+      await useFlowStore.getState().buildFlow({});
+
+      expect(useFlowStore.getState().componentsToUpdate).toEqual([
+        expect.objectContaining({ blocked: true, outdated: false }),
+      ]);
+      expect(mockedRunFlow).toHaveBeenCalledTimes(1);
+    });
+
+    it("fires trackFlowBuild with isError=true and the error list after a failure", async () => {
+      const errorList = ["boom"];
+      mockedRunFlow.mockImplementation(async () => {
+        useFlowStore.setState({
+          buildInfo: { success: false, error: errorList },
+        });
+      });
+
+      await useFlowStore.getState().buildFlow({});
+
+      expect(mockedRunFlow).toHaveBeenCalledTimes(1);
+      expect(trackFlowBuildMock).toHaveBeenCalledWith("Test Flow", true, {
+        flowId: "flow-abc",
+        error: errorList,
+      });
+    });
+
+    it("passes silent and sets the active building session before the AG-UI run", async () => {
+      mockedRunFlow.mockImplementation(async () => {
+        const state = useFlowStore.getState();
+        expect(state.buildingFlowId).toBe("flow-abc");
+        expect(state.buildingSessionId).toBe("session-123");
+        useFlowStore.setState({ buildInfo: null });
+      });
+
+      await useFlowStore.getState().buildFlow({
+        silent: true,
+        session: "session-123",
+      });
+
+      expect(mockedRunFlow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          flowId: "flow-abc",
+          threadId: "session-123",
+          silent: true,
+        }),
+      );
+      expect(trackFlowBuildMock).toHaveBeenCalledWith("Test Flow", false, {
+        flowId: "flow-abc",
+      });
+    });
+
+    it("uses the public playground virtual flow id for the active building session", async () => {
+      const expectedFlowId = uuidv5("client:client-123_flow-abc", uuidv5.DNS);
+
+      useUtilityStore.setState({ clientId: "client-123" });
+      useAuthStore.setState({
+        isAuthenticated: false,
+        autoLogin: true,
+        userData: null,
+      });
+      useFlowStore.setState({ playgroundPage: true });
+      mockedRunFlow.mockImplementation(async () => {
+        const state = useFlowStore.getState();
+        expect(state.buildingFlowId).toBe(expectedFlowId);
+        expect(state.buildingSessionId).toBe("session-123");
+        useFlowStore.setState({ buildInfo: null });
+      });
+
+      await useFlowStore.getState().buildFlow({
+        session: "session-123",
+      });
+
+      expect(mockedRunFlow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          flowId: "flow-abc",
+          threadId: "session-123",
+        }),
+      );
+    });
+
+    it("uses the authenticated user virtual flow id for the active building session", async () => {
+      const expectedFlowId = uuidv5("user:user-123_flow-abc", uuidv5.DNS);
+
+      useAuthStore.setState({
+        isAuthenticated: true,
+        autoLogin: false,
+        userData: { id: "user-123" },
+      });
+      useFlowStore.setState({ playgroundPage: true });
+      mockedRunFlow.mockImplementation(async () => {
+        const state = useFlowStore.getState();
+        expect(state.buildingFlowId).toBe(expectedFlowId);
+        expect(state.buildingSessionId).toBe("session-123");
+        useFlowStore.setState({ buildInfo: null });
+      });
+
+      await useFlowStore.getState().buildFlow({
+        session: "session-123",
+      });
+
+      expect(mockedRunFlow).toHaveBeenCalledWith(
+        expect.objectContaining({
+          flowId: "flow-abc",
+          threadId: "session-123",
+        }),
+      );
+    });
+  });
+
+  describe("setNode broken-edge warning", () => {
+    const sourceHandle = scapedJSONStringfy({
+      id: "hitl",
+      name: "branch_fallback",
+      output_types: ["Message"],
+      dataType: "HumanInput",
+    });
+    const targetHandle = scapedJSONStringfy({
+      type: "str",
+      fieldName: "input_value",
+      id: "co",
+      inputTypes: ["Message"],
+    });
+
+    const humanInputNode = (
+      outputs: { name: string; display_name: string }[],
+    ): AllNodeType =>
+      ({
+        id: "hitl",
+        type: "genericNode",
+        position: { x: 0, y: 0 },
+        data: {
+          id: "hitl",
+          type: "HumanInput",
+          node: {
+            display_name: "Human Input",
+            template: {},
+            outputs: outputs.map((output) => ({
+              ...output,
+              types: ["Message"],
+              group_outputs: true,
+            })),
+          },
+        },
+      }) as unknown as AllNodeType;
+
+    const chatOutputNode = {
+      id: "co",
+      type: "genericNode",
+      position: { x: 0, y: 0 },
+      data: {
+        id: "co",
+        type: "ChatOutput",
+        node: {
+          display_name: "Chat Output",
+          template: {
+            input_value: {
+              type: "str",
+              input_types: ["Message"],
+              display_name: "Inputs",
+            },
+          },
+          outputs: [],
+        },
+      },
+    } as unknown as AllNodeType;
+
+    const fallbackEdge = {
+      id: "edge-fallback",
+      source: "hitl",
+      target: "co",
+      sourceHandle,
+      targetHandle,
+    } as unknown as EdgeType;
+
+    const bothBranches = [
+      { name: "branch_approve", display_name: "Approve" },
+      { name: "branch_fallback", display_name: "Fallback" },
+    ];
+
+    const spyOnErrorData = () => {
+      const setErrorData = jest.fn();
+      jest.spyOn(useAlertStore, "getState").mockReturnValue({
+        setErrorData,
+        setSuccessData: jest.fn(),
+      } as unknown as ReturnType<typeof useAlertStore.getState>);
+      return setErrorData;
+    };
+
+    const seedFlow = () => {
+      act(() => {
+        useFlowStore.setState({
+          nodes: [humanInputNode(bothBranches), chatOutputNode],
+          edges: [fallbackEdge],
+        });
+      });
+    };
+
+    it("warns when a node edit drops a wired edge", () => {
+      const setErrorData = spyOnErrorData();
+      seedFlow();
+
+      act(() => {
+        useFlowStore
+          .getState()
+          .setNode(
+            "hitl",
+            humanInputNode([
+              { name: "branch_approve", display_name: "Approve" },
+            ]),
+          );
+      });
+
+      expect(useFlowStore.getState().edges).toHaveLength(0);
+      expect(setErrorData).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "flow.brokenEdgesWarning" }),
+      );
+    });
+
+    it("does not warn when the edit keeps every wired handle", () => {
+      const setErrorData = spyOnErrorData();
+      seedFlow();
+
+      act(() => {
+        useFlowStore.getState().setNode("hitl", humanInputNode(bothBranches));
+      });
+
+      expect(useFlowStore.getState().edges).toHaveLength(1);
+      expect(setErrorData).not.toHaveBeenCalled();
     });
   });
 });

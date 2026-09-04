@@ -10,10 +10,16 @@ running ``make``.
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from pathlib import Path
 
 import pytest
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10: tomllib is stdlib only on 3.11+
+    import tomli as tomllib
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 _SCRIPT = REPO_ROOT / "scripts" / "ci" / "sync_bundle_lfx_pin.py"
@@ -87,7 +93,8 @@ class TestRewriteLfxDep:
             assert mod.rewrite_lfx_dep(self_ref, self.FLOOR) == self_ref
 
     def test_leaves_nightly_form_untouched(self):
-        # update_bundle_versions.py rewrites to this; sync must not clobber it.
+        # Legacy form from the retired nightly bundle-rename track (see
+        # src/bundles/NIGHTLY.md); sync must not clobber it if encountered.
         assert mod.rewrite_lfx_dep('"lfx-nightly==1.10.0.dev38"', self.FLOOR) == '"lfx-nightly==1.10.0.dev38"'
 
     def test_only_rewrites_runtime_dep_in_full_block(self):
@@ -136,3 +143,67 @@ class TestSyncBundles:
         mod.sync_bundles("1.10.0", bundles)
         second = dict(mod.sync_bundles("1.10.0", bundles))
         assert second == {"arxiv": False}
+
+
+def test_bundle_manifests_match_distribution_versions():
+    """Keep published extension identity aligned with wheel metadata."""
+    for pyproject in sorted((REPO_ROOT / "src" / "bundles").glob("*/pyproject.toml")):
+        project_version = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["version"]
+        manifests = sorted(pyproject.parent.glob("src/*/extension.json"))
+        if pyproject.parent.name != "lfx-bundles":
+            assert manifests, f"{pyproject.relative_to(REPO_ROOT)} is missing extension.json"
+        for manifest in manifests:
+            manifest_version = json.loads(manifest.read_text(encoding="utf-8"))["version"]
+            assert manifest_version == project_version, (
+                f"{manifest.relative_to(REPO_ROOT)} has version {manifest_version}, "
+                f"but {pyproject.relative_to(REPO_ROOT)} has {project_version}"
+            )
+
+
+# ---------------------------------------------------------------------------
+# ratchet_spec -- sync must never WIDEN an existing pin
+# ---------------------------------------------------------------------------
+
+
+class TestRatchetSpec:
+    GEN_1_11 = "lfx>=1.11.0.dev0,<2.0.0"
+    GEN_1_12 = "lfx>=1.12.0.dev0,<2.0.0"
+
+    def test_keeps_hand_tightened_maintenance_pin(self):
+        # The regression this guards: `make patch v=1.11.7` on release-1.11.x
+        # regenerating <2.0.0 would let a 1.11-line bundle satisfy a 1.12
+        # install. The 1.11 bundle numbers sort higher, so the resolver would
+        # prefer them and langflow 1.12 would silently get 1.11-line code.
+        assert mod.ratchet_spec("lfx>=1.11.6,<1.12", self.GEN_1_11) == "lfx>=1.11.6,<1.12"
+
+    def test_generated_pin_is_a_noop_on_itself(self):
+        assert mod.ratchet_spec(self.GEN_1_12, self.GEN_1_12) == self.GEN_1_12
+
+    def test_stale_floor_is_still_raised(self):
+        assert mod.ratchet_spec("lfx>=1.9.0,<2.0.0", self.GEN_1_11) == self.GEN_1_11
+
+    def test_line_move_supersedes_rather_than_emptying(self):
+        # Intersecting here would yield ">=1.12.0.dev0,<1.12" -- unsatisfiable.
+        assert mod.ratchet_spec("lfx>=1.11.6,<1.12", self.GEN_1_12) == self.GEN_1_12
+
+    def test_cap_padding(self):
+        # "<1.12" and "<1.12.0" are the same bound, so both are line moves.
+        assert mod.ratchet_spec("lfx>=1.11.6,<1.12.0", self.GEN_1_12) == self.GEN_1_12
+
+    @pytest.mark.parametrize("legacy", ["lfx>=0.5.0", "lfx~=0.5.0", "lfx==0.5.0"])
+    def test_legacy_forms_normalise_wholesale(self, legacy):
+        assert mod.ratchet_spec(legacy, self.GEN_1_11) == self.GEN_1_11
+
+
+def test_sync_preserves_a_tightened_maintenance_pin(tmp_path):
+    """End-to-end: `make patch v=1.11.7` on a 1.11.x-shaped tree is a no-op."""
+    bundles = tmp_path / "bundles"
+    (bundles / "amazon").mkdir(parents=True)
+    pyproject = bundles / "amazon" / "pyproject.toml"
+    pyproject.write_text(
+        '[project]\nname = "lfx-amazon"\ndependencies = [\n    "lfx>=1.11.6,<1.12",\n]\n',
+        encoding="utf-8",
+    )
+
+    assert dict(mod.sync_bundles("1.11.7", bundles)) == {"amazon": False}
+    assert '"lfx>=1.11.6,<1.12"' in pyproject.read_text(encoding="utf-8")

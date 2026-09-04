@@ -12,10 +12,15 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-} from "@/components/ui/select-custom";
+} from "@/components/ui/select";
+import {
+  useIsFlowPermissionPending,
+  useIsFlowReadOnly,
+} from "@/contexts/permissionsContext";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useDarkStore } from "@/stores/darkStore";
+import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { APIClassType } from "@/types/api";
 import {
@@ -65,6 +70,25 @@ export const SidebarDraggableComponent = forwardRef(
     const { deleteFlow } = useDeleteFlow();
     const flows = useFlowsManagerStore((state) => state.flows);
     const addComponent = useAddComponent();
+    // Same flow id `useAddComponent` gates on, so the affordance and the gate
+    // can never disagree about which flow is being evaluated.
+    const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+    const isReadOnly = useIsFlowReadOnly(currentFlowId);
+    const isPermissionPending = useIsFlowPermissionPending(currentFlowId);
+
+    // `isReadOnly` is the same predicate the add path refuses on, so the
+    // control is unavailable for exactly as long as the click would be
+    // discarded — while the answer is in flight and, permanently, when it
+    // denies write. Pending only picks which reason to show.
+    // A placement constraint is a separate verdict and keeps hiding the add
+    // button; the permission cases only disable it, so a read-only user still
+    // sees the same layout everyone else does.
+    const isUnavailable = disabled || isReadOnly;
+    const unavailableTooltip = disabled
+      ? disabledTooltip
+      : isPermissionPending
+        ? t("sidebar.permissionsPending")
+        : t("sidebar.permissionDenied");
 
     const version = useDarkStore((state) => state.version);
     const [cursorPos, setCursorPos] = useState({ x: 0, y: 0 });
@@ -104,7 +128,20 @@ export const SidebarDraggableComponent = forwardRef(
       }
     }
 
+    // WCAG 2.5.3 Label in Name (LE-2235): the accessible name must contain
+    // the text the row shows, and the Beta / Legacy badge is part of that
+    // visible text — so it goes into the name too ("Add Listen Beta to
+    // canvas"), otherwise voice-control users saying "click Listen Beta"
+    // get no match. Keep these literals in sync with the badges below.
+    const visibleName = [display_name, beta && "Beta", legacy && "Legacy"]
+      .filter(Boolean)
+      .join(" ");
+    const addToCanvasLabel = t("sidebar.addComponentToCanvas", {
+      name: visibleName,
+    });
+
     const handleKeyDown = (e) => {
+      if (isUnavailable) return;
       if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         e.stopPropagation();
@@ -120,7 +157,7 @@ export const SidebarDraggableComponent = forwardRef(
         key={itemName}
       >
         <ShadTooltip
-          content={disabled ? disabledTooltip : null}
+          content={isUnavailable ? unavailableTooltip : null}
           styleClasses="z-50"
         >
           <div
@@ -131,28 +168,37 @@ export const SidebarDraggableComponent = forwardRef(
             }}
             key={itemName}
             data-tooltip-id={itemName}
-            tabIndex={0}
-            onKeyDown={handleKeyDown}
-            className="rounded-md outline-none ring-ring focus-visible:ring-1"
+            className={cn(
+              "group/draggable flex items-center gap-2 rounded-md bg-muted p-1 px-2 hover:bg-secondary-hover/75",
+              error && "cursor-not-allowed select-none",
+              isUnavailable
+                ? "cursor-not-allowed bg-accent text-placeholder-foreground h-8"
+                : "bg-muted text-foreground",
+            )}
             data-testid={`${sectionName.toLowerCase()}_${display_name.toLowerCase()}_draggable`}
           >
             <div
               data-testid={sectionName + display_name}
               id={sectionName + display_name}
+              role="button"
+              aria-label={addToCanvasLabel}
+              tabIndex={0}
+              onKeyDown={handleKeyDown}
               className={cn(
-                "group/draggable flex cursor-grab items-center gap-2 rounded-md bg-muted p-1 px-2 hover:bg-secondary-hover/75",
-                error && "cursor-not-allowed select-none",
-                disabled
-                  ? "pointer-events-none bg-accent text-placeholder-foreground h-8"
-                  : "bg-muted text-foreground",
+                // `min-w-0` (LE-2311): without it this flex item keeps the
+                // default `min-width: auto` and refuses to shrink below the
+                // component name's intrinsic width, pushing the sibling
+                // add/drag container off the row.
+                "flex min-w-0 flex-1 items-center gap-2 rounded-md outline-none ring-ring focus-visible:ring-1",
+                isUnavailable ? "cursor-not-allowed" : "cursor-grab",
               )}
-              draggable={!error}
+              draggable={!error && !isUnavailable}
               style={{
                 borderLeftColor: color,
               }}
               onDragStart={onDragStart}
               onDoubleClick={() => {
-                if (!disabled) {
+                if (!isUnavailable) {
                   addComponent(apiClass, itemName);
                 }
               }}
@@ -198,65 +244,73 @@ export const SidebarDraggableComponent = forwardRef(
                   </Badge>
                 )}
               </div>
-              <div className="flex shrink-0 items-center gap-1">
-                {!disabled && (
-                  <Button
-                    data-testid={`add-component-button-${convertTestName(
-                      display_name,
-                    )}`}
-                    variant="ghost"
-                    size="icon"
-                    tabIndex={-1}
-                    className="text-primary"
-                    onClick={() => addComponent(apiClass, itemName)}
-                  >
-                    <ForwardedIconComponent
-                      name="Plus"
-                      className="h-4 w-4 shrink-0 transition-all group-hover/draggable:opacity-100 group-focus/draggable:opacity-100 sm:opacity-0"
-                    />
-                  </Button>
-                )}
-                <div ref={popoverRef}>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
+              {!disabled && (
+                <Button
+                  data-testid={`add-component-button-${convertTestName(
+                    display_name,
+                  )}`}
+                  variant="ghost"
+                  size="icon"
+                  tabIndex={-1}
+                  disabled={isReadOnly}
+                  aria-label={addToCanvasLabel}
+                  className="text-primary"
+                  onClick={() => addComponent(apiClass, itemName)}
+                >
                   <ForwardedIconComponent
-                    name="GripVertical"
-                    className="h-4 w-4 shrink-0 text-muted-foreground group-hover/draggable:text-primary"
+                    name="Plus"
+                    className="h-4 w-4 shrink-0 transition-all group-hover/draggable:opacity-100 group-focus-within/draggable:opacity-100 sm:opacity-0"
                   />
-                  <SelectTrigger tabIndex={-1}></SelectTrigger>
-                  <SelectContent
-                    position="popper"
-                    side="bottom"
-                    sideOffset={-25}
-                    style={{
-                      position: "absolute",
-                      left: cursorPos.x,
-                      top: cursorPos.y,
-                    }}
-                  >
-                    <SelectItem value={"download"}>
+                </Button>
+              )}
+              <div ref={popoverRef}>
+                <ForwardedIconComponent
+                  name="GripVertical"
+                  className="h-4 w-4 shrink-0 text-muted-foreground group-hover/draggable:text-primary"
+                />
+                <SelectTrigger
+                  variant="plain"
+                  tabIndex={-1}
+                  aria-label={t("folder.options")}
+                ></SelectTrigger>
+                <SelectContent
+                  position="popper"
+                  side="bottom"
+                  sideOffset={-25}
+                  className="min-w-[11.5rem]"
+                  style={{
+                    position: "absolute",
+                    left: cursorPos.x,
+                    top: cursorPos.y,
+                  }}
+                >
+                  <SelectItem variant="plain" value={"download"}>
+                    <div className="flex">
+                      <IconComponent
+                        name="Download"
+                        className="relative top-0.5 mr-2 h-4 w-4"
+                      />{" "}
+                      {t("sidebar.download")}{" "}
+                    </div>{" "}
+                  </SelectItem>
+                  {(!official || onDelete) && (
+                    <SelectItem
+                      variant="plain"
+                      value={"delete"}
+                      data-testid="draggable-component-menu-delete"
+                    >
                       <div className="flex">
                         <IconComponent
-                          name="Download"
+                          name="Trash2"
                           className="relative top-0.5 mr-2 h-4 w-4"
                         />{" "}
-                        {t("sidebar.download")}{" "}
+                        {t("sidebar.delete")}{" "}
                       </div>{" "}
                     </SelectItem>
-                    {(!official || onDelete) && (
-                      <SelectItem
-                        value={"delete"}
-                        data-testid="draggable-component-menu-delete"
-                      >
-                        <div className="flex">
-                          <IconComponent
-                            name="Trash2"
-                            className="relative top-0.5 mr-2 h-4 w-4"
-                          />{" "}
-                          {t("sidebar.delete")}{" "}
-                        </div>{" "}
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </div>
+                  )}
+                </SelectContent>
               </div>
             </div>
           </div>

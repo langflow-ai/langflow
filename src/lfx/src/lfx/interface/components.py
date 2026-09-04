@@ -6,7 +6,9 @@ import inspect
 import json
 import os
 import pkgutil
+import threading
 import time
+from concurrent.futures import Future
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
@@ -21,12 +23,18 @@ from lfx.extension import (
     format_extension_error,
     load_dev_extensions,
     load_installed_extensions,
+    load_lfx_bundles_extensions,
     load_seed_extensions,
 )
 from lfx.extension.bundle_registry import BundleRecord, get_default_registry
 from lfx.extension.reload import register_post_swap_hook
 from lfx.log.logger import logger
-from lfx.utils.flow_validation import collect_component_hash_lookups
+from lfx.utils.component_aliases import ComponentIdentityIndex, build_component_identity_index
+from lfx.utils.flow_validation import (
+    collect_code_by_hash,
+    collect_component_code_lookups,
+    collect_component_hash_lookups,
+)
 from lfx.utils.validate_cloud import (
     filter_disabled_components_from_dict,
     is_component_disabled_in_astra_cloud,
@@ -53,12 +61,42 @@ class ComponentCache:
         Creates empty storage for all component types and tracking of fully loaded components.
         """
         self.all_types_dict: dict[str, Any] | None = None
+        # True only after the built-in, custom, and extension component maps
+        # and every derived lookup have been published atomically.
+        self.all_types_ready = False
         self.fully_loaded_components: dict[str, bool] = {}
         # Precomputed code hashes for fast flow validation.
         # Populated by get_and_cache_all_types_dict() via _build_code_hash_lookups().
         # None means "not yet loaded" (fail-closed); {} means "loaded, no components found".
         self.type_to_current_hash: dict[str, set[str]] | None = None
         self.all_known_hashes: set[str] | None = None
+        # Maps each known code-hash to its trusted server-side source. Used to
+        # substitute the trusted copy for client bytes once the hash gate
+        # passes, so a truncated-hash collision can't run attacker code.
+        self.code_by_hash: dict[str, str] | None = None
+        # Maps each known component type (and its aliases) to this server's
+        # trusted source for that type. Keyed by type rather than by hash, so a
+        # node whose stored built-in code has merely drifted across versions can
+        # still be rebuilt with the server's current copy.
+        self.type_to_code: dict[str, str] | None = None
+        # Collision-aware canonical registry identity lookup used by catalog
+        # palette and runtime policy enforcement.
+        self.component_identity_index: ComponentIdentityIndex | None = None
+        # Registry publication and every process-wide derived lookup share one
+        # lock. Hot reload builds templates outside the lock, then swaps the
+        # registry and invalidates its derived indexes atomically.
+        self.state_lock = threading.RLock()
+        # Cross-event-loop single-flight primitive for async initialization.
+        # ``concurrent.futures.Future`` is not bound to the first caller's loop;
+        # each follower awaits its own shielded ``asyncio.wrap_future`` view.
+        self.initialization_future: Future[dict[str, Any]] | None = None
+        # The elected caller starts cache construction in this independently
+        # owned task. Keeping a strong reference prevents cancellation of that
+        # caller from cancelling or garbage-collecting shared initialization.
+        self.initialization_task: asyncio.Task[None] | None = None
+        # Reloads that complete while initial discovery is in flight are folded
+        # into the local registry before its one atomic publication.
+        self.pending_bundle_updates: dict[str, dict[str, Any]] = {}
 
 
 # Singleton instance
@@ -235,11 +273,11 @@ def _save_generated_index(modules_dict: dict) -> None:
         # Get version
         from importlib.metadata import version
 
-        langflow_version = version("langflow")
+        lfx_version = version("lfx")
 
         # Build index structure
         index = {
-            "version": langflow_version,
+            "version": lfx_version,
             "metadata": {
                 "num_modules": num_modules,
                 "num_components": num_components,
@@ -390,13 +428,70 @@ def _warm_circular_imports() -> None:
             importlib.import_module(modname)
 
 
+_LFX_BUNDLES_SHIM_MARKER = "# lfx-bundles-shim"
+_LFX_COMPAT_SHIM_MARKER = "# lfx-compat-shim"
+
+
+def _discover_marked_component_dirs(search_paths: list[str], markers: set[str]) -> set[str]:
+    """Top-level ``lfx.components`` subdirs whose ``__init__.py`` starts with a known marker."""
+    marked: set[str] = set()
+    for root in search_paths:
+        root_path = Path(root)
+        if not root_path.is_dir():
+            continue
+        for child in sorted(root_path.iterdir()):
+            init_py = child / "__init__.py"
+            if not (child.is_dir() and init_py.is_file()):
+                continue
+            try:
+                with init_py.open(encoding="utf-8") as f:
+                    head = f.readline()
+            except OSError:
+                continue
+            if any(head.startswith(marker) for marker in markers):
+                marked.add(child.name)
+    return marked
+
+
+def _discover_shimmed_component_dirs(search_paths: list[str]) -> set[str]:
+    """Top-level ``lfx.components`` subdirs that are lfx-bundles import shims.
+
+    A provider consolidated into the lfx-bundles metapackage leaves a one-file
+    shim at ``lfx/components/<provider>/__init__.py`` (first line
+    ``# lfx-bundles-shim``) re-pointing to ``lfx_bundles.<provider>``.  Those
+    components load dynamically at the @official slot via the lfx.bundles
+    discovery path, so the in-tree walk must skip them or each component would
+    be registered twice (once in-tree, once at @official).
+    """
+    return _discover_marked_component_dirs(search_paths, {_LFX_BUNDLES_SHIM_MARKER})
+
+
+def _discover_component_skip_dirs(search_paths: list[str]) -> set[str]:
+    """Top-level ``lfx.components`` subdirs that contain no palette components.
+
+    Besides bundle provider shims, Langflow keeps a few package-rename shims
+    solely for import compatibility (for example ``knowledge_bases`` ->
+    ``files_and_knowledge``). They must stay importable, but the component
+    discovery walk should not treat them as palette categories.
+    """
+    return _discover_marked_component_dirs(
+        search_paths,
+        {_LFX_BUNDLES_SHIM_MARKER, _LFX_COMPAT_SHIM_MARKER},
+    )
+
+
 async def _load_components_dynamically(
     target_modules: list[str] | None = None,
+    *,
+    parallel: bool = True,
 ) -> dict[str, Any]:
     """Load components dynamically by scanning and importing modules.
 
     Args:
         target_modules: Optional list of specific module names to load (e.g., ["mistral", "openai"])
+        parallel: Process modules concurrently. Index generation disables this because
+            concurrent imports can expose partially initialized compatibility modules and
+            make the generated component set nondeterministic.
 
     Returns:
         Dictionary mapping top-level module names to their components
@@ -409,6 +504,10 @@ async def _load_components_dynamically(
         await logger.aerror(f"Failed to import langflow.components package: {e}", exc_info=True)
         return modules_dict
 
+    # Skip compatibility-only packages that should stay importable but should not
+    # be treated as palette categories during the in-tree walk.
+    skip_component_dirs = _discover_component_skip_dirs(list(components_pkg.__path__))
+
     # Collect all module names to process
     module_names = []
     for _, modname, _ in pkgutil.walk_packages(components_pkg.__path__, prefix=components_pkg.__name__ + "."):
@@ -420,6 +519,11 @@ async def _load_components_dynamically(
         parts = modname.split(".")
         if len(parts) > MIN_MODULE_PARTS:
             component_type = parts[2]
+
+            # Compatibility-only packages are either discovered through their
+            # real extension path or intentionally contain no palette components.
+            if component_type in skip_component_dirs:
+                continue
 
             # Skip disabled components when ASTRA_CLOUD_DISABLE_COMPONENT is true
             if len(parts) >= MIN_MODULE_PARTS_WITH_FILENAME:
@@ -444,15 +548,22 @@ async def _load_components_dynamically(
     # of the cycle and CPython raises an import ``_DeadlockError``.
     _warm_circular_imports()
 
-    # Create tasks for parallel module processing
-    tasks = [asyncio.to_thread(_process_single_module, modname) for modname in module_names]
+    if parallel:
+        # Create tasks for parallel module processing
+        tasks = [asyncio.to_thread(_process_single_module, modname) for modname in module_names]
 
-    # Wait for all modules to be processed
-    try:
-        module_results = await asyncio.gather(*tasks, return_exceptions=True)
-    except Exception as e:  # noqa: BLE001
-        await logger.aerror(f"Error during parallel module processing: {e}", exc_info=True)
-        return modules_dict
+        # Wait for all modules to be processed
+        try:
+            module_results = await asyncio.gather(*tasks, return_exceptions=True)
+        except Exception as e:  # noqa: BLE001
+            await logger.aerror(f"Error during parallel module processing: {e}", exc_info=True)
+            return modules_dict
+    else:
+        # Static index generation values reproducibility over startup speed. Importing
+        # and processing one module at a time avoids cross-thread import cycles that can
+        # otherwise make a component disappear from one generated index and reappear in
+        # the next.
+        module_results = [_process_single_module(modname) for modname in module_names]
 
     # Merge results from all modules
     for result in module_results:
@@ -587,13 +698,18 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
     """
     try:
         module = importlib.import_module(modname)
+    except ModuleNotFoundError as e:
+        # Expected when a component's optional dependency isn't installed, so a one-line
+        # warning is enough; a full traceback per affected module would flood startup logs.
+        logger.warning(f"Skipping component module {modname}: missing optional dependency ({e.name or e})")
+        return None
     except Exception as e:  # noqa: BLE001
         # Catch all exceptions during import to prevent component failures from crashing startup
         # TODO: Surface these errors to the UI in a friendly manner
         logger.error(f"Failed to import module {modname}: {e}", exc_info=True)
         return None
     # Extract the top-level subpackage name after "lfx.components."
-    # e.g., "lfx.components.Notion.add_content_to_page" -> "Notion"
+    # e.g., "lfx.components.processing.combine_text" -> "processing"
     mod_parts = modname.split(".")
     if len(mod_parts) <= MIN_MODULE_PARTS:
         return None
@@ -652,26 +768,40 @@ async def _determine_loading_strategy(settings_service: "SettingsService") -> di
     Returns:
         Dictionary containing loaded component types and templates
     """
-    component_cache.all_types_dict = {}
+    all_types_dict: dict[str, Any] = {}
     if settings_service.settings.lazy_load_components:
         # Partial loading mode - just load component metadata
         await logger.adebug("Using partial component loading")
-        component_cache.all_types_dict = await aget_component_metadata(settings_service.settings.components_path)
+        all_types_dict = await aget_component_metadata(settings_service.settings.components_path)
     elif settings_service.settings.components_path:
         # Traditional full loading - filter out base components path to only load custom components
         custom_paths = [p for p in settings_service.settings.components_path if p != BASE_COMPONENTS_PATH]
         if custom_paths:
-            component_cache.all_types_dict = await aget_all_types_dict(custom_paths)
+            all_types_dict = await aget_all_types_dict(custom_paths)
 
     # Log custom component loading stats
-    components_dict = component_cache.all_types_dict or {}
+    components_dict = all_types_dict or {}
     component_count = sum(len(comps) for comps in components_dict.get("components", {}).values())
     if component_count > 0 and settings_service.settings.components_path:
         await logger.adebug(
             f"Built {component_count} custom components from {settings_service.settings.components_path}"
         )
 
-    return component_cache.all_types_dict or {}
+    return all_types_dict
+
+
+def _collect_component_cache_lookups(
+    all_types_dict: dict[str, Any],
+) -> tuple[dict[str, set[str]], set[str], dict[str, str], dict[str, str], ComponentIdentityIndex]:
+    """Build every derived component lookup without mutating shared cache state."""
+    type_to_hash, all_hashes = collect_component_hash_lookups(all_types_dict)
+    return (
+        type_to_hash,
+        all_hashes,
+        collect_code_by_hash(all_types_dict),
+        collect_component_code_lookups(all_types_dict),
+        build_component_identity_index(all_types_dict),
+    )
 
 
 def _build_code_hash_lookups(cache: ComponentCache) -> None:
@@ -681,14 +811,46 @@ def _build_code_hash_lookups(cache: ComponentCache) -> None:
     - type_to_current_hash: {component_type: 12-char SHA256 prefix}
     - all_known_hashes: set of all known code hashes
     """
-    if not cache.all_types_dict:
-        return
+    with cache.state_lock:
+        all_types_dict = cache.all_types_dict
+        if all_types_dict is None or (not all_types_dict and not cache.all_types_ready):
+            return
 
-    type_to_hash, all_hashes = collect_component_hash_lookups(cache.all_types_dict)
+        type_to_hash, all_hashes, code_by_hash, type_to_code, identity_index = _collect_component_cache_lookups(
+            all_types_dict
+        )
 
-    cache.type_to_current_hash = type_to_hash
-    cache.all_known_hashes = all_hashes
-    logger.debug(f"Built code hash lookups: {len(type_to_hash)} types, {len(all_hashes)} unique hashes")
+        cache.type_to_current_hash = type_to_hash
+        cache.all_known_hashes = all_hashes
+        cache.code_by_hash = code_by_hash
+        cache.type_to_code = type_to_code
+        cache.component_identity_index = identity_index
+        logger.debug(f"Built code hash lookups: {len(type_to_hash)} types, {len(all_hashes)} unique hashes")
+
+
+def get_component_identity_index(
+    all_types_dict: dict[str, Any] | None = None,
+) -> ComponentIdentityIndex | None:
+    """Return a collision-aware identity index for a registry mapping.
+
+    The process-wide component registry reuses the precomputed cache. A
+    request-local or synthetic mapping receives its own index so it can never
+    accidentally resolve against stale identities from another registry.
+    When no mapping is supplied, an incompletely initialized or empty process
+    registry returns ``None`` so active catalog policy can fail closed.
+    """
+    with component_cache.state_lock:
+        if all_types_dict is None:
+            if not component_cache.all_types_ready or not component_cache.all_types_dict:
+                return None
+            all_types_dict = component_cache.all_types_dict
+
+        if all_types_dict is component_cache.all_types_dict:
+            if component_cache.component_identity_index is None:
+                component_cache.component_identity_index = build_component_identity_index(all_types_dict)
+            return component_cache.component_identity_index
+
+    return build_component_identity_index(all_types_dict)
 
 
 def _components_path_extension_paths(settings_service: "SettingsService") -> list[Path]:
@@ -728,17 +890,29 @@ def _decorate_template_with_extension(
     bundle: str,
     extension_version: str,
     namespaced_id: str,
+    legacy_name: str | None = None,
 ) -> dict[str, Any]:
     """Stamp the AC-required identity fields onto a frontend-node template.
 
     The ``namespaced_id`` is also written to the template so a consumer that
     only looks at the value (not the dict key) still sees the canonical
     ``ext:<bundle>:<Class>@<slot>`` identifier.
+
+    ``legacy_name`` is the identity the component had in the in-tree palette
+    (the class's ``name`` attribute, falling back to the class name) -- the
+    string saved flows carry as their node ``type``.  In-tree palette entries
+    expose it as the dict key, but ext entries are keyed by ``namespaced_id``,
+    so it must be carried in the value or both alias maps (frontend
+    ``getTemplateAliases``, ``lfx.utils.component_aliases``) lose the only
+    bridge from a pre-move node type like ``AstraDB`` or ``Chroma`` to the
+    current template -- leaving such nodes permanently unresolvable.
     """
     template["extension"] = extension_id
     template["bundle"] = bundle
     template["extension_version"] = extension_version
     template["namespaced_id"] = namespaced_id
+    if legacy_name and not template.get("name"):
+        template["name"] = legacy_name
     return template
 
 
@@ -749,32 +923,85 @@ def _emit_extension_diagnostics(results: list[LoadResult]) -> None:
     emission; until then we want operators to see what the loader
     rejected without silently dropping the typed payload.
     """
+    optional_missing: dict[tuple[str, str], list[ExtensionError]] = {}
     for result in results:
         for err in result.errors:
             logger.error("Extension load error: %s", format_extension_error(err))
         for warn in result.warnings:
+            if warn.code == "optional-dependency-missing":
+                bundle = result.bundle or "<unknown>"
+                missing_module = warn.content or "<unknown>"
+                missing_root = missing_module.split(".", 1)[0]
+                optional_missing.setdefault((bundle, missing_root), []).append(warn)
+                logger.debug("Suppressed extension optional-dependency detail: %s", format_extension_error(warn))
+                continue
             logger.warning("Extension load warning: %s", format_extension_error(warn))
+    for (bundle, missing_module), warnings_for_dependency in sorted(optional_missing.items()):
+        representative = warnings_for_dependency[0].location or "<unknown>"
+        logger.warning(
+            "Extension optional dependency missing: bundle=%r module=%r skipped_modules=%s representative=%s",
+            bundle,
+            missing_module,
+            len(warnings_for_dependency),
+            representative,
+        )
 
 
 # Discovery-source precedence for cross-source bundle-name collisions.
 # Higher in the list wins.  Ordered from most-authoritative (pip-installed
 # distribution = explicit, packaged install) to least (LANGFLOW_COMPONENTS_PATH
-# = loose, legacy custom-components path).  Operators who stage a bundle in
-# multiple places almost always *want* the more-authoritative copy to win;
-# the typed warning is what catches the unintentional case.
-_DISCOVERY_PRECEDENCE: tuple[str, ...] = ("installed", "seed", "dev", "inline")
+# = loose, legacy custom-components path).  ``lfx_bundles`` is the
+# manifest-less metapackage tier: it sits BELOW the two manifest sources
+# (installed > seed) so a graduated ``lfx-<provider>`` shipping a manifest
+# always shadows the same-named provider in the metapackage -- the property
+# that lets a provider graduate with no lockstep release -- and ABOVE the
+# loose dev/inline sources.  Operators who stage a bundle in multiple places
+# almost always *want* the more-authoritative copy to win; the typed warning
+# is what catches the unintentional case.
+_DISCOVERY_PRECEDENCE: tuple[str, ...] = ("installed", "seed", "lfx_bundles", "dev", "inline")
+
+
+def _claimed_official_bundles(
+    extension_results: list[LoadResult],
+    seed_results: list[LoadResult],
+) -> dict[str, tuple[str, str]]:
+    """Map bundle names won by installed/seed sources to ``(kind, path)``.
+
+    Fed to :func:`load_lfx_bundles_extensions` so the manifest-less
+    metapackage tier skips *importing* providers that would lose shadow
+    resolution anyway -- the @official sources share one
+    ``_lfx_ext.official.<bundle>.*`` sys.modules namespace, and a
+    lower-precedence import would overwrite the winner's live modules.
+    Mirrors the winner-picking rule in :func:`_resolve_bundle_shadowing`:
+    only results that actually produced components claim a name, and the
+    first (highest-precedence) claimant wins.
+    """
+    claimed: dict[str, tuple[str, str]] = {}
+    for kind, results in (("installed", extension_results), ("seed", seed_results)):
+        for result in results:
+            if not result.bundle or not result.components or result.bundle in claimed:
+                continue
+            claimed[result.bundle] = (kind, str(result.source_path) if result.source_path else "<unknown>")
+    return claimed
 
 
 def _resolve_bundle_shadowing(
     *,
     extension_results: list[LoadResult],
     seed_results: list[LoadResult],
+    lfx_bundles_results: list[LoadResult],
     dev_results: list[LoadResult],
     inline_results: list[LoadResult],
-) -> tuple[list[LoadResult], list[LoadResult], list[LoadResult], list[LoadResult]]:
+) -> tuple[
+    list[LoadResult],
+    list[LoadResult],
+    list[LoadResult],
+    list[LoadResult],
+    list[LoadResult],
+]:
     """Drop loser components and emit typed shadow warnings on lower-precedence dups.
 
-    Precedence is :data:`_DISCOVERY_PRECEDENCE` (installed > seed > dev > inline).
+    Precedence is :data:`_DISCOVERY_PRECEDENCE` (installed > seed > lfx_bundles > dev > inline).
     For each bundle name claimed by more than one source, the highest-precedence
     source keeps its components; every other source has its ``components`` cleared
     AND gains a typed warning naming the winning source's path so the operator can
@@ -802,6 +1029,7 @@ def _resolve_bundle_shadowing(
     sources: dict[str, list[LoadResult]] = {
         "installed": extension_results,
         "seed": seed_results,
+        "lfx_bundles": lfx_bundles_results,
         "dev": dev_results,
         "inline": inline_results,
     }
@@ -819,9 +1047,8 @@ def _resolve_bundle_shadowing(
             winner_for_bundle.setdefault(result.bundle, (kind, result))
 
     # Second pass: for each result that is NOT the winner, drop its components
-    # and append the typed warning to the result's errors list (mirroring the
-    # original ``seed-bundle-shadowed`` flow so CLI exit-code logic keeps
-    # treating it as a non-fatal diagnostic that stays attached to the loser).
+    # and append a typed warning to the losing result. Shadowing is expected
+    # during bundle graduation and therefore never flips ``LoadResult.ok``.
     for kind in _DISCOVERY_PRECEDENCE:
         for result in sources[kind]:
             if not result.bundle or not result.components:
@@ -834,7 +1061,7 @@ def _resolve_bundle_shadowing(
             if winner_kind == "installed" and kind == "seed":
                 # Preserve the documented code for the documented pair so the
                 # existing CLI warn-only set and snapshot tests keep working.
-                result.errors.append(
+                result.warnings.append(
                     ExtensionError(
                         code="seed-bundle-shadowed",
                         message=(
@@ -851,7 +1078,7 @@ def _resolve_bundle_shadowing(
                     )
                 )
             else:
-                result.errors.append(
+                result.warnings.append(
                     ExtensionError(
                         code="bundle-shadowed",
                         message=(
@@ -862,7 +1089,7 @@ def _resolve_bundle_shadowing(
                         location=loser_path,
                         content=result.bundle,
                         hint=(
-                            "Discovery precedence is installed > seed > dev > inline. "
+                            "Discovery precedence is installed > seed > lfx_bundles > dev > inline. "
                             f"Either remove the {kind} copy of this bundle or rename it so each "
                             "bundle name comes from exactly one source."
                         ),
@@ -872,7 +1099,7 @@ def _resolve_bundle_shadowing(
             # loops naturally skip this result; the typed warning still emits.
             result.components = []
 
-    return extension_results, seed_results, dev_results, inline_results
+    return extension_results, seed_results, lfx_bundles_results, dev_results, inline_results
 
 
 async def import_extension_components(
@@ -911,6 +1138,24 @@ async def import_extension_components(
     # When neither $LANGFLOW_SEED_DIR is set nor /opt/langflow/bundles
     # exists this is a no-op, so it costs nothing in Mode A.
     seed_results = load_seed_extensions()
+    # Manifest-less lfx.bundles metapackage roots are the third @official
+    # production source (after installed-manifest and seed): a distribution
+    # declaring the ``lfx.bundles`` entry-point ships a package whose
+    # subdirectories are bundles, registered at @official with no manifest.
+    # Loaded here so they enter the same shadow-resolution + registry +
+    # palette pathway; a no-op when no distribution declares the group.
+    #
+    # ``claimed_bundles`` carries the names already won by the two
+    # higher-precedence sources so the metapackage loader never *imports* a
+    # losing copy: all @official sources share the
+    # ``_lfx_ext.official.<bundle>.*`` sys.modules namespace, so importing a
+    # shadowed provider would overwrite the winner's live modules even though
+    # _resolve_bundle_shadowing later drops its components.  This collision is
+    # the expected post-graduation state (standalone lfx-<provider> installed
+    # alongside an older metapackage), not a misconfiguration.
+    lfx_bundles_results = load_lfx_bundles_extensions(
+        claimed_bundles=_claimed_official_bundles(extension_results, seed_results)
+    )
     # Dev extensions registered via ``lfx extension dev`` ship the same v0
     # manifest contract as installed extensions; load them through the
     # @official-slot pathway so they enter the BundleRegistry, expose the
@@ -923,8 +1168,9 @@ async def import_extension_components(
     inline_results = discover_inline_bundles(_components_path_extension_paths(settings_service))
 
     # Resolve cross-source bundle-name shadowing in a single pass.  Discovery
-    # surfaces four sources -- installed (pip) > seed (filesystem-staged) >
-    # dev (`lfx extension dev`) > inline (LANGFLOW_COMPONENTS_PATH) -- and the
+    # surfaces five sources -- installed (pip) > seed (filesystem-staged) >
+    # lfx_bundles (manifest-less metapackage) > dev (`lfx extension dev`) >
+    # inline (LANGFLOW_COMPONENTS_PATH) -- and the
     # registry is keyed by bundle name.  Without an explicit precedence the
     # registry-population loop would silently overwrite earlier records with
     # later ones (last-wins by iteration order), and the reload endpoint would
@@ -933,17 +1179,28 @@ async def import_extension_components(
     # surface the typed warning before either the registry or the palette
     # mapping is built so the operator sees the shadow once with the actual
     # paths involved.
-    deduped_extension_results, deduped_seed_results, deduped_dev_results, deduped_inline_results = (
-        _resolve_bundle_shadowing(
-            extension_results=extension_results,
-            seed_results=seed_results,
-            dev_results=dev_results,
-            inline_results=inline_results,
-        )
+    (
+        deduped_extension_results,
+        deduped_seed_results,
+        deduped_lfx_bundles_results,
+        deduped_dev_results,
+        deduped_inline_results,
+    ) = _resolve_bundle_shadowing(
+        extension_results=extension_results,
+        seed_results=seed_results,
+        lfx_bundles_results=lfx_bundles_results,
+        dev_results=dev_results,
+        inline_results=inline_results,
     )
 
     _emit_extension_diagnostics(
-        [*deduped_extension_results, *deduped_seed_results, *deduped_dev_results, *deduped_inline_results]
+        [
+            *deduped_extension_results,
+            *deduped_seed_results,
+            *deduped_lfx_bundles_results,
+            *deduped_dev_results,
+            *deduped_inline_results,
+        ]
     )
 
     # Populate the process-default BundleRegistry so the reload endpoint
@@ -960,6 +1217,7 @@ async def import_extension_components(
     all_results = [
         *deduped_extension_results,
         *deduped_seed_results,
+        *deduped_lfx_bundles_results,
         *deduped_dev_results,
         *deduped_inline_results,
     ]
@@ -974,6 +1232,7 @@ async def import_extension_components(
             components=tuple(result.components),
             distribution=result.distribution,
             source_path=result.source_path,
+            manifestless=result.manifestless,
         )
         registry.install_bundle(record)
 
@@ -1009,8 +1268,36 @@ async def import_extension_components(
                 bundle=loaded.bundle,
                 extension_version=loaded.extension_version,
                 namespaced_id=loaded.namespaced_id,
+                legacy_name=getattr(instance, "name", None) or loaded.class_name,
             )
     return components_dict
+
+
+def _publish_bundle_cache(bundle: str, bundle_dict: dict[str, Any]) -> bool:
+    """Atomically publish one reloaded bundle and invalidate derived lookups."""
+    with component_cache.state_lock:
+        current_types = component_cache.all_types_dict
+        if current_types is None or not component_cache.all_types_ready:
+            if component_cache.initialization_future is not None:
+                component_cache.pending_bundle_updates[bundle] = bundle_dict
+                logger.debug("Queued reloaded bundle %r for the in-flight cache initialization", bundle)
+            else:
+                logger.debug(
+                    "Skipped publishing reloaded bundle %r: no component cache is published and none is initializing",
+                    bundle,
+                )
+            return False
+
+        # Copy-on-write keeps any reader that already holds the previous
+        # registry paired with its previous immutable identity index.
+        component_cache.all_types_dict = {**current_types, bundle: bundle_dict}
+        component_cache.all_types_ready = True
+        component_cache.type_to_current_hash = None
+        component_cache.all_known_hashes = None
+        component_cache.code_by_hash = None
+        component_cache.type_to_code = None
+        component_cache.component_identity_index = None
+        return True
 
 
 def refresh_bundle_cache_from_record(record: "BundleRecord") -> None:
@@ -1026,7 +1313,10 @@ def refresh_bundle_cache_from_record(record: "BundleRecord") -> None:
     Components whose class fails to instantiate or template are skipped
     with a logged warning, mirroring :func:`import_extension_components`.
     """
-    if component_cache.all_types_dict is None:
+    with component_cache.state_lock:
+        cache_ready = component_cache.all_types_dict is not None and component_cache.all_types_ready
+        initialization_in_progress = component_cache.initialization_future is not None
+    if not cache_ready and not initialization_in_progress:
         # Cache hasn't been built yet; nothing to refresh.  The first
         # ``get_and_cache_all_types_dict`` call will see the fresh registry
         # entry and pick up the post-reload class set.
@@ -1055,6 +1345,7 @@ def refresh_bundle_cache_from_record(record: "BundleRecord") -> None:
             bundle=loaded.bundle,
             extension_version=loaded.extension_version,
             namespaced_id=loaded.namespaced_id,
+            legacy_name=getattr(instance, "name", None) or loaded.class_name,
         )
 
     expected = len(record.components)
@@ -1088,32 +1379,62 @@ def refresh_bundle_cache_from_record(record: "BundleRecord") -> None:
             failures,
         )
 
-    component_cache.all_types_dict[record.bundle] = bundle_dict
-
-    # Invalidate the precomputed code-hash lookups so flow validation
-    # picks up the freshly-loaded class bodies instead of comparing
-    # against the pre-reload hashes.  ``get_component_hash_lookups_for_validation``
-    # rebuilds them lazily on the next call when both fields are None.
-    component_cache.type_to_current_hash = None
-    component_cache.all_known_hashes = None
+    # Publish the new registry and invalidate every derived view in one
+    # critical section. Readers therefore observe either the complete old
+    # state or the complete new state, never a new registry with a stale index.
+    _publish_bundle_cache(record.bundle, bundle_dict)
 
 
-async def get_and_cache_all_types_dict(
+def _consume_wrapped_initialization_result(wrapped_future: asyncio.Future[dict[str, Any]]) -> None:
+    """Retrieve a per-loop wrapper exception even if its caller was cancelled."""
+    if not wrapped_future.cancelled():
+        wrapped_future.exception()
+
+
+async def _await_component_cache_initialization(
+    initialization_future: Future[dict[str, Any]],
+) -> dict[str, Any]:
+    """Await process-wide initialization without coupling it to caller cancellation."""
+    wrapped_future = asyncio.wrap_future(initialization_future)
+    wrapped_future.add_done_callback(_consume_wrapped_initialization_result)
+    return await asyncio.shield(wrapped_future)
+
+
+def _finish_component_initialization_task(
+    cache: ComponentCache,
+    initialization_future: Future[dict[str, Any]],
+    initialization_task: asyncio.Task[None],
+) -> None:
+    """Clean up if the background initializer is cancelled or exits unexpectedly."""
+    task_exception = None if initialization_task.cancelled() else initialization_task.exception()
+    with cache.state_lock:
+        if cache.initialization_task is not initialization_task:
+            return
+
+        cache.initialization_task = None
+        if cache.initialization_future is not initialization_future:
+            return
+
+        cache.initialization_future = None
+        cache.pending_bundle_updates.clear()
+        if initialization_future.done():
+            return
+        if initialization_task.cancelled():
+            initialization_future.cancel()
+        elif task_exception is not None:
+            initialization_future.set_exception(task_exception)
+        else:
+            initialization_future.set_exception(RuntimeError("Component cache initialization ended without a result"))
+
+
+async def _initialize_component_cache(
+    cache: ComponentCache,
     settings_service: "SettingsService",
-    telemetry_service: Any | None = None,
-):
-    """Retrieves and caches the complete dictionary of component types and templates.
-
-    Supports both full and partial (lazy) loading. If the cache is empty, loads built-in Langflow
-    components and either fully loads all components or loads only their metadata, depending on the
-    lazy loading setting. Merges built-in, custom, and Extension-System components into the cache
-    and returns the resulting dictionary.
-
-    Args:
-        settings_service: Settings service instance
-        telemetry_service: Optional telemetry service for tracking component loading metrics
-    """
-    if component_cache.all_types_dict is None:
+    telemetry_service: Any | None,
+    initialization_future: Future[dict[str, Any]],
+) -> None:
+    """Build and atomically publish component state independently of any caller."""
+    try:
         await logger.adebug("Building components cache")
 
         langflow_components = await import_langflow_components(settings_service, telemetry_service)
@@ -1132,18 +1453,102 @@ async def get_and_cache_all_types_dict(
         # Merge built-in, custom, and extension components (no wrapper at cache level).
         # Extension components win on collision so a manifest-shipping bundle
         # supersedes any same-named legacy entry.
-        component_cache.all_types_dict = {
+        merged_types = {
             **langflow_components["components"],
             **custom_flat,
             **extension_components,
         }
-        component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
+        component_count = sum(len(comps) for comps in merged_types.values())
         await logger.adebug(f"Loaded {component_count} components")
 
-        # Precompute code hash lookups for fast flow validation
-        _build_code_hash_lookups(component_cache)
+        while True:
+            lookups = _collect_component_cache_lookups(merged_types)
+            with cache.state_lock:
+                if cache.pending_bundle_updates:
+                    pending_updates = dict(cache.pending_bundle_updates)
+                    cache.pending_bundle_updates.clear()
+                else:
+                    type_to_hash, all_hashes, code_by_hash, type_to_code, identity_index = lookups
+                    cache.all_types_dict = merged_types
+                    cache.all_types_ready = True
+                    cache.type_to_current_hash = type_to_hash
+                    cache.all_known_hashes = all_hashes
+                    cache.code_by_hash = code_by_hash
+                    cache.type_to_code = type_to_code
+                    cache.component_identity_index = identity_index
+                    cache.initialization_future = None
+                    cache.initialization_task = None
+                    initialization_future.set_result(merged_types)
+                    return
 
-    return component_cache.all_types_dict
+            # A reload completed while local discovery or lookup construction
+            # was in flight. Its bundle wins over the stale discovered copy;
+            # rebuild all derived maps locally before trying publication again.
+            merged_types = {**merged_types, **pending_updates}
+    except asyncio.CancelledError:
+        with cache.state_lock:
+            if cache.initialization_future is initialization_future:
+                cache.initialization_future = None
+                cache.initialization_task = None
+                cache.pending_bundle_updates.clear()
+            if not initialization_future.done():
+                initialization_future.cancel()
+        raise
+    except Exception as exc:  # noqa: BLE001
+        with cache.state_lock:
+            if cache.initialization_future is initialization_future:
+                cache.initialization_future = None
+                cache.initialization_task = None
+                cache.pending_bundle_updates.clear()
+            if not initialization_future.done():
+                initialization_future.set_exception(exc)
+
+
+async def get_and_cache_all_types_dict(
+    settings_service: "SettingsService",
+    telemetry_service: Any | None = None,
+) -> dict[str, Any]:
+    """Retrieves and caches the complete dictionary of component types and templates.
+
+    Supports both full and partial (lazy) loading. If the cache is empty, loads built-in Langflow
+    components and either fully loads all components or loads only their metadata, depending on the
+    lazy loading setting. Merges built-in, custom, and Extension-System components into the cache
+    and returns the resulting dictionary.
+
+    Args:
+        settings_service: Settings service instance
+        telemetry_service: Optional telemetry service for tracking component loading metrics
+    """
+    cache = component_cache
+    with cache.state_lock:
+        if cache.all_types_ready and cache.all_types_dict is not None:
+            return cache.all_types_dict
+
+        initialization_future = cache.initialization_future
+        if initialization_future is None:
+            initialization_future = Future()
+            cache.initialization_future = initialization_future
+            # Discard any legacy/failed partial state. The initializer keeps all
+            # new registry and lookup data in locals until atomic publication.
+            cache.all_types_dict = None
+            cache.all_types_ready = False
+            cache.type_to_current_hash = None
+            cache.all_known_hashes = None
+            cache.code_by_hash = None
+            cache.type_to_code = None
+            cache.component_identity_index = None
+            initialization_task = asyncio.create_task(
+                _initialize_component_cache(cache, settings_service, telemetry_service, initialization_future),
+                name="lfx-component-cache-initialization",
+            )
+            cache.initialization_task = initialization_task
+            initialization_task.add_done_callback(
+                lambda task: _finish_component_initialization_task(cache, initialization_future, task)
+            )
+
+    # Every caller receives a loop-local wrapper. Shielding that wrapper keeps
+    # caller cancellation from reaching either the shared future or its task.
+    return await _await_component_cache_initialization(initialization_future)
 
 
 async def aget_all_types_dict(components_paths: list[str]):

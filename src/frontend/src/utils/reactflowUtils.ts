@@ -66,7 +66,7 @@ import {
   cleanMcpConfig,
   type MCPServerValue,
 } from "./helpers/clean-mcp-config";
-import { getLayoutedNodes } from "./layoutUtils";
+import { getFallbackGridPositions, getLayoutedNodes } from "./layoutUtils";
 import { createRandomKey, toTitleCase } from "./utils";
 
 const uid = new ShortUniqueId();
@@ -125,6 +125,9 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
     // check if the source and target handle still exists
     const sourceHandle = edge.sourceHandle; //right
     const targetHandle = edge.targetHandle; //left
+    // Hold by reference: the target block rewrites edge.id on migration, so a second find-by-id in
+    // the source block would miss it and skip the source-handle migration (DataFrame stays). LE-1929.
+    const edgeInNewEdges = newEdges.find((e) => e.id === edge.id);
     if (targetHandle) {
       const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
       const field = targetHandleObject.fieldName;
@@ -199,7 +202,7 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
           isAdvanced) &&
         !isLoopInput
       ) {
-        newEdges = newEdges.filter((e) => e.id !== edge.id);
+        newEdges = newEdges.filter((e) => e !== edgeInNewEdges);
         brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
       } else if (
         targetHandlesMatchResult &&
@@ -207,7 +210,6 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       ) {
         // Handles match via migration but IDs differ — update edge to use current types
         // so React Flow can find the DOM handle
-        const edgeInNewEdges = newEdges.find((e) => e.id === edge.id);
         if (edgeInNewEdges) {
           edgeInNewEdges.targetHandle = expectedTargetHandle;
           if (edgeInNewEdges.data) {
@@ -277,14 +279,13 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             sourceHandle,
           );
           if (!sourceMatchResult && !hasAllowsLoop) {
-            newEdges = newEdges.filter((e) => e.id !== edge.id);
+            newEdges = newEdges.filter((e) => e !== edgeInNewEdges);
             brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
           } else if (
             sourceMatchResult &&
             expectedSourceHandle !== sourceHandle
           ) {
             // Handles match via migration but IDs differ — update edge to use current types
-            const edgeInNewEdges = newEdges.find((e) => e.id === edge.id);
             if (edgeInNewEdges) {
               edgeInNewEdges.sourceHandle = expectedSourceHandle;
               if (edgeInNewEdges.data) {
@@ -302,13 +303,18 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             }
           }
         } else {
-          newEdges = newEdges.filter((e) => e.id !== edge.id);
+          newEdges = newEdges.filter((e) => e !== edgeInNewEdges);
           brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
         }
       }
     }
 
-    newEdges = filterHiddenFieldsEdges(edge, newEdges, targetNode);
+    // Pass the retained reference: its id/handles reflect any migration above.
+    newEdges = filterHiddenFieldsEdges(
+      edgeInNewEdges ?? edge,
+      newEdges,
+      targetNode,
+    );
   });
 
   return { edges: newEdges, brokenEdges };
@@ -603,7 +609,14 @@ export const processFlows = (DbData: FlowType[], skipUpdate = true) => {
 };
 
 export const needsLayout = (nodes: AllNodeType[]) => {
-  return nodes.some((node) => !node.position);
+  // Number.isFinite does not coerce, so this also rejects non-numeric
+  // coordinates as well as NaN and ±Infinity.
+  return nodes.some(
+    (node) =>
+      !node.position ||
+      !Number.isFinite(node.position.x) ||
+      !Number.isFinite(node.position.y),
+  );
 };
 
 export async function processDataFromFlow(
@@ -621,6 +634,11 @@ export async function processDataFromFlow(
     if (refreshIds) updateIds(data); // Assuming updateIds is defined elsewhere
     // add layout to nodes if not present
     if (needsLayout(data.nodes)) {
+      // Seed deterministic positions synchronously first. processFlows invokes
+      // this function without awaiting it, so anything that depends on the
+      // `await` below would still hand position-less nodes to React Flow (whose
+      // getNodePositionWithOrigin dereferences node.position.x unguarded).
+      data.nodes = getFallbackGridPositions(data.nodes);
       const layoutedNodes = await getLayoutedNodes(data.nodes, data.edges);
       data.nodes = layoutedNodes;
     }
@@ -857,7 +875,9 @@ export function updateEdges(edges: EdgeType[]) {
     });
 }
 
-export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
+export type NamedFlow = Pick<FlowType, "id" | "name">;
+
+export function addVersionToDuplicates(flow: FlowType, flows: NamedFlow[]) {
   const flowsWithoutUpdatedFlow = flows.filter((f) => f.id !== flow.id);
 
   const existingNames = flowsWithoutUpdatedFlow.map((item) => item.name);
@@ -1902,6 +1922,24 @@ export function processFlowNodes(flow: FlowType) {
     flow.data.nodes = nodes;
     flow.data.edges = edges;
   }
+  reconcileStaleGenericNodeDimensions(flow.data.nodes);
+}
+
+/**
+ * Drop persisted width/height on genericNodes so React Flow re-measures the real DOM size.
+ *
+ * The component card is a fixed Tailwind width (`w-80`/`w-48`). Flows saved when that width was
+ * larger (`w-96` = 384px) kept `width: 384`, which React Flow then uses to place the right-side
+ * output handle — landing it ~64px past the visual dot so edges render detached (LE-1929). Only
+ * genericNodes are content-sized; noteNodes are user-resizable and keep their dimensions.
+ */
+export function reconcileStaleGenericNodeDimensions(nodes: AllNodeType[]) {
+  for (const node of nodes) {
+    if (node.type !== "genericNode") continue;
+    delete node.width;
+    delete node.height;
+    delete node.measured;
+  }
 }
 
 export function expandGroupNode(
@@ -2148,6 +2186,20 @@ const getTemplateAliases = (
     componentType.endsWith("Component")
   ) {
     aliases.push(componentType.replace(/Component$/, ""));
+  }
+
+  // Extension components are keyed ``ext:<bundle>:<ClassName>@<slot>``.
+  // Flows saved before the provider moved out of the built-in palette
+  // reference the legacy keys (``OpenAIModelComponent`` / ``OpenAIModel``);
+  // without these aliases such nodes stop resolving a current template and
+  // are wrongly reported as blocked instead of merely outdated.
+  const extMatch = componentKey.match(/^ext:[^:]+:([^@]+)@.+$/);
+  if (extMatch) {
+    const bareClassName = extMatch[1];
+    aliases.push(bareClassName);
+    if (bareClassName.endsWith("Component")) {
+      aliases.push(bareClassName.replace(/Component$/, ""));
+    }
   }
 
   return Array.from(new Set(aliases.filter(Boolean)));

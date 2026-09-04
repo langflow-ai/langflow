@@ -1,3 +1,5 @@
+import type { Page } from "@playwright/test";
+
 // ---------------------------------------------------------------------------
 // Shared mock data for deployment E2E tests
 // ---------------------------------------------------------------------------
@@ -91,6 +93,14 @@ export const CONFIGS_MOCK = {
   total: 0,
 };
 
+export const ELIGIBLE_FLOW_DATA_MOCK = {
+  nodes: [
+    { id: "chat-input", data: { type: "ChatInput" } },
+    { id: "chat-output", data: { type: "ChatOutput" } },
+  ],
+  edges: [],
+};
+
 export const FLOWS_MOCK = [
   {
     id: "f1",
@@ -99,7 +109,7 @@ export const FLOWS_MOCK = [
     folder_id: "my-collection",
     icon: "Workflow",
     description: "",
-    data: null,
+    data: ELIGIBLE_FLOW_DATA_MOCK,
   },
 ];
 
@@ -114,6 +124,14 @@ export const FLOW_VERSIONS_MOCK = {
       is_current: true,
     },
   ],
+  max_entries: 1,
+};
+
+export const FLOW_VERSION_DETAIL_MOCK = {
+  ...FLOW_VERSIONS_MOCK.entries[0],
+  user_id: "user-1",
+  description: null,
+  data: ELIGIBLE_FLOW_DATA_MOCK,
 };
 
 export const DEPLOY_RESPONSE = {
@@ -214,3 +232,125 @@ export const COMPLETED_RUN_RESPONSE = {
     },
   },
 };
+
+// ---------------------------------------------------------------------------
+// Shared route mocks for deployment E2E tests
+// ---------------------------------------------------------------------------
+
+/**
+ * Register the API route mocks the deployment specs need. The broad
+ * deployments catch-all is registered FIRST so the specific routes
+ * registered after it win via Playwright's LIFO route matching.
+ */
+export async function setupDeploymentMocks(
+  page: Page,
+  folderId: string,
+  snapshotsMock: object = SNAPSHOTS_EMPTY_MOCK,
+  flowsMock: typeof FLOWS_MOCK = FLOWS_MOCK,
+) {
+  // Broad catch-all registered FIRST so specific routes (registered after) take priority via LIFO
+  await page.route("**/api/v1/deployments*", (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ deployments: [] }),
+    });
+  });
+
+  // Snapshots (used for duplicate tool name check on review step).
+  // When snapshotsMock is SNAPSHOTS_DUPLICATE_MOCK, echo back the requested names
+  // as existing tools so the check works regardless of the scoped tool name format.
+  await page.route("**/api/v1/deployments/snapshots**", (route) => {
+    if (snapshotsMock === SNAPSHOTS_DUPLICATE_MOCK) {
+      const url = new URL(route.request().url());
+      const names = url.searchParams.getAll("names");
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          provider_data: {
+            tools: names.map((name, i) => ({ id: `tool-${i}`, name })),
+            page: 1,
+            size: 50,
+            total: names.length,
+          },
+        }),
+      });
+      return;
+    }
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(snapshotsMock),
+    });
+  });
+
+  // Provider accounts
+  await page.route("**/api/v1/deployments/providers**", (route) => {
+    if (route.request().method() === "GET") {
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(PROVIDERS_MOCK),
+      });
+    } else {
+      route.continue();
+    }
+  });
+
+  // LLMs
+  await page.route("**/api/v1/deployments/llms**", (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(LLMS_MOCK),
+    });
+  });
+
+  // Deployment configs (connections)
+  await page.route("**/api/v1/deployments/configs**", (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(CONFIGS_MOCK),
+    });
+  });
+
+  // Flows list — inject the captured folderId so the component's folder filter passes
+  await page.route("**/api/v1/flows/**", (route) => {
+    const url = route.request().url();
+    const isVersionDetail =
+      /\/api\/v1\/flows\/[^/]+\/versions\/[^/?]+(?:\?.*)?$/.test(url);
+    if (isVersionDetail) {
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(FLOW_VERSION_DETAIL_MOCK),
+      });
+      return;
+    }
+    if (url.includes("/versions/")) {
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(FLOW_VERSIONS_MOCK),
+      });
+      return;
+    }
+    const flows = flowsMock.map((f) => ({ ...f, folder_id: folderId }));
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(flows),
+    });
+  });
+
+  // Global variables (used in attach-flows step)
+  await page.route("**/api/v1/variables**", (route) => {
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([]),
+    });
+  });
+}

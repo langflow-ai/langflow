@@ -6,10 +6,13 @@ import httpx
 import pytest
 import respx
 from httpx import Response
+
+pytest.importorskip("lfx_bundles")
+
 from lfx.base.langwatch.utils import get_cached_evaluators
-from lfx.components.langwatch.langwatch import LangWatchComponent
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
+from lfx_bundles.langwatch.langwatch import LangWatchComponent
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -94,7 +97,7 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         """Clear the LRU cache before each test."""
         get_cached_evaluators.cache_clear()
 
-    @patch("lfx.components.langwatch.langwatch.httpx.get")
+    @patch("lfx_bundles.langwatch.langwatch.httpx.get")
     async def test_set_evaluators_success(self, mock_get, component, mock_evaluators):
         """Test successful setting of evaluators."""
         mock_response = Mock()
@@ -106,7 +109,7 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         component.set_evaluators(endpoint)
         assert component.evaluators == mock_evaluators
 
-    @patch("lfx.components.langwatch.langwatch.httpx.get")
+    @patch("lfx_bundles.langwatch.langwatch.httpx.get")
     async def test_set_evaluators_empty_response(self, mock_get, component):
         """Test setting evaluators with empty response."""
         mock_response = Mock()
@@ -196,7 +199,7 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
             # Should set the selected evaluator
             assert result["evaluator_name"]["value"] == "test_evaluator"
 
-    @patch("lfx.components.langwatch.langwatch.httpx.get")
+    @patch("lfx_bundles.langwatch.langwatch.httpx.get")
     @respx.mock
     async def test_evaluate_success(self, mock_get, component, mock_evaluators):
         """Test successful evaluation."""
@@ -248,7 +251,7 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
             assert isinstance(result, Data)
             assert "No evaluator selected" in result.data["error"]
 
-    @patch("lfx.components.langwatch.langwatch.httpx.get")
+    @patch("lfx_bundles.langwatch.langwatch.httpx.get")
     @respx.mock
     async def test_evaluate_evaluator_not_found(self, mock_get, component, mock_evaluators):
         """Test evaluation with non-existent evaluator."""
@@ -266,7 +269,7 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Data)
         assert "Selected evaluator 'non_existent_evaluator' not found" in result.data["error"]
 
-    @patch("lfx.components.langwatch.langwatch.httpx.get")
+    @patch("lfx_bundles.langwatch.langwatch.httpx.get")
     @respx.mock
     async def test_evaluate_http_error(self, mock_get, component, mock_evaluators):
         """Test evaluation with HTTP error."""
@@ -290,7 +293,7 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Data)
         assert "Evaluation error" in result.data["error"]
 
-    @patch("lfx.components.langwatch.langwatch.httpx.get")
+    @patch("lfx_bundles.langwatch.langwatch.httpx.get")
     @respx.mock
     async def test_evaluate_with_tracing(self, mock_get, component, mock_evaluators):
         """Test evaluation with tracing service."""
@@ -333,7 +336,7 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Data)
         assert result.data == expected_response
 
-    @patch("lfx.components.langwatch.langwatch.httpx.get")
+    @patch("lfx_bundles.langwatch.langwatch.httpx.get")
     @respx.mock
     async def test_evaluate_with_contexts_parsing(self, mock_get, component, mock_evaluators):
         """Test evaluation with contexts parsing."""
@@ -371,7 +374,7 @@ class TestLangWatchComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Data)
         assert result.data == expected_response
 
-    @patch("lfx.components.langwatch.langwatch.httpx.get")
+    @patch("lfx_bundles.langwatch.langwatch.httpx.get")
     @respx.mock
     async def test_evaluate_timeout_handling(self, mock_get, component, mock_evaluators):
         """Test evaluation with timeout."""

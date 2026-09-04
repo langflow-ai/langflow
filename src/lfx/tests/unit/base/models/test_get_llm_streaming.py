@@ -191,3 +191,54 @@ def test_should_set_stream_usage_true_for_anthropic_when_streaming():
     assert captured.get("stream_usage") is True, (
         "Anthropic streaming responses must carry stream_usage=True for token-cost reporting."
     )
+
+
+def test_should_forward_explicit_overrides_to_chat_model_kwargs():
+    """Error-driven remediation: get_llm(overrides=...) reaches the constructor."""
+    from lfx.base.models import unified_models as unified_models_module
+    from lfx.base.models.unified_models.instantiation import get_llm
+
+    fake_cls, captured = _capture_factory()
+
+    with (
+        patch.object(
+            unified_models_module,
+            "get_api_key_for_provider",
+            return_value="sk-dummy",  # pragma: allowlist secret
+        ),
+        patch.object(unified_models_module, "get_model_class", return_value=fake_cls),
+    ):
+        get_llm(
+            _build_openai_model_selection(),
+            user_id=None,
+            stream=True,
+            overrides={"use_responses_api": True},
+        )
+
+    assert captured.get("use_responses_api") is True
+
+
+def test_should_pre_apply_cached_remediation_overrides_for_the_model():
+    """A remediation remembered for this model is pre-applied on the next build."""
+    from lfx.base.models import unified_models as unified_models_module
+    from lfx.base.models.model_remediation import remember, reset_remediation_cache
+    from lfx.base.models.unified_models.instantiation import get_llm
+
+    reset_remediation_cache()
+    remember("OpenAI", "gpt-4o-mini", {"use_responses_api": True})
+    fake_cls, captured = _capture_factory()
+
+    try:
+        with (
+            patch.object(
+                unified_models_module,
+                "get_api_key_for_provider",
+                return_value="sk-dummy",  # pragma: allowlist secret
+            ),
+            patch.object(unified_models_module, "get_model_class", return_value=fake_cls),
+        ):
+            get_llm(_build_openai_model_selection(), user_id=None, stream=True)
+    finally:
+        reset_remediation_cache()
+
+    assert captured.get("use_responses_api") is True

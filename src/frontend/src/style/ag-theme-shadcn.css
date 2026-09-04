@@ -22,6 +22,17 @@
   height: 3rem !important;
 }
 
+/* WCAG 2.5.8 — AG-Grid renders the paging buttons as 16x16 icon boxes, too
+   close to the grid's last row for the spacing exception to apply. Grow the
+   hit area to the 24x24 minimum and keep the icon centered. */
+.ag-theme-shadcn .ag-paging-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
+}
+
 .ag-row .ag-cell {
   align-content: center !important;
 }
@@ -109,10 +120,30 @@
   border-top: none !important;
 }
 
-.ag-no-border .ag-cell-focus:not(.ag-cell-inline-editing) {
+.ag-no-border .ag-cell-focus:not(.ag-cell-inline-editing):not(:focus-visible) {
   border: 1px solid transparent !important;
   box-shadow: none !important;
   outline: none !important;
+}
+
+/* WCAG 2.4.7 — keyboard focus ring for every grid (cells, header cells, rows
+   and AG-Grid's own inputs). Mouse focus keeps each grid's own look; the
+   suppression rules above and in classes.css / App.css are all scoped to
+   :not(:focus-visible). Uses the app-wide --ring token (LE-1561, LE-2233). */
+.ag-root-wrapper .ag-cell:focus-visible,
+.ag-root-wrapper .ag-header-cell:focus-visible,
+.ag-root-wrapper .ag-row:focus-visible,
+.ag-root-wrapper input[class^="ag-"]:focus-visible,
+.ag-root-wrapper textarea[class^="ag-"]:focus-visible {
+  outline: 2px solid hsl(var(--ring)) !important;
+  outline-offset: -2px !important;
+  border-radius: 0.375rem !important;
+}
+
+/* AG-Grid draws its own inner 1px ::after box on focused header cells; the ring
+   above replaces it. */
+.ag-root-wrapper .ag-header-cell:focus-visible::after {
+  display: none;
 }
 .ag-no-border .ag-selection-checkbox {
   margin-right: 0px !important;
@@ -170,7 +201,7 @@
   border-top: none !important;
 }
 
-.ag-tool-mode .ag-cell-focus:not(.ag-cell-inline-editing) {
+.ag-tool-mode .ag-cell-focus:not(.ag-cell-inline-editing):not(:focus-visible) {
   border: 1px solid transparent !important;
   box-shadow: none !important;
   outline: none !important;
@@ -195,4 +226,19 @@
 .ag-tool-mode .ag-layout-auto-height .ag-center-cols-container,
 .ag-tool-mode .ag-layout-auto-height .ag-center-cols-viewport {
   min-height: 0px !important;
+}
+
+/* Visually hide the header label of icon-only action columns while keeping it
+   in the accessibility tree, so the columnheader has an accessible name
+   (WCAG 4.1.2 / IBM aria_accessiblename_exists) without showing header text. */
+.ag-sr-only-header .ag-header-cell-text {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
 }

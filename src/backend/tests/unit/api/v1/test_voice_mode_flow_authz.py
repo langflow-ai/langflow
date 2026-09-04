@@ -1,0 +1,385 @@
+"""Authorization regression tests for the voice flow-as-tool WebSocket."""
+
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock
+from uuid import uuid4
+
+import pytest
+from fastapi import BackgroundTasks, HTTPException
+from langflow.api.v1 import voice_mode
+from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
+from langflow.services.deps import session_scope
+from lfx.services.model_provider_policy import (
+    ModelProviderPolicyError,
+    ModelProviderPolicyPurpose,
+    current_model_provider_policy_context,
+)
+
+
+def _flow(*, owner_id, description="Authorized flow"):
+    return SimpleNamespace(
+        id=uuid4(),
+        user_id=owner_id,
+        workspace_id=uuid4(),
+        folder_id=uuid4(),
+        description=description,
+    )
+
+
+class _DescriptionProbe:
+    def __init__(self, *, owner_id):
+        self.id = uuid4()
+        self.user_id = owner_id
+        self.workspace_id = uuid4()
+        self.folder_id = uuid4()
+        self.description_reads = 0
+
+    @property
+    def description(self):
+        self.description_reads += 1
+        return "private description"
+
+
+async def test_openai_voice_policy_denial_precedes_secret_lookup(monkeypatch):
+    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    websocket = SimpleNamespace(send_json=AsyncMock())
+    variable_service = SimpleNamespace(
+        get_variable=AsyncMock(side_effect=AssertionError("secret lookup reached after provider denial"))
+    )
+    require_provider = Mock(side_effect=ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.USE))
+    resolve_policy = AsyncMock(return_value=SimpleNamespace(require=require_provider))
+    monkeypatch.setattr(voice_mode, "get_variable_service", Mock(return_value=variable_service))
+    monkeypatch.setattr(voice_mode, "aresolve_model_provider_policy", resolve_policy, raising=False)
+
+    result = await voice_mode.authenticate_and_get_openai_key(SimpleNamespace(), user, websocket)
+
+    assert result == (None, None)
+    resolve_policy.assert_awaited_once_with(
+        user_id=user.id,
+        providers=["OpenAI"],
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+    require_provider.assert_called_once_with("OpenAI")
+    variable_service.get_variable.assert_not_awaited()
+    websocket.send_json.assert_awaited_once_with(
+        {
+            "type": "error",
+            "code": "policy_blocked",
+            "message": "The requested model provider is not available",
+        }
+    )
+
+
+async def test_openai_voice_policy_allows_secret_lookup(monkeypatch):
+    user = SimpleNamespace(id=uuid4(), is_superuser=True)
+    session = SimpleNamespace()
+    websocket = SimpleNamespace(send_json=AsyncMock())
+    variable_service = SimpleNamespace(get_variable=AsyncMock(return_value="sk-test"))
+    require_provider = Mock()
+    resolve_policy = AsyncMock(return_value=SimpleNamespace(require=require_provider))
+    monkeypatch.setattr(voice_mode, "get_variable_service", Mock(return_value=variable_service))
+    monkeypatch.setattr(voice_mode, "aresolve_model_provider_policy", resolve_policy, raising=False)
+
+    result = await voice_mode.authenticate_and_get_openai_key(session, user, websocket)
+
+    assert result == (user, "sk-test")
+    resolve_policy.assert_awaited_once_with(
+        user_id=user.id,
+        providers=["OpenAI"],
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+    require_provider.assert_called_once_with("OpenAI")
+    variable_service.get_variable.assert_awaited_once_with(
+        user_id=user.id,
+        name="OPENAI_API_KEY",
+        field="openai_api_key",
+        session=session,
+    )
+    websocket.send_json.assert_not_awaited()
+
+
+async def test_authorized_voice_flow_allows_owner(monkeypatch):
+    user = SimpleNamespace(id=uuid4())
+    flow = _flow(owner_id=user.id)
+    session = SimpleNamespace()
+    read_flow = AsyncMock(return_value=flow)
+    ensure_permission = AsyncMock()
+    monkeypatch.setattr(voice_mode, "_read_flow", read_flow, raising=False)
+    monkeypatch.setattr(voice_mode, "ensure_flow_permission", ensure_permission, raising=False)
+
+    result = await voice_mode._get_authorized_voice_flow(str(flow.id), user, session)
+
+    assert result is flow
+    read_flow.assert_awaited_once_with(session, flow.id, user.id)
+    ensure_permission.assert_awaited_once_with(
+        user,
+        voice_mode.FlowAction.EXECUTE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
+
+
+async def test_authorized_voice_flow_allows_share_aware_fetch_when_guard_allows(monkeypatch):
+    user = SimpleNamespace(id=uuid4())
+    foreign_flow = _flow(owner_id=uuid4())
+    session = SimpleNamespace()
+    read_flow = AsyncMock(return_value=foreign_flow)
+    ensure_permission = AsyncMock()
+    monkeypatch.setattr(voice_mode, "_read_flow", read_flow, raising=False)
+    monkeypatch.setattr(voice_mode, "ensure_flow_permission", ensure_permission, raising=False)
+
+    result = await voice_mode._get_authorized_voice_flow(str(foreign_flow.id), user, session)
+
+    assert result is foreign_flow
+    read_flow.assert_awaited_once_with(session, foreign_flow.id, user.id)
+    ensure_permission.assert_awaited_once_with(
+        user,
+        voice_mode.FlowAction.EXECUTE,
+        flow_id=foreign_flow.id,
+        flow_user_id=foreign_flow.user_id,
+        workspace_id=foreign_flow.workspace_id,
+        folder_id=foreign_flow.folder_id,
+    )
+
+
+async def test_authorized_voice_flow_preserves_public_flow_access(monkeypatch):
+    user = SimpleNamespace(id=uuid4())
+    public_flow = _flow(owner_id=uuid4())
+    read_flow = AsyncMock(return_value=None)
+    ensure_permission = AsyncMock()
+    result = SimpleNamespace(first=lambda: public_flow)
+    session = SimpleNamespace(exec=AsyncMock(return_value=result))
+    monkeypatch.setattr(voice_mode, "_read_flow", read_flow, raising=False)
+    monkeypatch.setattr(voice_mode, "ensure_flow_permission", ensure_permission, raising=False)
+
+    authorized = await voice_mode._get_authorized_voice_flow(str(public_flow.id), user, session)
+
+    assert authorized is public_flow
+    session.exec.assert_awaited_once()
+    ensure_permission.assert_awaited_once()
+
+
+async def test_authorized_voice_flow_allows_public_flow_for_non_owner_with_real_session(flow, user_two):
+    async with session_scope() as session:
+        db_flow = await session.get(Flow, flow.id)
+        assert db_flow is not None
+        db_flow.access_type = AccessTypeEnum.PUBLIC
+        session.add(db_flow)
+        await session.flush()
+
+    async with session_scope() as session:
+        authorized = await voice_mode._get_authorized_voice_flow(str(flow.id), user_two, session)
+
+    assert authorized.id == flow.id
+    assert authorized.user_id == flow.user_id
+
+
+async def test_missing_voice_flow_uses_same_generic_404(monkeypatch):
+    user = SimpleNamespace(id=uuid4())
+    read_flow = AsyncMock(return_value=None)
+    ensure_permission = AsyncMock()
+    result = SimpleNamespace(first=lambda: None)
+    session = SimpleNamespace(exec=AsyncMock(return_value=result))
+    monkeypatch.setattr(voice_mode, "_read_flow", read_flow)
+    monkeypatch.setattr(voice_mode, "ensure_flow_permission", ensure_permission)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await voice_mode._get_authorized_voice_flow(str(uuid4()), user, session)
+
+    assert exc_info.value.status_code == 404
+    assert exc_info.value.detail == "Flow not found"
+    ensure_permission.assert_not_awaited()
+
+
+async def test_denied_cross_user_websocket_reaches_no_secret_description_config_provider_or_sink(monkeypatch):
+    user = SimpleNamespace(id=uuid4())
+    foreign_flow = _DescriptionProbe(owner_id=uuid4())
+    websocket = SimpleNamespace(accept=AsyncMock(), send_json=AsyncMock())
+    session = SimpleNamespace()
+    legacy_description_sink = AsyncMock(return_value="private description")
+    connect = Mock(side_effect=AssertionError("external connection reached before authorization"))
+    add_message = AsyncMock()
+    get_voice_config = Mock()
+
+    monkeypatch.setattr(voice_mode, "get_current_user_for_websocket", AsyncMock(return_value=user))
+    authenticate = AsyncMock(return_value=(user, "test-openai-key"))
+    monkeypatch.setattr(voice_mode, "authenticate_and_get_openai_key", authenticate)
+    monkeypatch.setattr(voice_mode, "_read_flow", AsyncMock(return_value=foreign_flow), raising=False)
+    monkeypatch.setattr(
+        voice_mode,
+        "ensure_flow_permission",
+        AsyncMock(side_effect=HTTPException(status_code=403, detail="denied")),
+        raising=False,
+    )
+    # Pin the pre-fix unscoped description helper as an explicit sink: a deny
+    # must return before either this legacy path or the Flow.description field.
+    monkeypatch.setattr(voice_mode, "get_flow_desc_from_db", legacy_description_sink, raising=False)
+    monkeypatch.setattr(voice_mode, "get_voice_config", get_voice_config)
+    monkeypatch.setattr(voice_mode.websockets, "connect", connect)
+    monkeypatch.setattr(voice_mode, "add_message_to_db", add_message)
+
+    await voice_mode.flow_as_tool_websocket(
+        client_websocket=websocket,
+        flow_id=str(foreign_flow.id),
+        background_tasks=BackgroundTasks(),
+        session=session,
+        session_id="voice-session",
+    )
+
+    websocket.accept.assert_awaited_once()
+    authenticate.assert_not_awaited()
+    websocket.send_json.assert_awaited_once_with({"error": "Failed to load flow: 404: Flow not found"})
+    assert foreign_flow.description_reads == 0
+    legacy_description_sink.assert_not_awaited()
+    get_voice_config.assert_not_called()
+    connect.assert_not_called()
+    add_message.assert_not_awaited()
+
+
+async def test_tts_websocket_passes_client_websocket_to_authentication(monkeypatch):
+    user = SimpleNamespace(id=uuid4())
+    websocket = SimpleNamespace(accept=AsyncMock())
+    session = SimpleNamespace()
+    authenticate = AsyncMock(return_value=(None, None))
+    monkeypatch.setattr(voice_mode, "get_current_user_for_websocket", AsyncMock(return_value=user))
+    monkeypatch.setattr(voice_mode, "_get_authorized_voice_flow", AsyncMock(return_value=_flow(owner_id=user.id)))
+    monkeypatch.setattr(voice_mode, "authenticate_and_get_openai_key", authenticate)
+
+    await voice_mode.flow_tts_websocket(
+        client_websocket=websocket,
+        flow_id=str(uuid4()),
+        background_tasks=BackgroundTasks(),
+        session=session,
+        session_id="voice-session",
+    )
+
+    websocket.accept.assert_awaited_once()
+    authenticate.assert_awaited_once_with(session, user, websocket)
+
+
+async def test_denied_tts_websocket_reaches_no_secret_config_provider_or_flow_sink(monkeypatch):
+    user = SimpleNamespace(id=uuid4())
+    foreign_flow = _DescriptionProbe(owner_id=uuid4())
+    websocket = SimpleNamespace(accept=AsyncMock(), send_json=AsyncMock())
+    session = SimpleNamespace()
+    authenticate = AsyncMock(return_value=(user, "test-openai-key"))
+    get_tts_config = Mock()
+    connect = Mock(side_effect=AssertionError("external connection reached before authorization"))
+    build_flow = AsyncMock(side_effect=AssertionError("flow execution reached before authorization"))
+
+    monkeypatch.setattr(voice_mode, "get_current_user_for_websocket", AsyncMock(return_value=user))
+    monkeypatch.setattr(voice_mode, "authenticate_and_get_openai_key", authenticate)
+    monkeypatch.setattr(voice_mode, "_read_flow", AsyncMock(return_value=foreign_flow))
+    monkeypatch.setattr(
+        voice_mode,
+        "ensure_flow_permission",
+        AsyncMock(side_effect=HTTPException(status_code=403, detail="denied")),
+    )
+    monkeypatch.setattr(voice_mode, "get_tts_config", get_tts_config)
+    monkeypatch.setattr(voice_mode.websockets, "connect", connect)
+    monkeypatch.setattr(voice_mode, "build_flow_and_stream", build_flow)
+
+    await voice_mode.flow_tts_websocket(
+        client_websocket=websocket,
+        flow_id=str(foreign_flow.id),
+        background_tasks=BackgroundTasks(),
+        session=session,
+        session_id="voice-session",
+    )
+
+    websocket.accept.assert_awaited_once()
+    websocket.send_json.assert_awaited_once_with({"error": "Failed to load flow: 404: Flow not found"})
+    authenticate.assert_not_awaited()
+    assert foreign_flow.description_reads == 0
+    get_tts_config.assert_not_called()
+    connect.assert_not_called()
+    build_flow.assert_not_awaited()
+
+
+@pytest.mark.parametrize("endpoint", ["flow_as_tool", "flow_tts"])
+async def test_voice_websocket_uses_target_scope_before_provider_secret_or_network(endpoint, monkeypatch):
+    """Both voice modes must deny target-scoped OpenAI before secrets or sockets."""
+    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    flow = _flow(owner_id=user.id)
+    websocket = SimpleNamespace(accept=AsyncMock(), send_json=AsyncMock())
+    variable_service = SimpleNamespace(
+        get_variable=AsyncMock(side_effect=AssertionError("secret lookup reached after target policy denial"))
+    )
+    observed_contexts = []
+    provider_id = "openai"
+
+    async def _resolve_openai(**_kwargs):
+        observed_contexts.append(current_model_provider_policy_context())
+        return SimpleNamespace(
+            require=Mock(side_effect=ModelProviderPolicyError(provider_id, ModelProviderPolicyPurpose.USE))
+        )
+
+    connect = Mock(side_effect=AssertionError("OpenAI socket reached after target policy denial"))
+    monkeypatch.setattr(voice_mode, "get_current_user_for_websocket", AsyncMock(return_value=user))
+    monkeypatch.setattr(voice_mode, "_get_authorized_voice_flow", AsyncMock(return_value=flow))
+    monkeypatch.setattr(voice_mode, "get_variable_service", Mock(return_value=variable_service))
+    monkeypatch.setattr(voice_mode, "aresolve_model_provider_policy", _resolve_openai, raising=False)
+    monkeypatch.setattr(voice_mode.websockets, "connect", connect)
+
+    kwargs = {
+        "client_websocket": websocket,
+        "flow_id": str(flow.id),
+        "background_tasks": BackgroundTasks(),
+        "session": SimpleNamespace(),
+        "session_id": "voice-target-scope",
+    }
+    if endpoint == "flow_as_tool":
+        await voice_mode.flow_as_tool_websocket(**kwargs)
+    else:
+        await voice_mode.flow_tts_websocket(**kwargs)
+
+    assert len(observed_contexts) == 1
+    context = observed_contexts[0]
+    assert context is not None
+    assert context.attributes["provider_scope_required"] is True
+    assert context.attributes["project_id"] == flow.folder_id
+    assert context.attributes["workspace_id"] == flow.workspace_id
+    variable_service.get_variable.assert_not_awaited()
+    connect.assert_not_called()
+
+
+@pytest.mark.parametrize("endpoint", ["flow_as_tool", "flow_tts"])
+async def test_voice_websocket_keeps_target_scope_through_openai_socket(endpoint, monkeypatch):
+    """The trusted target scope must remain bound for the socket lifetime, not only key lookup."""
+    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    flow = _flow(owner_id=user.id)
+    websocket = SimpleNamespace(accept=AsyncMock(), send_json=AsyncMock())
+    observed_contexts = []
+    stop_message = "stop after socket scope probe"
+
+    def _connect(*_args, **_kwargs):
+        observed_contexts.append(current_model_provider_policy_context())
+        raise RuntimeError(stop_message)
+
+    monkeypatch.setattr(voice_mode, "get_current_user_for_websocket", AsyncMock(return_value=user))
+    monkeypatch.setattr(voice_mode, "_get_authorized_voice_flow", AsyncMock(return_value=flow))
+    monkeypatch.setattr(voice_mode, "authenticate_and_get_openai_key", AsyncMock(return_value=(user, "sk-test")))
+    monkeypatch.setattr(voice_mode, "get_voice_config", Mock(return_value=SimpleNamespace()))
+    monkeypatch.setattr(voice_mode, "get_tts_config", Mock(return_value=SimpleNamespace()))
+    monkeypatch.setattr(voice_mode.websockets, "connect", _connect)
+
+    kwargs = {
+        "client_websocket": websocket,
+        "flow_id": str(flow.id),
+        "background_tasks": BackgroundTasks(),
+        "session": SimpleNamespace(),
+        "session_id": "voice-target-scope",
+    }
+    if endpoint == "flow_as_tool":
+        await voice_mode.flow_as_tool_websocket(**kwargs)
+    else:
+        await voice_mode.flow_tts_websocket(**kwargs)
+
+    assert len(observed_contexts) == 1
+    context = observed_contexts[0]
+    assert context is not None
+    assert context.attributes["provider_scope_required"] is True
+    assert context.attributes["project_id"] == flow.folder_id
+    assert context.attributes["workspace_id"] == flow.workspace_id

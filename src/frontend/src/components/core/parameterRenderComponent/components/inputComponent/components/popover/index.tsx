@@ -1,6 +1,7 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import { X } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Badge } from "@/components/ui/badge";
@@ -16,7 +17,12 @@ import {
   PopoverContent,
   PopoverContentWithoutPortal,
 } from "@/components/ui/popover";
+import {
+  getSuppressedAutoComplete,
+  PASSWORD_MANAGER_IGNORE_PROPS,
+} from "@/utils/inputAutofill";
 import { cn } from "@/utils/utils";
+import { getNodeScopedDomId } from "../../../../helpers/get-node-scoped-dom-id";
 import { useIMEInputForOnChange } from "../../../../hooks/use-ime-input";
 
 const OptionBadge = ({
@@ -39,34 +45,40 @@ const OptionBadge = ({
     | "errorStatic";
   className?: string;
   onRemove: (e: React.MouseEvent<HTMLButtonElement>) => void;
-}) => (
-  <Badge
-    variant={
-      variant as
-        | "default"
-        | "emerald"
-        | "gray"
-        | "secondary"
-        | "destructive"
-        | "outline"
-        | "secondaryStatic"
-        | "pinkStatic"
-        | "successStatic"
-        | "errorStatic"
-    }
-    className={cn("flex items-center gap-1 truncate", className)}
-  >
-    <div className="truncate">{option}</div>
-    <div
-      data-testid="remove-icon-badge"
-      onClick={(e) =>
-        onRemove(e as unknown as React.MouseEvent<HTMLButtonElement>)
+}) => {
+  const { t } = useTranslation();
+  return (
+    <Badge
+      variant={
+        variant as
+          | "default"
+          | "emerald"
+          | "gray"
+          | "secondary"
+          | "destructive"
+          | "outline"
+          | "secondaryStatic"
+          | "pinkStatic"
+          | "successStatic"
+          | "errorStatic"
       }
+      className={cn("flex items-center gap-1 truncate", className)}
     >
-      <X className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive" />
-    </div>
-  </Badge>
-);
+      <div className="truncate">{option}</div>
+      <button
+        type="button"
+        data-testid="remove-icon-badge"
+        aria-label={t("multiselect.removeOption", { option })}
+        onClick={onRemove}
+      >
+        <X
+          className="h-3 w-3 cursor-pointer bg-transparent hover:text-destructive"
+          aria-hidden="true"
+        />
+      </button>
+    </Badge>
+  );
+};
 
 const CommandItemContent = ({
   option,
@@ -159,8 +171,7 @@ const getAnchorClassName = (
     editNode && "min-h-7 p-0 px-1",
     editNode && disabled && "min-h-5 border-muted",
     disabled && "bg-muted text-muted",
-    isFocused &&
-      "border-foreground ring-1 ring-foreground hover:border-foreground",
+    isFocused && "border-foreground hover:border-foreground",
   );
 };
 
@@ -196,9 +207,21 @@ const CustomInputPopover = ({
   blockAddNewGlobalVariable,
   hasRefreshButton,
   inspectionPanel,
+  ariaLabelledBy,
+  inputProps = undefined as
+    | React.InputHTMLAttributes<HTMLInputElement>
+    | undefined,
+  nodeId = undefined as string | undefined,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
   const memoizedOptions = useMemo(() => new Set<string>(options), [options]);
+  const anchorRef = useRef<HTMLDivElement>(null);
+
+  // Password / plain text fields reuse this popover shell but do not open a
+  // list. Keep the wrapper out of the tab order so Tab lands on the input
+  // (WCAG 2.4.3) instead of an unnamed button stop.
+  const canOpenOptions =
+    !nodeStyle && !disabled && (!!setSelectedOption || !!setSelectedOptions);
 
   const PopoverContentInput =
     editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
@@ -244,24 +267,56 @@ const CustomInputPopover = ({
     !setSelectedOptions && setShowOptions(false);
   };
 
+  const handleOpenChange = (open: boolean) => {
+    setShowOptions(open);
+    if (!open && canOpenOptions) {
+      // PopoverAnchor is not a PopoverTrigger, so Radix does not restore focus
+      // on close. Re-assert onto the control that opened the list so Esc does
+      // not dump focus at the top of a parent dialog (WCAG 2.4.3). Outlast the
+      // dialog focus scope's one-time restore with a few animation frames.
+      const restore = () => anchorRef.current?.focus();
+      requestAnimationFrame(() => {
+        restore();
+        requestAnimationFrame(() => {
+          restore();
+          requestAnimationFrame(restore);
+        });
+      });
+    }
+  };
+
   return (
-    <Popover modal open={showOptions} onOpenChange={setShowOptions}>
+    <Popover modal open={showOptions} onOpenChange={handleOpenChange}>
       <PopoverAnchor>
         <div
+          ref={anchorRef}
           data-testid={`anchor-${id}`}
           className={getAnchorClassName(editNode, disabled, isFocused)}
-          onClick={() => !nodeStyle && !disabled && setShowOptions(true)}
-          role="button"
-          tabIndex={disabled ? -1 : 0}
-          aria-disabled={disabled}
+          onClick={() => canOpenOptions && setShowOptions(true)}
+          role={canOpenOptions ? "button" : undefined}
+          tabIndex={canOpenOptions ? 0 : undefined}
+          aria-disabled={canOpenOptions ? disabled : undefined}
+          aria-expanded={canOpenOptions ? showOptions : undefined}
+          aria-haspopup={canOpenOptions ? "listbox" : undefined}
+          // aria-labelledby is only valid on widget roles — not on a generic
+          // wrapper around a plain/password input (IBM aria_attribute_valid).
+          aria-labelledby={canOpenOptions ? ariaLabelledBy : undefined}
           onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              if (!nodeStyle && !disabled) {
-                if (e.key === " ") {
-                  e.preventDefault();
-                }
-                setShowOptions(true);
-              }
+            if (!canOpenOptions) return;
+
+            const isAnchorTarget = e.target === e.currentTarget;
+            const isEnter = e.key === "Enter";
+            // Only handle Space on the anchor itself so typing spaces in the
+            // nested input is not intercepted.
+            const isSpace =
+              isAnchorTarget && (e.key === " " || e.key === "Spacebar");
+
+            if (isEnter || isSpace) {
+              // Prevent form submit (Enter) and the synthetic click that would
+              // immediately dismiss the modal popover after opening.
+              e.preventDefault();
+              e.stopPropagation();
+              setShowOptions(true);
             }
           }}
         >
@@ -301,10 +356,12 @@ const CustomInputPopover = ({
 
           {(!selectedOption?.length && !selectedOptions?.length) || disabled ? (
             <input
-              autoComplete="off"
+              {...inputProps}
+              autoComplete={getSuppressedAutoComplete(!!password)}
+              {...PASSWORD_MANAGER_IGNORE_PROPS}
               onFocus={() => setIsFocused(true)}
               autoFocus={autoFocus}
-              id={id}
+              id={getNodeScopedDomId(id, nodeId)}
               ref={refInput}
               type={!pwdVisible && password ? "password" : "text"}
               {...imeInputProps}
@@ -316,6 +373,10 @@ const CustomInputPopover = ({
               value={disabled ? "" : displayValue}
               disabled={disabled}
               required={required}
+              // Multi-select fields use the wrapper as the combobox tab stop;
+              // the nested placeholder input is display-only.
+              tabIndex={setSelectedOptions ? -1 : undefined}
+              aria-labelledby={ariaLabelledBy}
               className={getInputClassName(
                 editNode,
                 disabled,
@@ -349,6 +410,7 @@ const CustomInputPopover = ({
         align="start"
       >
         <Command
+          label={optionsPlaceholder || "Search options"}
           filter={(value, search) => {
             if (
               value.toLowerCase().includes(search.toLowerCase()) ||

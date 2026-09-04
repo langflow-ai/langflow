@@ -21,6 +21,8 @@ from lfx.base.knowledge_bases.backends import (
 )
 from lfx.base.knowledge_bases.backends.base import BaseVectorStoreBackend
 
+pytestmark = pytest.mark.usefixtures("fake_opensearchpy")
+
 if TYPE_CHECKING:
     from pathlib import Path
 
@@ -162,7 +164,11 @@ class TestOpenSearchTestConnection:
         assert "Authentication failed" in result.message
 
     @pytest.mark.asyncio
-    async def test_returns_authorization_message_on_authorization_exception(self, tmp_path: Path) -> None:
+    async def test_treats_authorization_exception_as_reachable(self, tmp_path: Path) -> None:
+        # A 403 on client.info (GET /) means the account lacks cluster:monitor/main,
+        # but the cluster is reachable and the credentials authenticated. KB
+        # create/ingest uses index-scoped permissions granted separately, so a
+        # least-privilege account must still pass the liveness check.
         from opensearchpy.exceptions import AuthorizationException
 
         backend = self._make_backend(tmp_path)
@@ -173,9 +179,9 @@ class TestOpenSearchTestConnection:
             patch("langchain_community.vectorstores.OpenSearchVectorSearch"),
         ):
             result = await backend.test_connection()
-        assert result.ok is False
+        assert result.ok is True
         assert result.details.get("type") == "AuthorizationException"
-        assert "Authorization failed" in result.message
+        assert result.details.get("reachable") is True
 
     @pytest.mark.asyncio
     async def test_returns_connection_message_on_connection_error(self, tmp_path: Path) -> None:

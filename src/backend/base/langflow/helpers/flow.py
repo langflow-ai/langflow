@@ -1,20 +1,23 @@
 from __future__ import annotations
 
+import keyword
+import re
+from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from lfx.log.logger import logger
 from pydantic.v1 import BaseModel, Field, create_model
 from sqlalchemy.orm import aliased
 from sqlmodel import asc, desc, select
 
 from langflow.schema.schema import INPUT_FIELD_NAME
-from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.flow.model import Flow, FlowRead, FlowType
 from langflow.services.deps import get_settings_service, session_scope
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import AsyncIterator, Awaitable, Callable
 
     from lfx.graph.graph.base import Graph
     from lfx.graph.schema import RunOutputs
@@ -35,6 +38,25 @@ SORT_DISPATCHER = {
 }
 
 
+def _safe_function_argument_names(inputs: list[Vertex]) -> list[str]:
+    """Return unique Python identifiers for flow-tool input arguments."""
+    names: list[str] = []
+    used: set[str] = set()
+    for index, input_ in enumerate(inputs, start=1):
+        base = re.sub(r"\W", "_", input_.display_name.lower())
+        if not base or not base.isidentifier() or keyword.iskeyword(base) or base == "__debug__":
+            base = f"input_{index}"
+
+        name = base
+        suffix = 2
+        while name in used:
+            name = f"{base}_{suffix}"
+            suffix += 1
+        names.append(name)
+        used.add(name)
+    return names
+
+
 async def list_flows(*, user_id: str | None = None) -> list[Data]:
     if not user_id:
         msg = "Session is invalid"
@@ -51,12 +73,14 @@ async def list_flows(*, user_id: str | None = None) -> list[Data]:
         raise ValueError(msg) from e
 
 
-async def list_flows_by_flow_folder(
+async def _list_flows_in_flow_folder(
     *,
-    user_id: str | None = None,
-    flow_id: str | None = None,
-    order_params: dict | None = {"column": "updated_at", "direction": "desc"},  # noqa: B006
+    user_id: str | None,
+    flow_id: str | None,
+    order_params: dict | None,
+    a2a_only: bool,
 ) -> list[Data]:
+    """Query flows sharing ``flow_id``'s folder, optionally only those published as A2A agents."""
     if not user_id:
         msg = "Session is invalid"
         raise ValueError(msg)
@@ -78,6 +102,8 @@ async def list_flows_by_flow_folder(
                 .where(Flow.user_id == uuid_user_id)
                 .where(Flow.id != uuid_flow_id)
             )
+            if a2a_only:
+                stmt = stmt.where(Flow.a2a_enabled == True)  # noqa: E712
             # sort flows by the specified column and direction
             if order_params is not None:
                 sort_col = getattr(Flow, order_params.get("column", "updated_at"), Flow.updated_at)
@@ -87,8 +113,33 @@ async def list_flows_by_flow_folder(
             flows = (await session.exec(stmt)).all()
             return [Data(data=dict(flow._mapping)) for flow in flows]  # noqa: SLF001
     except Exception as e:
-        msg = f"Error listing flows: {e}"
+        msg = f"Error listing {'A2A agents' if a2a_only else 'flows'}: {e}"
         raise ValueError(msg) from e
+
+
+async def list_flows_by_flow_folder(
+    *,
+    user_id: str | None = None,
+    flow_id: str | None = None,
+    order_params: dict | None = {"column": "updated_at", "direction": "desc"},  # noqa: B006
+) -> list[Data]:
+    """List the user's other flows in the same folder as ``flow_id``."""
+    return await _list_flows_in_flow_folder(user_id=user_id, flow_id=flow_id, order_params=order_params, a2a_only=False)
+
+
+async def list_a2a_agents_by_flow_folder(
+    *,
+    user_id: str | None = None,
+    flow_id: str | None = None,
+    order_params: dict | None = {"column": "updated_at", "direction": "desc"},  # noqa: B006
+) -> list[Data]:
+    """List flows published as A2A agents in the same folder as ``flow_id``.
+
+    Same shape as ``list_flows_by_flow_folder`` but restricted to flows the user has turned on
+    as A2A agents (``a2a_enabled``), so the A2A Agent component offers only real agents to call
+    internally, not every flow (that would just be Run Flow).
+    """
+    return await _list_flows_in_flow_folder(user_id=user_id, flow_id=flow_id, order_params=order_params, a2a_only=True)
 
 
 async def list_flows_by_folder_id(
@@ -167,13 +218,12 @@ async def get_flow_by_id_or_name(
 
 async def _build_graph_from_authorized_flow(
     *,
-    caller: User,  # noqa: ARG001
     flow: Flow,
     flow_id: str,
     user_id: str,
     tweaks: dict | None,
 ) -> Graph:
-    """Build a Graph from an already-loaded flow row (permission enforced by decorator)."""
+    """Build a Graph from an already-authorized target flow row."""
     from lfx.graph.graph.base import Graph
 
     from langflow.processing.process import process_tweaks
@@ -183,30 +233,43 @@ async def _build_graph_from_authorized_flow(
         msg = f"Flow {flow_id} not found"
         raise ValueError(msg)
     if tweaks:
-        graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
+        # Component-side, not caller-side. The only routes here are the generated
+        # flow-as-tool function below and ``CustomComponent.run_flow``, both of
+        # which build these tweaks from their own declared inputs. Judging them
+        # against the deployment policy would make ``off`` stop an agent from
+        # calling a flow as a tool. The protected-field floor still applies.
+        graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks, caller_supplied=False)
     return Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
 
 
-async def load_flow(
-    user_id: str, flow_id: str | None = None, flow_name: str | None = None, tweaks: dict | None = None
-) -> Graph:
-    """Load a flow graph after authorizing EXECUTE for the caller."""
-    from langflow.services.authorization import FlowAction
-    from langflow.services.authorization.decorators import requires_flow_permission
+async def _resolve_authorized_target_flow(
+    *,
+    user_id: str | UUID,
+    flow_id: str | UUID | None = None,
+    flow_name: str | None = None,
+) -> tuple[User, Flow]:
+    """Freshly load and authorize a nested target flow for the calling user."""
+    from langflow.services.authorization import FlowAction, ensure_flow_permission
     from langflow.services.authorization.fetch import authorized_or_owner_scoped
     from langflow.services.database.models.user.model import User
 
+    if not user_id:
+        msg = "Session is invalid"
+        raise ValueError(msg)
     if not flow_id and not flow_name:
         msg = "Flow ID or Flow Name is required"
         raise ValueError(msg)
     if not flow_id and flow_name:
-        flow_id = await find_flow(flow_name, user_id)
+        flow_id = await find_flow(flow_name, str(user_id))
         if not flow_id:
             msg = f"Flow {flow_name} not found"
             raise ValueError(msg)
 
     uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
     uuid_flow_id = UUID(flow_id) if isinstance(flow_id, str) else flow_id
+    if uuid_flow_id is None:
+        msg = "Flow ID or Flow Name is required"
+        raise ValueError(msg)
 
     async with session_scope() as session:
         flow = await authorized_or_owner_scoped(
@@ -226,21 +289,67 @@ async def load_flow(
             msg = "Session is invalid"
             raise ValueError(msg)
 
-    build_graph = requires_flow_permission(
-        FlowAction.EXECUTE,
-        user_param="caller",
-        flow_param="flow",
-        forbidden_as_not_found=True,
-        not_found_template=f"Flow {flow_id} not found",
-    )(_build_graph_from_authorized_flow)
+        try:
+            await ensure_flow_permission(
+                caller,
+                FlowAction.EXECUTE,
+                flow_id=flow.id,
+                flow_user_id=flow.user_id,
+                workspace_id=flow.workspace_id,
+                folder_id=flow.folder_id,
+            )
+        except HTTPException as exc:
+            if exc.status_code == status.HTTP_403_FORBIDDEN:
+                msg = f"Flow {flow_id} not found"
+                raise ValueError(msg) from exc
+            raise
 
-    return await build_graph(
-        caller=caller,
-        flow=flow,
-        flow_id=flow_id,
+    return caller, flow
+
+
+@asynccontextmanager
+async def scoped_model_provider_policy_for_target_flow(
+    *,
+    user_id: str | UUID,
+    flow_id: str | UUID | None = None,
+    flow_name: str | None = None,
+) -> AsyncIterator[Flow]:
+    """Bind a freshly resolved nested target scope for build and execution.
+
+    The target row is reloaded on every entry, including cache hits, so role
+    revocation and project moves take effect immediately. ContextVar nesting
+    restores the caller's scope on success, failure, and concurrent tasks.
+    """
+    from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
+
+    caller, flow = await _resolve_authorized_target_flow(
         user_id=user_id,
-        tweaks=tweaks,
+        flow_id=flow_id,
+        flow_name=flow_name,
     )
+    with scoped_model_provider_policy_for_flow(
+        flow,
+        user_id=caller.id,
+        is_superuser=bool(caller.is_superuser),
+    ):
+        yield flow
+
+
+async def load_flow(
+    user_id: str, flow_id: str | None = None, flow_name: str | None = None, tweaks: dict | None = None
+) -> Graph:
+    """Load a flow graph after authorizing EXECUTE for the caller."""
+    async with scoped_model_provider_policy_for_target_flow(
+        user_id=user_id,
+        flow_id=flow_id,
+        flow_name=flow_name,
+    ) as flow:
+        return await _build_graph_from_authorized_flow(
+            flow=flow,
+            flow_id=str(flow.id),
+            user_id=str(user_id),
+            tweaks=tweaks,
+        )
 
 
 async def find_flow(flow_name: str, user_id: str) -> str | None:
@@ -265,45 +374,67 @@ async def run_flow(
     if user_id is None:
         msg = "Session is invalid"
         raise ValueError(msg)
-    if graph is None:
-        graph = await load_flow(user_id, flow_id, flow_name, tweaks)
-    if run_id:
-        graph.set_run_id(UUID(run_id))
-    if session_id:
-        graph.session_id = session_id
-    if user_id:
-        graph.user_id = user_id
 
-    if inputs is None:
-        inputs = []
-    if isinstance(inputs, dict):
-        inputs = [inputs]
-    inputs_list = []
-    inputs_components = []
-    types = []
-    for input_dict in inputs:
-        inputs_list.append({INPUT_FIELD_NAME: cast("str", input_dict.get("input_value"))})
-        inputs_components.append(input_dict.get("components", []))
-        types.append(input_dict.get("type", "chat"))
+    graph_flow_id = getattr(graph, "flow_id", None) if graph is not None else None
+    if flow_id is not None and graph_flow_id is not None and str(flow_id) != str(graph_flow_id):
+        msg = "Provided flow ID does not match the graph's target flow"
+        raise ValueError(msg)
+    target_flow_id = flow_id or graph_flow_id
+    target_flow_name = flow_name or (getattr(graph, "flow_name", None) if graph is not None else None)
 
-    outputs = [
-        vertex.id
-        for vertex in graph.vertices
-        if output_type == "debug"
-        or (
-            vertex.is_output and (output_type == "any" or output_type in vertex.id.lower())  # type: ignore[operator]
+    async with scoped_model_provider_policy_for_target_flow(
+        user_id=user_id,
+        flow_id=target_flow_id,
+        flow_name=target_flow_name,
+    ) as target_flow:
+        if graph is None:
+            graph = await _build_graph_from_authorized_flow(
+                flow=target_flow,
+                flow_id=str(target_flow.id),
+                user_id=str(user_id),
+                tweaks=tweaks,
+            )
+        if run_id:
+            graph.set_run_id(UUID(run_id))
+        if session_id:
+            graph.session_id = session_id
+        graph.user_id = str(user_id)
+
+        if inputs is None:
+            inputs = []
+        if isinstance(inputs, dict):
+            inputs = [inputs]
+        inputs_list = []
+        inputs_components = []
+        types = []
+        for input_dict in inputs:
+            inputs_list.append({INPUT_FIELD_NAME: cast("str", input_dict.get("input_value"))})
+            inputs_components.append(input_dict.get("components", []))
+            types.append(input_dict.get("type", "chat"))
+
+        outputs = [
+            vertex.id
+            for vertex in graph.vertices
+            if output_type == "debug"
+            or (
+                vertex.is_output and (output_type == "any" or output_type in vertex.id.lower())  # type: ignore[operator]
+            )
+        ]
+
+        fallback_to_env_vars = get_settings_service().settings.fallback_to_env_var
+
+        from lfx.run.hitl import raise_if_nested_hitl_unsupported
+
+        # A nested run cannot pause: a Human Input in here would silently not pause. Fail loud instead.
+        raise_if_nested_hitl_unsupported(graph)
+
+        return await graph.arun(
+            inputs_list,
+            outputs=outputs,
+            inputs_components=inputs_components,
+            types=types,
+            fallback_to_env_vars=fallback_to_env_vars,
         )
-    ]
-
-    fallback_to_env_vars = get_settings_service().settings.fallback_to_env_var
-
-    return await graph.arun(
-        inputs_list,
-        outputs=outputs,
-        inputs_components=inputs_components,
-        types=types,
-        fallback_to_env_vars=fallback_to_env_vars,
-    )
 
 
 def generate_function_for_flow(
@@ -329,25 +460,20 @@ def generate_function_for_flow(
         result = function(input1, input2)
     """
     # Prepare function arguments with type hints and default values
+    safe_arg_names = _safe_function_argument_names(inputs)
     args = [
-        (
-            f"{input_.display_name.lower().replace(' ', '_')}: {INPUT_TYPE_MAP[input_.base_name]['type_hint']} = "
-            f"{INPUT_TYPE_MAP[input_.base_name]['default']}"
-        )
-        for input_ in inputs
+        (f"{arg_name}: {INPUT_TYPE_MAP[input_.base_name]['type_hint']} = {INPUT_TYPE_MAP[input_.base_name]['default']}")
+        for input_, arg_name in zip(inputs, safe_arg_names, strict=True)
     ]
 
-    # Maintain original argument names for constructing the tweaks dictionary
-    original_arg_names = [input_.display_name for input_ in inputs]
+    # Use vertex IDs for tweaks so duplicate display names remain independently addressable.
+    input_ids = [str(input_.id) for input_ in inputs]
 
     # Prepare a Pythonic, valid function argument string
     func_args = ", ".join(args)
 
-    # Map original argument names to their corresponding Pythonic variable names in the function
-    arg_mappings = ", ".join(
-        f'"{original_name}": {name}'
-        for original_name, name in zip(original_arg_names, [arg.split(":")[0] for arg in args], strict=True)
-    )
+    # Map input vertex IDs to their corresponding Pythonic variable names in the function.
+    arg_mappings = ", ".join(f"{input_id!r}: {name}" for input_id, name in zip(input_ids, safe_arg_names, strict=True))
 
     func_body = f"""
 from typing import Optional
@@ -359,8 +485,8 @@ async def flow_function({func_args}):
     try:
         run_outputs = await run_flow(
             tweaks={{key: {{'input_value': value}} for key, value in tweaks.items()}},
-            flow_id="{flow_id}",
-            user_id="{user_id}"
+            flow_id={flow_id!r},
+            user_id={str(user_id)!r}
         )
         if not run_outputs:
                 return []
@@ -373,7 +499,7 @@ async def flow_function({func_args}):
                     data.extend(build_data_from_result_data(output))
         return format_flow_output_data(data)
     except Exception as e:
-        raise ToolException(f'Error running flow: ' + e)
+        raise ToolException(f'Error running flow: {{e}}') from e
 """
 
     compiled_func = compile(func_body, "<string>", "exec")
@@ -427,8 +553,8 @@ def build_schema_from_inputs(name: str, inputs: list[Vertex]) -> type[BaseModel]
 
     """
     fields = {}
-    for input_ in inputs:
-        field_name = input_.display_name.lower().replace(" ", "_")
+    safe_arg_names = _safe_function_argument_names(inputs)
+    for input_, field_name in zip(inputs, safe_arg_names, strict=True):
         description = input_.description
         fields[field_name] = (str, Field(default="", description=description))
     return create_model(name, **fields)
@@ -444,9 +570,10 @@ def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
         List[dict[str, str]]: A list of dictionaries, where each dictionary contains the component name and its
             argument name.
     """
+    safe_arg_names = _safe_function_argument_names(inputs)
     return [
-        {"component_name": input_.display_name, "arg_name": input_.display_name.lower().replace(" ", "_")}
-        for input_ in inputs
+        {"component_name": str(input_.id), "arg_name": arg_name}
+        for input_, arg_name in zip(inputs, safe_arg_names, strict=True)
     ]
 
 
@@ -466,6 +593,15 @@ async def get_flow_by_id_or_endpoint_name(
     a subsequent permission check (e.g. agentic MCP tools) must leave the
     default, otherwise widening leaks graph metadata for another user's flow
     before any policy decision runs.
+
+    SECURITY — ``user_id``: passing ``user_id=None`` disables owner scoping and
+    resolves the flow by id/endpoint_name ALONE (any user's flow). This is an
+    intentional contract for trusted internal callers, but it means every caller
+    MUST pass the authenticated user's id. Never wire this as a FastAPI
+    ``Depends`` whose ``user_id`` comes from a request-controlled (and possibly
+    unset) query param, and never forward a caller-supplied ``user_id`` that was
+    not derived from the authenticated identity — either reintroduces a flow
+    IDOR.
     """
     from langflow.services.deps import get_authorization_service
 
@@ -537,42 +673,148 @@ async def generate_unique_flow_name(flow_name, user_id, session):
         n += 1
 
 
-def json_schema_from_flow(flow: Flow) -> dict:
-    """Generate JSON schema from flow input nodes."""
+def _get_flow_input_nodes(flow: Flow) -> list[Vertex]:
     from lfx.graph.graph.base import Graph
 
-    # Get the flow's data which contains the nodes and their configurations
-    flow_data = flow.data or {}
+    graph = Graph.from_payload(flow.data or {})
+    return [vertex for vertex in graph.vertices if vertex.is_input]
 
-    graph = Graph.from_payload(flow_data)
-    input_nodes = [vertex for vertex in graph.vertices if vertex.is_input]
 
+def _is_visible_input_field(field_data: Any) -> bool:
+    return isinstance(field_data, dict) and field_data.get("show", False) and not field_data.get("advanced", False)
+
+
+# ``input_value`` carries the flow's chat message. ``handle_call_tool`` pops it before the tweak
+# filter runs and forwards it as ``SimplifiedAPIRequest.input_value``, so the runtime accepts it
+# whatever the allowlist says. Withholding it from the advertised schema publishes a contract
+# narrower than the one actually served, and a caller obeying that schema sends no message at all.
+_ALWAYS_EXPOSED_INPUT_FIELDS = frozenset({"input_value"})
+
+
+def _input_nodes_declare_api_allowlist(input_nodes: list[Vertex]) -> bool:
+    """Return whether any input node marks a template field ``api_editable``.
+
+    This mirrors ``lfx.utils.flow_validation.flow_declares_api_editable`` and the reasoning
+    recorded there: a flow whose author toggled at least one field has declared an allowlist, so
+    the untoggled fields close. A flow with no toggles has declared nothing and keeps its previous
+    permissive contract. ``api_editable`` defaults to ``False``, is written only by the Inspector's
+    API toggle, and has no backfill, so without this fallback the flag empties the advertised schema
+    of every flow nobody hand-prepared -- including every flow the UI creates from a template.
+
+    Scoped to input nodes because those are the only fields MCP can advertise. A toggle elsewhere in
+    the flow is an API-snippet concern and must not reshape the MCP contract.
+    """
+    for node in input_nodes:
+        template = node.data.get("node", {}).get("template")
+        if not isinstance(template, dict):
+            continue
+        if any(isinstance(field, dict) and field.get("api_editable") is True for field in template.values()):
+            return True
+    return False
+
+
+def _is_exposed_input_field(field_name: str, field_data: Any, *, honor_allowlist: bool) -> bool:
+    """Return whether an input node's field belongs in the advertised input contract."""
+    if not _is_visible_input_field(field_data):
+        return False
+    if not honor_allowlist or field_name in _ALWAYS_EXPOSED_INPUT_FIELDS:
+        return True
+    return field_data.get("api_editable") is True
+
+
+_JSON_SCHEMA_TYPE_BY_FIELD_TYPE = {
+    "str": "string",
+    "string": "string",
+    "int": "integer",
+    "integer": "integer",
+    "float": "number",
+    "number": "number",
+    "slider": "number",
+    "bool": "boolean",
+    "boolean": "boolean",
+    "dict": "object",
+    "NestedDict": "object",
+    "duration": "object",
+    "auth": "object",
+    "mcp": "object",
+    "data_display": "object",
+    "object": "object",
+    "array": "array",
+    "connect": "string",
+    "file": "string",
+    "prompt": "string",
+    "mustache": "string",
+    "code": "string",
+    "other": "string",
+    "link": "string",
+    "tab": "string",
+    "query": "string",
+    "knowledge_backend": "string",
+}
+
+_JSON_SCHEMA_ARRAY_ITEM_TYPE_BY_FIELD_TYPE = {
+    "sortableList": "object",
+    "actionPicker": "string",
+    "table": "object",
+    "tools": "object",
+    "model": "object",
+}
+
+
+def _json_schema_type_for_field(field_data: dict[str, Any]) -> dict[str, Any]:
+    field_type = field_data.get("type", "string")
+    array_item_type = _JSON_SCHEMA_ARRAY_ITEM_TYPE_BY_FIELD_TYPE.get(field_type)
+    if array_item_type is not None:
+        return {"type": "array", "items": {"type": array_item_type}}
+
+    json_schema_type = _JSON_SCHEMA_TYPE_BY_FIELD_TYPE.get(field_type)
+    if json_schema_type is None:
+        logger.warning(f"Unknown field type: {field_type} defaulting to string")
+        json_schema_type = "string"
+
+    if field_data.get("list") is True or field_data.get("is_list") is True:
+        return {"type": "array", "items": {"type": json_schema_type}}
+    return {"type": json_schema_type}
+
+
+def get_flow_input_tweaks(flow: Flow, inputs: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Map advertised MCP inputs to node-scoped flow tweaks."""
+    tweaks: dict[str, dict[str, Any]] = {}
+    input_nodes = _get_flow_input_nodes(flow)
+    honor_allowlist = _input_nodes_declare_api_allowlist(input_nodes)
+    for node in input_nodes:
+        template = node.data["node"]["template"]
+        node_tweaks = {
+            field_name: inputs[field_name]
+            for field_name, field_data in template.items()
+            if field_name in inputs and _is_exposed_input_field(field_name, field_data, honor_allowlist=honor_allowlist)
+        }
+        if node_tweaks:
+            tweaks[node.id] = node_tweaks
+
+    return tweaks
+
+
+def json_schema_from_flow(flow: Flow, *, require_api_editable: bool = True) -> dict:
+    """Generate JSON schema from flow input nodes.
+
+    MCP schemas honor a flow's API exposure allowlist once the flow declares one. Other consumers,
+    such as A2A, include every visible, non-advanced field in their input contract.
+    """
     properties = {}
     required = []
+    input_nodes = _get_flow_input_nodes(flow)
+    honor_allowlist = require_api_editable and _input_nodes_declare_api_allowlist(input_nodes)
     for node in input_nodes:
         node_data = node.data["node"]
         template = node_data["template"]
 
         for field_name, field_data in template.items():
-            if isinstance(field_data, dict) and field_data.get("show", False) and not field_data.get("advanced", False):
-                field_type = field_data.get("type", "string")
+            if _is_exposed_input_field(field_name, field_data, honor_allowlist=honor_allowlist):
                 properties[field_name] = {
-                    "type": field_type,
+                    **_json_schema_type_for_field(field_data),
                     "description": field_data.get("info", f"Input for {field_name}"),
                 }
-                # Update field_type in properties after determining the JSON Schema type
-                if field_type == "str":
-                    field_type = "string"
-                elif field_type == "int":
-                    field_type = "integer"
-                elif field_type == "float":
-                    field_type = "number"
-                elif field_type == "bool":
-                    field_type = "boolean"
-                else:
-                    logger.warning(f"Unknown field type: {field_type} defaulting to string")
-                    field_type = "string"
-                properties[field_name]["type"] = field_type
 
                 if field_data.get("required", False):
                     required.append(field_name)
@@ -587,3 +829,51 @@ def json_schema_from_flow(flow: Flow) -> dict:
         }
 
     return {"type": "object", "properties": properties, "required": required}
+
+
+# Built-in agents matched by their component ``name`` (stored as ``node.data.type``). The name is the
+# stable flow-matching identifier and never changes, so this classifies an agent flow even when the
+# node's stored source was saved by an older build and no longer evaluates. Custom agent components
+# (an unknown name) still fall through to the eval-based check below.
+_AGENT_TYPE_NAMES = frozenset({"Agent"})
+
+
+def suggest_flow_type(flow_data: dict | None) -> FlowType:
+    """Suggest ``agent`` vs ``workflow`` for a flow based on its graph contents.
+
+    Returns ``FlowType.AGENT`` if any node is a known agent component (matched by its stable
+    ``node.data.type`` name) or resolves to a subclass of ``LCAgentComponent``, else
+    ``FlowType.WORKFLOW``. This is a UI default suggestion only, never the stored source of truth, so
+    it never raises: any node it cannot resolve is skipped and the flow falls back to ``WORKFLOW``.
+    A custom component's class is recovered from its own stored source
+    (``node.data.node.template.code.value``) via ``eval_custom_component_code``, which evaluates the
+    class definition without instantiating or running it; the name fast-path handles flows whose
+    stored code predates the lfx module split and no longer evaluates.
+    """
+    from lfx.base.agents.agent import LCAgentComponent
+    from lfx.custom.eval import eval_custom_component_code
+
+    nodes = (flow_data or {}).get("nodes") or []
+    for node in nodes:
+        node_data = node.get("data") or {}
+        # Version-stable fast path before the fragile eval: a built-in agent classifies by name even
+        # if its stored code can't be evaluated in this build.
+        if node_data.get("type") in _AGENT_TYPE_NAMES:
+            return FlowType.AGENT
+        try:
+            code = node_data["node"]["template"]["code"]["value"]
+        except (KeyError, TypeError):
+            continue
+        if not code:
+            continue
+        try:
+            component_class = eval_custom_component_code(code)
+        except Exception:  # noqa: BLE001 - a suggestion must never fail the caller
+            logger.debug("suggest_flow_type: skipping a node whose code could not be evaluated", exc_info=True)
+            continue
+        try:
+            if issubclass(component_class, LCAgentComponent):
+                return FlowType.AGENT
+        except TypeError:
+            continue
+    return FlowType.WORKFLOW

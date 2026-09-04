@@ -1,7 +1,9 @@
 import asyncio
+import faulthandler
 import json
 import os
 import shutil
+import sys
 
 # we need to import tmpdir
 import tempfile
@@ -26,7 +28,13 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User, UserCreate, UserRead
 from langflow.services.database.models.vertex_builds.crud import delete_vertex_builds_by_flow_id_unchecked
-from langflow.services.deps import get_auth_service, get_db_service, session_scope
+from langflow.services.deps import (
+    get_auth_service,
+    get_db_service,
+    get_settings_service,
+    is_settings_service_initialized,
+    session_scope,
+)
 from lfx.components.input_output import ChatInput
 from lfx.graph import Graph
 from lfx.log.logger import logger
@@ -63,6 +71,36 @@ def disable_models_dev_refresh():
     os.environ["LANGFLOW_MODELS_DEV_REFRESH"] = "false"
     yield
     os.environ.pop("LANGFLOW_MODELS_DEV_REFRESH", None)
+
+
+@pytest.fixture(scope="session", autouse=True)
+def disable_mcp_auto_init():
+    """Keep the MCP server auto-initialization out of tests.
+
+    Every app boot otherwise schedules a lifespan task (``delayed_init_mcp_servers``)
+    that, ~10s in, reconciles each project's MCP server config. For apikey/none projects
+    that reconciliation spawns ``uvx mcp-proxy`` and makes an outbound connect with no
+    bounded timeout, so on a slow/CI runner it hangs until the OS connect timeout (~127s),
+    inflating every app-fixture test by ~130s and pushing the heaviest test split past the
+    CI step timeout. Skipping it keeps the boot local and deterministic.
+    """
+    previous_env_value = os.environ.get("LANGFLOW_SKIP_MCP_AUTO_INIT")
+    previous_setting = (
+        get_settings_service().settings.skip_mcp_auto_init
+        if is_settings_service_initialized()
+        else (previous_env_value or "").lower() in {"1", "true", "yes", "on"}
+    )
+
+    os.environ["LANGFLOW_SKIP_MCP_AUTO_INIT"] = "true"
+    if is_settings_service_initialized():
+        get_settings_service().set("skip_mcp_auto_init", value=True)
+    yield
+    if previous_env_value is None:
+        os.environ.pop("LANGFLOW_SKIP_MCP_AUTO_INIT", None)
+    else:
+        os.environ["LANGFLOW_SKIP_MCP_AUTO_INIT"] = previous_env_value
+    if is_settings_service_initialized():
+        get_settings_service().set("skip_mcp_auto_init", previous_setting)
 
 
 # TODO: Revert this to True once bb.functions[func].can_block_in("http/client.py", "_safe_read") is fixed
@@ -129,10 +167,61 @@ def blockbuster(request):
             yield bb
 
 
+# Hard, GIL-proof per-test watchdog. pytest-timeout's thread method (pyproject
+# `timeout = 90`) arms a *Python* timer thread, which needs the GIL to run its
+# callback -- a hang inside a C call that never releases the GIL (observed on
+# the release-1.11.3 py3.13 Group 5 job: a worker froze for 25+ minutes in
+# test_login.py::test_session_endpoint_rejects_expired_external_token with no
+# dump) silently defeats it and the job burns to the CI step wall.
+# faulthandler.dump_traceback_later() instead uses a C-level watchdog thread
+# that needs no GIL: it dumps every thread's stack to the real stderr fd
+# (inherited by xdist workers, so it lands in the CI log) and, with exit=True,
+# hard-exits the wedged worker -- xdist then reports "node down", replaces the
+# worker, and --reruns retries the test on the fresh one. The 120s default sits
+# above pytest-timeout's 90s so the soft watchdog (clean per-test failure)
+# always gets first shot; this only fires when that one *couldn't* run.
+# Disable locally for debugger sessions with LANGFLOW_TEST_HARD_TIMEOUT=0.
+_HARD_TIMEOUT_S = float(os.getenv("LANGFLOW_TEST_HARD_TIMEOUT", "120"))
+
+# Real-stderr fd, dup'd at pytest_configure time. pytest's fd-level capture
+# redirects fd 2 into a per-test temp file that is discarded when the process
+# hard-exits, so a dump armed against sys.__stderr__ at *test* time vanishes
+# (which is also why pytest-timeout's thread dumps never showed in CI logs).
+# At configure time fd 2 still points at the process's original stderr -- in an
+# xdist worker that fd is inherited from the controller, so dumps written to
+# the dup land in the CI step log. Same strategy as pytest's builtin
+# faulthandler plugin.
+_watchdog_stderr_fd: int | None = None
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_protocol(item, nextitem):  # noqa: ARG001
+    if _HARD_TIMEOUT_S <= 0 or _watchdog_stderr_fd is None:
+        return (yield)
+    faulthandler.dump_traceback_later(_HARD_TIMEOUT_S, file=_watchdog_stderr_fd, exit=True)
+    try:
+        return (yield)
+    finally:
+        faulthandler.cancel_dump_traceback_later()
+
+
 def pytest_configure(config):
+    global _watchdog_stderr_fd  # noqa: PLW0603
+    if _HARD_TIMEOUT_S > 0 and _watchdog_stderr_fd is None:
+        with suppress(AttributeError, ValueError, OSError):
+            try:
+                fd = sys.stderr.fileno()
+            except (AttributeError, ValueError, OSError):
+                fd = sys.__stderr__.fileno()
+            _watchdog_stderr_fd = os.dup(fd)
+
     config.addinivalue_line("markers", "noclient: don't create a client for this test")
     config.addinivalue_line("markers", "load_flows: load the flows for this test")
     config.addinivalue_line("markers", "api_key_required: run only if the api key is set in the environment variables")
+    config.addinivalue_line(
+        "markers",
+        "real_services: Tests that need real service instances (real SQLite + real Postgres + real Redis)",
+    )
     data_path = Path(__file__).parent.absolute() / "data"
 
     pytest.BASIC_EXAMPLE_PATH = data_path / "basic_example.json"
@@ -318,6 +407,8 @@ def distributed_client_fixture(
         db_path = Path(db_dir) / "test.db"
         monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
         monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+        monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
+        monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
         # monkeypatch langflow.services.task.manager.USE_CELERY to True
         # monkeypatch.setattr(manager, "USE_CELERY", True)
         monkeypatch.setattr(celery_app, "celery_app", celery_app.make_celery("langflow", Config))
@@ -470,6 +561,8 @@ async def client_fixture(
             db_path = Path(db_dir) / "test.db"
             monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+            monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
+            monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
             monkeypatch.setenv("DO_NOT_TRACK", "true")
             if "load_flows" in request.keywords:
                 shutil.copyfile(

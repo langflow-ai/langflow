@@ -12,6 +12,7 @@ from fastapi.encoders import jsonable_encoder
 from typing_extensions import Protocol
 
 from lfx.log.logger import logger
+from lfx.serialization.serialization import serialize
 
 if TYPE_CHECKING:
     # Lightweight type stub for log types
@@ -69,7 +70,18 @@ class EventManager:
         self.events[name] = callback_
 
     def send_event(self, *, event_type: str, data: LoggableType):
-        jsonable_data = jsonable_encoder(data)
+        try:
+            jsonable_data = jsonable_encoder(data)
+        except (ValueError, TypeError) as exc:
+            # Component payloads can contain objects that FastAPI's jsonable_encoder
+            # cannot serialize — e.g. a vector-DB client holding a ``threading.Lock``
+            # surfaced through a Loop's per-iteration build events (issue #12591).
+            # jsonable_encoder's last-resort fallback raises ``ValueError([TypeError, ...])``
+            # there, which would otherwise abort the entire flow build. Degrade to the
+            # fail-safe serializer, which converts unknown objects to a string
+            # representation instead of crashing.
+            logger.debug(f"jsonable_encoder failed for event '{event_type}'; using safe serializer: {exc}")
+            jsonable_data = serialize(data, to_str=True)
         json_data = {"event": event_type, "data": jsonable_data}
         event_id = f"{event_type}-{uuid.uuid4()}"
         str_data = json.dumps(json_data) + "\n\n"

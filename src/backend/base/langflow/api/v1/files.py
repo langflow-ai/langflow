@@ -179,7 +179,15 @@ async def download_image(
 
     try:
         file_content = await storage_service.get_file(flow_id=flow_id_str, file_name=file_name)
-        return StreamingResponse(BytesIO(file_content), media_type=content_type)
+        # Defense-in-depth: a tenant-uploaded SVG/HTML served inline with a renderable content type
+        # would execute scripts in the app origin if opened directly. nosniff stops MIME sniffing
+        # and Content-Disposition: attachment forces a download on direct navigation (so any script
+        # cannot run in-origin). <img>/blob embedding -- the intended use -- is unaffected.
+        return StreamingResponse(
+            BytesIO(file_content),
+            media_type=content_type,
+            headers={"X-Content-Type-Options": "nosniff", "Content-Disposition": "attachment"},
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

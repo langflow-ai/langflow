@@ -18,7 +18,7 @@ from langchain_chroma import Chroma
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.base.data.utils import extract_text_from_bytes
-from lfx.base.knowledge_bases.backends import BackendType, create_backend
+from lfx.base.knowledge_bases.backends import BackendType, create_backend, is_local_chroma
 from lfx.base.knowledge_bases.backends.base import (
     METADATA_KEY_CHUNK_INDEX,
     METADATA_KEY_FILE_NAME,
@@ -28,6 +28,7 @@ from lfx.base.knowledge_bases.backends.base import (
     METADATA_KEY_SOURCE_METADATA,
     METADATA_KEY_SOURCE_TYPE,
     METADATA_KEY_TOTAL_CHUNKS,
+    BackendConfigurationError,
     BaseVectorStoreBackend,
 )
 from lfx.base.knowledge_bases.ingestion_sources import (
@@ -98,6 +99,211 @@ def chunk_text_for_ingestion(
         splitter_kwargs["separators"] = [separator.replace("\\n", "\n")]
     splitter = RecursiveCharacterTextSplitter(**splitter_kwargs)
     return splitter.split_text(text)
+
+
+def _coerce_backend_config_value(value: Any) -> dict[str, Any]:
+    """Normalize a stored ``backend_config`` into a plain dict."""
+    if isinstance(value, dict):
+        return dict(value)
+    return {}
+
+
+def validate_kb_name(kb_name: str) -> None:
+    """Reject a KB name that could escape the per-user KB namespace.
+
+    Must run before persistence for **every** backend. Remote backends
+    (OpenSearch / Chroma Cloud / Mongo / Astra / Postgres) resolve no local
+    path, so the containment guard in :func:`resolve_local_store_path` never
+    runs for them — without this a crafted name such as
+    ``../victim_user/evil_kb`` would be accepted and persisted verbatim. That
+    both collides with another user's KB namespace and, once such a row is
+    reconciled onto local Chroma, escapes the KB root on disk.
+
+    Path separators and parent-directory segments have no legitimate place in a
+    KB name (spaces are the only structural character the create path allows,
+    and it maps them to underscores before this runs), so rejecting them is a
+    backend-independent guard rather than a filesystem one.
+    """
+    if not kb_name:
+        msg = "KB name is empty"
+        raise ValueError(msg)
+    if "\x00" in kb_name:
+        msg = "KB name contains a null byte"
+        raise ValueError(msg)
+    if "/" in kb_name or "\\" in kb_name:
+        msg = "KB name contains a path separator"
+        raise ValueError(msg)
+    # With separators already rejected the name is a single path segment, so the
+    # only remaining traversal form is the segment being a bare '.' or '..'.
+    if kb_name in {".", ".."}:
+        msg = "KB name is a directory-traversal segment"
+        raise ValueError(msg)
+
+
+def validate_kb_path(kb_root: Path, kb_path: Path) -> None:
+    """Assert that ``kb_path`` is contained within ``kb_root`` (path traversal guard).
+
+    Prevents crafted usernames or KB names with '..' segments from escaping the KB
+    root directory. Follows the same pattern as ``services/storage/local.py:save_file``.
+
+    Defined here rather than in ``memory_base.kb_path_helpers`` (which re-exports it
+    for its long-standing importers) because that module already depends on this one;
+    hosting the guard in the lower-level module keeps the import graph acyclic.
+    """
+    kb_root_resolved = kb_root.resolve()
+    kb_path_resolved = kb_path.resolve()
+    if not kb_path_resolved.is_relative_to(kb_root_resolved):
+        msg = "KB path escapes root directory"
+        raise ValueError(msg)
+
+
+def local_chroma_rejection_reason(
+    backend_type: str | None,
+    backend_config: dict[str, Any] | None,
+    *,
+    resource: str = "knowledge base",
+) -> str | None:
+    """Explain why local Chroma is unavailable here, or ``None`` when it is fine.
+
+    Local Chroma writes vectors to the serving box's own filesystem: they do not
+    survive a replica restart, cannot be shared between replicas, and scale with
+    the machine rather than the cluster. The production profile therefore refuses
+    it and expects pgVector, OpenSearch, or Chroma Cloud instead.
+
+    This create-time check is the only enforcement needed. Prod boot already
+    requires a reachable pgVector (``preflight.probe_pgvector`` is a *required*
+    check that aborts startup), so ``resolve_default_kb_backend()`` never falls
+    back to Chroma there — local Chroma can only arrive as an explicit client
+    selection.
+
+    Returns the message rather than raising so HTTP routes and service-layer
+    callers can wrap it in their own error type without duplicating the rule.
+    """
+    if not is_local_chroma(backend_type, backend_config):
+        return None
+    if get_settings_service().settings.deployment_profile != "prod":
+        return None
+    return (
+        f"Local Chroma is not available in the production deployment profile, so this {resource} "
+        "cannot be created with it. Choose a shared vector store (pgVector, OpenSearch, or Chroma "
+        "Cloud), or run with LANGFLOW_DEPLOYMENT_PROFILE=dev for local-only storage."
+    )
+
+
+def resolve_local_store_path(
+    kb_name: str,
+    kb_username: str,
+    *,
+    backend_type: str | None,
+    backend_config: dict[str, Any] | None,
+    create: bool = False,
+) -> Path | None:
+    """Return the on-disk directory for a KB, or ``None`` when it needs no disk.
+
+    The single place KB code turns a ``(backend_type, backend_config)`` pair into
+    a filesystem location, so "does this KB touch disk?" has exactly one answer.
+
+    Returns ``None`` for every non-local-Chroma backend **without reading
+    settings or touching the filesystem** — notably without calling
+    ``KBStorageHelper.get_root_path()``, which raises when ``knowledge_bases_dir``
+    is unset. That is what lets a deployment with no local storage at all serve
+    remote-backed KBs.
+
+    For local Chroma it resolves ``<root>/<username>/<kb_name>``, containment-checks
+    it against the root, and creates it when ``create=True``.
+
+    Deliberately does **not** raise when the directory is absent. Existence is a
+    property of the ``knowledge_base`` row, not of the filesystem: Chroma creates
+    its directory lazily on first write, so a KB that has been created but never
+    ingested into legitimately has no directory yet.
+    """
+    if not is_local_chroma(backend_type, backend_config):
+        return None
+
+    kb_root = KBStorageHelper.get_root_path()
+    kb_user_path = (kb_root / kb_username).resolve()
+    kb_path = (kb_user_path / kb_name).resolve()
+    # The username roots the path, so check it against the real root first: a
+    # username containing ".." would otherwise escape before the kb_name check.
+    validate_kb_path(kb_root, kb_user_path)
+    validate_kb_path(kb_user_path, kb_path)
+
+    if create:
+        kb_path.mkdir(parents=True, exist_ok=True)
+    return kb_path
+
+
+async def resolve_backend_selection(
+    *,
+    user_id: uuid.UUID,
+    kb_name: str,
+) -> tuple[str, dict[str, Any]]:
+    """Resolve ``(backend_type, backend_config)`` for a KB from its ``knowledge_base`` row.
+
+    The row is the sole authority. When there is no row this raises rather than
+    assuming local storage: guessing would write a remote-backed KB into a local
+    Chroma directory while queries followed the real config to the configured
+    cluster and returned nothing, with no error anywhere.
+
+    Reads no filesystem, so it behaves identically on a replica whose local disk
+    never held the KB directory. KB directories written by a Langflow version that
+    predates the row are adopted by ``langflow reconcile-kb-from-disk``, not by an
+    implicit fallback here.
+
+    Shared by Knowledge Bases and Memory Bases so the two cannot drift apart.
+    """
+    from langflow.api.utils import knowledge_base_service
+
+    record = await knowledge_base_service.get_by_user_and_name(user_id, kb_name)
+    if record is not None:
+        return (
+            record.backend_type or BackendType.CHROMA.value,
+            _coerce_backend_config_value(record.backend_config),
+        )
+
+    msg = (
+        f"Cannot determine the vector-store backend for '{kb_name}': it has no knowledge_base record. "
+        "Refusing to fall back to local storage, which would write to a different store than queries "
+        "read from. If this knowledge base predates the database-backed metadata, adopt it with "
+        "'langflow reconcile-kb-from-disk'."
+    )
+    raise ValueError(msg)
+
+
+# Last-resort embedding when the row records none. Matches the historical
+# fallback in ``resolve_embedding`` so behavior is unchanged for callers that
+# relied on it.
+_DEFAULT_EMBEDDING_PROVIDER = "OpenAI"
+_DEFAULT_EMBEDDING_MODEL = "text-embedding-3-small"
+
+
+async def resolve_embedding_selection(
+    *,
+    user_id: uuid.UUID,
+    kb_name: str,
+) -> tuple[str, str]:
+    """Resolve ``(embedding_provider, embedding_model)`` for a KB from its ``knowledge_base`` row.
+
+    Counterpart to :func:`resolve_backend_selection`: the row's ``model_selection``
+    is authoritative and a hardcoded default is the only fallback. Unlike the
+    backend, a missing embedding selection is recoverable — the default is a real,
+    working model — so this returns rather than raising.
+
+    Reads no filesystem, so a Knowledge Base or Memory Base resolves identically on
+    any replica.
+
+    Shared by Knowledge Bases and Memory Bases so the two cannot drift apart.
+    """
+    from langflow.api.utils import knowledge_base_service
+    from langflow.api.utils.knowledge_base_service import get_embedding_model, get_embedding_provider
+
+    record = await knowledge_base_service.get_by_user_and_name(user_id, kb_name)
+    if record is not None:
+        model = get_embedding_model(record.model_selection)
+        if model:
+            return get_embedding_provider(record.model_selection), model
+
+    return _DEFAULT_EMBEDDING_PROVIDER, _DEFAULT_EMBEDDING_MODEL
 
 
 class KBStorageHelper:
@@ -299,81 +505,6 @@ class KBAnalysisHelper:
     """Helper class for Knowledge Base metadata, metrics, and configuration detection."""
 
     @staticmethod
-    def get_metadata(kb_path: Path, *, fast: bool = False) -> dict:
-        """Extract metadata from a knowledge base directory."""
-        metadata_file = kb_path / "embedding_metadata.json"
-        defaults = {
-            "chunks": 0,
-            "words": 0,
-            "characters": 0,
-            "avg_chunk_size": 0.0,
-            "embedding_provider": "Unknown",
-            "embedding_model": "Unknown",
-            "id": str(uuid.uuid4()),
-            "size": 0,
-            "source_types": [],
-            "chunk_size": None,
-            "chunk_overlap": None,
-            "separator": None,
-            "backend_type": BackendType.CHROMA.value,
-            "backend_config": {},
-        }
-
-        metadata = {}
-        if metadata_file.exists():
-            try:
-                metadata = json.loads(metadata_file.read_text())
-            except (OSError, json.JSONDecodeError):
-                logger.warning(f"Failed to parse metadata file for {kb_path.name}, resetting to defaults.")
-
-        missing_keys = not all(k in metadata for k in defaults)
-        has_unknowns = metadata.get("embedding_provider") == "Unknown" or metadata.get("embedding_model") == "Unknown"
-        # Detect stale zero-chunk metadata: the file claims 0 chunks but
-        # Chroma data exists on disk, meaning data was ingested without updating
-        # the metrics (e.g. via the KnowledgeIngestionComponent before the fix).
-        has_chroma_data = any((kb_path / m).exists() for m in ["chroma", "chroma.sqlite3", "index"])
-        stale_chunks = metadata.get("chunks", 0) == 0 and has_chroma_data
-        directory_size: int | None = None
-
-        if fast and not missing_keys and not stale_chunks:
-            return metadata
-
-        backfill_needed = not metadata_file.exists() or missing_keys or (not fast and has_unknowns)
-
-        if backfill_needed:
-            for key, default_val in defaults.items():
-                if key not in metadata or (key == "id" and not metadata[key]):
-                    metadata[key] = default_val
-            if not isinstance(metadata.get("backend_config"), dict):
-                metadata["backend_config"] = {}
-
-            try:
-                if directory_size is None:
-                    directory_size = KBStorageHelper.get_directory_size(kb_path)
-                metadata["size"] = directory_size
-                if metadata.get("embedding_provider") == "Unknown":
-                    metadata["embedding_provider"] = KBAnalysisHelper._detect_embedding_provider(kb_path)
-                if metadata.get("embedding_model") == "Unknown":
-                    metadata["embedding_model"] = KBAnalysisHelper._detect_embedding_model(kb_path)
-
-                metadata_file.write_text(json.dumps(metadata, indent=2))
-            except (OSError, ValueError, TypeError, json.JSONDecodeError) as e:
-                logger.debug(f"Metadata backfill failed for {kb_path}: {e}")
-
-        # Recount metrics from Chroma if metadata claims 0 chunks but data exists
-        if stale_chunks:
-            try:
-                KBAnalysisHelper.update_text_metrics(kb_path, metadata)
-                if directory_size is None:
-                    directory_size = KBStorageHelper.get_directory_size(kb_path)
-                metadata["size"] = directory_size
-                metadata_file.write_text(json.dumps(metadata, indent=2))
-            except (OSError, ValueError, TypeError, json.JSONDecodeError, chromadb.errors.ChromaError) as e:
-                logger.debug(f"Stale metrics recount failed for {kb_path}: {e}")
-
-        return metadata
-
-    @staticmethod
     async def update_text_metrics_via_backend(metadata: dict, backend) -> None:
         """Backend-agnostic metrics refresh.
 
@@ -462,103 +593,6 @@ class KBAnalysisHelper:
                 KBStorageHelper.release_chroma_resources(kb_path)
 
     @staticmethod
-    def _detect_embedding_provider(kb_path: Path) -> str:
-        """Internal helper to detect the embedding provider."""
-        provider_patterns = {
-            "OpenAI": ["openai", "text-embedding-ada", "text-embedding-3"],
-            "Azure OpenAI": ["azure"],
-            "HuggingFace": ["sentence-transformers", "huggingface", "bert-"],
-            "Cohere": ["cohere", "embed-english", "embed-multilingual"],
-            "Google": ["palm", "gecko", "google"],
-            "Ollama": ["ollama"],
-            "Chroma": ["chroma"],
-        }
-
-        for config_file in kb_path.glob("*.json"):
-            try:
-                with config_file.open("r", encoding="utf-8") as f:
-                    config_data = json.load(f)
-                    if not isinstance(config_data, dict):
-                        continue
-
-                    config_str = json.dumps(config_data).lower()
-                    provider_fields = ["embedding_provider", "provider", "embedding_model_provider"]
-                    for field in provider_fields:
-                        if field in config_data:
-                            provider_value = str(config_data[field]).lower()
-                            for provider, patterns in provider_patterns.items():
-                                if any(pattern in provider_value for pattern in patterns):
-                                    return provider
-                            if provider_value and provider_value != "unknown":
-                                return provider_value.title()
-
-                    for provider, patterns in provider_patterns.items():
-                        if any(pattern in config_str for pattern in patterns):
-                            return provider
-
-            except (OSError, json.JSONDecodeError):
-                logger.exception("Error reading config file '%s'", config_file)
-                continue
-
-        if (kb_path / "chroma").exists():
-            return "Chroma"
-        if (kb_path / "vectors.npy").exists():
-            return "Local"
-
-        return "Unknown"
-
-    @staticmethod
-    def _detect_embedding_model(kb_path: Path) -> str:
-        """Internal helper to detect the embedding model."""
-        metadata_file = kb_path / "embedding_metadata.json"
-        if metadata_file.exists():
-            try:
-                with metadata_file.open("r", encoding="utf-8") as f:
-                    metadata = json.load(f)
-                    if isinstance(metadata, dict) and "embedding_model" in metadata:
-                        model_value = str(metadata.get("embedding_model", "unknown"))
-                        if model_value and model_value.lower() != "unknown":
-                            return model_value
-            except (OSError, json.JSONDecodeError):
-                logger.exception("Error reading embedding metadata file '%s'", metadata_file)
-
-        for config_file in kb_path.glob("*.json"):
-            if config_file.name == "embedding_metadata.json":
-                continue
-
-            try:
-                with config_file.open("r", encoding="utf-8") as f:
-                    config_data = json.load(f)
-                    if not isinstance(config_data, dict):
-                        continue
-
-                    model_fields = ["embedding_model", "model", "embedding_model_name", "model_name"]
-                    for field in model_fields:
-                        if field in config_data:
-                            model_value = str(config_data[field])
-                            if model_value and model_value.lower() != "unknown":
-                                return model_value
-
-                    if "openai" in json.dumps(config_data).lower():
-                        openai_models = ["text-embedding-ada-002", "text-embedding-3-small", "text-embedding-3-large"]
-                        config_str = json.dumps(config_data).lower()
-                        for model in openai_models:
-                            if model in config_str:
-                                return model
-
-                    if "model" in config_data:
-                        model_name = str(config_data["model"])
-                        hf_patterns = ["sentence-transformers", "all-MiniLM", "all-mpnet", "multi-qa"]
-                        if any(pattern in model_name for pattern in hf_patterns):
-                            return model_name
-
-            except (OSError, json.JSONDecodeError):
-                logger.exception("Error reading config file '%s'", config_file)
-                continue
-
-        return "Unknown"
-
-    @staticmethod
     def _calculate_text_metrics(df: pd.DataFrame, text_columns: list[str]) -> tuple[int, int]:
         """Internal helper to calculate total words and characters."""
         total_words = 0
@@ -581,7 +615,7 @@ class KBIngestionHelper:
     @staticmethod
     async def perform_ingestion(
         kb_name: str,
-        kb_path: Path,
+        kb_path: Path | None,
         files_data: list[tuple[str, bytes]] | None,
         chunk_size: int,
         chunk_overlap: int,
@@ -807,8 +841,8 @@ class KBIngestionHelper:
                     ),
                     size_bytes=size_bytes,
                 )
-                # Track extension for the legacy ``source_types`` list
-                # in the KB's ``embedding_metadata.json``.
+                # Track extension for the KB row's ``source_types`` list,
+                # which drives the file-type icon in the KB list.
                 if "." in content_obj.file_name:
                     source_extension_tags.add(content_obj.file_name.rsplit(".", 1)[-1].lower())
 
@@ -825,33 +859,33 @@ class KBIngestionHelper:
             else:
                 final_status = IngestionRunStatus.SUCCEEDED
 
-            metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
-            # Backend-agnostic metrics refresh — ``raw_langchain_store`` was
-            # Chroma-only and broke Mongo/Astra/Postgres with AttributeError
-            # (which then falsely marked the run failed and rolled back the
-            # chunks we'd just written).
-            await KBAnalysisHelper.update_text_metrics_via_backend(metadata, backend)
-            metadata["size"] = KBStorageHelper.get_directory_size(kb_path)
-            metadata["chunk_size"] = chunk_size
-            metadata["chunk_overlap"] = chunk_overlap
-            metadata["separator"] = separator or None
-            metadata_path = kb_path / "embedding_metadata.json"
-            existing_source_types = metadata.get("source_types", [])
-            metadata["source_types"] = sorted(set(existing_source_types) | source_extension_tags)
-            metadata_path.write_text(json.dumps(metadata, indent=2))
+            # Refresh the counters straight onto the ``knowledge_base`` row —
+            # there is no on-disk sidecar to keep in sync any more. The scratch
+            # dict is just a carrier for ``update_text_metrics_via_backend``,
+            # which is backend-agnostic: the older Chroma-only path broke
+            # Mongo/Astra/Postgres with AttributeError, which then falsely marked
+            # the run failed and rolled back chunks we had already written.
+            metrics: dict[str, Any] = {}
+            await KBAnalysisHelper.update_text_metrics_via_backend(metrics, backend)
 
-            # Mirror the refreshed stats onto the DB row. Done after
-            # the JSON write so if the DB update fails, older service
-            # versions still see a consistent filesystem view.
+            # ``size`` is a local-Chroma concept: it measures the persistence
+            # directory. Remote stores keep nothing on this box, so reporting a
+            # directory walk there would be meaningless (and would need a path we
+            # deliberately no longer resolve).
+            size_bytes = KBStorageHelper.get_directory_size(kb_path) if kb_path is not None else 0
+
+            existing_source_types = list(kb_record.source_types or []) if kb_record is not None else []
+            merged_source_types = sorted(set(existing_source_types) | source_extension_tags)
+
             if kb_record_id is not None:
                 try:
                     await knowledge_base_service.update_stats(
                         kb_record_id,
-                        chunks=metadata.get("chunks", 0),
-                        words=metadata.get("words", 0),
-                        characters=metadata.get("characters", 0),
-                        size_bytes=metadata.get("size", 0),
-                        source_types=metadata.get("source_types", []),
+                        chunks=metrics.get("chunks", 0),
+                        words=metrics.get("words", 0),
+                        characters=metrics.get("characters", 0),
+                        size_bytes=size_bytes,
+                        source_types=merged_source_types,
                         chunk_size=chunk_size,
                         chunk_overlap=chunk_overlap,
                         separator=separator or None,
@@ -948,7 +982,7 @@ class KBIngestionHelper:
     @staticmethod
     async def cleanup_chroma_chunks_by_job(
         job_id: uuid.UUID,
-        kb_path: Path,
+        kb_path: Path | None,
         kb_name: str,
         backend_type: str | None = None,
         backend_config: dict | None = None,
@@ -982,62 +1016,6 @@ class KBIngestionHelper:
             await backend.teardown()
 
     @staticmethod
-    async def write_documents_to_chroma(
-        *,
-        documents: list[Document],
-        chroma: Chroma,
-        task_job_id: uuid.UUID,
-        job_service: JobService,
-    ) -> int:
-        """Write pre-built Documents into an open Chroma collection.
-
-        This is the shared primitive used by both file-based KB ingestion
-        (``perform_ingestion``) and message-based Memory Base ingestion.
-
-        Documents must already be chunked and have their metadata populated
-        by the caller — this method only handles the batched write, cancellation
-        checking, and retry logic.
-
-        Args:
-            documents: LangChain Document objects ready for embedding.
-            chroma: An already-constructed ``Chroma`` instance pointing at the
-                target collection.
-            task_job_id: Job ID used to poll for cancellation.
-            job_service: Service for checking job status.
-
-        Returns:
-            Number of documents successfully written.  If the job is cancelled
-            mid-batch this will be less than ``len(documents)``.
-
-        Raises:
-            Exception: Re-raises any non-cancellation write failure after the
-                retry budget is exhausted.
-        """
-        written = 0
-        for i in range(0, len(documents), INGESTION_BATCH_SIZE):
-            if await KBIngestionHelper.is_job_cancelled(job_service, task_job_id):
-                return written
-
-            batch = documents[i : i + INGESTION_BATCH_SIZE]
-            for attempt in range(MAX_RETRY_ATTEMPTS):
-                if await KBIngestionHelper.is_job_cancelled(job_service, task_job_id):
-                    return written
-                try:
-                    await chroma.aadd_documents(batch)
-                    break
-                except Exception as e:
-                    if attempt == MAX_RETRY_ATTEMPTS - 1:
-                        raise
-                    wait = (attempt + 1) * EXPONENTIAL_BACKOFF_MULTIPLIER
-                    await logger.awarning("Write failed, retrying in %ds: %s", wait, e)
-                    await asyncio.sleep(wait)
-
-            written += len(batch)
-            await asyncio.sleep(0.01)
-
-        return written
-
-    @staticmethod
     async def write_documents_to_backend(
         *,
         documents: list[Document],
@@ -1047,12 +1025,12 @@ class KBIngestionHelper:
     ) -> int:
         """Write pre-built Documents through a ``BaseVectorStoreBackend``.
 
-        Backend-agnostic counterpart to :meth:`write_documents_to_chroma`.
-        Used by the multi-backend KB ingestion path so Mongo/Astra/
-        Postgres/OpenSearch ingestions share the same batching,
-        cancellation-checking, and exponential-backoff retry logic that
-        Memory Base's Chroma path gets from
-        :meth:`write_documents_to_chroma`.
+        The single write primitive for every ingestion path — file-based
+        Knowledge Bases and message-based Memory Bases alike — so batching,
+        cancellation checking, and exponential-backoff retry behave identically
+        whatever backend the KB is on. A Chroma-only counterpart used to exist
+        for Memory Bases; it was removed so the local-only path cannot be
+        reintroduced by accident.
 
         Documents must already be chunked with metadata populated.
 
@@ -1076,6 +1054,12 @@ class KBIngestionHelper:
                 try:
                     await backend.add_documents(batch)
                     break
+                except BackendConfigurationError:
+                    # Permanent, operator-actionable misconfiguration (missing
+                    # extension, embedding-dimension mismatch, …). Retrying only
+                    # burns the backoff budget (~20s) on a call that cannot
+                    # succeed, so surface it immediately.
+                    raise
                 except Exception as exc:
                     if attempt == MAX_RETRY_ATTEMPTS - 1:
                         raise
@@ -1098,8 +1082,8 @@ class KBIngestionHelper:
     async def build_embeddings(provider: str, model: str, current_user):
         """Build a LangChain embeddings instance for a stored KB.
 
-        The provider/model pair is the source of truth recorded in the KB's
-        ``embedding_metadata.json`` at creation time. We resolve the embedding
+        The provider/model pair is the source of truth recorded on the KB's
+        ``knowledge_base`` row at creation time. We resolve the embedding
         class and parameter mapping straight from the static registry rather
         than the user-filtered catalog, so retrieval keeps working when:
 
@@ -1140,5 +1124,11 @@ class KBIngestionHelper:
             },
         }
 
-        embedding_model = EmbeddingModelComponent(model=[selected_option], _user_id=current_user.id)
+        # Force None so input defaults (localhost Ollama / blank api_base) do not override globals.
+        embedding_model = EmbeddingModelComponent(
+            model=[selected_option],
+            ollama_base_url=None,
+            api_base=None,
+            _user_id=current_user.id,
+        )
         return embedding_model.build_embeddings()

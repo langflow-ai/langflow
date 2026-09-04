@@ -6,6 +6,12 @@ on:
       - "src/lfx/src/lfx/components/**"
       - "scripts/build_component_index.py"
     types: [opened, synchronize, reopened, labeled]
+
+# autofix-ci/action uploads a diff artifact and the autofix.ci GitHub App applies
+# it with its own credentials, so no job here needs write access to the repo.
+permissions:
+  contents: read
+
 env:
   PYTHON_VERSION: "3.13"
 
@@ -16,17 +22,18 @@ jobs:
     if: github.event.action != 'labeled' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
       - run: uv run ruff check --fix-only .
       - run: uv run ruff format . --config pyproject.toml
-      - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27
+      - uses: autofix-ci/action@c5b2d67aa2274e7b5a18224e8171550871fc7e4a
 
 
   update-starter-projects:
@@ -34,10 +41,11 @@ jobs:
     if: github.event.action != 'labeled' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
@@ -51,7 +59,7 @@ jobs:
       - name: Run starter projects update
         run: uv run python scripts/ci/update_starter_projects.py
 
-      - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27
+      - uses: autofix-ci/action@c5b2d67aa2274e7b5a18224e8171550871fc7e4a
 
 
   update-component-index:
@@ -61,7 +69,7 @@ jobs:
       && (github.event.action != 'labeled' || github.event.label.name == 'fix-index')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           repository: ${{ github.event.pull_request.head.repo.full_name }}
           ref: ${{ github.event.pull_request.head.ref }}
@@ -70,7 +78,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git merge origin/${{ github.base_ref }} --no-edit || {
+          git remote add upstream "${{ github.event.pull_request.base.repo.clone_url }}"
+          git fetch --no-tags upstream "${{ github.base_ref }}"
+          git merge upstream/${{ github.base_ref }} --no-edit || {
             # Check which files have conflicts
             CONFLICTED=$(git diff --name-only --diff-filter=U)
 
@@ -87,8 +97,9 @@ jobs:
             GIT_EDITOR=true git merge --continue
           }
       - name: "Setup Environment"
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
@@ -102,4 +113,4 @@ jobs:
           LFX_DEV: "1"
         run: make build_component_index
 
-      - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27
+      - uses: autofix-ci/action@c5b2d67aa2274e7b5a18224e8171550871fc7e4a

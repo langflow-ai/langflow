@@ -20,6 +20,7 @@ from ag_ui.core import RunFinishedEvent, RunStartedEvent
 
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.edge.base import CycleEdge, Edge
+from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.constants import Finish, lazy_load_vertex_dict
 from lfx.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from lfx.graph.graph.schema import GraphData, GraphDump, StartConfigDict, VertexBuildResult
@@ -38,11 +39,51 @@ from lfx.graph.vertex.base import Vertex, VertexStates
 from lfx.graph.vertex.schema import NodeData, NodeTypeEnum
 from lfx.graph.vertex.vertex_types import ComponentVertex, InterfaceVertex, StateVertex
 from lfx.log.logger import LogConfig, configure, logger
+from lfx.observability import (
+    APPLICATION_TRACER_NAME,
+    _root_error_type,
+    get_execution_client,
+    get_execution_protocol,
+    get_queued_trace_link,
+)
 from lfx.schema.dotdict import dotdict
 from lfx.schema.schema import INPUT_FIELD_NAME, InputType, OutputValue
 from lfx.services.cache.utils import CacheMiss
 from lfx.services.deps import get_chat_service, get_tracing_service
 from lfx.utils.async_helpers import run_until_complete
+
+try:
+    from opentelemetry import trace as otel_trace
+    from opentelemetry.context import Context as OtelContext
+except ImportError:
+    # lfx does not depend on opentelemetry. Under langflow it is installed and the application
+    # span is emitted; under bare lfx this stays None and the span code path is a no-op.
+    otel_trace = None
+    OtelContext = None
+
+FLOW_EXECUTION_SPAN_NAME = "flow.execute"
+
+
+class FlowSpanScope:
+    """Lets a driver that handles its own component errors still mark the run as failed.
+
+    The /build vertex walk catches a component exception, turns it into an error output for the
+    client and stops walking, rather than re-raising. The span's own except clauses therefore
+    never see it, and without this the run would be exported as a success. Callers that let
+    exceptions propagate (arun, async_start, process) need none of this and ignore the scope.
+
+    Only the exception *type* is accepted, never the message: component output ends up in those
+    messages and must not reach the operator's APM.
+    """
+
+    __slots__ = ("error_type",)
+
+    def __init__(self) -> None:
+        self.error_type: str | None = None
+
+    def record_error(self, error_type: str) -> None:
+        self.error_type = error_type
+
 
 INPUT_TYPE_COMPONENT_TYPES = {
     "chat": {InterfaceComponentTypes.ChatInput.value},
@@ -55,11 +96,31 @@ if TYPE_CHECKING:
 
     from lfx.custom.custom_component.component import Component
     from lfx.events.event_manager import EventManager
+    from lfx.graph.checkpoint.schema import GraphCheckpoint
+    from lfx.graph.checkpoint.store import CheckpointStore
     from lfx.graph.edge.schema import EdgeData
     from lfx.graph.schema import ResultData
     from lfx.schema.schema import InputValueRequest
     from lfx.services.chat.schema import GetCache, SetCache
     from lfx.services.tracing.service import TracingService
+
+
+def _serving_trace_end_user_enabled() -> bool:
+    """Whether the operator opted into forwarding the end-user id to the tracing provider (I4).
+
+    Default False (fail-closed): the end-user id is PII and tracing providers are third-party. Reads
+    the serving setting lazily; any resolution failure (lfx-standalone / no settings) is treated as
+    off so telemetry never leaks the identity by accident.
+    """
+    try:
+        from lfx.services.deps import get_settings_service
+
+        settings_service = get_settings_service()
+    except (ImportError, AttributeError, RuntimeError):
+        return False
+    if settings_service is None:
+        return False
+    return bool(getattr(settings_service.settings, "serving_trace_end_user", False))
 
 
 class Graph:
@@ -75,6 +136,8 @@ class Graph:
         user_id: str | None = None,
         log_config: LogConfig | None = None,
         context: dict[str, Any] | None = None,
+        *,
+        instantiate_components: bool = True,
     ) -> None:
         """Initializes a new Graph instance.
 
@@ -93,14 +156,32 @@ class Graph:
         self._runs = 0
         self._updates = 0
         self.flow_id = flow_id
+        # Server-set provenance for a public flow whose execution uses a virtual
+        # flow_id. Request data must never populate this storage scope.
+        self.source_flow_id: str | None = None
         self.flow_name = flow_name
         self.description = description
         self.user_id = user_id
+        # Warm-registry templates need the parsed graph structure without
+        # executing component constructors at preload/reconcile time. Normal
+        # graphs keep the historical eager-instantiation behavior.
+        self._instantiate_components_on_initialize = instantiate_components
+        # Warm parsing cannot emit migration/error events into an authenticated
+        # user's keyspace. Such templates stay cold-only so request parsing can
+        # preserve the historical per-user extension-event contract.
+        self.requires_extension_event_replay = False
         # Optional caller-supplied label forwarded to tracing providers. Kept
         # distinct from ``self.user_id`` so request-supplied identifiers can be
         # surfaced in external traces (e.g. Langfuse trace metadata) without
         # leaking into authn/authz paths.
         self.tracing_user_id: str | None = None
+        # Serving-plane end-user id (the gateway-injected identity for this run).
+        # In-memory only, never persisted: the single carrier every service reads to
+        # scope memory (and, later, telemetry and agent file writes) to the end user
+        # while execution still runs as ``self.user_id`` (the service account). ``None``
+        # on the editor plane and for anonymous/feature-off runs, so those paths are
+        # byte-for-byte unchanged.
+        self.end_user_id: str | None = None
         self._is_input_vertices: list[str] = []
         self._is_output_vertices: list[str] = []
         self._is_state_vertices: list[str] | None = None
@@ -108,6 +189,10 @@ class Graph:
         self._sorted_vertices_layers: list[list[str]] = []
         self._run_id = ""
         self._session_id = ""
+        # Whether components in this run may persist chat memory. Set False for
+        # anonymous serving-plane runs (ephemeral); bound per component execution
+        # in get_instance_results so astore_message can skip the DB write.
+        self.persist_messages: bool = True
         self._start_time = datetime.now(timezone.utc)
         self.inactivated_vertices: set = set()
         self.activated_vertices: list[str] = []
@@ -141,6 +226,20 @@ class Graph:
         self._snapshots: list[dict[str, Any]] = []
         self._end_trace_tasks: set[asyncio.Task] = set()
         self._is_subgraph = False
+        self.checkpointing_enabled = False
+        self.pause_requested = False
+        self.pause_info: dict[str, Any] | None = None
+        self.checkpoint_store: CheckpointStore | None = None
+        self.job_id: str | None = None
+        self.resumed_from_checkpoint = False
+        # Vertices already built at checkpoint time: on resume their async generators are exhausted,
+        # so the output-collection loop must NOT re-consume them. Empty for fresh (non-resume) runs.
+        self.checkpoint_restored_built_ids: set[str] = set()
+        # Built vertices whose live output (Tool/model client) was opaque-dropped to None in the
+        # checkpoint: only these re-run on resume to regenerate the object, so producers whose output
+        # round-tripped (e.g. an Agent's Message) are not needlessly re-executed. Empty otherwise.
+        self.checkpoint_opaque_dropped_ids: set[str] = set()
+        self.pause_probe: Callable[[str], Any] | None = None
 
         if context and not isinstance(context, dict):
             msg = "Context must be a dictionary"
@@ -261,7 +360,8 @@ class Graph:
             graph_dict["description"] = description
         elif description is None and self.description:
             graph_dict["description"] = self.description
-        graph_dict["endpoint_name"] = str(endpoint_name)
+        if endpoint_name is not None:
+            graph_dict["endpoint_name"] = str(endpoint_name)
         return graph_dict
 
     def add_nodes_and_edges(self, nodes: list[NodeData], edges: list[EdgeData]) -> None:
@@ -367,6 +467,26 @@ class Graph:
         }
         self._add_edge(edge_data)
 
+    @contextlib.contextmanager
+    def _flow_span_scope(self, *, open_flow_span: bool):
+        """Open the flow span for a run, or defer to the caller that already opened one.
+
+        The guard is here because deferring and then not opening one is the failure this flag
+        makes possible, and it is silent: the run simply produces no flow span. Warn rather than
+        raise, because telemetry must never take a run down.
+        """
+        if open_flow_span:
+            with self.flow_execution_span(make_current=False):
+                yield
+            return
+        if otel_trace is not None and not otel_trace.get_current_span().is_recording():
+            logger.warning(
+                "async_start was told the caller owns the flow span, but no span is current, "
+                "so this run will not be recorded. The caller should open "
+                "graph.flow_execution_span() around its consumption of the stream."
+            )
+        yield
+
     async def async_start(
         self,
         inputs: list[dict] | None = None,
@@ -376,49 +496,62 @@ class Graph:
         *,
         reset_output_values: bool = True,
         fallback_to_env_vars: bool = False,
+        open_flow_span: bool = True,
     ):
-        # Preserve start_component_id from constructor if available
-        start_component_id = self._start.get_id() if self._start else None
-        self.prepare(start_component_id=start_component_id)
-        if reset_output_values:
-            self._reset_all_output_values()
+        """Run the graph, yielding each step.
 
-        await self.initialize_run()
+        open_flow_span=False says the caller already opened the flow span and this run belongs
+        to it. Prefer that: a span opened here cannot be made current, because this is an async
+        generator and the context token would be attached and detached across its suspension
+        points, so nothing that runs inside the graph nests under the flow span. A caller that
+        is a coroutine has no such problem, so the span it opens is a real parent.
 
-        # The idea is for this to return a generator that yields the result of
-        # each step call and raise StopIteration when the graph is done
-        if config is not None:
-            self.__apply_config(config)
-        # I want to keep a counter of how many tyimes result.vertex.id
-        # has been yielded
-        yielded_counts: dict[str, int] = defaultdict(int)
+        Left defaulting to True so a caller that has not been converted still gets a span rather
+        than silently none. Those runs keep the flat shape.
+        """
+        with self._flow_span_scope(open_flow_span=open_flow_span):
+            # Preserve start_component_id from constructor if available
+            start_component_id = self._start.get_id() if self._start else None
+            self.prepare(start_component_id=start_component_id)
+            if reset_output_values:
+                self._reset_all_output_values()
 
-        while should_continue(yielded_counts, max_iterations):
-            result = await self.astep(
-                event_manager=event_manager, inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
-            )
-            yield result
-            if isinstance(result, Finish):
-                return
-            if hasattr(result, "vertex"):
-                yielded_counts[result.vertex.id] += 1
-                # Emit on_end_vertex event for each completed vertex
-                if event_manager is not None:
-                    result_data_dict = None
-                    if hasattr(result, "result_dict") and result.result_dict:
-                        try:
-                            result_data_dict = result.result_dict.model_dump()
-                        except (AttributeError, TypeError):
-                            result_data_dict = result.result_dict
-                    build_data = {
-                        "id": result.vertex.id,
-                        "valid": result.valid if hasattr(result, "valid") else True,
-                        "data": result_data_dict,
-                    }
-                    event_manager.on_end_vertex(data={"build_data": build_data})
+            await self.initialize_run()
 
-        msg = "Max iterations reached"
-        raise ValueError(msg)
+            # The idea is for this to return a generator that yields the result of
+            # each step call and raise StopIteration when the graph is done
+            if config is not None:
+                self.__apply_config(config)
+            # I want to keep a counter of how many tyimes result.vertex.id
+            # has been yielded
+            yielded_counts: dict[str, int] = defaultdict(int)
+
+            while should_continue(yielded_counts, max_iterations):
+                result = await self.astep(
+                    event_manager=event_manager, inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
+                )
+                yield result
+                if isinstance(result, Finish):
+                    return
+                if hasattr(result, "vertex"):
+                    yielded_counts[result.vertex.id] += 1
+                    # Emit on_end_vertex event for each completed vertex
+                    if event_manager is not None:
+                        result_data_dict = None
+                        if hasattr(result, "result_dict") and result.result_dict:
+                            try:
+                                result_data_dict = result.result_dict.model_dump()
+                            except (AttributeError, TypeError):
+                                result_data_dict = result.result_dict
+                        build_data = {
+                            "id": result.vertex.id,
+                            "valid": result.valid if hasattr(result, "valid") else True,
+                            "data": result_data_dict,
+                        }
+                        event_manager.on_end_vertex(data={"build_data": build_data})
+
+            msg = "Max iterations reached"
+            raise ValueError(msg)
 
     def _snapshot(self):
         return {
@@ -478,25 +611,43 @@ class Graph:
             asyncio.set_event_loop(loop)
 
             try:
-                # Run the async generator
-                async_gen = self.async_start(inputs, max_iterations, event_manager)
+                # Nothing is caught inside this block on purpose. A failure has to leave the
+                # span scope for the span to see it: caught in here, the context manager exits
+                # cleanly and a failed run is exported as status "ok", which is worse than no
+                # telemetry because it looks like a healthy run.
+                #
+                # A thread entry point rather than a generator, so the span can be current for
+                # every anext below. See async_start.
+                try:
+                    with self.flow_execution_span():
+                        # By keyword: async_start takes (inputs, max_iterations, config,
+                        # event_manager), so positionally the event manager lands in config and
+                        # __apply_config subscripts it. config is already applied above, so it
+                        # is deliberately not forwarded again.
+                        async_gen = self.async_start(
+                            inputs=inputs,
+                            max_iterations=max_iterations,
+                            event_manager=event_manager,
+                            open_flow_span=False,
+                        )
 
-                while True:
-                    try:
-                        # Get next result from async generator
-                        result = loop.run_until_complete(anext(async_gen))
-                        result_queue.put(result)
+                        while True:
+                            try:
+                                result = loop.run_until_complete(anext(async_gen))
+                                result_queue.put(result)
 
-                        if isinstance(result, Finish):
-                            break
+                                if isinstance(result, Finish):
+                                    break
 
-                    except StopAsyncIteration:
-                        break
-                    except ValueError as e:
-                        # Put the exception in the queue
-                        result_queue.put(e)
-                        break
-
+                            except StopAsyncIteration:
+                                break
+                except Exception as exc:  # noqa: BLE001 - the worker boundary; see below
+                    # Every Exception, not just ValueError. This runs on a thread, so anything
+                    # not put on the queue dies with the thread while the caller reads the None
+                    # below and sees a clean end of stream. The generator consumer re-raises
+                    # whatever arrives here, so the caller gets the failure it would have got
+                    # from a synchronous call.
+                    result_queue.put(exc)
             finally:
                 # Ensure all pending tasks are completed
                 pending = asyncio.all_tasks(loop)
@@ -507,11 +658,23 @@ class Graph:
 
                 # Close the loop
                 loop.close()
-                # Signal completion
+                # Signal completion, after any exception above so the caller reads that first.
                 result_queue.put(None)
 
-        # Start thread for async execution
-        thread = threading.Thread(target=run_async_code)
+        # Start thread for async execution, carrying the caller's context into it.
+        #
+        # A new thread starts with an empty context, so without this the flow span opened inside
+        # run_async_code finds no current span and starts a brand-new trace: measured, the
+        # caller's span and flow.execute came back with different trace ids and no parent or
+        # link between them, which is exactly the correlation this PR exists to provide. The
+        # same copy carries the protocol and client contextvars, which are set at the entry
+        # point for the same reason.
+        #
+        # The caller's span is still recording while the generator below is consumed, so the
+        # flow span parents to it normally. A caller that abandons the generator early leaves a
+        # dead parent, which flow_execution_span already handles by linking instead.
+        context = contextvars.copy_context()
+        thread = threading.Thread(target=context.run, args=(run_async_code,))
         thread.start()
 
         # Yield results from queue
@@ -678,10 +841,102 @@ class Graph:
 
         self._run_id = str(run_id)
 
+    def request_pause(self, reason: str = "pause_requested", data: dict[str, Any] | None = None) -> None:
+        self.pause_requested = True
+        self.pause_info = {"reason": reason, "data": data or {}}
+
+    @classmethod
+    def resume_from_checkpoint(cls, checkpoint: GraphCheckpoint, *, checkpoint_store: CheckpointStore | None = None):
+        from lfx.graph.checkpoint.resume import restore_graph_from_checkpoint
+
+        return restore_graph_from_checkpoint(checkpoint, store=checkpoint_store)
+
+    def resume_first_layer(self) -> list[str]:
+        from lfx.graph.checkpoint.resume import compute_resume_layer
+
+        return compute_resume_layer(self)
+
+    def build_checkpoint(self) -> GraphCheckpoint:
+        from lfx.graph.checkpoint.builder import build_checkpoint
+
+        return build_checkpoint(self)
+
+    def _persist_resolved_branch_exclusions(self) -> None:
+        """Promote already-answered HumanInput decisions into the persistent exclusion channel.
+
+        A HumanInput stops its non-chosen branches with ``self.stop()`` (transient INACTIVE: reset
+        per build and never checkpointed). When a later HumanInput pauses, the earlier node's dead
+        branches would revive on resume and run — surfacing extra outputs and a re-paused first node.
+        Move each resolved decision into ``conditionally_excluded_vertices`` (the same durable channel
+        ConditionalRouter uses) so the dead branches stay dead across the resume. Derived from graph
+        edges plus the recorded decision, so it also covers saved flows whose frozen component code
+        predates any in-component exclusion call.
+        """
+        decisions = getattr(self, "human_input_decisions", {}) or {}
+        if not decisions:
+            return
+        for vertex in self.vertices:
+            if (getattr(vertex, "data", None) or {}).get("type") != "HumanInput":
+                continue
+            decision = decisions.get(f"{vertex.id}:{self.run_id}")
+            if not decision:
+                continue
+            chosen = decision.get("action_id")
+            branch_outputs = {
+                edge.source_handle.name
+                for edge in self.edges
+                if edge.source_id == vertex.id and edge.source_handle.name.startswith("branch_")
+            }
+            non_chosen = sorted(branch_outputs - {f"branch_{chosen}"})
+            if non_chosen:
+                self.exclude_branches_conditionally(vertex.id, non_chosen)
+
+    async def _check_for_pause_signal(self) -> None:
+        if self.pause_probe is None or self.job_id is None:
+            return
+        decision = await self.pause_probe(self.job_id)
+        if decision == "pause":
+            self.request_pause()
+        elif decision == "cancel":
+            raise asyncio.CancelledError
+
+    async def check_and_handle_pause(self) -> None:
+        """Boundary hook: consult the probe and suspend if a pause is pending.
+
+        Raises GraphPausedException after persisting the checkpoint. Default-off:
+        with no probe, no pause request, or checkpointing disabled this is a no-op,
+        so existing flows are unchanged.
+        """
+        await self._check_for_pause_signal()
+        if not (self.checkpointing_enabled and self.pause_requested):
+            return
+        self._persist_resolved_branch_exclusions()
+        checkpoint = self.build_checkpoint()
+        store = self.checkpoint_store
+        if store is None:
+            from lfx.services.deps import get_checkpoint_service
+
+            store = get_checkpoint_service()
+        await store.save(checkpoint)
+        info = self.pause_info or {}
+        raise GraphPausedException(
+            checkpoint_id=checkpoint.checkpoint_id,
+            reason=info.get("reason", "pause_requested"),
+            data=info.get("data"),
+        )
+
     async def initialize_run(self) -> None:
         if not self._run_id:
             self.set_run_id()
         if self.tracing_service:
+            # Serving-plane telemetry attribution: surface the end user as the SEPARATE tracing label
+            # (never the primary trace user_id, which stays the SID). Gated OFF by default: the
+            # end-user id is PII and tracing providers are third-party SaaS, so it is forwarded only
+            # when the operator opts in via ``serving_trace_end_user``, matching the fail-closed
+            # posture of outbound MCP forwarding. Only fills when an identified serving run set
+            # end_user_id and no explicit caller label was already provided.
+            if self.end_user_id and not self.tracing_user_id and _serving_trace_end_user_enabled():
+                self.tracing_user_id = self.end_user_id
             run_name = f"{self.flow_name} - {self.flow_id}"
             await self.tracing_service.start_tracers(
                 run_id=uuid.UUID(self._run_id),
@@ -691,6 +946,140 @@ class Graph:
                 flow_id=self.flow_id,
                 tracing_user_id=self.tracing_user_id,
             )
+
+    @contextlib.contextmanager
+    def flow_execution_span(self, *, make_current: bool = True):
+        """One application span per flow execution, for the operator's APM.
+
+        Attributes are set on exit because run_id is assigned by initialize_run, inside this scope.
+        The span carries identifiers only: prompts, completions and component payloads belong to the
+        LLM tracer integrations and must never reach the operator's APM, which is also why the error
+        attribute is the exception type and not its message. Subgraphs (Loop iterations) are skipped
+        so a loop over N items stays one span instead of N.
+
+        That rule is enforced per signal, and this is only the span half: the export filter lives in
+        ``ApplicationOnlySpanProcessor``, and the same content is kept off the logs signal by the
+        body policy in ``lfx.log.logger``. Neither covers container stdout or the local log file,
+        which still carry full messages by design.
+
+        make_current attaches the span to the OTel context so a flow run from inside another flow
+        (flow-as-tool, sub-flow components) nests under its caller instead of appearing as a sibling
+        of it. It must stay False when the scope wraps an async generator: the context token would be
+        attached and detached across the generator's suspension points, which leaks it into whatever
+        task resumes the generator.
+
+        The status attribute exists because OTel's StatusCode has three values and a paused run is
+        none of them: it did not fail, and calling it OK would tell an operator the work finished
+        when a human is still holding it. Span status stays UNSET for a pause so alerting on the
+        error rate does not fire, and the attribute carries the distinction.
+
+        A parent that has already ended is turned into a link instead. Several drivers outlive the
+        request that started them: the v1 build route hands the work to a task and returns the
+        job_id, so the server span is closed before the flow runs, and ``create_task`` copies the
+        context regardless. Parenting to it yields a child that starts after its parent finished,
+        which renders as a broken trace. Detecting it here rather than asking callers to declare it
+        keeps the v2 stream correct for free: its server span stays open for the whole response, so
+        it is still a real parent and is left as one.
+
+        Yields a :class:`FlowSpanScope`. Callers that let exceptions propagate can ignore it; a
+        driver that catches component failures itself must call ``record_error`` or its run is
+        exported as a success.
+        """
+        scope = FlowSpanScope()
+        if otel_trace is None or self._is_subgraph:
+            yield scope
+            return
+        tracer = otel_trace.get_tracer(APPLICATION_TRACER_NAME)
+        # is_recording() goes False once a span has ended, which is the signal that this run
+        # outlived its request. An empty Context is what makes the replacement a root; without it
+        # start_span would pick the dead span up as parent anyway.
+        parent = otel_trace.get_current_span()
+        parent_context = parent.get_span_context()
+        queued_link = get_queued_trace_link()
+        if queued_link is not None and not parent.is_recording():
+            # A run picked off a queue, carrying the context of the request that queued it on
+            # the job row.
+            #
+            # Checked before the ended-parent branch, and gated on the parent not recording
+            # rather than on no span being current. Whatever ended span the worker happens to
+            # be holding is not necessarily this run's originator: a worker task started from
+            # a request inherits that request's context permanently, so every later run it
+            # serves would link back to that first request. The carrier was written for this
+            # specific job and is the authoritative answer; an ambient ended span is only a
+            # good guess. A live parent still wins over both, below.
+            span = tracer.start_span(
+                FLOW_EXECUTION_SPAN_NAME,
+                context=OtelContext(),
+                links=[queued_link],
+            )
+        elif parent_context.is_valid and not parent.is_recording():
+            span = tracer.start_span(
+                FLOW_EXECUTION_SPAN_NAME,
+                context=OtelContext(),
+                links=[otel_trace.Link(parent_context)],
+            )
+        else:
+            span = tracer.start_span(FLOW_EXECUTION_SPAN_NAME)
+        status = "ok"
+        try:
+            with contextlib.ExitStack() as stack:
+                if make_current:
+                    # Not end_on_exit: the finally below ends it after the attributes are set.
+                    # Neither recording nor status-setting is delegated, because the SDK's version
+                    # of both writes the exception message onto the span and that can carry flow data.
+                    stack.enter_context(
+                        otel_trace.use_span(
+                            span, end_on_exit=False, record_exception=False, set_status_on_exception=False
+                        )
+                    )
+                yield scope
+        except GraphPausedException:
+            # A HITL pause suspends the unit of work; it is not a failed request. The resume is
+            # driven through Graph.process by the durable runner, which opens its own span.
+            status = "paused"
+            raise
+        except asyncio.CancelledError:
+            # CancelledError is a BaseException, so the handler below does not see it and the
+            # span would otherwise report the run as "ok". Reached by a user pressing stop (the
+            # job service marks the job CANCELLED and re-raises) and by any asyncio.wait_for
+            # ceiling wrapped around a span-carrying run: the v2 build driver, a2a, and the
+            # agentic assistant all have one. The run did not finish, so it gets its own value.
+            #
+            # Span status stays UNSET, which is right for a stop button and arguable for a
+            # timeout: a server-imposed ceiling is closer to a fault, and an operator alerting
+            # on span error rate will not see it. Left as one value for now because the two are
+            # indistinguishable here; the job row (CANCELLED vs FAILED) still tells them apart.
+            status = "cancelled"
+            raise
+        except Exception as exc:
+            status = "error"
+            error_type = _root_error_type(exc)
+            span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, error_type))
+            span.set_attribute("error.type", error_type)
+            raise
+        finally:
+            if self.flow_id:
+                span.set_attribute("flow_id", str(self.flow_id))
+            if self._run_id:
+                span.set_attribute("run_id", self._run_id)
+            if self.session_id:
+                span.set_attribute("session_id", str(self.session_id))
+            # Absent rather than "unknown" when nothing set it: a missing attribute is a wiring
+            # gap the operator can see, an "unknown" value looks like a protocol we support.
+            if (protocol := get_execution_protocol()) is not None:
+                span.set_attribute("protocol", protocol)
+            # Absent when the caller did not identify itself, same rule as protocol: a missing
+            # attribute is "nobody said", which an operator can see and act on.
+            if (client := get_execution_client()) is not None:
+                span.set_attribute("client", client)
+            # A driver that swallowed its own component error exits this scope cleanly, so the
+            # only signal is what it recorded on the way out.
+            if status == "ok" and scope.error_type is not None:
+                status = "error"
+                span.set_status(otel_trace.Status(otel_trace.StatusCode.ERROR, scope.error_type))
+                span.set_attribute("error.type", scope.error_type)
+            span.set_attribute("status", status)
+            span.end()
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
         # Subgraphs don't end traces - the parent graph owns the trace lifecycle
@@ -844,6 +1233,10 @@ class Graph:
                 event_manager=event_manager,
             )
             self.increment_run_count()
+        except (GraphPausedException, asyncio.CancelledError):
+            # Why: a HITL pause/cancel must propagate UNWRAPPED so the job/runner layer suspends the
+            # run instead of finalizing it; wrapping it as ValueError terminalizes the job (LE-1440).
+            raise
         except Exception as exc:
             self._end_all_traces_async(error=exc)
             msg = f"Error running graph: {exc}"
@@ -859,7 +1252,14 @@ class Graph:
                 msg = f"Vertex {vertex_id} not found"
                 raise ValueError(msg)
 
-            if not vertex.result and not stream and hasattr(vertex, "consume_async_generator"):
+            if (
+                not vertex.result
+                and not stream
+                and vertex.id not in self.checkpoint_restored_built_ids
+                and hasattr(vertex, "consume_async_generator")
+            ):
+                # A vertex restored from a checkpoint already consumed its generator in the original
+                # run; re-consuming here would re-iterate an exhausted/absent iterator and raise.
                 await vertex.consume_async_generator()
             if (not outputs and vertex.is_output) or (vertex.display_name in outputs or vertex.id in outputs):
                 vertex_outputs.append(vertex.result)
@@ -878,25 +1278,35 @@ class Graph:
         fallback_to_env_vars: bool = False,
         event_manager: EventManager | None = None,
     ) -> list[RunOutputs]:
-        """Runs the graph with the given inputs.
+        """Runs the graph with the given inputs via the configured executor."""
+        from lfx.execution import aget_default_coordinator
 
-        Args:
-            inputs (list[Dict[str, str]]): The input values for the graph.
-            inputs_components (Optional[list[list[str]]], optional): Components to run for the inputs. Defaults to None.
-            types (Optional[list[Optional[InputType]]], optional): The types of the inputs. Defaults to None.
-            outputs (Optional[list[str]], optional): The outputs to retrieve from the graph. Defaults to None.
-            session_id (Optional[str], optional): The session ID for the graph. Defaults to None.
-            stream (bool, optional): Whether to stream the results or not. Defaults to False.
-            fallback_to_env_vars (bool, optional): Whether to fallback to environment variables. Defaults to False.
-            event_manager (EventManager | None): The event manager for the graph.
+        coordinator = await aget_default_coordinator()
+        return await coordinator.run_to_completion(
+            self,
+            inputs=inputs,
+            inputs_components=inputs_components,
+            types=types,
+            outputs=outputs,
+            session_id=session_id,
+            stream=stream,
+            fallback_to_env_vars=fallback_to_env_vars,
+            event_manager=event_manager,
+            _use_arun_legacy=True,
+        )
 
-        Returns:
-            List[RunOutputs]: The outputs of the graph.
-        """
-        # inputs is {"message": "Hello, world!"}
-        # we need to go through self.inputs and update the self.raw_params
-        # of the vertices that are inputs
-        # if the value is a list, we need to run multiple times
+    async def _arun_legacy(
+        self,
+        inputs: list[dict[str, str]],
+        *,
+        inputs_components: list[list[str]] | None = None,
+        types: list[InputType | None] | None = None,
+        outputs: list[str] | None = None,
+        session_id: str | None = None,
+        stream: bool = False,
+        fallback_to_env_vars: bool = False,
+        event_manager: EventManager | None = None,
+    ) -> list[RunOutputs]:
         vertex_outputs = []
         if not isinstance(inputs, list):
             inputs = [inputs]
@@ -914,20 +1324,21 @@ class Graph:
             self.session_id = session_id
         for _ in range(len(inputs) - len(types)):
             types.append("chat")  # default to chat
-        for run_inputs, components, input_type in zip(inputs, inputs_components, types, strict=True):
-            run_outputs = await self._run(
-                inputs=run_inputs,
-                input_components=components,
-                input_type=input_type,
-                outputs=outputs or [],
-                stream=stream,
-                session_id=session_id or "",
-                fallback_to_env_vars=fallback_to_env_vars,
-                event_manager=event_manager,
-            )
-            run_output_object = RunOutputs(inputs=run_inputs, outputs=run_outputs)
-            await logger.adebug(f"Run outputs: {run_output_object}")
-            vertex_outputs.append(run_output_object)
+        with self.flow_execution_span():
+            for run_inputs, components, input_type in zip(inputs, inputs_components, types, strict=True):
+                run_outputs = await self._run(
+                    inputs=run_inputs,
+                    input_components=components,
+                    input_type=input_type,
+                    outputs=outputs or [],
+                    stream=stream,
+                    session_id=session_id or "",
+                    fallback_to_env_vars=fallback_to_env_vars,
+                    event_manager=event_manager,
+                )
+                run_output_object = RunOutputs(inputs=run_inputs, outputs=run_outputs)
+                await logger.adebug(f"Run outputs: {run_output_object}")
+                vertex_outputs.append(run_output_object)
         return vertex_outputs
 
     def next_vertex_to_build(self):
@@ -986,13 +1397,52 @@ class Graph:
         if state == VertexStates.INACTIVE:
             self.run_manager.remove_from_predecessors(vertex_id)
 
+    def _get_output_names(self, vertex_id: str) -> set[str]:
+        return {
+            edge.source_handle.name
+            for edge in self.edges
+            if edge.source_id == vertex_id and getattr(edge.source_handle, "name", None)
+        }
+
+    def _collect_branch_vertices(self, vertex_id: str, output_names: set[str] | None = None) -> set[str]:
+        visited: set[str] = {vertex_id}
+
+        def walk(current_id: str, *, is_source: bool = False) -> None:
+            for edge in self.edges:
+                if edge.source_id != current_id:
+                    continue
+                if is_source and output_names is not None and edge.source_handle.name not in output_names:
+                    continue
+                child_id = edge.target_id
+                if child_id in visited:
+                    continue
+                visited.add(child_id)
+                walk(child_id)
+
+        walk(vertex_id, is_source=True)
+        visited.discard(vertex_id)
+        return visited
+
+    def _get_vertices_reachable_from_other_outputs(self, vertex_id: str, output_names: set[str]) -> set[str]:
+        other_output_names = self._get_output_names(vertex_id) - output_names
+        if not other_output_names:
+            return set()
+        return self._collect_branch_vertices(vertex_id, other_output_names)
+
     def _mark_branch(
-        self, vertex_id: str, state: str, visited: set | None = None, output_name: str | None = None
+        self,
+        vertex_id: str,
+        state: str,
+        visited: set | None = None,
+        output_name: str | None = None,
+        protected_vertices: set[str] | None = None,
     ) -> set:
         """Marks a branch of the graph."""
         if visited is None:
             visited = set()
         else:
+            if state == VertexStates.INACTIVE and vertex_id in (protected_vertices or set()):
+                return visited
             self.mark_vertex(vertex_id, state)
         if vertex_id in visited:
             return visited
@@ -1005,11 +1455,21 @@ class Graph:
                 edge = self.get_edge(vertex_id, child_id)
                 if edge and edge.source_handle.name != output_name:
                     continue
-            self._mark_branch(child_id, state, visited)
+            self._mark_branch(child_id, state, visited, protected_vertices=protected_vertices)
         return visited
 
     def mark_branch(self, vertex_id: str, state: str, output_name: str | None = None) -> None:
-        visited = self._mark_branch(vertex_id=vertex_id, state=state, output_name=output_name)
+        protected_vertices = (
+            self._get_vertices_reachable_from_other_outputs(vertex_id, {output_name})
+            if state == VertexStates.INACTIVE and output_name
+            else None
+        )
+        visited = self._mark_branch(
+            vertex_id=vertex_id,
+            state=state,
+            output_name=output_name,
+            protected_vertices=protected_vertices,
+        )
         new_predecessor_map, _ = self.build_adjacency_maps(self.edges)
         new_predecessor_map = {k: v for k, v in new_predecessor_map.items() if k in visited}
         if vertex_id in self.cycle_vertices:
@@ -1022,6 +1482,19 @@ class Graph:
             run_predecessors=new_predecessor_map,
             vertices_to_run=self.vertices_to_run,
         )
+
+    def _replace_conditional_exclusions(self, vertex_id: str, excluded: set[str]) -> None:
+        """Replace ``vertex_id``'s conditional exclusions with ``excluded``.
+
+        Any vertices this source previously excluded are cleared first so the routing
+        decision can be re-evaluated (e.g. on later cycle iterations where the condition
+        may change) before the new set is applied and recorded against the source.
+        """
+        if vertex_id in self.conditional_exclusion_sources:
+            self.conditionally_excluded_vertices -= self.conditional_exclusion_sources.pop(vertex_id)
+        self.conditionally_excluded_vertices.update(excluded)
+        if excluded:
+            self.conditional_exclusion_sources[vertex_id] = excluded
 
     def exclude_branch_conditionally(self, vertex_id: str, output_name: str | None = None) -> None:
         """Marks a branch as conditionally excluded (for conditional routing).
@@ -1036,45 +1509,44 @@ class Graph:
 
         Args:
             vertex_id: The source vertex making the exclusion decision
-            output_name: The output name to follow when excluding downstream vertices
+            output_name: The output name to follow when excluding downstream vertices. A falsy
+                value (``None`` or an empty string) excludes the entire downstream branch
+                (every output), matching the historical behavior.
         """
-        # Clear any previous exclusions from this source vertex
-        if vertex_id in self.conditional_exclusion_sources:
-            previous_exclusions = self.conditional_exclusion_sources[vertex_id]
-            self.conditionally_excluded_vertices -= previous_exclusions
-            del self.conditional_exclusion_sources[vertex_id]
-
-        # Now exclude the new branch
-        visited: set[str] = set()
-        excluded: set[str] = set()
-        self._exclude_branch_conditionally(vertex_id, visited, excluded, output_name, skip_first=True)
-
-        # Track which vertices this source excluded
-        if excluded:
-            self.conditional_exclusion_sources[vertex_id] = excluded
-
-    def _exclude_branch_conditionally(
-        self, vertex_id: str, visited: set, excluded: set, output_name: str | None = None, *, skip_first: bool = False
-    ) -> None:
-        """Recursively excludes vertices in a branch for conditional routing."""
-        if vertex_id in visited:
+        if output_name:
+            # A single named output is the multi-branch case with one branch; delegating
+            # keeps the "keep shared downstream nodes reachable from a sibling output" logic
+            # (e.g. a merge node fed by both branches of an If-Else) in one place.
+            self.exclude_branches_conditionally(vertex_id, [output_name])
             return
-        visited.add(vertex_id)
 
-        # Don't exclude the first vertex (the router itself)
-        if not skip_first:
-            self.conditionally_excluded_vertices.add(vertex_id)
-            excluded.add(vertex_id)
+        # Whole-branch exclusion (no output filter): exclude every descendant.
+        self._replace_conditional_exclusions(vertex_id, self._collect_branch_vertices(vertex_id))
 
-        for child_id in self.parent_child_map[vertex_id]:
-            # If we're at the router (skip_first=True) and have an output_name,
-            # only follow edges from that specific output
-            if skip_first and output_name:
-                edge = self.get_edge(vertex_id, child_id)
-                if edge and edge.source_handle.name != output_name:
-                    continue
-            # After the first level, exclude all descendants
-            self._exclude_branch_conditionally(child_id, visited, excluded, output_name=None, skip_first=False)
+    def exclude_branches_conditionally(self, vertex_id: str, output_names: list[str]) -> None:
+        """Conditionally exclude several output branches of a single source vertex at once.
+
+        Behaves like :meth:`exclude_branch_conditionally` but accumulates the branches of
+        every output in ``output_names`` under one source key, so excluding one branch does
+        not clear its siblings. This is required by multi-way routers (e.g. Smart Router)
+        that keep a single matched output and must persistently exclude all the others.
+
+        Like the single-branch variant, any previous exclusions from this source vertex are
+        cleared first so the decision can be re-evaluated (e.g. on later cycle iterations).
+
+        Args:
+            vertex_id: The source vertex making the exclusion decision.
+            output_names: The output names whose downstream branches should be excluded.
+        """
+        # Exclude each requested branch, then keep shared descendants that are still
+        # reachable from a non-excluded output (for example, a merge node downstream
+        # of both a selected and an unselected branch).
+        output_names_set = set(output_names)
+        excluded: set[str] = set()
+        for output_name in output_names:
+            excluded.update(self._collect_branch_vertices(vertex_id, {output_name}))
+        excluded -= self._get_vertices_reachable_from_other_outputs(vertex_id, output_names_set)
+        self._replace_conditional_exclusions(vertex_id, excluded)
 
     def get_edge(self, source_id: str, target_id: str) -> CycleEdge | None:
         """Returns the edge between two vertices."""
@@ -1103,6 +1575,7 @@ class Graph:
             "vertices": self.vertices,
             "edges": self.edges,
             "flow_id": self.flow_id,
+            "source_flow_id": self.source_flow_id,
             "flow_name": self.flow_name,
             "description": self.description,
             "user_id": self.user_id,
@@ -1127,9 +1600,24 @@ class Graph:
             "_is_output_vertices": self._is_output_vertices,
             "has_session_id_vertices": self.has_session_id_vertices,
             "_sorted_vertices_layers": self._sorted_vertices_layers,
+            "_instantiate_components_on_initialize": self._instantiate_components_on_initialize,
         }
 
-    def __deepcopy__(self, memo):
+    def _copy_graph(
+        self,
+        memo: dict,
+        *,
+        user_id: str | None,
+        instantiate_components: bool,
+        before_initialize: Callable[[Graph], None] | None = None,
+    ) -> Graph:
+        """Copy this graph, optionally binding component construction to one user.
+
+        ``add_nodes_and_edges`` eagerly instantiates every component. Keeping the
+        user override on graph construction (instead of stamping it afterward)
+        preserves the cold-path constructor contract for components that inspect
+        ``_user_id`` during ``__init__``.
+        """
         # Check if we've already copied this instance
         if id(self) in memo:
             return memo[id(self)]
@@ -1139,30 +1627,103 @@ class Graph:
             start_copy = copy.deepcopy(self._start, memo)
             end_copy = copy.deepcopy(self._end, memo)
             new_graph = type(self)(
-                start_copy,
-                end_copy,
-                copy.deepcopy(self.flow_id, memo),
-                copy.deepcopy(self.flow_name, memo),
-                copy.deepcopy(self.user_id, memo),
+                start=start_copy,
+                end=end_copy,
+                flow_id=copy.deepcopy(self.flow_id, memo),
+                flow_name=copy.deepcopy(self.flow_name, memo),
+                description=copy.deepcopy(self.description, memo),
+                user_id=user_id,
+                instantiate_components=instantiate_components,
             )
+            if before_initialize is not None:
+                before_initialize(new_graph)
+            new_graph.source_flow_id = copy.deepcopy(self.source_flow_id, memo)
         else:
-            # Create a new graph without start and end, but copy flow_id, flow_name, and user_id
+            # Create a new graph without start and end, binding the requested user
+            # before add_nodes_and_edges instantiates request-local components.
             new_graph = type(self)(
-                None,
-                None,
-                copy.deepcopy(self.flow_id, memo),
-                copy.deepcopy(self.flow_name, memo),
-                copy.deepcopy(self.user_id, memo),
+                flow_id=copy.deepcopy(self.flow_id, memo),
+                flow_name=copy.deepcopy(self.flow_name, memo),
+                description=copy.deepcopy(self.description, memo),
+                user_id=user_id,
+                instantiate_components=instantiate_components,
             )
-            # Deep copy vertices and edges
-            new_graph.add_nodes_and_edges(copy.deepcopy(self._vertices, memo), copy.deepcopy(self._edges, memo))
+            # add_nodes_and_edges synchronously builds FileInput parameters, so
+            # trusted public-flow provenance must exist before reconstruction.
+            new_graph.source_flow_id = copy.deepcopy(self.source_flow_id, memo)
+            # Rebuild parsed graphs from their original frontend shape. ``_vertices``
+            # and ``_edges`` have already been flattened by ``process_flow``; using
+            # them here would turn grouped children into top-level vertices and
+            # change grouped execution/status semantics. Programmatic graphs do not
+            # necessarily have raw frontend data, so retain the processed fallback.
+            has_raw_graph_data = self.raw_graph_data != {"nodes": [], "edges": []} or not (
+                self._vertices or self._edges
+            )
+            source_graph_data = (
+                self.raw_graph_data
+                if has_raw_graph_data
+                else {
+                    "nodes": self._vertices,
+                    "edges": self._edges,
+                }
+            )
+            source_graph_data = copy.deepcopy(source_graph_data, memo)
+            if has_raw_graph_data:
+                # Match cold-path ordering: request-local raw overrides run on
+                # the original frontend shape before groups are flattened.
+                new_graph.raw_graph_data = source_graph_data
+                if before_initialize is not None:
+                    before_initialize(new_graph)
+                source_graph_data = new_graph.raw_graph_data
+            new_graph.add_nodes_and_edges(source_graph_data["nodes"], source_graph_data["edges"])
+            if not has_raw_graph_data and before_initialize is not None:
+                before_initialize(new_graph)
+
+        new_graph.requires_extension_event_replay = self.requires_extension_event_replay
 
         # Store the newly created object in memo
         memo[id(self)] = new_graph
 
         return new_graph
 
+    def __deepcopy__(self, memo):
+        return self._copy_graph(
+            memo,
+            user_id=copy.deepcopy(self.user_id, memo),
+            instantiate_components=self._instantiate_components_on_initialize,
+            before_initialize=None,
+        )
+
+    def copy_for_run(
+        self,
+        *,
+        user_id: str | None,
+        before_instantiate: Callable[[Graph], None] | None = None,
+    ) -> Graph:
+        """Return an isolated executable graph whose constructors see run defaults.
+
+        ``before_instantiate`` can apply request-local raw-parameter overrides
+        (for example the implicit streaming value) after frontend-data copying,
+        before group flattening and component construction observe them.
+        """
+        new_graph = self._copy_graph(
+            {},
+            user_id=user_id,
+            instantiate_components=False,
+            before_initialize=before_instantiate,
+        )
+        new_graph._instantiate_components_in_vertices()  # noqa: SLF001
+        new_graph._instantiate_components_on_initialize = True  # noqa: SLF001
+        return new_graph
+
     def __setstate__(self, state):
+        # Cache/checkpoint payloads written before lazy warm templates existed
+        # must retain the historical eager-instantiation behavior.
+        state.setdefault("_instantiate_components_on_initialize", True)
+        state.setdefault("requires_extension_event_replay", False)
+        # Graphs cached before source-flow provenance was introduced remain
+        # loadable and simply have no additional trusted storage namespace.
+        state.setdefault("source_flow_id", None)
         run_manager = state["run_manager"]
         if isinstance(run_manager, RunnableVerticesManager):
             state["run_manager"] = run_manager
@@ -1181,6 +1742,9 @@ class Graph:
         flow_name: str | None = None,
         user_id: str | None = None,
         context: dict | None = None,
+        *,
+        instantiate_components: bool = True,
+        emit_extension_events: bool = True,
     ) -> Graph:
         """Creates a graph from a payload.
 
@@ -1190,15 +1754,32 @@ class Graph:
             flow_name: The flow name.
             user_id: The user ID.
             context: Optional context dictionary for request-specific data.
+            instantiate_components: Whether to run component constructors while
+                parsing. Warm templates disable this and instantiate only on the
+                request-local copy with the authenticated caller identity.
+            emit_extension_events: Whether migration reports should be published
+                to the extension event service. Background warm parsing disables
+                this because it is not scoped to an active caller.
 
         Returns:
             Graph: The created graph.
         """
         from lfx.extension.migration import migrate_flow_payload
-        from lfx.utils.flow_validation import validate_flow_for_current_settings
+        from lfx.services.deps import get_catalog_policy_service
+        from lfx.utils.flow_validation import (
+            substitute_outdated_component_code_in_place,
+            validate_catalog_policy_for_flow,
+            validate_flow_for_current_settings,
+        )
 
         if "data" in payload:
             payload = payload["data"]
+        # Catalog identity is the exact, case-sensitive stored node.data.type.
+        # Validate it before extension migration rewrites legacy identifiers.
+        # Reuse this same immutable snapshot below so migrated executable types
+        # are checked against the identical policy view without a TOCTOU gap.
+        catalog_policy_snapshot = get_catalog_policy_service().snapshot
+        validate_catalog_policy_for_flow(payload, snapshot=catalog_policy_snapshot)
         # Rewrite legacy component references in place against the append-only
         # extension migration table.  Best-effort: a corrupt table or unmapped
         # reference produces typed errors on the report but never raises, so
@@ -1224,55 +1805,93 @@ class Graph:
                 migration_error.message,
             )
         # Emit extension events so the frontend can surface migration results.
-        try:
-            from lfx.services.deps import get_extension_events_service
+        if emit_extension_events:
+            try:
+                from lfx.services.deps import get_extension_events_service
 
-            _svc = get_extension_events_service()
-            if _svc is not None:
-                # Per-user keyspace so flow_id / migration error details only
-                # reach the user that loaded the flow; fall back to "global"
-                # for unauthenticated paths (CLI, tests, single-user dev).
-                _keyspace = f"user:{user_id}" if user_id else "global"
-                if migration_report.any_rewritten:
-                    _svc.emit(
-                        "flow_migrated",
-                        {
-                            "flow_id": str(flow_id) if flow_id else None,
-                            "rewritten_count": migration_report.rewritten_count,
-                        },
-                        keyspace=_keyspace,
-                    )
-                for migration_error in migration_report.errors:
-                    _svc.emit(
-                        "extension_error",
-                        {
-                            "flow_id": str(flow_id) if flow_id else None,
-                            "code": migration_error.code,
-                            "message": migration_error.message,
-                            "hint": migration_error.hint,
-                            "location": migration_error.location,
-                        },
-                        keyspace=_keyspace,
-                    )
-        except Exception:  # noqa: BLE001 -- best-effort emit; never break flow load on an event-bus failure
-            logger.warning(
-                "extension.event_emit_failed: failed to emit migration events in from_payload.",
-                exc_info=True,
-            )
+                _svc = get_extension_events_service()
+                if _svc is not None:
+                    # Per-user keyspace so flow_id / migration error details only
+                    # reach the user that loaded the flow; fall back to "global"
+                    # for unauthenticated paths (CLI, tests, single-user dev).
+                    _keyspace = f"user:{user_id}" if user_id else "global"
+                    if migration_report.any_rewritten:
+                        _svc.emit(
+                            "flow_migrated",
+                            {
+                                "flow_id": str(flow_id) if flow_id else None,
+                                "rewritten_count": migration_report.rewritten_count,
+                            },
+                            keyspace=_keyspace,
+                        )
+                    for migration_error in migration_report.errors:
+                        _svc.emit(
+                            "extension_error",
+                            {
+                                "flow_id": str(flow_id) if flow_id else None,
+                                "code": migration_error.code,
+                                "message": migration_error.message,
+                                "hint": migration_error.hint,
+                                "location": migration_error.location,
+                            },
+                            keyspace=_keyspace,
+                        )
+            except Exception:  # noqa: BLE001 -- best-effort emit; never break flow load on an event-bus failure
+                logger.warning(
+                    "extension.event_emit_failed: failed to emit migration events in from_payload.",
+                    exc_info=True,
+                )
+        # Restricted deployments (allow_custom_components=False) never execute a node's stored
+        # code — the build substitutes this server's copy keyed by code hash. Rewrite the code of
+        # recognized built-ins whose stored copy has merely drifted across versions, so the
+        # validation below passes on its own and the flow builds with this server's component
+        # instead of being refused over code it was not going to run. No-op when custom
+        # components are allowed or the operator turned the substitution off; a node whose type
+        # is not a known server component is left untouched and still refused below.
+        # Public routes sanitize before handing the payload to the executor, but a hot extension
+        # reload can occur before graph construction. In restricted mode the substitution below
+        # may therefore select a newer source generation than the route checked. Re-run the public
+        # code-execution gate for the anonymous execution principal against the exact
+        # post-substitution bytes and the same registry snapshot, before component instantiation.
+        from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+
+        validate_public_execution = str(user_id) == str(PUBLIC_ANONYMOUS_ACTOR_ID)
+        substitute_outdated_component_code_in_place(
+            payload,
+            validate_public_execution=validate_public_execution,
+        )
         # Defense-in-depth: validate here so that no code path can construct
         # a graph with blocked/custom components, even if an API endpoint
         # forgets its own pre-check. Ideally this would live only at the API
         # boundary (middleware or endpoint dependency) so from_payload stays
         # pure deserialization, but a missed endpoint means arbitrary code
         # execution, so we keep this as a safety net.
-        validate_flow_for_current_settings(payload)
+        validate_flow_for_current_settings(payload, catalog_policy_snapshot=catalog_policy_snapshot)
         try:
+            # The extension migrator intentionally rewrites only the nodes at
+            # the payload level it receives, while process_flow later flattens
+            # inlined nested flows for execution. Build that executable view
+            # on a deep copy, migrate it, and enforce the same snapshot so a
+            # nested legacy alias cannot bypass a block on its canonical key.
+            # Migration errors on this policy-only copy remain best-effort and
+            # are not exposed. Skip the work for the default allow-all policy.
+            if catalog_policy_snapshot.blocked_component_keys:
+                effective_catalog_payload = process_flow(payload)
+                migrate_flow_payload(effective_catalog_payload)
+                validate_catalog_policy_for_flow(effective_catalog_payload, snapshot=catalog_policy_snapshot)
             vertices = payload["nodes"]
             edges = payload["edges"]
-            graph = cls(flow_id=flow_id, flow_name=flow_name, user_id=user_id, context=context)
+            graph = cls(
+                flow_id=flow_id,
+                flow_name=flow_name,
+                user_id=user_id,
+                context=context,
+                instantiate_components=instantiate_components,
+            )
             graph.add_nodes_and_edges(vertices, edges)
+            graph.requires_extension_event_replay = bool(migration_report.any_rewritten or migration_report.errors)
         except KeyError as exc:
-            logger.exception(exc)
+            logger.exception("Extension migration replay failed while reading the payload")
             if "nodes" not in payload and "edges" not in payload:
                 msg = f"Invalid payload. Expected keys 'nodes' and 'edges'. Found {list(payload.keys())}"
                 raise ValueError(msg) from exc
@@ -1422,7 +2041,8 @@ class Graph:
         # This is a hack to make sure that the LLM vertex is sent to
         # the toolkit vertex
         self._build_vertex_params()
-        self._instantiate_components_in_vertices()
+        if self._instantiate_components_on_initialize:
+            self._instantiate_components_in_vertices()
         self._set_cache_to_vertices_in_cycle()
         self._set_cache_if_listen_notify_components()
         for vertex in self.vertices:
@@ -1657,6 +2277,10 @@ class Graph:
             if not vertex.frozen or is_loop_component:
                 should_build = True
             else:
+                # Frozen results can outlive a role or provider-policy change.
+                # Reauthorize before even consulting the result cache so a
+                # revoked provider cannot reuse output from an earlier run.
+                await vertex.arequire_model_provider_policy(user_id, event_manager=event_manager)
                 # Check the cache for the vertex
                 if get_cache is not None:
                     cached_result = await get_cache(key=vertex.id)
@@ -1762,7 +2386,11 @@ class Graph:
     ) -> Graph:
         """Processes the graph with vertices in each layer run in parallel."""
         has_webhook_component = "webhook" in start_component_id.lower() if start_component_id else False
-        first_layer = self.sort_vertices(start_component_id=start_component_id)
+        if self.resumed_from_checkpoint:
+            # A full re-sort would reset the restored run state and re-queue built vertices.
+            first_layer = self.resume_first_layer()
+        else:
+            first_layer = self.sort_vertices(start_component_id=start_component_id)
         vertex_task_run_count: dict[str, int] = {}
         to_process = deque(first_layer)
         layer_index = 0
@@ -1783,6 +2411,7 @@ class Graph:
         await self.initialize_run()
         lock = asyncio.Lock()
         while to_process:
+            await self.check_and_handle_pause()
             current_batch = list(to_process)  # Copy current deque items to a list
             to_process.clear()  # Clear the deque for new items
             tasks = []
@@ -1873,6 +2502,10 @@ class Graph:
         Formats the exception message and stack trace, constructs an error output,
         and records the failure using the vertex build logging system.
         """
+        if not self.persist_messages:
+            # Ephemeral (anonymous serving) run: vertex-build rows retain component
+            # params and outputs, so the no-persist contract covers them too.
+            return
         if isinstance(result, ComponentBuildError):
             params = result.message
             tb = result.formatted_traceback
@@ -1941,15 +2574,19 @@ class Graph:
                 raise result
             if isinstance(result, VertexBuildResult):
                 if self.flow_id is not None:
-                    await log_vertex_build(
-                        flow_id=self.flow_id,
-                        vertex_id=result.vertex.id,
-                        valid=result.valid,
-                        params=result.params,
-                        data=result.result_dict,
-                        artifacts=result.artifacts,
-                        job_id=self._run_id if self._run_id else None,
-                    )
+                    # Ephemeral (anonymous serving) runs skip the persisted build
+                    # record — vertex-build rows retain params/outputs — but still
+                    # register the result so live SSE emission is unaffected.
+                    if self.persist_messages:
+                        await log_vertex_build(
+                            flow_id=self.flow_id,
+                            vertex_id=result.vertex.id,
+                            valid=result.valid,
+                            params=result.params,
+                            data=result.result_dict,
+                            artifacts=result.artifacts,
+                            job_id=self._run_id if self._run_id else None,
+                        )
                     # Store for SSE emission later
                     build_results[result.vertex.id] = result
 
@@ -2306,6 +2943,23 @@ class Graph:
         """
         return [vertex.id for vertex in self.vertices if not self.successor_map.get(vertex.id, [])]
 
+    def _orphaned_tool_vertex_ids(self) -> set[str]:
+        """Tool-mode components with no consumer, excluded from scheduling.
+
+        A tool-mode component's only output is the synthetic ``component_as_tool`` Tool, meaningful
+        only when wired into a consumer (an Agent). With no successor it is a leftover — typically a
+        tool left behind after its Agent was deleted — and building it standalone runs its underlying
+        logic with no inputs (e.g. a URL fetch with no URL), raising a ComponentBuildError that fails
+        the whole run. Skipping it keeps the rest of the flow runnable.
+        """
+        orphaned: set[str] = set()
+        for vertex in self.vertices:
+            data = getattr(vertex, "data", None)
+            node = data.get("node") if isinstance(data, dict) else None
+            if isinstance(node, dict) and node.get("tool_mode") and not self.successor_map.get(vertex.id):
+                orphaned.add(vertex.id)
+        return orphaned
+
     def sort_vertices(
         self,
         stop_component_id: str | None = None,
@@ -2328,6 +2982,15 @@ class Graph:
             get_vertex_successors=self.get_vertex_successors_ids,
             is_cyclic=self.is_cyclic,
         )
+
+        # A run that explicitly targets the tool-mode node (the node's play button sets
+        # stop/start to it) is the user inspecting its toolset output — never skip that one.
+        orphaned_tools = self._orphaned_tool_vertex_ids() - {stop_component_id, start_component_id}
+        if orphaned_tools:
+            first_layer = [vertex_id for vertex_id in first_layer if vertex_id not in orphaned_tools]
+            remaining_layers = [
+                [vertex_id for vertex_id in layer if vertex_id not in orphaned_tools] for layer in remaining_layers
+            ]
 
         self.increment_run_count()
         self._sorted_vertices_layers = [first_layer, *remaining_layers]
@@ -2371,8 +3034,14 @@ class Graph:
         # Check if vertex is conditionally excluded (for conditional routing)
         if vertex_id in self.conditionally_excluded_vertices:
             return False
-        is_active = self.get_vertex(vertex_id).is_active()
-        is_loop = self.get_vertex(vertex_id).is_loop
+        vertex = self.get_vertex(vertex_id)
+        is_active = vertex.is_active()
+        is_loop = vertex.is_loop
+        # A resume keeps the checkpoint's vertices_to_run, so a restored-built vertex stays eligible
+        # and the backward predecessor walk can re-execute it (Chat Input then persists a duplicate
+        # User message). Vertices the resume un-builds have built=False and stay eligible.
+        if not is_loop and vertex.built and vertex_id in self.checkpoint_restored_built_ids:
+            return False
         return self.run_manager.is_vertex_runnable(vertex_id, is_active=is_active, is_loop=is_loop)
 
     def build_run_map(self) -> None:
@@ -2493,6 +3162,13 @@ class Graph:
         subgraph._tracing_service_initialized = True
         subgraph._run_id = self._run_id
         subgraph.session_id = self.session_id
+        # A subgraph extends the parent's run, so it inherits the ephemeral
+        # (no-persist) decision too.
+        subgraph.persist_messages = self.persist_messages
+        # Sub-flows and loop iterations run under the same end user as the parent, so
+        # the identity carrier propagates down (memory scopes to the same end user).
+        subgraph.end_user_id = self.end_user_id
+        subgraph.source_flow_id = self.source_flow_id
         subgraph._is_subgraph = True
 
         # Add the filtered nodes and edges

@@ -2,29 +2,43 @@
 
 from __future__ import annotations
 
+import asyncio
+from collections.abc import Awaitable
 from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
 from lfx.log.logger import logger
+from lfx.services.authorization.base import BaseAuthorizationService, ShareRuleSnapshot
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas.authz_shares import ShareCreate, ShareRead, ShareUpdate
 from langflow.services.authorization import ShareAction, ensure_share_permission
+from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION
+from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.utils import audit_decision
-from langflow.services.database.models.auth import AuthzShare, AuthzTeamMember, SharePermissionLevel, ShareScope
+from langflow.services.database.models.auth import (
+    AuthzShare,
+    AuthzTeam,
+    AuthzTeamMember,
+    SharePermissionLevel,
+    ShareScope,
+)
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
+from langflow.services.database.models.memory_base.model import MemoryBase
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import Variable
 from langflow.services.deps import get_authorization_service
 
-router = APIRouter(prefix="/authz/shares", tags=["Authorization"])
+router = APIRouter(prefix="/authz/shares", tags=["Authorization"], include_in_schema=False)
+
+_SHARE_POLICY_HOOK_TIMEOUT_SECONDS = 5.0
 
 
 # resource_type slug → (model, owner column).
@@ -50,9 +64,46 @@ async def _resolve_resource_owner(
         return None
     model, owner_attr = lookup
     row = await session.get(model, resource_id)
+    # Memory Bases share the ``knowledge_base`` authorization namespace, but
+    # their ids live in ``memory_base`` rather than ``knowledge_base``. Keep a
+    # single external resource type while resolving either backing model.
+    if row is None and resource_type == "knowledge_base":
+        row = await session.get(MemoryBase, resource_id)
     if row is None:
         return None
     return getattr(row, owner_attr, None)
+
+
+async def _serialize_shares(session: DbSession, rows: list[AuthzShare]) -> list[ShareRead]:
+    """Serialize shares with human-readable user and team target names.
+
+    ``target_id`` is polymorphic, so the database cannot expose a normal ORM
+    relationship. Resolve each target kind in one query and keep the name
+    optional for deleted or otherwise stale targets.
+    """
+    user_ids = {row.target_id for row in rows if row.scope == ShareScope.USER.value and row.target_id is not None}
+    team_ids = {row.target_id for row in rows if row.scope == ShareScope.TEAM.value and row.target_id is not None}
+
+    user_names: dict[UUID, str] = {}
+    if user_ids:
+        user_rows = await session.exec(select(User.id, User.username).where(User.id.in_(user_ids)))
+        user_names.update(dict(user_rows.all()))
+    team_names: dict[UUID, str] = {}
+    if team_ids:
+        team_rows = await session.exec(select(AuthzTeam.id, AuthzTeam.team_name).where(AuthzTeam.id.in_(team_ids)))
+        team_names.update(dict(team_rows.all()))
+
+    def target_name(row: AuthzShare) -> str | None:
+        if row.scope == ShareScope.USER.value:
+            return user_names.get(row.target_id)
+        if row.scope == ShareScope.TEAM.value:
+            return team_names.get(row.target_id)
+        return None
+
+    return [
+        ShareRead.model_validate(row, from_attributes=True).model_copy(update={"target_name": target_name(row)})
+        for row in rows
+    ]
 
 
 def _share_visible(
@@ -73,12 +124,25 @@ def _share_visible(
         return True
     scope = row.scope
     if scope == ShareScope.PUBLIC.value:
-        return True
+        # PUBLIC is a direct-link grant, not a discovery/listing grant.
+        return False
     if scope == ShareScope.USER.value and row.target_id == user_id:
         return True
     if scope == ShareScope.TEAM.value and row.target_id is not None:
         return is_team_member
     return False
+
+
+def _active_team_ids_for_user(user_id: UUID):
+    """Select only active teams whose membership can confer share visibility."""
+    return (
+        select(AuthzTeamMember.team_id)
+        .join(AuthzTeam, AuthzTeam.id == AuthzTeamMember.team_id)
+        .where(
+            AuthzTeamMember.user_id == user_id,
+            AuthzTeam.is_active.is_(True),
+        )
+    )
 
 
 async def _user_can_see_share(
@@ -91,10 +155,7 @@ async def _user_can_see_share(
     """Return True when the user may see this share row (single-row path)."""
     is_team_member = False
     if row.scope == ShareScope.TEAM.value and row.target_id is not None:
-        membership_stmt = select(AuthzTeamMember).where(
-            AuthzTeamMember.team_id == row.target_id,
-            AuthzTeamMember.user_id == user_id,
-        )
+        membership_stmt = _active_team_ids_for_user(user_id).where(AuthzTeamMember.team_id == row.target_id)
         is_team_member = (await session.exec(membership_stmt)).first() is not None
     return _share_visible(
         row=row,
@@ -104,13 +165,101 @@ async def _user_can_see_share(
     )
 
 
-async def _invalidate_for_share(scope: str, target_id: UUID | None) -> None:
+async def _try_bounded_invalidation(operation: Awaitable[None], *, hook_name: str, op: str) -> bool:
+    """Run one invalidation hook within the post-commit plugin deadline."""
+    try:
+        await asyncio.wait_for(operation, timeout=_SHARE_POLICY_HOOK_TIMEOUT_SECONDS)
+    except Exception as exc:  # noqa: BLE001 - post-commit plugin hooks are best-effort
+        logger.warning("%s failed after %s; cache may be stale: %s", hook_name, op, exc)
+        return False
+    return True
+
+
+async def _invalidate_for_share(scope: str, target_id: UUID | None, *, op: str = "share:write") -> None:
     """Invalidate cached policy after a share write (user scope vs invalidate_all)."""
     authz = get_authorization_service()
     if scope == ShareScope.USER.value and target_id is not None:
-        await authz.invalidate_user(target_id)
-    else:
-        await authz.invalidate_all()
+        if await _try_bounded_invalidation(
+            authz.invalidate_user(target_id),
+            hook_name="invalidate_user",
+            op=op,
+        ):
+            return
+        await _try_bounded_invalidation(
+            authz.invalidate_all(),
+            hook_name="invalidate_all fallback",
+            op=op,
+        )
+        return
+    await _try_bounded_invalidation(
+        authz.invalidate_all(),
+        hook_name="invalidate_all",
+        op=op,
+    )
+
+
+def _uses_base_sync_shares(authz: BaseAuthorizationService) -> bool:
+    """Return True when the service only has the OSS no-op sync_shares hook."""
+    return getattr(type(authz), "sync_shares", None) is BaseAuthorizationService.sync_shares
+
+
+def _overrides_share_hook(authz: BaseAuthorizationService, hook_name: str) -> bool:
+    """Return whether a plugin provides a non-base implementation of ``hook_name``."""
+    plugin_hook = getattr(type(authz), hook_name, None)
+    base_hook = getattr(BaseAuthorizationService, hook_name)
+    return plugin_hook is not None and plugin_hook is not base_hook
+
+
+async def _try_coarse_share_sync(authz: BaseAuthorizationService, *, op: str) -> bool:
+    """Run the legacy full-table hook when overridden, returning whether it succeeded."""
+    sync_shares = getattr(authz, "sync_shares", None)
+    if sync_shares is not None and not _uses_base_sync_shares(authz):
+        try:
+            await asyncio.wait_for(
+                sync_shares(),
+                timeout=_SHARE_POLICY_HOOK_TIMEOUT_SECONDS,
+            )
+        except Exception as exc:  # noqa: BLE001 - plugin hooks are best-effort post-commit work
+            logger.warning("sync_shares failed after %s; falling back to safe invalidation: %s", op, exc)
+        else:
+            return True
+    return False
+
+
+async def _refresh_policy_for_share(share_id: UUID, scope: str, target_id: UUID | None, *, op: str) -> None:
+    """Refresh one share after commit, then degrade through legacy-safe fallbacks."""
+    authz = get_authorization_service()
+    if _overrides_share_hook(authz, "sync_share"):
+        try:
+            await asyncio.wait_for(
+                authz.sync_share(share_id),
+                timeout=_SHARE_POLICY_HOOK_TIMEOUT_SECONDS,
+            )
+        except Exception as exc:  # noqa: BLE001 - durable share writes must never be rolled back by plugin hooks
+            logger.warning("sync_share failed after %s; falling back to sync_shares: %s", op, exc)
+        else:
+            return
+    if await _try_coarse_share_sync(authz, op=op):
+        return
+    await _invalidate_for_share(scope, target_id, op=op)
+
+
+async def _remove_policy_for_share(snapshot: ShareRuleSnapshot, *, op: str) -> None:
+    """Remove one deleted share's rules after commit, with coarse compatibility fallbacks."""
+    authz = get_authorization_service()
+    if _overrides_share_hook(authz, "remove_share_rules"):
+        try:
+            await asyncio.wait_for(
+                authz.remove_share_rules(snapshot),
+                timeout=_SHARE_POLICY_HOOK_TIMEOUT_SECONDS,
+            )
+        except Exception as exc:  # noqa: BLE001 - durable share deletes must never be rolled back by plugin hooks
+            logger.warning("remove_share_rules failed after %s; falling back to sync_shares: %s", op, exc)
+        else:
+            return
+    if await _try_coarse_share_sync(authz, op=op):
+        return
+    await _invalidate_for_share(snapshot.scope, snapshot.target_id, op=op)
 
 
 async def _ensure_can_administer_share(
@@ -140,6 +289,18 @@ async def _ensure_can_administer_share(
     )
 
 
+def _ensure_supported_share_permission(*, resource_type: str, scope: str, permission_level: str) -> None:
+    """Reject share levels that have no matching public flow product behavior."""
+    if resource_type != "flow" or scope != ShareScope.PUBLIC.value:
+        return
+    if permission_level == SharePermissionLevel.EXECUTE.value:
+        return
+    raise HTTPException(
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        detail="PUBLIC flow shares require permission_level 'execute'.",
+    )
+
+
 @router.post("", response_model=ShareRead, status_code=status.HTTP_201_CREATED)
 @router.post("/", response_model=ShareRead, status_code=status.HTTP_201_CREATED)
 async def create_share(
@@ -156,17 +317,25 @@ async def create_share(
     if owner_id is None:
         # UUID privacy: missing resource → 404.
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
-    await _ensure_can_administer_share(user=current_user, owner_id=owner_id)
-    # SECURITY: pass the *resource* owner (not the caller) so the owner-override
-    # in ensure_share_permission only fast-paths the real resource owner. With
-    # share_user_id=current_user.id the override would always trip and the
-    # authorization plugin's enforce() would never run for non-owner creators
-    # when the OSS floor is bypassed (cross_user_fetch + AUTHZ_ENABLED).
-    await ensure_share_permission(
-        current_user,
-        ShareAction.CREATE,
-        share_user_id=owner_id,
-    )
+    try:
+        await _ensure_can_administer_share(user=current_user, owner_id=owner_id)
+        # SECURITY: pass the *resource* owner (not the caller) so the owner-override
+        # in ensure_share_permission only fast-paths the real resource owner. With
+        # share_user_id=current_user.id the override would always trip and the
+        # authorization plugin's enforce() would never run for non-owner creators
+        # when the OSS floor is bypassed (cross_user_fetch + AUTHZ_ENABLED).
+        await ensure_share_permission(
+            current_user,
+            ShareAction.CREATE,
+            share_user_id=owner_id,
+        )
+        _ensure_supported_share_permission(
+            resource_type=payload.resource_type,
+            scope=payload.scope,
+            permission_level=payload.permission_level,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Resource not found") from exc
 
     row = AuthzShare(
         resource_type=payload.resource_type,
@@ -189,9 +358,12 @@ async def create_share(
             detail="Share could not be created: it may already exist or conflict with an existing share.",
         ) from exc
     await session.refresh(row)
+    response = (await _serialize_shares(session, [row]))[0]
+    await session.commit()
 
-    # Invalidate policy cache for the share audience.
-    await _invalidate_for_share(payload.scope, payload.target_id)
+    # Refresh policy after commit so plugins using a separate DB connection see
+    # the durable authz_share row instead of the pre-commit transaction state.
+    await _refresh_policy_for_share(response.id, payload.scope, payload.target_id, op="share:create")
 
     await audit_decision(
         user_id=current_user.id,
@@ -199,13 +371,17 @@ async def create_share(
         obj=f"{payload.resource_type}:{payload.resource_id}",
         result="allow",
         details={
-            "share_id": str(row.id),
+            # The guard already wrote an ``event: authorization_decision`` row
+            # for the share:create check. This row is the effect, and only it
+            # means a share now exists.
+            "event": AUDIT_EVENT_MUTATION,
+            "share_id": str(response.id),
             "scope": payload.scope,
             "target_id": str(payload.target_id) if payload.target_id else None,
             "permission_level": payload.permission_level,
         },
     )
-    return ShareRead.model_validate(row, from_attributes=True)
+    return response
 
 
 _LIST_SHARES_MAX_LIMIT = 200
@@ -253,14 +429,14 @@ async def list_shares(
 
     is_superuser = getattr(current_user, "is_superuser", False)
     if is_superuser:
-        return [ShareRead.model_validate(row, from_attributes=True) for row in rows]
+        return await _serialize_shares(session, rows)
 
     # Pre-fetch team memberships (avoid N+1 per row).
-    team_membership_stmt = select(AuthzTeamMember.team_id).where(AuthzTeamMember.user_id == current_user.id)
+    team_membership_stmt = _active_team_ids_for_user(current_user.id)
     caller_team_ids: set[UUID] = set(await session.exec(team_membership_stmt))
 
     # Filter rows by visibility rules for non-superusers.
-    visible: list[ShareRead] = []
+    visible: list[AuthzShare] = []
     owner_cache: dict[tuple[str, UUID], UUID | None] = {}
     for row in rows:
         key = (row.resource_type, row.resource_id)
@@ -276,8 +452,8 @@ async def list_shares(
             resource_owner_id=owner_cache[key],
             caller_team_ids=caller_team_ids,
         ):
-            visible.append(ShareRead.model_validate(row, from_attributes=True))
-    return visible
+            visible.append(row)
+    return await _serialize_shares(session, visible)
 
 
 def _row_visible_to(
@@ -331,7 +507,7 @@ async def get_share(
         # UUID privacy: forbidden share → 404.
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Share not found")
 
-    return ShareRead.model_validate(row, from_attributes=True)
+    return (await _serialize_shares(session, [row]))[0]
 
 
 @router.patch("/{share_id}", response_model=ShareRead)
@@ -360,6 +536,11 @@ async def update_share(
         share_id=share_id,
         share_user_id=owner_id,
     )
+    _ensure_supported_share_permission(
+        resource_type=row.resource_type,
+        scope=row.scope,
+        permission_level=payload.permission_level,
+    )
 
     # Validate permission_level (422 before DB CHECK).
     try:
@@ -381,20 +562,23 @@ async def update_share(
             detail="Share could not be updated: it may conflict with an existing share.",
         ) from exc
     await session.refresh(row)
+    response = (await _serialize_shares(session, [row]))[0]
+    await session.commit()
 
-    await _invalidate_for_share(row.scope, row.target_id)
+    await _refresh_policy_for_share(response.id, response.scope, response.target_id, op="share:update")
 
     await audit_decision(
         user_id=current_user.id,
         action="share:update",
-        obj=f"{row.resource_type}:{row.resource_id}",
+        obj=f"{response.resource_type}:{response.resource_id}",
         result="allow",
         details={
-            "share_id": str(row.id),
-            "permission_level": row.permission_level,
+            "event": AUDIT_EVENT_MUTATION,
+            "share_id": str(response.id),
+            "permission_level": response.permission_level,
         },
     )
-    return ShareRead.model_validate(row, from_attributes=True)
+    return response
 
 
 @router.delete("/{share_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -423,21 +607,26 @@ async def delete_share(
         share_user_id=owner_id,
     )
 
-    target_id = row.target_id
-    resource_type = row.resource_type
-    resource_id = row.resource_id
-    scope = row.scope
+    snapshot = ShareRuleSnapshot(
+        share_id=row.id,
+        resource_type=row.resource_type,
+        resource_id=row.resource_id,
+        scope=row.scope,
+        target_id=row.target_id,
+        permission_level=row.permission_level,
+    )
     await session.delete(row)
     await session.flush()
+    await session.commit()
 
-    await _invalidate_for_share(scope, target_id)
+    await _remove_policy_for_share(snapshot, op="share:delete")
 
     await audit_decision(
         user_id=current_user.id,
         action="share:delete",
-        obj=f"{resource_type}:{resource_id}",
+        obj=f"{snapshot.resource_type}:{snapshot.resource_id}",
         result="allow",
-        details={"share_id": str(share_id)},
+        details={"event": AUDIT_EVENT_MUTATION, "share_id": str(share_id)},
     )
 
 

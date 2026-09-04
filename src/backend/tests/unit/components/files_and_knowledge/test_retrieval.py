@@ -9,12 +9,13 @@ and vector access to the configured backend registry entry.
 
 The rewritten suite covers the actual retrieval contract:
 
-* ``_get_kb_metadata`` reading ``embedding_metadata.json``.
+* ``_get_kb_metadata`` reading the ``knowledge_base`` row.
 * ``_resolve_model_selection`` preferring ``model_selection`` over
   the legacy string fields, with a clear error when neither is
   present and the string doesn't map to a current catalog entry.
 * ``retrieve_data`` orchestrating ``get_embeddings`` +
-  backend-registry ``similarity_search`` against the right KB path.
+  backend-registry ``similarity_search`` against the right KB path
+  (resolved only when the row says local Chroma).
 * User-scoping + required-field guards that make retrieval safe
   across sessions.
 """
@@ -62,21 +63,37 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         return KnowledgeBaseComponent
 
     @pytest.fixture(autouse=True)
-    def mock_knowledge_base_path(self, tmp_path):
-        """Pin the KB root at a fresh tmp dir for every test."""
+    def mock_knowledge_base_path(self, tmp_path, monkeypatch):
+        """Pin the KB root at a fresh tmp dir for every test.
+
+        Local-Chroma path resolution goes through
+        ``KBStorageHelper.get_root_path``, which reads the setting live, so the
+        setting is what has to move — patching the lfx module-level cache alone
+        would leave the two disagreeing.
+        """
+        from langflow.services.deps import get_settings_service
+
+        monkeypatch.setattr(get_settings_service().settings, "knowledge_bases_dir", str(tmp_path))
         with patch("lfx.components.files_and_knowledge._kb_paths._KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
             yield
 
     @pytest.fixture
-    def default_kwargs(self, tmp_path, active_user):
-        kb_name = "test_kb"
-        kb_path = tmp_path / active_user.username / kb_name
-        kb_path.mkdir(parents=True, exist_ok=True)
+    async def default_kwargs(self, tmp_path, active_user):
+        """Seed the KB's ``knowledge_base`` row — the sole authority for its config.
 
-        metadata = {
-            "embedding_provider": "HuggingFace",
-            "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "model_selection": {
+        The directory is created too because this KB is local-Chroma backed and
+        that is where its vectors would live; no metadata sidecar is written,
+        because nothing reads one.
+        """
+        from langflow.api.utils import knowledge_base_service
+
+        kb_name = "test_kb"
+        (tmp_path / active_user.username / kb_name).mkdir(parents=True, exist_ok=True)
+
+        await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name=kb_name,
+            model_selection={
                 "name": "sentence-transformers/all-MiniLM-L6-v2",
                 "provider": "HuggingFace",
                 "metadata": {
@@ -84,10 +101,8 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
                     "param_mapping": {"model_name": "model"},
                 },
             },
-            "chunk_size": 1000,
-            "created_at": "2026-04-01T00:00:00Z",
-        }
-        (kb_path / "embedding_metadata.json").write_text(json.dumps(metadata))
+            chunk_size=1000,
+        )
 
         return {
             "knowledge_base": kb_name,
@@ -106,16 +121,20 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
     # ---- update_build_config ----------------------------------------
 
     async def test_get_knowledge_bases_utility(self, tmp_path, active_user):
-        (tmp_path / active_user.username / "kb1").mkdir(parents=True, exist_ok=True)
-        (tmp_path / active_user.username / "kb2").mkdir(parents=True, exist_ok=True)
-        (tmp_path / active_user.username / ".hidden").mkdir(parents=True, exist_ok=True)
+        """The dropdown lists rows, not directories."""
+        from langflow.api.utils import knowledge_base_service
 
-        kb_list = await get_knowledge_bases(tmp_path, user_id=active_user.id)
+        # Directories alone are invisible; only rows appear.
+        (tmp_path / active_user.username / "dir_without_row").mkdir(parents=True, exist_ok=True)
+        await knowledge_base_service.create_record(user_id=active_user.id, name="kb1")
+        await knowledge_base_service.create_record(user_id=active_user.id, name="kb2")
+
+        kb_list = await get_knowledge_bases(user_id=active_user.id)
 
         assert "test_kb" in kb_list
         assert "kb1" in kb_list
         assert "kb2" in kb_list
-        assert ".hidden" not in kb_list
+        assert "dir_without_row" not in kb_list
 
     async def test_get_knowledge_bases_db_first_hides_stale_disk_dirs(self, tmp_path, active_user):
         """DB-first listing hides on-disk dirs that have no matching DB row.
@@ -136,13 +155,13 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         (tmp_path / active_user.username / "stale_dir").mkdir(parents=True, exist_ok=True)
         await knowledge_base_service.create_record(user_id=active_user.id, name="real_kb")
 
-        kb_list = await get_knowledge_bases(tmp_path, user_id=active_user.id)
+        kb_list = await get_knowledge_bases(user_id=active_user.id)
 
         assert "real_kb" in kb_list
         # ``stale_dir`` has no DB row → it's a phantom and must not show up.
         assert "stale_dir" not in kb_list
 
-    async def test_get_knowledge_bases_skips_memory_base_associated_kbs(self, tmp_path, active_user):
+    async def test_get_knowledge_bases_skips_memory_base_associated_kbs(self, active_user):
         """Memory-base-associated KBs are filtered out of the generic KB list.
 
         Matches the listing endpoint's behavior — those KBs are exposed
@@ -153,16 +172,18 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         await knowledge_base_service.create_record(user_id=active_user.id, name="regular_kb")
         await knowledge_base_service.create_record(user_id=active_user.id, name="memory_kb", source_types=["memory"])
 
-        kb_list = await get_knowledge_bases(tmp_path, user_id=active_user.id)
+        kb_list = await get_knowledge_bases(user_id=active_user.id)
 
         assert "regular_kb" in kb_list
         assert "memory_kb" not in kb_list
 
-    async def test_update_build_config_populates_options(self, component_class, default_kwargs, tmp_path, active_user):
+    async def test_update_build_config_populates_options(self, component_class, default_kwargs, active_user):
+        from langflow.api.utils import knowledge_base_service
+
         component = component_class(**default_kwargs)
 
-        (tmp_path / active_user.username / "kb1").mkdir(parents=True, exist_ok=True)
-        (tmp_path / active_user.username / "kb2").mkdir(parents=True, exist_ok=True)
+        await knowledge_base_service.create_record(user_id=active_user.id, name="kb1")
+        await knowledge_base_service.create_record(user_id=active_user.id, name="kb2")
 
         build_config = {"knowledge_base": {"value": "test_kb", "options": []}}
         result = await component.update_build_config(build_config, None, "knowledge_base")
@@ -179,28 +200,32 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
 
     # ---- _get_kb_metadata --------------------------------------------
 
-    def test_get_kb_metadata_happy_path(self, component_class, default_kwargs, active_user):
+    async def test_get_kb_metadata_happy_path(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
-        kb_path = Path(default_kwargs["kb_root_path"]) / active_user.username / default_kwargs["knowledge_base"]
-        metadata = component._get_kb_metadata(kb_path)
+        metadata = await component._get_kb_metadata()
         assert metadata["embedding_provider"] == "HuggingFace"
         assert metadata["embedding_model"] == "sentence-transformers/all-MiniLM-L6-v2"
-        # New-format KBs carry the full selection dict so retrieval can
-        # pass it straight to get_embeddings.
+        # The row carries the full selection dict so retrieval can pass it
+        # straight to get_embeddings.
         assert "model_selection" in metadata
 
-    def test_get_kb_metadata_missing_file_returns_empty(self, component_class, default_kwargs, tmp_path, active_user):
-        component = component_class(**default_kwargs)
+    async def test_get_kb_metadata_without_a_row_returns_empty(
+        self, component_class, default_kwargs, tmp_path, active_user
+    ):
+        """A directory with no row yields no metadata — even with a sidecar present.
+
+        The sidecar is legacy data that only ``langflow reconcile-kb-from-disk``
+        looks at; the component must not resurrect it.
+        """
         ghost = tmp_path / active_user.username / "ghost"
         ghost.mkdir(parents=True, exist_ok=True)
-        assert component._get_kb_metadata(ghost) == {}
+        (ghost / "embedding_metadata.json").write_text(
+            json.dumps({"embedding_provider": "OpenAI", "embedding_model": "m"})
+        )
 
-    def test_get_kb_metadata_corrupt_json_returns_empty(self, component_class, default_kwargs, tmp_path, active_user):
+        default_kwargs["knowledge_base"] = "ghost"
         component = component_class(**default_kwargs)
-        kb_path = tmp_path / active_user.username / "bad_kb"
-        kb_path.mkdir(parents=True, exist_ok=True)
-        (kb_path / "embedding_metadata.json").write_text("{not json")
-        assert component._get_kb_metadata(kb_path) == {}
+        assert await component._get_kb_metadata() == {}
 
     # ---- _resolve_model_selection ------------------------------------
 
@@ -337,10 +362,9 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
     # ---- retrieve_data orchestration ---------------------------------
 
     async def test_retrieve_data_missing_metadata_raises(self, component_class, default_kwargs, tmp_path, active_user):
-        kb_path = tmp_path / active_user.username / default_kwargs["knowledge_base"]
-        metadata_file = kb_path / "embedding_metadata.json"
-        if metadata_file.exists():
-            metadata_file.unlink()
+        """A KB with a directory but no row cannot be retrieved from."""
+        (tmp_path / active_user.username / "rowless_kb").mkdir(parents=True, exist_ok=True)
+        default_kwargs["knowledge_base"] = "rowless_kb"
 
         component = component_class(**default_kwargs)
         with pytest.raises(ValueError, match="Metadata not found"):
@@ -373,6 +397,29 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
             with pytest.raises(ValueError, match=r"User with ID .* not found"):
                 await component.retrieve_data()
 
+    @pytest.mark.parametrize("knowledge_base", ["../../outside", "../victim/secret_kb"])
+    async def test_retrieve_data_rejects_paths_outside_the_current_user_directory(
+        self, component_class, default_kwargs, active_user, knowledge_base
+    ):
+        """A traversing KB *name* is refused when its path is resolved.
+
+        A name like this has no row, so retrieval normally stops at "no
+        metadata" without ever building a path. Seeding a row for the traversing
+        name is what forces path resolution to run — and it must still refuse.
+        """
+        from langflow.api.utils import knowledge_base_service
+
+        await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name=knowledge_base,
+            model_selection={"name": "m", "provider": "HuggingFace"},
+        )
+        default_kwargs["knowledge_base"] = knowledge_base
+        component = component_class(**default_kwargs)
+
+        with pytest.raises(ValueError, match="KB path escapes root directory"):
+            await component.retrieve_data()
+
     async def test_retrieve_data_routes_query_with_scores(
         self,
         component_class,
@@ -404,10 +451,6 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
             patch(
                 "langflow.services.database.models.user.crud.get_user_by_id",
                 return_value=user_record,
-            ),
-            patch(
-                "lfx.components.files_and_knowledge.knowledge._get_knowledge_bases_root_path",
-                return_value=Path(default_kwargs["kb_root_path"]),
             ),
             patch(
                 "lfx.components.files_and_knowledge.knowledge.get_embeddings",
@@ -460,10 +503,6 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
                 return_value=user_record,
             ),
             patch(
-                "lfx.components.files_and_knowledge.knowledge._get_knowledge_bases_root_path",
-                return_value=Path(default_kwargs["kb_root_path"]),
-            ),
-            patch(
                 "lfx.components.files_and_knowledge.knowledge.get_embeddings",
                 return_value=MagicMock(),
             ),
@@ -505,10 +544,6 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
                 return_value=user_record,
             ),
             patch(
-                "lfx.components.files_and_knowledge.knowledge._get_knowledge_bases_root_path",
-                return_value=Path(default_kwargs["kb_root_path"]),
-            ),
-            patch(
                 "lfx.components.files_and_knowledge.knowledge.get_embeddings",
                 return_value=MagicMock(),
             ),
@@ -548,10 +583,6 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
             patch(
                 "langflow.services.database.models.user.crud.get_user_by_id",
                 return_value=user_record,
-            ),
-            patch(
-                "lfx.components.files_and_knowledge.knowledge._get_knowledge_bases_root_path",
-                return_value=Path(default_kwargs["kb_root_path"]),
             ),
             patch(
                 "lfx.components.files_and_knowledge.knowledge.get_embeddings",
@@ -617,10 +648,6 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
             patch(
                 "langflow.services.database.models.user.crud.get_user_by_id",
                 return_value=user_record,
-            ),
-            patch(
-                "lfx.components.files_and_knowledge.knowledge._get_knowledge_bases_root_path",
-                return_value=Path(default_kwargs["kb_root_path"]),
             ),
             patch(
                 "lfx.components.files_and_knowledge.knowledge.get_embeddings",

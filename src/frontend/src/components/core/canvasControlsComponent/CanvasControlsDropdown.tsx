@@ -13,6 +13,10 @@ import { Separator } from "@/components/ui/separator";
 import useFlowStore from "@/stores/flowStore";
 import { AllNodeType } from "@/types/flow";
 import DropdownControlButton from "./DropdownControlButton";
+import {
+  FIT_VIEW_OPTIONS,
+  FIT_VIEW_PADDING_WITH_INSPECTION_PANEL,
+} from "./fit-view-options";
 import { formatZoomPercentage, reactFlowSelector } from "./utils/canvasUtils";
 
 export const KEYBOARD_SHORTCUTS = {
@@ -84,13 +88,15 @@ const CanvasControlsDropdown = ({
 
   const handleFitView = useCallback(() => {
     fitView({
-      padding: {
-        left: "20px",
-        right: inspectionPanelVisible && selectedNode ? "340px" : "20px",
-        top: "80px",
-      },
+      ...FIT_VIEW_OPTIONS,
+      // The inspection panel covers the right of the canvas, so the graph has
+      // to clear it rather than the usual edge padding.
+      padding:
+        inspectionPanelVisible && selectedNode
+          ? FIT_VIEW_PADDING_WITH_INSPECTION_PANEL
+          : FIT_VIEW_OPTIONS.padding,
     });
-  }, [fitView, selectedNode]);
+  }, [fitView, inspectionPanelVisible, selectedNode]);
 
   const handleResetZoom = useCallback(() => {
     zoomTo(1);
@@ -105,9 +111,12 @@ const CanvasControlsDropdown = ({
           className="group flex h-8 items-center justify-center rounded-md px-0.5 hover:bg-muted"
           unstyled
           title={t("canvas.controls")}
+          aria-label={t("canvas.zoomControlAriaLabel", {
+            zoom: formatZoomPercentage(zoom),
+          })}
         >
           <div className="flex items-center justify-center gap-1">
-            <span className="text-sm text-muted-foreground group-hover:text-foreground">
+            <span className="w-11 pl-1.5 text-left text-sm tabular-nums text-muted-foreground group-hover:text-foreground">
               {formatZoomPercentage(zoom)}
             </span>
             <IconComponent

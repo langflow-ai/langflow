@@ -3,7 +3,7 @@ from datetime import datetime
 from types import MethodType  # near the imports
 from typing import TYPE_CHECKING, Any
 
-from langflow.helpers.flow import get_flow_by_id_or_name
+from langflow.helpers.flow import get_flow_by_id_or_name, scoped_model_provider_policy_for_target_flow
 
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
 from lfx.custom.custom_component.component import Component, get_component_toolkit
@@ -146,28 +146,37 @@ class RunFlowBaseComponent(Component):
         if not (flow_name_selected or flow_id_selected):
             msg = "Flow name or id is required"
             raise ValueError(msg)
-        if flow_id_selected and (flow := self._flow_cache_call("get", flow_id=flow_id_selected)):
-            if self._is_cached_flow_up_to_date(flow, updated_at):
-                return flow
-            self._flow_cache_call("delete", flow_id=flow_id_selected)  # stale, delete it
-
-        # TODO: use flow id only
-        flow = await self.get_flow(flow_name_selected=flow_name_selected, flow_id_selected=flow_id_selected)
-        if not flow:
-            msg = "Flow not found"
-            raise ValueError(msg)
-
-        graph = Graph.from_payload(
-            payload=flow.data.get("data", {}),
+        async with scoped_model_provider_policy_for_target_flow(
+            user_id=self.user_id,
             flow_id=flow_id_selected,
             flow_name=flow_name_selected,
-        )
-        graph.description = flow.data.get("description", None)
-        graph.updated_at = flow.data.get("updated_at", None)
+        ):
+            if flow_id_selected and (flow := self._flow_cache_call("get", flow_id=flow_id_selected)):
+                if str(getattr(flow, "flow_id", "")) != str(flow_id_selected):
+                    self._flow_cache_call("delete", flow_id=flow_id_selected)
+                elif self._is_cached_flow_up_to_date(flow, updated_at):
+                    return flow
+                else:
+                    self._flow_cache_call("delete", flow_id=flow_id_selected)  # stale, delete it
 
-        self._flow_cache_call("set", flow=graph)
+            # TODO: use flow id only
+            flow = await self.get_flow(flow_name_selected=flow_name_selected, flow_id_selected=flow_id_selected)
+            if not flow:
+                msg = "Flow not found"
+                raise ValueError(msg)
 
-        return graph
+            graph = Graph.from_payload(
+                payload=flow.data.get("data", {}),
+                flow_id=flow_id_selected or flow.data.get("id"),
+                flow_name=flow_name_selected,
+                user_id=self.user_id,
+            )
+            graph.description = flow.data.get("description", None)
+            graph.updated_at = flow.data.get("updated_at", None)
+
+            self._flow_cache_call("set", flow=graph)
+
+            return graph
 
     ################################################################
     # Flow inputs/config
@@ -532,7 +541,14 @@ class RunFlowBaseComponent(Component):
             )  # may or may not want to create a deepcopy of the graph here
 
             if tweaks := self._build_flow_tweak_data():
-                graph = self._process_tweaks_on_graph(graph, tweaks)
+                from lfx.processing.process import process_tweaks_on_graph
+
+                # These tweaks are this component's own declared inputs, not a
+                # caller overriding the sub-flow, so the deployment policy does
+                # not judge them. Without this, ``off`` would stop the Run Flow
+                # component and every flow used as an agent tool from working.
+                # The protected-field floor still applies.
+                graph = process_tweaks_on_graph(graph, tweaks, caller_supplied=False)
 
             result = await run_flow(
                 inputs=self._build_inputs(tweaks),
@@ -544,7 +560,17 @@ class RunFlowBaseComponent(Component):
                 graph=graph,
             )
 
-        except Exception:  # noqa: BLE001
+        except Exception as exc:
+            from lfx.exceptions.tweaks import TweakRefusedError
+            from lfx.run.hitl import NestedHITLUnsupportedError
+
+            if isinstance(exc, NestedHITLUnsupportedError):
+                raise
+            # A refused tweak is a caller error, not a flow failure. Collapsing it
+            # into a generic RuntimeError would discard the refused field names and
+            # the reason, and the caller would never learn which key was rejected.
+            if isinstance(exc, TweakRefusedError):
+                raise
             msg = f"Error running flow: {self.flow_name_selected}"
             raise RuntimeError(msg) from None
 
@@ -752,17 +778,3 @@ class RunFlowBaseComponent(Component):
             self._attributes["flow_name_selected_updated_at"] = self._cached_flow_updated_at
         # remove stale data from previous toolmode run
         self._attributes.pop("flow_tweak_data", None)
-
-    def _process_tweaks_on_graph(self, graph: Graph, tweaks: dict[str, dict[str, Any]]):
-        # there is a bug with the lfx process_tweaks_on_graph function
-        # that causes it to not persist the tweaks to the graph at runtime.
-        # so we implement a custom version here that fixes the bug.
-        # TODO: make a fast follow-up PR to fix this bug in the existing helper.
-        for vertex in graph.vertices:
-            if not (isinstance(vertex, Vertex) and isinstance(vertex.id, str)):
-                continue
-            if not (node_tweaks := tweaks.get(vertex.id)):
-                continue
-            node_tweaks.pop("code", None)
-            vertex.update_raw_params(node_tweaks, overwrite=True)
-        return graph

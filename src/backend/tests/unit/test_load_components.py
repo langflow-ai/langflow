@@ -146,3 +146,59 @@ class TestComponentLoading:
         with patch("importlib.import_module", side_effect=MaxRetryError(None, "", reason="Connection timeout")):
             result = _process_single_module("lfx.components.test_module")
             assert result is None, "Should return None when MaxRetryError occurs"
+
+    @pytest.mark.no_blockbuster
+    @pytest.mark.asyncio
+    async def test_process_single_module_missing_optional_dep_logs_single_warning(self):
+        """A ModuleNotFoundError during import is an expected condition (optional dependency absent).
+
+        It must produce a single-line warning without a traceback, not an error with exc_info
+        (for example, when a provider extra is absent from a minimal installation).
+        """
+        from unittest.mock import MagicMock, patch
+
+        from lfx.interface.components import _process_single_module
+
+        mock_logger = MagicMock()
+        missing_dep = ModuleNotFoundError("No module named 'litellm'", name="litellm")
+        with (
+            patch("lfx.interface.components.logger", mock_logger),
+            patch("importlib.import_module", side_effect=missing_dep),
+        ):
+            result = _process_single_module("lfx.components.crewai.crewai")
+
+        assert result is None, "Should return None when the optional dependency is missing"
+        mock_logger.error.assert_not_called()
+        mock_logger.warning.assert_called_once()
+        args, kwargs = mock_logger.warning.call_args
+        message = args[0]
+        assert "lfx.components.crewai.crewai" in message
+        assert "litellm" in message
+        assert "exc_info" not in kwargs, "Missing optional dependency must not log a traceback"
+
+    @pytest.mark.no_blockbuster
+    @pytest.mark.asyncio
+    async def test_process_single_module_unexpected_import_error_logs_traceback(self):
+        """Any non-ModuleNotFoundError import failure (syntax error, real bug) must stay loud.
+
+        It should be logged at error level with the full traceback (exc_info=True).
+        """
+        from unittest.mock import MagicMock, patch
+
+        from lfx.interface.components import _process_single_module
+
+        mock_logger = MagicMock()
+        with (
+            patch("lfx.interface.components.logger", mock_logger),
+            patch("importlib.import_module", side_effect=RuntimeError("boom during import")),
+        ):
+            result = _process_single_module("lfx.components.test_module")
+
+        assert result is None, "Should return None when an unexpected exception occurs"
+        mock_logger.warning.assert_not_called()
+        mock_logger.error.assert_called_once()
+        args, kwargs = mock_logger.error.call_args
+        message = args[0]
+        assert "lfx.components.test_module" in message
+        assert "boom during import" in message
+        assert kwargs.get("exc_info") is True, "Unexpected import failures must keep the full traceback"

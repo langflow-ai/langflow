@@ -1,15 +1,15 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
+import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
+import CustomModelProvidersEmptyState from "@/customization/components/custom-model-providers-empty-state";
+import type { ModelTypeFilter } from "@/types/models";
 import ProviderListItem from "./ProviderListItem";
 import { Provider } from "./types";
 
-// Supported model types for filtering providers
-type ModelType = "llm" | "embeddings" | "all";
-
-export interface ProviderListProps {
-  modelType: ModelType;
+export interface ProviderListProps extends ProviderScopeParams {
+  modelType: ModelTypeFilter;
   onProviderSelect?: (provider: Provider) => void;
   selectedProviderName?: string | null;
   /** Case-insensitive substring filter applied to the provider name. */
@@ -21,13 +21,22 @@ const ProviderList = ({
   onProviderSelect,
   selectedProviderName,
   query,
+  flowId,
+  projectId,
 }: ProviderListProps) => {
   const { t } = useTranslation();
   const {
     data: rawProviders = [],
     isLoading,
     isFetching,
-  } = useGetModelProviders({ includeDeprecated: true });
+    fetchStatus,
+    isError,
+  } = useGetModelProviders({
+    includeDeprecated: true,
+    flowId,
+    projectId,
+    purpose: "configure",
+  });
 
   const trimmedQuery = (query ?? "").trim().toLowerCase();
 
@@ -54,6 +63,7 @@ const ProviderList = ({
           model_count: matchingModels.length,
           models: matchingModels,
           api_docs_url: provider.api_docs_url,
+          live_discovery: provider.live_discovery,
         };
       });
   }, [rawProviders, modelType, trimmedQuery]);
@@ -63,7 +73,7 @@ const ProviderList = ({
   };
 
   const isLoadingProviders =
-    isLoading || (isFetching && filteredProviders.length === 0);
+    isLoading || isFetching || fetchStatus === "paused";
 
   if (isLoadingProviders) {
     return (
@@ -72,6 +82,18 @@ const ProviderList = ({
         data-testid="provider-list-loading"
       >
         <LoadingTextComponent text={t("modelProviders.loadingProviders")} />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div
+        role="alert"
+        className="text-muted-foreground px-4 py-2 text-sm"
+        data-testid="provider-list-error"
+      >
+        {t("modelProviders.errorUnexpected")}
       </div>
     );
   }
@@ -90,17 +112,22 @@ const ProviderList = ({
   }
 
   return (
-    <div className="flex flex-col gap-1" data-testid="provider-list">
-      {filteredProviders.map((provider) => (
-        <ProviderListItem
-          key={provider.provider}
-          provider={provider}
-          showIcon={selectedProviderName !== null}
-          isSelected={selectedProviderName === provider.provider}
-          onSelect={handleProviderSelect}
-        />
-      ))}
-    </div>
+    <CustomModelProvidersEmptyState
+      kind="providers"
+      show={filteredProviders.length === 0}
+    >
+      <div className="flex flex-col gap-1" data-testid="provider-list">
+        {filteredProviders.map((provider) => (
+          <ProviderListItem
+            key={provider.provider}
+            provider={provider}
+            showIcon={selectedProviderName !== null}
+            isSelected={selectedProviderName === provider.provider}
+            onSelect={handleProviderSelect}
+          />
+        ))}
+      </div>
+    </CustomModelProvidersEmptyState>
   );
 };
 

@@ -1,24 +1,15 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test.describe("Token Usage Tracking", () => {
   test(
     "node badge should show token count after running an LLM flow",
     { tag: ["@release", "@workspace", "@components"] },
     async ({ page }) => {
-      if (!process.env.CI) {
-        dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-      }
-
-      test.skip(
-        !process?.env?.OPENAI_API_KEY,
-        "OPENAI_API_KEY required to run this test",
-      );
-
+      await seedLoopbackProvider(page);
       await awaitBootstrapTest(page);
 
       await page.getByTestId("side_nav_options_all-templates").click();
@@ -29,7 +20,7 @@ test.describe("Token Usage Tracking", () => {
         timeout: 100000,
       });
 
-      await initialGPTsetup(page);
+      await configureLoopbackOpenAI(page);
 
       await page
         .getByRole("button", { name: TEXTS.playground, exact: true })
@@ -64,15 +55,7 @@ test.describe("Token Usage Tracking", () => {
     "chat message should show token count alongside run duration",
     { tag: ["@release", "@workspace", "@components"] },
     async ({ page }) => {
-      if (!process.env.CI) {
-        dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-      }
-
-      test.skip(
-        !process?.env?.OPENAI_API_KEY,
-        "OPENAI_API_KEY required to run this test",
-      );
-
+      await seedLoopbackProvider(page);
       await awaitBootstrapTest(page);
 
       await page.getByTestId("side_nav_options_all-templates").click();
@@ -83,7 +66,7 @@ test.describe("Token Usage Tracking", () => {
         timeout: 100000,
       });
 
-      await initialGPTsetup(page);
+      await configureLoopbackOpenAI(page);
 
       await page
         .getByRole("button", { name: TEXTS.playground, exact: true })
@@ -111,6 +94,12 @@ test.describe("Token Usage Tracking", () => {
         .getByTestId("chat-message-token-usage")
         .textContent();
       expect(tokenText?.trim()).toMatch(/^\d/);
+
+      // Run duration is shown alongside the token usage (folds in the
+      // regular-playground regression that lived in shareable-playground-token-display).
+      await expect(page.getByText("Finished in")).toBeVisible({
+        timeout: 30000,
+      });
     },
   );
 });

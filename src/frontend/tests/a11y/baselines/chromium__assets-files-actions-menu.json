@@ -1,0 +1,17 @@
+{
+  "label": "chromium__assets-files-actions-menu",
+  "description": "KNOWN a11y debt (tracked, not accepted as correct). The open Radix DropdownMenu portals its content to <body>, which sits outside any landmark, so IBM reports aria_content_in_landmark. This is an app-wide Radix limitation (menus, unlike aria-modal dialogs, are not landmark-exempt) and <main> is overflow-hidden so the menu cannot simply portal into it. Delete this file to resurface the violation in tests/a11y/files.a11y.spec.ts ('scans open row actions menu').",
+  "results": [
+    {
+      "ruleId": "aria_content_in_landmark",
+      "reasonId": "Fail_1",
+      "level": "violation",
+      "message": "Content is not within a landmark element",
+      "path": {
+        "dom": "/html[1]/body[1]/div[2]/div[1]",
+        "aria": "/document[1]/menu[1]"
+      },
+      "value": ["VIOLATION", "FAIL"]
+    }
+  ]
+}

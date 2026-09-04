@@ -1,14 +1,19 @@
-import { type Page } from "@playwright/test";
 import { expect } from "../fixtures";
-import { TEXTS } from "../utils/constants/texts";
+import { createActiveUserViaApi } from "./auth/manage-users-via-api";
+import { TEXTS } from "./constants/texts";
 import { waitForNewProjectButton } from "./flow/new-project-flow";
-export const addNewUserAndLogin = async (page: Page) => {
+import type { LangflowPage } from "./types";
+
+export const addNewUserAndLogin = async (page: LangflowPage) => {
   await page.route("**/api/v1/auto_login", (route) => {
     route.fulfill({
-      status: 500,
+      status: 403,
       contentType: "application/json",
       body: JSON.stringify({
-        detail: { auto_login: false },
+        detail: {
+          message: "Auto login is disabled.",
+          auto_login: false,
+        },
       }),
     });
   });
@@ -32,7 +37,7 @@ export const addNewUserAndLogin = async (page: Page) => {
 
   await page.goto("/");
 
-  await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+  await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
     timeout: 30000,
   });
 
@@ -41,7 +46,7 @@ export const addNewUserAndLogin = async (page: Page) => {
     .fill(TEXTS.authDefaultCredential);
   await page
     .getByPlaceholder(TEXTS.placeholderPassword)
-    .fill(TEXTS.authDefaultCredential);
+    .fill(TEXTS.authDefaultPassword);
 
   await page.evaluate(() => {
     sessionStorage.removeItem("testMockAutoLogin");
@@ -64,32 +69,11 @@ export const addNewUserAndLogin = async (page: Page) => {
 
   await waitForNewProjectButton(page);
 
-  await page.getByTestId("user-profile-settings").click();
-
-  await page.getByText("Admin Page", { exact: true }).click();
-
-  //CRUD an user
-  await page.getByText("New User", { exact: true }).click();
-
-  await page
-    .getByPlaceholder(TEXTS.placeholderUsername)
-    .last()
-    .fill(randomName);
-  await page.locator('input[name="password"]').fill(randomPassword);
-  await page.locator('input[name="confirmpassword"]').fill(randomPassword);
-
-  await page.waitForSelector("#is_active", {
-    timeout: 1500,
-  });
-
-  await page.locator("#is_active").click();
-
-  await page.getByText(TEXTS.save, { exact: true }).click();
-
-  await page.waitForSelector("text=new user added", { timeout: 30000 });
-
-  await expect(page.getByText(randomName, { exact: true })).toBeVisible({
-    timeout: 2000,
+  // OSS no longer ships the Admin Page UI; create the user through the
+  // authenticated superuser API instead.
+  await createActiveUserViaApi(page, {
+    username: randomName,
+    password: randomPassword,
   });
 
   await page.waitForSelector("[data-testid='user-profile-settings']", {
@@ -104,16 +88,12 @@ export const addNewUserAndLogin = async (page: Page) => {
 
   await page.getByText(TEXTS.logout, { exact: true }).click();
 
-  await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+  await expect(page.getByRole("button", { name: TEXTS.signIn })).toBeVisible({
     timeout: 30000,
   });
 
   await page.getByPlaceholder(TEXTS.placeholderUsername).fill(randomName);
   await page.getByPlaceholder(TEXTS.placeholderPassword).fill(randomPassword);
-
-  await page.waitForSelector("text=Sign in", {
-    timeout: 1500,
-  });
 
   await page.getByRole("button", { name: TEXTS.signIn }).click();
 

@@ -168,13 +168,18 @@ class TestCORSConfiguration:
     @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
     @patch("langflow.main.get_settings_service")
     @patch("langflow.main.logger")
-    def test_cors_wildcard_credentials_runtime_check_current_behavior(
+    def test_cors_wildcard_credentials_disabled_at_middleware(
         self, mock_logger, mock_get_settings, mock_add_sentry_middleware
     ):
-        """Test runtime validation prevents wildcard with credentials (current behavior)."""
+        """Wildcard CORS origins must NOT be paired with credentials at the middleware.
+
+        Even though the setting defaults to credentials=True, a wildcard origin makes
+        the credentialed-CORS combination unsafe (and invalid per the spec), so the
+        middleware must be configured with allow_credentials=False.
+        """
         from langflow.main import create_app
 
-        # Mock settings with configuration that triggers current security measure
+        # Mock settings with the insecure wildcard + credentials combination.
         mock_settings = MagicMock()
         mock_settings.settings.cors_origins = "*"
         mock_settings.settings.cors_allow_credentials = True  # Gets disabled for security
@@ -189,15 +194,13 @@ class TestCORSConfiguration:
         mock_add_sentry_middleware.return_value = None  # Use the mock
         app = create_app()
 
-        # Check that warning was logged about deprecation/security
-        # The actual warning message is different from what we expected
+        # The permissive-defaults warning still fires (the setting is unchanged).
         warning_calls = [str(call) for call in mock_logger.warning.call_args_list]
-        # We expect warnings about the insecure configuration - check for the actual message
         assert any("CORS" in str(call) and "permissive" in str(call) for call in warning_calls), (
             f"Expected CORS security warning but got: {warning_calls}"
         )
 
-        # Find CORS middleware and verify credentials are still allowed (current insecure behavior)
+        # Find CORS middleware and verify credentials were force-disabled for the wildcard.
         cors_middleware = None
         for middleware in app.user_middleware:
             if middleware.cls == CORSMiddleware:
@@ -206,16 +209,123 @@ class TestCORSConfiguration:
 
         assert cors_middleware is not None
         assert cors_middleware.kwargs["allow_origins"] == "*"
-        assert cors_middleware.kwargs["allow_credentials"] is True  # Current behavior: NOT disabled (insecure!)
+        assert cors_middleware.kwargs["allow_credentials"] is False  # wildcard => credentials disabled
 
-        # Warn about the security implications
-        warnings.warn(
-            "CRITICAL SECURITY WARNING: Current behavior allows wildcard origins WITH CREDENTIALS ENABLED! "
-            "This is a severe security vulnerability. Any website can make authenticated requests. "
-            "In v1.7, this will be changed to secure defaults with specific origins only.",
-            UserWarning,
-            stacklevel=2,
+        # The override must be surfaced so an operator who set credentials on purpose
+        # can see why credentialed requests stopped working.
+        assert any(
+            "CORS" in str(call) and "wildcard" in str(call) and "credentials" in str(call) for call in warning_calls
+        ), f"Expected a wildcard-credentials override warning but got: {warning_calls}"
+
+    @pytest.mark.parametrize(
+        ("origins", "expected"),
+        [
+            ("*", True),
+            (["*"], True),
+            (["https://app.example.com", "*"], True),
+            ("https://app.example.com", False),
+            (["https://app.example.com"], False),
+            (["https://a.example.com", "https://b.example.com"], False),
+            ([], False),
+        ],
+    )
+    def test_cors_origins_contain_wildcard(self, origins, expected):
+        """The shared wildcard predicate detects every wildcard origin shape."""
+        from langflow.main import cors_origins_contain_wildcard
+
+        assert cors_origins_contain_wildcard(origins) is expected
+
+    @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
+    @patch("langflow.main.get_settings_service")
+    @patch("langflow.main.logger")
+    def test_cors_list_wildcard_credentials_disabled_and_warned(
+        self, mock_logger, mock_get_settings, mock_add_sentry_middleware
+    ):
+        """A wildcard mixed into a list of specific origins must still disable credentials and warn.
+
+        This is the gap the string-only check missed: ``LANGFLOW_CORS_ORIGINS="https://app.com,*"``
+        parses to ``["https://app.com", "*"]``. Credentials must be force-disabled, and both the
+        permissive-defaults warning and the explicit override warning must fire so the operator is
+        not left guessing why credentialed requests stopped working.
+        """
+        from langflow.main import create_app
+
+        mock_settings = MagicMock()
+        mock_settings.settings.cors_origins = ["https://app.example.com", "*"]
+        mock_settings.settings.cors_allow_credentials = True  # Gets disabled for security
+        mock_settings.settings.cors_allow_methods = "*"
+        mock_settings.settings.cors_allow_headers = "*"
+        mock_settings.settings.prometheus_enabled = False
+        mock_settings.settings.mcp_server_enabled = False
+        mock_settings.settings.sentry_dsn = None  # Disable Sentry
+        mock_get_settings.return_value = mock_settings
+
+        mock_add_sentry_middleware.return_value = None  # Use the mock
+        app = create_app()
+
+        warning_calls = [str(call) for call in mock_logger.warning.call_args_list]
+        # The shared predicate now makes the permissive-defaults warning fire for list-form wildcards.
+        assert any("CORS" in str(call) and "permissive" in str(call) for call in warning_calls), (
+            f"Expected CORS permissive-defaults warning but got: {warning_calls}"
         )
+        # And the explicit override warning points at the wildcard as the cause.
+        assert any(
+            "CORS" in str(call) and "wildcard" in str(call) and "credentials" in str(call) for call in warning_calls
+        ), f"Expected a wildcard-credentials override warning but got: {warning_calls}"
+
+        cors_middleware = None
+        for middleware in app.user_middleware:
+            if middleware.cls == CORSMiddleware:
+                cors_middleware = middleware
+                break
+
+        assert cors_middleware is not None
+        assert cors_middleware.kwargs["allow_origins"] == ["https://app.example.com", "*"]
+        assert cors_middleware.kwargs["allow_credentials"] is False  # wildcard in list => credentials disabled
+
+    @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
+    @patch("langflow.main.get_settings_service")
+    @patch("langflow.main.logger")
+    def test_cors_wildcard_without_credentials_no_override_warning(
+        self, mock_logger, mock_get_settings, mock_add_sentry_middleware
+    ):
+        """When credentials are already off, a wildcard origin must not log a spurious override warning.
+
+        The override warning is only meaningful when we actually flip ``allow_credentials`` from True
+        to False; otherwise there is nothing to surface.
+        """
+        from langflow.main import create_app
+
+        mock_settings = MagicMock()
+        mock_settings.settings.cors_origins = "*"
+        mock_settings.settings.cors_allow_credentials = False  # already disabled by the operator
+        mock_settings.settings.cors_allow_methods = "*"
+        mock_settings.settings.cors_allow_headers = "*"
+        mock_settings.settings.prometheus_enabled = False
+        mock_settings.settings.mcp_server_enabled = False
+        mock_settings.settings.sentry_dsn = None  # Disable Sentry
+        mock_get_settings.return_value = mock_settings
+
+        mock_add_sentry_middleware.return_value = None  # Use the mock
+        app = create_app()
+
+        warning_calls = [str(call) for call in mock_logger.warning.call_args_list]
+        # No credentials => no permissive-defaults warning and no override warning.
+        assert not any("permissive" in str(call) for call in warning_calls), (
+            f"Did not expect a permissive-defaults warning but got: {warning_calls}"
+        )
+        assert not any("disabling credentials" in str(call) for call in warning_calls), (
+            f"Did not expect a wildcard-credentials override warning but got: {warning_calls}"
+        )
+
+        cors_middleware = None
+        for middleware in app.user_middleware:
+            if middleware.cls == CORSMiddleware:
+                cors_middleware = middleware
+                break
+
+        assert cors_middleware is not None
+        assert cors_middleware.kwargs["allow_credentials"] is False
 
 
 class TestRefreshTokenSecurity:
@@ -328,34 +438,30 @@ class TestRefreshTokenSecurity:
                         # user_id is converted to string in JWT payload, then back to UUID in service
                         mock_create_tokens.assert_called_once_with(str(user_id), mock_db)
 
-    def test_refresh_token_samesite_setting_current_behavior(self):
-        """Test current refresh token SameSite settings (warns about security)."""
+    def test_refresh_cookie_defaults_support_same_site_http(self):
+        """Refresh cookies use the same safe, HTTP-compatible defaults as access cookies."""
         from lfx.services.settings.auth import AuthSettings
 
         with tempfile.TemporaryDirectory() as temp_dir, patch.dict(os.environ, {"LANGFLOW_CONFIG_DIR": temp_dir}):
             auth_settings = AuthSettings(CONFIG_DIR=temp_dir)
-            # Current behavior: refresh token uses 'none' (allows cross-site)
-            assert auth_settings.REFRESH_SAME_SITE == "none"  # Current: allows cross-site (less secure)
-            assert auth_settings.ACCESS_SAME_SITE == "lax"  # Access token is already lax (good)
+            assert auth_settings.REFRESH_SAME_SITE == "lax"
+            assert auth_settings.REFRESH_SECURE is False
+            assert auth_settings.ACCESS_SAME_SITE == "lax"
+            assert auth_settings.ACCESS_SECURE is False
+            assert auth_settings.ACCESS_HTTPONLY is True
 
-            # Warn about security implications
-            warnings.warn(
-                "SECURITY WARNING: Refresh tokens currently use SameSite=none which allows "
-                "cross-site requests. This should be changed to 'lax' or 'strict' in production. "
-                "In v1.7, this will default to 'lax' for better security.",
-                UserWarning,
-                stacklevel=2,
+    def test_refresh_cookie_cross_site_https_can_be_enabled(self):
+        """Operators can retain cross-site HTTPS refresh cookies explicitly."""
+        from lfx.services.settings.auth import AuthSettings
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            auth_settings = AuthSettings(
+                CONFIG_DIR=temp_dir,
+                REFRESH_SAME_SITE="none",
+                REFRESH_SECURE=True,
             )
-
-    @pytest.mark.skip(reason="Uncomment in v1.7 - represents future secure SameSite behavior")
-    def test_refresh_token_samesite_setting_future_secure(self):
-        """Test future secure refresh token SameSite settings (skip until v1.7)."""
-        # Future secure behavior (uncomment in v1.7):
-        # from langflow.services.settings.auth import AuthSettings
-        # with tempfile.TemporaryDirectory() as temp_dir, patch.dict(os.environ, {"LANGFLOW_CONFIG_DIR": temp_dir}):
-        #     auth_settings = AuthSettings(CONFIG_DIR=temp_dir)
-        #     assert auth_settings.REFRESH_SAME_SITE == "lax"  # Secure default
-        #     assert auth_settings.ACCESS_SAME_SITE == "lax"
+            assert auth_settings.REFRESH_SAME_SITE == "none"
+            assert auth_settings.REFRESH_SECURE is True
 
 
 class TestCORSIntegration:

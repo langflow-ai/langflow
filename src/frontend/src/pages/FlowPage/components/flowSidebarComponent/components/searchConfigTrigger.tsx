@@ -15,7 +15,11 @@ export const SearchConfigTrigger = ({
   const { t } = useTranslation();
   return (
     <div className="flex items-center justify-center">
-      <ShadTooltip content={t("sidebar.componentSettings")} styleClasses="z-50">
+      <ShadTooltip
+        content={t("sidebar.componentSettings")}
+        styleClasses="z-50"
+        ariaDescribedBy={undefined}
+      >
         <Button
           variant={showConfig ? "ghostActive" : "ghost"}
           size="iconMd"
@@ -23,6 +27,8 @@ export const SearchConfigTrigger = ({
           onClick={() => setShowConfig(!showConfig)}
           className="hover:text-primary text-muted-foreground"
           style={{ padding: "0px" }}
+          aria-label={t("sidebar.componentSettings")}
+          aria-expanded={showConfig}
         >
           <ForwardedIconComponent name="Settings2" className="h-4 w-4" />
         </Button>

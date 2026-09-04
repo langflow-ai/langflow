@@ -4,6 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
+from sqlalchemy.orm.exc import StaleDataError
 from sqlmodel import col, delete, select
 
 from langflow.api.utils import DbSession, custom_params
@@ -19,7 +20,12 @@ from langflow.services.database.models.message.crud import (
     get_message_for_user,
     get_messages_for_user_by_session,
 )
-from langflow.services.database.models.message.model import MessageRead, MessageTable, MessageUpdate
+from langflow.services.database.models.message.model import (
+    ALLOWED_MESSAGE_ORDER_FIELDS,
+    MessageRead,
+    MessageTable,
+    MessageUpdate,
+)
 from langflow.services.database.models.transactions.crud import transform_transaction_table_for_logs
 from langflow.services.database.models.transactions.model import TransactionLogsResponse, TransactionTable
 from langflow.services.database.models.user.model import User
@@ -37,6 +43,14 @@ from langflow.services.tracing.langfuse import (
 )
 
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
+
+MESSAGE_UPDATE_FAILED = "Could not update the message."
+
+
+async def _log_message_update_failure(error: Exception) -> None:
+    from lfx.log.logger import logger
+
+    await logger.aerror("Message update failed", error_type=type(error).__name__)
 
 
 @router.get("/job_queue", dependencies=[Depends(get_current_active_superuser)])
@@ -224,9 +238,13 @@ async def get_messages(
     current_user: Annotated[User, Depends(get_current_active_user)],
     flow_id: Annotated[UUID | None, Query()] = None,
     session_id: Annotated[str | None, Query()] = None,
+    end_user_id: Annotated[str | None, Query()] = None,
     sender: Annotated[str | None, Query()] = None,
     sender_name: Annotated[str | None, Query()] = None,
     order_by: Annotated[str | None, Query()] = "timestamp",
+    order: Annotated[str, Query()] = "ASC",
+    limit: Annotated[int | None, Query(ge=0)] = None,
+    offset: Annotated[int | None, Query(ge=0)] = None,
 ) -> list[MessageResponse]:
     try:
         # When a flow_id is provided, gate on flow READ permission first; the
@@ -250,15 +268,34 @@ async def get_messages(
 
             decoded_session_id = unquote(session_id)
             stmt = stmt.where(MessageTable.session_id == decoded_session_id)
+        if end_user_id:
+            # Serving-plane: pull one end user's messages by the indexed owner column. Derive the
+            # raw id to the same UUID the write stamped (D6 / resolve_message_owner_id) so the
+            # predicate matches. Optional + off by default -> existing callers are unchanged (BC).
+            from lfx.memory.flow_context import derive_message_owner_uuid
+
+            stmt = stmt.where(MessageTable.user_id == derive_message_owner_uuid(end_user_id))
         if sender:
             stmt = stmt.where(MessageTable.sender == sender)
         if sender_name:
             stmt = stmt.where(MessageTable.sender_name == sender_name)
+        normalized_order = order.upper()
+        if normalized_order not in {"ASC", "DESC"}:
+            raise HTTPException(status_code=400, detail=f"Invalid order direction: {order}")
         if order_by:
-            order_col = getattr(MessageTable, order_by).asc()
+            if order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
+                raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
+            order_col = getattr(MessageTable, order_by)
+            order_col = order_col.desc() if normalized_order == "DESC" else order_col.asc()
             stmt = stmt.order_by(order_col)
+        if limit:
+            stmt = stmt.limit(limit)
+        if offset:
+            stmt = stmt.offset(offset)
         messages = await session.exec(stmt)
         return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -289,13 +326,17 @@ async def update_message(
     background_tasks: BackgroundTasks,
     current_user: Annotated[User, Depends(get_current_active_user)],
 ):
+    # Rollback expires ORM state, so keep the ownership key as a stable scalar
+    # for the post-race lookup.
+    current_user_id = current_user.id
     try:
         # Fetch is scoped by user ownership. A foreign message ID resolves to
         # None so callers receive the same 404 as a non-existent message.
         # This avoids leaking whether another user's message exists.
-        db_message = await get_message_for_user(session, current_user.id, message_id)
+        db_message = await get_message_for_user(session, current_user_id, message_id)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        await _log_message_update_failure(e)
+        raise HTTPException(status_code=500, detail=MESSAGE_UPDATE_FAILED) from e
 
     if not db_message:
         # Intentionally return 404 for both "not found" and "not owned".
@@ -304,9 +345,11 @@ async def update_message(
     # Bind the parent flow's authorization to message writes so a viewer-role
     # user cannot edit messages on a flow they only have READ on.
     if db_message.flow_id is not None:
-        await _ensure_flow_action_or_404(
+        db_flow = await _ensure_flow_action_or_404(
             session, flow_id=db_message.flow_id, user=current_user, action=FlowAction.WRITE
         )
+        if db_flow is None:
+            raise HTTPException(status_code=404, detail="Message not found")
 
     try:
         previous_positive_feedback = _get_positive_feedback_value(db_message)
@@ -318,8 +361,23 @@ async def update_message(
         session.add(db_message)
         await session.flush()
         await session.refresh(db_message)
+    except StaleDataError as e:
+        # A flow/session cleanup can delete the row after the ownership lookup.
+        # Recover the failed transaction, then re-check through the same
+        # owner-scoped query so missing and foreign IDs remain indistinguishable.
+        try:
+            await session.rollback()
+            current_db_message = await get_message_for_user(session, current_user_id, message_id)
+        except Exception as recheck_error:
+            await _log_message_update_failure(recheck_error)
+            raise HTTPException(status_code=500, detail=MESSAGE_UPDATE_FAILED) from recheck_error
+        if current_db_message is None:
+            raise HTTPException(status_code=404, detail="Message not found") from e
+        await _log_message_update_failure(e)
+        raise HTTPException(status_code=500, detail=MESSAGE_UPDATE_FAILED) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        await _log_message_update_failure(e)
+        raise HTTPException(status_code=500, detail=MESSAGE_UPDATE_FAILED) from e
 
     current_positive_feedback = _get_positive_feedback_value(db_message)
     langfuse_trace_id = _resolve_langfuse_trace_id(db_message)
@@ -490,6 +548,11 @@ async def delete_messages_sessions(
     }
 
 
+def _compute_shared_message_flow_id(user_id: UUID, source_flow_id: UUID) -> UUID:
+    """Derive the authenticated user's virtual flow ID for shared-message storage."""
+    return compute_virtual_flow_id(user_id, source_flow_id, principal_type="user")
+
+
 @router.get("/messages/shared/sessions")
 async def get_shared_message_sessions(
     session: DbSession,
@@ -502,7 +565,7 @@ async def get_shared_message_sessions(
     original flow ID. Only messages stored under this virtual flow_id are returned.
     """
     try:
-        virtual_flow_id = compute_virtual_flow_id(current_user.id, source_flow_id)
+        virtual_flow_id = _compute_shared_message_flow_id(current_user.id, source_flow_id)
         stmt = select(MessageTable.session_id).distinct()
         stmt = stmt.where(MessageTable.flow_id == virtual_flow_id)
         stmt = stmt.where(col(MessageTable.session_id).isnot(None))
@@ -520,6 +583,9 @@ async def get_shared_messages(
     source_flow_id: Annotated[UUID, Query(description="The original public flow ID")],
     session_id: Annotated[str | None, Query()] = None,
     order_by: Annotated[str | None, Query()] = "timestamp",
+    order: Annotated[str, Query()] = "ASC",
+    limit: Annotated[int | None, Query(ge=0)] = None,
+    offset: Annotated[int | None, Query(ge=0)] = None,
 ) -> list[MessageResponse]:
     """Get messages for a shared/public flow, scoped to the authenticated user.
 
@@ -527,7 +593,7 @@ async def get_shared_messages(
     original flow ID. Only messages stored under this virtual flow_id are returned.
     """
     try:
-        virtual_flow_id = compute_virtual_flow_id(current_user.id, source_flow_id)
+        virtual_flow_id = _compute_shared_message_flow_id(current_user.id, source_flow_id)
         stmt = select(MessageTable)
         stmt = stmt.where(MessageTable.flow_id == virtual_flow_id)
 
@@ -536,12 +602,19 @@ async def get_shared_messages(
 
             decoded_session_id = unquote(session_id)
             stmt = stmt.where(MessageTable.session_id == decoded_session_id)
-        allowed_order_fields = {"timestamp", "sender", "sender_name", "session_id", "text"}
+        normalized_order = order.upper()
+        if normalized_order not in {"ASC", "DESC"}:
+            raise HTTPException(status_code=400, detail=f"Invalid order direction: {order}")
         if order_by:
-            if order_by not in allowed_order_fields:
+            if order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
                 raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
-            order_col = getattr(MessageTable, order_by).asc()
+            order_col = getattr(MessageTable, order_by)
+            order_col = order_col.desc() if normalized_order == "DESC" else order_col.asc()
             stmt = stmt.order_by(order_col)
+        if limit:
+            stmt = stmt.limit(limit)
+        if offset:
+            stmt = stmt.offset(offset)
 
         messages = await session.exec(stmt)
         return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
@@ -560,7 +633,7 @@ async def delete_shared_messages_session(
 ):
     """Delete messages for a session on a shared/public flow, scoped to the authenticated user."""
     try:
-        virtual_flow_id = compute_virtual_flow_id(current_user.id, source_flow_id)
+        virtual_flow_id = _compute_shared_message_flow_id(current_user.id, source_flow_id)
         stmt = (
             delete(MessageTable)
             .where(MessageTable.flow_id == virtual_flow_id)
@@ -582,7 +655,7 @@ async def update_shared_message(
 ):
     """Update a message on a shared/public flow, scoped to the authenticated user."""
     try:
-        virtual_flow_id = compute_virtual_flow_id(current_user.id, source_flow_id)
+        virtual_flow_id = _compute_shared_message_flow_id(current_user.id, source_flow_id)
         db_message = (
             await session.exec(
                 select(MessageTable).where(
@@ -620,7 +693,7 @@ async def rename_shared_session(
 ) -> list[MessageResponse]:
     """Rename a session on a shared/public flow, scoped to the authenticated user."""
     try:
-        virtual_flow_id = compute_virtual_flow_id(current_user.id, source_flow_id)
+        virtual_flow_id = _compute_shared_message_flow_id(current_user.id, source_flow_id)
         stmt = select(MessageTable).where(
             MessageTable.flow_id == virtual_flow_id,
             MessageTable.session_id == old_session_id,

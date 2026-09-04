@@ -5,6 +5,7 @@ update_component_field_value, and list_component_fields.
 """
 
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
@@ -207,8 +208,11 @@ class TestUpdateComponentFieldValue:
         db_flow = MagicMock()
         db_flow.user_id = UUID(USER_ID)
         db_flow.data = flow.data.copy()
+        previous_updated_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        db_flow.updated_at = previous_updated_at
 
         mock_session = AsyncMock()
+        mock_session.add = MagicMock()
         mock_session.get = AsyncMock(return_value=db_flow)
         mock_session.commit = AsyncMock()
         mock_session.refresh = AsyncMock()
@@ -233,6 +237,8 @@ class TestUpdateComponentFieldValue:
         assert result["success"] is True
         assert result["old_value"] == "hello"
         assert result["new_value"] == "new_value"
+        assert db_flow.updated_at > previous_updated_at
+        assert db_flow.updated_at.tzinfo is timezone.utc
 
     @pytest.mark.asyncio
     async def test_should_return_error_for_missing_component(self):
@@ -285,6 +291,39 @@ class TestUpdateComponentFieldValue:
 
         assert result["success"] is False
         assert "permission" in result["error"].lower()
+
+    async def test_should_reject_update_when_fresh_database_row_is_locked(self):
+        """The direct MCP DB path must honor a lock acquired after lookup."""
+        flow = _make_flow()
+        flow.locked = False
+        db_flow = MagicMock()
+        db_flow.user_id = UUID(USER_ID)
+        db_flow.locked = True
+
+        mock_session = AsyncMock()
+        mock_session.get = AsyncMock(return_value=db_flow)
+
+        @asynccontextmanager
+        async def mock_scope():
+            yield mock_session
+
+        with (
+            patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=flow),
+            patch(f"{MODULE}.session_scope", mock_scope),
+            patch(f"{MODULE}.logger", _mock_logger()),
+        ):
+            result = await update_component_field_value(
+                "test-flow",
+                "comp-1",
+                "input_value",
+                "blocked value",
+                USER_ID,
+            )
+
+        assert result["success"] is False
+        assert result["error"] == "Flow is locked. Unlock it before making changes."
+        mock_session.refresh.assert_awaited_once_with(db_flow, with_for_update=True)
+        mock_session.commit.assert_not_awaited()
 
 
 class TestListComponentFields:

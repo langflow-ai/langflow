@@ -23,7 +23,7 @@ export function ChatHeaderActions({
   }
 
   const actionButtonClasses =
-    "h-8 w-8 p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors overflow-hidden no-focus-visible";
+    "h-8 w-8 p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded transition-colors overflow-hidden focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-2";
 
   return (
     <div className="relative flex items-center gap-2 w-20 justify-end">

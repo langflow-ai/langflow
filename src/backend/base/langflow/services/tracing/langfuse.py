@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import contextlib
 import os
 import threading
 from collections import OrderedDict
+from functools import cache
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -25,6 +27,59 @@ if TYPE_CHECKING:
 
 
 LANGFUSE_FEEDBACK_SCORE_NAME = "user-feedback"
+
+
+def _normalize_boundary_messages(value: Any) -> Any:
+    """Replace Langflow messages with their text while preserving container shape."""
+    from lfx.schema.message import Message
+
+    if isinstance(value, Message):
+        return value.get_text()
+    if isinstance(value, dict):
+        return {key: _normalize_boundary_messages(item) for key, item in value.items()}
+    if isinstance(value, list | tuple):
+        return [_normalize_boundary_messages(item) for item in value]
+    return value
+
+
+def _serialize_component_boundary(component_output: Any) -> Any:
+    """Collapse a sole component output and normalize Langflow messages to text."""
+    value = (
+        next(iter(component_output.values()))
+        if isinstance(component_output, dict) and len(component_output) == 1
+        else component_output
+    )
+    return serialize(_normalize_boundary_messages(value))
+
+
+def _trace_boundary_value(
+    component_values: dict[str, Any],
+    boundary_traces: dict[str, str],
+    *,
+    fallback_component_values: dict[str, Any] | None = None,
+    prefer_fallback_trace_ids: set[str] | None = None,
+) -> tuple[bool, Any]:
+    """Return marked graph-boundary outputs in deterministic component-id order."""
+    values = []
+    prefer_fallback_trace_ids = prefer_fallback_trace_ids or set()
+    for trace_id, trace_name in sorted(boundary_traces.items()):
+        sources = (
+            (fallback_component_values, component_values)
+            if trace_id in prefer_fallback_trace_ids
+            else (component_values, fallback_component_values)
+        )
+        for source in sources:
+            if source is None or trace_name not in source:
+                continue
+            component_value = source[trace_name]
+            if isinstance(component_value, dict) and not component_value:
+                continue
+            values.append(_serialize_component_boundary(component_value))
+            break
+
+    if not values:
+        return False, None
+    return True, values[0] if len(boundary_traces) == 1 else values
 
 
 class _SharedClient:
@@ -68,10 +123,19 @@ def _get_or_create_shared_client(config: dict) -> Langfuse:
 
 
 def _reset_shared_client_for_tests() -> None:
-    """Test-only hook: clear the cached client so each test gets a fresh mock."""
+    """Test-only hook: clear the cached client so each test gets a fresh mock.
+
+    Also clears the langfuse SDK's own process-global resource-manager registry
+    (keyed by public_key); without it a prior test's client leaks into the next —
+    e.g. a real-SDK test resolves to a stale manager with no in-memory exporter.
+    """
     with _SharedClient.lock:
         _SharedClient.client = None
         _SharedClient.key = None
+    with contextlib.suppress(Exception):
+        from langfuse._client.resource_manager import LangfuseResourceManager
+
+        LangfuseResourceManager._instances.clear()
 
 
 def normalize_langfuse_trace_id(trace_id: UUID | str | None) -> str | None:
@@ -162,6 +226,112 @@ def delete_feedback_score(*, message_id: UUID | str) -> None:
     client.api.score.delete(score_id=feedback_score_id(message_id))
 
 
+def _build_otel_parent_span(trace_id: str | None, parent_span_id: str | None):
+    """Build a non-recording OpenTelemetry span pointing at an existing Langfuse span.
+
+    Mirrors the SDK's private ``Langfuse._create_remote_parent_span`` using only
+    public values we already hold — the flow ``trace_id`` and the parent span id.
+    The returned span is suitable for ``opentelemetry.trace.use_span(...)`` so a
+    subsequently created span nests under it and inherits the same trace id.
+
+    Returns ``None`` when either id is missing or not valid hex (e.g. under unit
+    tests that use mock span ids) so callers degrade to the SDK's default behavior
+    instead of raising.
+    """
+    if not trace_id or not parent_span_id:
+        return None
+
+    from opentelemetry import trace as otel_trace_api
+
+    try:
+        int_trace_id = int(trace_id, 16)
+        int_span_id = int(parent_span_id, 16)
+    except (TypeError, ValueError):
+        return None
+
+    span_context = otel_trace_api.SpanContext(
+        trace_id=int_trace_id,
+        span_id=int_span_id,
+        is_remote=False,
+        trace_flags=otel_trace_api.TraceFlags(0x01),  # mark span as sampled
+    )
+    return otel_trace_api.NonRecordingSpan(span_context)
+
+
+@cache
+def _root_run_reparenting_handler_cls(base_cls: type) -> type:
+    """Build a langfuse ``CallbackHandler`` subclass that re-parents root LLM runs.
+
+    Why this exists
+    ---------------
+    The langfuse v3 LangChain ``CallbackHandler`` only applies its constructor
+    ``trace_context`` on the chain path (``on_chain_start``). When a model runs as
+    the *root* LangChain run — e.g. a bare Ollama / chat-model call with no wrapping
+    chain — the generation path calls ``start_observation`` without that
+    ``trace_context``. With no active OpenTelemetry span in context, the generation
+    starts a brand-new root trace, orphaned from the flow trace and therefore
+    missing ``userId`` / ``sessionId`` and its token-usage metrics.
+    See https://github.com/langflow-ai/langflow/issues/13429.
+
+    The fix
+    -------
+    For root LLM runs we activate the flow's component (or root) span as the current
+    OpenTelemetry span while the SDK creates the generation span. The generation then
+    inherits the flow ``trace_id`` and nests under that span, restoring user/session
+    attribution. The handler sets ``run_inline = True``, so these callbacks execute
+    synchronously inside the model invocation and the activation reliably wraps span
+    creation. Non-root runs (wrapping chain/agent present) are left untouched — the
+    SDK already nests those correctly under the chain span.
+
+    Cached per ``base_cls`` so repeated callbacks reuse a single class object.
+    """
+    from opentelemetry import trace as otel_trace_api
+
+    class _RootRunReparentingCallbackHandler(base_cls):  # type: ignore[misc, valid-type]
+        def __init__(self, *, otel_parent: Any = None, **kwargs: Any) -> None:
+            super().__init__(**kwargs)
+            self._otel_parent = otel_parent
+
+        def __deepcopy__(self, memo: dict[int, Any]) -> Any:
+            """Return self instead of a copy.
+
+            The base CallbackHandler holds a LangfuseResourceManager whose
+            keyword-only ``__new__`` cannot be reconstructed during deepcopy
+            (raises ``__new__() missing required keyword arguments``), and
+            langflow deep-copies flow state around the Agent build. The handler
+            keeps no per-invocation mutable state, so sharing it across
+            concurrent calls is safe. See issues #13965 / #13429 (same
+            workaround in flow_loader.py).
+            """
+            memo[id(self)] = self
+            return self
+
+        def __copy__(self) -> Any:
+            return self
+
+        def _reparent(self, method_name: str, args: tuple, kwargs: dict, parent_run_id: UUID | None):
+            bound = getattr(super(), method_name)
+            if parent_run_id is None and self._otel_parent is not None:
+                # end_on_exit/record_exception False so the parent span is never
+                # mutated or closed by activating it as the current context.
+                with otel_trace_api.use_span(
+                    self._otel_parent,
+                    end_on_exit=False,
+                    record_exception=False,
+                    set_status_on_exception=False,
+                ):
+                    return bound(*args, parent_run_id=parent_run_id, **kwargs)
+            return bound(*args, parent_run_id=parent_run_id, **kwargs)
+
+        def on_chat_model_start(self, *args: Any, parent_run_id: UUID | None = None, **kwargs: Any) -> Any:
+            return self._reparent("on_chat_model_start", args, kwargs, parent_run_id)
+
+        def on_llm_start(self, *args: Any, parent_run_id: UUID | None = None, **kwargs: Any) -> Any:
+            return self._reparent("on_llm_start", args, kwargs, parent_run_id)
+
+    return _RootRunReparentingCallbackHandler
+
+
 class LangFuseTracer(BaseTracer):
     """LangFuse tracer implementation using langfuse v3 API.
 
@@ -187,16 +357,15 @@ class LangFuseTracer(BaseTracer):
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.trace_id = trace_id
-        # ``user_id`` remains the authenticated Langflow user and drives
-        # ``trace.userId`` unchanged from pre-#9505 behavior. ``tracing_user_id``
-        # is an optional caller-supplied label; when set, it is stamped into
-        # trace metadata as ``langflow.tracing_user_id`` so consumers can still
-        # access the override without redefining ``trace.userId``.
+        # ``user_id`` stays the authenticated user (drives ``trace.userId``); ``tracing_user_id`` is
+        # stamped into metadata as ``langflow.tracing_user_id`` instead of overriding it (#9505).
         self.user_id = user_id
         self.tracing_user_id = tracing_user_id
         self.session_id = session_id
         self.flow_id = trace_name.split(" - ")[-1]
         self.spans: dict[str, LangfuseSpan] = OrderedDict()
+        self._input_trace_names: dict[str, str] = {}
+        self._output_trace_names: dict[str, str] = {}
         self.langfuse_trace_id = None
 
         config = self._get_config()
@@ -295,6 +464,12 @@ class LangFuseTracer(BaseTracer):
 
         name = trace_name.removesuffix(f" ({trace_id})")
 
+        if vertex is not None:
+            if vertex.is_input:
+                self._input_trace_names[trace_id] = trace_name
+            if vertex.is_output:
+                self._output_trace_names[trace_id] = trace_name
+
         # Create child span under the root span
         span = self._root_span.start_span(
             name=name,
@@ -338,10 +513,28 @@ class LangFuseTracer(BaseTracer):
         if not self._ready:
             return
 
-        # Serialize once and reuse to avoid duplicate work
+        # Keep the complete component aggregates on the root observation.
         inputs_ser = serialize(inputs)
         outputs_ser = serialize(outputs)
         metadata_ser = serialize(metadata) if metadata else None
+
+        # Input components emit the normalized external request as their output;
+        # output components emit the final graph result. If a custom graph has no
+        # boundary marker, retain the full aggregate rather than guessing from
+        # concurrent component completion order.
+        dual_role_trace_ids = self._input_trace_names.keys() & self._output_trace_names.keys()
+        input_found, trace_input = _trace_boundary_value(
+            outputs,
+            self._input_trace_names,
+            fallback_component_values=inputs,
+            prefer_fallback_trace_ids=dual_role_trace_ids,
+        )
+        if not input_found:
+            trace_input = inputs_ser
+
+        output_found, trace_output = _trace_boundary_value(outputs, self._output_trace_names)
+        if not output_found:
+            trace_output = outputs_ser
 
         # Update the root span with final input/output
         self._root_span.update(
@@ -352,8 +545,8 @@ class LangFuseTracer(BaseTracer):
 
         # Update trace-level data
         self._root_span.update_trace(
-            input=inputs_ser,
-            output=outputs_ser,
+            input={"input": trace_input},
+            output={"output": trace_output},
             metadata=metadata_ser,
         )
 
@@ -375,19 +568,23 @@ class LangFuseTracer(BaseTracer):
         try:
             from langfuse.langchain import CallbackHandler
 
-            # Get the current span's context for proper nesting
-            if self.spans:
-                # Use the most recent span as parent
-                current_span = next(reversed(self.spans.values()))
-                # Create callback with parent context
-                trace_ctx: TraceContext = {
-                    "trace_id": self._trace_context["trace_id"],
-                    "parent_span_id": current_span.id,
-                }
-                handler = CallbackHandler(trace_context=trace_ctx)
-            else:
-                # Fall back to root trace context
-                handler = CallbackHandler(trace_context=self._trace_context)
+            # Nest LangChain work under the most recent open component span when
+            # there is one, else under the flow root span. Both share the flow
+            # trace_id, so generations stay attributed to the flow's user/session.
+            parent_span = next(reversed(self.spans.values())) if self.spans else self._root_span
+            trace_ctx: TraceContext = {
+                "trace_id": self._trace_context["trace_id"],
+                "parent_span_id": parent_span.id,
+            }
+
+            # ``trace_context`` alone keeps chain/agent runs nested (the SDK honors
+            # it on the chain path). ``otel_parent`` additionally re-parents *root*
+            # LLM runs (a bare model with no wrapping chain), which the SDK would
+            # otherwise emit as an orphan trace with no user/session and detached
+            # token usage. See https://github.com/langflow-ai/langflow/issues/13429.
+            otel_parent = _build_otel_parent_span(self._trace_context["trace_id"], parent_span.id)
+            handler_cls = _root_run_reparenting_handler_cls(CallbackHandler)
+            handler = handler_cls(trace_context=trace_ctx, otel_parent=otel_parent)
 
         except (ImportError, ValueError, TypeError) as e:
             logger.debug(f"Error creating LangChain callback handler: {e}")

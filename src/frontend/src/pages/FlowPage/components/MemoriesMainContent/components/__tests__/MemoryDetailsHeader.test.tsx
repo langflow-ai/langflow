@@ -190,9 +190,7 @@ describe("MemoryDetailsHeader", () => {
     const props = makeProps({ sessions: ["session-1", "session-2"] });
     render(<MemoryDetailsHeader {...props} />);
 
-    const sessionTrigger = screen.getByRole("button", {
-      name: "Session filter",
-    });
+    const sessionTrigger = screen.getByTestId("session-filter-button");
     expect(sessionTrigger).toBeInTheDocument();
     expect(sessionTrigger).not.toBeDisabled();
   });
@@ -203,9 +201,7 @@ describe("MemoryDetailsHeader", () => {
       hasNextSessionsPage: false,
     });
     render(<MemoryDetailsHeader {...props} />);
-    expect(
-      screen.getByRole("button", { name: "Session filter" }),
-    ).not.toBeDisabled();
+    expect(screen.getByTestId("session-filter-button")).not.toBeDisabled();
   });
 
   it("renders the reload button with correct aria-label", () => {
@@ -467,27 +463,27 @@ describe("MemoryDetailsHeader", () => {
       const props = makeProps({ selectedSession: null });
       render(<MemoryDetailsHeader {...props} />);
 
-      expect(
-        screen.getByRole("button", { name: "Session filter" }),
-      ).toHaveTextContent("All Sessions");
+      expect(screen.getByTestId("session-filter-button")).toHaveTextContent(
+        "All Sessions",
+      );
     });
 
     it("shows 'All Sessions' label on trigger when selectedSession is ALL_SESSIONS_VALUE", () => {
       const props = makeProps({ selectedSession: ALL_SESSIONS_VALUE });
       render(<MemoryDetailsHeader {...props} />);
 
-      expect(
-        screen.getByRole("button", { name: "Session filter" }),
-      ).toHaveTextContent("All Sessions");
+      expect(screen.getByTestId("session-filter-button")).toHaveTextContent(
+        "All Sessions",
+      );
     });
 
     it("shows the selected session ID on the trigger when a specific session is active", () => {
       const props = makeProps({ selectedSession: "session-1" });
       render(<MemoryDetailsHeader {...props} />);
 
-      expect(
-        screen.getByRole("button", { name: "Session filter" }),
-      ).toHaveTextContent("session-1");
+      expect(screen.getByTestId("session-filter-button")).toHaveTextContent(
+        "session-1",
+      );
     });
 
     it("marks the 'All Sessions' item as checked when selectedSession is null", () => {
@@ -557,7 +553,7 @@ describe("MemoryDetailsHeader", () => {
       });
       render(<MemoryDetailsHeader {...props} />);
 
-      const btn = screen.getByRole("button", { name: "Session filter" });
+      const btn = screen.getByTestId("session-filter-button");
       expect(btn).toHaveTextContent(`${longId.slice(0, 20)}...`);
     });
   });

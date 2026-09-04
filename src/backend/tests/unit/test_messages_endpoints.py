@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 from uuid import UUID, uuid4
 
@@ -118,6 +119,30 @@ async def created_messages(session, active_user):  # noqa: ARG001
 
 
 @pytest.fixture
+async def timestamped_messages(active_user):
+    async with session_scope() as session:
+        flow = Flow(name="test_flow_for_message_ordering", user_id=active_user.id, data={"nodes": [], "edges": []})
+        session.add(flow)
+        await session.flush()
+
+        base_timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        messages = [
+            MessageCreate(
+                text=f"Message {index}",
+                sender="User",
+                sender_name="User",
+                session_id="ordered-session",
+                timestamp=base_timestamp + timedelta(minutes=index),
+            )
+            for index in range(3)
+        ]
+        messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
+        for message in messagetables:
+            message.flow_id = flow.id
+        return await aadd_messagetables(messagetables, session)
+
+
+@pytest.fixture
 async def created_messages_multiple_sessions(session, active_user):  # noqa: ARG001
     """Create messages across multiple distinct sessions for bulk-delete testing."""
     async with session_scope() as _session:
@@ -183,6 +208,42 @@ async def test_get_messages_does_not_return_other_users_messages(
     other_returned_ids = {message["id"] for message in other_response.json()}
     assert str(cross_user_messages["foreign_message"].id) in other_returned_ids
     assert str(cross_user_messages["owned_message"].id) not in other_returned_ids
+
+
+@pytest.mark.usefixtures("timestamped_messages")
+async def test_get_messages_defaults_to_timestamp_ascending(client: AsyncClient, logged_in_headers):
+    response = await client.get(
+        "api/v1/monitor/messages",
+        headers=logged_in_headers,
+        params={"session_id": "ordered-session"},
+    )
+
+    assert response.status_code == 200, response.text
+    assert [message["text"] for message in response.json()] == ["Message 0", "Message 1", "Message 2"]
+
+
+@pytest.mark.usefixtures("timestamped_messages")
+async def test_get_messages_supports_descending_order_with_pagination(client: AsyncClient, logged_in_headers):
+    response = await client.get(
+        "api/v1/monitor/messages",
+        headers=logged_in_headers,
+        params={"session_id": "ordered-session", "order": "DESC", "limit": 2, "offset": 1},
+    )
+
+    assert response.status_code == 200, response.text
+    assert [message["text"] for message in response.json()] == ["Message 1", "Message 0"]
+
+
+@pytest.mark.usefixtures("timestamped_messages")
+async def test_get_messages_rejects_invalid_order_direction(client: AsyncClient, logged_in_headers):
+    response = await client.get(
+        "api/v1/monitor/messages",
+        headers=logged_in_headers,
+        params={"session_id": "ordered-session", "order": "sideways"},
+    )
+
+    assert response.status_code == 400, response.text
+    assert response.json()["detail"] == "Invalid order direction: sideways"
 
 
 @pytest.mark.api_key_required
@@ -346,6 +407,67 @@ async def test_update_message_not_found(client: AsyncClient, logged_in_headers):
     assert response.json()["detail"] == "Message not found"
 
 
+async def test_update_message_returns_404_when_message_is_deleted_during_update(
+    client: AsyncClient,
+    logged_in_headers,
+    created_message,
+    monkeypatch,
+):
+    original_get_message_for_user = monitor_api.get_message_for_user
+    deleted_message = False
+
+    async def get_message_then_delete(session, user_id, message_id):
+        nonlocal deleted_message
+        db_message = await original_get_message_for_user(session, user_id, message_id)
+        if db_message is not None and not deleted_message:
+            deleted_message = True
+            async with session_scope() as deleting_session:
+                message_to_delete = await deleting_session.get(MessageTable, message_id)
+                assert message_to_delete is not None
+                await deleting_session.delete(message_to_delete)
+        return db_message
+
+    monkeypatch.setattr(monitor_api, "get_message_for_user", get_message_then_delete)
+
+    response = await client.put(
+        f"api/v1/monitor/messages/{created_message.id}",
+        json=MessageUpdate(text="Raced update").model_dump(),
+        headers=logged_in_headers,
+    )
+
+    assert deleted_message is True
+    assert response.status_code == 404, response.text
+    assert response.json() == {"detail": "Message not found"}
+
+
+async def test_update_message_sanitizes_unexpected_update_errors(
+    client: AsyncClient,
+    logged_in_headers,
+    created_message,
+    monkeypatch,
+):
+    sensitive_error = (
+        f"UPDATE message SET text='secret' WHERE id='{created_message.id}' "  # noqa: S608
+        "postgresql://admin:password@database.internal/langflow"  # pragma: allowlist secret
+    )
+
+    def fail_update(*_args, **_kwargs):
+        raise RuntimeError(sensitive_error)
+
+    monkeypatch.setattr(MessageTable, "sqlmodel_update", fail_update)
+
+    response = await client.put(
+        f"api/v1/monitor/messages/{created_message.id}",
+        json=MessageUpdate(text="Updated content").model_dump(),
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 500, response.text
+    assert response.json() == {"detail": monitor_api.MESSAGE_UPDATE_FAILED}
+    assert sensitive_error not in response.text
+    assert str(created_message.id) not in response.text
+
+
 @pytest.mark.api_key_required
 async def test_delete_messages_cannot_delete_other_users_messages(
     client: AsyncClient, logged_in_headers, cross_user_messages, other_logged_in_headers
@@ -456,8 +578,7 @@ async def test_successfully_update_session_id(client, logged_in_headers, created
         timestamp_str = timestamp_to_str(timestamp)
         assert timestamp_str == response_timestamp
 
-    # Check if the messages ordered by timestamp are in the correct order
-    # User, User, AI
+    # Messages default to timestamp ASC (oldest first): User, User, AI
     assert messages[0]["sender"] == "User"
     assert messages[1]["sender"] == "User"
     assert messages[2]["sender"] == "AI"

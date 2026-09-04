@@ -15,7 +15,7 @@ interface ChatSidebarProps {
   onSessionSelect?: (sessionId: string) => void;
   currentSessionId?: string;
   onDeleteSession?: (sessionId: string) => void;
-  onOpenLogs?: (sessionId: string) => void;
+  onOpenLogs?: (sessionId: string, triggerElement: HTMLElement | null) => void;
   onRenameSession?: (oldId: string, newId: string) => Promise<void>;
   onBulkDeleteSessions?: (sessionIds: string[], onSuccess: () => void) => void;
 }
@@ -126,6 +126,7 @@ export function ChatSidebar({
               variant="ghost"
               className="flex h-8 w-8 items-center justify-center !p-0 hover:bg-secondary-hover"
               onClick={onNewChat}
+              aria-label={t("chat.newChat")}
             >
               <ForwardedIconComponent
                 name="Plus"
@@ -190,6 +191,9 @@ export function ChatSidebar({
                           size="icon"
                           className="h-8 w-8 p-2 rounded text-status-red hover:text-status-red hover:bg-error-background"
                           onClick={handleBulkDelete}
+                          aria-label={t("chat.deleteSessionsCount", {
+                            count: selectedSessions.size,
+                          })}
                         >
                           <ForwardedIconComponent
                             name="Trash2"

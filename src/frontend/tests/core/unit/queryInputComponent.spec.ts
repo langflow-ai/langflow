@@ -5,11 +5,10 @@ import { TEXTS } from "../../utils/constants/texts";
 
 import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 import {
-  closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
-  openAdvancedOptions,
+  closeParametersPanel,
+  openParametersPanel,
 } from "../../utils/open-advanced-options";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
 // TODO: This component doesn't have slider needs updating
 test(
@@ -29,9 +28,10 @@ test(
       .getByTestId("sidebar-search-input")
       .fill(TEXTS.providerOpenAiSearch);
 
-    await page.waitForSelector('[data-testid="openaiOpenAI"]', {
-      timeout: 3000,
-    });
+    await skipIfComponentUnavailable(
+      page.getByTestId("openaiOpenAI"),
+      "OpenAI",
+    );
 
     await page
       .getByTestId("openaiOpenAI")
@@ -100,18 +100,13 @@ test(
       await page.getByTestId("query_query_openai_api_base").inputValue(),
     ).toEqual("THIS IS A NEW VALUE");
 
-    await disableInspectPanel(page);
-
-    await openAdvancedOptions(page);
-
-    expect(
-      await page.getByTestId("query_query_edit_openai_api_base").inputValue(),
-    ).toEqual("THIS IS A NEW VALUE");
+    // LE-1810: the panel only manages parameters — the value is edited on
+    // the node itself.
+    await openParametersPanel(page);
+    await closeParametersPanel(page);
 
     await page
-      .getByTestId(
-        "button_open_text_area_modal_query_query_edit_openai_api_base_advanced",
-      )
+      .getByTestId("button_open_text_area_modal_query_query_openai_api_base")
       .click();
 
     await page
@@ -121,15 +116,7 @@ test(
     await page.getByTestId("genericModalBtnSave").click();
 
     expect(
-      await page.getByTestId("query_query_edit_openai_api_base").inputValue(),
-    ).toEqual("THIS IA TEST TEXT INSIDE CONTROLS PANEL");
-
-    await closeAdvancedOptions(page);
-
-    expect(
       await page.getByTestId("query_query_openai_api_base").inputValue(),
     ).toEqual("THIS IA TEST TEXT INSIDE CONTROLS PANEL");
-
-    await enableInspectPanel(page);
   },
 );

@@ -44,11 +44,14 @@ let mockFilteredProviders = [
     models: [{ model_name: "gpt-4o" }],
   },
 ];
+let mockCatalogLoading = false;
+let mockCatalogError = false;
 
 jest.mock("../../hooks", () => ({
   useEnabledModels: () => ({
     filteredProviders: mockFilteredProviders,
-    isLoading: false,
+    isLoading: mockCatalogLoading,
+    isError: mockCatalogError,
   }),
 }));
 
@@ -59,6 +62,28 @@ describe("ModelSelector", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCatalogLoading = false;
+    mockCatalogError = false;
+  });
+
+  it("renders an inert error state instead of a stale saved model", () => {
+    mockCatalogError = true;
+    render(
+      <ModelSelector
+        selectedModel={{
+          id: "OpenAI-gpt-4o",
+          name: "gpt-4o",
+          provider: "OpenAI",
+          displayName: "gpt-4o",
+        }}
+        {...defaultProps}
+      />,
+    );
+
+    expect(screen.getByTestId("assistant-model-catalog-error")).toBeDisabled();
+    expect(
+      screen.queryByTestId("assistant-model-selector"),
+    ).not.toBeInTheDocument();
   });
 
   describe("provider icon in trigger button", () => {
@@ -153,6 +178,128 @@ describe("ModelSelector", () => {
       const updatedTrigger = screen.getByTestId("assistant-model-selector");
       const anthropicIcon = screen.getByTestId("icon-Anthropic");
       expect(updatedTrigger).toContainElement(anthropicIcon);
+    });
+  });
+
+  describe("out-of-the-box default model (LE-1767)", () => {
+    it("should_auto_select_first_strong_model_when_a_weak_model_comes_first_in_catalog_order", () => {
+      // Arrange — QA repro: weak model first in catalog order, no stored selection
+      mockFilteredProviders = [
+        {
+          provider: "OpenAI",
+          icon: "OpenAI",
+          models: [{ model_name: "gpt-4o-mini" }, { model_name: "gpt-4o" }],
+        },
+      ];
+
+      const onModelChange = jest.fn();
+
+      // Act — fresh user: nothing in localStorage → selectedModel is null
+      render(
+        <ModelSelector selectedModel={null} onModelChange={onModelChange} />,
+      );
+
+      // Assert — the strong model is picked, not allModels[0]
+      expect(onModelChange).toHaveBeenCalledWith(
+        expect.objectContaining({ provider: "OpenAI", name: "gpt-4o" }),
+      );
+      expect(
+        screen.queryByTestId("assistant-model-weak-hint"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should_auto_select_strong_model_from_later_provider_when_first_provider_only_has_weak_models", () => {
+      // Arrange — first provider offers only a weak SKU; strong model lives in the next provider
+      mockFilteredProviders = [
+        {
+          provider: "OpenAI",
+          icon: "OpenAI",
+          models: [{ model_name: "gpt-4o-mini" }],
+        },
+        {
+          provider: "Anthropic",
+          icon: "Anthropic",
+          models: [{ model_name: "claude-sonnet-4-20250514" }],
+        },
+      ];
+
+      const onModelChange = jest.fn();
+
+      // Act
+      render(
+        <ModelSelector selectedModel={null} onModelChange={onModelChange} />,
+      );
+
+      // Assert
+      expect(onModelChange).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: "Anthropic",
+          name: "claude-sonnet-4-20250514",
+        }),
+      );
+    });
+
+    it("should_fall_back_to_first_model_and_show_hint_when_every_enabled_model_is_weak", () => {
+      // Arrange — user enabled only weak SKUs; there is no strong model to prefer
+      mockFilteredProviders = [
+        {
+          provider: "OpenAI",
+          icon: "OpenAI",
+          models: [
+            { model_name: "gpt-4o-mini" },
+            { model_name: "gpt-4.1-nano" },
+          ],
+        },
+      ];
+
+      const onModelChange = jest.fn();
+
+      // Act
+      render(
+        <ModelSelector selectedModel={null} onModelChange={onModelChange} />,
+      );
+
+      // Assert — degrades to today's behavior: first enabled model, hint visible
+      expect(onModelChange).toHaveBeenCalledWith(
+        expect.objectContaining({ provider: "OpenAI", name: "gpt-4o-mini" }),
+      );
+      expect(
+        screen.getByTestId("assistant-model-weak-hint"),
+      ).toBeInTheDocument();
+    });
+
+    it("should_not_override_an_explicit_weak_selection_the_user_made", () => {
+      // Arrange — the user deliberately picked the weak model; the default must not fight them
+      mockFilteredProviders = [
+        {
+          provider: "OpenAI",
+          icon: "OpenAI",
+          models: [{ model_name: "gpt-4o-mini" }, { model_name: "gpt-4o" }],
+        },
+      ];
+
+      const weakModel: AssistantModel = {
+        id: "OpenAI-gpt-4o-mini",
+        name: "gpt-4o-mini",
+        provider: "OpenAI",
+        displayName: "gpt-4o-mini",
+      };
+
+      const onModelChange = jest.fn();
+
+      // Act
+      render(
+        <ModelSelector
+          selectedModel={weakModel}
+          onModelChange={onModelChange}
+        />,
+      );
+
+      // Assert — selection is respected; the advisory hint still shows
+      expect(onModelChange).not.toHaveBeenCalled();
+      expect(
+        screen.getByTestId("assistant-model-weak-hint"),
+      ).toBeInTheDocument();
     });
   });
 

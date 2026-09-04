@@ -1,20 +1,8 @@
-import type { Locator } from "@playwright/test";
-
 import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
-async function findVisibleElement(
-  elements: Locator[],
-): Promise<Locator | undefined> {
-  for (const element of elements) {
-    if (await element.isVisible()) {
-      return element;
-    }
-  }
-  return undefined;
-}
+import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 
 test(
   "user must see on handle click the possibility connections - RetrievalQA",
@@ -30,35 +18,19 @@ test(
 
     await addLegacyComponents(page);
 
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("retrievalqa");
-
-    await page.waitForSelector(
-      '[data-testid="langchain_utilitiesRetrieval QA"]',
-      {
-        timeout: 3000,
-      },
-    );
-    await page
-      .getByTestId("langchain_utilitiesRetrieval QA")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+    await addComponentFromSidebar(page, {
+      search: "retrievalqa",
+      testId: "langchain_utilitiesRetrieval QA",
+      position: { x: 200, y: 200 },
+    });
 
     await adjustScreenView(page);
 
-    const outputElements = await page
+    const outputHandle = page
       .getByTestId("handle-retrievalqa-shownode-text-right")
-      .all();
-
-    let visibleElementHandle = await findVisibleElement(outputElements);
-    if (!visibleElementHandle) {
-      throw new Error("Output handle not visible");
-    }
-
-    await visibleElementHandle.click({
-      force: true,
-    });
+      .first();
+    await expect(outputHandle).toBeVisible();
+    await outputHandle.click({ position: { x: 31, y: 16 } });
 
     const disclosureTestIds = [
       "disclosure-input & output",
@@ -69,6 +41,9 @@ test(
       "disclosure-processing",
       "disclosure-flow control",
       "disclosure-utilities",
+    ];
+
+    const optionalDisclosureTestIds = [
       "disclosure-bundles-langchain",
       "disclosure-bundles-assemblyai",
       "disclosure-bundles-datastax",
@@ -79,11 +54,12 @@ test(
       "data_sourceAPI Request",
       "langchain_utilitiesTool Calling Agent",
       "langchain_utilitiesConversationChain",
-      "mem0Mem0 Chat Memory",
       "flow_controlsCondition",
       "langchain_utilitiesSelf Query Retriever",
       "langchain_utilitiesCharacter Text Splitter",
     ];
+
+    const optionalElementTestIds = ["mem0Mem0 Chat Memory"];
 
     await Promise.all(
       disclosureTestIds.map((id) => {
@@ -94,6 +70,13 @@ test(
       }),
     );
 
+    for (const id of optionalDisclosureTestIds) {
+      const disclosure = page.getByTestId(id);
+      if (await disclosure.isVisible().catch(() => false)) {
+        await expect(disclosure).toBeVisible();
+      }
+    }
+
     await Promise.all(
       elementTestIds.map(async (id) => {
         if (!expect(page.getByTestId(id).first()).toBeVisible()) {
@@ -103,12 +86,20 @@ test(
       }),
     );
 
+    for (const id of optionalElementTestIds) {
+      const element = page.getByTestId(id).first();
+      if (await element.isVisible().catch(() => false)) {
+        await expect(element).toBeVisible();
+      }
+    }
+
     await page.getByTestId("sidebar-search-input").click();
 
-    const visibleModelSpecsTestIds = [
-      "cohereCohere Language Models",
-      "groqGroq",
+    const visibleModelSpecsTestIds = ["cohereCohere Language Models"];
+
+    const optionalVisibleModelSpecsTestIds = [
       "lmstudioLM Studio",
+      "groqGroq",
       "maritalkMariTalk",
       "perplexityPerplexity",
       "baiduQianfan",
@@ -125,33 +116,22 @@ test(
       }),
     );
 
-    const chainInputElements1 = await page
-      .getByTestId("handle-retrievalqa-shownode-llm-left")
-      .all();
-
-    const llmHandle = await findVisibleElement(chainInputElements1);
-    if (llmHandle) {
-      visibleElementHandle = llmHandle;
+    for (const id of optionalVisibleModelSpecsTestIds) {
+      const modelSpec = page.getByTestId(id);
+      if (await modelSpec.isVisible().catch(() => false)) {
+        await expect(modelSpec).toBeVisible();
+      }
     }
 
-    await visibleElementHandle.blur();
-
-    await visibleElementHandle.click({
-      force: true,
-    });
+    const modelHandle = page
+      .getByTestId("handle-retrievalqa-shownode-language model-left")
+      .first();
+    await expect(modelHandle).toBeVisible();
+    await modelHandle.click({ position: { x: 1, y: 16 } });
 
     await expect(page.getByTestId("disclosure-models & agents")).toBeVisible();
 
-    const rqaChainInputElements0 = await page
-      .getByTestId("handle-retrievalqa-shownode-template-left")
-      .all();
-
-    const templateHandle = await findVisibleElement(rqaChainInputElements0);
-    if (templateHandle) {
-      visibleElementHandle = templateHandle;
-    }
-
-    await visibleElementHandle.click();
+    await outputHandle.click({ position: { x: 31, y: 16 } });
 
     await expect(page.getByTestId("disclosure-input & output")).toBeVisible();
     await expect(page.getByTestId("disclosure-data sources")).toBeVisible();

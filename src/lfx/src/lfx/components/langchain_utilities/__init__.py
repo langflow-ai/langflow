@@ -23,7 +23,6 @@ if TYPE_CHECKING:
     from .retrieval_qa import RetrievalQAComponent
     from .runnable_executor import RunnableExecComponent
     from .self_query import SelfQueryRetrieverComponent
-    from .spider import SpiderTool
     from .sql import SQLAgentComponent
     from .sql_database import SQLDatabaseComponent
     from .sql_generator import SQLGeneratorComponent
@@ -51,7 +50,6 @@ _dynamic_imports = {
     "RunnableExecComponent": "runnable_executor",
     "SelfQueryRetrieverComponent": "self_query",
     "SemanticTextSplitterComponent": "language_semantic",
-    "SpiderTool": "spider",
     "SQLAgentComponent": "sql",
     "SQLDatabaseComponent": "sql_database",
     "SQLGeneratorComponent": "sql_generator",
@@ -83,7 +81,6 @@ __all__ = [
     "SQLGeneratorComponent",
     "SelfQueryRetrieverComponent",
     "SemanticTextSplitterComponent",
-    "SpiderTool",
     "ToolCallingAgentComponent",
     "VectorStoreInfoComponent",
     "VectorStoreRouterAgentComponent",

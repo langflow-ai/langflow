@@ -17,6 +17,7 @@ async def astore_message(
     message: Message,
     flow_id: str | UUID | None = None,
     run_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,  # noqa: ARG001
 ) -> list[Message]:
     """Store a message in the memory.
 
@@ -25,6 +26,7 @@ async def astore_message(
         flow_id (Optional[str | UUID]): The flow ID associated with the message.
             When running from the CustomComponent you can access this using `self.graph.flow_id`.
         run_id (Optional[str | UUID]): The graph/native run ID associated with the message.
+        user_id (Optional[str | UUID]): The executing user's ID, stamped on the stored message.
 
     Returns:
         List[Message]: A list containing the stored message.
@@ -35,6 +37,14 @@ async def astore_message(
     if not message:
         logger.warning("No message provided.")
         return []
+
+    # Serving-plane ephemeral runs (anonymous end-user) must not persist chat
+    # memory. Mirrors the identical gate in langflow.memory.astore_message so the
+    # contract holds regardless of which memory implementation dispatch selects.
+    from lfx.memory.flow_context import should_persist_messages
+
+    if not should_persist_messages():
+        return [message]
 
     if not message.session_id or not message.sender or not message.sender_name:
         msg = (
@@ -96,6 +106,7 @@ def store_message(
     message: Message,
     flow_id: str | UUID | None = None,
     run_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,  # noqa: ARG001
 ) -> list[Message]:
     """DEPRECATED: Stores a message in the memory.
 
@@ -106,6 +117,7 @@ def store_message(
         flow_id (Optional[str | UUID]): The flow ID associated with the message.
             When running from the CustomComponent you can access this using `self.graph.flow_id`.
         run_id (Optional[str | UUID]): The graph/native run ID associated with the message.
+        user_id (Optional[str | UUID]): The executing user's ID, stamped on the stored message.
 
     Returns:
         List[Message]: A list containing the stored message.
@@ -188,6 +200,7 @@ async def aget_messages(
     order: str | None = "DESC",  # noqa: ARG001
     flow_id: UUID | None = None,  # noqa: ARG001
     limit: int | None = None,  # noqa: ARG001
+    user_id: str | UUID | None = None,  # noqa: ARG001
 ) -> list[Message]:
     """Retrieve messages based on the provided filters.
 
@@ -200,6 +213,7 @@ async def aget_messages(
         order (Optional[str]): The order in which to retrieve the messages. Defaults to "DESC".
         flow_id (Optional[UUID]): The flow ID associated with the messages.
         limit (Optional[int]): The maximum number of messages to retrieve.
+        user_id (Optional[str | UUID]): When provided, scope retrieval to this owning user.
 
     Returns:
         List[Message]: A list of Message objects representing the retrieved messages.
@@ -225,6 +239,7 @@ def get_messages(
     order: str | None = "DESC",
     flow_id: UUID | None = None,
     limit: int | None = None,
+    user_id: str | UUID | None = None,  # noqa: ARG001
 ) -> list[Message]:
     """DEPRECATED - Retrieve messages based on the provided filters.
 
@@ -275,11 +290,19 @@ def delete_messages(session_id: str | None = None, context_id: str | None = None
     return run_until_complete(adelete_messages(session_id, context_id))
 
 
-async def aadd_messages(messages: Message | list[Message]) -> list[Message]:
+async def aadd_messages(
+    messages: Message | list[Message],
+    flow_id: str | UUID | None = None,  # noqa: ARG001
+    run_id: str | UUID | None = None,  # noqa: ARG001
+    user_id: str | UUID | None = None,  # noqa: ARG001
+) -> list[Message]:
     """Add messages to the memory.
 
     Args:
         messages: Message or list of messages to add.
+        flow_id (Optional[str | UUID]): The flow ID associated with the messages.
+        run_id (Optional[str | UUID]): The graph/native run ID associated with the messages.
+        user_id (Optional[str | UUID]): The executing user's ID, stamped on the stored messages.
 
     Returns:
         List[Message]: Added messages.

@@ -3,10 +3,20 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { extractApiErrorMessage } from "@/controllers/API/helpers/extract-api-error-message";
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
+import CustomLoginBrandTitle from "@/customization/components/custom-login-brand-title";
+import CustomLoginFormGate from "@/customization/components/custom-login-form-gate";
+import CustomLoginSignupPrompt from "@/customization/components/custom-login-signup-prompt";
+import CustomLoginSsoOptions from "@/customization/components/custom-login-sso-options";
+import useTheme from "@/customization/hooks/use-custom-theme";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { useSanitizeRedirectUrl } from "@/hooks/use-sanitize-redirect-url";
+import {
+  appendErrorSuggestion,
+  getRequiredFieldError,
+} from "@/utils/authErrorMessages";
 import InputComponent from "../../components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
@@ -18,16 +28,24 @@ import type {
   inputHandlerEventType,
   loginInputStateType,
 } from "../../types/components";
+import DotGridBackground from "./components/dot-grid-background";
 
 export default function LoginPage(): JSX.Element {
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  // Server-side rejection (e.g. wrong credentials), mirrored inline so the
+  // error is programmatically associated with the credential fields
+  // (WCAG 3.3.1) instead of living only in the transient toast.
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const { password, username } = inputState;
 
   useSanitizeRedirectUrl();
+  useTheme();
 
   const { t } = useTranslation();
+  useDocumentTitle(t("auth.signInButton"));
   const { login, clearAuthSession } = useContext(AuthContext);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -35,6 +53,7 @@ export default function LoginPage(): JSX.Element {
     target: { name, value },
   }: inputHandlerEventType): void {
     setInputState((prev) => ({ ...prev, [name]: value }));
+    setServerError(null);
   }
 
   const { mutate } = useLoginUser();
@@ -53,18 +72,41 @@ export default function LoginPage(): JSX.Element {
         queryClient.clear();
       },
       onError: (error) => {
+        const message = appendErrorSuggestion(
+          extractApiErrorMessage(
+            error as Parameters<typeof extractApiErrorMessage>[0],
+            t("errors.signin"),
+          ),
+          t("errors.signinSuggestion", {
+            defaultValue: "Check your username and password, then try again.",
+          }),
+        );
+        setServerError(message);
         setErrorData({
           title: t("errors.signin"),
-          list: [error["response"]["data"]["detail"]],
+          list: [message],
         });
       },
     });
   }
 
+  const usernameError = getRequiredFieldError(
+    submitAttempted,
+    username,
+    t("auth.usernameRequired"),
+  );
+  const passwordError = getRequiredFieldError(
+    submitAttempted,
+    password,
+    t("auth.passwordRequired"),
+  );
+
   return (
     <Form.Root
+      onInvalidCapture={() => setSubmitAttempted(true)}
       onSubmit={(event) => {
-        if (password === "") {
+        setSubmitAttempted(true);
+        if (username.trim() === "" || password.trim() === "") {
           event.preventDefault();
           return;
         }
@@ -72,93 +114,161 @@ export default function LoginPage(): JSX.Element {
         const _data = Object.fromEntries(new FormData(event.currentTarget));
         event.preventDefault();
       }}
-      className="h-screen w-full"
+      className="min-h-svh w-full overflow-auto bg-canvas text-foreground"
     >
-      <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
-        <div className="flex w-full max-w-xs flex-col items-center justify-center gap-2">
-          <LangflowLogo
-            title={t("common.langflowLogo")}
-            className="mb-4 h-10 w-10 scale-[1.5]"
-          />
-          <span className="mb-6 text-2xl font-semibold text-primary text-center">
-            {t("auth.loginTitle")}
-          </span>
-          <div className="mb-3 w-full">
-            <Form.Field name="username">
-              <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
-                <span className="truncate">{t("auth.usernameLabel")}</span>
-                <span className="shrink-0 font-medium text-destructive">*</span>
-              </Form.Label>
-
-              <Form.Control asChild>
-                <Input
-                  type="username"
-                  onChange={({ target: { value } }) => {
-                    handleInput({ target: { name: "username", value } });
-                  }}
-                  value={username}
-                  className="w-full"
-                  required
-                  placeholder={t("auth.usernamePlaceholder")}
-                />
-              </Form.Control>
-
-              <Form.Message match="valueMissing" className="field-invalid">
-                {t("auth.usernameRequired")}
-              </Form.Message>
-            </Form.Field>
+      <DotGridBackground />
+      <main className="relative z-10 flex min-h-svh w-full flex-col items-center justify-center px-6 py-10">
+        <div className="flex w-full max-w-[420px] flex-col items-center gap-8">
+          <div className="flex items-center gap-2">
+            <LangflowLogo
+              title={t("common.langflowLogo")}
+              className="h-12 w-12 text-foreground"
+            />
+            <h1 className="pl-3 text-center text-5xl font-semibold tracking-tight">
+              <CustomLoginBrandTitle />
+            </h1>
           </div>
-          <div className="mb-3 w-full">
-            <Form.Field name="password">
-              <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
-                <span className="truncate">{t("auth.passwordLabel")}</span>
-                <span className="shrink-0 font-medium text-destructive">*</span>
-              </Form.Label>
+          <section
+            aria-labelledby="login-form-title"
+            className="w-full rounded-xl border border-border bg-card p-8 shadow-2xl shadow-black/10 dark:shadow-black/40 sm:p-10"
+          >
+            <h2 id="login-form-title" className="sr-only">
+              {t("auth.loginTitle")}
+            </h2>
+            <div className="flex flex-col gap-5">
+              <CustomLoginFormGate>
+                <Form.Field name="username" className="pb-3">
+                  <label
+                    htmlFor="login-username"
+                    className={`mb-2 flex items-center gap-1 overflow-hidden text-sm font-medium ${
+                      usernameError ? "label-invalid" : ""
+                    }`}
+                  >
+                    <span className="truncate">{t("auth.usernameLabel")}</span>
+                    <span className="shrink-0 font-medium text-destructive">
+                      *
+                    </span>
+                  </label>
 
-              <InputComponent
-                onChange={(value) => {
-                  handleInput({ target: { name: "password", value } });
-                }}
-                value={password}
-                isForm
-                password={true}
-                required
-                placeholder={t("auth.passwordPlaceholder")}
-                className="w-full"
-              />
+                  <Input
+                    id="login-username"
+                    name="username"
+                    type="text"
+                    allowAutofill
+                    autoComplete="username"
+                    onChange={({ target: { value } }) => {
+                      handleInput({ target: { name: "username", value } });
+                    }}
+                    value={username}
+                    className="h-11 w-full rounded-lg bg-muted"
+                    required
+                    aria-describedby={
+                      [
+                        usernameError && "login-username-error",
+                        serverError && "login-form-error",
+                      ]
+                        .filter(Boolean)
+                        .join(" ") || undefined
+                    }
+                    aria-invalid={Boolean(usernameError || serverError)}
+                    placeholder={t("auth.usernamePlaceholder")}
+                  />
 
-              <Form.Message className="field-invalid" match="valueMissing">
-                {t("auth.passwordRequired")}
-              </Form.Message>
-            </Form.Field>
-          </div>
-          <div className="w-full">
-            <Form.Submit asChild>
-              <Button className="mr-3 mt-6 w-full" type="submit">
-                {t("auth.signInButton")}
-              </Button>
-            </Form.Submit>
-          </div>
-          <div className="w-full">
-            <CustomLink to="/signup">
-              <ShadTooltip
-                content={`${t("auth.noAccount")} ${t("auth.signUpLink")}`}
-                styleClasses="z-50"
-              >
-                <Button
-                  className="w-full overflow-hidden"
-                  variant="outline"
-                  type="button"
-                >
-                  <span className="truncate">
-                    {t("auth.noAccount")}&nbsp;<b>{t("auth.signUpLink")}</b>
-                  </span>
-                </Button>
-              </ShadTooltip>
-            </CustomLink>
-          </div>
+                  {usernameError && (
+                    <p
+                      id="login-username-error"
+                      role="alert"
+                      className="field-invalid"
+                    >
+                      {usernameError}
+                    </p>
+                  )}
+                </Form.Field>
+
+                <Form.Field name="password" className="pb-3">
+                  <label
+                    htmlFor="form-login-password"
+                    className={`mb-2 flex items-center gap-1 overflow-hidden text-sm font-medium ${
+                      passwordError ? "label-invalid" : ""
+                    }`}
+                  >
+                    <span className="truncate">{t("auth.passwordLabel")}</span>
+                    <span className="shrink-0 font-medium text-destructive">
+                      *
+                    </span>
+                  </label>
+
+                  <InputComponent
+                    onChange={(value) => {
+                      handleInput({ target: { name: "password", value } });
+                    }}
+                    value={password}
+                    isForm
+                    allowAutofill
+                    password={true}
+                    required
+                    id="login-password"
+                    inputProps={{
+                      autoComplete: "current-password",
+                      "aria-describedby":
+                        [
+                          passwordError && "login-password-error",
+                          serverError && "login-form-error",
+                        ]
+                          .filter(Boolean)
+                          .join(" ") || undefined,
+                      "aria-invalid":
+                        Boolean(passwordError || serverError) || undefined,
+                    }}
+                    placeholder={t("auth.passwordPlaceholder")}
+                    className="h-11 w-full rounded-lg bg-muted"
+                  />
+
+                  {passwordError && (
+                    <p
+                      id="login-password-error"
+                      role="alert"
+                      className="field-invalid"
+                    >
+                      {passwordError}
+                    </p>
+                  )}
+                </Form.Field>
+
+                {serverError && (
+                  <p
+                    id="login-form-error"
+                    role="alert"
+                    className="field-invalid static"
+                  >
+                    {serverError}
+                  </p>
+                )}
+
+                <Form.Submit asChild>
+                  <Button className="h-11 w-full rounded-lg" type="submit">
+                    {t("auth.signInButton")}
+                  </Button>
+                </Form.Submit>
+              </CustomLoginFormGate>
+
+              <CustomLoginSsoOptions />
+
+              <CustomLoginSignupPrompt>
+                <p className="text-center text-sm text-muted-foreground">
+                  {t("auth.noAccount")}{" "}
+                  <CustomLink
+                    className="font-medium text-primary underline-offset-4 hover:underline"
+                    to="/signup"
+                  >
+                    {t("auth.signUpLink")}
+                  </CustomLink>
+                </p>
+              </CustomLoginSignupPrompt>
+            </div>
+          </section>
         </div>
-      </div>
+      </main>
     </Form.Root>
   );
 }

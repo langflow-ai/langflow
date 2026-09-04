@@ -3,11 +3,16 @@ from __future__ import annotations
 import asyncio
 import re
 from copy import deepcopy
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Literal
 
 import pandas as pd
+
+# LangChain resolves these annotations at runtime to inject config and callback managers.
+from langchain_core.callbacks import AsyncCallbackManagerForToolRun, CallbackManagerForToolRun  # noqa: TC002
+from langchain_core.runnables import RunnableConfig  # noqa: TC002
 from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
+from typing_extensions import override
 
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
 from lfx.log.logger import logger
@@ -27,6 +32,43 @@ if TYPE_CHECKING:
     from lfx.schema.dotdict import dotdict
 
 TOOL_TYPES_SET = {"Tool", "BaseTool", "StructuredTool"}
+
+
+class ComponentStructuredTool(StructuredTool):
+    """StructuredTool that keeps JSON-safe component results as LangChain artifacts."""
+
+    response_format: Literal["content_and_artifact"] = "content_and_artifact"
+
+    @staticmethod
+    def _content_and_artifact(content: Any) -> tuple[Any, Any | None]:
+        artifact = None if isinstance(content, str) else serialize(content)
+        return content, artifact
+
+    @override
+    def _run(
+        self,
+        *args: Any,
+        config: RunnableConfig,
+        run_manager: CallbackManagerForToolRun | None = None,
+        **kwargs: Any,
+    ) -> tuple[Any, Any | None]:
+        content = super()._run(*args, config=config, run_manager=run_manager, **kwargs)
+        return self._content_and_artifact(content)
+
+    @override
+    async def _arun(
+        self,
+        *args: Any,
+        config: RunnableConfig,
+        run_manager: AsyncCallbackManagerForToolRun | None = None,
+        **kwargs: Any,
+    ) -> tuple[Any, Any | None]:
+        if self.coroutine is None:
+            # StructuredTool falls back to self._run, which already returns the
+            # content-and-artifact tuple. Wrapping it again would nest the tuple.
+            return await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
+        content = await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
+        return self._content_and_artifact(content)
 
 
 def _get_input_type(input_: InputTypes):
@@ -60,33 +102,6 @@ def patch_components_send_message(component: Component):
     return old_send_message
 
 
-def _patch_send_message_decorator(component, func):
-    """Decorator to patch the send_message method of a component.
-
-    This is useful when we want to use a component as a tool, but we don't want to
-    send any messages to the UI. With this only the Component calling the tool
-    will send messages to the UI.
-    """
-
-    async def async_wrapper(*args, **kwargs):
-        original_send_message = component.send_message
-        component.send_message = send_message_noop
-        try:
-            return await func(*args, **kwargs)
-        finally:
-            component.send_message = original_send_message
-
-    def sync_wrapper(*args, **kwargs):
-        original_send_message = component.send_message
-        component.send_message = send_message_noop
-        try:
-            return func(*args, **kwargs)
-        finally:
-            component.send_message = original_send_message
-
-    return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
-
-
 def _build_output_function(
     component: Component,
     output_method: Callable,
@@ -106,10 +121,15 @@ def _build_output_function(
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
+        # Nothing patches send_message here. Silencing the shared component leaked across
+        # overlapping calls: the second call recorded the first call's no-op as the method
+        # to restore, and restored it once the first call had put the real one back.
+        # Suppressing the tool run's own messages is a separate change, tracked on its own.
         local_method = getattr(comp, method_name, output_method)
         build_started = False
         result = None
         try:
+            comp._ensure_code_execution_policy()  # noqa: SLF001
             if event_manager:
                 event_manager.on_build_start(data={"id": comp.get_id()})
                 build_started = True
@@ -140,7 +160,7 @@ def _build_output_function(
         # removing the model_dump() call here because it is not serializable
         return serialize(result)
 
-    return _patch_send_message_decorator(component, output_function)
+    return output_function
 
 
 def _build_output_async_function(
@@ -162,10 +182,12 @@ def _build_output_async_function(
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
+        # See _build_output_function: a tool call must not patch send_message anywhere.
         local_method = getattr(comp, method_name, output_method)
         build_started = False
         result = None
         try:
+            comp._ensure_code_execution_policy()  # noqa: SLF001
             if event_manager:
                 event_manager.on_build_start(data={"id": comp.get_id()})
                 build_started = True
@@ -195,7 +217,7 @@ def _build_output_async_function(
         # removing the model_dump() call here because it is not serializable
         return serialize(result)
 
-    return _patch_send_message_decorator(component, output_function)
+    return output_function
 
 
 def _format_tool_name(name: str):
@@ -358,7 +380,7 @@ class ComponentToolkit:
             event_manager = self.component.get_event_manager()
             if asyncio.iscoroutinefunction(output_method):
                 tools.append(
-                    StructuredTool(
+                    ComponentStructuredTool(
                         name=formatted_name,
                         description=build_description(self.component, output),
                         coroutine=_build_output_async_function(
@@ -376,7 +398,7 @@ class ComponentToolkit:
                 )
             else:
                 tools.append(
-                    StructuredTool(
+                    ComponentStructuredTool(
                         name=formatted_name,
                         description=build_description(self.component, output),
                         func=_build_output_function(self.component, output_method, event_manager, TOOL_OUTPUT_NAME),
@@ -440,6 +462,11 @@ class ComponentToolkit:
                         if tool_metadata.get("status", True):
                             tool.name = tool_metadata.get("name", tool.name)
                             tool.description = tool_metadata.get("description", tool.description)
+                            # Carry the per-action HITL decisions onto the tool so the
+                            # agent gates exactly what the user selected (LE-1447).
+                            if tool.metadata is None:
+                                tool.metadata = {}
+                            tool.metadata["approval_actions"] = tool_metadata.get("approval_actions") or []
                             if tool_metadata.get("commands"):
                                 tool.description = _add_commands_to_tool_description(
                                     tool.description, tool_metadata.get("commands")

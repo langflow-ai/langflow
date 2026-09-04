@@ -206,7 +206,7 @@ input[type="password"]::-ms-clear {
     stroke-width: 1.5;
   }
   .primary-input {
-    @apply form-input block w-full rounded-md border border-border bg-background px-3 text-left text-sm placeholder:text-muted-foreground hover:border-muted-foreground focus:border-foreground focus:placeholder-transparent focus:ring-0 focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 placeholder:disabled:text-muted-foreground;
+    @apply form-input block w-full rounded-md border border-control bg-background px-3 text-left text-sm placeholder:text-muted-foreground hover:border-muted-foreground focus:border-foreground focus:placeholder-transparent focus:ring-0 focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 placeholder:disabled:text-muted-foreground;
   }
 
   .skeleton-card {
@@ -223,7 +223,7 @@ input[type="password"]::-ms-clear {
 
   /* The same as primary-input but no-truncate */
   .textarea-primary {
-    @apply form-input block w-full rounded-md border border-border bg-background px-3 text-left text-sm placeholder:text-muted-foreground hover:border-muted-foreground focus:border-foreground focus:placeholder-transparent focus:ring-0 focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 placeholder:disabled:text-muted-foreground;
+    @apply form-input block w-full rounded-md border border-control bg-background px-3 text-left text-sm placeholder:text-muted-foreground hover:border-muted-foreground focus:border-foreground focus:placeholder-transparent focus:ring-0 focus:ring-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 placeholder:disabled:text-muted-foreground;
   }
 
   .input-edit-node {
@@ -602,11 +602,11 @@ input[type="password"]::-ms-clear {
     @apply ml-auto mr-2 flex items-center gap-5;
   }
   .header-github-link-box {
-    @apply inline-flex h-8 items-center justify-center rounded-md border border-input px-2 pr-0;
+    @apply inline-flex h-8 items-center justify-center rounded-md border border-control px-2 pr-0;
   }
 
   .header-waitlist-link-box {
-    @apply inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-input px-2 text-sm font-medium text-muted-foreground shadow-sm ring-offset-background disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex h-9 items-center justify-center whitespace-nowrap rounded-md border border-control px-2 text-sm font-medium text-muted-foreground shadow-sm ring-offset-background disabled:pointer-events-none disabled:opacity-50;
   }
   .header-waitlist-link-box:hover {
     @apply hover:bg-accent hover:text-accent-foreground;
@@ -663,7 +663,7 @@ input[type="password"]::-ms-clear {
   }
 
   .app-div {
-    @apply absolute bottom-20 left-5 flex flex-col-reverse;
+    @apply absolute bottom-4 left-4 flex flex-col-reverse;
   }
 
   .chat-input-modal-txtarea {
@@ -967,7 +967,7 @@ input[type="password"]::-ms-clear {
     @apply block w-full overflow-auto border-0 px-3 py-2 text-sm outline-0 word-break-break-word;
   }
   .form-modal-lockchat {
-    @apply form-input block w-full rounded-md border border-border p-4 pr-16 custom-scroll focus:border-ring focus:ring-0 sm:text-sm;
+    @apply form-input block w-full rounded-md border border-control p-4 pr-16 custom-scroll focus:border-ring focus:ring-0 sm:text-sm;
   }
   .form-modal-send-icon-position {
     @apply absolute bottom-2 right-4;
@@ -1128,12 +1128,28 @@ input[type="password"]::-ms-clear {
     @apply rounded-md bg-accent-indigo px-0 font-semibold;
   }
 
+  /* A prompt variable whose name will be rejected on Check & Save. No background
+     token of its own: the wavy red underline reads as "invalid" the way a spell
+     checker does, and accent-red-foreground is already tuned for both themes. */
+  .chat-message-highlight-invalid {
+    @apply rounded-md px-0 font-semibold text-accent-red-foreground underline decoration-wavy underline-offset-2;
+  }
+
   .field-invalid {
     @apply absolute text-[0.8rem] font-medium text-destructive;
   }
 
   .label-invalid {
     @apply text-destructive;
+  }
+
+  /* In dark mode the default destructive red only reaches ~3.9:1 on the dark
+     background, below the WCAG AA 4.5:1 minimum for this small/medium-weight
+     error text. Use the brighter accent-red (which the dark theme already
+     defines) so form error messages and invalid labels stay legible. */
+  .dark .field-invalid,
+  .dark .label-invalid {
+    color: hsl(var(--accent-red-foreground));
   }
 
   .input-invalid {
@@ -1240,7 +1256,7 @@ input[type="password"]::-ms-clear {
     @apply top-[-23px];
   }
   .popover-input {
-    @apply h-fit w-fit flex-1 border-none bg-transparent p-0 shadow-none outline-none ring-0 ring-offset-0 placeholder:text-muted-foreground focus:border-foreground focus:outline-none focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply h-fit w-fit flex-1 border-none bg-transparent p-0 shadow-none outline-none ring-0 ring-offset-0 placeholder:text-muted-foreground focus:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50;
   }
 
   .beta-badge {
@@ -1293,14 +1309,6 @@ input[type="password"]::-ms-clear {
 
   .btn-playground-actions {
     @apply flex h-[32px] w-[32px] items-center justify-center rounded-md bg-muted font-bold transition-all;
-  }
-
-  .no-focus-visible {
-    @apply focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0;
-    --tw-ring-offset-width: none !important;
-    --tw-ring-shadow: none !important;
-    --tw-ring-offset-shadow: none !important;
-    --tw-ring-color: none !important;
   }
 
   .helper-lines {

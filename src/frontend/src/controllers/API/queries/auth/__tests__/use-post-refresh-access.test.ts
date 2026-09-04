@@ -49,7 +49,7 @@ describe("refresh token functionality", () => {
   });
 
   describe("successful token refresh", () => {
-    it("should call refresh API and set new refresh token cookie", async () => {
+    it("should call refresh API without replacing the server's HttpOnly cookies", async () => {
       const mockRefreshResponse = {
         access_token: "new-access-token",
         refresh_token: "new-refresh-token",
@@ -64,10 +64,7 @@ describe("refresh token functionality", () => {
       expect(mockApiPost).toHaveBeenCalledWith(
         expect.stringContaining("refresh"),
       );
-      expect(mockCookieManagerSet).toHaveBeenCalledWith(
-        "refresh_token_lf",
-        "new-refresh-token",
-      );
+      expect(mockCookieManagerSet).not.toHaveBeenCalled();
       expect(result).toEqual(mockRefreshResponse);
     });
 
@@ -113,7 +110,7 @@ describe("refresh token functionality", () => {
   });
 
   describe("cookie management", () => {
-    it("should use cookieManager for setting refresh token", async () => {
+    it("should leave the refresh cookie server-owned", async () => {
       const mockRefreshResponse = {
         access_token: "access-token",
         refresh_token: "refresh-token-xyz",
@@ -125,14 +122,10 @@ describe("refresh token functionality", () => {
       const refreshMutation = useRefreshAccessToken();
       await refreshMutation.mutate();
 
-      expect(mockCookieManagerSet).toHaveBeenCalledTimes(1);
-      expect(mockCookieManagerSet).toHaveBeenCalledWith(
-        "refresh_token_lf",
-        "refresh-token-xyz",
-      );
+      expect(mockCookieManagerSet).not.toHaveBeenCalled();
     });
 
-    it("should set refresh token cookie before returning response", async () => {
+    it("should return the response without writing token cookies", async () => {
       const mockRefreshResponse = {
         access_token: "access-token",
         refresh_token: "refresh-token-abc",
@@ -144,11 +137,7 @@ describe("refresh token functionality", () => {
       const refreshMutation = useRefreshAccessToken();
       const response = await refreshMutation.mutate();
 
-      // Verify cookie was set before response was returned
-      expect(mockCookieManagerSet).toHaveBeenCalledWith(
-        "refresh_token_lf",
-        "refresh-token-abc",
-      );
+      expect(mockCookieManagerSet).not.toHaveBeenCalled();
       expect(response).toEqual(mockRefreshResponse);
     });
   });

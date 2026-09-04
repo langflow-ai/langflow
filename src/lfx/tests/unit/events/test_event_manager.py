@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import threading
 from unittest.mock import MagicMock
 
 import pytest
@@ -129,6 +130,37 @@ class TestEventManager:
         test_data = {"message": "test"}
         # Should not raise exception, just log debug message
         manager.send_event(event_type="test", data=test_data)
+
+    def test_send_event_degrades_unserializable_payload(self):
+        """Regression for #12591: an unserializable payload must not crash the build.
+
+        A ``threading.Lock`` held by a vector-DB client (surfaced through a Loop's
+        per-iteration build events) makes FastAPI's jsonable_encoder raise
+        ``ValueError([TypeError, TypeError])``. ``send_event`` should fall back to the
+        fail-safe serializer and still emit a JSON-decodable event with the object
+        degraded to a string.
+        """
+        queue = MagicMock()
+        manager = EventManager(queue)
+
+        lock = threading.Lock()
+        # Mirror the on_end_vertex build_data shape emitted during a loop subgraph build.
+        data = {"build_data": {"id": "Chroma-1", "data": {"text": "chunk", "vector_store": lock}}}
+
+        # Must not raise (pre-fix this propagated as "Error building Component Loop").
+        manager.send_event(event_type="end_vertex", data=data)
+
+        queue.put_nowait.assert_called_once()
+        _, data_bytes, _ = queue.put_nowait.call_args[0][0]
+        parsed = json.loads(data_bytes.decode("utf-8").strip())
+
+        assert parsed["event"] == "end_vertex"
+        # The lock survives as a string representation rather than crashing serialization.
+        serialized_lock = parsed["data"]["build_data"]["data"]["vector_store"]
+        assert isinstance(serialized_lock, str)
+        assert "lock" in serialized_lock.lower()
+        # Serializable siblings are preserved.
+        assert parsed["data"]["build_data"]["data"]["text"] == "chunk"
 
     def test_noop_method(self):
         """Test noop method."""

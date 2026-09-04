@@ -9,7 +9,12 @@ from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from lfx.log.logger import logger
-from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from lfx.services.settings.constants import (
+    DEFAULT_SUPERUSER,
+    DEFAULT_SUPERUSER_PASSWORD,
+    MINIMUM_SECRET_KEY_LENGTH,
+    SHORT_SECRET_KEY_WARNING,
+)
 from lfx.services.settings.utils import (
     derive_public_key_from_private,
     generate_rsa_key_pair,
@@ -17,6 +22,15 @@ from lfx.services.settings.utils import (
     write_public_key_to_file,
     write_secret_to_file,
 )
+
+ASCII_CONTROL_CHARACTER_LIMIT = 0x20
+ASCII_DELETE_CHARACTER = 0x7F
+
+
+def _warn_if_secret_key_is_short(value: str | SecretStr) -> None:
+    secret_value = value.get_secret_value() if isinstance(value, SecretStr) else value
+    if len(secret_value) < MINIMUM_SECRET_KEY_LENGTH:
+        logger.warning(SHORT_SECRET_KEY_WARNING)
 
 
 class JWTAlgorithm(str, Enum):
@@ -72,7 +86,7 @@ class AuthSettings(BaseSettings):
     AUTO_LOGIN: bool = Field(
         default=True,  # TODO: Set to False in v2.0
         description=(
-            "Enable automatic login with default credentials. "
+            "Enable automatic login with a configured or generated bootstrap account. "
             "SECURITY WARNING: This bypasses authentication and should only be used in development environments. "
             "Set to False in production. This will default to False in v2.0."
         ),
@@ -95,13 +109,26 @@ class AuthSettings(BaseSettings):
     """If True, allows creation of superusers via the CLI 'langflow superuser' command."""
 
     NEW_USER_IS_ACTIVE: bool = False
+
+    ENABLE_SIGNUP: bool = Field(
+        default=True,
+        description=(
+            "Whether public self-registration via POST /api/v1/users/ is allowed. "
+            "Always refused when AUTO_LOGIN is enabled (single-user mode has no signup "
+            "concept); operators running multi-user instances can set this to False to "
+            "disable public sign up entirely. Authenticated superusers can still create "
+            "users regardless of this setting."
+        ),
+    )
+    """If True, public self-registration via POST /api/v1/users/ is allowed."""
+
     SUPERUSER: str = DEFAULT_SUPERUSER
     # Store password as SecretStr to prevent accidental plaintext exposure
     SUPERUSER_PASSWORD: SecretStr = Field(default=DEFAULT_SUPERUSER_PASSWORD)
 
-    REFRESH_SAME_SITE: Literal["lax", "strict", "none"] = "none"
+    REFRESH_SAME_SITE: Literal["lax", "strict", "none"] = "lax"
     """The SameSite attribute of the refresh token cookie."""
-    REFRESH_SECURE: bool = True
+    REFRESH_SECURE: bool = False
     """The Secure attribute of the refresh token cookie."""
     REFRESH_HTTPONLY: bool = True
     """The HttpOnly attribute of the refresh token cookie."""
@@ -109,7 +136,7 @@ class AuthSettings(BaseSettings):
     """The SameSite attribute of the access token cookie."""
     ACCESS_SECURE: bool = False
     """The Secure attribute of the access token cookie."""
-    ACCESS_HTTPONLY: bool = False
+    ACCESS_HTTPONLY: bool = True
     """The HttpOnly attribute of the access token cookie."""
 
     COOKIE_DOMAIN: str | None = None
@@ -133,6 +160,11 @@ class AuthSettings(BaseSettings):
         description="Path to SSO configuration file (YAML format). Required when SSO_ENABLED=true.",
     )
     """Path to YAML configuration file for SSO settings. Contains provider-specific configuration."""
+
+    SSO_REDIRECT_URL: str | None = Field(
+        default=None,
+        description="Same-origin relative URL used after SSO authentication. Absolute URLs are rejected.",
+    )
 
     # External trusted-identity settings.
     # Used when an upstream identity layer (proxy, gateway, IdP) issues or
@@ -203,6 +235,17 @@ class AuthSettings(BaseSettings):
         default="name",
         description="JWT claim containing the user's display name.",
     )
+    EXTERNAL_AUTH_GROUP_RECONCILE_INTERVAL_SECONDS: int = Field(
+        default=60,
+        ge=0,
+        description=(
+            "Minimum seconds between external group reconciliations for one unchanged directory state. "
+            "Bearer tokens arrive on every request, and reconciliation writes rows, takes policy locks and "
+            "appends an audit entry, so an unchanged (provider, subject, group set) is only reconciled once "
+            "per interval. A group set that differs from the last reconciled one always reconciles "
+            "immediately. Set to 0 to reconcile on every request."
+        ),
+    )
     EXTERNAL_AUTH_ACCESS_CEILING_ENABLED: bool = Field(
         default=False,
         description=(
@@ -250,9 +293,17 @@ class AuthSettings(BaseSettings):
         description=(
             "Write an AuthzAuditLog row for every authorization decision and share-administration "
             "action. Independent of AUTHZ_ENABLED — set this to True while enforcement is off to "
-            "observe traffic before flipping the AUTHZ_ENABLED flag. Defaults to False because the "
-            "fire-and-forget audit task opens its own DB session per row; on SQLite this can "
-            "contend with concurrent write transactions ('database is locked')."
+            "observe traffic before flipping the AUTHZ_ENABLED flag. The default pipeline is "
+            "best effort and may drop rows under sustained database failure or queue saturation."
+        ),
+    )
+    AUTHZ_AUDIT_DURABLE: bool = Field(
+        default=False,
+        description=(
+            "Require every accepted authorization audit call to wait for its database commit. "
+            "A full queue applies backpressure and persistence failures fail the triggering request "
+            "with a sanitized error. Disabled by default to preserve the non-blocking OSS behavior; "
+            "enable it before using authz_audit_log as a compliance or external-delivery source."
         ),
     )
     AUTHZ_AUDIT_RETENTION_DAYS: int = Field(
@@ -286,27 +337,6 @@ class AuthSettings(BaseSettings):
         # Preserve the configured username but scrub the password from memory to avoid plaintext exposure.
         self.SUPERUSER_PASSWORD = SecretStr("")
 
-    # If autologin is true, then we need to set the credentials to
-    # the default values
-    # so we need to validate the superuser and superuser_password
-    # fields
-    @field_validator("SUPERUSER", "SUPERUSER_PASSWORD", mode="before")
-    @classmethod
-    def validate_superuser(cls, value, info):
-        # When AUTO_LOGIN is enabled, force superuser to use default values.
-        if info.data.get("AUTO_LOGIN"):
-            logger.debug("Auto login is enabled, forcing superuser to use default values")
-            if info.field_name == "SUPERUSER":
-                if value != DEFAULT_SUPERUSER:
-                    logger.debug("Resetting superuser to default value")
-                return DEFAULT_SUPERUSER
-            if info.field_name == "SUPERUSER_PASSWORD":
-                if value != DEFAULT_SUPERUSER_PASSWORD.get_secret_value():
-                    logger.debug("Resetting superuser password to default value")
-                return DEFAULT_SUPERUSER_PASSWORD
-
-        return value
-
     @field_validator("SECRET_KEY", mode="before")
     @classmethod
     def get_secret_key(cls, value, info):
@@ -314,7 +344,9 @@ class AuthSettings(BaseSettings):
 
         if not config_dir:
             logger.debug("No CONFIG_DIR provided, not saving secret key")
-            return value or secrets.token_urlsafe(32)
+            value = value or secrets.token_urlsafe(32)
+            _warn_if_secret_key_is_short(value)
+            return value
 
         secret_key_path = Path(config_dir) / "secret_key"
 
@@ -334,6 +366,7 @@ class AuthSettings(BaseSettings):
             write_secret_to_file(secret_key_path, value)
             logger.debug("Saved secret key")
 
+        _warn_if_secret_key_is_short(value)
         return value if isinstance(value, SecretStr) else SecretStr(value).get_secret_value()
 
     @field_validator("EXTERNAL_AUTH_PROVIDER", mode="before")
@@ -351,6 +384,35 @@ class AuthSettings(BaseSettings):
             return "external"
         normalized = str(value).strip()
         return normalized or "external"
+
+    @field_validator("SSO_REDIRECT_URL", mode="before")
+    @classmethod
+    def validate_sso_redirect_url(cls, value):
+        """Allow only same-origin relative URL references."""
+        if value is None:
+            return None
+
+        raw_url = str(value)
+        url = raw_url.strip()
+        if not url:
+            return None
+        if any(
+            ord(character) < ASCII_CONTROL_CHARACTER_LIMIT or ord(character) == ASCII_DELETE_CHARACTER
+            for character in raw_url
+        ):
+            msg = "SSO_REDIRECT_URL must not contain control characters."
+            raise ValueError(msg)
+
+        parsed = urlparse(url)
+        normalized_separators = url.replace("\\", "/")
+        if parsed.scheme or parsed.netloc or normalized_separators.startswith("//"):
+            msg = (
+                "SSO_REDIRECT_URL must be a same-origin relative path; "
+                "absolute and protocol-relative URLs are not allowed."
+            )
+            raise ValueError(msg)
+
+        return url
 
     @field_validator("EXTERNAL_AUTH_JWKS_URL", mode="before")
     @classmethod

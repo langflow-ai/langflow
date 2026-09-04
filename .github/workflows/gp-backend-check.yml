@@ -4,6 +4,11 @@ on:
   pull_request:
     paths:
       - "src/lfx/src/lfx/components/**"
+      # Bundle component strings reach core locales/en.json through the
+      # lfx/components/<provider> import shims, so an edit to a bundle's
+      # display_name/description/info must re-trigger the extractor too --
+      # otherwise en.json silently drifts from src/bundles/**.
+      - "src/bundles/**"
       - "src/backend/base/langflow/initial_setup/starter_projects/**"
 
 jobs:
@@ -18,7 +23,7 @@ jobs:
 
     steps:
       - name: Checkout PR branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.head_ref }}
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -27,8 +32,9 @@ jobs:
         run: python scripts/gp/bake_note_keys.py
 
       - name: Setup uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: "3.12"

@@ -7,8 +7,8 @@ from lfx.graph.graph.base import Graph
 
 @pytest.mark.skip("Temporarilty disabled")
 def test_edge_raises_error_on_invalid_target_handle():
-    from lfx.components.openai.openai_chat_model import OpenAIModelComponent
     from lfx.components.processing import PromptComponent
+    from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
     template = """Answer the user as if you were a pirate.
 

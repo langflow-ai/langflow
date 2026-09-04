@@ -33,8 +33,30 @@ export type FlowType = {
   locked?: boolean | null;
   public?: boolean;
   access_type?: "PUBLIC" | "PRIVATE" | "PROTECTED";
+  /**
+   * Anonymous capabilities for this flow, returned only by the direct-link
+   * endpoint (`GET /api/v1/flows/public_flow/{id}`). Authoritative over
+   * `access_type`, which cannot express a canonical `AuthzShare(scope=public)`.
+   */
+  public_access?: PublicFlowAccess;
   mcp_enabled?: boolean;
+  flow_type?: "workflow" | "agent";
+  a2a_enabled?: boolean;
+  a2a_card_overrides?: A2ACardOverrides | null;
   name_key?: string | null;
+};
+
+export type PublicFlowAccess = {
+  can_read: boolean;
+  can_execute: boolean;
+};
+
+export type A2ACardOverrides = {
+  name?: string;
+  description?: string;
+  version?: string;
+  tags?: string[];
+  examples?: string[];
 };
 
 export type GenericNodeType = Node<NodeDataType, "genericNode">;

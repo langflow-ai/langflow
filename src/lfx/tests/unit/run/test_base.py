@@ -180,7 +180,7 @@ class TestRunFlowJsonInput:
             mock_graph.edges = []
             mock_graph.prepare = MagicMock()
 
-            async def mock_async_start(_inputs, **_kwargs):
+            async def mock_async_start(_inputs=None, **_kwargs):
                 yield
 
             mock_graph.async_start = mock_async_start
@@ -227,7 +227,7 @@ class TestRunFlowJsonInput:
                 return_value=settings_service,
             ),
             patch(
-                "lfx.utils.flow_validation.ensure_component_hash_lookups_loaded",
+                "lfx.load.load.ensure_component_hash_lookups_loaded",
                 new=AsyncMock(return_value={"ChatInput": {"knownhash1234"}}),
             ),
             patch.object(component_cache, "type_to_current_hash", {"ChatInput": {"knownhash1234"}}),
@@ -308,7 +308,7 @@ class TestRunFlowSessionId:
         graph.edges = []
         graph.prepare = MagicMock()
 
-        async def _async_start(_inputs, **_kwargs):
+        async def _async_start(_inputs=None, **_kwargs):
             yield
 
         graph.async_start = _async_start
@@ -469,7 +469,7 @@ class TestRunFlowSessionIdPropagation:
         graph.edges = []
         graph.prepare = MagicMock()
 
-        async def _async_start(_inputs, **_kwargs):
+        async def _async_start(_inputs=None, **_kwargs):
             yield
 
         graph.async_start = _async_start
@@ -574,7 +574,7 @@ class TestRunFlowUserId:
         graph.edges = []
         graph.prepare = MagicMock()
 
-        async def _async_start(_inputs, **_kwargs):
+        async def _async_start(_inputs=None, **_kwargs):
             yield
 
         graph.async_start = _async_start
@@ -671,7 +671,7 @@ class TestRunFlowFallbackToEnvVars:
         graph.edges = []
         graph.prepare = MagicMock()
 
-        async def _async_start(_inputs, **kwargs):
+        async def _async_start(_inputs=None, **kwargs):
             captured.update(kwargs)
             yield
 
@@ -743,7 +743,7 @@ class TestRunFlowGlobalVariables:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs, **_kwargs):
+        async def mock_async_start(_inputs=None, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -784,7 +784,7 @@ graph = Graph(chat_input, chat_output)
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs, **_kwargs):
+        async def mock_async_start(_inputs=None, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -825,7 +825,7 @@ class TestRunFlowOutputFormats:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs, **_kwargs):
+        async def mock_async_start(_inputs=None, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -938,7 +938,7 @@ class TestRunFlowTiming:
         mock_result.vertex.display_name = "TestComponent"
         mock_result.vertex.id = "test-id-123"
 
-        async def mock_async_start(_inputs, **_kwargs):
+        async def mock_async_start(_inputs=None, **_kwargs):
             yield mock_result
 
         mock_graph.async_start = mock_async_start
@@ -1133,7 +1133,7 @@ class TestRunFlowVariableValidation:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs, **_kwargs):
+        async def mock_async_start(_inputs=None, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -1169,7 +1169,7 @@ class TestRunFlowInputValueHandling:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs, **_kwargs):
+        async def mock_async_start(_inputs=None, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -1207,7 +1207,7 @@ class TestRunFlowInputValueHandling:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs, **_kwargs):
+        async def mock_async_start(_inputs=None, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -1264,7 +1264,7 @@ class TestRunFlowJsonFileExecution:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def mock_async_start(_inputs, **_kwargs):
+        async def mock_async_start(_inputs=None, **_kwargs):
             yield
 
         mock_graph.async_start = mock_async_start
@@ -1364,7 +1364,7 @@ class TestRunFlowExecutionErrors:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def failing_async_start(_inputs, **_kwargs):
+        async def failing_async_start(_inputs=None, **_kwargs):
             msg = "Execution failed"
             raise ValueError(msg)
             yield  # Required to make it an async generator
@@ -1643,7 +1643,7 @@ class TestUpgradeFlowOption:
 
     @pytest.mark.asyncio
     async def test_upgrade_flow_check_passes_clean_real_flow_without_registry_mock(self):
-        """Regression: a known-clean real starter flow must PASS --upgrade-flow=check.
+        """Regression: the current clean real starter flow must PASS --upgrade-flow=check.
 
         Deliberately does NOT mock the registry. The original bug was that the gate read
         component_cache.all_types_dict (empty at gate time) instead of the bundled component
@@ -1653,7 +1653,15 @@ class TestUpgradeFlowOption:
         """
         from pathlib import Path
 
-        fixture = Path(__file__).parents[2] / "fixtures" / "starter_flows" / "v1.9.0" / "basic_prompting.json"
+        fixture = (
+            Path(__file__).parents[4]
+            / "backend"
+            / "base"
+            / "langflow"
+            / "initial_setup"
+            / "starter_projects"
+            / "Basic Prompting.json"
+        )
         flow_json = fixture.read_text(encoding="utf-8")
 
         mock_graph = MagicMock()
@@ -1662,7 +1670,7 @@ class TestUpgradeFlowOption:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def _async_start(_inputs, **_kwargs):
+        async def _async_start(_inputs=None, **_kwargs):
             yield
 
         mock_graph.async_start = _async_start
@@ -1703,7 +1711,7 @@ class TestUpgradeFlowOption:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def _async_start(_inputs, **_kwargs):
+        async def _async_start(_inputs=None, **_kwargs):
             yield
 
         mock_graph.async_start = _async_start
@@ -1740,7 +1748,7 @@ class TestUpgradeFlowOption:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def _async_start(_inputs, **_kwargs):
+        async def _async_start(_inputs=None, **_kwargs):
             yield
 
         mock_graph.async_start = _async_start
@@ -1783,7 +1791,7 @@ class TestUpgradeFlowOption:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def _async_start(_inputs, **_kwargs):
+        async def _async_start(_inputs=None, **_kwargs):
             yield
 
         mock_graph.async_start = _async_start
@@ -1822,7 +1830,7 @@ class TestUpgradeFlowOption:
         mock_graph.edges = []
         mock_graph.prepare = MagicMock()
 
-        async def _async_start(_inputs, **_kwargs):
+        async def _async_start(_inputs=None, **_kwargs):
             yield
 
         mock_graph.async_start = _async_start

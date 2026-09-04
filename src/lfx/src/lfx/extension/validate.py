@@ -253,23 +253,6 @@ def _validate_manifest_phase(root: Path, report: ValidateReport) -> ManifestSour
         msg = "manifest discovery returned an inconsistent result"
         raise RuntimeError(msg)
 
-    # Detect multi-bundle BEFORE model_validate so the dedicated discriminant
-    # fires reliably even if other manifest fields are also wrong.
-    bundles = raw_data.get("bundles") if isinstance(raw_data, dict) else None
-    if isinstance(bundles, list) and len(bundles) > 1:
-        report.errors.add_error(
-            ExtensionError(
-                code="multi-bundle-unsupported",
-                message=(
-                    f"Manifest declares {len(bundles)} bundles; v0 accepts exactly one. "
-                    "Multi-bundle support is deferred to a future milestone."
-                ),
-                location=f"{source_path}:bundles",
-                hint=("Split each bundle into its own Extension distribution until multi-bundle support ships."),
-            )
-        )
-        return None
-
     # Detect deferred fields BEFORE model_validate so that authors get a clean
     # discriminant rather than a generic schema error wall.
     deferred_present: list[str] = []
@@ -400,6 +383,26 @@ def _is_component_class(node: ast.ClassDef) -> bool:
         if isinstance(base, ast.Name) and (base.id == "Component" or base.id.endswith("Component")):
             return True
         if isinstance(base, ast.Attribute) and (base.attr == "Component" or base.attr.endswith("Component")):
+            return True
+    return False
+
+
+def _inherits_entry_point(node: ast.ClassDef) -> bool:
+    """True when a *derived* Component base plausibly supplies the entry-point.
+
+    Subclasses of bases like ``LCVectorStoreComponent`` / ``LCToolComponent`` /
+    ``LCModelComponent`` inherit the class-level ``outputs = [Output(...)]``
+    declaration and only override the output *method*, so the subclass body
+    shows neither ``build`` nor ``outputs`` (the original pilots declared
+    ``outputs`` inline, which is why this never fired before the partner
+    graduations).  Static analysis cannot resolve the base across modules, so
+    accept any base whose name ends with ``Component`` but is not the root
+    ``Component`` itself -- the loader's registration-time checks remain the
+    real gate, exactly as for :func:`_is_component_class`.
+    """
+    for base in node.bases:
+        name = base.id if isinstance(base, ast.Name) else base.attr if isinstance(base, ast.Attribute) else None
+        if name and name != "Component" and name.endswith("Component"):
             return True
     return False
 
@@ -577,7 +580,7 @@ def _scan_python_file(py_path: Path, bundle_root: Path, errors: ExtensionErrorCo
     for node in tree.body if isinstance(tree, ast.Module) else []:
         if isinstance(node, ast.ClassDef) and _is_component_class(node):
             has_component = True
-            if not _has_build_method(node):
+            if not _has_build_method(node) and not _inherits_entry_point(node):
                 errors.add_error(
                     ExtensionError(
                         code="build-method-missing",
@@ -860,9 +863,7 @@ def validate_extension(
 
     manifest = source.manifest
 
-    # Pass 2 + 3 per bundle.  v0 schema-validates length<=1 already, so this
-    # loop runs once in practice; written generically so the plumbing is in
-    # place when multi-bundle ships.
+    # Pass 2 + 3 independently for every declared bundle.
     for bundle in manifest.bundles:
         resolved, path_error = _resolve_bundle_path(root_path, bundle.path)
         if path_error is not None or resolved is None:

@@ -3,8 +3,10 @@ from copy import deepcopy
 from uuid import uuid4
 
 import pytest
+from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
     get_or_create_default_folder,
+    get_or_create_starter_folder,
     session_scope,
     update_projects_components_with_latest_component_versions,
 )
@@ -25,6 +27,20 @@ async def test_get_or_create_default_folder_creation() -> None:
         folder = await get_or_create_default_folder(session, test_user_id)
         assert folder.name == DEFAULT_FOLDER_NAME, "The project name should match the default."
         assert hasattr(folder, "id"), "The project should have an 'id' attribute after creation."
+
+
+async def test_get_or_create_starter_folder_ignores_user_owned_name_collision(async_session) -> None:
+    """A user project named like the reserved project must not become the system Starter Project."""
+    user_folder = Folder(user_id=uuid4(), name=STARTER_FOLDER_NAME, description="User project")
+    async_session.add(user_folder)
+    await async_session.flush()
+
+    starter_folder = await get_or_create_starter_folder(async_session)
+
+    assert starter_folder.user_id is None
+    assert starter_folder.id != user_folder.id
+    matching_folders = (await async_session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).all()
+    assert {folder.id for folder in matching_folders} == {user_folder.id, starter_folder.id}
 
 
 @pytest.mark.usefixtures("client")
@@ -322,3 +338,87 @@ def test_update_components_does_not_mutate_field_format_attributes():
     assert all_types_dict == snapshot, (
         "all_types_dict must not be mutated via mutable FIELD_FORMAT_ATTRIBUTES (e.g. input_types)"
     )
+
+
+def _with_metadata(project_metadata, latest_metadata):
+    """Build (project_data, all_types_dict) pairs carrying the given node metadata."""
+    all_types_dict = _make_all_types_dict()
+    all_types_dict["test_category"]["TestComponent"]["metadata"] = latest_metadata
+    project_data = _make_project_data()
+    project_data["nodes"][0]["data"]["node"]["metadata"] = project_metadata
+    return project_data, all_types_dict
+
+
+def test_update_components_preserves_importable_module_over_runtime_ext_namespace():
+    """A runtime ``_lfx_ext.*`` module from the live template must not be persisted.
+
+    The live template of a moved (ext) component reports its runtime
+    ``_lfx_ext.*`` module, which is not importable outside a running extension
+    loader. The updater must keep the node's stored legacy path (the bundle
+    shims keep it importable, and the migration table + template tests resolve
+    it) while still syncing the rest of the metadata.
+    """
+    project_data, all_types_dict = _with_metadata(
+        project_metadata={"module": "lfx.components.test.test_component.TestComponent"},
+        latest_metadata={"module": "_lfx_ext.official.test.test_component", "dependencies": ["dep"]},
+    )
+
+    result = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+
+    merged = result["nodes"][0]["data"]["node"]["metadata"]
+    assert merged["module"] == "lfx.components.test.test_component.TestComponent"
+    assert merged["dependencies"] == ["dep"]
+
+
+def test_update_components_syncs_module_for_in_tree_components():
+    """A normal (importable) module path from the live template still syncs."""
+    project_data, all_types_dict = _with_metadata(
+        project_metadata={"module": "lfx.components.test.old_location.TestComponent"},
+        latest_metadata={"module": "lfx.components.test.test_component.TestComponent"},
+    )
+
+    result = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+
+    merged = result["nodes"][0]["data"]["node"]["metadata"]
+    assert merged["module"] == "lfx.components.test.test_component.TestComponent"
+
+
+def test_update_components_syncs_metadata_for_skipped_language_model():
+    """Refreshing skipped dynamic components must keep source metadata consistent."""
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "LanguageModelComponent",
+                    "node": {
+                        "metadata": {"code_hash": "old-hash", "module": "old.module"},
+                        "template": {
+                            "_type": "Component",
+                            "code": {"type": "code", "value": "old source"},
+                            "model": {"value": "persisted-model"},
+                        },
+                    },
+                }
+            }
+        ],
+        "edges": [],
+    }
+    all_types_dict = {
+        "models_and_agents": {
+            "LanguageModelComponent": {
+                "metadata": {"code_hash": "new-hash", "module": "new.module"},
+                "template": {
+                    "_type": "Component",
+                    "code": {"type": "code", "value": "new source"},
+                    "model": {"value": "default-model"},
+                },
+            }
+        }
+    }
+
+    result = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+    node = result["nodes"][0]["data"]["node"]
+
+    assert node["template"]["code"]["value"] == "new source"
+    assert node["template"]["model"]["value"] == "persisted-model"
+    assert node["metadata"] == {"code_hash": "new-hash", "module": "new.module"}

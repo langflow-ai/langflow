@@ -17,9 +17,19 @@ from __future__ import annotations
 import uuid
 from typing import TYPE_CHECKING
 
+from lfx.base.knowledge_bases.backends import is_local_chroma
+from lfx.base.knowledge_bases.backends.postgres import resolve_default_kb_backend
+from lfx.base.knowledge_bases.validation import validate_collection_name
+from lfx.base.models.provider_registry import is_api_key_optional
 from lfx.base.models.unified_models import get_api_key_for_provider
+from lfx.services.model_provider_policy import (
+    ModelProviderPolicyPurpose,
+    aresolve_model_provider_policy,
+    require_model_provider,
+)
 from sqlmodel import col, select
 
+from langflow.api.utils.kb_helpers import local_chroma_rejection_reason
 from langflow.services.base import Service
 from langflow.services.database.models.memory_base.model import (
     MemoryBase,
@@ -51,13 +61,20 @@ from langflow.services.memory_base.ingestion import (
     trigger_ingestion as _trigger_ingestion,
 )
 from langflow.services.memory_base.kb_path_helpers import (
+    BackendProvisioningError,
     delete_kb,
+    delete_kb_remote_collection,
     initialize_kb,
     resolve_kb_username,
     sanitize_kb_name,
 )
+from langflow.services.memory_base.provider_scope import (
+    resolve_owned_memory_flow,
+)
+from langflow.services.model_provider_policy_scope import scoped_model_provider_policy_for_flow
 
 if TYPE_CHECKING:
+    from lfx.services.authorization.base import ResourceVisibilityScope
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
@@ -65,21 +82,110 @@ class PreprocessingValidationError(ValueError):
     """Raised when preprocessing is enabled but the provider API key is absent."""
 
 
-def _validate_preprocessing_api_key(user_id: uuid.UUID, preproc_model: str | None) -> None:
-    """Raise PreprocessingValidationError if the preprocessing provider API key is missing."""
+def _require_preprocessing_model_provider(user_id: uuid.UUID, preproc_model: str | None) -> str | None:
+    """Require CONFIGURE access for a supplied preprocessing model identity."""
+    provider = _infer_preprocessing_model_provider(preproc_model)
+    if provider is None:
+        return None
+    require_model_provider(
+        user_id=user_id,
+        provider=provider,
+        purpose=ModelProviderPolicyPurpose.CONFIGURE,
+    )
+    return provider
+
+
+def _infer_preprocessing_model_provider(preproc_model: str | None) -> str | None:
+    """Resolve a supplied preprocessing model without accessing credentials."""
     if not preproc_model:
-        return
+        return None
     try:
-        provider = infer_llm_provider(preproc_model)
+        return infer_llm_provider(preproc_model)
     except ValueError as exc:
         raise PreprocessingValidationError(str(exc)) from exc
-    api_key = get_api_key_for_provider(user_id, provider)
+
+
+async def _preflight_memory_provider_configuration(
+    *,
+    flow,
+    actor_user_id: uuid.UUID,
+    actor_is_superuser: bool,
+    embedding_model: str,
+    preproc_model: str | None,
+) -> tuple[str | None, str]:
+    """Authorize selected configuration providers before any owner credential read."""
+    preprocessing_provider = _infer_preprocessing_model_provider(preproc_model)
+    embedding_provider = infer_embedding_provider(embedding_model)
+    providers = list(dict.fromkeys(provider for provider in (preprocessing_provider, embedding_provider) if provider))
+    with scoped_model_provider_policy_for_flow(
+        flow,
+        user_id=actor_user_id,
+        is_superuser=actor_is_superuser,
+    ):
+        provider_policy = await aresolve_model_provider_policy(
+            user_id=actor_user_id,
+            providers=providers,
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
+        for provider in providers:
+            provider_policy.require(provider)
+    return preprocessing_provider, embedding_provider
+
+
+def _validate_preprocessing_api_key(user_id: uuid.UUID, preproc_model: str | None) -> None:
+    """Raise PreprocessingValidationError if the preprocessing provider API key is missing."""
+    provider = _require_preprocessing_model_provider(user_id, preproc_model)
+    _validate_preprocessing_provider_api_key(user_id, preproc_model, provider)
+
+
+def _validate_preprocessing_provider_api_key(
+    owner_user_id: uuid.UUID,
+    preproc_model: str | None,
+    provider: str | None,
+) -> None:
+    """Validate an owner's credential after the actor's provider preflight succeeds."""
+    if provider is None:
+        return
+    if provider == "Ollama" or is_api_key_optional(provider):
+        return
+    api_key = get_api_key_for_provider(owner_user_id, provider)
     if not api_key:
         msg = (
             f"No API key found for provider '{provider}' (required for preprocessing model "
             f"'{preproc_model}'). Add the key to your global variables before enabling preprocessing."
         )
         raise PreprocessingValidationError(msg)
+
+
+async def _create_kb_record_for_memory_base(
+    *,
+    user_id: uuid.UUID,
+    kb_name: str,
+    embedding_provider: str,
+    embedding_model: str,
+    backend_type: str,
+    backend_config: dict,
+) -> None:
+    """Persist the ``knowledge_base`` row backing a Memory Base.
+
+    Memory Bases used to exist only as a directory plus a sidecar file, so their
+    vector-store backend could not be resolved on a replica that had never
+    touched that directory — every read path fell back to local Chroma. This row
+    is now the single source of truth: embedding config, backend, cached stats,
+    and the ``source_types=["memory"]`` marker all live here, so Memory Bases are
+    first-class Knowledge Bases with no dependency on local disk (no sidecar is
+    written at all).
+    """
+    from langflow.api.utils import knowledge_base_service
+
+    await knowledge_base_service.create_record(
+        user_id=user_id,
+        name=kb_name,
+        model_selection={"name": embedding_model, "provider": embedding_provider},
+        backend_type=backend_type,
+        backend_config=backend_config,
+        source_types=["memory"],
+    )
 
 
 class MemoryBaseService(Service):
@@ -91,39 +197,56 @@ class MemoryBaseService(Service):
     #  CRUD                                                                #
     # ------------------------------------------------------------------ #
 
-    async def create(self, payload: MemoryBaseCreate, user_id: uuid.UUID) -> MemoryBase:
+    async def create(
+        self,
+        payload: MemoryBaseCreate,
+        user_id: uuid.UUID,
+        *,
+        is_superuser: bool = False,
+    ) -> MemoryBase:
+        backend_type = payload.backend_type or resolve_default_kb_backend()
+        backend_config = payload.backend_config or {}
+
+        # 0. Local Chroma is a dev-profile-only backend — its vectors live on the
+        # serving box's filesystem. ``BackendProvisioningError`` is already mapped
+        # to 422 by the route, which is the same status the KB endpoint returns
+        # for this rejection.
+        rejection = local_chroma_rejection_reason(backend_type, backend_config, resource="memory base")
+        if rejection is not None:
+            raise BackendProvisioningError(rejection)
+
         # 1. Verify that the referenced flow belongs to this user.
         async with session_scope() as db:
-            from langflow.services.database.models.flow.model import Flow
+            flow = await resolve_owned_memory_flow(db, flow_id=payload.flow_id, user_id=user_id)
 
-            flow_result = await db.exec(select(Flow).where(Flow.id == payload.flow_id).where(Flow.user_id == user_id))
-            if flow_result.first() is None:
-                msg = f"Flow {payload.flow_id} not found"
-                raise PermissionError(msg)
-
-        # 1b. Validate preprocessing API key before touching the filesystem.
+        # 1b. Validate every supplied preprocessing identity even while the
+        # feature is disabled; enabling it additionally requires credentials.
+        # Resolve and authorize every supplied provider before reading any
+        # owner credential. This prevents a later embedding denial from
+        # becoming a preprocessing-secret oracle.
+        preprocessing_provider, embedding_provider = await _preflight_memory_provider_configuration(
+            flow=flow,
+            actor_user_id=user_id,
+            actor_is_superuser=is_superuser,
+            embedding_model=payload.embedding_model,
+            preproc_model=payload.preproc_model,
+        )
         if payload.preprocessing:
-            _validate_preprocessing_api_key(user_id, payload.preproc_model)
+            _validate_preprocessing_provider_api_key(
+                user_id,
+                payload.preproc_model,
+                preprocessing_provider,
+            )
 
         # 2. Resolve username — needed for the KB path.
         async with session_scope() as db:
             kb_username = await resolve_kb_username(db, user_id)
 
-        # 3. Auto-generate kb_name: sanitized_name_<8hex>
-        kb_name = f"{sanitize_kb_name(payload.name)}_{uuid.uuid4().hex[:8]}"
-
-        # 4. Create KB directory and embedding_metadata.json on disk.
-        embedding_provider = infer_embedding_provider(payload.embedding_model)
-        await initialize_kb(
-            kb_name=kb_name,
-            kb_username=kb_username,
-            embedding_provider=embedding_provider,
-            embedding_model=payload.embedding_model,
-        )
-
-        # 5. Uniqueness check + insert.
-        from sqlalchemy.exc import IntegrityError
-
+        # 2b. Reject a duplicate Memory Base name BEFORE provisioning anything.
+        # The authoritative uniqueness guard is the insert in step 5, but running
+        # this pre-check first means the common duplicate case never provisions a
+        # vector collection or writes a knowledge_base row that would then have to
+        # be rolled back (and, for a remote backend, leak a live collection).
         async with session_scope() as db:
             existing = await db.exec(
                 select(MemoryBase).where(MemoryBase.user_id == user_id).where(MemoryBase.name == payload.name)
@@ -132,20 +255,100 @@ class MemoryBaseService(Service):
                 msg = f"A Memory Base named '{payload.name}' already exists for this user"
                 raise ValueError(msg)
 
-            mb = MemoryBase(
-                **payload.model_dump(exclude={"user_id"}),
+        # 3. Auto-generate kb_name: sanitized_name_<8hex>
+        kb_name = f"{sanitize_kb_name(payload.name)}_{uuid.uuid4().hex[:8]}"
+        validate_collection_name(
+            kb_name,
+            resource="Memory Base",
+            local=is_local_chroma(backend_type, backend_config),
+        )
+
+        # 4-5. Provision the backing KB (vector-store collection + ``knowledge_base``
+        # row) then insert the memory_base row. These span independent sessions and
+        # a remote collection, so there is no single DB transaction to lean on: if
+        # anything after provisioning fails — a concurrent create winning the
+        # unique-name race, any IntegrityError — run compensating cleanup so we
+        # never leak an orphaned knowledge_base row + provisioned collection (the
+        # DB row is the source of truth, so an orphan is worse than the old sidecar).
+        from sqlalchemy.exc import IntegrityError
+
+        needs_cleanup = False
+        try:
+            # ``initialize_kb`` raises ``BackendProvisioningError`` for a non-local
+            # backend whose connectivity check fails, so a bad remote config is
+            # rejected here rather than producing a silently-dead Memory Base.
+            await initialize_kb(
+                kb_name=kb_name,
+                kb_username=kb_username,
+                user_id=user_id,
+                backend_type=backend_type,
+                backend_config=backend_config,
+            )
+            # From here on a collection may exist and the row will be written, so
+            # any later failure must roll both back.
+            needs_cleanup = True
+            await _create_kb_record_for_memory_base(
                 user_id=user_id,
                 kb_name=kb_name,
+                embedding_provider=embedding_provider,
+                embedding_model=payload.embedding_model,
+                backend_type=backend_type,
+                backend_config=backend_config,
             )
-            db.add(mb)
-            try:
-                await db.commit()
-            except IntegrityError:
-                msg = f"A Memory Base named '{payload.name}' already exists for this user"
-                raise ValueError(msg) from None
-            await db.refresh(mb)
+
+            async with session_scope() as db:
+                # Re-check inside the insert path to narrow the TOCTOU window with
+                # the pre-check; the DB unique constraint is the final arbiter.
+                existing = await db.exec(
+                    select(MemoryBase).where(MemoryBase.user_id == user_id).where(MemoryBase.name == payload.name)
+                )
+                if existing.first() is not None:
+                    msg = f"A Memory Base named '{payload.name}' already exists for this user"
+                    raise ValueError(msg)
+
+                mb = MemoryBase(
+                    # ``backend_type``/``backend_config`` live on the knowledge_base
+                    # row created above, not on this table.
+                    **payload.model_dump(exclude={"user_id", "backend_type", "backend_config"}),
+                    user_id=user_id,
+                    kb_name=kb_name,
+                )
+                db.add(mb)
+                try:
+                    await db.commit()
+                except IntegrityError:
+                    msg = f"A Memory Base named '{payload.name}' already exists for this user"
+                    raise ValueError(msg) from None
+                await db.refresh(mb)
+        except Exception:
+            if needs_cleanup:
+                await self._cleanup_orphaned_provisioning(kb_name=kb_name, kb_username=kb_username, user_id=user_id)
+            raise
 
         return mb
+
+    async def _cleanup_orphaned_provisioning(self, *, kb_name: str, kb_username: str, user_id: uuid.UUID) -> None:
+        """Compensating cleanup when a create fails after KB provisioning.
+
+        Mirrors :meth:`delete`'s teardown order — remote collection first (it
+        needs the ``knowledge_base`` row to resolve backend config), then the
+        row, then local disk — so a rejected create leaves nothing behind.
+        Best-effort and idempotent: each step no-ops when there is nothing to
+        remove.
+        """
+        from lfx.log.logger import logger
+
+        from langflow.api.utils import knowledge_base_service
+
+        try:
+            await delete_kb_remote_collection(kb_name=kb_name, user_id=user_id)
+        except Exception as exc:  # noqa: BLE001 — rollback is best-effort
+            await logger.awarning("Create rollback: remote collection cleanup failed for kb_name=%s: %s", kb_name, exc)
+        try:
+            await knowledge_base_service.delete_by_user_and_name(user_id, kb_name)
+        except Exception as exc:  # noqa: BLE001 — rollback is best-effort
+            await logger.awarning("Create rollback: knowledge_base row cleanup failed for kb_name=%s: %s", kb_name, exc)
+        await delete_kb(kb_name=kb_name, kb_username=kb_username)
 
     async def list_for_user(self, user_id: uuid.UUID) -> list[MemoryBase]:
         async with session_scope() as db:
@@ -153,9 +356,28 @@ class MemoryBaseService(Service):
             result = await db.exec(stmt)
             return list(result.all())
 
-    def list_for_user_stmt(self, user_id: uuid.UUID, flow_id: uuid.UUID | None = None):  # type: ignore[return]
+    def list_for_user_stmt(
+        self,
+        user_id: uuid.UUID,
+        flow_id: uuid.UUID | None = None,
+        *,
+        visibility: ResourceVisibilityScope | None = None,
+    ):  # type: ignore[return]
         """Return the SQLModel select statement for pagination at the API layer."""
-        stmt = select(MemoryBase).where(MemoryBase.user_id == user_id)
+        stmt = select(MemoryBase)
+        if visibility is None:
+            stmt = stmt.where(MemoryBase.user_id == user_id)
+        else:
+            from langflow.services.authorization.listing import restrict_to_owned_or_visible_scope
+
+            # MemoryBase has no canonical workspace/project columns, so
+            # domain-only grants intentionally remain owner-scoped.
+            stmt = restrict_to_owned_or_visible_scope(
+                stmt,
+                id_column=MemoryBase.id,
+                owner_clause=MemoryBase.user_id == user_id,
+                visibility=visibility,
+            )
         if flow_id is not None:
             stmt = stmt.where(MemoryBase.flow_id == flow_id)
         return stmt
@@ -169,23 +391,43 @@ class MemoryBaseService(Service):
     async def update(
         self,
         memory_base_id: uuid.UUID,
-        user_id: uuid.UUID,
+        owner_user_id: uuid.UUID,
         patch: MemoryBaseUpdate,
+        *,
+        actor_user_id: uuid.UUID,
+        actor_is_superuser: bool = False,
     ) -> MemoryBase | None:
         """Update mutable fields.
+
+        ``owner_user_id`` scopes resource and credential access, while
+        ``actor_user_id`` and ``actor_is_superuser`` identify the principal
+        whose provider permission is evaluated.
 
         Threshold changes take effect on the NEXT auto-capture trigger; any
         already-running ingestion task ignores the change (immutable args).
         """
         async with session_scope() as db:
-            stmt = select(MemoryBase).where(MemoryBase.id == memory_base_id).where(MemoryBase.user_id == user_id)
+            stmt = select(MemoryBase).where(MemoryBase.id == memory_base_id).where(MemoryBase.user_id == owner_user_id)
             result = await db.exec(stmt)
             mb = result.first()
             if mb is None:
                 return None
 
+            flow = await resolve_owned_memory_flow(db, flow_id=mb.flow_id, user_id=owner_user_id)
+            preprocessing_provider, _embedding_provider = await _preflight_memory_provider_configuration(
+                flow=flow,
+                actor_user_id=actor_user_id,
+                actor_is_superuser=actor_is_superuser,
+                embedding_model=mb.embedding_model,
+                preproc_model=mb.preproc_model if mb.preprocessing else None,
+            )
+
             if mb.preprocessing:
-                _validate_preprocessing_api_key(user_id, mb.preproc_model)
+                _validate_preprocessing_provider_api_key(
+                    owner_user_id,
+                    mb.preproc_model,
+                    preprocessing_provider,
+                )
 
             for field, value in patch.model_dump(exclude_unset=True).items():
                 setattr(mb, field, value)
@@ -211,6 +453,26 @@ class MemoryBaseService(Service):
 
             await db.delete(mb)
             await db.commit()
+
+        # Drop the remote vector-store collection FIRST, while the
+        # knowledge_base row (and its backend config) still exists — otherwise
+        # the OpenSearch index / Chroma Cloud collection is stranded with no way
+        # to resolve how to reach it. Best-effort; local Chroma is a no-op here
+        # (its vectors are removed by ``delete_kb`` below).
+        await delete_kb_remote_collection(kb_name=kb_name, user_id=user_id)
+
+        # Delete the backing knowledge_base row — it's the authoritative record for
+        # this Memory Base, so leaving it would orphan the row (and keep the KB's
+        # memory-base guards active for a name the user just freed). Best-effort:
+        # the memory_base row is already committed.
+        from langflow.api.utils import knowledge_base_service
+
+        try:
+            await knowledge_base_service.delete_by_user_and_name(user_id, kb_name)
+        except Exception:  # noqa: BLE001
+            from lfx.log.logger import logger
+
+            await logger.awarning("Could not delete knowledge_base row for Memory Base kb_name=%s", kb_name)
 
         # Delete the corresponding KB from disk (best-effort — DB already committed)
         await delete_kb(kb_name=kb_name, kb_username=kb_username)
@@ -297,12 +559,14 @@ class MemoryBaseService(Service):
     async def trigger_ingestion(
         self,
         memory_base_id: uuid.UUID,
-        user_id: uuid.UUID,
+        owner_user_id: uuid.UUID,
+        actor_user_id: uuid.UUID,
         session_id: str,
     ) -> str:
         return await _trigger_ingestion(
             memory_base_id,
-            user_id,
+            owner_user_id,
+            actor_user_id,
             session_id,
             get_mb_or_raise=self.get_memory_base_or_404,
             get_or_create_session=self._get_or_create_session,
@@ -328,10 +592,16 @@ class MemoryBaseService(Service):
             get_mb_or_raise=self.get_memory_base_or_404,
         )
 
-    async def regenerate(self, memory_base_id: uuid.UUID, user_id: uuid.UUID) -> list[str]:
+    async def regenerate(
+        self,
+        memory_base_id: uuid.UUID,
+        owner_user_id: uuid.UUID,
+        actor_user_id: uuid.UUID,
+    ) -> list[str]:
         return await _regenerate(
             memory_base_id,
-            user_id,
+            owner_user_id,
+            actor_user_id,
             get_mb_or_raise=self.get_memory_base_or_404,
             trigger_ingestion_fn=self.trigger_ingestion,
         )

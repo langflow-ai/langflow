@@ -108,12 +108,25 @@ class TestInput:
             "fileTypes": [],
             "file_path": "",
             "advanced": False,
+            "api_editable": False,
             "title_case": False,
             "dynamic": False,
             "info": "",
             "input_types": ["Text"],
             "load_from_db": False,
         }
+
+    def test_input_api_editable_flag(self):
+        input_obj = Input(field_type="str")
+        assert input_obj.to_dict()["api_editable"] is False
+        input_obj.api_editable = True
+        assert input_obj.to_dict()["api_editable"] is True
+
+    def test_mixin_input_api_editable_flag(self):
+        default_input = MessageTextInput(name="prompt")
+        assert default_input.to_dict()["api_editable"] is False
+        exposed_input = MessageTextInput(name="prompt", api_editable=True)
+        assert exposed_input.to_dict()["api_editable"] is True
 
 
 class TestOutput:

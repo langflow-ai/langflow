@@ -7,7 +7,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
-import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import DropdownControlButton from "./DropdownControlButton";
 
 export type HelpDropdownViewProps = {
@@ -15,8 +14,6 @@ export type HelpDropdownViewProps = {
   onOpenChange: (open: boolean) => void;
   helperLineEnabled: boolean;
   onToggleHelperLines: () => void;
-  inspectionPanelVisible?: boolean;
-  onToggleInspectionPanel?: () => void;
   navigateTo: (path: string) => void;
   openLink: (url: string) => void;
   urls: {
@@ -31,8 +28,6 @@ export const HelpDropdownView = ({
   onOpenChange,
   helperLineEnabled,
   onToggleHelperLines,
-  inspectionPanelVisible,
-  onToggleInspectionPanel,
   navigateTo,
   openLink,
   urls,
@@ -46,6 +41,7 @@ export const HelpDropdownView = ({
           size="icon"
           className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
           title={t("help.title")}
+          aria-label={t("help.title")}
           data-testid="canvas_controls_dropdown_help"
         >
           <IconComponent
@@ -96,16 +92,6 @@ export const HelpDropdownView = ({
           label={t("help.enableSmartGuides")}
           hasToogle={true}
         />
-        {ENABLE_INSPECTION_PANEL && (
-          <DropdownControlButton
-            iconName="PanelRightClose"
-            testId="canvas_controls_dropdown_toggle_inspector"
-            onClick={onToggleInspectionPanel}
-            toggleValue={inspectionPanelVisible}
-            label={t("help.showInspectorPanel")}
-            hasToogle={true}
-          />
-        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

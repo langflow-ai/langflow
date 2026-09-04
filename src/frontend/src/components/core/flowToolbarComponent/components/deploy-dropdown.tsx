@@ -11,7 +11,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
+import { usePermissions } from "@/contexts/permissionsContext";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
+import CustomFlowShareAction from "@/customization/components/custom-flow-share-action";
 import { CustomLink } from "@/customization/components/custom-link";
 import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
 import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
@@ -47,48 +49,63 @@ export default function PublishDropdown({
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
+  const pendingAutoSave = useFlowStore((state) => state.autoSaveFlow);
   const isPublished = currentFlow?.access_type === "PUBLIC";
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
+  const { can } = usePermissions();
+  // Publishing changes the flow's access settings → gate on write. Only the
+  // publish controls are gated; the rest of the menu (API access, export,
+  // MCP, embed) stays available to read-only users.
+  const canShare = can(flowId, "write");
   const [openExportModal, setOpenExportModal] = useState(false);
   const { t } = useTranslation();
 
   const handlePublishedSwitch = async (checked: boolean) => {
-    mutateAsync(
-      {
-        id: flowId ?? "",
-        access_type: checked ? "PRIVATE" : "PUBLIC",
-      },
-      {
-        onSuccess: (updatedFlow) => {
-          if (flows) {
-            setFlows(
-              flows.map((flow) => {
-                if (flow.id === updatedFlow.id) {
-                  return updatedFlow;
-                }
-                return flow;
-              }),
-            );
-            setCurrentFlow(updatedFlow);
-          } else {
+    try {
+      // Publishing reads the persisted graph in a new tab. Drain any pending
+      // canvas save before changing access so the access-only response cannot
+      // replace the unsaved graph baseline and make that save look complete.
+      await pendingAutoSave?.flush();
+      await mutateAsync(
+        {
+          id: flowId ?? "",
+          access_type: checked ? "PRIVATE" : "PUBLIC",
+        },
+        {
+          onSuccess: (updatedFlow) => {
+            if (flows) {
+              setFlows(
+                flows.map((flow) => {
+                  if (flow.id === updatedFlow.id) {
+                    return updatedFlow;
+                  }
+                  return flow;
+                }),
+              );
+              setCurrentFlow(updatedFlow);
+            } else {
+              setErrorData({
+                title: t("errors.failedToSaveFlow"),
+                list: [t("errors.flowsVariableUndefined")],
+              });
+            }
+          },
+          // biome-ignore lint/suspicious/noExplicitAny: legacy
+          onError: (e: any) => {
+            const detail =
+              e.response?.data?.detail || e.message || "Unknown error";
             setErrorData({
               title: t("errors.failedToSaveFlow"),
-              list: [t("errors.flowsVariableUndefined")],
+              list: [detail],
             });
-          }
+          },
         },
-        // biome-ignore lint/suspicious/noExplicitAny: legacy
-        onError: (e: any) => {
-          const detail =
-            e.response?.data?.detail || e.message || "Unknown error";
-          setErrorData({
-            title: t("errors.failedToSaveFlow"),
-            list: [detail],
-          });
-        },
-      },
-    );
+      );
+    } catch {
+      // mutateAsync rejects after invoking onError; the alert above is the
+      // user-facing failure path, so consume the handled rejection here.
+    }
   };
 
   return (
@@ -112,6 +129,15 @@ export default function PublishDropdown({
           align="end"
           className="w-full min-w-[275px]"
         >
+          {/* Customization seam: overlays render a user/team share item; the OSS stub renders nothing. */}
+          {flowId && (
+            <CustomFlowShareAction
+              resourceId={flowId}
+              resourceType="flow"
+              resourceName={flowName}
+              menuContext="editor"
+            />
+          )}
           <DropdownMenuItem
             className="deploy-dropdown-item group"
             onClick={() => setOpenApiModal(true)}
@@ -158,7 +184,7 @@ export default function PublishDropdown({
           {ENABLE_PUBLISH && (
             <DropdownMenuItem
               className="deploy-dropdown-item group"
-              disabled={!hasIO}
+              disabled={!canShare || !hasIO}
               onClick={() => {}}
               data-testid="shareable-playground"
             >
@@ -204,11 +230,11 @@ export default function PublishDropdown({
                   data-testid="publish-switch"
                   className="scale-[85%]"
                   checked={isPublished}
-                  disabled={!hasIO}
+                  disabled={!canShare || !hasIO}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    handlePublishedSwitch(isPublished);
+                    void handlePublishedSwitch(isPublished);
                   }}
                 />
               </div>

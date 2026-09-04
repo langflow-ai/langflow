@@ -8,6 +8,7 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException, status
 from httpx import AsyncClient
+from langflow.api.v1 import projects_mcp_helpers
 from langflow.api.v1.mcp_projects import (
     ProjectMCPServer,
     _args_reference_urls,
@@ -20,6 +21,7 @@ from langflow.api.v1.mcp_projects import (
 )
 from langflow.api.v2.mcp import is_mcp_servers_locked
 from langflow.services.auth.utils import create_user_longterm_token, get_password_hash
+from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user.model import User
@@ -33,9 +35,6 @@ from mcp.server.sse import SseServerTransport
 from sqlmodel import select
 
 from tests.unit.utils.mcp import project_session_manager_lifespan
-
-# Mark all tests in this module as asyncio
-pytestmark = pytest.mark.asyncio
 
 
 def _set_startup_mcp_settings(
@@ -407,6 +406,57 @@ async def test_streamable_oauth_project_rejects_invalid_api_key(
     mock_streamable_http_manager.handle_request.assert_not_called()
 
 
+async def test_streamable_none_auth_project_runs_as_project_owner(
+    client: AsyncClient,
+    other_test_project,
+    other_test_user,
+    mock_streamable_http_manager,
+    mock_current_user_ctx,
+    enable_mcp_composer,
+):
+    """A public MCP project must not grant the anonymous caller superuser identity."""
+    assert enable_mcp_composer
+    await _set_project_auth_type(other_test_project.id, "none")
+
+    response = await client.post(
+        f"api/v1/mcp/project/{other_test_project.id}/streamable",
+        json={"type": "test", "content": "message"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    mock_streamable_http_manager.handle_request.assert_called_once()
+    authenticated_user = mock_current_user_ctx.set.call_args.args[0]
+    assert authenticated_user.id == other_test_user.id
+    assert authenticated_user.is_superuser is False
+
+
+async def test_streamable_none_auth_project_without_owner_returns_not_found(
+    client: AsyncClient,
+    other_test_project,
+    mock_streamable_http_manager,
+    mock_current_user_ctx,
+    enable_mcp_composer,
+):
+    """A public MCP project without an owner must not fall back to superuser identity."""
+    assert enable_mcp_composer
+    await _set_project_auth_type(other_test_project.id, "none")
+    async with session_scope() as session:
+        project = await session.get(Folder, other_test_project.id)
+        assert project is not None
+        project.user_id = None
+        session.add(project)
+
+    response = await client.post(
+        f"api/v1/mcp/project/{other_test_project.id}/streamable",
+        json={"type": "test", "content": "message"},
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json()["detail"] == "Project owner not found"
+    mock_current_user_ctx.set.assert_not_called()
+    mock_streamable_http_manager.handle_request.assert_not_called()
+
+
 async def test_handle_project_messages_success(
     client: AsyncClient, user_test_project, mock_sse_transport, logged_in_headers
 ):
@@ -425,7 +475,7 @@ async def test_update_project_mcp_settings_invalid_json(client: AsyncClient, use
     response = await client.patch(
         f"api/v1/mcp/project/{user_test_project.id}", headers=logged_in_headers, json="invalid"
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 @pytest.fixture
@@ -858,7 +908,7 @@ async def test_project_session_manager_lifespan_handles_cleanup(user_test_projec
     assert lifecycle_events == ["enter", "exit"]
 
 
-def _prepare_install_test_env(monkeypatch, tmp_path, filename="cursor.json"):
+def _prepare_install_test_env(monkeypatch, tmp_path, filename="cursor.json", *, skip_auth=True):
     config_path = tmp_path / filename
     config_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -883,6 +933,9 @@ def _prepare_install_test_env(monkeypatch, tmp_path, filename="cursor.json"):
     class DummyAuth:
         AUTO_LOGIN = True
         SUPERUSER = True
+        # The credential-less superuser fallback on the MCP transport endpoints is only
+        # available when this is explicitly enabled; installs otherwise embed an API key.
+        skip_auth_auto_login = skip_auth
 
     dummy_settings = SimpleNamespace(host="localhost", port=9999, mcp_composer_enabled=False)
     dummy_service = SimpleNamespace(settings=dummy_settings, auth_settings=DummyAuth())
@@ -982,6 +1035,64 @@ async def test_v2_mcp_servers_locked_allows_superuser_add_patch_delete(
     assert response.status_code == status.HTTP_200_OK
 
 
+@pytest.mark.usefixtures("active_user")
+@pytest.mark.parametrize(
+    ("allow_custom_components", "custom_component_admin_only", "block_code_interpreter_components"),
+    [(False, False, False), (True, True, False), (True, False, True)],
+)
+async def test_v2_mcp_stdio_registration_follows_code_execution_lockdown(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+    allow_custom_components,
+    custom_component_admin_only,
+    block_code_interpreter_components,
+):
+    """A non-superuser cannot register a process-spawning MCP server under code-exec lockdown."""
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "mcp_servers_locked", False)
+    monkeypatch.setattr(settings, "allow_custom_components", allow_custom_components)
+    monkeypatch.setattr(settings, "custom_component_admin_only", custom_component_admin_only)
+    monkeypatch.setattr(settings, "block_code_interpreter_components", block_code_interpreter_components)
+
+    stdio_name = f"lf-lockdown-stdio-{uuid4().hex[:8]}"
+    response = await client.post(
+        f"/api/v2/mcp/servers/{stdio_name}",
+        json={"command": "uvx", "args": ["attacker-controlled-package"]},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_v2_mcp_action_count_does_not_spawn_stdio_under_code_execution_lockdown(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    """Existing stdio configs cannot bypass a newly enabled code-exec lockdown via action_count."""
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "mcp_servers_locked", False)
+    monkeypatch.setattr(settings, "allow_custom_components", False)
+    monkeypatch.setattr(settings, "custom_component_admin_only", False)
+
+    get_server_list = AsyncMock(
+        return_value={
+            "mcpServers": {
+                "blocked-stdio": {"command": "uvx", "args": ["attacker-controlled-package"]},
+            }
+        }
+    )
+    monkeypatch.setattr("langflow.api.v2.mcp.get_server_list", get_server_list)
+    update_tools = AsyncMock()
+    monkeypatch.setattr("langflow.api.v2.mcp.update_tools", update_tools)
+
+    response = await client.get("/api/v2/mcp/servers?action_count=true", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    update_tools.assert_not_awaited()
+
+
 async def test_install_mcp_config_defaults_to_sse_transport(
     client: AsyncClient,
     user_test_project,
@@ -1027,6 +1138,39 @@ async def test_install_mcp_config_streamable_transport(
     assert "--transport" in args
     assert "streamablehttp" in args
     assert args[-1].endswith("/streamable")
+
+
+async def test_install_mcp_config_embeds_api_key_without_skip_auth_auto_login(
+    client: AsyncClient,
+    user_test_project,
+    logged_in_headers,
+    tmp_path,
+    monkeypatch,
+):
+    """AUTO_LOGIN alone no longer authenticates MCP transport callers, so installs need a key.
+
+    With AUTO_LOGIN on and skip_auth_auto_login off (the default), the MCP transport
+    endpoints reject credential-less callers. The generated client config must therefore
+    carry an x-api-key header instead of relying on the superuser fallback.
+    """
+    config_path = _prepare_install_test_env(monkeypatch, tmp_path, "cursor_apikey.json", skip_auth=False)
+
+    response = await client.post(
+        f"/api/v1/mcp/project/{user_test_project.id}/install",
+        headers=logged_in_headers,
+        json={"client": "cursor"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    installed_config = json.loads(config_path.read_text())
+    args = installed_config["mcpServers"]["lf-user_test_project"]["args"]
+    assert "--headers" in args
+    assert "x-api-key" in args
+    # The header NAME alone proves nothing: assert the generated key value is actually present,
+    # otherwise an empty or missing value would still satisfy the membership checks above.
+    api_key_value = args[args.index("x-api-key") + 1]
+    assert api_key_value
+    assert api_key_value != "x-api-key"  # pragma: allowlist secret
 
 
 async def test_init_mcp_servers(user_test_project, other_test_project):
@@ -1192,6 +1336,127 @@ async def test_init_mcp_servers_reconciles_existing_apikey_project_server_config
         assert streamable_http_url in server_args
     finally:
         await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=headers)
+
+
+async def test_init_mcp_servers_reconciles_stale_config_without_transaction_error(
+    client: AsyncClient,
+    user_test_project,
+    created_api_key,
+    monkeypatch,
+):
+    """Reconciling a pre-1.11.1 config must not break the caller's savepoint (issue #14536).
+
+    ``update_server`` used to commit the transaction owned by ``init_mcp_servers``'
+    ``session.begin_nested()``, so its own trailing read raised ``InvalidRequestError:
+    Can't operate on closed transaction inside context manager`` - after that commit had
+    already persisted the API key created for the config.
+    """
+    project_sse_transports.clear()
+    project_mcp_servers.clear()
+    _set_startup_mcp_settings(
+        monkeypatch,
+        auto_login=False,
+        mcp_composer_enabled=False,
+        add_projects_to_mcp_servers=True,
+    )
+
+    async with session_scope() as session:
+        project = await session.get(Folder, user_test_project.id)
+        assert project is not None
+        project.auth_settings = {"auth_type": "apikey"}
+        session.add(project)
+
+    server_name = f"lf-{sanitize_mcp_name(user_test_project.name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+    streamable_http_url = await get_project_streamable_http_url(user_test_project.id)
+    # Config as written by <=1.11.0: no `--with mcp~=1.28` constraint prefix, so 1.11.1+
+    # no longer considers it a match and reconciles it on every startup.
+    stale_server_config = {
+        "command": "uvx",
+        "args": ["mcp-proxy", "--transport", "streamablehttp", streamable_http_url],
+    }
+    headers = {"x-api-key": created_api_key.api_key}
+    response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=stale_server_config, headers=headers)
+    assert response.status_code == 200
+
+    reconcile_errors: list[BaseException] = []
+    real_register = projects_mcp_helpers.register_mcp_servers_for_project
+
+    async def spy(*args, **kwargs):
+        try:
+            return await real_register(*args, **kwargs)
+        except BaseException as exc:
+            reconcile_errors.append(exc)
+            raise
+
+    monkeypatch.setattr(projects_mcp_helpers, "register_mcp_servers_for_project", spy)
+
+    try:
+        with (
+            patch("langflow.api.v1.mcp_projects.get_project_sse"),
+            patch("langflow.api.v1.mcp_projects.get_project_mcp_server"),
+            patch("langflow.api.v1.mcp_projects.auto_configure_starter_projects_mcp", new=AsyncMock()),
+        ):
+            await init_mcp_servers()
+
+        assert not reconcile_errors, f"startup reconciliation raised: {reconcile_errors}"
+
+        response = await client.get(f"/api/v2/mcp/servers/{server_name}", headers=headers)
+        assert response.status_code == 200
+        assert "--with" in response.json()["args"]
+    finally:
+        await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=headers)
+
+
+async def test_init_mcp_servers_does_not_leak_api_key_when_reconciliation_fails(
+    user_test_project,
+    monkeypatch,
+):
+    """A failed startup reconciliation must leave no orphaned API key behind (issue #14536).
+
+    ``create_api_key`` runs before the server write, so the savepoint is the only thing
+    keeping the two atomic. A commit inside ``update_server`` would persist the key even
+    though the reconciliation it was generated for never completed.
+    """
+    project_sse_transports.clear()
+    project_mcp_servers.clear()
+    _set_startup_mcp_settings(
+        monkeypatch,
+        auto_login=False,
+        mcp_composer_enabled=False,
+        add_projects_to_mcp_servers=True,
+    )
+
+    async with session_scope() as session:
+        project = await session.get(Folder, user_test_project.id)
+        assert project is not None
+        project.auth_settings = {"auth_type": "apikey"}
+        session.add(project)
+
+    async def count_api_keys() -> int:
+        async with session_scope() as session:
+            return len((await session.exec(select(ApiKey))).all())
+
+    keys_before = await count_api_keys()
+
+    # Fail after create_api_key and after the server row is written, i.e. exactly where
+    # the InvalidRequestError used to surface.
+    real_update_server = projects_mcp_helpers.update_server
+
+    async def failing_update_server(*args, **kwargs):
+        await real_update_server(*args, **kwargs)
+        msg = "server sync failed"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr(projects_mcp_helpers, "update_server", failing_update_server)
+
+    with (
+        patch("langflow.api.v1.mcp_projects.get_project_sse"),
+        patch("langflow.api.v1.mcp_projects.get_project_mcp_server"),
+        patch("langflow.api.v1.mcp_projects.auto_configure_starter_projects_mcp", new=AsyncMock()),
+    ):
+        await init_mcp_servers()
+
+    assert await count_api_keys() == keys_before, "failed reconciliation leaked an API key"
 
 
 async def test_patch_project_mcp_settings_syncs_server_config_for_apikey(

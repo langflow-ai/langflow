@@ -108,7 +108,7 @@ python langflow_setup_test.py --list-flows
 
 This will:
 
-- Use default Langflow credentials (langflow/langflow)
+- Use `LANGFLOW_SUPERUSER` / `LANGFLOW_SUPERUSER_PASSWORD` or AUTO_LOGIN
 - Generate API keys
 - Upload a real starter project flow
 - Provide credentials for load testing
@@ -185,7 +185,7 @@ Use with: `--shape ramp100` or `--shape stepramp`
 
 1. **Health Check**: Verify Langflow is running
 2. **Flow Selection**: Choose from 40+ real starter project flows
-3. **Authentication**: Login with default credentials (langflow/langflow)
+3. **Authentication**: Login with configured credentials or AUTO_LOGIN
 4. **API Key Generation**: Create API key for load testing
 5. **Flow Upload**: Upload the selected starter project flow
 6. **Credential Export**: Provide environment variables for testing
@@ -240,7 +240,7 @@ The test tracks:
 ### Common Issues
 
 1. **Setup Failed**: Ensure Langflow is accessible and not in read-only mode
-2. **Authentication Errors**: Verify default credentials (langflow/langflow) are enabled
+2. **Authentication Errors**: Set `LANGFLOW_SUPERUSER` and `LANGFLOW_SUPERUSER_PASSWORD`, or enable `LANGFLOW_AUTO_LOGIN`
 3. **Flow Creation Failed**: Verify the user has permission to create flows
 4. **Connection Errors**: Check network connectivity and firewall settings
 5. **Status Code 0 Errors**: Usually indicates connection overload - reduce user count or spawn rate

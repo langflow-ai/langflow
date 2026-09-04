@@ -8,8 +8,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from limits import parse
 from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+from slowapi.wrappers import Limit
 
 from langflow.services.deps import get_settings_service
 
@@ -59,6 +62,69 @@ def get_rate_limiter() -> Limiter:
     return _limiter
 
 
+def check_rate_limit(
+    request: Request,
+    *,
+    scope: str | None = None,
+    limit_per_minute: int | None = None,
+) -> None:
+    """Enforce the configured rate limit for a request.
+
+    A scope creates a distinct counter namespace while retaining the configured
+    client-IP key. This lets public flows have independent build counters without
+    consuming the login-attempt counter for the same client.
+
+    Args:
+        request: FastAPI request whose app owns the configured limiter.
+        scope: Optional counter namespace, such as a public flow identifier.
+        limit_per_minute: Optional endpoint-specific limit. When omitted, the
+            configured login limit is used.
+
+    Raises:
+        RateLimitExceeded: If the configured limit has been exceeded.
+    """
+    limiter = request.app.state.limiter
+    limit_string = f"{limit_per_minute}/minute" if limit_per_minute is not None else get_rate_limit_string()
+    limit_item = parse(limit_string)
+    client_key = limiter._key_func(request)  # noqa: SLF001
+    identifiers = (scope, client_key) if scope is not None else (client_key,)
+
+    if not limiter._limiter.hit(limit_item, *identifiers):  # noqa: SLF001
+        limit_wrapper = Limit(
+            limit=limit_item,
+            key_func=limiter._key_func,  # noqa: SLF001
+            scope=scope,
+            per_method=False,
+            methods=None,
+            error_message=None,
+            exempt_when=None,
+            cost=1,
+            override_defaults=False,
+        )
+        raise RateLimitExceeded(limit_wrapper)
+
+
+def get_last_forwarded_for_hop(request: Request) -> str | None:
+    """Return the rightmost ``X-Forwarded-For`` entry, or None when the header is absent.
+
+    The header may legitimately arrive as several separate lines: some proxies
+    (HAProxy's ``option forwardfor``, for one) append their own line instead of
+    extending the client's. ``Headers.get`` returns only the first line, so
+    reading it alone would yield the rightmost entry of the *client-supplied*
+    line and hand an attacker control of a value the caller assumes is
+    unspoofable. Join every line in order, per RFC 9110 field-order semantics,
+    before taking the last hop.
+
+    Callers must gate this on an explicit trusted-proxy opt-in; the header is
+    attacker-controlled otherwise.
+    """
+    # X-Forwarded-For format: "client, proxy1, proxy2", possibly split across lines.
+    chain = [ip.strip() for line in request.headers.getlist("x-forwarded-for") for ip in line.split(",")]
+    entries = [ip for ip in chain if ip]
+    # Rightmost entry = last hop added by the trusted proxy; the leftmost is client-supplied.
+    return entries[-1] if entries else None
+
+
 def get_client_ip(request: Request) -> str:
     """Extract client IP address from request, using rightmost X-Forwarded-For entry.
 
@@ -73,12 +139,9 @@ def get_client_ip(request: Request) -> str:
         str: Client IP address
     """
     # Check X-Forwarded-For header first (for proxied requests)
-    forwarded_for = request.headers.get("X-Forwarded-For")
-    if forwarded_for:
-        # X-Forwarded-For format: "client, proxy1, proxy2"
-        # Take the rightmost IP (last proxy before us)
-        ips = [ip.strip() for ip in forwarded_for.split(",")]
-        return ips[-1]
+    last_hop = get_last_forwarded_for_hop(request)
+    if last_hop:
+        return last_hop
 
     # Fall back to direct client IP
     if request.client:

@@ -76,6 +76,16 @@ ListConfigsResponse = importlib.import_module(
 TEST_WXO_LLM = "ibm/granite-3.3-8b"
 
 
+def _valid_wxo_flow_data() -> dict:
+    return {
+        "nodes": [
+            {"data": {"type": "ChatInput"}},
+            {"data": {"type": "ChatOutput"}},
+        ],
+        "edges": [],
+    }
+
+
 def _normalized_provider_app_id(app_id: str) -> str:
     return payloads_module.validate_wxo_name(app_id, field_label="Connection app id")
 
@@ -3345,6 +3355,7 @@ def test_create_wxo_flow_tool_keeps_load_from_db_global_values_unprefixed(monkey
             "nodes": [
                 {
                     "data": {
+                        "type": "ChatInput",
                         "node": {
                             "template": {
                                 "api_key": {
@@ -3356,9 +3367,10 @@ def test_create_wxo_flow_tool_keeps_load_from_db_global_values_unprefixed(monkey
                                     "value": "DO_NOT_TOUCH",
                                 },
                             }
-                        }
+                        },
                     }
-                }
+                },
+                {"data": {"type": "ChatOutput"}},
             ],
             "edges": [],
         },
@@ -3470,6 +3482,49 @@ def test_create_wxo_flow_tool_excludes_provider_data_from_artifact(monkeypatch):
     assert "description" in captured_flow_definition
 
 
+@pytest.mark.parametrize(
+    ("nodes", "expected_detail"),
+    [
+        ([{"data": {"type": "ChatOutput"}}], "Add one Chat Input ('ChatInput') node"),
+        (
+            [
+                {"data": {"type": "ChatInput"}},
+                {"data": {"type": "ChatInput"}},
+                {"data": {"type": "ChatOutput"}},
+            ],
+            "Remove extra Chat Input ('ChatInput') nodes",
+        ),
+        ([{"data": {"type": "ChatInput"}}], "Add at least one Chat Output ('ChatOutput') node"),
+    ],
+)
+def test_create_wxo_flow_tool_rejects_ineligible_flow_before_sdk_conversion(
+    monkeypatch,
+    nodes: list[dict],
+    expected_detail: str,
+):
+    flow_payload = BaseFlowArtifact[payloads_module.WatsonxFlowArtifactProviderData](
+        id="00000000-0000-0000-0000-000000000001",
+        name="ineligible-flow",
+        description="desc",
+        data={"nodes": nodes, "edges": []},
+        tags=[],
+        provider_data=payloads_module.WatsonxFlowArtifactProviderData(
+            project_id="project-123",
+            source_ref="src-ref-1",
+            tool_display_name="Ineligible Flow",
+        ),
+    )
+
+    def unexpected_sdk_conversion(**_kwargs):
+        pytest.fail("create_langflow_tool should not be called for an ineligible flow")
+
+    monkeypatch.setattr(tools_module, "create_langflow_tool", unexpected_sdk_conversion)
+
+    with pytest.raises(InvalidContentError) as exc_info:
+        tools_module.create_wxo_flow_tool(flow_payload=flow_payload, connections={})
+    assert expected_detail in str(exc_info.value)
+
+
 def test_create_wxo_flow_tool_requires_provider_data_project_id():
     flow_payload = BaseFlowArtifact(
         id="00000000-0000-0000-0000-000000000001",
@@ -3496,7 +3551,7 @@ def test_create_wxo_flow_tool_normalizes_name_for_raw_payload(monkeypatch):
         id="00000000-0000-0000-0000-000000000001",
         name="basicllmwxo",
         description="desc",
-        data={"nodes": [], "edges": []},
+        data=_valid_wxo_flow_data(),
         tags=[],
         provider_data=payloads_module.WatsonxFlowArtifactProviderData(
             project_id="project-123",
@@ -3539,7 +3594,7 @@ def test_create_wxo_flow_tool_uses_provider_data_technical_name(monkeypatch):
         id="00000000-0000-0000-0000-000000000001",
         name="raw-correlation-key",
         description="desc",
-        data={"nodes": [], "edges": []},
+        data=_valid_wxo_flow_data(),
         tags=[],
         provider_data=payloads_module.WatsonxFlowArtifactProviderData(
             project_id="project-123",
@@ -5168,6 +5223,12 @@ def test_is_retryable_create_exception_domain_exceptions_not_retryable():
     assert is_retryable_create_exception(ResourceConflictError()) is False
     assert is_retryable_create_exception(InvalidContentError()) is False
     assert is_retryable_create_exception(InvalidDeploymentOperationError()) is False
+
+
+def test_is_retryable_create_exception_value_error_is_not_retryable():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import is_retryable_create_exception
+
+    assert is_retryable_create_exception(ValueError("invalid flow definition")) is False
 
 
 def test_is_retryable_create_exception_generic_exception_is_retryable():
@@ -6871,6 +6932,107 @@ def test_build_langflow_artifact_bytes_structure():
         assert "bundle-format" in names
 
 
+def _read_artifact_requirements(artifact_bytes: bytes) -> list[str]:
+    """Return the non-empty requirements.txt lines from a wxO artifact zip."""
+    with zipfile.ZipFile(io.BytesIO(artifact_bytes), "r") as zf:
+        content = zf.read("requirements.txt").decode("utf-8")
+    return [line.strip() for line in content.splitlines() if line.strip()]
+
+
+def _provider_model_flow(provider: str, field: str = "model") -> dict:
+    """Minimal flow whose single unified-model node selects *provider*.
+
+    ``field`` is the model-selection template field (``model`` for Language
+    Model / Embedding, ``agent_llm`` for the Agent component).
+    """
+    return {
+        "id": "flow-1",
+        "name": "Provider Flow",
+        "data": {
+            "nodes": [
+                {
+                    "id": "lm-1",
+                    "type": "genericNode",
+                    "data": {
+                        "type": "LanguageModelComponent",
+                        "node": {
+                            "template": {
+                                "code": {
+                                    "type": "code",
+                                    "value": "from lfx.base.models.model import LCModelComponent",
+                                },
+                                field: {"value": [{"provider": provider, "name": "x"}]},
+                            }
+                        },
+                    },
+                }
+            ],
+            "edges": [],
+        },
+    }
+
+
+def test_build_langflow_artifact_requirements_pin_lfx_first_line():
+    """requirements.txt for an empty flow pins lfx as its first (and only) line.
+
+    Locks the bundle-split contract that the wxO runner installs a pinned lfx
+    plus only the third-party packages dependency detection emits.
+    """
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
+        build_langflow_artifact_bytes,
+    )
+    from packaging.requirements import Requirement
+
+    tool = SimpleNamespace(__tool_spec__=SimpleNamespace(name="empty_tool"))
+    artifact_bytes = build_langflow_artifact_bytes(tool=tool, flow_definition={"data": {"nodes": [], "edges": []}})
+
+    reqs = _read_artifact_requirements(artifact_bytes)
+    assert reqs, "requirements.txt should never be empty (lfx must always be pinned)"
+    assert reqs[0].startswith("lfx=="), f"first requirement should pin lfx, got {reqs[0]!r}"
+    # Every line must be a valid, installable PEP 508 specifier.
+    for line in reqs:
+        Requirement(line)
+
+
+def test_build_langflow_artifact_requirements_for_openai_provider_flow():
+    """A bundle-resident provider flow ships the langchain SDK, never a bundle dist.
+
+    The runner builds the model from the langchain class directly, so it needs
+    ``langchain-openai`` — and must NOT be told to install ``lfx-openai`` /
+    ``lfx-bundles`` (those are not on the runner and are not required).
+    """
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
+        build_langflow_artifact_bytes,
+    )
+
+    tool = SimpleNamespace(__tool_spec__=SimpleNamespace(name="openai_tool"))
+    artifact_bytes = build_langflow_artifact_bytes(tool=tool, flow_definition=_provider_model_flow("OpenAI"))
+
+    reqs = _read_artifact_requirements(artifact_bytes)
+    names = {line.split("==")[0] for line in reqs}
+    assert "langchain-openai" in names
+    assert "lfx-openai" not in names
+    assert "lfx-bundles" not in names
+    assert any(line.startswith("lfx==") for line in reqs)
+
+
+def test_build_langflow_artifact_requirements_for_openrouter_provider_flow():
+    """OpenRouter is unified-selectable and runs on langchain-openai at runtime.
+
+    Regression guard for the gap where OpenRouter resolved to no packages and
+    produced an artifact that ImportErrors on the wxO runner.
+    """
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import (
+        build_langflow_artifact_bytes,
+    )
+
+    tool = SimpleNamespace(__tool_spec__=SimpleNamespace(name="openrouter_tool"))
+    artifact_bytes = build_langflow_artifact_bytes(tool=tool, flow_definition=_provider_model_flow("OpenRouter"))
+
+    names = {line.split("==")[0] for line in _read_artifact_requirements(artifact_bytes)}
+    assert "langchain-openai" in names
+
+
 # ---------------------------------------------------------------------------
 # WxOCredentials repr masking
 # ---------------------------------------------------------------------------
@@ -7192,6 +7354,39 @@ async def test_create_maps_422_to_invalid_content_error():
         )
 
 
+@pytest.mark.anyio
+async def test_create_maps_value_error_to_invalid_content_without_retry():
+    """Deterministic local create errors are actionable client errors and must not be retried."""
+    error_message = "No 'ChatInput' node found in langflow tool"
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    agent = FakeAgentClient(
+        {"id": "dep-1", "tools": []},
+        create_exception=ValueError(error_message),
+    )
+    clients = FakeWXOClients(
+        agent=agent,
+        tool=FakeToolClient([{"id": "tool-existing-1", "binding": {"langflow": {}}}]),
+        connections=FakeConnectionsClient(existing_app_id="app-existing-1"),
+    )
+    _attach_provider_clients(service, clients)
+
+    with pytest.raises(InvalidContentError, match=error_message):
+        await service.create(
+            user_id="user-1",
+            db=object(),
+            payload=DeploymentCreate(
+                spec=BaseDeploymentData(
+                    name="my_deployment",
+                    description="desc",
+                    type=DeploymentType.AGENT,
+                ),
+                provider_data=_create_provider_spec(),
+            ),
+        )
+
+    assert len(agent.create_calls) == 1
+
+
 # ---------------------------------------------------------------------------
 # Test Coverage Gap #2: create — unsupported deployment type rejection
 # ---------------------------------------------------------------------------
@@ -7472,9 +7667,7 @@ async def test_create_preserves_exception_chain_on_unexpected_error():
             ),
         )
 
-    inner = exc_info.value.__cause__
-    assert isinstance(inner, DeploymentError)
-    assert inner.__cause__ is original_error
+    assert exc_info.value.__cause__ is original_error
 
 
 @pytest.mark.anyio
@@ -7629,7 +7822,12 @@ async def test_get_agent_run_falls_back_to_param_run_id(monkeypatch):
 
 
 def test_build_orchestrate_run_payload_uses_message_directly():
-    """build_orchestrate_run_payload passes message from provider_data when present."""
+    """build_orchestrate_run_payload passes message from provider_data when present.
+
+    The run target is always the deployment's own (owner-pinned) resource key: a
+    caller-supplied provider_data["agent_id"] must be ignored so it cannot redirect the
+    run to an arbitrary agent in the owner's WxO tenant.
+    """
     from langflow.services.adapters.deployment.watsonx_orchestrate.core.execution import build_orchestrate_run_payload
 
     message = {"role": "user", "content": "direct message"}
@@ -7638,7 +7836,7 @@ def test_build_orchestrate_run_payload_uses_message_directly():
         deployment_id="dep-fallback",
     )
     assert result["message"] is message
-    assert result["agent_id"] == "a-1"
+    assert result["agent_id"] == "dep-fallback"
     assert len(result) == 2
 
 

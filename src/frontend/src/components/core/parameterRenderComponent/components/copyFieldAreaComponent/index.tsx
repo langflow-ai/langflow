@@ -7,6 +7,7 @@ import useFlowStore from "@/stores/flowStore";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Input } from "../../../../ui/input";
+import { getNodeScopedDomId } from "../../helpers/get-node-scoped-dom-id";
 import type { InputProps, TextAreaComponentType } from "../../types";
 
 const BACKEND_URL = "BACKEND_URL";
@@ -60,7 +61,9 @@ export default function CopyFieldAreaComponent({
   handleOnNewValue,
   editNode = false,
   id = "",
+  nodeId,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<string, TextAreaComponentType>): JSX.Element | null {
   const { t } = useTranslation();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -92,7 +95,7 @@ export default function CopyFieldAreaComponent({
     handleOnNewValue({ value: e.target.value });
   };
 
-  const handleCopy = (event?: React.MouseEvent<HTMLDivElement>) => {
+  const handleCopy = (event?: React.MouseEvent<HTMLButtonElement>) => {
     setIsCopied(true);
     setTimeout(() => setIsCopied(false), 2000);
     navigator.clipboard.writeText(valueToRender);
@@ -124,7 +127,11 @@ export default function CopyFieldAreaComponent({
           aria-hidden="true"
         />
       )}
-      <div onClick={handleCopy}>
+      <button
+        type="button"
+        onClick={handleCopy}
+        aria-label={isCopied ? "Copied" : "Copy"}
+      >
         <IconComponent
           dataTestId={`btn_copy_${id?.toLowerCase()}${
             editNode ? "_advanced" : ""
@@ -139,7 +146,7 @@ export default function CopyFieldAreaComponent({
             "bg-muted text-foreground",
           )}
         />
-      </div>
+      </button>
     </>
   );
 
@@ -152,12 +159,13 @@ export default function CopyFieldAreaComponent({
       <Input
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
-        id={id}
+        id={getNodeScopedDomId(id, nodeId)}
         data-testid={id}
         value={valueToRender}
         onChange={handleInputChange}
         className={cn(getInputClassName())}
-        aria-label={valueToRender}
+        aria-label={!ariaLabelledBy ? valueToRender : undefined}
+        aria-labelledby={ariaLabelledBy}
         ref={inputRef}
         type="text"
         disabled

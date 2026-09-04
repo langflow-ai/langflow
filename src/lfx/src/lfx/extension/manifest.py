@@ -1,10 +1,10 @@
 """Pydantic models for the v0 Extension manifest schema.
 
-A Langflow Extension is the distribution unit that gets pip-installed.  In v0
-it ships exactly one Bundle (a named group of components) plus a manifest at
-the distribution root.  The manifest tells Langflow:
+A Langflow Extension is the distribution unit that gets pip-installed. It
+ships Bundles (named groups of components) and/or model providers, plus a
+manifest at the distribution root. The manifest tells Langflow:
 
-    - which Bundle to register (``bundles[0]``),
+    - which Bundles to register (``bundles``),
     - what component-base-class API surface the Bundle was built against
       (``lfx.compat``),
     - what optional capabilities the Bundle declares
@@ -22,12 +22,8 @@ Deferred fields (``services``, ``routes``, ``hooks``, ``starter_projects``,
 presence and emit ``field-deferred-in-this-milestone`` rather than silently
 dropping them.
 
-Multi-bundle is similarly reserved: ``bundles`` is a list, but v0 rejects
-length > 1 with ``multi-bundle-deferred-in-this-milestone``.  This is enforced
-in two places:
-
-    - here, by :class:`ExtensionManifest` (validator-side).
-    - in the loader at install/discovery time.
+Each declared bundle is validated and loaded independently while sharing the
+extension's identity, compatibility declaration, and distribution.
 """
 
 from __future__ import annotations
@@ -86,12 +82,35 @@ BUNDLE_NAME_RE: re.Pattern[str] = re.compile(r"^[a-z][a-z0-9_]{1,63}$")
 """Bundle names use snake_case so they can be addressed in the registry as
 ``ext:<bundle>:<Class>@<slot>`` without quoting."""
 
+_PROVIDER_ID_RE: re.Pattern[str] = re.compile(r"^[a-z0-9][a-z0-9._-]*$")
+
 _SEMVER_RE: re.Pattern[str] = re.compile(
-    r"^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)"
+    r"^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
     r"(?:-(?:[0-9A-Za-z-]+)(?:\.[0-9A-Za-z-]+)*)?"
     r"(?:\+(?:[0-9A-Za-z-]+)(?:\.[0-9A-Za-z-]+)*)?$"
 )
 """SemVer 2.0.0 pattern (https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string)."""
+
+_REPOSITORY_PEP440_RE: re.Pattern[str] = re.compile(
+    r"^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+    r"(?:(?:a|b|rc)(?:0|[1-9][0-9]*)|\.dev(?:0|[1-9][0-9]*))?$"
+)
+"""Canonical PEP 440 forms emitted by the repository's bundle release tooling."""
+
+
+def _json_schema_fullmatch(pattern: re.Pattern[str]) -> str:
+    """Adapt a Python-anchored regex to JSON Schema's search semantics.
+
+    The trailing lookahead prevents ``$`` from accepting a match immediately
+    before a final newline, keeping the authoring schema aligned with the
+    runtime validator's ``fullmatch`` behavior.
+    """
+    return rf"(?:{pattern.pattern})(?![\s\S])"
+
+
+_EXTENSION_VERSION_JSON_SCHEMA: dict[str, list[dict[str, str]]] = {
+    "anyOf": [{"pattern": _json_schema_fullmatch(pattern)} for pattern in (_SEMVER_RE, _REPOSITORY_PEP440_RE)]
+}
 
 # Deferred manifest fields.  Validators reject any non-null value with
 # ``field-deferred-in-this-milestone``.  Listed here so tests can iterate and so
@@ -243,6 +262,214 @@ class BundleRef(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Model providers
+# ---------------------------------------------------------------------------
+
+
+class ProviderClassRef(BaseModel):
+    """Lazy class-import pointer ``(module, attr, install_hint)`` for a provider.
+
+    Mirrors the tuples in ``unified_models.class_registry`` so the provider's
+    LangChain class is imported only at instantiation, never at discovery.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    module: StrictStr = Field(..., min_length=1, description="Importable module path, e.g. 'langchain_openai'.")
+    attr: StrictStr = Field(..., min_length=1, description="Attribute on the module, e.g. 'ChatOpenAI'.")
+    install_hint: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        description="Optional pip package name surfaced when the import fails (defaults to the top module).",
+    )
+
+
+class ProviderEmbeddingRef(BaseModel):
+    """Embedding wiring for a provider that also offers embeddings."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    class_name: StrictStr = Field(..., min_length=1, description="Embedding class name, e.g. 'OpenAIEmbeddings'.")
+    module: StrictStr = Field(..., min_length=1, description="Importable module path of the embedding class.")
+    attr: StrictStr = Field(..., min_length=1, description="Attribute on the module for the embedding class.")
+    install_hint: StrictStr | None = Field(default=None, min_length=1, description="Optional pip package hint.")
+    param_mapping_key: StrictStr = Field(
+        ...,
+        min_length=1,
+        description="Key under which param_mapping is stored in EMBEDDING_PARAM_MAPPINGS.",
+    )
+    param_mapping: dict[str, StrictStr] = Field(
+        default_factory=dict,
+        description="Abstract-slot -> real-kwarg mapping for the embedding class constructor.",
+    )
+
+
+_PROVIDER_VARIABLE_KEYS: frozenset[str] = frozenset(
+    {
+        "base_url_suffix",
+        "combobox",
+        "component_metadata",
+        "description",
+        "header_name",
+        "is_header",
+        "is_list",
+        "is_secret",
+        "langchain_param",
+        "options",
+        "required",
+        "variable_key",
+        "variable_name",
+    }
+)
+
+
+class ProviderManifestEntry(BaseModel):
+    """A model provider contributed by an extension bundle (``providers[]``).
+
+    ``metadata`` mirrors a single ``MODEL_PROVIDER_METADATA`` value (``icon``,
+    ``variables``, ``mapping`` with at least ``model_class``, ``api_docs_url``).
+    The loader translates this into a ``provider_registry.ProviderSpec`` and
+    merges it into the core provider tables at load time.
+    """
+
+    # ``model_class`` lives in pydantic's protected ``model_`` namespace; opt
+    # out so the manifest can mirror the core table's field name verbatim.
+    model_config = ConfigDict(extra="forbid", frozen=True, protected_namespaces=())
+
+    name: StrictStr = Field(..., min_length=1, max_length=120, description="Canonical provider name, e.g. 'vLLM'.")
+    provider_id: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        max_length=120,
+        pattern=_PROVIDER_ID_RE.pattern,
+        description=(
+            "Stable machine identity used by policy, e.g. 'openai' or 'acme.watsonx'. "
+            "Omit only for legacy manifests; Langflow then derives an ID from name."
+        ),
+    )
+    display_name: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        max_length=120,
+        description="Optional user-facing label; changing it does not change provider_id or saved-flow identity.",
+    )
+    aliases: tuple[StrictStr, ...] = Field(
+        default=(),
+        description="Legacy provider names accepted when resolving stable provider identity.",
+    )
+    metadata: dict[str, Any] = Field(
+        ...,
+        description="MODEL_PROVIDER_METADATA value: icon, variables, mapping (with model_class), api_docs_url, etc.",
+        json_schema_extra={
+            "properties": {
+                "variables": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "base_url_suffix": {
+                                "type": "string",
+                                "minLength": 1,
+                                "description": (
+                                    "Optional path suffix appended to a variable mapped to the base_url LangChain "
+                                    "parameter when the configured URL does not already end with it."
+                                ),
+                            }
+                        },
+                    },
+                }
+            }
+        },
+    )
+    model_class: ProviderClassRef | None = Field(
+        default=None,
+        description="Lazy import for the LLM class in metadata.mapping.model_class. Omit when reusing a core class.",
+    )
+    embedding: ProviderEmbeddingRef | None = Field(default=None, description="Optional embedding wiring.")
+    api_key_required: StrictBool = Field(
+        default=True,
+        description="If False, get_llm/get_embeddings do not raise when no API key is configured.",
+    )
+    live: StrictBool = Field(default=False, description="Add to LIVE_MODEL_PROVIDERS (always-on live discovery).")
+    conditional_live: StrictBool = Field(
+        default=False,
+        description="Add to CONDITIONAL_LIVE_MODEL_PROVIDERS (live only when a custom endpoint is configured).",
+    )
+    live_discovery: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        description="Dotted-path callable 'module:attr' for live models: (user_id, model_type) -> list[dict].",
+    )
+    validator: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        description="Dotted-path callable 'module:attr' validating credentials: (provider, variables, model) -> None.",
+    )
+    catalog_loader: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        description=(
+            "Dotted-path callable 'module:attr' returning a flat list of static model metadata rows. "
+            "Langflow stamps provider ownership and validates model identities."
+        ),
+    )
+
+    @field_validator("aliases")
+    @classmethod
+    def _aliases_are_unique_and_non_empty(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        normalized: set[str] = set()
+        for alias in value:
+            if not alias.strip():
+                msg = "provider.aliases must contain non-empty strings"
+                raise ValueError(msg)
+            folded = alias.casefold()
+            if folded in normalized:
+                msg = f"provider.aliases contains duplicate alias {alias!r}"
+                raise ValueError(msg)
+            normalized.add(folded)
+        return value
+
+    @field_validator("metadata")
+    @classmethod
+    def _metadata_is_valid(cls, value: dict[str, Any]) -> dict[str, Any]:
+        mapping = value.get("mapping") if isinstance(value, dict) else None
+        if not isinstance(mapping, dict) or not mapping.get("model_class"):
+            msg = "provider.metadata must include a 'mapping' object with a non-empty 'model_class'"
+            raise ValueError(msg)
+        variables = value.get("variables", [])
+        if isinstance(variables, list):
+            for index, variable in enumerate(variables):
+                if not isinstance(variable, dict):
+                    continue
+                langchain_param = variable.get("langchain_param")
+                if langchain_param == "base_url":
+                    unknown_keys = sorted(set(variable) - _PROVIDER_VARIABLE_KEYS)
+                    if unknown_keys:
+                        msg = (
+                            f"provider.metadata.variables[{index}] contains unrecognized base_url variable key(s): "
+                            f"{', '.join(unknown_keys)}"
+                        )
+                        raise ValueError(msg)
+                suffix = variable.get("base_url_suffix")
+                if suffix is None:
+                    continue
+                if langchain_param != "base_url":
+                    msg = f"provider.metadata.variables[{index}].base_url_suffix requires langchain_param='base_url'"
+                    raise ValueError(msg)
+                if not isinstance(suffix, str) or not suffix.strip("/"):
+                    msg = f"provider.metadata.variables[{index}].base_url_suffix must contain a non-empty path suffix"
+                    raise ValueError(msg)
+        return value
+
+    @model_validator(mode="after")
+    def _live_mutually_exclusive(self) -> ProviderManifestEntry:
+        if self.live and self.conditional_live:
+            msg = f"provider {self.name!r} cannot set both 'live' and 'conditional_live'"
+            raise ValueError(msg)
+        return self
+
+
+# ---------------------------------------------------------------------------
 # ExtensionManifest
 # ---------------------------------------------------------------------------
 
@@ -278,8 +505,11 @@ class ExtensionManifest(BaseModel):
     )
     version: StrictStr = Field(
         ...,
-        pattern=_SEMVER_RE.pattern,
-        description="SemVer 2.0.0 version string for this extension release.",
+        description=(
+            "SemVer 2.0.0 or repository-supported PEP 440 stable/dev/alpha/beta/rc version string "
+            "for this extension release."
+        ),
+        json_schema_extra=_EXTENSION_VERSION_JSON_SCHEMA,
     )
     name: StrictStr = Field(
         ...,
@@ -299,13 +529,22 @@ class ExtensionManifest(BaseModel):
     )
 
     bundles: list[BundleRef] = Field(
-        ...,
-        min_length=1,
-        max_length=1,
+        default_factory=list,
         description=(
-            "Bundles shipped by this extension. v0 accepts exactly one; the "
-            "constraint is encoded as ``minItems``/``maxItems`` in the published "
-            "JSON Schema so third-party manifest tools agree with the runtime."
+            "Bundles (component groups) shipped by this extension. May be empty "
+            "for a provider-only extension that ships model providers but no "
+            "components; an extension must declare at least one of ``bundles`` "
+            "or ``providers``."
+        ),
+    )
+
+    providers: list[ProviderManifestEntry] = Field(
+        default_factory=list,
+        description=(
+            "Model providers contributed by this extension. Each is merged into "
+            "Langflow's unified model-provider tables (MODEL_PROVIDER_METADATA, the "
+            "class-import registries, LIVE_MODEL_PROVIDERS) at load time, so a "
+            "provider bundle adds a provider without editing core lfx."
         ),
     )
 
@@ -347,13 +586,38 @@ class ExtensionManifest(BaseModel):
     # Validators
     # ------------------------------------------------------------------
 
+    @field_validator("version")
+    @classmethod
+    def _validate_version(cls, value: str) -> str:
+        if not any(pattern.fullmatch(value) for pattern in (_SEMVER_RE, _REPOSITORY_PEP440_RE)):
+            msg = (
+                "version must be SemVer 2.0.0 or a supported PEP 440 form: "
+                "X.Y.Z, X.Y.Z.devN, X.Y.ZaN, X.Y.ZbN, or X.Y.ZrcN"
+            )
+            raise ValueError(msg)
+        return value
+
+    @model_validator(mode="after")
+    def _validate_declares_something(self) -> ExtensionManifest:
+        # An extension must contribute at least one bundle (components) or one
+        # provider; an empty manifest is almost certainly a mistake.
+        if not self.bundles and not self.providers:
+            msg = "An extension must declare at least one bundle or one provider"
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _validate_provider_name_uniqueness(self) -> ExtensionManifest:
+        names = [p.name for p in self.providers]
+        if len(set(names)) != len(names):
+            msg = "Provider names must be unique within an extension"
+            raise ValueError(msg)
+        return self
+
     @model_validator(mode="after")
     def _validate_bundle_uniqueness(self) -> ExtensionManifest:
-        # The list-length constraint (exactly one bundle in v0) is encoded on
-        # the field above so it lands in the JSON Schema.  This validator covers
-        # what Field constraints can't express: bundle names must be unique
-        # within an extension.  The check is cheap and forward-compatible -- the
-        # loader uses this list directly when multi-bundle ships.
+        # Bundle names are public registry and saved-flow namespaces, so they
+        # must be unique within one extension.
         names = [bundle.name for bundle in self.bundles]
         if len(set(names)) != len(names):
             msg = "Bundle names must be unique within an extension"

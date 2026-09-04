@@ -7,6 +7,8 @@ from lfx.io import DropdownInput, IntInput, MessageTextInput, Output
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 
+ARXIV_REQUEST_TIMEOUT_SECONDS = 10
+
 
 class ArXivComponent(Component):
     display_name = "arXiv"
@@ -141,7 +143,7 @@ class ArXivComponent(Component):
             urllib.request.install_opener(opener)
 
             # Make the request with validated URL using restricted opener
-            response = opener.open(url)
+            response = opener.open(url, timeout=ARXIV_REQUEST_TIMEOUT_SECONDS)
             response_text = response.read().decode("utf-8")
 
             # Parse the response
@@ -150,7 +152,7 @@ class ArXivComponent(Component):
             # Convert to Data objects
             results = [Data(data=paper) for paper in papers]
             self.status = results
-        except (urllib.error.URLError, ValueError) as e:
+        except (TimeoutError, urllib.error.URLError, ValueError) as e:
             error_data = Data(data={"error": f"Request error: {e!s}"})
             self.status = error_data
             return [error_data]

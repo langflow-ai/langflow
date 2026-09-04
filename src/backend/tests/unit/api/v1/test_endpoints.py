@@ -1,13 +1,19 @@
 import asyncio
+import hashlib
 import inspect
+from types import SimpleNamespace
 from typing import Any
+from unittest.mock import AsyncMock
+from uuid import uuid4
 
+import pytest
 from anyio import Path
 from fastapi import status
 from httpx import AsyncClient
-from langflow.api.v1.schemas import CustomComponentRequest, UpdateCustomComponentRequest
+from langflow.api.v1.schemas import CustomComponentRequest, SimplifiedAPIRequest, UpdateCustomComponentRequest
 from lfx.components.models_and_agents.agent import AgentComponent
 from lfx.custom.utils import build_custom_component_template
+from lfx.services.catalog_policy.base import CatalogPolicySnapshot
 
 
 async def test_get_version(client: AsyncClient):
@@ -32,6 +38,214 @@ async def test_get_config_basic(client: AsyncClient, logged_in_headers: dict):
     assert "auto_saving" in result, "The dictionary must contain a key called 'auto_saving'"
     assert "health_check_max_retries" in result, "The dictionary must contain a 'health_check_max_retries' key"
     assert "max_file_size_upload" in result, "The dictionary must contain a key called 'max_file_size_upload'"
+
+
+async def test_get_config_mirrors_assistant_message_length(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """The Assistant composer reads its cap from /config, so the setting must be mirrored there.
+
+    Without this the UI falls back to a local constant, which is how a 500-character UI cap
+    ended up silently truncating prompts the 2000-character API would have accepted.
+    """
+    from lfx.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "assistant_max_message_length", 6000)
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["assistant_max_message_length"] == 6000
+
+
+@pytest.mark.parametrize(
+    ("project_id", "workspace_id"),
+    [(uuid4(), uuid4()), (None, None)],
+)
+async def test_simple_run_flow_binds_trusted_required_provider_scope(
+    monkeypatch,
+    project_id,
+    workspace_id,
+):
+    from langflow.api.v1 import endpoints
+
+    captured = []
+    token = object()
+
+    def _capture_context(*, user_id, attributes=None):
+        captured.append((user_id, attributes))
+        return token
+
+    monkeypatch.setattr(endpoints, "set_current_model_provider_policy_context", _capture_context)
+    monkeypatch.setattr(endpoints, "reset_current_model_provider_policy_context", lambda _token: None)
+    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    flow = SimpleNamespace(
+        id=uuid4(),
+        folder_id=project_id,
+        workspace_id=workspace_id,
+        data=None,
+    )
+
+    with pytest.raises(ValueError, match="has no data"):
+        await endpoints.simple_run_flow(flow, SimplifiedAPIRequest(), api_key_user=user)
+
+    expected_attributes = {
+        "is_superuser": False,
+        "provider_scope_required": True,
+    }
+    if project_id is not None:
+        expected_attributes["project_id"] = project_id
+    if workspace_id is not None:
+        expected_attributes["workspace_id"] = workspace_id
+    assert captured == [(user.id, expected_attributes)]
+
+
+async def test_build_driver_rebinds_scope_for_reused_graph_execution(monkeypatch):
+    """A warm/session graph never inherits the provider scope from an earlier run."""
+    from langflow.api import build
+    from lfx.services.model_provider_policy import current_model_provider_policy_context
+
+    observed = []
+
+    async def _reuse_graph(**_kwargs):
+        observed.append(current_model_provider_policy_context())
+
+    monkeypatch.setattr(build, "_generate_flow_events", _reuse_graph)
+    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    first_flow = SimpleNamespace(folder_id=uuid4(), workspace_id=uuid4())
+    second_flow = SimpleNamespace(folder_id=uuid4(), workspace_id=uuid4())
+
+    await build.generate_flow_events(provider_policy_flow=first_flow, current_user=user)
+    await build.generate_flow_events(provider_policy_flow=second_flow, current_user=user)
+
+    assert [context.user_id for context in observed] == [user.id, user.id]
+    assert [context.attributes for context in observed] == [
+        {
+            "is_superuser": False,
+            "project_id": first_flow.folder_id,
+            "workspace_id": first_flow.workspace_id,
+            "provider_scope_required": True,
+        },
+        {
+            "is_superuser": False,
+            "project_id": second_flow.folder_id,
+            "workspace_id": second_flow.workspace_id,
+            "provider_scope_required": True,
+        },
+    ]
+
+
+async def test_build_driver_marks_missing_provider_scope_as_required(monkeypatch):
+    """An internal caller that omits its stored flow cannot fall back to global policy."""
+    from langflow.api import build
+    from lfx.services.model_provider_policy import current_model_provider_policy_context
+
+    observed = []
+
+    async def _capture_context(**_kwargs):
+        observed.append(current_model_provider_policy_context())
+
+    monkeypatch.setattr(build, "_generate_flow_events", _capture_context)
+    user = SimpleNamespace(id=uuid4(), is_superuser=True)
+
+    await build.generate_flow_events(current_user=user)
+
+    assert len(observed) == 1
+    assert observed[0].user_id == user.id
+    assert observed[0].attributes == {
+        "is_superuser": True,
+        "provider_scope_required": True,
+    }
+
+
+@pytest.mark.parametrize("path", ["api/v1/custom_component", "api/v1/custom_component/update"])
+async def test_catalog_blocks_known_template_before_custom_component_build(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+    path: str,
+):
+    """A blocked built-in cannot be reintroduced through either custom-component path."""
+    agent_component_file = await asyncio.to_thread(inspect.getsourcefile, AgentComponent)
+    code = await Path(agent_component_file).read_text(encoding="utf-8")
+    code_hash = hashlib.sha256(code.encode()).hexdigest()[:12]
+    snapshot = CatalogPolicySnapshot(blocked_component_keys={"Agent"})
+
+    monkeypatch.setattr(
+        "langflow.api.v1.endpoints.get_catalog_policy_service",
+        lambda: SimpleNamespace(snapshot=snapshot),
+    )
+    monkeypatch.setattr(
+        "lfx.utils.flow_validation.get_component_hash_lookups_for_validation",
+        lambda: {"Agent": {code_hash}},
+    )
+
+    def fail_if_built(*_args, **_kwargs):
+        msg = "catalog policy must deny known blocked source before component build"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr("langflow.api.v1.endpoints.build_custom_component_template", fail_if_built)
+    if path.endswith("/update"):
+        request = UpdateCustomComponentRequest(
+            code=code,
+            frontend_node={"outputs": []},
+            field="",
+            field_value="",
+            template={},
+        )
+    else:
+        request = CustomComponentRequest(code=code)
+
+    response = await client.post(path, json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "Agent" in response.json()["detail"]
+
+
+@pytest.mark.parametrize("path", ["api/v1/custom_component", "api/v1/custom_component/update"])
+async def test_catalog_blocks_resolved_custom_component_type(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+    path: str,
+):
+    """A modified custom component cannot assume an exact blocked runtime type."""
+    code = """
+from lfx.custom import Component
+from lfx.template.field.base import Output
+
+class CatalogLookalikeComponent(Component):
+    name = "Agent"
+    display_name = "Catalog Lookalike"
+    outputs = [Output(display_name="Output", name="output", method="get_result")]
+
+    def get_result(self) -> str:
+        return "blocked"
+"""
+    snapshot = CatalogPolicySnapshot(blocked_component_keys={"Agent"})
+    monkeypatch.setattr(
+        "langflow.api.v1.endpoints.get_catalog_policy_service",
+        lambda: SimpleNamespace(snapshot=snapshot),
+    )
+    monkeypatch.setattr(
+        "lfx.utils.flow_validation.get_component_hash_lookups_for_validation",
+        lambda: {"Agent": {"different-template-hash"}},
+    )
+
+    if path.endswith("/update"):
+        request = UpdateCustomComponentRequest(
+            code=code,
+            frontend_node={"outputs": []},
+            field="",
+            field_value="",
+            template={},
+        )
+    else:
+        request = CustomComponentRequest(code=code)
+
+    response = await client.post(path, json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "Agent" in response.json()["detail"]
 
 
 async def test_update_component_outputs(client: AsyncClient, logged_in_headers: dict):
@@ -255,14 +469,41 @@ class SuperUserMetadataComponent(Component):
 async def test_custom_component_update_admin_only_allows_superuser(
     client: AsyncClient,
     logged_in_headers_super_user: dict,
+    active_super_user,
     monkeypatch,
 ):
+    from langflow.api.v1 import endpoints
     from langflow.services.deps import get_settings_service
+    from lfx.custom.custom_component.component import Component
+    from lfx.services.model_provider_policy import current_model_provider_policy_context
 
     settings_service = get_settings_service()
     admin_only_enabled = True
     monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
     monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
+
+    bound_contexts = []
+    reset_tokens = []
+    policy_contexts = []
+    original_set_context = endpoints.set_current_model_provider_policy_context
+    original_reset_context = endpoints.reset_current_model_provider_policy_context
+    original_require_policy = Component.arequire_model_provider_policy
+
+    def capture_set_context(*, user_id, attributes=None):
+        bound_contexts.append((user_id, attributes))
+        return original_set_context(user_id=user_id, attributes=attributes)
+
+    def capture_reset_context(token):
+        reset_tokens.append(token)
+        original_reset_context(token)
+
+    async def capture_require_policy(self, purpose, **kwargs):
+        policy_contexts.append(current_model_provider_policy_context())
+        return await original_require_policy(self, purpose, **kwargs)
+
+    monkeypatch.setattr(endpoints, "set_current_model_provider_policy_context", capture_set_context)
+    monkeypatch.setattr(endpoints, "reset_current_model_provider_policy_context", capture_reset_context)
+    monkeypatch.setattr(Component, "arequire_model_provider_policy", capture_require_policy)
 
     component_code = """
 from lfx.custom import Component
@@ -289,6 +530,189 @@ class SuperUserUpdateMetadataComponent(Component):
     )
 
     assert response.status_code == status.HTTP_200_OK, response.json()
+    assert bound_contexts == [(active_super_user.id, {"is_superuser": True})]
+    assert len(reset_tokens) == 1
+    assert policy_contexts
+    assert policy_contexts[0] is not None
+    assert policy_contexts[0].user_id == active_super_user.id
+    assert policy_contexts[0].attributes["is_superuser"] is True
+
+
+async def test_custom_component_create_denies_provider_before_dynamic_update_hooks(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    from langflow.api.v1 import endpoints
+    from lfx.custom.custom_component.component import Component
+    from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+    provider_denial = ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.CONFIGURE)
+    component_instance = Component(_code="")
+    require_policy = AsyncMock(side_effect=provider_denial)
+    update_frontend_node = AsyncMock(return_value={"tool_mode": False})
+    run_update_outputs = AsyncMock()
+    monkeypatch.setattr(component_instance, "arequire_model_provider_policy", require_policy)
+    monkeypatch.setattr(component_instance, "update_frontend_node", update_frontend_node)
+    monkeypatch.setattr(component_instance, "run_and_validate_update_outputs", run_update_outputs)
+    monkeypatch.setattr(endpoints, "get_current_external_access_context", lambda: None)
+    monkeypatch.setattr(
+        endpoints,
+        "get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace()),
+    )
+    monkeypatch.setattr(
+        endpoints,
+        "get_catalog_policy_service",
+        lambda: SimpleNamespace(snapshot=object()),
+    )
+    monkeypatch.setattr(
+        endpoints,
+        "resolve_component_code_for_action",
+        lambda code, **_kwargs: code,
+    )
+    monkeypatch.setattr(
+        endpoints,
+        "build_custom_component_template",
+        lambda *_args, **_kwargs: ({"tool_mode": False}, component_instance),
+    )
+    monkeypatch.setattr(endpoints, "get_instance_name", lambda _component: "DeniedModel")
+    monkeypatch.setattr(endpoints, "enforce_catalog_policy_for_component_type", lambda *_args, **_kwargs: None)
+
+    request = CustomComponentRequest(
+        code="class DeniedModel: pass",
+        frontend_node={
+            "template": {
+                "model": {
+                    "value": [{"provider": "OpenAI", "name": "gpt-test"}],
+                    "_input_type": "ModelInput",
+                }
+            }
+        },
+    )
+    response = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == {"detail": "Model provider not found"}
+    assert require_policy.await_args.args == (ModelProviderPolicyPurpose.CONFIGURE,)
+    assert require_policy.await_args.kwargs["parameters"]["model"][0]["provider"] == "OpenAI"
+    update_frontend_node.assert_not_awaited()
+    run_update_outputs.assert_not_awaited()
+
+
+async def test_custom_component_update_denies_selected_provider_before_secret_hydration(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    from langflow.api.v1 import endpoints
+    from lfx.custom.custom_component.component import Component
+    from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+    component_instance = Component(_code="")
+    denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE)
+    require_policy = AsyncMock(side_effect=denial)
+    hydrate = AsyncMock(side_effect=AssertionError("secret hydration reached after provider denial"))
+    monkeypatch.setattr(component_instance, "arequire_model_provider_policy", require_policy)
+    monkeypatch.setattr(endpoints, "update_params_with_load_from_db_fields", hydrate)
+    monkeypatch.setattr(endpoints, "get_current_external_access_context", lambda: None)
+    monkeypatch.setattr(endpoints, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace()))
+    monkeypatch.setattr(endpoints, "get_catalog_policy_service", lambda: SimpleNamespace(snapshot=object()))
+    monkeypatch.setattr(endpoints, "resolve_component_code_for_action", lambda code, **_kwargs: code)
+    monkeypatch.setattr(
+        endpoints,
+        "build_custom_component_template",
+        lambda *_args, **_kwargs: ({"template": {}, "outputs": []}, component_instance),
+    )
+    monkeypatch.setattr(endpoints, "get_instance_name", lambda _component: "SelectedModel")
+    monkeypatch.setattr(endpoints, "enforce_catalog_policy_for_component_type", lambda *_args, **_kwargs: None)
+
+    request = UpdateCustomComponentRequest(
+        code="class SelectedModel: pass",
+        frontend_node={"outputs": []},
+        field="model",
+        field_value=[{"provider": "Anthropic", "model_name": "claude-test"}],
+        template={
+            "model": {
+                "value": [{"provider": "Anthropic", "model_name": "claude-test"}],
+                "_input_type": "ModelInput",
+            },
+            "api_key": {
+                "value": "ANTHROPIC_API_KEY",
+                "_input_type": "SecretStrInput",
+                "load_from_db": True,
+            },
+        },
+    )
+    response = await client.post(
+        "api/v1/custom_component/update",
+        json=request.model_dump(),
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert response.json() == {"detail": "Model provider not found"}
+    assert require_policy.await_args.args == (ModelProviderPolicyPurpose.CONFIGURE,)
+    assert require_policy.await_args.kwargs["parameters"]["model"][0]["provider"] == "Anthropic"
+    hydrate.assert_not_awaited()
+
+
+async def test_custom_component_update_keeps_realtime_value_out_of_component_attributes(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    from unittest.mock import MagicMock
+
+    from langflow.api.v1 import endpoints
+    from lfx.custom.custom_component.component import Component
+    from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+    component_instance = Component(_code="")
+    require_policy = AsyncMock()
+    set_attributes = MagicMock()
+    run_update_outputs = AsyncMock()
+    monkeypatch.setattr(component_instance, "arequire_model_provider_policy", require_policy)
+    monkeypatch.setattr(component_instance, "set_attributes", set_attributes)
+    monkeypatch.setattr(component_instance, "run_and_validate_update_outputs", run_update_outputs)
+    monkeypatch.setattr(endpoints, "get_current_external_access_context", lambda: None)
+    monkeypatch.setattr(endpoints, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace()))
+    monkeypatch.setattr(endpoints, "get_catalog_policy_service", lambda: SimpleNamespace(snapshot=object()))
+    monkeypatch.setattr(endpoints, "resolve_component_code_for_action", lambda code, **_kwargs: code)
+    monkeypatch.setattr(
+        endpoints,
+        "build_custom_component_template",
+        lambda *_args, **_kwargs: ({"template": {}, "outputs": []}, component_instance),
+    )
+    monkeypatch.setattr(endpoints, "get_instance_name", lambda _component: "SelectedModel")
+    monkeypatch.setattr(endpoints, "enforce_catalog_policy_for_component_type", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(endpoints, "update_component_build_config", AsyncMock())
+
+    template_value = [{"provider": "OpenAI", "model_name": "gpt-test"}]
+    realtime_value = [{"provider": "Anthropic", "model_name": "claude-test"}]
+    request = UpdateCustomComponentRequest(
+        code="class SelectedModel: pass",
+        frontend_node={"outputs": []},
+        field="model",
+        field_value=realtime_value,
+        template={
+            "model": {
+                "value": template_value,
+                "_input_type": "ModelInput",
+            }
+        },
+    )
+
+    response = await client.post(
+        "api/v1/custom_component/update",
+        json=request.model_dump(),
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert require_policy.await_args.args == (ModelProviderPolicyPurpose.CONFIGURE,)
+    assert require_policy.await_args.kwargs["parameters"]["model"] == realtime_value
+    assert set_attributes.call_args.args[0]["model"] == template_value
 
 
 async def test_custom_component_endpoint_returns_metadata(client: AsyncClient, logged_in_headers: dict):
@@ -383,6 +807,189 @@ async def test_get_config_without_authentication_returns_public_config(client: A
     """Test that /config returns public config when accessed without authentication."""
     response = await client.get("api/v1/config")
     assert response.status_code == status.HTTP_200_OK
+
+
+async def test_get_config_reports_catalog_governance_without_exposing_policy_contents(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    """The public variant exposes only the derived governance indicator."""
+    monkeypatch.setattr(
+        "langflow.api.v1.endpoints.get_catalog_policy_service",
+        lambda: SimpleNamespace(enabled=True),
+    )
+
+    public_response = await client.get("api/v1/config")
+    authenticated_response = await client.get("api/v1/config", headers=logged_in_headers)
+
+    assert public_response.status_code == status.HTTP_200_OK
+    assert authenticated_response.status_code == status.HTTP_200_OK
+    for result in (public_response.json(), authenticated_response.json()):
+        assert result["catalog_governance_enabled"] is True
+        assert "blocked_component_keys" not in result
+        assert "blocked_template_keys" not in result
+    # A policy service exposing no snapshot names nothing rather than guessing.
+    assert authenticated_response.json()["blocked_component_types"] == []
+
+
+def test_public_config_never_carries_blocked_component_identities():
+    """The anonymous response withholds the policy contents by construction.
+
+    Asserted on the schema rather than a response: the test client's
+    unauthenticated request resolves a user under auto-login, so it cannot
+    exercise the anonymous branch.
+    """
+    from langflow.api.v1.schemas import ConfigResponse, PublicConfigResponse
+
+    assert "blocked_component_types" not in PublicConfigResponse.model_fields
+    assert "blocked_component_types" in ConfigResponse.model_fields
+
+
+async def test_get_config_names_blocked_components_to_authenticated_callers(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    """The editor cannot attribute a missing template without the identities.
+
+    ``catalog_governance_enabled`` says a policy exists somewhere; a node whose
+    template is missing may instead be an uninstalled bundle, an imported flow
+    or the caller's own component, so the editor needs the blocked identities
+    to name a cause truthfully.
+    """
+    monkeypatch.setattr(
+        "langflow.api.v1.endpoints.get_catalog_policy_service",
+        lambda: SimpleNamespace(
+            enabled=True,
+            snapshot=SimpleNamespace(
+                blocked_component_keys=frozenset({"ChatOutput", "Agent"}),
+                blocked_template_keys=frozenset({"Simple Agent"}),
+            ),
+        ),
+    )
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    reported = response.json()["blocked_component_types"]
+    # The keys themselves, plus every alias a saved node could carry for them.
+    assert {"Agent", "ChatOutput"} <= set(reported)
+    # Template identities stay withheld: nothing in the editor consumes them.
+    assert "Simple Agent" not in reported
+    # An unrelated component contributes nothing.
+    assert "Prompt Template" not in reported
+
+
+async def test_get_config_names_every_alias_of_a_blocked_component(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    """A node saved under an alias must match the administrator's canonical key.
+
+    Alias resolution runs alias -> canonical only, so reporting just the
+    blocked key and its canonical candidates leaves a node saved as ``Prompt``
+    unmatched when ``Prompt Template`` is blocked -- and the palette exposes
+    only ``Prompt Template``, so that is the key an administrator can find.
+    Nine shipped starter flows save that component as ``Prompt``.
+    """
+    identity_index = SimpleNamespace(
+        canonical_keys=frozenset({"Prompt Template", "ParserComponent"}),
+        aliases={
+            "Prompt": frozenset({"Prompt Template"}),
+            "PromptComponent": frozenset({"Prompt Template"}),
+            "parser": frozenset({"ParserComponent"}),
+        },
+        resolve_many=lambda keys: frozenset(
+            candidate
+            for key in keys
+            for candidate in (
+                frozenset({key})
+                if key in {"Prompt Template", "ParserComponent"}
+                else {
+                    "Prompt": frozenset({"Prompt Template"}),
+                    "PromptComponent": frozenset({"Prompt Template"}),
+                    "parser": frozenset({"ParserComponent"}),
+                }.get(key, frozenset({key}))
+            )
+        ),
+    )
+    monkeypatch.setattr(
+        "lfx.utils.flow_validation.get_component_identity_index_for_validation",
+        lambda: identity_index,
+    )
+    monkeypatch.setattr(
+        "langflow.api.v1.endpoints.get_catalog_policy_service",
+        lambda: SimpleNamespace(
+            enabled=True,
+            snapshot=SimpleNamespace(
+                blocked_component_keys=frozenset({"Prompt Template"}),
+                blocked_template_keys=frozenset(),
+            ),
+        ),
+    )
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    reported = response.json()["blocked_component_types"]
+    # The alias a saved node actually carries.
+    assert "Prompt" in reported
+    assert "PromptComponent" in reported
+    assert "Prompt Template" in reported
+    # An unrelated component's alias stays out of it.
+    assert "parser" not in reported
+
+
+async def test_get_config_names_no_components_when_only_a_template_is_blocked(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    """Governance is on, yet no component is blocked (LE-2226).
+
+    ``enabled`` is true when *either* blocklist is non-empty, so blocking one
+    starter template used to be enough for the editor to brand every
+    code-bearing node without a template "disabled by an administrator".
+    """
+    monkeypatch.setattr(
+        "langflow.api.v1.endpoints.get_catalog_policy_service",
+        lambda: SimpleNamespace(
+            enabled=True,
+            snapshot=SimpleNamespace(
+                blocked_component_keys=frozenset(),
+                blocked_template_keys=frozenset({"Simple Agent"}),
+            ),
+        ),
+    )
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["catalog_governance_enabled"] is True
+    assert response.json()["blocked_component_types"] == []
+
+
+async def test_get_config_fails_open_without_exposing_catalog_policy_errors(client: AsyncClient, monkeypatch):
+    """A broken custom policy accessor does not leak through public config."""
+
+    class BrokenCatalogPolicy:
+        @property
+        def enabled(self) -> bool:
+            msg = "sensitive catalog backend detail"
+            raise RuntimeError(msg)
+
+    monkeypatch.setattr(
+        "langflow.api.v1.endpoints.get_catalog_policy_service",
+        BrokenCatalogPolicy,
+    )
+
+    response = await client.get("api/v1/config")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["catalog_governance_enabled"] is False
+    assert "sensitive catalog backend detail" not in response.text
 
 
 async def test_get_config_unauthenticated_returns_expected_fields(client: AsyncClient):
@@ -482,6 +1089,34 @@ async def test_get_config_authenticated_returns_full_config(client: AsyncClient,
     assert "auto_saving_interval" in result, "Authenticated response must contain 'auto_saving_interval'"
     assert "health_check_max_retries" in result, "Authenticated response must contain 'health_check_max_retries'"
     assert "feature_flags" in result, "Authenticated response must contain 'feature_flags'"
+    # The publish-as-agent UI reads this to explain, rather than 404, when A2A is off server-side.
+    assert "a2a_enabled" in result, "Authenticated response must expose the a2a server flag"
+    # The Assistant panel reads this to explain, rather than 404, when the experience is off.
+    assert "agentic_experience" in result, "Authenticated response must expose the agentic experience flag"
+
+    # The autosave interval the client actually uses comes from here, not from
+    # the frontend constant, which only covers the moments before this response
+    # lands. Every save is a full-graph overwrite, so this number is the window
+    # in which two people editing one flow can diverge unnoticed.
+    assert result["auto_saving_interval"] == 2000, (
+        "The autosave debounce must stay at 2000ms; the frontend's AUTOSAVE_DEBOUNCE_TIME fallback has to match it"
+    )
+
+
+async def test_get_config_exposes_outdated_component_substitution_policy(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch
+):
+    """Both editor modes need the server policy to decide whether drift blocks a run."""
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "substitute_outdated_component_code", False)
+
+    for headers in ({}, logged_in_headers):
+        response = await client.get("api/v1/config", headers=headers)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["substitute_outdated_component_code"] is False
 
 
 async def test_get_config_embedded_mode_cascades_hide_flags(client: AsyncClient, logged_in_headers: dict, monkeypatch):
@@ -651,3 +1286,162 @@ async def test_deprecated_upload_enforces_max_file_size(
     assert response.status_code == status.HTTP_413_CONTENT_TOO_LARGE, (
         f"Expected 413 for oversized upload, got {response.status_code}: {response.text}"
     )
+
+
+async def test_custom_component_runs_trusted_copy_on_hash_collision(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+    tmp_path,
+):
+    """Restricted mode must run the trusted copy, not colliding attacker bytes.
+
+    Security (#13496): the truncated code-hash is the only gate in front of
+    exec(). A second-preimage collision must NOT run attacker code — the server
+    substitutes its own trusted copy keyed by the same hash. Proven end-to-end
+    with a forced collision and a module-level side-effect sentinel: the attacker
+    payload writes a file at import time, so if it ever executed the sentinel
+    would exist. It must not.
+    """
+    import lfx.utils.flow_validation as fv
+    from langflow.services.deps import get_settings_service
+    from lfx.interface.components import component_cache
+
+    # The server's trusted copy for the (collided) hash: a benign, buildable component.
+    trusted_path = Path(__file__).parent.parent.parent.parent / "data" / "dynamic_output_component.py"
+    trusted_code = await trusted_path.read_text(encoding="utf-8")
+
+    # Attacker payload: valid component whose MODULE-LEVEL code drops a sentinel.
+    # prepare_global_scope() exec's module-level assignments, so this WOULD fire
+    # at build time if the client bytes were executed.
+    sentinel = tmp_path / "pwned.txt"
+    malicious_code = (
+        "from lfx.custom import Component\n"
+        "from lfx.inputs import MessageTextInput\n"
+        "from lfx.template.field.base import Output\n"
+        f"_pwn = open({str(sentinel)!r}, 'w').write('pwned')\n"
+        "class EvilComponent(Component):\n"
+        '    display_name = "Evil Component"\n'
+        "    inputs = [MessageTextInput(display_name='Input', name='input_value')]\n"
+        "    outputs = [Output(display_name='Output', name='output', method='process_input')]\n"
+        "    def process_input(self) -> str:\n"
+        "        return 'evil'\n"
+    )
+
+    settings_service = get_settings_service()
+    # Restricted mode — the hash gate is the only thing in front of exec().
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", False)
+
+    # Force a 48-bit collision: every blob maps to the same known hash.
+    collision_hash = "c0ffeec0ffee"  # pragma: allowlist secret
+    monkeypatch.setattr(fv, "_compute_code_hash", lambda _code: collision_hash)
+
+    # Seed the cache so the collided hash resolves to the trusted copy. A non-None
+    # type_to_current_hash stops the endpoint's lazy builder from rebuilding over the seed.
+    monkeypatch.setattr(component_cache, "type_to_current_hash", {"EvilComponent": {collision_hash}})
+    monkeypatch.setattr(component_cache, "all_known_hashes", {collision_hash})
+    monkeypatch.setattr(component_cache, "code_by_hash", {collision_hash: trusted_code})
+
+    request = CustomComponentRequest(code=malicious_code)
+    response = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
+
+    # The trusted copy built successfully (gate passed via the collided hash)...
+    assert response.status_code == status.HTTP_200_OK, response.json()
+    # ...and the attacker's module-level code NEVER executed.
+    assert not sentinel.exists(), "Attacker module-level code executed — trusted-copy substitution failed"
+
+
+async def test_custom_component_update_runs_trusted_copy_on_hash_collision(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+    tmp_path,
+):
+    """The /update endpoint must also run the trusted copy on a hash collision.
+
+    Mirror of ``test_custom_component_runs_trusted_copy_on_hash_collision`` for
+    the update path (#13496). In addition to proving the attacker payload never
+    executes, this asserts the returned node template carries the trusted code —
+    not the colliding client bytes — so the substitution can't be undone by
+    persisting the response into a saved flow and re-building it.
+    """
+    import lfx.utils.flow_validation as fv
+    from langflow.services.deps import get_settings_service
+    from lfx.interface.components import component_cache
+
+    trusted_path = Path(__file__).parent.parent.parent.parent / "data" / "dynamic_output_component.py"
+    trusted_code = await trusted_path.read_text(encoding="utf-8")
+
+    sentinel = tmp_path / "pwned_update.txt"
+    malicious_code = (
+        "from lfx.custom import Component\n"
+        "from lfx.inputs import MessageTextInput\n"
+        "from lfx.template.field.base import Output\n"
+        f"_pwn = open({str(sentinel)!r}, 'w').write('pwned')\n"
+        "class EvilComponent(Component):\n"
+        '    display_name = "Evil Component"\n'
+        "    inputs = [MessageTextInput(display_name='Input', name='input_value')]\n"
+        "    outputs = [Output(display_name='Output', name='output', method='process_input')]\n"
+        "    def process_input(self) -> str:\n"
+        "        return 'evil'\n"
+    )
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", False)
+
+    collision_hash = "c0ffeec0ffee"  # pragma: allowlist secret
+    monkeypatch.setattr(fv, "_compute_code_hash", lambda _code: collision_hash)
+    monkeypatch.setattr(component_cache, "type_to_current_hash", {"EvilComponent": {collision_hash}})
+    monkeypatch.setattr(component_cache, "all_known_hashes", {collision_hash})
+    monkeypatch.setattr(component_cache, "code_by_hash", {collision_hash: trusted_code})
+
+    request = UpdateCustomComponentRequest(
+        code=malicious_code,
+        frontend_node={"outputs": []},
+        field="",
+        field_value="",
+        template={},
+    )
+    response = await client.post("api/v1/custom_component/update", json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.json()
+    # The attacker's module-level code NEVER executed...
+    assert not sentinel.exists(), "Attacker module-level code executed — trusted-copy substitution failed"
+    # ...and the returned node carries the trusted code, not the colliding bytes.
+    returned_code = response.json().get("template", {}).get("code", {}).get("value")
+    assert returned_code != malicious_code
+    assert returned_code == trusted_code
+
+
+async def test_custom_component_fails_closed_when_no_trusted_copy(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    """Restricted mode must 403 when the hash gate passes but no trusted copy exists.
+
+    Security (#13496): if a submitted blob clears the truncated-hash gate but
+    ``code_by_hash`` has no entry for that hash (e.g. a poisoned/incomplete
+    index, or a collision against a hash whose source failed the integrity
+    check), the endpoint must fail closed rather than fall back to client bytes.
+    """
+    import lfx.utils.flow_validation as fv
+    from langflow.services.deps import get_settings_service
+    from lfx.interface.components import component_cache
+
+    code = 'from lfx.custom import Component\nclass Anything(Component):\n    display_name = "Anything"\n'
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", False)
+
+    collision_hash = "c0ffeec0ffee"  # pragma: allowlist secret
+    monkeypatch.setattr(fv, "_compute_code_hash", lambda _code: collision_hash)
+    # Gate passes (hash is "known"), but there is no trusted source for it.
+    monkeypatch.setattr(component_cache, "type_to_current_hash", {"Anything": {collision_hash}})
+    monkeypatch.setattr(component_cache, "all_known_hashes", {collision_hash})
+    monkeypatch.setattr(component_cache, "code_by_hash", {})
+
+    request = CustomComponentRequest(code=code)
+    response = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN, response.json()

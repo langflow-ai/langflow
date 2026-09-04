@@ -8,6 +8,9 @@ import {
   useUpdateUser,
 } from "@/controllers/API/queries/auth";
 import { useGetProfilePicturesQuery } from "@/controllers/API/queries/files";
+import { CustomRegistrationData } from "@/customization/components/custom-registration-data";
+import CustomSettingsPasswordFormGate from "@/customization/components/custom-settings-password-form-gate";
+import { CustomTelemetryToggle } from "@/customization/components/custom-telemetry-toggle";
 import { CustomTermsLinks } from "@/customization/components/custom-terms-links";
 import { ENABLE_PROFILE_ICONS } from "@/customization/feature-flags";
 import useAuthStore from "@/stores/authStore";
@@ -31,12 +34,18 @@ export const GeneralPage = () => {
   const [inputState, setInputState] = useState<patchUserInputStateType>(
     CONTROL_PATCH_USER_STATE,
   );
+  // Password change rejection (mismatch or server error), mirrored inline so
+  // the error is programmatically associated with the password fields
+  // (WCAG 3.3.1) instead of living only in the transient toast.
+  const [passwordFormError, setPasswordFormError] = useState<string | null>(
+    null,
+  );
 
   const { t } = useTranslation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { userData, setUserData } = useContext(AuthContext);
-  const { password, cnfPassword, profilePicture } = inputState;
+  const { currentPassword, password, cnfPassword, profilePicture } = inputState;
   const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const { storeApiKey } = useContext(AuthContext);
@@ -49,6 +58,7 @@ export const GeneralPage = () => {
 
   const handlePatchPassword = () => {
     if (password !== cnfPassword) {
+      setPasswordFormError(t("errors.passwordMismatch"));
       setErrorData({
         title: t("errors.changePassword"),
         list: [t("errors.passwordMismatch")],
@@ -56,20 +66,26 @@ export const GeneralPage = () => {
       return;
     }
 
-    if (password !== "") {
+    if (currentPassword !== "" && password !== "") {
       mutateResetPassword(
-        { user_id: userData!.id, password: { password } },
+        {
+          user_id: userData!.id,
+          password: { current_password: currentPassword, password },
+        },
         {
           onSuccess: () => {
+            handleInput({ target: { name: "currentPassword", value: "" } });
             handleInput({ target: { name: "password", value: "" } });
             handleInput({ target: { name: "cnfPassword", value: "" } });
             setSuccessData({ title: t("success.changesSaved") });
           },
           onError: (error) => {
+            // biome-ignore lint/suspicious/noExplicitAny: legacy
+            const detail = (error as any)?.response?.data?.detail;
+            setPasswordFormError(detail ?? t("errors.saveChanges"));
             setErrorData({
               title: t("errors.saveChanges"),
-              // biome-ignore lint/suspicious/noExplicitAny: legacy
-              list: [(error as any)?.response?.data?.detail],
+              list: [detail],
             });
           },
         },
@@ -135,6 +151,9 @@ export const GeneralPage = () => {
     target: { name, value },
   }: inputHandlerEventType): void {
     setInputState((prev) => ({ ...prev, [name]: value }));
+    if (["currentPassword", "password", "cnfPassword"].includes(name)) {
+      setPasswordFormError(null);
+    }
   }
 
   return (
@@ -155,14 +174,22 @@ export const GeneralPage = () => {
         )}
 
         {!autoLogin && (
-          <PasswordFormComponent
-            password={password}
-            cnfPassword={cnfPassword}
-            handleInput={handleInput}
-            handlePatchPassword={handlePatchPassword}
-          />
+          <CustomSettingsPasswordFormGate>
+            <PasswordFormComponent
+              currentPassword={currentPassword}
+              password={password}
+              cnfPassword={cnfPassword}
+              handleInput={handleInput}
+              handlePatchPassword={handlePatchPassword}
+              serverError={passwordFormError}
+            />
+          </CustomSettingsPasswordFormGate>
         )}
       </div>
+
+      <CustomTelemetryToggle />
+
+      <CustomRegistrationData />
 
       <CustomTermsLinks />
     </div>

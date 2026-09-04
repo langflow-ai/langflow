@@ -9,7 +9,7 @@ two public entry points the rest of Langflow consumes:
       every immediate subfolder of every path is one Bundle at the
       ``extra`` slot, with first-wins resolution across paths.
 
-Path-safety, multi-bundle re-checks, duplicate-name detection, and the
+Path-safety, bundle-selection checks, duplicate-name detection, and the
 ``no-component-subclass`` / ``bundle-empty`` discriminants are all enforced
 here.  The lower-level layers stay agnostic of those rules so they remain
 easy to unit-test in isolation.
@@ -20,6 +20,7 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+from importlib import metadata as importlib_metadata
 from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
@@ -44,11 +45,12 @@ from lfx.extension.manifest import (
     BUNDLE_NAME_RE,
     BundleRef,
     ExtensionManifest,
+    ManifestSource,
     load_manifest,
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
 
 
 logger = logging.getLogger(__name__)
@@ -141,6 +143,7 @@ def _load_bundle_directory(
     distribution: str | None,
     result: LoadResult,
     module_namespace: str = DEFAULT_MODULE_NAMESPACE,
+    optional_dependency_distributions: Mapping[str, str] | None = None,
 ) -> None:
     """Walk ``bundle_root``, import every .py file, register Component subclasses.
 
@@ -185,14 +188,35 @@ def _load_bundle_directory(
     # accurate when a future caller reuses a LoadResult (e.g. multi-bundle or
     # a batch wrapper) and the aggregate ``result.errors`` list already has
     # entries from a sibling call.
-    call_local_errors_emitted = 0
+    call_local_diagnostics_emitted = 0
 
     for file_path in files:
         module_name = module_name_for(file_path, bundle_root, bundle_name, slot, namespace=module_namespace)
-        module, import_error = import_bundle_module(module_name, file_path)
+        module, import_error, import_cause = import_bundle_module(module_name, file_path)
         if import_error is not None:
-            result.errors.append(import_error)
-            call_local_errors_emitted += 1
+            missing_module = import_cause.name if isinstance(import_cause, ModuleNotFoundError) else None
+            missing_root = missing_module.split(".", 1)[0] if missing_module else None
+            normalized_missing_root = "".join(char for char in (missing_root or "").casefold() if char.isalnum())
+            declared_distribution = (optional_dependency_distributions or {}).get(normalized_missing_root)
+            dependency_is_absent = False
+            if result.manifestless and declared_distribution:
+                try:
+                    importlib_metadata.distribution(declared_distribution)
+                except importlib_metadata.PackageNotFoundError:
+                    dependency_is_absent = True
+            if dependency_is_absent:
+                result.warnings.append(
+                    ExtensionError(
+                        code="optional-dependency-missing",
+                        message=f"ModuleNotFoundError: optional dependency {missing_module!r} is not installed.",
+                        location=str(file_path),
+                        content=missing_module,
+                        hint=f"Install the provider extra: pip install '{result.extension_id}[{bundle_name}]'.",
+                    )
+                )
+            else:
+                result.errors.append(import_error)
+            call_local_diagnostics_emitted += 1
             continue
 
         # Hash the file once per module so multi-class files don't re-read
@@ -229,13 +253,13 @@ def _load_bundle_directory(
                         hint=("Rename one of the component classes; class names must be unique within a bundle."),
                     )
                 )
-                call_local_errors_emitted += 1
+                call_local_diagnostics_emitted += 1
                 continue
             seen_classes[class_name] = loaded
             result.components.append(loaded)
             found_any_component = True
 
-    if not found_any_component and call_local_errors_emitted == 0:
+    if not found_any_component and call_local_diagnostics_emitted == 0:
         # Only emit the "no Component subclass" error if no other failure
         # *from this call* already explained why the bundle yielded nothing.
         # Gating on the aggregate ``result.errors`` would silently drop this
@@ -256,12 +280,89 @@ def _load_bundle_directory(
 # ---------------------------------------------------------------------------
 
 
+def _register_manifest_providers(
+    manifest: ExtensionManifest,
+    source: ManifestSource,
+    result: LoadResult,
+) -> None:
+    """Merge each manifest-declared model provider into the core provider tables.
+
+    Failure-isolated: a malformed provider spec records a typed
+    ``provider-invalid`` warning on *result* and is skipped, so one bad provider
+    never aborts the load, affects sibling providers, or marks the extension
+    ``ok=False`` (provider issues are warnings, not load failures).
+    """
+    if not manifest.providers:
+        return
+
+    # Lazy import: keeps the loader importable without pulling in the model
+    # stack at module-import time and avoids any cycle through lfx.base.models.
+    from lfx.base.models.provider_registry import ProviderDescriptor, ProviderOrigin, register_provider
+
+    for entry in manifest.providers:
+        try:
+            embedding = entry.embedding
+            spec = ProviderDescriptor(
+                name=entry.name,
+                metadata=dict(entry.metadata),
+                provider_id=entry.provider_id,
+                display_name=entry.display_name,
+                aliases=tuple(entry.aliases),
+                model_class=(
+                    (entry.model_class.module, entry.model_class.attr, entry.model_class.install_hint)
+                    if entry.model_class
+                    else None
+                ),
+                embedding_class_name=embedding.class_name if embedding else None,
+                embedding_class=((embedding.module, embedding.attr, embedding.install_hint) if embedding else None),
+                embedding_param_key=embedding.param_mapping_key if embedding else None,
+                embedding_param_mapping=dict(embedding.param_mapping) if embedding else None,
+                api_key_required=entry.api_key_required,
+                live=entry.live,
+                conditional_live=entry.conditional_live,
+                live_discovery=entry.live_discovery,
+                validator=entry.validator,
+                catalog_loader=entry.catalog_loader,
+                origin=ProviderOrigin(
+                    extension_id=manifest.id,
+                    extension_version=manifest.version,
+                    distribution=result.distribution,
+                    manifest_path=str(source.path),
+                ),
+            )
+            if not register_provider(spec):
+                result.warnings.append(
+                    ExtensionError(
+                        code="provider-skipped",
+                        message=(
+                            f"Extension {manifest.id!r} did not register model provider {entry.name!r}: "
+                            "the name collides with a built-in or already-loaded provider."
+                        ),
+                        location=str(source.path),
+                        content=entry.name,
+                        hint="Rename the provider, or remove the conflicting extension.",
+                    )
+                )
+        except Exception as exc:  # noqa: BLE001
+            result.warnings.append(
+                ExtensionError(
+                    code="provider-invalid",
+                    message=(f"Extension {manifest.id!r} could not register model provider {entry.name!r}: {exc}"),
+                    location=str(source.path),
+                    content=entry.name,
+                    hint="Check the provider's metadata.mapping.model_class and any dotted-path callables.",
+                )
+            )
+
+
 def load_extension(
     root: Path | str,
     *,
     slot: Literal["official", "extra"] = SLOT_OFFICIAL,
     distribution: str | None = None,
     module_namespace: str = DEFAULT_MODULE_NAMESPACE,
+    bundle_name: str | None = None,
+    _register_providers: bool = True,
 ) -> LoadResult:
     """Load an Extension at ``root``.
 
@@ -281,6 +382,9 @@ def load_extension(
             loads.  The reload pipeline passes ``__reload_staging__.<id>``
             so Stage 1 lands in an isolated namespace; do not override
             this in normal application code.
+        bundle_name: Select one bundle from a multi-bundle manifest. Startup
+            discovery should use :func:`load_extension_bundles` to load all
+            declared bundles.
 
     Returns:
         A :class:`LoadResult`.  ``ok`` is False on any structural failure;
@@ -362,24 +466,46 @@ def load_extension(
         )
         return result
 
-    # Multi-bundle is rejected by the schema, but we re-check here because
-    # the loader is the runtime gate; a forged manifest that bypassed the
-    # schema layer would otherwise silently load only the first bundle.
-    if len(manifest.bundles) != 1:
+    # Register any model providers this extension declares before touching the
+    # component bundle: providers are independent of components, and a
+    # provider-only extension ships providers with no bundle.
+    if _register_providers:
+        _register_manifest_providers(manifest, source, result)
+
+    if bundle_name is None and len(manifest.bundles) > 1:
         result.errors.append(
             ExtensionError(
                 code="multi-bundle-unsupported",
                 message=(
-                    f"Extension {manifest.id!r} declares {len(manifest.bundles)} bundles; v0 accepts exactly one. "
-                    "Multi-bundle support is deferred to a future milestone."
+                    f"Extension {manifest.id!r} declares {len(manifest.bundles)} bundles; "
+                    "select bundle_name or use load_extension_bundles()."
                 ),
                 location=str(source.path),
-                hint=("Split each bundle into its own Extension distribution until multi-bundle support ships."),
+                hint="Pass one declared bundle name, or load all bundle results at startup.",
             )
         )
         return result
 
-    bundle = manifest.bundles[0]
+    # Provider-only extension: no component bundle to load. Providers (if any)
+    # were registered above; nothing else to do.
+    if not manifest.bundles:
+        return result
+
+    if bundle_name is None:
+        bundle = manifest.bundles[0]
+    else:
+        bundle = next((candidate for candidate in manifest.bundles if candidate.name == bundle_name), None)
+        if bundle is None:
+            result.errors.append(
+                ExtensionError(
+                    code="reload-bundle-name-mismatch",
+                    message=f"Extension {manifest.id!r} does not declare bundle {bundle_name!r}.",
+                    location=str(source.path),
+                    content=bundle_name,
+                    hint="Select one of the bundle names declared in extension.json.",
+                )
+            )
+            return result
     result.bundle = bundle.name
 
     bundle_root, path_error = _resolve_bundle_path(root_path, bundle)
@@ -399,6 +525,51 @@ def load_extension(
         module_namespace=module_namespace,
     )
     return result
+
+
+def load_extension_bundles(
+    root: Path | str,
+    *,
+    slot: Literal["official", "extra"] = SLOT_OFFICIAL,
+    distribution: str | None = None,
+    module_namespace: str = DEFAULT_MODULE_NAMESPACE,
+) -> list[LoadResult]:
+    """Load every component bundle declared by one extension manifest."""
+    root_path = Path(root).resolve()
+    try:
+        source = load_manifest(root_path)
+    except (FileNotFoundError, ValueError, TypeError):
+        return [
+            load_extension(
+                root_path,
+                slot=slot,
+                distribution=distribution,
+                module_namespace=module_namespace,
+            )
+        ]
+
+    bundle_names = [bundle.name for bundle in source.manifest.bundles]
+    if len(bundle_names) <= 1:
+        return [
+            load_extension(
+                root_path,
+                slot=slot,
+                distribution=distribution,
+                module_namespace=module_namespace,
+            )
+        ]
+
+    return [
+        load_extension(
+            root_path,
+            slot=slot,
+            distribution=distribution,
+            module_namespace=module_namespace,
+            bundle_name=name,
+            _register_providers=index == 0,
+        )
+        for index, name in enumerate(bundle_names)
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -421,6 +592,20 @@ def load_extension(
 # This is intentionally a tiny shape; full manifest support belongs at
 # the @official slot.
 _INLINE_BUNDLE_DEFAULT_VERSION = "0.0.0"
+_INLINE_BUNDLE_SKIP_MARKERS = frozenset({"# lfx-bundles-shim", "# lfx-compat-shim"})
+
+
+def _is_marked_component_shim(path: Path) -> bool:
+    """Return True for Langflow-owned compatibility dirs that are not inline bundles."""
+    init_py = path / "__init__.py"
+    if not init_py.is_file():
+        return False
+    try:
+        with init_py.open(encoding="utf-8") as f:
+            head = f.readline()
+    except OSError:
+        return False
+    return any(head.startswith(marker) for marker in _INLINE_BUNDLE_SKIP_MARKERS)
 
 
 def _validate_inline_bundle_id(
@@ -642,6 +827,8 @@ def discover_inline_bundles(
             name = child.name
             # Skip clearly-internal directories without surfacing an error.
             if name.startswith(".") or name in SKIP_DIR_NAMES:
+                continue
+            if _is_marked_component_shim(child):
                 continue
             result = LoadResult(slot=SLOT_EXTRA, source_path=child)
 

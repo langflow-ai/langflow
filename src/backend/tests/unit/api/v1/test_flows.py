@@ -6,6 +6,13 @@ from fastapi import status
 from httpx import AsyncClient
 
 
+def _catalog_flow_data(component_key: str) -> dict:
+    return {
+        "nodes": [{"id": f"{component_key}-node", "data": {"type": component_key}}],
+        "edges": [],
+    }
+
+
 async def _attach_deployment_to_flow(*, user_id: UUID, flow_id: UUID, project_id: UUID) -> None:
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.deployment_provider_account.model import (
@@ -97,6 +104,456 @@ async def test_create_flow(client: AsyncClient, logged_in_headers):
     assert "updated_at" in result, "The result must have a 'updated_at' key"
     assert "user_id" in result, "The result must have a 'user_id' key"
     assert "webhook" in result, "The result must have a 'webhook' key"
+
+
+async def test_create_flow_retries_transient_sqlite_lock_with_fresh_payload(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    """A transient SQLite writer lock retries from a deeply copied FlowCreate snapshot."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from sqlalchemy.exc import OperationalError
+
+    original_new_flow = flows_module._new_flow
+    attempts: list[object] = []
+    expected_name = f"create-lock-retry-{uuid.uuid4()}"
+    expected_data = {
+        "nodes": [{"id": "original-node", "data": {"settings": {"values": ["original"]}}}],
+        "edges": [],
+    }
+    insert_statement = "INSERT INTO flow (id, name) VALUES (?, ?)"
+
+    async def create_after_one_lock(**kwargs):
+        attempts.append(kwargs["flow"])
+        if len(attempts) == 1:
+            kwargs["flow"].name = "mutated-during-failed-attempt"
+            kwargs["flow"].data["nodes"][0]["data"]["settings"]["values"].append("mutated")
+            raise OperationalError(
+                insert_statement,
+                {"name": expected_name},
+                sqlite3.OperationalError("database is locked"),
+            )
+        return await original_new_flow(**kwargs)
+
+    monkeypatch.setattr(flows_module, "_new_flow", create_after_one_lock)
+
+    response = await client.post(
+        "api/v1/flows/",
+        json={"name": expected_name, "data": expected_data},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED, response.text
+    assert response.json()["name"] == expected_name
+    assert response.json()["data"] == expected_data
+    assert len(attempts) == 2
+    assert attempts[0] is not attempts[1]
+    assert attempts[0].data is not attempts[1].data
+    assert attempts[0].data["nodes"][0] is not attempts[1].data["nodes"][0]
+
+
+async def test_create_flow_duplicate_explicit_id_returns_sanitized_unique_error(client: AsyncClient, logged_in_headers):
+    """A real duplicate primary-key failure reaches the route's uniqueness mapping."""
+    explicit_id = str(uuid.uuid4())
+    first_response = await client.post(
+        "api/v1/flows/",
+        json={"id": explicit_id, "name": f"explicit-id-first-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert first_response.status_code == status.HTTP_201_CREATED, first_response.text
+
+    duplicate_response = await client.post(
+        "api/v1/flows/",
+        json={"id": explicit_id, "name": f"explicit-id-second-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+
+    assert duplicate_response.status_code == status.HTTP_400_BAD_REQUEST, duplicate_response.text
+    assert duplicate_response.json()["detail"] == "Id must be unique"
+    assert explicit_id not in duplicate_response.text
+    assert "INSERT INTO" not in duplicate_response.text
+    assert "sqlalche.me" not in duplicate_response.text
+
+
+def test_flow_unique_constraint_error_maps_postgres_sqlstate_without_leaking_values():
+    """PostgreSQL 23505 diagnostics map only known flow constraints to safe field names."""
+    from types import SimpleNamespace
+
+    from langflow.api.v1 import flows as flows_module
+    from sqlalchemy.exc import IntegrityError
+
+    leaked_id = str(uuid.uuid4())
+    expected_details = {
+        "flow_pkey": "Id must be unique",
+        "pk_flow": "Id must be unique",
+        "uq_flow_id": "Id must be unique",
+        "unique_flow_name": "Name must be unique",
+        "unique_flow_endpoint_name": "Endpoint name must be unique",
+    }
+
+    for constraint_name, expected_detail in expected_details.items():
+        driver_error = RuntimeError(f"duplicate key value {leaked_id}")
+        driver_error.sqlstate = "23505"
+        driver_error.diag = SimpleNamespace(constraint_name=constraint_name)
+        integrity_error = IntegrityError("INSERT INTO flow ...", {"id": leaked_id}, driver_error)
+
+        response_error = flows_module._handle_unique_constraint_error(integrity_error)
+
+        assert response_error.status_code == status.HTTP_400_BAD_REQUEST
+        assert response_error.detail == expected_detail
+        assert leaked_id not in str(response_error.detail)
+
+    marker_driver_error = RuntimeError(f"duplicate key value UNIQUE constraint failed: flow.id {leaked_id}")
+    marker_driver_error.sqlstate = "23505"
+    marker_driver_error.diag = SimpleNamespace(constraint_name="unique_flow_name")
+    marker_integrity_error = IntegrityError("INSERT INTO flow ...", {"name": leaked_id}, marker_driver_error)
+
+    marker_response_error = flows_module._handle_unique_constraint_error(marker_integrity_error)
+
+    assert marker_response_error.status_code == status.HTTP_400_BAD_REQUEST
+    assert marker_response_error.detail == "Name must be unique"
+    assert leaked_id not in str(marker_response_error.detail)
+
+    unknown_driver_error = RuntimeError(f"duplicate key value {leaked_id}")
+    unknown_driver_error.sqlstate = "23505"
+    unknown_driver_error.diag = SimpleNamespace(constraint_name="unrelated_unique_constraint")
+    unknown_integrity_error = IntegrityError("INSERT INTO other ...", {"id": leaked_id}, unknown_driver_error)
+
+    unknown_response_error = flows_module._handle_unique_constraint_error(unknown_integrity_error)
+
+    assert unknown_response_error.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert unknown_response_error.detail == "Could not persist the flow."
+    assert leaked_id not in str(unknown_response_error.detail)
+
+
+def test_flow_unique_constraint_error_rejects_unknown_sqlite_table():
+    """SQLite messages for other tables or unknown flow constraint shapes stay generic."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from sqlalchemy.exc import IntegrityError
+
+    leaked_id = str(uuid.uuid4())
+    unknown_constraints = (
+        "unrelated.id",
+        "other.name",
+        "flow.name",
+        "flow.user_id, unrelated.name",
+    )
+
+    for constraint in unknown_constraints:
+        driver_error = sqlite3.IntegrityError(f"UNIQUE constraint failed: {constraint}")
+        integrity_error = IntegrityError("INSERT INTO other ...", {"id": leaked_id}, driver_error)
+
+        response_error = flows_module._handle_unique_constraint_error(integrity_error)
+
+        assert response_error.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+        assert response_error.detail == "Could not persist the flow."
+        assert constraint not in str(response_error.detail)
+        assert leaked_id not in str(response_error.detail)
+
+
+async def test_create_flow_real_competing_sqlite_writer_is_retried(client: AsyncClient, logged_in_headers, monkeypatch):
+    """A real second SQLite connection holding the write lock triggers a create retry."""
+    from langflow.api.v1 import flows as flows_module
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.deps import session_scope
+    from sqlalchemy import text
+
+    original_new_flow = flows_module._new_flow
+    attempts = {"count": 0}
+    expected_name = f"create-real-lock-{uuid.uuid4()}"
+
+    async def create_after_competing_write(**kwargs):
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            async with session_scope() as competing_session:
+                competing_session.add(Folder(name=f"create-competing-write-{uuid.uuid4()}", user_id=None))
+                await competing_session.flush()
+                # The competing connection now holds SQLite's write lock. Make
+                # the route connection report the real lock immediately; the
+                # failed attempt unwinds this context and releases the writer.
+                await kwargs["session"].exec(text("PRAGMA busy_timeout = 0"))
+                return await original_new_flow(**kwargs)
+        return await original_new_flow(**kwargs)
+
+    monkeypatch.setattr(flows_module, "_new_flow", create_after_competing_write)
+
+    response = await client.post(
+        "api/v1/flows/",
+        json={"name": expected_name, "data": {}},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED, response.text
+    assert response.json()["name"] == expected_name
+    assert attempts["count"] >= 2
+
+
+async def test_create_flow_exhausted_lock_retries_return_sanitized_503(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    """Exhausted create retries expose neither SQL nor bound values."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from langflow.services.database.lock_retry import DEFAULT_LOCK_RETRY_ATTEMPTS
+    from sqlalchemy.exc import OperationalError
+
+    leaked_statement = "INSERT INTO flow (id, name) VALUES (?, ?)"
+    leaked_value = f"secret-create-value-{uuid.uuid4()}"
+    leaked_id = str(uuid.uuid4())
+    attempts = {"count": 0}
+
+    async def always_locked(**_kwargs):
+        attempts["count"] += 1
+        raise OperationalError(
+            leaked_statement,
+            {"id": leaked_id, "name": leaked_value},
+            sqlite3.OperationalError("database is locked"),
+        )
+
+    monkeypatch.setattr(flows_module, "_new_flow", always_locked)
+    original_retry = flows_module.run_with_lock_retry
+
+    async def run_without_delay(operation, *, session, description):
+        return await original_retry(operation, session=session, description=description, base_delay=0)
+
+    monkeypatch.setattr(flows_module, "run_with_lock_retry", run_without_delay)
+
+    response = await client.post(
+        "api/v1/flows/",
+        json={"name": leaked_value, "id": leaked_id, "data": {}},
+        headers=logged_in_headers,
+    )
+
+    assert attempts["count"] == DEFAULT_LOCK_RETRY_ATTEMPTS
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert response.headers["Retry-After"] == "1"
+    assert response.json()["detail"] == flows_module.FLOW_CREATE_BUSY
+    assert leaked_statement not in response.text
+    assert leaked_value not in response.text
+    assert leaked_id not in response.text
+    assert "sqlalche.me" not in response.text
+
+
+async def test_create_flow_non_lock_failure_returns_sanitized_500(client: AsyncClient, logged_in_headers, monkeypatch):
+    """A non-lock failure inside the real create helper is not retried or disclosed."""
+    from langflow.api.v1 import flows as flows_module
+    from langflow.api.v1 import flows_helpers
+
+    leaked_detail = f"sensitive-create-detail-{uuid.uuid4()} UNIQUE constraint failed: flow.id"
+    attempts = {"count": 0}
+
+    async def fail_save(*_args, **_kwargs):
+        attempts["count"] += 1
+        raise RuntimeError(leaked_detail)
+
+    monkeypatch.setattr(flows_helpers, "_save_flow_to_fs", fail_save)
+
+    response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"create-non-lock-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+
+    assert attempts["count"] == 1
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.json()["detail"] == flows_module.FLOW_CREATE_FAILED
+    assert leaked_detail not in response.text
+    assert "Retry-After" not in response.headers
+
+
+async def test_create_flow_helper_http_500_returns_sanitized_500(client: AsyncClient, logged_in_headers, monkeypatch):
+    """A helper HTTP 500 cannot disclose filesystem paths or flow identifiers."""
+    from fastapi import HTTPException
+    from langflow.api.v1 import flows as flows_module
+    from langflow.api.v1 import flows_helpers
+
+    leaked_id = str(uuid.uuid4())
+    leaked_detail = f"Failed to write flow to filesystem: /private/flows/{leaked_id}.json"
+
+    async def fail_save(*_args, **_kwargs):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=leaked_detail)
+
+    monkeypatch.setattr(flows_helpers, "_save_flow_to_fs", fail_save)
+
+    response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"create-helper-http-500-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.json()["detail"] == flows_module.FLOW_CREATE_FAILED
+    assert leaked_detail not in response.text
+    assert leaked_id not in response.text
+
+
+async def test_new_flow_default_sanitizes_unhandled_error(active_user, monkeypatch):
+    """Direct helper callers retain the safe default instead of receiving raw persistence errors."""
+    import pytest
+    from fastapi import HTTPException
+    from langflow.api.v1 import flows_helpers
+    from langflow.services.database.models.flow.model import FlowCreate
+    from langflow.services.deps import get_storage_service, session_scope
+
+    leaked_id = str(uuid.uuid4())
+    leaked_statement = "INSERT INTO flow VALUES (?)"
+    leaked_detail = f"{leaked_statement}: {leaked_id}"
+
+    async def fail_save(*_args, **_kwargs):
+        raise RuntimeError(leaked_detail)
+
+    monkeypatch.setattr(flows_helpers, "_save_flow_to_fs", fail_save)
+
+    with pytest.raises(HTTPException) as exc_info:
+        async with session_scope() as session:
+            await flows_helpers._new_flow(
+                session=session,
+                flow=FlowCreate(name=f"direct-helper-failure-{uuid.uuid4()}", data={}),
+                user_id=active_user.id,
+                storage_service=get_storage_service(),
+            )
+
+    assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert exc_info.value.detail == "An internal error occurred while creating the flow."
+    assert leaked_detail not in str(exc_info.value)
+    assert leaked_id not in str(exc_info.value)
+
+
+async def test_create_and_put_flow_enforce_catalog_policy_with_default_allow(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    from langflow.api.v1 import flows
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+    class MutableCatalogPolicyService:
+        snapshot = CatalogPolicySnapshot()
+
+    service = MutableCatalogPolicyService()
+    monkeypatch.setattr(flows, "get_catalog_policy_service", lambda: service)
+    blocked_key = "BlockedForFlowWrites"
+    graph = _catalog_flow_data(blocked_key)
+
+    allowed_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"catalog-default-allow-{uuid.uuid4()}", "data": graph},
+        headers=logged_in_headers,
+    )
+    assert allowed_response.status_code == status.HTTP_201_CREATED, allowed_response.text
+
+    service.snapshot = CatalogPolicySnapshot(blocked_component_keys={blocked_key})
+    blocked_create = await client.post(
+        "api/v1/flows/",
+        json={"name": f"catalog-blocked-create-{uuid.uuid4()}", "data": graph},
+        headers=logged_in_headers,
+    )
+    assert blocked_create.status_code == status.HTTP_400_BAD_REQUEST
+    assert blocked_create.json()["detail"].endswith(blocked_key)
+
+    put_flow_id = uuid.uuid4()
+    blocked_put = await client.put(
+        f"api/v1/flows/{put_flow_id}",
+        json={"name": f"catalog-blocked-put-{uuid.uuid4()}", "data": graph},
+        headers=logged_in_headers,
+    )
+    assert blocked_put.status_code == status.HTTP_400_BAD_REQUEST
+    assert blocked_put.json()["detail"].endswith(blocked_key)
+
+
+async def test_create_flow_maps_catalog_identity_unavailable_to_503(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    from langflow.api.v1 import flows
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+    from lfx.utils.flow_validation import CatalogPolicyIdentityUnavailableError
+
+    detail = "Catalog policy component identities are still initializing. Please try again in a few seconds."
+
+    def identities_unavailable(_flow_data, *, snapshot):
+        assert snapshot.blocked_component_keys
+        raise CatalogPolicyIdentityUnavailableError(detail)
+
+    service = type(
+        "CatalogPolicyService",
+        (),
+        {"snapshot": CatalogPolicySnapshot(blocked_component_keys={"Prompt Template"})},
+    )()
+    monkeypatch.setattr(flows, "get_catalog_policy_service", lambda: service)
+    monkeypatch.setattr(flows, "validate_catalog_policy_for_flow", identities_unavailable)
+
+    response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"catalog-identities-unavailable-{uuid.uuid4()}", "data": _catalog_flow_data("Prompt")},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert response.json()["detail"] == detail
+
+
+async def test_patch_and_put_metadata_only_updates_validate_stored_graph(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    from langflow.api.v1 import flows
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+    class MutableCatalogPolicyService:
+        snapshot = CatalogPolicySnapshot()
+
+    service = MutableCatalogPolicyService()
+    monkeypatch.setattr(flows, "get_catalog_policy_service", lambda: service)
+    blocked_key = "BlockedStoredGraph"
+    graph = _catalog_flow_data(blocked_key)
+
+    patch_source = await client.post(
+        "api/v1/flows/",
+        json={"name": f"catalog-patch-source-{uuid.uuid4()}", "description": "original", "data": graph},
+        headers=logged_in_headers,
+    )
+    put_source = await client.post(
+        "api/v1/flows/",
+        json={"name": f"catalog-put-source-{uuid.uuid4()}", "description": "original", "data": graph},
+        headers=logged_in_headers,
+    )
+    assert patch_source.status_code == status.HTTP_201_CREATED, patch_source.text
+    assert put_source.status_code == status.HTTP_201_CREATED, put_source.text
+
+    service.snapshot = CatalogPolicySnapshot(blocked_component_keys={blocked_key})
+    patch_response = await client.patch(
+        f"api/v1/flows/{patch_source.json()['id']}",
+        json={"description": "metadata-only patch"},
+        headers=logged_in_headers,
+    )
+    put_response = await client.put(
+        f"api/v1/flows/{put_source.json()['id']}",
+        json={"name": put_source.json()["name"], "description": "metadata-only put"},
+        headers=logged_in_headers,
+    )
+
+    assert patch_response.status_code == status.HTTP_400_BAD_REQUEST
+    assert patch_response.json()["detail"].endswith(blocked_key)
+    assert put_response.status_code == status.HTTP_400_BAD_REQUEST
+    assert put_response.json()["detail"].endswith(blocked_key)
+
+    unchanged_patch = await client.get(
+        f"api/v1/flows/{patch_source.json()['id']}",
+        headers=logged_in_headers,
+    )
+    unchanged_put = await client.get(
+        f"api/v1/flows/{put_source.json()['id']}",
+        headers=logged_in_headers,
+    )
+    assert unchanged_patch.json()["description"] == "original"
+    assert unchanged_put.json()["description"] == "original"
 
 
 async def test_read_flows(client: AsyncClient, logged_in_headers):
@@ -207,6 +664,87 @@ async def test_update_flow(client: AsyncClient, logged_in_headers):
     assert result["name"] == updated_name, "The name must be updated"
 
 
+async def test_locked_flow_rejects_api_updates_until_unlocked(client: AsyncClient, logged_in_headers):
+    original_data = {"nodes": [], "edges": []}
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": "locked-flow", "description": "original", "data": original_data, "locked": True},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    created = create_response.json()
+    flow_id = created["id"]
+
+    # Navigation can submit the full current flow even when nothing changed.
+    # A no-op save must succeed so the UI can leave a locked flow cleanly.
+    no_op_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={
+            "name": created["name"],
+            "description": created["description"],
+            "data": created["data"],
+            "folder_id": created["folder_id"],
+            "endpoint_name": created["endpoint_name"],
+            "locked": True,
+        },
+        headers=logged_in_headers,
+    )
+    assert no_op_response.status_code == status.HTTP_200_OK
+    assert no_op_response.json()["locked"] is True
+
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"description": "changed via PATCH"},
+        headers=logged_in_headers,
+    )
+    assert patch_response.status_code == status.HTTP_423_LOCKED
+    assert patch_response.json()["detail"] == "Flow is locked. Unlock it before making changes."
+
+    put_response = await client.put(
+        f"api/v1/flows/{flow_id}",
+        json={"name": "changed-via-put", "description": "original", "data": original_data},
+        headers=logged_in_headers,
+    )
+    assert put_response.status_code == status.HTTP_423_LOCKED
+
+    combined_unlock_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"locked": False, "description": "changed while unlocking"},
+        headers=logged_in_headers,
+    )
+    assert combined_unlock_response.status_code == status.HTTP_423_LOCKED
+
+    unchanged_response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert unchanged_response.status_code == status.HTTP_200_OK
+    assert unchanged_response.json()["name"] == "locked-flow"
+    assert unchanged_response.json()["description"] == "original"
+
+    # The UI sends the current flow fields along with the lock toggle. Equal
+    # values must not prevent an unlock-only request from succeeding.
+    unlock_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={
+            "name": created["name"],
+            "description": created["description"],
+            "data": created["data"],
+            "folder_id": created["folder_id"],
+            "endpoint_name": created["endpoint_name"],
+            "locked": False,
+        },
+        headers=logged_in_headers,
+    )
+    assert unlock_response.status_code == status.HTTP_200_OK
+    assert unlock_response.json()["locked"] is False
+
+    update_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"description": "changed after unlock"},
+        headers=logged_in_headers,
+    )
+    assert update_response.status_code == status.HTTP_200_OK
+    assert update_response.json()["description"] == "changed after unlock"
+
+
 async def test_patch_flow_keeps_existing_endpoint_when_not_provided(client: AsyncClient, logged_in_headers):
     """Test that PATCH preserves endpoint_name when the field is omitted."""
     initial_flow = {
@@ -276,6 +814,146 @@ async def test_patch_flow_updates_access_and_action_fields(client: AsyncClient, 
     assert result["action_description"] == "Shared flow action"
 
 
+async def test_create_flow_defaults_to_workflow_type(client: AsyncClient, logged_in_headers):
+    """A flow created without flow_type is a workflow with A2A off."""
+    response = await client.post(
+        "api/v1/flows/",
+        json={"name": "default_type_flow", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    result = response.json()
+    assert result["flow_type"] == "workflow"
+    assert result["a2a_enabled"] is False
+    assert result["a2a_card_overrides"] is None
+
+
+async def test_create_agent_flow_round_trips(client: AsyncClient, logged_in_headers):
+    """flow_type=agent and the a2a fields persist through create and read."""
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={
+            "name": "agent_flow",
+            "data": {},
+            "flow_type": "agent",
+            "a2a_enabled": True,
+            "a2a_card_overrides": {"skill_description": "does things"},
+        },
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    created = create_response.json()
+    assert created["flow_type"] == "agent"
+    assert created["a2a_enabled"] is True
+
+    flow_id = created["id"]
+    read_response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert read_response.status_code == status.HTTP_200_OK
+    read = read_response.json()
+    assert read["flow_type"] == "agent"
+    assert read["a2a_enabled"] is True
+    assert read["a2a_card_overrides"] == {"skill_description": "does things"}
+
+
+async def test_patch_flow_updates_flow_type_and_a2a(client: AsyncClient, logged_in_headers):
+    """PATCH can promote a workflow to an agent and set the a2a fields."""
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": "patch_flow_type_flow", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"flow_type": "agent", "a2a_enabled": True, "a2a_card_overrides": {"tags": ["x"]}},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+    assert result["flow_type"] == "agent"
+    assert result["a2a_enabled"] is True
+    assert result["a2a_card_overrides"] == {"tags": ["x"]}
+
+
+async def test_read_flows_filtered_by_flow_type(client: AsyncClient, logged_in_headers):
+    """The list endpoint filtered by flow_type=agent returns only agent flows."""
+    workflow_response = await client.post(
+        "api/v1/flows/",
+        json={"name": "a_workflow_flow", "data": {}},
+        headers=logged_in_headers,
+    )
+    agent_response = await client.post(
+        "api/v1/flows/",
+        json={"name": "an_agent_flow", "data": {}, "flow_type": "agent"},
+        headers=logged_in_headers,
+    )
+    workflow_id = workflow_response.json()["id"]
+    agent_id = agent_response.json()["id"]
+
+    response = await client.get(
+        "api/v1/flows/",
+        params={"get_all": True, "flow_type": "agent"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+    returned_ids = {flow["id"] for flow in result}
+    assert agent_id in returned_ids
+    assert workflow_id not in returned_ids
+    assert all(flow["flow_type"] == "agent" for flow in result)
+
+
+async def test_create_agent_flow_defaults_a2a_disabled(client: AsyncClient, logged_in_headers):
+    """Creating an agent flow without a2a_enabled leaves A2A off by default."""
+    response = await client.post(
+        "api/v1/flows/",
+        json={"name": "agent_no_a2a_flow", "data": {}, "flow_type": "agent"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    result = response.json()
+    assert result["flow_type"] == "agent"
+    assert result["a2a_enabled"] is False
+
+
+async def test_read_flows_rejects_invalid_flow_type(client: AsyncClient, logged_in_headers):
+    """An unknown flow_type query value is rejected by enum validation."""
+    response = await client.get(
+        "api/v1/flows/",
+        params={"get_all": True, "flow_type": "not_a_real_type"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+
+async def test_read_flows_header_mode_filtered_by_flow_type(client: AsyncClient, logged_in_headers):
+    """The flow_type filter also applies on the header_flows (compressed) list path."""
+    await client.post(
+        "api/v1/flows/",
+        json={"name": "header_workflow_flow", "data": {}},
+        headers=logged_in_headers,
+    )
+    agent_response = await client.post(
+        "api/v1/flows/",
+        json={"name": "header_agent_flow", "data": {}, "flow_type": "agent"},
+        headers=logged_in_headers,
+    )
+    agent_id = agent_response.json()["id"]
+
+    response = await client.get(
+        "api/v1/flows/",
+        params={"get_all": True, "header_flows": True, "flow_type": "agent"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+    returned_ids = {flow["id"] for flow in result}
+    assert agent_id in returned_ids
+    assert all(flow["flow_type"] == "agent" for flow in result)
+
+
 async def test_create_flows(client: AsyncClient, logged_in_headers):
     amount_flows = 10
     basic_case = {
@@ -301,6 +979,52 @@ async def test_create_flows(client: AsyncClient, logged_in_headers):
     assert response.status_code == status.HTTP_201_CREATED
     assert isinstance(result, list), "The result must be a list"
     assert len(result) == amount_flows, "The result must have the same amount of flows"
+
+
+async def test_create_flows_catalog_policy_preflight_is_atomic_and_uses_one_snapshot(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    from langflow.api.v1 import flows
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+    blocked_key = "BlockedLateInBatch"
+
+    class RotatingCatalogPolicyService:
+        calls = 0
+
+        @property
+        def snapshot(self):
+            self.calls += 1
+            if self.calls == 1:
+                return CatalogPolicySnapshot(blocked_component_keys={blocked_key})
+            return CatalogPolicySnapshot()
+
+    service = RotatingCatalogPolicyService()
+    monkeypatch.setattr(flows, "get_catalog_policy_service", lambda: service)
+    allowed_name = f"catalog-batch-allowed-{uuid.uuid4()}"
+    blocked_name = f"catalog-batch-blocked-{uuid.uuid4()}"
+
+    response = await client.post(
+        "api/v1/flows/batch/",
+        json={
+            "flows": [
+                {"name": allowed_name, "data": _catalog_flow_data("AllowedInBatch")},
+                {"name": blocked_name, "data": _catalog_flow_data(blocked_key)},
+            ]
+        },
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"].endswith(blocked_key)
+    assert service.calls == 1
+
+    listed = await client.get("api/v1/flows/", headers=logged_in_headers)
+    persisted_names = {flow["name"] for flow in listed.json()}
+    assert allowed_name not in persisted_names
+    assert blocked_name not in persisted_names
 
 
 async def test_create_flows_with_explicit_folder(client: AsyncClient, logged_in_headers):
@@ -347,6 +1071,71 @@ async def test_read_basic_examples(client: AsyncClient, logged_in_headers):
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, list), "The result must be a list"
     assert len(result) > 0, "The result must have at least one flow"
+    assert all(item["name_key"] for item in result)
+
+
+async def test_read_basic_examples_catalog_policy_preserves_public_cache_and_unblocks(
+    client: AsyncClient,
+    monkeypatch,
+):
+    from langflow.api.v1 import flows
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+    class MutableCatalogPolicyService:
+        snapshot = CatalogPolicySnapshot(blocked_template_keys={"basic_prompting"})
+
+    service = MutableCatalogPolicyService()
+    monkeypatch.setattr(flows, "get_catalog_policy_service", lambda: service)
+    flows._starter_flows_cache.clear()
+    flows._starter_flows_translated_cache.clear()
+
+    blocked_response = await client.get("api/v1/flows/basic_examples/")
+    assert blocked_response.status_code == status.HTTP_200_OK, blocked_response.text
+    blocked_keys = {flow["name_key"] for flow in blocked_response.json()}
+    assert "basic_prompting" not in blocked_keys
+
+    service.snapshot = CatalogPolicySnapshot()
+    unblocked_response = await client.get("api/v1/flows/basic_examples/")
+    assert unblocked_response.status_code == status.HTTP_200_OK, unblocked_response.text
+    unblocked_keys = {flow["name_key"] for flow in unblocked_response.json()}
+    assert "basic_prompting" in unblocked_keys
+
+
+async def test_read_basic_examples_include_blocked_requires_superuser(
+    client: AsyncClient,
+    logged_in_headers,
+):
+    anonymous_response = await client.get("api/v1/flows/basic_examples/?include_blocked=true")
+    assert anonymous_response.status_code == status.HTTP_403_FORBIDDEN
+
+    denied_response = await client.get(
+        "api/v1/flows/basic_examples/?include_blocked=true",
+        headers=logged_in_headers,
+    )
+    assert denied_response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_read_basic_examples_superuser_can_include_blocked(
+    client: AsyncClient,
+    logged_in_headers_super_user,
+    monkeypatch,
+):
+    from langflow.api.v1 import flows
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+    service = type(
+        "CatalogPolicyService",
+        (),
+        {"snapshot": CatalogPolicySnapshot(blocked_template_keys={"basic_prompting"})},
+    )()
+    monkeypatch.setattr(flows, "get_catalog_policy_service", lambda: service)
+
+    override_response = await client.get(
+        "api/v1/flows/basic_examples/?include_blocked=true",
+        headers=logged_in_headers_super_user,
+    )
+    assert override_response.status_code == status.HTTP_200_OK, override_response.text
+    assert "basic_prompting" in {flow["name_key"] for flow in override_response.json()}
 
 
 async def test_read_flows_user_isolation(client: AsyncClient, logged_in_headers, active_user):
@@ -664,7 +1453,7 @@ async def test_upload_flow_rejects_list_payload(client: AsyncClient, logged_in_h
         files={"file": ("flows.json", file_content, "application/json")},
         headers=logged_in_headers,
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_upload_flow_rejects_scalar_payload(client: AsyncClient, logged_in_headers):
@@ -678,7 +1467,7 @@ async def test_upload_flow_rejects_scalar_payload(client: AsyncClient, logged_in
         files={"file": ("flows.json", file_content, "application/json")},
         headers=logged_in_headers,
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_upload_flow_rejects_endpoint_name_with_dots(client: AsyncClient, logged_in_headers):
@@ -703,7 +1492,7 @@ async def test_upload_flow_rejects_endpoint_name_with_dots(client: AsyncClient, 
         files={"file": ("flows.json", file_content, "application/json")},
         headers=logged_in_headers,
     )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_upload_flow_accepts_valid_endpoint_name(client: AsyncClient, logged_in_headers):
@@ -727,6 +1516,72 @@ async def test_upload_flow_accepts_valid_endpoint_name(client: AsyncClient, logg
     assert isinstance(body, list)
     assert len(body) == 1
     assert body[0]["name"] == "neuro-vision"
+
+
+async def test_upload_catalog_policy_preflights_all_effective_graphs_before_upsert(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    import json
+
+    from langflow.api.v1 import flows
+    from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+    class MutableCatalogPolicyService:
+        snapshot = CatalogPolicySnapshot()
+
+    service = MutableCatalogPolicyService()
+    monkeypatch.setattr(flows, "get_catalog_policy_service", lambda: service)
+    blocked_key = "BlockedStoredUploadGraph"
+    original_name = f"catalog-upload-source-{uuid.uuid4()}"
+    source = await client.post(
+        "api/v1/flows/",
+        json={"name": original_name, "description": "original", "data": _catalog_flow_data(blocked_key)},
+        headers=logged_in_headers,
+    )
+    assert source.status_code == status.HTTP_201_CREATED, source.text
+
+    mutation_calls = 0
+
+    async def track_unexpected_mutation(**_kwargs):
+        nonlocal mutation_calls
+        mutation_calls += 1
+        return []
+
+    monkeypatch.setattr(flows, "_new_flow", track_unexpected_mutation)
+    monkeypatch.setattr(flows, "_update_existing_flow", track_unexpected_mutation)
+    service.snapshot = CatalogPolicySnapshot(blocked_component_keys={blocked_key})
+    allowed_name = f"catalog-upload-allowed-{uuid.uuid4()}"
+    changed_name = f"catalog-upload-changed-{uuid.uuid4()}"
+    file_content = json.dumps(
+        {
+            "flows": [
+                {"name": allowed_name, "data": _catalog_flow_data("AllowedInUpload")},
+                {
+                    "id": source.json()["id"],
+                    "name": changed_name,
+                    "description": "metadata-only upload update",
+                },
+            ]
+        }
+    )
+
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("flows.json", file_content, "application/json")},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"].endswith(blocked_key)
+    assert mutation_calls == 0
+
+    unchanged = await client.get(f"api/v1/flows/{source.json()['id']}", headers=logged_in_headers)
+    assert unchanged.status_code == status.HTTP_200_OK
+    assert unchanged.json()["name"] == original_name
+    listed = await client.get("api/v1/flows/", headers=logged_in_headers)
+    assert allowed_name not in {flow["name"] for flow in listed.json()}
 
 
 async def test_upload_flow_rejects_absolute_path(client: AsyncClient, logged_in_headers):
@@ -1095,6 +1950,440 @@ async def test_bulk_delete_with_deployed_flow_returns_409(client: AsyncClient, l
     assert "cannot be deleted because it has deployed versions" in delete_resp.json()["detail"].lower()
 
 
+async def test_delete_flow_retries_transient_sqlite_lock(client: AsyncClient, logged_in_headers, monkeypatch):
+    """A transient SQLite lock retries the complete single-flow deletion."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from sqlalchemy.exc import OperationalError
+
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"delete-lock-retry-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_id = create_response.json()["id"]
+    original_delete = flows_module.cascade_delete_flow
+    attempts = {"count": 0}
+    statement = "DELETE FROM flow WHERE flow.id = ?"
+
+    async def delete_after_one_lock(session, target_flow_id):
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            raise OperationalError(
+                statement,
+                {"id": target_flow_id},
+                sqlite3.OperationalError("database is locked"),
+            )
+        return await original_delete(session, target_flow_id)
+
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", delete_after_one_lock)
+
+    response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert attempts["count"] == 2
+    read_response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert read_response.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_delete_flow_exhausted_lock_retries_return_sanitized_503(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    """Exhausted single-flow lock retries expose no SQL or bound values."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from langflow.services.database.lock_retry import DEFAULT_LOCK_RETRY_ATTEMPTS
+    from sqlalchemy.exc import OperationalError
+
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"delete-lock-exhausted-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    flow_id = create_response.json()["id"]
+    leaked_statement = "DELETE FROM flow WHERE flow.id = ?"
+    leaked_value = f"secret-bound-value-{uuid.uuid4()}"
+    attempts = {"count": 0}
+
+    async def always_locked(_session, _target_flow_id):
+        attempts["count"] += 1
+        raise OperationalError(
+            leaked_statement,
+            {"id": flow_id, "value": leaked_value},
+            sqlite3.OperationalError("database is locked"),
+        )
+
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", always_locked)
+    original_retry = flows_module.run_with_lock_retry
+
+    async def run_without_delay(operation, *, session, description):
+        return await original_retry(operation, session=session, description=description, base_delay=0)
+
+    monkeypatch.setattr(flows_module, "run_with_lock_retry", run_without_delay)
+
+    response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+
+    assert attempts["count"] == DEFAULT_LOCK_RETRY_ATTEMPTS
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert response.headers["Retry-After"] == "1"
+    detail = response.json()["detail"]
+    assert detail == flows_module.FLOW_DELETE_BUSY
+    assert leaked_statement not in detail
+    assert leaked_value not in detail
+    assert flow_id not in detail
+    assert "sqlalche.me" not in detail
+
+
+async def test_delete_flow_non_lock_failure_returns_sanitized_500(client: AsyncClient, logged_in_headers, monkeypatch):
+    """A non-lock failure is not retried and does not disclose exception details."""
+    from langflow.api.v1 import flows as flows_module
+
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"delete-non-lock-failure-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    flow_id = create_response.json()["id"]
+    leaked_detail = f"sensitive-delete-detail-{uuid.uuid4()}"
+    attempts = {"count": 0}
+
+    async def fail_delete(_session, _target_flow_id):
+        attempts["count"] += 1
+        raise RuntimeError(leaked_detail)
+
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", fail_delete)
+
+    response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+
+    assert attempts["count"] == 1
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.json()["detail"] == flows_module.FLOW_DELETE_FAILED
+    assert leaked_detail not in response.text
+    assert "Retry-After" not in response.headers
+
+
+async def test_delete_flow_real_competing_sqlite_writer_is_retried(client: AsyncClient, logged_in_headers, monkeypatch):
+    """A real second SQLite connection holding the write lock triggers a retry."""
+    from langflow.api.v1 import flows as flows_module
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.deps import session_scope
+    from sqlalchemy import text
+
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"delete-real-lock-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    flow_id = create_response.json()["id"]
+    original_delete = flows_module.cascade_delete_flow
+    attempts = {"count": 0}
+
+    async def delete_after_competing_commit(session, target_flow_id):
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            async with session_scope() as competing_session:
+                competing_session.add(Folder(name=f"delete-competing-write-{uuid.uuid4()}", user_id=None))
+                await competing_session.flush()
+                # The second connection now holds SQLite's write lock. Disable
+                # waiting on the route connection so its real DELETE reports
+                # the lock immediately and exercises the retry boundary.
+                await session.exec(text("PRAGMA busy_timeout = 0"))
+                return await original_delete(session, target_flow_id)
+        return await original_delete(session, target_flow_id)
+
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", delete_after_competing_commit)
+
+    response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert attempts["count"] >= 2
+    read_response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert read_response.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_delete_flow_retry_is_idempotent_when_concurrent_delete_wins(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    """A retry treats an already-deleted target as successful."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.deps import session_scope
+    from sqlalchemy.exc import OperationalError
+
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"delete-concurrent-winner-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    flow_id = UUID(create_response.json()["id"])
+    attempts = {"count": 0}
+    statement = "DELETE FROM flow WHERE flow.id = ?"
+
+    async def concurrent_delete_then_lock(_session, target_flow_id):
+        attempts["count"] += 1
+        async with session_scope() as competing_session:
+            target = await competing_session.get(Flow, target_flow_id)
+            if target is not None:
+                await competing_session.delete(target)
+        raise OperationalError(statement, {"id": target_flow_id}, sqlite3.OperationalError("database is locked"))
+
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", concurrent_delete_then_lock)
+
+    response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert attempts["count"] == 1
+
+
+async def test_delete_flow_retry_preserves_permission_denial(client: AsyncClient, logged_in_headers, monkeypatch):
+    """A retry-time authorization denial remains a 403 instead of becoming a 500."""
+    import sqlite3
+
+    from fastapi import HTTPException
+    from langflow.api.v1 import flows as flows_module
+    from sqlalchemy.exc import OperationalError
+
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"delete-retry-denied-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    flow_id = create_response.json()["id"]
+    statement = "DELETE FROM flow WHERE flow.id = ?"
+
+    async def locked_once(_session, target_flow_id):
+        raise OperationalError(statement, {"id": target_flow_id}, sqlite3.OperationalError("database is locked"))
+
+    async def deny_retry(*_args, **_kwargs):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="delete permission revoked")
+
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", locked_once)
+    monkeypatch.setattr(flows_module, "ensure_flow_permission", deny_retry)
+    original_retry = flows_module.run_with_lock_retry
+
+    async def run_without_delay(operation, *, session, description):
+        return await original_retry(operation, session=session, description=description, base_delay=0)
+
+    monkeypatch.setattr(flows_module, "run_with_lock_retry", run_without_delay)
+
+    response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json()["detail"] == "delete permission revoked"
+
+
+async def test_delete_flow_deployment_guard_retry_reauthorizes_before_second_cascade(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    """A deployment-guard retry must reauthorize before attempting the delete again."""
+    from fastapi import HTTPException
+    from langflow.api.v1 import flows as flows_module
+    from langflow.api.v1.mappers.deployments import sync as deployment_sync
+    from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
+
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"delete-deployment-retry-denied-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    flow_payload = create_response.json()
+    flow_id = UUID(flow_payload["id"])
+    owner_id = UUID(flow_payload["user_id"])
+    permission_attempts = 0
+    cascade_attempts = 0
+    repair_owner_maps: list[dict[UUID, UUID]] = []
+
+    async def allow_then_deny(*_args, **_kwargs):
+        nonlocal permission_attempts
+        permission_attempts += 1
+        if permission_attempts == 2:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="delete permission revoked")
+
+    async def fail_deployment_guard_once(_session, _target_flow_id):
+        nonlocal cascade_attempts
+        cascade_attempts += 1
+        raise DeploymentGuardError(
+            code="FLOW_HAS_DEPLOYED_VERSIONS",
+            technical_detail="Flow is deployed.",
+            detail="Flow is deployed.",
+        )
+
+    async def record_deployment_repair(*, db, flow_owner_ids):  # noqa: ARG001
+        repair_owner_maps.append(dict(flow_owner_ids))
+
+    monkeypatch.setattr(flows_module, "ensure_flow_permission", allow_then_deny)
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", fail_deployment_guard_once)
+    monkeypatch.setattr(deployment_sync, "sync_flow_deployment_state_by_owner", record_deployment_repair)
+
+    response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json()["detail"] == "delete permission revoked"
+    assert permission_attempts == 2
+    assert cascade_attempts == 1
+    assert repair_owner_maps == [{flow_id: owner_id}]
+    read_response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert read_response.status_code == status.HTTP_200_OK
+
+
+async def test_bulk_delete_retries_transient_sqlite_lock(client: AsyncClient, logged_in_headers, monkeypatch):
+    """A transient SQLite lock retries the complete bulk deletion transaction."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from sqlalchemy.exc import OperationalError
+
+    flow_ids = []
+    for index in range(2):
+        create_response = await client.post(
+            "api/v1/flows/",
+            json={"name": f"bulk-delete-lock-{index}-{uuid.uuid4()}", "data": {}},
+            headers=logged_in_headers,
+        )
+        flow_ids.append(create_response.json()["id"])
+
+    original_delete = flows_module.cascade_delete_flow
+    attempts = {"count": 0}
+    statement = "DELETE FROM flow WHERE flow.id = ?"
+
+    async def delete_after_one_lock(session, target_flow_id):
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            raise OperationalError(
+                statement,
+                {"id": target_flow_id},
+                sqlite3.OperationalError("database is locked"),
+            )
+        return await original_delete(session, target_flow_id)
+
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", delete_after_one_lock)
+
+    response = await client.request("DELETE", "api/v1/flows/", json=flow_ids, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json() == {"deleted": 2}
+    assert attempts["count"] == 3
+    for flow_id in flow_ids:
+        assert (
+            await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+        ).status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_bulk_delete_retry_rebuilds_authorized_owner_map(client: AsyncClient, logged_in_headers, monkeypatch):
+    """A retry passes the deployment guard only owners reloaded after rollback."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.deps import session_scope
+    from sqlalchemy.exc import OperationalError
+
+    flow_ids = []
+    for index in range(2):
+        create_response = await client.post(
+            "api/v1/flows/",
+            json={"name": f"bulk-delete-owner-reload-{index}-{uuid.uuid4()}", "data": {}},
+            headers=logged_in_headers,
+        )
+        flow_ids.append(UUID(create_response.json()["id"]))
+
+    original_delete = flows_module.cascade_delete_flow
+    guard_maps: list[dict[UUID, UUID]] = []
+    first_delete = True
+    statement = "DELETE FROM flow WHERE flow.id = ?"
+
+    async def delete_after_concurrent_removal(session, target_flow_id):
+        nonlocal first_delete
+        if first_delete:
+            first_delete = False
+            async with session_scope() as competing_session:
+                removed = await competing_session.get(Flow, flow_ids[1])
+                assert removed is not None
+                await competing_session.delete(removed)
+            raise OperationalError(
+                statement,
+                {"id": target_flow_id},
+                sqlite3.OperationalError("database is locked"),
+            )
+        return await original_delete(session, target_flow_id)
+
+    async def record_guard_map(*, db, flow_owner_ids, operation):  # noqa: ARG001
+        try:
+            return await operation()
+        finally:
+            guard_maps.append(dict(flow_owner_ids))
+
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", delete_after_concurrent_removal)
+    monkeypatch.setattr(flows_module, "retry_flow_operation_on_deployment_guard", record_guard_map)
+
+    response = await client.request(
+        "DELETE",
+        "api/v1/flows/",
+        json=[str(flow_id) for flow_id in flow_ids],
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json() == {"deleted": 1}
+    assert set(guard_maps[0]) == set(flow_ids)
+    assert set(guard_maps[1]) == {flow_ids[0]}
+
+
+async def test_bulk_delete_exhausted_lock_retries_return_sanitized_503(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    """Exhausted bulk-delete lock retries expose no SQL or bound values."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from langflow.services.database.lock_retry import DEFAULT_LOCK_RETRY_ATTEMPTS
+    from sqlalchemy.exc import OperationalError
+
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"bulk-delete-lock-exhausted-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    flow_id = create_response.json()["id"]
+    leaked_statement = "DELETE FROM flow WHERE flow.id = ?"
+    leaked_value = f"secret-bound-value-{uuid.uuid4()}"
+    attempts = {"count": 0}
+
+    async def always_locked(_session, _target_flow_id):
+        attempts["count"] += 1
+        raise OperationalError(
+            leaked_statement,
+            {"id": flow_id, "value": leaked_value},
+            sqlite3.OperationalError("database is locked"),
+        )
+
+    monkeypatch.setattr(flows_module, "cascade_delete_flow", always_locked)
+    original_retry = flows_module.run_with_lock_retry
+
+    async def run_without_delay(operation, *, session, description):
+        return await original_retry(operation, session=session, description=description, base_delay=0)
+
+    monkeypatch.setattr(flows_module, "run_with_lock_retry", run_without_delay)
+
+    response = await client.request("DELETE", "api/v1/flows/", json=[flow_id], headers=logged_in_headers)
+
+    assert attempts["count"] == DEFAULT_LOCK_RETRY_ATTEMPTS
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert response.headers["Retry-After"] == "1"
+    detail = response.json()["detail"]
+    assert detail == flows_module.FLOW_DELETE_BUSY
+    assert leaked_statement not in detail
+    assert leaked_value not in detail
+    assert flow_id not in detail
+    assert "sqlalche.me" not in detail
+
+
 async def test_patch_flow_folder_move_with_deployed_versions_returns_409(
     client: AsyncClient, logged_in_headers, active_user
 ):
@@ -1129,6 +2418,189 @@ async def test_patch_flow_folder_move_with_deployed_versions_returns_409(
     )
     assert patch_resp.status_code == status.HTTP_409_CONFLICT
     assert "cannot be moved to another project" in patch_resp.json()["detail"].lower()
+
+
+async def test_patch_flow_folder_move_recovers_from_concurrent_write_lock(
+    client: AsyncClient, logged_in_headers, monkeypatch
+):
+    """A competing SQLite commit must not turn a flow move into a 500."""
+    from langflow.api.v1 import flows as flows_module
+    from langflow.services.database.models.folder.model import Folder
+    from langflow.services.deps import session_scope
+
+    project_payload = {"description": "", "flows_list": [], "components_list": []}
+    source_response = await client.post(
+        "api/v1/projects/",
+        json={**project_payload, "name": f"lock-source-{uuid.uuid4()}"},
+        headers=logged_in_headers,
+    )
+    destination_response = await client.post(
+        "api/v1/projects/",
+        json={**project_payload, "name": f"lock-destination-{uuid.uuid4()}"},
+        headers=logged_in_headers,
+    )
+    assert source_response.status_code == status.HTTP_201_CREATED
+    assert destination_response.status_code == status.HTTP_201_CREATED
+    source_project_id = source_response.json()["id"]
+    destination_project_id = destination_response.json()["id"]
+
+    flow_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"contended-move-{uuid.uuid4()}", "data": {}, "folder_id": source_project_id},
+        headers=logged_in_headers,
+    )
+    assert flow_response.status_code == status.HTTP_201_CREATED
+    flow_id = flow_response.json()["id"]
+
+    original_read_flow = flows_module._read_flow
+    attempts = {"count": 0}
+
+    async def read_flow_with_competing_commit(*args, **kwargs):
+        db_flow = await original_read_flow(*args, **kwargs)
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            async with session_scope() as competing_session:
+                competing_session.add(Folder(name=f"competing-write-{uuid.uuid4()}", user_id=None))
+        return db_flow
+
+    monkeypatch.setattr(flows_module, "_read_flow", read_flow_with_competing_commit)
+
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"folder_id": destination_project_id},
+        headers=logged_in_headers,
+    )
+
+    assert patch_response.status_code == status.HTTP_200_OK, patch_response.text
+    assert attempts["count"] >= 2, "the PATCH did not retry after its first stale-snapshot write failed"
+    assert patch_response.json()["folder_id"] == destination_project_id
+
+    persisted_response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert persisted_response.status_code == status.HTTP_200_OK
+    assert persisted_response.json()["folder_id"] == destination_project_id
+
+
+async def test_patch_flow_exhausted_lock_retries_do_not_leak_sql(client: AsyncClient, logged_in_headers, monkeypatch):
+    """An exhausted SQLite lock retry returns a safe, retryable response."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from langflow.services.database.lock_retry import DEFAULT_LOCK_RETRY_ATTEMPTS
+    from sqlalchemy.exc import OperationalError
+
+    flow_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"locked-patch-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert flow_response.status_code == status.HTTP_201_CREATED
+    flow_id = flow_response.json()["id"]
+
+    leaked_statement = "UPDATE flow SET description = ? WHERE flow.id = ?"
+    leaked_value = "bound-description-value"
+    attempts = {"count": 0}
+
+    async def always_locked(**_kwargs):
+        attempts["count"] += 1
+        raise OperationalError(
+            leaked_statement,
+            {"description": leaked_value, "id": flow_id},
+            sqlite3.OperationalError("database is locked"),
+        )
+
+    monkeypatch.setattr(flows_module, "_patch_flow", always_locked)
+    original_retry = flows_module.run_with_lock_retry
+
+    async def run_without_delay(operation, *, session, description):
+        return await original_retry(operation, session=session, description=description, base_delay=0)
+
+    monkeypatch.setattr(flows_module, "run_with_lock_retry", run_without_delay)
+
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"description": leaked_value},
+        headers=logged_in_headers,
+    )
+
+    assert attempts["count"] == DEFAULT_LOCK_RETRY_ATTEMPTS
+    assert patch_response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert patch_response.headers["Retry-After"] == "1"
+    detail = patch_response.json()["detail"]
+    assert detail == flows_module.FLOW_UPDATE_BUSY
+    assert "UPDATE flow" not in detail
+    assert "sqlalche.me" not in detail
+    assert flow_id not in detail
+    assert leaked_value not in detail
+
+
+async def test_patch_flow_lock_retry_supports_api_key_user(
+    client: AsyncClient, logged_in_headers, created_api_key, monkeypatch
+):
+    """Retrying must work when authentication returns a detached UserRead."""
+    import sqlite3
+
+    from langflow.api.v1 import flows as flows_module
+    from sqlalchemy.exc import OperationalError
+
+    flow_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"api-key-lock-retry-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert flow_response.status_code == status.HTTP_201_CREATED
+    flow_id = flow_response.json()["id"]
+
+    original_patch_flow = flows_module._patch_flow
+    attempts = {"count": 0}
+    statement = "UPDATE flow SET description = ? WHERE flow.id = ?"
+
+    async def patch_after_one_lock(**kwargs):
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            raise OperationalError(
+                statement,
+                {"description": "updated", "id": flow_id},
+                sqlite3.OperationalError("database is locked"),
+            )
+        return await original_patch_flow(**kwargs)
+
+    monkeypatch.setattr(flows_module, "_patch_flow", patch_after_one_lock)
+
+    patch_response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"description": "updated"},
+        headers={"x-api-key": created_api_key.api_key},
+    )
+
+    assert attempts["count"] == 2
+    assert patch_response.status_code == status.HTTP_200_OK, patch_response.text
+    assert patch_response.json()["description"] == "updated"
+
+
+async def test_patch_flow_unique_value_with_lock_text_is_not_retried(client: AsyncClient, logged_in_headers):
+    """Bound values that mention lock text must remain ordinary constraint errors."""
+    marker = f"database is locked {uuid.uuid4()}"
+    existing_response = await client.post(
+        "api/v1/flows/",
+        json={"name": marker, "data": {}},
+        headers=logged_in_headers,
+    )
+    victim_response = await client.post(
+        "api/v1/flows/",
+        json={"name": f"unique-lock-marker-{uuid.uuid4()}", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert existing_response.status_code == status.HTTP_201_CREATED
+    assert victim_response.status_code == status.HTTP_201_CREATED
+
+    patch_response = await client.patch(
+        f"api/v1/flows/{victim_response.json()['id']}",
+        json={"name": marker},
+        headers=logged_in_headers,
+    )
+
+    assert patch_response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "must be unique" in patch_response.json()["detail"].lower()
 
 
 async def test_upsert_flow_folder_move_with_deployed_versions_returns_409(
@@ -1169,3 +2641,90 @@ async def test_upsert_flow_folder_move_with_deployed_versions_returns_409(
     )
     assert put_resp.status_code == status.HTTP_409_CONFLICT
     assert "cannot be moved to another project" in put_resp.json()["detail"].lower()
+
+
+# _handle_unique_constraint_error: backend-agnostic mapping of unique violations.
+#
+# These are direct unit tests because the integration suite only ever runs SQLite, so the
+# PostgreSQL branch — the one that matters for the deployment this feature targets — has no other
+# coverage. Before this, a PostgreSQL unique violation fell through to a 500 whose detail was the
+# whole SQLAlchemy string, i.e. the statement plus its bound parameters.
+
+
+class _FakePgDriverError(Exception):
+    """Stand-in for a psycopg driver exception, which exposes the SQLSTATE."""
+
+    def __init__(self, sqlstate: str) -> None:
+        super().__init__("duplicate key")
+        self.sqlstate = sqlstate
+
+
+class _FakeDbError(Exception):
+    """Stand-in for sqlalchemy.exc.IntegrityError, which wraps the driver exception in .orig."""
+
+    def __init__(self, message: str, orig: Exception | None = None) -> None:
+        super().__init__(message)
+        self.orig = orig
+
+
+def test_handle_unique_constraint_error_sqlite_composite_constraint():
+    """The (user_id, name) constraint must name the field, not the table."""
+    from langflow.api.v1.flows import _handle_unique_constraint_error
+
+    exc = _FakeDbError("(sqlite3.IntegrityError) UNIQUE constraint failed: flow.user_id, flow.name")
+    result = _handle_unique_constraint_error(exc, status_code=status.HTTP_409_CONFLICT)
+
+    assert result.status_code == status.HTTP_409_CONFLICT
+    assert result.detail == "Name must be unique"
+
+
+def test_handle_unique_constraint_error_sqlite_endpoint_name():
+    from langflow.api.v1.flows import _handle_unique_constraint_error
+
+    exc = _FakeDbError("(sqlite3.IntegrityError) UNIQUE constraint failed: flow.user_id, flow.endpoint_name")
+    result = _handle_unique_constraint_error(exc, status_code=status.HTTP_409_CONFLICT)
+
+    assert result.detail == "Endpoint name must be unique"
+
+
+def test_handle_unique_constraint_error_postgres_is_a_conflict_not_a_leaking_500():
+    """A PostgreSQL unique violation must map to the conflict status, not fall through to 500."""
+    from langflow.api.v1.flows import _handle_unique_constraint_error
+
+    message = (
+        '(psycopg.errors.UniqueViolation) duplicate key value violates unique constraint "unique_flow_name"\n'
+        "DETAIL:  Key (user_id, name)=(abc, my-flow) already exists.\n"
+        "[SQL: INSERT INTO flow (id, name) VALUES (%(id)s, %(name)s)]\n"
+        "[parameters: {'id': 'abc', 'name': 'my-flow'}]"
+    )
+    exc = _FakeDbError(message, orig=_FakePgDriverError("23505"))
+    result = _handle_unique_constraint_error(exc, status_code=status.HTTP_409_CONFLICT)
+
+    assert result.status_code == status.HTTP_409_CONFLICT
+    assert result.detail == "Name must be unique"
+    assert "SQL" not in result.detail
+    assert "parameters" not in result.detail
+
+
+def test_handle_unique_constraint_error_primary_key_is_not_reported_as_a_name_conflict():
+    """A concurrent upsert at the same id collides on the PK, not on (user_id, name)."""
+    from langflow.api.v1.flows import _handle_unique_constraint_error
+
+    exc = _FakeDbError("(sqlite3.IntegrityError) UNIQUE constraint failed: folder.id")
+    result = _handle_unique_constraint_error(exc, status_code=status.HTTP_409_CONFLICT)
+
+    assert result.status_code == status.HTTP_409_CONFLICT
+    assert result.detail == "A project with this ID already exists"
+
+
+def test_handle_unique_constraint_error_non_unique_error_is_sanitized():
+    """Anything that is not a unique violation still becomes a 500, but must not echo the SQL."""
+    from langflow.api.v1.flows import _handle_unique_constraint_error
+    from sqlalchemy.exc import OperationalError
+
+    exc = OperationalError("SELECT * FROM flow WHERE id = %(id)s", {"id": "secret-value"}, Exception("boom"))
+    result = _handle_unique_constraint_error(exc)
+
+    assert result.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert "secret-value" not in result.detail
+    assert "SELECT" not in result.detail

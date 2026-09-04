@@ -68,18 +68,27 @@ jest.mock("@/components/ui/input", () => ({
     "data-testid": dataTestId,
     placeholder,
     disabled,
+    id,
+    "aria-invalid": ariaInvalid,
+    "aria-describedby": ariaDescribedby,
   }: {
     value?: string;
     onChange?: (event: { target: { value: string } }) => void;
     "data-testid"?: string;
     placeholder?: string;
     disabled?: boolean;
+    id?: string;
+    "aria-invalid"?: boolean;
+    "aria-describedby"?: string;
   }) => (
     <input
       value={value}
       placeholder={placeholder}
       data-testid={dataTestId}
       disabled={disabled}
+      id={id}
+      aria-invalid={ariaInvalid}
+      aria-describedby={ariaDescribedby}
       onChange={(event) =>
         onChange?.({ target: { value: event.target.value } })
       }
@@ -96,14 +105,23 @@ jest.mock("@/components/ui/textarea", () => ({
     value,
     onChange,
     "data-testid": dataTestId,
+    id,
+    "aria-invalid": ariaInvalid,
+    "aria-describedby": ariaDescribedby,
   }: {
     value?: string;
     onChange?: (event: { target: { value: string } }) => void;
     "data-testid"?: string;
+    id?: string;
+    "aria-invalid"?: boolean;
+    "aria-describedby"?: string;
   }) => (
     <textarea
       value={value}
       data-testid={dataTestId}
+      id={id}
+      aria-invalid={ariaInvalid}
+      aria-describedby={ariaDescribedby}
       onChange={(event) =>
         onChange?.({ target: { value: event.target.value } })
       }
@@ -155,6 +173,15 @@ jest.mock("@/modals/baseModal", () => {
   MockBaseModal.Content = ({ children }: ChildrenProps) => (
     <div>{children}</div>
   );
+  MockBaseModal.Header = ({
+    children,
+    description,
+  }: ChildrenProps & { description?: ReactNode }) => (
+    <div>
+      <h2>{children}</h2>
+      {description}
+    </div>
+  );
 
   return { __esModule: true, default: MockBaseModal };
 });
@@ -188,13 +215,19 @@ jest.mock(
     default: ({
       onChange,
       testId,
+      value,
+      enableGlobalVariables,
     }: {
       onChange: (value: Array<unknown>) => void;
       testId?: string;
+      value: Array<unknown>;
+      enableGlobalVariables?: boolean;
     }) => (
       <button
         type="button"
         data-testid={`${testId}-clear`}
+        data-enable-global-variables={enableGlobalVariables}
+        data-value={JSON.stringify(value)}
         onClick={() => onChange([])}
       >
         Clear
@@ -275,6 +308,74 @@ describe("AddMcpServerModal", () => {
     expect(screen.getByTestId("stdio-name-input")).toBeDisabled();
   });
 
+  it("persists global-variable-aware headers when editing a STDIO server", async () => {
+    const user = userEvent.setup();
+    const initialData: MCPServerType = {
+      name: "my-server",
+      command: "uvx",
+      args: ["mcp-proxy", "http://host/mcp"],
+      headers: {
+        "X-Langflow-Global-Var-OPENRAG_INGEST_TOKEN": "OPENRAG_INGEST_TOKEN",
+      },
+    };
+
+    render(
+      <AddMcpServerModal
+        open={true}
+        setOpen={jest.fn()}
+        initialData={initialData}
+      />,
+    );
+
+    expect(screen.getByTestId("stdio-headers-clear")).toHaveAttribute(
+      "data-enable-global-variables",
+      "true",
+    );
+    expect(screen.getByTestId("stdio-headers-clear")).toHaveAttribute(
+      "data-value",
+      expect.stringContaining("OPENRAG_INGEST_TOKEN"),
+    );
+
+    await user.click(screen.getByTestId("add-mcp-server-button"));
+
+    expect(mockPatchMCPServer).toHaveBeenCalledWith({
+      name: "my-server",
+      command: "uvx",
+      args: ["mcp-proxy", "http://host/mcp"],
+      headers: {
+        "X-Langflow-Global-Var-OPENRAG_INGEST_TOKEN": "OPENRAG_INGEST_TOKEN",
+      },
+    });
+  });
+
+  it("sends empty headers when deleting the last STDIO header", async () => {
+    const user = userEvent.setup();
+    const initialData: MCPServerType = {
+      name: "my-server",
+      command: "uvx",
+      args: ["mcp-server"],
+      headers: { Authorization: "TOKEN_VARIABLE" },
+    };
+
+    render(
+      <AddMcpServerModal
+        open={true}
+        setOpen={jest.fn()}
+        initialData={initialData}
+      />,
+    );
+
+    await user.click(screen.getByTestId("stdio-headers-clear"));
+    await user.click(screen.getByTestId("add-mcp-server-button"));
+
+    expect(mockPatchMCPServer).toHaveBeenCalledWith({
+      name: "my-server",
+      command: "uvx",
+      args: ["mcp-server"],
+      headers: {},
+    });
+  });
+
   it("patches the original server name when editing, instead of creating a duplicate", async () => {
     const user = userEvent.setup();
     const initialData: MCPServerType = {
@@ -301,5 +402,55 @@ describe("AddMcpServerModal", () => {
     // The create (add) flow must never fire during an edit — that is what
     // produced the duplicate server.
     expect(mockAddMCPServer).not.toHaveBeenCalled();
+  });
+
+  it("associates the invalid-JSON error with the JSON textarea", async () => {
+    const user = userEvent.setup();
+    render(<AddMcpServerModal open={true} setOpen={jest.fn()} />);
+
+    await user.type(screen.getByTestId("json-input"), "{{not valid json");
+    await user.click(screen.getByTestId("add-mcp-server-button"));
+
+    const banner = await screen.findByRole("alert");
+    expect(banner).toHaveAttribute("id", "mcp-server-form-error");
+    const textarea = screen.getByTestId("json-input");
+    expect(textarea).toHaveAttribute("aria-invalid", "true");
+    expect(textarea).toHaveAttribute(
+      "aria-describedby",
+      "mcp-server-form-error",
+    );
+  });
+
+  it("marks the empty required STDIO field invalid and points it at the banner", async () => {
+    const user = userEvent.setup();
+    const initialData: MCPServerType = {
+      name: "my-server",
+      command: "uvx",
+      args: [],
+    };
+    render(
+      <AddMcpServerModal
+        open={true}
+        setOpen={jest.fn()}
+        initialData={initialData}
+      />,
+    );
+
+    await user.clear(screen.getByTestId("stdio-command-input"));
+    await user.click(screen.getByTestId("add-mcp-server-button"));
+
+    const banner = await screen.findByRole("alert");
+    expect(banner).toHaveAttribute("id", "mcp-server-form-error");
+    const command = screen.getByTestId("stdio-command-input");
+    expect(command).toHaveAttribute("aria-invalid", "true");
+    expect(command).toHaveAttribute(
+      "aria-describedby",
+      "mcp-server-form-error",
+    );
+    // The filled (locked) name field is not blamed for the error.
+    expect(screen.getByTestId("stdio-name-input")).not.toHaveAttribute(
+      "aria-invalid",
+    );
+    expect(mockPatchMCPServer).not.toHaveBeenCalled();
   });
 });

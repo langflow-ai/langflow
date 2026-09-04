@@ -1,9 +1,11 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
 import {
-  closeAdvancedOptions,
-  openAdvancedOptions,
+  closeParametersPanel,
+  openParametersPanel,
+  toggleParameterOnNode,
 } from "../../utils/open-advanced-options";
 
 /**
@@ -45,33 +47,36 @@ test(
   async ({ page }) => {
     await dragAgentOntoCanvas(page);
 
-    // Focus the Agent node so its advanced-field drawer is reachable.
+    // Focus the Agent node so its parameters panel is reachable (LE-1810).
     await page.getByTestId("div-generic-node").click();
 
-    await openAdvancedOptions(page);
+    await openParametersPanel(page);
 
-    // Both advanced toggles exist as show-on-canvas checkboxes.
+    // Both advanced toggles are listed as manageable parameters in the panel.
     // Their default `value=True` is validated by the pytest suite
     // (`test_should_have_placeholders_in_default_system_prompt` covers the
     // default contract of the inputs list).
     await expect(
-      page.locator('//*[@id="showadd_current_date_tool"]'),
-    ).toBeVisible({ timeout: 10000 });
+      page.getByTestId("inspector-param-add_current_date_tool"),
+    ).toBeVisible({ timeout: TIMEOUTS.standard });
     await expect(
-      page.locator('//*[@id="showadd_calculator_tool"]'),
-    ).toBeVisible({ timeout: 10000 });
+      page.getByTestId("inspector-param-add_calculator_tool"),
+    ).toBeVisible({ timeout: TIMEOUTS.standard });
 
     // Flip the Calculator field visible on canvas so we can assert the toggle
     // is active and can be switched off and on (S3).
-    await page.locator('//*[@id="showadd_calculator_tool"]').click();
-    await closeAdvancedOptions(page);
+    await toggleParameterOnNode(page, "add_calculator_tool");
+    await expect(
+      page.getByTestId("inspector-remove-add_calculator_tool"),
+    ).toBeVisible();
+    await closeParametersPanel(page);
 
     await adjustScreenView(page);
 
     const calculatorToggle = page.getByTestId(
       "toggle_bool_add_calculator_tool",
     );
-    await expect(calculatorToggle).toBeVisible({ timeout: 10000 });
+    await expect(calculatorToggle).toBeVisible({ timeout: TIMEOUTS.standard });
     await expect(calculatorToggle).toBeChecked();
 
     // S3 — user disables the toggle.
@@ -93,7 +98,9 @@ test(
     // The placeholders must be present inside the Agent Instructions textarea
     // so the dynamic injection has a discoverable effect out of the box.
     const instructionsTextarea = page.getByTestId("textarea_str_system_prompt");
-    await expect(instructionsTextarea).toBeVisible({ timeout: 10000 });
+    await expect(instructionsTextarea).toBeVisible({
+      timeout: TIMEOUTS.standard,
+    });
 
     // <textarea> stores content in its `value`, not textContent.
     const promptText = await instructionsTextarea.inputValue();

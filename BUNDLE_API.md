@@ -58,12 +58,19 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | `DataFrame` | `lfx.schema.dataframe` |
 | `Message` | `lfx.schema.message` |
 
+### Lazy-import helper (consumed by bundle ``__init__.py`` files)
+
+| Symbol | Source |
+| --- | --- |
+| `import_mod(attr_name, module_name, package)` | `lfx.utils.lazy_import` (canonical; `lfx.components._importing` re-exports it for backward compatibility) |
+
 ### Manifest contract (consumed by the loader)
 
 | Symbol | Source |
 | --- | --- |
 | Manifest schema (`extension.json` / `[tool.langflow.extension]`) | `lfx.extension.manifest.ExtensionManifest` |
-| `BundleRef` (one entry in `bundles[]`) | `lfx.extension.manifest.BundleRef` |
+| `BundleRef` (one entry in optional `bundles[]`; bundle names must be unique) | `lfx.extension.manifest.BundleRef` |
+| `ProviderManifestEntry` (one entry in the optional `providers[]`) | `lfx.extension.manifest.ProviderManifestEntry` |
 | `LfxCompat` (declared as `manifest.lfx`) | `lfx.extension.manifest.LfxCompat` |
 | `BUNDLE_API_VERSION` (the integer this lfx ships) | `lfx.extension.manifest` |
 | `EXTENSION_SCHEMA_URL` / `SCHEMA_VERSION` | `lfx.extension.manifest` |
@@ -76,7 +83,8 @@ Component IDs at runtime are `ext:<bundle>:<Class>@<slot>`.
 
 | Symbol | Source |
 | --- | --- |
-| `load_extension(root)` | `lfx.extension.loader` |
+| `load_extension(root, *, bundle_name=None)` | `lfx.extension.loader` |
+| `load_extension_bundles(root)` | `lfx.extension.loader` |
 | `load_installed_extensions()` | `lfx.extension.loader` |
 | `discover_inline_bundles()` | `lfx.extension.loader` |
 | `discover_installed_extensions()` / `discover_seed_extensions()` / `discover_all_extensions()` | `lfx.extension.discovery` |
@@ -182,6 +190,28 @@ the deserialize half is covered by
 ### v0 (this release)
 
 - Initial surface enumerated above.  Frozen as `BUNDLE_API_VERSION = 1`.
+- `ExtensionManifest.version` now accepts the canonical PEP 440 stable, dev,
+  alpha, beta, and release-candidate forms emitted by the repository's bundle
+  release pipeline, in addition to the existing SemVer 2.0.0 forms.  Runtime
+  and published JSON Schema validation remain equivalent; this is additive and
+  does not change `BUNDLE_API_VERSION`.
+- Typed loader diagnostics now distinguish unavailable optional providers from
+  broken bundle imports.  `optional-dependency-missing` is added to
+  `ERROR_CODES`; a manifest-less `lfx-bundles` module emits this warning only
+  when its declared provider distribution is genuinely absent, allowing the
+  remaining bundle components to load.  Undeclared imports and installed but
+  broken distributions remain `module-import-failed` errors.  Expected
+  `bundle-shadowed` / `seed-bundle-shadowed` precedence outcomes are warnings;
+  winner selection is unchanged.
+- Extension manifests may now declare multiple component bundles.  Startup
+  discovery loads every declared bundle through `load_extension_bundles()`;
+  direct callers may select one with `load_extension(..., bundle_name=...)`.
+  Single-bundle and provider-only manifests retain their existing behavior,
+  so this is additive and does not change `BUNDLE_API_VERSION`.
+- Inline bundle discovery now skips Langflow-owned component compatibility
+  shims marked with `# lfx-bundles-shim` or `# lfx-compat-shim`.  These
+  packages remain importable, but are not treated as user inline bundles
+  and no longer emit `bundle-empty`.
 - `BundleRegistry.write_locked()` exposed as a public context manager so the
   reload pipeline can hold the registry write lock across both the
   `sys.modules` swap and the `BundleRecord` install.  Concurrent readers
@@ -402,3 +432,137 @@ the deserialize half is covered by
   added to ``ERROR_CODES`` (additive; codes-as-contract semantics
   preserved).  In-tree polling clients that never sent the parameter
   are unaffected.
+- **Manifest-less `lfx.bundles` discovery (metapackage split, 1.11).**  A
+  distribution may declare `[project.entry-points."lfx.bundles"]` whose
+  value is an importable package; each immediate subdirectory is loaded as
+  one bundle at the `@official` slot with **no `extension.json`** (the
+  langchain-community model; these directories are not inputs to
+  `lfx extension validate` -- the validator requires an `extension.json` or
+  `[tool.langflow.extension]` manifest and reports `manifest-not-found`
+  without one).
+  `load_lfx_bundles_extensions` is exported from `lfx.extension` (additive).
+  Discovery precedence for cross-source bundle-name collisions becomes
+  `installed > seed > lfx_bundles > dev > inline` -- **manifest always
+  wins**, so a manifest-shipping `lfx-<provider>` shadows the same-named
+  provider in a metapackage with the existing `bundle-shadowed` warning
+  (graduation requires no lockstep release).  A metapackage provider whose
+  name is already claimed by an installed or seed source is **never
+  imported** -- all `@official` sources share the
+  `_lfx_ext.official.<bundle>.*` sys.modules namespace, so importing the
+  losing copy would overwrite the winner's live modules; the skipped copy
+  carries the same typed `bundle-shadowed` diagnostic (on `errors`, matching
+  the resolver) so filtering by code never mixes severities.  Namespace
+  packages are walked across **all portions**, and resolved roots are
+  deduplicated by path so duplicate declarations never self-shadow.  This
+  precedence is a **startup-time** property: `load_lfx_bundles_extensions`
+  runs in the component-loading path, not in `discover_all_extensions`, so
+  `lfx extension list` -- which walks only the installed and seed
+  (manifest-bearing) sources -- does **not** enumerate manifest-less
+  metapackage providers.  A live `lfx.bundles` provider is therefore
+  invisible at list-time, and its shadowing against a manifest-shipping
+  package is resolved only when the server assembles the
+  `_lfx_ext.official.<bundle>.*` namespace at startup.  New
+  warning-only codes added to `ERROR_CODES` (additive), one per discovery
+  failure mode and none of which abort startup: `bundle-discovery-malformed`
+  (declaration does not resolve to an importable package directory --
+  including a parent package whose `__init__` raises during `find_spec`),
+  `bundles-provider-name-invalid` (provider folder is not a valid bundle
+  name), `bundles-root-unreadable` (root cannot be enumerated), and
+  `duplicate-lfx-bundles-provider` (same provider name in more than one
+  root; first wins).  Manifest-less bundles bypass the
+  `version-constraint-unsatisfied` API-version gate by construction (no
+  manifest to carry `lfx.compat`); install-time compatibility rides on the
+  metapackage's PEP 508 `lfx>=X,<Y` pin instead.  Manifest-less records
+  register with `manifestless=True` (additive field on `LoadResult` /
+  `BundleRecord`) and are **not hot-reloadable**: the reload pipeline
+  refuses them with the new typed code `reload-manifestless-unsupported`
+  (additive in `ERROR_CODES`) instead of failing `manifest-not-found`;
+  pick up metapackage changes by upgrading the distribution and
+  restarting the process.
+- **`import_mod` promoted to a stable public home.**  The lazy-import helper
+  that bundle packages call from their `__getattr__`-based `__init__.py`
+  files moved from the internal `lfx.components._importing` to
+  `lfx.utils.lazy_import` and is now part of the BUNDLE_API surface (name,
+  signature, and semantics contract-stable).  `lfx.components._importing`
+  re-exports it unchanged, so existing in-tree and third-party callers are
+  unaffected (additive).
+- **Validator accepts inherited entry-points.**  `validate_extension` no
+  longer emits `build-method-missing` for a Component subclass whose base
+  is a *derived* Component base (name ends with `Component`, e.g.
+  `LCVectorStoreComponent` / `LCToolComponent`): such classes inherit the
+  class-level `outputs` declaration and only override the output method,
+  which the AST-only check cannot resolve across modules.  Direct
+  subclasses of the root `Component` keep the strict inline
+  `build`-or-`outputs` requirement.  Surfaced by the partner graduations
+  (`lfx-datastax` et al.); previously-passing bundles are unaffected
+  (strictly fewer false positives).
+- **Manifest `providers[]` — bundles can register model providers (additive).**
+  `ExtensionManifest` gains an optional `providers[]` list
+  (`ProviderManifestEntry`).  Each entry declares a model provider — name,
+  metadata (icon, credential variables, `mapping.model_class`), optional lazy
+  `model_class` / `embedding` import refs, `api_key_required`, `live` /
+  `conditional_live`, and dotted-path `live_discovery` / `validator` callables —
+  which the loader merges into lfx's unified model system at load time via
+  `lfx.base.models.provider_registry`.  Built-in providers always win on a name
+  collision.  `bundles[]` is now **0-or-1** rather than exactly one, so a
+  *provider-only* extension may ship providers with no component bundle; an
+  extension must declare at least one of `bundles` or `providers`.  Existing
+  single-bundle manifests are unaffected.  Discovery
+  (`discover_installed_extensions` / `discover_seed_extensions`) surfaces a
+  provider-only extension with `DiscoveredExtension.bundle_name = None`, and
+  `registry.Extension.bundle_name` is likewise now `str | None` (the
+  `lfx extension list` BUNDLE column shows `—` for such extensions).
+- **Provider base-URL suffixes (additive).**  A provider metadata variable whose
+  `langchain_param` is `base_url` may declare `base_url_suffix` (for example,
+  `/v1`).  Runtime chat and embedding clients append the normalized suffix only
+  when the configured URL does not already end with it.  The field is published
+  in the extension JSON Schema, and unrecognized sibling keys on base-URL
+  variables are rejected so misspellings cannot silently disable normalization.
+- **Provider identity and static catalogs (additive).**  A `providers[]` entry
+  may now declare a stable lowercase `provider_id`, an independent
+  `display_name`, legacy `aliases`, and a dotted-path `catalog_loader`.  The
+  loader must return a flat list of model metadata rows; Langflow validates
+  model identities and stamps provider ownership before merging those rows
+  into the unified catalog.  Manifests that omit `provider_id` retain their
+  existing behavior through a deterministic ID derived from `name`.
+  `ProviderDescriptor` is the preferred public registry type and
+  `ProviderSpec` remains an alias for source compatibility.  The registry also
+  exposes an immutable generation-tagged snapshot plus an eager catalog
+  validation hook for deployment readiness.  Existing provider manifests are
+  unaffected and `BUNDLE_API_VERSION` remains `1`.
+- **Provider identity resolution and policy snapshots (additive).**
+  `resolve_provider_id()` is the canonical resolver for registered names,
+  display names, aliases, stable IDs, and deterministic legacy fallbacks.
+  Model-provider policy services now expose cached synchronous `resolve()`,
+  async `aresolve()`, single-provider `is_allowed()`, and `invalidate()`
+  hooks while preserving the existing immutable snapshot and allow-all OSS
+  behavior. The process-local snapshot cache has a bounded TTL, and async
+  implementations can override `aget_allowed_provider_ids()` without
+  bypassing it. Existing synchronous policy subclasses, including subclasses
+  that did not call `super().__init__()`, remain source-compatible.
+- **New typed error codes (additive): `provider-invalid`, `provider-skipped`.**
+  A malformed provider spec surfaces `provider-invalid`; a provider whose name
+  collides with a built-in or already-loaded provider surfaces
+  `provider-skipped`.  Both are warning-only — the rest of the extension still
+  loads — so adding them is backward-compatible (no `BUNDLE_API_VERSION` bump).
+- **`ExtensionError.ref_url` / CLI ``see:`` no longer carry per-code anchors.**
+  Auto-derived ``ref_url`` values (and the rendered ``see:`` line) now point
+  to the single extension-error guidance page
+  (``https://docs.langflow.org/extensions/errors``) instead of
+  ``…/extensions/errors#<code>``.  The ``code``, ``message``, ``location``,
+  ``content``, and ``hint`` fields are unchanged; only the docs link shape
+  changed.  Callers that deep-linked on ``ref_url`` suffix should read
+  ``code`` directly instead.
+- **`duplicate-distribution` detection resolves symlinks first.**
+  `load_installed_extensions` collapses manifest paths that are merely
+  different spellings of the same physical file (compared via
+  `Path.resolve()`; an `OSError` during resolution falls back to the raw
+  path) before the duplicate check.  RHEL-family (ubi) venvs symlink
+  `lib64 -> lib` and put both spellings on `sys.path`, so
+  `importlib.metadata.distributions()` yields every installed distribution
+  twice — previously each manifest-shipping bundle logged a false
+  `duplicate-distribution` error at Docker startup.  The
+  lexicographically-first unresolved spelling remains the winner, so error
+  messages and winner selection are unchanged, and two physically distinct
+  manifests for one canonical name still error.  No public symbol's name or
+  signature changed.

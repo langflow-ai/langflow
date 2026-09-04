@@ -6,6 +6,9 @@ class ServiceType(str, Enum):
 
     AUTH_SERVICE = "auth_service"
     AUTHORIZATION_SERVICE = "authorization_service"
+    CATALOG_POLICY_SERVICE = "catalog_policy_service"
+    MODEL_PROVIDER_POLICY_SERVICE = "model_provider_policy_service"
+    POLICY_BUNDLE_SERVICE = "policy_bundle_service"
     CACHE_SERVICE = "cache_service"
     SHARED_COMPONENT_CACHE_SERVICE = "shared_component_cache_service"
     SETTINGS_SERVICE = "settings_service"
@@ -24,4 +27,5 @@ class ServiceType(str, Enum):
     JOB_SERVICE = "jobs_service"
     FLOW_EVENTS_SERVICE = "flow_events_service"
     MEMORY_BASE_SERVICE = "memory_base_service"
+    BACKGROUND_EXECUTION_SERVICE = "background_execution_service"
     TELEMETRY_WRITER_SERVICE = "telemetry_writer_service"

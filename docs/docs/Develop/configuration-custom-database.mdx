@@ -7,9 +7,19 @@ Langflow's default database is [SQLite](https://www.sqlite.org/docs.html), but y
 
 This guide walks you through setting up an external database for Langflow by replacing the default SQLite connection string `sqlite:///./langflow.db` with PostgreSQL, both in local and containerized environments.
 
+:::note SQLite paths should be absolute
+If you set `LANGFLOW_DATABASE_URL` to a SQLite connection string, use an **absolute** path, such as `sqlite:////absolute/path/to/langflow.db` (note the four leading slashes) or, on Windows, `sqlite:///C:/path/to/langflow.db`.
+
+A relative path such as `sqlite:///./langflow.db` is resolved against the directory you start Langflow from, so launching from different directories points at different database files (your flows can appear to "disappear"), and a relative path that includes a subdirectory which doesn't yet exist fails at startup because SQLite does not create intermediate directories.
+:::
+
 In this configuration, all structured application data from Langflow, including flows, message history, and logs, is instead managed by PostgreSQL.
 PostgreSQL is better suited for production environments due to its robust support for concurrent users, advanced data integrity features, and scalability.
 Langflow can more efficiently handle multiple users and larger workloads by using PostgreSQL as the database.
+
+:::note
+Setting [`LANGFLOW_DATABASE_URL`](#connect-langflow-to-a-local-postgresql-database) does not enable Postgres as a vector store for knowledge bases or memory bases, which instead use [DB Providers](/knowledge#configure-vector-database-providers).
+:::
 
 ## Prerequisites
 
@@ -196,6 +206,7 @@ Since each Langflow instance runs in its own container on the Docker network, us
 
 ## See also
 
+* [Database migrations](./database-migrations)
 * [Langflow database guide for enterprise DBAs](/enterprise-database-guide)
 * [Memory management options](/memory)
 * [Logs](/logging)

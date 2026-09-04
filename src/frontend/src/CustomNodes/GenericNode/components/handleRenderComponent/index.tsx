@@ -1,6 +1,8 @@
 import { type Connection, Handle, Position } from "@xyflow/react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
 import type { APIDataType } from "@/types/api";
@@ -174,6 +176,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   testIdComplement,
   nodeId,
   colorName,
+  minimizedHandleTop,
 }: {
   left: boolean;
   tooltipTitle?: string;
@@ -187,17 +190,23 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   testIdComplement?: string;
   nodeId: string;
   colorName?: string[];
+  minimizedHandleTop?: string;
 }) {
+  const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const [openTooltip, setOpenTooltip] = useState(false);
 
   const idType = id && "type" in id ? id.type : undefined;
 
-  const isLocked = useFlowStore(
+  const isFlowLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
   );
+  const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+  const isPermissionReadOnly = useIsFlowReadOnly(currentFlowId);
+  const isLocked = isFlowLocked || isPermissionReadOnly;
 
   const edges = useFlowStore((state) => state.edges);
+  const getNode = useFlowStore((state) => state.getNode);
 
   // Check if this node is in "connect other models" mode
   const isInConnectionMode = useFlowStore(
@@ -394,6 +403,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
 
   const handleMouseDown = useCallback(
     (event: React.MouseEvent) => {
+      if (isLocked) return;
       if (event.button === 0) {
         setHandleDragging(currentFilter);
         const handleMouseUp = () => {
@@ -403,10 +413,11 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
         document.addEventListener("mouseup", handleMouseUp);
       }
     },
-    [currentFilter, setHandleDragging],
+    [currentFilter, isLocked, setHandleDragging],
   );
 
   const handleClick = useCallback(() => {
+    if (isLocked) return;
     const nodes = useFlowStore.getState().nodes;
     setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
     setFilterType(currentFilter);
@@ -428,6 +439,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     filterOpenHandle,
     filterType,
     onConnect,
+    isLocked,
   ]);
 
   const handleMouseEnter = useCallback(() => setIsHovered(true), []);
@@ -437,6 +449,28 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     (e: React.MouseEvent) => e.preventDefault(),
     [],
   );
+
+  // The handle carries role="button" (see below) but ReactFlow's own
+  // keyboard a11y is disabled canvas-wide (disableKeyboardA11y, PageComponent),
+  // so without this it would be an announced-but-inert button: focusable by
+  // no means, activatable only by mouse. Route Enter/Space to the same
+  // handler mouse clicks use so the announced role is actually operable.
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      handleClick();
+    },
+    [handleClick],
+  );
+
+  // DefaultEdge already prefers display_name over the raw id for its
+  // accessible name; do the same here instead of reading the node's id
+  // character-by-character to assistive tech.
+  const nodeDisplayName = getNode(nodeId)?.data?.node?.display_name ?? nodeId;
+  const handleAriaLabel = left
+    ? t("handle.ariaLabelInput", { field: title, node: nodeDisplayName })
+    : t("handle.ariaLabelOutput", { field: title, node: nodeDisplayName });
 
   return (
     <div>
@@ -470,6 +504,11 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
           )}
           style={{
             ...BASE_HANDLE_STYLES,
+            // LE-1810 (T8): distribute the handles of a minimized node
+            // vertically so they don't overlap at the card center.
+            ...(!showNode && minimizedHandleTop
+              ? { top: minimizedHandleTop }
+              : {}),
             pointerEvents: isLocked ? "none" : "auto",
           }}
           onClick={handleClick}
@@ -478,6 +517,10 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
           onMouseDown={handleMouseDown}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          onKeyDown={isLocked ? undefined : handleKeyDown}
+          role="button"
+          tabIndex={isLocked ? undefined : 0}
+          aria-label={handleAriaLabel}
           data-testid={`handle-${testIdComplement}-${title.toLowerCase()}-${
             !showNode ? (left ? "target" : "source") : left ? "left" : "right"
           }`}

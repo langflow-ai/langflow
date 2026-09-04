@@ -19,7 +19,6 @@ call site is expected to obtain a fresh backend instance and tear it down via
 
 from __future__ import annotations
 
-import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
@@ -27,6 +26,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from lfx.log.logger import logger
+from lfx.utils.env_var_security import safe_getenv
 
 if TYPE_CHECKING:
     import queue as sync_queue
@@ -110,6 +110,19 @@ class TestConnectionResult:
     details: dict[str, Any] = field(default_factory=dict)
 
 
+class BackendConfigurationError(ValueError):
+    """A permanent, operator-actionable backend misconfiguration.
+
+    Raised for conditions that a retry of the same call can never fix: a missing
+    database extension, an embedding-dimension mismatch between the stored
+    collection and the current model, a missing privilege, etc. Ingestion's
+    retry loop (``KBIngestionHelper.write_documents_to_backend``) re-raises these
+    immediately instead of spending its backoff budget on a call that cannot
+    succeed. Subclasses ``ValueError`` so existing ``except ValueError`` sites
+    (and their tests) keep catching it.
+    """
+
+
 class BaseVectorStoreBackend(ABC):
     """Base class every KB vector-store backend inherits from.
 
@@ -130,11 +143,15 @@ class BaseVectorStoreBackend(ABC):
     def __init__(
         self,
         kb_name: str,
-        kb_path: Path,
+        kb_path: Path | None = None,
         backend_config: dict[str, Any] | None = None,
         embedding_function: Embeddings | None = None,
         user_id: UUID | str | None = None,
     ) -> None:
+        # ``kb_path`` is meaningful only to local Chroma, the one backend that
+        # persists to this box's filesystem. Every other backend ignores it, so
+        # callers that resolved a non-local backend pass ``None`` rather than
+        # inventing a throwaway directory just to satisfy the signature.
         self.kb_name = kb_name
         self.kb_path = kb_path
         self.backend_config = backend_config or {}
@@ -196,7 +213,9 @@ class BaseVectorStoreBackend(ABC):
             except Exception as exc:  # noqa: BLE001 — fall through to env
                 logger.debug("variable_service lookup for %s failed: %s", variable_name, exc)
 
-        env_value = os.environ.get(variable_name)
+        # safe_getenv denies reserved names (LANGFLOW_SECRET_KEY, DATABASE_URL, ...) so a
+        # tenant-supplied KB secret name cannot exfiltrate the server's own secrets.
+        env_value = safe_getenv(variable_name)
         return env_value or None
 
     async def resolve_required_secret(self, variable_name: str) -> str:
@@ -271,6 +290,10 @@ class BaseVectorStoreBackend(ABC):
             return await self.vector_store.asimilarity_search_with_score(query=query, k=k, filter=filter)
         docs = await self.vector_store.asimilarity_search(query=query, k=k, filter=filter)
         return [(doc, 0.0) for doc in docs]
+
+    def normalize_score(self, score: float) -> float:
+        """Convert this backend's distance score to the public higher-is-better contract."""
+        return -float(score)
 
     async def delete_by(self, where: dict[str, Any]) -> None:
         await self.ensure_ready()

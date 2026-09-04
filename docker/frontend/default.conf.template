@@ -39,12 +39,15 @@ http {
 
         location /api {
             proxy_pass ${BACKEND_URL};
+            proxy_http_version 1.1;
         }
         location /health_check {
             proxy_pass ${BACKEND_URL};
+            proxy_http_version 1.1;
         }
         location /health {
             proxy_pass ${BACKEND_URL};
+            proxy_http_version 1.1;
         }
 
         include /etc/nginx/extra-conf.d/*.conf;

@@ -14,6 +14,7 @@ import {
   type MouseEvent,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -21,12 +22,18 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import {
+  FIT_VIEW_OPTIONS,
+  MAX_ZOOM,
+  MIN_ZOOM,
+} from "@/components/core/canvasControlsComponent/fit-view-options";
 import { FlowBuilderWelcomeMount } from "@/components/core/flowBuilderWelcome/flow-builder-welcome-mount";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
 import {
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
@@ -78,14 +85,20 @@ import {
   getSnapPosition,
   type HelperLinesState,
 } from "./helpers/helper-lines";
+import { useFitViewWhenMeasured } from "./hooks/use-fit-view-when-measured";
+import { useKeyboardMovePersistence } from "./hooks/use-keyboard-move-persistence";
 import { useCanvasDragSelectFix } from "./hooks/useCanvasDragSelectFix";
+import { usePresentationalEdgeSvgs } from "./hooks/usePresentationalEdgeSvgs";
 import {
   MemoizedBackground,
   MemoizedCanvasControls,
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
 import { computeNoteScreenPosition } from "./utils/compute-note-position";
+import { getEdgeAriaLabel } from "./utils/get-edge-aria-label";
+import { getNodeAriaLabels } from "./utils/get-node-aria-label";
 import getRandomName from "./utils/get-random-name";
+import isEventFromOutsideElement from "./utils/is-event-from-outside-element";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
 export default function Page({
@@ -104,6 +117,9 @@ export default function Page({
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const setFilterComponent = useFlowStore((state) => state.setFilterComponent);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  // True between onNodeDragStart and onNodeDragStop — lets the keyboard-move
+  // wrapper tell pointer-drag position changes apart from arrow-key ones.
+  const isPointerDragRef = useRef(false);
   const setPositionDictionary = useFlowStore(
     (state) => state.setPositionDictionary,
   );
@@ -114,6 +130,63 @@ export default function Page({
   const nodes = useFlowStore((state) => state.nodes);
   const edges = useFlowStore((state) => state.edges);
   const isEmptyFlow = useRef(nodes.length === 0);
+
+  const nodesWithAriaLabel = useMemo(() => {
+    // Labels are derived from the whole list at once: same-type nodes would
+    // otherwise share an accessible name, which role="application" forbids.
+    const ariaLabels = getNodeAriaLabels(nodes, t);
+    return nodes.map((node, index) => ({
+      ...node,
+      ariaLabel: ariaLabels[index],
+      // Nodes are tabbable, so a plain "group" (ReactFlow's fallback)
+      // fails IBM element_tabbable_role_valid — but every widget role with
+      // presentational children (button, option, ...) fails
+      // aria_descendant_valid instead, because nodes contain interactive
+      // handles and fields. "application" is the ARIA role for a composite
+      // canvas widget with its own keyboard model (arrow keys move the
+      // node), permits interactive descendants, and scans clean.
+      ariaRole: "application" as const,
+    }));
+  }, [nodes, t]);
+
+  const getNode = useFlowStore((state) => state.getNode);
+  // ReactFlow's built-in screen-reader strings (node/edge instructions via
+  // aria-describedby, and the assertive live region that announces arrow-key
+  // moves) are hard-coded English in @xyflow/system. Everything else the
+  // canvas announces is translated, so these must be too.
+  const ariaLabelConfig = useMemo(
+    () => ({
+      "node.a11yDescription.default": t("flow.a11y.nodeInstructions"),
+      "node.a11yDescription.ariaLiveMessage": ({
+        direction,
+        x,
+        y,
+      }: {
+        direction: string;
+        x: number;
+        y: number;
+      }) =>
+        t("flow.a11y.nodeMoved", {
+          direction: t(`flow.a11y.direction.${direction}`),
+          x,
+          y,
+        }),
+      "edge.a11yDescription.default": t("flow.a11y.edgeInstructions"),
+    }),
+    [t],
+  );
+
+  const edgesWithAriaLabel = useMemo(
+    () =>
+      edges.map((edge) => ({
+        ...edge,
+        ariaLabel: getEdgeAriaLabel(edge, getNode, t),
+        // Same widget-role requirement as nodes; the edge wrapper is a
+        // tabbable <g> whose ReactFlow fallback role is "group".
+        ariaRole: "button" as const,
+      })),
+    [edges, getNode, t],
+  );
 
   const previewLabel = useVersionPreviewStore((s) => s.previewLabel);
   const isPreviewActive = previewLabel !== null;
@@ -147,11 +220,13 @@ export default function Page({
   const isLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
   );
+  const currentFlowResourceId = useFlowStore((state) => state.currentFlow?.id);
 
   const position = useRef({ x: 0, y: 0 });
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const isPermissionReadOnly = useIsFlowReadOnly(currentFlowResourceId);
 
   const { isAgentWorking, events, lastSettledAt, clearEvents } = useFlowEvents(
     currentFlowId || undefined,
@@ -159,7 +234,8 @@ export default function Page({
   const isAssistantProcessing = useAssistantManagerStore(
     (state) => state.isAssistantProcessing,
   );
-  const effectiveLocked = isLocked || isAgentWorking || isAssistantProcessing;
+  const effectiveLocked =
+    isLocked || isPermissionReadOnly || isAgentWorking || isAssistantProcessing;
 
   // Keep banner mounted during exit animation, preserve last text
   const [bannerVisible, setBannerVisible] = useState(false);
@@ -228,14 +304,9 @@ export default function Page({
             return;
           }
 
-          applyFlowToCanvas(response.data);
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              reactFlowInstance?.fitView({
-                padding: { left: "20px", right: "20px", top: "80px" },
-              });
-            });
-          });
+          // A settle refresh is a background sync of a canvas the user is
+          // already working in, so it reloads the graph without re-framing it.
+          applyFlowToCanvas(response.data, { fitView: false });
 
           const nonSettleEvents = settleEvents.filter(
             (e) => e.type !== "flow_settled",
@@ -300,6 +371,7 @@ export default function Page({
   const addComponent = useAddComponent();
 
   const handleGroupNode = useCallback(() => {
+    if (effectiveLocked) return;
     takeSnapshot();
     const edgesState = useFlowStore.getState().edges;
     if (validateSelection(lastSelection!, edgesState).length === 0) {
@@ -331,7 +403,7 @@ export default function Page({
         list: validateSelection(lastSelection!, edgesState),
       });
     }
-  }, [lastSelection, setNodes, setErrorData, takeSnapshot]);
+  }, [effectiveLocked, lastSelection, setNodes, setErrorData, takeSnapshot, t]);
 
   useEffect(() => {
     const handleMouseMove = (event) => {
@@ -394,6 +466,10 @@ export default function Page({
     (e as unknown as Event).stopImmediatePropagation();
     const selectedNode = nodes.filter((obj) => obj.selected);
     if (selectedNode.length > 0) {
+      // Snapshot before pasting so the duplication is its own history entry.
+      // Without this, undo falls back to the previous snapshot (e.g. a drag's
+      // pre-move state) and reverts both the duplication and the prior action.
+      takeSnapshot();
       paste(
         { nodes: selectedNode, edges: [] },
         {
@@ -524,11 +600,12 @@ export default function Page({
 
   const onConnectMod = useCallback(
     (params: Connection) => {
+      if (effectiveLocked) return;
       takeSnapshot();
       onConnect(params);
       track("New Component Connection Added");
     },
-    [takeSnapshot, onConnect],
+    [effectiveLocked, takeSnapshot, onConnect],
   );
 
   const [helperLines, setHelperLines] = useState<HelperLinesState>({});
@@ -550,6 +627,7 @@ export default function Page({
       // 👇 make dragging a node undoable
       takeSnapshot();
       setIsDragging(true);
+      isPointerDragRef.current = true;
       // 👉 you can place your event handlers here
     },
     [takeSnapshot],
@@ -562,6 +640,7 @@ export default function Page({
       updateCurrentFlow({ nodes });
       setPositionDictionary({});
       setIsDragging(false);
+      isPointerDragRef.current = false;
       setHelperLines({});
     },
     [
@@ -631,9 +710,42 @@ export default function Page({
     [onNodesChange, nodes, isDragging, helperLineEnabled],
   );
 
+  // Arrow-key node moves (keyboard a11y) don't pass through the drag
+  // handlers, so this wrapper gives them the same undo snapshot + autosave
+  // treatment a pointer drag gets.
+  const persistKeyboardMove = useCallback(() => {
+    autoSaveFlow();
+    updateCurrentFlow({ nodes: useFlowStore.getState().nodes });
+  }, [autoSaveFlow, updateCurrentFlow]);
+
+  // On unmount the debounced autosave would fire after navigation, when the
+  // store can already hold a different flow — flush it while it still holds
+  // this one.
+  const flushKeyboardMove = useCallback(() => {
+    persistKeyboardMove();
+    void autoSaveFlow.flush?.();
+  }, [persistKeyboardMove, autoSaveFlow]);
+
+  const onNodesChangeWithKeyboardPersistence = useKeyboardMovePersistence(
+    onNodesChangeWithHelperLines,
+    isPointerDragRef,
+    takeSnapshot,
+    persistKeyboardMove,
+    undefined,
+    flushKeyboardMove,
+  );
+
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
     takeSnapshot();
+    // A selection-rect drag never fires the node drag handlers, so it must
+    // mark the pointer-drag ref itself or the keyboard-move wrapper would
+    // read its position changes as arrow-key moves (double snapshot).
+    isPointerDragRef.current = true;
   }, [takeSnapshot]);
+
+  const onSelectionDragStop: SelectionDragHandler = useCallback(() => {
+    isPointerDragRef.current = false;
+  }, []);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -730,6 +842,7 @@ export default function Page({
   }, []);
 
   useCanvasDragSelectFix(reactFlowWrapper);
+  usePresentationalEdgeSvgs(reactFlowWrapper);
 
   // Workaround to show the menu only after the selection has ended.
   useEffect(() => {
@@ -752,6 +865,11 @@ export default function Page({
 
   const onNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: AllNodeType) => {
+      // Overlays opened from a node (model providers modal, parameter popovers)
+      // render through portals, so React bubbles their events to this handler
+      // even though their DOM sits outside the node. Leave those alone: the
+      // browser menu must open and the node behind must not react.
+      if (isEventFromOutsideElement(event)) return;
       event.preventDefault();
       if (effectiveLocked) return;
 
@@ -799,6 +917,10 @@ export default function Page({
   // Immediately places the note above the toolbar so the user can drag it right away.
   useEffect(() => {
     const handleStartAddNote = () => {
+      if (effectiveLocked) {
+        window.dispatchEvent(new Event("lf:end-add-note"));
+        return;
+      }
       const toolbar = document.querySelector(
         "[data-testid='main_canvas_controls']",
       );
@@ -836,14 +958,11 @@ export default function Page({
     return () => {
       window.removeEventListener("lf:start-add-note", handleStartAddNote);
     };
-  }, [reactFlowInstance, getNodeId, setNodes]);
+  }, [effectiveLocked, reactFlowInstance, getNodeId, setNodes]);
 
-  const MIN_ZOOM = 0.25;
-  const MAX_ZOOM = 2;
-  const fitViewOptions = {
-    minZoom: MIN_ZOOM,
-    maxZoom: MAX_ZOOM,
-  };
+  // ReactFlow's `fitView` prop only fits whatever was measured in the first
+  // internals batch; this re-fits once the whole graph has dimensions.
+  useFitViewWhenMeasured(FIT_VIEW_OPTIONS);
 
   // Get inspection panel visibility from store
   const inspectionPanelVisible = useFlowStore(
@@ -887,34 +1006,37 @@ export default function Page({
       {showCanvas ? (
         <>
           <div id="react-flow-id" className="h-full w-full bg-canvas relative">
+            {!isWelcomeOpen && <MemoizedSidebarTrigger />}
             {!view && !isWelcomeOpen && (
               <>
                 <MemoizedCanvasControls
                   selectedNode={selectedNode}
                   isAgentWorking={isAgentWorking}
+                  isReadOnly={effectiveLocked}
                 />
                 {!isPreviewActive && <FlowToolbar />}
-                {inspectionPanelVisible && (
+                {inspectionPanelVisible && !effectiveLocked && (
                   <InspectionPanel selectedNode={selectedNode} />
                 )}
               </>
             )}
-            {!isWelcomeOpen && <MemoizedSidebarTrigger />}
             <SelectionMenu
               lastSelection={lastSelection}
-              isVisible={selectionMenuVisible}
+              isVisible={selectionMenuVisible && !effectiveLocked}
               nodes={lastSelection?.nodes}
               onClick={handleGroupNode}
             />
             <ReactFlow<AllNodeType, EdgeType>
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChangeWithHelperLines}
+              aria-label={t("flow.canvasLabel")}
+              nodes={nodesWithAriaLabel}
+              edges={edgesWithAriaLabel}
+              onNodesChange={onNodesChangeWithKeyboardPersistence}
               onEdgesChange={onEdgesChange}
               onConnect={
                 effectiveLocked || isPreviewActive ? undefined : onConnectMod
               }
-              disableKeyboardA11y={true}
+              disableKeyboardA11y={false}
+              ariaLabelConfig={ariaLabelConfig}
               nodesFocusable={!effectiveLocked && !isPreviewActive}
               edgesFocusable={!effectiveLocked && !isPreviewActive}
               nodesDraggable={!isPreviewActive && !effectiveLocked}
@@ -933,24 +1055,45 @@ export default function Page({
               onReconnectEnd={
                 effectiveLocked || isPreviewActive ? undefined : onEdgeUpdateEnd
               }
-              onNodeDrag={isPreviewActive ? undefined : onNodeDrag}
-              onNodeDragStart={isPreviewActive ? undefined : onNodeDragStart}
+              onNodeDrag={
+                isPreviewActive || effectiveLocked ? undefined : onNodeDrag
+              }
+              onNodeDragStart={
+                isPreviewActive || effectiveLocked ? undefined : onNodeDragStart
+              }
               onSelectionDragStart={
-                isPreviewActive ? undefined : onSelectionDragStart
+                isPreviewActive || effectiveLocked
+                  ? undefined
+                  : onSelectionDragStart
+              }
+              onSelectionDragStop={
+                isPreviewActive || effectiveLocked
+                  ? undefined
+                  : onSelectionDragStop
               }
               elevateEdgesOnSelect={false}
-              onSelectionEnd={isPreviewActive ? undefined : onSelectionEnd}
-              onSelectionStart={isPreviewActive ? undefined : onSelectionStart}
+              onSelectionEnd={
+                isPreviewActive || effectiveLocked ? undefined : onSelectionEnd
+              }
+              onSelectionStart={
+                isPreviewActive || effectiveLocked
+                  ? undefined
+                  : onSelectionStart
+              }
               connectionRadius={30}
               edgeTypes={edgeTypes}
               connectionLineComponent={ConnectionLineComponent}
-              onDragOver={isPreviewActive ? undefined : onDragOver}
-              onNodeDragStop={isPreviewActive ? undefined : onNodeDragStop}
-              onDrop={isPreviewActive ? undefined : onDrop}
+              onDragOver={
+                isPreviewActive || effectiveLocked ? undefined : onDragOver
+              }
+              onNodeDragStop={
+                isPreviewActive || effectiveLocked ? undefined : onNodeDragStop
+              }
+              onDrop={isPreviewActive || effectiveLocked ? undefined : onDrop}
               onSelectionChange={onSelectionChange}
               deleteKeyCode={[]}
               fitView={isEmptyFlow.current ? false : true}
-              fitViewOptions={fitViewOptions}
+              fitViewOptions={FIT_VIEW_OPTIONS}
               className="theme-attribution"
               tabIndex={effectiveLocked ? -1 : undefined}
               minZoom={MIN_ZOOM}
@@ -966,8 +1109,14 @@ export default function Page({
               onKeyDown={handleKeyDown}
               onNodeContextMenu={onNodeContextMenu}
             >
-              <UpdateAllComponents />
-              <MemoizedBackground />
+              {!effectiveLocked && <UpdateAllComponents />}
+              {/* The dot grid is pure decoration. ReactFlow's <Background>
+                  does not forward DOM props, so the only way to reach its
+                  <svg> is a wrapper; `display: contents` keeps it out of the
+                  layout entirely. */}
+              <div aria-hidden="true" style={{ display: "contents" }}>
+                <MemoizedBackground />
+              </div>
               {helperLineEnabled && <HelperLines helperLines={helperLines} />}
             </ReactFlow>
             <FlowBuildingComponent />
@@ -996,7 +1145,7 @@ export default function Page({
                 its visibility is driven entirely by the
                 ``flowBuilderWelcomeStore`` which is primed by the
                 "New Flow" button on the home page. */}
-            <FlowBuilderWelcomeMount />
+            {!effectiveLocked && <FlowBuilderWelcomeMount />}
           </div>
         </>
       ) : (

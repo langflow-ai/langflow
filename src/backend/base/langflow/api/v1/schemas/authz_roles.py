@@ -2,21 +2,13 @@
 
 from __future__ import annotations
 
-import re
 from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
-from langflow.services.authorization.actions import (
-    DeploymentAction,
-    FileAction,
-    FlowAction,
-    KnowledgeBaseAction,
-    ProjectAction,
-    ShareAction,
-    VariableAction,
-)
+from langflow.services.authorization.permissions import validate_permission_slug
+
 
 # Canonical permission slug is ``<resource>:<action>`` — matches the
 # system-role seed in ``8d3a1f9c2e0b_seed_authz_system_roles`` and the
@@ -30,49 +22,10 @@ from langflow.services.authorization.actions import (
 # the actions exposed by its enum in ``services/authorization/actions.py``.
 # Validating them independently would let admins create permissions like
 # ``file:deploy`` or ``share:execute`` that no enforce() call could ever
-# match — undermining the canonical-slug guarantee. The map below is the
-# authoritative source. ``*`` (all actions on that resource) is always
-# accepted; ``*`` as a resource is NOT — a role granting every action on
-# every resource is effectively superuser and should not be expressible
-# as a slug.
-_RESOURCE_ACTIONS: dict[str, frozenset[str]] = {
-    "flow": frozenset({a.value for a in FlowAction}) | {"*"},
-    "deployment": frozenset({a.value for a in DeploymentAction}) | {"*"},
-    "project": frozenset({a.value for a in ProjectAction}) | {"*"},
-    "knowledge_base": frozenset({a.value for a in KnowledgeBaseAction}) | {"*"},
-    "variable": frozenset({a.value for a in VariableAction}) | {"*"},
-    "file": frozenset({a.value for a in FileAction}) | {"*"},
-    "share": frozenset({a.value for a in ShareAction}) | {"*"},
-}
-
-_PERMISSION_SLUG_RE = re.compile(r"^[a-z_]+:[a-z_*]+$")
-
-
-def _validate_permission_slug(slug: str) -> str:
-    # Pydantic coerces ``list[str]`` so we only ever see strings here; the
-    # regex check carries the real format guarantee.
-    if not _PERMISSION_SLUG_RE.fullmatch(slug):
-        msg = (
-            f"permission {slug!r} is not in the canonical "
-            "'<resource>:<action>' form (e.g. 'flow:read', 'deployment:execute')"
-        )
-        raise ValueError(msg)
-    resource, action = slug.split(":", 1)
-    allowed = _RESOURCE_ACTIONS.get(resource)
-    if allowed is None:
-        msg = f"permission {slug!r} has unknown resource {resource!r}; expected one of {sorted(_RESOURCE_ACTIONS)}"
-        raise ValueError(msg)
-    if action not in allowed:
-        # Surface the resource-specific action vocabulary so callers can
-        # fix the slug without consulting the enums directly.
-        msg = (
-            f"permission {slug!r} has unknown action {action!r} for resource {resource!r}; "
-            f"expected one of {sorted(allowed)}"
-        )
-        raise ValueError(msg)
-    return slug
-
-
+# match — undermining the canonical-slug guarantee. The service-level
+# permission validator is the authoritative source. ``*`` as a resource is
+# never accepted; a role granting every action on every resource is effectively
+# superuser and should not be expressible as a slug.
 class RoleCreate(BaseModel):
     """Payload for creating an authz_role row."""
 
@@ -83,11 +36,13 @@ class RoleCreate(BaseModel):
         description=(
             "Permission slugs in the canonical ``<resource>:<action>`` form — for "
             "example ``flow:read``, ``deployment:execute``, ``share:create``. "
-            "Resources must be one of flow, deployment, project, knowledge_base, "
-            "variable, file, share. Actions are constrained per-resource (see "
+            "Resources must be one of user, team, role, flow, deployment, project, knowledge_base, "
+            "variable, file, share, provider_account, voice, plus the narrow model-provider form "
+            "``component:models/<provider-id>:read``. Actions are constrained per-resource (see "
             "``services/authorization/actions.py``): e.g. ``deploy`` is only valid "
             "on ``flow``, ``ingest`` only on ``knowledge_base``, ``update`` only on "
-            "``share``. ``*`` (all actions on that resource) is always accepted. "
+            "``share``. ``*`` is accepted only for resource vocabularies that expose it; "
+            "administration resources use the explicit ``manage`` action. "
             "A registered authorization plugin is responsible for compiling these "
             "into its policy format."
         ),
@@ -97,7 +52,7 @@ class RoleCreate(BaseModel):
     @field_validator("permissions")
     @classmethod
     def _validate_permissions(cls, value: list[str]) -> list[str]:
-        return [_validate_permission_slug(s) for s in value]
+        return [validate_permission_slug(slug) for slug in value]
 
 
 class RoleUpdate(BaseModel):
@@ -113,7 +68,7 @@ class RoleUpdate(BaseModel):
     def _validate_permissions(cls, value: list[str] | None) -> list[str] | None:
         if value is None:
             return None
-        return [_validate_permission_slug(s) for s in value]
+        return [validate_permission_slug(slug) for slug in value]
 
 
 class RoleRead(BaseModel):

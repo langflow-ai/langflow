@@ -11,7 +11,8 @@ from lfx.schema.data import Data
 from lfx.schema.message import Message
 
 # Database imports removed - lfx should be lightweight
-from lfx.services.deps import get_settings_service
+from lfx.services.database.service import NoopDatabaseService
+from lfx.services.deps import get_db_service, get_settings_service
 
 if TYPE_CHECKING:
     from lfx.graph.vertex.base import Vertex
@@ -202,7 +203,7 @@ async def emit_vertex_build_event(
     except ImportError:
         pass  # langflow not available (standalone lfx usage)
     except Exception as exc:  # noqa: BLE001
-        logger.debug(f"SSE emission failed for vertex {vertex_id}: {exc}")
+        logger.debug(f"SSE emission failed for vertex {vertex_id}", exc_info=exc)
 
 
 async def emit_build_start_event(flow_id: str | UUID, vertex_id: str) -> None:
@@ -223,7 +224,7 @@ async def emit_build_start_event(flow_id: str | UUID, vertex_id: str) -> None:
     except ImportError:
         pass  # langflow not available (standalone lfx usage)
     except Exception as exc:  # noqa: BLE001
-        logger.debug(f"SSE build_start emission failed for vertex {vertex_id}: {exc}")
+        logger.debug(f"SSE build_start emission failed for vertex {vertex_id}", exc_info=exc)
 
 
 def _vertex_to_primitive_dict(target: Vertex) -> dict:
@@ -266,6 +267,14 @@ async def log_transaction(
         if source is None:
             return
 
+        # Serving-plane ephemeral runs must not persist execution telemetry either:
+        # transaction rows store component inputs/outputs verbatim, which would
+        # retain the very conversation content the anonymous no-persist contract
+        # excludes. Read the flag off the vertex's graph (deterministic here, where
+        # the per-component ContextVar binding is already out of scope).
+        if not getattr(getattr(source, "graph", None), "persist_messages", True):
+            return
+
         # Get the transaction service via dependency injection
         from lfx.services.deps import get_transaction_service
 
@@ -302,7 +311,7 @@ async def log_transaction(
         )
 
     except Exception as exc:  # noqa: BLE001
-        logger.debug(f"Error logging transaction: {exc!s}")
+        logger.debug("Error logging transaction", exc_info=exc)
 
 
 # Latch so the "writer enabled but not running" fall-through log fires once
@@ -356,13 +365,19 @@ async def log_vertex_build(
     try:
         # Try to use langflow's services if available (when running within langflow)
         try:
-            from langflow.services.deps import get_db_service as langflow_get_db_service
-            from langflow.services.deps import get_settings_service as langflow_get_settings_service
-
-            settings_service = langflow_get_settings_service()
+            settings_service = get_settings_service()
             if not settings_service:
                 return
             if not getattr(settings_service.settings, "vertex_builds_storage_enabled", False):
+                return
+
+            # Resolve only the database service already registered with the shared
+            # LFX service manager. Calling langflow.services.deps.get_db_service()
+            # here would install Langflow's default DatabaseService as a lookup
+            # side effect, turning a DB-less `lfx serve` process into a partially
+            # initialized DB runtime between two vertices in the same graph run.
+            db_service = get_db_service()
+            if isinstance(db_service, NoopDatabaseService):
                 return
 
             if isinstance(flow_id, str):
@@ -407,10 +422,6 @@ async def log_vertex_build(
             ) and _try_enqueue_via_telemetry_writer(vertex_build):
                 return
 
-            db_service = langflow_get_db_service()
-            if db_service is None:
-                return
-
             async with db_service._with_session() as session:  # noqa: SLF001
                 await crud_log_vertex_build(session, vertex_build)
 
@@ -431,7 +442,7 @@ async def log_vertex_build(
             logger.debug(f"Vertex build logged: vertex={vertex_id}, flow={flow_id}, valid={valid}")
 
     except Exception as exc:  # noqa: BLE001
-        logger.warning(f"Error logging vertex build: {exc}")
+        logger.warning("Error logging vertex build", exc_info=exc)
 
 
 def rewrite_file_path(file_path: str):

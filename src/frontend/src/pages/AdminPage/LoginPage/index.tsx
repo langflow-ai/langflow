@@ -3,6 +3,7 @@ import { useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { useLoginUser } from "@/controllers/API/queries/auth";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { CONTROL_LOGIN_STATE } from "../../../constants/constants";
@@ -18,6 +19,7 @@ export default function LoginAdminPage() {
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
   const { t } = useTranslation();
+  useDocumentTitle(t("auth.adminTitle"));
   const { login } = useContext(AuthContext);
   const queryClient = useQueryClient();
   const { password, username } = inputState;
@@ -51,7 +53,7 @@ export default function LoginAdminPage() {
   }
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
+    <main className="flex h-full w-full flex-col items-center justify-center bg-muted">
       <div className="flex w-72 flex-col items-center justify-center gap-2">
         <LangflowLogo
           title={t("common.langflowLogo")}
@@ -61,6 +63,9 @@ export default function LoginAdminPage() {
           {t("auth.adminTitle")}
         </span>
         <Input
+          allowAutofill
+          name="username"
+          value={username}
           onChange={({ target: { value } }) => {
             handleInput({ target: { name: "username", value } });
           }}
@@ -69,6 +74,9 @@ export default function LoginAdminPage() {
         />
         <Input
           type="password"
+          allowAutofill
+          name="password"
+          value={password}
           onChange={({ target: { value } }) => {
             handleInput({ target: { name: "password", value } });
           }}
@@ -85,6 +93,6 @@ export default function LoginAdminPage() {
           {t("auth.adminLoginButton")}
         </Button>
       </div>
-    </div>
+    </main>
   );
 }

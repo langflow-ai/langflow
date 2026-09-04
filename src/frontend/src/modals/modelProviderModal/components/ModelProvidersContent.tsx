@@ -1,15 +1,18 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
+import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
+import CustomModelProvidersEmptyState from "@/customization/components/custom-model-providers-empty-state";
 import ProviderList from "@/modals/modelProviderModal/components/ProviderList";
 import { Provider } from "@/modals/modelProviderModal/components/types";
+import type { ModelTypeFilter } from "@/types/models";
 import { cn } from "@/utils/utils";
 import { useProviderConfiguration } from "../hooks/useProviderConfiguration";
-import ModelSelection from "./ModelSelection";
+import ModelSelection, { hasProviderOwnedEmptyState } from "./ModelSelection";
 import ProviderConfigurationForm from "./ProviderConfigurationForm";
 
-interface ModelProvidersContentProps {
-  modelType: "llm" | "embeddings" | "all";
+interface ModelProvidersContentProps extends ProviderScopeParams {
+  modelType: ModelTypeFilter;
   onFlushRef?: React.MutableRefObject<(() => Promise<void>) | null>;
   onHasChangesRef?: React.MutableRefObject<(() => boolean) | null>;
 }
@@ -18,6 +21,8 @@ const ModelProvidersContent = ({
   modelType,
   onFlushRef,
   onHasChangesRef,
+  flowId,
+  projectId,
 }: ModelProvidersContentProps) => {
   const { t } = useTranslation();
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(
@@ -51,6 +56,8 @@ const ModelProvidersContent = ({
     requiresConfiguration,
   } = useProviderConfiguration({
     selectedProvider,
+    flowId,
+    projectId,
   });
 
   // Expose flushPendingChanges and hasUserMadeChanges to the parent
@@ -79,6 +86,21 @@ const ModelProvidersContent = ({
     );
   };
 
+  const typedModelCount = (syncedSelectedProvider?.models ?? []).filter(
+    (model) => modelType === "all" || model.metadata?.model_type === modelType,
+  ).length;
+  // Providers whose catalog is discovered from their endpoint have no models
+  // to show until credentials are configured; ModelSelection renders a
+  // configure-credentials hint for them instead of the generic empty state.
+  const awaitingLiveDiscovery =
+    !!syncedSelectedProvider?.live_discovery &&
+    !syncedSelectedProvider?.is_configured;
+  const showNoAvailableModels =
+    !!syncedSelectedProvider &&
+    typedModelCount === 0 &&
+    !awaitingLiveDiscovery &&
+    !hasProviderOwnedEmptyState(syncedSelectedProvider.provider);
+
   return (
     <div className="flex flex-row w-full h-full overflow-hidden">
       <div
@@ -105,6 +127,8 @@ const ModelProvidersContent = ({
           onProviderSelect={handleProviderSelect}
           selectedProviderName={syncedSelectedProvider?.provider ?? null}
           query={providerQuery}
+          flowId={flowId}
+          projectId={projectId}
         />
       </div>
 
@@ -139,20 +163,37 @@ const ModelProvidersContent = ({
           requiresConfiguration={requiresConfiguration}
         />
 
-        <div className="relative flex min-h-0 flex-1 flex-col">
+        {/* hidden while collapsed: the padded scroller inside has intrinsic
+            width, so it would stick out of the w-0 column and register as
+            clipped content at a 320px viewport (WCAG 1.4.10). */}
+        <div
+          className={cn(
+            "relative flex min-h-0 flex-1 flex-col",
+            !syncedSelectedProvider && "hidden",
+          )}
+        >
           <div className="flex h-full flex-col gap-3 overflow-y-auto px-4 pt-4 pb-6 transition-all duration-300 ease-in-out">
-            <ModelSelection
-              modelType={modelType}
-              availableModels={syncedSelectedProvider?.models || []}
-              onModelToggle={handleModelToggle}
-              providerName={syncedSelectedProvider?.provider}
-              isEnabledModel={
-                !!(
-                  syncedSelectedProvider?.is_enabled ||
-                  syncedSelectedProvider?.is_configured
-                )
-              }
-            />
+            <CustomModelProvidersEmptyState
+              kind="models"
+              show={showNoAvailableModels}
+            >
+              <ModelSelection
+                modelType={modelType}
+                availableModels={syncedSelectedProvider?.models || []}
+                onModelToggle={handleModelToggle}
+                providerName={syncedSelectedProvider?.provider}
+                isEnabledModel={
+                  !!(
+                    syncedSelectedProvider?.is_enabled ||
+                    syncedSelectedProvider?.is_configured
+                  )
+                }
+                liveDiscovery={!!syncedSelectedProvider?.live_discovery}
+                isConfigured={!!syncedSelectedProvider?.is_configured}
+                flowId={flowId}
+                projectId={projectId}
+              />
+            </CustomModelProvidersEmptyState>
           </div>
           <div className="pointer-events-none absolute inset-x-0 top-0 h-6 bg-gradient-to-b from-background via-background/70 to-transparent" />
           <div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-background via-background/70 to-transparent" />

@@ -22,10 +22,12 @@ from langflow.api.v1.mappers.deployments.helpers import (
     apply_flow_version_patch_attachments,
     attach_flow_versions,
     deployment_pagination_params,
+    ensure_flow_deploy_for_version_ids,
     flow_version_ids_for_flows,
     get_deployment_row_or_404,
     get_deployment_synced,
     get_owned_provider_account_or_404,
+    get_shared_listing_provider_account_or_404,
     handle_adapter_errors,
     list_deployment_flow_versions_synced,
     list_deployments_synced,
@@ -67,13 +69,22 @@ from langflow.api.v1.schemas.deployments import (
     SnapshotUpdateResponse,
 )
 from langflow.services.adapters.deployment.context import deployment_provider_scope
-from langflow.services.authorization import DeploymentAction, ensure_deployment_permission, filter_visible_resources
+from langflow.services.authorization import (
+    DeploymentAction,
+    ProviderAccountAction,
+    ensure_deployment_permission,
+    ensure_provider_account_permission,
+    filter_visible_resources,
+    visible_scope_prefilter,
+)
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.utils import _resolve_authz_domain
 from langflow.services.database.models.deployment.crud import (
+    UNCONFIRMED_DELETE_ROWCOUNT,
     count_deployments_by_provider,
     delete_deployment_by_id,
     get_deployment_by_resource_key,
+    has_visible_deployment_for_provider,
 )
 from langflow.services.database.models.deployment.crud import (
     create_deployment_from_model as create_deployment_db,
@@ -224,6 +235,7 @@ async def _count_provider_deployments_after_reconciliation(
     deployment_count = await count_deployments_by_provider(
         session,
         user_id=user_id,
+        row_owner_id=user_id,
         deployment_provider_account_id=provider_account.id,
     )
     if deployment_count <= 0:
@@ -237,6 +249,7 @@ async def _count_provider_deployments_after_reconciliation(
                 deployment_adapter=deployment_adapter,
                 deployment_mapper=deployment_mapper,
                 user_id=user_id,
+                row_owner_id=user_id,
                 provider_id=provider_account.id,
                 db=session,
                 page=1,
@@ -253,7 +266,30 @@ async def _count_provider_deployments_after_reconciliation(
     return deployment_count
 
 
-async def _delete_local_deployment_row_with_commit_retry(
+async def _delete_deployment_strictly_or_raise(
+    *,
+    session: DbSession,
+    deployment_id: UUID,
+    user_id: UUID,
+) -> None:
+    """Delete exactly one deployment row by PK + owner scope, or raise.
+
+    Raises:
+        HTTPException: 404 when the driver confirmed zero rows matched; 500 when
+            the affected-row count could not be confirmed
+            (:data:`UNCONFIRMED_DELETE_ROWCOUNT`).
+    """
+    deleted = await delete_deployment_by_id(session, user_id=user_id, deployment_id=deployment_id)
+    if deleted is UNCONFIRMED_DELETE_ROWCOUNT:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Deployment delete could not be confirmed.",
+        )
+    if deleted == 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found.")
+
+
+async def _delete_local_deployment_row(
     *,
     session: DbSession,
     deployment_id: UUID,
@@ -262,36 +298,47 @@ async def _delete_local_deployment_row_with_commit_retry(
 ) -> None:
     """Delete the local deployment row, retrying once if the commit fails.
 
-    Delete is provider-first, so by the time this helper runs the provider
-    resource is already gone (or was already missing). If the first DB commit
-    fails, retry the local delete once after a rollback so we do not strand a
-    stale Langflow row that still blocks later reads or provider-account
-    deletion.
+    When ``include_provider`` was true on the route, the provider resource is
+    already gone (or was already missing) before this helper runs. Either way,
+    if the first DB commit fails, retry the local delete once after a rollback
+    so we do not strand a stale Langflow row.
+
+    Requires exactly one row deleted (PK + owner scope). A zero-row delete
+    means the local row was already gone or the owner scope was wrong — raise
+    404 rather than returning success.
     """
     try:
-        await delete_deployment_by_id(session, user_id=user_id, deployment_id=deployment_id)
+        await _delete_deployment_strictly_or_raise(session=session, user_id=user_id, deployment_id=deployment_id)
         await session.commit()
+    except HTTPException:
+        raise
     except Exception:  # noqa: BLE001
         await session.rollback()
         logger.warning(
-            "Local deployment cleanup failed for deployment %s (resource_key=%s) after provider delete; retrying.",
+            "Local deployment cleanup failed for deployment %s (resource_key=%s); retrying.",
             deployment_id,
             resource_key,
             exc_info=True,
         )
         try:
-            await delete_deployment_by_id(session, user_id=user_id, deployment_id=deployment_id)
+            await _delete_deployment_strictly_or_raise(session=session, user_id=user_id, deployment_id=deployment_id)
             await session.commit()
+        except HTTPException:
+            raise
         except Exception as exc:
             await session.rollback()
             logger.exception(
-                "Retrying local deployment cleanup failed for deployment %s (resource_key=%s) after provider delete.",
+                "Retrying local deployment cleanup failed for deployment %s (resource_key=%s).",
                 deployment_id,
                 resource_key,
             )
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Deployment was deleted from the provider, but local cleanup failed. Retry the delete request.",
+                detail=(
+                    "Failed to delete the tracked deployment in Langflow. "
+                    "It may already have been deleted from the provider. "
+                    "Retry the delete request."
+                ),
             ) from exc
 
 
@@ -307,6 +354,11 @@ async def create_provider_account(
     current_user: CurrentActiveUser,
     telemetry: Annotated[DeploymentTelemetryCtx, Depends(provider_create_telemetry)],
 ):
+    await ensure_provider_account_permission(
+        current_user,
+        ProviderAccountAction.CREATE,
+        provider_account_user_id=current_user.id,
+    )
     telemetry.provider = payload.provider_key
     deployment_mapper = get_deployment_mapper(payload.provider_key)
     deployment_adapter = resolve_deployment_adapter(payload.provider_key)
@@ -340,6 +392,11 @@ async def list_provider_accounts(
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=50)] = 20,
 ):
+    await ensure_provider_account_permission(
+        current_user,
+        ProviderAccountAction.READ,
+        provider_account_user_id=current_user.id,
+    )
     offset = page_offset(page, size)
     provider_accounts = await list_provider_account_rows(session, user_id=current_user.id, offset=offset, limit=size)
     total = await count_provider_account_rows(session, user_id=current_user.id)
@@ -367,6 +424,15 @@ async def get_provider_account(
     provider_account = await get_provider_account_row_by_id(session, provider_id=provider_id, user_id=current_user.id)
     if provider_account is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment provider account not found.")
+    try:
+        await ensure_provider_account_permission(
+            current_user,
+            ProviderAccountAction.READ,
+            provider_account_id=provider_account.id,
+            provider_account_user_id=provider_account.user_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Deployment provider account not found.") from exc
     return get_deployment_mapper(provider_account.provider_key).resolve_provider_account_response(provider_account)
 
 
@@ -386,6 +452,15 @@ async def delete_provider_account(
         user_id=current_user.id,
         db=session,
     )
+    try:
+        await ensure_provider_account_permission(
+            current_user,
+            ProviderAccountAction.DELETE,
+            provider_account_id=provider_account.id,
+            provider_account_user_id=provider_account.user_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Deployment provider account not found.") from exc
     telemetry.provider = provider_account.provider_key
     telemetry.wxo_tenant_id = provider_account.provider_tenant_id
     deployment_count = await _count_provider_deployments_after_reconciliation(
@@ -422,6 +497,15 @@ async def update_provider_account(
         user_id=current_user.id,
         db=session,
     )
+    try:
+        await ensure_provider_account_permission(
+            current_user,
+            ProviderAccountAction.WRITE,
+            provider_account_id=provider_account.id,
+            provider_account_user_id=provider_account.user_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Deployment provider account not found.") from exc
     telemetry.provider = provider_account.provider_key
     telemetry.wxo_tenant_id = provider_account.provider_tenant_id
 
@@ -481,6 +565,27 @@ async def create_deployment(
 
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
+
+    # Authorize create (and flow:deploy) before any provider get/create so a
+    # denied caller cannot trigger provider reads, rate limits, or provider-side
+    # audit events via the existing-resource onboarding probe.
+    project_id = await resolve_project_id_for_deployment_create(payload=payload, user_id=current_user.id, db=session)
+    await ensure_deployment_permission(current_user, DeploymentAction.CREATE, project_id=project_id)
+    flow_version_ids = deployment_mapper.util_create_flow_version_ids(payload)
+    await validate_project_scoped_flow_version_ids(
+        flow_version_ids=flow_version_ids,
+        user_id=current_user.id,
+        project_id=project_id,
+        db=session,
+    )
+    await ensure_flow_deploy_for_version_ids(
+        user=current_user,
+        flow_version_ids=flow_version_ids,
+        owner_id=current_user.id,
+        db=session,
+        project_id=project_id,
+    )
+
     existing_resource_key = deployment_mapper.util_existing_deployment_resource_key_for_create(payload)
     existing_provider_resource: DeploymentGetResult | None = None
     if existing_resource_key is not None:
@@ -504,15 +609,6 @@ async def create_deployment(
                 db=session,
             )
     should_create_provider_resource = existing_resource_key is None
-    project_id = await resolve_project_id_for_deployment_create(payload=payload, user_id=current_user.id, db=session)
-    await ensure_deployment_permission(current_user, DeploymentAction.CREATE, project_id=project_id)
-    flow_version_ids = deployment_mapper.util_create_flow_version_ids(payload)
-    await validate_project_scoped_flow_version_ids(
-        flow_version_ids=flow_version_ids,
-        user_id=current_user.id,
-        project_id=project_id,
-        db=session,
-    )
     if should_create_provider_resource:
         adapter_payload = await deployment_mapper.resolve_deployment_create(
             user_id=current_user.id,
@@ -615,7 +711,9 @@ async def list_deployments(
     load_from_provider: Annotated[
         bool,
         Query(
-            description=("When true, list deployments directly from the provider (bypassing Langflow deployment rows).")
+            description=(
+                "When true, list deployments directly from the provider (bypassing Langflow-tracked deployments)."
+            )
         ),
     ] = False,
     flow_version_ids: Annotated[
@@ -646,22 +744,22 @@ async def list_deployments(
 ):
     if flow_ids and flow_version_ids:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="flow_ids and flow_version_ids are mutually exclusive.",
         )
     if load_from_provider and flow_version_ids:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="flow_version_ids filtering is not supported when loading deployments directly from the provider.",
         )
     if load_from_provider and flow_ids:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="flow_ids filtering is not supported when loading deployments directly from the provider.",
         )
     if load_from_provider and project_id is not None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="project_id filtering is not supported when loading deployments directly from the provider.",
         )
     effective_flow_version_ids = flow_version_ids
@@ -671,14 +769,66 @@ async def list_deployments(
             return DeploymentListResponse(deployments=[], page=params.page, size=params.size, total=0)
         effective_flow_version_ids = resolved
 
-    provider_account = await get_owned_provider_account_or_404(
-        provider_id=provider_id, user_id=current_user.id, db=session
+    # DB-layer authz prefilter: a registered authorization plugin can return the
+    # concrete set of deployment ids the caller may read, which we thread into
+    # ``list_deployments_synced`` so the page query and its total are constrained
+    # to (owner ⊕ visible) in SQL — skipping the per-row in-memory filter below
+    # and the N+1 it implies. OSS pass-through returns None → owner-scoped query
+    # plus ``filter_visible_resources`` unchanged.
+    #
+    # Computed up front (not after the provider-account gate) so a concrete list
+    # can also relax that gate: a shared deployment lives under its *owner's*
+    # provider account, so the strict owner gate would 404 a cross-user reader
+    # before the prefilter could widen anything. ``load_from_provider`` lists via
+    # the owner's live provider connection, so it always requires an owned account
+    # and never consults the prefilter.
+    visibility_scope = (
+        None
+        if load_from_provider
+        else await visible_scope_prefilter(
+            current_user,
+            resource_type="deployment",
+            domain=_resolve_authz_domain(None, project_id),
+            act=DeploymentAction.READ,
+        )
     )
-    await ensure_deployment_permission(
-        current_user,
-        DeploymentAction.READ,
-        project_id=project_id,
+
+    # OSS / no-plugin path keeps the strict owner gate. A structured prefilter
+    # may relax it only after the same SQL visibility predicate used by the page
+    # proves that this specific provider owns at least one row visible to the
+    # caller. A coarse workspace/project/global grant alone is not enough:
+    # loading arbitrary foreign provider UUIDs would expose an existence oracle.
+    use_shared_provider_lookup = bool(
+        visibility_scope is not None
+        and visibility_scope.has_cross_user_access
+        and await has_visible_deployment_for_provider(
+            session,
+            user_id=current_user.id,
+            deployment_provider_account_id=provider_id,
+            visibility_scope=visibility_scope,
+        )
     )
+    if use_shared_provider_lookup:
+        provider_account = await get_shared_listing_provider_account_or_404(provider_id=provider_id, db=session)
+    else:
+        provider_account = await get_owned_provider_account_or_404(
+            provider_id=provider_id, user_id=current_user.id, db=session
+        )
+    try:
+        await ensure_deployment_permission(
+            current_user,
+            DeploymentAction.READ,
+            project_id=project_id,
+        )
+    except HTTPException as exc:
+        if use_shared_provider_lookup:
+            # The relaxed provider-account lookup above loads by UUID alone so
+            # shared deployments can be listed. Once that path is active, mask
+            # a policy deny exactly like a missing account; otherwise callers
+            # could distinguish an existing foreign provider UUID (403) from a
+            # nonexistent UUID (404).
+            raise deny_to_404(exc, detail="Deployment provider account not found.") from exc
+        raise
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
     if load_from_provider:
@@ -700,6 +850,7 @@ async def list_deployments(
             deployment_adapter=deployment_adapter,
             deployment_mapper=deployment_mapper,
             user_id=current_user.id,
+            row_owner_id=provider_account.user_id,
             provider_id=provider_id,
             db=session,
             page=params.page,
@@ -707,24 +858,26 @@ async def list_deployments(
             deployment_type=deployment_type,
             flow_version_ids=effective_flow_version_ids,
             project_id=project_id,
+            visibility_scope=visibility_scope,
         )
     # Per-deployment authorization filter. Mirrors GET /flows/ and GET /projects/:
     # the coarse READ check above gates whether the caller can list deployments
-    # at all; this call drops individual rows the authorization plugin denies. OSS
-    # pass-through returns the input unchanged. ``rows_with_counts`` is
-    # ``list[tuple[Deployment, int, list[...]]]`` so the key/domain extractors
-    # operate on the first element. ``total`` may overcount denied items —
-    # accurate paginated counts need SQL-level prefilter (Phase 3, alongside
-    # ``authz_share``).
-    rows_with_counts = await filter_visible_resources(
-        current_user,
-        resource_type="deployment",
-        candidates=list(rows_with_counts),
-        key=lambda row: row[0].id,
-        domain_extractor=lambda row: _resolve_authz_domain(row[0].workspace_id, row[0].project_id),
-        owner_extractor=lambda row: row[0].user_id,
-        act=DeploymentAction.READ,
-    )
+    # at all; this call drops individual rows the authorization plugin denies.
+    # Runs only as the OSS in-memory fallback — when a concrete prefilter is
+    # available the SQL union already constrained the page (and ``total``), so we
+    # skip the per-row enforce. ``total`` may overcount denied items only on this
+    # fallback path. ``rows_with_counts`` is ``list[tuple[Deployment, int,
+    # list[...]]]`` so the key/domain extractors operate on the first element.
+    if visibility_scope is None:
+        rows_with_counts = await filter_visible_resources(
+            current_user,
+            resource_type="deployment",
+            candidates=list(rows_with_counts),
+            key=lambda row: row[0].id,
+            domain_extractor=lambda row: _resolve_authz_domain(row[0].workspace_id, row[0].project_id),
+            owner_extractor=lambda row: row[0].user_id,
+            act=DeploymentAction.READ,
+        )
     deployments = deployment_mapper.shape_deployment_list_items(
         rows_with_counts=rows_with_counts,
         # include flow_version_ids in list items only when
@@ -957,7 +1110,7 @@ async def list_deployment_configs(
 
     if provider_account is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="Either provider_id or deployment_id must be provided.",
         )
 
@@ -1227,7 +1380,7 @@ async def update_snapshot(
         )
     if flow_version.data is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Flow version '{body.flow_version_id}' has no data.",
         )
     await validate_project_scoped_flow_version_ids(
@@ -1235,6 +1388,14 @@ async def update_snapshot(
         user_id=owner_id,
         project_id=deployment.project_id,
         db=session,
+    )
+    await ensure_flow_deploy_for_version_ids(
+        user=current_user,
+        flow_version_ids=[body.flow_version_id],
+        owner_id=owner_id,
+        db=session,
+        project_id=deployment.project_id,
+        workspace_id=deployment.workspace_id,
     )
 
     provider_account = await get_owned_provider_account_or_404(
@@ -1458,12 +1619,6 @@ async def update_deployment(
     # owner's scope. ``current_user`` is still the actor for authorization
     # and audit, but the data plane operates in the owner's namespace.
     owner_id = deployment_row.user_id
-    adapter_payload = await deployment_mapper.resolve_deployment_update(
-        user_id=owner_id,
-        deployment_db_id=deployment_row_id,
-        db=session,
-        payload=payload,
-    )
     added_flow_version_ids, remove_flow_version_ids = resolve_flow_version_patch_for_update(
         deployment_mapper=deployment_mapper,
         payload=payload,
@@ -1473,6 +1628,25 @@ async def update_deployment(
         user_id=owner_id,
         project_id=deployment_row.project_id,
         db=session,
+    )
+    # Only newly published versions need flow:deploy; removals are gated by
+    # deployment:write alone today. There is no flow:undeploy (or similar) in
+    # FlowAction yet — consider adding one if detaching a version from a
+    # deployment should require its own grant. Authorize before
+    # resolve_deployment_update reads flow data.
+    await ensure_flow_deploy_for_version_ids(
+        user=current_user,
+        flow_version_ids=added_flow_version_ids,
+        owner_id=owner_id,
+        db=session,
+        project_id=deployment_row.project_id,
+        workspace_id=deployment_row.workspace_id,
+    )
+    adapter_payload = await deployment_mapper.resolve_deployment_update(
+        user_id=owner_id,
+        deployment_db_id=deployment_row_id,
+        db=session,
+        payload=payload,
     )
     with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(deployment_provider_account_id):
         update_result: DeploymentUpdateResult = await deployment_adapter.update(
@@ -1517,7 +1691,7 @@ async def update_deployment(
         # Roll back the session to discard any pending DB changes (or reset
         # it from the "inactive" state after a failed commit) so the mapper
         # can query the original attachment rows and build a compensating
-        # payload.
+        # payload. Compensating update must stay in the owner's namespace.
         await session.rollback()
         await rollback_provider_update(
             deployment_adapter=deployment_adapter,
@@ -1525,7 +1699,7 @@ async def update_deployment(
             deployment_db_id=deployment_row_id,
             deployment_resource_key=deployment_resource_key,
             deployment_provider_account_id=deployment_provider_account_id,
-            user_id=current_user.id,
+            user_id=owner_id,
             db=session,
         )
         if isinstance(exc, AttachmentConflictError):
@@ -1585,10 +1759,10 @@ async def delete_deployment(
                 deployment_row.resource_key,
                 deployment_row.deployment_provider_account_id,
             )
-    await _delete_local_deployment_row_with_commit_retry(
+    await _delete_local_deployment_row(
         session=session,
         deployment_id=deployment_row.id,
-        user_id=current_user.id,
+        user_id=deployment_row.user_id,
         resource_key=deployment_row.resource_key,
     )
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -40,8 +40,9 @@ from dotenv import load_dotenv
 from fastapi import HTTPException
 from httpx import HTTPError
 from jwt import InvalidTokenError
+from lfx.cli.command_plugins import register_cli_command_plugins
 from lfx.log.logger import configure, logger
-from lfx.services.settings.constants import DEFAULT_SUPERUSER, DEFAULT_SUPERUSER_PASSWORD
+from lfx.services.settings.constants import DEFAULT_SUPERUSER
 from multiprocess import cpu_count
 from multiprocess.context import Process
 from packaging import version as pkg_version
@@ -51,6 +52,7 @@ from rich.panel import Panel
 from rich.table import Table
 from sqlmodel import select
 
+from langflow.cli.admin import admin_app
 from langflow.cli.progress import create_langflow_progress
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.main import setup_app
@@ -58,7 +60,7 @@ from langflow.services.auth.utils import get_current_user_from_access_token
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError, check_postgresql_version_sync
 from langflow.services.deps import get_db_service, get_settings_service, is_settings_service_initialized, session_scope
-from langflow.services.utils import initialize_services
+from langflow.services.utils import get_auto_login_superuser_password, initialize_services
 from langflow.utils.version import fetch_latest_version, get_version_info
 from langflow.utils.version import is_pre_release as langflow_is_pre_release
 
@@ -80,6 +82,18 @@ try:
 except ImportError:
     # LFX not available, skip adding the sub-app
     pass
+
+# Mounted at the top level, not under `lfx`: the OTLP pipeline it checks is langflow's own
+# (langflow's telemetry service calls the same bootstrap), so `langflow observability doctor` is
+# the command an operator running langflow would look for.
+#
+# Deliberately outside the try/except above: lfx is already imported unguarded at module scope,
+# so an ImportError here means this module is broken, not that lfx is absent. Swallowing it
+# would make the command vanish from `langflow --help` with nothing said.
+from lfx.cli._observability_commands import observability_app  # noqa: E402
+
+app.add_typer(observability_app, name="observability")
+app.add_typer(admin_app, name="admin")
 
 
 class ProcessManager:
@@ -220,7 +234,60 @@ def build_direct_uvicorn_kwargs(
         "ssl_certfile": ssl_cert_file_path,
         "ssl_keyfile": ssl_key_file_path,
         "forwarded_allow_ips": "*" if trust_proxy else "",
+        # A request that arrives while another is still in flight on the same connection is
+        # queued as a pipelined request, and uvicorn then starts it from inside the finishing
+        # request's task (httptools_impl ``on_response_complete`` -> ``_start_asgi_task``).
+        # ``create_task`` copies the context, so the new request begins with the previous
+        # request's already-ended server span still current. OpenTelemetry's ASGI middleware
+        # reads that as nesting and emits the request as an INTERNAL child of an unrelated,
+        # finished request instead of as a SERVER root, which merges unrelated traces and
+        # hides roughly half of HTTP traffic from RED metrics and service maps. A browser page
+        # load triggers it; sequential curl never does. See CPython #140947.
+        "reset_contextvars": True,
     }
+
+
+MULTI_WORKER_BYPASS_ENV_VAR = "LANGFLOW_DANGEROUSLY_ALLOW_MULTI_WORKER_WITHOUT_SHARED_QUEUE"
+
+
+def multi_worker_bypass_warning(num_workers: int) -> str:
+    """Build the loud warning logged when the multi-worker guard is bypassed.
+
+    Kept next to :func:`ensure_multi_worker_safe` (rather than inlined) so the
+    same text can be reused by any other entrypoint that needs to re-state the
+    caveats, and so tests can assert the caveat list without provoking a boot.
+
+    The reattach poll interval is read from the live bus rather than restated so
+    the number in the warning cannot drift from the one actually used. The import
+    is local: this module is the CLI entrypoint and should not pull in background
+    execution machinery just to build a string.
+    """
+    from langflow.services.background_execution.live_bus import _DURABLE_POLL_INTERVAL_S
+
+    return (
+        f"{MULTI_WORKER_BYPASS_ENV_VAR}=true: starting with {num_workers} workers and the "
+        "default in-memory job queue. THIS CONFIGURATION IS UNSUPPORTED WITH THE LANGFLOW UI "
+        "AND WITH MCP OVER SSE. Every behavior that needs state shared across workers is "
+        "degraded:\n"
+        "  * The v1 /build editor and playground flows do not work. Build queues live in one "
+        "worker's memory and the follow-up GET /api/v1/build/<job_id>/events request is "
+        "round-robined to a different worker, which fails with 'Job queue not found for "
+        "job_id'.\n"
+        "  * MCP over SSE does not work: the SSE stream and the POST message endpoint that "
+        "feeds it must share a process. Use the Streamable HTTP transport instead.\n"
+        f"  * Reattaching to a background run falls back to polling the durable log every "
+        f"{_DURABLE_POLL_INTERVAL_S}s instead of receiving in-process events, so first-event "
+        "latency after a reattach is higher.\n"
+        "  * Rate limits are counted per worker while LANGFLOW_RATE_LIMIT_STORAGE_URI is "
+        "in-memory (memory://); the effective limit is multiplied by the worker count. Point "
+        "it at Redis for a shared counter.\n"
+        "  * The orphan-sweep file lock is node-local, so one worker per pod/replica runs the "
+        "startup reconcile rather than one per deployment.\n"
+        "  * Webhook UI feedback is per worker: the webhook event manager keeps its listener "
+        "registry in memory, so a webhook only surfaces live events when it happens to land on "
+        "the worker holding the browser's connection.\n"
+        "Set LANGFLOW_JOB_QUEUE_TYPE=redis to run multiple workers with full support."
+    )
 
 
 def ensure_multi_worker_safe(num_workers: int) -> None:
@@ -242,14 +309,27 @@ def ensure_multi_worker_safe(num_workers: int) -> None:
 
     Skipped entirely when ``LANGFLOW_JOB_QUEUE_TYPE=redis`` is configured —
     Redis-backed queues share state across workers and support every delivery
-    mode, so the race the check guards against cannot occur.
+    mode, so the race the check guards against cannot occur. Redis short-circuits
+    before the bypass is consulted: a properly configured deployment must never
+    see the bypass warning, even if the flag is left set in the environment.
+
+    ``LANGFLOW_DANGEROUSLY_ALLOW_MULTI_WORKER_WITHOUT_SHARED_QUEUE=true`` turns
+    the refusal into a loud warning for headless deployments that drive Langflow
+    through the API only and accept the degradations listed in
+    :func:`multi_worker_bypass_warning`. It is off by default and deliberately
+    named: it does not make multi-worker safe, it only stops the process from
+    refusing to boot.
 
     Only called on the Gunicorn (Linux) path — the direct-uvicorn path on
     Windows/macOS clamps workers to 1, so the race cannot occur there.
     """
     if num_workers <= 1:
         return
-    if get_settings_service().settings.job_queue_type == "redis":
+    settings = get_settings_service().settings
+    if settings.job_queue_type == "redis":
+        return
+    if settings.dangerously_allow_multi_worker_without_shared_queue:
+        logger.warning(multi_worker_bypass_warning(num_workers))
         return
     msg = (
         f"Refusing to start with {num_workers} workers and the default in-memory "
@@ -260,6 +340,9 @@ def ensure_multi_worker_safe(num_workers: int) -> None:
         "  * Configure a shared job queue: LANGFLOW_JOB_QUEUE_TYPE=redis. Works "
         "for every event_delivery mode.\n"
         "  * Run with --workers 1. Single worker, no cross-worker routing.\n"
+        f"  * If this deployment never uses the Langflow UI or MCP over SSE, set "
+        f"{MULTI_WORKER_BYPASS_ENV_VAR}=true to boot anyway and accept per-worker "
+        "behavior. Unsupported; read the startup warning it prints first.\n"
         "Note: event_delivery=direct works in multi-worker because the POST "
         "endpoint streams events back inline, but every client must opt into "
         "direct delivery; the server cannot enforce that at startup."
@@ -402,6 +485,13 @@ def run(
         None, help="Defines the SSL certificate file path.", show_default=False
     ),
     ssl_key_file_path: str | None = typer.Option(None, help="Defines the SSL key file path.", show_default=False),
+    deployment_profile: str | None = typer.Option(  # noqa: ARG001 — applied to settings via the CLI-arg loop below
+        None,
+        help="Deployment profile: 'dev' (default) or 'prod'. 'prod' runs fail-loud "
+        "production infrastructure checks before starting and aborts boot if a required "
+        "service is missing. Can also be set via LANGFLOW_DEPLOYMENT_PROFILE.",
+        show_default=False,
+    ),
 ) -> None:
     """Run Langflow."""
     if env_file:
@@ -469,6 +559,24 @@ def run(
 
         # create path object if frontend_path is provided
         static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
+
+    # Propagate the resolved profile to the environment so forked Gunicorn workers
+    # and factory-based entrypoints (which rebuild settings from env) observe it —
+    # this carries a --deployment-profile CLI flag through to the app factory.
+    resolved_profile = get_settings_service().settings.deployment_profile
+    os.environ["LANGFLOW_DEPLOYMENT_PROFILE"] = resolved_profile
+
+    # Production preflight: fail-loud infrastructure checks. Runs once here in the
+    # parent process, before any worker is spawned, so a misconfigured prod
+    # deployment aborts cleanly instead of coming up half-working. The FastAPI
+    # lifespan runs the same check as a safety net for entrypoints that bypass this
+    # CLI (e.g. `make backend`); a sentinel env var keeps it from running twice.
+    # No-op in dev.
+    if resolved_profile == "prod":
+        from langflow.cli.preflight import run_production_preflight
+
+        if not run_production_preflight(get_settings_service(), verbose=verbose):
+            raise typer.Exit(code=1)
 
     # Step 2: Starting Core Services
     app = None
@@ -844,10 +952,10 @@ def print_banner(host: str, port: int, protocol: str) -> None:
 @app.command()
 def superuser(
     username: str = typer.Option(
-        None, help="Username for the superuser. Defaults to 'langflow' when AUTO_LOGIN is enabled."
+        None, help="Username for the superuser. Defaults to the configured AUTO_LOGIN superuser."
     ),
     password: str = typer.Option(
-        None, help="Password for the superuser. Defaults to 'langflow' when AUTO_LOGIN is enabled."
+        None, help="Password for the superuser. Ignored when AUTO_LOGIN generates the bootstrap password."
     ),
     log_level: str = typer.Option("error", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
     auth_token: str = typer.Option(
@@ -856,7 +964,7 @@ def superuser(
 ) -> None:
     """Create a superuser.
 
-    When AUTO_LOGIN is enabled, uses default credentials.
+    When AUTO_LOGIN is enabled, uses configured or generated bootstrap credentials.
     In production mode, requires authentication.
     """
     configure(log_level=log_level)
@@ -866,7 +974,7 @@ def superuser(
 
 async def _create_superuser(username: str, password: str, auth_token: str | None):
     """Create a superuser."""
-    await initialize_services()
+    await initialize_services(skip_superuser_setup=True)
 
     settings_service = get_settings_service()
     # Check if superuser creation via CLI is enabled
@@ -876,9 +984,7 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
         raise typer.Exit(1)
 
     if settings_service.auth_settings.AUTO_LOGIN:
-        # Force default credentials for AUTO_LOGIN mode
-        username = DEFAULT_SUPERUSER
-        password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
+        username = getattr(settings_service.auth_settings, "SUPERUSER", None) or DEFAULT_SUPERUSER
     else:
         # Production mode - prompt for credentials if not provided
         if not username:
@@ -890,8 +996,6 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
 
     existing_superusers = []
     async with session_scope() as session:
-        # Note that the default superuser is created by the initialize_services() function,
-        # but leaving this check here in case we change that behavior
         existing_superusers = await get_all_superusers(session)
     is_first_setup = len(existing_superusers) == 0
 
@@ -905,6 +1009,7 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
             typer.echo("2. Run this command again with --auth-token")
             raise typer.Exit(1)
 
+        password = get_auto_login_superuser_password(settings_service.auth_settings)
         typer.echo(f"AUTO_LOGIN enabled. Creating default superuser '{username}'...")
         # Do not echo the default password to avoid exposing it in logs.
     # AUTO_LOGIN is false - production mode
@@ -921,17 +1026,13 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
         # Validate the auth token
         try:
             auth_user = None
-            async with session_scope() as session:
-                # Try JWT first
-                user = None
-                try:
-                    user = await get_current_user_from_access_token(auth_token, session)
-                except (InvalidTokenError, HTTPException):
-                    # Try API key
-                    api_key_result = await check_key(session, auth_token)
-                    if api_key_result and hasattr(api_key_result, "is_superuser"):
-                        user = api_key_result
-                auth_user = user
+            # Try JWT first, closing its session before falling back to API-key
+            # authentication, which owns a separate database transaction.
+            try:
+                async with session_scope() as session:
+                    auth_user = await get_current_user_from_access_token(auth_token, session)
+            except (InvalidTokenError, HTTPException):
+                auth_user = await check_key(auth_token)
 
             if not auth_user or not auth_user.is_superuser:
                 typer.echo(
@@ -976,6 +1077,66 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
         else:
             logger.error(f"SECURITY AUDIT: Failed attempt to create superuser '{username}' via CLI")
             typer.echo("Superuser creation failed.")
+
+
+@app.command(name="migrate-mcp")
+def migrate_mcp(
+    log_level: str = typer.Option("info", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    dry_run: bool = typer.Option(default=False, help="Report what would be imported without writing."),  # noqa: FBT001
+) -> None:
+    """Import existing per-user MCP config files (_mcp_servers_<id>.json) into the mcp_server table.
+
+    This also runs automatically on startup; use this command to run or preview it on demand.
+    It is idempotent and never deletes the legacy files.
+    """
+    configure(log_level=log_level)
+    asyncio.run(_migrate_mcp(dry_run=dry_run))
+
+
+async def _migrate_mcp(*, dry_run: bool) -> None:
+    from langflow.api.utils.mcp.backfill import backfill_mcp_servers_from_files
+
+    await initialize_services()
+    async with session_scope() as session:
+        summary = await backfill_mcp_servers_from_files(session, dry_run=dry_run)
+    verb = "would import" if dry_run else "imported"
+    typer.echo(
+        f"MCP migration complete: {verb} {summary['imported']} server(s) across "
+        f"{summary['users']} user(s) (skipped {summary['skipped']}, errors {summary['errors']})."
+    )
+
+
+@app.command(name="reconcile-kb-from-disk")
+def reconcile_kb_from_disk(
+    log_level: str = typer.Option("info", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+    username: str = typer.Option("", help="Only reconcile this user's knowledge bases."),
+    dry_run: bool = typer.Option(default=False, help="Report what would be adopted without writing."),  # noqa: FBT001
+) -> None:
+    """Adopt knowledge base directories on disk that have no database row.
+
+    The ``knowledge_base`` table is the sole authority for KB metadata, so this scan
+    no longer runs on every boot. Use it to recover KBs created by a Langflow version
+    that still wrote the on-disk ``embedding_metadata.json`` sidecar and that are not
+    showing up after an upgrade.
+
+    Idempotent, and it never deletes anything: directories that already have a row,
+    that carry the ``.kb_deleted`` marker, or whose metadata is unreadable are skipped.
+    """
+    configure(log_level=log_level)
+    asyncio.run(_reconcile_kb_from_disk(username=username or None, dry_run=dry_run))
+
+
+async def _reconcile_kb_from_disk(*, username: str | None, dry_run: bool) -> None:
+    from langflow.api.utils import knowledge_base_service
+
+    await initialize_services()
+    inserted = await knowledge_base_service.backfill_all_users_from_disk(
+        username=username,
+        dry_run=dry_run,
+    )
+    scope = f"user '{username}'" if username else "all users"
+    verb = "would adopt" if dry_run else "adopted"
+    typer.echo(f"Knowledge base reconciliation complete: {verb} {inserted} knowledge base(s) for {scope}.")
 
 
 # command to copy the langflow database from the cache to the current directory
@@ -1065,11 +1226,15 @@ def api_key(
         async with session_scope() as session:
             from langflow.services.database.models.user.model import User
 
-            stmt = select(User).where(User.username == DEFAULT_SUPERUSER)
+            superuser_username = auth_settings.SUPERUSER or DEFAULT_SUPERUSER
+            stmt = select(User).where(
+                User.username == superuser_username,
+                User.is_superuser == True,  # noqa: E712
+            )
             superuser = (await session.exec(stmt)).first()
             if not superuser:
                 typer.echo(
-                    "Default superuser not found. This command requires a superuser and AUTO_LOGIN to be enabled."
+                    "Auto-login superuser not found. This command requires a superuser and AUTO_LOGIN to be enabled."
                 )
                 return None
             from langflow.services.database.models.api_key.crud import create_api_key, delete_api_key
@@ -1111,6 +1276,9 @@ def version_option(
     ),
 ):
     pass
+
+
+register_cli_command_plugins(app)
 
 
 def api_key_banner(unmasked_api_key) -> None:

@@ -3,6 +3,8 @@ import datetime
 import hashlib
 import os
 import secrets
+from collections.abc import Callable
+from contextlib import AbstractAsyncContextManager
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from uuid import UUID
@@ -15,7 +17,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from langflow.services.auth import utils as auth_utils
 from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate, ApiKeyRead, UnmaskedApiKeyRead
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_settings_service, session_scope
 
 if TYPE_CHECKING:
     from sqlmodel.sql.expression import SelectOfScalar
@@ -30,9 +32,17 @@ class ApiKeyAuthResult:
     api_key_id: UUID | None = None
 
 
+SessionScopeFactory = Callable[[], AbstractAsyncContextManager[AsyncSession]]
+
+
 def hash_api_key(api_key: str) -> str:
     """One-way SHA-256 hash of a plaintext API key for indexed lookup."""
     return hashlib.sha256(api_key.encode()).hexdigest()
+
+
+def _api_keys_match(provided: str, expected: str) -> bool:
+    """Compare API keys without content-dependent short-circuiting."""
+    return secrets.compare_digest(provided.encode(), expected.encode())
 
 
 def _is_expired(expires_at: datetime.datetime | None) -> bool:
@@ -120,7 +130,7 @@ async def delete_api_key(session: AsyncSession, api_key_id: UUID, user_id: UUID)
     await session.delete(api_key)
 
 
-async def check_key(session: AsyncSession, api_key: str) -> User | None:
+async def check_key(api_key: str) -> User | None:
     """Check if the API key is valid.
 
     Validates API keys based on the LANGFLOW_API_KEY_SOURCE setting:
@@ -128,20 +138,36 @@ async def check_key(session: AsyncSession, api_key: str) -> User | None:
     - 'env': Validates against the LANGFLOW_API_KEY environment variable,
              falls back to database if env validation fails
     """
+    result = await authenticate_api_key(api_key)
+    return result.user if result is not None else None
+
+
+async def authenticate_api_key(api_key: str) -> ApiKeyAuthResult | None:
+    """Validate an API key in an owned transaction and return non-secret metadata."""
+    return await _authenticate_api_key_in_owned_scope(api_key, session_scope)
+
+
+async def _authenticate_api_key_in_owned_scope(
+    api_key: str,
+    scope_factory: SessionScopeFactory,
+) -> ApiKeyAuthResult | None:
+    """Authenticate and durably persist bookkeeping in a top-level transaction."""
     settings_service = get_settings_service()
-    api_key_source = settings_service.auth_settings.API_KEY_SOURCE
+    async with scope_factory() as auth_session:
+        result = await _authenticate_api_key_with_session(auth_session, api_key, settings_service)
+        if result is not None and result.user in auth_session:
+            # Keep scalar user fields available after the owned scope commits and
+            # closes, independent of the session maker's expire_on_commit value.
+            auth_session.expunge(result.user)
+        return result
 
-    if api_key_source == "env":
-        user = await _check_key_from_env(session, api_key, settings_service)
-        if user is not None:
-            return user
-        # Fallback to database if env validation fails
-    return await _check_key_from_db(session, api_key, settings_service)
 
-
-async def authenticate_api_key(session: AsyncSession, api_key: str) -> ApiKeyAuthResult | None:
-    """Validate an API key and return the user plus non-secret key metadata."""
-    settings_service = get_settings_service()
+async def _authenticate_api_key_with_session(
+    session: AsyncSession,
+    api_key: str,
+    settings_service,
+) -> ApiKeyAuthResult | None:
+    """Transaction-local API-key authentication implementation."""
     api_key_source = settings_service.auth_settings.API_KEY_SOURCE
 
     if api_key_source == "env":
@@ -207,11 +233,10 @@ async def _check_key_from_db_with_context(
         api_key_obj = matches[0]
         if _is_expired(api_key_obj.expires_at):
             return None
-        # Resolve + authorize the user BEFORE mutating usage counters so a denied
-        # authentication (missing user or blocked external user) does not bump
-        # total_uses / last_used_at.
+        # Resolve + authorize the user BEFORE the usage counters, so a denied authentication
+        # (missing user, blocked external user) does not bump total_uses / last_used_at.
         user = await session.get(User, api_key_obj.user_id)
-        if user is None:
+        if user is None or not user.is_active:
             return None
         if await _external_access_ceiling_blocks_user(session, user, settings_service):
             logger.info("API key rejected for externally managed user while external access ceiling is enabled")
@@ -243,20 +268,19 @@ async def _check_key_from_db_with_context(
             continue
 
         # decrypt_api_key returns "" on failure (never raises for decryption errors)
-        if stored_value == api_key:
+        if _api_keys_match(api_key, stored_value):
             matched = True
         else:
             candidate = auth_utils.decrypt_api_key(stored_value)
-            matched = candidate == api_key
+            matched = _api_keys_match(api_key, candidate)
 
         if matched:
             if _is_expired(api_key_obj.expires_at):
                 return None
-            # Resolve + authorize the user BEFORE mutating usage counters / hash
-            # backfill so a denied authentication (missing user or blocked
-            # external user) does not bump total_uses / last_used_at.
+            # Resolve + authorize the user BEFORE the usage counters / hash backfill, so a denied
+            # authentication (missing user, blocked external user) does not bump total_uses.
             user = await session.get(User, api_key_obj.user_id)
-            if user is None:
+            if user is None or not user.is_active:
                 return None
             if await _external_access_ceiling_blocks_user(session, user, settings_service):
                 logger.info("API key rejected for externally managed user while external access ceiling is enabled")
@@ -289,8 +313,7 @@ async def _check_key_from_env(session: AsyncSession, api_key: str, settings_serv
     if not env_api_key:
         return None
 
-    # Compare the provided API key with the environment variable
-    if api_key != env_api_key:
+    if not _api_keys_match(api_key, env_api_key):
         return None
 
     # Return the superuser for authorization purposes

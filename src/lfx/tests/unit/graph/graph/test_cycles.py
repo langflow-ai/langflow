@@ -6,13 +6,13 @@ try:
     from lfx.components.input_output import ChatInput, ChatOutput, TextOutputComponent
     from lfx.components.input_output.text import TextInputComponent
     from lfx.components.logic.conditional_router import ConditionalRouterComponent
-    from lfx.components.openai.openai_chat_model import OpenAIModelComponent
     from lfx.components.processing import PromptComponent
     from lfx.custom.custom_component.component import Component
     from lfx.graph.graph.base import Graph
     from lfx.graph.graph.utils import find_cycle_vertices
     from lfx.io import MessageTextInput, Output
     from lfx.schema.message import Message
+    from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 except Exception as e:
     pytest.skip(f"Failed to import components in tests. Exception: {e}", allow_module_level=True)
 

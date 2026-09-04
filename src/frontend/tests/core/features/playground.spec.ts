@@ -7,7 +7,7 @@ import { TIMEOUTS } from "../../utils/constants/timeouts";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
-import { disableInspectPanel } from "../../utils/open-advanced-options";
+import { sendPlaygroundMessage } from "../../utils/playground/send-playground-message";
 import { sessionMoreMenu } from "../../utils/playground/sessions";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -20,8 +20,6 @@ test(
     await openBlankFlow(page);
 
     await addLegacyComponents(page);
-
-    await disableInspectPanel(page);
 
     await addComponentFromSidebar(page, {
       search: "chat output",
@@ -66,9 +64,7 @@ test(
     });
 
     //send message
-    await page.getByTestId(TID.inputChatPlayground).click();
-    await page.getByTestId(TID.inputChatPlayground).fill("message 1");
-    await page.keyboard.press("Enter");
+    await sendPlaygroundMessage(page, "message 1", { sendBy: "enter" });
     await expect(page.getByTestId("chat-message-User-message 1")).toBeVisible();
     await expect(page.getByTestId("chat-message-AI-message 1")).toBeVisible();
 
@@ -111,13 +107,12 @@ test(
     await expect(page.getByTitle("New Session 0")).toBeVisible();
 
     // check rename session
-    await page
-      .getByTestId(TID.inputChatPlayground)
-      .fill("session_after_delete");
-    await page.keyboard.press("Enter");
-    await page
-      .getByTestId("chat-message-User-session_after_delete")
-      .isVisible();
+    await sendPlaygroundMessage(page, "session_after_delete", {
+      sendBy: "enter",
+    });
+    await expect(
+      page.getByTestId("chat-message-User-session_after_delete"),
+    ).toBeVisible();
     // Use sidebar session more menu for rename
     await sessionMoreMenu(page, "last").click();
     await page.getByTestId("rename-session-option").click();
@@ -149,11 +144,9 @@ test(
 
     //create new session
     await page.getByTestId(TID.newChat).click();
-    await page.getByTestId(TID.inputChatPlayground).click();
-    await page
-      .getByTestId(TID.inputChatPlayground)
-      .fill("session_after_delete");
-    await page.keyboard.press("Enter");
+    await sendPlaygroundMessage(page, "session_after_delete", {
+      sendBy: "enter",
+    });
     await expect(
       page.getByTestId("chat-message-User-session_after_delete"),
     ).toBeVisible();

@@ -75,6 +75,14 @@ export const SanitizedMarkdown = ({
             isEmpty ? "text-muted-foreground" : "text-primary",
           )}
           components={{
+            // Spread first, then pin target/rel, so a raw-HTML anchor that
+            // arrives with its own target/rel cannot opt out of noopener.
+            // Matches the link handling every other Markdown site here uses.
+            a: ({ node, ...props }) => (
+              <a {...props} target="_blank" rel="noopener noreferrer">
+                {props.children}
+              </a>
+            ),
             p({ node, ...props }) {
               return (
                 <p className="w-fit max-w-full my-1.5 last:mb-0 first:mt-0">
@@ -109,7 +117,7 @@ export const SanitizedMarkdown = ({
               );
             },
             // biome-ignore lint/suspicious/noExplicitAny: pre-existing react-markdown override; proper type cleanup out of scope for this PR
-            code: ({ node, inline, className, children, ...props }: any) => {
+            code: ({ node, className, children, ...props }: any) => {
               let content = children as string;
               if (
                 Array.isArray(children) &&
@@ -130,9 +138,18 @@ export const SanitizedMarkdown = ({
                   }
                 }
 
+                // react-markdown v8+ removed the `inline` prop. Detect a
+                // fenced code block by the presence of either a
+                // `language-X` className (hinted block) or multi-line
+                // content (unhinted block). Anything else is inline
+                // backtick code — rendering it as a `<div>`/`<pre>`
+                // CodeTabsComponent inside a markdown `<p>` triggers the
+                // 'div cannot be a descendant of p' hydration error.
                 const match = /language-(\w+)/.exec(className || "");
+                const isBlock =
+                  match !== null || (content?.includes("\n") ?? false);
 
-                return !inline ? (
+                return isBlock ? (
                   <CodeTabsComponent
                     language={(match && match[1]) || ""}
                     code={String(content).replace(/\n$/, "")}

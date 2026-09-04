@@ -86,6 +86,15 @@ def load_registry_with_user_overlay(*, user_id: str | None) -> dict[str, dict]:
     """
     base_registry = load_local_registry()
 
+    # SECURITY: building an overlay entry instantiates the user's generated code in-process
+    # (build_custom_component_template -> compile/exec of the class). When the operator has disabled
+    # custom components, do NOT load/execute user-generated components — return only the built-in
+    # registry so the assistant cannot become a code-execution path that bypasses the platform policy.
+    from lfx.services.deps import get_settings_service
+
+    if not get_settings_service().settings.allow_custom_components:
+        return base_registry
+
     if user_id is None:
         return base_registry
 
@@ -189,6 +198,15 @@ def _build_overlay_entry(py_file: Path, base_template: dict) -> dict | None:
     # syntax-broken files rather than letting downstream consumers crash.
     if not _is_parseable_python(code):
         logger.debug("Skipping %s: not parseable Python", py_file.name)
+        return None
+
+    # Files may survive an upgrade from a release whose scanner permitted
+    # dangerous code, or may have been planted outside the privileged writer.
+    # Refuse them before the template builder imports and executes the source.
+    from langflow.agentic.helpers.code_security import scan_code_security
+
+    if not scan_code_security(code).is_safe:
+        logger.warning("Skipping %s: failed component security validation", py_file.name)
         return None
 
     # PRIMARY: build the REAL template by introspecting the component —

@@ -50,7 +50,7 @@ export default function AppHeader(): JSX.Element {
   };
 
   return (
-    <div
+    <header
       className={`z-10 flex h-[48px] w-full items-center justify-between border-b pr-5 pl-2.5 dark:bg-background`}
       data-testid="app-header"
     >
@@ -64,8 +64,9 @@ export default function AppHeader(): JSX.Element {
           onClick={() => navigate("/")}
           className="mr-1 flex h-8 w-8 items-center"
           data-testid="icon-ChevronLeft"
+          aria-label={t("header.home")}
         >
-          <LangflowLogo className="h-5 w-5" />
+          <LangflowLogo className="h-5 w-5" aria-hidden="true" />
         </Button>
         <CustomOrgSelector />
       </div>
@@ -88,11 +89,16 @@ export default function AppHeader(): JSX.Element {
           notificationRef={notificationContentRef}
           onClose={() => setActiveState(null)}
         >
-          <ShadTooltip content={t("header.notifications")} side="bottom">
+          <ShadTooltip
+            content={t("header.notifications")}
+            side="bottom"
+            ariaDescribedBy={undefined}
+          >
             <AlertDropdown onClose={() => setActiveState(null)}>
               <Button
                 ref={notificationRef}
                 unstyled
+                aria-label={t("header.notifications")}
                 onClick={() =>
                   setActiveState((prev) =>
                     prev === "notifications" ? null : "notifications",
@@ -128,6 +134,6 @@ export default function AppHeader(): JSX.Element {
           <CustomAccountMenu />
         </div>
       </div>
-    </div>
+    </header>
   );
 }

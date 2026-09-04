@@ -39,7 +39,9 @@ export const McpAuthSection = ({
             content={
               !composerUrlData?.error_message
                 ? undefined
-                : `MCP Server is not running: ${composerUrlData?.error_message}`
+                : t("mcp.serverNotRunning", {
+                    message: composerUrlData?.error_message,
+                  })
             }
           >
             <span

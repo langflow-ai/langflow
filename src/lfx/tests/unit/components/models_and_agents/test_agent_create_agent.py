@@ -5,8 +5,10 @@ It does NOT rely on `LCAgentComponent.run_agent()` or `ToolCallingAgentComponent
 internally — those code paths still exist for legacy components but are bypassed here.
 """
 
+import json
 import os
 from collections.abc import AsyncIterator
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -108,6 +110,29 @@ async def test_should_apply_tool_retry_middleware_when_handle_parsing_errors_set
 
     middleware = captured.get("middleware") or []
     assert any(isinstance(m, ToolRetryMiddleware) for m in middleware)
+
+
+@pytest.mark.asyncio
+async def test_should_apply_tool_call_id_middleware_when_tools_are_attached() -> None:
+    """Normalize missing IDs before LangGraph constructs error ToolMessages."""
+    from lfx.components.models_and_agents.agent_helpers.tool_call_id_middleware import ToolCallIDMiddleware
+
+    captured: dict = {}
+
+    def _capture_create_agent(**kwargs):
+        captured.update(kwargs)
+        return MagicMock(name="compiled_state_graph")
+
+    component = _build_component()
+    component.set_attributes({"tools": [MagicMock(name="some_tool")]})
+    with (
+        patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_create_agent),
+    ):
+        component.create_agent_runnable()
+
+    middleware = captured.get("middleware") or []
+    assert any(isinstance(m, ToolCallIDMiddleware) for m in middleware)
 
 
 @pytest.mark.asyncio
@@ -589,7 +614,7 @@ async def test_should_pass_event_manager_on_token_callback_to_process_agent_even
     """
     captured: dict = {}
 
-    async def _capture_process(stream, _agent_message, _send_message_callback, on_token_callback=None):
+    async def _capture_process(stream, _agent_message, _send_message_callback, on_token_callback=None, **_kw):
         # consume the stream so the adapter doesn't leak
         async for _ in stream:
             pass
@@ -619,7 +644,7 @@ async def test_should_pass_none_on_token_callback_when_event_manager_is_absent()
     """Regression guard: no event_manager → on_token_callback must be None, not a stub."""
     captured: dict = {}
 
-    async def _capture_process(stream, _agent_message, _send_message_callback, on_token_callback=None):
+    async def _capture_process(stream, _agent_message, _send_message_callback, on_token_callback=None, **_kw):
         async for _ in stream:
             pass
         captured["on_token"] = on_token_callback
@@ -1176,13 +1201,41 @@ def test_should_return_none_when_system_prompt_is_none() -> None:
     assert component._inject_dynamic_prompt_values(None) is None
 
 
-def test_should_still_replace_placeholders_when_system_prompt_is_plain_string() -> None:
-    """Regression guard: the plain-string path must keep working unchanged."""
-    component = _build_component()
-    with patch.object(type(component), "_get_resolved_model_name", return_value="m1"):
-        result = component._inject_dynamic_prompt_values("hello {model_name}")
+def test_should_render_default_system_prompt_at_agent_runtime_seam() -> None:
+    """The component must resolve the default prompt's runtime environment fields."""
+    from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 
-    assert result == "hello m1"
+    component = _build_component()
+    with patch.object(type(component), "_get_resolved_model_name", return_value="loopback-model"):
+        result = component._inject_dynamic_prompt_values(DEFAULT_SYSTEM_PROMPT_TEMPLATE)
+
+    assert result is not None
+    assert "{current_date}" not in result
+    assert "{model_name}" not in result
+    assert "loopback-model" in result
+    assert "# Environment" in result
+
+
+def test_should_pass_custom_system_prompt_through_unchanged_without_opt_in_placeholders() -> None:
+    """Custom prompts are byte-preserved unless they opt in with a known placeholder."""
+    component = _build_component()
+    custom = 'Keep this JSON literal unchanged: {"answer": 42}.'
+
+    assert component._inject_dynamic_prompt_values(custom) == custom
+
+
+def test_should_replace_known_placeholders_in_opted_in_custom_system_prompt() -> None:
+    """A custom prompt can independently opt into date/model substitution."""
+    component = _build_component()
+    custom = 'Model {model_name} on {current_date}; JSON: {"answer": 42}.'
+    with patch.object(type(component), "_get_resolved_model_name", return_value="m1"):
+        result = component._inject_dynamic_prompt_values(custom)
+
+    assert result is not None
+    assert "{model_name}" not in result
+    assert "{current_date}" not in result
+    assert "Model m1 on " in result
+    assert '{"answer": 42}' in result
 
 
 # ===== max_iterations must never silently disable the call cap =================
@@ -1479,3 +1532,405 @@ async def test_should_pass_stream_true_to_get_llm_when_self_stream_toggle_is_tru
         component._get_llm()
 
     assert captured.get("stream") is True
+
+
+def _gated_tool(name: str):
+    """A connected tool whose action was marked 'Require approval' on the tool."""
+    return SimpleNamespace(name=name, metadata={"approval_actions": ["approve", "reject"]})
+
+
+def test_should_attach_hitl_middleware_when_a_tool_is_gated() -> None:
+    """LE-1447 Slice 1: a tool whose action requires approval adds HumanInTheLoopMiddleware."""
+    from langchain.agents.middleware import HumanInTheLoopMiddleware
+
+    component = _build_component()
+    component.set_attributes({"tools": [_gated_tool("search")]})
+
+    middleware = component._build_middleware(MagicMock(name="fake_llm"))
+
+    hitl = [m for m in middleware if isinstance(m, HumanInTheLoopMiddleware)]
+    assert len(hitl) == 1
+    assert component._gated_interrupt_on() == {"search": {"allowed_decisions": ["approve", "reject"]}}
+
+
+def test_should_omit_hitl_middleware_when_no_tools_gated() -> None:
+    """A tool with no approval flag keeps the existing graph shape (no HITL middleware)."""
+    from langchain.agents.middleware import HumanInTheLoopMiddleware
+
+    component = _build_component()
+    component.set_attributes({"tools": [SimpleNamespace(name="search", metadata={})]})
+
+    middleware = component._build_middleware(MagicMock(name="fake_llm"))
+
+    assert not any(isinstance(m, HumanInTheLoopMiddleware) for m in middleware)
+
+
+def test_gates_only_tools_marked_for_approval() -> None:
+    """Only tools whose metadata lists approval_actions are gated; others run freely."""
+    component = _build_component()
+    component.set_attributes(
+        {"tools": [_gated_tool("transfer"), SimpleNamespace(name="search", metadata={"approval_actions": []})]}
+    )
+
+    assert component._gated_interrupt_on() == {"transfer": {"allowed_decisions": ["approve", "reject"]}}
+
+
+def test_gated_interrupt_on_empty_when_no_tool_marked() -> None:
+    component = _build_component()
+    component.set_attributes({"tools": [SimpleNamespace(name="search", metadata=None)]})
+
+    assert component._gated_interrupt_on() == {}
+
+
+def _capture_kwargs(captured: dict):
+    def _capture(**kwargs):
+        captured.update(kwargs)
+        return MagicMock(name="compiled_state_graph")
+
+    return _capture
+
+
+@pytest.mark.asyncio
+async def test_should_pass_durable_checkpointer_when_gated_with_run_context() -> None:
+    """LE-1447 Slice 3: a gated tool + a per-run id wires the durable saver + thread_id."""
+    from lfx.components.models_and_agents.agent_helpers.job_checkpoint_saver import JobCheckpointSaver
+
+    captured: dict = {}
+    component = _build_component()
+    component._run_id = "job-1"
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]}
+    )
+    with (
+        patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_kwargs(captured)),
+    ):
+        component.create_agent_runnable()
+
+    assert isinstance(captured.get("checkpointer"), JobCheckpointSaver)
+    assert component._agent_thread_id() == "job-1"
+
+
+@pytest.mark.asyncio
+async def test_should_omit_checkpointer_when_no_tools_gated() -> None:
+    captured: dict = {}
+    component = _build_component()
+    component._run_id = "job-1"
+    component.set_attributes({"tools": [SimpleNamespace(name="transfer", metadata={})]})
+    with (
+        patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_kwargs(captured)),
+    ):
+        component.create_agent_runnable()
+
+    assert captured.get("checkpointer") is None
+
+
+@pytest.mark.asyncio
+async def test_should_omit_checkpointer_and_hitl_when_allow_interrupts_false() -> None:
+    """The structured-output path disables interrupts: no checkpointer, no HITL middleware."""
+    from langchain.agents.middleware import HumanInTheLoopMiddleware
+
+    captured: dict = {}
+    component = _build_component()
+    component._run_id = "job-1"
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]}
+    )
+    with (
+        patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
+        patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_kwargs(captured)),
+    ):
+        component.create_agent_runnable(allow_interrupts=False)
+
+    assert captured.get("checkpointer") is None
+    assert not any(isinstance(m, HumanInTheLoopMiddleware) for m in (captured.get("middleware") or []))
+
+
+_INTERRUPT_VALUE = {
+    "action_requests": [{"name": "transfer", "args": {"amount": 100}, "description": "Transfer $100 to Bob"}],
+    "review_configs": [{"action_name": "transfer", "allowed_decisions": ["approve", "reject"]}],
+}
+
+
+def test_should_map_middleware_interrupt_to_tool_approval_request() -> None:
+    """LE-1447 Slice 4: a HumanInTheLoopMiddleware interrupt maps to the HITL pause contract."""
+    component = _build_component()
+    component._vertex = SimpleNamespace(graph=SimpleNamespace(run_id="job-1"))
+
+    request = component._map_interrupt_to_request(_INTERRUPT_VALUE)
+
+    assert request["kind"] == "tool_approval"
+    assert request["request_id"].endswith(":job-1")
+    assert request["prompt"] == "Transfer $100 to Bob"
+    assert request["allowed_decisions"] == ["approve", "reject"]
+    assert request["options"] == [
+        {"action_id": "approve", "label": "Approve"},
+        {"action_id": "reject", "label": "Reject"},
+    ]
+    assert request["action_requests"] == _INTERRUPT_VALUE["action_requests"]
+
+
+@pytest.mark.asyncio
+async def test_should_request_pause_when_agent_stops_on_tool_approval_interrupt() -> None:
+    """LE-1447 Slice 4: a pending interrupt makes run_agent suspend instead of completing.
+
+    The drained stream leaves the interrupt in the checkpointer; `process_agent_events`
+    queries it via the getter and raises, so `run_agent` requests a graph pause carrying
+    the tool-approval request rather than writing a 'complete' message.
+    """
+    component = _build_component()
+    component._run_id = "job-1"
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]}
+    )
+    langflow_graph = MagicMock(run_id="job-1", session_id="11111111-1111-1111-1111-111111111111")
+    component._vertex = SimpleNamespace(graph=langflow_graph)
+    component.send_message = AsyncMock(side_effect=lambda message, **_kwargs: message)
+
+    fake_graph = MagicMock(spec=CompiledStateGraph)
+    fake_graph.astream_events = lambda *_args, **_kwargs: _empty_event_stream()
+    fake_graph.aget_state = AsyncMock(
+        return_value=SimpleNamespace(interrupts=[SimpleNamespace(value=_INTERRUPT_VALUE)], tasks=[])
+    )
+
+    with patch.object(type(component), "_get_shared_callbacks", return_value=[]):
+        result = await component.run_agent(fake_graph)
+
+    langflow_graph.request_pause.assert_called_once()
+    _, kwargs = langflow_graph.request_pause.call_args
+    assert kwargs["reason"] == "human_input_required"
+    assert kwargs["data"]["kind"] == "tool_approval"
+    assert kwargs["data"]["allowed_decisions"] == ["approve", "reject"]
+    assert result.properties.state != "complete"
+
+
+def test_should_translate_each_action_id_to_its_middleware_decision_shape() -> None:
+    """LE-1447 Slice 5: approve/edit/reject/respond map to the HITL middleware resume shape."""
+    component = _build_component()
+    action_request = {"name": "transfer", "args": {"amount": 100}}
+
+    assert component._to_langgraph_decision({"action_id": "approve"}, action_request) == {"type": "approve"}
+    assert component._to_langgraph_decision({"action_id": "reject", "values": {"message": "no"}}, action_request) == {
+        "type": "reject",
+        "message": "no",
+    }
+    assert component._to_langgraph_decision(
+        {"action_id": "respond", "values": {"message": "use 50"}}, action_request
+    ) == {"type": "respond", "message": "use 50"}
+    assert component._to_langgraph_decision(
+        {"action_id": "edit", "values": {"args": {"amount": 50}}}, action_request
+    ) == {
+        "type": "edit",
+        "edited_action": {"name": "transfer", "args": {"amount": 50}},
+    }
+
+
+@pytest.mark.asyncio
+async def test_should_stream_resume_command_when_a_human_decision_is_injected() -> None:
+    """LE-1447 Slice 5: on resume, run_agent feeds the graph a Command(resume=...), not the input.
+
+    The injected decision plus the checkpointed interrupt produce one Decision per pending
+    tool call so LangGraph continues the paused thread instead of starting over.
+    """
+    from langgraph.types import Command
+
+    component = _build_component()
+    component._run_id = "job-1"
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]}
+    )
+    langflow_graph = MagicMock(run_id="job-1", session_id="11111111-1111-1111-1111-111111111111")
+    langflow_graph.human_input_decisions = {f"{component._id}:job-1": {"action_id": "approve"}}
+    component._vertex = SimpleNamespace(graph=langflow_graph)
+    component.send_message = AsyncMock(side_effect=lambda message, **_kwargs: message)
+
+    captured: dict = {}
+
+    def _astream(stream_input, *, config, **_kwargs):  # noqa: ARG001
+        captured["input"] = stream_input
+        return _empty_event_stream()
+
+    fake_graph = MagicMock(spec=CompiledStateGraph)
+    fake_graph.astream_events = _astream
+    fake_graph.aget_state = AsyncMock(
+        return_value=SimpleNamespace(interrupts=[SimpleNamespace(value=_INTERRUPT_VALUE)], tasks=[])
+    )
+
+    with patch.object(type(component), "_get_shared_callbacks", return_value=[]):
+        await component.run_agent(fake_graph)
+
+    assert isinstance(captured["input"], Command)
+    assert captured["input"].resume == {"decisions": [{"type": "approve"}]}
+
+
+@pytest.mark.asyncio
+async def test_should_not_probe_interrupts_when_agent_has_no_checkpointer() -> None:
+    """LE-1447 Slice 6: the structured-output path builds without a checkpointer.
+
+    Even on a gated component, run_agent must not query interrupt state (which would
+    raise on a checkpointer-less graph) and must complete normally.
+    """
+    component = _build_component()
+    component._run_id = "job-1"
+    component.set_attributes(
+        {"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]}
+    )
+    langflow_graph = MagicMock(run_id="job-1", session_id="11111111-1111-1111-1111-111111111111")
+    component._vertex = SimpleNamespace(graph=langflow_graph)
+    component.send_message = AsyncMock(side_effect=lambda message, **_kwargs: message)
+
+    fake_graph = MagicMock(spec=CompiledStateGraph)
+    fake_graph.checkpointer = None
+    fake_graph.astream_events = lambda *_args, **_kwargs: _empty_event_stream()
+    fake_graph.aget_state = AsyncMock(side_effect=AssertionError("aget_state must not run without a checkpointer"))
+
+    with patch.object(type(component), "_get_shared_callbacks", return_value=[]):
+        result = await component.run_agent(fake_graph)
+
+    langflow_graph.request_pause.assert_not_called()
+    assert result.properties.state == "complete"
+
+
+@pytest.mark.asyncio
+async def test_legacy_agent_llm_selection_participates_in_async_provider_policy(monkeypatch) -> None:
+    from lfx.components.models_and_agents.agent import AgentComponent
+    from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+    component = AgentComponent(
+        model=[],
+        agent_llm="Anthropic",
+        model_name="claude-test",
+        _user_id="resource-owner",
+        _parameters={"model": [], "agent_llm": "Anthropic", "model_name": "claude-test"},
+    )
+    denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.USE)
+    snapshot = SimpleNamespace(require=MagicMock(side_effect=denial))
+    resolve_policy = AsyncMock(return_value=snapshot)
+    monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+
+    with pytest.raises(ModelProviderPolicyError):
+        await component.arequire_model_provider_policy(
+            ModelProviderPolicyPurpose.USE,
+            user_id="policy-actor",
+            parameters={"model": [], "agent_llm": "Anthropic", "model_name": "claude-test"},
+        )
+
+    resolve_policy.assert_awaited_once_with(
+        user_id="policy-actor",
+        providers=["anthropic"],
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+
+
+@pytest.mark.asyncio
+async def test_historical_embedded_agent_llm_selection_uses_base_provider_policy(monkeypatch) -> None:
+    """A saved 1.6 Agent lacks today's override but inherits the current base gate."""
+    from lfx.base.models import model_input_constants
+    from lfx.custom.custom_component.component import Component
+    from lfx.custom.utils import build_custom_component_template
+    from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+    fixture = Path(__file__).parents[3] / "data" / "starter_projects_1_6_0" / "News Aggregator.json"
+    flow = json.loads(fixture.read_text(encoding="utf-8"))["data"]
+    agent_template = next(
+        node["data"]["node"]["template"] for node in flow["nodes"] if "agent_llm" in node["data"]["node"]["template"]
+    )
+    source = agent_template["code"]["value"]
+    # The fixture's provider catalog predates the current compatibility module.
+    # Supply only the inert metadata needed to evaluate its class definition.
+    monkeypatch.setattr(
+        model_input_constants,
+        "MODEL_PROVIDERS_DICT",
+        {provider: {"inputs": []} for provider in ("Anthropic", "Google Generative AI", "OpenAI")},
+    )
+    monkeypatch.setattr(
+        model_input_constants,
+        "MODELS_METADATA",
+        {provider: {} for provider in ("Anthropic", "Google Generative AI", "OpenAI")},
+    )
+    _frontend_node, historical_agent = build_custom_component_template(Component(_code=source))
+
+    denial = ModelProviderPolicyError("openai", ModelProviderPolicyPurpose.USE)
+    snapshot = SimpleNamespace(require=MagicMock(side_effect=denial))
+    resolve_policy = AsyncMock(return_value=snapshot)
+    credential_read = MagicMock(side_effect=AssertionError("credential read reached after policy denial"))
+    monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+    monkeypatch.setattr("lfx.base.models.unified_models.get_api_key_for_provider", credential_read)
+
+    with pytest.raises(ModelProviderPolicyError):
+        await historical_agent.arequire_model_provider_policy(
+            ModelProviderPolicyPurpose.USE,
+            user_id="policy-actor",
+            parameters={"agent_llm": "OpenAI", "model_name": "gpt-4o"},
+        )
+
+    resolve_policy.assert_awaited_once_with(
+        user_id="policy-actor",
+        providers=["openai"],
+        purpose=ModelProviderPolicyPurpose.USE,
+    )
+    credential_read.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_legacy_agent_runtime_denial_precedes_model_resolution(monkeypatch) -> None:
+    from lfx.components.models_and_agents.agent import AgentComponent
+    from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+    component = AgentComponent(model=[], agent_llm="Anthropic", model_name="claude-test", _user_id="policy-actor")
+    denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.USE)
+    require_policy = AsyncMock(side_effect=denial)
+    resolve_model = MagicMock(side_effect=AssertionError("legacy model resolved after policy denial"))
+    monkeypatch.setattr(component, "arequire_model_provider_policy", require_policy)
+    monkeypatch.setattr(component, "_resolve_selected_model", resolve_model)
+
+    with pytest.raises(ModelProviderPolicyError):
+        await component.get_agent_requirements()
+
+    require_policy.assert_awaited_once_with(ModelProviderPolicyPurpose.USE)
+    resolve_model.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_legacy_agent_config_denial_precedes_model_update_hook(monkeypatch) -> None:
+    from lfx.components.models_and_agents import agent as agent_module
+    from lfx.components.models_and_agents.agent import AgentComponent
+    from lfx.services.model_provider_policy import ModelProviderPolicyError, ModelProviderPolicyPurpose
+
+    component = AgentComponent(model=[], agent_llm="Anthropic", _user_id="policy-actor")
+    denial = ModelProviderPolicyError("anthropic", ModelProviderPolicyPurpose.CONFIGURE)
+    require_policy = AsyncMock(side_effect=denial)
+    update_hook = MagicMock(side_effect=AssertionError("model update hook reached after policy denial"))
+    monkeypatch.setattr(component, "arequire_model_provider_policy", require_policy)
+    monkeypatch.setattr(agent_module, "handle_model_input_update", update_hook)
+
+    with pytest.raises(ModelProviderPolicyError):
+        await component.update_build_config({}, "Anthropic", "agent_llm")
+
+    require_policy.assert_awaited_once_with(
+        ModelProviderPolicyPurpose.CONFIGURE,
+        parameters={"model": [], "agent_llm": "Anthropic"},
+    )
+    update_hook.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_legacy_agent_provider_options_are_filtered_by_active_scope(monkeypatch) -> None:
+    from lfx.components.models_and_agents.agent import AgentComponent
+
+    component = AgentComponent(_user_id="policy-actor")
+    snapshot = SimpleNamespace(filter=lambda providers: [provider for provider in providers if provider == "OpenAI"])
+    resolve_policy = AsyncMock(return_value=snapshot)
+    monkeypatch.setattr("lfx.services.model_provider_policy.aresolve_model_provider_policy", resolve_policy)
+    build_config = {
+        "agent_llm": {
+            "options": ["Anthropic", "OpenAI"],
+            "options_metadata": [{"icon": "Anthropic"}, {"icon": "OpenAI"}],
+        }
+    }
+
+    await component._filter_legacy_provider_options(build_config)
+
+    assert build_config["agent_llm"]["options"] == ["OpenAI"]
+    assert build_config["agent_llm"]["options_metadata"] == [{"icon": "OpenAI"}]

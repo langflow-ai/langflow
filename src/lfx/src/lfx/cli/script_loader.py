@@ -119,6 +119,12 @@ async def load_graph_from_script(script_path: Path) -> "Graph":
             msg = "No 'graph' variable or 'get_graph()' function found in the executed script"
             raise ValueError(msg)
 
+        # Programmatic Graph construction does not pass through the JSON flow
+        # loader's warm-up. Active catalog rules need the same canonical
+        # identity index before synchronous graph validation runs below.
+        from lfx.utils.flow_validation import ensure_component_hash_lookups_loaded
+
+        await ensure_component_hash_lookups_loaded()
         return _validate_graph_instance(graph_obj)
 
     except (

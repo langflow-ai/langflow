@@ -1,18 +1,26 @@
 import ast
 import contextlib
+import copy
 import importlib
 import sys
 import warnings
-from types import FunctionType
+from types import FunctionType, ModuleType
 from typing import Optional, Union
 
 from langchain_core._api.deprecation import LangChainDeprecationWarning
 from pydantic import ValidationError
 
+from lfx.custom.annotation_validation import (
+    UnsafeReturnAnnotationError,
+    register_compiled_class_method_returns,
+    snapshot_trusted_class_method_returns,
+    validate_return_annotations,
+)
 from lfx.field_typing.constants import CUSTOM_COMPONENT_SUPPORTED_TYPES, DEFAULT_IMPORT_STRING
 from lfx.log.logger import logger
 
 _LANGFLOW_IS_INSTALLED = False
+_VECTOR_STORE_CONNECTION_MODULE = "lfx.base.vectorstores.vector_store_connection_decorator"
 
 with contextlib.suppress(ImportError):
     import langflow  # noqa: F401
@@ -57,80 +65,26 @@ def validate_code(code):
                 except ModuleNotFoundError as e:
                     errors["imports"]["errors"].append(str(e))
 
-    # Evaluate the function definition with langflow context
+    # Validate each function definition WITHOUT executing it.
+    #
+    # Security (GHSA-2wcq-pvw2-xh7v): this endpoint only
+    # *validates* code, but it previously compiled and exec()'d every function
+    # definition. Executing a function definition evaluates its decorators and
+    # default-argument expressions at definition time, so a payload such as
+    #     def f(x=__import__("os").system("...")): ...
+    # achieves arbitrary code execution during "validation" — the function never
+    # has to be called. Compile only, to surface syntax/compile errors; never
+    # exec untrusted code on the validation path.
     for node in tree.body:
         if isinstance(node, ast.FunctionDef):
-            code_obj = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
             try:
-                # Create execution context with common langflow imports
-                exec_globals = _create_langflow_execution_context()
-                exec(code_obj, exec_globals)
+                compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
             except Exception as e:  # noqa: BLE001
-                logger.debug("Error executing function code", exc_info=True)
+                logger.debug("Error compiling function code", exc_info=True)
                 errors["function"]["errors"].append(str(e))
 
     # Return the errors dictionary
     return errors
-
-
-def _create_langflow_execution_context():
-    """Create execution context with common langflow imports."""
-    context = {}
-
-    # Import common langflow types that are used in templates
-    try:
-        from lfx.schema.dataframe import DataFrame
-
-        context["DataFrame"] = DataFrame
-    except ImportError:
-        # Create a mock DataFrame if import fails
-        context["DataFrame"] = type("DataFrame", (), {})
-
-    try:
-        from lfx.schema.message import Message
-
-        context["Message"] = Message
-    except ImportError:
-        context["Message"] = type("Message", (), {})
-
-    try:
-        from lfx.schema.data import Data
-
-        context["Data"] = Data
-    except ImportError:
-        context["Data"] = type("Data", (), {})
-
-    try:
-        from lfx.custom import Component
-
-        context["Component"] = Component
-    except ImportError:
-        context["Component"] = type("Component", (), {})
-
-    try:
-        from lfx.io import HandleInput, Output, TabInput
-
-        context["HandleInput"] = HandleInput
-        context["Output"] = Output
-        context["TabInput"] = TabInput
-    except ImportError:
-        context["HandleInput"] = type("HandleInput", (), {})
-        context["Output"] = type("Output", (), {})
-        context["TabInput"] = type("TabInput", (), {})
-
-    # Add common Python typing imports
-    try:
-        from typing import Any, Optional, Union
-
-        context["Any"] = Any
-        context["Dict"] = dict
-        context["List"] = list
-        context["Optional"] = Optional
-        context["Union"] = Union
-    except ImportError:
-        pass
-
-    return context
 
 
 def eval_function(function_string: str):
@@ -245,6 +199,52 @@ def create_function(code, function_name):
     return wrapped_function
 
 
+def _trusted_vector_store_decorator_alias(module: ast.Module, class_name: str) -> str | None:
+    """Recognize an unshadowed canonical vector-store decorator import."""
+    class_node = next(node for node in module.body if isinstance(node, ast.ClassDef) and node.name == class_name)
+    if len(class_node.decorator_list) != 1 or not isinstance(class_node.decorator_list[0], ast.Name):
+        return None
+
+    decorator_name = class_node.decorator_list[0].id
+    approved_import = None
+    for node in module.body:
+        if not isinstance(node, ast.ImportFrom) or node.level != 0 or node.module != _VECTOR_STORE_CONNECTION_MODULE:
+            continue
+        for imported in node.names:
+            if imported.name == "vector_store_connection" and (imported.asname or imported.name) == decorator_name:
+                if approved_import is not None:
+                    msg = f"Trusted vector-store decorator alias '{decorator_name}' is bound more than once."
+                    raise UnsafeReturnAnnotationError(msg)
+                approved_import = imported
+    if approved_import is None:
+        return None
+
+    for node in ast.walk(module):
+        if node is approved_import:
+            continue
+        if isinstance(node, ast.Name) and node.id == decorator_name and isinstance(node.ctx, ast.Store | ast.Del):
+            break
+        if isinstance(node, ast.arg) and node.arg == decorator_name:
+            break
+        if isinstance(node, ast.alias):
+            bound_name = node.asname or node.name.split(".", 1)[0]
+            if node.name == "*" or bound_name == decorator_name:
+                break
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef) and node.name == decorator_name:
+            break
+        if isinstance(node, ast.ExceptHandler) and node.name == decorator_name:
+            break
+        if isinstance(node, ast.MatchAs | ast.MatchStar) and node.name == decorator_name:
+            break
+        if isinstance(node, ast.MatchMapping) and node.rest == decorator_name:
+            break
+    else:
+        return decorator_name
+
+    msg = f"Trusted vector-store decorator alias '{decorator_name}' is shadowed or rebound."
+    raise UnsafeReturnAnnotationError(msg)
+
+
 def create_class(code, class_name):
     """Dynamically create a class from a string of code and a specified class name.
 
@@ -258,6 +258,36 @@ def create_class(code, class_name):
     Raises:
         ValueError: If the code contains syntax errors or the class definition is invalid
     """
+    from langchain_core.vectorstores import VectorStore
+
+    from lfx.io import Output
+
+    vector_store_type = VectorStore
+    output_type = Output
+    compiled_return_registrar = register_compiled_class_method_returns
+
+    def apply_vector_store_connection(component_class: type) -> type:
+        """Apply trusted behavior without component-controlled global lookups."""
+        component_class.decorated = True
+        if hasattr(component_class, "outputs"):
+            component_class.outputs = component_class.outputs.copy()
+            if "vectorstoreconnection" not in [output.name for output in component_class.outputs]:
+                component_class.outputs.append(
+                    output_type(
+                        display_name="Vector Store Connection",
+                        hidden=False,
+                        name="vectorstoreconnection",
+                        method="as_vector_store",
+                        group_outputs=False,
+                    )
+                )
+
+        def as_vector_store(self) -> vector_store_type:
+            return self.build_vector_store()
+
+        component_class.as_vector_store = as_vector_store
+        return component_class
+
     if not hasattr(ast, "TypeIgnore"):
         ast.TypeIgnore = create_type_ignore_class()
 
@@ -270,13 +300,71 @@ def create_class(code, class_name):
     code = DEFAULT_IMPORT_STRING + "\n" + code
     try:
         module = ast.parse(code)
-        exec_globals = prepare_global_scope(module)
+        # Return annotations are evaluated by Python during class creation and
+        # later by typing.get_type_hints. Reject active syntax before imports,
+        # compilation, or component construction can execute it.
+        validate_return_annotations(module)
+        if not any(
+            isinstance(node, ast.ImportFrom)
+            and node.module == "__future__"
+            and any(alias.name == "annotations" for alias in node.names)
+            for node in module.body
+        ):
+            module.body.insert(
+                0,
+                ast.ImportFrom(module="__future__", names=[ast.alias(name="annotations")], level=0),
+            )
+            ast.fix_missing_locations(module)
+        trusted_vector_store_alias = _trusted_vector_store_decorator_alias(module, class_name)
+        runtime_module = copy.deepcopy(module) if trusted_vector_store_alias is not None else module
+        if trusted_vector_store_alias is not None:
+            runtime_class_code = extract_class_code(runtime_module, class_name)
+            runtime_class_code.decorator_list = []
+        trusted_method_returns = {}
+        source_class_bindings = {}
+        exec_globals = prepare_global_scope(
+            runtime_module,
+            trusted_method_returns=trusted_method_returns,
+            source_class_bindings=source_class_bindings,
+        )
 
-        future_imports = [n for n in module.body if isinstance(n, ast.ImportFrom) and n.module == "__future__"]
+        future_imports = [n for n in runtime_module.body if isinstance(n, ast.ImportFrom) and n.module == "__future__"]
         class_code = extract_class_code(module, class_name)
-        compiled_class = compile_class_code(class_code, future_imports)
-
-        return build_class_constructor(compiled_class, exec_globals, class_name)
+        runtime_class_code = extract_class_code(runtime_module, class_name)
+        compiled_class = compile_class_code(runtime_class_code, future_imports)
+        preexisting_class_ids = frozenset(id(value) for value in exec_globals.values() if issubclass(type(value), type))
+        component_class = build_class_constructor(compiled_class, exec_globals, class_name)
+        if trusted_vector_store_alias is not None:
+            component_class = apply_vector_store_connection(component_class)
+            exec_globals[class_name] = component_class
+        try:
+            component_mro = type.__getattribute__(component_class, "__mro__")
+        except (AttributeError, TypeError):
+            component_mro = ()
+        for source_node in (node for node in runtime_module.body if isinstance(node, ast.ClassDef)):
+            source_base = source_class_bindings.get(id(source_node))
+            if source_base is None or not any(source_base is base for base in component_mro[1:]):
+                continue
+            if source_node.decorator_list or type(source_base) is not type:
+                continue
+            compiled_return_registrar(
+                source_base,
+                source_node,
+                globalns=exec_globals,
+                preexisting_class_ids=preexisting_class_ids,
+                trusted_method_returns=trusted_method_returns,
+                allow_preexisting_class=True,
+                infer_decorated_methods=False,
+            )
+        compiled_return_registrar(
+            component_class,
+            class_code,
+            globalns=exec_globals,
+            preexisting_class_ids=preexisting_class_ids,
+            trusted_method_returns=trusted_method_returns,
+            trusted_vector_store_applied=trusted_vector_store_alias is not None,
+            trusted_vector_store_output=vector_store_type,
+        )
 
     except SyntaxError as e:
         msg = f"Syntax error in code: {e!s}"
@@ -288,9 +376,13 @@ def create_class(code, class_name):
         messages = [error["msg"].split(",", 1) for error in e.errors()]
         error_message = "\n".join([message[1] if len(message) > 1 else message[0] for message in messages])
         raise ValueError(error_message) from e
+    except UnsafeReturnAnnotationError as e:
+        raise ValueError(str(e)) from e
     except Exception as e:
         msg = f"Error creating class. {type(e).__name__}({e!s})."
         raise ValueError(msg) from e
+    else:
+        return component_class
 
 
 def create_type_ignore_class():
@@ -380,11 +472,58 @@ def _get_module_fallbacks(module_name: str) -> list[str]:
     return names
 
 
-def prepare_global_scope(module):
+def _static_imported_base(node: ast.AST, exec_globals: dict) -> type | None:
+    if isinstance(node, ast.Name):
+        value = dict.get(exec_globals, node.id)
+    elif isinstance(node, ast.Attribute):
+        attributes: list[str] = []
+        while isinstance(node, ast.Attribute):
+            attributes.append(node.attr)
+            node = node.value
+        if not isinstance(node, ast.Name):
+            return None
+        value = dict.get(exec_globals, node.id)
+        for attribute in reversed(attributes):
+            if not isinstance(value, ModuleType):
+                return None
+            namespace = ModuleType.__getattribute__(value, "__dict__")
+            if type(namespace) is not dict:
+                return None
+            value = dict.get(namespace, attribute)
+    else:
+        return None
+    return value if issubclass(type(value), type) else None
+
+
+def _trusted_imported_bases(module: ast.Module, exec_globals: dict) -> list[type]:
+    bases: dict[int, type] = {}
+    for node in module.body:
+        if not isinstance(node, ast.ClassDef):
+            continue
+        for base_node in node.bases:
+            base = _static_imported_base(base_node, exec_globals)
+            if base is not None:
+                bases[id(base)] = base
+    return list(bases.values())
+
+
+def _has_static_type_metaclass_bases(class_node: ast.ClassDef, exec_globals: dict) -> bool:
+    """Return whether a source class must be freshly created by the built-in type metaclass."""
+    if class_node.decorator_list or class_node.keywords:
+        return False
+    return all(
+        (base := _static_imported_base(base_node, exec_globals)) is not None and type(base) is type
+        for base_node in class_node.bases
+    )
+
+
+def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bindings=None):
     """Prepares the global scope with necessary imports from the provided code module.
 
     Args:
         module: AST parsed module
+        trusted_method_returns: Optional destination for server-owned method snapshots
+        source_class_bindings: Optional destination for exact classes produced by source ClassDefs
 
     Returns:
         Dictionary representing the global scope with imported modules
@@ -406,7 +545,7 @@ def prepare_global_scope(module):
             future_imports.append(node)
         elif isinstance(node, ast.ImportFrom) and node.module is not None:
             import_froms.append(node)
-        elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.Assign | ast.AnnAssign):
+        elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef | ast.Assign | ast.AnnAssign):
             definitions.append(node)
 
     for node in imports:
@@ -472,11 +611,28 @@ def prepare_global_scope(module):
             msg = f"Module {node.module} not found. Please install it and try again"
             raise ModuleNotFoundError(msg)
 
+    if trusted_method_returns is not None:
+        trusted_bases = _trusted_imported_bases(module, exec_globals)
+        trusted_method_returns.update(snapshot_trusted_class_method_returns(trusted_bases))
+
     if definitions:
         # Prepend __future__ imports so compiler directives (e.g. PEP 563 annotations) take effect
-        combined_module = ast.Module(body=future_imports + definitions, type_ignores=[])
-        compiled_code = compile(combined_module, "<string>", "exec")
-        exec(compiled_code, exec_globals)
+        if source_class_bindings is None:
+            combined_module = ast.Module(body=future_imports + definitions, type_ignores=[])
+            compiled_code = compile(combined_module, "<string>", "exec")
+            exec(compiled_code, exec_globals)
+        else:
+            for definition in definitions:
+                safe_source_class = isinstance(definition, ast.ClassDef) and _has_static_type_metaclass_bases(
+                    definition, exec_globals
+                )
+                preexisting_class_ids = {id(value) for value in exec_globals.values() if issubclass(type(value), type)}
+                definition_module = ast.Module(body=[*future_imports, definition], type_ignores=[])
+                exec(compile(definition_module, "<string>", "exec"), exec_globals)
+                if safe_source_class:
+                    runtime_class = dict.get(exec_globals, definition.name)
+                    if type(runtime_class) is type and id(runtime_class) not in preexisting_class_ids:
+                        source_class_bindings[id(definition)] = runtime_class
 
     return exec_globals
 

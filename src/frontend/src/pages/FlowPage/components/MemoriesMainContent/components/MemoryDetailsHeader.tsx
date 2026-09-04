@@ -15,6 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import CustomResourceShareAction from "@/customization/components/custom-resource-share-action";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import { extractApiErrorMessages } from "@/utils/apiError";
@@ -120,8 +121,8 @@ export function MemoryDetailsHeader({
                 <Button
                   variant="outline"
                   size="sm"
-                  aria-label={t("memory.sessionFilter")}
                   className="w-[180px] justify-between rounded-[10px] px-3"
+                  data-testid="session-filter-button"
                 >
                   <span className="truncate">
                     {sessionLabel.length > 20
@@ -198,6 +199,13 @@ export function MemoryDetailsHeader({
             className={cn("h-4 w-4", isRefreshing && "animate-spin")}
           />
         </Button>
+
+        <CustomResourceShareAction
+          resourceId={memory.id}
+          resourceType="knowledge_base"
+          resourceSubtype="memory"
+          resourceName={memory.name}
+        />
 
         <DeleteConfirmationModal
           description={t("memory.deleteDescription", { name: memory.name })}

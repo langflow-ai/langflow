@@ -106,7 +106,7 @@ export const EmptyPageCommunity = ({
                 <div className="relative flex flex-col rounded-lg border-[1px] bg-background p-4 transition-all duration-300 hover:border-accent-pink-foreground">
                   <div className="grid w-full items-center justify-between gap-2">
                     <div className="flex gap-3">
-                      <FaGithub className="h-6 w-6" />
+                      <FaGithub className="h-6 w-6" aria-hidden="true" />
                       <div>
                         <span className="font-semibold">GitHub</span>
                         <span className="ml-2 font-mono text-muted-foreground">
@@ -136,7 +136,10 @@ export const EmptyPageCommunity = ({
                 <div className="relative flex flex-col rounded-lg border-[1px] bg-background p-4 transition-all duration-300 hover:border-discord-color">
                   <div className="grid w-full items-center justify-between gap-2">
                     <div className="flex gap-3">
-                      <FaDiscord className="h-6 w-6 text-discord-color" />
+                      <FaDiscord
+                        className="h-6 w-6 text-discord-color"
+                        aria-hidden="true"
+                      />
                       <div>
                         <span className="font-semibold">Discord</span>
                         <span className="ml-2 font-mono text-muted-foreground">

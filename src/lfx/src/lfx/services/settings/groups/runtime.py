@@ -13,12 +13,54 @@ class RuntimeSettings(BaseModel):
     guarantees ``workers`` is in ``info.data`` when this validator runs.
     """
 
+    warm_registry_enabled: bool = False
+    """Enable the process-local warm graph registry (LANGFLOW_WARM_REGISTRY_ENABLED)."""
+
+    warm_registry_preload_limit: int = Field(default=0, ge=0)
+    """Maximum flows each worker eagerly preloads (LANGFLOW_WARM_REGISTRY_PRELOAD_LIMIT).
+
+    The safe default is zero: flows warm lazily after an authorized request, so
+    enabling the cache on a shared cluster cannot make every worker materialize
+    every tenant's saved graph. Dedicated trusted execution workers may opt into
+    a bounded preload. Must be >= 0.
+    """
+
+    warm_registry_max_entries: int = Field(default=128, gt=0)
+    """Maximum resident flow templates per worker (LANGFLOW_WARM_REGISTRY_MAX_ENTRIES)."""
+
+    warm_registry_max_flow_bytes: int = Field(default=2_000_000, gt=0)
+    """Maximum serialized retained execution snapshot eligible for warming, in bytes."""
+
+    warm_registry_max_total_bytes: int = Field(default=32_000_000, gt=0)
+    """Maximum total serialized execution-snapshot bytes retained or in flight per worker."""
+
     dev: bool = False
     """If True, Langflow will run in development mode."""
+
+    warm_reconcile_interval: float = Field(default=20.0, gt=0)
+    """Seconds between warm-registry reconcile passes (LANGFLOW_WARM_RECONCILE_INTERVAL).
+
+    Each execution machine independently diffs its in-memory registry against the
+    shared ``flow`` table every ``interval`` seconds, so a deploy or delete takes up
+    to this long to propagate across the fleet. Lower for faster convergence at the
+    cost of more manifest queries. Only used when ``warm_registry_enabled`` is true.
+    Must be > 0."""
 
     # Job Queue
     job_queue_type: Literal["asyncio", "redis"] = "asyncio"
     """The job queue backend. Use 'redis' for multi-worker deployments to solve cross-worker JobQueueNotFoundError."""
+    dangerously_allow_multi_worker_without_shared_queue: bool = False
+    """Opt out of the startup guard that refuses ``workers > 1`` with the default
+    in-memory job queue.
+
+    Off by default. Enabling it lets headless deployments take multi-worker
+    throughput without standing up Redis, at the cost of every behavior that
+    needs process-shared state: the v1 ``/build`` editor and playground flows and
+    MCP over SSE stop working, and rate limiting, webhook UI feedback, and the
+    orphan sweep degrade to per-worker or per-node. ``LANGFLOW_JOB_QUEUE_TYPE=redis``
+    remains the supported way to run multiple workers; see
+    ``langflow.__main__.ensure_multi_worker_safe`` for the full list of caveats
+    logged when the bypass is active."""
     redis_queue_host: str | None = None
     """Redis host for the job queue. Falls back to redis_host if not set."""
     redis_queue_port: int | None = None
@@ -57,11 +99,63 @@ class RuntimeSettings(BaseModel):
     The watchdog only checks jobs this worker owns (entries in self._queues).
     Must be > 0 so the scan loop makes progress."""
 
+    # Background execution (v2 workflows background mode)
+    background_max_concurrency: int = Field(default=5, gt=0)
+    """Max number of background workflow jobs the in-process executor runs
+    concurrently. Jobs beyond this queue and start as workers free up. Kept
+    small by default so background runs cannot starve the request event loop;
+    raise it for dedicated worker processes. The redis backend ignores this in
+    favor of its own worker-process pool. Must be > 0."""
+    background_job_timeout: float | None = None
+    """Wall-clock seconds a single background job may run before it is marked
+    TIMED_OUT. ``None`` (default) means no timeout. Applies per job, enforced by
+    the runner via ``asyncio.wait_for`` around the build loop."""
+    background_input_deadline_s: float | None = None
+    """Optional wall-clock seconds a background run may stay SUSPENDED (awaiting human
+    input) before it is given up on. Independent of ``background_job_timeout``: paused
+    time never accrues against the compute timeout (resume re-enqueues a fresh pass).
+    ``None`` (default) disables the deadline — nothing is stamped, nothing enforced.
+    Enforced by ``sweep_input_deadlines`` (startup sweep + the periodic watchdog when
+    the setting is set), which FAILs overdue runs with an ``input_timed_out`` error."""
+    background_lease_ttl_s: float = Field(default=45.0, gt=0)
+    """Liveness lease window for a running background job. The running owner
+    refreshes a heartbeat on the job row; a reconciler (startup sweep / scaled
+    watchdog) only fails or requeues an IN_PROGRESS job whose heartbeat is older
+    than this TTL (or never recorded). Must comfortably exceed
+    ``background_heartbeat_interval_s`` so a healthy owner never looks stale."""
+    background_heartbeat_interval_s: float = Field(default=15.0, gt=0)
+    """How often a running background job refreshes its liveness heartbeat. Kept
+    well below ``background_lease_ttl_s`` so a brief stall does not trip the
+    reconciler. Must be > 0."""
+    background_watchdog_interval_s: float = Field(default=15.0, gt=0)
+    """How often the scaled worker's periodic watchdog scans for orphaned leases
+    (a dead worker's in-flight job) and reconciles them WITHOUT requiring a
+    restart. Must be > 0."""
+    test_redis_url: str | None = Field(default=None)
+    """Redis URL used by tests that exercise the scaled background backend.
+
+    Mirrors LANGFLOW_TEST_DATABASE_URI: when set, lease/watchdog/Streams/pubsub
+    timing tests run against this real Redis; when unset they skip. Read from
+    the LANGFLOW_TEST_REDIS_URL environment variable via the env_prefix."""
+
     event_delivery: Literal["polling", "streaming", "direct"] = "streaming"
     """How to deliver build events to the frontend. Can be 'polling', 'streaming' or 'direct'."""
 
     worker_timeout: int = 300
     """Timeout for the API calls in seconds."""
+
+    workflow_execution_timeout: int = 300
+    """Wall-clock ceiling in seconds for a client-attached v2 workflow run.
+    Sync runs raise a 408; stream and public runs emit the protocol's terminal-error
+    event. Background runs use ``background_job_timeout`` instead."""
+
+    model_provider_policy_refresh_interval_s: float = Field(default=10.0, gt=0)
+    """How often each backend worker refreshes the install-wide model-provider policy.
+
+    A several-second default limits steady-state database traffic while still
+    converging policy updates promptly across workers. Must be positive so the
+    refresh loop cannot spin continuously.
+    """
 
     public_flow_cleanup_interval: int = Field(default=3600, gt=600)
     """The interval in seconds at which public temporary flows will be cleaned up.
@@ -84,6 +178,14 @@ class RuntimeSettings(BaseModel):
     max_ingestion_timeout_secs: int = 600
 
     celery_enabled: bool = False
+
+    executor_kind: str = "in-process"
+    """The default executor kind used by the execution coordinator.
+
+    Must match the `kind` of an Executor registered with the executor service. The built-in
+    `in-process` executor runs graphs in the current process; third-party executors registered
+    via the `lfx.executors` entry-point group can be selected by setting this to their kind.
+    """
 
     @field_validator("event_delivery", mode="before")
     @classmethod
@@ -109,3 +211,14 @@ class RuntimeSettings(BaseModel):
                 )
             return "direct"
         return value
+
+    @property
+    def background_backend_is_scaled(self) -> bool:
+        """True when the background executor should use the redis-backed queue.
+
+        Backend selection follows the existing job_queue_type/redis settings:
+        a redis job queue means a separate `langflow worker` process drains
+        jobs, so the scaled background backend is used. Otherwise the default
+        in-process executor runs jobs inside the API process.
+        """
+        return self.job_queue_type == "redis"

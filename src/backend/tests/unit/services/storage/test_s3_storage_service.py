@@ -47,6 +47,17 @@ def s3_service_offline(mock_session_service, mock_settings_service, monkeypatch)
     return service
 
 
+def test_get_client_uses_aiobotocore_create_client(mock_session_service, mock_settings_service):
+    service = S3StorageService(mock_session_service, mock_settings_service)
+    session = Mock()
+    service.session = session
+
+    client_context = service._get_client()
+
+    session.create_client.assert_called_once_with("s3")
+    assert client_context is session.create_client.return_value
+
+
 _MALICIOUS_FLOW_IDS = [
     "/etc",
     "..",
@@ -122,3 +133,28 @@ class TestS3StorageServicePathValidation:
         """
         with pytest.raises(ValueError, match="Invalid"):
             await s3_service_offline.get_file("/etc", "hosts")
+
+
+class TestS3BuildFullPathValidation:
+    """``build_full_path`` is a public key builder, so it validates its own inputs.
+
+    Path shape must never stand in for authorization: a caller that composes a key without
+    going through one of the file operations still cannot address a foreign namespace.
+    """
+
+    @pytest.mark.parametrize("malicious_flow_id", [fid for fid in _MALICIOUS_FLOW_IDS if fid])
+    def test_build_full_path_rejects_malicious_flow_id(self, s3_service_offline, malicious_flow_id):
+        with pytest.raises(ValueError, match="Invalid"):
+            s3_service_offline.build_full_path(malicious_flow_id, "file.txt")
+
+    @pytest.mark.parametrize("malicious_file_name", [name for name in _MALICIOUS_FILE_NAMES if name])
+    def test_build_full_path_rejects_malicious_file_name(self, s3_service_offline, malicious_file_name):
+        with pytest.raises(ValueError, match="Invalid"):
+            s3_service_offline.build_full_path("legit_flow", malicious_file_name)
+
+    def test_build_full_path_allows_empty_file_name_for_listing_prefix(self, s3_service_offline):
+        """``list_files`` builds a prefix with an empty file name; that must keep working."""
+        assert s3_service_offline.build_full_path("legit_flow", "") == "test-prefix/legit_flow/"
+
+    def test_build_full_path_accepts_legitimate_identifiers(self, s3_service_offline):
+        assert s3_service_offline.build_full_path("legit_flow", "file.txt") == "test-prefix/legit_flow/file.txt"

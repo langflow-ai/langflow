@@ -2,7 +2,7 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
 test(
   "user must be able to save or delete a global variable",
@@ -20,9 +20,10 @@ test(
       .getByTestId("sidebar-search-input")
       .fill(TEXTS.providerOpenAiSearch);
 
-    await page.waitForSelector('[data-testid="openaiOpenAI"]', {
-      timeout: 1000,
-    });
+    await skipIfComponentUnavailable(
+      page.getByTestId("openaiOpenAI"),
+      "OpenAI",
+    );
 
     await page
       .getByTestId("openaiOpenAI")
@@ -32,12 +33,6 @@ test(
       });
 
     await adjustScreenView(page, { numberOfZoomOut: 2 });
-
-    await initialGPTsetup(page, {
-      skipAdjustScreenView: true,
-      skipUpdateOldComponents: true,
-      skipSelectGptModel: true,
-    });
 
     const genericName = Math.random().toString();
     const credentialName = Math.random().toString();

@@ -13,31 +13,37 @@
     --foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --background: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --muted: 240 5% 96%; /* hsl(240, 5%, 96%) */
-    --muted-foreground: 240 4% 46%; /* hsl(240, 4%, 46%) */
+    --muted-foreground: 0 0% 44%; /* hsl(0, 0%, 44%) */
     --card: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --card-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --popover: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --popover-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --border: 240 6% 90%; /* hsl(240, 6%, 90%) */
     --input: 240 6% 90%; /* hsl(240, 6%, 90%) */
+    /* Boundary of an interactive control (text field, dropdown trigger,
+       outlined button, radio). WCAG 1.4.11 requires >= 3:1 against the
+       adjacent surface; #8b8b98 measures 3.36:1 on white. Kept separate from
+       --border/--input because those also paint decorative edges and panel
+       fills, which 1.4.11 does not cover and which must stay light. */
+    --control-boundary: 240 6% 57%; /* hsl(240, 6%, 57%) — #8b8b98 */
     --primary-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --primary: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --secondary: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --secondary-foreground: 240 4% 16%; /* hsl(240, 4%, 16%) */
     --accent: 240 5% 96%; /* hsl(240, 5%, 96%) */
     --accent-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
-    --destructive: 0 72% 51%; /* hsl(0, 72%, 51%) */
+    --destructive: 0 72% 45%; /* hsl(0, 72%, 45%) */
     --destructive-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --accent-amber: 26 90% 37%; /* hsl(26, 90%, 37%) */
     --accent-amber-foreground: 26 90% 37%; /* hsl(26, 90%, 37%) */
     --ring: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --primary-hover: 240 4% 16%; /* hsl(240, 4%, 16%) */
     --secondary-hover: 240 6% 90%; /* hsl(240, 6%, 90%) */
-    --placeholder-foreground: 240 5% 65%; /* hsl(240, 5%, 65%) */
+    --placeholder-foreground: 240 5% 40%; /* hsl(240, 5%, 40%) — darkened for WCAG 1.4.3 contrast ≥4.5:1 on white */
     --canvas: 240 5% 96%; /* hsl(240, 5%, 96%) */
     --canvas-dot: 240 5% 65%; /* hsl(240, 5%, 65%) */
     --accent-emerald: 149 80% 90%; /* hsl(149, 80%, 90%) */
-    --accent-emerald-foreground: 161 94% 30%; /* hsl(161, 94%, 30%) */
+    --accent-emerald-foreground: 138 75% 22%; /* hsl(138, 75%, 22%) — #0E6027, forest green for WCAG AA ≥4.5:1 on white and accent-emerald bg */
     --accent-emerald-hover: 152.4 76% 80.4%; /* hsl(152.4, 76%, 80.4%) */
     --accent-indigo: 226 100% 94%; /* hsl(226, 100%, 94%) */
     --accent-indigo-foreground: 243 75% 59%; /* hsl(243, 75%, 59%) */
@@ -229,6 +235,10 @@
     --popover-foreground: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --border: 240 5% 26%; /* hsl(240, 5%, 26%) */
     --input: 240 5% 34%; /* hsl(240, 5%, 34%) */
+    /* See :root. Measured against the surfaces controls actually sit on in
+       dark mode: 3.37:1 on --muted (#27272a, the worst case), 4.01:1 on
+       --background (#18181b), 4.75:1 on --canvas (#000). */
+    --control-boundary: 240 5% 49%; /* hsl(240, 5%, 49%) — #777783 */
     --primary-foreground: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --primary: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --secondary: 0 0% 0%; /* hsl(0, 0%, 0%) */
@@ -240,7 +250,7 @@
     --ring: 0 0% 100%; /* hsl(0, 0%, 100%) */
     --primary-hover: 240 6% 90%; /* hsl(240, 6%, 90%) */
     --secondary-hover: 240 4% 16%; /* hsl(240, 4%, 16%) */
-    --placeholder-foreground: 240 4% 46%; /* hsl(240, 4%, 46%) */
+    --placeholder-foreground: 240 4% 63%; /* hsl(240, 4%, 63%) — lightened for WCAG 1.4.3 ≥4.5:1 on dark bg */
     --canvas: 0 0% 0%; /* hsl(0, 0%, 0%) */
     --canvas-dot: 240 5.3% 26.1%; /* hsl(240, 5.3%, 26.1%) */
 
@@ -492,4 +502,12 @@
     --red-foreground: 0 72.2% 50.6%;
     --indigo-foreground: 234.5 89.5% 73.9%;
   }
+}
+
+/* WCAG 2.4.7 — visible focus indicator fallback for any element not covered
+   by component-level Tailwind ring classes. Component ring classes (box-shadow)
+   take precedence over this outline via the cascade. */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
 }

@@ -61,10 +61,17 @@ export default function ShortcutsPage() {
     localStorage.removeItem("langflow-shortcuts");
   }
 
+  function openShortcutEditor(shortcutName: string) {
+    setSelectedRows([shortcutName]);
+    setOpen(true);
+  }
+
   return (
     <div className="flex h-full w-full flex-col gap-6">
-      <div className="flex w-full items-start justify-between gap-6">
-        <div className="flex w-full flex-col">
+      {/* flex-wrap (and no w-full on the title column): at narrow viewports
+          (WCAG 1.4.10, 320px) the Restore button wraps instead of clipping. */}
+      <div className="flex w-full flex-wrap items-start justify-between gap-x-6 gap-y-2">
+        <div className="flex flex-col">
           <h2
             className="flex items-center text-lg font-semibold tracking-tight"
             data-testid="settings_menu_header"
@@ -117,8 +124,15 @@ export default function ShortcutsPage() {
               columnDefs={colDefs}
               rowData={nodesRowData}
               onCellDoubleClicked={(e) => {
-                setSelectedRows([e.data.name]);
-                setOpen(true);
+                openShortcutEditor(e.data.name);
+              }}
+              onCellKeyDown={(e) => {
+                const event = e.event as KeyboardEvent | undefined;
+                if (event?.key !== "Enter" && event?.key !== " ") {
+                  return;
+                }
+                event.preventDefault();
+                openShortcutEditor(e.data.name);
               }}
             />
           )}

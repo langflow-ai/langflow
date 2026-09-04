@@ -5,6 +5,12 @@ from pathlib import Path
 import pytest
 from lfx.services.base import Service
 from lfx.services.manager import NoFactoryRegisteredError, ServiceManager
+from lfx.services.model_provider_policy import (
+    BaseModelProviderPolicyService,
+    ModelProviderPolicyContext,
+    ModelProviderPolicyPurpose,
+    ModelProviderPolicyService,
+)
 from lfx.services.schema import ServiceType
 from lfx.services.storage.local import LocalStorageService
 from lfx.services.telemetry.service import TelemetryService
@@ -12,6 +18,21 @@ from lfx.services.tracing.service import TracingService
 from lfx.services.variable.service import VariableService
 
 from .conftest import MockSessionService
+
+
+class DenyAllModelProviderPolicyService(BaseModelProviderPolicyService):
+    """Test plugin proving that deployment config replaces the OSS default."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.set_ready()
+
+    @property
+    def name(self) -> str:
+        return ServiceType.MODEL_PROVIDER_POLICY_SERVICE.value
+
+    def get_allowed_provider_ids(self, *, context, candidate_provider_ids, purpose):  # noqa: ARG002
+        return frozenset()
 
 
 @pytest.fixture
@@ -100,6 +121,71 @@ storage_service = "lfx.services.storage.local:LocalStorageService"
 
         assert ServiceType.STORAGE_SERVICE in service_manager.service_classes
         assert service_manager.service_classes[ServiceType.STORAGE_SERVICE] == LocalStorageService
+
+    def test_model_provider_policy_config_overrides_allow_all_default(self, service_manager, temp_config_dir):
+        service_manager.register_service_class(
+            ServiceType.MODEL_PROVIDER_POLICY_SERVICE,
+            ModelProviderPolicyService,
+            override=True,
+        )
+        (temp_config_dir / "lfx.toml").write_text(
+            f"""
+[services]
+model_provider_policy_service = "{__name__}:DenyAllModelProviderPolicyService"
+"""
+        )
+
+        service_manager.discover_plugins(temp_config_dir)
+        service = service_manager.get(ServiceType.MODEL_PROVIDER_POLICY_SERVICE)
+        snapshot = service.resolve(
+            context=ModelProviderPolicyContext(user_id="user-1"),
+            candidate_provider_ids=frozenset({"openai", "anthropic"}),
+            purpose=ModelProviderPolicyPurpose.USE,
+        )
+
+        assert isinstance(service, DenyAllModelProviderPolicyService)
+        assert snapshot.allowed_provider_ids == frozenset()
+
+    @pytest.mark.parametrize(
+        ("service_path", "error"),
+        [
+            (
+                "nonexistent.module:MissingModelProviderPolicyService",
+                "could not be loaded",
+            ),
+            (
+                "lfx.services.storage.local:LocalStorageService",
+                "must subclass BaseModelProviderPolicyService",
+            ),
+        ],
+    )
+    def test_invalid_explicit_model_provider_policy_fails_closed(
+        self,
+        service_manager,
+        temp_config_dir,
+        service_path,
+        error,
+    ):
+        (temp_config_dir / "lfx.toml").write_text(
+            f"""
+[services]
+model_provider_policy_service = "{service_path}"
+"""
+        )
+
+        with pytest.raises(RuntimeError, match=error):
+            service_manager.discover_plugins(temp_config_dir)
+
+    def test_missing_explicit_policy_bundle_fails_startup(self, service_manager, temp_config_dir):
+        (temp_config_dir / "lfx.toml").write_text(
+            """
+[services]
+policy_bundle_service = "nonexistent.module:MissingPolicyBundleService"
+"""
+        )
+
+        with pytest.raises(RuntimeError, match="Configured policy bundle service could not be loaded"):
+            service_manager.discover_plugins(temp_config_dir)
 
     def test_discover_multiple_services_from_config(self, service_manager, temp_config_dir):
         """Test discovering multiple real services from config."""
@@ -359,6 +445,27 @@ class TestTeardown:
         # Services should be cleared
         assert ServiceType.STORAGE_SERVICE not in service_manager.services
 
+    @pytest.mark.asyncio
+    async def test_teardown_clears_factories_registered_flag(self, service_manager):
+        """teardown() must clear the factories-registered flag, not just the dict.
+
+        get_service() (both lfx and langflow) re-registers factories only when
+        are_factories_registered() returns False. teardown() empties
+        self.factories, so if it leaves the flag set, every later lookup skips
+        re-registration and raises NoFactoryRegisteredError. That surfaced as
+        flow-execution 500s once Graph.arun routed through the executor service
+        and a sibling test had torn the global manager down.
+        """
+        service_manager.register_service_class(ServiceType.STORAGE_SERVICE, LocalStorageService)
+        service_manager.get(ServiceType.STORAGE_SERVICE)
+        service_manager.set_factory_registered()
+        assert service_manager.are_factories_registered() is True
+
+        await service_manager.teardown()
+
+        assert service_manager.factories == {}
+        assert service_manager.are_factories_registered() is False
+
 
 class TestConfigDirectorySource:
     """Tests for config_dir parameter with real services."""
@@ -480,3 +587,79 @@ variable_service = "lfx.services.variable.service:VariableService"
         assert isinstance(telemetry, TelemetryService)
         assert isinstance(tracing, TracingService)
         assert isinstance(variables, VariableService)
+
+
+class _SpyService(Service):
+    """Minimal Service that records teardown and can be flipped to raise."""
+
+    def __init__(self, name: str, *, fail: bool = False) -> None:
+        super().__init__()
+        self._name = name
+        self._fail = fail
+        self.torn_down = False
+
+    @property
+    def name(self) -> str:
+        return self._name
+
+    async def teardown(self) -> None:
+        self.torn_down = True
+        if self._fail:
+            msg = f"{self._name} teardown boom"
+            raise RuntimeError(msg)
+
+
+class TestServiceManagerTeardown:
+    """``teardown(raise_on_error=...)`` — strict mode for fork-safety-critical disposal."""
+
+    async def test_best_effort_swallows_errors_by_default(self, service_manager):
+        bad = _SpyService("bad_service", fail=True)
+        service_manager.services[ServiceType.TRACING_SERVICE] = bad
+
+        # Default best-effort: a failing teardown is logged, not raised.
+        await service_manager.teardown()
+
+        assert bad.torn_down is True
+        assert service_manager.services == {}
+
+    async def test_raise_on_error_propagates_after_attempting_all(self, service_manager):
+        bad = _SpyService("bad_service", fail=True)
+        good = _SpyService("good_service")
+        service_manager.services[ServiceType.TRACING_SERVICE] = bad
+        service_manager.services[ServiceType.CACHE_SERVICE] = good
+
+        with pytest.raises(RuntimeError, match="Service teardown failed"):
+            await service_manager.teardown(raise_on_error=True)
+
+        # Every service is still torn down before the error surfaces, and the table is cleared.
+        assert bad.torn_down is True
+        assert good.torn_down is True
+        assert service_manager.services == {}
+
+    async def test_raise_on_error_is_quiet_when_all_succeed(self, service_manager):
+        good = _SpyService("good_service")
+        service_manager.services[ServiceType.TRACING_SERVICE] = good
+
+        await service_manager.teardown(raise_on_error=True)  # no raise
+
+        assert good.torn_down is True
+        assert service_manager.services == {}
+
+    async def test_service_without_teardown_is_skipped_not_failed(self, service_manager):
+        """A duck-typed service with no teardown holds nothing to dispose — not an error.
+
+        The in-memory caches and the Noop database/transaction services implement plain
+        protocols rather than Service, so calling through would raise AttributeError and
+        fail an otherwise clean fork-safety teardown.
+        """
+        from lfx.services.shared_component_cache.service import SharedComponentCacheService
+
+        cache = SharedComponentCacheService()
+        good = _SpyService("good_service")
+        service_manager.services[ServiceType.SHARED_COMPONENT_CACHE_SERVICE] = cache
+        service_manager.services[ServiceType.TRACING_SERVICE] = good
+
+        await service_manager.teardown(raise_on_error=True)  # no raise
+
+        assert good.torn_down is True
+        assert service_manager.services == {}

@@ -1,8 +1,10 @@
 """Flow data preparation and model injection."""
 
+import contextlib
 import copy
 import json
 import logging
+import os
 from pathlib import Path
 
 from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA, get_provider_param_mapping
@@ -10,12 +12,8 @@ from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA, get_provider
 import lfx
 from langflow.agentic.helpers.assistant_workspace import resolve_assistant_fs_root
 
-# Relative path embedded in the bundled LangflowAssistant.json flow for the
-# Directory component that scans built-in lfx components. It only resolves
-# correctly when the process CWD is the monorepo root, which is never the
-# case for a packaged install (Langflow Desktop, `pip install langflow`,
-# Docker, etc.). inject_lfx_components_path rewrites it to an absolute path
-# derived from the installed lfx package at runtime.
+# Resolves only from the monorepo root; inject_lfx_components_path rewrites it to
+# an absolute path at runtime so packaged installs (Desktop, pip, Docker) work.
 LFX_COMPONENTS_PATH_SENTINEL = "./src/lfx/src/lfx/components/"
 
 logger = logging.getLogger(__name__)
@@ -47,6 +45,73 @@ def available_model_providers(global_variables: dict[str, str] | None) -> list[s
                     providers.append(provider)
                 break
     return providers
+
+
+def inject_history_limit_into_flow(flow_data: dict, limit: int | None) -> dict:
+    """Set the memory window (``n_messages``) on the flow's Agent components.
+
+    Runtime override for the ``/history N`` command — the dominant memory lever
+    (the Agent's DB memory), which the buffer-injection env var does not control.
+    Best-effort: ``None``/negative is a no-op; an Agent without the field is left
+    untouched.
+    """
+    if limit is None or limit < 0:
+        return flow_data
+    for node in flow_data.get("data", {}).get("nodes", []):
+        node_data = node.get("data", {})
+        if node_data.get("type") != "Agent":
+            continue
+        field = node_data.get("node", {}).get("template", {}).get("n_messages")
+        if isinstance(field, dict):
+            field["value"] = limit
+    return flow_data
+
+
+MAX_ASSISTANT_ITERATIONS = 200
+# Pinned assistant step budget (a COST decision, tripwire-tested): LangflowAssistant.json
+# pins it on its Agents and the Python builder flow defaults to it — one source of truth.
+DEFAULT_ASSISTANT_ITERATIONS = 30
+ASSISTANT_ITERATIONS_ENV = "LANGFLOW_ASSISTANT_ITERATIONS"
+
+
+def assistant_iterations_default() -> int:
+    """Step budget for a request that carries no ``/iterations N`` override.
+
+    ``/iterations N`` tunes one browser session; an operator running Langflow for a
+    team whose flows are multi-stage by nature needs the DEFAULT to move, which is
+    what this env var does (same shape as ``LANGFLOW_ASSISTANT_HISTORY_TURNS``).
+    Precedence is per-request > env > pinned default, and the value is clamped to
+    ``[1, MAX_ASSISTANT_ITERATIONS]`` so a bad value can neither disable the cap nor
+    run away.
+    """
+    raw = os.environ.get(ASSISTANT_ITERATIONS_ENV, "")
+    try:
+        return max(1, min(int(raw), MAX_ASSISTANT_ITERATIONS))
+    except (TypeError, ValueError):
+        return DEFAULT_ASSISTANT_ITERATIONS
+
+
+def inject_iterations_into_flow(flow_data: dict, limit: int | None) -> dict:
+    """Set the step budget (``max_iterations``) on the flow's Agent components.
+
+    ``max_iterations`` caps the Agent's model-call loop and derives LangGraph's
+    ``recursion_limit`` (``max_iterations * 2 + 5``), so a low pin makes even a
+    small compound turn (build a 4-component flow, then report it) die on
+    "Recursion limit reached". Best-effort: ``None`` is a no-op (the flow default
+    stands); values are clamped to ``[1, MAX_ASSISTANT_ITERATIONS]`` so a bad input
+    can neither disable the cap nor run away.
+    """
+    if limit is None:
+        return flow_data
+    clamped = max(1, min(int(limit), MAX_ASSISTANT_ITERATIONS))
+    for node in flow_data.get("data", {}).get("nodes", []):
+        node_data = node.get("data", {})
+        if node_data.get("type") != "Agent":
+            continue
+        field = node_data.get("node", {}).get("template", {}).get("max_iterations")
+        if isinstance(field, dict):
+            field["value"] = clamped
+    return flow_data
 
 
 def inject_model_into_flow(
@@ -86,17 +151,15 @@ def inject_model_into_flow(
         raise ValueError(msg)
     param_mapping = get_provider_param_mapping(provider)
 
-    # Use provided api_key_var or default from config
     api_key_var = api_key_var or provider_config.get("variable_name")
 
     metadata = {
         "api_key_param": param_mapping.get("api_key_param", provider_config.get("api_key_param", "api_key")),
         "context_length": 128000,
         "model_class": param_mapping.get("model_class", provider_config.get("model_class", "ChatOpenAI")),
-        "model_name_param": param_mapping.get("model_name_param", provider_config.get("model_name_param", "model")),
+        "model_name_param": param_mapping.get("model_param", provider_config.get("model_param", "model")),
     }
 
-    # Add extra params from param mapping (url_param, project_id_param, base_url_param)
     for extra_param in ("url_param", "project_id_param", "base_url_param"):
         if extra_param in param_mapping:
             metadata[extra_param] = param_mapping[extra_param]
@@ -113,7 +176,6 @@ def inject_model_into_flow(
         }
     ]
 
-    # Resolve provider-specific template fields to inject into Agent nodes
     provider_fields: dict[str, str] = {}
     pv = provider_vars or {}
 
@@ -129,7 +191,6 @@ def inject_model_into_flow(
         if pv.get("OLLAMA_BASE_URL"):
             provider_fields["base_url_ollama"] = pv["OLLAMA_BASE_URL"]
 
-    # Inject into all Agent nodes
     for node in flow_data.get("data", {}).get("nodes", []):
         node_data = node.get("data", {})
         if node_data.get("type") != "Agent":
@@ -137,9 +198,7 @@ def inject_model_into_flow(
         template = node_data.get("node", {}).get("template", {})
 
         if "model" not in template:
-            # Silent skip here means the run later fails with an
-            # opaque "No model selected" — leave a diagnostic with
-            # the node id so the cause is traceable.
+            # Silent skip surfaces later as an opaque "No model selected"; log the node id.
             logger.warning(
                 "assistant.inject_model.agent_missing_model_field node_id=%s provider=%s",
                 node.get("id", "<unknown>"),
@@ -155,14 +214,8 @@ def inject_model_into_flow(
         existing_provider = existing_entry.get("provider")
 
         if not overwrite_existing_model and existing_name:
-            # Preserve the user's/agent's explicit model — NEVER silently swap
-            # it for our verified model. When it's the SAME provider, REBUILD a
-            # COMPLETE value carrying the user's model NAME but the full,
-            # well-formed metadata/icon (the value the agent set via
-            # configure_component is often a bare ``{provider, name}`` with no
-            # metadata, which can make the run fail to resolve the model). Also
-            # top up the credential so the run authenticates. Cross-provider, we
-            # don't hold that provider's verified key, so leave it untouched.
+            # Keep the user's explicit model. Same provider: rebuild a complete value (full
+            # metadata + credential) since the agent's may be a bare {provider,name}; else leave it.
             if existing_provider == provider:
                 template["model"]["value"] = [{**model_value[0], "name": existing_name}]
                 for field_name, field_value in provider_fields.items():
@@ -171,7 +224,6 @@ def inject_model_into_flow(
             continue
 
         template["model"]["value"] = model_value
-        # Inject provider-specific fields (API key, URLs, project IDs)
         for field_name, field_value in provider_fields.items():
             if field_name in template:
                 template[field_name]["value"] = field_value
@@ -242,10 +294,8 @@ def inject_assistant_fs_root(flow_data: dict) -> dict:
     return flow_data
 
 
-# Parsed bundled-flow templates, keyed by path → ((mtime_ns, size),
-# parsed dict). The raw template is stable per file; re-reading +
-# json.loads on every request (and x4 on validation retries) was
-# blocking the event loop. A genuine file change (mtime/size) re-parses.
+# Cache parsed templates by path+stat: re-reading + json.loads on every request
+# (x4 on validation retries) blocked the event loop; mtime/size change re-parses.
 _FLOW_TEMPLATE_CACHE: dict[str, tuple[tuple[int, int], dict]] = {}
 
 
@@ -274,12 +324,33 @@ def load_and_prepare_flow(
     model_name: str | None,
     api_key_var: str | None,
     provider_vars: dict[str, str] | None = None,
+    history_limit: int | None = None,
 ) -> str:
     """Load flow file and prepare JSON with model injection."""
     flow_data = _load_flow_template(flow_path)
 
     if provider and model_name:
         flow_data = inject_model_into_flow(flow_data, provider, model_name, api_key_var, provider_vars)
+
+    # global_variables reaches here as provider_vars; the /history command's limit
+    # rides in it as HISTORY_LIMIT when not passed explicitly.
+    if history_limit is None and provider_vars:
+        raw = provider_vars.get("HISTORY_LIMIT")
+        if raw not in (None, ""):
+            try:
+                history_limit = int(raw)
+            except (TypeError, ValueError):
+                history_limit = None
+    flow_data = inject_history_limit_into_flow(flow_data, history_limit)
+
+    # The per-request step budget rides in provider_vars as ITERATIONS_LIMIT; without
+    # one the deployment default applies, so the env override reaches JSON flows too.
+    iterations = assistant_iterations_default()
+    raw_iterations = (provider_vars or {}).get("ITERATIONS_LIMIT")
+    if raw_iterations not in (None, ""):
+        with contextlib.suppress(TypeError, ValueError):
+            iterations = int(raw_iterations)
+    flow_data = inject_iterations_into_flow(flow_data, iterations)
 
     flow_data = inject_lfx_components_path(flow_data)
     flow_data = inject_assistant_fs_root(flow_data)

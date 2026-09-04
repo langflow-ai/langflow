@@ -1,11 +1,12 @@
 import io
 import json
 import zipfile
-from unittest.mock import MagicMock, patch
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi import status
+from fastapi import BackgroundTasks, HTTPException, status
 from httpx import AsyncClient
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.deployment.model import Deployment
@@ -18,6 +19,7 @@ from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
 )
+from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import session_scope
 from lfx.services.adapters.deployment.schema import DeploymentType
 
@@ -33,6 +35,76 @@ def basic_case():
         "flows_list": [],
         "components_list": [],
     }
+
+
+@pytest.mark.asyncio
+async def test_project_download_uses_resolved_owner_namespace():
+    from langflow.api.v1.projects_files import download_project_flows
+
+    actor_id = uuid4()
+    owner_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Shared Project", user_id=owner_id)
+    flow = Flow(id=uuid4(), name="Shared Flow", user_id=owner_id, folder_id=project_id, data={})
+
+    project_result = MagicMock()
+    project_result.first.return_value = project
+    flows_result = MagicMock()
+    flows_result.all.return_value = [flow]
+    session = AsyncMock()
+    session.exec.side_effect = [project_result, flows_result]
+
+    response = await download_project_flows(
+        session=session,
+        project_id=project_id,
+        current_user=SimpleNamespace(id=actor_id),
+        project_owner_id=owner_id,
+    )
+
+    assert response.status_code == 200
+    project_sql = str(session.exec.await_args_list[0].args[0].compile(compile_kwargs={"literal_binds": True}))
+    flows_sql = str(session.exec.await_args_list[1].args[0].compile(compile_kwargs={"literal_binds": True}))
+    assert owner_id.hex in project_sql
+    assert owner_id.hex in flows_sql
+    assert actor_id.hex not in project_sql
+
+
+async def test_shared_project_download_filters_flows_by_read_permission():
+    from langflow.api.v1.projects_files import download_project_flows
+
+    actor_id = uuid4()
+    owner_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Shared Project", user_id=owner_id)
+    allowed_flow = Flow(id=uuid4(), name="Allowed Flow", user_id=owner_id, folder_id=project_id, data={})
+    denied_flow = Flow(id=uuid4(), name="Denied Flow", user_id=owner_id, folder_id=project_id, data={})
+
+    project_result = MagicMock()
+    project_result.first.return_value = project
+    flows_result = MagicMock()
+    flows_result.all.return_value = [allowed_flow, denied_flow]
+    session = AsyncMock()
+    session.exec.side_effect = [project_result, flows_result]
+
+    with patch(
+        "langflow.api.v1.projects_files.filter_visible_resources",
+        new_callable=AsyncMock,
+        create=True,
+        return_value=[allowed_flow],
+    ) as filter_visible:
+        response = await download_project_flows(
+            session=session,
+            project_id=project_id,
+            current_user=SimpleNamespace(id=actor_id),
+            project_owner_id=owner_id,
+        )
+
+    body = b"".join([chunk async for chunk in response.body_iterator])
+    with zipfile.ZipFile(io.BytesIO(body), "r") as archive:
+        assert archive.namelist() == ["Allowed Flow.json"]
+
+    filter_visible.assert_awaited_once()
+    assert filter_visible.await_args.kwargs["candidates"] == [allowed_flow, denied_flow]
 
 
 async def test_create_project(client: AsyncClient, logged_in_headers, basic_case):
@@ -80,6 +152,65 @@ async def test_read_projects(client: AsyncClient, logged_in_headers):
     assert response.status_code == status.HTTP_200_OK
     assert isinstance(result, list), "The result must be a list"
     assert len(result) > 0, "The list must not be empty"
+    assert all(project["owner_username"] for project in result)
+    assert all(project["is_owner"] is True for project in result)
+
+
+async def test_read_projects_qualifies_visible_same_named_projects_by_owner():
+    from langflow.api.v1.projects import read_projects
+
+    actor_id = uuid4()
+    other_user_id = uuid4()
+    own_project = Folder(id=uuid4(), name="Starter Project", user_id=actor_id)
+    shared_project = Folder(id=uuid4(), name="Starter Project", user_id=other_user_id)
+    ownerless_project = Folder(id=uuid4(), name="Ownerless Project", user_id=None)
+    internal_project = Folder(id=uuid4(), name=STARTER_FOLDER_NAME, user_id=other_user_id)
+
+    projects_result = MagicMock()
+    projects_result.all.return_value = [shared_project, internal_project, ownerless_project, own_project]
+    owners_result = MagicMock()
+    owners_result.all.return_value = [(actor_id, "current-user"), (other_user_id, "other-user")]
+    session = AsyncMock()
+    session.exec.side_effect = [projects_result, owners_result]
+
+    async def return_candidates(*_args, **kwargs):
+        return kwargs["candidates"]
+
+    with patch(
+        "langflow.api.v1.projects.filter_visible_resources",
+        new_callable=AsyncMock,
+        side_effect=return_candidates,
+    ) as filter_visible:
+        result = await read_projects(
+            session=session,
+            current_user=SimpleNamespace(id=actor_id),
+        )
+
+    projects_by_id = {project.id: project for project in result}
+    assert set(projects_by_id) == {shared_project.id, internal_project.id, ownerless_project.id, own_project.id}
+    assert (
+        projects_by_id[shared_project.id].name,
+        projects_by_id[shared_project.id].owner_username,
+        projects_by_id[shared_project.id].is_owner,
+    ) == ("Starter Project", "other-user", False)
+    assert (
+        projects_by_id[ownerless_project.id].name,
+        projects_by_id[ownerless_project.id].owner_username,
+        projects_by_id[ownerless_project.id].is_owner,
+    ) == ("Ownerless Project", None, False)
+    assert (
+        projects_by_id[internal_project.id].name,
+        projects_by_id[internal_project.id].owner_username,
+        projects_by_id[internal_project.id].is_owner,
+    ) == (STARTER_FOLDER_NAME, "other-user", False)
+    assert (
+        projects_by_id[own_project.id].name,
+        projects_by_id[own_project.id].owner_username,
+        projects_by_id[own_project.id].is_owner,
+    ) == ("Starter Project", "current-user", True)
+    assert session.exec.await_count == 2
+    domain_extractor = filter_visible.await_args.kwargs["domain_extractor"]
+    assert domain_extractor(shared_project) == f"project:{shared_project.id}"
 
 
 async def test_read_project(client: AsyncClient, logged_in_headers, basic_case):
@@ -137,11 +268,89 @@ async def test_update_project(client: AsyncClient, logged_in_headers, basic_case
     assert "parent_id" in result, "The dictionary must contain a key called 'parent_id'"
 
 
+async def test_update_project_rename_onto_taken_name_returns_409(client: AsyncClient, logged_in_headers):
+    """PATCH renaming a project onto a name the owner already uses is a 409, not a 500.
+
+    Regression test: the rename dirties the ORM row, the next query autoflushes into the
+    (user_id, name) constraint, and handle_mcp_server_rename swallowed that IntegrityError —
+    so the later flush raised PendingRollbackError and the handler returned 500 with the SQL
+    statement and bound parameters in the response body.
+    """
+    await client.post("api/v1/projects/", json={"name": "patch_target_name"}, headers=logged_in_headers)
+    second = await client.post("api/v1/projects/", json={"name": "patch_source_name"}, headers=logged_in_headers)
+    second_id = second.json()["id"]
+
+    response = await client.patch(
+        f"api/v1/projects/{second_id}",
+        json={"name": "patch_target_name"},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT, response.text
+    detail = response.json()["detail"]
+    assert detail == "Project name must be unique"
+    # The 500 body used to carry the failing statement and its parameters.
+    assert "SQL" not in detail
+    assert "parameters" not in detail
+
+
+async def test_update_project_cannot_rename_system_starter(monkeypatch):
+    from langflow.api.v1 import projects as projects_module
+    from langflow.services.database.models.folder.model import FolderUpdate
+
+    project_id = uuid4()
+    system_starter = Folder(id=project_id, name=STARTER_FOLDER_NAME, user_id=None)
+    monkeypatch.setattr(
+        projects_module,
+        "authorized_or_owner_scoped",
+        AsyncMock(return_value=system_starter),
+    )
+    monkeypatch.setattr(projects_module, "ensure_project_permission", AsyncMock())
+
+    with pytest.raises(HTTPException) as exc_info:
+        await projects_module.update_project(
+            session=AsyncMock(),
+            project_id=project_id,
+            project=FolderUpdate(name="Renamed starter"),
+            current_user=SimpleNamespace(id=uuid4()),
+            background_tasks=BackgroundTasks(),
+        )
+
+    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+    assert "cannot be renamed" in exc_info.value.detail
+
+
+async def test_update_project_rejects_unowned_parent_id(
+    client: AsyncClient, logged_in_headers, basic_case, active_user
+):
+    """Reparenting under a folder the caller does not own returns 404.
+
+    Regression for an IDOR footgun: a tenant-supplied parent_id was assigned without verifying
+    the parent folder belongs to the caller.
+    """
+    other_user_id, _ = await _create_other_user(client)
+    async with session_scope() as session:
+        project = Folder(name=f"Project {uuid4()}", description="", user_id=active_user.id)
+        other_parent = Folder(name=f"Other User Parent {uuid4()}", description="", user_id=UUID(other_user_id))
+        session.add(project)
+        session.add(other_parent)
+        await session.commit()
+        await session.refresh(project)
+        await session.refresh(other_parent)
+        proj_id = project.id
+        other_parent_id = other_parent.id
+
+    update_case = basic_case.copy()
+    update_case["parent_id"] = str(other_parent_id)
+    response = await client.patch(f"api/v1/projects/{proj_id}", json=update_case, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
 async def test_create_project_validation_error(client: AsyncClient, logged_in_headers, basic_case):
     invalid_case = basic_case.copy()
     invalid_case.pop("name")
     response = await client.post("api/v1/projects/", json=invalid_case, headers=logged_in_headers)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_delete_project_then_404(client: AsyncClient, logged_in_headers, basic_case):
@@ -155,10 +364,103 @@ async def test_delete_project_then_404(client: AsyncClient, logged_in_headers, b
     assert get_resp.status_code == status.HTTP_404_NOT_FOUND
 
 
+async def test_delete_project_cannot_delete_system_starter(monkeypatch):
+    from langflow.api.v1 import projects as projects_module
+
+    project_id = uuid4()
+    system_starter = Folder(id=project_id, name=STARTER_FOLDER_NAME, user_id=None)
+    monkeypatch.setattr(
+        projects_module,
+        "authorized_or_owner_scoped",
+        AsyncMock(return_value=system_starter),
+    )
+    monkeypatch.setattr(projects_module, "ensure_project_permission", AsyncMock())
+
+    with pytest.raises(HTTPException) as exc_info:
+        await projects_module.delete_project(
+            session=AsyncMock(),
+            project_id=project_id,
+            current_user=SimpleNamespace(id=uuid4()),
+        )
+
+    assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
+    assert STARTER_FOLDER_NAME in exc_info.value.detail
+
+
+async def test_delete_project_recovers_from_concurrent_write_lock(
+    client: AsyncClient, logged_in_headers, basic_case, monkeypatch
+):
+    """LE-2020: a competing commit must not turn DELETE into a 500 that leaves the project behind.
+
+    ``delete_project`` runs inside ``begin_nested()`` — the SAVEPOINT opens a DEFERRED
+    SQLite transaction, and the reads it performs (flow enumeration, deployment check)
+    pin a read snapshot. When another connection commits before the row delete runs,
+    SQLite answers SQLITE_BUSY_SNAPSHOT *immediately*: the busy handler is never
+    invoked, so ``busy_timeout`` cannot help and only restarting the transaction can.
+
+    The contention is injected with a real second connection committing a real row —
+    the DB is never mocked, only the timing is made deterministic instead of load-dependent.
+    """
+    from langflow.api.v1 import projects as projects_module
+
+    create_resp = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    assert create_resp.status_code == status.HTTP_201_CREATED
+    project_id = create_resp.json()["id"]
+
+    original_check = projects_module.check_project_has_deployments
+    attempts = {"count": 0}
+
+    async def check_with_competing_commit(session, *, project_id):
+        # Only the first attempt races: a retry must find a quiet database and win.
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            async with session_scope() as competing_session:
+                competing_session.add(Folder(name=f"competing-write-{uuid4()}", user_id=None))
+        return await original_check(session, project_id=project_id)
+
+    monkeypatch.setattr(projects_module, "check_project_has_deployments", check_with_competing_commit)
+
+    delete_resp = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+
+    assert attempts["count"] >= 1, "the contention hook never ran — the test no longer exercises the race"
+    assert delete_resp.status_code == status.HTTP_204_NO_CONTENT, delete_resp.text
+
+    get_resp = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert get_resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_delete_project_does_not_leak_sql_on_database_error(
+    client: AsyncClient, logged_in_headers, basic_case, monkeypatch
+):
+    """LE-2020: the error payload must never echo the statement, table or bound parameters."""
+    import sqlite3
+
+    from langflow.api.v1 import projects as projects_module
+    from sqlalchemy.exc import OperationalError
+
+    create_resp = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    project_id = create_resp.json()["id"]
+
+    leaked_statement = "DELETE FROM folder WHERE folder.id = ?"
+
+    async def always_locked(session, *, project_id):  # noqa: ARG001
+        raise OperationalError(leaked_statement, {"id": project_id}, sqlite3.OperationalError("database is locked"))
+
+    monkeypatch.setattr(projects_module, "check_project_has_deployments", always_locked)
+
+    delete_resp = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+
+    assert delete_resp.status_code != status.HTTP_204_NO_CONTENT
+    detail = delete_resp.json()["detail"]
+    assert "DELETE FROM folder" not in detail
+    assert "sqlalche.me" not in detail
+    assert str(project_id) not in detail
+
+
 async def test_read_project_invalid_id_format(client: AsyncClient, logged_in_headers):
     bad_id = "not-a-uuid"
     response = await client.get(f"api/v1/projects/{bad_id}", headers=logged_in_headers)
-    assert response.status_code in (status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_400_BAD_REQUEST)
+    assert response.status_code in (status.HTTP_422_UNPROCESSABLE_CONTENT, status.HTTP_400_BAD_REQUEST)
 
 
 async def test_read_projects_pagination(client: AsyncClient, logged_in_headers):
@@ -2089,3 +2391,176 @@ async def test_delete_project_with_deployments_returns_409_project_guard(
     detail = delete_resp.json()["detail"]
     assert "project cannot be deleted because it has deployments" in detail.lower()
     assert "flow cannot be deleted because it has deployed versions" not in detail.lower()
+
+
+# PUT endpoint tests (upsert)
+
+
+async def test_upsert_project_creates_new_project_with_specified_id(client: AsyncClient, logged_in_headers):
+    """PUT creates a new project at the specified ID and returns 201."""
+    specified_id = str(uuid4())
+    project_data = {"name": "upsert_new_project", "description": "Created via upsert"}
+
+    response = await client.put(f"api/v1/projects/{specified_id}", json=project_data, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_201_CREATED, response.text
+    result = response.json()
+    assert result["id"] == specified_id
+    assert result["name"] == "upsert_new_project"
+
+
+async def test_upsert_project_updates_existing_project(client: AsyncClient, logged_in_headers):
+    """PUT updates an existing project in place and returns 200."""
+    create_response = await client.post(
+        "api/v1/projects/",
+        json={"name": "initial_project_name", "description": "initial description"},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    project_id = create_response.json()["id"]
+
+    updated_project = {"name": "updated_project_name", "description": "updated description"}
+    response = await client.put(f"api/v1/projects/{project_id}", json=updated_project, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    result = response.json()
+    assert result["id"] == project_id
+    assert result["name"] == "updated_project_name"
+    assert result["description"] == "updated description"
+
+
+async def test_upsert_project_returns_404_for_other_users_project(client: AsyncClient, logged_in_headers):
+    """PUT returns 404 when targeting another user's project (avoids leaking existence)."""
+    _, other_user_headers = await _create_other_user(client)
+
+    create_response = await client.post(
+        "api/v1/projects/",
+        json={"name": "other_user_project", "description": ""},
+        headers=other_user_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    other_user_project_id = create_response.json()["id"]
+
+    response = await client.put(
+        f"api/v1/projects/{other_user_project_id}",
+        json={"name": "trying_to_steal", "description": ""},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert "not found" in response.json()["detail"].lower()
+
+
+async def test_upsert_project_returns_409_for_name_conflict_on_create(client: AsyncClient, logged_in_headers):
+    """PUT fails loud (409) when the name collides during CREATE (no auto-rename)."""
+    await client.post(
+        "api/v1/projects/",
+        json={"name": "duplicate_project_name", "description": ""},
+        headers=logged_in_headers,
+    )
+
+    specified_id = str(uuid4())
+    response = await client.put(
+        f"api/v1/projects/{specified_id}",
+        json={"name": "duplicate_project_name", "description": ""},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT, response.text
+    # Exact detail, not a substring: a loose check passed while the shared helper's composite-key
+    # mis-parse was surfacing " folder must be unique" to callers.
+    assert response.json()["detail"] == "Project name must be unique"
+
+
+async def test_upsert_project_returns_409_for_name_conflict_on_update(client: AsyncClient, logged_in_headers):
+    """PUT returns 409 when renaming a project onto another project's name during UPDATE."""
+    await client.post("api/v1/projects/", json={"name": "project_one", "description": ""}, headers=logged_in_headers)
+    second_response = await client.post(
+        "api/v1/projects/", json={"name": "project_two", "description": ""}, headers=logged_in_headers
+    )
+    second_project_id = second_response.json()["id"]
+
+    response = await client.put(
+        f"api/v1/projects/{second_project_id}",
+        json={"name": "project_one", "description": ""},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT, response.text
+    assert response.json()["detail"] == "Project name must be unique"
+
+
+async def test_upsert_project_allows_same_name_update_no_conflict(client: AsyncClient, logged_in_headers):
+    """Re-PUT of a project's own name must NOT 409 (idempotent same-UUID re-sync is the core use case)."""
+    create_response = await client.post(
+        "api/v1/projects/",
+        json={"name": "sync_project", "description": "initial description"},
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == status.HTTP_201_CREATED
+    project_id = create_response.json()["id"]
+
+    # Re-send the project's OWN name with a changed description: same-name update, no collision.
+    response = await client.put(
+        f"api/v1/projects/{project_id}",
+        json={"name": "sync_project", "description": "changed description"},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    result = response.json()
+    assert result["id"] == project_id
+    assert result["name"] == "sync_project"
+    assert result["description"] == "changed description"
+
+
+async def test_upsert_project_create_with_flows_list_moves_flows(client: AsyncClient, logged_in_headers):
+    """PUT create at a specified id runs the flow-move side effect (flows_list) like POST does."""
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "upsert-move-flow", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow_id = flow_resp.json()["id"]
+
+    specified_id = str(uuid4())
+    proj_resp = await client.put(
+        f"api/v1/projects/{specified_id}",
+        json={"name": "upsert-move-project", "flows_list": [flow_id]},
+        headers=logged_in_headers,
+    )
+    assert proj_resp.status_code == status.HTTP_201_CREATED, proj_resp.text
+    assert proj_resp.json()["id"] == specified_id
+
+    flow_after = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert flow_after.status_code == status.HTTP_200_OK
+    assert flow_after.json()["folder_id"] == specified_id
+
+
+async def test_upsert_project_update_rejects_flows_list(client: AsyncClient, logged_in_headers):
+    """PUT to an EXISTING project carrying flows_list fails loud (400) instead of silently dropping it."""
+    flow_resp = await client.post(
+        "api/v1/flows/",
+        json={"name": "reject-move-flow", "data": {}},
+        headers=logged_in_headers,
+    )
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow_id = flow_resp.json()["id"]
+
+    create_resp = await client.post(
+        "api/v1/projects/",
+        json={"name": "reject-move-project", "description": ""},
+        headers=logged_in_headers,
+    )
+    assert create_resp.status_code == status.HTTP_201_CREATED
+    project_id = create_resp.json()["id"]
+
+    response = await client.put(
+        f"api/v1/projects/{project_id}",
+        json={"name": "reject-move-project", "flows_list": [flow_id]},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST, response.text
+    assert "flows_list" in response.json()["detail"]

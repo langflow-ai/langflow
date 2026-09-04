@@ -1,4 +1,5 @@
 import asyncio
+from typing import Any
 
 import pydantic
 from anyio import BrokenResourceError
@@ -7,18 +8,90 @@ from fastapi.responses import HTMLResponse
 from lfx.log.logger import logger
 from mcp import types
 from mcp.server import NotificationOptions, Server
+from mcp.server.auth.middleware.bearer_auth import AuthenticatedUser
+from mcp.server.auth.provider import AccessToken
 from mcp.server.sse import SseServerTransport
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
 from langflow.api.utils import CurrentActiveMCPUser, raise_error_if_astra_cloud_env
 from langflow.api.v1.mcp_utils import (
+    authenticated_caller_ctx,
     current_user_ctx,
     handle_call_tool,
     handle_list_resources,
     handle_list_tools,
     handle_mcp_errors,
     handle_read_resource,
+    raise_if_sse_disabled,
 )
+
+
+def _ensure_mcp_root_model_ready(model: type[pydantic.BaseModel], root_type: Any, *, force: bool = False) -> None:
+    """Rebuild an MCP RootModel only when Pydantic left it incomplete.
+
+    Pydantic 2.14.0a1 can lose the generic root annotation when MCP is first
+    imported through Langflow's router stack. Complete models, including those
+    built by stable Pydantic releases, return without mutation.
+    """
+    if model.__pydantic_complete__ and not force:
+        return
+
+    rebuild_kwargs: dict[str, Any] = {"_types_namespace": {"RootModelRootType": root_type}}
+    if force:
+        rebuild_kwargs["force"] = True
+    model.model_rebuild(**rebuild_kwargs)
+
+
+def _ensure_mcp_paginated_request_defaults() -> bool:
+    """Restore optional params defaults lost from MCP paginated request models.
+
+    Pydantic 2.14.0a1 drops the inherited ``params=None`` default when it
+    specializes MCP's generic ``PaginatedRequest``. The MCP client then omits
+    params from list requests, while the server's validator incorrectly treats
+    the field as required and returns JSON-RPC -32602.
+    """
+    repaired = False
+    paginated_requests = (
+        types.ListPromptsRequest,
+        types.ListResourceTemplatesRequest,
+        types.ListResourcesRequest,
+        types.ListTasksRequest,
+        types.ListToolsRequest,
+    )
+    for request_model in paginated_requests:
+        params_field = request_model.model_fields["params"]
+        if not params_field.is_required():
+            continue
+        params_field.default = None
+        request_model.model_rebuild(force=True)
+        repaired = True
+    return repaired
+
+
+def _ensure_mcp_root_models_ready() -> None:
+    """Restore MCP SDK RootModel validators after affected Pydantic imports."""
+    paginated_requests_repaired = _ensure_mcp_paginated_request_defaults()
+    root_models = (
+        (
+            types.JSONRPCMessage,
+            types.JSONRPCRequest | types.JSONRPCNotification | types.JSONRPCResponse | types.JSONRPCError,
+        ),
+        (types.ClientRequest, types.ClientRequestType),
+        (types.ClientNotification, types.ClientNotificationType),
+        (types.ClientResult, types.ClientResultType),
+        (types.ServerRequest, types.ServerRequestType),
+        (types.ServerNotification, types.ServerNotificationType),
+        (types.ServerResult, types.ServerResultType),
+    )
+    for model, root_type in root_models:
+        _ensure_mcp_root_model_ready(
+            model,
+            root_type,
+            force=paginated_requests_repaired and model is types.ClientRequest,
+        )
+
+
+_ensure_mcp_root_models_ready()
 
 router = APIRouter(prefix="/mcp", tags=["mcp"], include_in_schema=False)
 
@@ -55,16 +128,8 @@ async def handle_global_call_tool(name: str, arguments: dict) -> list[types.Text
     return await handle_call_tool(name, arguments, server)
 
 
-########################################################
-# The transports handle the full ASGI response.
-# FastAPI still expects the endpoint to return
-# a Response, while Starlette's middleware
-# stream validation panics when
-# a http.response.start message
-# is encountered twice within the same stream.
-# This class nullifies the redundant
-# response to end streams gracefully.
-########################################################
+# The MCP transports emit the full ASGI response themselves; returning a real
+# Response would start the stream twice, so this no-op satisfies FastAPI instead.
 class ResponseNoOp(Response):
     async def __call__(self, scope, receive, send) -> None:  # noqa: ARG002
         return
@@ -79,16 +144,25 @@ def find_validation_error(exc):
     return None
 
 
-################################################################################
-# SSE Transport
-################################################################################
 sse = SseServerTransport("/api/v1/mcp/")
+
+
+def _bind_mcp_transport_user(request: Request, current_user: CurrentActiveMCPUser) -> None:
+    """Expose the authenticated Langflow principal to the MCP transport.
+
+    The SSE transport binds each session to ``scope["user"]`` and requires the
+    same principal on subsequent message requests. Langflow performs its own
+    authentication, so adapt the resolved user to the identity type expected by
+    the transport instead of leaving both requests anonymous at the ASGI layer.
+    """
+    user_id = str(current_user.id)
+    request.scope["user"] = AuthenticatedUser(AccessToken(token="", client_id=user_id, scopes=[], subject=user_id))
 
 
 @router.head(
     "/sse",
     response_class=HTMLResponse,
-    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    dependencies=[Depends(raise_error_if_astra_cloud_env), Depends(raise_if_sse_disabled)],
 )
 async def im_alive():
     return Response()
@@ -97,11 +171,13 @@ async def im_alive():
 @router.get(
     "/sse",
     response_class=ResponseNoOp,
-    dependencies=[Depends(raise_error_if_astra_cloud_env)],
+    dependencies=[Depends(raise_error_if_astra_cloud_env), Depends(raise_if_sse_disabled)],
 )
 async def handle_sse(request: Request, current_user: CurrentActiveMCPUser):
     msg = f"Starting SSE connection, server name: {server.name}"
     await logger.ainfo(msg)
+    _bind_mcp_transport_user(request, current_user)
+    authenticated_caller_ctx.set(current_user.id)
     token = current_user_ctx.set(current_user)
     try:
         async with sse.connect_sse(request.scope, request.receive, request._send) as streams:  # noqa: SLF001
@@ -143,8 +219,9 @@ async def handle_sse(request: Request, current_user: CurrentActiveMCPUser):
         current_user_ctx.reset(token)
 
 
-@router.post("/", dependencies=[Depends(raise_error_if_astra_cloud_env)])
-async def handle_messages(request: Request):
+@router.post("/", dependencies=[Depends(raise_error_if_astra_cloud_env), Depends(raise_if_sse_disabled)])
+async def handle_messages(request: Request, current_user: CurrentActiveMCPUser):
+    _bind_mcp_transport_user(request, current_user)
     try:
         await sse.handle_post_message(request.scope, request.receive, request._send)  # noqa: SLF001
     except (BrokenResourceError, BrokenPipeError) as e:
@@ -155,17 +232,15 @@ async def handle_messages(request: Request):
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}") from e
 
 
-################################################################################
-# Streamable HTTP Transport
-################################################################################
 class StreamableHTTP:
-    def __init__(self) -> None:
+    def __init__(self, mcp_server: Server | None = None) -> None:
+        # Default is this module's flows-as-tools server; the agentic MCP passes its own.
+        self._server = mcp_server if mcp_server is not None else server
         self.session_manager: StreamableHTTPSessionManager | None = None
         self._started = False
         self._start_stop_lock = asyncio.Lock()
-        # own the lifecycle of the session manager
-        # inside an asyncio task to ensure that
-        # __aenter__ and __aexit__ happen in the same task
+        # A dedicated task owns the manager lifecycle so __aenter__ and
+        # __aexit__ of its run() context happen in the same task.
         self._mgr_task: asyncio.Task | None = None
         self._mgr_ready: asyncio.Event | None = None
         self._mgr_close: asyncio.Event | None = None
@@ -191,7 +266,7 @@ class StreamableHTTP:
                 await logger.adebug("Streamable HTTP session manager already running; skipping start")
                 return
             try:
-                self.session_manager = StreamableHTTPSessionManager(server, stateless=stateless)
+                self.session_manager = StreamableHTTPSessionManager(self._server, stateless=stateless)
                 self._mgr_ready = asyncio.Event()
                 self._mgr_close = asyncio.Event()
                 self._mgr_task = asyncio.create_task(self._start_session_manager())
@@ -278,6 +353,7 @@ async def _dispatch_streamable_http(
         current_user.id,
     )
 
+    authenticated_caller_ctx.set(current_user.id)
     context_token = current_user_ctx.set(current_user)
     try:
         manager = get_streamable_http_manager()

@@ -2,14 +2,9 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import {
-  closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
-  openAdvancedOptions,
+  closeParametersPanel,
+  openParametersPanel,
 } from "../../utils/open-advanced-options";
 
 test(
@@ -30,22 +25,17 @@ test(
         },
       });
     });
-    skipIfMissing.openAiKey();
-    loadDotenvIfLocal(__dirname);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page
       .getByRole("heading", { name: TEXTS.templateBasicPrompting })
       .click();
-    await initialGPTsetup(page);
-
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
 
-    await disableInspectPanel(page);
     await page.getByText(TEXTS.componentChatInput, { exact: true }).click();
-    await openAdvancedOptions(page);
-    await closeAdvancedOptions(page);
+    await openParametersPanel(page);
+    await closeParametersPanel(page);
 
     await page
       .getByRole("button", { name: TEXTS.playground, exact: true })
@@ -73,7 +63,5 @@ test(
     ).toBeVisible();
 
     await page.getByTestId("playground-close-button").click();
-
-    await enableInspectPanel(page);
   },
 );

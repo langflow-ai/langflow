@@ -1,9 +1,9 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test.describe("Session Deletion Data Leakage Fix", () => {
   // Helper to send a message in the playground
@@ -78,9 +78,9 @@ test.describe("Session Deletion Data Leakage Fix", () => {
 
   test(
     "should prevent data leakage when default session is deleted and recreated",
-    { tag: ["@release", "@regression"] },
+    { tag: ["@release"] },
     async ({ page }) => {
-      skipIfMissing.openAiKey();
+      await seedLoopbackProvider(page);
       await awaitBootstrapTest(page);
 
       // Load a starter project
@@ -88,7 +88,7 @@ test.describe("Session Deletion Data Leakage Fix", () => {
       await page
         .getByRole("heading", { name: TEXTS.templateBasicPrompting })
         .click();
-      await initialGPTsetup(page);
+      await configureLoopbackOpenAI(page);
 
       // Open playground
       await page
@@ -143,9 +143,9 @@ test.describe("Session Deletion Data Leakage Fix", () => {
 
   test(
     "should clear LLM context when session is deleted",
-    { tag: ["@release", "@regression"] },
+    { tag: ["@release"] },
     async ({ page }) => {
-      skipIfMissing.openAiKey();
+      await seedLoopbackProvider(page);
       await awaitBootstrapTest(page);
 
       // Load a starter project with memory
@@ -153,7 +153,7 @@ test.describe("Session Deletion Data Leakage Fix", () => {
       await page
         .getByRole("heading", { name: TEXTS.templateBasicPrompting })
         .click();
-      await initialGPTsetup(page);
+      await configureLoopbackOpenAI(page);
 
       // Open playground
       await page

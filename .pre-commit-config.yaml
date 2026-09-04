@@ -62,7 +62,7 @@ repos:
         pass_filenames: false
       - id: extension-router-trust
         name: Extension router trust - no install/uninstall under /api/v1/extensions
-        entry: python scripts/migrate/check_router_trust.py
+        entry: uv run python scripts/migrate/check_router_trust.py
         language: system
         files: ^src/backend/base/langflow/api/.*\.py$
         pass_filenames: false
@@ -72,12 +72,27 @@ repos:
         language: system
         files: ^(src/lfx/src/lfx/components/.*\.py|src/backend/base/langflow/components/.*\.py|src/bundles/.*\.py)$
         pass_filenames: false
+      - id: logged-exception-text
+        name: Log calls must not render the caught exception (leaks payloads, drops error.type)
+        entry: uv run python scripts/lint/check_logged_exception_text.py
+        language: system
+        # Scoped to the flow execution path, which is where a leaked exception message
+        # carries flow content. pass_filenames is false so the whole scope is re-checked on
+        # any touch rather than only the staged slice, which is what keeps it at zero
+        # without a baseline file.
+        files: ^(src/lfx/src/lfx/base/agents/.*\.py|src/lfx/src/lfx/graph/.*\.py|src/lfx/src/lfx/components/models_and_agents/.*\.py)$
+        pass_filenames: false
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
     hooks:
       - id: detect-secrets
         args: ["--baseline", ".secrets.baseline"]
-        exclude: '(^docs/|^SECURITY\.md$|src/lfx/src/lfx/_assets/component_index\.json$|src/lfx/README\.md$)'
+        # Bundle starter projects are excluded for the same reason as the langflow ones listed
+        # just before them: both are generated flow templates that embed component source and
+        # its content hash, so a regeneration trips the high-entropy detector on a value that is
+        # a hash by construction. Only the langflow path was listed, because those regenerate on
+        # every component change while a bundled template's Agent changes far more rarely.
+        exclude: '(^docs/|^SECURITY\.md$|src/lfx/src/lfx/_assets/component_index\.json$|src/lfx/README\.md$|^src/backend/base/langflow/initial_setup/starter_projects/|^src/bundles/.*/starter_projects/)'
   - repo: local
     hooks:
       - id: local-biome-check

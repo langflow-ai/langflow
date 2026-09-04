@@ -74,10 +74,15 @@ class MessageStoreComponent(Component):
             if message.sender:
                 stored_messages = [m for m in stored_messages if m.sender == message.sender]
         else:
-            await astore_message(message, flow_id=self.graph.flow_id)
+            graph_user_id = getattr(self.graph, "user_id", None)
+            user_id_scope = graph_user_id if graph_user_id and str(graph_user_id) != "None" else None
+            await astore_message(message, flow_id=self.graph.flow_id, user_id=user_id_scope)
             stored_messages = (
                 await aget_messages(
-                    session_id=message.session_id, sender_name=message.sender_name, sender=message.sender
+                    session_id=message.session_id,
+                    sender_name=message.sender_name,
+                    sender=message.sender,
+                    user_id=user_id_scope,
                 )
                 or []
             )

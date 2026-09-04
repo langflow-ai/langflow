@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProviderModal from "@/modals/modelProviderModal";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
 import type { AssistantModel } from "../assistant-panel.types";
 import { classifyModelStrength } from "../helpers/model-strength";
@@ -29,7 +30,12 @@ export function ModelSelector({
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const [isManageProvidersOpen, setIsManageProvidersOpen] = useState(false);
-  const { filteredProviders: enabledProviders, isLoading } = useEnabledModels();
+  const {
+    filteredProviders: enabledProviders,
+    isLoading,
+    isError,
+  } = useEnabledModels();
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const { refresh: refreshAllModelInputs } = useRefreshModelInputs();
 
   const handleRefreshList = async () => {
@@ -55,16 +61,25 @@ export function ModelSelector({
     );
   }, [enabledProviders]);
 
-  // Auto-select first available model if none selected or if the selected model
+  // Catalog order can put a weak SKU first (LE-1767): default to the first
+  // strong model; allModels[0] only when every enabled model is weak.
+  const defaultModel = useMemo(
+    () =>
+      allModels.find((m) => classifyModelStrength(m.name) === "strong") ??
+      allModels[0] ??
+      null,
+    [allModels],
+  );
+
+  // Auto-select the default model if none selected or if the selected model
   // is no longer available (e.g., provider was removed or model was disabled)
   useEffect(() => {
-    if (allModels.length === 0) return;
+    if (!defaultModel) return;
 
     const isSelectedModelValid =
       selectedModel && allModels.some((m) => m.id === selectedModel.id);
 
     if (!isSelectedModelValid) {
-      const defaultModel = allModels[0];
       onModelChange({
         id: defaultModel.id,
         name: defaultModel.name,
@@ -72,9 +87,9 @@ export function ModelSelector({
         displayName: defaultModel.displayName,
       });
     }
-  }, [selectedModel, allModels, onModelChange]);
+  }, [selectedModel, allModels, defaultModel, onModelChange]);
 
-  const currentModel = selectedModel || allModels[0] || null;
+  const currentModel = selectedModel || defaultModel;
 
   // Resolve the provider icon for the currently selected model
   const currentProviderIcon = useMemo(() => {
@@ -95,12 +110,8 @@ export function ModelSelector({
     setIsOpen(false);
   };
 
-  // Discreet UX hint: when the selected model is too small for agent loops
-  // (heuristic in helpers/model-strength.ts), surface an inline italic note
-  // next to the chip. Classification is advisory; the dropdown behaves the
-  // same regardless of result. Re-evaluated on every change of currentModel.
-  // Must stay above the early returns below — Rules of Hooks: hook count
-  // can't change between renders, and isLoading flips false on first fetch.
+  // Advisory hint only (dropdown behaves the same). Must stay above the early
+  // returns below — Rules of Hooks: isLoading flips false after first fetch.
   const modelStrength = useMemo(
     () => classifyModelStrength(currentModel?.name ?? ""),
     [currentModel?.name],
@@ -120,6 +131,21 @@ export function ModelSelector({
     );
   }
 
+  if (isError) {
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        data-testid="assistant-model-catalog-error"
+        className="h-7 gap-1.5 px-2 text-xs text-muted-foreground"
+        disabled
+      >
+        <span className="text-destructive">•</span>
+        <span>{t("errors.failedToLoadModels")}</span>
+      </Button>
+    );
+  }
+
   if (allModels.length === 0) {
     return (
       <Button
@@ -135,9 +161,8 @@ export function ModelSelector({
   }
 
   return (
-    // gap-3: leaves room for the chip's focus ring (~4px outline + offset)
-    // so the italic warning to the right doesn't visually overlap it after
-    // the user clicks the dropdown and the button keeps keyboard focus.
+    // gap-3 leaves room for the chip's focus ring so the italic warning
+    // doesn't overlap it while the button keeps keyboard focus.
     <div className="flex items-center gap-3">
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
@@ -257,9 +282,9 @@ export function ModelSelector({
         <span
           data-testid="assistant-model-weak-hint"
           className="select-none text-xs italic text-muted-foreground/70"
-          title="Smaller models may underperform on agent tasks"
+          title="This model may underperform on agent tasks"
         >
-          Smaller models may underperform on agent tasks
+          This model may underperform on agent tasks
         </span>
       )}
       {isManageProvidersOpen && (
@@ -267,6 +292,7 @@ export function ModelSelector({
           open={isManageProvidersOpen}
           onClose={() => setIsManageProvidersOpen(false)}
           modelType="llm"
+          flowId={currentFlowId}
         />
       )}
     </div>

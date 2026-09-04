@@ -14,9 +14,13 @@ positive assertion that the fields are stamped onto the produced template.
 
 from __future__ import annotations
 
+import asyncio
+import hashlib
 import os
+from threading import Event, Thread
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from lfx.interface.components import (
@@ -48,6 +52,283 @@ def _stub_template(*_args, **_kwargs) -> tuple[dict[str, Any], object]:
     return ({"display_name": "Stub", "type": "stub", "template": {}}, object())
 
 
+@pytest.mark.asyncio
+async def test_component_cache_initialization_is_single_flight_and_atomic() -> None:
+    """Concurrent callers share one load and never observe a partial registry."""
+    from lfx.interface import components as components_module
+
+    cache = components_module.ComponentCache()
+    cache.type_to_code = {"StaleComponent": "# stale trusted code"}
+    settings_service = SimpleNamespace(settings=SimpleNamespace())
+    trusted_code = "# trusted ChatInput code"
+    code_hash = hashlib.sha256(trusted_code.encode()).hexdigest()[:12]
+    builtins = {
+        "components": {
+            "input_output": {
+                "ChatInput": {
+                    "display_name": "Chat Input",
+                    "metadata": {"code_hash": code_hash},
+                    "template": {"_type": "Component", "code": {"value": trusted_code}},
+                }
+            }
+        }
+    }
+    load_started = asyncio.Event()
+    release_load = asyncio.Event()
+
+    async def load_builtins(*_args, **_kwargs):
+        load_started.set()
+        await release_load.wait()
+        return builtins
+
+    with (
+        patch.object(components_module, "component_cache", cache),
+        patch.object(components_module, "import_langflow_components", new=AsyncMock(side_effect=load_builtins)) as load,
+        patch.object(components_module, "_determine_loading_strategy", new=AsyncMock(return_value={})),
+        patch.object(components_module, "import_extension_components", new=AsyncMock(return_value={})),
+    ):
+        leader = asyncio.create_task(components_module.get_and_cache_all_types_dict(settings_service))
+        await asyncio.wait_for(load_started.wait(), timeout=2)
+        follower = asyncio.create_task(components_module.get_and_cache_all_types_dict(settings_service))
+        await asyncio.sleep(0)
+
+        with cache.state_lock:
+            assert cache.all_types_dict is None
+            assert not cache.all_types_ready
+            assert cache.type_to_current_hash is None
+            assert cache.code_by_hash is None
+            assert cache.type_to_code is None
+            assert cache.component_identity_index is None
+        assert not follower.done()
+
+        release_load.set()
+        leader_result, follower_result = await asyncio.wait_for(asyncio.gather(leader, follower), timeout=2)
+
+    assert load.await_count == 1
+    assert leader_result is follower_result
+    assert leader_result is cache.all_types_dict
+    assert cache.all_types_ready
+    assert cache.type_to_current_hash == {"ChatInput": {code_hash}, "Chat Input": {code_hash}}
+    assert cache.code_by_hash == {code_hash: trusted_code}
+    assert cache.type_to_code == {"ChatInput": trusted_code, "Chat Input": trusted_code}
+    assert cache.component_identity_index is not None
+    assert cache.component_identity_index.resolve("Chat Input") == frozenset({"ChatInput"})
+
+
+@pytest.mark.asyncio
+async def test_cancelled_initiating_caller_does_not_cancel_shared_initialization() -> None:
+    """Cancelling the caller that elected initialization must not strand followers."""
+    from lfx.interface import components as components_module
+
+    cache = components_module.ComponentCache()
+    settings_service = SimpleNamespace(settings=SimpleNamespace())
+    builtins = {
+        "components": {
+            "input_output": {
+                "ChatInput": {
+                    "display_name": "Chat Input",
+                    "template": {"_type": "Component"},
+                }
+            }
+        }
+    }
+    load_started = asyncio.Event()
+    release_load = asyncio.Event()
+
+    async def load_builtins(*_args, **_kwargs):
+        load_started.set()
+        await release_load.wait()
+        return builtins
+
+    with (
+        patch.object(components_module, "component_cache", cache),
+        patch.object(components_module, "import_langflow_components", new=AsyncMock(side_effect=load_builtins)) as load,
+        patch.object(components_module, "_determine_loading_strategy", new=AsyncMock(return_value={})),
+        patch.object(components_module, "import_extension_components", new=AsyncMock(return_value={})),
+    ):
+        initiating_caller = asyncio.create_task(components_module.get_and_cache_all_types_dict(settings_service))
+        await asyncio.wait_for(load_started.wait(), timeout=2)
+        follower = asyncio.create_task(components_module.get_and_cache_all_types_dict(settings_service))
+        await asyncio.sleep(0)
+
+        with cache.state_lock:
+            initialization_task = cache.initialization_task
+            initialization_future = cache.initialization_future
+        assert initialization_task is not None
+        assert initialization_task is not initiating_caller
+        assert initialization_future is not None
+
+        initiating_caller.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await initiating_caller
+
+        assert not initialization_task.done()
+        assert not initialization_future.cancelled()
+        assert not follower.done()
+
+        release_load.set()
+        follower_result = await asyncio.wait_for(follower, timeout=2)
+
+    load.assert_awaited_once_with(settings_service, None)
+    assert follower_result is cache.all_types_dict
+    assert cache.all_types_ready
+    assert cache.initialization_future is None
+    assert cache.initialization_task is None
+
+
+@pytest.mark.asyncio
+async def test_failed_background_initialization_cleans_state_and_can_retry() -> None:
+    """Initializer failure reaches its caller and leaves no stale single-flight state."""
+    from lfx.interface import components as components_module
+
+    cache = components_module.ComponentCache()
+    settings_service = SimpleNamespace(settings=SimpleNamespace())
+    builtins = {"components": {}}
+
+    with (
+        patch.object(components_module, "component_cache", cache),
+        patch.object(
+            components_module,
+            "import_langflow_components",
+            new=AsyncMock(side_effect=[RuntimeError("component import failed"), builtins]),
+        ) as load,
+        patch.object(components_module, "_determine_loading_strategy", new=AsyncMock(return_value={})),
+        patch.object(components_module, "import_extension_components", new=AsyncMock(return_value={})),
+    ):
+        with pytest.raises(RuntimeError, match="component import failed"):
+            await components_module.get_and_cache_all_types_dict(settings_service)
+
+        with cache.state_lock:
+            assert cache.initialization_future is None
+            assert cache.initialization_task is None
+            assert not cache.pending_bundle_updates
+
+        assert await components_module.get_and_cache_all_types_dict(settings_service) == {}
+
+    assert load.await_count == 2
+    assert cache.all_types_ready
+
+
+@pytest.mark.asyncio
+async def test_cancelled_background_initialization_cleans_shared_state() -> None:
+    """Explicit initializer cancellation wakes waiters and clears retry state."""
+    from lfx.interface import components as components_module
+
+    cache = components_module.ComponentCache()
+    settings_service = SimpleNamespace(settings=SimpleNamespace())
+    load_started = asyncio.Event()
+
+    async def load_builtins(*_args, **_kwargs):
+        load_started.set()
+        await asyncio.Event().wait()
+
+    with (
+        patch.object(components_module, "component_cache", cache),
+        patch.object(components_module, "import_langflow_components", new=AsyncMock(side_effect=load_builtins)),
+    ):
+        caller = asyncio.create_task(components_module.get_and_cache_all_types_dict(settings_service))
+        await asyncio.wait_for(load_started.wait(), timeout=2)
+        with cache.state_lock:
+            initialization_task = cache.initialization_task
+        assert initialization_task is not None
+
+        initialization_task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await asyncio.wait_for(caller, timeout=2)
+
+    with cache.state_lock:
+        assert cache.initialization_future is None
+        assert cache.initialization_task is None
+        assert not cache.pending_bundle_updates
+
+
+@pytest.mark.asyncio
+async def test_reload_completed_during_initialization_wins_at_atomic_publication(tmp_path: Path) -> None:
+    """A post-swap reload cannot be overwritten by stale in-flight discovery."""
+    from lfx.extension.bundle_registry import BundleRecord
+    from lfx.extension.loader._types import LoadedComponent
+    from lfx.interface import components as components_module
+
+    cache = components_module.ComponentCache()
+    settings_service = SimpleNamespace(settings=SimpleNamespace())
+    stale_id = "ext:delta:OldThing@official"
+    current_id = "ext:delta:DeltaThing@official"
+    stale_extension = {
+        "delta": {
+            stale_id: {
+                "name": "OldThing",
+                "display_name": "Old Thing",
+                "template": {"_type": "Component"},
+            }
+        }
+    }
+    stale_discovery_ready = asyncio.Event()
+    release_discovery = asyncio.Event()
+
+    async def load_stale_extension(_settings_service):
+        stale_discovery_ready.set()
+        await release_discovery.wait()
+        return stale_extension
+
+    class _DeltaThing:
+        display_name = "Delta"
+
+        def build(self) -> None:
+            return None
+
+    record = BundleRecord(
+        bundle="delta",
+        extension_id="lfx-delta",
+        extension_version="1.0.0",
+        slot="official",
+        components=(
+            LoadedComponent(
+                extension_id="lfx-delta",
+                extension_version="1.0.0",
+                bundle="delta",
+                class_name="DeltaThing",
+                slot="official",
+                klass=_DeltaThing,
+                module_name="_lfx_ext.official.delta.thing",
+                file_path=tmp_path / "thing.py",
+                distribution=None,
+            ),
+        ),
+    )
+
+    with (
+        patch.object(components_module, "component_cache", cache),
+        patch.object(
+            components_module,
+            "import_langflow_components",
+            new=AsyncMock(return_value={"components": {}}),
+        ),
+        patch.object(components_module, "_determine_loading_strategy", new=AsyncMock(return_value={})),
+        patch.object(
+            components_module,
+            "import_extension_components",
+            new=AsyncMock(side_effect=load_stale_extension),
+        ),
+        patch.object(components_module, "create_component_template", side_effect=_stub_template),
+    ):
+        initialization = asyncio.create_task(components_module.get_and_cache_all_types_dict(settings_service))
+        await asyncio.wait_for(stale_discovery_ready.wait(), timeout=2)
+
+        components_module.refresh_bundle_cache_from_record(record)
+        with cache.state_lock:
+            assert current_id in cache.pending_bundle_updates["delta"]
+            assert cache.all_types_dict is None
+
+        release_discovery.set()
+        result = await asyncio.wait_for(initialization, timeout=2)
+
+    assert current_id in result["delta"]
+    assert stale_id not in result["delta"]
+    assert result is cache.all_types_dict
+    assert cache.component_identity_index is not None
+    assert cache.component_identity_index.resolve("DeltaThing") == frozenset({current_id})
+
+
 def test_decorate_template_stamps_required_fields() -> None:
     """The AC fields land on the template dict as top-level keys."""
     template = {"display_name": "X"}
@@ -64,6 +345,37 @@ def test_decorate_template_stamps_required_fields() -> None:
     assert decorated["namespaced_id"] == "ext:pilot:PilotThing@official"
     # Existing keys are preserved.
     assert decorated["display_name"] == "X"
+
+
+def test_decorate_template_stamps_legacy_name() -> None:
+    """``legacy_name`` lands as ``template["name"]``.
+
+    It is the bridge both alias maps (frontend getTemplateAliases, lfx
+    component_aliases) use to resolve pre-move node types like ``AstraDB``
+    whose saved ``type`` is the component's ``name`` attribute, not its
+    class name.
+    """
+    decorated = _decorate_template_with_extension(
+        {"display_name": "X"},
+        extension_id="lfx-pilot",
+        bundle="pilot",
+        extension_version="1.2.3",
+        namespaced_id="ext:pilot:PilotThing@official",
+        legacy_name="AstraDB",
+    )
+    assert decorated["name"] == "AstraDB"
+
+
+def test_decorate_template_never_overrides_existing_name() -> None:
+    decorated = _decorate_template_with_extension(
+        {"display_name": "X", "name": "Original"},
+        extension_id="lfx-pilot",
+        bundle="pilot",
+        extension_version="1.2.3",
+        namespaced_id="ext:pilot:PilotThing@official",
+        legacy_name="AstraDB",
+    )
+    assert decorated["name"] == "Original"
 
 
 @pytest.mark.asyncio
@@ -113,6 +425,9 @@ async def test_inline_bundle_components_decorated_with_extension_metadata(tmp_pa
     assert template["extension"]  # id derived from bundle.json or default
     assert template["extension_version"]  # default "0.0.0" when no bundle.json
     assert template["namespaced_id"] == expected_id
+    # The legacy in-tree identity (name attr falling back to class name) is
+    # carried in the template value so saved flows' node types still resolve.
+    assert template["name"] == "AlphaThing"
 
 
 @pytest.mark.asyncio
@@ -219,10 +534,10 @@ async def test_seed_bundle_shadowed_by_installed_emits_typed_warning(tmp_path: P
     """When an installed pip dist shadows a same-named seed bundle, installed wins.
 
     Per the deployment doc, installed pip distributions take precedence; the
-    seed copy is dropped and a typed ``seed-bundle-shadowed`` ExtensionError
+    seed copy is dropped and a typed ``seed-bundle-shadowed`` warning
     is appended to the seed result so the diagnostics emitter surfaces the
     misconfiguration.  This test asserts both halves: installed wins in the
-    BundleRegistry, AND the typed error is attached to the seed result that
+    BundleRegistry, AND the typed warning is attached to the seed result that
     flows through ``_emit_extension_diagnostics``.
     """
     import json
@@ -310,10 +625,10 @@ async def test_seed_bundle_shadowed_by_installed_emits_typed_warning(tmp_path: P
     assert record.distribution == "lfx-pilot"
 
     # The seed result that ran through the diagnostics emitter carries the
-    # typed shadowing error so operators can see the misconfiguration.
+    # typed shadowing warning so operators can see the misconfiguration.
     assert captured_diagnostics, "diagnostics emitter was never called"
     all_results = captured_diagnostics[0]
-    shadow_codes = {err.code for r in all_results for err in r.errors}
+    shadow_codes = {warning.code for r in all_results for warning in r.warnings}
     assert "seed-bundle-shadowed" in shadow_codes, (
         f"expected seed-bundle-shadowed in emitted diagnostics; got codes: {sorted(shadow_codes)}"
     )
@@ -425,9 +740,9 @@ async def test_seed_bundle_shadows_dev_emits_generic_bundle_shadowed(tmp_path: P
     # generic typed shadow warning naming both paths.
     assert captured_diagnostics, "diagnostics emitter was never called"
     all_results = captured_diagnostics[0]
-    shadow_errors = [err for r in all_results for err in r.errors if err.code == "bundle-shadowed"]
+    shadow_errors = [warning for r in all_results for warning in r.warnings if warning.code == "bundle-shadowed"]
     assert len(shadow_errors) == 1, (
-        f"expected exactly one bundle-shadowed warning; got {[e.code for r in all_results for e in r.errors]}"
+        f"expected exactly one bundle-shadowed warning; got {[w.code for r in all_results for w in r.warnings]}"
     )
     msg = shadow_errors[0].message
     assert str(dev_path) in msg, msg
@@ -494,6 +809,7 @@ def test_post_swap_hook_refreshes_component_cache(tmp_path: Path) -> None:
 
     # Seed the cache with a placeholder pre-reload template for bundle 'gamma'.
     component_cache.all_types_dict = {"gamma": {"old": {"display_name": "old"}}}
+    component_cache.all_types_ready = True
 
     # Build a BundleRecord with a fake LoadedComponent.  We use the same
     # toy Component shim the other tests use; create_component_template
@@ -551,6 +867,7 @@ def test_post_swap_hook_noop_when_cache_not_built() -> None:
     )
 
     component_cache.all_types_dict = None
+    component_cache.all_types_ready = False
     record = BundleRecord(
         bundle="empty",
         extension_id="lfx-empty",
@@ -579,8 +896,11 @@ def test_post_swap_hook_invalidates_hash_lookups(tmp_path: Path) -> None:
     )
 
     component_cache.all_types_dict = {"delta": {"old": {"display_name": "old"}}}
+    component_cache.all_types_ready = True
     component_cache.type_to_current_hash = {"DeltaThing": {"abc123def456"}}  # pragma: allowlist secret
     component_cache.all_known_hashes = {"abc123def456"}  # pragma: allowlist secret
+    component_cache.type_to_code = {"DeltaThing": "# stale trusted code"}
+    component_cache.component_identity_index = object()
 
     class _Component:
         pass
@@ -615,6 +935,241 @@ def test_post_swap_hook_invalidates_hash_lookups(tmp_path: Path) -> None:
 
     assert component_cache.type_to_current_hash is None
     assert component_cache.all_known_hashes is None
+    assert component_cache.type_to_code is None
+    assert component_cache.component_identity_index is None
+
+
+def test_identity_index_read_cannot_publish_stale_state_after_reload(tmp_path: Path) -> None:
+    """A reader building the old index must linearize before reload invalidates it."""
+    from lfx.extension.bundle_registry import BundleRecord
+    from lfx.extension.loader._types import LoadedComponent
+    from lfx.interface import components as components_module
+
+    old_id = "ext:delta:OldThing@official"
+    new_id = "ext:delta:DeltaThing@official"
+    cache = components_module.ComponentCache()
+    with cache.state_lock:
+        cache.all_types_dict = {
+            "delta": {
+                old_id: {
+                    "name": "OldThing",
+                    "display_name": "Old Thing",
+                    "template": {"_type": "Component"},
+                }
+            }
+        }
+        cache.all_types_ready = True
+        cache.component_identity_index = None
+
+    class _DeltaThing:
+        display_name = "Delta"
+
+        def build(self) -> None:
+            return None
+
+    record = BundleRecord(
+        bundle="delta",
+        extension_id="lfx-delta",
+        extension_version="1.0.0",
+        slot="official",
+        components=(
+            LoadedComponent(
+                extension_id="lfx-delta",
+                extension_version="1.0.0",
+                bundle="delta",
+                class_name="DeltaThing",
+                slot="official",
+                klass=_DeltaThing,
+                module_name="_lfx_ext.official.delta.thing",
+                file_path=tmp_path / "thing.py",
+                distribution=None,
+            ),
+        ),
+    )
+
+    build_started = Event()
+    release_build = Event()
+    refresh_started = Event()
+    refresh_finished = Event()
+    reader_results = []
+    thread_errors: list[Exception] = []
+    real_build = components_module.build_component_identity_index
+
+    def delayed_build(all_types_dict):
+        result = real_build(all_types_dict)
+        build_started.set()
+        if not release_build.wait(timeout=2):
+            message = "identity-index test did not release the reader"
+            raise TimeoutError(message)
+        return result
+
+    def read_identity_index() -> None:
+        try:
+            reader_results.append(components_module.get_component_identity_index())
+        except Exception as exc:
+            thread_errors.append(exc)
+
+    def refresh_cache() -> None:
+        refresh_started.set()
+        try:
+            components_module.refresh_bundle_cache_from_record(record)
+        except Exception as exc:
+            thread_errors.append(exc)
+        finally:
+            refresh_finished.set()
+
+    with (
+        patch.object(components_module, "component_cache", cache),
+        patch.object(components_module, "build_component_identity_index", side_effect=delayed_build),
+        patch.object(components_module, "create_component_template", side_effect=_stub_template),
+    ):
+        reader = Thread(target=read_identity_index)
+        reader.start()
+        assert build_started.wait(timeout=2)
+
+        refresher = Thread(target=refresh_cache)
+        refresher.start()
+        assert refresh_started.wait(timeout=2)
+        assert not refresh_finished.wait(timeout=0.1), "reload published while an old index read held the state lock"
+
+        release_build.set()
+        reader.join(timeout=2)
+        refresher.join(timeout=2)
+        assert not reader.is_alive()
+        assert not refresher.is_alive()
+
+        assert not thread_errors
+        assert reader_results[0].resolve("OldThing") == frozenset({old_id})
+        assert cache.component_identity_index is None
+
+        current_index = components_module.get_component_identity_index()
+        assert current_index is not None
+        assert current_index.resolve("DeltaThing") == frozenset({new_id})
+        assert old_id not in current_index.canonical_keys
+
+
+def test_trusted_code_read_cannot_republish_stale_state_after_reload(tmp_path: Path) -> None:
+    """Lazy trusted-code construction linearizes before reload invalidation."""
+    from lfx.extension.bundle_registry import BundleRecord
+    from lfx.extension.loader._types import LoadedComponent
+    from lfx.interface import components as components_module
+    from lfx.utils import flow_validation
+
+    cache = components_module.ComponentCache()
+    old_id = "ext:delta:OldThing@official"
+    new_id = "ext:delta:DeltaThing@official"
+    old_code = "# trusted old code"
+    new_code = "# trusted new code"
+    old_hash = hashlib.sha256(old_code.encode()).hexdigest()[:12]
+    new_hash = hashlib.sha256(new_code.encode()).hexdigest()[:12]
+    with cache.state_lock:
+        cache.all_types_dict = {
+            "delta": {
+                old_id: {
+                    "name": "OldThing",
+                    "metadata": {"code_hash": old_hash},
+                    "template": {"_type": "Component", "code": {"value": old_code}},
+                }
+            }
+        }
+        cache.all_types_ready = True
+        cache.code_by_hash = None
+
+    class _DeltaThing:
+        display_name = "Delta"
+
+        def build(self) -> None:
+            return None
+
+    record = BundleRecord(
+        bundle="delta",
+        extension_id="lfx-delta",
+        extension_version="1.0.0",
+        slot="official",
+        components=(
+            LoadedComponent(
+                extension_id="lfx-delta",
+                extension_version="1.0.0",
+                bundle="delta",
+                class_name="DeltaThing",
+                slot="official",
+                klass=_DeltaThing,
+                module_name="_lfx_ext.official.delta.thing",
+                file_path=tmp_path / "thing.py",
+                distribution=None,
+            ),
+        ),
+    )
+
+    def new_template(*_args, **_kwargs):
+        return (
+            {
+                "display_name": "Delta",
+                "metadata": {"code_hash": new_hash},
+                "template": {"_type": "Component", "code": {"value": new_code}},
+            },
+            object(),
+        )
+
+    build_started = Event()
+    release_build = Event()
+    refresh_started = Event()
+    refresh_finished = Event()
+    reader_results: list[str | None] = []
+    thread_errors: list[Exception] = []
+    real_collect = flow_validation.collect_code_by_hash
+
+    def delayed_collect(all_types_dict):
+        result = real_collect(all_types_dict)
+        build_started.set()
+        if not release_build.wait(timeout=2):
+            message = "trusted-code test did not release the reader"
+            raise TimeoutError(message)
+        return result
+
+    def read_trusted_code() -> None:
+        try:
+            reader_results.append(flow_validation.get_trusted_code_for_validation(old_code))
+        except Exception as exc:
+            thread_errors.append(exc)
+
+    def refresh_cache() -> None:
+        refresh_started.set()
+        try:
+            components_module.refresh_bundle_cache_from_record(record)
+        except Exception as exc:
+            thread_errors.append(exc)
+        finally:
+            refresh_finished.set()
+
+    with (
+        patch.object(components_module, "component_cache", cache),
+        patch.object(flow_validation, "collect_code_by_hash", side_effect=delayed_collect),
+        patch.object(components_module, "create_component_template", side_effect=new_template),
+    ):
+        reader = Thread(target=read_trusted_code)
+        reader.start()
+        assert build_started.wait(timeout=2)
+
+        refresher = Thread(target=refresh_cache)
+        refresher.start()
+        assert refresh_started.wait(timeout=2)
+        assert not refresh_finished.wait(timeout=0.1), "reload passed a trusted-code read holding the state lock"
+
+        release_build.set()
+        reader.join(timeout=2)
+        refresher.join(timeout=2)
+        assert not reader.is_alive()
+        assert not refresher.is_alive()
+
+        assert cache.code_by_hash is None
+        assert flow_validation.get_trusted_code_for_validation(new_code) == new_code
+        assert flow_validation.get_trusted_code_for_validation(old_code) is None
+
+    assert not thread_errors
+    assert reader_results == [old_code]
+    assert cache.all_types_dict is not None
+    assert new_id in cache.all_types_dict["delta"]
 
 
 def test_refresh_cache_preserves_entry_on_total_failure(tmp_path: Path) -> None:
@@ -635,6 +1190,7 @@ def test_refresh_cache_preserves_entry_on_total_failure(tmp_path: Path) -> None:
 
     pre_existing = {"ext:zeta:OldThing@official": {"display_name": "old", "extension": "lfx-zeta"}}
     component_cache.all_types_dict = {"zeta": dict(pre_existing)}
+    component_cache.all_types_ready = True
 
     class _Component:
         pass
@@ -693,6 +1249,7 @@ def test_refresh_cache_writes_partial_on_partial_failure(tmp_path: Path) -> None
     )
 
     component_cache.all_types_dict = {"eta": {}}
+    component_cache.all_types_ready = True
 
     class _Component:
         pass

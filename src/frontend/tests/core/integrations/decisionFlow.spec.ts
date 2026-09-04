@@ -1,29 +1,22 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
 import {
-  closeAdvancedOptions,
-  openAdvancedOptions,
+  closeParametersPanel,
+  openParametersPanel,
+  toggleParameterOnNode,
 } from "../../utils/open-advanced-options";
-import { selectGptModel } from "../../utils/select-gpt-model";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "should create a flow with decision",
-  { tag: ["@release", "@components", "@workflow"] },
+  { tag: ["@release", "@components"] },
 
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
     await awaitBootstrapTest(page);
 
     await page.waitForSelector('[data-testid="blank-flow"]', {
@@ -176,9 +169,10 @@ test(
     await page
       .getByTestId("sidebar-search-input")
       .fill(TEXTS.providerOpenAiSearch);
-    await page.waitForSelector('[data-testid="openai_openai_draggable"]', {
-      timeout: 2000,
-    });
+    await skipIfComponentUnavailable(
+      page.getByTestId("openai_openai_draggable"),
+      "OpenAI",
+    );
     await page
       .getByTestId("openaiOpenAI")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
@@ -303,11 +297,11 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-openaimodel-shownode-input-left")
+      .getByTestId("handle-openaimodelcomponent-shownode-input-left")
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-openaimodel-shownode-model response-right")
+      .getByTestId("handle-openaimodelcomponent-shownode-model response-right")
       .nth(0)
       .click();
     await page
@@ -320,17 +314,17 @@ test(
       .getByTestId(/^popover-anchor-input-input_message.*/)
       .nth(0)
       .fill("You're Happy! 🤪");
-    await openAdvancedOptions(page);
-    await page.getByTestId("showignored_message").last().click();
-    await closeAdvancedOptions(page);
+    await openParametersPanel(page);
+    await toggleParameterOnNode(page, "ignored_message");
+    await closeParametersPanel(page);
     await page.getByTestId("title-Pass").nth(0).click();
     await page
       .getByTestId(/^popover-anchor-input-input_message.*/)
       .nth(0)
       .fill("You're Sad! 🥲");
-    await openAdvancedOptions(page);
-    await page.getByTestId("showignored_message").last().click();
-    await closeAdvancedOptions(page);
+    await openParametersPanel(page);
+    await toggleParameterOnNode(page, "ignored_message");
+    await closeParametersPanel(page);
 
     await page
       .getByTestId("handle-conditionalrouter-shownode-true-right")
@@ -364,12 +358,7 @@ test(
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .nth(1)
       .click();
-    const apiKeyInput = page.getByTestId("popover-anchor-input-api_key");
-    const isApiKeyInputVisible = await apiKeyInput.isVisible();
-    if (isApiKeyInputVisible) {
-      await apiKeyInput.fill(process.env.OPENAI_API_KEY ?? "");
-    }
-    await selectGptModel(page);
+    await configureLoopbackOpenAI(page);
 
     await adjustScreenView(page);
 

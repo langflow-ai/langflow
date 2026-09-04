@@ -8,6 +8,10 @@ on:
       - 'src/backend/base/langflow/services/database/service.py'
       - 'src/backend/tests/unit/alembic/**'
       - '.github/workflows/migration-validation.yml'
+      - 'src/backend/base/langflow/services/background_execution/**'
+      - 'src/backend/base/langflow/services/jobs/**'
+      - 'src/backend/base/langflow/services/job_queue/**'
+      - 'src/backend/tests/unit/background_execution/**'
 
 jobs:
   model-migration-consistency:
@@ -19,7 +23,7 @@ jobs:
         image: postgres:16
         env:
           POSTGRES_USER: langflow
-          POSTGRES_PASSWORD: langflow
+          POSTGRES_PASSWORD: langflow  # pragma: allowlist secret
           POSTGRES_DB: langflow
         ports:
           - 5432:5432
@@ -31,15 +35,17 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          version: latest-known
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -50,9 +56,64 @@ jobs:
       - name: Check model/migration consistency
         env:
           MIGRATION_VALIDATION_CI: "true"
-          LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"
+          LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
         run: |
           uv run pytest src/backend/tests/unit/alembic/test_migration_execution.py -x -v
+
+  background-real-service:
+    name: Background Execution Real-Service Tests (real Postgres + Redis)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: langflow
+          POSTGRES_PASSWORD: langflow  # pragma: allowlist secret
+          POSTGRES_DB: langflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U langflow"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          version: latest-known
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          uv sync --extra postgresql
+
+      - name: Run real-service tests
+        env:
+          LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
+          LANGFLOW_TEST_REDIS_URL: "redis://localhost:6379/0"
+        run: |
+          uv run pytest src/backend/tests/unit/background_execution -m real_services -x -v
 
   validate-migration:
     name: Migration Pattern Validation
@@ -60,12 +121,12 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -105,7 +166,7 @@ jobs:
 
       - name: Post PR comment with results
         if: always() && steps.changed-files.outputs.files != ''
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');

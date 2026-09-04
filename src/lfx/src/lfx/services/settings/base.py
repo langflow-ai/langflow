@@ -139,8 +139,9 @@ class Settings(
 
     @property
     def voice_mode_available(self) -> bool:
-        """Check if voice mode is available by testing webrtcvad import."""
+        """Check whether the optional voice runtime dependencies are installed."""
         try:
+            import openai  # noqa: F401
             import webrtcvad  # noqa: F401
         except ImportError:
             return False

@@ -16,8 +16,16 @@ import jsonpatch
 from lfx.custom import Component
 from lfx.io import MessageTextInput, Output
 from lfx.schema import Data
+from lfx.services.model_provider_policy import ModelProviderPolicyError
 
-from ._state import _emit, _find_node, _readable_preview, get_working_flow
+from ._state import (
+    _emit,
+    _find_node,
+    _readable_preview,
+    emit_tool_start,
+    get_working_flow,
+    should_apply_edits_live,
+)
 
 
 def emit_field_edit_proposal(flow: dict, component_id: str, field_name: str, new_value: object) -> bool:
@@ -98,6 +106,7 @@ class ProposeFieldEdit(Component):
     ]
 
     def propose_field_edit(self) -> Data:
+        emit_tool_start("propose_field_edit", component_id=self.component_id, field=self.field_name)
         flow = get_working_flow()
         if flow is None:
             return Data(data={"error": "No flow loaded. Cannot propose edits on an empty canvas."})
@@ -121,6 +130,18 @@ class ProposeFieldEdit(Component):
                     "error": f"Field '{self.field_name}' not found on '{self.component_id}'. Available: {available}",
                 }
             )
+
+        # This tool is an alternate configuration path: the UI may apply its
+        # emitted patch after approval, while headless callers apply it below.
+        # Gate the prospective value before either mutation can escape.
+        from .mutate_tools import _model_providers_in_params, _require_allowed_model_providers
+
+        try:
+            _require_allowed_model_providers(
+                _model_providers_in_params(flow, self.component_id, {self.field_name: self.new_value})
+            )
+        except ModelProviderPolicyError as exc:
+            return Data(data={"error": str(exc)})
 
         # 3. Read old value
         old_value = template[self.field_name].get("value")
@@ -168,5 +189,11 @@ class ProposeFieldEdit(Component):
         )
 
         preview = _readable_preview(self.new_value)
+        # Headless callers have no review UI; apply live and narrate as done so the
+        # assistant never claims a pending-approval step that cannot happen (#13641).
+        if should_apply_edits_live():
+            template[self.field_name]["value"] = self.new_value
+            return Data(data={"text": f'Set {self.field_name} = "{preview}" on {component_type}'})
+
         text = f'Proposed: set {self.field_name} = "{preview}" on {component_type} (pending user approval)'
         return Data(data={"text": text})

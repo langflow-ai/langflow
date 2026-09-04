@@ -1,7 +1,9 @@
 """Unit tests for SSRF protection utilities."""
 
+import os
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
+from urllib.parse import urlencode
 
 import pytest
 from lfx.utils.ssrf_protection import (
@@ -11,22 +13,41 @@ from lfx.utils.ssrf_protection import (
     is_ip_blocked,
     is_ssrf_protection_enabled,
     resolve_hostname,
+    validate_and_resolve_url,
+    validate_connector_url_for_ssrf,
+    validate_database_url_for_ssrf,
+    validate_git_repository_url,
     validate_url_for_ssrf,
 )
 
 
 @contextmanager
-def mock_ssrf_settings(*, enabled=False, allowed_hosts=None):
+def mock_ssrf_settings(*, enabled=False, allowed_hosts=None, restrict_files=False, connector_validation=True):
     """Context manager to mock SSRF settings."""
     if allowed_hosts is None:
         allowed_hosts = []
 
-    with patch("lfx.utils.ssrf_protection.get_settings_service") as mock_get_settings:
-        mock_settings = MagicMock()
-        mock_settings.settings.ssrf_protection_enabled = enabled
-        mock_settings.settings.ssrf_allowed_hosts = allowed_hosts
-        mock_get_settings.return_value = mock_settings
+    mock_settings = MagicMock()
+    mock_settings.settings.ssrf_protection_enabled = enabled
+    mock_settings.settings.ssrf_allowed_hosts = allowed_hosts
+    mock_settings.settings.connector_ssrf_validation_enabled = connector_validation
+    # Explicit (not a truthy MagicMock) so DB local-file checks behave deterministically.
+    mock_settings.settings.restrict_local_file_access = restrict_files
+    # The local-file-restriction read lives in file_path_security (is_local_file_access_restricted,
+    # reused by the DB/git validators here), so patch its settings source too.
+    with (
+        patch("lfx.utils.ssrf_protection.get_settings_service", return_value=mock_settings),
+        patch("lfx.utils.file_path_security.get_settings_service", return_value=mock_settings),
+    ):
         yield
+
+
+def _sqlalchemy_odbc_connect_string(uri: str) -> str:
+    """Return SQLAlchemy's serialized PyODBC connection string when available."""
+    sqlalchemy = pytest.importorskip("sqlalchemy")
+    pyodbc = pytest.importorskip("sqlalchemy.dialects.mssql.pyodbc")
+    connect_args, _connect_kwargs = pyodbc.MSDialect_pyodbc().create_connect_args(sqlalchemy.engine.make_url(uri))
+    return connect_args[0]
 
 
 class TestSSRFProtectionConfiguration:
@@ -126,6 +147,11 @@ class TestIPBlocking:
             "fc00::1",  # ULA
             "fe80::1",  # Link-local
             "ff00::1",  # Multicast
+            # IPv6 transition prefixes whose embedded IPv4 is blocked (decoded + re-checked, SSRF)
+            "2002:a9fe:a9fe::1",  # 6to4 of 169.254.169.254 (metadata)
+            "2002:0a00:0005::1",  # 6to4 of 10.0.0.5 (RFC 1918)
+            "64:ff9b::a9fe:a9fe",  # NAT64 of 169.254.169.254 (metadata)
+            "64:ff9b::169.254.169.254",  # NAT64 dotted form of metadata
         ],
     )
     def test_blocked_ips(self, ip):
@@ -144,6 +170,10 @@ class TestIPBlocking:
             # Public IPv6 addresses
             "2001:4860:4860::8888",  # Google DNS
             "2606:4700:4700::1111",  # Cloudflare DNS
+            # Transition prefixes encoding a *public* IPv4 must stay reachable (IPv6-only / DNS64)
+            "64:ff9b::8.8.8.8",  # NAT64 of 8.8.8.8 (public)
+            "64:ff9b::0808:0808",  # NAT64 of 8.8.8.8, hextet form
+            "2002:0808:0808::1",  # 6to4 of 8.8.8.8 (public)
         ],
     )
     def test_allowed_ips(self, ip):
@@ -285,6 +315,16 @@ class TestURLValidation:
             validate_url_for_ssrf("http://example.com", warn_only=False)
             validate_url_for_ssrf("https://example.com", warn_only=False)
             validate_url_for_ssrf("https://api.example.com/v1", warn_only=False)
+
+    def test_dns_pinning_validator_blocks_ambiguous_authority(self):
+        """The DNS-pinning validator applies the same raw-authority validation."""
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve,
+            pytest.raises(SSRFProtectionError, match="backslash"),
+        ):
+            validate_and_resolve_url("http://127.0.0.1\\@1.1.1.1/")
+        mock_resolve.assert_not_called()
 
     def test_direct_ip_blocking(self):
         """Test blocking of direct IP addresses."""
@@ -433,3 +473,371 @@ class TestIntegrationScenarios:
 
             validate_url_for_ssrf("http://database:5432", warn_only=False)
             validate_url_for_ssrf("http://api.internal.local", warn_only=False)
+
+
+class TestDatabaseURLValidation:
+    """Tests for validate_database_url_for_ssrf (tenant-controlled DB URIs)."""
+
+    def test_protection_disabled_allows_all(self):
+        """With SSRF off and file access unrestricted, sqlite/local URIs are allowed (OSS default)."""
+        with mock_ssrf_settings(enabled=False, restrict_files=False):
+            validate_database_url_for_ssrf("sqlite:////etc/passwd")
+            validate_database_url_for_ssrf("postgresql://127.0.0.1:5432/db")
+
+    def test_sqlite_allowed_by_default_with_ssrf_on(self):
+        """SQLite must keep working by default (SSRF on, file access not restricted)."""
+        with mock_ssrf_settings(enabled=True, restrict_files=False):
+            validate_database_url_for_ssrf("sqlite:///./local.db")
+            validate_database_url_for_ssrf("sqlite:///:memory:")
+
+    @pytest.mark.parametrize(
+        "uri",
+        [
+            "sqlite:////etc/passwd",
+            "sqlite:///./local.db",
+            "sqlite+aiosqlite:////var/lib/secret.db",
+            "duckdb:///data.duckdb",
+        ],
+    )
+    def test_local_file_dialects_blocked_when_restricted(self, uri):
+        """Local-file dialects are rejected when file access is restricted (multi-tenant)."""
+        with (
+            mock_ssrf_settings(enabled=True, restrict_files=True),
+            pytest.raises(SSRFProtectionError, match="local filesystem"),
+        ):
+            validate_database_url_for_ssrf(uri)
+
+    @pytest.mark.parametrize(
+        "uri",
+        [
+            "postgresql://127.0.0.1:5432/db",
+            "postgresql://localhost/db",
+            "mysql://10.0.0.5:3306/db",
+            "postgresql+psycopg2://user:pass@192.168.1.10/db",  # pragma: allowlist secret
+        ],
+    )
+    def test_internal_hosts_blocked(self, uri):
+        """Network DB URIs pointing at internal/loopback hosts are blocked (SSRF)."""
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError):
+            validate_database_url_for_ssrf(uri)
+
+    def test_public_host_allowed(self):
+        """A network DB URI to a public host is allowed."""
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve,
+        ):
+            mock_resolve.return_value = ["93.184.216.34"]  # public IP
+            validate_database_url_for_ssrf("postgresql://db.example.com:5432/app")
+
+    @pytest.mark.parametrize(
+        "query",
+        [
+            "host=127.0.0.1",
+            "h%6fst=127.0.0.1",
+            "host=1.1.1.1&host=127.0.0.1",
+            "hostaddr=127.0.0.1",
+            "port=15432",
+            "unix_socket=%2Fvar%2Frun%2Fdatabase.sock",
+            "odbc_connect=SERVER%3D127.0.0.1",
+            "dsn=127.0.0.1%3A15432%2Fapp",
+        ],
+    )
+    def test_connection_target_query_overrides_blocked(self, query):
+        """DBAPI query options cannot replace the network target that passed validation."""
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
+            pytest.raises(SSRFProtectionError, match="connection target"),
+        ):
+            validate_database_url_for_ssrf(f"postgresql://db.example.com:5432/app?{query}")
+
+    def test_non_target_query_options_allowed(self):
+        """Connection options that cannot redirect the target remain supported."""
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
+        ):
+            validate_database_url_for_ssrf("postgresql://db.example.com:5432/app?sslmode=require")
+
+    @pytest.mark.parametrize("target_key", ["SERVER", "Address", "Addr", "Network+Address", "Data+Source"])
+    def test_odbc_connection_target_query_aliases_blocked(self, target_key):
+        """ODBC aliases cannot supersede the server from the validated authority."""
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
+            pytest.raises(SSRFProtectionError, match="connection target"),
+        ):
+            validate_database_url_for_ssrf(
+                f"mssql+pyodbc://db.example.com/app?driver=ODBC+Driver+18&{target_key}=127.0.0.1"
+            )
+
+    @pytest.mark.parametrize(
+        ("scheme", "query_key"),
+        [
+            ("mssql+pyodbc", "trace%3Bextra"),
+            ("mssql+aioodbc", "trace%3Dextra"),
+            ("mssql", "trace%0Aextra"),
+            ("mysql+pyodbc", "trace%00extra"),
+        ],
+    )
+    def test_odbc_connection_string_delimiters_and_controls_blocked(self, scheme, query_key):
+        """Unsafe ODBC key characters are rejected before SQLAlchemy serializes them."""
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
+            pytest.raises(SSRFProtectionError, match="unsupported ODBC query key"),
+        ):
+            validate_database_url_for_ssrf(f"{scheme}://db.example.com/app?driver=ODBC+Driver+18&{query_key}=enabled")
+
+    def test_odbc_delimiter_key_matches_sqlalchemy_serialization(self):
+        """Regression mirrors how SQLAlchemy turns an arbitrary key into a new ODBC attribute."""
+        uri = "mssql+pyodbc://db.example.com/app?driver=ODBC+Driver+18&trace%3BServer=alternate.example.com=enabled"
+
+        assert ";Server=alternate.example.com=" in _sqlalchemy_odbc_connect_string(uri)
+
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
+            pytest.raises(SSRFProtectionError, match="unsupported ODBC query key"),
+        ):
+            validate_database_url_for_ssrf(uri)
+
+    def test_unknown_odbc_driver_attribute_blocked(self):
+        """Driver-defined attributes are denied unless explicitly classified as safe."""
+        with (
+            mock_ssrf_settings(enabled=True),
+            pytest.raises(SSRFProtectionError, match="unsupported ODBC query key"),
+        ):
+            validate_database_url_for_ssrf(
+                "mssql+pyodbc://db.example.com/app?driver=ODBC+Driver+18&VendorOption=enabled"
+            )
+
+    def test_unknown_odbc_driver_attribute_allowed_when_protections_disabled(self):
+        """The explicit OSS opt-out preserves vendor-specific ODBC attributes."""
+        with mock_ssrf_settings(enabled=False, restrict_files=False):
+            validate_database_url_for_ssrf(
+                "mssql+pyodbc://db.example.com/app?driver=ODBC+Driver+18&VendorOption=enabled"
+            )
+
+    def test_odbc_filedsn_target_override_blocked(self):
+        """FILEDSN is serialized as a target source and cannot bypass authority validation."""
+        uri = "mssql+pyodbc://db.example.com/app?driver=ODBC+Driver+18&FILEDSN=%2Ftmp%2Fconnection.dsn"
+        assert ";FILEDSN=/tmp/connection.dsn" in _sqlalchemy_odbc_connect_string(uri)
+
+        with (
+            mock_ssrf_settings(enabled=True, restrict_files=False),
+            pytest.raises(SSRFProtectionError, match="connection target"),
+        ):
+            validate_database_url_for_ssrf(uri)
+
+    def test_odbc_failover_partner_target_override_blocked(self):
+        """Failover_Partner cannot supply an alternate server target."""
+        uri = "mssql+pyodbc://db.example.com/app?driver=ODBC+Driver+18&Failover_Partner=alternate.example.com"
+        assert ";Failover_Partner=alternate.example.com" in _sqlalchemy_odbc_connect_string(uri)
+
+        with (
+            mock_ssrf_settings(enabled=True, restrict_files=False),
+            pytest.raises(SSRFProtectionError, match="connection target"),
+        ):
+            validate_database_url_for_ssrf(uri)
+
+    @pytest.mark.parametrize(
+        ("query_key", "query_value"),
+        [
+            ("SAVEFILE", "/tmp/connection.dsn"),
+            ("ClientCertificate", "file:/tmp/client.pem"),
+            ("ClientKey", "file:/tmp/client.key"),
+            ("QueryLogFile", "/tmp/query.log"),
+            ("ServerCertificate", "/tmp/server.pem"),
+            ("StatsLogFile", "/tmp/stats.log"),
+        ],
+    )
+    def test_odbc_local_file_options_blocked_when_restricted(self, query_key, query_value):
+        """ODBC client-file options are blocked even when network SSRF validation is disabled."""
+        query = urlencode({"driver": "ODBC Driver 18", query_key: query_value})
+        uri = f"mssql+pyodbc://db.example.com/app?{query}"
+        assert f";{query_key}={query_value}" in _sqlalchemy_odbc_connect_string(uri)
+
+        with (
+            mock_ssrf_settings(enabled=False, restrict_files=True),
+            pytest.raises(SSRFProtectionError, match="local filesystem"),
+        ):
+            validate_database_url_for_ssrf(uri)
+
+    @pytest.mark.parametrize("certificate", ["sha1:0123456789abcdef", "subject:Langflow Client"])
+    def test_odbc_certificate_store_selectors_allowed_when_local_files_restricted(self, certificate):
+        """Non-file ClientCertificate forms do not access the local filesystem."""
+        query = urlencode({"driver": "ODBC Driver 18", "ClientCertificate": certificate})
+        with mock_ssrf_settings(enabled=False, restrict_files=True):
+            validate_database_url_for_ssrf(f"mssql+pyodbc://db.example.com/app?{query}")
+
+    def test_safe_odbc_query_options_allowed(self):
+        """Common ODBC options with safe key names remain supported."""
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["93.184.216.34"]),
+        ):
+            validate_database_url_for_ssrf(
+                "mssql+pyodbc://db.example.com/app?driver=ODBC+Driver+18"
+                "&TrustServerCertificate=yes&Application+Name=Langflow"
+            )
+
+    def test_missing_host_blocked(self):
+        """A non-file dialect with no host cannot be validated -> blocked (fail closed)."""
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError, match="network host"):
+            validate_database_url_for_ssrf("postgresql:///db")
+
+
+class TestGitRepositoryURLValidation:
+    """Tests for validate_git_repository_url (tenant-controlled git clone URLs)."""
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            'ext::sh -c "touch /tmp/pwned"',  # remote-helper RCE
+            "ext::git-upload-pack",
+            "fd::17/foo",
+            "::bar",  # default remote helper
+        ],
+    )
+    def test_remote_helper_transports_always_blocked(self, url):
+        """ext::/fd:: remote helpers (RCE) are blocked regardless of toggles."""
+        with (
+            mock_ssrf_settings(enabled=False, restrict_files=False),
+            pytest.raises(SSRFProtectionError, match="remote-helper"),
+        ):
+            validate_git_repository_url(url)
+
+    def test_option_injection_always_blocked(self):
+        """A leading '-' is parsed by git as an option => always blocked."""
+        with (
+            mock_ssrf_settings(enabled=False, restrict_files=False),
+            pytest.raises(SSRFProtectionError, match="option injection"),
+        ):
+            validate_git_repository_url("-upload-pack=evil")
+
+    @pytest.mark.parametrize(
+        "url",
+        ["file:///etc/passwd", "/etc/passwd", "./local/repo", "~/repo", "../escape"],
+    )
+    def test_local_paths_blocked_when_ssrf_on(self, url):
+        """file:// and bare local paths read arbitrary server files -> blocked with SSRF on."""
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError, match="local-filesystem"):
+            validate_git_repository_url(url)
+
+    def test_local_paths_allowed_when_all_off(self):
+        """With SSRF off and file access unrestricted, local clones are allowed (single-tenant)."""
+        with mock_ssrf_settings(enabled=False, restrict_files=False):
+            validate_git_repository_url("/srv/repos/myrepo")
+            validate_git_repository_url("file:///srv/repos/myrepo")
+
+    def test_local_paths_blocked_when_file_restricted(self):
+        """Local clones are blocked when local-file access is restricted, even with SSRF off."""
+        with (
+            mock_ssrf_settings(enabled=False, restrict_files=True),
+            pytest.raises(SSRFProtectionError, match="local-filesystem"),
+        ):
+            validate_git_repository_url("/etc/passwd")
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://169.254.169.254/latest/meta-data/",
+            "http://127.0.0.1/x",
+            "https://10.0.0.5/repo.git",
+            "git@127.0.0.1:user/repo.git",  # scp-like to internal host
+        ],
+    )
+    def test_internal_hosts_blocked(self, url):
+        """Network clone URLs pointing at internal/metadata hosts are blocked."""
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError):
+            validate_git_repository_url(url)
+
+    def test_disallowed_scheme_blocked(self):
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError, match="scheme"):
+            validate_git_repository_url("gopher://x/y")
+
+    def test_public_https_allowed(self):
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve,
+        ):
+            mock_resolve.return_value = ["140.82.112.3"]  # public IP
+            validate_git_repository_url("https://github.com/user/repo.git")
+
+    def test_public_scp_like_allowed(self):
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve,
+        ):
+            mock_resolve.return_value = ["140.82.112.3"]
+            validate_git_repository_url("git@github.com:user/repo.git")
+
+    def test_empty_url_rejected(self):
+        with mock_ssrf_settings(enabled=True), pytest.raises(ValueError, match="non-empty"):
+            validate_git_repository_url("   ")
+
+    def test_allowlist_bypass(self):
+        """An allowlisted internal host is permitted (operator opt-in)."""
+        with (
+            mock_ssrf_settings(enabled=True, allowed_hosts=["database"]),
+            patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve,
+        ):
+            mock_resolve.return_value = ["172.18.0.2"]
+            validate_git_repository_url("https://database/user/repo.git")
+
+
+class TestConnectorURLValidation:
+    """Tests for validate_connector_url_for_ssrf."""
+
+    def test_noop_when_connector_validation_explicitly_disabled(self):
+        """With the connector flag off, even a metadata URL is a no-op."""
+        with (
+            patch.dict(os.environ, {"LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "false"}),
+            mock_ssrf_settings(enabled=True),
+        ):
+            validate_connector_url_for_ssrf("http://169.254.169.254/latest/meta-data/")
+
+    def test_blocks_metadata_by_default(self):
+        """With global SSRF on, a metadata URL is blocked by default."""
+        with (
+            patch.dict(os.environ, {}, clear=True),
+            mock_ssrf_settings(enabled=True),
+            pytest.raises(SSRFProtectionError),
+        ):
+            validate_connector_url_for_ssrf("http://169.254.169.254/")
+
+    def test_blocks_metadata_when_env_enabled(self):
+        """An explicit true env var also blocks metadata URLs."""
+        with (
+            patch.dict(os.environ, {"LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "true"}),
+            mock_ssrf_settings(enabled=True),
+            pytest.raises(SSRFProtectionError),
+        ):
+            validate_connector_url_for_ssrf("http://169.254.169.254/")
+
+    @pytest.mark.parametrize(
+        "url",
+        ["host:19530", "localhost:19530", "10.0.0.5:5432", "my-milvus", "grpc://h:443"],
+    )
+    def test_scheme_less_host_gives_clear_error(self, url):
+        """A bare host[:port] / non-http scheme yields a connector-specific message.
+
+        Without this, urlparse maps these to a missing/garbage scheme and the shared validator
+        would surface a confusing "Invalid URL scheme ''" instead.
+        """
+        with (
+            patch.dict(os.environ, {"LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "true"}),
+            mock_ssrf_settings(enabled=True),
+            pytest.raises(SSRFProtectionError, match=r"http\(s\) URL with a host"),
+        ):
+            validate_connector_url_for_ssrf(url)
+
+    def test_scheme_less_noop_when_global_ssrf_off(self):
+        """When global SSRF protection is off, the wrapper stays a no-op even for a bare host."""
+        with (
+            patch.dict(os.environ, {"LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "true"}),
+            mock_ssrf_settings(enabled=False),
+        ):
+            validate_connector_url_for_ssrf("host:19530")

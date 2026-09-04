@@ -11,7 +11,7 @@ class ParseDataComponent(Component):
     icon = "message-square"
     name = "ParseData"
     legacy = True
-    replacement = ["processing.DataOperations", "processing.TypeConverterComponent"]
+    replacement = ["processing.Operations", "processing.TypeConverterComponent"]
     metadata = {
         "legacy_name": "Parse Data",
     }

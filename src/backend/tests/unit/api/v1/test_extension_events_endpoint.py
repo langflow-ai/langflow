@@ -40,14 +40,14 @@ async def test_keyspace_query_param_is_rejected_with_typed_422(monkeypatch: pyte
             keyspace="user:bob-id",
         )
 
-    assert exc.value.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert exc.value.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     detail = exc.value.detail
     assert isinstance(detail, dict)
     assert detail["code"] == "extension-events-keyspace-forbidden"
     assert detail["location"] == "query.keyspace"
     assert detail["content"] == "user:bob-id"
     assert detail["hint"]
-    assert detail["ref_url"].endswith("#extension-events-keyspace-forbidden")
+    assert detail["ref_url"] == "https://docs.langflow.org/extensions/errors"
     sentinel_svc.since.assert_not_called()
 
 
@@ -66,7 +66,7 @@ async def test_empty_string_keyspace_is_also_rejected(monkeypatch: pytest.Monkey
     with pytest.raises(HTTPException) as exc:
         await get_extension_events(current_user=_user(), since=0.0, keyspace="")
 
-    assert exc.value.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert exc.value.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     assert exc.value.detail["code"] == "extension-events-keyspace-forbidden"
 
 
@@ -116,5 +116,5 @@ async def test_service_unavailable_short_circuits_without_touching_keyspace_chec
     # With keyspace: still 422, even though the service is unavailable.
     with pytest.raises(HTTPException) as exc:
         await get_extension_events(current_user=_user(), since=0.0, keyspace="global")
-    assert exc.value.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert exc.value.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
     assert exc.value.detail["code"] == "extension-events-keyspace-forbidden"

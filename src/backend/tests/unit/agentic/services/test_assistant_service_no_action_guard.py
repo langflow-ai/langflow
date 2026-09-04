@@ -166,3 +166,105 @@ async def test_should_emit_error_not_fake_success_when_no_action_retries_exhaust
 
     assert any('"event": "error"' in e for e in events)
     assert not any('"event": "complete"' in e for e in events)
+
+
+@pytest.mark.asyncio
+async def test_should_name_the_model_in_no_action_error_so_users_know_what_to_change():
+    """Tiny models write tool-call-shaped JSON as text; the error must blame the model, not the prompt."""
+
+    def streaming_factory(**_kw):
+        async def gen():
+            yield "end", {"result": "Here is how you would build the flow: ..."}
+
+        return gen()
+
+    with (
+        patch(f"{MODULE}.classify_intent", new_callable=AsyncMock, return_value=_make_intent("build_flow")),
+        patch(f"{MODULE}.execute_flow_file_streaming", side_effect=streaming_factory),
+        patch(f"{MODULE}.drain_flow_events", return_value=[]),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
+        events = await _collect(
+            execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="crie um flow com 5 componentes aleatorios",
+                global_variables={},
+                model_name="qwen2.5:1.5b",
+                max_retries=1,
+            )
+        )
+
+    error_events = [e for e in events if '"event": "error"' in e]
+    assert error_events, f"Expected an error event, got: {events}"
+    assert "qwen2.5:1.5b" in error_events[0], "The error must name the model that produced no canvas actions"
+    assert "larger" in error_events[0].lower(), "The error must suggest a larger/more capable model"
+
+
+@pytest.mark.asyncio
+async def test_should_fail_fast_without_retries_when_a_small_model_produces_no_actions():
+    """Retrying a tiny model is predictably futile — one attempt, immediate model-naming error."""
+    call_count = 0
+
+    def streaming_factory(**_kw):
+        nonlocal call_count
+        call_count += 1
+
+        async def gen():
+            yield "end", {"result": "Step 1: search components..."}
+
+        return gen()
+
+    with (
+        patch(f"{MODULE}.classify_intent", new_callable=AsyncMock, return_value=_make_intent("build_flow")),
+        patch(f"{MODULE}.execute_flow_file_streaming", side_effect=streaming_factory),
+        patch(f"{MODULE}.drain_flow_events", return_value=[]),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
+        events = await _collect(
+            execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="crie um flow com 5 componentes aleatorios",
+                global_variables={},
+                model_name="qwen2.5:1.5b",
+                max_retries=3,
+            )
+        )
+
+    assert call_count == 1, f"A known-small model must not burn retries; executor ran {call_count}x"
+    assert not any('"step": "retrying"' in e for e in events), "No retry spam for known-small models"
+    error_events = [e for e in events if '"event": "error"' in e]
+    assert error_events, "Expected an immediate error event"
+    assert "qwen2.5:1.5b" in error_events[0]
+
+
+@pytest.mark.asyncio
+async def test_should_keep_retrying_no_action_for_large_models():
+    """A 20B-class model deserves the corrective re-prompt — only known-small models fail fast."""
+    call_count = 0
+
+    def streaming_factory(**_kw):
+        nonlocal call_count
+        call_count += 1
+
+        async def gen():
+            yield "end", {"result": "I would build it like this..."}
+
+        return gen()
+
+    with (
+        patch(f"{MODULE}.classify_intent", new_callable=AsyncMock, return_value=_make_intent("build_flow")),
+        patch(f"{MODULE}.execute_flow_file_streaming", side_effect=streaming_factory),
+        patch(f"{MODULE}.drain_flow_events", return_value=[]),
+        patch("asyncio.sleep", new_callable=AsyncMock),
+    ):
+        await _collect(
+            execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="build a chatbot",
+                global_variables={},
+                model_name="gpt-oss:20b",
+                max_retries=2,
+            )
+        )
+
+    assert call_count >= 2, f"Large models must keep the corrective retry; executor ran {call_count}x"

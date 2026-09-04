@@ -22,11 +22,10 @@ from pydantic import Field
 
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.events import ExceptionWithMessageError, process_agent_events
-from lfx.base.agents.utils import data_to_messages, get_chat_output_sender_name
+from lfx.base.agents.utils import data_to_messages, get_chat_output_sender_name, resolve_agent_verbose
 from lfx.components.models_and_agents import AgentComponent
 from lfx.log.logger import logger
 from lfx.memory import delete_message
-from lfx.schema.content_block import ContentBlock
 from lfx.schema.data import Data
 
 if TYPE_CHECKING:
@@ -303,7 +302,9 @@ class ALTKBaseAgentComponent(AgentComponent):
         else:
             # note the tools are not required to run the agent, hence the validation removed.
             handle_parsing_errors = hasattr(self, "handle_parsing_errors") and self.handle_parsing_errors
-            verbose = hasattr(self, "verbose") and self.verbose
+            # Gate LangChain's stdout chain markers on LANGCHAIN_VERBOSE (off by default)
+            # rather than the always-True component input. See resolve_agent_verbose().
+            verbose = resolve_agent_verbose()
             max_iterations = hasattr(self, "max_iterations") and self.max_iterations
             runnable = AgentExecutor.from_agent_and_tools(
                 agent=agent,
@@ -379,7 +380,12 @@ class ALTKBaseAgentComponent(AgentComponent):
             sender=MESSAGE_SENDER_AI,
             sender_name=sender_name,
             properties={"icon": "Bot", "state": "partial"},
-            content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+            # `text=""` sentinel so MessageTable's no_content check accepts
+            # an in-flight agent message whose content_blocks haven't been
+            # populated yet. Mirrors ChatInput's convention.
+            text="",
+            # Flat chronological event log; see lfx.base.agents.events.
+            content_blocks=[],
             session_id=session_id or uuid.uuid4(),
         )
         try:
@@ -404,11 +410,13 @@ class ALTKBaseAgentComponent(AgentComponent):
                 if msg_id:
                     await delete_message(id_=msg_id)
             await self._send_message_event(e.agent_message, category="remove_message")
-            logger.error(f"ExceptionWithMessageError: {e}")
+            # exception(), not error(f"...{e}"): this class's str() interpolates the model's
+            # partial completion, and passing the exception rather than formatting it is what
+            # gives the exported record an error.type to triage on.
+            logger.exception("Agent run failed after a partial message was emitted")
             raise
-        except Exception as e:
-            # Log or handle any other exceptions
-            logger.error(f"Error: {e}")
+        except Exception:
+            logger.exception("Agent run failed")
             raise
 
         self.status = result

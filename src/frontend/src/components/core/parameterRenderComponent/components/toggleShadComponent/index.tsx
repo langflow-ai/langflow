@@ -1,4 +1,5 @@
 import { Switch } from "../../../../ui/switch";
+import { getNodeScopedDomId } from "../../helpers/get-node-scoped-dom-id";
 import type { InputProps, ToggleComponentType } from "../../types";
 
 export default function ToggleShadComponent({
@@ -9,7 +10,10 @@ export default function ToggleShadComponent({
   size,
   showToogle,
   id,
+  nodeId,
   showParameter = true,
+  ariaLabelledBy,
+  tabIndex,
 }: InputProps<boolean, ToggleComponentType>): JSX.Element | null {
   let scaleX, scaleY;
   switch (size) {
@@ -43,7 +47,7 @@ export default function ToggleShadComponent({
   return (
     <div onClick={(e) => e.stopPropagation()}>
       <Switch
-        id={id}
+        id={getNodeScopedDomId(id, nodeId)}
         data-testid={id}
         style={{
           transform: `scaleX(${scaleX}) scaleY(${scaleY})`,
@@ -51,6 +55,8 @@ export default function ToggleShadComponent({
         disabled={disabled}
         className=""
         checked={value}
+        aria-labelledby={ariaLabelledBy}
+        tabIndex={tabIndex}
         onCheckedChange={(isEnabled: boolean) => {
           const data = showToogle
             ? { advanced: !isEnabled }

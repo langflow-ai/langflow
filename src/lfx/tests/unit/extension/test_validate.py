@@ -105,17 +105,22 @@ def test_deferred_field_emits_dedicated_code(tmp_path: Path) -> None:
     assert report.errors.errors[0].content == "services"
 
 
-def test_multi_bundle_emits_dedicated_code(tmp_path: Path) -> None:
-    bad = {
+def test_multi_bundle_validates_each_declared_path(tmp_path: Path) -> None:
+    manifest = {
         **_BASE_MANIFEST,
         "bundles": [
-            {"name": "a", "path": "a"},
-            {"name": "b", "path": "b"},
+            {"name": "alpha", "path": "alpha"},
+            {"name": "bravo", "path": "bravo"},
         ],
     }
-    (tmp_path / "extension.json").write_text(json.dumps(bad), encoding="utf-8")
+    (tmp_path / "extension.json").write_text(json.dumps(manifest), encoding="utf-8")
+    for name in ("alpha", "bravo"):
+        bundle = tmp_path / name
+        bundle.mkdir()
+        (bundle / "component.py").write_text(_component_source(), encoding="utf-8")
     report = validate_extension(tmp_path)
-    assert _codes(report) == ["multi-bundle-unsupported"]
+    assert report.ok
+    assert report.bundle_files_scanned == 2
 
 
 # ---------------------------------------------------------------------------
@@ -220,6 +225,30 @@ def test_output_method_without_matching_def_still_flagged(tmp_path: Path) -> Non
     _make_bundle(tmp_path, files={"text.py": src})
     report = validate_extension(tmp_path)
     assert "build-method-missing" in _codes(report)
+
+
+def test_derived_component_base_inherits_entry_point(tmp_path: Path) -> None:
+    """A subclass of a derived Component base is accepted without inline build/outputs.
+
+    Mirrors the graduated partner bundles (datastax / openai / ...): classes
+    like ``AstraDBVectorStoreComponent(LCVectorStoreComponent)`` inherit the
+    class-level ``outputs`` declaration from the base and only override the
+    output method, so the subclass body shows neither ``build`` nor
+    ``outputs``.  The AST cannot resolve the base across modules; a base name
+    ending in ``Component`` (other than the root ``Component``) is treated as
+    supplying the entry-point.  Bare ``Component`` subclasses keep the strict
+    check (see ``test_build_method_missing_flagged``).
+    """
+    src = (
+        "from lfx.base.vectorstores.model import LCVectorStoreComponent\n\n"
+        "class AstraThing(LCVectorStoreComponent):\n"
+        "    display_name = 'X'\n\n"
+        "    def build_vector_store(self):\n"
+        "        return None\n"
+    )
+    _make_bundle(tmp_path, files={"text.py": src})
+    report = validate_extension(tmp_path)
+    assert "build-method-missing" not in _codes(report), report.errors.errors
 
 
 def test_import_star_flagged(tmp_path: Path) -> None:

@@ -32,6 +32,9 @@ export const ForwardedIconComponent = memo(
         id = "",
         skipFallback = false,
         dataTestId = "",
+        ariaHidden,
+        ariaLabel,
+        title,
       }: IconComponentProps,
       ref,
     ) => {
@@ -92,10 +95,25 @@ export const ForwardedIconComponent = memo(
         setIconError(true);
       }, []);
 
+      // Icons are decorative by default: hidden from assistive technology
+      // unless an explicit ariaLabel (or ariaHidden=false) is provided.
+      const labelled = Boolean(ariaLabel);
+      const a11yProps = labelled
+        ? {
+            role: "img",
+            "aria-label": ariaLabel,
+            ...(title && { title }),
+          }
+        : {
+            "aria-hidden": ariaHidden ?? true,
+            ...(title && { title }),
+          };
+
       if (!TargetIcon || iconError) {
         // Return a placeholder div or null depending on settings
         return skipFallback ? null : (
           <div
+            {...a11yProps}
             className={cn(className, "flex items-center justify-center")}
             data-testid={
               dataTestId
@@ -109,11 +127,14 @@ export const ForwardedIconComponent = memo(
       }
 
       const fallback = showFallback ? (
-        <div className={cn(className, "flex items-center justify-center")}>
+        <div
+          {...a11yProps}
+          className={cn(className, "flex items-center justify-center")}
+        >
           <Skeleton className="h-4 w-4" />
         </div>
       ) : (
-        <div className={className}></div>
+        <div {...a11yProps} className={className}></div>
       );
 
       // Check if TargetIcon is a valid React component (function, class, or lazy component)
@@ -143,6 +164,7 @@ export const ForwardedIconComponent = memo(
       // - type: wrapped components (memo wrapping forwardRef))
 
       const baseProps = {
+        ...a11yProps,
         className,
         style,
         "data-testid": dataTestId

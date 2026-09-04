@@ -1,0 +1,552 @@
+from __future__ import annotations
+
+import os
+import re
+import shutil
+import tempfile
+from pathlib import Path
+from typing import TYPE_CHECKING, cast
+from uuid import uuid4
+
+from lfx.base.models import LCModelComponent
+from lfx.base.models.unified_models import (
+    get_language_model_options,
+    get_llm,
+    update_model_options_in_build_config,
+)
+from lfx.field_typing import LanguageModel, Tool
+from lfx.io import (
+    BoolInput,
+    HandleInput,
+    ModelInput,
+    MultilineInput,
+    Output,
+    SecretStrInput,
+    StrInput,
+    TabInput,
+)
+from lfx.log.logger import logger
+
+from lfx_toolguard.components.models_and_agents.policies.module_utils import (
+    ensure_toolguard_module_path_compat,
+    unload_module,
+)
+
+if TYPE_CHECKING:
+    from lfx.inputs.inputs import InputTypes
+    from toolguard.buildtime import ToolGuardsCodeGenerationResult, ToolGuardSpec
+
+
+def _resolve_toolguard_work_dir() -> Path:
+    configured_work_dir = os.getenv("TOOLGUARD_WORK_DIR")
+    if configured_work_dir:
+        return Path(configured_work_dir)
+    return Path(tempfile.gettempdir()) / "tmp_toolguard"
+
+
+TOOLGUARD_WORK_DIR = _resolve_toolguard_work_dir()
+BUILDTIME_MODELS = ["gpt-5", "claude-sonnet"]  # currently inactive, we recommend but do not enforce
+STEP1 = "Step_1"
+STEP2 = "Step_2"
+MODE_GENERATE = "🛠️ Generate"
+MODE_GUARD = "🛡️ Guard"
+GENERATED_GUARD_INFO_PREFIX = "Auto-generated ToolGuard code for "
+
+_TOOLGUARD_INSTALL_HINT = (
+    "The 'toolguard' package is required to use PoliciesComponent. "
+    "Install the extension extra: `pip install 'lfx[toolguard]'`."
+)
+
+
+class PoliciesComponent(LCModelComponent):
+    """Component for building tool protection code from textual business policies and instructions.
+
+    This component uses ToolGuard to generate and apply policy-based guards to tools,
+    ensuring that tool execution complies with defined business policies.
+    Powered by ALTK ToolGuard (https://github.com/AgentToolkit/toolguard).
+
+    `toolguard` is supplied by the `lfx-toolguard` extension; imports happen
+    lazily inside methods so this component can be discovered and inspected even
+    when the extra isn't installed.
+    """
+
+    model_provider_policy_mode = "delegate"
+    display_name = "Policies"
+    description = """Component for building tool protection code from textual business policies and instructions.
+Powered by [ALTK ToolGuard](https://github.com/AgentToolkit/toolguard )"""
+    documentation: str = "https://github.com/AgentToolkit/toolguard"
+    icon = "shield-check"
+    name = "policies"
+    beta = True
+
+    inputs = cast(
+        "list[InputTypes]",
+        [
+            BoolInput(
+                name="enabled",
+                display_name="Enabled",
+                info="If `true` - guards tool calls. If `false`, skip policy validation.",
+                value=True,
+            ),
+            TabInput(
+                name="mode",
+                display_name="Activity",
+                options=[MODE_GENERATE, MODE_GUARD],
+                info=(
+                    "Generate new guard code or apply existing guard. "
+                    "Review generated files in the details panel on the right."
+                ),
+                value=MODE_GENERATE,
+                real_time_refresh=True,
+                tool_mode=True,
+            ),
+            MultilineInput(
+                name="project",
+                display_name="Policies Project",
+                info="Folder name of the generated code",
+                value="my_project",
+                # required=True,
+            ),
+            HandleInput(
+                name="in_tools",
+                display_name="Tools",
+                input_types=["Tool"],
+                is_list=True,
+                required=True,
+                info="These are the tools that the agent can use to help with tasks.",
+            ),
+            StrInput(
+                name="policies",
+                display_name="Policies",
+                info="One or more clear, well-defined and self-contained business policies",
+                is_list=True,
+                tool_mode=True,
+                placeholder="Add business policy...",
+                list_add_label="Add Policy",
+                # input_types=[],
+            ),
+            ModelInput(
+                name="model",
+                display_name="Language Model",
+                info=(
+                    "Select LLM for Policies buildtime. We recommend using "
+                    "Anthropic Claude-Sonnet series for this task."
+                ),
+                real_time_refresh=True,
+                required=True,
+            ),
+            SecretStrInput(
+                name="api_key",
+                display_name="API Key",
+                info="Model Provider API key",
+                required=False,
+                advanced=True,
+            ),
+        ],
+    )
+    outputs = [
+        Output(
+            display_name="Guarded Tools",
+            type_=Tool,
+            name="guarded_tools",
+            method="guard_tools",
+            # group_outputs=True,
+        ),
+    ]
+
+    @staticmethod
+    def _import_toolguard():
+        """Lazily import `toolguard` and the sibling helpers that depend on it.
+
+        Defined as a static method so it survives custom-component re-execution
+        via `create_class`, which only re-executes the class body, not arbitrary
+        module-level statements such as `try/except` import guards.
+        """
+        try:
+            import toolguard.runtime.runtime as toolguard_runtime
+            from toolguard.buildtime import (
+                PolicySpecOptions,
+                ToolGuardsCodeGenerationResult,
+                generate_guard_specs,
+                generate_guards_code,
+            )
+            from toolguard.extra.langchain_to_oas import langchain_tools_to_openapi
+            from toolguard.runtime import load_toolguards, load_toolguards_from_memory
+            from toolguard.runtime.runtime import RESULTS_FILENAME
+
+            from lfx_toolguard.components.models_and_agents.policies.guard_sync_utils import (
+                sync_generated_guard_code_inputs,
+            )
+            from lfx_toolguard.components.models_and_agents.policies.guarded_tool import GuardedTool
+            from lfx_toolguard.components.models_and_agents.policies.llm_wrapper import LangchainModelWrapper
+        except ModuleNotFoundError as e:
+            raise ImportError(_TOOLGUARD_INSTALL_HINT) from e
+        ensure_toolguard_module_path_compat(toolguard_runtime)
+        return {
+            "PolicySpecOptions": PolicySpecOptions,
+            "ToolGuardsCodeGenerationResult": ToolGuardsCodeGenerationResult,
+            "generate_guard_specs": generate_guard_specs,
+            "generate_guards_code": generate_guards_code,
+            "langchain_tools_to_openapi": langchain_tools_to_openapi,
+            "load_toolguards": load_toolguards,
+            "load_toolguards_from_memory": load_toolguards_from_memory,
+            "RESULTS_FILENAME": RESULTS_FILENAME,
+            "sync_generated_guard_code_inputs": sync_generated_guard_code_inputs,
+            "GuardedTool": GuardedTool,
+            "LangchainModelWrapper": LangchainModelWrapper,
+        }
+
+    @property
+    def work_dir(self) -> Path:
+        """Return a path isolated by user, flow, component, and project."""
+        try:
+            user_id = self.user_id
+        except (AttributeError, ValueError):
+            user_id = None
+        try:
+            flow_id = self.flow_id
+        except (AttributeError, ValueError):
+            flow_id = None
+
+        vertex = getattr(self, "_vertex", None)
+        component_id = getattr(self, "_id", None) or getattr(vertex, "id", None)
+
+        user_namespace = self._to_snake_case(str(user_id)) if user_id and str(user_id) != "None" else "anonymous"
+        flow_namespace = self._to_snake_case(str(flow_id)) if flow_id else "standalone"
+        if component_id:
+            component_namespace = self._to_snake_case(str(component_id))
+        else:
+            instance_id = getattr(self, "_toolguard_instance_id", None)
+            if instance_id is None:
+                instance_id = uuid4().hex
+                self._toolguard_instance_id = instance_id
+            component_namespace = f"component_{instance_id}"
+        project_namespace = self._to_snake_case(self.project)
+        return TOOLGUARD_WORK_DIR / user_namespace / flow_namespace / component_namespace / project_namespace
+
+    def build_model(self) -> LanguageModel:
+        llm_model = get_llm(
+            model=self.model,
+            user_id=self.user_id,
+            api_key=self.api_key,
+            stream=False,
+        )
+        if llm_model is None:
+            msg = "No language model selected. Please choose a model to proceed."
+            raise ValueError(msg)
+        return llm_model
+
+    @staticmethod
+    def _sync_model_requirement(build_config: dict, mode: str) -> None:
+        """Require a model only when the selected activity generates guard code."""
+        if mode not in (MODE_GENERATE, MODE_GUARD):
+            msg = f"Policies: unsupported activity mode: {mode!r}"
+            raise ValueError(msg)
+        model_config = build_config.get("model")
+        if isinstance(model_config, dict):
+            model_config["required"] = mode == MODE_GENERATE
+
+    def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
+        """Dynamically update model options and the activity-specific requirement."""
+        updated_build_config = update_model_options_in_build_config(
+            component=self,
+            build_config=build_config,
+            cache_key_prefix="language_model_options",
+            get_options_func=get_language_model_options,
+            field_name=field_name,
+            field_value=field_value,
+        )
+        selected_mode = (
+            field_value if field_name == "mode" else updated_build_config.get("mode", {}).get("value", MODE_GENERATE)
+        )
+        self._sync_model_requirement(updated_build_config, selected_mode)
+        tg = self._import_toolguard()
+        py_module = self._to_snake_case(self.project)
+        return tg["sync_generated_guard_code_inputs"](
+            build_config=updated_build_config,
+            work_dir=self.work_dir,
+            step2_subdir=STEP2,
+            project_name=py_module,
+        )
+
+    @staticmethod
+    def _is_generated_guard_field(field: dict) -> bool:
+        """Return whether a template field contains generated ToolGuard code."""
+        return (
+            isinstance(field, dict)
+            and field.get("type") == "code"
+            and field.get("dynamic") is True
+            and isinstance(field.get("info"), str)
+            and field["info"].startswith(GENERATED_GUARD_INFO_PREFIX)
+        )
+
+    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict) -> dict:
+        """Update the static component template without dropping persisted guard code."""
+        updated_frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)
+        updated_template = updated_frontend_node.get("template")
+        current_template = current_frontend_node.get("template")
+        if isinstance(updated_template, dict) and isinstance(current_template, dict):
+            for field_name, field in current_template.items():
+                if self._is_generated_guard_field(field):
+                    updated_template[field_name] = field
+            selected_mode = updated_template.get("mode", {}).get("value", MODE_GENERATE)
+            self._sync_model_requirement(updated_template, selected_mode)
+        return updated_frontend_node
+
+    async def _generate_guard_specs(self) -> list[ToolGuardSpec]:
+        tg = self._import_toolguard()
+        logger.debug("Starting step 1")
+        logger.debug(f"model = {self.model}")
+        llm = tg["LangchainModelWrapper"](self.build_model())
+        out_dir = self.work_dir / STEP1
+        if out_dir.exists():
+            shutil.rmtree(out_dir)
+        policy_text = "\n * ".join(self.policies)
+        open_api = tg["langchain_tools_to_openapi"](self.in_tools)
+
+        options = tg["PolicySpecOptions"](example_number=4)
+        specs = await tg["generate_guard_specs"](
+            policy_text=policy_text, tools=open_api, llm=llm, work_dir=out_dir, options=options
+        )
+        logger.debug("Step 1 Done")
+        return specs
+
+    async def _generate_guard_code(self, specs: list[ToolGuardSpec]) -> ToolGuardsCodeGenerationResult:
+        tg = self._import_toolguard()
+        logger.debug("Starting step 2")
+        out_dir = self.work_dir / STEP2
+        if out_dir.exists():
+            shutil.rmtree(out_dir)
+        llm = tg["LangchainModelWrapper"](self.build_model())
+        app_name = self._to_snake_case(self.project)
+        open_api = tg["langchain_tools_to_openapi"](self.in_tools)
+
+        gen_result = await tg["generate_guards_code"](
+            tools=open_api, tool_specs=specs, work_dir=out_dir, llm=llm, app_name=app_name
+        )
+        logger.debug("Step 2 Done")
+        return gen_result
+
+    def in_recommended_models(self, model_name: str):
+        return any(recommended in model_name for recommended in BUILDTIME_MODELS)
+
+    def validate_before_generate(self) -> None:
+        """Validate required inputs before generating guard code."""
+        if not self.project:
+            msg = "Policies: project cannot be empty!"
+            raise ValueError(msg)
+
+        if not any(self.policies):
+            msg = "Policies: policies cannot be empty!"
+            raise ValueError(msg)
+
+        if not self.in_tools:
+            msg = "Policies: in_tools cannot be empty!"
+            raise ValueError(msg)
+
+        # Only the model selection is mandatory. ``api_key`` is declared optional
+        # (required=False, advanced=True) and is frequently supplied by the model
+        # connection, an environment variable, or a global variable rather than by
+        # this field — requiring it here wrongly blocked valid setups with
+        # "model or api_key cannot be empty!". When credentials really are missing,
+        # ``build_model`` -> ``get_llm`` raises a clear provider-specific error.
+        if not self.model:
+            msg = "Policies: model cannot be empty!"
+            raise ValueError(msg)
+
+        # uncomment if willing to enforce certain models for buildtime
+        # if not self.in_recommended_models(self.model[0]["name"]):
+        #     msg = f"Policies: model {self.model[0]['name']} is not in recommended models: {BUILDTIME_MODELS}"
+        #     raise ValueError(msg)
+
+    async def generate(self):
+        specs = await self._generate_guard_specs()
+        res = await self._generate_guard_code(specs)
+
+        # if there was a previous version of the guard, remove it from python cache
+        unload_module(res.domain.app_name)
+
+    def _verify_cached_guards(self, code_dir: Path) -> None:
+        tg = self._import_toolguard()
+        # Validate cache exists before attempting to load
+        if not code_dir.exists():
+            msg = (
+                f"Policies: Cache directory not found at '{code_dir}'. "
+                f"Please run in 'Generate' mode first to create the guard code, "
+                f"or verify the project name is correct."
+            )
+            raise ValueError(msg)
+
+        try:
+            tg["load_toolguards"](code_dir)
+        except FileNotFoundError as exc:
+            msg = (
+                f"Policies: Required guard code files missing in '{code_dir}'. "
+                f"Please run in 'Generate' mode to create the guard code."
+            )
+            raise ValueError(msg) from exc
+        except Exception as exc:
+            msg = (
+                f"Policies: Failed to load guard code from '{code_dir}'. "
+                f"The cached code may be invalid or corrupted. "
+                f"Try running in 'Generate' mode to rebuild the guard code. "
+                f"Error: {exc!s}"
+            )
+            raise ValueError(msg) from exc
+
+    def _validate_before_using_cache(self, code_dir: Path) -> None:
+        if not self.in_tools:
+            msg = "Policies: in_tools cannot be empty!"
+            raise ValueError(msg)
+
+        self._verify_cached_guards(code_dir)
+
+    @staticmethod
+    def _template_field_key(file_name: str | Path) -> str:
+        r"""Normalize a generated file name to its node-template field key.
+
+        ``sync_generated_guard_code_inputs`` keys every generated CodeInput by the
+        file's POSIX relative path (``Path.relative_to(...).as_posix()``), so the
+        keys always use forward slashes. The toolguard result model stores
+        ``file_name`` as a :class:`pathlib.Path`, whose ``str()`` uses the OS
+        separator — backslashes on Windows. Reading back with ``str(file_name)``
+        therefore misses every key on Windows, ``attrs.get(...)`` returns ``None``
+        and the subsequent ``["value"]`` raised the cryptic
+        ``'NoneType' object is not subscriptable`` (issue #13727).
+
+        Normalizing through ``as_posix()`` is the exact inverse of how the keys are
+        written, so lookups match on every platform. ``replace("\\", "/")`` is a
+        belt-and-suspenders guard for the rare case where ``file_name`` is already a
+        string carrying Windows separators (e.g. a flow generated on Windows and
+        opened on POSIX, where ``PurePosixPath`` would not split on backslashes).
+        """
+        return Path(str(file_name).replace("\\", "/")).as_posix()
+
+    def make_toolguard_result(self) -> ToolGuardsCodeGenerationResult:
+        tg = self._import_toolguard()
+        attrs = self.get_vertex().data["node"]["template"]
+        if not attrs:
+            msg = "Policies: component template data is missing. This may indicate a corrupted flow state."
+            raise ValueError(msg)
+
+        def read_content(file_name: str | Path) -> str:
+            """Fetch a generated file's stored source from the node template.
+
+            Raises a clear, actionable error when the field is absent instead of
+            letting a missing key surface as ``'NoneType' object is not
+            subscriptable``. A missing field means the guard code was never
+            generated (or only the ``pass  # FIXME`` scaffold was produced), so the
+            fix is to re-run Generate.
+            """
+            key = self._template_field_key(file_name)
+            field = attrs.get(key)
+            if field is None:
+                msg = (
+                    f"Policies: generated guard file '{key}' is missing from the component. "
+                    f"Re-run in 'Generate' mode to (re)build the guard code before guarding."
+                )
+                raise ValueError(msg)
+            return field["value"]
+
+        result_str = read_content(tg["RESULTS_FILENAME"])
+        result = tg["ToolGuardsCodeGenerationResult"].model_validate_json(result_str)
+
+        result.domain.app_types.content = read_content(result.domain.app_types.file_name)
+        result.domain.app_api.content = read_content(result.domain.app_api.file_name)
+        result.domain.app_api_impl.content = read_content(result.domain.app_api_impl.file_name)
+
+        for tool in result.tools.values():
+            tool.guard_file.content = read_content(tool.guard_file.file_name)
+            for tool_item in tool.item_guard_files:
+                tool_item.content = read_content(tool_item.file_name)
+
+        return result
+
+    @staticmethod
+    def _code_execution_allowed() -> bool:
+        """Whether executing guard code is permitted by the deployment policy.
+
+        ToolGuard runs guard Python whose source comes from the component's
+        client-editable CodeInput template values (make_toolguard_result reads
+        attrs[...]["value"]) — these are NOT covered by the custom-component hash
+        gate. So when an operator locks the deployment down with
+        allow_custom_components=False, running that code must be refused too.
+
+        Fails closed to match validate_flow_for_current_settings: when the
+        settings layer is present but the service is unavailable (returns None),
+        execution is denied. Fail-open is reserved for the truly standalone case
+        where the settings layer cannot be imported at all (lfx used as a bare
+        library), which is a local/trusted context.
+        """
+        try:
+            from lfx.services.deps import get_settings_service
+        except ModuleNotFoundError as exc:
+            if exc.name not in {"lfx.services", "lfx.services.deps"}:
+                raise
+            return True
+
+        settings_service = get_settings_service()
+        settings = getattr(settings_service, "settings", None) if settings_service else None
+        if settings is None:
+            return False
+        return bool(getattr(settings, "allow_custom_components", False))
+
+    async def guard_tools(self) -> list[Tool]:
+        if self.enabled:
+            mode = getattr(self, "mode", MODE_GENERATE)
+            if mode not in (MODE_GENERATE, MODE_GUARD):
+                msg = f"Policies: unsupported activity mode: {mode!r}"
+                raise ValueError(msg)
+
+            # Refuse to execute guard code when allow_custom_components is disabled.
+            # Checked before importing/loading any toolguard runtime so
+            # the client-supplied CodeInput guard values are never exec'd.
+            if not self._code_execution_allowed():
+                msg = (
+                    "Policies/ToolGuard executes guard code, which is disabled because "
+                    "allow_custom_components is False. Set LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true "
+                    "to enable this component."
+                )
+                raise ValueError(msg)
+            tg = self._import_toolguard()
+            if mode == MODE_GENERATE:
+                self.log(f"Start generating guard code at {self.work_dir}", name="info")
+                self.validate_before_generate()
+                await self.generate()
+                self.log(f"Policies code generation saved to {self.work_dir}", name="info")
+                self.log("Review the generated files in the details panel on the right.", name="info")
+
+            else:  # mode == MODE_GUARD
+                if not self.in_tools:
+                    msg = "Policies: in_tools cannot be empty!"
+                    raise ValueError(msg)
+                self.log("Using guard code stored in the component template", name="info")
+                try:
+                    tg_result = self.make_toolguard_result()
+                    tg_runtime = tg["load_toolguards_from_memory"](tg_result)
+                    guarded_tools = [tg["GuardedTool"](tool, self.in_tools, tg_runtime) for tool in self.in_tools]
+                    return cast("list[Tool]", guarded_tools)
+                except Exception as e:
+                    logger.exception(e)
+                    raise
+
+        return self.in_tools
+
+    @staticmethod
+    def _to_snake_case(human_name: str) -> str:
+        """Convert human-readable name to snake_case, sanitizing path traversal attempts."""
+        # Convert to lowercase
+        result = human_name.lower()
+
+        # Replace any non-alphanumeric character (including path traversal chars) with underscore
+        result = re.sub(r"[^a-z0-9]+", "_", result)
+
+        # Strip leading/trailing underscores
+        result = result.strip("_")
+
+        # Ensure the result contains at least one alphanumeric character
+        if not result or not re.search(r"[a-z0-9]", result):
+            msg = "Project name must contain at least one alphanumeric character"
+            raise ValueError(msg)
+
+        return result

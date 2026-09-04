@@ -2,126 +2,18 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
-  CONFIGS_MOCK,
   DEPLOY_RESPONSE,
-  FLOW_VERSIONS_MOCK,
   FLOWS_MOCK,
-  LLMS_MOCK,
-  PROVIDERS_MOCK,
   SNAPSHOTS_DUPLICATE_MOCK,
   SNAPSHOTS_EMPTY_MOCK,
+  setupDeploymentMocks,
 } from "../../utils/deployment-mocks";
+import { getDefaultProjectIdForTest } from "../../utils/get-default-project-id-for-test.mjs";
 
 test.skip(
   process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
   "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
 );
-
-// ---------------------------------------------------------------------------
-// Helper: set up all required API route mocks
-// ---------------------------------------------------------------------------
-async function setupDeploymentMocks(
-  page: Page,
-  folderId: string,
-  snapshotsMock: object = SNAPSHOTS_EMPTY_MOCK,
-  flowsMock: typeof FLOWS_MOCK = FLOWS_MOCK,
-) {
-  // Broad catch-all registered FIRST so specific routes (registered after) take priority via LIFO
-  await page.route("**/api/v1/deployments*", (route) => {
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ deployments: [] }),
-    });
-  });
-
-  // Snapshots (used for duplicate tool name check on review step).
-  // When snapshotsMock is SNAPSHOTS_DUPLICATE_MOCK, echo back the requested names
-  // as existing tools so the check works regardless of the scoped tool name format.
-  await page.route("**/api/v1/deployments/snapshots**", (route) => {
-    if (snapshotsMock === SNAPSHOTS_DUPLICATE_MOCK) {
-      const url = new URL(route.request().url());
-      const names = url.searchParams.getAll("names");
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          provider_data: {
-            tools: names.map((name, i) => ({ id: `tool-${i}`, name })),
-            page: 1,
-            size: 50,
-            total: names.length,
-          },
-        }),
-      });
-      return;
-    }
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(snapshotsMock),
-    });
-  });
-
-  // Provider accounts
-  await page.route("**/api/v1/deployments/providers**", (route) => {
-    if (route.request().method() === "GET") {
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(PROVIDERS_MOCK),
-      });
-    } else {
-      route.continue();
-    }
-  });
-
-  // LLMs
-  await page.route("**/api/v1/deployments/llms**", (route) => {
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(LLMS_MOCK),
-    });
-  });
-
-  // Deployment configs (connections)
-  await page.route("**/api/v1/deployments/configs**", (route) => {
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(CONFIGS_MOCK),
-    });
-  });
-
-  // Flows list — inject the captured folderId so the component's folder filter passes
-  await page.route("**/api/v1/flows/**", (route) => {
-    const url = route.request().url();
-    if (url.includes("/versions/")) {
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(FLOW_VERSIONS_MOCK),
-      });
-      return;
-    }
-    const flows = flowsMock.map((f) => ({ ...f, folder_id: folderId }));
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify(flows),
-    });
-  });
-
-  // Global variables (used in attach-flows step)
-  await page.route("**/api/v1/variables**", (route) => {
-    route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify([]),
-    });
-  });
-}
 
 // ---------------------------------------------------------------------------
 // Helper: navigate to the deployments page and open the stepper
@@ -131,29 +23,8 @@ async function openDeploymentStepper(
   snapshotsMock: object = SNAPSHOTS_EMPTY_MOCK,
   flowsMock: typeof FLOWS_MOCK = FLOWS_MOCK,
 ) {
-  // Listen for the folders/projects API response BEFORE bootstrap to capture
-  // the real myCollectionId. The step-attach-flows component filters flows by
-  // folder_id === myCollectionId, so mock flows must carry the same id.
-  const projectsResponsePromise = page.waitForResponse(
-    (resp) => resp.url().includes("/api/v1/projects") && resp.status() === 200,
-    { timeout: 30000 },
-  );
-
   await awaitBootstrapTest(page, { skipModal: true });
-
-  let myCollectionId = "";
-  try {
-    const projectsResp = await projectsResponsePromise;
-    const folders = await projectsResp.json();
-    const match = Array.isArray(folders)
-      ? (folders.find(
-          (f: { name: string; id: string }) => f.name === "Starter Project",
-        ) ?? folders[0])
-      : null;
-    myCollectionId = (match as { id: string } | null)?.id ?? "";
-  } catch {
-    // proceed with empty id — test will likely fail at flow-item assertion
-  }
+  const myCollectionId = await getDefaultProjectIdForTest(page);
 
   await setupDeploymentMocks(page, myCollectionId, snapshotsMock, flowsMock);
   await page.getByTestId("deployments-btn").click();
@@ -207,13 +78,11 @@ async function goToStepReview(page: Page) {
   await page.getByTestId("flow-item-f1").click();
   // Click version item
   await page.waitForSelector('[data-testid="version-item-fv1"]');
-  await page.getByTestId("version-item-fv1").click();
-  // After clicking version, a connection panel may appear - skip it if present
-  const skipBtn = page.getByRole("button", { name: /skip/i });
-  const skipVisible = await skipBtn.isVisible().catch(() => false);
-  if (skipVisible) {
-    await skipBtn.click();
-  }
+  await page.getByTestId("version-item-fv1-select").click();
+  // Wait for the async eligibility check before skipping the connection step
+  const skipButton = page.getByTestId("connection-skip");
+  await expect(skipButton).toBeVisible();
+  await skipButton.click();
   // Advance to review
   await page.getByTestId("deployment-stepper-next").click();
   await expect(
@@ -227,7 +96,7 @@ async function goToStepReview(page: Page) {
 test(
   "deployment-create: opens stepper on New Deployment click",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await awaitBootstrapTest(page, { skipModal: true });
@@ -247,7 +116,7 @@ test(
 test(
   "deployment-create: step 1 provider - Next disabled without selection, enabled after selecting",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page);
@@ -269,7 +138,7 @@ test(
 test(
   "deployment-create: step 2 type - fill name and select type to enable Next",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page);
@@ -305,7 +174,7 @@ test(
 test(
   "deployment-create: step 3 attach flows - select flow and version enables Next",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page);
@@ -329,14 +198,12 @@ test(
 
     // Version panel should appear, click the version
     await page.waitForSelector('[data-testid="version-item-fv1"]');
-    await page.getByTestId("version-item-fv1").click();
+    await page.getByTestId("version-item-fv1-select").click();
 
-    // Skip connection if prompted
-    const skipBtn = page.getByRole("button", { name: /skip/i });
-    const skipVisible = await skipBtn.isVisible().catch(() => false);
-    if (skipVisible) {
-      await skipBtn.click();
-    }
+    // Wait for the async eligibility check before skipping the connection step
+    const skipButton = page.getByTestId("connection-skip");
+    await expect(skipButton).toBeVisible();
+    await skipButton.click();
 
     // Next should be enabled after version selection
     await expect(page.getByTestId("deployment-stepper-next")).toBeEnabled();
@@ -349,7 +216,7 @@ test(
 test(
   "deployment-create: step 4 review - shows review content and Deploy button text",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page);
@@ -376,7 +243,7 @@ test(
 test(
   "deployment-create: clicking Deploy triggers POST and shows deploy status",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page);
@@ -426,7 +293,7 @@ test(
 test(
   "deployment-create: user can change tool name on review step",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page);
@@ -460,7 +327,7 @@ test(
 test(
   "deployment-create: review step does not block deploy when provider has matching tool names",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page, SNAPSHOTS_DUPLICATE_MOCK);
@@ -480,7 +347,7 @@ test(
 test(
   "deployment-create: review step shows no error when tool name is unique",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page, SNAPSHOTS_EMPTY_MOCK);
@@ -502,7 +369,7 @@ test(
 test(
   "deployment-create: editing tool display name on review with provider duplicates",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page, SNAPSHOTS_DUPLICATE_MOCK);
@@ -531,7 +398,7 @@ test(
 test(
   "deployment-create: review step allows numeric flow names as tool display names",
   {
-    tag: ["@deployment", "@workspace"],
+    tag: ["@release", "@workspace"],
   },
   async ({ page }) => {
     await openDeploymentStepper(page, SNAPSHOTS_EMPTY_MOCK, [

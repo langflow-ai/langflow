@@ -14,6 +14,7 @@ from typing import TYPE_CHECKING
 
 from lfx.services.deps import get_settings_service, get_storage_service
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.file_path_security import enforce_local_file_access
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -22,6 +23,46 @@ if TYPE_CHECKING:
 
 # Constants for path parsing
 EXPECTED_PATH_PARTS = 2  # Path format: "flow_id/filename"
+
+
+def _is_existing_local_file(file_path: str) -> bool:
+    """Return True when file_path is an absolute path to a real local file.
+
+    Under S3 storage some callers still hand us genuine local paths (e.g. the
+    Langflow Assistant injects the installed lfx components dir into a Directory
+    node). A real local file is never an S3 key, so it must be read from disk
+    instead of being parsed as "flow_id/filename". See issue #13798.
+
+    The check is restricted to ABSOLUTE paths on purpose: S3 keys are always
+    relative ("flow_id/filename"), so requiring an absolute path makes it
+    impossible to mistake a relative S3 key for a same-named file that happens
+    to exist relative to the process CWD.
+    """
+    try:
+        path_obj = Path(file_path)
+        return path_obj.is_absolute() and path_obj.is_file()
+    except OSError:
+        return False
+
+
+def _confine_local_read(file_path: str, resolve_path: Callable[[str], str] | None = None) -> str:
+    """Apply local-file containment to the S3 branch's real-local-file short-circuit.
+
+    ``_is_existing_local_file`` is a deliberate escape hatch (#13798), but it must not become a
+    way to read server files that ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` blocks on local
+    storage. The restriction is documented as a property of the built-in file-reading
+    components, not of the storage backend, so it has to hold on both branches.
+
+    When the caller supplies ``resolve_path`` (components pass a closure that runs
+    ``enforce_local_file_access`` with the authenticated user/flow scope) that resolver is
+    authoritative and full tenant isolation applies. Callers with no scope to offer fall back to
+    the storage-root floor: the path must stay under ``config_dir`` and must not be one of the
+    server-managed secret/key/DB files. Both are no-ops when the restriction is disabled, so the
+    default (unrestricted) #13798 behavior is unchanged.
+    """
+    if resolve_path is not None:
+        return resolve_path(file_path)
+    return str(enforce_local_file_access(file_path, allow_storage_root=True))
 
 
 def parse_storage_path(path: str) -> tuple[str, str] | None:
@@ -56,8 +97,9 @@ async def read_file_bytes(
     Args:
         file_path: Path to the file (S3 key format "flow_id/filename" or local path)
         storage_service: Optional storage service instance (will get from deps if not provided)
-        resolve_path: Optional function to resolve relative paths to absolute paths
-                     (typically Component.resolve_path). Only used for local storage.
+        resolve_path: Optional function that resolves and confines a local path (components
+                     pass a closure around ``enforce_local_file_access``). Used for local
+                     storage, and for the S3 branch's real-local-file short-circuit.
 
     Returns:
         bytes: The file content
@@ -68,6 +110,9 @@ async def read_file_bytes(
     settings = get_settings_service().settings
 
     if settings.storage_type == "s3":
+        if _is_existing_local_file(file_path):
+            return Path(_confine_local_read(file_path, resolve_path)).read_bytes()
+
         parsed = parse_storage_path(file_path)
         if not parsed:
             msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"
@@ -104,8 +149,9 @@ async def read_file_text(
         file_path: Path to the file (storage service path or local path)
         encoding: Text encoding to use
         storage_service: Optional storage service instance
-        resolve_path: Optional function to resolve relative paths to absolute paths
-                     (typically Component.resolve_path). Only used for local storage.
+        resolve_path: Optional function that resolves and confines a local path (components
+                     pass a closure around ``enforce_local_file_access``). Used for local
+                     storage, and for the S3 branch's real-local-file short-circuit.
         newline: Newline mode (None for default, "" for universal newlines like CSV).
                  When set to "", normalizes all line endings to \\n for consistency.
 
@@ -154,6 +200,11 @@ def get_file_size(file_path: str, storage_service: StorageService | None = None)
     settings = get_settings_service().settings
 
     if settings.storage_type == "s3":
+        if _is_existing_local_file(file_path):
+            # Same containment floor as ``read_file_bytes``: without it this is a size/existence
+            # oracle (via ``file_exists``) for any server file under restriction.
+            return Path(_confine_local_read(file_path)).stat().st_size
+
         parsed = parse_storage_path(file_path)
         if not parsed:
             msg = f"Invalid S3 path format: {file_path}. Expected 'flow_id/filename'"

@@ -19,6 +19,7 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from lfx.services.adapters.registry import AdapterRegistry
+    from lfx.services.catalog_policy.base import BaseCatalogPolicyService
     from lfx.services.interfaces import (
         AuthServiceProtocol,
         CacheServiceProtocol,
@@ -31,6 +32,7 @@ if TYPE_CHECKING:
         TransactionServiceProtocol,
         VariableServiceProtocol,
     )
+    from lfx.services.policy_bundle.base import BasePolicyBundleService
 
 
 def get_service(service_type: ServiceType, default=None):
@@ -61,7 +63,78 @@ def get_service(service_type: ServiceType, default=None):
     try:
         return service_manager.get(service_type, default)
     except Exception:  # noqa: BLE001
+        # Preserve the traceback in logs so callers seeing a None return have something to grep
+        # for. Returning None remains the contract because several callers (e.g. get_db_service)
+        # treat absence as "not configured" and substitute a noop implementation.
+        logger.exception("Failed to resolve service %s", service_type)
         return None
+
+
+def get_model_provider_policy_service():
+    """Return the configured model-provider policy service or fail closed."""
+    from lfx.services.model_provider_policy.base import BaseModelProviderPolicyService
+    from lfx.services.model_provider_policy.service import ModelProviderPolicyService  # noqa: F401
+
+    service = get_service(ServiceType.MODEL_PROVIDER_POLICY_SERVICE)
+    if not isinstance(service, BaseModelProviderPolicyService) or not service.ready:
+        msg = "A valid, ready model_provider_policy_service is required"
+        raise TypeError(msg)
+    return service
+
+
+def get_policy_bundle_service() -> BasePolicyBundleService:
+    """Return the ready process-local shared policy bundle coordinator."""
+    from lfx.services.policy_bundle import BasePolicyBundleService, PolicyBundleService  # noqa: F401
+
+    service = get_service(ServiceType.POLICY_BUNDLE_SERVICE)
+    if not isinstance(service, BasePolicyBundleService) or not service.ready:
+        msg = "A valid, ready policy_bundle_service is required"
+        raise TypeError(msg)
+    return service
+
+
+_catalog_policy_fallback: BaseCatalogPolicyService | None = None
+_catalog_policy_fallback_lock = threading.Lock()
+
+
+def get_catalog_policy_service():
+    """Return the ready catalog-policy service.
+
+    Standalone LFX resolves the built-in allow-all implementation. Langflow
+    overrides it with the database-backed process-local snapshot service. A
+    broken configured implementation is replaced with one stable built-in
+    allow-all instance so later lookups remain fail-open instead of retrying a
+    failing constructor.
+    """
+    from lfx.services.catalog_policy.base import BaseCatalogPolicyService
+    from lfx.services.catalog_policy.service import CatalogPolicyService
+    from lfx.services.manager import get_service_manager
+
+    service_manager = get_service_manager()
+    cached = service_manager.services.get(ServiceType.CATALOG_POLICY_SERVICE)
+    if isinstance(cached, BaseCatalogPolicyService) and cached.ready:
+        return cached
+
+    service = get_service(ServiceType.CATALOG_POLICY_SERVICE)
+    if isinstance(service, BaseCatalogPolicyService) and service.ready:
+        return service
+
+    global _catalog_policy_fallback  # noqa: PLW0603
+    with _catalog_policy_fallback_lock:
+        cached = service_manager.services.get(ServiceType.CATALOG_POLICY_SERVICE)
+        if isinstance(cached, BaseCatalogPolicyService) and cached.ready:
+            return cached
+        fallback = _catalog_policy_fallback
+        if fallback is None:
+            fallback = CatalogPolicyService()
+            _catalog_policy_fallback = fallback
+        service_manager.services[ServiceType.CATALOG_POLICY_SERVICE] = fallback
+
+    logger.warning(
+        "Configured catalog_policy_service is unavailable or invalid; "
+        "using the built-in allow-all policy for this process"
+    )
+    return fallback
 
 
 def get_db_service() -> DatabaseServiceProtocol:
@@ -126,6 +199,17 @@ def get_chat_service() -> ChatServiceProtocol | None:
     from lfx.services.schema import ServiceType
 
     return get_service(ServiceType.CHAT_SERVICE)
+
+
+def get_checkpoint_service():
+    """Checkpoint store: registered service, or the in-memory standalone fallback."""
+    from lfx.graph.checkpoint.store import default_checkpoint_store
+    from lfx.services.schema import ServiceType
+
+    service = get_service(ServiceType.CHECKPOINT_SERVICE)
+    if service is not None:
+        return service
+    return default_checkpoint_store()
 
 
 def get_tracing_service() -> TracingServiceProtocol | None:

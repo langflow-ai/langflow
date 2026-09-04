@@ -10,12 +10,15 @@ Notes:
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import json
 import subprocess
 import sys
 import textwrap
+import threading
 import time
+from contextvars import ContextVar
 from copy import deepcopy
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -27,12 +30,80 @@ from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_
 from lfx.inputs import SortableListInput
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, StrInput
 from lfx.io import BoolInput, FileInput, IntInput, Output, SecretStrInput
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame  # noqa: TC001
 from lfx.schema.message import Message
 from lfx.services.deps import get_settings_service, get_storage_service
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.validate_cloud import is_astra_cloud_environment
+
+_FILE_TOOL_CANCEL_EVENT: ContextVar[threading.Event | None] = ContextVar("file_tool_cancel_event", default=None)
+_FILE_TOOL_CANCEL_WAIT_SECONDS = 6
+_FILE_TOOL_MAX_CONCURRENT_LOADS = 4
+_FILE_TOOL_LIMITER_ATTRIBUTE = "_lfx_file_tool_load_limiter"
+_FILE_TOOL_PROCESS_REAP_SECONDS = 2
+
+
+class _FileToolCancelledError(RuntimeError):
+    """Stop synchronous file loading after its async tool call is cancelled."""
+
+
+def _raise_if_file_tool_cancelled(cancel_event: threading.Event | None = None) -> None:
+    event = cancel_event or _FILE_TOOL_CANCEL_EVENT.get()
+    if event is not None and event.is_set():
+        raise _FileToolCancelledError
+
+
+def _kill_and_reap_process(proc: subprocess.Popen) -> None:
+    try:
+        proc.kill()
+    except ProcessLookupError:
+        pass
+    except OSError:
+        logger.exception("Failed to kill cancelled Docling subprocess")
+    except Exception:  # noqa: BLE001 - cleanup must not mask the caller's cancellation
+        logger.exception("Unexpected error while killing cancelled Docling subprocess")
+
+    try:
+        proc.communicate(timeout=_FILE_TOOL_PROCESS_REAP_SECONDS)
+    except subprocess.TimeoutExpired:
+        logger.warning("Timed out draining cancelled Docling subprocess; waiting for process exit")
+    except OSError:
+        logger.exception("Failed to drain cancelled Docling subprocess")
+    except Exception:  # noqa: BLE001 - cleanup must not mask the caller's cancellation
+        logger.exception("Unexpected error while draining cancelled Docling subprocess")
+    else:
+        return
+
+    try:
+        proc.wait(timeout=_FILE_TOOL_PROCESS_REAP_SECONDS)
+    except subprocess.TimeoutExpired:
+        logger.exception("Cancelled Docling subprocess could not be reaped within the cleanup timeout")
+    except OSError:
+        logger.exception("Failed to reap cancelled Docling subprocess")
+    except Exception:  # noqa: BLE001 - cleanup must not mask the caller's cancellation
+        logger.exception("Unexpected error while reaping cancelled Docling subprocess")
+
+
+def _get_file_tool_limiter() -> asyncio.Semaphore:
+    """Return the bounded loader admission gate for the current event loop."""
+    loop = asyncio.get_running_loop()
+    limiter = getattr(loop, _FILE_TOOL_LIMITER_ATTRIBUTE, None)
+    if limiter is None:
+        limiter = asyncio.Semaphore(_FILE_TOOL_MAX_CONCURRENT_LOADS)
+        setattr(loop, _FILE_TOOL_LIMITER_ATTRIBUTE, limiter)
+    return limiter
+
+
+def _log_abandoned_file_tool_result(task: asyncio.Task) -> None:
+    """Observe unexpected failures from a synchronous loader that outlived its caller."""
+    try:
+        error = task.exception()
+    except asyncio.CancelledError:
+        return
+    if error is not None and not isinstance(error, _FileToolCancelledError):
+        logger.error("Abandoned file loader failed after its tool call was cancelled", exc_info=error)
 
 
 def _get_storage_location_options():
@@ -316,6 +387,8 @@ class FileComponent(BaseFileComponent):
 
         async def read_files_tool() -> str:
             """Read the content of uploaded files."""
+            cancel_event = threading.Event()
+            cancel_token = _FILE_TOOL_CANCEL_EVENT.set(cancel_event)
             try:
                 if getattr(self, "advanced_mode", False):
                     # In advanced mode, use the markdown output path so that the
@@ -323,9 +396,43 @@ class FileComponent(BaseFileComponent):
                     # outputs rather than triggering a second subprocess via
                     # load_files_message.
                     self.markdown = True
-                    result = self.load_files_markdown()
+                    loader = self.load_files_markdown
                 else:
-                    result = self.load_files_message()
+                    loader = self.load_files_message
+                # Both loaders are blocking (file IO plus, in advanced mode, a Docling
+                # subprocess). Run them off the event loop so streaming/heartbeats on
+                # the same loop keep flowing while the agent waits for this tool. Keep
+                # admission bounded until the real worker exits so cancelled standard
+                # parsers cannot build an unbounded default-executor backlog.
+                load_limiter = _get_file_tool_limiter()
+                await load_limiter.acquire()
+                try:
+                    loader_task = asyncio.create_task(asyncio.to_thread(loader))
+                except BaseException:
+                    load_limiter.release()
+                    raise
+                loader_task.add_done_callback(lambda _task: load_limiter.release())
+                try:
+                    result = await asyncio.shield(loader_task)
+                except asyncio.CancelledError:
+                    cancel_event.set()
+                    # Give cooperative cleanup time to kill/reap Docling and remove
+                    # temporary files before releasing this tool invocation.
+                    try:
+                        await asyncio.wait_for(
+                            asyncio.shield(loader_task),
+                            timeout=_FILE_TOOL_CANCEL_WAIT_SECONDS,
+                        )
+                    except _FileToolCancelledError:
+                        pass
+                    except asyncio.TimeoutError:
+                        pass
+                    except Exception:  # noqa: BLE001 - cancellation stays dominant over loader cleanup
+                        logger.exception("File loader failed while cleaning up a cancelled tool call")
+                    finally:
+                        if not loader_task.done():
+                            loader_task.add_done_callback(_log_abandoned_file_tool_result)
+                    raise
                 if hasattr(result, "get_text"):
                     return result.get_text()
                 if hasattr(result, "text"):
@@ -333,6 +440,8 @@ class FileComponent(BaseFileComponent):
                 return str(result)
             except (FileNotFoundError, ValueError, OSError, RuntimeError) as e:
                 return f"Error reading files: {e}"
+            finally:
+                _FILE_TOOL_CANCEL_EVENT.reset(cancel_token)
 
         description = self.get_tool_description()
 
@@ -519,12 +628,21 @@ class FileComponent(BaseFileComponent):
                         display_name="Structured Content",
                         name="dataframe",
                         method="load_files_structured",
+                        types=["Table"],
+                        selected="Table",
                         tool_mode=True,
                     ),
                 )
             elif file_path.endswith(".json"):
                 frontend_node["outputs"].append(
-                    Output(display_name="Structured Content", name="json", method="load_files_json", tool_mode=True),
+                    Output(
+                        display_name="Structured Content",
+                        name="json",
+                        method="load_files_json",
+                        types=["JSON"],
+                        selected="JSON",
+                        tool_mode=True,
+                    ),
                 )
 
             advanced_mode = frontend_node.get("template", {}).get("advanced_mode", {}).get("value", False)
@@ -534,28 +652,73 @@ class FileComponent(BaseFileComponent):
                         display_name="Structured Output",
                         name="advanced_dataframe",
                         method="load_files_dataframe",
+                        types=["Table"],
+                        selected="Table",
                         tool_mode=True,
                     ),
                 )
                 frontend_node["outputs"].append(
                     Output(
-                        display_name="Markdown", name="advanced_markdown", method="load_files_markdown", tool_mode=True
+                        display_name="Markdown",
+                        name="advanced_markdown",
+                        method="load_files_markdown",
+                        types=["Message"],
+                        selected="Message",
+                        tool_mode=True,
                     ),
                 )
                 frontend_node["outputs"].append(
-                    Output(display_name="File Path", name="path", method="load_files_path", tool_mode=True),
+                    Output(
+                        display_name="File Path",
+                        name="path",
+                        method="load_files_path",
+                        types=["Message"],
+                        selected="Message",
+                        tool_mode=True,
+                    ),
                 )
             else:
                 frontend_node["outputs"].append(
-                    Output(display_name="Raw Content", name="message", method="load_files_message", tool_mode=True),
+                    Output(
+                        display_name="Raw Content",
+                        name="message",
+                        method="load_files_message",
+                        types=["Message"],
+                        selected="Message",
+                        tool_mode=True,
+                    ),
                 )
                 frontend_node["outputs"].append(
-                    Output(display_name="File Path", name="path", method="load_files_path", tool_mode=True),
+                    Output(
+                        display_name="File Path",
+                        name="path",
+                        method="load_files_path",
+                        types=["Message"],
+                        selected="Message",
+                        tool_mode=True,
+                    ),
                 )
         else:
-            # Multiple files => DataFrame output; advanced parser disabled
+            # Multiple files => DataFrame and Message outputs; advanced parser disabled
             frontend_node["outputs"].append(
-                Output(display_name="Files", name="dataframe", method="load_files", tool_mode=True)
+                Output(
+                    display_name="Files",
+                    name="dataframe",
+                    method="load_files",
+                    types=["Table"],
+                    selected="Table",
+                    tool_mode=True,
+                )
+            )
+            frontend_node["outputs"].append(
+                Output(
+                    display_name="Raw Content",
+                    name="message",
+                    method="load_files_message",
+                    types=["Message"],
+                    selected="Message",
+                    tool_mode=True,
+                )
             )
 
         return frontend_node
@@ -597,16 +760,29 @@ class FileComponent(BaseFileComponent):
             from pathlib import Path
 
             from lfx.schema.data import Data
+            from lfx.utils.file_path_security import (
+                StorageNamespaceError,
+                component_file_access_scopes,
+                enforce_local_file_access,
+            )
 
             # Use same resolution logic as BaseFileComponent (support storage paths)
             path_str = str(file_path_str)
             if parse_storage_path(path_str):
                 try:
                     resolved_path = Path(self.get_full_path(path_str))
+                except StorageNamespaceError:
+                    # A storage namespace outside this graph's scope is an access denial,
+                    # not a resolution failure: never retry it as a plain local path.
+                    raise
                 except (ValueError, AttributeError):
                     resolved_path = Path(self.resolve_path(path_str))
             else:
                 resolved_path = Path(self.resolve_path(path_str))
+
+            # Security: confine tool-mode reads to the storage dir in restricted (multi-tenant)
+            # mode so a tenant cannot read arbitrary server files via file_path_str.
+            resolved_path = enforce_local_file_access(resolved_path, scope_ids=component_file_access_scopes(self))
 
             if not resolved_path.exists():
                 msg = f"File or directory not found: {file_path_str}"
@@ -656,7 +832,14 @@ class FileComponent(BaseFileComponent):
 
         temp_path = Path(temp_file_path)
         data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(temp_path)})
-        return [BaseFileComponent.BaseFile(data_obj, temp_path, delete_after_processing=True)]
+        return [
+            BaseFileComponent.BaseFile(
+                data_obj,
+                temp_path,
+                delete_after_processing=True,
+                cleanup_local_file=True,
+            )
+        ]
 
     def _read_from_google_drive(self) -> list[BaseFileComponent.BaseFile]:
         """Read file from Google Drive."""
@@ -714,7 +897,14 @@ class FileComponent(BaseFileComponent):
 
         temp_path = Path(temp_file_path)
         data_obj = Data(data={self.SERVER_FILE_PATH_FIELDNAME: str(temp_path)})
-        return [BaseFileComponent.BaseFile(data_obj, temp_path, delete_after_processing=True)]
+        return [
+            BaseFileComponent.BaseFile(
+                data_obj,
+                temp_path,
+                delete_after_processing=True,
+                cleanup_local_file=True,
+            )
+        ]
 
     def _is_docling_compatible(self, file_path: str) -> bool:
         """Lightweight extension gate for Docling-compatible types."""
@@ -752,16 +942,26 @@ class FileComponent(BaseFileComponent):
         )
         return file_path.lower().endswith(docling_exts)
 
-    async def _get_local_file_for_docling(self, file_path: str) -> tuple[str, bool]:
+    async def _get_local_file_for_docling(
+        self, file_path: str, *, is_local_temp_file: bool = False
+    ) -> tuple[str, bool]:
         """Get a local file path for Docling processing, downloading from S3 if needed.
 
         Args:
             file_path: Either a local path or S3 key (format "flow_id/filename")
+            is_local_temp_file: Whether file_path is an internally created local temporary file.
 
         Returns:
             tuple[str, bool]: (local_path, should_delete) where should_delete indicates
                               if this is a temporary file that should be cleaned up
         """
+        if is_local_temp_file:
+            local_temp_path = Path(file_path)
+            if not local_temp_path.is_absolute() or not local_temp_path.is_file():
+                msg = f"Invalid local temporary path: {file_path}"
+                raise ValueError(msg)
+            return file_path, False
+
         settings = get_settings_service().settings
         if settings.storage_type == "local":
             return file_path, False
@@ -785,7 +985,7 @@ class FileComponent(BaseFileComponent):
 
         return temp_path, True
 
-    def _process_docling_in_subprocess(self, file_path: str) -> Data | None:
+    def _process_docling_in_subprocess(self, file_path: str, *, is_local_temp_file: bool = False) -> Data | None:
         """Run Docling in a separate OS process and map the result to a Data object.
 
         We avoid multiprocessing pickling by launching `python -c "<script>"` and
@@ -796,14 +996,19 @@ class FileComponent(BaseFileComponent):
         if not file_path:
             return None
 
+        cancel_event = _FILE_TOOL_CANCEL_EVENT.get()
+        _raise_if_file_tool_cancelled(cancel_event)
         settings = get_settings_service().settings
         if settings.storage_type == "s3":
-            local_path, should_delete = run_until_complete(self._get_local_file_for_docling(file_path))
+            local_path, should_delete = run_until_complete(
+                self._get_local_file_for_docling(file_path, is_local_temp_file=is_local_temp_file)
+            )
         else:
             local_path = file_path
             should_delete = False
 
         try:
+            _raise_if_file_tool_cancelled(cancel_event)
             return self._process_docling_subprocess_impl(local_path, file_path)
         finally:
             # Clean up temp file if we created one
@@ -1021,16 +1226,13 @@ class FileComponent(BaseFileComponent):
             """
         )
 
-        # Validate file_path to avoid command injection or unsafe input.
-        # Note: $ is intentionally not blocked here because the path is passed as JSON via
-        # stdin to the subprocess, not interpolated in a shell command.
-        if not isinstance(args["file_path"], str) or any(c in args["file_path"] for c in [";", "|", "&", "`"]):
+        # The path is passed as JSON over stdin to an argument-list subprocess, so shell
+        # metacharacters are ordinary filename characters here.
+        if not isinstance(args["file_path"], str):
             return Data(data={"error": "Unsafe file path detected.", "file_path": args["file_path"]})
 
-        # Use Popen with a polling loop instead of blocking subprocess.run().
-        # This lets us emit periodic log messages that keep the SSE event stream
-        # alive in multi-worker (Gunicorn) deployments, preventing the job queue
-        # from being cleaned up while Docling is still processing.
+        # Use communicate() in bounded intervals so stdout/stderr are drained while the
+        # child runs without losing the heartbeat that keeps the SSE event stream alive.
         docling_timeout = 600  # 10 minutes; large PDFs with OCR may need this
         poll_interval = 5  # seconds between progress heartbeats
 
@@ -1040,33 +1242,42 @@ class FileComponent(BaseFileComponent):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
-        # Send input and close stdin so child can proceed
-        proc.stdin.write(json.dumps(args).encode("utf-8"))
-        proc.stdin.close()
 
         start = time.monotonic()
-        while proc.poll() is None:
-            elapsed = time.monotonic() - start
-            if elapsed >= docling_timeout:
-                proc.kill()
-                proc.wait()
-                return Data(
-                    data={
-                        "error": (
-                            f"Docling processing timed out after {docling_timeout}s. "
-                            "Consider using the standalone Docling component for large documents."
-                        ),
-                        "file_path": original_file_path,
-                    },
-                )
-            # Heartbeat: emit a log so the graph event stream stays active
-            self.log(f"Docling processing in progress ({int(elapsed)}s elapsed)...")
-            time.sleep(poll_interval)
-
-        stdout_bytes = proc.stdout.read()
-        stderr_bytes = proc.stderr.read()
-        proc.stdout.close()
-        proc.stderr.close()
+        input_bytes: bytes | None = json.dumps(args).encode("utf-8")
+        cancel_event = _FILE_TOOL_CANCEL_EVENT.get()
+        try:
+            while True:
+                _raise_if_file_tool_cancelled(cancel_event)
+                elapsed = time.monotonic() - start
+                if elapsed >= docling_timeout:
+                    proc.kill()
+                    proc.communicate()
+                    return Data(
+                        data={
+                            "error": (
+                                f"Docling processing timed out after {docling_timeout}s. "
+                                "Consider using the standalone Docling component for large documents."
+                            ),
+                            "file_path": original_file_path,
+                        },
+                    )
+                try:
+                    stdout_bytes, stderr_bytes = proc.communicate(
+                        input=input_bytes,
+                        timeout=min(poll_interval, docling_timeout - elapsed),
+                    )
+                    _raise_if_file_tool_cancelled(cancel_event)
+                    break
+                except subprocess.TimeoutExpired:
+                    # communicate() retains partially written input and collected output across
+                    # retries, so subsequent calls continue draining without resending stdin.
+                    input_bytes = None
+                    elapsed = time.monotonic() - start
+                    self.log(f"Docling processing in progress ({int(elapsed)}s elapsed)...")
+        finally:
+            if (cancel_event is not None and cancel_event.is_set()) or proc.poll() is None:
+                _kill_and_reap_process(proc)
 
         if not stdout_bytes:
             err_msg = stderr_bytes.decode("utf-8", errors="replace") if stderr_bytes else "no output from child process"
@@ -1113,6 +1324,8 @@ class FileComponent(BaseFileComponent):
         - advanced_mode => Docling in a separate process.
         - Otherwise => standard parsing in current process (optionally threaded).
         """
+        cancel_event = _FILE_TOOL_CANCEL_EVENT.get()
+        _raise_if_file_tool_cancelled(cancel_event)
         if not file_list:
             msg = "No files to process."
             raise ValueError(msg)
@@ -1122,6 +1335,7 @@ class FileComponent(BaseFileComponent):
         image_extensions = {"jpeg", "jpg", "png", "gif", "webp", "bmp", "tiff"}
         settings = get_settings_service().settings
         for file in file_list:
+            _raise_if_file_tool_cancelled(cancel_event)
             extension = file.path.suffix[1:].lower()
             if extension in image_extensions:
                 # Read bytes based on storage type
@@ -1149,6 +1363,7 @@ class FileComponent(BaseFileComponent):
         # Validate that files requiring Docling are only processed when advanced mode is enabled
         if not self.advanced_mode:
             for file in file_list:
+                _raise_if_file_tool_cancelled(cancel_event)
                 extension = file.path.suffix[1:].lower()
                 if extension in self.DOCLING_ONLY_EXTENSIONS:
                     if is_astra_cloud_environment():
@@ -1166,7 +1381,11 @@ class FileComponent(BaseFileComponent):
 
         def process_file_standard(file_path: str, *, silent_errors: bool = False) -> Data | None:
             try:
-                return parse_text_file_to_data(file_path, silent_errors=silent_errors)
+                _raise_if_file_tool_cancelled(cancel_event)
+                result = parse_text_file_to_data(file_path, silent_errors=silent_errors)
+                _raise_if_file_tool_cancelled(cancel_event)
+            except _FileToolCancelledError:
+                raise
             except FileNotFoundError as e:
                 self.log(f"File not found: {file_path}. Error: {e}")
                 if not silent_errors:
@@ -1177,6 +1396,8 @@ class FileComponent(BaseFileComponent):
                 if not silent_errors:
                     raise
                 return None
+            else:
+                return result
 
         docling_compatible = all(self._is_docling_compatible(str(f.path)) for f in file_list)
 
@@ -1184,8 +1405,12 @@ class FileComponent(BaseFileComponent):
         if self.advanced_mode and docling_compatible:
             final_return: list[BaseFileComponent.BaseFile] = []
             for file in file_list:
+                _raise_if_file_tool_cancelled(cancel_event)
                 file_path = str(file.path)
-                advanced_data: Data | None = self._process_docling_in_subprocess(file_path)
+                advanced_data: Data | None = self._process_docling_in_subprocess(
+                    file_path, is_local_temp_file=file.cleanup_local_file
+                )
+                _raise_if_file_tool_cancelled(cancel_event)
 
                 # Handle None case - Docling processing failed or returned None
                 if advanced_data is None:
@@ -1264,6 +1489,7 @@ class FileComponent(BaseFileComponent):
             load_function=process_file_standard,
             max_concurrency=concurrency,
         )
+        _raise_if_file_tool_cancelled(cancel_event)
         return self.rollup_data(file_list, my_data)
 
     # ------------------------------ Output helpers -----------------------------------

@@ -18,13 +18,19 @@ from langflow.services.auth.utils import get_current_active_user, get_current_ac
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.store.utils import get_lf_version_from_pypi
+from langflow.utils import flow_secrets as _flow_secrets
 from langflow.utils.constants import LANGFLOW_GLOBAL_VAR_HEADER_PREFIX
 
 if TYPE_CHECKING:
     from langflow.services.store.schema import StoreComponentCreate
 
 
-API_WORDS = ["api", "key", "token"]
+API_WORDS = _flow_secrets.API_WORDS
+has_api_terms = _flow_secrets.has_api_terms
+remove_api_keys = _flow_secrets.remove_api_keys
+strip_flow_secrets = _flow_secrets.strip_flow_secrets
+strip_secret_field_values = _flow_secrets.strip_secret_field_values
+strip_secret_field_values_in_place = _flow_secrets.strip_secret_field_values_in_place
 
 MAX_PAGE_SIZE = 50
 MIN_PAGE_SIZE = 1
@@ -35,6 +41,21 @@ CurrentActiveMCPUser = Annotated[User, Depends(get_current_active_user_mcp)]
 DbSession = Annotated[AsyncSession, Depends(injectable_session_scope)]
 # DbSessionReadOnly for read-only operations (no auto-commit, reduces lock contention)
 DbSessionReadOnly = Annotated[AsyncSession, Depends(injectable_session_scope_readonly)]
+
+
+async def release_db_transaction(session: AsyncSession) -> None:
+    """End the session's current transaction before long-running work.
+
+    A handler that awaits a model, tool, or workflow after its DB reads must
+    not keep the transaction from those reads open for the wait: the session
+    would pin a pooled connection for the whole run (on Postgres as
+    ``idle in transaction``, which a nonzero
+    ``idle_in_transaction_session_timeout`` kills mid-run). Committing ends
+    the transaction and returns the connection to the pool; any later DB work
+    on the same session begins a fresh short transaction, and the dependency
+    teardown's final commit becomes a no-op.
+    """
+    await session.commit()
 
 
 def _get_validated_path_segment(value: str, *, label: str = "name") -> str:
@@ -68,10 +89,6 @@ class EventDeliveryType(str, Enum):
     POLLING = "polling"
 
 
-def has_api_terms(word: str):
-    return "api" in word and ("key" in word or ("token" in word and "tokens" not in word))
-
-
 def _get_provider_from_template(template: dict) -> str | None:
     """Return provider name from template's model field, if any."""
     model_field = template.get("model")
@@ -81,25 +98,6 @@ def _get_provider_from_template(template: dict) -> str | None:
     if isinstance(raw, list) and len(raw) > 0 and isinstance(raw[0], dict):
         return raw[0].get("provider")
     return None
-
-
-def remove_api_keys(flow: dict):
-    """Remove api keys from flow data."""
-    for node in flow.get("data", {}).get("nodes", []):
-        node_data = node.get("data")
-        if not isinstance(node_data, dict):
-            continue
-        node_inner = node_data.get("node")
-        if not isinstance(node_inner, dict):
-            continue
-        template = node_inner.get("template")
-        if not isinstance(template, dict):
-            continue
-        for value in template.values():
-            if isinstance(value, dict) and "name" in value and has_api_terms(value["name"]) and value.get("password"):
-                value["value"] = None
-
-    return flow
 
 
 # ---------------------------------------------------------------------------
@@ -312,8 +310,18 @@ def format_syntax_error_message(exc: SyntaxError) -> str:
 
 
 def get_causing_exception(exc: BaseException) -> BaseException:
-    """Get the causing exception from an exception."""
-    if hasattr(exc, "__cause__") and exc.__cause__:
+    """Get the causing exception from an exception.
+
+    Walks the ``__cause__`` chain to the root, but stops at a bundle-shim
+    ``ModuleNotFoundError`` whose curated "components moved to ..." message is
+    raised ``from`` the raw ``No module named '<x>'`` it wraps, so the curated
+    message wins instead of unwrapping past it to the bare cause underneath.
+    """
+    # A raw import error reads "No module named '<x>'"; anything else is a
+    # curated message (e.g. a bundle shim) that should win over its cause.
+    if isinstance(exc, ModuleNotFoundError) and not str(exc).startswith("No module named"):
+        return exc
+    if getattr(exc, "__cause__", None):
         return get_causing_exception(exc.__cause__)
     return exc
 
@@ -322,9 +330,14 @@ def format_exception_message(exc: Exception) -> str:
     """Format an exception message for returning to the frontend."""
     # We need to check if the __cause__ is a SyntaxError
     # If it is, we need to return the message of the SyntaxError
+    from lfx.utils.exceptions import module_not_found_hint
+
     causing_exception = get_causing_exception(exc)
     if isinstance(causing_exception, SyntaxError):
         return format_syntax_error_message(causing_exception)
+    hint = module_not_found_hint(causing_exception)
+    if hint is not None:
+        return hint
     return str(exc)
 
 

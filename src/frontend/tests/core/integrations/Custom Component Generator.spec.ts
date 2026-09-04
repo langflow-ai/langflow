@@ -1,20 +1,16 @@
-import { expect, test } from "../../fixtures";
+import { expect } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
-import { selectAnthropicModel } from "../../utils/select-anthropic-model";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "Custom Component Generator",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.ANTHROPIC_API_KEY,
-      "ANTHROPIC_API_KEY required to run this test",
-    );
-    loadDotenvIfLocal(__dirname);
+    await seedLoopbackProvider(page);
     await page.goto("/");
 
     await awaitBootstrapTest(page);
@@ -25,7 +21,7 @@ withEventDeliveryModes(
       timeout: 100000,
     });
 
-    await selectAnthropicModel(page);
+    await configureLoopbackOpenAI(page);
 
     await page.getByTestId("playground-btn-flow-io").click();
 
@@ -38,16 +34,12 @@ withEventDeliveryModes(
 
     await page.getByTestId("button-send").last().click();
 
-    await page.waitForTimeout(1000);
-
     const stopButton = page.getByRole("button", { name: TEXTS.stop });
-    await stopButton.waitFor({ state: "hidden", timeout: 30000 * 3 });
+    await stopButton.waitFor({ state: "hidden", timeout: 90_000 });
 
     const textContents = await getAllResponseMessage(page);
     expect(textContents.length).toBeGreaterThan(100);
-    expect(await page.getByTestId("chat-code-tab").last().isVisible()).toBe(
-      true,
-    );
+    await expect(page.getByTestId("chat-code-tab").last()).toBeVisible();
     expect(textContents.toLowerCase()).toContain("langflow");
   },
 );

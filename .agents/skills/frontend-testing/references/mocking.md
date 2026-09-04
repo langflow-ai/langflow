@@ -21,6 +21,7 @@ These modules are already mocked in `jest.setup.js`. Do NOT re-mock them unless 
 
 - `@radix-ui/react-form` (all exports render children)
 - `react-markdown` (renders null)
+- `remark-gfm`, `remark-math`, `rehype-mathjax/browser` (no-op plugins; pure ESM that fails to parse under jest)
 - `lucide-react/dynamicIconImports` (empty object)
 - `@/components/common/genericIconComponent` (renders null)
 - `@/icons/BotMessageSquare` (renders null)

@@ -6,7 +6,10 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from lfx.log.logger import logger
-from sqlmodel import select
+from lfx.services.authorization.base import ResourceVisibilityScope
+from lfx.services.settings.constants import AGENTIC_VARIABLES
+from lfx.services.variable import VariableNotFoundError
+from sqlmodel import col, select
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
@@ -22,32 +25,68 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
+def has_variable_value(variable: Variable) -> bool:
+    """Return whether a variable has a usable value without exposing credentials."""
+    if not variable.value:
+        return False
+    if variable.type != CREDENTIAL_TYPE:
+        return bool(variable.value.strip())
+    try:
+        decrypted_value = auth_utils.decrypt_api_key(variable.value)
+    except Exception:  # noqa: BLE001
+        return False
+    return bool(decrypted_value and decrypted_value.strip())
+
+
 class DatabaseVariableService(VariableService, Service):
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
+
+    async def get_default_field_bindings(
+        self,
+        user_id: UUID | str,
+        session: AsyncSession,
+    ) -> list[tuple[str, list[str] | None]]:
+        """Read only names and default fields; never materialize variable values."""
+        stmt = (
+            select(Variable.name, Variable.default_fields)
+            .where(Variable.user_id == user_id)
+            .order_by(col(Variable.name), col(Variable.id))
+        )
+        return [(name, default_fields) for name, default_fields in (await session.exec(stmt)).all() if name]
 
     async def initialize_user_variables(self, user_id: UUID | str, session: AsyncSession) -> None:
         if not self.settings_service.settings.store_environment_variables:
             await logger.adebug("Skipping environment variable storage.")
             return
 
-        # Import the provider mapping to set default_fields for known providers
+        # Import provider metadata to identify placeholder API-key values and
+        # enforce provider-governance policy for environment imports.
         try:
             from lfx.base.models.unified_models import get_model_provider_metadata
+            from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, resolve_model_provider_policy
 
-            # Build var_to_provider from all variables in metadata (not just primary)
+            from langflow.services.database.models.user.model import User
+
             var_to_provider = {}
-            var_to_info = {}  # Maps variable_key to its full info (including is_secret)
+            provider_variables = {}
             metadata = get_model_provider_metadata()
+            principal = await session.get(User, UUID(str(user_id)))
             for provider, meta in metadata.items():
                 for var in meta.get("variables", []):
                     var_key = var.get("variable_key")
                     if var_key:
                         var_to_provider[var_key] = provider
-                        var_to_info[var_key] = var
+                        provider_variables[var_key] = var
+            provider_policy = resolve_model_provider_policy(
+                user_id=user_id,
+                providers=metadata,
+                purpose=ModelProviderPolicyPurpose.CONFIGURE,
+                attributes={"is_superuser": bool(principal and principal.is_superuser)},
+            )
         except Exception:  # noqa: BLE001
-            var_to_provider = {}
-            var_to_info = {}
+            await logger.aexception("Could not resolve model-provider metadata; skipping environment variable import")
+            return
 
         for var_name in self.settings_service.settings.variables_to_get_from_environment:
             # Check if session is still usable before processing each variable
@@ -58,13 +97,17 @@ class DatabaseVariableService(VariableService, Service):
                 )
                 break
 
+            provider_name = var_to_provider.get(var_name)
+            if provider_name is not None and not provider_policy.allows(provider_name):
+                continue
+
             if var_name in os.environ and os.environ[var_name].strip():
                 value = os.environ[var_name].strip()
 
                 # Skip placeholder/test values like "dummy" for API key variables only
                 # This prevents test environments from overwriting user-configured model provider keys
-                is_provider_variable = var_name in var_to_provider
-                var_info = var_to_info.get(var_name, {})
+                var_info = provider_variables.get(var_name, {})
+                is_provider_variable = bool(var_info)
                 is_secret_variable = var_info.get("is_secret", False)
 
                 if is_provider_variable and is_secret_variable and value.lower() == "dummy":
@@ -75,35 +118,7 @@ class DatabaseVariableService(VariableService, Service):
                     continue
 
                 query = select(Variable).where(Variable.user_id == user_id, Variable.name == var_name)
-                # Set default_fields if this is a known provider variable
-                default_fields = []
                 try:
-                    if is_provider_variable:
-                        provider_name = var_to_provider[var_name]
-                        # Get the variable type from metadata
-                        var_display_name = var_info.get("variable_name", "api_key")
-
-                        # Validate secret variables (API keys) before setting default_fields
-                        # This prevents invalid keys from enabling providers during migration
-                        if is_secret_variable:
-                            try:
-                                from lfx.base.models.unified_models import validate_model_provider_key
-
-                                validate_model_provider_key(provider_name, {var_name: value})
-                                # Only set default_fields if validation passes
-                                default_fields = [provider_name, var_display_name]
-                                await logger.adebug(f"Validated {var_name} - provider will be enabled")
-                            except (ValueError, Exception) as validation_error:  # noqa: BLE001
-                                # Validation failed - don't set default_fields
-                                # This prevents the provider from appearing as "Enabled"
-                                default_fields = []
-                                await logger.adebug(
-                                    f"Skipping default_fields for {var_name} - validation failed: {validation_error!s}"
-                                )
-                        else:
-                            # Non-secret variables (like project_id, url) don't need validation
-                            default_fields = [provider_name, var_display_name]
-                            await logger.adebug(f"Set default_fields for non-secret variable {var_name}")
                     existing = (await session.exec(query)).first()
                 except Exception as e:  # noqa: BLE001
                     await logger.aexception(f"Error querying {var_name} variable: {e!s}")
@@ -126,35 +141,8 @@ class DatabaseVariableService(VariableService, Service):
                         )
 
                         if is_user_modified:
-                            # Variable was modified by user, don't overwrite with environment variable
-                            # Only update default_fields if they're not set
-                            if not existing.default_fields and default_fields:
-                                variable_update = VariableUpdate(
-                                    id=existing.id,
-                                    default_fields=default_fields,
-                                )
-                                await self.update_variable_fields(
-                                    user_id=user_id,
-                                    variable_id=existing.id,
-                                    variable=variable_update,
-                                    session=session,
-                                )
                             await logger.adebug(
                                 f"Skipping update of user-modified variable {var_name} with environment value"
-                            )
-                        # Variable was not user-modified, safe to update from environment
-                        elif not existing.default_fields and default_fields:
-                            # Update both value and default_fields
-                            variable_update = VariableUpdate(
-                                id=existing.id,
-                                value=value,
-                                default_fields=default_fields,
-                            )
-                            await self.update_variable_fields(
-                                user_id=user_id,
-                                variable_id=existing.id,
-                                variable=variable_update,
-                                session=session,
                             )
                         else:
                             await self.update_variable(user_id, var_name, value, session=session)
@@ -163,7 +151,8 @@ class DatabaseVariableService(VariableService, Service):
                             user_id=user_id,
                             name=var_name,
                             value=value,
-                            default_fields=default_fields,
+                            # Model Providers resolve these at runtime; Apply To Fields is user-owned.
+                            default_fields=[],
                             type_=CREDENTIAL_TYPE,
                             session=session,
                         )
@@ -189,7 +178,7 @@ class DatabaseVariableService(VariableService, Service):
 
         if not variable or not variable.value:
             msg = f"{name} variable not found."
-            raise ValueError(msg)
+            raise VariableNotFoundError(msg)
 
         return variable
 
@@ -202,7 +191,52 @@ class DatabaseVariableService(VariableService, Service):
     ) -> str | SecretStr:
         # we get the credential from the database
         # credential = session.query(Variable).filter(Variable.user_id == user_id, Variable.name == name).first()
-        variable = await self.get_variable_object(user_id, name, session)
+        try:
+            variable = await self.get_variable_object(user_id, name, session)
+        except VariableNotFoundError as owned_lookup_error:
+            # Runtime resolution may use an explicitly shared variable, but it
+            # must never broaden administrative get/update/delete lookups. An
+            # owned variable wins on name collisions; otherwise require one
+            # unambiguous READ-visible row from the authorization plugin.
+            from langflow.services.deps import get_authorization_service
+
+            authz = get_authorization_service()
+            if not await authz.is_enabled() or not await authz.supports_cross_user_fetch():
+                raise
+            get_visibility = getattr(authz, "get_resource_visibility", None)
+            if get_visibility is None:
+                # Compatibility for duck-typed authorization services that
+                # predate ResourceVisibilityScope.
+                visible_ids = await authz.list_visible_resource_ids(
+                    user_id=UUID(str(user_id)),
+                    resource_type="variable",
+                    domain="*",
+                    act="read",
+                )
+                visibility = None if visible_ids is None else ResourceVisibilityScope(resource_ids=tuple(visible_ids))
+            else:
+                visibility = await get_visibility(
+                    user_id=UUID(str(user_id)),
+                    resource_type="variable",
+                    domain="*",
+                    act="read",
+                )
+            if visibility is None or not (visibility.all_resources or visibility.resource_ids):
+                raise
+
+            shared_clauses = [
+                Variable.name == name,
+                Variable.user_id != user_id,
+            ]
+            if not visibility.all_resources:
+                shared_clauses.append(col(Variable.id).in_(visibility.resource_ids))
+            shared_variables = list((await session.exec(select(Variable).where(*shared_clauses))).all())
+            if not shared_variables:
+                raise
+            if len(shared_variables) > 1:
+                msg = f"Multiple shared variables named '{name}' are visible; use an owned variable with that name."
+                raise ValueError(msg) from owned_lookup_error
+            variable = shared_variables[0]
 
         if variable.type == CREDENTIAL_TYPE and field == "session_id":
             msg = (
@@ -231,22 +265,81 @@ class DatabaseVariableService(VariableService, Service):
         # GENERIC type - return as-is
         return variable.value
 
-    async def get_all(self, user_id: UUID | str, session: AsyncSession) -> list[VariableRead]:
-        stmt = select(Variable).where(Variable.user_id == user_id)
+    async def get_all(
+        self,
+        user_id: UUID | str,
+        session: AsyncSession,
+        *,
+        visibility: ResourceVisibilityScope | None = None,
+        include_empty_names: set[str] | None = None,
+    ) -> list[VariableRead]:
+        stmt = select(Variable).order_by(col(Variable.name), col(Variable.id))
+        if visibility is None:
+            stmt = stmt.where(Variable.user_id == user_id)
+        else:
+            from langflow.services.authorization.listing import restrict_to_owned_or_visible_scope
+
+            # Variable has no canonical workspace/project columns, so
+            # domain-only grants intentionally remain owner-scoped.
+            stmt = restrict_to_owned_or_visible_scope(
+                stmt,
+                id_column=Variable.id,
+                owner_clause=Variable.user_id == user_id,
+                visibility=visibility,
+            )
         variables = list((await session.exec(stmt)).all())
+        include_empty_names = include_empty_names or set()
         variables_read = []
         for variable in variables:
+            is_owner = str(variable.user_id) == str(user_id)
             value = None
-            if variable.type == GENERIC_TYPE:
-                value = auth_utils.decrypt_api_key(variable.value)
-                if not value:
-                    # If decryption fails (likely due to encryption by different key), skip this variable
+            if variable.type == GENERIC_TYPE and is_owner:
+                if not variable.value and variable.name not in include_empty_names:
+                    if variable.name in AGENTIC_VARIABLES:
+                        await logger.adebug(
+                            "Agentic placeholder variable '%s' has no stored value — skipping.", variable.name
+                        )
+                    else:
+                        await logger.awarning("Variable '%s' has no stored value — skipping.", variable.name)
                     continue
+                if variable.value:
+                    # Security defense-in-depth: a GENERIC variable is stored as plain text, so its
+                    # value must never be a Fernet token. If it is (e.g. a CREDENTIAL row that was
+                    # relabeled GENERIC), do NOT decrypt-and-return it — that would leak the secret.
+                    if isinstance(variable.value, str) and variable.value.startswith("gAAAAA"):
+                        await logger.awarning(
+                            "Skipping variable '%s': a GENERIC variable holds ciphertext "
+                            "(likely a CREDENTIAL row relabeled GENERIC); not decrypting or returning it.",
+                            variable.name,
+                        )
+                        continue
+                    value = auth_utils.decrypt_api_key(variable.value)
+                    if not value:
+                        await logger.awarning(
+                            "Variable '%s' could not be decrypted — likely encrypted with a different "
+                            "LANGFLOW_SECRET_KEY. Skipping.",
+                            variable.name,
+                        )
+                        continue
+                else:
+                    # Optional settings use an empty value as a meaningful reset
+                    # while retaining the row UUID.
+                    value = ""
 
             # Model validate will set value to None if credential type
             variable_read = VariableRead.model_validate(variable, from_attributes=True)
-            if variable.type == GENERIC_TYPE:
+            variable_read.has_value = has_variable_value(variable)
+            variable_read.is_owner = is_owner
+            # Deliberately conservative: resource owners can manage shares.
+            # Enterprise may authorize additional administrators server-side,
+            # but the list UI must not show a re-share control to recipients.
+            variable_read.can_manage_shares = is_owner
+            # Shared values are usable only inside runtime variable resolution;
+            # API list responses expose metadata but never plaintext values.
+            if variable.type == GENERIC_TYPE and is_owner:
                 variable_read.value = value
+            elif not is_owner:
+                variable_read.value = None
 
             variables_read.append(variable_read)
         return variables_read
@@ -345,7 +438,21 @@ class DatabaseVariableService(VariableService, Service):
     ):
         query = select(Variable).where(Variable.id == variable_id, Variable.user_id == user_id)
         db_variable = (await session.exec(query)).one()
-        db_variable.updated_at = datetime.now(timezone.utc)
+
+        # Security: prevent a CREDENTIAL -> GENERIC type-confusion that would expose the
+        # decrypted secret. Credential values are stored as Fernet ciphertext ("gAAAAA...").
+        # Relabeling the row GENERIC *without* supplying a fresh value would leave that
+        # ciphertext in place; get_all() then decrypts GENERIC values and returns the
+        # plaintext (e.g. the server's shared provider keys). Reject that transition.
+        resulting_type = variable.type if variable.type is not None else db_variable.type
+        if (
+            resulting_type == GENERIC_TYPE
+            and variable.value is None
+            and isinstance(db_variable.value, str)
+            and db_variable.value.startswith("gAAAAA")
+        ):
+            msg = "Cannot change a credential variable to a generic variable without providing a new value."
+            raise ValueError(msg)
 
         # Handle value encryption based on variable type (consistent with update_variable and create_variable)
         if variable.value is not None:
@@ -364,6 +471,7 @@ class DatabaseVariableService(VariableService, Service):
                 variable.value = auth_utils.encrypt_api_key(variable.value, settings_service=self.settings_service)
             # GENERIC_TYPE variables are stored as plain text
 
+        db_variable.updated_at = datetime.now(timezone.utc)
         variable_data = variable.model_dump(exclude_unset=True)
         for key, value in variable_data.items():
             setattr(db_variable, key, value)

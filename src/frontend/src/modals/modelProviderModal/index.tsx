@@ -1,19 +1,28 @@
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
+import type { ModelTypeFilter } from "@/types/models";
 import ModelProvidersContent from "./components/ModelProvidersContent";
 
-interface ModelProviderModalProps {
+interface ModelProviderModalProps extends ProviderScopeParams {
   open: boolean;
   onClose: (opts?: { hasChanges?: boolean }) => void;
-  modelType: "llm" | "embeddings" | "all";
+  modelType: ModelTypeFilter;
 }
 
 const ModelProviderModal = ({
   open,
   onClose,
   modelType,
+  flowId,
+  projectId,
 }: ModelProviderModalProps) => {
   const { t } = useTranslation();
   const { refreshAllModelInputs } = useRefreshModelInputs();
@@ -43,15 +52,18 @@ const ModelProviderModal = ({
       <DialogContent className="flex flex-col overflow-hidden rounded-xl p-0 max-w-[768px] h-[560px] gap-0">
         <DialogHeader className="flex w-full border-b px-4 py-3">
           <div className="flex justify-start items-center gap-3">
-            <div className="text-[13px] font-semibold">
+            <DialogTitle className="text-[13px] font-semibold">
               {t("modelProviders.title")}
-            </div>
+            </DialogTitle>
           </div>
         </DialogHeader>
 
         <div className="h-[513px] overflow-hidden">
           <ModelProvidersContent
+            key={`${flowId ?? ""}:${projectId ?? ""}`}
             modelType={modelType}
+            flowId={flowId}
+            projectId={projectId}
             onFlushRef={flushRef}
             onHasChangesRef={hasChangesRef}
           />

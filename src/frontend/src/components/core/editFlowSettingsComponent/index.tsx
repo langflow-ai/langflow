@@ -14,6 +14,7 @@ export const EditFlowSettings: React.FC<
     submitForm?: () => void;
     locked?: boolean;
     setLocked?: (v: boolean) => void;
+    readOnly?: boolean;
   }
 > = ({
   name,
@@ -27,10 +28,12 @@ export const EditFlowSettings: React.FC<
   submitForm,
   locked = false,
   setLocked,
+  readOnly = false,
 }: InputProps & {
   submitForm?: () => void;
   locked?: boolean;
   setLocked?: (v: boolean) => void;
+  readOnly?: boolean;
 }): JSX.Element => {
   const { t } = useTranslation();
   const [isMaxLength, setIsMaxLength] = useState(false);
@@ -129,7 +132,7 @@ export const EditFlowSettings: React.FC<
               onDoubleClickCapture={handleFocus}
               data-testid="input-flow-name"
               autoFocus
-              disabled={locked}
+              disabled={locked || readOnly}
             />
           </Form.Control>
         ) : (
@@ -173,7 +176,7 @@ export const EditFlowSettings: React.FC<
               maxLength={descriptionMaxLength}
               onDoubleClickCapture={handleFocus}
               onKeyDown={handleDescriptionKeyDown}
-              disabled={locked}
+              disabled={locked || readOnly}
             />
           </Form.Control>
         ) : (
@@ -189,33 +192,39 @@ export const EditFlowSettings: React.FC<
         <Form.Message match="valueMissing" className="field-invalid">
           {t("flow.pleaseEnterDescription")}
         </Form.Message>
-        <div className="mt-3">
-          <div className="flex items-center gap-2">
-            <div>
-              <div className="flex items-center gap-2">
-                <Form.Label className="text-mmd font-medium">
-                  {t("flow.lockFlow")}
-                </Form.Label>
+        {/* Callers that only display the flow (no setLocked) would otherwise
+            render a focusable switch that cannot change anything. */}
+        {setLocked && (
+          <div className="mt-3">
+            <div className="flex items-center gap-2">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Form.Label className="text-mmd font-medium">
+                    {t("flow.lockFlow")}
+                  </Form.Label>
 
-                <ForwardedIconComponent
-                  name={locked ? "Lock" : "Unlock"}
-                  className="text-muted-foreground !w-5 !h-5"
-                />
+                  <ForwardedIconComponent
+                    name={locked ? "Lock" : "Unlock"}
+                    className="text-muted-foreground !w-5 !h-5"
+                  />
+                </div>
+
+                <p className="text-xs text-muted-foreground/70 mt-1 font-normal">
+                  {t("flow.lockFlowDescription")}
+                </p>
               </div>
 
-              <p className="text-xs text-muted-foreground/70 mt-1 font-normal">
-                {t("flow.lockFlowDescription")}
-              </p>
+              <Switch
+                checked={!!locked}
+                onCheckedChange={(v) => setLocked(v)}
+                disabled={readOnly}
+                className="data-[state=checked]:bg-primary ml-auto"
+                data-testid="lock-flow-switch"
+                aria-label={t("flow.lockFlowAriaLabel")}
+              />
             </div>
-
-            <Switch
-              checked={!!locked}
-              onCheckedChange={(v) => setLocked?.(v)}
-              className="data-[state=checked]:bg-primary ml-auto"
-              data-testid="lock-flow-switch"
-            />
           </div>
-        </div>
+        )}
       </Form.Field>
     </>
   );

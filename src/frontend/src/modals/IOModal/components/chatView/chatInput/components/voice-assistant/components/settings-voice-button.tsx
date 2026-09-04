@@ -22,6 +22,7 @@ const SettingsVoiceButton = ({
             unstyled
             disabled={isRecording}
             onClick={() => setShowSettingsModal(true)}
+            aria-label={t("voice.audioSettings")}
           >
             <ForwardedIconComponent
               className={`h-[18px] w-[18px]`}

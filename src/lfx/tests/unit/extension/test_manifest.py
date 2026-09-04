@@ -83,6 +83,52 @@ def test_minimal_manifest_round_trip() -> None:
     assert manifest.description is None
 
 
+@pytest.mark.parametrize(
+    "version",
+    [
+        "1.2.3",
+        "1.2.3-alpha.1",
+        "1.2.3-alpha.1+build.5",
+        "1.2.3+build.5",
+        "1.2.3.dev0",
+        "1.2.3a1",
+        "1.2.3b2",
+        "1.2.3rc3",
+    ],
+)
+def test_accepts_semver_and_repository_pep440_versions(version: str) -> None:
+    manifest = ExtensionManifest.model_validate(_with(_VALID, version=version))
+
+    assert manifest.version == version
+
+
+@pytest.mark.parametrize(
+    "version",
+    [
+        "1.2",
+        "01.2.3",
+        "v1.2.3",
+        "1.2.3.dev",
+        "1.2.3dev1",
+        "1.2.3a",
+        "1.2.3alpha1",
+        "1.2.3rc",
+        "1.2.3post1",
+        "1.2.3a01",
+        "1.2.3b01",
+        "1.2.3rc01",
+        "1.2.3.dev01",
+        "1.2.\u0663",
+        "\uff11.2.3",
+        "1.2.3\n",
+        "1.2.3rc1\n",
+    ],
+)
+def test_rejects_unsupported_version_forms(version: str) -> None:
+    with pytest.raises(ValidationError, match="version"):
+        ExtensionManifest.model_validate(_with(_VALID, version=version))
+
+
 # ---------------------------------------------------------------------------
 # v0 field validation -- malformed manifests
 # ---------------------------------------------------------------------------
@@ -98,7 +144,10 @@ def test_minimal_manifest_round_trip() -> None:
         ({"name": ""}, "name"),
         ({"lfx": {"compat": []}}, "compat"),
         ({"lfx": {"compat": ["0"]}}, "compat"),
-        ({"bundles": []}, "bundles"),
+        # Empty bundles is now allowed at the field level (provider-only
+        # extensions ship no components); the cross-field rule rejects a manifest
+        # that declares neither a bundle nor a provider.
+        ({"bundles": []}, "at least one bundle"),
         ({"bundles": [{"name": "Bad-Name", "path": "x"}]}, "name"),
         ({"bundles": [{"name": "x", "path": "/abs/path"}]}, "path"),
         ({"bundles": [{"name": "x", "path": "../escape"}]}, "path"),
@@ -158,31 +207,20 @@ def test_deferred_field_accepted_when_omitted(field_name: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Multi-bundle deferred
+# Multi-bundle
 # ---------------------------------------------------------------------------
 
 
-def test_multi_bundle_rejected_at_model_level() -> None:
-    """Pydantic rejects multi-bundle via the field-level ``max_length=1``.
-
-    The dedicated ``multi-bundle-deferred-in-this-milestone`` discriminant is
-    surfaced by the validator pipeline in ``lfx.extension.validate`` (covered by
-    ``test_validate.py``); at the model level we only need to confirm the
-    constraint is enforced on the ``bundles`` field, which also means it lands
-    in the published JSON Schema.
-    """
-    bad = _with(
+def test_multi_bundle_accepted_at_model_level() -> None:
+    data = _with(
         _VALID,
         bundles=[
             {"name": "aa", "path": "aa"},
             {"name": "bb", "path": "bb"},
         ],
     )
-    with pytest.raises(ValidationError) as exc_info:
-        ExtensionManifest.model_validate(bad)
-    error = exc_info.value.errors()[0]
-    assert error["loc"] == ("bundles",)
-    assert error["type"] == "too_long"
+    manifest = ExtensionManifest.model_validate(data)
+    assert [bundle.name for bundle in manifest.bundles] == ["aa", "bb"]
 
 
 def test_duplicate_bundle_names_rejected() -> None:

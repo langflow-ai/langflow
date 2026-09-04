@@ -14,11 +14,13 @@ from lfx.mcp.flow_builder_tools import (
     reset_working_flow,
 )
 
+# LanguageModelComponent: in-tree model type (provider model components live
+# in bundle packages not installed in this env).
 SIMPLE_FLOW_SPEC = """\
 name: Test Flow
 nodes:
   A: ChatInput
-  B: OpenAIModel
+  B: LanguageModelComponent
   C: ChatOutput
 edges:
   A.message -> B.input_value
@@ -193,7 +195,7 @@ class TestProposeFieldEditMultiple:
         flow = _build_test_flow()
         init_working_flow(flow, "test-flow-id")
         input_id = _get_component_id(flow, "ChatInput")
-        model_id = _get_component_id(flow, "OpenAIModel")
+        model_id = _get_component_id(flow, "LanguageModelComponent")
 
         tool1 = ProposeFieldEdit()
         tool1.set(component_id=input_id, field_name="input_value", new_value="hello")

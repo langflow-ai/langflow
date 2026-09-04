@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
+import DataDisplayComponent from "@/components/core/parameterRenderComponent/components/dataDisplayComponent";
 import DBProviderInputComponent from "@/components/core/parameterRenderComponent/components/dbProviderInputComponent";
 import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
@@ -13,7 +14,9 @@ import CustomLinkComponent from "@/customization/components/custom-linkComponent
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import type { APIClassType, InputFieldType } from "@/types/api";
 import AccordionPromptComponent from "./components/accordionPromptComponent";
+import ActionPickerComponent from "./components/actionPickerComponent";
 import DictComponent from "./components/dictComponent";
+import DurationComponent from "./components/durationComponent";
 import { EmptyParameterComponent } from "./components/emptyParameterComponent";
 import FloatComponent from "./components/floatComponent";
 import InputListComponent from "./components/inputListComponent";
@@ -45,6 +48,7 @@ export function ParameterRenderComponent({
   placeholder,
   isToolMode,
   nodeInformationMetadata,
+  ariaLabelledBy,
 }: {
   handleOnNewValue:
     | handleOnNewValueType
@@ -62,6 +66,7 @@ export function ParameterRenderComponent({
   placeholder?: string;
   isToolMode?: boolean;
   nodeInformationMetadata?: NodeInfoType;
+  ariaLabelledBy?: string;
 }) {
   const { t } = useTranslation();
   const id = (
@@ -89,6 +94,7 @@ export function ParameterRenderComponent({
       hasRefreshButton: templateData.refresh_button,
       showParameter,
       inspectionPanel,
+      ariaLabelledBy,
     };
 
     if (TEXT_FIELD_TYPES.includes(templateData.type ?? "")) {
@@ -281,6 +287,27 @@ export function ParameterRenderComponent({
             id={`sortablelist_${id}`}
           />
         );
+      case "duration":
+        return (
+          <DurationComponent
+            {...baseInputProps}
+            options={
+              Array.isArray(templateData.options) ? templateData.options : []
+            }
+            id={`duration_${id}`}
+          />
+        );
+      case "actionPicker":
+        return (
+          <ActionPickerComponent
+            {...baseInputProps}
+            options={
+              Array.isArray(templateData.options) ? templateData.options : []
+            }
+            combobox={templateData.combobox}
+            id={`actionpicker_${id}`}
+          />
+        );
       case "connect": {
         const link =
           templateData?.options?.find(
@@ -347,10 +374,27 @@ export function ParameterRenderComponent({
             id={`dbprovider_${id}`}
           />
         );
+      case "data_display":
+        return (
+          <DataDisplayComponent
+            {...baseInputProps}
+            buttonText={templateData?.button_text}
+            buttonIcon={templateData?.button_icon}
+            id={`data_display_${id}`}
+          />
+        );
       default:
         return <EmptyParameterComponent {...baseInputProps} />;
     }
   };
 
+  // No wrapping role="group" here: a screen reader announces a group's own
+  // name on entry, then the focused control's name right after — since
+  // every widget that actually applies ariaLabelledBy composes the same
+  // field label into its own accessible name, a wrapper would double up
+  // ("Model Name" from the group, then "Model Name gpt-4" from the
+  // combobox). Widgets that don't yet apply it themselves get nothing from
+  // wrapping either way — role="group" doesn't propagate a name to a
+  // focused descendant control, only to the group boundary itself.
   return renderComponent();
 }

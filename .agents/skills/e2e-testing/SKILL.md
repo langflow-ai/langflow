@@ -167,17 +167,19 @@ withEventDeliveryModes(
 
 ## Tags System
 
-Every test MUST have at least one tag. Tags enable filtering and CI pipeline configuration.
+Every test MUST be tagged with `@release` — the release run greps for it, so an
+untagged or wrongly-tagged spec silently drops out of release coverage. Add the
+domain tag(s) below on top of `@release` (a test can have more than one). These
+six are the only allowed tags; do not invent new ones.
 
 | Tag | Purpose | When to Use |
 |-----|---------|-------------|
-| `@release` | Tests that must pass before release | Critical user flows |
+| `@release` | Part of the release run (required on every spec) | All tests |
 | `@workspace` | Workspace/flow management | Creating, editing, deleting flows |
 | `@api` | API-dependent features | Tests that call backend endpoints |
 | `@database` | Database operations | Tests involving persistence |
 | `@components` | Component-level tests | Individual component behavior |
 | `@starter-projects` | Template/starter project tests | Pre-built flow templates |
-| `@regression` | Bug regression tests | Tests for specific fixed bugs |
 
 ```typescript
 // Right: tag your test
@@ -322,7 +324,7 @@ test.skip(true, "Feature not yet implemented with new designs");
 ## Writing Good E2E Tests
 
 ### Do:
-- **Tag every test** with at least one tag
+- **Tag every test** with `@release` (plus any domain tags that apply)
 - **Import from `../../fixtures`**, not `@playwright/test`
 - **Start with `awaitBootstrapTest(page)`** — always
 - **Use `getByTestId`** for stable selectors

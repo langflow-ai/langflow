@@ -6,6 +6,7 @@ from lfx.helpers.data import data_to_text
 from lfx.inputs.inputs import DropdownInput, HandleInput, IntInput, MessageTextInput, MultilineInput, TabInput
 from lfx.log.logger import logger
 from lfx.memory import aget_messages, astore_message
+from lfx.memory.flow_context import resolve_message_owner_id
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.dotdict import dotdict
@@ -69,12 +70,30 @@ def _safe_graph_flow_id(component: Component) -> str | UUID | None:
     return getattr(graph, "flow_id", None)
 
 
+def _safe_graph_user_id(component: Component) -> str | UUID | None:
+    """Best-effort lookup of the id chat-history retrieval scopes to (see :func:`_safe_graph_flow_id`).
+
+    Resolves the serving-plane end-user id when present, else the executing user id, via
+    the shared :func:`resolve_message_owner_id` so the retrieval predicate matches the
+    owner the write path (``Component._store_message``) stamped. Returns ``None`` when
+    the graph is unavailable or carries no real id (PlaceholderGraph stores ``user_id``
+    as ``str(...)``, so the literal "None" is treated as no owner), letting retrieval
+    fall back to the previous unscoped behavior rather than crashing or over-filtering.
+    """
+    try:
+        graph = component.graph
+    except AttributeError:
+        return None
+    return resolve_message_owner_id(graph)
+
+
 async def aget_agent_chat_history(
     *,
     session_id: str | UUID | None,
     flow_id: str | UUID | None,
     context_id: str | None = None,
     n_messages: int | None = None,
+    user_id: str | UUID | None = None,
 ) -> list[Message]:
     """Fetch chat history for an agent, scoped to a single flow.
 
@@ -100,6 +119,7 @@ async def aget_agent_chat_history(
         flow_id=_coerce_flow_id_to_uuid(flow_id),
         limit=fetch_limit,
         order="DESC",
+        user_id=user_id,
     )
     if not n_messages and len(messages) == MAX_CHAT_HISTORY_FETCH_LIMIT:
         # We hit the unbounded-fetch ceiling. The caller will likely see
@@ -300,17 +320,28 @@ class MemoryComponent(Component):
             # so a missing/ad-hoc ``_vertex`` cannot crash the write half while
             # the read half degrades gracefully. See PR #13087 review I1.
             flow_id_scope = _coerce_flow_id_to_uuid(_safe_graph_flow_id(self))
-            await astore_message(message, flow_id=flow_id_scope)
-            stored_messages = (
-                await aget_messages(
-                    session_id=message.session_id,
-                    context_id=message.context_id,
-                    sender_name=message.sender_name,
-                    sender=message.sender,
-                    flow_id=flow_id_scope,
+            user_id_scope = _safe_graph_user_id(self)
+            await astore_message(message, flow_id=flow_id_scope, user_id=user_id_scope)
+            from lfx.memory.flow_context import should_persist_messages
+
+            if not should_persist_messages():
+                # Ephemeral (anonymous serving) run: astore_message deliberately
+                # skipped the DB write, so the read-back below would come up empty
+                # and the "nothing stored" guard would crash the flow. The in-run
+                # message itself is the result.
+                stored_messages = [message]
+            else:
+                stored_messages = (
+                    await aget_messages(
+                        session_id=message.session_id,
+                        context_id=message.context_id,
+                        sender_name=message.sender_name,
+                        sender=message.sender,
+                        flow_id=flow_id_scope,
+                        user_id=user_id_scope,
+                    )
+                    or []
                 )
-                or []
-            )
 
         if not stored_messages:
             msg = "No messages were stored. Please ensure that the session ID and sender are properly set."
@@ -365,6 +396,7 @@ class MemoryComponent(Component):
             # Scope by flow_id so default session names (e.g. "New Session 0") do not
             # leak chat history across unrelated flows. See issue #13059.
             flow_id_scope = _coerce_flow_id_to_uuid(_safe_graph_flow_id(self))
+            user_id_scope = _safe_graph_user_id(self)
             fetch_limit = n_messages if n_messages else MAX_CHAT_HISTORY_FETCH_LIMIT
             stored = await aget_messages(
                 sender=sender_type,
@@ -372,6 +404,7 @@ class MemoryComponent(Component):
                 session_id=session_id,
                 context_id=context_id,
                 flow_id=flow_id_scope,
+                user_id=user_id_scope,
                 limit=fetch_limit,
                 order="DESC",
             )

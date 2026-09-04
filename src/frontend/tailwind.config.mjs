@@ -205,6 +205,10 @@ const config = {
         hover: "var(--hover)",
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
+        // `border-control` — the boundary that identifies an interactive
+        // control. Deliberately separate from `border`/`input`, which are also
+        // used for decorative edges and panel fills. See --control-boundary.
+        control: "hsl(var(--control-boundary))",
         ring: "hsl(var(--ring))",
         "error-red": "hsl(var(--error-red))",
         "error-red-border": "hsl(var(--error-red-border))",
@@ -479,10 +483,6 @@ const config = {
         },
         ".text-align-last-right": {
           "text-align-last": "right",
-        },
-        ":focus-visible": {
-          outline: "none  !important",
-          outlineOffset: "0px !important",
         },
         ".note-node-markdown": {
           lineHeight: "1",

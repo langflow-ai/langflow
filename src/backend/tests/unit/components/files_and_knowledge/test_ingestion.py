@@ -1,4 +1,3 @@
-import json
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -19,13 +18,20 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         return KnowledgeIngestionComponent
 
     @pytest.fixture(autouse=True)
-    def mock_knowledge_base_path(self, tmp_path):
-        """Mock the knowledge base root path directly."""
+    def mock_knowledge_base_path(self, tmp_path, monkeypatch):
+        """Pin the KB root at a fresh tmp dir for every test.
+
+        Local-Chroma path resolution reads ``knowledge_bases_dir`` live via
+        ``KBStorageHelper.get_root_path``, so the setting is what has to move.
+        """
+        from langflow.services.deps import get_settings_service
+
+        monkeypatch.setattr(get_settings_service().settings, "knowledge_bases_dir", str(tmp_path))
         with patch("lfx.components.files_and_knowledge._kb_paths._KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
             yield
 
     @pytest.fixture
-    def default_kwargs(self, tmp_path, active_user):
+    async def default_kwargs(self, tmp_path, active_user):
         """Return default kwargs for component instantiation."""
         # Create a sample DataFrame
         data_df = DataFrame(
@@ -44,11 +50,15 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         kb_path = tmp_path / active_user.username / kb_name
         kb_path.mkdir(parents=True, exist_ok=True)
 
-        # Create embedding metadata file (new format with model_selection)
-        metadata = {
-            "embedding_provider": "HuggingFace",
-            "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "model_selection": {
+        # The ``knowledge_base`` row is what makes the KB exist and carries its
+        # embedding config; the directory above is only where local-Chroma
+        # vectors would land.
+        from langflow.api.utils import knowledge_base_service
+
+        await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name=kb_name,
+            model_selection={
                 "name": "sentence-transformers/all-MiniLM-L6-v2",
                 "provider": "HuggingFace",
                 "metadata": {
@@ -56,12 +66,8 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
                     "param_mapping": {"model": "model_name"},
                 },
             },
-            "api_key": None,
-            "api_key_used": False,
-            "chunk_size": 1000,
-            "created_at": "2024-01-01T00:00:00Z",
-        }
-        (kb_path / "embedding_metadata.json").write_text(json.dumps(metadata))
+            chunk_size=1000,
+        )
 
         return {
             "knowledge_base": kb_name,
@@ -106,6 +112,25 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         with pytest.raises(ValueError, match="Column 'nonexistent' not found in DataFrame"):
             component._validate_column_config(data_df)
 
+    @pytest.mark.parametrize("knowledge_base", ["../../outside", "../victim/secret_kb"])
+    async def test_kb_path_rejects_paths_outside_the_current_user_directory(
+        self, component_class, default_kwargs, knowledge_base
+    ):
+        from langflow.api.utils import knowledge_base_service
+
+        # Path resolution only runs once the backend resolves, so the traversing
+        # name needs a row for the containment guard to be reachable at all.
+        await knowledge_base_service.create_record(
+            user_id=default_kwargs["_user_id"],
+            name=knowledge_base,
+            model_selection={"name": "m", "provider": "HuggingFace"},
+        )
+        default_kwargs["knowledge_base"] = knowledge_base
+        component = component_class(**default_kwargs)
+
+        with pytest.raises(ValueError, match="KB path escapes root directory"):
+            await component._kb_path()
+
     def test_new_knowledge_dialog_uses_provider_credentials(self, component_class, default_kwargs):
         """Test the create-knowledge dialog no longer exposes a redundant API key override."""
         component = component_class(**default_kwargs)
@@ -121,83 +146,6 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         # Default is empty so the frontend can populate it from the user's
         # configured active DB Provider on first render.
         assert backend_input.value == {}
-
-    @patch("lfx.components.files_and_knowledge.knowledge.get_settings_service")
-    @patch("lfx.components.files_and_knowledge.knowledge.encrypt_api_key")
-    def test_build_embedding_metadata(self, mock_encrypt, mock_get_settings, component_class, default_kwargs):
-        """Test building embedding metadata."""
-        component = component_class(**default_kwargs)
-
-        mock_settings = MagicMock()
-        mock_get_settings.return_value = mock_settings
-        mock_encrypt.return_value = "encrypted_key"
-
-        model_selection = [
-            {"name": "sentence-transformers/all-MiniLM-L6-v2", "provider": "HuggingFace", "metadata": {}}
-        ]
-        metadata = component._build_embedding_metadata(model_selection, "test-key")
-
-        assert metadata["embedding_provider"] == "HuggingFace"
-        assert metadata["embedding_model"] == "sentence-transformers/all-MiniLM-L6-v2"
-        assert metadata["api_key"] == "encrypted_key"  # pragma:allowlist secret
-        assert metadata["api_key_used"] is True
-        assert metadata["chunk_size"] == 1000
-        assert "created_at" in metadata
-
-    def test_update_metadata_metrics_persists_chunk_stats(self, component_class, default_kwargs, tmp_path, active_user):
-        """Test updating the persisted KB metrics from the Chroma collection."""
-        component = component_class(**default_kwargs)
-        kb_path = tmp_path / active_user.username / "test_kb"
-
-        mock_collection = MagicMock()
-        mock_collection.count.return_value = 2
-        mock_collection.get.return_value = {"documents": ["hello world", "foo"]}
-
-        mock_chroma = MagicMock()
-        mock_chroma._collection = mock_collection
-
-        component._update_metadata_metrics(kb_path, mock_chroma)
-        stored_metadata = json.loads((kb_path / "embedding_metadata.json").read_text())
-
-        assert stored_metadata["chunks"] == 2
-        assert stored_metadata["words"] == 3
-        assert stored_metadata["characters"] == 14
-        assert stored_metadata["avg_chunk_size"] == 7.0
-        assert stored_metadata["size"] > 0
-
-    def test_update_metadata_metrics_no_metadata_file(self, component_class, default_kwargs, tmp_path, active_user):
-        """Test _update_metadata_metrics silently returns when embedding_metadata.json does not exist."""
-        component = component_class(**default_kwargs)
-        kb_path = tmp_path / active_user.username / "no_metadata_kb"
-        kb_path.mkdir(parents=True, exist_ok=True)
-        # Do NOT create embedding_metadata.json
-
-        mock_chroma = MagicMock()
-
-        # Should return without error
-        component._update_metadata_metrics(kb_path, mock_chroma)
-
-        # Metadata file should still not exist
-        assert not (kb_path / "embedding_metadata.json").exists()
-
-    def test_update_metadata_metrics_empty_collection(self, component_class, default_kwargs, tmp_path, active_user):
-        """Test _update_metadata_metrics when Chroma collection has 0 chunks."""
-        component = component_class(**default_kwargs)
-        kb_path = tmp_path / active_user.username / "test_kb"
-
-        mock_collection = MagicMock()
-        mock_collection.count.return_value = 0
-
-        mock_chroma = MagicMock()
-        mock_chroma._collection = mock_collection
-
-        component._update_metadata_metrics(kb_path, mock_chroma)
-        stored_metadata = json.loads((kb_path / "embedding_metadata.json").read_text())
-
-        assert stored_metadata["chunks"] == 0
-        # update_text_metrics does not write words/characters/avg_chunk_size when chunks == 0
-        # unless they were already present — verify no crash occurred
-        mock_collection.get.assert_not_called()
 
     def test_build_column_metadata(self, component_class, default_kwargs):
         """Test building column metadata."""
@@ -272,10 +220,12 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert component.is_valid_collection_name("valid_name") is True
         assert component.is_valid_collection_name("valid-name") is True
         assert component.is_valid_collection_name("ValidName123") is True
+        assert component.is_valid_collection_name("docs.v2") is True
+        assert component.is_valid_collection_name("a" * 512) is True
 
         # Invalid names
         assert component.is_valid_collection_name("ab") is False  # Too short
-        assert component.is_valid_collection_name("a" * 64) is False  # Too long
+        assert component.is_valid_collection_name("a" * 513) is False  # Too long
         assert component.is_valid_collection_name("_invalid") is False  # Starts with underscore
         assert component.is_valid_collection_name("invalid_") is False  # Ends with underscore
         assert component.is_valid_collection_name("invalid@name") is False  # Invalid character
@@ -289,7 +239,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_get_embeddings.return_value = mock_embedding_fn
 
         # Mock vector store creation
-        with patch.object(component, "_create_vector_store"), patch.object(component, "_save_kb_files"):
+        with patch.object(component, "_create_vector_store"):
             result = await component.build_kb_info()
 
         assert isinstance(result, Data)
@@ -301,16 +251,19 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
     async def test_get_knowledge_bases(self, tmp_path, active_user):
         """Test getting list of knowledge bases."""
         # Create additional test directories
-        (tmp_path / active_user.username / "kb1").mkdir(parents=True, exist_ok=True)
-        (tmp_path / active_user.username / "kb2").mkdir(parents=True, exist_ok=True)
-        (tmp_path / active_user.username / ".hidden").mkdir(parents=True, exist_ok=True)  # Should be ignored
+        from langflow.api.utils import knowledge_base_service
 
-        kb_list = await get_knowledge_bases(tmp_path, user_id=active_user.id)
+        # Rows are what the dropdown lists; a bare directory is invisible.
+        await knowledge_base_service.create_record(user_id=active_user.id, name="kb1")
+        await knowledge_base_service.create_record(user_id=active_user.id, name="kb2")
+        (tmp_path / active_user.username / "dir_without_row").mkdir(parents=True, exist_ok=True)
+
+        kb_list = await get_knowledge_bases(user_id=active_user.id)
 
         assert "test_kb" in kb_list
         assert "kb1" in kb_list
         assert "kb2" in kb_list
-        assert ".hidden" not in kb_list
+        assert "dir_without_row" not in kb_list
 
     @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
     async def test_update_build_config_new_kb(self, mock_get_embeddings, component_class, default_kwargs):
@@ -333,15 +286,18 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_embeddings.embed_query.return_value = [0.1, 0.2, 0.3]
         mock_get_embeddings.return_value = mock_embeddings
 
-        with patch.object(component, "_save_embedding_metadata") as mock_save_metadata:
+        with patch.object(
+            component,
+            "_create_knowledge_base_record",
+            wraps=component._create_knowledge_base_record,
+        ) as mock_create_record:
             result = await component.update_build_config(build_config, field_value, "knowledge_base")
 
         assert result["knowledge_base"]["value"] == "new_test_kb"
         assert "new_test_kb" in result["knowledge_base"]["options"]
         assert "api_key" not in mock_get_embeddings.call_args.kwargs
-        assert "api_key" not in mock_save_metadata.call_args.kwargs
-        assert mock_save_metadata.call_args.kwargs["backend_type"] == "chroma"
-        assert mock_save_metadata.call_args.kwargs["backend_config"] == {}
+        assert mock_create_record.call_args.kwargs["backend_type"] == "chroma"
+        assert mock_create_record.call_args.kwargs["backend_config"] == {}
 
     @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
     async def test_update_build_config_new_kb_persists_backend_selection(
@@ -372,15 +328,11 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_embeddings.embed_query.return_value = [0.1, 0.2, 0.3]
         mock_get_embeddings.return_value = mock_embeddings
 
-        with (
-            patch.object(component, "_save_embedding_metadata") as mock_save_metadata,
-            patch.object(component, "_create_knowledge_base_record") as mock_create_record,
-        ):
+        with patch.object(component, "_create_knowledge_base_record") as mock_create_record:
             await component.update_build_config(build_config, field_value, "knowledge_base")
 
-        assert mock_save_metadata.call_args.kwargs["backend_type"] == "opensearch"
-        assert mock_save_metadata.call_args.kwargs["backend_config"]["index_name"] == "kb-index"
         assert mock_create_record.call_args.kwargs["backend_type"] == "opensearch"
+        assert mock_create_record.call_args.kwargs["backend_config"]["index_name"] == "kb-index"
         assert mock_create_record.call_args.kwargs["backend_config"]["text_field"] == "content"
 
     @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
@@ -396,7 +348,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         mock_embedding_fn = MagicMock()
         mock_get_embeddings.return_value = mock_embedding_fn
 
-        with patch.object(component, "_create_vector_store"), patch.object(component, "_save_kb_files"):
+        with patch.object(component, "_create_vector_store"):
             result = await component.build_kb_info()
 
         assert isinstance(result, Data)
@@ -414,37 +366,16 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
             "03_knowledge_backend": {"backend_type": "chroma", "backend_config": {}},
         }
 
-        with pytest.raises(ValueError, match="Invalid knowledge base name"):
+        with pytest.raises(ValueError, match="Chroma naming rules"):
             await component.update_build_config(build_config, field_value, "knowledge_base")
 
     @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
-    async def test_build_kb_info_with_new_format_metadata(
-        self, mock_get_embeddings, component_class, default_kwargs, tmp_path, active_user
-    ):
-        """Test that build_kb_info uses model_selection directly from new-format metadata."""
-        # Overwrite the default metadata file to use the new format (includes model_selection key).
-        # The old format only had embedding_model/embedding_provider strings; the new format
-        # stores the full model_selection dict so get_embeddings() can reconstruct the client.
-        kb_path = tmp_path / active_user.username / "test_kb"
-        new_format_metadata = {
-            "embedding_provider": "HuggingFace",
-            "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "model_selection": {
-                "name": "sentence-transformers/all-MiniLM-L6-v2",
-                "provider": "HuggingFace",
-                "metadata": {},
-            },
-            "api_key": None,
-            "api_key_used": False,
-            "chunk_size": 1000,
-            "created_at": "2024-01-01T00:00:00Z",
-        }
-        (kb_path / "embedding_metadata.json").write_text(json.dumps(new_format_metadata))
-
+    async def test_build_kb_info_with_new_format_metadata(self, mock_get_embeddings, component_class, default_kwargs):
+        """Test that build_kb_info uses ``model_selection`` straight off the KB row."""
         component = component_class(**default_kwargs)
         mock_get_embeddings.return_value = MagicMock()
 
-        with patch.object(component, "_create_vector_store"), patch.object(component, "_save_kb_files"):
+        with patch.object(component, "_create_vector_store"):
             result = await component.build_kb_info()
 
         assert isinstance(result, Data)
@@ -482,53 +413,15 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         # All rows should be included — duplicates are allowed
         assert len(data_objects) == 2
 
-    async def test_build_kb_info_no_metadata_file_raises_error(
+    async def test_build_kb_info_without_a_kb_row_raises_error(
         self, component_class, default_kwargs, tmp_path, active_user
     ):
-        """Test that build_kb_info raises RuntimeError when no embedding metadata file exists."""
-        # Remove the metadata file so model_selection cannot be determined
-        kb_path = tmp_path / active_user.username / "test_kb"
-        (kb_path / "embedding_metadata.json").unlink()
-
+        """A KB with no ``knowledge_base`` row has no embedding config to ingest with."""
+        (tmp_path / active_user.username / "rowless_kb").mkdir(parents=True, exist_ok=True)
+        default_kwargs["knowledge_base"] = "rowless_kb"
         component = component_class(**default_kwargs)
 
         with pytest.raises(RuntimeError, match="No embedding model configuration found"):
-            await component.build_kb_info()
-
-    @patch("lfx.components.files_and_knowledge.knowledge.get_embedding_model_options")
-    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
-    async def test_build_kb_info_old_format_unrecognized_model(
-        self,
-        mock_get_embeddings,  # noqa: ARG002
-        mock_get_options,
-        component_class,
-        default_kwargs,
-        tmp_path,
-        active_user,
-    ):
-        """Test that old-format metadata with an unrecognized model name raises a clear error."""
-        # Overwrite metadata to use old format (no model_selection key) with a model name
-        # that is not in the current registry.
-        kb_path = tmp_path / active_user.username / "test_kb"
-        old_format_metadata = {
-            "embedding_provider": "SomeOldProvider",
-            "embedding_model": "old-model-that-no-longer-exists",
-            "api_key": None,
-            "api_key_used": False,
-            "chunk_size": 1000,
-            "created_at": "2024-01-01T00:00:00Z",
-        }
-        (kb_path / "embedding_metadata.json").write_text(json.dumps(old_format_metadata))
-
-        # Registry returns models that do NOT include the old model name
-        mock_get_options.return_value = [
-            {"name": "text-embedding-3-small", "provider": "OpenAI", "metadata": {}},
-        ]
-
-        component = component_class(**default_kwargs)
-
-        # Should raise a RuntimeError wrapping a ValueError with a clear message
-        with pytest.raises(RuntimeError, match="no longer recognized"):
             await component.build_kb_info()
 
     def test_scalar_notna_with_scalar_values(self, component_class, default_kwargs):
@@ -598,22 +491,3 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
 
         assert len(data_objects) == 2
         assert all(isinstance(obj, Data) for obj in data_objects)
-
-    def test_build_embedding_metadata_without_api_key(self, component_class, default_kwargs):
-        """Test _build_embedding_metadata with no API key stores model_selection for later use."""
-        component = component_class(**default_kwargs)
-        model_selection = [
-            {"name": "sentence-transformers/all-MiniLM-L6-v2", "provider": "HuggingFace", "metadata": {}}
-        ]
-
-        metadata = component._build_embedding_metadata(model_selection, api_key=None)
-
-        assert metadata["embedding_provider"] == "HuggingFace"
-        assert metadata["embedding_model"] == "sentence-transformers/all-MiniLM-L6-v2"
-        assert metadata["api_key"] is None
-        assert metadata["api_key_used"] is False
-        # New in this PR: full model_selection is stored alongside the string fields so
-        # build_kb_info() can reconstruct the embedding client without hitting the model registry.
-        assert "model_selection" in metadata
-        assert metadata["model_selection"]["name"] == "sentence-transformers/all-MiniLM-L6-v2"
-        assert metadata["model_selection"]["provider"] == "HuggingFace"

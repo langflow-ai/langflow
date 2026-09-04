@@ -74,7 +74,7 @@ const withQueryClient = (
 
     useEffect(() => {
       const clientId = "test-client-id";
-      const computedFlowId = uuidv5(`${clientId}_${flowId}`, uuidv5.DNS);
+      const computedFlowId = uuidv5(`client:${clientId}_${flowId}`, uuidv5.DNS);
 
       queryClient.setQueryData(
         [
@@ -223,7 +223,7 @@ const withPlaygroundPageSetup = (
           useUtilityStore.getState().clientId || "test-client-id";
         const playgroundPage = useFlowStore.getState().playgroundPage;
         const computedFlowId = playgroundPage
-          ? uuidv5(`${clientId}_${realFlowId}`, uuidv5.DNS)
+          ? uuidv5(`client:${clientId}_${realFlowId}`, uuidv5.DNS)
           : realFlowId;
         const sessionId = session || computedFlowId;
 

@@ -34,12 +34,17 @@ class _StubAuthorizationService:
         allow: bool = True,
         batch_results: list[bool] | None = None,
         supports_api_key_scopes: bool = False,
+        visible_ids: list | None = None,
     ) -> None:
         self.allow = allow
         self.batch_results = batch_results
         self._supports_api_key_scopes = supports_api_key_scopes
+        # ``None`` mirrors the OSS pass-through (declines to prefilter); a list
+        # mirrors a registered plugin returning a concrete visible-id set.
+        self.visible_ids = visible_ids
         self.calls: list[dict] = []
         self.batch_calls: list[dict] = []
+        self.visible_calls: list[dict] = []
 
     async def enforce(self, **kwargs) -> bool:
         self.calls.append(kwargs)
@@ -51,16 +56,27 @@ class _StubAuthorizationService:
             return self.batch_results
         return [self.allow] * len(kwargs.get("requests", []))
 
+    async def list_visible_resource_ids(self, **kwargs) -> list | None:
+        self.visible_calls.append(kwargs)
+        return self.visible_ids
+
     async def supports_api_key_scopes(self) -> bool:
         return self._supports_api_key_scopes
 
 
-def install_settings(monkeypatch, *, authz_enabled: bool, audit_enabled: bool = False) -> None:
+def install_settings(
+    monkeypatch,
+    *,
+    authz_enabled: bool,
+    audit_enabled: bool = False,
+    audit_durable: bool = False,
+) -> None:
     """Patch settings on every module that calls ``get_settings_service``."""
     settings = SimpleNamespace(
         auth_settings=SimpleNamespace(
             AUTHZ_ENABLED=authz_enabled,
             AUTHZ_AUDIT_ENABLED=audit_enabled,
+            AUTHZ_AUDIT_DURABLE=audit_durable,
         ),
     )
     for module in (authz_audit, authz_guards, authz_listing):

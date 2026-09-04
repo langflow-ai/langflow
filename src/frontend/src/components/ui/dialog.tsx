@@ -1,14 +1,23 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import DialogContentWithouFixed from "@/customization/components/custom-dialog-content-without-fixed";
 import { dialogClass } from "@/customization/utils/dialog-class";
 import { cn } from "../../utils/utils";
 import ShadTooltip from "../common/shadTooltipComponent";
+import { useClosedTriggerAriaControls } from "./use-closed-trigger-aria-controls";
+import { useInertForAriaHiddenElements } from "./use-inert-for-aria-hidden";
 
 const Dialog = DialogPrimitive.Root;
 
-const DialogTrigger = DialogPrimitive.Trigger;
+const DialogTrigger = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Trigger>
+>((props, ref) => (
+  <DialogPrimitive.Trigger ref={useClosedTriggerAriaControls(ref)} {...props} />
+));
+DialogTrigger.displayName = DialogPrimitive.Trigger.displayName;
 
 const DialogPortal = ({
   children,
@@ -34,6 +43,26 @@ const DialogOverlay = React.forwardRef<
 ));
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
+const MAX_DIALOG_CHILD_SCAN_DEPTH = 4;
+
+const hasChildOfType = (
+  children: React.ReactNode,
+  targetType: React.ElementType,
+  depth = 0,
+): boolean =>
+  React.Children.toArray(children).some((child) => {
+    if (!React.isValidElement<{ children?: React.ReactNode }>(child)) {
+      return false;
+    }
+    if (child.type === targetType) {
+      return true;
+    }
+    if (depth >= MAX_DIALOG_CHILD_SCAN_DEPTH) {
+      return false;
+    }
+    return hasChildOfType(child.props.children, targetType, depth + 1);
+  });
+
 // Create a VisuallyHidden component for accessibility
 const VisuallyHidden = React.forwardRef<
   HTMLSpanElement,
@@ -54,6 +83,7 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
     hideTitle?: boolean;
+    hideDescription?: boolean;
     hideCloseButton?: boolean;
     closeButtonClassName?: string;
     overlayClassName?: string;
@@ -64,22 +94,29 @@ const DialogContent = React.forwardRef<
       className,
       children,
       hideTitle = false,
+      hideDescription = false,
       hideCloseButton = false,
       closeButtonClassName,
       overlayClassName,
       onOpenAutoFocus,
+      onCloseAutoFocus,
       ...props
     },
     ref,
   ) => {
+    const { t } = useTranslation();
     // Check if DialogTitle is included in children
-    const hasDialogTitle = React.Children.toArray(children).some(
-      (child) => React.isValidElement(child) && child.type === DialogTitle,
-    );
-    const hasDialogDescription = React.Children.toArray(children).some(
-      (child) =>
-        React.isValidElement(child) && child.type === DialogDescription,
-    );
+    const hasDialogTitle = hideTitle || hasChildOfType(children, DialogTitle);
+    const hasDialogDescription =
+      hideDescription || hasChildOfType(children, DialogDescription);
+
+    // Radix Dialog only restores focus to DialogTrigger. Controlled dialogs
+    // without a trigger leave focus on <body> on close (WCAG 2.4.3). Capture
+    // the opener in onOpenAutoFocus (still focused at that point) so we can
+    // restore it in onCloseAutoFocus.
+    const previousFocusRef = React.useRef<HTMLElement | null>(null);
+
+    useInertForAriaHiddenElements();
 
     return (
       <DialogPortal>
@@ -90,18 +127,44 @@ const DialogContent = React.forwardRef<
             "fixed z-50 flex w-full max-w-lg flex-col gap-4 rounded-xl border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]",
             className,
           )}
+          {...props}
           onOpenAutoFocus={(e) => {
+            const active = document.activeElement;
+            const content = e.currentTarget as HTMLElement;
+            // Prefer the real opener; ignore body and anything already inside
+            // the dialog (FocusScope may have moved focus before this runs).
+            if (
+              active instanceof HTMLElement &&
+              active !== document.body &&
+              !content.contains(active)
+            ) {
+              previousFocusRef.current = active;
+            }
             if (onOpenAutoFocus) {
               onOpenAutoFocus(e);
-            } else {
-              e.preventDefault();
+              return;
+            }
+            // Focus must enter the dialog on open (WCAG 2.4.3), but not
+            // land on the close button — that would pop its tooltip.
+            // Focus the dialog container itself instead.
+            e.preventDefault();
+            (e.target as HTMLElement | null)?.focus();
+          }}
+          onCloseAutoFocus={(e) => {
+            onCloseAutoFocus?.(e);
+            if (e.defaultPrevented) return;
+            // Prevent FocusScope from parking focus on <body>, and restore
+            // to the element that opened the dialog (trigger or prior focus).
+            e.preventDefault();
+            const node = previousFocusRef.current;
+            if (node && document.contains(node)) {
+              node.focus();
             }
           }}
-          {...props}
         >
           {!hasDialogTitle && (
             <VisuallyHidden>
-              <DialogTitle>Dialog</DialogTitle>
+              <DialogTitle>{t("common.dialog")}</DialogTitle>
             </VisuallyHidden>
           )}
           {!hasDialogDescription && (
@@ -113,7 +176,7 @@ const DialogContent = React.forwardRef<
           {!hideCloseButton && (
             <ShadTooltip
               styleClasses="z-50"
-              content="Close"
+              content={t("common.close")}
               side="bottom"
               avoidCollisions
             >
@@ -123,8 +186,8 @@ const DialogContent = React.forwardRef<
                   closeButtonClassName,
                 )}
               >
-                <Cross2Icon className="h-[18px] w-[18px]" />
-                <span className="sr-only">Close</span>
+                <Cross2Icon className="h-[18px] w-[18px]" aria-hidden="true" />
+                <span className="sr-only">{t("common.close")}</span>
               </DialogPrimitive.Close>
             </ShadTooltip>
           )}
@@ -133,6 +196,41 @@ const DialogContent = React.forwardRef<
     );
   },
 );
+
+const DialogOverlayPlain = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Overlay>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Overlay
+    ref={ref}
+    className={cn(
+      "fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-overlayHide data-[state=open]:animate-overlayShow",
+      className,
+    )}
+    {...props}
+  />
+));
+DialogOverlayPlain.displayName = "DialogOverlayPlain";
+
+const DialogContentPlain = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+>(({ className, children, ...props }, ref) => (
+  <DialogPrimitive.Portal>
+    <DialogOverlayPlain />
+    <DialogPrimitive.Content
+      ref={ref}
+      className={cn(
+        "fixed left-1/2 top-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-3 rounded-xl border bg-background p-3 shadow-lg duration-200 data-[state=closed]:animate-contentHide data-[state=open]:animate-contentShow",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+    </DialogPrimitive.Content>
+  </DialogPrimitive.Portal>
+));
+DialogContentPlain.displayName = "DialogContentPlain";
 
 const DialogHeader = ({
   className,
@@ -189,6 +287,7 @@ DialogDescription.displayName = DialogPrimitive.Description.displayName;
 export {
   Dialog,
   DialogContent,
+  DialogContentPlain,
   DialogContentWithouFixed,
   DialogDescription,
   DialogFooter,

@@ -8,6 +8,7 @@ import orjson
 import pytest
 from lfx.interface.components import (
     _get_cache_path,
+    _load_components_dynamically,
     _parse_dev_mode,
     _read_component_index,
     _save_generated_index,
@@ -302,7 +303,7 @@ class TestSaveGeneratedIndex:
         cache_file = tmp_path / "component_index.json"
         monkeypatch.setattr("lfx.interface.components._get_cache_path", lambda: cache_file)
 
-        with patch("importlib.metadata.version", return_value="0.1.12"):
+        with patch("importlib.metadata.version", return_value="0.1.12") as mock_version:
             _save_generated_index(modules_dict)
 
         assert cache_file.exists()
@@ -312,6 +313,7 @@ class TestSaveGeneratedIndex:
         assert "entries" in saved_index
         assert "sha256" in saved_index
         assert len(saved_index["entries"]) == 2
+        mock_version.assert_called_once_with("lfx")
 
     def test_save_generated_index_empty_dict(self, tmp_path, monkeypatch):
         """Test saving empty modules dict."""
@@ -351,6 +353,38 @@ class TestImportLangflowComponents:
         assert "category1" in result["components"]
         # In dev mode, we don't save to cache
         assert not mock_save.called
+
+    async def test_dynamic_import_supports_serial_processing(self):
+        """Index generation can process modules serially to avoid import races."""
+        module_names = [
+            (None, "lfx.components.category1.first", False),
+            (None, "lfx.components.category1.second", False),
+        ]
+
+        with (
+            patch("lfx.interface.components.pkgutil.walk_packages", return_value=module_names),
+            patch(
+                "lfx.interface.components._process_single_module",
+                side_effect=[
+                    ("category1", {"first": {"template": {}}}),
+                    ("category1", {"second": {"template": {}}}),
+                ],
+            ) as mock_process,
+            patch("lfx.interface.components.asyncio.to_thread") as mock_to_thread,
+        ):
+            result = await _load_components_dynamically(parallel=False)
+
+        assert result == {
+            "category1": {
+                "first": {"template": {}},
+                "second": {"template": {}},
+            }
+        }
+        assert [call.args[0] for call in mock_process.call_args_list] == [
+            "lfx.components.category1.first",
+            "lfx.components.category1.second",
+        ]
+        mock_to_thread.assert_not_called()
 
     async def test_import_with_builtin_index(self, monkeypatch):
         """Test import with valid built-in index."""
@@ -443,3 +477,43 @@ class TestImportLangflowComponents:
         # Should return empty dict, not raise
         assert "components" in result
         assert len(result["components"]) == 0
+
+
+class TestToolOutputCapabilitySerialization:
+    """``add_tool_output`` must survive into the serialized template.
+
+    It is half of ``Component._handle_tool_mode``, the runtime authority for
+    whether a component can produce a ``component_as_tool`` output. Consumers
+    that only see a template (the flow builder, the MCP registry) cannot state
+    that rule unless the flag is serialized, and the alternative signal they
+    reached for — ``tool_mode`` on outputs — is set by nearly every component.
+    """
+
+    def _frontend_node(self, **attrs):
+        from lfx.custom.custom_component.base_component import BaseComponent
+        from lfx.template.frontend_node.custom_components import ComponentFrontendNode
+
+        component = type("StubComponent", (), {"inputs": [], "outputs": [], **attrs})()
+        config = BaseComponent.get_template_config(component)
+        return ComponentFrontendNode.from_inputs(**config, base_classes=[]).to_dict(keep_name=False)
+
+    def test_enabled_capability_is_serialized(self):
+        assert self._frontend_node(add_tool_output=True)["add_tool_output"] is True
+
+    def test_disabled_capability_is_omitted(self):
+        """The default must not bloat every template with a false flag."""
+        assert "add_tool_output" not in self._frontend_node(add_tool_output=False)
+
+    def test_bundled_index_carries_runtime_capabilities(self):
+        index_path = Path(__file__).parents[2] / "src" / "lfx" / "_assets" / "component_index.json"
+        index = orjson.loads(index_path.read_bytes())
+        components = {name: tmpl for _category, entries in index["entries"] for name, tmpl in entries.items()}
+
+        # RunFlow has no tool_mode input; add_tool_output is its only signal.
+        assert components["RunFlow"]["add_tool_output"] is True
+        # CSVAgent redeclares LCAgentComponent's input_value, which shadows the
+        # base input's tool_mode in the name-keyed template.
+        assert components["CSVAgent"]["template"]["input_value"]["tool_mode"] is True
+        # ChatInput has neither, yet its message output carries tool_mode.
+        assert "add_tool_output" not in components["ChatInput"]
+        assert any(o.get("tool_mode") for o in components["ChatInput"]["outputs"])

@@ -18,18 +18,16 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
-import re
 import uuid
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
 import pandas as pd
-from cryptography.fernet import InvalidToken
 from langchain_chroma import Chroma
-from langflow.services.auth.utils import decrypt_api_key, encrypt_api_key
 
-from lfx.base.knowledge_bases.backends import BackendType, BaseVectorStoreBackend, create_backend
+from lfx.base.knowledge_bases.backends import BackendType, BaseVectorStoreBackend, create_backend, is_local_chroma
 from lfx.base.knowledge_bases.ingestion_sources.base import (
     IngestionItemResult,
     IngestionItemStatus,
@@ -38,14 +36,14 @@ from lfx.base.knowledge_bases.ingestion_sources.base import (
 )
 from lfx.base.knowledge_bases.ingestion_sources.flow_component import FlowComponentSource
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
+from lfx.base.knowledge_bases.validation import (
+    is_valid_collection_name as is_valid_kb_collection_name,
+)
+from lfx.base.knowledge_bases.validation import (
+    validate_collection_name,
+)
 from lfx.base.models.unified_models import get_embedding_model_options, get_embeddings
 from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
-from lfx.components.files_and_knowledge._kb_paths import (
-    get_knowledge_bases_root_path as _get_knowledge_bases_root_path,
-)
-from lfx.components.files_and_knowledge._kb_paths import (
-    load_kb_metadata,
-)
 from lfx.components.processing.converter import convert_to_dataframe
 from lfx.custom import Component
 from lfx.io import (
@@ -68,7 +66,6 @@ from lfx.schema.dataframe import DataFrame
 from lfx.schema.dotdict import dotdict
 from lfx.schema.table import EditMode
 from lfx.services.deps import (
-    get_settings_service,
     session_scope,
 )
 from lfx.utils.component_utils import set_current_fields, set_field_display
@@ -175,6 +172,54 @@ class KnowledgeComponent(Component):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self._cached_kb_path: Path | None = None
+
+    @staticmethod
+    def _embedding_provider_from_selection(selection: Any) -> str | None:
+        """Read a provider name from a raw or persisted model selection."""
+        if isinstance(selection, list):
+            selection = selection[0] if selection else None
+        if not isinstance(selection, Mapping):
+            return None
+        provider = selection.get("provider")
+        if not isinstance(provider, str) or not provider.strip():
+            return None
+        return provider.strip()
+
+    async def _additional_model_provider_policy_ids(self, purpose, parameters=None) -> tuple[str, ...]:
+        """Resolve the embedding provider before dialog hooks or runtime secrets.
+
+        New-KB configuration carries its ModelInput inside a dropdown dialog,
+        while existing KBs persist the provider in the KB row. Neither is a
+        top-level ModelInput, so both must be resolved explicitly before the
+        generic component pipeline hydrates ``api_key``.
+        """
+        from lfx.base.models.provider_registry import resolve_provider_id
+        from lfx.services.model_provider_policy import ModelProviderPolicyError
+
+        effective_parameters = parameters if isinstance(parameters, Mapping) else getattr(self, "_parameters", None)
+        if not isinstance(effective_parameters, Mapping):
+            effective_parameters = {}
+        knowledge_value = effective_parameters.get("knowledge_base", getattr(self, "knowledge_base", None))
+
+        if isinstance(knowledge_value, Mapping):
+            if "02_embedding_model" not in knowledge_value:
+                return ()
+            provider = self._embedding_provider_from_selection(knowledge_value.get("02_embedding_model"))
+        elif isinstance(knowledge_value, str) and knowledge_value.strip():
+            metadata = await self._get_kb_metadata(knowledge_value.strip())
+            provider = self._embedding_provider_from_selection(metadata.get("model_selection"))
+            if provider is None:
+                legacy_provider = metadata.get("embedding_provider")
+                provider = legacy_provider.strip() if isinstance(legacy_provider, str) else None
+                if provider == "Unknown":
+                    provider = None
+        else:
+            return ()
+
+        if provider is None:
+            unknown_provider = "unknown"
+            raise ModelProviderPolicyError(unknown_provider, purpose)
+        return (resolve_provider_id(provider),)
 
     @dataclass
     class NewKnowledgeBaseInput:
@@ -514,10 +559,6 @@ class KnowledgeComponent(Component):
                     raise ValueError(msg)
                 kb_user = current_user.username
             if isinstance(field_value, dict) and "01_new_kb_name" in field_value:
-                if not self.is_valid_collection_name(field_value["01_new_kb_name"]):
-                    msg = f"Invalid knowledge base name: {field_value['01_new_kb_name']}"
-                    raise ValueError(msg)
-
                 model_selection = field_value["02_embedding_model"]
                 if isinstance(model_selection, dict):
                     model_selection = [model_selection]
@@ -525,6 +566,13 @@ class KnowledgeComponent(Component):
                 backend_type, backend_config = self._normalize_backend_selection(
                     field_value.get("03_knowledge_backend")
                 )
+                new_kb_name = field_value["01_new_kb_name"]
+                if backend_type == BackendType.CHROMA.value:
+                    validate_collection_name(
+                        new_kb_name,
+                        resource="Knowledge base",
+                        local=is_local_chroma(backend_type, backend_config),
+                    )
 
                 embed_model = get_embeddings(
                     model=model_selection,
@@ -543,16 +591,19 @@ class KnowledgeComponent(Component):
                     msg = f"Embedding validation failed: {e!s}"
                     raise ValueError(msg) from e
 
-                kb_path = _get_knowledge_bases_root_path() / kb_user / field_value["01_new_kb_name"]
-                kb_path.mkdir(parents=True, exist_ok=True)
+                # Only local Chroma gets a directory; every remote backend
+                # returns None here and creates its collection on first write.
+                from langflow.api.utils.kb_helpers import resolve_local_store_path
 
-                build_config["knowledge_base"]["value"] = field_value["01_new_kb_name"]
-                self._save_embedding_metadata(
-                    kb_path=kb_path,
-                    model_selection=model_selection,
+                resolve_local_store_path(
+                    new_kb_name,
+                    kb_user,
                     backend_type=backend_type,
                     backend_config=backend_config,
+                    create=True,
                 )
+
+                build_config["knowledge_base"]["value"] = new_kb_name
                 await self._create_knowledge_base_record(
                     user_id=self.user_id,
                     name=field_value["01_new_kb_name"],
@@ -561,10 +612,7 @@ class KnowledgeComponent(Component):
                     backend_config=backend_config,
                 )
 
-            build_config["knowledge_base"]["options"] = await get_knowledge_bases(
-                _get_knowledge_bases_root_path(),
-                user_id=self.user_id,
-            )
+            build_config["knowledge_base"]["options"] = await get_knowledge_bases(user_id=self.user_id)
             if build_config["knowledge_base"]["value"] not in build_config["knowledge_base"]["options"]:
                 build_config["knowledge_base"]["value"] = None
 
@@ -590,10 +638,6 @@ class KnowledgeComponent(Component):
     # =====================================================================
     #                       INGESTION CODE PATH
     # =====================================================================
-    def _get_kb_root(self) -> Path:
-        """Return the root directory for knowledge bases."""
-        return _get_knowledge_bases_root_path()
-
     @staticmethod
     def _scalar_notna(value) -> bool:
         """Check if a value is not NA, safely handling arrays and sequences.
@@ -627,94 +671,12 @@ class KnowledgeComponent(Component):
 
         return config_list
 
-    def _build_embedding_metadata(
-        self,
-        model_selection: list[dict[str, Any]],
-        api_key: str | None = None,
-        backend_type: str = BackendType.CHROMA.value,
-        backend_config: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        """Build embedding model metadata from a model selection dict."""
-        model_dict = model_selection[0] if isinstance(model_selection, list) else model_selection
-        embedding_model = model_dict.get("name", "")
-        embedding_provider = model_dict.get("provider", "Unknown")
-
-        api_key_to_save = None
-        if api_key and hasattr(api_key, "get_secret_value"):
-            api_key_to_save = api_key.get_secret_value()
-        elif isinstance(api_key, str):
-            api_key_to_save = api_key
-
-        encrypted_api_key = None
-        if api_key_to_save:
-            settings_service = get_settings_service()
-            try:
-                encrypted_api_key = encrypt_api_key(api_key_to_save, settings_service=settings_service)
-            except (TypeError, ValueError) as e:
-                self.log(f"Could not encrypt API key: {e}")
-
-        return {
-            "embedding_provider": embedding_provider,
-            "embedding_model": embedding_model,
-            "model_selection": model_dict,
-            "api_key": encrypted_api_key,
-            "api_key_used": bool(api_key),
-            "chunk_size": self.chunk_size,
-            "backend_type": backend_type,
-            "backend_config": backend_config or {},
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        }
-
-    def _save_embedding_metadata(
-        self,
-        kb_path: Path,
-        model_selection: list[dict[str, Any]],
-        api_key: str | None = None,
-        backend_type: str | None = None,
-        backend_config: dict[str, Any] | None = None,
-    ) -> None:
-        """Save embedding model metadata."""
-        metadata_path = kb_path / "embedding_metadata.json"
-        existing_metadata: dict[str, Any] = {}
-        if metadata_path.exists():
-            try:
-                existing_metadata = json.loads(metadata_path.read_text())
-            except (OSError, json.JSONDecodeError):
-                existing_metadata = {}
-
-        embedding_metadata = self._build_embedding_metadata(
-            model_selection,
-            api_key,
-            backend_type=backend_type or existing_metadata.get("backend_type") or BackendType.CHROMA.value,
-            backend_config=backend_config
-            if backend_config is not None
-            else existing_metadata.get("backend_config") or {},
-        )
-        metadata_path.write_text(json.dumps(embedding_metadata, indent=2))
-
-    def _update_metadata_metrics(self, kb_path: Path, chroma: Chroma) -> None:
-        """Update embedding_metadata.json with accurate chunk/word/character counts."""
-        import chromadb.errors
-        from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBStorageHelper
-
-        metadata_path = kb_path / "embedding_metadata.json"
-        if not metadata_path.exists():
-            return
-
-        try:
-            metadata = json.loads(metadata_path.read_text())
-            KBAnalysisHelper.update_text_metrics(kb_path, metadata, chroma)
-            metadata["size"] = KBStorageHelper.get_directory_size(kb_path)
-            metadata_path.write_text(json.dumps(metadata, indent=2))
-        except (OSError, ValueError, TypeError, json.JSONDecodeError, chromadb.errors.ChromaError) as e:
-            self.log(f"Warning: Could not update metadata metrics: {e}")
-
     @staticmethod
     def _extract_source_types_from_df(df_source: pd.DataFrame) -> set[str]:
         """Pull file extensions out of common path/name columns on the source DataFrame.
 
         The direct-upload ingestion path stores extensions in
-        ``embedding_metadata.json[source_types]`` so the KB list can render the
+        the KB row's ``source_types`` so the KB list can render the
         correct file-type icon. When ingestion happens via a connected
         ``input_df`` (e.g. File → Knowledge) the same field stayed empty and
         the icon defaulted to a blank tile. We look at the well-known columns
@@ -800,34 +762,32 @@ class KnowledgeComponent(Component):
             mapping = input_value
         return cls._extract_source_types_from_mapping(mapping)
 
-    def _merge_source_types(self, kb_path: Path, extensions: set[str]) -> None:
-        """Merge newly observed extensions into the KB's ``source_types`` metadata.
+    async def _refresh_kb_stats(
+        self,
+        *,
+        kb_record_id: Any,
+        backend: BaseVectorStoreBackend,
+        extensions: set[str],
+    ) -> None:
+        """Recount the KB from its vector store and write the totals onto the row.
 
-        Mirrors the direct-upload path in ``KBIngestionHelper`` so the icon
-        rendering on the Knowledge Bases list works regardless of which
-        ingestion route was used.
+        Backend-agnostic: counts come from ``count`` / ``iter_documents`` /
+        ``storage_size_bytes``, so a Chroma, OpenSearch, or pgVector KB all report
+        real numbers. ``extensions`` are merged into ``source_types`` so the KB
+        list renders the right file-type icon regardless of which ingestion route
+        produced the chunks.
+
+        Best-effort: the chunks are already written and committed by the time this
+        runs, so a stats refresh failure must not fail the ingestion.
         """
-        if not extensions:
-            return
-        metadata_path = kb_path / "embedding_metadata.json"
-        if not metadata_path.exists():
+        if kb_record_id is None:
             return
         try:
-            metadata = json.loads(metadata_path.read_text())
-            existing = set(metadata.get("source_types") or [])
-            metadata["source_types"] = sorted(existing | extensions)
-            metadata_path.write_text(json.dumps(metadata, indent=2))
-        except (OSError, ValueError, TypeError, json.JSONDecodeError) as e:
-            self.log(f"Warning: Could not update source_types metadata: {e}")
-
-    async def _update_backend_metadata_metrics(self, kb_path: Path, backend: BaseVectorStoreBackend) -> None:
-        """Update metadata metrics for non-Chroma backends."""
-        metadata_path = kb_path / "embedding_metadata.json"
-        if not metadata_path.exists():
+            from langflow.api.utils import knowledge_base_service
+        except ImportError:
             return
 
         try:
-            metadata = json.loads(metadata_path.read_text())
             chunks = await backend.count()
             characters = 0
             words = 0
@@ -836,27 +796,46 @@ class KnowledgeComponent(Component):
                     characters += len(document.content)
                     words += len(document.content.split())
 
-            metadata["chunks"] = chunks
-            metadata["characters"] = characters
-            metadata["words"] = words
-            metadata["avg_chunk_size"] = characters / chunks if chunks else 0.0
-            metadata["size"] = await backend.storage_size_bytes()
-            metadata_path.write_text(json.dumps(metadata, indent=2))
-        except (OSError, ValueError, TypeError, json.JSONDecodeError) as e:
-            self.log(f"Warning: Could not update backend metadata metrics: {e}")
+            record = await knowledge_base_service.get_by_id(kb_record_id)
+            existing = set(record.source_types or []) if record is not None else set()
+
+            await knowledge_base_service.update_stats(
+                kb_record_id,
+                chunks=chunks,
+                words=words,
+                characters=characters,
+                size_bytes=await backend.storage_size_bytes(),
+                source_types=sorted(existing | extensions),
+            )
+        except Exception as e:  # noqa: BLE001 — stats are cosmetic; chunks are already written
+            self.log(f"Warning: Could not refresh knowledge base stats: {e}")
 
     @staticmethod
-    def _normalize_backend_selection(value: Any) -> tuple[str, dict[str, Any]]:
+    def _default_backend_selection() -> tuple[str, dict[str, Any]]:
+        """Deployment default for a new KB with no explicit backend chosen.
+
+        pgVector is environment-driven: when ``PGVECTOR_CONNECTION_STRING`` is set
+        the deployment snap-configures to Postgres, so an unspecified selection
+        (headless flows, multi-replica) becomes ``postgres``. Otherwise Chroma.
+        """
+        from lfx.base.knowledge_bases.backends.postgres import postgres_env_configured
+
+        if postgres_env_configured():
+            return BackendType.POSTGRES.value, {}
+        return BackendType.CHROMA.value, {}
+
+    @classmethod
+    def _normalize_backend_selection(cls, value: Any) -> tuple[str, dict[str, Any]]:
         """Normalize a DBProviderInput value into backend type/config."""
         if not value:
-            return BackendType.CHROMA.value, {}
+            return cls._default_backend_selection()
 
         if isinstance(value, str):
-            backend_type = value if value == BackendType.OPENSEARCH.value else BackendType.CHROMA.value
-            return (
-                backend_type,
-                _DEFAULT_OPENSEARCH_CONFIG.copy() if backend_type == BackendType.OPENSEARCH.value else {},
-            )
+            if value == BackendType.OPENSEARCH.value:
+                return BackendType.OPENSEARCH.value, _DEFAULT_OPENSEARCH_CONFIG.copy()
+            if value == BackendType.POSTGRES.value:
+                return BackendType.POSTGRES.value, {}
+            return BackendType.CHROMA.value, {}
 
         if not isinstance(value, dict):
             return BackendType.CHROMA.value, {}
@@ -869,6 +848,9 @@ class KnowledgeComponent(Component):
                 backend_config = {}
             return BackendType.OPENSEARCH.value, {**_DEFAULT_OPENSEARCH_CONFIG, **backend_config}
 
+        if backend_type == BackendType.POSTGRES.value:
+            return BackendType.POSTGRES.value, {}
+
         if backend_type == "chroma_cloud":
             backend_config = value.get("backend_config") or value.get("config") or {}
             if not isinstance(backend_config, dict):
@@ -876,22 +858,6 @@ class KnowledgeComponent(Component):
             return BackendType.CHROMA.value, {**_DEFAULT_CHROMA_CLOUD_CONFIG, **backend_config}
 
         return BackendType.CHROMA.value, {}
-
-    @staticmethod
-    def _get_backend_from_metadata(kb_path: Path) -> tuple[str, dict[str, Any]]:
-        metadata_path = kb_path / "embedding_metadata.json"
-        if not metadata_path.exists():
-            return BackendType.CHROMA.value, {}
-        try:
-            metadata = json.loads(metadata_path.read_text())
-        except (OSError, json.JSONDecodeError):
-            return BackendType.CHROMA.value, {}
-
-        backend_type = str(metadata.get("backend_type") or BackendType.CHROMA.value)
-        backend_config = metadata.get("backend_config") or {}
-        if not isinstance(backend_config, dict):
-            backend_config = {}
-        return backend_type, backend_config
 
     async def _create_knowledge_base_record(
         self,
@@ -919,22 +885,6 @@ class KnowledgeComponent(Component):
             )
         except Exception as exc:  # noqa: BLE001
             self.log(f"Warning: could not persist knowledge base record: {exc}")
-
-    def _save_kb_files(
-        self,
-        kb_path: Path,
-        config_list: list[dict[str, Any]],
-    ) -> None:
-        """Save KB files using File Component storage patterns."""
-        try:
-            kb_path.mkdir(parents=True, exist_ok=True)
-
-            cfg_path = kb_path / "schema.json"
-            if not cfg_path.exists():
-                cfg_path.write_text(json.dumps(config_list, indent=2))
-
-        except (OSError, TypeError, ValueError) as e:
-            self.log(f"Error saving KB files: {e}")
 
     def _build_column_metadata(self, config_list: list[dict[str, Any]], df_source: pd.DataFrame) -> dict[str, Any]:
         """Build detailed column metadata."""
@@ -973,13 +923,12 @@ class KnowledgeComponent(Component):
         embedding_function,
     ) -> BaseVectorStoreBackend:
         """Create vector store using the configured DB provider."""
-        vector_store_dir = await self._kb_path()
-        if not vector_store_dir:
-            msg = "Knowledge base path is not set. Please create a new knowledge base first."
-            raise ValueError(msg)
-        vector_store_dir.mkdir(parents=True, exist_ok=True)
+        backend_type, backend_config = await self._resolve_backend_config()
+        # ``None`` for every remote backend — nothing to create on this box.
+        vector_store_dir = self._resolve_store_path(await self._kb_username(), backend_type, backend_config)
+        if vector_store_dir is not None:
+            vector_store_dir.mkdir(parents=True, exist_ok=True)
 
-        backend_type, backend_config = self._get_backend_from_metadata(vector_store_dir)
         backend = create_backend(
             backend_type,
             kb_name=self.knowledge_base,
@@ -1026,17 +975,22 @@ class KnowledgeComponent(Component):
         data_objects: list[Data] = []
 
         if existing_ids is None:
+            # Local-Chroma-only branch: every other backend collects its existing
+            # ids through ``iter_documents`` in ``_create_vector_store`` and
+            # passes them in, so ``kb_path`` is guaranteed non-None here.
             kb_path = await self._kb_path()
+            if kb_path is None:
+                existing_ids = set()
+            else:
+                chroma = Chroma(
+                    persist_directory=str(kb_path),
+                    collection_name=self.knowledge_base,
+                    **chroma_langchain_collection_kwargs(),
+                )
 
-            chroma = Chroma(
-                persist_directory=str(kb_path),
-                collection_name=self.knowledge_base,
-                **chroma_langchain_collection_kwargs(),
-            )
+                all_docs = chroma.get()
 
-            all_docs = chroma.get()
-
-            existing_ids = {metadata.get("_id") for metadata in all_docs["metadatas"] if metadata.get("_id")}
+                existing_ids = {metadata.get("_id") for metadata in all_docs["metadatas"] if metadata.get("_id")}
 
         content_cols = []
         identifier_cols = []
@@ -1083,25 +1037,36 @@ class KnowledgeComponent(Component):
 
         return data_objects
 
-    def is_valid_collection_name(self, name, min_length: int = 3, max_length: int = 63) -> bool:
-        """Validate collection name.
+    def is_valid_collection_name(self, name: str) -> bool:
+        """Return whether ``name`` satisfies the shared collection-name contract."""
+        return is_valid_kb_collection_name(name)
 
-        1. Contains 3-63 characters
-        2. Starts and ends with alphanumeric character
-        3. Contains only alphanumeric characters, underscores, or hyphens.
+    def _resolve_store_path(
+        self,
+        kb_user: str,
+        backend_type: str,
+        backend_config: dict[str, Any] | None,
+    ) -> Path | None:
+        """Return this KB's on-disk directory, or ``None`` when it needs no disk.
+
+        Only local Chroma stores anything on this box; every other backend
+        resolves to ``None`` and never touches the filesystem.
         """
-        if not (min_length <= len(name) <= max_length):
-            return False
+        # Lazy import keeps lfx importable without langflow's DB services.
+        from langflow.api.utils.kb_helpers import resolve_local_store_path
 
-        if not (name[0].isalnum() and name[-1].isalnum()):
-            return False
+        return resolve_local_store_path(
+            self.knowledge_base,
+            kb_user,
+            backend_type=backend_type,
+            backend_config=backend_config,
+        )
 
-        return re.match(r"^[a-zA-Z0-9_-]+$", name) is not None
-
-    async def _kb_path(self) -> Path | None:
-        cached_path = getattr(self, "_cached_kb_path", None)
-        if cached_path is not None:
-            return cached_path
+    async def _kb_username(self) -> str:
+        """Resolve the owning user's username (used to root a local-Chroma path)."""
+        cached = getattr(self, "_cached_kb_username", None)
+        if cached is not None:
+            return cached
 
         # Lazy import to keep ``lfx`` importable standalone — langflow's
         # user/DB models are not always available at module load time.
@@ -1115,12 +1080,19 @@ class KnowledgeComponent(Component):
             if not current_user:
                 msg = f"User with ID {self.user_id} not found."
                 raise ValueError(msg)
-            kb_user = current_user.username
+            self._cached_kb_username = current_user.username
 
-        kb_root = self._get_kb_root()
+        return self._cached_kb_username
 
-        self._cached_kb_path = kb_root / kb_user / self.knowledge_base
+    async def _kb_path(self) -> Path | None:
+        """Resolve the KB's local directory from its configured backend."""
+        cached_path = getattr(self, "_cached_kb_path", None)
+        if cached_path is not None:
+            return cached_path
 
+        backend_type, backend_config = await self._resolve_backend_config()
+        kb_user = await self._kb_username()
+        self._cached_kb_path = self._resolve_store_path(kb_user, backend_type, backend_config)
         return self._cached_kb_path
 
     def _resolve_user_metadata_tag(self) -> str:
@@ -1170,86 +1142,68 @@ class KnowledgeComponent(Component):
             config_list = self._validate_column_config(df_source)
             column_metadata = self._build_column_metadata(config_list, df_source)
 
-            kb_path = await self._kb_path()
-            if not kb_path:
-                msg = "Knowledge base path is not set. Please create a new knowledge base first."
-                raise ValueError(msg)
-            metadata_path = kb_path / "embedding_metadata.json"
-            api_key = None
-            model_selection = None
-
-            if metadata_path.exists():
-                settings_service = get_settings_service()
-                stored_metadata = json.loads(metadata_path.read_text())
-
-                model_selection = stored_metadata.get("model_selection")
-                if model_selection:
-                    model_selection = [model_selection] if isinstance(model_selection, dict) else model_selection
-                else:
-                    embedding_model_name = stored_metadata.get("embedding_model")
-                    embedding_provider = stored_metadata.get("embedding_provider", "Unknown")
-                    if embedding_model_name:
-                        try:
-                            all_options = get_embedding_model_options(user_id=self.user_id)
-                            match = next(
-                                (o for o in all_options if o.get("name") == embedding_model_name),
-                                None,
-                            )
-                            if match:
-                                model_selection = [match]
-                            else:
-                                self.log(
-                                    f"Embedding model '{embedding_model_name}' (provider: {embedding_provider}) "
-                                    "from stored metadata is no longer available in the model registry. "
-                                    "Please re-create this knowledge base with a supported embedding model."
-                                )
-                                msg = (
-                                    f"Embedding model '{embedding_model_name}' is no longer recognized. "
-                                    "The knowledge base was created with an older format and the model "
-                                    "is not available in the current registry. "
-                                    "Please re-create the knowledge base with a supported embedding model."
-                                )
-                                raise ValueError(msg)
-                        except ValueError:
-                            raise
-                        except Exception:  # noqa: BLE001
+            # Embedding config comes from the ``knowledge_base`` row — the sole
+            # authority. No sidecar is read, so ingestion resolves the same model
+            # on any replica.
+            stored_metadata = await self._get_kb_metadata()
+            model_selection = stored_metadata.get("model_selection")
+            if model_selection:
+                model_selection = [model_selection] if isinstance(model_selection, dict) else list(model_selection)
+            else:
+                embedding_model_name = stored_metadata.get("embedding_model")
+                embedding_provider = stored_metadata.get("embedding_provider", "Unknown")
+                if embedding_model_name:
+                    try:
+                        all_options = get_embedding_model_options(user_id=self.user_id)
+                        match = next(
+                            (o for o in all_options if o.get("name") == embedding_model_name),
+                            None,
+                        )
+                        if match:
+                            model_selection = [match]
+                        else:
                             self.log(
-                                f"Failed to look up embedding model '{embedding_model_name}' in registry. "
+                                f"Embedding model '{embedding_model_name}' (provider: {embedding_provider}) "
+                                "from the knowledge base record is no longer available in the model registry. "
                                 "Please re-create this knowledge base with a supported embedding model."
                             )
                             msg = (
-                                f"Could not look up embedding model '{embedding_model_name}' "
-                                f"(provider: {embedding_provider}). "
+                                f"Embedding model '{embedding_model_name}' is no longer recognized. "
+                                "The knowledge base was created with an older format and the model "
+                                "is not available in the current registry. "
                                 "Please re-create the knowledge base with a supported embedding model."
                             )
-                            raise ValueError(msg)  # noqa: B904
-
-                encrypted_key = stored_metadata.get("api_key")
-                if encrypted_key:
-                    try:
-                        api_key = decrypt_api_key(encrypted_key, settings_service)
-                    except (InvalidToken, TypeError, ValueError) as e:
-                        self.log(f"Could not decrypt API key. Please provide it manually. Error: {e}")
-
-            if self.api_key:
-                api_key = self.api_key
-                if model_selection:
-                    self._save_embedding_metadata(
-                        kb_path=kb_path,
-                        model_selection=model_selection,
-                        api_key=api_key,
-                    )
+                            raise ValueError(msg)
+                    except ValueError:
+                        raise
+                    except Exception:  # noqa: BLE001
+                        self.log(
+                            f"Failed to look up embedding model '{embedding_model_name}' in registry. "
+                            "Please re-create this knowledge base with a supported embedding model."
+                        )
+                        msg = (
+                            f"Could not look up embedding model '{embedding_model_name}' "
+                            f"(provider: {embedding_provider}). "
+                            "Please re-create the knowledge base with a supported embedding model."
+                        )
+                        raise ValueError(msg)  # noqa: B904
 
             if not model_selection:
                 msg = "No embedding model configuration found. Please create the knowledge base first."
                 raise ValueError(msg)
 
+            # ``api_key=None`` falls through to the user's variables table and
+            # then the environment inside ``get_embeddings`` — the same
+            # resolution the server-side ingestion path uses. The component input
+            # only overrides it.
             embedding_function = get_embeddings(
                 model=model_selection,
                 user_id=self.user_id,
-                api_key=api_key,
+                api_key=self.api_key if getattr(self, "api_key", None) else None,
                 chunk_size=self.chunk_size,
             )
+
+            kb_path = await self._kb_path()
 
             run_id, run_job_id, run_summary, kb_record_id = await self._begin_ingestion_run(kb_path)
             if kb_record_id is not None:
@@ -1257,15 +1211,7 @@ class KnowledgeComponent(Component):
 
             backend = await self._create_vector_store(df_source, config_list, embedding_function=embedding_function)
 
-            self._save_kb_files(kb_path, config_list)
-
             try:
-                if not isinstance(backend, BaseVectorStoreBackend):
-                    pass
-                elif backend.backend_type == BackendType.CHROMA and hasattr(backend, "raw_langchain_store"):
-                    self._update_metadata_metrics(kb_path, backend.raw_langchain_store())
-                else:
-                    await self._update_backend_metadata_metrics(kb_path, backend)
                 # Stamp the KB with the file extensions we just ingested so
                 # the Knowledge Bases list renders the correct icon for
                 # flow-driven ingestion (input_df), matching direct upload.
@@ -1274,7 +1220,12 @@ class KnowledgeComponent(Component):
                 # when projecting onto the DataFrame.
                 source_types = self._extract_source_types_from_input(input_value)
                 source_types |= self._extract_source_types_from_df(df_source)
-                self._merge_source_types(kb_path, source_types)
+                if isinstance(backend, BaseVectorStoreBackend):
+                    await self._refresh_kb_stats(
+                        kb_record_id=kb_record_id,
+                        backend=backend,
+                        extensions=source_types,
+                    )
             finally:
                 if isinstance(backend, BaseVectorStoreBackend):
                     await backend.teardown()
@@ -1300,7 +1251,7 @@ class KnowledgeComponent(Component):
                 )
 
             if kb_record_id is not None:
-                await self._record_kb_stats(kb_record_id, kb_path)
+                # Stats were already refreshed straight from the backend above.
                 await self._record_kb_status(kb_record_id, "ready")
 
             self.status = f"✅ KB **{self.knowledge_base}** saved · {len(df_source)} chunks."
@@ -1460,41 +1411,6 @@ class KnowledgeComponent(Component):
         except Exception as exc:  # noqa: BLE001
             self.log(f"Could not update KB status to {status_value}: {exc}")
 
-    async def _record_kb_stats(self, kb_record_id: uuid.UUID, kb_path: Path) -> None:
-        """Push freshly-refreshed metrics from embedding_metadata.json onto the DB row."""
-        try:
-            from langflow.api.utils import knowledge_base_service
-        except ImportError:
-            self.log("knowledge_base_service unavailable; KB stats will not sync to DB row.")
-            return
-        metadata_path = kb_path / "embedding_metadata.json"
-        if not metadata_path.exists():
-            self.log(f"No embedding_metadata.json at {metadata_path}; skipping KB stats sync.")
-            return
-        try:
-            metadata = json.loads(metadata_path.read_text())
-        except (OSError, json.JSONDecodeError) as exc:
-            self.log(f"Could not read KB metadata for stats sync: {exc}")
-            return
-        chunks = int(metadata.get("chunks", 0) or 0)
-        words = int(metadata.get("words", 0) or 0)
-        characters = int(metadata.get("characters", 0) or 0)
-        try:
-            await knowledge_base_service.update_stats(
-                kb_record_id,
-                chunks=chunks,
-                words=words,
-                characters=characters,
-                size_bytes=int(metadata.get("size", 0) or 0),
-                source_types=list(metadata.get("source_types") or []),
-                chunk_size=metadata.get("chunk_size"),
-                chunk_overlap=metadata.get("chunk_overlap"),
-                separator=metadata.get("separator"),
-            )
-            self.log(f"Synced KB stats to DB row {kb_record_id}: chunks={chunks} words={words} characters={characters}")
-        except Exception as exc:  # noqa: BLE001
-            self.log(f"Could not sync KB stats to DB row {kb_record_id}: {exc}")
-
     def _parse_user_metadata_dict(self) -> dict[str, Any]:
         """Decode ``metadata_json`` to a dict, or ``{}`` on any error."""
         raw = getattr(self, "metadata_json", None)
@@ -1519,30 +1435,71 @@ class KnowledgeComponent(Component):
             return None
         return self.user_id if isinstance(self.user_id, uuid.UUID) else uuid.UUID(self.user_id)
 
-    def _get_kb_metadata(self, kb_path: Path) -> dict:
-        """Load the knowledge base's embedding metadata file."""
-        raise_error_if_astra_cloud_disable_component(astra_error_msg)
-        return load_kb_metadata(kb_path, log_label=f"knowledge base '{self.knowledge_base}'")
+    async def _get_kb_metadata(self, knowledge_base: str | None = None) -> dict:
+        """Load this knowledge base's embedding config from its database row.
 
-    async def _resolve_backend(self, *, kb_user: str) -> tuple[str, dict[str, Any]]:  # noqa: ARG002
-        """Return ``(backend_type, backend_config)`` for this KB."""
+        The row is the sole authority. There is no on-disk sidecar to fall back
+        to, which is what lets retrieval work identically on a replica whose
+        filesystem never held the KB directory.
+        """
+        raise_error_if_astra_cloud_disable_component(astra_error_msg)
         try:
             from langflow.api.utils import knowledge_base_service
+        except ImportError:
+            return {}
 
-            user_uuid = self._user_uuid
-            if user_uuid is None:
-                return BackendType.CHROMA.value, {}
-            record = await knowledge_base_service.get_by_user_and_name(user_uuid, self.knowledge_base)
-        except Exception as exc:  # noqa: BLE001
-            logger.debug("KB record lookup failed: %s", exc)
-            return BackendType.CHROMA.value, {}
-
-        if record is None:
-            return BackendType.CHROMA.value, {}
-        return (
-            record.backend_type or BackendType.CHROMA.value,
-            record.backend_config or {},
+        user_uuid = self._user_uuid
+        if user_uuid is None:
+            return {}
+        record = await knowledge_base_service.get_by_user_and_name(
+            user_uuid,
+            knowledge_base or self.knowledge_base,
         )
+        if record is None:
+            return {}
+        return knowledge_base_service.record_to_metadata_dict(record)
+
+    async def _backend_from_record(self) -> tuple[str, dict[str, Any]] | None:
+        """Read ``(backend_type, backend_config)`` off the KB's database row.
+
+        Returns ``None`` when there is no row to read — a legacy KB predating the
+        record, or bare lfx with no langflow installed. A lookup that *fails* is a
+        different situation and is allowed to propagate: guessing a backend after a
+        database error is how vectors end up in a store nothing queries.
+        """
+        try:
+            from langflow.api.utils import knowledge_base_service
+        except ImportError:
+            return None
+
+        user_uuid = self._user_uuid
+        if user_uuid is None:
+            return None
+        record = await knowledge_base_service.get_by_user_and_name(user_uuid, self.knowledge_base)
+        if record is None:
+            return None
+        return record.backend_type or BackendType.CHROMA.value, record.backend_config or {}
+
+    async def _resolve_backend_config(self) -> tuple[str, dict[str, Any]]:
+        """Resolve this KB's backend from its database row.
+
+        Ingestion and retrieval both land here, so they cannot disagree about
+        where this KB's vectors live. A backend that cannot be resolved raises
+        rather than defaulting to local storage: guessing is how a pod ends up
+        writing vectors to a local directory while queries follow the real config
+        to a remote store and silently find nothing.
+        """
+        resolved = await self._backend_from_record()
+        if resolved is None:
+            msg = (
+                f"Cannot determine the vector-store backend for knowledge base "
+                f"'{self.knowledge_base}': it has no database record. Refusing to fall "
+                f"back to local storage, which would write to a different store than "
+                f"queries read from. If this knowledge base predates database-backed "
+                f"metadata, adopt it with 'langflow reconcile-kb-from-disk'."
+            )
+            raise ValueError(msg)
+        return resolved
 
     def _resolve_model_selection(self, metadata: dict[str, Any]) -> list[dict[str, Any]]:
         """Resolve the ``get_embeddings``-compatible model selection from metadata."""
@@ -1625,22 +1582,32 @@ class KnowledgeComponent(Component):
                 msg = f"User with ID {self.user_id} not found."
                 raise ValueError(msg)
             kb_user = current_user.username
-        kb_path = _get_knowledge_bases_root_path() / kb_user / self.knowledge_base
 
-        metadata = self._get_kb_metadata(kb_path)
+        metadata = await self._get_kb_metadata()
         if not metadata:
             msg = f"Metadata not found for knowledge base: {self.knowledge_base}. Ensure it has been indexed."
             raise ValueError(msg)
 
         model_selection = self._resolve_model_selection(metadata)
         chunk_size = metadata.get("chunk_size")
+
+        # Resolve where this KB lives before instantiating embeddings: path
+        # containment is a cheap local check, and a request that will be refused
+        # shouldn't first pay for a credential lookup and a provider client.
+        backend_type, backend_config = await self._resolve_backend_config()
+        kb_path = self._resolve_store_path(kb_user, backend_type, backend_config)
+
+        # ``api_key=None`` is not "no credential": ``get_embeddings`` resolves the
+        # provider's key from the user's variables table and then the environment,
+        # exactly as the server-side ingestion path does. The component input just
+        # takes precedence when supplied.
         embedding_function = get_embeddings(
             model=model_selection,
             user_id=self.user_id,
+            api_key=self.api_key if getattr(self, "api_key", None) else None,
             chunk_size=chunk_size,
         )
 
-        backend_type, backend_config = await self._resolve_backend(kb_user=kb_user)
         backend = create_backend(
             backend_type,
             kb_name=self.knowledge_base,

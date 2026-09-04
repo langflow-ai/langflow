@@ -8,7 +8,8 @@ and exercise the *real* flow routes over HTTP, validating that:
 
 * the per-route guards (``ensure_flow_permission`` via the ``Authorized*Flow``
   dependencies) actually gate read/write/delete/create/execute by role,
-* cross-user denials are masked as 404 (not 403) on fetch routes,
+* cross-user denials are masked as 404 (not 403) on fetch routes, while
+  write and delete denials on readable flows return an explicit 403,
 * the share-aware fetch + ``authz_share`` rows grant cross-user access, and
 * domain resolution (``_resolve_authz_domain``) scopes a domain-bound grant.
 
@@ -18,11 +19,20 @@ Everything runs against the OSS package only — no EE Casbin enforcer required.
 
 from __future__ import annotations
 
+import json
+from unittest.mock import MagicMock
 from uuid import UUID, uuid4
 
+from langflow.api.v1.knowledge_bases import KBStorageHelper
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_auth_service, get_settings_service, session_scope
+from langflow.services.deps import (
+    get_auth_service,
+    get_authorization_service,
+    get_settings_service,
+    session_scope,
+)
 
 from ._policy_double import (
     assign_role,
@@ -61,6 +71,18 @@ async def _make_flow(owner_id: UUID, name: str, *, workspace_id: UUID | None = N
         flow_id = flow.id
         await session.commit()
     return flow_id
+
+
+async def _make_project(owner_id: UUID, name: str, *, workspace_id: UUID | None = None) -> UUID:
+    """Insert a project owned by ``owner_id`` and return its id."""
+    async with session_scope() as session:
+        project = Folder(name=name, user_id=owner_id, workspace_id=workspace_id)
+        session.add(project)
+        await session.flush()
+        assert project.id is not None
+        project_id = project.id
+        await session.commit()
+    return project_id
 
 
 async def _seed_roles() -> dict[str, UUID]:
@@ -110,16 +132,36 @@ async def test_viewer_can_read_and_execute_but_not_write_delete_or_create(client
         # execute (build) -> allowed (viewer has flow:execute)
         build = await client.post(f"api/v1/build/{flow_id}/flow", headers=headers, json={})
         assert build.status_code == 200, build.text
-        # write -> denied, masked as 404 (NOT 403) on a fetch route
+        # write -> denied, but the flow is readable so return an edit-permission 403.
         patch = await client.patch(f"api/v1/flows/{flow_id}", headers=headers, json={"name": f"x_{uuid4().hex}"})
-        assert patch.status_code == 404
-        # delete -> denied, masked as 404
-        assert (await client.delete(f"api/v1/flows/{flow_id}", headers=headers)).status_code == 404
-        # create -> denied; 403 is correct here (no existing resource UUID to protect)
-        create = await client.post(
+        assert patch.status_code == 403
+        assert patch.json()["detail"] == "You don't have permission to edit this flow."
+        # delete -> denied, but the flow is readable so return a delete-permission 403.
+        delete = await client.delete(f"api/v1/flows/{flow_id}", headers=headers)
+        assert delete.status_code == 403
+        assert delete.json()["detail"] == "You don't have permission to delete this flow."
+        # create into the *owner's* project -> denied; 403 is correct here (no
+        # existing resource UUID to protect).
+        owner_project_id = await _make_project(owner_id, f"owner_project_{uuid4().hex}")
+        create_elsewhere = await client.post(
+            "api/v1/flows/",
+            headers=headers,
+            json={
+                "name": f"new_{uuid4().hex}",
+                "data": {"nodes": [], "edges": []},
+                "folder_id": str(owner_project_id),
+            },
+        )
+        assert create_elsewhere.status_code == 403
+        # create into a project the viewer owns -> allowed by owner override.
+        # Ownership is checked before any policy rule, and a project is the
+        # only ownership a not-yet-created flow can inherit. Without this a
+        # read-only role cannot use the default project created for them
+        # (LE-1905 finding 11).
+        create_own = await client.post(
             "api/v1/flows/", headers=headers, json={"name": f"new_{uuid4().hex}", "data": {"nodes": [], "edges": []}}
         )
-        assert create.status_code == 403
+        assert create_own.status_code == 201, create_own.text
 
 
 async def test_developer_can_write_and_create_but_not_delete(client):
@@ -138,8 +180,10 @@ async def test_developer_can_write_and_create_but_not_delete(client):
             "api/v1/flows/", headers=headers, json={"name": f"dev_{uuid4().hex}", "data": {"nodes": [], "edges": []}}
         )
         assert create.status_code == 201, create.text
-        # delete -> denied (developer lacks flow:delete) -> 404
-        assert (await client.delete(f"api/v1/flows/{flow_id}", headers=headers)).status_code == 404
+        # delete -> denied (developer lacks flow:delete) but readable -> 403
+        delete = await client.delete(f"api/v1/flows/{flow_id}", headers=headers)
+        assert delete.status_code == 403
+        assert delete.json()["detail"] == "You don't have permission to delete this flow."
 
 
 async def test_admin_has_full_flow_access(client):
@@ -182,6 +226,7 @@ async def test_share_grants_cross_user_access_and_absence_is_404(client):
         assert (
             await client.patch(f"api/v1/flows/{flow_id}", headers=bob_headers, json={"name": "x"})
         ).status_code == 404
+        assert (await client.delete(f"api/v1/flows/{flow_id}", headers=bob_headers)).status_code == 404
         assert (await client.post(f"api/v1/build/{flow_id}/flow", headers=bob_headers, json={})).status_code == 404
 
     # Alice grants Bob an admin-level share (read + write + execute).
@@ -224,13 +269,158 @@ async def test_read_only_share_allows_get_but_denies_write_and_execute(client):
 
     with install_policy_authz(settings):
         assert (await client.get(f"api/v1/flows/{flow_id}", headers=bob_headers)).status_code == 200
-        # write is not granted by a read-level share -> deny -> 404
+        # write is not granted by a read-level share, but the flow is readable
+        # so return an edit-permission 403 instead of a "not found" mask.
         patch = await client.patch(f"api/v1/flows/{flow_id}", headers=bob_headers, json={"name": "nope"})
-        assert patch.status_code == 404
+        assert patch.status_code == 403
+        assert patch.json()["detail"] == "You don't have permission to edit this flow."
+        # delete is likewise denied on a readable flow -> delete-permission 403,
+        # matching the write behavior (LE-1738 B9: a flow the caller can GET must
+        # not flip to 404 on a denied DELETE).
+        delete = await client.delete(f"api/v1/flows/{flow_id}", headers=bob_headers)
+        assert delete.status_code == 403
+        assert delete.json()["detail"] == "You don't have permission to delete this flow."
         # execute is modeled independently from write — a read-level share must
         # not grant build either -> deny -> 404
         build = await client.post(f"api/v1/build/{flow_id}/flow", headers=bob_headers, json={})
-        assert build.status_code == 404
+        # execute -> denied. Bob can read this flow, so answering "not found"
+        # would hide a resource he has already opened and send him to debug a
+        # flow id that is correct (LE-1905 finding 8).
+        assert build.status_code == 403
+        assert build.json()["detail"] == "You don't have permission to execute this flow."
+
+
+# --------------------------------------------------------------------------- #
+# Flow create destinations: plugin grants may target a foreign-owned project,
+# while the OSS pass-through must keep its existing owner-scoped fallback.
+# --------------------------------------------------------------------------- #
+
+
+async def test_project_scoped_developer_can_create_flow_in_foreign_project(client):
+    """A plugin-authorized non-owner must retain the project destination it was granted."""
+    role_ids = await _seed_roles()
+    project_owner_id = await _make_user(f"project_owner_{uuid4().hex}")
+    workspace_id = uuid4()
+    project_id = await _make_project(
+        project_owner_id,
+        f"shared_project_{uuid4().hex}",
+        workspace_id=workspace_id,
+    )
+    developer_id, headers = await _role_user(
+        client,
+        "developer",
+        role_ids,
+        domain_type="project",
+        domain_id=project_id,
+    )
+
+    with install_policy_authz(get_settings_service()):
+        response = await client.post(
+            "api/v1/flows/",
+            headers=headers,
+            json={
+                "name": f"shared_project_flow_{uuid4().hex}",
+                "folder_id": str(project_id),
+                "data": {"nodes": [], "edges": []},
+            },
+        )
+        assert response.status_code == 201, response.text
+        created = response.json()
+        edit = await client.patch(
+            f"api/v1/flows/{created['id']}",
+            headers=headers,
+            json={"name": f"edited_shared_project_flow_{uuid4().hex}"},
+        )
+        upload = await client.post(
+            "api/v1/flows/upload/",
+            headers=headers,
+            files={
+                "file": (
+                    "shared-project-flow.json",
+                    json.dumps(
+                        {
+                            "id": created["id"],
+                            "name": f"uploaded_shared_project_flow_{uuid4().hex}",
+                        }
+                    ),
+                    "application/json",
+                )
+            },
+        )
+
+    assert created["user_id"] == str(developer_id)
+    assert created["folder_id"] == str(project_id)
+    assert created["workspace_id"] == str(workspace_id)
+    assert edit.status_code == 200, edit.text
+    assert edit.json()["folder_id"] == str(project_id)
+    assert edit.json()["workspace_id"] == str(workspace_id)
+    assert upload.status_code == 201, upload.text
+    assert upload.json()[0]["id"] == created["id"]
+    assert upload.json()[0]["folder_id"] == str(project_id)
+    assert upload.json()[0]["workspace_id"] == str(workspace_id)
+
+
+async def test_oss_create_flow_keeps_foreign_project_owner_scoped(client):
+    """The OSS service must not widen a foreign project merely because authz is enabled."""
+    project_owner_id = await _make_user(f"project_owner_{uuid4().hex}")
+    foreign_project_id = await _make_project(project_owner_id, f"foreign_project_{uuid4().hex}")
+    creator_username = f"creator_{uuid4().hex}"
+    creator_id = await _make_user(creator_username)
+    headers = await _login(client, creator_username)
+
+    settings = get_settings_service()
+    authz = get_authorization_service()
+    assert await authz.supports_cross_user_fetch() is False
+    saved_authz_enabled = settings.auth_settings.AUTHZ_ENABLED
+    settings.auth_settings.AUTHZ_ENABLED = True
+    try:
+        response = await client.post(
+            "api/v1/flows/",
+            headers=headers,
+            json={
+                "name": f"oss_owner_scoped_flow_{uuid4().hex}",
+                "folder_id": str(foreign_project_id),
+                "data": {"nodes": [], "edges": []},
+            },
+        )
+    finally:
+        settings.auth_settings.AUTHZ_ENABLED = saved_authz_enabled
+
+    assert response.status_code == 201, response.text
+    created = response.json()
+    assert created["folder_id"] != str(foreign_project_id)
+    async with session_scope() as session:
+        destination = await session.get(Folder, UUID(created["folder_id"]))
+    assert destination is not None
+    assert destination.user_id == creator_id
+
+
+async def test_cross_user_destination_resolution_does_not_widen_flow_moves(client):
+    """Cross-user destination fetch is limited to CREATE and cannot bypass move authorization."""
+    project_owner_id = await _make_user(f"move_project_owner_{uuid4().hex}")
+    foreign_project_id = await _make_project(project_owner_id, f"move_target_{uuid4().hex}")
+    creator_username = f"move_creator_{uuid4().hex}"
+    await _make_user(creator_username)
+    headers = await _login(client, creator_username)
+
+    create = await client.post(
+        "api/v1/flows/",
+        headers=headers,
+        json={"name": f"move_source_{uuid4().hex}", "data": {"nodes": [], "edges": []}},
+    )
+    assert create.status_code == 201, create.text
+    original_folder_id = create.json()["folder_id"]
+
+    with install_policy_authz(get_settings_service()):
+        move = await client.patch(
+            f"api/v1/flows/{create.json()['id']}",
+            headers=headers,
+            json={"folder_id": str(foreign_project_id)},
+        )
+
+    assert move.status_code == 200, move.text
+    assert move.json()["folder_id"] == original_folder_id
+    assert move.json()["folder_id"] != str(foreign_project_id)
 
 
 # --------------------------------------------------------------------------- #
@@ -255,3 +445,103 @@ async def test_domain_scoped_role_applies_only_in_matching_domain(client):
         # (If domain resolution regressed to '*', the workspace-A grant would stop
         # matching flow A and the assertion above would fail instead.)
         assert (await client.get(f"api/v1/flows/{flow_b}", headers=headers)).status_code == 404
+
+
+# --------------------------------------------------------------------------- #
+# File / Knowledge Base create guards (QA BUG-2).
+# Create has no existing resource owner, so the prospective owner must not
+# trigger the existing-resource owner override before the policy service runs.
+# --------------------------------------------------------------------------- #
+
+
+def _knowledge_base_payload(name: str) -> dict[str, object]:
+    return {
+        "name": name,
+        "embedding_provider": "OpenAI",
+        "embedding_model": "text-embedding-3-small",
+        "backend_type": "chroma",
+        "backend_config": {},
+    }
+
+
+async def test_roleless_user_cannot_create_files_or_knowledge_bases(client, monkeypatch, tmp_path):
+    username = f"roleless_{uuid4().hex}"
+    await _make_user(username)
+    headers = await _login(client, username)
+
+    monkeypatch.setattr(KBStorageHelper, "get_root_path", lambda: tmp_path)
+    monkeypatch.setattr(KBStorageHelper, "get_fresh_chroma_client", lambda _path: MagicMock())
+    monkeypatch.setattr(KBStorageHelper, "release_chroma_resources", lambda _path: None)
+
+    with install_policy_authz(get_settings_service()):
+        upload = await client.post(
+            "api/v2/files",
+            headers=headers,
+            files={"file": ("roleless.txt", b"not allowed", "text/plain")},
+        )
+        test_connection = await client.post(
+            "api/v1/knowledge_bases/test-connection",
+            headers=headers,
+            json={"backend_type": "chroma", "backend_config": {}},
+        )
+        create = await client.post(
+            "api/v1/knowledge_bases",
+            headers=headers,
+            json=_knowledge_base_payload(f"Roleless_{uuid4().hex}"),
+        )
+        preview = await client.post(
+            "api/v1/knowledge_bases/preview-chunks",
+            headers=headers,
+            files={"files": ("roleless.txt", b"not allowed", "text/plain")},
+        )
+
+        assert {
+            "file upload": upload.status_code,
+            "knowledge-base test connection": test_connection.status_code,
+            "knowledge-base create": create.status_code,
+            "knowledge-base preview chunks": preview.status_code,
+        } == {
+            "file upload": 403,
+            "knowledge-base test connection": 403,
+            "knowledge-base create": 403,
+            "knowledge-base preview chunks": 403,
+        }
+
+
+async def test_developer_can_create_files_and_knowledge_bases(client, monkeypatch, tmp_path):
+    role_ids = await _seed_roles()
+    _developer_id, headers = await _role_user(client, "developer", role_ids)
+
+    monkeypatch.setattr(KBStorageHelper, "get_root_path", lambda: tmp_path)
+    chroma_client = MagicMock()
+    monkeypatch.setattr(KBStorageHelper, "get_fresh_chroma_client", lambda _path: chroma_client)
+    monkeypatch.setattr(KBStorageHelper, "release_chroma_resources", lambda _path: None)
+
+    with install_policy_authz(get_settings_service()):
+        upload = await client.post(
+            "api/v2/files",
+            headers=headers,
+            files={"file": ("developer.txt", b"allowed", "text/plain")},
+        )
+        assert upload.status_code == 201, upload.text
+
+        test_connection = await client.post(
+            "api/v1/knowledge_bases/test-connection",
+            headers=headers,
+            json={"backend_type": "chroma", "backend_config": {}},
+        )
+        assert test_connection.status_code == 200, test_connection.text
+
+        create = await client.post(
+            "api/v1/knowledge_bases",
+            headers=headers,
+            json=_knowledge_base_payload(f"Developer_{uuid4().hex}"),
+        )
+        assert create.status_code == 201, create.text
+
+        preview = await client.post(
+            "api/v1/knowledge_bases/preview-chunks",
+            headers=headers,
+            files={"files": ("developer.txt", b"allowed", "text/plain")},
+        )
+        assert preview.status_code == 200, preview.text

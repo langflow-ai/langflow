@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { OutputFieldType } from "@/types/api";
 import GenericNode from "../index";
 
 const mockUpdateNodeInternals = jest.fn();
@@ -15,8 +16,29 @@ const mockRemoveDismissedNodes = jest.fn();
 const mockRegisterNodeUpdate = jest.fn();
 const mockCompleteNodeUpdate = jest.fn();
 
-let mockTemplates: Record<string, any>;
-let mockFlowStoreState: any;
+type MockFlowStoreState = {
+  deleteNode: typeof mockDeleteNode;
+  setNode: typeof mockSetNode;
+  edges: unknown[];
+  setEdges: typeof mockSetEdges;
+  dismissedNodes: string[];
+  addDismissedNodes: jest.Mock;
+  removeDismissedNodes: typeof mockRemoveDismissedNodes;
+  dismissedNodesLegacy: string[];
+  addDismissedNodesLegacy: jest.Mock;
+  componentsToUpdate: Array<{
+    id: string;
+    outdated: boolean;
+    blocked: boolean;
+    breakingChange: boolean;
+    userEdited: boolean;
+  }>;
+  nodes: Array<{ id: string; selected: boolean }>;
+  rightClickedNodeId: null;
+};
+
+let mockTemplates: Record<string, { template: { code: { value: string } } }>;
+let mockFlowStoreState: MockFlowStoreState;
 
 jest.mock("@xyflow/react", () => ({
   useUpdateNodeInternals: () => mockUpdateNodeInternals,
@@ -58,7 +80,7 @@ jest.mock(
   "@/controllers/API/queries/nodes/use-post-validate-component-code",
   () => ({
     usePostValidateComponentCode: () => ({
-      mutate: mockValidateComponentCode,
+      mutateAsync: mockValidateComponentCode,
     }),
   }),
 );
@@ -150,7 +172,7 @@ jest.mock("../../hooks/use-update-node-code", () => ({
 }));
 
 jest.mock("../../helpers/process-node-advanced-fields", () => ({
-  processNodeAdvancedFields: (...args: any[]) =>
+  processNodeAdvancedFields: (...args: unknown[]) =>
     mockProcessNodeAdvancedFields(...args),
 }));
 
@@ -259,21 +281,17 @@ describe("GenericNode dismissed update recovery", () => {
       outputs: [],
     });
 
-    mockValidateComponentCode.mockImplementation(
-      (_payload, { onSuccess }: { onSuccess: (value: any) => void }) => {
-        onSuccess({
-          data: {
-            display_name: "Prompt",
-            description: "Prompt node",
-            template: {
-              code: { value: "server_code" },
-            },
-            outputs: [],
-          },
-          type: "Prompt",
-        });
+    mockValidateComponentCode.mockResolvedValue({
+      data: {
+        display_name: "Prompt",
+        description: "Prompt node",
+        template: {
+          code: { value: "server_code" },
+        },
+        outputs: [],
       },
-    );
+      type: "Prompt",
+    });
   });
 
   it("restores a dismissed outdated node through the single-node update flow", async () => {
@@ -288,8 +306,16 @@ describe("GenericNode dismissed update recovery", () => {
           node: {
             display_name: "Prompt",
             description: "Prompt node",
+            documentation: "",
             template: {
-              code: { value: "old_code" },
+              code: {
+                type: "code",
+                required: true,
+                list: false,
+                show: true,
+                readonly: false,
+                value: "old_code",
+              },
             },
             outputs: [],
           },
@@ -312,6 +338,54 @@ describe("GenericNode dismissed update recovery", () => {
       );
       expect(mockRemoveDismissedNodes).toHaveBeenCalledWith(["node-1"]);
       expect(mockCompleteNodeUpdate).toHaveBeenCalledWith("node-1");
+    });
+  });
+
+  it("selects the first visible output when no output is selected", async () => {
+    const outputs: OutputFieldType[] = [
+      {
+        name: "response",
+        display_name: "Response",
+        types: ["Message"],
+      },
+      {
+        name: "agent",
+        display_name: "Agent",
+        types: ["Agent"],
+      },
+    ];
+    const nodeData = {
+      id: "node-1",
+      type: "Prompt",
+      selected_output: undefined as string | undefined,
+      node: {
+        display_name: "Prompt",
+        description: "Prompt node",
+        documentation: "",
+        template: {},
+        outputs,
+      },
+    };
+    const existingNode = { data: nodeData };
+    let updatedNode = existingNode;
+
+    mockSetEdges.mockImplementation(
+      (updater: (edges: unknown[]) => unknown[]) => updater([]),
+    );
+    mockSetNode.mockImplementation(
+      (
+        _nodeId: string,
+        updater: (node: typeof existingNode) => typeof existingNode,
+      ) => {
+        updatedNode = updater(existingNode);
+      },
+    );
+
+    render(<GenericNode selected={false} data={nodeData} />);
+
+    await waitFor(() => {
+      expect(updatedNode.data.selected_output).toBe("response");
+      expect(updatedNode.data.node.outputs[0].selected).toBe("Message");
     });
   });
 });

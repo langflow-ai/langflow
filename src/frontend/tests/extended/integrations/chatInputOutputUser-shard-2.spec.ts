@@ -1,23 +1,19 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import {
-  closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
-  openAdvancedOptions,
+  closeParametersPanel,
+  openParametersPanel,
+  toggleParameterOnNode,
 } from "../../utils/open-advanced-options";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test(
   "user must interact with chat with Input/Output",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
-    skipIfMissing.openAiKey();
-    loadDotenvIfLocal(__dirname);
+    await seedLoopbackProvider(page);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
@@ -25,7 +21,7 @@ test(
       .getByRole("heading", { name: TEXTS.templateBasicPrompting })
       .click();
 
-    await initialGPTsetup(page);
+    await configureLoopbackOpenAI(page);
 
     // Open Playground
     await page
@@ -65,16 +61,15 @@ test(
     // close the playground (fullscreen covers the toolbar, use the close button)
     await page.getByTestId("playground-close-button").click();
 
-    await disableInspectPanel(page);
-    await page.getByText(TEXTS.componentChatInput, { exact: true }).click();
-    await openAdvancedOptions(page);
-    await page.getByTestId("showsender_name").click();
-    await closeAdvancedOptions(page);
+    await page.getByRole("application", { name: "Chat Input node" }).click();
+    await openParametersPanel(page);
+    await toggleParameterOnNode(page, "sender_name");
+    await closeParametersPanel(page);
 
-    await page.getByText("Chat Output", { exact: true }).click();
-    await openAdvancedOptions(page);
-    await page.getByTestId("showsender_name").click();
-    await closeAdvancedOptions(page);
+    await page.getByRole("application", { name: "Chat Output node" }).click();
+    await openParametersPanel(page);
+    await toggleParameterOnNode(page, "sender_name");
+    await closeParametersPanel(page);
 
     await page
       .getByTestId("popover-anchor-input-sender_name")
@@ -116,6 +111,5 @@ test(
     ).not.toBeEmpty();
 
     await page.getByTestId("playground-close-button").click();
-    await enableInspectPanel(page);
   },
 );

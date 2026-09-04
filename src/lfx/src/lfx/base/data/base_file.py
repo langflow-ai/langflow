@@ -18,8 +18,15 @@ from lfx.io import BoolInput, FileInput, HandleInput, Output, StrInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
-from lfx.services.deps import get_settings_service
+from lfx.services.deps import get_settings_service, get_storage_service
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.file_path_security import (
+    StorageNamespaceError,
+    component_authenticated_user_scope,
+    component_file_access_scopes,
+    enforce_local_file_access,
+    validate_storage_key,
+)
 from lfx.utils.helpers import build_content_type_from_extension
 
 if TYPE_CHECKING:
@@ -45,11 +52,13 @@ class BaseFileComponent(Component, ABC):
             path: Path,
             *,
             delete_after_processing: bool = False,
+            cleanup_local_file: bool = False,
             silent_errors: bool = False,
         ):
             self._data = data if isinstance(data, list) else [data]
             self.path = path
             self.delete_after_processing = delete_after_processing
+            self.cleanup_local_file = cleanup_local_file
             self._silent_errors = silent_errors
 
         @property
@@ -313,11 +322,52 @@ class BaseFileComponent(Component, ABC):
                     temp_dir.cleanup()
                 # Delete files marked for deletion
                 for file in final_files:
-                    if file.delete_after_processing and file.path.exists():
-                        if file.path.is_dir():
-                            shutil.rmtree(file.path)
-                        else:
-                            file.path.unlink()
+                    self._delete_after_processing(file)
+
+    def _delete_after_processing(self, file: BaseFile) -> None:
+        """Delete a processed server file through its configured storage backend."""
+        if not file.delete_after_processing:
+            return
+
+        if file.cleanup_local_file:
+            self._delete_local_path(file.path)
+            return
+
+        settings = get_settings_service().settings
+        if settings.storage_type == "s3":
+            parsed_path = parse_storage_path(str(file.path))
+            if not parsed_path:
+                # Absolute local paths can still be read in unrestricted S3 deployments
+                # for compatibility, but they must never be treated as object keys or
+                # deleted from the host filesystem.
+                return
+
+            namespace_id, file_name = parsed_path
+            if namespace_id != component_authenticated_user_scope(self):
+                # User-file and legacy flow-file objects share an untyped top-level
+                # namespace. Flow IDs are caller-selectable, so accepting a matching
+                # graph flow ID here could collide with another user's UUID. Only the
+                # authenticated user's namespace has unambiguous ownership.
+                self.log("Skipping S3 file cleanup outside the authenticated user's storage namespace.")
+                return
+
+            storage_service = get_storage_service()
+            if storage_service is None:
+                msg = "Storage service is unavailable; could not delete processed S3 file."
+                raise RuntimeError(msg)
+            run_until_complete(storage_service.delete_file(namespace_id, file_name))
+            return
+
+        self._delete_local_path(file.path)
+
+    @staticmethod
+    def _delete_local_path(path: Path) -> None:
+        """Delete an explicitly local cleanup target."""
+        if path.exists():
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
 
     def load_files_core(self) -> list[Data]:
         """Load files and return as Data objects, with per-instance caching.
@@ -656,6 +706,7 @@ class BaseFileComponent(Component, ABC):
                     data=merged_data_list,
                     path=base_file.path,
                     delete_after_processing=base_file.delete_after_processing,
+                    cleanup_local_file=base_file.cleanup_local_file,
                 )
             )
 
@@ -713,8 +764,23 @@ class BaseFileComponent(Component, ABC):
             # that don't exist on the local filesystem. We defer validation until file processing.
             # For local storage, validate the file exists immediately to fail fast.
             if settings.storage_type == "s3":
+                resolved_path = Path(path_str)
+                if resolved_path.is_absolute():
+                    # S3 deployments intentionally support genuine absolute local files
+                    # for trusted internal callers. Preserve that read behavior while
+                    # applying restricted-mode confinement and never deleting the local
+                    # path through the Server File cleanup flag.
+                    resolved_path = enforce_local_file_access(
+                        resolved_path, scope_ids=component_file_access_scopes(self)
+                    )
+                    delete_after_processing = False
+                elif parse_storage_path(path_str):
+                    # Relative values are object keys ("<namespace>/<file_name>") handed to
+                    # ``storage_service.get_file`` at read time. The namespace selects another
+                    # principal's prefix, so it must belong to this graph.
+                    validate_storage_key(self, path_str)
                 resolved_files.append(
-                    BaseFileComponent.BaseFile(data, Path(path_str), delete_after_processing=delete_after_processing)
+                    BaseFileComponent.BaseFile(data, resolved_path, delete_after_processing=delete_after_processing)
                 )
             else:
                 # Check if path looks like a storage path (flow_id/filename format)
@@ -723,12 +789,20 @@ class BaseFileComponent(Component, ABC):
                     try:
                         resolved_path = Path(self.get_full_path(path_str))
                         self.log(f"Resolved storage path '{path_str}' to '{resolved_path}'")
+                    except StorageNamespaceError:
+                        # An out-of-scope namespace is an access denial, not a resolution
+                        # failure: never fall back to reading the raw string as a local path.
+                        raise
                     except (ValueError, AttributeError) as e:
                         # Fallback to resolve_path if get_full_path fails
                         self.log(f"get_full_path failed for '{path_str}': {e}, falling back to resolve_path")
                         resolved_path = Path(self.resolve_path(path_str))
                 else:
                     resolved_path = Path(self.resolve_path(path_str))
+
+                # Security: in restricted (multi-tenant) mode, confine reads to the storage dir
+                # so a tenant cannot read arbitrary server files via an absolute/traversal path.
+                resolved_path = enforce_local_file_access(resolved_path, scope_ids=component_file_access_scopes(self))
 
                 if not resolved_path.exists():
                     if delete_after_processing:
@@ -807,6 +881,7 @@ class BaseFileComponent(Component, ABC):
                             data,
                             sub_path,
                             delete_after_processing=delete_after_processing,
+                            cleanup_local_file=file.cleanup_local_file,
                         )
                         for sub_path in path.rglob("*")
                         if sub_path.is_file() and not sub_path.is_symlink()
@@ -830,6 +905,7 @@ class BaseFileComponent(Component, ABC):
                             data,
                             sub_path,
                             delete_after_processing=delete_after_processing,
+                            cleanup_local_file=file.cleanup_local_file,
                         )
                         for sub_path in subpaths
                     ]

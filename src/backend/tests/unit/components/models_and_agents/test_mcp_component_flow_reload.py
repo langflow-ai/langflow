@@ -30,7 +30,10 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self):
         return {
-            "mcp_server": {"name": "test_server", "config": {"command": "uvx test-mcp-server"}},
+            "mcp_server": {
+                "name": "test_server",
+                "config": {"command": "uvx", "args": ["test-mcp-server"]},
+            },
             "tool": "saved_tool",
             "use_cache": False,
         }

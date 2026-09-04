@@ -2,25 +2,47 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 
 import { Model } from "@/modals/modelProviderModal/components/types";
+import type { ModelType, ModelTypeFilter } from "@/types/models";
 import { cn } from "@/utils/utils";
 
-export interface ModelProviderSelectionProps {
+/** Providers where the callable model id is a user-chosen deployment name. */
+const CUSTOM_DEPLOYMENT_PROVIDERS = new Set(["Azure AI Foundry"]);
+
+/** Providers that render their own useful UI when no catalog models exist. */
+export const hasProviderOwnedEmptyState = (providerName?: string): boolean =>
+  !!providerName &&
+  (CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) ||
+    providerName.toLowerCase() === "ollama");
+
+export interface ModelProviderSelectionProps extends ProviderScopeParams {
   availableModels: Model[];
-  onModelToggle: (modelName: string, enabled: boolean) => void;
-  modelType: "llm" | "embeddings" | "all";
+  onModelToggle: (
+    modelName: string,
+    enabled: boolean,
+    modelType: ModelType,
+  ) => void;
+  modelType: ModelTypeFilter;
   providerName?: string;
   isEnabledModel?: boolean;
+  /** True when the provider's model list is discovered from its endpoint
+   *  after credentials are configured (backend ``live_discovery`` flag). */
+  liveDiscovery?: boolean;
+  /** True when the provider's credentials are already configured. */
+  isConfigured?: boolean;
 }
 
 interface ModelRowProps {
   model: Model;
+  modelType: ModelType;
   enabled: boolean;
-  onToggle: (modelName: string, enabled: boolean) => void;
+  onToggle: (modelName: string, enabled: boolean, modelType: ModelType) => void;
   testIdPrefix: string;
   isEnabledModel?: boolean;
   /** When true (modelType === "all" view), show the "embedding" tag on
@@ -101,6 +123,7 @@ const buildCapabilityTags = (
 const ModelRow = ({
   onToggle,
   model,
+  modelType,
   enabled,
   testIdPrefix,
   isEnabledModel,
@@ -146,7 +169,13 @@ const ModelRow = ({
       {isEnabledModel && (
         <Switch
           checked={enabled}
-          onCheckedChange={(checked) => onToggle(model.model_name, checked)}
+          disabled={
+            model.metadata?.deprecated === true ||
+            model.metadata?.not_supported === true
+          }
+          onCheckedChange={(checked) =>
+            onToggle(model.model_name, checked, modelType)
+          }
           data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
           aria-label={
             enabled
@@ -170,11 +199,29 @@ const ModelSelection = ({
   onModelToggle,
   providerName,
   isEnabledModel,
+  liveDiscovery,
+  isConfigured,
+  flowId,
+  projectId,
 }: ModelProviderSelectionProps) => {
   const { t } = useTranslation();
-  const { data: enabledModelsData } = useGetEnabledModels();
+  const {
+    data: enabledModelsData,
+    isSuccess: isEnabledModelsSuccess,
+    isFetching: isEnabledModelsFetching,
+    isFetchedAfterMount: isEnabledModelsFetchedAfterMount,
+    fetchStatus: enabledModelsFetchStatus,
+    isError: isEnabledModelsError,
+    refetch: refetchEnabledModels,
+  } = useGetEnabledModels({ flowId, projectId, purpose: "configure" });
   const [modelQuery, setModelQuery] = useState<string>("");
   const [showDeprecated, setShowDeprecated] = useState<boolean>(false);
+  const canUseEnabledModels =
+    !!enabledModelsData &&
+    isEnabledModelsSuccess &&
+    !isEnabledModelsFetching &&
+    isEnabledModelsFetchedAfterMount &&
+    enabledModelsFetchStatus === "idle";
 
   // Reset both the search and the deprecated disclosure when the selected
   // provider changes so neither state leaks across providers
@@ -184,34 +231,141 @@ const ModelSelection = ({
     setShowDeprecated(false);
   }, [providerName]);
 
-  const isModelEnabled = (modelName: string): boolean => {
-    if (!providerName || !enabledModelsData?.enabled_models) return false;
+  const isModelEnabled = (
+    modelName: string,
+    selectedModelType: ModelType,
+  ): boolean => {
+    if (
+      !canUseEnabledModels ||
+      !providerName ||
+      !enabledModelsData.enabled_models
+    ) {
+      return false;
+    }
+
+    const typedProvider =
+      enabledModelsData.enabled_models_by_type?.[providerName];
+    if (typedProvider !== undefined) {
+      return typedProvider[selectedModelType]?.[modelName] ?? false;
+    }
+
     return enabledModelsData.enabled_models[providerName]?.[modelName] ?? false;
   };
 
-  const trimmedModelQuery = modelQuery.trim().toLowerCase();
+  const supportsCustomDeployments =
+    !!providerName && CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName);
+
+  const visibleDeploymentTypes = useMemo<ModelType[]>(
+    () => (modelType === "all" ? ["llm", "embeddings"] : [modelType]),
+    [modelType],
+  );
+
+  // Merge enabled free-text deployments; typed API wins, legacy customs default to llm.
+  const modelsWithCustomDeployments = useMemo(() => {
+    if (!canUseEnabledModels) {
+      return [];
+    }
+    if (!supportsCustomDeployments || !providerName) {
+      return availableModels;
+    }
+
+    const flatEnabledForProvider =
+      enabledModelsData?.enabled_models?.[providerName] ?? {};
+    const typedEnabledForProvider =
+      enabledModelsData?.enabled_models_by_type?.[providerName];
+    const knownNames = new Set(
+      availableModels.map((model) => model.model_name),
+    );
+    const knownTypedNames = new Set(
+      availableModels.map(
+        (model) =>
+          `${model.metadata?.model_type ?? "llm"}\0${model.model_name}`,
+      ),
+    );
+    const customModels: Model[] = [];
+
+    if (typedEnabledForProvider !== undefined) {
+      for (const deploymentType of visibleDeploymentTypes) {
+        for (const [name, enabled] of Object.entries(
+          typedEnabledForProvider[deploymentType] ?? {},
+        )) {
+          if (!enabled || knownTypedNames.has(`${deploymentType}\0${name}`)) {
+            continue;
+          }
+          customModels.push({
+            model_name: name,
+            metadata: {
+              model_type: deploymentType,
+              icon: "Azure",
+            },
+          });
+        }
+      }
+    } else if (visibleDeploymentTypes.includes("llm")) {
+      for (const [name, enabled] of Object.entries(flatEnabledForProvider)) {
+        if (!enabled || knownNames.has(name)) continue;
+        customModels.push({
+          model_name: name,
+          metadata: {
+            model_type: "llm",
+            icon: "Azure",
+          },
+        });
+      }
+    }
+    return customModels.length > 0
+      ? [...availableModels, ...customModels]
+      : availableModels;
+  }, [
+    availableModels,
+    canUseEnabledModels,
+    enabledModelsData?.enabled_models,
+    enabledModelsData?.enabled_models_by_type,
+    providerName,
+    supportsCustomDeployments,
+    visibleDeploymentTypes,
+  ]);
+
+  const trimmedModelQuery = modelQuery.trim();
+  const trimmedModelQueryLower = trimmedModelQuery.toLowerCase();
 
   const matchesModelQuery = (model: Model): boolean =>
-    trimmedModelQuery.length === 0 ||
-    model.model_name.toLowerCase().includes(trimmedModelQuery);
+    trimmedModelQueryLower.length === 0 ||
+    model.model_name.toLowerCase().includes(trimmedModelQueryLower);
 
   const llmModels = useMemo(
     () =>
-      availableModels.filter(
+      modelsWithCustomDeployments.filter(
         (model) =>
           model.metadata?.model_type === "llm" && matchesModelQuery(model),
       ),
-    [availableModels, trimmedModelQuery],
+    [modelsWithCustomDeployments, trimmedModelQueryLower],
   );
   const embeddingModels = useMemo(
     () =>
-      availableModels.filter(
+      modelsWithCustomDeployments.filter(
         (model) =>
           model.metadata?.model_type === "embeddings" &&
           matchesModelQuery(model),
       ),
-    [availableModels, trimmedModelQuery],
+    [modelsWithCustomDeployments, trimmedModelQueryLower],
   );
+
+  const addableDeploymentTypes =
+    canUseEnabledModels &&
+    supportsCustomDeployments &&
+    isEnabledModel &&
+    trimmedModelQuery.length > 0
+      ? visibleDeploymentTypes.filter(
+          (deploymentType) =>
+            !modelsWithCustomDeployments.some(
+              (model) =>
+                model.metadata?.model_type === deploymentType &&
+                model.model_name.toLowerCase() === trimmedModelQueryLower,
+            ),
+        )
+      : [];
+  const canAddCustomDeployment = addableDeploymentTypes.length > 0;
 
   const partitionDeprecated = (models: Model[]): [Model[], Model[]] => {
     const active: Model[] = [];
@@ -226,13 +380,14 @@ const ModelSelection = ({
     return [active, deprecated];
   };
 
-  const renderModelRow = (model: Model, testIdPrefix: string) => (
+  const renderModelRow = (model: Model, selectedModelType: ModelType) => (
     <ModelRow
       key={model.model_name}
       model={model}
-      enabled={isModelEnabled(model.model_name)}
+      modelType={selectedModelType}
+      enabled={isModelEnabled(model.model_name, selectedModelType)}
       onToggle={onModelToggle}
-      testIdPrefix={testIdPrefix}
+      testIdPrefix={selectedModelType}
       isEnabledModel={isEnabledModel}
       showEmbeddingTag={modelType === "all"}
     />
@@ -241,22 +396,24 @@ const ModelSelection = ({
   const renderModelSection = (
     title: string,
     models: Model[],
-    testIdPrefix: string,
+    selectedModelType: ModelType,
   ) => {
     if (models.length === 0) return null;
     const [activeModels, deprecatedModels] = partitionDeprecated(models);
     return (
-      <div data-testid={`${testIdPrefix}-models-section`}>
+      <div data-testid={`${selectedModelType}-models-section`}>
         <div className="text-[13px] font-semibold text-muted-foreground">
           {title}
         </div>
         <div className="flex flex-col gap-2 pt-4">
-          {activeModels.map((model) => renderModelRow(model, testIdPrefix))}
+          {activeModels.map((model) =>
+            renderModelRow(model, selectedModelType),
+          )}
         </div>
         {deprecatedModels.length > 0 && (
           <details
             className="pt-3"
-            data-testid={`${testIdPrefix}-deprecated-disclosure`}
+            data-testid={`${selectedModelType}-deprecated-disclosure`}
             open={showDeprecated}
             onToggle={(event) =>
               setShowDeprecated(
@@ -266,7 +423,7 @@ const ModelSelection = ({
           >
             <summary
               className="text-xs font-medium text-muted-foreground hover:text-foreground cursor-pointer select-none"
-              data-testid={`${testIdPrefix}-deprecated-summary`}
+              data-testid={`${selectedModelType}-deprecated-summary`}
             >
               {deprecatedModels.length === 1
                 ? t("modelProviders.showDeprecatedSingular", {
@@ -279,7 +436,7 @@ const ModelSelection = ({
             </summary>
             <div className="flex flex-col gap-2 pt-3">
               {deprecatedModels.map((model) =>
-                renderModelRow(model, testIdPrefix),
+                renderModelRow(model, selectedModelType),
               )}
             </div>
           </details>
@@ -288,44 +445,137 @@ const ModelSelection = ({
     );
   };
 
-  const isOllama = providerName?.toLowerCase() === "ollama";
-  // Use the unfiltered availableModels for the empty-state check so an
+  const providerOwnsEmptyState = hasProviderOwnedEmptyState(providerName);
+  const isOllama =
+    providerOwnsEmptyState && providerName?.toLowerCase() === "ollama";
+  // Live-discovery providers have nothing to list until credentials are
+  // configured; show a configure-credentials hint instead of the generic
+  // "no models" state. Ollama keeps its own specialized empty state.
+  const awaitsCredentialDiscovery =
+    !!liveDiscovery && !isConfigured && !isOllama;
+  // Use the unfiltered list for the empty-state check so an
   // ollama-no-models warning still fires when the search field happens to be
   // populated.
-  const llmAvailableCount = availableModels.filter(
+  const llmAvailableCount = modelsWithCustomDeployments.filter(
     (m) => m.metadata?.model_type === "llm",
   ).length;
-  const embeddingAvailableCount = availableModels.filter(
+  const embeddingAvailableCount = modelsWithCustomDeployments.filter(
     (m) => m.metadata?.model_type === "embeddings",
   ).length;
   const noModelsAvailable =
     (modelType === "llm" && llmAvailableCount === 0) ||
     (modelType === "embeddings" && embeddingAvailableCount === 0) ||
-    (modelType === "all" && availableModels.length === 0);
+    (modelType === "all" && modelsWithCustomDeployments.length === 0);
 
   const noModelsMatchQuery =
     !noModelsAvailable &&
-    trimmedModelQuery.length > 0 &&
+    trimmedModelQueryLower.length > 0 &&
     llmModels.length === 0 &&
     embeddingModels.length === 0;
 
+  const showSearchInput =
+    supportsCustomDeployments ||
+    (!noModelsAvailable && modelsWithCustomDeployments.length > 0);
+
+  const searchInputLabel = supportsCustomDeployments
+    ? t("modelProviders.searchOrAddDeployment", {
+        defaultValue: "Search or add a deployment name…",
+      })
+    : t("modelProviders.searchModels", {
+        defaultValue: "Search models…",
+      });
+
+  if (!canUseEnabledModels) {
+    return (
+      <div
+        data-testid="model-provider-selection"
+        className="flex flex-col gap-3"
+      >
+        {isEnabledModelsError ? (
+          <div role="alert" className="flex flex-col items-start gap-3">
+            <span>{t("modelProviders.errorUnexpected")}</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void refetchEnabledModels()}
+            >
+              {t("common.retry")}
+            </Button>
+          </div>
+        ) : (
+          <div role="status" aria-live="polite">
+            {t("modelInput.loadingModels")}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div data-testid="model-provider-selection" className="flex flex-col gap-6">
-      {!noModelsAvailable && availableModels.length > 0 && (
+      {supportsCustomDeployments ? (
+        <p
+          className="text-xs text-muted-foreground leading-relaxed"
+          data-testid="custom-deployment-hint"
+        >
+          {t("modelProviders.customDeploymentHint", {
+            defaultValue:
+              "Use your Azure AI Foundry deployment names from the portal (not catalog model IDs). Search or type a name to add one.",
+          })}
+        </p>
+      ) : null}
+      {showSearchInput && (
         <Input
           icon="Search"
           value={modelQuery}
           onChange={(event) => setModelQuery(event.target.value)}
-          placeholder={t("modelProviders.searchModels", {
-            defaultValue: "Search models…",
-          })}
-          aria-label={t("modelProviders.searchModels", {
-            defaultValue: "Search models…",
-          })}
+          placeholder={searchInputLabel}
+          aria-label={searchInputLabel}
           data-testid="model-search-input"
         />
       )}
-      {noModelsMatchQuery ? (
+      {canAddCustomDeployment ? (
+        <div className="flex flex-col gap-2">
+          {addableDeploymentTypes.map((deploymentType) => (
+            <Button
+              key={deploymentType}
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full justify-start"
+              data-testid={
+                modelType === "all"
+                  ? `add-custom-${deploymentType}-deployment-button`
+                  : "add-custom-deployment-button"
+              }
+              onClick={() => {
+                onModelToggle(trimmedModelQuery, true, deploymentType);
+                setModelQuery("");
+              }}
+            >
+              <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
+              {modelType === "all"
+                ? deploymentType === "llm"
+                  ? t("modelProviders.addLanguageDeployment", {
+                      name: trimmedModelQuery,
+                      defaultValue:
+                        'Add deployment "{{name}}" as language model',
+                    })
+                  : t("modelProviders.addEmbeddingDeployment", {
+                      name: trimmedModelQuery,
+                      defaultValue:
+                        'Add deployment "{{name}}" as embedding model',
+                    })
+                : t("modelProviders.addDeployment", {
+                    name: trimmedModelQuery,
+                    defaultValue: 'Add deployment "{{name}}"',
+                  })}
+            </Button>
+          ))}
+        </div>
+      ) : null}
+      {noModelsMatchQuery && !canAddCustomDeployment ? (
         <div
           className="text-muted-foreground px-1 py-2 text-sm"
           data-testid="model-search-empty"
@@ -359,6 +609,28 @@ const ModelSelection = ({
           >
             {t("modelProviders.checkOllamaLibrary")}
           </a>
+        </div>
+      ) : awaitsCredentialDiscovery && noModelsAvailable ? (
+        <div
+          className="flex flex-col items-center justify-center p-8 text-center border border-dashed rounded-lg bg-muted/30"
+          data-testid="live-discovery-empty-state"
+        >
+          <ForwardedIconComponent
+            name="Info"
+            className="w-10 h-10 mb-4 text-muted-foreground"
+          />
+          <h3 className="mb-2 text-sm font-semibold text-foreground">
+            {t("modelProviders.liveDiscoveryTitle", {
+              defaultValue: "No models yet",
+            })}
+          </h3>
+          <p className="max-w-[300px] text-xs text-muted-foreground leading-relaxed">
+            {t("modelProviders.liveDiscoveryHint", {
+              provider: providerName,
+              defaultValue:
+                "{{provider}} models are discovered from your account once credentials are configured. Save your credentials above to load the available models.",
+            })}
+          </p>
         </div>
       ) : (
         <>

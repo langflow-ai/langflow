@@ -38,7 +38,17 @@ export default function TextModal({
       setOpen={setOpen}
       onEscapeKeyDown={handleEscapeKeyDown}
     >
-      <BaseModal.Trigger className="h-full">{children}</BaseModal.Trigger>
+      <BaseModal.Trigger asChild>
+        <button
+          type="button"
+          tabIndex={-1}
+          data-langflow-text-cell-trigger
+          aria-haspopup="dialog"
+          className="flex h-6 min-h-6 w-full items-center truncate text-left leading-6"
+        >
+          {children}
+        </button>
+      </BaseModal.Trigger>
       <BaseModal.Header description={""}>
         <span className="pr-2">{t("modal.viewText")}</span>
         <IconComponent
@@ -70,7 +80,7 @@ export default function TextModal({
                 setOpen(false);
               }}
             >
-              Save
+              {t("modal.saveButton")}
             </Button>
           )}
         </div>

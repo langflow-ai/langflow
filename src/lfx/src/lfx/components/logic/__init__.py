@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from lfx.components.logic.conditional_router import ConditionalRouterComponent
     from lfx.components.logic.data_conditional_router import DataConditionalRouterComponent
     from lfx.components.logic.flow_tool import FlowToolComponent
+    from lfx.components.logic.human_input import HumanInput
     from lfx.components.logic.llm_conditional_router import SmartRouterComponent
     from lfx.components.logic.loop import LoopComponent
     from lfx.components.logic.pass_message import PassMessageComponent
@@ -25,6 +26,7 @@ _dynamic_imports = {
     "ConditionalRouterComponent": "conditional_router",
     "DataConditionalRouterComponent": "data_conditional_router",
     "FlowToolComponent": "flow_tool",
+    "HumanInput": "human_input",
     "LoopComponent": "loop",
     "PassMessageComponent": "pass_message",
     "RunFlowComponent": "run_flow",
@@ -36,6 +38,7 @@ __all__ = [
     "ConditionalRouterComponent",
     "DataConditionalRouterComponent",
     "FlowToolComponent",
+    "HumanInput",
     "LoopComponent",
     "PassMessageComponent",
     "RunFlowComponent",
@@ -53,6 +56,7 @@ _redirected_submodules = {
     "lfx.components.logic.conditional_router": "lfx.components.flow_controls.conditional_router",
     "lfx.components.logic.data_conditional_router": "lfx.components.flow_controls.data_conditional_router",
     "lfx.components.logic.flow_tool": "lfx.components.flow_controls.flow_tool",
+    "lfx.components.logic.human_input": "lfx.components.flow_controls.human_input",
     "lfx.components.logic.run_flow": "lfx.components.flow_controls.run_flow",
     "lfx.components.logic.sub_flow": "lfx.components.flow_controls.sub_flow",
 }
@@ -144,17 +148,24 @@ def __getattr__(attr_name: str) -> Any:
         raise AttributeError(msg)
 
     # Most logic components were moved to flow_controls
-    # Forward them to flow_controls for backwards compatibility
+    # Forward them to flow_controls for backwards compatibility.
+    # Import the submodule directly rather than `from lfx.components import flow_controls`: neither
+    # flow_controls nor llm_operations is registered in lfx.components._dynamic_imports, so the
+    # `from ... import` form falls into lfx.components.__getattr__ and brute-force imports every
+    # bundle module before giving up.
     if attr_name in (
         "ConditionalRouterComponent",
         "DataConditionalRouterComponent",
         "FlowToolComponent",
+        "HumanInput",
         "LoopComponent",
         "PassMessageComponent",
         "RunFlowComponent",
         "SubFlowComponent",
     ):
-        from lfx.components import flow_controls
+        from importlib import import_module
+
+        flow_controls = import_module("lfx.components.flow_controls")
 
         result = getattr(flow_controls, attr_name)
         globals()[attr_name] = result
@@ -162,7 +173,9 @@ def __getattr__(attr_name: str) -> Any:
 
     # SmartRouterComponent was moved to llm_operations
     if attr_name == "SmartRouterComponent":
-        from lfx.components import llm_operations
+        from importlib import import_module
+
+        llm_operations = import_module("lfx.components.llm_operations")
 
         result = getattr(llm_operations, attr_name)
         globals()[attr_name] = result

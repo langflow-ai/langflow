@@ -1,3 +1,4 @@
+// biome-ignore-all lint/suspicious/noExplicitAny: pre-existing legacy flow-store types predate this rule; the HITL change only added typed fields
 import type {
   Connection,
   Node,
@@ -17,7 +18,9 @@ export type FlowPoolObjectType = {
   valid: boolean;
   messages: Array<ChatOutputType | ChatInputType> | [];
   data: {
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose store payload; not introduced by this PR (file touched only to add setNodesAndEdges)
     artifacts: any | ChatOutputType | ChatInputType;
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose store payload; not introduced by this PR (file touched only to add setNodesAndEdges)
     results: any | ChatOutputType | ChatInputType;
   };
   duration?: string;
@@ -26,14 +29,19 @@ export type FlowPoolObjectType = {
   buildId: string;
 };
 
+// A store write that is not the user's edit - a template refresh on mount, a
+// model-input refresh after load - still belongs on the canvas but must not
+// trigger a save. Autosaving it writes the flow on someone's behalf, which
+// under an edit precondition would also take their turn to write.
+export type FlowMutationOptions = { autoSave?: boolean };
+
 export type FlowPoolObjectTypeNew = {
-  //build
-  //1 - error->logs
-  //2 - success-> result
   timestamp: string;
   valid: boolean;
   data: {
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose store payload; not introduced by this PR (file touched only to add setNodesAndEdges)
     outputs?: any | ChatOutputType | ChatInputType;
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose store payload; not introduced by this PR (file touched only to add setNodesAndEdges)
     results: any | ChatOutputType | ChatInputType;
   };
   duration?: string;
@@ -54,12 +62,19 @@ export type FlowPoolType = {
 
 export type ComponentsToUpdateType = {
   id: string;
+  /** Registry type, needed to ask whether a policy names this component. */
+  type?: string;
   icon?: string;
   display_name: string;
   outdated: boolean;
   blocked: boolean;
   breakingChange: boolean;
   userEdited: boolean;
+};
+
+export type AutoSaveFlowType = ((flow?: FlowType) => void) & {
+  cancel: () => void;
+  flush: () => Promise<void> | void;
 };
 
 export type FlowStoreType = {
@@ -75,7 +90,10 @@ export type FlowStoreType = {
     [key: number]: number;
   }) => void;
   fitViewNode: (nodeId: string) => void;
-  autoSaveFlow: ((flow?: FlowType) => void) | undefined;
+  /** Set by `requestFitView`; the canvas fits once every node is measured. */
+  fitViewRequest: { id: number; onFitted?: () => void };
+  requestFitView: (onFitted?: () => void) => void;
+  autoSaveFlow: AutoSaveFlowType | undefined;
   componentsToUpdate: ComponentsToUpdateType[];
   setComponentsToUpdate: (
     update:
@@ -118,7 +136,9 @@ export type FlowStoreType = {
   buildingFlowId: string | null;
   buildingSessionId: string | null;
   isPending: boolean;
+  awaitingInput: boolean;
   setIsBuilding: (isBuilding: boolean) => void;
+  setAwaitingInput: (awaitingInput: boolean) => void;
   setBuildStartTime: (time: number) => void;
   setBuildDuration: (duration: number) => void;
   setBuildingSession: (flowId: string | null, sessionId: string | null) => void;
@@ -142,30 +162,42 @@ export type FlowStoreType = {
   onEdgesChange: OnEdgesChange<EdgeType>;
   setNodes: (
     update: AllNodeType[] | ((oldState: AllNodeType[]) => AllNodeType[]),
+    options?: FlowMutationOptions,
   ) => void;
   setEdges: (
     update: EdgeType[] | ((oldState: EdgeType[]) => EdgeType[]),
+    options?: FlowMutationOptions,
+  ) => void;
+  setNodesAndEdges: (
+    nodes: AllNodeType[],
+    edges: EdgeType[],
+    options?: FlowMutationOptions,
   ) => void;
   setNode: (
     id: string,
     update: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
     isUserChange?: boolean,
     callback?: () => void,
+    options?: FlowMutationOptions,
   ) => void;
   getNode: (id: string) => AllNodeType | undefined;
   deleteNode: (nodeId: string | Array<string>) => void;
   deleteEdge: (edgeId: string | Array<string>) => void;
   paste: (
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose store payload; not introduced by this PR (file touched only to add setNodesAndEdges)
     selection: { nodes: any; edges: any },
     position: { x: number; y: number; paneX?: number; paneY?: number },
   ) => void;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose store payload; not introduced by this PR (file touched only to add setNodesAndEdges)
   lastCopiedSelection: { nodes: any; edges: any } | null;
   setLastCopiedSelection: (
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose store payload; not introduced by this PR (file touched only to add setNodesAndEdges)
     newSelection: { nodes: any; edges: any } | null,
     isCrop?: boolean,
   ) => void;
   cleanFlow: () => void;
   setFilterEdge: (newState) => void;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose store payload; not introduced by this PR (file touched only to add setNodesAndEdges)
   getFilterEdge: any[];
   setFilterComponent: (newState) => void;
   getFilterComponent: string;

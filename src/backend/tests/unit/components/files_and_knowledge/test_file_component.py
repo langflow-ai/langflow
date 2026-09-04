@@ -1,10 +1,16 @@
+import asyncio
 import json
+import subprocess
 import tempfile
+import threading
 from unittest.mock import MagicMock, patch
 
 import pytest
 from langflow.io import Output
+from lfx.components.files_and_knowledge import file as file_component_module
 from lfx.components.files_and_knowledge.file import FileComponent
+
+from tests.base import ComponentTestBaseWithoutClient
 
 
 class TestFileComponentFrontendMetadata:
@@ -45,16 +51,73 @@ class TestFileComponentDynamicOutputs:
         assert "message" in output_names  # Raw content
         assert "path" in output_names  # File path
 
-    def test_update_outputs_multiple_files(self):
-        """Test multiple files show only Files output."""
+    async def test_update_outputs_multiple_files_preserves_raw_content(self):
+        """Test multiple files keep the Message output alongside Files."""
         component = FileComponent()
         frontend_node = {"outputs": [], "template": {"path": {"file_path": ["file1.txt", "file2.txt"]}}}
 
-        result = component.update_outputs(frontend_node, "path", ["file1.txt", "file2.txt"])
+        result = await component.run_and_validate_update_outputs(frontend_node, "path", ["file1.txt", "file2.txt"])
 
-        assert len(result["outputs"]) == 1
-        assert result["outputs"][0].name == "dataframe"
-        assert result["outputs"][0].display_name == "Files"
+        assert [
+            (output["name"], output["display_name"], output["method"], output["types"]) for output in result["outputs"]
+        ] == [
+            ("dataframe", "Files", "load_files", ["Table"]),
+            ("message", "Raw Content", "load_files_message", ["Message"]),
+        ]
+
+    @pytest.mark.parametrize(
+        ("paths", "advanced_mode", "expected_outputs"),
+        [
+            (
+                ["test.csv"],
+                False,
+                [
+                    ("dataframe", ["Table"], "Table"),
+                    ("message", ["Message"], "Message"),
+                    ("path", ["Message"], "Message"),
+                ],
+            ),
+            (
+                ["data.json"],
+                False,
+                [
+                    ("json", ["JSON"], "JSON"),
+                    ("message", ["Message"], "Message"),
+                    ("path", ["Message"], "Message"),
+                ],
+            ),
+            (
+                ["document.txt"],
+                False,
+                [("message", ["Message"], "Message"), ("path", ["Message"], "Message")],
+            ),
+            (
+                ["document.pdf"],
+                True,
+                [
+                    ("advanced_dataframe", ["Table"], "Table"),
+                    ("advanced_markdown", ["Message"], "Message"),
+                    ("path", ["Message"], "Message"),
+                ],
+            ),
+            (
+                ["file1.txt", "file2.txt"],
+                False,
+                [("dataframe", ["Table"], "Table"), ("message", ["Message"], "Message")],
+            ),
+        ],
+    )
+    def test_update_outputs_are_immediately_connectable(self, paths, advanced_mode, expected_outputs):
+        """Dynamic outputs must include their types before frontend validation runs."""
+        component = FileComponent()
+        frontend_node = {
+            "outputs": [],
+            "template": {"path": {"file_path": paths}, "advanced_mode": {"value": advanced_mode}},
+        }
+
+        result = component.update_outputs(frontend_node, "path", paths)
+
+        assert [(output.name, output.types, output.selected) for output in result["outputs"]] == expected_outputs
 
     def test_update_outputs_empty_path(self):
         """Test empty path results in no outputs."""
@@ -129,9 +192,10 @@ class TestFileComponentDynamicOutputs:
 
     @patch("subprocess.Popen")
     def test_process_docling_subprocess_success(self, mock_popen):
-        """Test successful Docling subprocess execution."""
+        """Test successful Docling execution for a valid path containing shell punctuation."""
         component = FileComponent()
         component.markdown = False
+        file_path = "invoice;final.pdf"
 
         # Mock successful subprocess response
         mock_result = {
@@ -141,25 +205,83 @@ class TestFileComponentDynamicOutputs:
                 {"page_no": 1, "label": "title", "text": "Test Document", "level": 1},
                 {"page_no": 1, "label": "paragraph", "text": "Content here", "level": 0},
             ],
-            "meta": {"file_path": "test.pdf"},
+            "meta": {"file_path": file_path},
         }
         stdout_bytes = json.dumps(mock_result).encode("utf-8")
 
-        # Simulate Popen: poll() returns None once (in-progress), then 0 (done)
         mock_proc = MagicMock()
-        mock_proc.poll.side_effect = [0]  # immediately done
-        mock_proc.stdin = MagicMock()
-        mock_proc.stdout = MagicMock()
-        mock_proc.stdout.read.return_value = stdout_bytes
-        mock_proc.stderr = MagicMock()
-        mock_proc.stderr.read.return_value = b""
+        mock_proc.communicate.return_value = (stdout_bytes, b"")
+        mock_popen.return_value = mock_proc
+
+        result = component._process_docling_in_subprocess(file_path)
+
+        assert result is not None
+        assert result.data["doc"] == mock_result["doc"]
+        assert result.data["file_path"] == file_path
+        mock_proc.communicate.assert_called_once()
+
+    @patch("subprocess.Popen")
+    def test_process_docling_subprocess_drains_output_between_heartbeats(self, mock_popen):
+        component = FileComponent()
+        component.markdown = False
+        mock_result = {"ok": True, "mode": "structured", "doc": [], "meta": {"file_path": "test.pdf"}}
+        mock_proc = MagicMock()
+        mock_proc.communicate.side_effect = [
+            subprocess.TimeoutExpired(cmd="docling", timeout=5),
+            (json.dumps(mock_result).encode("utf-8"), b""),
+        ]
         mock_popen.return_value = mock_proc
 
         result = component._process_docling_in_subprocess("test.pdf")
 
         assert result is not None
-        assert result.data["doc"] == mock_result["doc"]
-        assert result.data["file_path"] == "test.pdf"
+        assert result.data["doc"] == []
+        assert mock_proc.communicate.call_count == 2
+        assert mock_proc.communicate.call_args_list[0].kwargs["input"] is not None
+        assert mock_proc.communicate.call_args_list[1].kwargs["input"] is None
+
+    @patch("lfx.components.files_and_knowledge.file.get_storage_service")
+    @patch("lfx.components.files_and_knowledge.file.get_settings_service")
+    def test_process_files_preserves_local_temp_marker_for_docling_in_s3(self, mock_settings, mock_storage, tmp_path):
+        """Cloud downloads already on disk must not be reinterpreted as S3 keys."""
+        from lfx.base.data.base_file import BaseFileComponent
+        from lfx.schema.data import Data
+
+        mock_settings.return_value.settings.storage_type = "s3"
+        local_temp_file = tmp_path / "report.pdf"
+        local_temp_file.write_bytes(b"pdf")
+        component = FileComponent()
+        component.advanced_mode = True
+        component.markdown = False
+        component.silent_errors = False
+        base_file = BaseFileComponent.BaseFile(
+            data=Data(data={"file_path": str(local_temp_file)}),
+            path=local_temp_file,
+            delete_after_processing=True,
+            cleanup_local_file=True,
+        )
+        docling_result = Data(data={"doc": [{"text": "processed"}], "file_path": str(local_temp_file)})
+
+        with patch.object(component, "_process_docling_subprocess_impl", return_value=docling_result) as mock_process:
+            result = component.process_files([base_file])
+
+        assert result
+        mock_storage.assert_not_called()
+        mock_process.assert_called_once_with(str(local_temp_file), str(local_temp_file))
+
+    @patch("lfx.components.files_and_knowledge.file.get_storage_service")
+    @patch("lfx.components.files_and_knowledge.file.get_settings_service")
+    def test_docling_unmarked_absolute_path_still_requires_s3_key(self, mock_settings, mock_storage, tmp_path):
+        """The local-temp bypass must not weaken validation for ordinary S3 inputs."""
+        mock_settings.return_value.settings.storage_type = "s3"
+        unmarked_file = tmp_path / "report.pdf"
+        unmarked_file.write_bytes(b"pdf")
+        component = FileComponent()
+
+        with pytest.raises(ValueError, match="Invalid S3 path format"):
+            component._process_docling_in_subprocess(str(unmarked_file))
+
+        mock_storage.assert_not_called()
 
     def test_dynamic_outputs_have_tool_mode_enabled(self):
         """Test that all dynamically created outputs have tool_mode=True."""
@@ -293,8 +415,20 @@ class TestFileComponentDynamicOutputs:
         assert result.text == "Content from file_path_str", "file_path_str should take priority over path"
 
 
-class TestFileComponentToolMode:
+class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
     """Tests for the tool mode functionality of FileComponent."""
+
+    @pytest.fixture
+    def component_class(self):
+        return FileComponent
+
+    @pytest.fixture
+    def default_kwargs(self):
+        return {}
+
+    @pytest.fixture
+    def file_names_mapping(self):
+        return []
 
     def test_get_tool_description_without_files(self):
         """Test tool description when no files are uploaded."""
@@ -519,6 +653,143 @@ class TestFileComponentToolMode:
 
         assert test_content in result
 
+    @pytest.mark.parametrize(
+        ("advanced_mode", "loader_name"),
+        [(False, "load_files_message"), (True, "load_files_markdown")],
+    )
+    @pytest.mark.asyncio
+    async def test_tool_execution_offloads_sync_loader(
+        self, monkeypatch, component_class, default_kwargs, advanced_mode, loader_name
+    ):
+        """Both synchronous loaders must run outside the event-loop thread (issue #14380)."""
+        component = component_class(**default_kwargs)
+        component.advanced_mode = advanced_mode
+        event_loop_thread = threading.current_thread()
+        loader_thread = None
+
+        def fake_loader(_component):
+            nonlocal loader_thread
+            loader_thread = threading.current_thread()
+            return "file contents"
+
+        monkeypatch.setattr(component_class, loader_name, fake_loader)
+
+        tool = (await component._get_tools())[0]
+        result = await tool.coroutine()
+
+        assert result == "file contents"
+        assert loader_thread is not None
+        assert loader_thread is not event_loop_thread
+
+    @pytest.mark.asyncio
+    async def test_cancelled_standard_loader_holds_bounded_admission_slot(self, monkeypatch, component_class):
+        """A cancelled sync loader keeps its slot until its worker really exits."""
+        load_limiter = asyncio.Semaphore(1)
+        monkeypatch.setattr(file_component_module, "_get_file_tool_limiter", lambda: load_limiter)
+
+        first_started = threading.Event()
+        release_first = threading.Event()
+        first_finished = threading.Event()
+        second_started = threading.Event()
+        call_lock = threading.Lock()
+        call_count = 0
+
+        def fake_loader(_component):
+            nonlocal call_count
+            with call_lock:
+                call_count += 1
+                current_call = call_count
+            if current_call == 1:
+                first_started.set()
+                assert release_first.wait(timeout=2), "Cancelled standard loader was not released by the test"
+                first_finished.set()
+                return "first file"
+            second_started.set()
+            return "second file"
+
+        monkeypatch.setattr(component_class, "load_files_message", fake_loader)
+        first_tool = (await component_class()._get_tools())[0]
+        second_tool = (await component_class()._get_tools())[0]
+        first_task = asyncio.create_task(first_tool.coroutine())
+        assert await asyncio.to_thread(first_started.wait, 1), "Standard loader did not start"
+
+        first_task.cancel()
+        second_task = asyncio.create_task(second_tool.coroutine())
+        try:
+            assert not await asyncio.to_thread(second_started.wait, 0.1), (
+                "A second loader started before the cancelled worker released its admission slot"
+            )
+        finally:
+            release_first.set()
+
+        with pytest.raises(asyncio.CancelledError):
+            await first_task
+        assert first_finished.is_set()
+        assert await asyncio.wait_for(second_task, timeout=2) == "second file"
+        assert second_started.is_set()
+
+    @pytest.mark.asyncio
+    @patch("subprocess.Popen")
+    async def test_tool_cancellation_kills_and_reaps_docling_subprocess(self, mock_popen, monkeypatch, component_class):
+        component = component_class()
+        component.advanced_mode = True
+        component.md_image_placeholder = "<!-- image -->"
+        component.md_page_break_placeholder = ""
+        component.pipeline = "standard"
+        component.ocr_engine = "None"
+
+        started = threading.Event()
+        allow_poll = threading.Event()
+        stopped = threading.Event()
+        released = threading.Event()
+        reaped = threading.Event()
+        finished = threading.Event()
+        communicate_calls = 0
+        mock_proc = MagicMock()
+
+        def communicate(*args, **kwargs):  # noqa: ARG001
+            nonlocal communicate_calls
+            communicate_calls += 1
+            if communicate_calls == 1:
+                started.set()
+                assert allow_poll.wait(timeout=2), "Docling cancellation checkpoint was not released"
+                raise subprocess.TimeoutExpired(cmd="docling", timeout=5)
+            if stopped.is_set():
+                reaped.set()
+                return b"", b""
+            assert released.wait(timeout=2), "Abandoned Docling subprocess was not released by the test"
+            return b"", b""
+
+        mock_proc.communicate.side_effect = communicate
+        mock_proc.kill.side_effect = stopped.set
+        mock_proc.terminate.side_effect = stopped.set
+        mock_popen.return_value = mock_proc
+
+        def fake_loader(file_component):
+            try:
+                return file_component._process_docling_subprocess_impl("test.pdf", "test.pdf")
+            finally:
+                finished.set()
+
+        monkeypatch.setattr(component_class, "load_files_markdown", fake_loader)
+
+        tool = (await component._get_tools())[0]
+        task = asyncio.create_task(tool.coroutine())
+        assert await asyncio.to_thread(started.wait, 1), "Docling subprocess did not start"
+
+        task.cancel()
+        await asyncio.sleep(0.01)
+        allow_poll.set()
+        try:
+            with pytest.raises(asyncio.CancelledError):
+                await task
+            assert stopped.is_set(), "Docling subprocess was not stopped after tool cancellation"
+            assert reaped.is_set(), "Docling subprocess was not reaped after tool cancellation"
+            assert finished.is_set(), "Loader worker did not finish cancellation cleanup"
+        finally:
+            released.set()
+            await asyncio.to_thread(finished.wait, 2)
+
     # ==================== Error Handling Tests ====================
 
     @pytest.mark.asyncio
@@ -625,7 +896,33 @@ class TestFileComponentToolMode:
         new_temp_files = temp_files_after - temp_files_before
         assert len(new_temp_files) == 0, f"Temp files not cleaned up: {new_temp_files}"
 
+    @patch("lfx.base.data.cloud_storage_utils.create_s3_client")
+    @patch("lfx.base.data.cloud_storage_utils.validate_aws_credentials")
+    def test_s3_download_uses_explicit_local_cleanup(self, mock_validate, mock_create_client):  # noqa: ARG002
+        """Successful AWS downloads must remain eligible for local temp cleanup."""
+        component = FileComponent()
+        component.set_attributes(
+            {
+                "storage_location": [{"name": "AWS"}],
+                "aws_access_key_id": "test_key",
+                "aws_secret_access_key": "test_secret",
+                "bucket_name": "test-bucket",
+                "s3_file_key": "test-file.txt",
+            }
+        )
+        mock_s3_client = MagicMock()
+        mock_s3_client.download_fileobj.side_effect = lambda _bucket, _key, target: target.write(b"SAFE_CANARY")
+        mock_create_client.return_value = mock_s3_client
+
+        base_file = component._read_from_aws_s3()[0]
+
+        assert base_file.cleanup_local_file is True
+        assert base_file.path.read_bytes() == b"SAFE_CANARY"
+        component._delete_after_processing(base_file)
+        assert not base_file.path.exists()
+
     @patch("lfx.base.data.cloud_storage_utils.create_google_drive_service")
+    @pytest.mark.usefixtures("fake_googleapiclient")
     def test_google_drive_temp_file_cleanup_on_download_failure(self, mock_create_service):
         """Test that temp file is cleaned up when Google Drive download fails."""
         from pathlib import Path
@@ -662,6 +959,30 @@ class TestFileComponentToolMode:
         )
         new_temp_files = temp_files_after - temp_files_before
         assert len(new_temp_files) == 0, f"Temp files not cleaned up: {new_temp_files}"
+
+    @patch("googleapiclient.http.MediaIoBaseDownload")
+    @patch("lfx.base.data.cloud_storage_utils.create_google_drive_service")
+    def test_google_drive_download_uses_explicit_local_cleanup(self, mock_create_service, mock_downloader_class):
+        """Successful Drive downloads must remain eligible for local temp cleanup."""
+        component = FileComponent()
+        component.set_attributes(
+            {
+                "storage_location": [{"name": "Google Drive"}],
+                "service_account_key": '{"type": "service_account", "project_id": "test"}',
+                "file_id": "test-file-id",
+            }
+        )
+        mock_drive_service = MagicMock()
+        mock_drive_service.files().get().execute.return_value = {"name": "test-file.txt"}
+        mock_create_service.return_value = mock_drive_service
+        mock_downloader_class.return_value.next_chunk.return_value = (None, True)
+
+        base_file = component._read_from_google_drive()[0]
+
+        assert base_file.cleanup_local_file is True
+        assert base_file.path.exists()
+        component._delete_after_processing(base_file)
+        assert not base_file.path.exists()
 
 
 class TestFileComponentCloudEnvironment:

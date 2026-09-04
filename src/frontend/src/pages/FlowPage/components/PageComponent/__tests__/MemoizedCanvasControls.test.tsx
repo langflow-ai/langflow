@@ -45,8 +45,13 @@ jest.mock("@/stores/flowStore", () => ({
 
 jest.mock("@/components/core/canvasControlsComponent/CanvasControls", () => ({
   __esModule: true,
-  default: ({ children }) => (
-    <div data-testid="canvas-controls">{children}</div>
+  default: ({ children, effectiveLocked }) => (
+    <div
+      data-testid="canvas-controls"
+      data-effective-locked={String(Boolean(effectiveLocked))}
+    >
+      {children}
+    </div>
   ),
 }));
 
@@ -112,6 +117,15 @@ describe("MemoizedCanvasControls", () => {
       ),
     ).not.toThrow();
     expect(screen.getByTestId("canvas-controls")).toBeInTheDocument();
+  });
+
+  it("forwards the permission read-only state to canvas controls", () => {
+    render(<MemoizedCanvasControls {...defaultProps} isReadOnly />);
+
+    expect(screen.getByTestId("canvas-controls")).toHaveAttribute(
+      "data-effective-locked",
+      "true",
+    );
   });
 
   it("should be memoized", () => {

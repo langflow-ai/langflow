@@ -38,6 +38,26 @@ export type UtilityStoreType = {
   setHideGettingStartedProgress: (hideGettingStartedProgress: boolean) => void;
   allowCustomComponents: boolean;
   setAllowCustomComponents: (allowCustomComponents: boolean) => void;
+  substituteOutdatedComponentCode: boolean;
+  setSubstituteOutdatedComponentCode: (
+    substituteOutdatedComponentCode: boolean,
+  ) => void;
+  catalogGovernanceEnabled: boolean;
+  setCatalogGovernanceEnabled: (catalogGovernanceEnabled: boolean) => void;
+  /** Component types an administrator blocked, as reported by /config. */
+  blockedComponentTypes: ReadonlySet<string>;
+  setBlockedComponentTypes: (blockedComponentTypes: Iterable<string>) => void;
+  a2aEnabled: boolean;
+  setA2aEnabled: (a2aEnabled: boolean) => void;
+  agenticExperienceEnabled: boolean;
+  setAgenticExperienceEnabled: (agenticExperienceEnabled: boolean) => void;
+  // Mirror of LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH — the Assistant composer enforces the
+  // server's cap instead of a UI-local constant that can drift below it.
+  assistantMaxMessageLength: number;
+  setAssistantMaxMessageLength: (assistantMaxMessageLength: number) => void;
+  // False on the production deployment profile, where local Chroma is refused.
+  localVectorStoreAvailable: boolean;
+  setLocalVectorStoreAvailable: (localVectorStoreAvailable: boolean) => void;
   mcpBaseUrl: string;
   setMcpBaseUrl: (mcpBaseUrl: string) => void;
   /**

@@ -33,9 +33,9 @@ describe("FormKeyRender", () => {
     expect(screen.getByPlaceholderText("Enter key name")).toBeInTheDocument();
   });
 
-  it("renders the expiration date input", () => {
+  it("renders the expiration date picker trigger", () => {
     render(<FormKeyRender {...makeProps()} />);
-    expect(document.querySelector('input[type="date"]')).toBeInTheDocument();
+    expect(screen.getByTestId("expires-at-input")).toBeInTheDocument();
   });
 
   it("renders all three preset buttons", () => {
@@ -80,5 +80,27 @@ describe("FormKeyRender", () => {
     render(<FormKeyRender {...makeProps({ modalProps: undefined })} />);
     expect(screen.getByText(PRESET_WEEK)).toBeInTheDocument();
     expect(screen.getByText(PRESET_YEAR)).toBeInTheDocument();
+  });
+
+  it("describes the name input with the form-level server error", () => {
+    render(
+      <FormKeyRender {...makeProps({ serverError: "Something went wrong" })} />,
+    );
+    const error = screen.getByText("Something went wrong");
+    expect(error).toHaveAttribute("role", "alert");
+    expect(error).toHaveAttribute("id", "api-key-form-error");
+    const input = screen.getByPlaceholderText("Enter key name");
+    // The failure is the create action's, not the field's — described, not
+    // marked invalid.
+    expect(input).toHaveAttribute("aria-describedby", "api-key-form-error");
+    expect(input).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("renders no error wiring without a server error", () => {
+    render(<FormKeyRender {...makeProps()} />);
+    const input = screen.getByPlaceholderText("Enter key name");
+    expect(input).not.toHaveAttribute("aria-invalid");
+    expect(input).not.toHaveAttribute("aria-describedby");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

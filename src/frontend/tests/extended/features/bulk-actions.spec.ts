@@ -1,65 +1,72 @@
 import { expect, test } from "../../fixtures";
-import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
-import { openTemplatesModal } from "../../utils/flow/new-project-flow";
+import {
+  openTemplatesModal,
+  waitForNewProjectButton,
+} from "../../utils/flow/new-project-flow";
+import { selectStarterTemplate } from "../../utils/flow/select-starter-template";
+import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
+import { waitForMainPageReady } from "../../utils/flow/wait-for-main-page-ready";
 
 test(
   "user should be able to select flows with different methods and perform bulk actions",
-  { tag: ["@release", "@workspace", "@mainpage"] },
+  { tag: ["@release", "@workspace"] },
   async ({ page }) => {
+    const returnToHome = async () => {
+      await page.goto("/");
+      await waitForMainPageReady(page);
+      await waitForNewProjectButton(page);
+    };
+
     await awaitBootstrapTest(page);
 
     // Add some flows to test with
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page
-      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
-      .click();
-    await adjustScreenView(page);
+    const firstFlowId = await selectStarterTemplate(
+      page,
+      TEXTS.templateBasicPrompting,
+    );
+    await waitForFlowEditorReady(page);
 
-    // Go back to main page
-    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-      timeout: 100000,
-    });
-    await page.getByTestId("icon-ChevronLeft").first().click();
+    await returnToHome();
 
-    await expect(page.getByText("Projects").first()).toBeVisible();
     await openTemplatesModal(page);
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Document Q&A" }).click();
-    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-      timeout: 100000,
-    });
-    await page.getByTestId("icon-ChevronLeft").first().click();
+    const secondFlowId = await selectStarterTemplate(page, "Document Q&A");
+    await waitForFlowEditorReady(page);
+    await returnToHome();
 
-    await expect(page.getByText("Projects").first()).toBeVisible();
     await openTemplatesModal(page);
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page
-      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
-      .click();
-    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-      timeout: 100000,
-    });
-    await page.getByTestId("icon-ChevronLeft").first().click();
+    const thirdFlowId = await selectStarterTemplate(
+      page,
+      TEXTS.templateBasicPrompting,
+    );
+    await waitForFlowEditorReady(page);
+    await returnToHome();
 
-    await expect(page.getByText("Projects").first()).toBeVisible();
     await page.waitForSelector('[data-testid="home-dropdown-menu"]', {
       timeout: 100000,
     });
-    await page.getByTestId("list-card").first().isVisible({ timeout: 3000 });
-    await page.waitForTimeout(500);
+    const getFlowCard = (flowId: string) =>
+      page
+        .getByTestId("list-card")
+        .filter({ has: page.getByTestId(`flow-name-${flowId}`) });
+    const firstCard = getFlowCard(firstFlowId);
+    const secondCard = getFlowCard(secondFlowId);
+    const thirdCard = getFlowCard(thirdFlowId);
+    await expect(firstCard).toBeVisible();
+    await expect(secondCard).toBeVisible();
+    await expect(thirdCard).toBeVisible();
 
     // Test shift selection
     await page.keyboard.down("Shift");
-    await page.getByTestId("list-card").first().click();
-    await page.getByTestId("list-card").nth(2).click();
+    await firstCard.getByTestId("list-card-open-button").click();
+    await thirdCard.getByTestId("list-card-open-button").click();
     await page.keyboard.up("Shift");
 
     // Verify both flows are selected
-    const firstCheckbox = await page.getByTestId(/^checkbox-/).first();
-    const secondCheckbox = await page.getByTestId(/^checkbox-/).nth(1);
-    const thirdCheckbox = await page.getByTestId(/^checkbox-/).nth(2);
+    const firstCheckbox = page.getByTestId(`checkbox-${firstFlowId}`);
+    const secondCheckbox = page.getByTestId(`checkbox-${secondFlowId}`);
+    const thirdCheckbox = page.getByTestId(`checkbox-${thirdFlowId}`);
     await expect(firstCheckbox).toBeChecked();
     await expect(secondCheckbox).toBeChecked();
     await expect(thirdCheckbox).toBeChecked();
@@ -71,7 +78,7 @@ test(
 
     // Deselect all
     await page.keyboard.down("Shift");
-    await page.getByTestId("list-card").first().click();
+    await firstCard.getByTestId("list-card-open-button").click();
     await page.keyboard.up("Shift");
 
     // Verify both flows are deselected
@@ -81,33 +88,14 @@ test(
 
     // Test Ctrl/Cmd selection
     await page.keyboard.down("ControlOrMeta");
-    await page.getByTestId("list-card").first().click();
-    await page.getByTestId("list-card").nth(2).click();
+    await firstCard.getByTestId("list-card-open-button").click();
+    await thirdCard.getByTestId("list-card-open-button").click();
     await page.keyboard.up("ControlOrMeta");
 
     // Verify both flows are selected again
     await expect(firstCheckbox).toBeChecked();
     await expect(secondCheckbox).not.toBeChecked();
     await expect(thirdCheckbox).toBeChecked();
-
-    const firstFlowName =
-      (await page
-        .locator("[data-testid='flow-name-div']")
-        .first()
-        .locator("span")
-        .textContent()) ?? "";
-    const secondFlowName =
-      (await page
-        .locator("[data-testid='flow-name-div']")
-        .nth(1)
-        .locator("span")
-        .textContent()) ?? "";
-    const thirdFlowName =
-      (await page
-        .locator("[data-testid='flow-name-div']")
-        .nth(2)
-        .locator("span")
-        .textContent()) ?? "";
 
     // Test bulk delete
     await page.getByTestId("delete-bulk-btn").first().click();
@@ -122,12 +110,8 @@ test(
     });
 
     // Verify flows are deleted
-    await expect(
-      page.getByText(firstFlowName, { exact: true }),
-    ).not.toBeVisible();
-    await expect(page.getByText(secondFlowName, { exact: true })).toBeVisible();
-    await expect(
-      page.getByText(thirdFlowName, { exact: true }),
-    ).not.toBeVisible();
+    await expect(page.getByTestId(`flow-name-${firstFlowId}`)).toHaveCount(0);
+    await expect(page.getByTestId(`flow-name-${secondFlowId}`)).toBeVisible();
+    await expect(page.getByTestId(`flow-name-${thirdFlowId}`)).toHaveCount(0);
   },
 );

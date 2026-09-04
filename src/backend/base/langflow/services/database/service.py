@@ -16,13 +16,14 @@ import sqlalchemy as sa
 from alembic import command, util
 from alembic.config import Config
 from lfx.log.logger import logger
+from lfx.observability import instrument_database
 from lfx.services.deps import session_scope
 from sqlalchemy import event, inspect
 from sqlalchemy.dialects import sqlite as dialect_sqlite
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Engine, make_url
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
-from sqlmodel import SQLModel, select, text
+from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 from tenacity import retry, stop_after_attempt, wait_fixed
 
@@ -34,6 +35,7 @@ from langflow.services.database.constants import (
     MIN_POSTGRESQL_MAJOR_VERSION,
     POSTGRESQL_VERSION_REQUIRED_MESSAGE,
 )
+from langflow.services.database.migration import get_current_alembic_heads
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.session import NoopSession
 from langflow.services.database.utils import Result, TableResults
@@ -193,6 +195,65 @@ def check_postgresql_version_sync(database_url: str) -> None:
         engine.dispose()
 
 
+def get_sqlite_database_file_path(database_url: str) -> Path | None:
+    """Return the on-disk file path for a SQLite URL, or ``None`` when there is none.
+
+    Returns ``None`` for non-SQLite URLs and for in-memory SQLite databases
+    (``sqlite://`` and ``sqlite:///:memory:``), which have no file on disk. The
+    returned path is kept exactly as written in the URL (relative paths are *not*
+    resolved) so callers can report it back to the user verbatim.
+    """
+    if not database_url.startswith("sqlite"):
+        return None
+    try:
+        database = make_url(database_url).database
+    except Exception:  # noqa: BLE001 - defensive: malformed URLs are handled elsewhere
+        return None
+    if not database or database == ":memory:":
+        return None
+    return Path(database)
+
+
+def check_sqlite_database_path(database_url: str) -> None:
+    """Fail fast with an actionable message when a SQLite database cannot be opened.
+
+    SQLite does not create intermediate directories, and relative paths in
+    ``LANGFLOW_DATABASE_URL`` are resolved by SQLAlchemy against the current
+    working directory at connect time. When the resolved parent directory is
+    missing the raw ``sqlite3.OperationalError`` ("unable to open database file")
+    is opaque, so surface where Langflow actually tried to open the database and
+    how a relative path was resolved. No-op for non-SQLite and in-memory URLs.
+
+    Note: this only improves diagnostics; it does not change which URLs are
+    accepted nor create any directories. See issue #13634.
+    """
+    db_path = get_sqlite_database_file_path(database_url)
+    if db_path is None:
+        return
+
+    resolved = db_path.resolve()
+    logger.debug(f"Using SQLite database at {resolved}")
+
+    parent = resolved.parent
+    if parent.exists():
+        return
+
+    msg = (
+        f"Cannot open the SQLite database at '{resolved}': the parent directory "
+        f"'{parent}' does not exist, and SQLite does not create intermediate "
+        f"directories. "
+    )
+    if db_path.is_absolute():
+        msg += "Create the directory before starting Langflow, or point LANGFLOW_DATABASE_URL at an existing path."
+    else:
+        msg += (
+            f"The relative path '{db_path}' from LANGFLOW_DATABASE_URL was resolved against the current working "
+            f"directory ('{Path.cwd()}'). Set LANGFLOW_DATABASE_URL to an absolute path "
+            f"(e.g. 'sqlite:///{resolved}'), or create the directory before starting Langflow."
+        )
+    raise ValueError(msg)
+
+
 class DatabaseService(Service):
     name = "database_service"
 
@@ -221,6 +282,12 @@ class DatabaseService(Service):
             self.engine = self._create_engine_with_retry()
         else:
             self.engine = self._create_engine()
+        # Here rather than in the app factory: this is an AsyncEngine, and the instrumentor
+        # patches the sync engine underneath it. Instrumenting globally instead (no engine
+        # argument) attaches to pool events only, which yields a connect span per checkout and
+        # not a single query span. Verified against a live backend: 13 connect spans and zero
+        # db.statement for one API request.
+        instrument_database(self.engine)
 
         # Create async session maker for efficient session creation
         # This is the recommended SQLAlchemy 2.0+ pattern
@@ -240,14 +307,32 @@ class DatabaseService(Service):
         elif Path(alembic_log_file).is_absolute():
             self.alembic_log_path = Path(alembic_log_file)
         else:
-            self.alembic_log_path = Path(langflow_dir) / alembic_log_file
+            # Resolve relative log paths against the writable runtime config
+            # directory, not the installed package directory. The package dir is
+            # read-only in hardened deployments (non-root containers, read-only
+            # root filesystems, Kubernetes), where writing into it raises OSError
+            # and crashes startup. config_dir is always writable (it defaults to
+            # platformdirs' user cache dir and is created on startup).
+            config_dir = getattr(self.settings_service.settings, "config_dir", None)
+            base_dir = Path(config_dir) if config_dir else langflow_dir
+            self.alembic_log_path = base_dir / alembic_log_file
 
     async def initialize_alembic_log_file(self):
-        if self.alembic_log_to_stdout:
+        log_path = self.alembic_log_path
+        if self.alembic_log_to_stdout or log_path is None:
             return
-        # Ensure the directory and file for the alembic log file exists
-        await anyio.Path(self.alembic_log_path.parent).mkdir(parents=True, exist_ok=True)
-        await anyio.Path(self.alembic_log_path).touch(exist_ok=True)
+        # Ensure the directory and file for the alembic log file exists. The
+        # migration log is diagnostic-only, so a read-only filesystem (hardened
+        # containers / Kubernetes) must never abort startup: warn and move on.
+        try:
+            await anyio.Path(log_path.parent).mkdir(parents=True, exist_ok=True)
+            await anyio.Path(log_path).touch(exist_ok=True)
+        except OSError as exc:
+            await logger.awarning(
+                f"Could not initialize the Alembic migration log at '{log_path}' ({exc}). "
+                "Migration output falls back to stdout. Set LANGFLOW_ALEMBIC_LOG_FILE to a writable path "
+                "or LANGFLOW_ALEMBIC_LOG_TO_STDOUT=true to silence this warning."
+            )
 
     def reload_engine(self) -> None:
         self._sanitize_database_url()
@@ -411,7 +496,7 @@ class DatabaseService(Service):
                 .join(models.Folder)
                 .where(
                     models.Flow.user_id == None,  # noqa: E711
-                    models.Folder.name != STARTER_FOLDER_NAME,
+                    sa.or_(models.Folder.name != STARTER_FOLDER_NAME, models.Folder.user_id.is_not(None)),
                 )
             )
             orphaned_flows = (await session.exec(stmt)).all()
@@ -518,6 +603,33 @@ class DatabaseService(Service):
         # alembic_cfg.attributes["connection"].commit()
         command.upgrade(alembic_cfg, "head")
 
+    def _open_alembic_log_buffer(self):
+        """Open the Alembic migration log for writing, falling back to stdout.
+
+        The migration log is diagnostic-only output. If the target path cannot
+        be written -- e.g. the installed package directory or the root
+        filesystem is read-only, as in hardened container/Kubernetes deployments
+        (non-root user or read-only root filesystem) -- startup must not abort.
+        Fall back to stdout rather than letting OSError propagate through the
+        FastAPI lifespan. Returns a context manager yielding the buffer Alembic
+        writes its output to.
+        """
+        log_path = self.alembic_log_path
+        if self.alembic_log_to_stdout or log_path is None:
+            return nullcontext(sys.stdout)
+        try:
+            # _run_migrations can run before initialize_alembic_log_file(), so
+            # make sure the parent directory exists before opening for writing.
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            return log_path.open("w", encoding="utf-8")
+        except OSError as exc:
+            logger.warning(
+                f"Could not open the Alembic migration log at '{log_path}' ({exc}). "
+                "Falling back to stdout. Set LANGFLOW_ALEMBIC_LOG_FILE to a writable path "
+                "or LANGFLOW_ALEMBIC_LOG_TO_STDOUT=true to silence this warning."
+            )
+            return nullcontext(sys.stdout)
+
     def _run_migrations(self, should_initialize_alembic, fix) -> None:
         # First we need to check if alembic has been initialized
         # If not, we need to initialize it
@@ -528,9 +640,7 @@ class DatabaseService(Service):
         # which is a buffer
         # I don't want to output anything
         # subprocess.DEVNULL is an int
-        buffer_context = (
-            nullcontext(sys.stdout) if self.alembic_log_to_stdout else self.alembic_log_path.open("w", encoding="utf-8")  # type: ignore[union-attr]
-        )
+        buffer_context = self._open_alembic_log_buffer()
         # The advisory lock serialises concurrent migration runs across workers
         # so they do not race on CREATE TYPE / CREATE TABLE against a fresh PG.
         with _postgres_migration_lock(self.database_url), buffer_context as buffer:
@@ -571,16 +681,51 @@ class DatabaseService(Service):
                 self.try_downgrade_upgrade_until_success(alembic_cfg)
 
     async def run_migrations(self, *, fix=False) -> None:
-        should_initialize_alembic = False
         async with session_scope() as session:
-            # If the table does not exist it throws an error
-            # so we need to catch it
-            try:
-                await session.exec(text("SELECT * FROM alembic_version"))
-            except Exception:  # noqa: BLE001
+            should_initialize_alembic = not await get_current_alembic_heads(session)
+            if should_initialize_alembic:
                 await logger.adebug("Alembic not initialized")
-                should_initialize_alembic = True
         await asyncio.to_thread(self._run_migrations, should_initialize_alembic, fix)
+
+    def _current_alembic_revisions(self) -> set[str]:
+        """Read current revisions from the configured database, never alembic.ini."""
+        engine = sa.create_engine(_normalize_sync_postgres_url(self.database_url))
+        try:
+            with engine.connect() as connection:
+                return set(connection.execute(sa.text("SELECT version_num FROM alembic_version")).scalars())
+        finally:
+            engine.dispose()
+
+    def _run_migration_downgrade(self, *, expected_current_revision: str, target_revision: str) -> None:
+        """Downgrade the configured database only from one explicitly expected revision."""
+        buffer_context = self._open_alembic_log_buffer()
+        with _postgres_migration_lock(self.database_url), buffer_context as buffer:
+            current_revisions = self._current_alembic_revisions()
+            if current_revisions != {expected_current_revision}:
+                found = ", ".join(sorted(current_revisions)) or "none"
+                msg = (
+                    "Refusing migration downgrade: expected current revision "
+                    f"{expected_current_revision}, found {found}"
+                )
+                raise RuntimeError(msg)
+
+            alembic_cfg = Config(stdout=buffer)
+            alembic_cfg.set_main_option("script_location", str(self.script_location))
+            alembic_cfg.set_main_option("sqlalchemy.url", self.database_url.replace("%", "%%"))
+            command.downgrade(alembic_cfg, target_revision)
+
+    async def run_migration_downgrade(
+        self,
+        *,
+        expected_current_revision: str,
+        target_revision: str,
+    ) -> None:
+        """Safely downgrade the configured database in a worker thread."""
+        await asyncio.to_thread(
+            self._run_migration_downgrade,
+            expected_current_revision=expected_current_revision,
+            target_revision=target_revision,
+        )
 
     @staticmethod
     def try_downgrade_upgrade_until_success(alembic_cfg, retries=5) -> None:

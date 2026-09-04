@@ -1,22 +1,17 @@
-import { type Page } from "@playwright/test";
-import { expect, test } from "../../fixtures";
+import { expect } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
+import { configureLoopbackWebSearch } from "../../utils/configure-loopback-web-search";
 import { TEXTS } from "../../utils/constants/texts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "Travel Planning Agent",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    skipIfMissing.openAiKey();
-    test.skip(
-      !process?.env?.SEARCH_API_KEY,
-      "SEARCH_API_KEY required to run this test",
-    );
-    loadDotenvIfLocal(__dirname);
+    await seedLoopbackProvider(page);
     await page.goto("/");
     await awaitBootstrapTest(page);
 
@@ -30,36 +25,42 @@ withEventDeliveryModes(
       timeout: 100000,
     });
 
-    await initialGPTsetup(page);
+    await configureLoopbackOpenAI(page);
+    await configureLoopbackWebSearch(page);
 
     const randomCity = cities[Math.floor(Math.random() * cities.length)];
     const randomCity2 = cities[Math.floor(Math.random() * cities.length)];
     const randomFood = foods[Math.floor(Math.random() * foods.length)];
 
+    const flowId = new URL(page.url()).pathname.match(/\/flow\/([^/]+)/)?.[1];
+    expect(flowId).toBeTruthy();
+    const inputSave = page.waitForResponse(
+      (candidate) =>
+        candidate.request().method() === "PATCH" &&
+        new URL(candidate.url()).pathname === `/api/v1/flows/${flowId}`,
+      { timeout: TIMEOUTS.standard },
+    );
     await page
       .getByTestId("textarea_str_input_value")
       .first()
       .fill(
         `Create a travel plan from ${randomCity} to ${randomCity2} with ${randomFood}`,
       );
+    const inputSaveResponse = await inputSave;
+    expect(inputSaveResponse.ok()).toBeTruthy();
 
-    await page
-      .getByTestId("popover-anchor-input-api_key")
-      .first()
-      .fill(process.env.SEARCH_API_KEY ?? "");
-
-    await page.getByTestId("button_run_chat output").click();
-
-    await page.getByTestId("button_run_chat output").last().click();
-
-    if (await checkRateLimit(page)) {
-      console.warn("Rate limit detected, skipping test");
-      test.skip();
-    }
-
-    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
-      timeout: 60000 * 3,
-    });
+    const runButton = page.getByTestId("button_run_chat output");
+    await expect(runButton).toBeVisible();
+    const [response] = await Promise.all([
+      page.waitForResponse(
+        (candidate) =>
+          candidate.request().method() === "POST" &&
+          new URL(candidate.url()).pathname === "/api/v2/workflows",
+      ),
+      runButton.click(),
+    ]);
+    expect(response.ok()).toBeTruthy();
+    expect(await response.finished()).toBeNull();
 
     await page
       .getByRole("button", { name: TEXTS.playground, exact: true })
@@ -74,30 +75,13 @@ withEventDeliveryModes(
 
     expect(outputText.toLowerCase()).toContain("travel");
     expect(outputText.toLowerCase()).toContain("day");
+    expect(outputText).toContain("LOOPBACK_WEB_SEARCH_USED");
 
     expect(outputText.toLowerCase()).toContain(randomCity.toLowerCase());
     expect(outputText.toLowerCase()).toContain(randomCity2.toLowerCase());
     expect(outputText.toLowerCase()).toContain(randomFood.toLowerCase());
   },
 );
-
-async function checkRateLimit(page: Page): Promise<boolean> {
-  try {
-    await Promise.race([
-      page.waitForSelector("text=429", { timeout: 10000 }),
-      page.waitForSelector("text=Too Many Requests", { timeout: 10000 }),
-      page.waitForResponse((response) => response.status() === 429, {
-        timeout: 10000,
-      }),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("No rate limit detected")), 10000),
-      ),
-    ]);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 const cities = [
   "Tokyo",

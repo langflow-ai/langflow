@@ -44,10 +44,15 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
     .click();
   await page.getByTestId("handle-chatoutput-noshownode-inputs-target").click();
 
+  await page.runA11yScan("flow-canvas-chat-io");
+
   await page.getByText(TEXTS.playground, { exact: true }).last().click();
   await page.waitForSelector('[data-testid="input-chat-playground"]', {
     timeout: 100000,
   });
+
+  await page.runA11yScan("playground-modal");
+
   await page.getByTestId("input-chat-playground").click();
   await page.getByTestId("input-chat-playground").fill("teste");
   await page.getByTestId("button-send").first().click();
@@ -60,4 +65,6 @@ test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await expect(page.getByTestId("div-chat-message")).toHaveText("teste", {
     timeout: 30000,
   });
+
+  await page.runA11yScan("playground-modal-with-messages");
 });

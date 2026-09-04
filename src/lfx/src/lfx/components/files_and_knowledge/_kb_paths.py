@@ -1,8 +1,10 @@
-"""Shared helpers for Knowledge Base / Memory Base components.
+"""Shared KB root-path helper for Knowledge Base / Memory Base components.
 
-Centralizes the KB root path lookup and embedding-metadata loading that
-``ingestion.py``, ``retrieval.py`` and ``memory_retrieval.py`` would otherwise
-duplicate.
+Only the root-directory lookup lives here now. The on-disk
+``embedding_metadata.json`` sidecar this module used to read is gone: the
+``knowledge_base`` row is the sole authority for a KB's embedding config,
+backend routing, and stats, so components resolve all of that from the database
+and touch the filesystem only when the resolved backend is local Chroma.
 
 Astra cloud guard: the user-facing Knowledge Base ingestion and retrieval
 components are blocked in Astra cloud deployments via
@@ -14,21 +16,20 @@ the policy decision close to the UX rather than baked into a shared loader.
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from typing import Any
 
-from cryptography.fernet import InvalidToken
-from langflow.services.auth.utils import decrypt_api_key
-
-from lfx.log.logger import logger
 from lfx.services.deps import get_settings_service
 
 _KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
 
 
 def get_knowledge_bases_root_path() -> Path:
-    """Lazily resolve the configured KB root directory."""
+    """Lazily resolve the configured KB root directory.
+
+    Only reached for local-Chroma knowledge bases — every other backend stores
+    off-box and never asks for a path. Deployments that serve only remote vector
+    stores therefore never hit the ``knowledge_bases_dir`` requirement.
+    """
     global _KNOWLEDGE_BASES_ROOT_PATH  # noqa: PLW0603
     if _KNOWLEDGE_BASES_ROOT_PATH is None:
         settings = get_settings_service().settings
@@ -44,32 +45,3 @@ def reset_knowledge_bases_root_path_cache() -> None:
     """Clear the cached KB root path. Intended for tests that mutate settings."""
     global _KNOWLEDGE_BASES_ROOT_PATH  # noqa: PLW0603
     _KNOWLEDGE_BASES_ROOT_PATH = None
-
-
-def load_kb_metadata(kb_path: Path, *, log_label: str) -> dict[str, Any]:
-    """Load ``embedding_metadata.json`` from a KB directory.
-
-    Returns ``{}`` on missing file / invalid JSON. ``log_label`` is used in log
-    messages instead of the on-disk path so usernames (sometimes emails) are
-    not leaked into log streams.
-    """
-    metadata: dict[str, Any] = {}
-    metadata_file = kb_path / "embedding_metadata.json"
-    if not metadata_file.exists():
-        logger.warning("Embedding metadata file not found for %s", log_label)
-        return metadata
-
-    try:
-        with metadata_file.open("r", encoding="utf-8") as f:
-            metadata = json.load(f)
-    except json.JSONDecodeError:
-        logger.error("Error decoding embedding metadata JSON for %s", log_label)
-        return {}
-
-    if metadata.get("api_key"):
-        try:
-            metadata["api_key"] = decrypt_api_key(metadata["api_key"], get_settings_service())
-        except (InvalidToken, TypeError, ValueError) as e:
-            logger.error("Could not decrypt API key for %s. Provide it manually. Error: %s", log_label, e)
-            metadata["api_key"] = None
-    return metadata

@@ -14,6 +14,7 @@ export const TID = {
 
   // Flow editor
   blankFlow: "blank-flow",
+  flowSidebar: "shad-sidebar",
   sidebarSearchInput: "sidebar-search-input",
   sidebarCustomComponentButton: "sidebar-custom-component-button",
   sideNavAllTemplates: "side_nav_options_all-templates",
@@ -52,7 +53,7 @@ export const TID = {
   popoverAnchorInputApiKey: "popover-anchor-input-api_key",
 
   // Edit / inspect
-  editFieldsButton: "edit-fields-button",
+  parametersButton: "parameters-button",
   codeButtonModal: "code-button-modal",
 } as const;
 

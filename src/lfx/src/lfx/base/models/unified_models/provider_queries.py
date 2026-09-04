@@ -5,11 +5,16 @@ from __future__ import annotations
 from functools import lru_cache
 
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS_DETAILED
+from lfx.base.models.azure_ai_foundry_constants import AZURE_AI_FOUNDRY_MODELS_DETAILED
 from lfx.base.models.google_generative_ai_constants import (
     GOOGLE_GENERATIVE_AI_EMBEDDING_MODELS_DETAILED,
     GOOGLE_GENERATIVE_AI_MODELS_DETAILED,
 )
-from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA
+from lfx.base.models.model_metadata import (
+    CONDITIONAL_LIVE_MODEL_PROVIDERS,
+    LIVE_MODEL_PROVIDERS,
+    MODEL_PROVIDER_METADATA,
+)
 from lfx.base.models.ollama_constants import (
     OLLAMA_EMBEDDING_MODELS_DETAILED,
     OLLAMA_MODELS_DETAILED,
@@ -31,6 +36,17 @@ def get_model_provider_metadata() -> dict:
 model_provider_metadata = get_model_provider_metadata()
 
 
+def _canonical_provider_name(provider: str) -> str:
+    """Resolve a provider selector to the metadata table's legacy name key."""
+    from lfx.base.models.provider_registry import provider_name_for_id, resolve_provider_id
+
+    try:
+        provider_id = resolve_provider_id(provider)
+    except ValueError:
+        return provider
+    return provider_name_for_id(provider_id) or provider
+
+
 _STATIC_MODELS_DETAILED: list[list[dict]] = [
     ANTHROPIC_MODELS_DETAILED,
     OPENAI_MODELS_DETAILED,
@@ -41,6 +57,10 @@ _STATIC_MODELS_DETAILED: list[list[dict]] = [
     OLLAMA_EMBEDDING_MODELS_DETAILED,
     OPENROUTER_MODELS_DETAILED,
     WATSONX_MODELS_DETAILED,
+    # Last: seed deployment aliases (gpt-4o, gpt-4.1, …) overlap OpenAI rows.
+    # ``get_provider_for_model_name`` returns the first catalog hit, so keep
+    # Foundry after established providers for 1.8.x backwards compat.
+    AZURE_AI_FOUNDRY_MODELS_DETAILED,
 ]
 
 
@@ -62,10 +82,15 @@ def get_models_detailed() -> list[list[dict]]:
     # invalidate_catalog_cache).
     from lfx.base.models.models_dev_catalog import apply_models_dev_overrides, get_active_snapshot
 
+    # Provider-only extensions can contribute a static catalog without editing
+    # this core list. Import lazily to avoid a cycle during registry mutation.
+    from lfx.base.models.provider_registry import get_registered_model_catalogs
+
+    active_catalog = [*_STATIC_MODELS_DETAILED, *get_registered_model_catalogs()]
     snapshot = get_active_snapshot()
     if snapshot is None:
-        return _STATIC_MODELS_DETAILED
-    return apply_models_dev_overrides(_STATIC_MODELS_DETAILED, snapshot)
+        return active_catalog
+    return apply_models_dev_overrides(active_catalog, snapshot)
 
 
 # NOTE: ``MODELS_DETAILED`` is a back-compat binding for callers that imported
@@ -76,28 +101,54 @@ def get_models_detailed() -> list[list[dict]]:
 MODELS_DETAILED = _STATIC_MODELS_DETAILED
 
 
+def get_provider_secret_variable_key(provider: str) -> str | None:
+    """Return the provider's primary secret variable, never connection config.
+
+    Required secrets take precedence over optional secrets. Providers with no
+    declared secret (for example, a local API-key-optional endpoint configured
+    only by base URL) intentionally return ``None``.
+    """
+    variables = model_provider_metadata.get(_canonical_provider_name(provider), {}).get("variables", [])
+    required_secret = next(
+        (
+            variable.get("variable_key")
+            for variable in variables
+            if variable.get("required") and variable.get("is_secret")
+        ),
+        None,
+    )
+    if required_secret is not None:
+        return required_secret
+    return next((variable.get("variable_key") for variable in variables if variable.get("is_secret")), None)
+
+
 @lru_cache(maxsize=1)
 def get_model_provider_variable_mapping() -> dict[str, str]:
-    """Return primary (first required secret) variable for each provider.
+    """Return one primary variable for each provider.
 
-    Backward-compatible helper used in many callers that still expect a single
-    provider-level variable key.
+    This broad, backward-compatible mapping is used by provider UI and
+    enablement callers that need a representative variable even when a
+    provider has no secret. API-key resolution must instead use
+    :func:`get_provider_secret_variable_key`.
     """
     result = {}
     for provider, meta in model_provider_metadata.items():
-        for var in meta.get("variables", []):
-            if var.get("required") and var.get("is_secret"):
-                result[provider] = var["variable_key"]
-                break
-        # Fallback to first variable if no required secret found
-        if provider not in result and meta.get("variables"):
-            result[provider] = meta["variables"][0]["variable_key"]
+        variables = meta.get("variables", [])
+        # Prefer a required secret (the canonical API key), then any optional
+        # secret. Providers with no secret retain their first connection field
+        # for backward-compatible UI/enablement behavior; credential resolution
+        # deliberately uses get_provider_secret_variable_key directly.
+        chosen = get_provider_secret_variable_key(provider)
+        if chosen is None and variables:
+            chosen = variables[0]["variable_key"]
+        if chosen is not None:
+            result[provider] = chosen
     return result
 
 
 def get_provider_all_variables(provider: str) -> list[dict]:
     """Get all variables for a provider."""
-    meta = model_provider_metadata.get(provider, {})
+    meta = model_provider_metadata.get(_canonical_provider_name(provider), {})
     return meta.get("variables", [])
 
 
@@ -120,8 +171,58 @@ def _get_all_provider_specific_field_names() -> set[str]:
 
 
 def get_model_providers() -> list[str]:
-    """Return a sorted list of unique provider names."""
-    return sorted({md.get("provider", "Unknown") for group in get_models_detailed() for md in group})
+    """Return a sorted list of unique provider names.
+
+    Unions providers that have a static model catalog (``get_models_detailed``)
+    with every provider declared in ``MODEL_PROVIDER_METADATA``. The latter
+    covers providers that ship no static catalog and rely entirely on live
+    discovery -- including providers contributed by extension bundles via
+    ``provider_registry`` (which merge their metadata in place).
+
+    Stable identity, rather than display text, owns deduplication. This folds
+    a legacy alias contributed by one catalog surface into the canonical
+    metadata provider without changing the public display-name response.
+    """
+    from lfx.base.models.provider_registry import resolve_provider_id
+
+    providers_by_id: dict[str, str] = {}
+    # Metadata is authoritative for the public provider name, so seed it
+    # before catalog aliases and retain the first spelling for each stable ID.
+    for provider in model_provider_metadata:
+        if isinstance(provider, str) and provider.strip():
+            providers_by_id.setdefault(resolve_provider_id(provider), provider)
+    for group in get_models_detailed():
+        for metadata in group:
+            provider = metadata.get("provider", "Unknown")
+            if isinstance(provider, str) and provider.strip():
+                providers_by_id.setdefault(resolve_provider_id(provider), provider)
+    return sorted(providers_by_id.values())
+
+
+def get_live_only_providers() -> list[str]:
+    """Return providers whose models come exclusively from live discovery.
+
+    A provider qualifies when it is declared in the provider metadata and in
+    the live-discovery gates but ships no static catalog rows -- today always
+    a provider contributed by an extension bundle via ``provider_registry``
+    (e.g. vLLM, OpenAI Compatible). Catalog-driven listings such as
+    ``get_unified_models_detailed`` can never emit these, and
+    ``replace_with_live_models`` only appends a provider once it is configured
+    *and* its endpoint returns models, so provider-facing surfaces (the Model
+    Providers dialog) must union them in explicitly or an unconfigured
+    provider would be undiscoverable.
+
+    Metadata-only providers that are *not* live-capable (Azure OpenAI, Groq)
+    are deliberately excluded: with neither a catalog nor live discovery they
+    could never list models, and they are intentionally absent from the
+    unified-model UI today.
+
+    Not cached: ``register_provider`` mutates the metadata and live gates in
+    place, and the underlying collections are small.
+    """
+    cataloged = {md.get("provider") for group in get_models_detailed() for md in group}
+    live_capable = {*LIVE_MODEL_PROVIDERS, *CONDITIONAL_LIVE_MODEL_PROVIDERS}
+    return sorted(name for name in model_provider_metadata if name in live_capable and name not in cataloged)
 
 
 def get_provider_for_model_name(model_name: str) -> str:

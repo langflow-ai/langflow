@@ -283,18 +283,33 @@ class ServiceManager:
             self.services.pop(service_name, None)
             self.get(service_name)
 
-    async def teardown(self) -> None:
-        """Teardown all the services."""
+    async def teardown(self, *, raise_on_error: bool = False) -> None:
+        """Teardown all the services.
+
+        Args:
+            raise_on_error: When True, still attempt every teardown, but re-raise the
+                first error after the table is cleared. Default False logs failures only.
+        """
+        errors: list[tuple[str, Exception]] = []
         for service in list(self.services.values()):
             if service is None:
                 continue
+            # Registered services are duck-typed: the in-memory caches and the Noop
+            # database/transaction services implement plain protocols, not Service, so
+            # they have no teardown at all. Nothing to dispose is not a teardown failure —
+            # calling through would raise AttributeError and, under raise_on_error, abort
+            # a fork-safety teardown over a service that holds nothing.
+            teardown_callable = getattr(service, "teardown", None)
+            if teardown_callable is None:
+                continue
             logger.debug(f"Teardown service {service.name}")
             try:
-                teardown_result = service.teardown()
+                teardown_result = teardown_callable()
                 if asyncio.iscoroutine(teardown_result):
                     await teardown_result
             except Exception as exc:  # noqa: BLE001
                 logger.debug(f"Error in teardown of {service.name}", exc_info=exc)
+                errors.append((service.name, exc))
 
         # Adapter registries own singleton adapter instances and must also be cleaned up.
         try:
@@ -303,9 +318,21 @@ class ServiceManager:
             await teardown_all_adapter_registries()
         except Exception as exc:  # noqa: BLE001
             logger.error(f"Error during adapter registry teardown: {exc}", exc_info=True)
+            errors.append(("adapter_registries", exc))
 
         self.services = {}
         self.factories = {}
+        # ``teardown`` empties the factory registry, so the "registered" flag has
+        # to drop too: get_service() re-registers factories only when
+        # are_factories_registered() is False. Leaving it set after a teardown
+        # makes the next lookup skip re-registration and raise
+        # NoFactoryRegisteredError.
+        self.factory_registered = False
+
+        if raise_on_error and errors:
+            names = ", ".join(name for name, _ in errors)
+            msg = f"Service teardown failed for: {names}"
+            raise RuntimeError(msg) from errors[0][1]
 
     @classmethod
     def get_factories(cls) -> list[ServiceFactory]:
@@ -402,6 +429,24 @@ class ServiceManager:
             expected_bases[ServiceType.AUTHORIZATION_SERVICE] = BaseAuthorizationService
         except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
             logger.debug(f"BaseAuthorizationService unavailable; entry-point validation skipped: {exc}")
+        try:
+            from lfx.services.catalog_policy.base import BaseCatalogPolicyService
+
+            expected_bases[ServiceType.CATALOG_POLICY_SERVICE] = BaseCatalogPolicyService
+        except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
+            logger.debug(f"BaseCatalogPolicyService unavailable; entry-point validation skipped: {exc}")
+        try:
+            from lfx.services.model_provider_policy.base import BaseModelProviderPolicyService
+
+            expected_bases[ServiceType.MODEL_PROVIDER_POLICY_SERVICE] = BaseModelProviderPolicyService
+        except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
+            logger.debug(f"BaseModelProviderPolicyService unavailable; entry-point validation skipped: {exc}")
+        try:
+            from lfx.services.policy_bundle.base import BasePolicyBundleService
+
+            expected_bases[ServiceType.POLICY_BUNDLE_SERVICE] = BasePolicyBundleService
+        except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
+            logger.debug(f"BasePolicyBundleService unavailable; entry-point validation skipped: {exc}")
 
         for ep in eps:
             try:
@@ -473,7 +518,41 @@ class ServiceManager:
             object_key=service_key,
         )
         if service_class is None:
+            if service_type == ServiceType.MODEL_PROVIDER_POLICY_SERVICE:
+                msg = (
+                    "Configured model provider policy service could not be loaded; "
+                    "refusing to start with the OSS allow-all fallback"
+                )
+                raise RuntimeError(msg)
+            if service_type == ServiceType.POLICY_BUNDLE_SERVICE:
+                msg = (
+                    "Configured policy bundle service could not be loaded; "
+                    "refusing to start with the built-in process-local fallback"
+                )
+                raise RuntimeError(msg)
             return
+
+        if service_type == ServiceType.MODEL_PROVIDER_POLICY_SERVICE:
+            from lfx.services.model_provider_policy.base import BaseModelProviderPolicyService
+
+            if not isinstance(service_class, type) or not issubclass(service_class, BaseModelProviderPolicyService):
+                msg = "Configured model provider policy service must subclass BaseModelProviderPolicyService"
+                raise RuntimeError(msg)
+        if service_type == ServiceType.CATALOG_POLICY_SERVICE:
+            from lfx.services.catalog_policy.base import BaseCatalogPolicyService
+
+            if not isinstance(service_class, type) or not issubclass(service_class, BaseCatalogPolicyService):
+                logger.warning(
+                    "Configured catalog policy service must subclass BaseCatalogPolicyService; "
+                    "keeping the built-in fail-open service"
+                )
+                return
+        if service_type == ServiceType.POLICY_BUNDLE_SERVICE:
+            from lfx.services.policy_bundle.base import BasePolicyBundleService
+
+            if not isinstance(service_class, type) or not issubclass(service_class, BasePolicyBundleService):
+                msg = "Configured policy bundle service must subclass BasePolicyBundleService"
+                raise RuntimeError(msg)
 
         self.register_service_class(service_type, service_class, override=True)
         logger.debug(f"Registered service from config: {service_key} -> {service_path}")

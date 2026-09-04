@@ -118,6 +118,15 @@ async def list_flows_by_flow_folder(
         ValueError: If user_id is not provided.
         ValueError: If Flow ID is not provided.
     """
+    return await _list_flows_in_flow_folder(user_id=user_id, flow_id=flow_id, a2a_only=False)
+
+
+async def _list_flows_in_flow_folder(*, user_id: str | None, flow_id: str | None, a2a_only: bool) -> list[Data]:
+    """Stub mirror of ``langflow.helpers.flow._list_flows_in_flow_folder``.
+
+    Validates its arguments the same way the real implementation does, then no-ops: in lfx
+    we don't have a database backend by default, so there are no flows to list.
+    """
     if not user_id:
         msg = "Session is invalid"
         raise ValueError(msg)
@@ -125,10 +134,24 @@ async def list_flows_by_flow_folder(
         msg = "Flow ID is required"
         raise ValueError(msg)
 
-    # In lfx, we don't have a database backend by default
-    # This is a stub implementation
-    logger.warning("list_flows_by_flow_folder called but lfx doesn't have database backend by default")
+    caller = "list_a2a_agents_by_flow_folder" if a2a_only else "list_flows_by_flow_folder"
+    msg = f"{caller} called but lfx doesn't have database backend by default"
+    logger.warning(msg)
     return []
+
+
+async def list_a2a_agents_by_flow_folder(
+    *,
+    user_id: str | None = None,
+    flow_id: str | None = None,
+    order_params: dict | None = {"column": "updated_at", "direction": "desc"},  # noqa: B006, ARG001
+) -> list[Data]:
+    """Stub: lfx has no database backend, so there are no A2A agents to list.
+
+    The real implementation lives in ``langflow.helpers.flow`` and filters flows on
+    ``a2a_enabled``. See :func:`list_flows_by_flow_folder` for the same lfx/langflow split.
+    """
+    return await _list_flows_in_flow_folder(user_id=user_id, flow_id=flow_id, a2a_only=True)
 
 
 async def list_flows_by_folder_id(
@@ -298,6 +321,11 @@ async def run_flow(
 
     # In lfx, we don't have settings service, so use False as default
     fallback_to_env_vars = False
+
+    from lfx.run.hitl import raise_if_nested_hitl_unsupported
+
+    # A nested run cannot pause: a Human Input in here would silently not pause. Fail loud instead.
+    raise_if_nested_hitl_unsupported(graph)
 
     return await graph.arun(
         inputs_list,

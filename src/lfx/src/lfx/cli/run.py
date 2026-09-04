@@ -1,5 +1,6 @@
 """CLI wrapper for the run command."""
 
+import asyncio
 import json
 from functools import partial
 from pathlib import Path
@@ -7,6 +8,7 @@ from pathlib import Path
 import typer
 from asyncer import syncify
 
+from lfx.observability import bootstrap_application_telemetry, execution_protocol
 from lfx.run.base import RunError, run_flow
 
 # Verbosity level constants
@@ -81,6 +83,11 @@ async def run(
         show_default=True,
         help="Check global variables for environment compatibility",
     ),
+    check_dependencies: bool = typer.Option(
+        default=True,
+        show_default=True,
+        help="Preflight the flow's required packages; fail fast with install guidance when any are missing",
+    ),
     verbose: bool = typer.Option(
         False,  # noqa: FBT003
         "-v",
@@ -110,6 +117,17 @@ async def run(
         ),
     ),
     upgrade_flow: str | None = None,
+    human_input: bool | None = typer.Option(
+        None,
+        "--human-input/--no-human-input",
+        help=(
+            "Interactive human-in-the-loop. Default auto-enables it when the flow has a "
+            "pausing node (e.g. HumanInput) and the terminal is interactive; the run then "
+            "prompts at each pause. Use --no-human-input to disable. Interactive-session "
+            "only: checkpoints are in-memory, so a paused run cannot be resumed later or "
+            "from another process. Non-interactive runs do not pause (a warning is printed)."
+        ),
+    ),
 ) -> None:
     """Execute a Langflow graph script or JSON flow and return the result.
 
@@ -128,30 +146,44 @@ async def run(
         flow_json: Inline JSON flow content as a string
         stdin: Read JSON flow content from stdin
         check_variables: Check global variables for environment compatibility
+        check_dependencies: Preflight required packages and fail fast when any are missing
         timing: Include detailed timing information in output
         session_id: Optional session ID; auto-generated if not supplied
         upgrade_flow: Component compatibility mode ('check' or 'safe')
+        human_input: Interactive human-in-the-loop (None auto-detects; True/False force)
     """
     # Determine verbosity for output formatting
     verbosity = 3 if verbose_full else (2 if verbose_detailed else (1 if verbose else 0))
 
+    # Application observability for the one-shot surface. ``lfx serve`` and the langflow server
+    # install the OTLP providers from the standard OTEL_* environment variables at boot; this is
+    # the same call, made here because nothing else on this path makes it. Without it the
+    # ``flow.execute`` span the graph emits lands on OpenTelemetry's no-op proxy provider and is
+    # discarded, and an operator who wired ``lfx run`` (a cron job, a CI step, a batch worker)
+    # into their APM has a blind surface with no warning. A no-op when no endpoint is set, or
+    # when lfx was installed without the ``otel`` extra, so the default path costs nothing.
+    telemetry = bootstrap_application_telemetry()
     try:
-        result = await run_flow(
-            script_path=script_path,
-            input_value=input_value,
-            input_value_option=input_value_option,
-            output_format=output_format,
-            flow_json=flow_json,
-            stdin=bool(stdin),
-            check_variables=check_variables,
-            verbose=verbose,
-            verbose_detailed=verbose_detailed,
-            verbose_full=verbose_full,
-            timing=timing,
-            global_variables=None,
-            session_id=session_id,
-            upgrade_flow=upgrade_flow,
-        )
+        # The whole one-shot run happens inside this await, including the graph's own span.
+        with execution_protocol("lfx.run"):
+            result = await run_flow(
+                script_path=script_path,
+                input_value=input_value,
+                input_value_option=input_value_option,
+                output_format=output_format,
+                flow_json=flow_json,
+                stdin=bool(stdin),
+                check_variables=check_variables,
+                check_dependencies=check_dependencies,
+                verbose=verbose,
+                verbose_detailed=verbose_detailed,
+                verbose_full=verbose_full,
+                timing=timing,
+                global_variables=None,
+                session_id=session_id,
+                upgrade_flow=upgrade_flow,
+                human_input=human_input,
+            )
 
         # Output based on format
         if output_format in {"text", "message", "result"}:
@@ -172,3 +204,11 @@ async def run(
             error_response["exception_message"] = str(e)
         typer.echo(json.dumps(error_response))
         raise typer.Exit(1) from e
+    finally:
+        # This process owns the telemetry lifetime, so it flushes on the way out: the span is
+        # sitting in the batch processor when the run ends, and the process exits right after.
+        # On every exit path, because a failed run's ``status=error`` span is the one an
+        # operator most needs to see. After the result has been echoed, so a consumer reading
+        # stdout is never held behind the export, which blocks on the network (up to the OTLP
+        # timeout when the collector is unreachable). Off the event loop for the same reason.
+        await asyncio.to_thread(telemetry.shutdown)
