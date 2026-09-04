@@ -20,8 +20,9 @@ from typing import TYPE_CHECKING
 from lfx.base.knowledge_bases.backends import is_local_chroma
 from lfx.base.knowledge_bases.backends.postgres import resolve_default_kb_backend
 from lfx.base.knowledge_bases.validation import validate_collection_name
-from lfx.base.models.provider_registry import is_api_key_optional
+from lfx.base.models.provider_registry import is_api_key_optional, provider_name_for_id, resolve_provider_id
 from lfx.base.models.unified_models import get_api_key_for_provider
+from lfx.base.models.unified_models.class_registry import EMBEDDING_PROVIDER_CLASS_MAPPING
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyPurpose,
     aresolve_model_provider_policy,
@@ -29,7 +30,7 @@ from lfx.services.model_provider_policy import (
 )
 from sqlmodel import col, select
 
-from langflow.api.utils.kb_helpers import local_chroma_rejection_reason
+from langflow.api.utils.kb_helpers import local_chroma_rejection_reason, resolve_embedding_selection
 from langflow.services.base import Service
 from langflow.services.database.models.memory_base.model import (
     MemoryBase,
@@ -82,6 +83,10 @@ class PreprocessingValidationError(ValueError):
     """Raised when preprocessing is enabled but the provider API key is absent."""
 
 
+class EmbeddingProviderValidationError(ValueError):
+    """Raised when the caller-selected embedding provider cannot serve embeddings."""
+
+
 def _require_preprocessing_model_provider(user_id: uuid.UUID, preproc_model: str | None) -> str | None:
     """Require CONFIGURE access for a supplied preprocessing model identity."""
     provider = _infer_preprocessing_model_provider(preproc_model)
@@ -105,18 +110,67 @@ def _infer_preprocessing_model_provider(preproc_model: str | None) -> str | None
         raise PreprocessingValidationError(str(exc)) from exc
 
 
+# ``get_embedding_provider`` reports this sentinel for a knowledge_base row whose
+# ``model_selection`` carries no provider; it must never be authorized or persisted.
+_UNKNOWN_PROVIDER = "Unknown"
+
+
+def _select_embedding_provider(embedding_provider: str | None, embedding_model: str) -> str:
+    """Return the canonical embedding provider for a Memory Base.
+
+    The caller's explicit selection wins. It is canonicalized through the provider
+    registry so the persisted value is the exact key every downstream embedding
+    lookup uses (``EMBEDDING_PROVIDER_CLASS_MAPPING`` is matched verbatim, while the
+    policy layer matches case- and alias-insensitively): ``"openai"`` becomes
+    ``"OpenAI"`` and ``"IBM watsonx.ai"`` becomes ``"IBM WatsonX"``. Names the
+    registry does not know are kept as supplied so the policy layer can reject
+    them. Name-based inference is the fallback only when nothing usable was given.
+    """
+    supplied = (embedding_provider or "").strip()
+    if not supplied or supplied == _UNKNOWN_PROVIDER:
+        return infer_embedding_provider(embedding_model)
+    return provider_name_for_id(resolve_provider_id(supplied)) or supplied
+
+
+def _require_embedding_class(provider: str) -> None:
+    """Reject a caller-selected provider that cannot serve embeddings.
+
+    Runs after the policy preflight on create only. The OSS policy allows every
+    provider name, so without this check a typo or a chat-only provider would be
+    persisted and fail at the first ingestion with a misleading credential error.
+    Stored providers on existing Memory Bases are not re-checked so an uninstalled
+    bundle never blocks deactivating or renaming a Memory Base.
+
+    Raises:
+        EmbeddingProviderValidationError: ``provider`` has no registered embedding class.
+    """
+    if provider not in EMBEDDING_PROVIDER_CLASS_MAPPING:
+        msg = f"Embedding provider '{provider}' is not available for embeddings."
+        raise EmbeddingProviderValidationError(msg)
+
+
 async def _preflight_memory_provider_configuration(
     *,
     flow,
     actor_user_id: uuid.UUID,
     actor_is_superuser: bool,
     embedding_model: str,
+    embedding_provider: str | None,
     preproc_model: str | None,
 ) -> tuple[str | None, str]:
-    """Authorize selected configuration providers before any owner credential read."""
+    """Authorize selected configuration providers before any owner credential read.
+
+    ``embedding_provider`` is the provider the caller actually selected and is
+    authoritative when supplied. Name-based inference is only the fallback: it
+    cannot see live-discovered models (an OpenAI-Compatible endpoint's catalog is
+    per-user), so guessing from the model name labels those models as OpenAI and
+    every later credential lookup asks for the wrong key.
+    """
     preprocessing_provider = _infer_preprocessing_model_provider(preproc_model)
-    embedding_provider = infer_embedding_provider(embedding_model)
-    providers = list(dict.fromkeys(provider for provider in (preprocessing_provider, embedding_provider) if provider))
+    selected_embedding_provider = _select_embedding_provider(embedding_provider, embedding_model)
+    providers = list(
+        dict.fromkeys(provider for provider in (preprocessing_provider, selected_embedding_provider) if provider)
+    )
     with scoped_model_provider_policy_for_flow(
         flow,
         user_id=actor_user_id,
@@ -129,7 +183,7 @@ async def _preflight_memory_provider_configuration(
         )
         for provider in providers:
             provider_policy.require(provider)
-    return preprocessing_provider, embedding_provider
+    return preprocessing_provider, selected_embedding_provider
 
 
 def _validate_preprocessing_api_key(user_id: uuid.UUID, preproc_model: str | None) -> None:
@@ -229,8 +283,12 @@ class MemoryBaseService(Service):
             actor_user_id=user_id,
             actor_is_superuser=is_superuser,
             embedding_model=payload.embedding_model,
+            embedding_provider=payload.embedding_provider,
             preproc_model=payload.preproc_model,
         )
+        # Policy first so a hidden provider stays indistinguishable from a missing one.
+        if (payload.embedding_provider or "").strip():
+            _require_embedding_class(embedding_provider)
         if payload.preprocessing:
             _validate_preprocessing_provider_api_key(
                 user_id,
@@ -307,9 +365,9 @@ class MemoryBaseService(Service):
                     raise ValueError(msg)
 
                 mb = MemoryBase(
-                    # ``backend_type``/``backend_config`` live on the knowledge_base
-                    # row created above, not on this table.
-                    **payload.model_dump(exclude={"user_id", "backend_type", "backend_config"}),
+                    # ``backend_type``/``backend_config``/``embedding_provider`` live
+                    # on the knowledge_base row created above, not on this table.
+                    **payload.model_dump(exclude={"user_id", "backend_type", "backend_config", "embedding_provider"}),
                     user_id=user_id,
                     kb_name=kb_name,
                 )
@@ -414,11 +472,21 @@ class MemoryBaseService(Service):
                 return None
 
             flow = await resolve_owned_memory_flow(db, flow_id=mb.flow_id, user_id=owner_user_id)
+            # The embedding provider chosen at create time is persisted on the
+            # backing knowledge_base row (the memory_base table stores only the
+            # model name). Re-inferring it from that name would relabel a
+            # live-discovered model — e.g. one served by an OpenAI-Compatible
+            # endpoint — as OpenAI and authorize the wrong provider.
+            stored_embedding_provider, _stored_embedding_model = await resolve_embedding_selection(
+                user_id=owner_user_id,
+                kb_name=mb.kb_name,
+            )
             preprocessing_provider, _embedding_provider = await _preflight_memory_provider_configuration(
                 flow=flow,
                 actor_user_id=actor_user_id,
                 actor_is_superuser=actor_is_superuser,
                 embedding_model=mb.embedding_model,
+                embedding_provider=stored_embedding_provider,
                 preproc_model=mb.preproc_model if mb.preprocessing else None,
             )
 
