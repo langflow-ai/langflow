@@ -109,7 +109,7 @@ const ChunkCard = ({ chunk, index, onCopy }: ChunkCardProps) => {
             size="sq"
             className="text-xs text-muted-foreground"
           >
-            {chunk.char_count} {t("knowledge.charsSuffix")}
+            {t("knowledge.charCount", { count: chunk.char_count })}
           </Badge>
           <Button
             variant="ghost"

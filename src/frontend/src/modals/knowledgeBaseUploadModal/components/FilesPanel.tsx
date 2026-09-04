@@ -56,8 +56,7 @@ export function FilesPanel({
         {t("knowledge.sourcesLabel")}
         {files.length > 0 && (
           <span className="text-xs font-normal text-muted-foreground">
-            ({files.length}{" "}
-            {files.length === 1 ? t("knowledge.file") : t("knowledge.files")},{" "}
+            ({t("knowledge.fileCount", { count: files.length })},{" "}
             {formatFileSize(files)})
           </span>
         )}

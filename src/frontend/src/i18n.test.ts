@@ -72,6 +72,12 @@ describe("loadLanguage", () => {
     expect(i18n.t("deployments.flow", { count: 1 })).toBe("поток");
     expect(i18n.t("deployments.flow", { count: 2 })).toBe("потока");
     expect(i18n.t("deployments.flow", { count: 5 })).toBe("потоков");
+    expect(i18n.t("knowledge.fileCount", { count: 1 })).toBe("1 файл");
+    expect(i18n.t("knowledge.fileCount", { count: 2 })).toBe("2 файла");
+    expect(i18n.t("knowledge.fileCount", { count: 5 })).toBe("5 файлов");
+    expect(i18n.t("knowledge.charCount", { count: 21 })).toBe("21 символ");
+    expect(i18n.t("knowledge.charCount", { count: 22 })).toBe("22 символа");
+    expect(i18n.t("knowledge.charCount", { count: 25 })).toBe("25 символов");
   });
 
   it("does not call addResourceBundle if language is already cached", async () => {

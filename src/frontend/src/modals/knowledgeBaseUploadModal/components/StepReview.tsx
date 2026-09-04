@@ -222,17 +222,17 @@ export function StepReview({
         <SummaryItem
           icon="Files"
           label={t("knowledge.files")}
-          value={`${files.length} ${files.length !== 1 ? t("knowledge.files") : t("knowledge.file")} (${totalFileSize})`}
+          value={`${t("knowledge.fileCount", { count: files.length })} (${totalFileSize})`}
         />
         <SummaryItem
           icon="Ruler"
           label={t("knowledge.labelChunkSize")}
-          value={`${chunkSize} ${t("knowledge.charsSuffix")}`}
+          value={t("knowledge.charCount", { count: chunkSize })}
         />
         <SummaryItem
           icon="Layers"
           label={t("knowledge.labelChunkOverlap")}
-          value={`${chunkOverlap} ${t("knowledge.charsSuffix")}`}
+          value={t("knowledge.charCount", { count: chunkOverlap })}
         />
         <SummaryItem
           icon="SplitSquareHorizontal"
