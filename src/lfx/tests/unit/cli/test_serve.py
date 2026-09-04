@@ -370,11 +370,33 @@ class TestBuildRegistryFromPaths:
 
 
 class TestBuildServeRegistryTempCleanup:
-    def test_inline_flow_removes_temp_file_when_registry_build_fails(self, tmp_path, monkeypatch):
+    """``_build_serve_registry`` owns the temp file until it hands the path back.
+
+    ``serve_command`` only learns the path from a successful return, so any exit that
+    skips that return has to unlink the staged flow itself or it is orphaned in the
+    system temp directory.
+    """
+
+    @staticmethod
+    def _build(**overrides):
         import asyncio
 
-        import typer
         from lfx.cli.commands import _build_serve_registry
+
+        kwargs = {
+            "script_paths": None,
+            "flow_json": None,
+            "stdin": False,
+            "check_variables": False,
+            "no_env_fallback": False,
+            "flow_store": MagicMock(),
+            "verbose_print": lambda _: None,
+        }
+        kwargs.update(overrides)
+        return asyncio.run(_build_serve_registry(**kwargs))
+
+    def test_inline_flow_removes_temp_file_when_registry_build_fails(self, tmp_path, monkeypatch):
+        import typer
 
         monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
 
@@ -382,25 +404,35 @@ class TestBuildServeRegistryTempCleanup:
             patch("lfx.cli.commands.build_registry_from_paths", new=AsyncMock(side_effect=ValueError("invalid flow"))),
             pytest.raises(typer.Exit),
         ):
-            asyncio.run(
-                _build_serve_registry(
-                    script_paths=None,
-                    flow_json="{}",
-                    stdin=False,
-                    check_variables=False,
-                    no_env_fallback=False,
-                    flow_store=MagicMock(),
-                    verbose_print=lambda _: None,
-                )
-            )
+            self._build(flow_json="{}")
 
         assert list(tmp_path.iterdir()) == []
 
-    def test_upgraded_file_removes_temp_file_when_registry_build_fails(self, tmp_path, monkeypatch):
-        import asyncio
+    def test_inline_flow_removes_temp_file_when_build_fails_unexpectedly(self, tmp_path, monkeypatch):
+        """Cleanup can't hinge on ValueError — a Ctrl-C mid-load orphans the file too."""
+        monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
 
+        with (
+            patch("lfx.cli.commands.build_registry_from_paths", new=AsyncMock(side_effect=KeyboardInterrupt)),
+            pytest.raises(KeyboardInterrupt),
+        ):
+            self._build(flow_json="{}")
+
+        assert list(tmp_path.iterdir()) == []
+
+    def test_inline_flow_keeps_temp_file_for_caller_on_success(self, tmp_path, monkeypatch):
+        """The success path must still hand the path to ``serve_command``'s finally."""
+        monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+
+        with patch("lfx.cli.commands.build_registry_from_paths", new=AsyncMock(return_value=MagicMock())):
+            _registry, temp_file = self._build(flow_json="{}")
+
+        assert temp_file is not None
+        assert Path(temp_file).exists()
+        assert [entry.name for entry in tmp_path.iterdir()] == [Path(temp_file).name]
+
+    def test_upgraded_file_removes_temp_file_when_registry_build_fails(self, tmp_path, monkeypatch):
         import typer
-        from lfx.cli.commands import _build_serve_registry
 
         source_path = tmp_path / "flow.json"
         source_path.write_text("{}")
@@ -413,18 +445,7 @@ class TestBuildServeRegistryTempCleanup:
             patch("lfx.cli.commands.build_registry_from_paths", new=AsyncMock(side_effect=ValueError("invalid flow"))),
             pytest.raises(typer.Exit),
         ):
-            asyncio.run(
-                _build_serve_registry(
-                    script_paths=[str(source_path)],
-                    flow_json=None,
-                    stdin=False,
-                    check_variables=False,
-                    no_env_fallback=False,
-                    flow_store=MagicMock(),
-                    verbose_print=lambda _: None,
-                    upgrade_flow="safe",
-                )
-            )
+            self._build(script_paths=[str(source_path)], upgrade_flow="safe")
 
         assert list(temp_dir.iterdir()) == []
 
