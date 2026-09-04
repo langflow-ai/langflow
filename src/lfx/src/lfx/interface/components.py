@@ -759,6 +759,15 @@ def _process_single_module(modname: str) -> tuple[str, dict] | None:
     return (top_level, module_components)
 
 
+def _resolved_component_path(path: str | Path) -> Path:
+    """Resolve a component path for identity comparisons without requiring it to exist."""
+    candidate = Path(path)
+    try:
+        return candidate.resolve(strict=False)
+    except OSError:
+        return candidate
+
+
 async def _determine_loading_strategy(settings_service: "SettingsService") -> dict[str, Any]:
     """Determines and executes the appropriate component loading strategy.
 
@@ -769,15 +778,24 @@ async def _determine_loading_strategy(settings_service: "SettingsService") -> di
         Dictionary containing loaded component types and templates
     """
     all_types_dict: dict[str, Any] = {}
+    # Both branches load *custom* components only. Built-ins are already loaded from the prebuilt
+    # index by import_langflow_components, and _initialize_component_cache merges this result over
+    # them -- so scanning BASE_COMPONENTS_PATH here does not add the built-ins, it REPLACES them
+    # with whatever this scan produces, under directory-derived keys.
+    base_components_path = _resolved_component_path(BASE_COMPONENTS_PATH)
+    custom_paths = [
+        path
+        for path in (settings_service.settings.components_path or [])
+        if _resolved_component_path(path) != base_components_path
+    ]
     if settings_service.settings.lazy_load_components:
         # Partial loading mode - just load component metadata
         await logger.adebug("Using partial component loading")
-        all_types_dict = await aget_component_metadata(settings_service.settings.components_path)
-    elif settings_service.settings.components_path:
-        # Traditional full loading - filter out base components path to only load custom components
-        custom_paths = [p for p in settings_service.settings.components_path if p != BASE_COMPONENTS_PATH]
         if custom_paths:
-            all_types_dict = await aget_all_types_dict(custom_paths)
+            all_types_dict = await aget_component_metadata(custom_paths)
+    elif custom_paths:
+        # Traditional full loading - filter out base components path to only load custom components
+        all_types_dict = await aget_all_types_dict(custom_paths)
 
     # Log custom component loading stats
     components_dict = all_types_dict or {}
@@ -865,17 +883,11 @@ def _components_path_extension_paths(settings_service: "SettingsService") -> lis
     components dir through as an inline-bundle root (which would produce
     duplicate / garbage palette entries from walking it as a bundle parent).
     """
-    try:
-        base_resolved = Path(BASE_COMPONENTS_PATH).resolve(strict=False)
-    except OSError:
-        base_resolved = Path(BASE_COMPONENTS_PATH)
+    base_resolved = _resolved_component_path(BASE_COMPONENTS_PATH)
     paths: list[Path] = []
     for raw in settings_service.settings.components_path or []:
         candidate = Path(raw)
-        try:
-            candidate_resolved = candidate.resolve(strict=False)
-        except OSError:
-            candidate_resolved = candidate
+        candidate_resolved = _resolved_component_path(candidate)
         if candidate_resolved == base_resolved:
             continue
         if candidate.is_dir():
@@ -1427,6 +1439,50 @@ def _finish_component_initialization_task(
             initialization_future.set_exception(RuntimeError("Component cache initialization ended without a result"))
 
 
+def _merge_component_sources(
+    builtin: dict[str, Any],
+    custom: dict[str, Any] | None = None,
+    extension: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Merge component sources per COMPONENT, later sources winning on a name collision.
+
+    Categories are shared namespaces, not owned by one source: custom and extension loaders
+    routinely emit categories that also exist as built-ins ("tools", "embeddings",
+    "utilities"). Merging at the category level (``{**builtin, **custom}``) replaced the whole
+    built-in category with the other source's, deleting every built-in component in it. Those
+    components then had no registered hash, so ``allow_custom_components=false`` rejected every
+    flow that used one -- reporting first-party built-ins as custom components.
+
+    Inline extension discovery is the canonical representation of components also found by the
+    legacy custom scanner. Its namespaced registry key differs from the legacy component name, so
+    replace that legacy copy by its ``name`` alias before publishing the extension. This prevents
+    one custom component from appearing twice while preserving unrelated built-in siblings.
+
+    Empty categories are dropped: the lazy metadata scanner emits a fixed set of legacy category
+    names whether or not anything was found in them, and they would otherwise surface as empty
+    palette sections.
+    """
+    custom = custom or {}
+    extension = extension or {}
+    merged: dict[str, Any] = {category: dict(components) for category, components in builtin.items()}
+    for category, components in custom.items():
+        if not components:
+            continue
+        merged.setdefault(category, {}).update(components)
+
+    for category, components in extension.items():
+        if not components:
+            continue
+        target = merged.setdefault(category, {})
+        custom_components = custom.get(category, {})
+        for component_id, component in components.items():
+            legacy_name = component.get("name") if isinstance(component, dict) else None
+            if isinstance(legacy_name, str) and legacy_name in custom_components:
+                target.pop(legacy_name, None)
+            target[component_id] = component
+    return merged
+
+
 async def _initialize_component_cache(
     cache: ComponentCache,
     settings_service: "SettingsService",
@@ -1451,13 +1507,7 @@ async def _initialize_component_cache(
         custom_flat = custom_components_dict.get("components", custom_components_dict) or {}
 
         # Merge built-in, custom, and extension components (no wrapper at cache level).
-        # Extension components win on collision so a manifest-shipping bundle
-        # supersedes any same-named legacy entry.
-        merged_types = {
-            **langflow_components["components"],
-            **custom_flat,
-            **extension_components,
-        }
+        merged_types = _merge_component_sources(langflow_components["components"], custom_flat, extension_components)
         component_count = sum(len(comps) for comps in merged_types.values())
         await logger.adebug(f"Loaded {component_count} components")
 
@@ -1697,17 +1747,17 @@ async def ensure_component_loaded(component_type: str, component_name: str, sett
     if component_key in component_cache.fully_loaded_components:
         return
 
-    # If we don't have a cache or the component doesn't exist in the cache, nothing to do
-    if (
-        not component_cache.all_types_dict
-        or "components" not in component_cache.all_types_dict
-        or component_type not in component_cache.all_types_dict["components"]
-        or component_name not in component_cache.all_types_dict["components"][component_type]
-    ):
+    # If we don't have a cache or the component doesn't exist in the cache, nothing to do.
+    # The cache stores categories at the top level: _initialize_component_cache publishes
+    # ``merged_types`` with no "components" wrapper (the wrapper is stripped from the custom
+    # dict before merging). Indexing through a "components" key here matched nothing, so this
+    # function returned early every time and lazy stubs were never hydrated.
+    registry = component_cache.all_types_dict
+    if not registry or component_type not in registry or component_name not in registry[component_type]:
         return
 
     # Check if component is marked for lazy loading
-    if component_cache.all_types_dict["components"][component_type][component_name].get("lazy_loaded", False):
+    if registry[component_type][component_name].get("lazy_loaded", False):
         await logger.adebug(f"Fully loading component {component_type}:{component_name}")
 
         # Load just this specific component
@@ -1717,10 +1767,10 @@ async def ensure_component_loaded(component_type: str, component_name: str, sett
 
         if full_component:
             # Replace the stub with the fully loaded component
-            component_cache.all_types_dict["components"][component_type][component_name] = full_component
+            registry[component_type][component_name] = full_component
             # Remove lazy_loaded flag if it exists
-            if "lazy_loaded" in component_cache.all_types_dict["components"][component_type][component_name]:
-                del component_cache.all_types_dict["components"][component_type][component_name]["lazy_loaded"]
+            if "lazy_loaded" in registry[component_type][component_name]:
+                del registry[component_type][component_name]["lazy_loaded"]
 
             # Mark as fully loaded
             component_cache.fully_loaded_components[component_key] = True
