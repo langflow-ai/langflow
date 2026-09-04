@@ -184,6 +184,12 @@ async def test_non_owner_cannot_test_or_delete_connection(
         headers=headers,
     )
     deleted = await client.delete(f"api/v1/connections/{connection_id}", headers=headers)
+    started = await client.post(
+        f"api/v1/connections/{connection_id}/oauth/start",
+        json={"registration_id": "unknown", "scopes": ["read"]},
+        headers=headers,
+    )
+    assert started.status_code == 404
     assert tested.status_code == 404
     assert deleted.status_code == 404
 
