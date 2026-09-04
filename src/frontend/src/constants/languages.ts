@@ -5,5 +5,6 @@ export const SUPPORTED_LANGUAGES = [
   { code: "de", label: "Deutsch" },
   { code: "pt", label: "Português" },
   { code: "ja", label: "日本語" },
+  { code: "ru", label: "Русский" },
   { code: "zh-Hans", label: "中文" },
 ] as const;
