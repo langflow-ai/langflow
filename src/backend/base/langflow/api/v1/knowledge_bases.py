@@ -789,7 +789,7 @@ async def create_knowledge_base(
             # cleanup now: after a restart the lock should be gone, but clearing
             # only the sentinel would risk adopting the old collection's vectors.
             if KBStorageHelper.is_kb_dir_deleted(kb_path):
-                KBStorageHelper.delete_storage(kb_path, kb_name)
+                await asyncio.to_thread(KBStorageHelper.delete_storage, kb_path, kb_name)
                 if kb_path.exists():
                     raise HTTPException(
                         status_code=409,

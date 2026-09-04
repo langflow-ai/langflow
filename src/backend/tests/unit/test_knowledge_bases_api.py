@@ -1,5 +1,6 @@
 import io
 import json
+import threading
 import uuid
 from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
@@ -395,10 +396,12 @@ class TestKnowledgeBaseAPI:
         kb_path.mkdir(parents=True)
         (kb_path / "chroma.sqlite3").touch()
         (kb_path / KB_DELETED_SENTINEL).touch()
+        event_loop_thread_id = threading.get_ident()
 
         def remove_released_storage(path, name):
             assert path == kb_path
             assert name == kb_name
+            assert threading.get_ident() != event_loop_thread_id
             for child in path.iterdir():
                 child.unlink()
             path.rmdir()
