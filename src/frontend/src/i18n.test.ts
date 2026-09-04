@@ -78,6 +78,9 @@ describe("loadLanguage", () => {
     expect(i18n.t("knowledge.charCount", { count: 21 })).toBe("21 символ");
     expect(i18n.t("knowledge.charCount", { count: 22 })).toBe("22 символа");
     expect(i18n.t("knowledge.charCount", { count: 25 })).toBe("25 символов");
+    expect(i18n.t("store.results", { count: 1 })).toBe("результат");
+    expect(i18n.t("store.results", { count: 2 })).toBe("результата");
+    expect(i18n.t("store.results", { count: 5 })).toBe("результатов");
   });
 
   it("does not call addResourceBundle if language is already cached", async () => {
