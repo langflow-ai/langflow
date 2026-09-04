@@ -162,9 +162,9 @@ export default function DeploymentsTable({
                       />
                     )}
                     {deployment.attached_count}{" "}
-                    {deployment.attached_count === 1
-                      ? t("deployments.flow")
-                      : t("deployments.flows")}
+                    {t("deployments.flow", {
+                      count: deployment.attached_count,
+                    })}
                   </button>
                 </TableCell>
                 <TableCell>

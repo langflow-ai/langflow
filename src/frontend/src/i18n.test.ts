@@ -69,6 +69,9 @@ describe("loadLanguage", () => {
     expect(i18n.t("agentTab.turns", { count: 1 })).toBe("1 запрос");
     expect(i18n.t("agentTab.turns", { count: 2 })).toBe("2 запроса");
     expect(i18n.t("agentTab.turns", { count: 5 })).toBe("5 запросов");
+    expect(i18n.t("deployments.flow", { count: 1 })).toBe("поток");
+    expect(i18n.t("deployments.flow", { count: 2 })).toBe("потока");
+    expect(i18n.t("deployments.flow", { count: 5 })).toBe("потоков");
   });
 
   it("does not call addResourceBundle if language is already cached", async () => {
