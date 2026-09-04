@@ -1,21 +1,18 @@
-"""Deterministic, check-based guardrails with an optional LLM second opinion.
+"""Rule-based guardrails with at most one combined semantic model evaluation.
 
 An alternative to :class:`~lfx.components.llm_operations.guardrails.GuardrailsComponent`,
-which asks an LLM once per category on every turn. This component decides with rules
-and calls a model only when the rules land in an ambiguous band, so a clean input
-costs no round trip and the same input always produces the same verdict.
+which asks an LLM once per enabled category. Rules catch known patterns; a configured
+model evaluates the broader semantic categories together. Rule-only operation is
+available, but does not establish that unverified semantic categories are clean.
 
 Design rules
 ------------
-1. Every verdict is reachable without an LLM. Rules decide; the model only
-   advises. This is what makes the outcome repeatable - the same input always
-   produces the same decision.
-2. The LLM path is opt-in and env-configurable. On a clean input it is never
-   called, so the common case costs microseconds instead of a round trip.
-3. The LLM can only RAISE risk, never lower it. An LLM outage degrades recall,
-   it never turns a detected violation into a pass.
-4. Scope enforcement is a rule, not a judgement call. "Can you order me a
-   pizza?" is refused by the same code path every single time.
+1. Rules are deterministic; model-assisted verdicts can vary between runs.
+2. All semantic categories share one model call. In ambiguous mode a decisive
+   rule-based block skips that call.
+3. The model can only raise risk. Failed or incomplete evaluations block by
+   default, and unsupported or unsuccessful sanitization never counts as a pass.
+4. Scope enforcement uses literal configured topic rules, independently of the model.
 
 Environment overrides (all optional)
 ------------------------------------
@@ -82,9 +79,10 @@ def env_float(key: str, default: float) -> float:
     if raw is None:
         return default
     try:
-        return float(raw)
+        value = float(raw)
     except ValueError:
         return default
+    return value if math.isfinite(value) and 0 <= value <= 1 else default
 
 
 def env_bool(key: str, *, default: bool) -> bool:
@@ -217,11 +215,14 @@ _COMPACT_OVERRIDE = [
     r"showme(your|the)systemprompt",
     r"overridethe(system|policy|guardrail|instruction)",
     r"jailbreak",
-    r"donthinganow",
+    r"doanythingnow",
 ]
+_COMPACT_JAILBREAK = [r"jailbreak", r"doanythingnow"]
 _B64_CANDIDATE = re.compile(r"\b[A-Za-z0-9+/]{24,}={0,2}\b")
 _PRINTABLE_RATIO = 0.85
 _MIN_DECODED_LEN = 8
+_MAX_INPUT_CHARS = 64000
+_MAX_SCAN_CHARS = 128000
 
 
 def normalize(text: str) -> str:
@@ -249,6 +250,7 @@ def compact(text: str) -> str:
 def expand_encoded(text: str) -> str:
     """Append decoded base64 blobs so payloads hidden in encoding are still scanned."""
     extras: list[str] = []
+    expanded_length = len(text)
     for match in _B64_CANDIDATE.findall(text):
         try:
             raw = base64.b64decode(match + "=" * (-len(match) % 4), validate=True)
@@ -259,6 +261,10 @@ def expand_encoded(text: str) -> str:
             continue
         printable = sum(1 for ch in decoded if ch.isprintable() or ch in "\n\t")
         if printable / len(decoded) >= _PRINTABLE_RATIO:
+            expanded_length += len(decoded) + 1
+            if expanded_length > _MAX_SCAN_CHARS:
+                msg = "Decoded input exceeds the guardrail scan limit"
+                raise ValueError(msg)
             extras.append(decoded)
     return text + "\n" + "\n".join(extras) if extras else text
 
@@ -449,7 +455,16 @@ _PII_PATTERNS: list[tuple[str, re.Pattern]] = [
     ("EMAIL", re.compile(r"\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b", re.IGNORECASE)),
     ("SSN", re.compile(r"\b(?!000|666|9\d\d)\d{3}-(?!00)\d{2}-(?!0000)\d{4}\b")),
     ("IBAN", re.compile(r"\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b")),
-    ("PHONE", re.compile(r"(?:(?:\+|00)\d{1,3}[\s\-.]?)?(?:\(?\d{2,4}\)?[\s\-.]?)\d{3,4}[\s\-.]?\d{3,4}\b")),
+    (
+        "PHONE",
+        re.compile(
+            r"(?<!\w)(?:(?:\+|00)\d{1,3}[ .-]?\d{2,4}[ .-]?\d{3,4}[ .-]?\d{3,4}"
+            r"|\(\d{2,4}\)[ .-]?\d{3,4}[ .-]?\d{3,4}"
+            # Unprefixed numbers need three groups and at most 11 digits;
+            # otherwise build identifiers such as 2024 1130 0917 look like PII.
+            r"|(?!(?:\d[ .-]?){11}\d)\d{2,4}[ .-]\d{3,4}[ .-]\d{3,4})\b"
+        ),
+    ),
     ("IPV4", re.compile(r"\b(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)\b")),
     ("PPSN_IE", re.compile(r"\b\d{7}[A-Z]{1,2}\b")),
     ("NINO_UK", re.compile(r"\b[A-CEGHJ-PR-TW-Z]{2}\d{6}[A-D]\b", re.IGNORECASE)),
@@ -688,7 +703,7 @@ _DEFAULT_SCOPE_REFUSAL = (
 
 GUARDRAIL_DESCRIPTIONS = {
     "PII": (
-        "personal identifiable information such as addresses, phone numbers, email addresses, "
+        "personal identifiable information such as names, addresses, phone numbers, email addresses, "
         "national ID numbers, or payment card numbers"
     ),
     "Tokens/Passwords": (
@@ -718,7 +733,7 @@ GUARDRAIL_DESCRIPTIONS = {
 
 FIXED_JUSTIFICATIONS = {
     "PII": "The input contains personal identifiable information that must not be forwarded.",
-    "Tokens/Passwords": "The input contains credentials or secret material that must not be forwarded.",
+    "Tokens/Passwords": "The input contains credentials that must not be forwarded.",  # pragma: allowlist secret
     "Jailbreak": "The input attempts to bypass safety guidelines or coerce an unrestricted persona.",
     "Offensive Content": "The input contains offensive, hateful, threatening or violent content.",
     "Malicious Code": "The input contains malicious code, an exploit payload or a destructive command.",
@@ -752,28 +767,17 @@ OUTPUT_CATEGORIES = [
 SANITIZABLE = {"Prompt Injection", "Jailbreak", "PII", "Tokens/Passwords", "Enterprise Business"}
 # Categories whose detections carry redactable spans.
 _REDACTABLE = ("PII", "Tokens/Passwords", "Enterprise Business")
-LLM_ONLY = {"Custom Guardrail"}
 NEVER_LLM = {"Scope"}  # scope must stay deterministic or it starts flipping again
 
-# Categories where rules are a FLOOR, not a decision.
-#
-# The other categories have structure a rule can express exactly: a card number
-# has a checksum, an AWS key has a fixed prefix and length, a CRN has a grammar,
-# an injection attempt has to say something recognisable to work. For these,
-# rules are not an approximation - they are the definition.
-#
-# Offensive content has no such structure. "You people are all the same" is
-# hateful with nothing matchable in it. A rule can only ever catch the subset
-# someone thought to enumerate, so a zero score here means "no known pattern
-# matched", NOT "clean". These categories therefore force the LLM call even when
-# every rule scored zero - and when no LLM verdict is available, they are
-# reported as UNVERIFIED rather than passed.
-SEMANTIC = {"Offensive Content", "Custom Guardrail"}
+# Every security category extends beyond enumerated patterns. A zero rule score
+# cannot clear names, addresses, prose credentials, or novel injection attempts.
+SEMANTIC = (set(INPUT_CATEGORIES) | set(OUTPUT_CATEGORIES) | {"Custom Guardrail"}) - NEVER_LLM
 
 # _run_llm reasons that mean "the second opinion was never attempted", as opposed
 # to "it was attempted and failed". Only the latter is an incomplete evaluation,
 # and only the latter is what fail_closed exists to catch.
-LLM_NOT_ATTEMPTED = frozenset({"disabled", "skipped (rules decisive)"})
+_NO_MODEL = "no model configured (rules only)"
+LLM_NOT_ATTEMPTED = frozenset({"disabled", "skipped (rules decisive)", _NO_MODEL})
 
 _MAX_LLM_INPUT_CHARS = 12000
 _LLM_JSON_RE = re.compile(r"\{.*\}", re.DOTALL)
@@ -898,7 +902,7 @@ def _strong_weak(
 def detect_jailbreak(text: str) -> dict[str, Any]:
     result = _strong_weak(text, _JAILBREAK_STRONG, _JAILBREAK_WEAK, 0.85, 0.18)
     # Padding-evasion pass: "j a i l b r e a k" survives per-word un-spacing.
-    compact_hits = _find(_COMPACT_OVERRIDE, compact(text))
+    compact_hits = _find(_COMPACT_JAILBREAK, compact(text))
     if compact_hits:
         result["score"] = _cap(result["score"] + 0.85)
         result["matches"]["compact"] = compact_hits
@@ -1094,6 +1098,9 @@ def strip_directives(text: str) -> tuple[str, int]:
 
 def redact_spans(text: str, spans: list[tuple[str, str]], mode: str = "mask") -> tuple[str, int]:
     """Replace detected substrings, longest first so partial overwrites can't happen."""
+    if any(not value or value not in text for _tag, value in spans):
+        msg = "Detected sensitive content cannot be mapped to the original text"
+        raise ValueError(msg)
     redacted, out = 0, text
     for tag, value in sorted(spans, key=lambda s: len(s[1]), reverse=True):
         if not value or value not in out:
@@ -1112,11 +1119,11 @@ def redact_spans(text: str, spans: list[tuple[str, str]], mode: str = "mask") ->
 class GuardrailsV2Component(Component):
     display_name = "Guardrails V2"
     description = (
-        "Rule-based guardrails - weighted pattern scoring, Luhn, entropy, IBM-specific detectors "
-        "and a deterministic scope boundary. Optional LLM second opinion that can only raise risk."
+        "Checks text using rules and one optional combined model evaluation. "
+        "Blocks violations or safely sanitizes supported findings; rules alone have limited semantic coverage."
     )
     icon = "shield-check"
-    documentation = "https://docs.langflow.org/guardrails"
+    documentation = "https://docs.langflow.org/guardrails-v2"
     name = "GuardrailValidatorV2"
 
     inputs = [
@@ -1141,7 +1148,7 @@ class GuardrailsV2Component(Component):
         MultiselectInput(
             name="enabled_guardrails",
             display_name="Guardrails",
-            info="Which checks to run. All are deterministic.",
+            info="Checks to run. Connect a model for semantic coverage beyond known rule patterns.",
             options=sorted(set(INPUT_CATEGORIES) | set(OUTPUT_CATEGORIES)),
             required=True,
             value=[
@@ -1216,7 +1223,8 @@ class GuardrailsV2Component(Component):
             info=(
                 "Risk at or above which the text is sanitized rather than blocked: directive lines "
                 "are stripped and detected PII/secrets redacted, then the cleaned text continues "
-                "out the Pass output. Env: LANGFLOW_GUARDRAILS_SANITIZE_THRESHOLD."
+                "out the Pass output. Findings that cannot be safely removed are blocked. "
+                "Env: LANGFLOW_GUARDRAILS_SANITIZE_THRESHOLD."
             ),
             value=0.35,
             range_spec=RangeSpec(min=0, max=1, step=0.05),
@@ -1247,10 +1255,9 @@ class GuardrailsV2Component(Component):
             display_name="LLM Second Opinion",
             info=(
                 "'env' reads LANGFLOW_GUARDRAILS_LLM_MODE (default: ambiguous). "
-                "'off' is pure rules - zero round trips, fully repeatable. "
-                "'ambiguous' calls the model ONCE, and only when the rule score lands between the "
-                "two thresholds, so clean traffic costs nothing. "
-                "'always' calls it once on every turn. The LLM can only raise risk, never lower it."
+                "'off' runs only known rules, with limited semantic coverage. "
+                "'ambiguous' makes one combined semantic check unless rules already block the text. "
+                "'always' checks even rule-blocked text. A configured model can only raise risk."
             ),
             options=["env", "off", "ambiguous", "always"],
             value="env",
@@ -1259,7 +1266,10 @@ class GuardrailsV2Component(Component):
         ModelInput(
             name="model",
             display_name="Language Model",
-            info="Only used when the LLM second opinion actually fires.",
+            info=(
+                "Connect a model for semantic checks. Without one, only known rules run "
+                "and semantic categories remain unverified."
+            ),
             real_time_refresh=True,
             required=False,
         ),
@@ -1341,7 +1351,7 @@ class GuardrailsV2Component(Component):
             name="fail_closed",
             display_name="Fail Closed",
             info=(
-                "If the guardrail engine itself errors, block rather than let the text through. "
+                "Block if the rule engine or a requested model evaluation fails or returns an incomplete verdict. "
                 "Env: LANGFLOW_GUARDRAILS_FAIL_CLOSED."
             ),
             value=True,
@@ -1350,7 +1360,7 @@ class GuardrailsV2Component(Component):
         BoolInput(
             name="enable_custom_guardrail",
             display_name="Enable Custom Guardrail",
-            info="An extra LLM-evaluated guardrail with your own criteria. Requires llm_mode != off.",
+            info="An extra LLM-evaluated guardrail. Requires a configured model and llm_mode other than off.",
             value=False,
             advanced=True,
         ),
@@ -1389,6 +1399,9 @@ class GuardrailsV2Component(Component):
             msg = "Input text is empty. Please provide valid text for guardrail validation."
             self.status = f"ERROR: {msg}"
             raise ValueError(msg)
+        if len(raw) > _MAX_INPUT_CHARS:
+            msg = f"Input exceeds the {_MAX_INPUT_CHARS}-character guardrail limit"
+            raise ValueError(msg)
         self._raw_text = raw
 
         self._direction = str(getattr(self, "direction", "input") or "input")
@@ -1416,20 +1429,17 @@ class GuardrailsV2Component(Component):
         self._url_allowlist = self._lines(getattr(self, "url_allowlist", ""))
         self._blocklist = self._lines(getattr(self, "custom_blocklist", ""))
 
-        self._enterprise_orgs = self._lines(getattr(self, "enterprise_orgs", "")) or env_list("ENTERPRISE_ORGS")
-        self._enterprise_domains = self._lines(getattr(self, "enterprise_domains", "")) or env_list(
-            "ENTERPRISE_DOMAINS"
-        )
-        self._internal_host_labels = self._lines(getattr(self, "internal_host_labels", "")) or env_list(
-            "INTERNAL_HOST_LABELS"
-        )
-        self._classification_markers = self._lines(getattr(self, "classification_markers", "")) or env_list(
-            "CLASSIFICATION_MARKERS"
-        )
+        self._enterprise_orgs = self._configured_lines("enterprise_orgs")
+        self._enterprise_domains = self._configured_lines("enterprise_domains")
+        self._internal_host_labels = self._configured_lines("internal_host_labels")
+        self._classification_markers = self._configured_lines("classification_markers")
 
         self._scope_mode = env_str("SCOPE_MODE", str(getattr(self, "scope_mode", "off") or "off"))
-        self._allowed_topics = self._lines(getattr(self, "allowed_topics", "")) or env_list("ALLOWED_TOPICS")
-        self._blocked_topics = self._lines(getattr(self, "blocked_topics", "")) or env_list("BLOCKED_TOPICS")
+        if self._scope_mode not in {"off", "allowlist", "denylist", "both"}:
+            msg = "Invalid scope mode; choose off, allowlist, denylist, or both"
+            raise ValueError(msg)
+        self._allowed_topics = self._configured_lines("allowed_topics")
+        self._blocked_topics = self._configured_lines("blocked_topics")
 
         block = env_float("BLOCK_THRESHOLD", self._as_float(getattr(self, "block_threshold", 0.75), 0.75))
         sanitize = env_float("SANITIZE_THRESHOLD", self._as_float(getattr(self, "sanitize_threshold", 0.35), 0.35))
@@ -1441,15 +1451,24 @@ class GuardrailsV2Component(Component):
         if mode == "env":
             mode = env_str("LLM_MODE", "ambiguous") or "ambiguous"
         self._llm_mode = mode if mode in ("off", "ambiguous", "always") else "ambiguous"
+        if self._custom_description and (self._llm_mode == "off" or not getattr(self, "model", None)):
+            msg = "Custom Guardrail requires a configured model and an LLM mode other than off"
+            raise ValueError(msg)
 
         self._fail_closed = env_bool("FAIL_CLOSED", default=bool(getattr(self, "fail_closed", True)))
+
+    def _configured_lines(self, field: str) -> list[str]:
+        if env_str(field.upper()) is not None:
+            return env_list(field.upper())
+        return self._lines(getattr(self, field, ""))
 
     @staticmethod
     def _as_float(value: Any, default: float) -> float:
         try:
-            return float(value)
+            number = float(value)
         except (TypeError, ValueError):
             return default
+        return number if math.isfinite(number) and 0 <= number <= 1 else default
 
     @staticmethod
     def _lines(value: Any) -> list[str]:
@@ -1469,9 +1488,12 @@ class GuardrailsV2Component(Component):
 
     # -- deterministic engine --------------------------------------------
 
-    def _run_deterministic(self) -> dict[str, dict[str, Any]]:
-        raw = self._raw_text
+    def _run_deterministic(self, text: str | None = None) -> dict[str, dict[str, Any]]:
+        raw = self._raw_text if text is None else text
         norm = normalize(raw)
+        if len(norm) > _MAX_SCAN_CHARS:
+            msg = "Normalized input exceeds the guardrail scan limit"
+            raise ValueError(msg)
 
         if getattr(self, "scan_encoded_payloads", True):
             structural = expand_encoded(norm)
@@ -1520,7 +1542,7 @@ class GuardrailsV2Component(Component):
             return False
         if self._llm_mode == "always":
             return True
-        scores = [entry["score"] for name, entry in findings.items() if name not in NEVER_LLM]
+        scores = [entry["score"] for entry in findings.values()]
         top = max(scores) if scores else 0.0
 
         # Already blocking on rules alone - a second opinion cannot change the
@@ -1530,12 +1552,7 @@ class GuardrailsV2Component(Component):
 
         # A semantic category is enabled. Rules cannot clear it: a zero score
         # means "no known pattern matched", not "clean". Call regardless.
-        if self._semantic_enabled():
-            return True
-
-        # Otherwise 'ambiguous' means exactly that - only call when the rule
-        # score is near enough to the line for a second opinion to matter.
-        return top >= self._sanitize_threshold * 0.5
+        return bool(self._semantic_enabled())
 
     def _semantic_enabled(self) -> list[str]:
         """Enabled categories that rules can only put a floor under."""
@@ -1562,7 +1579,7 @@ class GuardrailsV2Component(Component):
             else "USER INPUT about to be sent to an assistant"
         )
 
-        safe = self._raw_text[:_MAX_LLM_INPUT_CHARS]
+        safe = self._raw_text
         for delim in (
             "<<<USER_INPUT_START>>>",
             "<<<USER_INPUT_END>>>",
@@ -1603,24 +1620,46 @@ JSON:"""
         if not match:
             msg = "LLM second opinion returned no JSON object"
             raise ValueError(msg)
-        parsed = json.loads(match.group(0))
+        parsed = json.loads(match.group(0), object_pairs_hook=self._unique_json_object)
         if not isinstance(parsed, dict):
             msg = "LLM second opinion returned a non-object"
             raise TypeError(msg)
 
+        if set(parsed) != set(self._llm_categories()):
+            msg = "LLM second opinion must include every requested category exactly once"
+            raise ValueError(msg)
         out: dict[str, dict[str, Any]] = {}
         for name in self._llm_categories():
             entry = parsed.get(name)
-            if not isinstance(entry, dict):
-                continue
-            detected = bool(entry.get("detected", False))
-            confidence = max(0.0, min(1.0, self._as_float(entry.get("confidence", 0.0), 0.0)))
+            if not isinstance(entry, dict) or type(entry.get("detected")) is not bool:
+                msg = f"LLM second opinion requires a boolean verdict for {name}"
+                raise ValueError(msg)
+            detected = entry["detected"]
+            confidence = entry.get("confidence")
+            if (
+                type(confidence) not in (int, float)
+                or not math.isfinite(confidence)
+                or not 0 <= confidence <= 1
+                or not isinstance(entry.get("reason"), str)
+            ):
+                msg = f"LLM second opinion requires finite confidence in [0, 1] and a reason for {name}"
+                raise ValueError(msg)
             if not detected:
                 confidence = 0.0
             elif confidence == 0.0:
                 confidence = 0.8
             out[name] = {"score": confidence, "reason": str(entry.get("reason", ""))[:200]}
         return out
+
+    @staticmethod
+    def _unique_json_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in result:
+                msg = "LLM second opinion returned duplicate JSON keys"
+                raise ValueError(msg)
+            result[key] = value
+        return result
 
     def _run_llm(self, findings: dict[str, dict[str, Any]]) -> tuple[dict[str, dict[str, Any]], str | None]:
         if self._llm_mode == "off":
@@ -1633,7 +1672,9 @@ JSON:"""
         # LiteLLM Proxy shares one model config with the rest of the flow.
         model_cfg = getattr(self, "model", None)
         if not model_cfg:
-            return {}, "no model configured (connect one to Language Model, or pick one)"
+            return {}, _NO_MODEL
+        if len(self._raw_text) > _MAX_LLM_INPUT_CHARS:
+            return {}, f"Input exceeds the {_MAX_LLM_INPUT_CHARS}-character model evaluation limit"
         try:
             llm = get_llm(model=model_cfg, user_id=self.user_id, api_key=self.api_key)
         except Exception as e:  # noqa: BLE001 - the proxy raises openai.APIConnectionError / APITimeoutError /
@@ -1660,6 +1701,36 @@ JSON:"""
 
     # -- decision ---------------------------------------------------------
 
+    def _result_metadata(
+        self,
+        findings: dict[str, dict[str, Any]],
+        llm_scores: dict[str, dict[str, Any]],
+        llm_error: str | None,
+    ) -> dict[str, Any]:
+        scores = {name: entry["score"] for name, entry in findings.items()}
+        return {
+            "direction": self._direction,
+            "scores": scores,
+            "detail": {
+                name: {
+                    "score": entry["score"],
+                    "source": entry.get("source"),
+                    "matches": entry.get("matches", {}),
+                    "llm_reason": entry.get("llm_reason"),
+                }
+                for name, entry in findings.items()
+                if entry["score"] > 0
+            },
+            "top_score": max(scores.values(), default=0.0),
+            "llm_mode": self._llm_mode,
+            "llm_used": bool(llm_scores),
+            "llm_error": llm_error,
+            "thresholds": {"block": self._block_threshold, "sanitize": self._sanitize_threshold},
+            "checks_run": list(findings),
+            "checks_skipped_for_direction": list(self._skipped),
+            "unverified_categories": self._unverified(llm_scores),
+        }
+
     def _evaluate(self) -> dict[str, Any]:
         if self._result is not None:
             return self._result
@@ -1670,14 +1741,12 @@ JSON:"""
             if self._fail_closed:
                 self.status = f"BLOCKED: guardrail engine error (fail-closed): {e!s}"
                 self._result = {
+                    **self._result_metadata({}, {}, None),
                     "action": "block",
                     "text": self._raw_text,
                     "result": "fail",
                     "justification": f"Guardrail engine error, blocked by fail-closed policy: {e!s}",
                     "violations": ["Engine Error"],
-                    "scores": {},
-                    "llm_used": False,
-                    "llm_error": None,
                 }
                 return self._result
             raise
@@ -1685,16 +1754,13 @@ JSON:"""
         llm_scores, llm_error = self._run_llm(findings)
         unverified = self._unverified(llm_scores)
 
-        # fail_closed used to guard only _run_deterministic. Everything below the
-        # LLM boundary failed OPEN: a dead proxy, a bad key or an unparseable
-        # response returned an llm_error that was recorded and never acted on, and
-        # the input went through as "pass". _should_call_llm only asks for a second
-        # opinion when the rules already found the input worth a closer look, so a
-        # failure here is an incomplete verdict on suspicious input, not a no-op.
+        # A requested model evaluation must return a complete verdict before
+        # the text can pass. Deliberately running rules only is not a failure.
         llm_failed = bool(llm_error) and llm_error not in LLM_NOT_ATTEMPTED
         if llm_failed and self._fail_closed:
             self.status = f"BLOCKED: LLM second opinion unavailable (fail-closed): {llm_error}"
             self._result = {
+                **self._result_metadata(findings, llm_scores, llm_error),
                 "action": "block",
                 "text": self._raw_text,
                 "result": "fail",
@@ -1703,10 +1769,6 @@ JSON:"""
                     f"evaluated. Blocked by fail-closed policy: {llm_error}"
                 ),
                 "violations": ["Incomplete Evaluation"],
-                "scores": {name: entry["score"] for name, entry in findings.items()},
-                "llm_used": False,
-                "llm_error": llm_error,
-                "unverified_categories": unverified,
             }
             return self._result
 
@@ -1733,30 +1795,7 @@ JSON:"""
             reverse=True,
         )
 
-        base = {
-            "direction": self._direction,
-            "scores": scores,
-            "detail": {
-                name: {
-                    "score": e["score"],
-                    "source": e.get("source"),
-                    "matches": e.get("matches", {}),
-                    "llm_reason": e.get("llm_reason"),
-                }
-                for name, e in findings.items()
-                if e["score"] > 0
-            },
-            "top_score": top,
-            "llm_mode": self._llm_mode,
-            "llm_used": bool(llm_scores),
-            "llm_error": llm_error,
-            "thresholds": {"block": self._block_threshold, "sanitize": self._sanitize_threshold},
-            "checks_run": list(self._enabled),
-            "checks_skipped_for_direction": list(self._skipped),
-            # Semantic categories with no LLM verdict this run. Rules put a floor
-            # under these; they cannot clear them. Treat as "not evaluated".
-            "unverified_categories": unverified,
-        }
+        base = self._result_metadata(findings, llm_scores, llm_error)
 
         medium_action = str(getattr(self, "medium_risk_action", "sanitize") or "sanitize")
 
@@ -1795,10 +1834,24 @@ JSON:"""
             return self._result
 
         if medium and medium_action == "sanitize":
-            cleaned, removed, redacted, applied = self._sanitize(findings, medium)
+            try:
+                cleaned, removed, redacted, applied = self._sanitize(findings, medium)
+            except ValueError as exc:
+                self.status = "BLOCKED: detected content could not be safely sanitized"
+                self._result = {
+                    **base,
+                    "action": "block",
+                    "text": self._raw_text,
+                    "result": "fail",
+                    "violations": medium,
+                    "justification": "Detected content could not be safely sanitized. Remove it and try again.",
+                    "sanitization_error": str(exc),
+                }
+                return self._result
             self.status = (
                 f"SANITIZED (risk={top:.2f}): {', '.join(applied) or 'none'} - "
                 f"{removed} line(s) stripped, {redacted} value(s) redacted"
+                + (f" | UNVERIFIED (no LLM verdict): {', '.join(unverified)}" if unverified else "")
             )
             self._result = {
                 **base,
@@ -1830,23 +1883,40 @@ JSON:"""
         return self._result
 
     def _sanitize(self, findings: dict[str, dict[str, Any]], medium: list[str]) -> tuple[str, int, int, list[str]]:
+        if any(name not in SANITIZABLE for name in medium):
+            msg = "This category does not support sanitization"
+            raise ValueError(msg)
+        if any(findings[name].get("llm_score", 0.0) >= self._sanitize_threshold for name in medium):
+            msg = "Semantic findings cannot be localized for safe sanitization"
+            raise ValueError(msg)
         text, removed, redacted = self._raw_text, 0, 0
         applied: list[str] = []
         mode = str(getattr(self, "redaction_mode", "mask") or "mask")
 
-        directive_cats = [n for n in ("Prompt Injection", "Jailbreak") if n in medium]
-        if directive_cats:
-            text, removed = strip_directives(text)
-            applied.extend(directive_cats)
-
         spans: list[tuple[str, str]] = []
         for name in _REDACTABLE:
             if name in medium:
-                spans.extend(findings.get(name, {}).get("spans", []))
+                category_spans = findings[name].get("spans", [])
+                if not category_spans:
+                    msg = "Detected sensitive content has no redactable spans"
+                    raise ValueError(msg)
+                spans.extend(category_spans)
                 applied.append(name)
         if spans:
             text, redacted = redact_spans(text, spans, mode)
 
+        directive_cats = [n for n in ("Prompt Injection", "Jailbreak") if n in medium]
+        if directive_cats:
+            text, removed = strip_directives(text)
+            if not removed:
+                msg = "Detected directives could not be removed"
+                raise ValueError(msg)
+            applied.extend(directive_cats)
+
+        remaining = self._run_deterministic(text)
+        if any(entry["score"] >= self._sanitize_threshold for entry in remaining.values()):
+            msg = "Sanitized text still contains a guardrail finding"
+            raise ValueError(msg)
         return (text or _NEUTRAL_STUB), removed, redacted, applied
 
     # -- outputs ----------------------------------------------------------
