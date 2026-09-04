@@ -32,6 +32,7 @@ from lfx.log.logger import (
     log_buffer,
     setup_gunicorn_logger,
     setup_uvicorn_logger,
+    structlog_routes_to_stdlib,
 )
 from loguru import logger as loguru_logger
 
@@ -479,6 +480,141 @@ class TestInterceptHandler:
 
         self.handler.emit(record)
         self.mock_logger.info.assert_called_once_with("Message with string and 42")
+
+
+class TestInterceptHandlerReentrancy:
+    """Regression tests for the ``InterceptHandler.emit()`` re-entrancy guard.
+
+    With a log file configured, ``configure()`` selects
+    ``structlog.stdlib.LoggerFactory``, so the structlog logger ``emit``
+    resolves from ``record.name`` writes back out to the stdlib logger of the
+    same name. When that logger is handled by an ``InterceptHandler`` (as
+    ``langflow.server.Logger`` sets up for ``gunicorn.error`` and
+    ``gunicorn.access``), the record cycles back into ``emit``, and each lap
+    re-renders the previous lap's payload into the next event.
+    """
+
+    def teardown_method(self):
+        structlog.reset_defaults()
+        logging.root.handlers = [h for h in logging.root.handlers if not isinstance(h, InterceptHandler)]
+        gunicorn_logger = logging.getLogger("gunicorn.error")
+        gunicorn_logger.handlers = []
+        gunicorn_logger.setLevel(logging.NOTSET)
+
+    @staticmethod
+    def _record(name="gunicorn.error", msg="boom"):
+        """Build an ERROR record named after a logger that server.py intercepts."""
+        return logging.LogRecord(
+            name=name,
+            level=logging.ERROR,
+            pathname="test.py",
+            lineno=1,
+            msg=msg,
+            args=(),
+            exc_info=None,
+        )
+
+    def test_emit_drops_a_record_that_re_enters_on_the_same_thread(self):
+        """A record routed back into emit() by its own structlog logger is dropped."""
+        handler = InterceptHandler()
+        record = self._record()
+        dispatched = []
+
+        class ReentrantLogger:
+            """Stands in for a structlog logger backed by structlog.stdlib.LoggerFactory."""
+
+            def error(self, message, **_kwargs):
+                """Dispatch, then route the record back into the handler."""
+                dispatched.append(message)
+                handler.emit(record)
+
+        with patch("structlog.get_logger", return_value=ReentrantLogger()):
+            handler.emit(record)
+
+        assert dispatched == ["boom"]
+
+    def test_guard_is_released_after_a_successful_emit(self):
+        """Two sequential emits both dispatch: the guard is not sticky."""
+        handler = InterceptHandler()
+        mock_logger = Mock()
+
+        with patch("structlog.get_logger", return_value=mock_logger):
+            handler.emit(self._record())
+            handler.emit(self._record())
+
+        assert mock_logger.error.call_count == 2
+
+    def test_guard_is_released_when_emit_raises(self):
+        """A failing emit routes to handleError and still clears the guard."""
+        handler = InterceptHandler()
+        mock_logger = Mock()
+        mock_logger.error.side_effect = [RuntimeError("render failed"), None]
+
+        with patch("structlog.get_logger", return_value=mock_logger), patch.object(handler, "handleError") as handle:
+            handler.emit(self._record())
+            handler.emit(self._record())
+
+        assert handle.call_count == 1
+        assert mock_logger.error.call_count == 2
+
+    def test_intercepted_logger_with_log_file_terminates(self, tmp_path, monkeypatch):
+        """The gunicorn.error + log_file combination logs once and terminates."""
+        depth = {"current": 0, "max": 0}
+        original_emit = InterceptHandler.emit
+        emit_cap = 8
+
+        def counting_emit(handler_self, record):
+            """Track emit depth and stop the cycle before it can exhaust memory."""
+            depth["current"] += 1
+            depth["max"] = max(depth["max"], depth["current"])
+            try:
+                # Hard stop so a regression cannot exhaust CI memory: without the
+                # guard the payload doubles per lap.
+                if depth["current"] > emit_cap:
+                    return None
+                return original_emit(handler_self, record)
+            finally:
+                depth["current"] -= 1
+
+        monkeypatch.setattr(InterceptHandler, "emit", counting_emit)
+
+        log_file = tmp_path / "langflow.log"
+        configure(log_level="ERROR", log_file=log_file, cache=False)
+
+        # Exactly what langflow.server.Logger.__init__ does for gunicorn.
+        gunicorn_logger = logging.getLogger("gunicorn.error")
+        gunicorn_logger.setLevel(logging.WARNING)
+        gunicorn_logger.handlers = [InterceptHandler()]
+
+        gunicorn_logger.error("boom")
+
+        for handler in logging.root.handlers:
+            handler.flush()
+
+        # One lap of interception, and the re-entrant lap the guard drops.
+        assert depth["max"] <= 2
+        contents = log_file.read_text()
+        assert "boom" in contents
+        assert len(contents) < 10_000
+
+
+class TestStructlogRoutesToStdlib:
+    """Tests for the predicate that reports whether structlog writes back to stdlib."""
+
+    def teardown_method(self):
+        structlog.reset_defaults()
+
+    def test_true_when_a_log_file_is_configured(self, tmp_path):
+        """A log file selects structlog.stdlib.LoggerFactory, which can cycle."""
+        configure(log_level="ERROR", log_file=tmp_path / "langflow.log", cache=False)
+
+        assert structlog_routes_to_stdlib() is True
+
+    def test_false_without_a_log_file(self):
+        """Without a log file the print factory writes to the stream directly."""
+        configure(log_level="ERROR", cache=False)
+
+        assert structlog_routes_to_stdlib() is False
 
 
 class TestSetupFunctions:
