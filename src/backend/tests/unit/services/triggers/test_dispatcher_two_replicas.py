@@ -15,6 +15,7 @@ under ``FOR UPDATE SKIP LOCKED`` candidate scans; set
 from __future__ import annotations
 
 import asyncio
+from uuid import uuid4
 
 import pytest
 from langflow.services.database.models.trigger.model import TriggerEvent
@@ -123,7 +124,7 @@ async def test_the_candidate_scan_uses_skip_locked_only_on_postgres(dialect, exp
     from sqlalchemy.dialects import postgresql, sqlite
 
     recorder = _StatementRecorder(dialect)
-    await dispatcher._candidate_ids(recorder, limit=5)
+    await dispatcher._candidate_ids(recorder, trigger_id=uuid4(), limit=5)
 
     compiler = postgresql.dialect() if dialect == "postgresql" else sqlite.dialect()
     rendered = str(recorder.statement.compile(dialect=compiler)).upper()

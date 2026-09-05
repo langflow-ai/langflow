@@ -550,12 +550,10 @@ def get_lifespan(*, fix_migration=False, version=None):
             # every API replica still fires each schedule once and runs each
             # ledger event once. Best-effort: a trigger loop that cannot start
             # must never stop the API from booting.
-            if get_settings_service().settings.trigger_dispatcher_enabled:
-                with suppress(Exception):
-                    from langflow.services.triggers.dispatcher import TriggerDispatcher
+            with suppress(Exception):
+                from langflow.services.triggers.dispatcher import start_dispatcher_if_enabled
 
-                    trigger_dispatcher = TriggerDispatcher()
-                    trigger_dispatcher.start()
+                trigger_dispatcher = start_dispatcher_if_enabled()
 
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")

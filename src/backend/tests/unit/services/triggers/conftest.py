@@ -71,12 +71,21 @@ def make_trigger(trigger_owner, owned_flow):
 
 
 class FakeBackgroundExecutionService:
-    """Records submits instead of running flows.
+    """Records submits instead of running flows — but parses them for real.
 
     The dispatcher's contract with the background execution service is narrow —
     ``submit(flow_id=..., request=..., user=...) -> job_id`` — so a recorder is
     enough to assert everything TRG-2 owns (one submit per event, the request
     shape, the identity) without standing up a build pipeline.
+
+    A pure recorder is NOT enough for the request *shape*, though. The real
+    service hands the dict to ``_parse_persisted_workflow_request``, which
+    rebuilds a ``WorkflowRunRequest`` — a model that forbids extra keys. A
+    recorder that only appends to a list happily accepts a request the real
+    worker would reject after committing the job row, which is exactly how an
+    unrunnable request shape survived a fully green suite. So every submit here
+    goes through the same parser first, and a bad shape fails the test that
+    produced it rather than production.
     """
 
     def __init__(self, *, fail_times: int = 0) -> None:
@@ -85,6 +94,11 @@ class FakeBackgroundExecutionService:
         self._frame_source_factory = object()  # already installed; do not touch v2 routes
 
     async def submit(self, *, flow_id, request, user):
+        from langflow.api.v2.workflow import _parse_persisted_workflow_request
+
+        # Raises for any key WorkflowRunRequest does not declare, exactly as the
+        # real service's _enqueue -> frame-source factory does.
+        _parse_persisted_workflow_request(request)
         if self.fail_times > 0:
             self.fail_times -= 1
             msg = "submit exploded"
