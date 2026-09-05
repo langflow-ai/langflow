@@ -30593,6 +30593,184 @@
       }
     ],
     [
+      "triggers",
+      {
+        "ScheduleTrigger": {
+          "base_classes": [
+            "JSON"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Run this flow on a cron schedule, evaluated in a timezone you choose.",
+          "display_name": "Schedule",
+          "documentation": "https://docs.langflow.org/triggers",
+          "edited": false,
+          "field_order": [
+            "cron_expression",
+            "timezone",
+            "catchup_policy",
+            "share_session"
+          ],
+          "frozen": false,
+          "icon": "Clock",
+          "legacy": false,
+          "metadata": {
+            "code_hash": "1fe70b7bf60c",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 1
+            },
+            "module": "lfx.components.triggers.schedule_trigger.ScheduleTriggerComponent"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Event",
+              "group_outputs": false,
+              "method": "build_event",
+              "name": "trigger_event",
+              "selected": "JSON",
+              "tool_mode": true,
+              "types": [
+                "JSON"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "catchup_policy": {
+              "_input_type": "DropdownInput",
+              "advanced": true,
+              "api_editable": false,
+              "combobox": false,
+              "dialog_inputs": {},
+              "display_name": "After downtime",
+              "dynamic": false,
+              "external_options": {},
+              "info": "What to do with ticks missed while the server was down. 'coalesce' runs once and reports the ticks that were missed; 'skip' waits for the next scheduled time.",
+              "name": "catchup_policy",
+              "options": [
+                "coalesce",
+                "skip"
+              ],
+              "options_metadata": [],
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "toggle": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "str",
+              "value": "coalesce"
+            },
+            "code": {
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "\"\"\"Fire a flow on a cron schedule, in a named timezone.\"\"\"\n\nfrom __future__ import annotations\n\nfrom typing import Any\nfrom zoneinfo import ZoneInfo, ZoneInfoNotFoundError\n\nfrom lfx.base.triggers.base import BaseTriggerComponent\nfrom lfx.io import BoolInput, DropdownInput, MessageTextInput\n\n#: Catch-up policies, mirroring ``TriggerCatchupPolicy`` on the server.\nCATCHUP_COALESCE = \"coalesce\"\nCATCHUP_SKIP = \"skip\"\n\n_CRON_FIELD_COUNT = 5\n\n\nclass ScheduleTriggerError(ValueError):\n    \"\"\"The schedule cannot be armed as configured.\"\"\"\n\n\ndef validate_cron_expression(expression: str) -> str:\n    \"\"\"Check the shape of a five-field cron expression.\n\n    Deliberately syntactic only. The server validates the expression with the\n    same library that computes fire times, so the two can never disagree about\n    what a given expression means; this check exists to give the person editing\n    the canvas an answer without a round trip.\n    \"\"\"\n    if not expression or expression.isspace():\n        msg = \"A cron expression is required, for example '0 8 * * 1-5'.\"\n        raise ScheduleTriggerError(msg)\n    fields = expression.split()\n    if len(fields) != _CRON_FIELD_COUNT:\n        msg = (\n            f\"A cron expression has {_CRON_FIELD_COUNT} fields \"\n            \"(minute hour day-of-month month day-of-week), \"\n            f\"got {len(fields)}: {expression!r}\"\n        )\n        raise ScheduleTriggerError(msg)\n    return \" \".join(fields)\n\n\ndef validate_timezone(name: str) -> str:\n    \"\"\"Check that the timezone is a real IANA zone.\n\n    An unknown zone must fail here, on save, rather than silently falling back\n    to UTC and firing the digest at the wrong local hour every day.\n    \"\"\"\n    if not name or name.isspace():\n        msg = \"A timezone is required, for example 'Europe/Lisbon'.\"\n        raise ScheduleTriggerError(msg)\n    try:\n        ZoneInfo(name)\n    except (ZoneInfoNotFoundError, ValueError) as exc:\n        msg = f\"Unknown timezone {name!r}; use an IANA name such as 'Europe/Lisbon'.\"\n        raise ScheduleTriggerError(msg) from exc\n    return name\n\n\nclass ScheduleTriggerComponent(BaseTriggerComponent):\n    display_name = \"Schedule\"\n    description = \"Run this flow on a cron schedule, evaluated in a timezone you choose.\"\n    documentation: str = \"https://docs.langflow.org/triggers\"\n    name = \"ScheduleTrigger\"\n    icon = \"Clock\"\n\n    trigger_kind = \"schedule\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"cron_expression\",\n            display_name=\"Cron expression\",\n            value=\"0 8 * * 1-5\",\n            info=(\n                \"Five fields: minute hour day-of-month month day-of-week. \"\n                \"'0 8 * * 1-5' is every weekday at 08:00 in the timezone below.\"\n            ),\n            input_types=[],\n            required=True,\n        ),\n        MessageTextInput(\n            name=\"timezone\",\n            display_name=\"Timezone\",\n            value=\"UTC\",\n            info=(\n                \"IANA timezone the expression is evaluated in, for example 'Europe/Lisbon'. \"\n                \"Daylight-saving changes are applied, so 08:00 stays 08:00 local.\"\n            ),\n            input_types=[],\n            required=True,\n        ),\n        DropdownInput(\n            name=\"catchup_policy\",\n            display_name=\"After downtime\",\n            options=[CATCHUP_COALESCE, CATCHUP_SKIP],\n            value=CATCHUP_COALESCE,\n            info=(\n                \"What to do with ticks missed while the server was down. \"\n                \"'coalesce' runs once and reports the ticks that were missed; \"\n                \"'skip' waits for the next scheduled time.\"\n            ),\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"share_session\",\n            display_name=\"Share session across runs\",\n            value=False,\n            info=(\n                \"Off: every run gets its own session. On: all runs share one session, \"\n                \"so an agent downstream keeps memory between ticks.\"\n            ),\n            advanced=True,\n        ),\n    ]\n\n    def trigger_config(self) -> dict[str, Any]:\n        \"\"\"The JSON the flow-save reconciler copies onto the trigger row.\"\"\"\n        return {\n            \"cron\": validate_cron_expression(self.cron_expression or \"\"),\n            \"timezone\": validate_timezone(self.timezone or \"\"),\n            \"catchup_policy\": self.catchup_policy or CATCHUP_COALESCE,\n            \"share_session\": bool(self.share_session),\n        }\n"
+            },
+            "cron_expression": {
+              "_input_type": "MessageTextInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Cron expression",
+              "dynamic": false,
+              "info": "Five fields: minute hour day-of-month month day-of-week. '0 8 * * 1-5' is every weekday at 08:00 in the timezone below.",
+              "input_types": [],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "cron_expression",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": "0 8 * * 1-5"
+            },
+            "share_session": {
+              "_input_type": "BoolInput",
+              "advanced": true,
+              "api_editable": false,
+              "display_name": "Share session across runs",
+              "dynamic": false,
+              "info": "Off: every run gets its own session. On: all runs share one session, so an agent downstream keeps memory between ticks.",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "share_session",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "bool",
+              "value": false
+            },
+            "timezone": {
+              "_input_type": "MessageTextInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Timezone",
+              "dynamic": false,
+              "info": "IANA timezone the expression is evaluated in, for example 'Europe/Lisbon'. Daylight-saving changes are applied, so 08:00 stays 08:00 local.",
+              "input_types": [],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "timezone",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": "UTC"
+            }
+          },
+          "tool_mode": false
+        }
+      }
+    ],
+    [
       "utilities",
       {
         "CalculatorComponent": {
@@ -31031,9 +31209,9 @@
     ]
   ],
   "metadata": {
-    "num_components": 127,
-    "num_modules": 16
+    "num_components": 128,
+    "num_modules": 17
   },
-  "sha256": "31809b64285fb257fa37b03c2742bbc26872f217501e58ad5a58edde963f60e8",
+  "sha256": "eb65ba7c05879807619fd015b97eb561e1878a49b480f989bff36139f3b70e0d",
   "version": "1.13.0"
 }

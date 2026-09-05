@@ -481,7 +481,15 @@ class TriggerDispatcher:
                 await asyncio.wait_for(self._stopping.wait(), timeout=settings.trigger_dispatcher_poll_interval_s)
 
     async def tick(self) -> int:
-        """Renew the lease and, when held, do one pass. Returns rows dispatched."""
+        """Produce due ticks, then drain the ledger. Returns rows dispatched.
+
+        The schedule tick producer holds its OWN lease, so a replica may be
+        producing ticks while another drains them — two independent singletons,
+        not one bottleneck.
+        """
+        from langflow.services.triggers.scheduler import run_scheduler_pass
+
+        await run_scheduler_pass(owner=self.owner)
         settings = get_settings_service().settings
         async with session_scope() as session:
             held = await leases.acquire(
