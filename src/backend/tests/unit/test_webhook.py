@@ -1048,6 +1048,6 @@ async def test_webhook_route_names_the_webhook_execution_family(
     response = await client.post(endpoint, headers={"x-api-key": created_api_key.api_key}, json={"k": "v"})
 
     assert response.status_code == 202, response.text
-    async with asyncio.timeout(10):
-        await started.wait()
+    # asyncio.timeout() is 3.11+; this suite still runs on 3.10, so use wait_for.
+    await asyncio.wait_for(started.wait(), timeout=10)
     assert captured["execution_family"] == FAMILY_WEBHOOK
