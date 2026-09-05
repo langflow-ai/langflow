@@ -142,10 +142,18 @@ async def create_trigger(
     current_user: CurrentActiveUser,
     service: TriggerServiceDep,
 ) -> TriggerRead:
-    """Create a trigger on a flow the caller may write."""
-    await _authorized_flow(session, current_user, payload.flow_id, FlowAction.WRITE)
+    """Create a trigger on a flow the caller may write.
+
+    The trigger is owned by the *flow owner*, not by whoever created it. The
+    execution-principal matrix classifies a trigger run as ``flow_owner``, and
+    flow-save reconciliation already creates rows that way; keying the API path
+    off the caller instead would give one flow two kinds of trigger identity
+    depending on which surface armed it, and would let a collaborator with flow
+    write silently schedule unattended runs under their own connections.
+    """
+    flow = await _authorized_flow(session, current_user, payload.flow_id, FlowAction.WRITE)
     _reject_unsupported_binding(payload.binding_target, payload.deployment_id)
-    row = await service.create(session, payload=payload, owner_id=current_user.id)
+    row = await service.create(session, payload=payload, owner_id=flow.user_id)
     return TriggerRead.model_validate(row)
 
 

@@ -269,3 +269,55 @@ async def test_trigger_kind_must_match_the_registry_grammar(
             "api/v1/triggers", json=_payload(flow.id, kind=bad_kind), headers=logged_in_headers
         )
         assert response.status_code == 422, f"{bad_kind!r} was accepted: {response.text}"
+
+
+async def test_a_trigger_created_through_the_api_is_owned_by_the_flow_owner(
+    client: AsyncClient,  # noqa: ARG001
+    active_user,
+    monkeypatch,
+) -> None:
+    """Identity comes from the flow, never from whoever called the route.
+
+    A trigger run executes as ``flow_owner`` and flow-save reconciliation
+    already creates rows that way. Under an authorization plugin a collaborator
+    with flow write can reach this route on somebody else's flow; keying the row
+    off the caller would give that flow two kinds of trigger identity and would
+    resolve the *collaborator's* connections for unattended runs.
+
+    The cross-owner read is only reachable with the authorization plugin
+    installed (OSS ``_read_flow`` is owner-scoped), so the fetch is stubbed and
+    the route function is called directly — the mapping under test is what the
+    route does with the flow it was given.
+    """
+    from langflow.api.v1 import triggers as triggers_route
+    from langflow.services.database.models.trigger.schemas import TriggerCreate
+    from langflow.services.deps import get_trigger_service
+
+    async with session_scope() as session:
+        owner = User(
+            username=f"flow-owner-{uuid4().hex[:8]}",
+            password="hashed-not-used",  # noqa: S106  # pragma: allowlist secret
+            is_active=True,
+        )
+        session.add(owner)
+        await session.flush()
+        owner_flow = Flow(name=f"owned-{uuid4().hex[:6]}", user_id=owner.id)
+        session.add(owner_flow)
+        await session.flush()
+        owner_id, owner_flow_id = owner.id, owner_flow.id
+
+    async def _stub_authorized_flow(session, user, flow_id, action):  # noqa: ARG001
+        return await session.get(Flow, flow_id)
+
+    monkeypatch.setattr(triggers_route, "_authorized_flow", _stub_authorized_flow)
+
+    async with session_scope() as session:
+        created = await triggers_route.create_trigger(
+            payload=TriggerCreate(flow_id=owner_flow_id, name="collaborator armed this", kind="schedule"),
+            session=session,
+            current_user=active_user,
+            service=get_trigger_service(),
+        )
+
+    assert created.user_id == owner_id
+    assert created.user_id != active_user.id
