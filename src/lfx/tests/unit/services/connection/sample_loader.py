@@ -22,10 +22,22 @@ if TYPE_CHECKING:
 _REPO_ROOT = Path(__file__).resolve().parents[6]
 SAMPLES_DIR = _REPO_ROOT / "docs" / "docs" / "Lfx" / "samples" / "connections"
 
+_DOCS_ROOT = _REPO_ROOT / "docs" / "docs"
+
 #: The samples ship in the repository, not in the ``lfx`` wheel. A test run made
 #: from a source tree without ``docs/`` (an sdist-only smoke run) skips them
-#: rather than failing on a file it was never given.
+#: rather than failing on a file it was never given. A checkout that HAS ``docs/``
+#: but not the samples is drift, not a packaging difference, so it fails loudly:
+#: a silently skipped suite would let the documented samples rot unnoticed.
 SAMPLES_AVAILABLE = SAMPLES_DIR.is_dir()
+if _DOCS_ROOT.is_dir() and not SAMPLES_AVAILABLE:
+    _MSG = (
+        f"{SAMPLES_DIR} is missing while {_DOCS_ROOT} exists. The INT-13 reference "
+        "samples are embedded in docs/docs/Lfx/lfx-connections.mdx and must ship "
+        "with it; move the tests with the samples rather than skipping them."
+    )
+    raise RuntimeError(_MSG)
+
 requires_samples = pytest.mark.skipif(
     not SAMPLES_AVAILABLE,
     reason=f"reference samples not present at {SAMPLES_DIR}",
