@@ -285,7 +285,7 @@ When you run the flow, if there is no global variable named `WATSONX_API_KEY`, L
 In this example, Langflow uses the `WATSONX_API_KEY` value from the `.env` to run the flow.
 ## Request-scoped variables and connection credentials {#request-scoped-variables}
 
-Headless runtimes have two channels that never touch Langflow's database, and both are documented in [Resolve connections in headless LFX](/lfx-connections).
+Headless runtimes have two channels that never touch Langflow's database, and both are documented in [Resolve connections in headless LFX](../Lfx/lfx-connections.mdx).
 
 `LANGFLOW_REQUEST_VARIABLES` holds a JSON object of variables for the current request.
 `lfx serve` populates the same scope from a request body's `global_vars`.
