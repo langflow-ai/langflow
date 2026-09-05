@@ -17,7 +17,7 @@ This is the same credential the [Users API](/api-users) requires.
 An empty policy is the default, and has no restrictions.
 Nothing is restricted until a superuser writes a policy.
 
-The four lists of restrictions are saved in one policy bundle.
+The six lists of restrictions are saved in one policy bundle.
 Replace the policy bundle with a `PUT` request.
 Send every list you want in effect with the `PUT` request.
 Send `[]` for a list you want unrestricted.
@@ -28,11 +28,18 @@ Send `[]` for a list you want unrestricted.
 | Hide a starter template | `blocked_template_keys` | `basic_prompting` |
 | Allow only some providers | `approved_provider_ids` | `["openai", "anthropic"]`. `[]` means every provider. |
 | Block a model | `blocked_model_keys` | `gpt-4o`, `openai::gpt-4o`, or `openai::llm::gpt-4o` |
+| Allow only some integrations | `approved_integration_provider_ids` | `["google", "slack"]`. `[]` means every integration. |
+| Block one integration action | `blocked_integration_action_keys` | `integrations.google.drive.delete` |
 
 A blocked component disappears from the palette.
 Saving or running a flow that still contains the component fails.
 
 A blocked template is omitted from the starter list.
+
+An integration outside `approved_integration_provider_ids`, or whose every action is
+in `blocked_integration_action_keys`, disappears from the palette and from
+`GET /api/v1/integrations`. Running a saved flow that still uses it fails before the
+provider is contacted, and creating or authorizing a connection for it returns `403`.
 
 :::tip
 Catalog policy hides or refuses *named* components, including built-ins.
@@ -139,7 +146,7 @@ An uninitialized bundle returns `503`.
     Reads still work. Writes return `409`.
     :::
 
-4. Replace the bundle with a `PUT` request that includes every list you want in effect. 
+4. Replace the bundle with a `PUT` request that includes every list you want in effect.
     Send the `revision` number copied from step 3 as `expected_revision`.
     Send `[]` for a list you want unrestricted.
 
@@ -292,6 +299,25 @@ Models use the identities in the model picker.
 "blocked_model_keys": ["gpt-4o", "openai::gpt-4o", "openai::llm::gpt-4o"]
 ```
 
+Integration providers use their manifest `provider_id`, in lowercase.
+
+```json
+"approved_integration_provider_ids": ["google", "slack"]
+```
+
+Integration actions use the `policy_keys` a bundle declares for each capability.
+A key is always `integrations.<provider_id>.<action>`; a key that names no provider is
+rejected with `422` before anything is written.
+`GET /api/v1/integrations?include_blocked=true` lists every loaded provider with the
+`policy_keys` of each of its actions, so you can copy the exact key to block.
+
+```json
+"blocked_integration_action_keys": ["integrations.google.drive.delete"]
+```
+
+Blocking one key of an action blocks the whole action.
+A component stays visible while at least one of its actions is still allowed.
+
 ## Change one list at a time {#catalog-policy}
 
 Use these endpoints when you want to change only components, templates, or providers.
@@ -343,6 +369,13 @@ If you are changing more than one list, use one `PUT` to `/api/v1/policy-bundle`
     ```
 
     Set `blocked_model_keys` with `PUT /api/v1/policy-bundle`.
+
+5. To see the integration policy that applies to you, `GET /api/v1/integrations/policy/effective`.
+
+    It returns the effective ceiling, the blocked action keys, and whether a plugin owns
+    the policy instead of the bundle.
+    Set `approved_integration_provider_ids` and `blocked_integration_action_keys` with
+    `PUT /api/v1/policy-bundle`.
 
 ## See also
 
