@@ -249,6 +249,17 @@ EXPECTED_FIELDS = {
     "background_heartbeat_interval_s",
     "background_watchdog_interval_s",
     "test_redis_url",
+    # Triggers (TRG-2)
+    "trigger_dispatcher_enabled",
+    "trigger_dispatcher_poll_interval_s",
+    "trigger_lease_ttl_s",
+    "trigger_heartbeat_interval_s",
+    "trigger_max_events_per_poll",
+    "trigger_retry_backoff_base_s",
+    "trigger_retry_backoff_cap_s",
+    "trigger_replay_window_days",
+    "trigger_event_retention_days",
+    "trigger_purge_interval_s",
     # ---- Added in 1.10.1 ----
     # SecuritySettings
     "allow_public_custom_components",
