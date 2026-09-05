@@ -1,10 +1,14 @@
 """Pinned-mode behavior of ``MCPPresetComponent``.
 
 ``update_tools`` is patched so no MCP server is contacted; the doubles carry the
-raw JSON Schemas on ``metadata`` exactly as the engine now does.  The last two
-tests are the regression guard for the two shipped, *unpinned* consumers
-(``lfx-confluent`` and ``lfx-ibm``): a component that does not override
-``_pinned_spec`` must behave exactly as it did before pinned mode existed.
+raw JSON Schemas on ``metadata`` exactly as the engine now does.  One test
+(``test_the_guard_rides_on_the_real_tool_the_engine_builds``) deliberately runs
+``update_tools`` for real against a fake transport, so the pinned-argument guard
+is exercised on the actual pydantic ``MCPStructuredTool`` rather than on a
+double.  The last two tests are the regression guard for the two shipped,
+*unpinned* consumers (``lfx-confluent`` and ``lfx-ibm``): a component that does
+not override ``_pinned_spec`` must behave exactly as it did before pinned mode
+existed.
 """
 
 from __future__ import annotations
@@ -14,6 +18,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from langchain_core.tools import StructuredTool
 from lfx.base.mcp.pinned import PinnedServerSpec, PinnedToolSpec, tools_list_digest
 from lfx.base.mcp.preset import MCPPresetComponent, preset_control_inputs
 from lfx.base.mcp.util import MCPServerInfo
@@ -200,13 +205,69 @@ async def test_pinned_tool_mode_guard_survives_the_toolset_handoff(pinned):
     assert json.loads(result.content[0].text)["args"] == {"query": "orders"}
 
 
-async def test_pinned_run_tool_rejects_a_missing_required_argument(pinned):
-    with (
-        patch(UPDATE_TOOLS_TARGET, new=_engine([_tool("search_messages")])),
-        pytest.raises(IncompatibleToolError) as excinfo,
-    ):
+class _EngineClient:
+    """Enough of ``MCPStreamableHttpClient`` for ``update_tools`` to run for real."""
+
+    def __init__(self, tools):
+        self._tools = tools
+        self._connected = True
+        self.server_info = None
+        self.calls: list[tuple[str, dict]] = []
+        self.connected_with: dict = {}
+
+    async def connect_to_server(self, url, headers=None, verify_ssl=True, allow_sse_fallback=True):  # noqa: ARG002, FBT002
+        self.connected_with = {"url": url, "headers": headers, "allow_sse_fallback": allow_sse_fallback}
+        return self._tools
+
+    async def run_tool(self, tool_name, arguments=None):
+        self.calls.append((tool_name, dict(arguments or {})))
+        text = json.dumps({"tool": tool_name, "args": arguments})
+        return SimpleNamespace(content=[SimpleNamespace(type="text", text=text)])
+
+
+def _server_tool(name: str):
+    """A discovered tool in the shape ``update_tools`` receives from the SDK."""
+    return SimpleNamespace(name=name, description=name, inputSchema=SEARCH_INPUT, outputSchema=SEARCH_OUTPUT)
+
+
+async def test_the_guard_rides_on_the_real_tool_the_engine_builds(pinned):
+    """Every other test here uses doubles; this one runs ``update_tools`` for real.
+
+    ``_guarded_tool`` assigns onto a live pydantic ``MCPStructuredTool``, and both
+    of that tool's call paths -- the async ``coroutine`` the Agent and ``run_tool``
+    use, and the synchronous ``func`` -- must carry the pinned-argument check.
+    """
+    client = _EngineClient([_server_tool("search_messages")])
+    pinned._streamable_http_client = client
+    with patch("lfx.base.mcp.util.validate_connector_url_for_ssrf", new=lambda _url: None):
+        tools, _ = await pinned._load_tools()
+
+    tool = tools[0]
+    assert isinstance(tool, StructuredTool)
+    assert client.connected_with["url"] == PINNED_URL
+    assert client.connected_with["allow_sse_fallback"] is False
+
+    with pytest.raises(IncompatibleToolError):
+        await tool.coroutine(query="orders", cursor="abc")
+    with pytest.raises(IncompatibleToolError):
+        tool.func(query="orders", cursor="abc")
+    assert client.calls == []
+
+    await tool.coroutine(query="orders")
+    assert client.calls == [("search_messages", {"query": "orders"})]
+
+
+async def test_a_missing_required_argument_is_not_reported_as_provider_drift(pinned):
+    """An omitted field reaches the tool, whose own args schema rejects it.
+
+    The doubles here accept anything, so what this pins is that the guard does
+    NOT convert a caller-side omission into a non-retryable ``incompatible-tool``
+    telling the operator to upgrade a bundle.
+    """
+    tool = _tool("search_messages")
+    with patch(UPDATE_TOOLS_TARGET, new=_engine([tool])):
         await pinned.run_tool()
-    assert excinfo.value.details["missing"] == ["query"]
+    assert tool.calls == [{}]
 
 
 # ---------------------------------------------------------------- build config

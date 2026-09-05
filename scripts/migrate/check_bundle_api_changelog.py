@@ -41,6 +41,9 @@ BUNDLE_API_RELPATH = "BUNDLE_API.md"
 # OR exact match.  Keep this list deliberately tight: it only covers the
 # surface enumerated in BUNDLE_API.md.
 IN_SCOPE_PATHS: tuple[str, ...] = (
+    # Preset MCP base class + its pinned action-to-tool contract
+    "src/lfx/src/lfx/base/mcp/pinned.py",
+    "src/lfx/src/lfx/base/mcp/preset.py",
     # Manifest schema + JSON-Schema export
     "src/lfx/src/lfx/extension/manifest.py",
     "src/lfx/src/lfx/extension/schema.py",
@@ -71,9 +74,6 @@ IN_SCOPE_PATHS: tuple[str, ...] = (
     "src/lfx/src/lfx/io/__init__.py",
     "src/lfx/src/lfx/custom/custom_component/component.py",
     "src/lfx/src/lfx/services/connection",
-    # Preset MCP base class + its pinned action-to-tool contract
-    "src/lfx/src/lfx/base/mcp/preset.py",
-    "src/lfx/src/lfx/base/mcp/pinned.py",
 )
 
 

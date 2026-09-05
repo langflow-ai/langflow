@@ -217,22 +217,6 @@ the deserialize half is covered by
 
 ### v0 (this release)
 
-- **Pinned action-to-tool mode for preset MCP components (additive).**
-  `MCPPresetComponent` gains a `_pinned_spec()` hook returning a
-  `PinnedServerSpec` (`lfx.base.mcp.pinned`); in pinned mode the component fixes
-  the endpoint and transport, refuses any tool that was added, removed, renamed,
-  or re-shaped relative to the pin, compares the `tools/list` content digest and
-  the `InitializeResult.serverInfo` name/version when they are pinned, keeps the
-  Tool dropdown off the live server, and re-checks call arguments against the
-  pinned schema. Drift raises the new `IncompatibleToolError`
-  (`incompatible-tool`, added to `INTEGRATION_ERROR_CODES`). Capabilities carry
-  the pin as `IntegrationCapability.mcp_pin: McpToolPin`; a capability whose
-  `substrate` is `mcp` must now declare both `mcp_tool` and `mcp_pin`. Tools
-  discovered by `update_tools` carry their raw `input_schema`/`output_schema` on
-  `metadata`, and a server config may set `allow_sse_fallback=False` to pin the
-  transport. Components that do not override `_pinned_spec()` are unaffected;
-  `BUNDLE_API_VERSION` remains `1`.
-
 - **Optional rejected-token digest for connection refresh.**
   `ConnectionResolutionRequest.rejected_token_digest` carries a SHA-256 digest only
   after a provider rejects a cached credential. `CredentialLease` supplies it on
@@ -634,3 +618,25 @@ the deserialize half is covered by
   messages and winner selection are unchanged, and two physically distinct
   manifests for one canonical name still error.  No public symbol's name or
   signature changed.
+
+- **Pinned action-to-tool mode for preset MCP components (additive).**
+  `MCPPresetComponent` gains a `_pinned_spec()` hook returning a
+  `PinnedServerSpec` (`lfx.base.mcp.pinned`); in pinned mode the component fixes
+  the endpoint and transport, refuses any tool that was added, removed, renamed,
+  or re-shaped relative to the pin, compares the `tools/list` content digest and
+  the `InitializeResult.serverInfo` name/version when they are pinned, keeps the
+  Tool dropdown off the live server, and re-checks call arguments against the
+  pinned schema on both of a tool's call paths (`coroutine` and `func`). Only an
+  argument the pin does not declare is treated as drift; an omitted required
+  field is left to the derived args schema, whose error is self-correctable.
+  `pinned_spec_from_capabilities()` additionally refuses a `tools_list_hash`
+  that is not the digest of exactly the tools the manifest pins, so that
+  authoring mistake surfaces at build time instead of as runtime "drift".
+  Drift raises the new `IncompatibleToolError`
+  (`incompatible-tool`, added to `INTEGRATION_ERROR_CODES`). Capabilities carry
+  the pin as `IntegrationCapability.mcp_pin: McpToolPin`; a capability whose
+  `substrate` is `mcp` must now declare both `mcp_tool` and `mcp_pin`. Tools
+  discovered by `update_tools` carry their raw `input_schema`/`output_schema` on
+  `metadata`, and a server config may set `allow_sse_fallback=False` to pin the
+  transport. Components that do not override `_pinned_spec()` are unaffected;
+  `BUNDLE_API_VERSION` remains `1`.

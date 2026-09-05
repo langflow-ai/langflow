@@ -19,7 +19,10 @@ whatever the server currently offers.  At call time the pinned argument schema
 is enforced again, because ``MCPStructuredTool`` deliberately passes keys that
 are not in the derived args schema through to the server
 (``lfx.base.mcp.util`` ``_convert_parameters``); a discovery-time check alone
-would let a drifted argument reach the provider.
+would let a drifted argument reach the provider.  Only an argument the pin does
+not declare counts as drift: an omitted *required* field is a caller mistake no
+bundle release can fix, so it is left to the derived args schema, which rejects
+it with a message an agent can correct on the next turn.
 
 The digest deliberately covers tool identity and schemas only, not tool
 descriptions: descriptions are prompt material that providers edit routinely,
@@ -122,21 +125,37 @@ def discovered_tool(tool: Any) -> DiscoveredTool:
     ``update_tools`` turns each discovered tool into a ``StructuredTool`` whose
     derived ``args_schema`` has already lost the raw JSON Schema, so the raw
     schemas are carried forward on the tool's ``metadata`` instead.
+
+    ``metadata`` is read FIRST and every candidate must be a mapping: a
+    LangChain tool is a ``Runnable``, which defines ``input_schema`` and
+    ``output_schema`` properties of its own that return pydantic model *classes*.
+    Reading those first would silently compare an empty schema against the pin
+    and report every real tool as re-shaped.
     """
-    name = getattr(tool, "name", None) or ""
-    input_schema = getattr(tool, "inputSchema", None) or getattr(tool, "input_schema", None)
-    output_schema = getattr(tool, "outputSchema", None) or getattr(tool, "output_schema", None)
     metadata = getattr(tool, "metadata", None)
-    if isinstance(metadata, Mapping):
-        if input_schema is None:
-            input_schema = metadata.get("input_schema")
-        if output_schema is None:
-            output_schema = metadata.get("output_schema")
+    metadata = metadata if isinstance(metadata, Mapping) else {}
     return DiscoveredTool(
-        name=str(name),
-        input_schema=dict(input_schema) if isinstance(input_schema, Mapping) else {},
-        output_schema=dict(output_schema) if isinstance(output_schema, Mapping) else None,
+        name=str(getattr(tool, "name", None) or ""),
+        input_schema=_first_mapping(
+            metadata.get("input_schema"),
+            getattr(tool, "inputSchema", None),
+            getattr(tool, "input_schema", None),
+        )
+        or {},
+        output_schema=_first_mapping(
+            metadata.get("output_schema"),
+            getattr(tool, "outputSchema", None),
+            getattr(tool, "output_schema", None),
+        ),
     )
+
+
+def _first_mapping(*candidates: Any) -> dict[str, Any] | None:
+    """First candidate that is actually a JSON-Schema-shaped mapping."""
+    for candidate in candidates:
+        if isinstance(candidate, Mapping):
+            return dict(candidate)
+    return None
 
 
 # --------------------------------------------------------------------- digest
@@ -310,32 +329,33 @@ def validate_pinned_arguments(
     A discovery-time diff is not enough on its own: ``MCPStructuredTool``
     forwards keys that are absent from the derived args schema, so a widened
     provider tool would still receive drifted arguments at call time.
+
+    Only *unexpected* arguments are treated as an incompatibility.  A missing
+    required argument is a caller-side mistake -- an agent routinely omits a
+    field -- not evidence that the provider drifted, and no bundle release can
+    fix it, so it is deliberately left to the derived args schema, whose
+    validation error (``lfx.base.mcp.util._handle_tool_validation_error``) names
+    the field and is self-correctable on the next turn.
     """
     schema = tool.input_schema or {}
     properties = schema.get("properties")
     properties = properties if isinstance(properties, Mapping) else {}
-    raw_required = schema.get("required")
-    is_list = isinstance(raw_required, Sequence) and not isinstance(raw_required, str)
-    required = [str(name) for name in raw_required] if is_list else []
 
-    unexpected: list[str] = []
-    if schema.get("additionalProperties") is not True:
-        unexpected = sorted(str(key) for key in arguments if key not in properties)
-    missing = sorted(name for name in required if name not in arguments)
-    if not unexpected and not missing:
+    if schema.get("additionalProperties") is True:
+        return
+    unexpected = sorted(str(key) for key in arguments if key not in properties)
+    if not unexpected:
         return
 
-    reasons: list[str] = []
-    if unexpected:
-        reasons.append(f"unexpected argument(s) {', '.join(unexpected)}")
-    if missing:
-        reasons.append(f"missing required argument(s) {', '.join(missing)}")
-    msg = f"Arguments for the pinned tool {tool.name!r} do not match its pinned schema: {'; '.join(reasons)}."
+    msg = (
+        f"Arguments for the pinned tool {tool.name!r} do not match its pinned schema: "
+        f"unexpected argument(s) {', '.join(unexpected)}."
+    )
     raise IncompatibleToolError(
         msg,
         provider=provider,
         hint="Reconnect the flow to a bundle release whose pin matches the server, or correct the arguments.",
-        details={"tool": tool.name, "unexpected": unexpected, "missing": missing},
+        details={"tool": tool.name, "unexpected": unexpected},
     )
 
 
@@ -348,6 +368,12 @@ def pinned_spec_from_capabilities(capabilities: Sequence[Any]) -> PinnedServerSp
     outside it is an *added* tool and fails closed.  All contributing
     capabilities must agree on the endpoint, transport, digest, and server
     identity; disagreement is a manifest error, not a runtime decision.
+
+    A declared ``tools_list_hash`` must also be the digest of exactly these
+    tools.  Computing it over a wider recording than the manifest pins is an easy
+    authoring mistake, and it would otherwise surface at every load as two
+    stacked runtime complaints (an added tool plus a digest mismatch) that read
+    like provider drift; checked here it is a bundle error at build time.
     """
     mcp_capabilities = [cap for cap in capabilities if getattr(cap, "substrate", None) == "mcp"]
     if not mcp_capabilities:
@@ -388,4 +414,12 @@ def pinned_spec_from_capabilities(capabilities: Sequence[Any]) -> PinnedServerSp
             raise ValueError(msg)
         tools[tool_name] = candidate
 
-    return PinnedServerSpec(tools=tuple(tools.values()), **server)
+    spec = PinnedServerSpec(tools=tuple(tools.values()), **server)
+    declared = spec.tools_list_hash
+    if declared is not None and declared != spec.digest():
+        msg = (
+            f"The pinned tools_list_hash {declared} is not the digest of the pinned tools "
+            f"({spec.digest()}). Compute it over exactly the tools these capabilities pin."
+        )
+        raise ValueError(msg)
+    return spec

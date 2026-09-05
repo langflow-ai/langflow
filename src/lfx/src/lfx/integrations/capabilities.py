@@ -137,6 +137,13 @@ class IntegrationCapability(BaseModel):
         Runtime discovery may not decide what an MCP action can do, so the manifest
         must name the tool and freeze its endpoint and schemas before the loader
         will accept the capability.
+
+        This is deliberately stricter than the free-form ``mcp_tool`` INT-3
+        accepted: it closes the door on an unpinned MCP capability rather than
+        merely adding optional fields.  Nothing in the tree declares ``substrate``
+        at all today, so no shipped manifest changes meaning and ``schema_version``
+        stays 1 -- but a future unpinned MCP action would need this rule relaxed,
+        not just a new field.
         """
         if self.substrate == "mcp":
             if self.mcp_tool is None:
