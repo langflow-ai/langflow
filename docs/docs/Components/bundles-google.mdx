@@ -154,7 +154,7 @@ Langflow includes multiple components that support Google Search, such as the fo
 ## Google Workspace actions
 
 The **Google Workspace** action components run Gmail, Drive, and Calendar operations
-against a [managed connection](/connection-oauth) instead of a pasted token. The
+against a [managed connection](../Develop/connection-oauth.mdx) instead of a pasted token. The
 connection stores the OAuth credential in encrypted server-side storage, refreshes it in
 the worker that uses it, and never places a token in flow JSON.
 
@@ -181,7 +181,7 @@ requires a restricted scope, which is deliberately out of scope for this release
 ### Connect a Google account
 
 1. Configure a Google registration on the server. See
-   [Configure connection OAuth](/connection-oauth).
+   [Configure connection OAuth](../Develop/connection-oauth.mdx).
 2. Create the connection record:
 
     ```http
@@ -274,7 +274,7 @@ component palette. It runs a local-server OAuth flow, which cannot complete on a
 deployment, and it puts a long-lived credential into flow data. Running it logs a
 deprecation warning.
 
-To connect your flows to Google services, use a [managed connection](/connection-oauth) with
+To connect your flows to Google services, use a [managed connection](../Develop/connection-oauth.mdx) with
 the [Google Workspace action components](#google-workspace-actions), or
 [Composio components](/bundles-composio).
 
@@ -284,7 +284,7 @@ the [Google Workspace action components](#google-workspace-actions), or
 <summary>Gmail Loader</summary>
 
 This component loads emails from Gmail using label ID filters and either a
-[managed connection](/connection-oauth) or
+[managed connection](../Develop/connection-oauth.mdx) or
 [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account)
 credentials. Set exactly one of the two.
 
@@ -307,7 +307,7 @@ As an alternative, you can use [Composio components](/bundles-composio) to conne
 <summary>Google Drive Loader</summary>
 
 This component loads a single document from Google Drive using a document ID and either a
-[managed connection](/connection-oauth) or
+[managed connection](../Develop/connection-oauth.mdx) or
 [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account)
 credentials. Set exactly one of the two. A managed connection resolves on `drive.file`, so it
 reaches only files this application created or the user opened with it.
