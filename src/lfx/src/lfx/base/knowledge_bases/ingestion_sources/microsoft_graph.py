@@ -39,6 +39,12 @@ GRAPH_BASE_URL = "https://graph.microsoft.com/v1.0"
 USER_AGENT = "NONISV|Langflow|langflow-kb-ingestion/1.0"
 DEFAULT_PAGE_SIZE = 200
 MAX_ITEMS_DEFAULT = 5000
+# Same ceiling and the same ``max_file_size_bytes`` config key FolderSource
+# uses, so a KB operator tunes one number regardless of where the bytes come
+# from. Oversized items are skipped during the walk (Graph reports driveItem
+# ``size``) and the download is capped again on the way in, because the item
+# may have grown between the listing and the fetch.
+DEFAULT_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024
 HTTP_FOUND = 302
 _REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
 
@@ -89,6 +95,11 @@ class MicrosoftGraphSource(OAuthConnectorBase):
         value = self.source_config.get("max_items")
         return int(value) if isinstance(value, int) and value > 0 else MAX_ITEMS_DEFAULT
 
+    @property
+    def max_file_size_bytes(self) -> int:
+        value = self.source_config.get("max_file_size_bytes")
+        return int(value) if isinstance(value, int) and value > 0 else DEFAULT_MAX_FILE_SIZE_BYTES
+
     async def validate_config(self) -> None:
         """Fail before a background job is spawned when the config cannot work."""
         if self.connection_handle():
@@ -136,8 +147,12 @@ class MicrosoftGraphSource(OAuthConnectorBase):
 
         Folders are descended into when ``recursive`` is set; only files
         are yielded, because a folder has no bytes to ingest.
+
+        The token is re-read once per Graph request rather than once per
+        walk: ``get_access_token`` is cached (and, for a connection handle,
+        lease-backed), so this costs nothing on a short run but keeps a
+        long ingestion from outliving the token it started with.
         """
-        token = await self.get_access_token()
         emitted = 0
         # (item_id, path) pairs still to enumerate; the first entry is the
         # configured starting point.
@@ -147,15 +162,25 @@ class MicrosoftGraphSource(OAuthConnectorBase):
                 current_id, current_path = pending.pop(0)
                 url = f"{GRAPH_BASE_URL}{self._children_path(current_id, current_path)}?$top={DEFAULT_PAGE_SIZE}"
                 while url and emitted < self.max_items:
-                    payload = await self._get_json(client, url, token)
+                    payload = await self._get_json(client, url, await self.get_access_token())
                     for entry in payload.get("value") or []:
                         if not isinstance(entry, dict):
                             continue
                         if entry.get("folder") is not None:
-                            if self.recursive:
-                                pending.append((str(entry.get("id") or ""), ""))
+                            child_id = str(entry.get("id") or "")
+                            # Without an id there is nothing to descend
+                            # into: queueing ("", "") would re-list the
+                            # drive root and walk in a circle.
+                            if self.recursive and child_id:
+                                pending.append((child_id, ""))
                             continue
                         if entry.get("file") is None:
+                            continue
+                        size = entry.get("size")
+                        if isinstance(size, int) and size > self.max_file_size_bytes:
+                            # Skipped for the same reason FolderSource skips
+                            # them: the bytes would blow the memory and
+                            # embedding budgets for one item.
                             continue
                         emitted += 1
                         yield self._to_item(entry)
@@ -193,22 +218,55 @@ class MicrosoftGraphSource(OAuthConnectorBase):
         url = f"{GRAPH_BASE_URL}{self.drive_root()}/items/{item.item_id}/content"
         async with self._client() as client:
             response = await client.get(url, headers={"Authorization": f"Bearer {token}"})
-            if response.status_code in _REDIRECT_STATUSES:
-                location = response.headers.get("location")
-                if not location:
-                    msg = f"Microsoft Graph returned {response.status_code} without a download location."
-                    raise OSError(msg)
-                response = await client.get(location)
-            self._raise_for_status(response, "download")
-            raw_bytes = response.content
+            if response.status_code not in _REDIRECT_STATUSES:
+                self._raise_for_status(response, "download")
+                return IngestionItemContent(
+                    raw_bytes=response.content[: self.max_file_size_bytes],
+                    file_name=item.display_name,
+                )
+            location = response.headers.get("location")
+            # Only an absolute TLS target is worth following: the location is
+            # a header on a response, and this leg carries no bearer token to
+            # protect.
+            if not location or not location.startswith("https://"):
+                msg = f"Microsoft Graph returned {response.status_code} without a usable download location."
+                raise OSError(msg)
+            raw_bytes = await self._stream_capped(client, location)
         return IngestionItemContent(raw_bytes=raw_bytes, file_name=item.display_name)
 
+    async def _stream_capped(self, client: httpx.AsyncClient, url: str) -> bytes:
+        """Read a preauthenticated download URL, stopping at the size cap.
+
+        The cap is a memory bound, not a trim: the connection is dropped as
+        soon as it is reached, so an item that grew past the size Graph
+        reported during the walk cannot pull an unbounded body into the
+        ingestion worker.
+        """
+        chunks: list[bytes] = []
+        remaining = self.max_file_size_bytes
+        async with client.stream("GET", url) as download:
+            if download.status_code >= HTTP_STATUS_CLIENT_ERROR_FLOOR:
+                await download.aread()
+                self._raise_for_status(download, "download")
+            async for chunk in download.aiter_bytes():
+                if remaining <= 0:
+                    break
+                chunks.append(chunk[:remaining])
+                remaining -= len(chunk)
+        return b"".join(chunks)
+
     def describe(self) -> dict[str, Any]:
-        """Expose the connection handle, which is a reference and not a secret."""
+        """Expose the connection handle, which is a reference and not a secret.
+
+        The scopes reported are the *configured* ones -- a SharePoint site
+        needs ``Sites.Read.All`` and an explicit drive id needs
+        ``Files.Read.All`` -- so what is advertised here matches what
+        resolution will actually demand.
+        """
         base = super().describe()
         base.setdefault("config", {})
         handle = self.connection_handle()
         if handle:
             base["config"]["connection"] = handle
-            base["config"]["required_scopes"] = list(self.connection_required_scopes)
+            base["config"]["required_scopes"] = list(self.required_connection_scopes())
         return base

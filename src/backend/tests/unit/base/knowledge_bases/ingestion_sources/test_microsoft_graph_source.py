@@ -144,6 +144,20 @@ class TestRegistration:
         assert described["config"]["required_scopes"] == ["Files.Read"]
         assert "refresh_token_variable" not in described["config"]
 
+    def test_describe_reports_the_configured_scopes_not_the_class_default(self) -> None:
+        """A picker binding to ``describe()`` must see what resolution will demand."""
+        site = SharePointSource(
+            user_id=USER_ID,
+            source_config={"connection": "microsoft/work", "site_id": "contoso.sharepoint.com,site"},
+        )
+        assert site.describe()["config"]["required_scopes"] == ["Files.Read", "Sites.Read.All"]
+
+        drive = OneDriveSource(
+            user_id=USER_ID,
+            source_config={"connection": "microsoft/work", "drive_id": "b!drive"},
+        )
+        assert drive.describe()["config"]["required_scopes"] == ["Files.Read", "Files.Read.All"]
+
 
 class TestConfiguration:
     def test_onedrive_defaults_to_the_signed_in_users_drive(self) -> None:
@@ -298,6 +312,62 @@ class TestWalk:
 
         assert [item.item_id for item in items] == ["01FILE"]
 
+    async def test_a_folder_without_an_id_is_not_queued(self, resolver, graph_transport) -> None:
+        """An id-less folder would re-list the drive root and walk in a circle."""
+        resolver(_Resolver(_credential()))
+        headless_folder = {"name": "Mystery", "folder": {"childCount": 1}}
+        requests = graph_transport(lambda _request: httpx.Response(200, json=_children([FILE_ENTRY, headless_folder])))
+        source = OneDriveSource(user_id=USER_ID, source_config={"connection": "microsoft/work"})
+
+        items = [item async for item in source.list_items()]
+
+        assert [item.item_id for item in items] == ["01FILE"]
+        assert len(requests) == 1
+
+    async def test_oversized_items_are_skipped_during_the_walk(self, resolver, graph_transport) -> None:
+        resolver(_Resolver(_credential()))
+        huge = {**FILE_ENTRY, "id": "01HUGE", "name": "huge.bin", "size": 999_999_999}
+        graph_transport(lambda _request: httpx.Response(200, json=_children([huge, FILE_ENTRY])))
+        source = OneDriveSource(
+            user_id=USER_ID,
+            source_config={"connection": "microsoft/work", "max_file_size_bytes": 1024},
+        )
+
+        items = [item async for item in source.list_items()]
+
+        assert [item.item_id for item in items] == ["01FILE"]
+
+    async def test_the_token_is_re_read_for_every_page(self, resolver, graph_transport, monkeypatch) -> None:
+        """A long walk must not outlive the token it started with.
+
+        ``get_access_token`` is lease-backed and caches, so asking per page is
+        free; asking once per *walk* is what would let a multi-hour ingestion
+        keep using an expired token.
+        """
+        resolver(_Resolver(_credential()))
+        next_link = "https://graph.microsoft.com/v1.0/me/drive/root/children?%24skiptoken=abc"
+        pages = [
+            _children([FILE_ENTRY], next_link=next_link),
+            _children([{**FILE_ENTRY, "id": "01SECOND", "name": "second.txt"}]),
+        ]
+        graph_transport(lambda _request: httpx.Response(200, json=pages.pop(0)))
+        source = OneDriveSource(user_id=USER_ID, source_config={"connection": "microsoft/work"})
+
+        calls = 0
+        original = type(source).get_access_token
+
+        async def _counting(self):
+            nonlocal calls
+            calls += 1
+            return await original(self)
+
+        monkeypatch.setattr(type(source), "get_access_token", _counting)
+
+        items = [item async for item in source.list_items()]
+
+        assert [item.item_id for item in items] == ["01FILE", "01SECOND"]
+        assert calls == 2
+
     async def test_a_graph_listing_failure_surfaces_as_an_oserror(self, resolver, graph_transport) -> None:
         resolver(_Resolver(_credential()))
         graph_transport(lambda _request: httpx.Response(403, json={"error": {"code": "accessDenied"}}))
@@ -327,6 +397,43 @@ class TestFetch:
         assert requests[0].url.path == "/v1.0/me/drive/items/01FILE/content"
         assert "authorization" in requests[0].headers
         assert "authorization" not in requests[1].headers
+
+    async def test_the_download_stops_at_the_size_cap(self, resolver, graph_transport) -> None:
+        """The cap bounds memory: the stream is abandoned, not trimmed afterwards."""
+        resolver(_Resolver(_credential()))
+        served: list[int] = []
+
+        async def _chunks():
+            for index in range(100):
+                served.append(index)
+                yield b"x" * 1024
+
+        def _handler(request: httpx.Request) -> httpx.Response:
+            if request.url.host == "graph.microsoft.com":
+                return httpx.Response(302, headers={"Location": DOWNLOAD_URL})
+            return httpx.Response(200, content=_chunks())
+
+        graph_transport(_handler)
+        source = OneDriveSource(
+            user_id=USER_ID,
+            source_config={"connection": "microsoft/work", "max_file_size_bytes": 2048},
+        )
+
+        content = await source.fetch_content(source._to_item(FILE_ENTRY))
+
+        assert len(content.raw_bytes) == 2048
+        assert len(served) <= 3
+
+    async def test_a_non_https_download_location_is_refused(self, resolver, graph_transport) -> None:
+        resolver(_Resolver(_credential()))
+        requests = graph_transport(
+            lambda _request: httpx.Response(302, headers={"Location": "http://169.254.169.254/latest/meta-data/"})
+        )
+        source = OneDriveSource(user_id=USER_ID, source_config={"connection": "microsoft/work"})
+
+        with pytest.raises(OSError, match="download location"):
+            await source.fetch_content(source._to_item(FILE_ENTRY))
+        assert len(requests) == 1
 
     async def test_a_download_failure_surfaces_as_an_oserror(self, resolver, graph_transport) -> None:
         resolver(_Resolver(_credential()))
