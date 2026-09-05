@@ -176,9 +176,9 @@ async def upload_project_flows(
 
     project = FolderCreate(name=data["folder_name"], description=data.get("folder_description", ""))
 
-    # Fourth project-creation entry point: this route builds the Folder itself instead of
-    # going through ``projects._new_project``, so it runs the same hooks through the same
-    # helper. Without this, a project limit would be bypassable by uploading an export.
+    # The one project-creation route that does not go through ``projects._new_project``: it
+    # builds the Folder itself, so it runs the same hooks through the same helper. Without
+    # this call a project limit would be bypassable by uploading a project export.
     await enforce_pre_creation(
         PreCreationContext(
             resource=RESOURCE_PROJECT,
