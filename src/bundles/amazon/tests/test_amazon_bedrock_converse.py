@@ -29,8 +29,8 @@ def test_explicit_credentials_are_optional_inputs():
 
     assert inputs["aws_access_key_id"].required is False
     assert inputs["aws_secret_access_key"].required is False
-    assert inputs["aws_access_key_id"].value is None
-    assert inputs["aws_secret_access_key"].value is None
+    assert inputs["aws_access_key_id"].value == ""
+    assert inputs["aws_secret_access_key"].value == ""
 
 
 def test_top_k_reaches_additional_model_request_fields():
