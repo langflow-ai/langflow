@@ -117,12 +117,20 @@ class DiscoveredTool:
 
 
 def discovered_tool(tool: Any) -> DiscoveredTool:
-    """Normalize an MCP ``types.Tool`` or an ``MCPStructuredTool`` for comparison.
+    """Normalize an MCP ``types.Tool``, an ``MCPStructuredTool``, or a raw entry.
 
     ``update_tools`` turns each discovered tool into a ``StructuredTool`` whose
     derived ``args_schema`` has already lost the raw JSON Schema, so the raw
-    schemas are carried forward on the tool's ``metadata`` instead.
+    schemas are carried forward on the tool's ``metadata`` instead.  A plain
+    mapping is accepted too, so a pin author can compute the digest straight
+    from a recorded ``tools/list`` response.
     """
+    if isinstance(tool, Mapping):
+        return DiscoveredTool(
+            name=str(tool.get("name") or ""),
+            input_schema=dict(tool.get("inputSchema") or tool.get("input_schema") or {}),
+            output_schema=_optional_schema(tool.get("outputSchema") or tool.get("output_schema")),
+        )
     name = getattr(tool, "name", None) or ""
     input_schema = getattr(tool, "inputSchema", None) or getattr(tool, "input_schema", None)
     output_schema = getattr(tool, "outputSchema", None) or getattr(tool, "output_schema", None)
@@ -137,6 +145,10 @@ def discovered_tool(tool: Any) -> DiscoveredTool:
         input_schema=dict(input_schema) if isinstance(input_schema, Mapping) else {},
         output_schema=dict(output_schema) if isinstance(output_schema, Mapping) else None,
     )
+
+
+def _optional_schema(value: Any) -> dict[str, Any] | None:
+    return dict(value) if isinstance(value, Mapping) else None
 
 
 # --------------------------------------------------------------------- digest

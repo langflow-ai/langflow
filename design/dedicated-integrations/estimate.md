@@ -1,8 +1,8 @@
 # Re-issued estimate for INT-1 through INT-14
 
-Status: re-issued 2026-09-01 under the release owner's confirmed decisions; amended 2026-09-02 for the Desktop registration decision
+Status: re-issued 2026-09-01 under the release owner's confirmed decisions; amended 2026-09-02 for the Desktop registration decision; amended 2026-09-04 for the INT-9 release decision
 Owners (sign-off roles): release owner
-Last verified: 2026-09-02
+Last verified: 2026-09-04
 
 The gate's last exit criterion is a re-issued estimate. The original ticket breakdown summed to 49
 engineer-weeks including INT-1. The numbers below apply the gate's findings ticket by ticket; every delta names the
@@ -23,16 +23,18 @@ public clients per the release owner's 2026-09-02 decision).
 | INT-6 Executing identity | 3 | 3 | 0 | the allow/deny table is already written per family in the contract |
 | INT-7 Governance | 3 | 3 | 0 | mirrors the model-provider policy pattern and includes the operator policy panel in `frontend-surfaces.md` B9 |
 | INT-8 Frontend Connections UX | 5 | 6 | +1 | OAuth return handling (popup plus `postMessage` or callback route) is greenfield; scope-coverage picker; a11y baseline spec; i18n in seven locales (`frontend-surfaces.md` B3, B5, A14) |
-| INT-9 MCP pinned mode | 3 | 0 | -3 | deferred to 1.14 because the gate has no dated authenticated `tools/list` evidence to freeze exact Slack tool ids and schemas (`decisions/substrate-slack.md`) |
+| INT-9 MCP pinned mode | 3 | 3 | 0 | restored to 1.13 by the release owner's 2026-09-04 decision: the pinned engine and the GA-swap procedure are provider-neutral and do not need the Slack capture. The Slack *adoption* is still gated on that capture (`decisions/substrate-slack.md` amendment 2026-09-04, `ga-swap-procedure.md`), so the 3 weeks buy the engine, the manifest pin, the typed `incompatible-tool` error, and a procedure exercised on a synthetic fixture -- not a live provider action on MCP |
 | INT-10 lfx-google wave 1 | 5 | 4.75 | -0.25 | include set shrinks to five SDK actions with no restricted scope and no MCP (-1); the `GoogleOAuthToken` deprecation and upgrade-checker rule remain; KB Drive ingestion source on connections (+0.75, `decisions/kb-oauth-connector-adoption.md`) |
 | INT-11 lfx-microsoft | 5 | 5.75 | +0.75 | eight Graph actions, a new bundle's eight registration points, the Entra guide; KB OneDrive, SharePoint, and Graph ingestion sources on connections plus the KB connector picker (`decisions/kb-oauth-connector-adoption.md`) |
 | INT-12 lfx-slack | 4 | 3 | -1 | seven Web API actions share one SDK and error-normalization path; separate named user OAuth and bot-install profiles remain |
 | INT-13 Headless reference | 1.5 | 1.5 | 0 | the env resolver is the sample |
 | INT-14 GA validation | 4 | 4 | 0 | contexts reduce to two callback paths times two client types, offset by three providers' verification runbooks |
-| **Total** | **49** | **48.75** | **-0.25** | inside the plan's 45 to 55 working range |
+| **Total** | **49** | **51.75** | **+2.75** | inside the plan's 45 to 55 working range |
 
-Sensitivity: adopting Slack MCP in 1.14 adds the deferred INT-9 estimate (3 engineer-weeks) plus any action-specific
-migration work established by the required `tools/list` capture. Accepting CASA instead of avoiding restricted
+Sensitivity: adopting Slack MCP no longer carries the INT-9 engine cost (it is in the 1.13 total above); what it
+still carries is the action-specific migration work established by the required `tools/list` capture -- an argument
+mapping if the pinned tool schemas do not line up with INT-12's REST-shaped inputs, plus the drift and
+swap-equivalence tests per adopted action (roughly 0.5 engineer-weeks per action on top of the capture itself). Accepting CASA instead of avoiding restricted
 scopes adds no engineer-weeks to INT-10 but adds several weeks of calendar lead time and an annual recurring
 assessment that no ticket currently carries.
 
@@ -47,7 +49,7 @@ assessment that no ticket currently carries.
 | Slack Marketplace listing | hosted, required to lift the non-Marketplace `conversations.replies` rate reduction | Slack review; weeks, not documented | `matrices/slack.json` sources `slack-conversations-replies`, `slack-rate-limits` |
 | Google Desktop client and Entra desktop platform on the hosted registrations | desktop | none beyond hosted: Google verification is per project consent screen and Microsoft publisher verification is per registration, so Desktop inherits both | `decisions/desktop-oauth-ownership.md` facts 2 and 4 |
 | Second Langflow-owned Slack app (PKCE, Desktop) | desktop | none to create; the Marketplace listing question is shared with hosted because any distributed non-Marketplace app runs `conversations.replies` at the reduced tier | `decisions/desktop-oauth-ownership.md` facts 5 and 6 |
-| Slack MCP tool identifiers | deferred 1.14 track | authenticated `tools/list` capture before any action is moved from REST to MCP | `decisions/substrate-slack.md` |
+| Slack MCP tool identifiers | Slack adoption track (the INT-9 engine itself no longer waits on it) | authenticated `tools/list` capture before any action is moved from REST to MCP | `decisions/substrate-slack.md` amendment 2026-09-04 |
 
 ## What the estimate does not include
 

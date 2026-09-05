@@ -19,14 +19,15 @@ these files are the historical record the checker keeps guarding.
 |---|---|---|---|---|
 | 1 | Three approved matrices, at most 8 actions each | `matrices/google.json`, `matrices/microsoft.json`, `matrices/slack.json` | `check_capability_matrices.py`: JSON Schema, included-action cap, required fields, enums | Google 5 included (Gmail search excluded), Microsoft 8 included, Slack 7 included (all Web API) |
 | 2 | Every scope classified; every restricted scope has a written decision | scope entries in the matrices; `decisions/google-restricted-scopes.md` | classification present and sourced; every scope on an included action tagged `required`, `optional`, or `alternative`; conditional rows carry a structured predicate naming a real action input; at least one scope is required; restricted scopes need a `restricted_scope_decisions` entry pointing at an existing record | accepted: avoid on the hosted app; Gmail search excluded, Drive on drive.file |
-| 3 | Substrate decision per provider with the server's GA status | `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`; `substrate_decision` in each matrix | included actions must use a chosen substrate; non-GA MCP rows cannot be high confidence | accepted: Google sdk, Microsoft rest, Slack rest; Slack MCP deferred to 1.14 pending exact tool evidence |
+| 3 | Substrate decision per provider with the server's GA status | `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`; `substrate_decision` in each matrix | included actions must use a chosen substrate; non-GA MCP rows cannot be high confidence | accepted: Google sdk, Microsoft rest, Slack rest; Slack MCP still waits on exact tool evidence, though the pinned engine itself ships in 1.13 (`ga-swap-procedure.md`) |
 | 4 | INT-2 connection-resolution contract signed off by lfx, langflow-base, Enterprise owners | `connection-contract.md` | sign-off coverage: every declared owner role has a row in the sign-off table below that lists the record | drafted 2026-09-01; 12 sections, owner questions in section 12 |
 | 5 | Frontend surface list | `frontend-surfaces.md` | none | drafted 2026-09-01; 14 extend + 9 new, including the operator governance surface; MVP/defer split |
 | 6 | Trigger/webhook track recorded as deferred | `triggers-deferred.md` | none | governing-plan findings folded in; provider transport and delivery discovery remains deferred |
-| 7 | Re-issued estimate | `estimate.md` | none | re-issued 2026-09-01 and amended 2026-09-02: 48.75 engineer-weeks under the confirmed decisions |
+| 7 | Re-issued estimate | `estimate.md` | none | re-issued 2026-09-01, amended 2026-09-02 and 2026-09-04: 51.75 engineer-weeks under the confirmed decisions (INT-9 restored to 1.13) |
 | + | KB OAuth connector adoption decision (added by the release owner) | `decisions/kb-oauth-connector-adoption.md` | none | accepted: adopt in 1.13 (release owner overrode the gate's defer recommendation); +1.5 engineer-weeks |
 | + | Palette naming next to Composio components (added by the release owner) | `decisions/palette-naming.md` | none | accepted: 'Product: Verb Object' names, new Microsoft 365 and Slack groups, Composio unchanged |
 | + | Desktop OAuth registration ownership (added by the release owner, 2026-09-02) | `decisions/desktop-oauth-ownership.md` | none | accepted: Langflow-owned public clients on Desktop, customer-owned registrations remain the override; +0.25 engineer-weeks |
+| + | GA-swap procedure, SDK/REST to pinned MCP (INT-9, release owner decision 2026-09-04) | `ga-swap-procedure.md` | exercised by `src/lfx/tests/unit/base/mcp/test_ga_swap_procedure.py` | accepted: INT-9 ships the pinned engine and this procedure in 1.13; the Slack adoption still waits on the dated `tools/list` capture |
 
 Gate close means: every row above is done, every record under `decisions/` is `Status: accepted` (the checker walks
 them all, not only the ones a matrix references), every declared owner has completed both sign-off tables, and
@@ -43,7 +44,7 @@ fails blank or invalid Name, Date, and PR cells. Role placeholders remain until 
 
 | Role | Signs off on | Name | Date | PR |
 |---|---|---|---|---|
-| lfx owner | `connection-contract.md`, `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`, `decisions/kb-oauth-connector-adoption.md` | | | |
+| lfx owner | `connection-contract.md`, `ga-swap-procedure.md`, `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`, `decisions/kb-oauth-connector-adoption.md` | | | |
 | langflow-base owner | `connection-contract.md`, `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`, `decisions/google-restricted-scopes.md`, `decisions/kb-oauth-connector-adoption.md`, `decisions/desktop-oauth-ownership.md` | | | |
 | Enterprise owner | `connection-contract.md`, `decisions/substrate-google.md`, `decisions/substrate-microsoft.md`, `decisions/substrate-slack.md`, `decisions/google-restricted-scopes.md` | | | |
 | frontend owner | `connection-contract.md` (section 12.d), `frontend-surfaces.md`, `decisions/palette-naming.md` | | | |
@@ -88,6 +89,7 @@ connection-contract.md             (Phase 5) INT-2 design for sign-off
 frontend-surfaces.md               (Phase 7)
 triggers-deferred.md               deferred track with re-open trigger
 estimate.md                        (Phase 8)
+ga-swap-procedure.md               INT-9: moving one action from SDK/REST to a pinned MCP server (2026-09-04)
 ```
 
 ## Matrix field glossary
