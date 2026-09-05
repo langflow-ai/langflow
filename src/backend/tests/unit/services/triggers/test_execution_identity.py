@@ -8,6 +8,7 @@ unattended use must stop the run before a job exists.
 
 from __future__ import annotations
 
+import json
 from uuid import uuid4
 
 import pytest
@@ -18,9 +19,8 @@ from langflow.services.deps import session_scope
 from langflow.services.triggers import dispatcher, ledger
 from langflow.services.triggers.constants import (
     ACTOR_TRIGGER_DISPATCHER,
-    EXECUTION_FAMILY_REQUEST_KEY,
-    FAMILY_TRIGGER_LISTENER,
     FAMILY_TRIGGER_PUSH,
+    TRIGGER_EVENT_FIELD,
 )
 from langflow.services.triggers.principal import connection_preflight, trigger_execution_principal
 
@@ -70,11 +70,12 @@ async def test_trigger_tweaks_are_server_generated_and_never_caller_supplied(
 ) -> None:
     """The matrix classifies trigger tweaks as ``server_generated``.
 
-    Nothing on the event payload may become a component override: a provider
-    that could set tweaks would be choosing which credentials the owner's flow
-    uses.
+    The dispatcher does build one tweak — the firing event, on the trigger's own
+    canvas node, under the single reserved field. Nothing from the event
+    *payload* may join it: a provider that could set tweaks would be choosing
+    which credentials the owner's flow uses.
     """
-    trigger_id = await make_trigger()
+    trigger_id = await make_trigger(node_id="ScheduleTrigger-node")
     async with session_scope() as session:
         await ledger.append_event(
             session,
@@ -85,11 +86,25 @@ async def test_trigger_tweaks_are_server_generated_and_never_caller_supplied(
 
     assert await dispatcher.run_once(owner="solo") == 1
     request = fake_background_service.submits[0]["request"]
-    assert request["tweaks"] == {}
+    # Exactly one node, exactly one field on it.
+    assert set(request["tweaks"]) == {"ScheduleTrigger-node"}
+    assert set(request["tweaks"]["ScheduleTrigger-node"]) == {TRIGGER_EVENT_FIELD}
+    assert "ChatInput-1" not in request["tweaks"]
     # The unpinned run carries no canvas override either, however the payload asks.
     assert "data" not in request
-    assert request["trigger_event"]["payload"]["tweaks"] == _HOSTILE_TWEAKS
-    assert request[EXECUTION_FAMILY_REQUEST_KEY] == FAMILY_TRIGGER_LISTENER
+    # The hostile keys survive only as inert data inside the event the component reads.
+    event = json.loads(request["tweaks"]["ScheduleTrigger-node"][TRIGGER_EVENT_FIELD])
+    assert event["payload"]["tweaks"] == _HOSTILE_TWEAKS
+
+
+async def test_a_trigger_with_no_canvas_node_sends_no_tweak(make_trigger, fake_background_service) -> None:
+    """An API-created trigger names no node to feed, so it overrides nothing."""
+    trigger_id = await make_trigger(node_id=None)
+    async with session_scope() as session:
+        await ledger.append_event(session, trigger_id=trigger_id, dedupe_key="no-node")
+
+    assert await dispatcher.run_once(owner="solo") == 1
+    assert fake_background_service.submits[0]["request"]["tweaks"] == {}
 
 
 async def test_trigger_on_a_connection_without_the_optin_fails_closed(

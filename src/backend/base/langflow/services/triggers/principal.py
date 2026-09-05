@@ -13,9 +13,12 @@ module runs that same check as a dispatch preflight so a trigger bound to a
 connection without the opt-in fails closed *before* a job exists, instead of
 failing deep inside a component where the owner would see it as a run error.
 
-INT-6 owns stamping the principal onto every graph. Until it lands, the
-dispatcher passes the family on the job request under the agreed
-``execution_family`` key; INT-6's worker-side helper reads it back.
+INT-6 owns stamping the principal onto every graph. The family reaches that
+helper as a keyword argument (``EXECUTION_FAMILY_KWARG``), never as a field on
+the run request: ``WorkflowRunRequest`` is ``extra="forbid"`` and the worker
+re-parses the persisted request before it builds anything, so a family smuggled
+onto the body would fail every trigger run. :func:`trigger_execution_principal`
+is the single call site INT-6 wires.
 """
 
 from __future__ import annotations
