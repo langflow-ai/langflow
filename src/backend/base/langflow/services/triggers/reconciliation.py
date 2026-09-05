@@ -156,10 +156,26 @@ async def reconcile_flow_triggers_safely(
     owner_id: UUID | None,
     flow_data: dict[str, Any] | None,
 ) -> None:
-    """Reconcile without ever failing the save that called it."""
+    """Reconcile without ever failing the save that called it.
+
+    The work runs inside a SAVEPOINT, and that is the load-bearing part rather
+    than the ``except``. Swallowing the exception alone is not enough: an
+    ``IntegrityError`` raised by this function's own ``flush`` leaves the
+    caller's ``AsyncSession`` in a failed transaction, so the flow save that
+    called us would still die — at ``commit``, with a ``PendingRollbackError``
+    the caller cannot attribute to trigger bookkeeping. The savepoint rollback
+    undoes only what reconciliation wrote and hands the save back a usable
+    session.
+
+    The failure is real, not theoretical: two concurrent saves of the same flow
+    (an autosave PATCH racing a PUT) can both see no row for a newly added
+    trigger node and both insert ``(flow_id, node_id)``; the loser violates
+    ``uq_trigger_flow_node``.
+    """
     if owner_id is None:
         return
     try:
-        await reconcile_flow_triggers(session, flow_id=flow_id, owner_id=owner_id, flow_data=flow_data)
+        async with session.begin_nested():
+            await reconcile_flow_triggers(session, flow_id=flow_id, owner_id=owner_id, flow_data=flow_data)
     except Exception:  # noqa: BLE001 — a flow save must never fail on trigger bookkeeping
         await logger.awarning("Trigger reconciliation failed for flow %s", flow_id, exc_info=True)
