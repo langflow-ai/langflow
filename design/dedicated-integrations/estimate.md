@@ -1,6 +1,6 @@
 # Re-issued estimate for INT-1 through INT-14
 
-Status: re-issued 2026-09-01 under the release owner's confirmed decisions; amended 2026-09-02 for the Desktop registration decision
+Status: re-issued 2026-09-01 under the release owner's confirmed decisions; amended 2026-09-02 for the Desktop registration decision; amended 2026-09-04 for the triggers 1.13 decision
 Owners (sign-off roles): release owner
 Last verified: 2026-09-02
 
@@ -54,3 +54,11 @@ assessment that no ticket currently carries.
 Triggers and webhooks (`triggers-deferred.md`); OAuth for unauthenticated public-flow callers; a self-managed restricted-scope profile
 (`decisions/google-restricted-scopes.md` Option C); Enterprise approvals, retention, and audit query UI beyond the
 existing plugin seams.
+
+**Amendment, 2026-09-04, release owner decision.** Triggers and webhooks are 1.13 scope after all: TRG-1 through
+TRG-8 each get a pull request in this release. The exclusion above still holds for *this* total - the 48.75
+engineer-weeks for INT-1 through INT-14 are unchanged, and the triggers work is additional to them rather than inside
+them. Their own re-issued figure, 39.5 engineer-weeks, lives in
+[`../dedicated-integrations-triggers/estimate.md`](../dedicated-integrations-triggers/estimate.md), and Risk 7 of the
+governing plan (pulling triggers forward invalidates the actions estimate) is answered by adding capacity, not by
+re-scoping the actions release: no INT ticket loses scope. Every other exclusion on this list is unaffected.

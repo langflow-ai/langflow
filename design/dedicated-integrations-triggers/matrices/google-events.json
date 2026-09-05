@@ -1,0 +1,433 @@
+{
+  "schema_version": 1,
+  "provider": "google",
+  "display_name": "Google Workspace",
+  "wave": 1,
+  "verified_on": "2026-09-05",
+  "public_ingress_by_context": {
+    "hosted": "available",
+    "self_managed": "conditional",
+    "desktop": "unavailable",
+    "headless": "unavailable"
+  },
+  "decision_records": [
+    "decisions/delivery-semantics.md",
+    "decisions/process-model.md",
+    "decisions/self-managed-ingress.md"
+  ],
+  "sources": {
+    "calendar-push": {
+      "url": "https://developers.google.com/workspace/calendar/api/guides/push",
+      "title": "Google Calendar API: Push notifications",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "events.watch opens a notification channel with a caller-chosen id, type 'web_hook', an https address, an optional opaque token and an optional expiration. The receiving domain must be registered and verified, and the address must present a valid SSL certificate. Notifications arrive as POSTs whose headers carry X-Goog-Channel-ID, X-Goog-Channel-Token, X-Goog-Channel-Expiration, X-Goog-Resource-ID, X-Goog-Resource-URI, X-Goog-Resource-State and X-Goog-Message-Number; the body is empty. The first notification after channel creation has X-Goog-Resource-State: sync and must be ignored. Channels expire (the expiration is returned in the watch response and echoed in X-Goog-Channel-Expiration) and channels.stop closes one early. A channel that is not answered with 2xx is retried with an exponential backoff."
+    },
+    "calendar-sync": {
+      "url": "https://developers.google.com/workspace/calendar/api/guides/sync",
+      "title": "Google Calendar API: Synchronize resources efficiently",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "A full events.list returns nextSyncToken; passing it as syncToken on the next call returns only what changed since, including cancellations as status 'cancelled'. An invalidated syncToken returns HTTP 410 GONE and the client must perform a full synchronization without a token."
+    },
+    "drive-push": {
+      "url": "https://developers.google.com/workspace/drive/api/guides/push",
+      "title": "Google Drive API: Push notifications",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "changes.watch and files.watch use the same notification-channel object and the same X-Goog-* headers as Calendar, with the same verified-domain and SSL requirements, the same initial sync message, the same channel expiration and channels.stop. Drive notifications are thin: they name the channel and resource, not the changed file."
+    },
+    "drive-changes": {
+      "url": "https://developers.google.com/workspace/drive/api/guides/manage-changes",
+      "title": "Google Drive API: Track changes for users and shared drives",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "changes.getStartPageToken returns the cursor to start from; changes.list(pageToken) returns the change list and either nextPageToken or newStartPageToken to persist for the next round. Under the drive.file scope the change feed only reports files the application created or the user explicitly opened with it."
+    },
+    "gmail-push": {
+      "url": "https://developers.google.com/workspace/gmail/api/guides/push",
+      "title": "Gmail API: Push notifications",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "users.watch registers a Cloud Pub/Sub topic for a mailbox and returns historyId and expiration; the watch must be re-called at least every seven days and Google recommends renewing it once a day. The Pub/Sub message data is a base64-encoded JSON object with emailAddress and historyId; it carries no message content. users.stop cancels the watch. The Gmail service account must be granted publish rights on the topic in the customer's Cloud project."
+    },
+    "gmail-sync": {
+      "url": "https://developers.google.com/workspace/gmail/api/guides/sync",
+      "title": "Gmail API: Synchronizing clients with Gmail",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "users.history.list(startHistoryId) returns the changes since that point. History records are kept for a limited period; a startHistoryId that is too old returns HTTP 404 and the client must fall back to a full synchronization. historyId values are per mailbox and are not comparable across mailboxes."
+    },
+    "pubsub-push": {
+      "url": "https://cloud.google.com/pubsub/docs/push",
+      "title": "Cloud Pub/Sub: Push subscriptions",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "A push subscription POSTs each message to an https endpoint and treats a 2xx as the acknowledgement; anything else is redelivered with backoff. The subscription can be configured to attach an OIDC token in the Authorization header, signed for a service account with a configured audience, which the receiver validates. Delivery is at-least-once and unordered unless message ordering is enabled."
+    },
+    "pubsub-pull": {
+      "url": "https://cloud.google.com/pubsub/docs/pull",
+      "title": "Cloud Pub/Sub: Pull subscriptions",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "A pull subscriber opens an outbound connection to Pub/Sub, receives messages and acknowledges each one by ack id; an unacknowledged message is redelivered after the acknowledgement deadline (default ten seconds, configurable up to ten minutes). No inbound connectivity is required."
+    },
+    "calendar-quota": {
+      "url": "https://developers.google.com/workspace/calendar/api/guides/quota",
+      "title": "Google Calendar API: Manage quotas",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "Quotas are per Cloud project and per user per project, expressed as queries per minute; exceeding them returns 403 rateLimitExceeded or 429, and Google's guidance is exponential backoff with jitter."
+    }
+  },
+  "open_questions": [
+    "Calendar and Drive notification channels expire, but the ceiling is set by the API rather than by the caller and differs between the two APIs. The renewal job reads the expiration from the watch response and from X-Goog-Channel-Expiration instead of assuming a constant; the hosted-app owner records the observed maxima per API before GA.",
+    "The hosted Google app must verify the notification domain in Search Console for the hosted ingress host. That is a hosted-app owner task with no engineer-week cost but a calendar dependency, and it has to be redone if the hosted ingress hostname changes."
+  ],
+  "mechanisms": [
+    {
+      "mechanism_id": "google.calendar_push",
+      "display_name": "Google Calendar push channel (events.watch)",
+      "track": "a",
+      "transport": "http_push",
+      "ingress_requirement": "public_https",
+      "deployment_contexts": ["hosted", "self_managed"],
+      "fallback_mechanism": "google.calendar_sync_poll",
+      "status": "wave_1",
+      "confidence": "medium",
+      "owning_ticket": "TRG-6",
+      "rationale": "Low-latency calendar triggers on the hosted app without touching a restricted scope: calendar.events.readonly is a sensitive, not restricted, scope and is already in the accepted 1.13 Google matrix.",
+      "events": ["calendar events created, updated or cancelled on the watched calendar"],
+      "required_scopes": ["https://www.googleapis.com/auth/calendar.events.readonly"],
+      "inbound_auth": {
+        "method": "channel_token",
+        "details": "The opaque token supplied to events.watch is echoed in X-Goog-Channel-Token and compared in constant time against the value stored on the subscription row, alongside the channel id. There is no signature; the receiving domain must be verified with Google and serve a valid certificate, and TRG-4's opaque per-trigger ingress id plus body cap carry the rest of the load.",
+        "source": "calendar-push"
+      },
+      "subscription": {
+        "required": true,
+        "max_ttl_seconds": null,
+        "renewal": "The watch response returns expiration and every notification echoes X-Goog-Channel-Expiration; the renewal job re-watches ahead of that value and calls channels.stop on the old channel, rather than assuming a fixed TTL. Disabling a trigger or revoking its connection calls channels.stop.",
+        "source": "calendar-push"
+      },
+      "payload": {
+        "shape": "thin",
+        "details": "The POST body is empty; the headers name the channel and the resource that changed, not what changed. The dispatched job hydrates with events.list(syncToken) using the owner's connection.",
+        "source": "calendar-push"
+      },
+      "delivery": {
+        "guarantee": "at_least_once",
+        "ack_deadline_seconds": null,
+        "retry_policy": "Google retries a notification that is not answered with 2xx using an exponential backoff. The first notification after channel creation carries X-Goog-Resource-State: sync and is dropped before the ledger write.",
+        "source": "calendar-push"
+      },
+      "replay": {
+        "available": true,
+        "window": "as far back as the stored syncToken remains valid",
+        "details": "Notifications themselves are not replayable, but the sync token is: re-running events.list with the stored syncToken re-reads the same window. A 410 GONE forces a full list, which the ledger's unique index prevents from re-running past events.",
+        "source": "calendar-sync"
+      },
+      "rate_limit": {
+        "details": "Per-project and per-user queries-per-minute quotas; 403 rateLimitExceeded or 429 with exponential backoff and jitter. Notification volume is not itself quota'd, but every notification causes a hydration call that is.",
+        "source": "calendar-quota"
+      },
+      "dedupe_key": {
+        "field": "derived from the calendar id, the event id and the event's updated timestamp (or etag)",
+        "stability": "derived",
+        "details": "The notification carries no event identity at all, so the key is derived from the hydrated event and must be identical to the key the poll mechanism derives for the same change; TRG-6's contract test pins that. X-Goog-Message-Number is per delivery and is metadata only.",
+        "source": "calendar-sync"
+      },
+      "session_key": {
+        "details": "google:calendar:{iCalUID or recurringEventId} so every instance and update of one event or series correlates to one conversation.",
+        "source": "calendar-sync"
+      },
+      "notes": "The hosted registration needs the notification domain verified in Search Console before any hosted channel can be created."
+    },
+    {
+      "mechanism_id": "google.drive_push",
+      "display_name": "Google Drive push channel (changes.watch)",
+      "track": "a",
+      "transport": "http_push",
+      "ingress_requirement": "public_https",
+      "deployment_contexts": ["hosted", "self_managed"],
+      "fallback_mechanism": "google.drive_changes_poll",
+      "status": "wave_1",
+      "confidence": "medium",
+      "owning_ticket": "TRG-6",
+      "rationale": "Ships on hosted under drive.file, matching the accepted 1.13 Google substrate decision, which avoids the restricted drive.readonly scope.",
+      "events": ["drive change feed entries for files the app created or the user opened with it"],
+      "required_scopes": ["https://www.googleapis.com/auth/drive.file"],
+      "inbound_auth": {
+        "method": "channel_token",
+        "details": "Identical to Calendar: the opaque channel token echoed in X-Goog-Channel-Token, compared in constant time with the channel id, over a verified domain with a valid certificate.",
+        "source": "drive-push"
+      },
+      "subscription": {
+        "required": true,
+        "max_ttl_seconds": null,
+        "renewal": "Same channel object and the same renewal rule as Calendar: re-watch ahead of the returned expiration and channels.stop the old channel. The start page token persists across renewals so a re-watch does not lose the cursor.",
+        "source": "drive-push"
+      },
+      "payload": {
+        "shape": "thin",
+        "details": "Headers only; the changed file is read inside the job with changes.list(pageToken) using the owner's connection.",
+        "source": "drive-push"
+      },
+      "delivery": {
+        "guarantee": "at_least_once",
+        "ack_deadline_seconds": null,
+        "retry_policy": "Exponential-backoff retries on a non-2xx; the initial X-Goog-Resource-State: sync message is dropped before the ledger write.",
+        "source": "drive-push"
+      },
+      "replay": {
+        "available": true,
+        "window": "as far back as the stored start page token remains valid",
+        "details": "Recovery is changes.list from the persisted page token, not a notification replay.",
+        "source": "drive-changes"
+      },
+      "rate_limit": {
+        "details": "Per-project and per-user queries-per-minute quotas with 403 rateLimitExceeded or 429; a busy shared drive can produce a burst of notifications that each cost a changes.list call.",
+        "source": "calendar-quota"
+      },
+      "dedupe_key": {
+        "field": "derived from the change record's fileId and its modifiedTime (or the change's time)",
+        "stability": "derived",
+        "details": "Derived from the hydrated change record so push and poll agree; the notification itself carries no file identity.",
+        "source": "drive-changes"
+      },
+      "session_key": {
+        "details": "google:files:{fileId} so repeated edits of one file correlate to one conversation.",
+        "source": "drive-changes"
+      },
+      "notes": "Under drive.file the change feed reports only files the app created or the user opened with it, so a 'watch this folder' expectation is not met on hosted; the frontend shows an app-files-only explanation next to the trigger."
+    },
+    {
+      "mechanism_id": "google.calendar_sync_poll",
+      "display_name": "Google Calendar sync-token poll (events.list)",
+      "track": "b",
+      "transport": "poll",
+      "ingress_requirement": "outbound_only",
+      "deployment_contexts": ["self_managed", "desktop"],
+      "status": "wave_1",
+      "confidence": "high",
+      "owning_ticket": "TRG-6",
+      "rationale": "The no-ingress answer for Calendar and the gate's answer to 'Calendar and Drive without ingress': poll, do not relay. Runs on the TRG-3 generic poll loop with the sync token stored on the trigger row.",
+      "events": ["calendar events created, updated or cancelled since the stored sync token"],
+      "required_scopes": ["https://www.googleapis.com/auth/calendar.events.readonly"],
+      "inbound_auth": {
+        "method": "none",
+        "details": "Nothing arrives inbound; the listener calls out with the owner's access token resolved as a trigger_listener principal.",
+        "source": "calendar-sync"
+      },
+      "subscription": {
+        "required": false,
+        "max_ttl_seconds": null,
+        "renewal": "No provider object. The persisted nextSyncToken is the whole state; a 410 GONE clears it and the next round performs a full list.",
+        "source": "calendar-sync"
+      },
+      "payload": {
+        "shape": "full",
+        "details": "events.list returns the changed events themselves, including cancellations as status 'cancelled', so the normalizer produces the same Data as the hydrated push path.",
+        "source": "calendar-sync"
+      },
+      "delivery": {
+        "guarantee": "at_least_once",
+        "ack_deadline_seconds": null,
+        "retry_policy": "Langflow controls the cadence; a failed round leaves the stored token untouched and the next tick repeats it.",
+        "source": "calendar-sync"
+      },
+      "replay": {
+        "available": true,
+        "window": "as far back as the stored sync token remains valid",
+        "details": "Re-running the stored token replays the same window; a full list after a 410 replays everything, which the ledger deduplicates.",
+        "source": "calendar-sync"
+      },
+      "rate_limit": {
+        "details": "The same per-project and per-user queries-per-minute quota as the push path's hydration calls, so the poll interval is a per-connection setting.",
+        "source": "calendar-quota"
+      },
+      "dedupe_key": {
+        "field": "derived from the calendar id, the event id and the event's updated timestamp (or etag)",
+        "stability": "derived",
+        "details": "Identical derivation to google.calendar_push, which is what lets a self-managed instance switch between them without duplicate runs.",
+        "source": "calendar-sync"
+      },
+      "session_key": {
+        "details": "google:calendar:{iCalUID or recurringEventId}, identical to the push path.",
+        "source": "calendar-sync"
+      }
+    },
+    {
+      "mechanism_id": "google.drive_changes_poll",
+      "display_name": "Google Drive changes poll (changes.list)",
+      "track": "b",
+      "transport": "poll",
+      "ingress_requirement": "outbound_only",
+      "deployment_contexts": ["self_managed", "desktop"],
+      "status": "wave_1",
+      "confidence": "high",
+      "owning_ticket": "TRG-6",
+      "rationale": "The no-ingress answer for Drive, on the same TRG-3 poll loop as Calendar and with the same cursor discipline.",
+      "events": ["drive change feed entries since the stored start page token"],
+      "required_scopes": ["https://www.googleapis.com/auth/drive.file"],
+      "inbound_auth": {
+        "method": "none",
+        "details": "Outbound only; the listener authenticates with the owner's access token as a trigger_listener principal.",
+        "source": "drive-changes"
+      },
+      "subscription": {
+        "required": false,
+        "max_ttl_seconds": null,
+        "renewal": "No provider object. changes.getStartPageToken seeds the cursor and each round persists newStartPageToken.",
+        "source": "drive-changes"
+      },
+      "payload": {
+        "shape": "full",
+        "details": "changes.list returns the change records themselves, so no separate hydration step is needed.",
+        "source": "drive-changes"
+      },
+      "delivery": {
+        "guarantee": "at_least_once",
+        "ack_deadline_seconds": null,
+        "retry_policy": "Langflow controls the cadence; a failed round leaves the persisted cursor untouched.",
+        "source": "drive-changes"
+      },
+      "replay": {
+        "available": true,
+        "window": "as far back as the stored page token remains valid",
+        "details": "Re-running the persisted page token replays the same window.",
+        "source": "drive-changes"
+      },
+      "rate_limit": {
+        "details": "Per-project and per-user queries-per-minute quotas with 403 rateLimitExceeded or 429 and exponential backoff.",
+        "source": "calendar-quota"
+      },
+      "dedupe_key": {
+        "field": "derived from the change record's fileId and its modifiedTime (or the change's time)",
+        "stability": "derived",
+        "details": "Identical derivation to google.drive_push.",
+        "source": "drive-changes"
+      },
+      "session_key": {
+        "details": "google:files:{fileId}, identical to the push path.",
+        "source": "drive-changes"
+      },
+      "notes": "The drive.file visibility limit applies here too; it is a scope consequence, not a transport one."
+    },
+    {
+      "mechanism_id": "google.gmail_watch_pubsub_push",
+      "display_name": "Gmail users.watch with a Pub/Sub push subscription",
+      "track": "a",
+      "transport": "http_push",
+      "ingress_requirement": "public_https",
+      "deployment_contexts": ["self_managed"],
+      "fallback_mechanism": "google.gmail_watch_pubsub_pull",
+      "status": "wave_1",
+      "confidence": "high",
+      "owning_ticket": "TRG-6",
+      "rationale": "The Gmail mechanism the deferred record named. It ships only on a customer-owned registration: gmail.readonly is a restricted scope and the accepted Google restricted-scope decision avoids restricted scopes on the hosted app, so the hosted registration cannot create this watch.",
+      "events": ["Gmail history records for the watched mailbox and label set"],
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "inbound_auth": {
+        "method": "oidc_token",
+        "details": "The Pub/Sub push subscription is configured to attach an OIDC token signed for a service account with a fixed audience; the ingress route validates the token's signature, issuer and audience before any database write, in addition to the opaque per-trigger ingress id. The Pub/Sub message body itself is not signed.",
+        "source": "pubsub-push"
+      },
+      "subscription": {
+        "required": true,
+        "max_ttl_seconds": 604800,
+        "renewal": "Two objects. The Pub/Sub topic and subscription live in the customer's Cloud project and are created once by the customer; the Gmail users.watch registration expires and must be re-called at least every seven days, so the renewal job re-watches daily. users.stop runs on disable and on connection revoke.",
+        "source": "gmail-push"
+      },
+      "payload": {
+        "shape": "thin",
+        "details": "The Pub/Sub message data is a base64-encoded object with emailAddress and historyId only; the dispatched job reads users.history.list from the stored historyId with the owner's connection.",
+        "source": "gmail-push"
+      },
+      "delivery": {
+        "guarantee": "at_least_once",
+        "ack_deadline_seconds": 10,
+        "retry_policy": "Pub/Sub treats a 2xx as the acknowledgement and redelivers anything else with backoff; delivery is at-least-once and unordered, so a later historyId can arrive before an earlier one.",
+        "source": "pubsub-push"
+      },
+      "replay": {
+        "available": true,
+        "window": "as far back as Gmail retains history for the mailbox",
+        "details": "Recovery is users.history.list from the stored historyId. A startHistoryId that is too old returns 404 and the trigger re-baselines; the re-baseline emits nothing older than the watch time so a reset does not replay the inbox.",
+        "source": "gmail-sync"
+      },
+      "rate_limit": {
+        "details": "Gmail API per-user quota units apply to the history and message reads; Pub/Sub applies its own per-subscription quotas. The unordered delivery means the job, not the ingress, decides what to read.",
+        "source": "gmail-push"
+      },
+      "dedupe_key": {
+        "field": "derived from the mailbox address and the history record id of the change",
+        "stability": "derived",
+        "details": "The Pub/Sub message id changes per delivery and is metadata only; the historyId in the message is a watermark, not an event identity, so the key is derived per history record after the read. This is the mechanism where an at-least-once transport most visibly needs the ledger's unique index.",
+        "source": "gmail-sync"
+      },
+      "session_key": {
+        "details": "google:gmail:{threadId} so a mail thread correlates to one conversation.",
+        "source": "gmail-sync"
+      },
+      "notes": "Hidden on hosted, and hidden on Desktop unless the customer-owned override is configured. It also needs a Cloud project with a Pub/Sub topic that grants the Gmail service account publish rights, which is customer setup, not Langflow setup."
+    },
+    {
+      "mechanism_id": "google.gmail_watch_pubsub_pull",
+      "display_name": "Gmail users.watch with a Pub/Sub pull subscription",
+      "track": "b",
+      "transport": "pull_subscription",
+      "ingress_requirement": "outbound_only",
+      "deployment_contexts": ["self_managed", "desktop"],
+      "status": "wave_1",
+      "confidence": "high",
+      "owning_ticket": "TRG-6",
+      "rationale": "The no-ingress answer for Gmail and the third leg of the deferred record's re-open trigger: a self-managed instance behind a firewall subscribes by pulling. Runs in the TRG-3 listener process.",
+      "events": ["Gmail history records for the watched mailbox and label set"],
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
+      "inbound_auth": {
+        "method": "oauth_access_token",
+        "details": "Nothing arrives inbound. The listener opens an outbound pull against the customer's subscription with credentials for the customer's Cloud project; the Gmail read uses the owner's delegated token as a trigger_listener principal.",
+        "source": "pubsub-pull"
+      },
+      "subscription": {
+        "required": true,
+        "max_ttl_seconds": 604800,
+        "renewal": "Same users.watch renewal as the push mechanism (re-watch daily, seven-day ceiling); only the Pub/Sub subscription type differs.",
+        "source": "gmail-push"
+      },
+      "payload": {
+        "shape": "thin",
+        "details": "The same base64 emailAddress and historyId body; the listener hands it to the ledger and the dispatched job performs the history read.",
+        "source": "gmail-push"
+      },
+      "delivery": {
+        "guarantee": "at_least_once",
+        "ack_deadline_seconds": 10,
+        "retry_policy": "A message is redelivered if it is not acknowledged within the acknowledgement deadline (default ten seconds, configurable up to ten minutes). The listener acknowledges only after the ledger write commits, so a crash redelivers rather than drops.",
+        "source": "pubsub-pull"
+      },
+      "replay": {
+        "available": true,
+        "window": "as far back as Gmail retains history for the mailbox",
+        "details": "Identical to the push mechanism: recovery is users.history.list from the stored historyId, with a 404 re-baseline.",
+        "source": "gmail-sync"
+      },
+      "rate_limit": {
+        "details": "Gmail per-user quota units for the reads and Pub/Sub per-subscription quotas for the pull; the acknowledgement deadline is the only latency budget that matters to the listener.",
+        "source": "pubsub-pull"
+      },
+      "dedupe_key": {
+        "field": "derived from the mailbox address and the history record id of the change",
+        "stability": "derived",
+        "details": "Identical derivation to the push mechanism, so a customer can move between push and pull without duplicate runs.",
+        "source": "gmail-sync"
+      },
+      "session_key": {
+        "details": "google:gmail:{threadId}, identical to the push path.",
+        "source": "gmail-sync"
+      },
+      "notes": "Desktop is supported only with the customer-owned Google registration; the hosted registration never has gmail.readonly."
+    }
+  ]
+}

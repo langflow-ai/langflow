@@ -1,6 +1,6 @@
 # Triggers and webhooks: deferred track
 
-Status: deferred
+Status: deferred, then re-opened 2026-09-04 by release owner decision - see "Amendment" below
 Owners (sign-off roles): release owner, platform owner
 Last verified: 2026-09-01
 
@@ -48,6 +48,25 @@ connection record must not grow trigger-specific fields in 1.13.
   a public ingress (otherwise the hosted-only constraint changes the design).
 
 Re-verify by: the 1.14 planning gate.
+
+## Amendment: re-opened 2026-09-04 (release owner decision)
+
+The release owner decided on 2026-09-04 that the triggers epic is 1.13 scope and that every TRG ticket gets a pull
+request now. This record is therefore superseded as a *deferral*, and is kept as the statement of the boundary it
+fixed. Its re-open trigger is met on two of its three clauses, verified 2026-09-05:
+
+| Clause | State |
+|---|---|
+| A written trigger/webhook findings document exists | partly: [`../dedicated-integrations-triggers/findings/2026-09-listeners.md`](../dedicated-integrations-triggers/findings/2026-09-listeners.md) carries the evidence pack and awaits the platform owner's authored sections |
+| A customer commitment names a trigger-driven flow for a dated release | not met; the 1.13 decision does not rest on one |
+| Two of three providers' event delivery confirmed usable from a self-managed instance without public ingress | **met, three of three**: Slack Socket Mode, Microsoft Graph delta queries, and Google sync-token/page-token polling plus Cloud Pub/Sub pull, recorded in [`../dedicated-integrations-triggers/decisions/self-managed-ingress.md`](../dedicated-integrations-triggers/decisions/self-managed-ingress.md) and machine-checked by `check_capability_matrices.py --design-root design/dedicated-integrations-triggers` |
+
+What does not change: the boundary this record fixed under "Interaction with the actions release" still binds every
+wave-1 action. No action component opens a listener, and the connection record grows no trigger-specific fields -
+trigger state lives on the `trigger` and `trigger_subscription` tables
+([`../dedicated-integrations-triggers/trigger-contract.md`](../dedicated-integrations-triggers/trigger-contract.md)
+section 1). The discovery this record said still had to happen is done, in
+[`../dedicated-integrations-triggers/`](../dedicated-integrations-triggers/README.md).
 
 ## Sign-off
 

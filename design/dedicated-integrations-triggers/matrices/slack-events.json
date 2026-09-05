@@ -1,0 +1,234 @@
+{
+  "schema_version": 1,
+  "provider": "slack",
+  "display_name": "Slack",
+  "wave": 1,
+  "verified_on": "2026-09-05",
+  "public_ingress_by_context": {
+    "hosted": "available",
+    "self_managed": "conditional",
+    "desktop": "unavailable",
+    "headless": "unavailable"
+  },
+  "decision_records": [
+    "decisions/delivery-semantics.md",
+    "decisions/process-model.md",
+    "decisions/self-managed-ingress.md"
+  ],
+  "sources": {
+    "slack-events-api": {
+      "url": "https://docs.slack.dev/apis/events-api/",
+      "title": "Slack: Events API",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "Events are delivered as HTTP POST to the app's Request URL. The first POST to a new Request URL is a url_verification event carrying a challenge that the app echoes. Each delivery must be answered with a 2xx within three seconds; Slack retries a failed or slow delivery three times (immediately, after one minute, after five minutes) carrying X-Slack-Retry-Num and X-Slack-Retry-Reason, and disables event delivery after sustained failures. The envelope carries event_id, event_time, team_id, api_app_id, authorizations and the full event object. Slack documents a per-workspace hourly ceiling on event delivery (30,000 events per hour per workspace)."
+    },
+    "slack-verify-requests": {
+      "url": "https://docs.slack.dev/authentication/verifying-requests-from-slack",
+      "title": "Slack: Verifying requests from Slack",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "X-Slack-Request-Timestamp and X-Slack-Signature; the signature is 'v0=' followed by the hex HMAC-SHA256 of the basestring 'v0:{timestamp}:{raw request body}' keyed with the app signing secret. Requests whose timestamp is more than five minutes old are rejected as replays. Comparison must be constant time and the raw, unparsed body must be used."
+    },
+    "slack-socket-mode": {
+      "url": "https://docs.slack.dev/apis/socket-mode/",
+      "title": "Slack: Socket Mode",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "The app opens an outbound WebSocket with apps.connections.open using an app-level token (xapp-) carrying connections:write; no public URL is needed. Envelopes wrap the same event payload and add envelope_id, retry_attempt and retry_reason, and must be acknowledged by echoing envelope_id. Slack sends a disconnect message (reason warning or refresh_requested) before closing a connection so the client can reconnect. An app can hold up to ten concurrent Socket Mode connections. Socket Mode apps cannot be distributed through the Slack Marketplace."
+    },
+    "slack-app-tokens": {
+      "url": "https://docs.slack.dev/authentication/tokens",
+      "title": "Slack: Token types",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "App-level tokens (xapp-) are issued per app, are not workspace-scoped, do not expire, and carry only connection-level scopes such as connections:write and authorizations:read. They are created in the app configuration and cannot be obtained through the OAuth install flow."
+    },
+    "slack-events-reference": {
+      "url": "https://docs.slack.dev/reference/events",
+      "title": "Slack: Event types reference",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "message.channels, message.groups, message.im and message.mpim require the matching *:history scope; reaction_added requires reactions:read; app_mention requires app_mentions:read. Message events carry channel, ts, and thread_ts when the message is a threaded reply; subtype distinguishes edits (message_changed), deletions (message_deleted) and bot posts, and bot_id is set on messages posted by an app."
+    },
+    "slack-rate-limits": {
+      "url": "https://docs.slack.dev/apis/web-api/rate-limits",
+      "title": "Slack: Web API rate limits",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "Web API tiers 1 to 4 plus special tiers, applied per method per workspace per app; 429 responses carry Retry-After in seconds. These govern the calls a triggered flow makes back into Slack, not the inbound event stream."
+    },
+    "slack-rtm": {
+      "url": "https://docs.slack.dev/apis/rtm-api/",
+      "title": "Slack: RTM API",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "The RTM API is the legacy WebSocket transport, available only to classic apps and to apps that cannot use the Events API; it does not support the granular scope model that the wave-1 Slack app uses."
+    }
+  },
+  "open_questions": [
+    "The hosted Slack app's event subscriptions have to be declared on one distributed app registration; the hosted-app owner has not yet confirmed which event types that registration will request, and adding an event type later re-triggers workspace re-installation for every hosted tenant."
+  ],
+  "mechanisms": [
+    {
+      "mechanism_id": "slack.events_api",
+      "display_name": "Slack Events API (HTTP push)",
+      "track": "a",
+      "transport": "http_push",
+      "ingress_requirement": "public_https",
+      "deployment_contexts": ["hosted", "self_managed"],
+      "fallback_mechanism": "slack.socket_mode",
+      "status": "wave_1",
+      "confidence": "high",
+      "owning_ticket": "TRG-5",
+      "rationale": "The only Slack transport a distributed (Marketplace) app can use, so it is the hosted transport. TRG-4 owns the ingress route and the signature verifier; TRG-5 owns the event-to-Data normalization.",
+      "events": [
+        "message.channels",
+        "message.groups",
+        "message.im",
+        "message.mpim",
+        "reaction_added",
+        "app_mention"
+      ],
+      "required_scopes": [
+        "channels:history",
+        "groups:history",
+        "im:history",
+        "mpim:history",
+        "reactions:read",
+        "app_mentions:read"
+      ],
+      "inbound_auth": {
+        "method": "hmac_signature",
+        "details": "X-Slack-Signature is 'v0=' plus hex HMAC-SHA256 over 'v0:{X-Slack-Request-Timestamp}:{raw body}' keyed with the app signing secret, compared in constant time; timestamps older than five minutes are rejected. The first POST to a new Request URL is a url_verification event whose challenge is echoed before any database write. The signing secret belongs to the app registration, not to a user connection.",
+        "source": "slack-verify-requests"
+      },
+      "subscription": {
+        "required": false,
+        "max_ttl_seconds": null,
+        "renewal": "Nothing to renew: the Request URL and the subscribed event types are app-configuration, not an API-created object with a lifetime. Slack disables delivery after sustained non-2xx or slow responses and the app owner must re-enable it, so the operator surface is a 'delivery disabled' state rather than a renewal job.",
+        "source": "slack-events-api"
+      },
+      "payload": {
+        "shape": "full",
+        "details": "The envelope carries the complete event object plus event_id, event_time, team_id, api_app_id and authorizations, so no fetch-back is needed to run a flow on the message text. Thread context arrives as thread_ts when the message is a reply.",
+        "source": "slack-events-api"
+      },
+      "delivery": {
+        "guarantee": "at_least_once",
+        "ack_deadline_seconds": 3,
+        "retry_policy": "A non-2xx or a response slower than three seconds is retried three times: immediately, after one minute, and after five minutes, each carrying X-Slack-Retry-Num and X-Slack-Retry-Reason. Sustained failure disables event delivery for the app.",
+        "source": "slack-events-api"
+      },
+      "replay": {
+        "available": false,
+        "window": null,
+        "details": "Slack offers no server-side replay beyond the three retries; an event dropped after them is lost at the provider. Langflow's own trigger_event ledger is the replay surface (decisions/delivery-semantics.md).",
+        "source": "slack-events-api"
+      },
+      "rate_limit": {
+        "details": "Event delivery is capped per workspace per app per hour (Slack publishes 30,000 events per hour); the flow's own calls back into Slack are governed by the Web API method tiers, including the reduced conversations.replies tier for commercially distributed non-Marketplace apps.",
+        "source": "slack-rate-limits"
+      },
+      "dedupe_key": {
+        "field": "event_id",
+        "stability": "stable_across_retries",
+        "details": "event_id is constant across the three retries and across a Socket Mode redelivery of the same event, so it is the dedupe key for both Slack mechanisms. X-Slack-Retry-Num and the Socket Mode envelope_id change per delivery and are recorded as delivery metadata only.",
+        "source": "slack-events-api"
+      },
+      "session_key": {
+        "details": "slack:{team_id}:{channel}:{thread_ts or ts} - a threaded reply reuses the parent's session, a new top-level message starts one, and a reaction uses the reacted-to message's thread_ts or ts.",
+        "source": "slack-events-reference"
+      },
+      "open_questions": [
+        "Re-verify the published per-workspace hourly event ceiling against the Slack docs before GA; the number gates how many workspaces one hosted app registration can serve."
+      ],
+      "notes": "Bot self-echo must be filtered on bot_id / bot_user_id or a flow that replies in thread re-triggers itself; edits and deletions (message_changed, message_deleted) are dropped by default with an opt-in toggle."
+    },
+    {
+      "mechanism_id": "slack.socket_mode",
+      "display_name": "Slack Socket Mode (outbound WebSocket)",
+      "track": "b",
+      "transport": "persistent_socket",
+      "ingress_requirement": "outbound_only",
+      "deployment_contexts": ["self_managed", "desktop"],
+      "status": "wave_1",
+      "confidence": "high",
+      "owning_ticket": "TRG-5",
+      "rationale": "The documented no-ingress answer for Slack and the reason Slack is one of the three providers that satisfies the deferred record's re-open trigger. Runs in the TRG-3 listener process, one connection per Slack app installation.",
+      "events": [
+        "message.channels",
+        "message.groups",
+        "message.im",
+        "message.mpim",
+        "reaction_added",
+        "app_mention"
+      ],
+      "required_scopes": [
+        "connections:write",
+        "channels:history",
+        "groups:history",
+        "im:history",
+        "mpim:history",
+        "reactions:read",
+        "app_mentions:read"
+      ],
+      "inbound_auth": {
+        "method": "app_level_token",
+        "details": "Langflow dials out, so there is no inbound request to verify. apps.connections.open is called with an app-level token (xapp-) carrying connections:write; that token is workspace-independent, never expires, and cannot be obtained through the OAuth install flow, so it is entered manually as the third named Slack profile (kind api_key, identity bot) and is resolvable only by trigger_listener principals.",
+        "source": "slack-app-tokens"
+      },
+      "subscription": {
+        "required": false,
+        "max_ttl_seconds": null,
+        "renewal": "The connection is the subscription. Slack sends a disconnect message with reason warning or refresh_requested before closing, and the listener reconnects; the TRG-3 lease guarantees exactly one replica holds each app's connection, because stale connections count against the ten-connection cap until they time out.",
+        "source": "slack-socket-mode"
+      },
+      "payload": {
+        "shape": "full",
+        "details": "The Socket Mode envelope wraps the same event payload as the Events API and adds envelope_id, retry_attempt and retry_reason, so one normalizer produces identical Data for both mechanisms.",
+        "source": "slack-socket-mode"
+      },
+      "delivery": {
+        "guarantee": "at_least_once",
+        "ack_deadline_seconds": 3,
+        "retry_policy": "An envelope that is not acknowledged by echoing its envelope_id is redelivered with retry_attempt incremented. The listener writes the ledger row before acknowledging (decisions/delivery-semantics.md).",
+        "source": "slack-socket-mode"
+      },
+      "replay": {
+        "available": false,
+        "window": null,
+        "details": "No server-side replay; a disconnected client misses events delivered while it was away. The gap is bounded by reconnect time, which is why the listener lease TTL is short.",
+        "source": "slack-socket-mode"
+      },
+      "rate_limit": {
+        "details": "Up to ten concurrent Socket Mode connections per app; the per-workspace hourly event ceiling is shared with the Events API.",
+        "source": "slack-socket-mode"
+      },
+      "dedupe_key": {
+        "field": "event_id",
+        "stability": "stable_across_retries",
+        "details": "Same key as the Events API, which is what lets a workspace move between the two mechanisms without duplicating runs. envelope_id is per delivery and is metadata only.",
+        "source": "slack-socket-mode"
+      },
+      "session_key": {
+        "details": "Identical to the Events API: slack:{team_id}:{channel}:{thread_ts or ts}.",
+        "source": "slack-events-reference"
+      },
+      "notes": "Not available on hosted: a Socket Mode app cannot be distributed through the Slack Marketplace, and hosted Langflow serves every tenant from one distributed registration. On Desktop it requires a customer-owned Slack app and two manually entered tokens (the bot token and the app-level token)."
+    },
+    {
+      "mechanism_id": "slack.rtm_api",
+      "display_name": "Slack RTM API",
+      "track": "b",
+      "transport": "persistent_socket",
+      "ingress_requirement": "outbound_only",
+      "deployment_contexts": [],
+      "status": "excluded",
+      "confidence": "high",
+      "owning_ticket": "TRG-5",
+      "rationale": "Legacy WebSocket transport limited to classic apps and to apps that cannot use the Events API; it does not support the granular scope model the wave-1 Slack app registration uses. Socket Mode is its replacement and is already the no-ingress answer.",
+      "notes": "Recorded so a future reader does not re-open it as an alternative to Socket Mode."
+    }
+  ]
+}
