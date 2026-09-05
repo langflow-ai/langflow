@@ -170,3 +170,43 @@ The backend removes callback query strings from its access-log request scope. Co
 reverse proxies and external request tracing to omit callback query strings as well, because
 those systems observe requests before Langflow does. Avoid capturing browser callback URLs
 in screenshots or support logs.
+
+## Executing identity per entry point (INT-6)
+
+A connection resolves under the identity of the run that needs it, not under whoever happens to be
+authenticated. Every Langflow entry point stamps that identity on the graph before it executes, and the
+resolver enforces the rule below. A graph that reaches a component without one resolves nothing, so a
+misconfigured or unrecognized path fails closed rather than borrowing someone else's credential.
+
+| Entry point | Runs as | Which connection it may use |
+|---|---|---|
+| Playground and canvas builds, `POST /api/v1/run`, the OpenAI-compatible Responses API, voice, `POST /api/v2/workflows` | the authenticated caller | that caller's own connection, or one explicitly shared with them |
+| `POST /api/v1/webhook/FLOW_ID` | the published flow's owner | the owner's connection, and only when `allow_non_interactive` is set on it |
+| Deployments on the serving plane | the deployment owner | the owner's connection, and only when `allow_non_interactive` is set on it |
+| A resumed background or human-in-the-loop run | the owner of the job that started it | that owner's connection with `allow_non_interactive` set; the identity is recomputed on the worker and is never read back from the checkpoint |
+| MCP (legacy transport and MCP projects) | the transport's authenticated user | that user's own connection only — a shared connection is not used, because a shared flow is not admitted through MCP either |
+| Shareable-playground links, the public workflow endpoint, and A2A calls admitted without authentication | an isolated anonymous principal | none: no user connection and no instance connection, whatever the flow references |
+
+Two rules are worth stating plainly, because they change what a working flow does when it is published:
+
+- **Unattended runs need an explicit opt-in.** A flow that works in the Playground can stop working as a
+  webhook or a deployment until the connection's owner sets `allow_non_interactive`. This is deliberate: an
+  interactive run can prompt for consent, an unattended one cannot, so using a credential there is a decision
+  the owner makes once, per connection.
+- **Publishing a flow does not publish its credentials.** Making a flow public, or exposing it over A2A
+  without authentication, means anonymous visitors run it — and an anonymous run resolves no connection at
+  all. Give such a flow an instance connection instead, or keep it authenticated.
+
+An instance-owned connection resolves for any authenticated principal in the deployment. Provisioning one
+is therefore a deployment-wide grant of that provider account; see
+`design/dedicated-integrations/decisions/instance-connection-referenceability.md`.
+
+### Errors a caller sees
+
+When resolution fails, the response carries a machine-readable `error_code` (`connection-unresolved`,
+`connection-not-authorized`, `auth-expired`, `scope-missing`, `rate-limited`, `provider-unavailable`,
+`action-unsupported`) together with `hint`, `provider`, `retryable`, and `retry_after` where it applies, and
+the HTTP status the provider situation warrants (403 for an unauthorized connection, 401 for expired
+credentials, 429 for a rate limit). The error's own sentence, which names the connection handle, is returned
+only to the flow's owner; delegated and anonymous callers get a generic message alongside the same code, so
+a client can still show the right call to action without learning which account the owner connected.

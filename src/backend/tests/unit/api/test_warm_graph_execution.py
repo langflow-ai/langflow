@@ -321,13 +321,16 @@ async def test_v1_streaming_run_requests_a_streaming_warm_copy(monkeypatch: pyte
 
     graph.set_run_id = set_run_id
 
-    async def fake_warm_deepcopy(flow_id, *, expected_version, user_id, session_id, stream=False):
+    async def fake_warm_deepcopy(
+        flow_id, *, expected_version, user_id, session_id, stream=False, execution_principal=None
+    ):
         captured.update(
             flow_id=flow_id,
             expected_version=expected_version,
             user_id=user_id,
             session_id=session_id,
             stream=stream,
+            execution_principal=execution_principal,
         )
         return graph
 
@@ -362,6 +365,11 @@ async def test_v1_streaming_run_requests_a_streaming_warm_copy(monkeypatch: pyte
     )
 
     assert result.session_id == "effective-session"
+    # INT-6: the warm copy carries this run's family, not the lfx headless default
+    # ``apply_run_defaults`` would otherwise leave on it.
+    principal = captured.pop("execution_principal")
+    assert principal.family == "v1_run"
+    assert principal.kind == "actor"
     assert captured == {
         "flow_id": str(flow_id),
         "expected_version": flow_version(updated_at),
@@ -384,13 +392,16 @@ async def test_v2_sync_run_requests_a_non_streaming_warm_copy(monkeypatch: pytes
 
     graph.set_run_id = set_run_id
 
-    async def fake_warm_deepcopy(flow_id, *, expected_version, user_id, session_id, stream=False):
+    async def fake_warm_deepcopy(
+        flow_id, *, expected_version, user_id, session_id, stream=False, execution_principal=None
+    ):
         captured.update(
             flow_id=flow_id,
             expected_version=expected_version,
             user_id=user_id,
             session_id=session_id,
             stream=stream,
+            execution_principal=execution_principal,
         )
         return graph
 
@@ -433,6 +444,9 @@ async def test_v2_sync_run_requests_a_non_streaming_warm_copy(monkeypatch: pytes
     )
 
     assert result is expected
+    principal = captured.pop("execution_principal")
+    assert principal.family == "workflow_v2"
+    assert principal.kind == "actor"
     assert captured == {
         "flow_id": str(flow_id),
         "expected_version": flow_version(updated_at),

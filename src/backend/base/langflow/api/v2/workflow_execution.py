@@ -724,10 +724,13 @@ async def execute_sync_workflow(
         # component policy. It must win over ``flow.data``, and it must bypass the warm
         # template — which is built from the unsanitized stored row.
         sanitized_flow_data = parsed.data
+        # ``getattr``: the same tolerance ``caller_owns_flow`` above applies, since
+        # this executor is also driven with partial flow objects (A2A's prepared
+        # public flow, and the job-runner stubs).
         execution_principal = execution_principal_for(
             execution_family,
             user=current_user,
-            flow_owner_id=flow.user_id,
+            flow_owner_id=getattr(flow, "user_id", None),
             end_user_id=parsed.end_user_id,
         )
         # Opt-in warm fast-path: serve a deepcopy of the pre-built template

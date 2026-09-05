@@ -171,10 +171,17 @@ defense in depth and pre-flight in interactive routes for UX.**
 | interactive_chat, v1_run, openai_responses, voice, workflow_v2 | actor_or_explicit_share | owner or explicit share | per policy |
 | legacy_mcp | actor | owner only (no shares) | per policy |
 | mcp_projects | actor | owner only; project auth `none` runs as the owner non-interactively, so it requires the per-connection opt-in | per policy |
+<!-- AMENDED by INT-6 (LE-2464), 2026-09-05: the mcp_projects auth-`none` row above does not describe the code.
+     `mcp_utils.py` swaps the execution user for `public_execution_user()` on an unauthenticated project call
+     (asserted by `test_mcp_utils.py::test_streamable_none_auth_project_...`), so such a call already executes
+     anonymously and resolves NO user connection, opt-in or not. Implementing the row as written would let an
+     unauthenticated caller use the owner's credential — a widening, not a hardening. INT-6 keeps the code:
+     auth `none` stamps `anonymous_public` and is marked non-interactive; `apikey`/`oauth` stay owner-only actor.
+     The matrix's `mcp_projects` exception text is the authority for the transport actor. -->
 | webhook | flow_owner | only with per-connection `allow_non_interactive` | per policy |
 | deployments | deployment_owner | only with per-connection `allow_non_interactive` | per policy |
 | workflow_hitl_v2 | job_owner | as the job owner who started it; re-resolved on the worker, never persisted | per policy |
-| legacy_public_chat, a2a (anonymous), workflow_public_v2 | anonymous_public | never | deny by default; Enterprise policy may allow flagged instance connections |
+| legacy_public_chat, a2a (anonymous), workflow_public_v2 | anonymous_public | never | hard deny in 1.13, no override (INT-6; `decisions/instance-connection-referenceability.md`) |
 | a2a authenticated sub-path | actor | owner only | per policy |
 | lfx run, embedded, lfx serve | headless_operator | not applicable (no database) | environment- or request-provisioned only (section 5) |
 
@@ -361,6 +368,20 @@ identifiers.**
   an `authz_endpoint_matrix.json` `connections` family; additions to
   `src/backend/tests/unit/api/v1/test_execution_principal_contract.py`; the `error_details_for_client`
   `IntegrationError` branch under all three policies.
+
+  AMENDED by INT-6 (LE-2464), 2026-09-05. Only the `authz_endpoint_matrix.json` `connections` family arrived with
+  INT-4/INT-5. INT-6 delivered the rest: the matrix `connection_resolution` dimension (plus a
+  `connection_resolution_note` and a `dependency_principal` consistency rule in
+  `check_execution_principal_matrix.py`), the `error_details_for_client` / `error_for_client` `IntegrationError`
+  branch, and per-family allow/deny coverage in
+  `src/backend/tests/unit/api/v1/test_connection_resolution_families.py` rather than by growing
+  `test_execution_principal_contract.py`, which is an admission-contract file.
+
+  Two further items this section did not anticipate, also built in INT-6 because nothing resolves without them:
+  the stamping itself (`src/backend/base/langflow/api/utils/execution_principal.py` and the route wiring — the
+  section-4 bullet above lists only the builders, and `serve_app.py`/`run/base.py` never touched
+  `execution_principal`; lfx stays on the `apply_run_defaults` stamp), and the precedence fix that stops
+  `apply_run_defaults` overwriting a host-stamped principal with the headless operator on the warm-graph path.
 
 ## 12. Open questions by sign-off owner
 
