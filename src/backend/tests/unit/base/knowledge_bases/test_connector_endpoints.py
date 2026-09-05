@@ -1,12 +1,13 @@
 """Integration tests for the connector endpoints in their trimmed-down state.
 
 The catalog (``GET /knowledge_bases/connectors``) and dispatcher
-(``POST /{kb_name}/ingest/connector``) endpoints are kept as
-framework infrastructure even though only ``file_upload`` and
-``folder`` are registered in this phase. The cloud-connector
-sources (S3 / Google Drive / OneDrive / SharePoint) are stubbed
-out at the registry layer; the catalog must hide them and the
-dispatcher must reject them as 400 typos rather than 500s.
+(``POST /{kb_name}/ingest/connector``) endpoints publish the registered
+sources: ``folder`` plus the connection-backed ``onedrive`` and
+``sharepoint`` sources added in INT-11 (``file_upload`` is registered but
+hidden because it has its own endpoint). The remaining cloud-connector
+sources (S3 / Google Drive) are stubbed out at the registry layer; the
+catalog must hide them and the dispatcher must reject them as 400 typos
+rather than 500s.
 """
 
 from __future__ import annotations
@@ -22,7 +23,8 @@ if TYPE_CHECKING:
     from httpx import AsyncClient
 
 
-_STUBBED_SOURCE_TYPES = ("s3", "google_drive", "onedrive", "sharepoint")
+_STUBBED_SOURCE_TYPES = ("s3", "google_drive")
+_CONNECTION_BACKED_SOURCE_TYPES = ("onedrive", "sharepoint")
 
 
 class TestConnectorCatalog:
@@ -44,6 +46,20 @@ class TestConnectorCatalog:
             assert stubbed not in types, (
                 f"{stubbed!r} is stubbed in this phase and must be hidden from the connector catalog"
             )
+
+        # The connection-backed Microsoft sources are registered and publish
+        # the provider and scopes a connection picker binds on.
+        by_type = {entry["source_type"]: entry for entry in entries}
+        for source_type in _CONNECTION_BACKED_SOURCE_TYPES:
+            assert source_type in types
+            entry = by_type[source_type]
+            assert entry["provider_key"] == "microsoft"
+            assert entry["required_scopes"] == ["Files.Read"]
+            assert entry["requires_credentials"] is True
+
+        # A variable-backed source publishes no provider to bind on.
+        assert by_type["folder"]["provider_key"] is None
+        assert by_type["folder"]["required_scopes"] == []
 
 
 class TestConnectorIngest:

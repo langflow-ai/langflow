@@ -1,52 +1,36 @@
-"""OneDrive ingestion source — stub.
+"""OneDrive ingestion source.
 
-The full OneDrive implementation (Microsoft Graph OAuth, folder walk)
-has been removed for this phase. Only ``file_upload`` and ``folder``
-are exposed in the UI. The ``SourceType.ONEDRIVE`` enum value is
-preserved so existing ``ingestion_run`` rows round-trip safely, but
-the class is not registered and using it raises ``NotImplementedError``.
-
-When OneDrive support is reinstated, restore the Graph-based
-implementation and re-register it in ``ingestion_sources/__init__.py``.
+Walks the connected user's OneDrive, or another drive by id, through
+Microsoft Graph. Credentials come from a Microsoft connection handle in
+``source_config["connection"]``; see
+:mod:`lfx.base.knowledge_bases.ingestion_sources.microsoft_graph`.
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from lfx.base.knowledge_bases.ingestion_sources.base import (
-    IngestionItem,
-    IngestionItemContent,
-    KBIngestionSource,
-    SourceType,
-)
-
-if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+from lfx.base.knowledge_bases.ingestion_sources.base import SourceType
+from lfx.base.knowledge_bases.ingestion_sources.microsoft_graph import MicrosoftGraphSource
 
 
-_DISABLED_MESSAGE = (
-    "The OneDrive knowledge-base ingestion source is not available in this "
-    "build. Use the file or folder upload paths instead."
-)
-
-
-class OneDriveSource(KBIngestionSource):
-    """Stub kept for type-and-enum compatibility only."""
+class OneDriveSource(MicrosoftGraphSource):
+    """Ingest files from OneDrive."""
 
     source_type = SourceType.ONEDRIVE
     display_name = "OneDrive"
-    description = "OneDrive ingestion is disabled in this build."
-    icon = "onedrive"
+    description = "Ingest files from a OneDrive folder through a Microsoft connection."
+    icon = "OneDrive"
     requires_credentials = True
 
-    async def validate_config(self) -> None:
-        raise NotImplementedError(_DISABLED_MESSAGE)
+    @property
+    def drive_id(self) -> str:
+        value = self.source_config.get("drive_id") or ""
+        return str(value) if isinstance(value, str) else ""
 
-    async def list_items(self) -> AsyncIterator[IngestionItem]:  # type: ignore[override]
-        raise NotImplementedError(_DISABLED_MESSAGE)
-        if False:  # pragma: no cover — keeps this an async generator
-            yield IngestionItem(item_id="", display_name="")
+    def drive_root(self) -> str:
+        return f"/drives/{self.drive_id}" if self.drive_id else "/me/drive"
 
-    async def fetch_content(self, item: IngestionItem) -> IngestionItemContent:
-        raise NotImplementedError(_DISABLED_MESSAGE)
+    def required_connection_scopes(self) -> tuple[str, ...]:
+        """A drive other than the signed-in user's needs Files.Read.All."""
+        if self.drive_id:
+            return ("Files.Read", "Files.Read.All")
+        return ("Files.Read",)

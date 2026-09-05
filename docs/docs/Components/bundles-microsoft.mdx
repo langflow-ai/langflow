@@ -119,6 +119,32 @@ Fetches one file's metadata and content through `GET .../content`.
 
 Graph answers a content request with a redirect to a short-lived, preauthenticated download URL. Langflow follows that redirect without the access token and never returns, stores, or logs the URL, because the URL is itself a credential for anyone who holds it.
 
+## Knowledge base ingestion
+
+The same Microsoft connection also backs two knowledge-base ingestion sources,
+**OneDrive** and **SharePoint**. They appear in the knowledge base's connector
+picker and take the connection handle in their `connection` setting rather than
+a refresh token stored in a Langflow variable.
+
+| Setting | OneDrive | SharePoint |
+| --- | --- | --- |
+| `connection` | required, `microsoft/<name>` | required, `microsoft/<name>` |
+| `site_id` | not used | required (unless `drive_id` is given) |
+| `drive_id` | optional; another user's or a shared drive | optional; a specific library |
+| `folder_path` / `item_id` | optional starting folder | optional starting folder |
+| `recursive` | default `true` | default `true` |
+| `max_items` | default 5000 | default 5000 |
+
+Permissions follow the configuration: the signed-in user's own OneDrive needs
+`Files.Read`, an explicit drive id also needs `Files.Read.All`, and a SharePoint
+site library needs `Sites.Read.All`.
+
+Ingestion runs in the background, detached from the request that started it, so
+Langflow resolves the connection as a **non-interactive job owner**. A
+connection that has not been marked as usable without an interactive user is
+refused before any Graph call is made, and the run fails with a
+connection-not-authorized error rather than silently ingesting nothing.
+
 ## Rate limits
 
 Microsoft throttles per service and returns `429` (or `503`) with a `Retry-After` header. The components surface that as a `rate-limited` error carrying the retry interval; they do not retry on your behalf.

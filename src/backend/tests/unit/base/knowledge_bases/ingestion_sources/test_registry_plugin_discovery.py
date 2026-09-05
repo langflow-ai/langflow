@@ -103,16 +103,23 @@ def _reinstall_builtin_sources() -> None:
     ``lfx.base.knowledge_bases.ingestion_sources.__init__`` at import
     time; after ``_reset_registries`` we reinstall them explicitly.
 
-    In this phase only ``file_upload`` and ``folder`` are registered.
-    The S3 / Google Drive / OneDrive / SharePoint stubs are NOT
-    re-registered because the production import path doesn't register
-    them either — see the ``__init__`` module's docstring.
+    This list MUST mirror the ``register_source(...)`` calls at the
+    bottom of ``lfx.base.knowledge_bases.ingestion_sources.__init__``:
+    ``file_upload``, ``folder``, ``onedrive`` and ``sharepoint``. Miss
+    one and every test that runs after this module in the same process
+    sees a registry that is quietly missing it. The S3 and Google Drive
+    stubs stay unregistered because the production import path does not
+    register them either — see the ``__init__`` module's docstring.
     """
     from lfx.base.knowledge_bases.ingestion_sources.file_upload import FileUploadSource
     from lfx.base.knowledge_bases.ingestion_sources.folder import FolderSource
+    from lfx.base.knowledge_bases.ingestion_sources.onedrive import OneDriveSource
+    from lfx.base.knowledge_bases.ingestion_sources.sharepoint import SharePointSource
 
     ingestion_registry.register_source(SourceType.FILE_UPLOAD, FileUploadSource)
     ingestion_registry.register_source(SourceType.FOLDER, FolderSource)
+    ingestion_registry.register_source(SourceType.ONEDRIVE, OneDriveSource)
+    ingestion_registry.register_source(SourceType.SHAREPOINT, SharePointSource)
 
 
 def _make_ensure_discovered(config_dir):
@@ -229,3 +236,37 @@ def test_unknown_plugin_key_raises_unknown_not_unregistered(monkeypatch):
     monkeypatch.setattr("importlib.metadata.entry_points", lambda *, group: [])  # noqa: ARG005
     with pytest.raises(ValueError, match="Unknown ingestion source"):
         ingestion_registry.get_source_class("does-not-exist-anywhere")
+
+
+# --------------------------------------------------------------------- #
+# Fixture drift guard                                                    #
+# --------------------------------------------------------------------- #
+
+
+async def test_reinstall_builtin_sources_matches_production_registrations(monkeypatch):
+    """``_reinstall_builtin_sources`` must restore the full production set.
+
+    The autouse fixture wipes the process-global registry and rebuilds
+    it by hand on teardown. If a new built-in source is registered in
+    ``lfx.base.knowledge_bases.ingestion_sources.__init__`` but not
+    added to the helper, every test that runs after this module in the
+    same process silently loses that source — which is exactly how
+    ``test_connector_endpoints.py`` started failing when ``onedrive``
+    and ``sharepoint`` were registered (INT-11).
+    """
+    import importlib
+
+    from lfx.base.knowledge_bases import ingestion_sources as sources_pkg
+
+    monkeypatch.setattr("importlib.metadata.entry_points", lambda *, group: [])  # noqa: ARG005
+
+    _reinstall_builtin_sources()
+    from_fixture = set(ingestion_registry.registered_source_keys())
+
+    # Rebuild the registry the way production does: a bare reset plus
+    # the module-level ``register_source`` side effects in ``__init__``.
+    await adapter_registry_mod._reset_registries()
+    importlib.reload(sources_pkg)
+    from_import = set(ingestion_registry.registered_source_keys())
+
+    assert from_fixture == from_import
