@@ -168,14 +168,36 @@ async def test_list_integrations_omits_a_blocked_action(
 
 
 @pytest.mark.usefixtures("active_user", "loaded_integration")
-async def test_include_blocked_explains_every_decision_for_the_operator_panel(
+async def test_include_blocked_is_refused_for_a_non_superuser(
     client: AsyncClient,
     logged_in_headers: dict[str, str],
     integration_policy,
 ) -> None:
+    """A plain caller may not enumerate the operator's deny decision.
+
+    Mirrors ``/api/v1/all``, starter projects and basic examples: the default
+    listing already hides what execution would refuse, and ``include_blocked``
+    is the operator panel's view of *why*.
+    """
     integration_policy(providers=frozenset({"slack"}), actions=frozenset({DELETE_KEY}))
 
     response = await client.get("api/v1/integrations?include_blocked=true", headers=logged_in_headers)
+
+    assert response.status_code == 403, response.text
+    # The refusal must not leak the decision it is refusing to disclose.
+    assert PROVIDER not in response.text
+    assert DELETE_KEY not in response.text
+
+
+@pytest.mark.usefixtures("loaded_integration")
+async def test_include_blocked_explains_every_decision_for_the_operator_panel(
+    client: AsyncClient,
+    logged_in_headers_super_user: dict[str, str],
+    integration_policy,
+) -> None:
+    integration_policy(providers=frozenset({"slack"}), actions=frozenset({DELETE_KEY}))
+
+    response = await client.get("api/v1/integrations?include_blocked=true", headers=logged_in_headers_super_user)
 
     assert response.status_code == 200, response.text
     entry = next(item for item in response.json()["providers"] if item["provider_id"] == PROVIDER)
