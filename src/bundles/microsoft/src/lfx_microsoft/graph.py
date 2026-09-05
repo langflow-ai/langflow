@@ -338,24 +338,57 @@ class GraphClient:
         ``@microsoft.graph.downloadUrl``. That URL is itself a credential: it
         is fetched without the Authorization header, is never returned to the
         caller, and is never written to a log or a Data payload.
+
+        ``max_bytes`` is a memory bound, not a post-hoc trim: the body is
+        streamed and the connection is dropped as soon as the cap is
+        reached, so a 2 GB driveItem never lands in the process.
         """
         response = await self.request("GET", path, headers=headers, allow_redirect=True)
-        if response.status_code in _REDIRECT_STATUSES:
-            location = response.headers.get("location")
-            if not location:
-                raise ProviderUnavailableError(provider=PROVIDER_ID, http_status=response.status_code)
-            try:
-                download = await self._anonymous.get(location, headers=dict(headers) if headers else None)
-            except httpx.TransportError as exc:
-                raise ProviderUnavailableError(provider=PROVIDER_ID) from exc
-            if download.status_code >= HTTP_BAD_REQUEST:
-                raise integration_error_for_response(download)
-            content = download.content
-        else:
+        if response.status_code not in _REDIRECT_STATUSES:
             content = response.content
-        if max_bytes is not None and len(content) > max_bytes:
-            return content[:max_bytes]
-        return content
+            if max_bytes is not None and len(content) > max_bytes:
+                return content[:max_bytes]
+            return content
+        location = response.headers.get("location")
+        # The redirect target is chosen by Graph, but it is still an
+        # attacker-influenceable header on a response we then fetch, so it
+        # must at least be an absolute TLS URL: no http:// downgrade, no
+        # file:// or other scheme, no relative path resolved against a base
+        # we did not choose.
+        if not location or not location.startswith("https://"):
+            raise ProviderUnavailableError(provider=PROVIDER_ID, http_status=response.status_code)
+        return await self._stream_download(location, headers=headers, max_bytes=max_bytes)
+
+    async def _stream_download(
+        self,
+        url: str,
+        *,
+        headers: Mapping[str, str] | None,
+        max_bytes: int | None,
+    ) -> bytes:
+        """Read a preauthenticated download URL, stopping at ``max_bytes``."""
+        chunks: list[bytes] = []
+        remaining = max_bytes
+        try:
+            async with self._anonymous.stream(
+                "GET",
+                url,
+                headers=dict(headers) if headers else None,
+            ) as download:
+                if download.status_code >= HTTP_BAD_REQUEST:
+                    await download.aread()
+                    raise integration_error_for_response(download)
+                async for chunk in download.aiter_bytes():
+                    if remaining is None:
+                        chunks.append(chunk)
+                        continue
+                    if remaining <= 0:
+                        break
+                    chunks.append(chunk[:remaining])
+                    remaining -= len(chunk)
+        except httpx.TransportError as exc:
+            raise ProviderUnavailableError(provider=PROVIDER_ID) from exc
+        return b"".join(chunks)
 
 
 def odata_params(

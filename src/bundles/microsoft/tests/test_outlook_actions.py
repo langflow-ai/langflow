@@ -13,6 +13,7 @@ from lfx_microsoft import (
     OutlookSearchComponent,
     OutlookSendComponent,
 )
+from lfx_microsoft.components.microsoft.outlook_send import MAX_ATTACHMENT_BYTES
 from microsoft_testkit import TransportRecorder, build_component, credential, graph_error, graph_fixture, json_response
 
 
@@ -95,6 +96,27 @@ async def test_send_mail_attaches_files_as_base64_file_attachments(resolver_fact
         }
     ]
     assert result.data["attachment_count"] == 1
+
+
+async def test_send_mail_refuses_attachments_over_the_inline_graph_limit(resolver_factory, tmp_path) -> None:
+    """Graph caps the sendMail body at 4 MB; refuse before reading the file, not after a 413."""
+    resolver_factory(credential(scopes={"Mail.Send"}))
+    attachment = tmp_path / "big.bin"
+    attachment.write_bytes(b"0" * (MAX_ATTACHMENT_BYTES + 1))
+    recorder = TransportRecorder(lambda _request: httpx.Response(202))
+    component = build_component(
+        OutlookSendComponent,
+        recorder,
+        connection="microsoft/work",
+        to="ada@contoso.com",
+        subject="Too big",
+        body="see attached",
+        attachments=[str(attachment)],
+    )
+
+    with pytest.raises(ValueError, match="exceed"):
+        await component.send_mail()
+    assert recorder.requests == []
 
 
 async def test_send_mail_surfaces_rate_limits_with_retry_after(resolver_factory) -> None:

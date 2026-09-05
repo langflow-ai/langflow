@@ -184,3 +184,17 @@ async def test_fetch_item_forwards_a_byte_range(resolver_factory) -> None:
     await component.fetch_item()
 
     assert recorder.requests[1].headers["range"] == "bytes=0-4"
+
+
+async def test_both_outputs_share_one_listing_request(resolver_factory) -> None:
+    """Items and Next Link come from one Graph call, in either evaluation order."""
+    resolver_factory(credential(scopes={"Files.Read"}))
+    recorder = TransportRecorder(lambda _request: json_response(graph_fixture("drive_children")))
+    component = build_component(SharePointListComponent, recorder, connection="microsoft/work", top=10)
+
+    # "Next Link" evaluated first is the order that used to double the traffic.
+    await component.next_page_link()
+    rows = await component.list_items()
+
+    assert len(recorder.requests) == 1
+    assert [row.data["name"] for row in rows] == ["Quarterly plan.docx", "Archive"]

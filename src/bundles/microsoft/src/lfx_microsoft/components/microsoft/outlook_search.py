@@ -72,6 +72,10 @@ class OutlookSearchComponent(MicrosoftGraphComponent):
     ]
 
     _next_link: str | None = None
+    # Both outputs come from a single Graph listing. The rows are cached on
+    # the instance so that evaluating "Next Link" first -- or evaluating both
+    # outputs -- costs one request, not two.
+    _rows: list[Data] | None = None
 
     def _path(self) -> str:
         folder = (self.folder_id or "").strip()
@@ -81,6 +85,9 @@ class OutlookSearchComponent(MicrosoftGraphComponent):
 
     async def search_messages(self) -> list[Data]:
         """Return the matching messages as Data rows."""
+        if self._rows is not None:
+            self.status = f"{len(self._rows)} message(s)"
+            return self._rows
         search = (self.search or "").strip()
         filter_expression = (self.filter or "").strip()
         params = odata_params(
@@ -100,11 +107,12 @@ class OutlookSearchComponent(MicrosoftGraphComponent):
             )
         self._next_link = next_link
         rows = [Data(data=item) for item in items]
+        self._rows = rows
         self.status = f"{len(rows)} message(s)"
         return rows
 
     async def next_page_link(self) -> Message:
         """Return the unfollowed ``@odata.nextLink``, if Graph supplied one."""
-        if self._next_link is None:
+        if self._rows is None:
             await self.search_messages()
         return Message(text=self._next_link or "")
