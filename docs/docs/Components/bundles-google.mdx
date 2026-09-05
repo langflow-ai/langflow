@@ -219,6 +219,35 @@ surfacing), `scope-missing` on a Google `403` that is not a rate limit, `rate-li
 `429` and on `403` quota reasons, and `provider-unavailable` on `5xx`. Google response
 bodies are never passed through verbatim.
 
+### Knowledge-base ingestion from Drive
+
+The **Google Drive** knowledge-base ingestion source reads the same
+`drive.file` scope through the same managed connection, so a knowledge base can be
+kept in sync with the files this application created or the user opened with it.
+Configure it with a connection handle:
+
+```json
+{"source_type": "google_drive", "source_config": {"connection": "google/work", "folder_id": "FOLDER_ID"}}
+```
+
+Google-native documents are exported on the way in: Docs and Slides as plain
+text, Sheets as CSV. Folders, Forms, Sites, and shortcuts are skipped because
+they carry no text to ingest.
+
+Because ingestion runs as a background job rather than an interactive request,
+the connection must have been created with `allow_non_interactive` set. Without
+it the run fails with `connection-not-authorized`, which is the intended
+behavior: a scheduled job acting on a user's Drive is something that user opts
+into explicitly.
+
+:::important
+The source is not registered by default in this release. It resolves its
+connection under a `job_owner` execution principal, and background jobs do not
+carry an execution principal yet, so every resolution would fail closed. Set
+`LANGFLOW_KB_GOOGLE_DRIVE_ENABLED=true` on a build that carries the
+executing-identity work to opt in.
+:::
+
 ### Swapping an action to a different substrate
 
 All five actions run on the Google Python SDK today. If a future release moves one of them
