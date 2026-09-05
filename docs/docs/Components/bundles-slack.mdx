@@ -1,0 +1,115 @@
+---
+title: Slack
+slug: /bundles-slack
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Slack** bundle.
+
+Every Slack component runs on the [Slack Web API](https://docs.slack.dev/reference/methods/) and takes its credential from a Langflow [connection](../Develop/connection-oauth.mdx) rather than from a token pasted into the flow.
+
+<GraduatedBundleInstall packageName="slack" />
+
+## Two executing identities
+
+Slack has two kinds of token, and a component is fixed to one of them:
+
+| Identity | Authorization profile | Posts as | Available on Desktop |
+| --- | --- | --- | --- |
+| Connected Slack user | `slack-user-oauth` | the person who authorized the connection | Yes |
+| App bot user | `slack-bot-install` | the app's bot user | No |
+
+Slack user scopes and bot scopes share names — `chat:write` is both a User Token Scope and a Bot Token Scope — so the scopes a connection was granted cannot tell the two identities apart. Each component instead checks the identity recorded on the connection and fails with a connection authorization error, before any request reaches Slack, when it is handed the wrong kind.
+
+Bot components are unavailable on Langflow Desktop because Slack desktop redirects use PKCE and [may not request bot scopes](https://docs.slack.dev/authentication/using-pkce/). Use a hosted or self-managed workspace installation for those actions.
+
+## Prerequisites
+
+* A Slack app installed in the target workspace, and a Langflow connection for it. See [Configure connection OAuth](../Develop/connection-oauth.mdx) for the registration steps, the redirect URLs, and the per-action scope tables.
+* For bot components, the app's bot user must be a member of the channel it acts on.
+
+## Slack: Search (as user)
+
+Calls [`search.messages`](https://docs.slack.dev/reference/methods/search.messages) with the connected user's visibility. Accepts the same query modifiers as the Slack search bar, such as `in:#general from:@avery`.
+
+Required scope: `search:read`.
+
+Outputs a list of [`Data`](/data-types#json) objects, one per match, and a `Pagination` `Data` carrying Slack's result counts and the `next_cursor` for the following page.
+
+## Slack: Read Thread (as user)
+
+Calls [`conversations.replies`](https://docs.slack.dev/reference/methods/conversations.replies) for one thread, identified by its channel and the parent message's `ts`.
+
+Required scopes: `channels:history`, `groups:history`, `im:history`, `mpim:history`. All four are requested so one connection can read threads in public channels, private channels, DMs, and group DMs.
+
+Outputs the thread's messages as `Data` objects and a `Pagination` `Data` with `has_more` and `next_cursor`.
+
+:::important
+For apps that are distributed but **not** listed in the Slack Marketplace, Slack rate-limits `conversations.replies` to one request per minute and caps each page at 15 messages. Marketplace-listed apps get Tier 3 (50+ per minute). A customer-owned app used only inside its own workspace is not affected.
+:::
+
+## Slack: Send Message (as user)
+
+Calls [`chat.postMessage`](https://docs.slack.dev/reference/methods/chat.postMessage) with the user token, so the message is attributed to the connected person.
+
+Required scope: `chat:write`.
+
+Set **Thread timestamp** to reply inside a thread. Optional **Blocks** accepts [Block Kit](https://docs.slack.dev/block-kit/) blocks as `Data` objects. Slack truncates message text above 40,000 characters, so the component rejects longer text before sending.
+
+Outputs a `Data` with the `channel`, `ts`, and the stored `message`.
+
+## Slack: Create Canvas (as user)
+
+Calls [`canvases.create`](https://docs.slack.dev/reference/methods/canvases.create) with markdown content, up to 1 MiB. The canvas is owned by the connected user.
+
+Required scope: `canvases:write`.
+
+Set **Channel ID** to create a channel canvas instead of a standalone one; free Slack plans cannot create standalone canvases.
+
+Outputs a `Data` with the new `canvas_id`.
+
+## Slack: Post Message (as app)
+
+Calls `chat.postMessage` with the bot token, so the message is attributed to the app's bot user rather than to a person.
+
+Required scope: `chat:write` (bot).
+
+Adds **Also send to channel** (`reply_broadcast`) and **Attachments** on top of the user variant's inputs.
+
+## Slack: Add Reaction (as app)
+
+Calls [`reactions.add`](https://docs.slack.dev/reference/methods/reactions.add) as the bot user. Give the emoji name without colons, such as `thumbsup`.
+
+Required scope: `reactions:write`.
+
+## Slack: List Channel Members (as app)
+
+Calls [`conversations.members`](https://docs.slack.dev/reference/methods/conversations.members) as the bot user.
+
+Required scope: `channels:read`. Two scopes are requested only when you enable the matching option:
+
+| Option | Additional scope |
+| --- | --- |
+| **Private channel** | `groups:read` |
+| **Resolve display names** | `users:read` |
+
+With **Resolve display names** off, the component returns member IDs. With it on, it calls [`users.info`](https://docs.slack.dev/reference/methods/users.info) once per member and returns the name, real name, display name, and bot flag as well — which costs one extra request per member, so leave it off for large channels.
+
+Outputs the members as `Data` objects and a `Pagination` `Data` with `next_cursor`.
+
+## Errors
+
+Slack reports application-level failures as `HTTP 200` with `{"ok": false, ...}`. The bundle translates those into Langflow's integration error codes, so the canvas shows an actionable message instead of a generic provider outage:
+
+| Slack error | Langflow error | What to do |
+| --- | --- | --- |
+| `invalid_auth`, `token_expired`, `token_revoked`, `account_inactive`, `not_authed` | `auth-expired` | Reconnect the connection. |
+| `missing_scope` | `scope-missing` | Grant the listed scopes and reconnect. |
+| `ratelimited` | `rate-limited` | Retry after the reported interval. |
+| `not_allowed_token_type`, `channel_not_found`, `not_in_channel` | `action-unsupported` | Check the identity, the channel, and the bot's membership. |
+
+If Slack rejects a token, the component re-resolves the connection once and retries. That is how a rotated Slack token is picked up: Slack tokens do not expire unless the app opted into token rotation, so a rejection is the only signal.

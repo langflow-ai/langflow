@@ -73,6 +73,7 @@
         "lfx-openai",
         "lfx-openai-compatible",
         "lfx-oracle",
+        "lfx-slack",
         "lfx-toolguard",
         "lfx-vllm"
       ],
@@ -106,6 +107,7 @@
           "lfx-openai",
           "lfx-openai-compatible",
           "lfx-oracle",
+          "lfx-slack",
           "lfx-toolguard",
           "lfx-vllm"
         ],
@@ -127,6 +129,11 @@
           "lfx_microsoft/extension.json",
           "lfx_microsoft/components/microsoft/capabilities.v1.json",
           "lfx_microsoft/components/microsoft/outlook_send.py"
+        ],
+        "lfx-slack": [
+          "lfx_slack/extension.json",
+          "lfx_slack/components/slack/capabilities.v1.json",
+          "lfx_slack/components/slack/slack_search.py"
         ],
         "lfx-azure": [
           "lfx_azure/extension.json",
@@ -234,6 +241,7 @@
           "lfx-openai-compatible",
           "lfx-oracle",
           "lfx-paddle",
+          "lfx-slack",
           "lfx-toolguard",
           "lfx-valkey",
           "lfx-vllm"
@@ -329,6 +337,11 @@
           "lfx_microsoft/extension.json",
           "lfx_microsoft/components/microsoft/capabilities.v1.json",
           "lfx_microsoft/components/microsoft/outlook_send.py"
+        ],
+        "lfx-slack": [
+          "lfx_slack/extension.json",
+          "lfx_slack/components/slack/capabilities.v1.json",
+          "lfx_slack/components/slack/slack_search.py"
         ],
         "lfx-azure": [
           "lfx_azure/extension.json",

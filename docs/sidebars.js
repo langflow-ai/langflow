@@ -570,6 +570,7 @@ module.exports = {
             "Components/bundles-sambanova",
             "Components/bundles-searchapi",
             "Components/bundles-serper",
+            "Components/bundles-slack",
             "Components/bundles-supabase",
             "Components/bundles-upstash",
             "Components/bundles-valkey",

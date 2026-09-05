@@ -101,6 +101,18 @@ class ResolvedCredential:
     owner_kind: Literal["user", "instance", "env"] = "env"
     provider: str = ""
     name: str = ""
+    # Executing identity recorded on the connection, when the host knows it.
+    # Providers whose user and bot tokens share scope names (Slack's
+    # ``chat:write`` is both a User Token Scope and a Bot Token Scope) cannot
+    # tell the identities apart from ``granted_scopes``, so a bundle capability
+    # that must run as a bot compares this instead and fails closed. ``None``
+    # means the resolver does not know -- the headless env wire format has no
+    # place to declare one -- and callers treat that as "the operator vouched
+    # for this token".
+    #
+    # The literal mirrors ``lfx.integrations.capabilities.IntegrationIdentity``;
+    # it is spelled out here because ``capabilities`` imports from this module.
+    identity: Literal["user_delegated", "bot", "service"] | None = None
 
     def __repr__(self) -> str:
         return (
@@ -108,7 +120,8 @@ class ResolvedCredential:
             f"token_type={self.token_type!r}, expires_at={self.expires_at!r}, "
             f"granted_scopes={self.granted_scopes!r}, scopes_verified={self.scopes_verified!r}, "
             f"account={self.account!r}, connection_id={self.connection_id!r}, "
-            f"owner_kind={self.owner_kind!r}, provider={self.provider!r}, name={self.name!r})"
+            f"owner_kind={self.owner_kind!r}, provider={self.provider!r}, name={self.name!r}, "
+            f"identity={self.identity!r})"
         )
 
     def __reduce__(self):
