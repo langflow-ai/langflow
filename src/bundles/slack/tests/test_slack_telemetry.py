@@ -8,7 +8,8 @@ import pytest
 from conftest import FakeResolver, SlackTransport, build_component, load_fixture
 from lfx.integrations.errors import ScopeMissingError
 from lfx.services.schema import ServiceType
-from lfx_slack import SlackSearchComponent
+from lfx_slack import SlackPostAsAppComponent, SlackSearchComponent
+from lfx_slack._base import SlackIdentityMismatchError
 
 
 @pytest.fixture
@@ -69,3 +70,19 @@ async def test_a_failed_action_reports_the_typed_error_code(
     payload, _ = telemetry[0]
     assert payload.success is False
     assert payload.error_code == "scope-missing"
+
+
+@pytest.mark.usefixtures("user_resolver", "transport")
+async def test_a_fail_closed_identity_denial_is_counted(telemetry: list) -> None:
+    """The denial an operator most wants counted must not fall outside the span."""
+    component = build_component(SlackPostAsAppComponent, channel="C0SLACKDEMO", text="hi")
+
+    with pytest.raises(SlackIdentityMismatchError):
+        await component.build_message()
+
+    payload, event_name = telemetry[0]
+    assert event_name == "integration_action"
+    assert payload.provider == "slack"
+    assert payload.capability == "slack.bot.post"
+    assert payload.success is False
+    assert payload.error_code == "connection-not-authorized"

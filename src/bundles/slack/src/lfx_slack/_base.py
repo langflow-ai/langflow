@@ -143,6 +143,20 @@ class SlackBaseComponent(Component):
     capability_id: ClassVar[str] = ""
     slack_identity: ClassVar[str] = USER_IDENTITY
 
+    def _pre_run_setup(self) -> None:
+        """Drop the per-build response memo before each build of this vertex.
+
+        ``Component._build_results`` calls this once per build, and the graph
+        reuses one component instance across builds -- a cycle vertex, a Loop
+        body, or any other rebuild. Without this the memo below would survive
+        into the next iteration and a write action would report the first
+        response forever while making no further request. Clearing it here
+        keeps the intended sharing *within* one build (a component's Matches
+        and Pagination outputs still cost one Slack call) and restores
+        freshness *between* builds.
+        """
+        self.__dict__.pop(_CACHE_KEY, None)
+
     def connection_lease(self) -> CredentialLease:
         """Return the lazy lease for this component's connection field."""
         return self.resolve_connection(CONNECTION_FIELD)
@@ -150,9 +164,10 @@ class SlackBaseComponent(Component):
     async def run_action(self, action: Callable[[SlackClient], Awaitable[dict[str, Any]]]) -> dict[str, Any]:
         """Resolve the connection, guard its identity, and run one traced call.
 
-        The result is memoized on the instance so a component with more than
-        one output does not spend a second call against Slack's per-method
-        rate tier.
+        The result is memoized for the duration of one build so a component
+        with more than one output does not spend a second call against Slack's
+        per-method rate tier; :meth:`_pre_run_setup` clears the memo when the
+        vertex is rebuilt.
         """
         cached = self.__dict__.get(_CACHE_KEY)
         if cached is not None:
@@ -160,7 +175,6 @@ class SlackBaseComponent(Component):
 
         lease = self.connection_lease()
         credential = await lease.get_credential()
-        require_identity(credential, expected=self.slack_identity)
         client = SlackClient(lease)
         async with integration_action(
             self,
@@ -168,6 +182,9 @@ class SlackBaseComponent(Component):
             capability=self.capability_id,
             owner_kind=credential.owner_kind,
         ):
+            # Inside the span so a fail-closed identity denial is counted like
+            # any other integration error instead of vanishing from telemetry.
+            require_identity(credential, expected=self.slack_identity)
             body = await action(client)
         self.__dict__[_CACHE_KEY] = body
         return body
