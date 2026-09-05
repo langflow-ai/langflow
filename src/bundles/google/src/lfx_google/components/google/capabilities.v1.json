@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "provider_id": "google",
+  "display_name": "Google Workspace",
+  "icon": "Google",
+  "docs_url": "https://docs.langflow.org/bundles-google",
+  "auth_profiles": [
+    {
+      "id": "user",
+      "kind": "oauth2_authorization_code",
+      "identity": "user_delegated",
+      "authorization_url": "https://accounts.google.com/o/oauth2/v2/auth",
+      "token_url": "https://oauth2.googleapis.com/token",
+      "supports_pkce": true,
+      "supports_refresh": true,
+      "scope_separator": " ",
+      "default_scopes": [],
+      "client_type_by_context": {
+        "hosted": "confidential",
+        "self_managed": "confidential",
+        "desktop": "public",
+        "headless": "external"
+      },
+      "owner_by_context": {
+        "hosted": "langflow",
+        "self_managed": "customer",
+        "desktop": "langflow",
+        "headless": "customer"
+      }
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "google.gmail.send",
+      "display_name": "Gmail: Send Email",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": ["https://www.googleapis.com/auth/gmail.send"],
+      "conditional_scopes": [],
+      "policy_keys": ["integrations.google.gmail.send"],
+      "substrate": "sdk",
+      "maturity": "ga",
+      "deployment_contexts": ["hosted", "self_managed", "desktop", "headless"],
+      "risk": "write",
+      "component_ref": "GmailSendComponent"
+    },
+    {
+      "id": "google.drive.list",
+      "display_name": "Drive: List Files (app files)",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": ["https://www.googleapis.com/auth/drive.file"],
+      "conditional_scopes": [],
+      "policy_keys": ["integrations.google.drive.list"],
+      "substrate": "sdk",
+      "maturity": "ga",
+      "deployment_contexts": ["hosted", "self_managed", "desktop", "headless"],
+      "risk": "read",
+      "component_ref": "GoogleDriveListComponent"
+    },
+    {
+      "id": "google.drive.fetch",
+      "display_name": "Drive: Fetch File (app files)",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": ["https://www.googleapis.com/auth/drive.file"],
+      "conditional_scopes": [],
+      "policy_keys": ["integrations.google.drive.fetch"],
+      "substrate": "sdk",
+      "maturity": "ga",
+      "deployment_contexts": ["hosted", "self_managed", "desktop", "headless"],
+      "risk": "read",
+      "component_ref": "GoogleDriveFetchComponent"
+    },
+    {
+      "id": "google.calendar.list",
+      "display_name": "Calendar: List Events",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": ["https://www.googleapis.com/auth/calendar.events.readonly"],
+      "conditional_scopes": [],
+      "policy_keys": ["integrations.google.calendar.list"],
+      "substrate": "sdk",
+      "maturity": "ga",
+      "deployment_contexts": ["hosted", "self_managed", "desktop", "headless"],
+      "risk": "read",
+      "component_ref": "GoogleCalendarListComponent"
+    },
+    {
+      "id": "google.calendar.create",
+      "display_name": "Calendar: Create Event",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": ["https://www.googleapis.com/auth/calendar.events"],
+      "conditional_scopes": [],
+      "policy_keys": ["integrations.google.calendar.create"],
+      "substrate": "sdk",
+      "maturity": "ga",
+      "deployment_contexts": ["hosted", "self_managed", "desktop", "headless"],
+      "risk": "write",
+      "component_ref": "GoogleCalendarCreateComponent"
+    }
+  ]
+}

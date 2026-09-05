@@ -16,14 +16,16 @@ from lfx_google.components.google import (
 TEST_API_KEY = "google-key"  # pragma: allowlist secret
 
 
-def test_gmail_loader_rejects_non_numeric_max_results() -> None:
+async def test_gmail_loader_rejects_non_numeric_max_results() -> None:
+    # load_emails became a coroutine in INT-10 so it can await a connection lease.
     component = GmailLoaderComponent()
+    component.connection = ""
     component.json_string = "{}"
     component.label_ids = "INBOX"
     component.max_results = "not-a-number"
 
     with pytest.raises(ValueError, match="Invalid max_results value: not-a-number"):
-        component.load_emails()
+        await component.load_emails()
 
 
 def test_drive_search_rejects_invalid_token_json() -> None:
@@ -201,3 +203,42 @@ def test_oauth_reports_invalid_client_credentials() -> None:
         pytest.raises(ValueError, match="OAuth authorization failed: invalid client credentials"),
     ):
         component.build_output()
+
+
+# --- INT-10: deprecation and replacement pointers ------------------------------
+
+
+def test_oauth_token_warns_on_use() -> None:
+    """The component keeps working, but every run says it is going away.
+
+    pytest.warns is explicit here because the root pyproject ignores
+    DeprecationWarning, so the warning is otherwise invisible in test output.
+    """
+    component = GoogleOAuthToken()
+    component.scopes = "https://www.googleapis.com/auth/drive.readonly"
+    component.oauth_credentials = "/tmp/google-client.json"
+    credentials = MagicMock()
+    credentials.to_json.return_value = json.dumps({"token": "test-token"})  # pragma: allowlist secret
+    flow = MagicMock()
+    flow.run_local_server.return_value = credentials
+
+    with (
+        patch(
+            "lfx_google.components.google.google_oauth_token.InstalledAppFlow.from_client_secrets_file",
+            return_value=flow,
+        ),
+        pytest.warns(DeprecationWarning, match="GoogleOAuthToken is deprecated"),
+    ):
+        result = component.build_output()
+
+    assert result.data == {"token": "test-token"}
+
+
+def test_oauth_token_points_at_the_connection_backed_components() -> None:
+    assert GoogleOAuthToken.legacy is True
+    assert "google.GmailSendComponent" in GoogleOAuthToken.replacement
+    assert "google.GoogleCalendarCreateComponent" in GoogleOAuthToken.replacement
+
+
+def test_drive_search_points_at_the_connection_backed_listing() -> None:
+    assert GoogleDriveSearchComponent.replacement == ["google.GoogleDriveListComponent"]
