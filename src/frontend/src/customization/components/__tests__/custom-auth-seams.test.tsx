@@ -70,10 +70,46 @@ describe("OSS auth customization seams", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("never skips auth refresh", () => {
+  it("does not skip auth refresh for an ordinary 403", () => {
     const error = {
       response: { status: 403, data: { detail: "must_change_password" } },
     } as AxiosError;
+
+    expect(customShouldSkipAuthRefresh(error)).toBe(false);
+  });
+
+  it("skips auth refresh for a tier denial carried on the error-code header", () => {
+    const error = {
+      response: {
+        status: 403,
+        headers: { "x-langflow-error-code": "tier_limit_reached" },
+        data: { detail: { error_code: "tier_limit_reached", message: "nope" } },
+      },
+    } as unknown as AxiosError;
+
+    expect(customShouldSkipAuthRefresh(error)).toBe(true);
+  });
+
+  it("skips auth refresh for a feature gate carried only in the body", () => {
+    const error = {
+      response: {
+        status: 403,
+        data: {
+          detail: { error_code: "feature_not_in_tier", message: "upgrade" },
+        },
+      },
+    } as unknown as AxiosError;
+
+    expect(customShouldSkipAuthRefresh(error)).toBe(true);
+  });
+
+  it("does not skip auth refresh for an unrelated error code", () => {
+    const error = {
+      response: {
+        status: 403,
+        headers: { "x-langflow-error-code": "superuser_required" },
+      },
+    } as unknown as AxiosError;
 
     expect(customShouldSkipAuthRefresh(error)).toBe(false);
   });

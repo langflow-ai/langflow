@@ -1497,6 +1497,130 @@ async def test_resume_input_required_task_completes(client: AsyncClient, active_
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
+async def test_resume_meters_the_completed_hitl_run(client: AsyncClient, active_user, human_input_flow_data):
+    """The resume that finishes a HITL run emits exactly one run event, keyed by the task id.
+
+    The paused first segment emits nothing (``execute_sync_workflow`` skips a parked run), and
+    resume goes through ``run_graph_internal`` rather than ``execute_sync_workflow``, so without
+    the resume-path emission the whole run would never reach ``run_event_store`` — i.e. would
+    never be metered.
+    """
+    from uuid import UUID
+
+    from langflow.services.telemetry.run_event_store import pop_all
+
+    flow_id = await _create_flow(active_user.id, data=human_input_flow_data)
+
+    paused = (await _jsonrpc(client, flow_id, "message/send", _text_message("start"))).json()["result"]
+    task_id, context_id = paused["id"], paused["contextId"]
+    # The run id is the task id normalized the way the sync path derives its job_id.
+    run_id = str(UUID(task_id))
+    # The parked segment must not be metered, and any events from earlier work are drained here.
+    assert [event for event in pop_all() if event.run_id == run_id] == []
+
+    resumed = (
+        await _jsonrpc(
+            client,
+            flow_id,
+            "message/send",
+            _text_message("Approve", message_id="m2", context_id=context_id, task_id=task_id),
+        )
+    ).json()["result"]
+    assert resumed["status"]["state"] == "completed"
+
+    events = [event for event in pop_all() if event.run_id == run_id]
+    assert len(events) == 1
+    assert events[0].run_success is True
+    assert events[0].run_is_webhook is False
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+async def test_re_parked_resume_is_not_metered(client: AsyncClient, active_user, human_input_flow_data):
+    """A reply that re-parks the task did not finish a run, so it emits no run event."""
+    from uuid import UUID
+
+    from langflow.services.telemetry.run_event_store import pop_all
+
+    flow_id = await _create_flow(active_user.id, data=human_input_flow_data)
+    paused = (await _jsonrpc(client, flow_id, "message/send", _text_message("start"))).json()["result"]
+    task_id, context_id = paused["id"], paused["contextId"]
+    pop_all()
+
+    reparked = (
+        await _jsonrpc(
+            client,
+            flow_id,
+            "message/send",
+            _text_message("maybe", message_id="m2", context_id=context_id, task_id=task_id),
+        )
+    ).json()["result"]
+    assert reparked["status"]["state"] == "input-required"
+    assert [event for event in pop_all() if event.run_id == str(UUID(task_id))] == []
+
+
+async def test_resume_cancellation_is_not_metered(active_user, echo_flow_data, monkeypatch):
+    """A client disconnect mid-resume is not a workflow failure, so it emits no run event.
+
+    Mirrors the streaming path, which suppresses telemetry on ``_stream_cancelled``.
+    """
+    import asyncio as _asyncio
+
+    from langflow.api.v1 import a2a as a2a_module
+    from langflow.services.telemetry.run_event_store import pop_all
+    from lfx.graph.checkpoint.schema import GraphCheckpoint
+
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    task_id = str(uuid.uuid4())
+    principal = str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID)
+    checkpoint = GraphCheckpoint(
+        run_id=task_id,
+        flow_id=str(flow_id),
+        user_id=principal,
+        flow_payload=echo_flow_data,
+        pause_context={"data": {"request_id": "node:run"}},
+    )
+
+    class FakeStore:
+        async def load_by_run_id(self, run_id):
+            assert run_id == task_id
+            return checkpoint
+
+        async def claim_by_run_id(self, run_id):
+            assert run_id == task_id
+            return True
+
+        async def delete_by_run_id(self, run_id):
+            assert run_id == task_id
+
+    class FakeGraph:
+        session_id = "session-1"
+
+        def get_terminal_nodes(self):
+            return []
+
+    def fake_resume(*_args):
+        return FakeGraph()
+
+    async def cancelled_run(*_args, **_kwargs):
+        raise _asyncio.CancelledError
+
+    async def fake_prepare(data):
+        return data
+
+    monkeypatch.setattr(a2a_module, "A2ACheckpointStore", FakeStore)
+    monkeypatch.setattr(a2a_module, "validate_public_flow_no_code_execution", lambda _data: None)
+    monkeypatch.setattr(a2a_module, "prepare_public_flow_build", fake_prepare)
+    monkeypatch.setattr(a2a_module, "resume_graph_with_decision", fake_resume)
+    monkeypatch.setattr("langflow.processing.process.run_graph_internal", cancelled_run)
+
+    pop_all()
+    with pytest.raises(_asyncio.CancelledError):
+        await a2a_module._resume_flow(flow_id, task_id, "Approve", admitted_user_id=principal)
+
+    assert [event for event in pop_all() if event.run_id == str(uuid.UUID(task_id))] == []
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
 async def test_unmatched_decision_re_parks_task(client: AsyncClient, active_user, human_input_flow_data):
     """A reply that matches no offered action re-parks the task instead of burning it.
 
