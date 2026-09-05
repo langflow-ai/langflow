@@ -70,6 +70,18 @@ def test_sanitized_policy_drops_the_handle_but_keeps_the_code() -> None:
     assert delegated.code == owner.code == "connection-unresolved"
 
 
+def test_the_owner_debug_policy_keeps_the_traceback_for_an_integration_failure() -> None:
+    """A flow owner debugging their own run keeps what every other error class gives them."""
+    error = ConnectionNotAuthorizedError(provider="google")
+    trace = 'Traceback (most recent call last):\n  File "flow.py", line 1'
+
+    owner = error_details_for_client(error, expose_details=True, stack_trace=trace)
+    delegated = error_details_for_client(error, expose_details=False, stack_trace=trace)
+
+    assert owner.stack_trace == trace
+    assert delegated.stack_trace == ""
+
+
 def test_sanitized_policy_drops_structured_details() -> None:
     error = ScopeMissingError(frozenset({"calendar.write"}), provider="google")
 

@@ -85,8 +85,8 @@ class ExecutionPrincipal:
     """Identity and route family used for dependency credential resolution.
 
     ``allow_explicit_shares`` is the owner-only switch for route families whose
-    admission never admits a delegated caller (legacy MCP transports and the
-    authenticated A2A sub-path). It is additive and defaults to ``True`` so the
+    admission never admits a delegated caller (the legacy MCP transports). It is
+    additive and defaults to ``True`` so the
     resolver keeps honoring explicit shares for every family that already did;
     a host resolver that supports shares must skip its share branch when it is
     ``False``. The portable deny floor is unaffected either way.

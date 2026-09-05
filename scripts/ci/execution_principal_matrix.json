@@ -150,7 +150,7 @@
       "revoke": "new_and_resume",
       "error_policy": "sanitized",
       "connection_resolution": "never",
-      "connection_resolution_note": "public admission executes anonymously; the API-key/OAuth sub-path runs as the owner and is owner-only",
+      "connection_resolution_note": "no A2A run resolves a user connection in 1.13: the public sub-path is anonymous by admission, and the API-key/OAuth sub-path is deliberately held to the same floor rather than executing as the flow owner",
       "exception": "auth_type=none is a compatibility-derived PUBLIC grant under the anonymous principal; API-key and OAuth A2A admission remains owner-only and executes as the authenticated owner",
       "test_references": [
         "src/backend/tests/unit/api/v1/test_a2a.py::test_public_a2a_run_uses_server_sanitized_flow_data",
@@ -188,7 +188,7 @@
       "revoke": "provider_controlled",
       "error_policy": "provider_sanitized",
       "connection_resolution": "owner_non_interactive_opt_in",
-      "connection_resolution_note": "the serving plane resolves the deployment owner's connection unattended, so it needs the opt-in",
+      "connection_resolution_note": "the serving plane resolves the deployment owner's connection unattended, so it needs the opt-in; the editor-plane route is provider sync only, so no editor-plane request stamps this family and an unstamped serving-plane build fails closed until that plane adopts FAMILY_DEPLOYMENTS",
       "exception": "deployment authorization and audit use the actor while the external data plane retains its owner namespace",
       "test_references": [
         "src/backend/tests/unit/api/v1/test_deployment_sync.py::test_shared_rows_use_provider_owner_namespace_for_sync",

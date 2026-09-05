@@ -21,13 +21,27 @@ def _load_execution_principal_module():
     The CI-scripts job installs only jsonschema/orjson/packaging/pytest/requests,
     so ``import langflow`` is not available here; the module itself imports one
     lfx symbol, which is stubbed for the same reason.
+
+    The stub is installed ONLY when lfx is genuinely absent. Guarding on the real
+    package rather than on the submodule key keeps this safe if these tests are
+    ever collected in the same session as the backend suite, where shadowing
+    ``lfx.services.authorization.base`` would break every later importer.
     """
     import sys
     import types
     import uuid
     from importlib import util
+    from importlib.util import find_spec
 
-    if "lfx.services.authorization.base" not in sys.modules:
+    def _lfx_is_importable() -> bool:
+        if "lfx" in sys.modules:
+            return True
+        try:
+            return find_spec("lfx") is not None
+        except (ImportError, ValueError):
+            return False
+
+    if not _lfx_is_importable():
         for name in ("lfx", "lfx.services", "lfx.services.authorization"):
             sys.modules.setdefault(name, types.ModuleType(name))
         stub = types.ModuleType("lfx.services.authorization.base")

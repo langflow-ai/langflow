@@ -51,7 +51,9 @@ class ExecutionErrorDetails:
         return body
 
 
-def _integration_details(error: IntegrationError, *, expose_details: bool) -> ExecutionErrorDetails:
+def _integration_details(
+    error: IntegrationError, *, expose_details: bool, stack_trace: str | None = None
+) -> ExecutionErrorDetails:
     """Build the typed body for an integration failure under either error policy.
 
     An ``IntegrationError`` is sanitized by construction (URLs and e-mail
@@ -67,7 +69,9 @@ def _integration_details(error: IntegrationError, *, expose_details: bool) -> Ex
     """
     return ExecutionErrorDetails(
         message=error.safe_message if expose_details else SAFE_INTEGRATION_ERROR_MESSAGE,
-        stack_trace="",
+        # A flow owner debugging their own run keeps the traceback every other
+        # error class gives them; a delegated or public caller never does.
+        stack_trace=(stack_trace or "") if expose_details else "",
         code=error.code,
         hint=error.hint,
         provider=error.provider,
@@ -86,7 +90,7 @@ def error_details_for_client(
 ) -> ExecutionErrorDetails:
     """Keep owner diagnostics while removing delegated/public runtime details."""
     if isinstance(error, IntegrationError):
-        return _integration_details(error, expose_details=expose_details)
+        return _integration_details(error, expose_details=expose_details, stack_trace=stack_trace)
     if expose_details:
         return ExecutionErrorDetails(
             message=message if message is not None else str(error),

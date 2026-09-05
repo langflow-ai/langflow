@@ -1016,3 +1016,38 @@ async def test_webhook_required_identity_present_is_accepted(client, added_webho
         json={"k": "v"},
     )
     assert resp.status_code == 202, resp.text
+
+
+async def test_webhook_route_names_the_webhook_execution_family(
+    client, added_webhook_test, created_api_key, monkeypatch
+):
+    """INT-6: the route, not the task's default, chooses the privileged family.
+
+    ``simple_run_flow_task`` defaults to the actor family (``v1_run``) so an
+    unconverted caller cannot silently inherit the flow owner's credentials;
+    ``webhook`` -- the one genuinely unattended caller -- is named at the route.
+    """
+    import inspect
+
+    from langflow.api.utils.execution_principal import FAMILY_V1_RUN, FAMILY_WEBHOOK
+    from langflow.api.v1 import endpoints
+
+    default_family = inspect.signature(endpoints.simple_run_flow_task).parameters["execution_family"].default
+    assert default_family == FAMILY_V1_RUN
+
+    captured: dict = {}
+    started = asyncio.Event()
+
+    async def _record_task(**kwargs):
+        captured.update(kwargs)
+        started.set()
+
+    monkeypatch.setattr(endpoints, "simple_run_flow_task", _record_task)
+
+    endpoint = f"api/v1/webhook/{added_webhook_test['endpoint_name']}"
+    response = await client.post(endpoint, headers={"x-api-key": created_api_key.api_key}, json={"k": "v"})
+
+    assert response.status_code == 202, response.text
+    async with asyncio.timeout(10):
+        await started.wait()
+    assert captured["execution_family"] == FAMILY_WEBHOOK

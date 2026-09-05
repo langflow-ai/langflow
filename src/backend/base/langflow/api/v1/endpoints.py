@@ -632,7 +632,7 @@ async def simple_run_flow_task(
     emit_events: bool = False,
     flow_id: str | None = None,
     http_request: Request | None = None,
-    execution_family: str = FAMILY_WEBHOOK,
+    execution_family: str = FAMILY_V1_RUN,
 ):
     """Run a flow task as a BackgroundTask, therefore it should not throw exceptions.
 
@@ -649,8 +649,11 @@ async def simple_run_flow_task(
         flow_id: Flow ID for event emission (required if emit_events=True)
         http_request: The incoming HTTP request, forwarded so serving-plane end-user
             session scoping can read the trusted identity header (None to skip).
-        execution_family: Matrix family for connection resolution; the webhook family
-            runs as the published flow's owner, unattended.
+        execution_family: Matrix family for connection resolution. It defaults to the
+            LEAST privileged option (``v1_run``, which runs as the actor); the one
+            caller that is genuinely unattended -- ``webhook_run_flow`` -- names
+            ``webhook`` explicitly. Defaulting to the owner-privileged family here
+            would silently hand a future caller the flow owner's credentials.
     """
     should_emit = emit_events and flow_id
 
@@ -1465,6 +1468,10 @@ async def webhook_run_flow(
                 emit_events=has_ui_listeners,
                 flow_id=flow_id_str,
                 http_request=request,
+                # The only unattended caller of this task: a published webhook runs
+                # as the flow's owner, so the owner's connection must carry the
+                # per-connection non-interactive opt-in.
+                execution_family=FAMILY_WEBHOOK,
             )
         )
         # Fire-and-forget: log exceptions but don't block
@@ -1685,6 +1692,11 @@ async def experimental_run_flow(
             if expose_error_details:
                 raise
             raise error_for_client(exc, expose_details=expose_error_details) from exc
+        # Same rule as the /run terminal handler: a connection the caller may not
+        # use keeps its typed body and the provider's status. Stringifying it here
+        # would lose the error_code and the 403/401/429 this route shares with /run.
+        if (typed := integration_http_error(exc, expose_details=expose_error_details)) is not None:
+            raise typed from exc
         client_error = error_for_client(exc, expose_details=expose_error_details)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(client_error)) from exc
 

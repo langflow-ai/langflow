@@ -440,10 +440,10 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
             return row
         if request.principal.user_id is None or not shared:
             return None
-        # Owner-only families (legacy MCP transports, the authenticated A2A
-        # sub-path) never admit a delegated caller, so they must not reach a
-        # shared row either -- otherwise a share would be a wider grant through
-        # MCP than through the route the share was made for.
+        # Owner-only families (the legacy MCP transports) never admit a delegated
+        # caller, so they must not reach a shared row either -- otherwise a share
+        # would be a wider grant through MCP than through the route the share was
+        # made for.
         if not request.principal.allow_explicit_shares:
             return None
         shared = [row for row in shared if request.principal.interactive or row.allow_non_interactive]

@@ -185,7 +185,7 @@ misconfigured or unrecognized path fails closed rather than borrowing someone el
 | Deployments on the serving plane | the deployment owner | the owner's connection, and only when `allow_non_interactive` is set on it |
 | A resumed background or human-in-the-loop run | the owner of the job that started it | that owner's connection with `allow_non_interactive` set; the identity is recomputed on the worker and is never read back from the checkpoint |
 | MCP (legacy transport and MCP projects) | the transport's authenticated user | that user's own connection only — a shared connection is not used, because a shared flow is not admitted through MCP either |
-| Shareable-playground links, the public workflow endpoint, and A2A calls admitted without authentication | an isolated anonymous principal | none: no user connection and no instance connection, whatever the flow references |
+| Shareable-playground links, the public workflow endpoint, and A2A | an isolated anonymous principal | none: no user connection and no instance connection, whatever the flow references |
 
 Two rules are worth stating plainly, because they change what a working flow does when it is published:
 
@@ -193,9 +193,12 @@ Two rules are worth stating plainly, because they change what a working flow doe
   webhook or a deployment until the connection's owner sets `allow_non_interactive`. This is deliberate: an
   interactive run can prompt for consent, an unattended one cannot, so using a credential there is a decision
   the owner makes once, per connection.
-- **Publishing a flow does not publish its credentials.** Making a flow public, or exposing it over A2A
-  without authentication, means anonymous visitors run it — and an anonymous run resolves no connection at
-  all. Give such a flow an instance connection instead, or keep it authenticated.
+- **Publishing a flow does not publish its credentials.** Making a flow public, or exposing it over A2A,
+  means the run resolves no connection at all. For a public link or an unauthenticated A2A agent
+  (`auth_type=none`) that is the anonymous principal doing what it must. An A2A agent protected with an API
+  key or OAuth is held to the same floor in 1.13: A2A admission is not a route through which one account's
+  credential is used on another's behalf, so an agent that needs a connection should be reached through a
+  flow run instead. Give such a flow an instance connection, or keep it on an authenticated run route.
 
 An instance-owned connection resolves for any authenticated principal in the deployment. Provisioning one
 is therefore a deployment-wide grant of that provider account; see

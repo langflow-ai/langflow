@@ -345,10 +345,11 @@ async def _run_flow(
             # response instead of running through. Resume happens in _resume_flow.
             checkpoint_store=A2ACheckpointStore(),
             expose_error_details=False,
-            # A2A is its own matrix family. Public admission arrives as the
-            # anonymous execution user (never resolves a user connection); the
-            # API-key/OAuth sub-path executes as the flow owner and is owner-only,
-            # so an explicit share must not resolve there either.
+            # A2A is its own matrix family, and in 1.13 it resolves no user
+            # connection on EITHER sub-path: public admission arrives as the
+            # anonymous execution user, and the API-key/OAuth sub-path is held to
+            # the same floor rather than executing as the flow owner. Widening the
+            # authenticated sub-path is a contract change, not a code detail.
             execution_family=FAMILY_A2A,
         )
 
