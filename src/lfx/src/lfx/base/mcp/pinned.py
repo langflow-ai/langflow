@@ -120,11 +120,13 @@ class DiscoveredTool:
 
 
 def discovered_tool(tool: Any) -> DiscoveredTool:
-    """Normalize an MCP ``types.Tool`` or an ``MCPStructuredTool`` for comparison.
+    """Normalize an MCP ``types.Tool``, an ``MCPStructuredTool``, or a raw entry.
 
     ``update_tools`` turns each discovered tool into a ``StructuredTool`` whose
     derived ``args_schema`` has already lost the raw JSON Schema, so the raw
-    schemas are carried forward on the tool's ``metadata`` instead.
+    schemas are carried forward on the tool's ``metadata`` instead.  A plain
+    mapping is accepted too, so a pin author can compute the digest straight
+    from a recorded ``tools/list`` response.
 
     ``metadata`` is read FIRST and every candidate must be a mapping: a
     LangChain tool is a ``Runnable``, which defines ``input_schema`` and
@@ -132,6 +134,12 @@ def discovered_tool(tool: Any) -> DiscoveredTool:
     Reading those first would silently compare an empty schema against the pin
     and report every real tool as re-shaped.
     """
+    if isinstance(tool, Mapping):
+        return DiscoveredTool(
+            name=str(tool.get("name") or ""),
+            input_schema=_first_mapping(tool.get("inputSchema"), tool.get("input_schema")) or {},
+            output_schema=_first_mapping(tool.get("outputSchema"), tool.get("output_schema")),
+        )
     metadata = getattr(tool, "metadata", None)
     metadata = metadata if isinstance(metadata, Mapping) else {}
     return DiscoveredTool(

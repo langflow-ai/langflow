@@ -640,3 +640,10 @@ the deserialize half is covered by
   `metadata`, and a server config may set `allow_sse_fallback=False` to pin the
   transport. Components that do not override `_pinned_spec()` are unaffected;
   `BUNDLE_API_VERSION` remains `1`.
+
+- **`discovered_tool()` accepts a recorded `tools/list` entry.**
+  `lfx.base.mcp.pinned.discovered_tool()` (and therefore `tools_list_digest()`)
+  now normalizes a plain mapping in addition to a live MCP tool object, so a
+  bundle author can compute a pin's `tools_list_hash` directly from the recorded
+  `tools/list` response that the pin is derived from. Additive;
+  `BUNDLE_API_VERSION` remains `1`.

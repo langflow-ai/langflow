@@ -1337,7 +1337,11 @@ class MCPSessionManager:
             # Include URL and headers for uniqueness
             url = connection_params["url"]
             headers = str(sorted((connection_params.get("headers", {})).items()))
-            key_input = f"{url}|{headers}"
+            # A caller that pinned the transport must not inherit a session (or a cached
+            # transport preference) that an unpinned caller established over SSE. The
+            # suffix is appended only in that case, so existing keys are unchanged.
+            pinned = "" if connection_params.get("allow_sse_fallback", True) else "|pinned_transport"
+            key_input = f"{url}|{headers}{pinned}"
             return f"streamable_http_{hash(key_input)}"
 
         # Fallback to a generic key
@@ -2286,8 +2290,8 @@ class MCPStreamableHttpClient:
             }
         elif headers:
             self._connection_params["headers"] = validated_headers
-        # Kept out of the server key on purpose: the key identifies the endpoint, not
-        # the caller's transport policy.
+        # Part of the server key (see ``_get_server_key``): a pinned-transport caller
+        # gets its own session rather than inheriting an SSE one.
         self._connection_params["allow_sse_fallback"] = allow_sse_fallback
 
         # If no session context is set, create a default one

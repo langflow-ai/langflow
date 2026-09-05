@@ -4,7 +4,7 @@ Status: accepted
 Decision ID: substrate-slack
 Applies to: matrices/slack.json, all actions; identity split user vs bot
 Owners (sign-off roles): lfx owner, langflow-base owner, Enterprise owner, hosted-app owner, release owner
-Last verified: 2026-09-01
+Last verified: 2026-09-04 (amended; see "Amendment 2026-09-04")
 
 ## Context
 
@@ -34,7 +34,8 @@ has no authenticated, dated `tools/list` capture. That evidence boundary blocks 
 
 Pros: exercises the strategic substrate where it is closest to production; user-identity reads on MCP are not
 subject to the non-Marketplace Web API reduction (fact 6); Slack maintains the tool schemas.
-Cons: two auth and error paths in one bundle; requires INT-9 pinned mode (3 engineer-weeks) in 1.13; the hosted
+Cons: two auth and error paths in one bundle; requires INT-9 pinned mode (3 engineer-weeks, delivered in 1.13 by the
+2026-09-04 amendment below); the hosted
 Langflow-owned app must be directory-published (fact 2), which is a Slack review with its own lead time; GA is now cited (fact 3); tool identifiers for the four user actions are not in the docs (fact 8).
 Cost: INT-9 plus the Marketplace listing lead time for hosted.
 
@@ -65,9 +66,36 @@ The strategic MCP path is deferred to the 1.14 planning gate. It may replace a R
 authorization exchange for that action. A future adoption changes this decision and the matrix before component
 implementation; INT-9 is not a post-gate discovery task for 1.13.
 
+## Amendment 2026-09-04 (release owner decision)
+
+**The Slack substrate decision is unchanged. What changed is INT-9's release, not Slack's substrate.**
+
+The release owner decided on 2026-09-04 that INT-9 ships in 1.13 as a *provider-neutral* capability: the pinned
+action-to-tool engine in `lfx.base.mcp.pinned` / `MCPPresetComponent`, the `IntegrationCapability.mcp_pin` manifest
+field, the typed `incompatible-tool` error, and the written GA-swap procedure (`../ga-swap-procedure.md`). None of
+that moves a Slack action off the Web API.
+
+Consequently:
+
+- `matrices/slack.json` `substrate_decision.chosen` remains `["rest"]` and all seven `slack.user.*` / `slack.bot.*`
+  actions remain `substrate: "rest"`. INT-12 is unaffected and still has no MCP implementation dependency.
+- The re-open trigger below is unchanged and still binding: no Slack action moves to MCP without a dated
+  authenticated `tools/list` capture under `evidence/`. That capture does not exist as of this amendment.
+- Because no capture exists, the GA-swap procedure is exercised on a sample action of a fictional provider against a
+  recorded fixture that is labeled synthetic inside the file
+  (`src/lfx/tests/unit/base/mcp/fixtures/slack-mcp-tools-list.synthetic.json`, exercised by
+  `src/lfx/tests/unit/base/mcp/test_ga_swap_procedure.py`). The fixture is Slack-*shaped* and is deliberately NOT
+  stored under `evidence/`: it is not evidence, its tool identifiers and schemas are invented, and it may not be
+  cited as a fact in this record.
+- `../ga-swap-procedure.md` names the exact files an `lfx-slack` adoption would touch once the capture exists, and
+  the two Slack-specific questions the capture must answer (whether the MCP server accepts INT-5's
+  `oauth.v2.user.access` user token as a Bearer; whether the pinned tool schemas map onto INT-12's REST-shaped
+  inputs without changing a flow-facing field name).
+
 ## Consequences
 
-- INT-9 moves to 1.14; INT-12 has no MCP implementation dependency in 1.13.
+- INT-9's engine and GA-swap procedure ship in 1.13 (amendment 2026-09-04); the Slack MCP *adoption* is still
+  deferred pending the capture, and INT-12 has no MCP implementation dependency in 1.13.
 - The hosted Slack app still needs a Slack Marketplace listing to avoid the reduced
   `conversations.replies` rate tier; the estimate records it as calendar risk.
 - Desktop hides bot actions in both options (fact 5).
@@ -92,4 +120,4 @@ Re-verify by: the 1.14 planning gate.
 | langflow-base owner | | | |
 | Enterprise owner | | | |
 | hosted-app owner | | | |
-| release owner | Eric Hare | 2026-09-01 | #14906 (confirmed in the planning session) |
+| release owner | Eric Hare | 2026-09-04 | #14906; amended by the release owner decision of 2026-09-04 |

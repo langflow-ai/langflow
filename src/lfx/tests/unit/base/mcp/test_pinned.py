@@ -101,6 +101,16 @@ def test_discovered_tool_reads_raw_schemas_from_structured_tool_metadata():
     assert view.output_schema == SEARCH_OUTPUT
 
 
+def test_discovered_tool_reads_a_raw_tools_list_entry():
+    """A pin author computes the digest straight from a recorded response."""
+    entry = {"name": "search_messages", "inputSchema": SEARCH_INPUT, "outputSchema": SEARCH_OUTPUT}
+    view = discovered_tool(entry)
+    assert view == DiscoveredTool(name="search_messages", input_schema=SEARCH_INPUT, output_schema=SEARCH_OUTPUT)
+    assert tools_list_digest([entry, {"name": "post_message", "inputSchema": POST_INPUT}]) == tools_list_digest(
+        _matching()
+    )
+
+
 def test_a_tools_own_schema_attributes_do_not_shadow_the_recorded_ones():
     """A LangChain tool is a ``Runnable``, which owns ``input_schema``/``output_schema``.
 
