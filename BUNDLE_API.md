@@ -207,6 +207,21 @@ the deserialize half is covered by
 
 ### v0 (this release)
 
+- **Integration policy gating of bundle capabilities (additive).**
+  `IntegrationPolicyBlockedError` (code `policy-blocked`, HTTP 403) is added to
+  the typed integration error envelope and to `INTEGRATION_ERROR_CODES`.
+  `IntegrationCapability.policy_keys` is now validated against the
+  `integrations.<provider_id>.<action>` grammar and `IntegrationProvider`
+  rejects capability policy keys outside its own provider prefix, so every
+  declared action is addressable by an operator deny-list.
+  `ConnectionResolutionRequest.capability_ids` carries the capability ids
+  declared by the requesting input, letting a host resolver enforce the
+  deny-list before it selects a credential row.  `Component` gains
+  `require_integration_policy()`, called from `build_results()`, so a blocked
+  provider or action fails before the component body runs and before any
+  credential is minted, decrypted, or refreshed.  Bundles that declare no
+  integrations are unaffected; `BUNDLE_API_VERSION` remains `1`.
+
 - **Optional rejected-token digest for connection refresh.**
   `ConnectionResolutionRequest.rejected_token_digest` carries a SHA-256 digest only
   after a provider rejects a cached credential. `CredentialLease` supplies it on
