@@ -86,6 +86,7 @@ def test_contract_required_files_exist_in_sources() -> None:
         "lfx-google": REPO_ROOT / "src" / "bundles" / "google" / "src",
         "lfx-ollama": REPO_ROOT / "src" / "bundles" / "ollama" / "src",
         "lfx-openai": REPO_ROOT / "src" / "bundles" / "openai" / "src",
+        "lfx-slack": REPO_ROOT / "src" / "bundles" / "slack" / "src",
         "lfx-toolguard": REPO_ROOT / "src" / "bundles" / "toolguard" / "src",
         "lfx-bundles": REPO_ROOT / "src" / "bundles" / "lfx-bundles" / "src",
     }

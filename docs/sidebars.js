@@ -134,6 +134,7 @@ module.exports = {
         },
         "Develop/install-custom-dependencies",
         "Develop/configuration-global-variables",
+        "Develop/connection-oauth",
         "Develop/environment-variables",
         {
           type: "category",
@@ -567,6 +568,7 @@ module.exports = {
             "Components/bundles-sambanova",
             "Components/bundles-searchapi",
             "Components/bundles-serper",
+            "Components/bundles-slack",
             "Components/bundles-supabase",
             "Components/bundles-upstash",
             "Components/bundles-valkey",

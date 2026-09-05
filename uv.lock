@@ -51,6 +51,7 @@ members = [
     "lfx-openai-compatible",
     "lfx-oracle",
     "lfx-paddle",
+    "lfx-slack",
     "lfx-toolguard",
     "lfx-valkey",
     "lfx-vllm",
@@ -7894,6 +7895,7 @@ dependencies = [
     { name = "lfx-openai" },
     { name = "lfx-openai-compatible" },
     { name = "lfx-oracle" },
+    { name = "lfx-slack" },
     { name = "lfx-toolguard" },
     { name = "lfx-vllm" },
 ]
@@ -8032,6 +8034,7 @@ requires-dist = [
     { name = "lfx-openai-compatible", editable = "src/bundles/openai-compatible" },
     { name = "lfx-oracle", editable = "src/bundles/oracle" },
     { name = "lfx-paddle", marker = "extra == 'bundles'", editable = "src/bundles/paddle" },
+    { name = "lfx-slack", editable = "src/bundles/slack" },
     { name = "lfx-toolguard", editable = "src/bundles/toolguard" },
     { name = "lfx-valkey", marker = "extra == 'bundles'", editable = "src/bundles/valkey" },
     { name = "lfx-vllm", editable = "src/bundles/vllm" },
@@ -10400,6 +10403,23 @@ dependencies = [
 requires-dist = [
     { name = "httpx", specifier = ">=0.24.0,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-slack"
+version = "0.1.0"
+source = { editable = "src/bundles/slack" }
+dependencies = [
+    { name = "aiohttp" },
+    { name = "lfx" },
+    { name = "slack-sdk" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "aiohttp", specifier = ">=3.10.0,<4.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "slack-sdk", specifier = ">=3.33.0,<4.0.0" },
 ]
 
 [[package]]
@@ -18786,6 +18806,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031, upload-time = "2024-12-04T17:35:28.174Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
+]
+
+[[package]]
+name = "slack-sdk"
+version = "3.44.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6e/4e/371068dd7281139307e60cd18553b96b9c8c391a4c3040617192713a3cc4/slack_sdk-3.44.1.tar.gz", hash = "sha256:ca19505423789fa2a3189ff486f989f02e49289f008d0a5813df7255b3fb93ea", size = 256661, upload-time = "2026-09-03T14:21:13.879Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ab/fc/67352b742fc6fa520a550581b0284f5757e4e31a32327c2a00276747fd30/slack_sdk-3.44.1-py2.py3-none-any.whl", hash = "sha256:d6f20a0fbe3fecf9cac955c99d686301b48a645b7045472c3a0cdd186d7c42b2", size = 319865, upload-time = "2026-09-03T14:21:12.405Z" },
 ]
 
 [[package]]

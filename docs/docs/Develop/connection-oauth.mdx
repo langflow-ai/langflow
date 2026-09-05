@@ -126,6 +126,82 @@ See Slack's [installation guide](https://docs.slack.dev/authentication/installin
 [token rotation](https://docs.slack.dev/authentication/using-token-rotation/), and
 [token revocation](https://docs.slack.dev/reference/methods/auth.revoke/).
 
+### Slack redirect URLs
+
+Register both forms the deployment needs. A server redirect is used for hosted and
+self-managed instances; the loopback form is used by the Desktop PKCE app.
+
+```text
+https://YOUR_INSTANCE/api/v1/connections/oauth/slack/callback
+http://localhost:7860/api/v1/connections/oauth/slack/callback
+```
+
+### Slack scopes per action
+
+The `lfx-slack` bundle declares these scopes per action. A registration's `scopes`
+array is the operator ceiling, so it must be a superset of the actions you intend to
+enable; the connection then requests the subset an action needs.
+
+| Action | Identity | Registration | Scopes |
+| --- | --- | --- | --- |
+| Search | user | `profile: "user"` | `search:read` |
+| Read Thread | user | `profile: "user"` | `channels:history`, `groups:history`, `im:history`, `mpim:history` |
+| Send Message | user | `profile: "user"` | `chat:write` |
+| Create Canvas | user | `profile: "user"` | `canvases:write` |
+| Post Message | bot | `profile: "bot"` | `chat:write` |
+| Add Reaction | bot | `profile: "bot"` | `reactions:write` |
+| List Channel Members | bot | `profile: "bot"` | `channels:read`, plus `groups:read` for private channels and `users:read` to resolve display names |
+
+User Token Scopes and Bot Token Scopes are configured separately in the Slack app,
+and `chat:write` appears in both lists. Because the two token types cannot be told
+apart from their granted scopes, keep one registration and one connection per
+identity, and name them accordingly.
+
+A worked two-registration example, covering every action above:
+
+```json
+{
+  "slack-user": {
+    "provider": "slack",
+    "profile": "user",
+    "owner": "customer",
+    "context": "self_managed",
+    "client_type": "confidential",
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET",
+    "redirect_uri": "https://langflow.example/api/v1/connections/oauth/slack/callback",
+    "allowed_tenants": ["T0SLACKTEAM"],
+    "scopes": [
+      "search:read",
+      "channels:history",
+      "groups:history",
+      "im:history",
+      "mpim:history",
+      "chat:write",
+      "canvases:write"
+    ]
+  },
+  "slack-bot": {
+    "provider": "slack",
+    "profile": "bot",
+    "owner": "customer",
+    "context": "self_managed",
+    "client_type": "confidential",
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET",
+    "redirect_uri": "https://langflow.example/api/v1/connections/oauth/slack/callback",
+    "allowed_tenants": ["T0SLACKTEAM"],
+    "scopes": ["chat:write", "reactions:write", "channels:read", "groups:read", "users:read"]
+  }
+}
+```
+
+Slack desktop redirects may not request bot scopes, so the Desktop PKCE app carries
+only the user scopes; bot actions are unavailable there. For headless runtimes,
+provide the token directly as `LF_CONNECTION__SLACK__<NAME>` instead of registering
+an OAuth app. That path records no executing identity, so the bundle trusts the
+operator to supply the right token type.
+
 ## Consent and revocation check
 
 Use the browser logged in to the configured Langflow origin. The existing connections
