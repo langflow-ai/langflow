@@ -13,6 +13,7 @@ from lfx.integrations.errors import (
     ConnectionNotAuthorizedError,
     ConnectionUnresolvedError,
     IntegrationError,
+    IntegrationPolicyBlockedError,
     ScopeMissingError,
 )
 from lfx.integrations.models import (
@@ -179,6 +180,37 @@ def _access_policy(row: Connection, *, explicit_share_authorized: bool) -> Conne
     )
 
 
+async def enforce_integration_policy_for_provider(
+    provider_key: str,
+    *,
+    user_id: UUID | str | None,
+    capability_ids: frozenset[str] = frozenset(),
+    purpose: str = "use",
+) -> None:
+    """Deny a governed provider or action before any credential work happens.
+
+    Raised as an ``IntegrationPolicyBlockedError`` rather than the policy's own
+    ``PermissionError`` so the failure travels through the sanitized integration
+    error family and reaches clients as the stable ``policy-blocked`` code.
+    """
+    from lfx.services.integration_policy import (
+        IntegrationPolicyError,
+        IntegrationPolicyPurpose,
+        arequire_integration_actions,
+        policy_keys_for_capabilities,
+    )
+
+    try:
+        await arequire_integration_actions(
+            user_id=user_id,
+            provider_id=provider_key,
+            policy_keys=policy_keys_for_capabilities(capability_ids),
+            purpose=IntegrationPolicyPurpose(purpose),
+        )
+    except IntegrationPolicyError as exc:
+        raise IntegrationPolicyBlockedError(provider=provider_key, policy_key=exc.policy_key) from exc
+
+
 class DatabaseConnectionResolverService(BaseConnectionResolverService):
     """Resolve encrypted database connections while exposing only safe metadata."""
 
@@ -195,6 +227,10 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         user: User | UserRead,
         payload: ConnectionCreate,
     ) -> ConnectionRead:
+        # "Enable an integration within the operator ceiling" happens here:
+        # creating a connection for a provider outside the ceiling is refused
+        # before any credential material is encrypted or stored.
+        await enforce_integration_policy_for_provider(payload.provider_key, user_id=user.id)
         owner_id = user.id if payload.ownership_mode == ConnectionOwnershipMode.USER else None
         now = _utc_now()
         raw_credentials = _credential_payload(payload)
@@ -389,6 +425,15 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
 
     async def _get_access_policy(self, request: ConnectionResolutionRequest) -> ConnectionAccessPolicy:
         user_id = _principal_user_id(request.principal)
+        # The policy gate runs before candidate discovery: no connection row is
+        # read, locked, decrypted, or refreshed for a denied provider or action,
+        # and every entry point (canvas, /api/v1/run, webhooks, deployments)
+        # goes through this one resolver.
+        await enforce_integration_policy_for_provider(
+            request.ref.provider,
+            user_id=request.principal.user_id,
+            capability_ids=request.capability_ids,
+        )
         async with session_scope() as session:
             row = await self._owned_or_instance_row(session, request.ref, user_id)
             if row is not None:
