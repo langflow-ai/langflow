@@ -259,6 +259,12 @@ class ConnectorCatalogEntry(BaseModel):
     description: str = ""
     icon: str | None = None
     requires_credentials: bool = False
+    #: Integration provider whose connections this source accepts, so a
+    #: picker can offer the right connections. ``None`` for sources that
+    #: read credential variables instead.
+    provider_key: str | None = None
+    #: Provider scopes the source needs on that connection.
+    required_scopes: list[str] = Field(default_factory=list)
 
 
 class ConnectorIngestRequest(BaseModel):
