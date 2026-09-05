@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "has_more": true,
+  "messages": [
+    {
+      "type": "message",
+      "user": "U0SLACKUSER",
+      "text": "who owns the release?",
+      "thread_ts": "1700000000.000100",
+      "reply_count": 2,
+      "ts": "1700000000.000100"
+    },
+    {
+      "type": "message",
+      "user": "U0SLACKMATE",
+      "text": "I do",
+      "thread_ts": "1700000000.000100",
+      "parent_user_id": "U0SLACKUSER",
+      "ts": "1700000050.000300"
+    }
+  ],
+  "response_metadata": { "next_cursor": "bmV4dC1wYWdlLWN1cnNvcg==" }
+}

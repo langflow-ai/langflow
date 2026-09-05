@@ -1,0 +1,233 @@
+{
+  "schema_version": 1,
+  "provider_id": "slack",
+  "display_name": "Slack",
+  "icon": "Slack",
+  "docs_url": "https://docs.langflow.org/bundles-slack",
+  "auth_profiles": [
+    {
+      "id": "slack-user-oauth",
+      "kind": "oauth2_authorization_code",
+      "identity": "user_delegated",
+      "authorization_url": "https://slack.com/oauth/v2/authorize",
+      "token_url": "https://slack.com/api/oauth.v2.access",
+      "supports_pkce": true,
+      "supports_refresh": true,
+      "scope_separator": ",",
+      "default_scopes": [],
+      "client_type_by_context": {
+        "hosted": "confidential",
+        "self_managed": "confidential",
+        "desktop": "public",
+        "headless": "external"
+      },
+      "owner_by_context": {
+        "hosted": "langflow",
+        "self_managed": "customer",
+        "desktop": "langflow",
+        "headless": "customer"
+      }
+    },
+    {
+      "id": "slack-bot-install",
+      "kind": "bot_token_install",
+      "identity": "bot",
+      "authorization_url": "https://slack.com/oauth/v2/authorize",
+      "token_url": "https://slack.com/api/oauth.v2.access",
+      "supports_pkce": false,
+      "supports_refresh": true,
+      "scope_separator": ",",
+      "default_scopes": [],
+      "client_type_by_context": {
+        "hosted": "confidential",
+        "self_managed": "confidential",
+        "headless": "external"
+      },
+      "owner_by_context": {
+        "hosted": "langflow",
+        "self_managed": "customer",
+        "headless": "customer"
+      }
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "slack.user.search",
+      "display_name": "Slack: Search (as user)",
+      "auth_profile_id": "slack-user-oauth",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "search:read"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.slack.user.search"
+      ],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "read",
+      "component_ref": "SlackSearchComponent"
+    },
+    {
+      "id": "slack.user.read_thread",
+      "display_name": "Slack: Read Thread (as user)",
+      "auth_profile_id": "slack-user-oauth",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "channels:history",
+        "groups:history",
+        "im:history",
+        "mpim:history"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.slack.user.read_thread"
+      ],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "read",
+      "component_ref": "SlackReadThreadComponent"
+    },
+    {
+      "id": "slack.user.send",
+      "display_name": "Slack: Send Message (as user)",
+      "auth_profile_id": "slack-user-oauth",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "chat:write"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.slack.user.send"
+      ],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "SlackSendAsUserComponent"
+    },
+    {
+      "id": "slack.user.canvas",
+      "display_name": "Slack: Create Canvas (as user)",
+      "auth_profile_id": "slack-user-oauth",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "canvases:write"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.slack.user.canvas"
+      ],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "SlackCanvasComponent"
+    },
+    {
+      "id": "slack.bot.post",
+      "display_name": "Slack: Post Message (as app)",
+      "auth_profile_id": "slack-bot-install",
+      "identity": "bot",
+      "required_scopes": [
+        "chat:write"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.slack.bot.post"
+      ],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "SlackPostAsAppComponent"
+    },
+    {
+      "id": "slack.bot.add_reaction",
+      "display_name": "Slack: Add Reaction (as app)",
+      "auth_profile_id": "slack-bot-install",
+      "identity": "bot",
+      "required_scopes": [
+        "reactions:write"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.slack.bot.add_reaction"
+      ],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "SlackAddReactionComponent"
+    },
+    {
+      "id": "slack.bot.list_channel_members",
+      "display_name": "Slack: List Channel Members (as app)",
+      "auth_profile_id": "slack-bot-install",
+      "identity": "bot",
+      "required_scopes": [
+        "channels:read"
+      ],
+      "conditional_scopes": [
+        {
+          "scope": "groups:read",
+          "role": "optional",
+          "condition": {
+            "kind": "input_truthy",
+            "input": "channel_is_private"
+          }
+        },
+        {
+          "scope": "users:read",
+          "role": "optional",
+          "condition": {
+            "kind": "input_truthy",
+            "input": "resolve_names"
+          }
+        }
+      ],
+      "policy_keys": [
+        "integrations.slack.bot.list_channel_members"
+      ],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "headless"
+      ],
+      "risk": "read",
+      "component_ref": "SlackListChannelMembersComponent"
+    }
+  ]
+}

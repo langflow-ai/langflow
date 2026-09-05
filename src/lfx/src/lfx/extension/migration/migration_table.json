@@ -4995,6 +4995,146 @@
       "bare_class_name": "SharePointFetchComponent",
       "target": "ext:microsoft:SharePointFetchComponent@official",
       "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SlackSearchComponent",
+      "target": "ext:slack:SlackSearchComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.slack.slack_search.SlackSearchComponent",
+      "target": "ext:slack:SlackSearchComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.slack.SlackSearchComponent",
+      "target": "ext:slack:SlackSearchComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "legacy_slot": "ext:slack:SlackSearchComponent@official-pre-a",
+      "target": "ext:slack:SlackSearchComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SlackReadThreadComponent",
+      "target": "ext:slack:SlackReadThreadComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.slack.slack_read_thread.SlackReadThreadComponent",
+      "target": "ext:slack:SlackReadThreadComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.slack.SlackReadThreadComponent",
+      "target": "ext:slack:SlackReadThreadComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "legacy_slot": "ext:slack:SlackReadThreadComponent@official-pre-a",
+      "target": "ext:slack:SlackReadThreadComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SlackSendAsUserComponent",
+      "target": "ext:slack:SlackSendAsUserComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.slack.slack_send_as_user.SlackSendAsUserComponent",
+      "target": "ext:slack:SlackSendAsUserComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.slack.SlackSendAsUserComponent",
+      "target": "ext:slack:SlackSendAsUserComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "legacy_slot": "ext:slack:SlackSendAsUserComponent@official-pre-a",
+      "target": "ext:slack:SlackSendAsUserComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SlackCanvasComponent",
+      "target": "ext:slack:SlackCanvasComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.slack.slack_canvas.SlackCanvasComponent",
+      "target": "ext:slack:SlackCanvasComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.slack.SlackCanvasComponent",
+      "target": "ext:slack:SlackCanvasComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "legacy_slot": "ext:slack:SlackCanvasComponent@official-pre-a",
+      "target": "ext:slack:SlackCanvasComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SlackPostAsAppComponent",
+      "target": "ext:slack:SlackPostAsAppComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.slack.slack_post_as_app.SlackPostAsAppComponent",
+      "target": "ext:slack:SlackPostAsAppComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.slack.SlackPostAsAppComponent",
+      "target": "ext:slack:SlackPostAsAppComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "legacy_slot": "ext:slack:SlackPostAsAppComponent@official-pre-a",
+      "target": "ext:slack:SlackPostAsAppComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SlackAddReactionComponent",
+      "target": "ext:slack:SlackAddReactionComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.slack.slack_add_reaction.SlackAddReactionComponent",
+      "target": "ext:slack:SlackAddReactionComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.slack.SlackAddReactionComponent",
+      "target": "ext:slack:SlackAddReactionComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "legacy_slot": "ext:slack:SlackAddReactionComponent@official-pre-a",
+      "target": "ext:slack:SlackAddReactionComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SlackListChannelMembersComponent",
+      "target": "ext:slack:SlackListChannelMembersComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.slack.slack_list_channel_members.SlackListChannelMembersComponent",
+      "target": "ext:slack:SlackListChannelMembersComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx.components.slack.SlackListChannelMembersComponent",
+      "target": "ext:slack:SlackListChannelMembersComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "legacy_slot": "ext:slack:SlackListChannelMembersComponent@official-pre-a",
+      "target": "ext:slack:SlackListChannelMembersComponent@official",
+      "added_in": "1.13.0"
     }
   ],
   "ambiguous_bare_names": [

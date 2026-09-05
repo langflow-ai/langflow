@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "query": "in:#general deploy",
+  "messages": {
+    "total": 2,
+    "pagination": {
+      "total_count": 2,
+      "page": 1,
+      "per_page": 20,
+      "page_count": 1,
+      "first": 1,
+      "last": 2
+    },
+    "paging": { "count": 20, "total": 2, "page": 1, "pages": 1 },
+    "matches": [
+      {
+        "iid": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+        "type": "message",
+        "channel": { "id": "C0SLACKDEMO", "name": "general", "is_private": false },
+        "user": "U0SLACKUSER",
+        "username": "avery",
+        "ts": "1700000000.000100",
+        "text": "deploy is green",
+        "permalink": "https://acme.slack.com/archives/C0SLACKDEMO/p1700000000000100"
+      },
+      {
+        "iid": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        "type": "message",
+        "channel": { "id": "C0SLACKDEMO", "name": "general", "is_private": false },
+        "user": "U0SLACKMATE",
+        "username": "robin",
+        "ts": "1700000100.000200",
+        "text": "deploy rolled back",
+        "permalink": "https://acme.slack.com/archives/C0SLACKDEMO/p1700000100000200"
+      }
+    ]
+  },
+  "response_metadata": { "next_cursor": "dXNlcjpVMDYxTkZUVDI=" }
+}

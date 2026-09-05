@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "user": {
+    "id": "U0SLACKUSER",
+    "team_id": "T0SLACKTEAM",
+    "name": "avery",
+    "real_name": "Avery Rivers",
+    "is_bot": false,
+    "profile": {
+      "real_name": "Avery Rivers",
+      "display_name": "avery",
+      "title": "Release manager"
+    }
+  }
+}
