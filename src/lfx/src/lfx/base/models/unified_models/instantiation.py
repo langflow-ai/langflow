@@ -275,11 +275,7 @@ def get_llm(
     # OpenAI-compatible servers that opt out of API keys (api_key_required=False)
     # still need a non-empty placeholder so the client library constructs, e.g.
     # a local vLLM endpoint without auth.
-    if (
-        not api_key
-        and is_api_key_optional(provider)
-        and provider_param_mapping.get("model_class") == "ChatOpenAI"
-    ):
+    if not api_key and is_api_key_optional(provider) and provider_param_mapping.get("model_class") == "ChatOpenAI":
         api_key = "EMPTY"  # pragma: allowlist secret
 
     # Get model class from metadata, falling back to the provider-level
