@@ -12,7 +12,7 @@ from lfx.io import SecretStrInput
 from lfx.schema.data import Data
 from lfx.template.field.base import Output
 
-from ._workspace_inputs import DRIVE_FILE_SCOPE, google_connection_input
+from lfx_google.components.google._workspace_inputs import DRIVE_FILE_SCOPE, google_connection_input
 
 
 class GoogleDriveComponent(Component):

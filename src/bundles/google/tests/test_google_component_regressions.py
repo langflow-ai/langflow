@@ -1,16 +1,35 @@
+import inspect
 import json
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 from google import genai
 from google.auth.exceptions import RefreshError
+from lfx.custom.eval import eval_custom_component_code
 from lfx.schema.dotdict import dotdict
 from lfx_google.components.google import (
     GmailLoaderComponent,
+    GmailSendComponent,
+    GoogleCalendarCreateComponent,
+    GoogleCalendarListComponent,
+    GoogleDriveComponent,
+    GoogleDriveFetchComponent,
+    GoogleDriveListComponent,
     GoogleDriveSearchComponent,
     GoogleGenerativeAIComponent,
     GoogleOAuthToken,
+)
+
+WORKSPACE_ACTION_CLASSES = (
+    GmailLoaderComponent,
+    GmailSendComponent,
+    GoogleCalendarCreateComponent,
+    GoogleCalendarListComponent,
+    GoogleDriveComponent,
+    GoogleDriveFetchComponent,
+    GoogleDriveListComponent,
 )
 
 TEST_API_KEY = "google-key"  # pragma: allowlist secret
@@ -242,3 +261,21 @@ def test_oauth_token_points_at_the_connection_backed_components() -> None:
 
 def test_drive_search_points_at_the_connection_backed_listing() -> None:
     assert GoogleDriveSearchComponent.replacement == ["google.GoogleDriveListComponent"]
+
+
+@pytest.mark.parametrize("component_class", WORKSPACE_ACTION_CLASSES, ids=lambda cls: cls.__name__)
+def test_component_source_builds_outside_its_package(component_class) -> None:
+    """The template builder re-executes component source with no package context.
+
+    `lfx.interface.components.import_extension_components` builds every component's
+    template by exec'ing its module source through `eval_custom_component_code`.
+    That runs outside the `lfx_google.components.google` package, so a sibling
+    import written as `from ._workspace_inputs import ...` raises
+    `ModuleNotFoundError: No module named '_workspace_inputs'` and the whole
+    extension load is dropped. Sibling helpers must be imported by absolute path.
+    """
+    source = Path(inspect.getfile(component_class)).read_text(encoding="utf-8")
+
+    rebuilt = eval_custom_component_code(source)
+
+    assert rebuilt.__name__ == component_class.__name__
