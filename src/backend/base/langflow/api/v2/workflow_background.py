@@ -28,6 +28,7 @@ from lfx.workflow.adapters import (
 from lfx.workflow.converters import ParsedWorkflowRun
 
 from langflow.api.utils.execution_errors import caller_owns_flow
+from langflow.api.utils.execution_principal import FAMILY_WORKFLOW_V2
 from langflow.api.v2.workflow_execution import _stream_event_frames
 from langflow.exceptions.api import (
     WorkflowQueueFullError,
@@ -318,6 +319,7 @@ async def _buffer_background_run(
             # Distinct from the live v2 stream: same driver, but nobody is holding the connection,
             # so an operator reading latency needs to tell the two apart.
             protocol="v2.background",
+            execution_family=FAMILY_WORKFLOW_V2,
         ):
             if terminal_error_type is not None and event_type == terminal_error_type:
                 errored = True

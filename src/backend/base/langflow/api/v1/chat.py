@@ -44,6 +44,13 @@ from langflow.api.utils import (
     verify_public_flow_and_get_user,
 )
 from langflow.api.utils.core import strip_secret_field_values
+from langflow.api.utils.execution_principal import (
+    FAMILY_INTERACTIVE_CHAT,
+    FAMILY_LEGACY_PUBLIC_CHAT,
+    FAMILY_VOICE,
+    execution_principal_for,
+    stamp_execution_principal,
+)
 from langflow.api.v1.schemas import (
     CancelFlowResponse,
     FlowDataRequest,
@@ -233,6 +240,9 @@ async def retrieve_vertices_order(
     start_time = time.perf_counter()
     components_count = None
     run_id = str(uuid.uuid4())
+    execution_principal = execution_principal_for(
+        FAMILY_INTERACTIVE_CHAT, user=current_user, flow_owner_id=flow.user_id
+    )
     try:
         with scoped_model_provider_policy_for_flow(
             flow,
@@ -243,10 +253,18 @@ async def retrieve_vertices_order(
                 trusted_data = await _trusted_stored_graph(flow.data, is_superuser=current_user.is_superuser)
                 if trusted_data is not None:
                     graph = await build_and_cache_graph_from_data(
-                        flow_id=flow_id, graph_data=trusted_data, chat_service=chat_service
+                        flow_id=flow_id,
+                        graph_data=trusted_data,
+                        chat_service=chat_service,
+                        execution_principal=execution_principal,
                     )
                 else:
-                    graph = await build_graph_from_db(flow_id=flow_id, session=session, chat_service=chat_service)
+                    graph = await build_graph_from_db(
+                        flow_id=flow_id,
+                        session=session,
+                        chat_service=chat_service,
+                        execution_principal=execution_principal,
+                    )
             else:
                 sanitized_data = await _trusted_stored_graph(
                     data.model_dump(),
@@ -255,7 +273,10 @@ async def retrieve_vertices_order(
                 if sanitized_data is not None:
                     data = FlowDataRequest.model_validate(sanitized_data)
                 graph = await build_and_cache_graph_from_data(
-                    flow_id=flow_id, graph_data=data.model_dump(), chat_service=chat_service
+                    flow_id=flow_id,
+                    graph_data=data.model_dump(),
+                    chat_service=chat_service,
+                    execution_principal=execution_principal,
                 )
             graph = graph.prepare(stop_component_id, start_component_id)
         graph.set_run_id(run_id)
@@ -317,6 +338,45 @@ async def build_flow(
     flow_name: str | None = None,
     event_delivery: EventDeliveryType = EventDeliveryType.POLLING,
 ):
+    """HTTP entry point for the v1 build route: always the ``interactive_chat`` family.
+
+    The execution family is deliberately NOT a request parameter. It selects the
+    identity connections resolve under, so a caller able to name it could ask for
+    ``webhook`` and run under the flow owner's credentials.
+    """
+    return await _build_flow_impl(
+        flow_id=flow_id,
+        background_tasks=background_tasks,
+        inputs=inputs,
+        data=data,
+        files=files,
+        stop_component_id=stop_component_id,
+        start_component_id=start_component_id,
+        log_builds=log_builds,
+        current_user=current_user,
+        queue_service=queue_service,
+        flow_name=flow_name,
+        event_delivery=event_delivery,
+        execution_family=FAMILY_INTERACTIVE_CHAT,
+    )
+
+
+async def _build_flow_impl(
+    *,
+    flow_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    inputs: InputValueRequest | None = None,
+    data: FlowDataRequest | None = None,
+    files: list[str] | None = None,
+    stop_component_id: str | None = None,
+    start_component_id: str | None = None,
+    log_builds: bool = True,
+    current_user: CurrentActiveUser,
+    queue_service: JobQueueService,
+    flow_name: str | None = None,
+    event_delivery: EventDeliveryType = EventDeliveryType.POLLING,
+    execution_family: str = FAMILY_INTERACTIVE_CHAT,
+):
     """Build and process a flow, returning a job ID for event polling.
 
     This endpoint requires authentication through the CurrentActiveUser dependency.
@@ -335,6 +395,9 @@ async def build_flow(
         queue_service: Queue service for job management
         flow_name: Optional name for the flow
         event_delivery: Optional event delivery type - default is streaming
+        execution_family: Matrix family for connection resolution. Chosen by the
+            caller in code (interactive_chat, legacy_public_chat, voice), never by
+            the request.
 
     Returns:
         Dict with job_id that can be used to poll for build status
@@ -463,6 +526,7 @@ async def build_flow(
             flow_name=flow_name,
             source_flow_owner_id=flow.user_id,
             expose_error_details=flow.user_id == current_user.id,
+            execution_family=execution_family,
         )
     await _register_job_owner_or_cancel(queue_service, job_id, current_user.id)
 
@@ -596,6 +660,9 @@ async def build_vertex(
     start_time = time.perf_counter()
     error_message = None
     run_id = None
+    execution_principal = execution_principal_for(
+        FAMILY_INTERACTIVE_CHAT, user=current_user, flow_owner_id=flow.user_id
+    )
     try:
         graph: Graph = await chat_service.get_cache(flow_id_str)
     except KeyError as exc:
@@ -622,6 +689,7 @@ async def build_vertex(
                     flow_id=flow_id_str,
                     chat_service=chat_service,
                     graph_data=sanitized_data,
+                    execution_principal=execution_principal,
                 )
             run_id = str(uuid.uuid4())
             graph.set_run_id(run_id)
@@ -638,6 +706,7 @@ async def build_vertex(
                         flow_id=flow_id,
                         session=session,
                         chat_service=chat_service,
+                        execution_principal=execution_principal,
                     )
             run_id = str(uuid.uuid4())
             graph.set_run_id(run_id)
@@ -645,6 +714,12 @@ async def build_vertex(
             needs_initialize_run = False
         else:
             graph = cached_graph
+        # This cache is keyed by flow UUID, not by execution principal, and the Redis
+        # backend round-trips the graph through ``__getstate__`` (which deliberately
+        # omits the principal). Re-stamp from THIS request so a cached graph neither
+        # arrives unstamped (denying every connection) nor carries another caller's
+        # identity. The owner-only guard above is what keeps the actor correct.
+        stamp_execution_principal(graph, execution_principal)
         try:
             _validate_graph_for_execution(graph)
         except HTTPException:
@@ -969,15 +1044,22 @@ async def build_vertex_stream(
         raise HTTPException(status_code=500, detail="Error building Component") from exc
 
 
-async def build_flow_and_stream(flow_id, inputs, background_tasks, current_user):
+async def build_flow_and_stream(flow_id, inputs, background_tasks, current_user, *, execution_family=FAMILY_VOICE):
+    """Voice's build seam.
+
+    Voice has no ``Graph.from_payload`` of its own: it reuses the v1 build path,
+    so the only thing that distinguishes it from ``interactive_chat`` is the
+    family stamped on the graph.
+    """
     queue_service = get_queue_service()
-    build_response = await build_flow(
+    build_response = await _build_flow_impl(
         flow_id=flow_id,
         inputs=inputs,
         background_tasks=background_tasks,
         current_user=current_user,
         queue_service=queue_service,
         event_delivery=EventDeliveryType.STREAMING,
+        execution_family=execution_family,
     )
     job_id = build_response["job_id"]
     return await get_flow_events_response(
@@ -1158,6 +1240,9 @@ async def build_public_tmp(
                 queue_service=queue_service,
                 flow_name=flow_name or f"{authenticated_user_id or client_id}_{flow_id}",
                 source_flow_owner_id=flow.user_id,
+                # Anonymous direct-link traffic: the graph runs under the stable
+                # non-user principal, which resolves no user connection at all.
+                execution_family=FAMILY_LEGACY_PUBLIC_CHAT,
                 expose_error_details=False,
             )
         # Gate the public events/cancel endpoints to jobs that were actually

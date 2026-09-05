@@ -2,19 +2,79 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Any
 
 from fastapi import HTTPException
+from lfx.integrations.errors import IntegrationError
 
 SAFE_WORKFLOW_ERROR_MESSAGE = "Workflow execution failed."
+
+# Generic replacement for an integration error's own sentence on paths where the
+# caller is not the connection's owner. The typed fields still cross (a client
+# needs the code to render the right call to action); only free text is dropped.
+SAFE_INTEGRATION_ERROR_MESSAGE = "This flow could not use one of its connections."
 
 
 @dataclass(frozen=True, slots=True)
 class ExecutionErrorDetails:
-    """The error fields that may cross an execution API boundary."""
+    """The error fields that may cross an execution API boundary.
+
+    ``code`` and the fields after it are populated only for
+    ``lfx.integrations.errors.IntegrationError``; they stay ``None``/``False`` for
+    every other failure, so existing consumers of ``message``/``stack_trace`` are
+    unchanged.
+    """
 
     message: str
     stack_trace: str
+    code: str | None = None
+    hint: str | None = None
+    provider: str | None = None
+    retryable: bool = False
+    retry_after: float | None = None
+    details: dict[str, Any] = field(default_factory=dict)
+
+    def as_client_body(self) -> dict[str, Any]:
+        """The typed body an integration failure sends to a client.
+
+        Only meaningful when ``code`` is set; callers gate on that.
+        """
+        body: dict[str, Any] = {"error_code": self.code, "message": self.message}
+        if self.hint:
+            body["hint"] = self.hint
+        if self.provider:
+            body["provider"] = self.provider
+        body["retryable"] = self.retryable
+        if self.retry_after is not None:
+            body["retry_after"] = self.retry_after
+        return body
+
+
+def _integration_details(error: IntegrationError, *, expose_details: bool) -> ExecutionErrorDetails:
+    """Build the typed body for an integration failure under either error policy.
+
+    An ``IntegrationError`` is sanitized by construction (URLs and e-mail
+    addresses are scrubbed when it is raised), so the code, hint, provider and
+    retry metadata are safe on every path and are always emitted -- INT-8's UI
+    turns the code into a "reconnect this integration" call to action, and a
+    public visitor seeing a generic sentence with no code has nothing to act on.
+
+    The error's own ``safe_message`` still names a non-secret handle
+    (``Connection 'google/work' could not be resolved``), which tells a delegated
+    or anonymous caller which account the owner uses. It is emitted only when the
+    caller is entitled to owner diagnostics.
+    """
+    return ExecutionErrorDetails(
+        message=error.safe_message if expose_details else SAFE_INTEGRATION_ERROR_MESSAGE,
+        stack_trace="",
+        code=error.code,
+        hint=error.hint,
+        provider=error.provider,
+        retryable=error.retryable,
+        retry_after=getattr(error, "retry_after", None),
+        details=dict(error.details) if expose_details else {},
+    )
 
 
 def error_details_for_client(
@@ -25,6 +85,8 @@ def error_details_for_client(
     stack_trace: str | None = None,
 ) -> ExecutionErrorDetails:
     """Keep owner diagnostics while removing delegated/public runtime details."""
+    if isinstance(error, IntegrationError):
+        return _integration_details(error, expose_details=expose_details)
     if expose_details:
         return ExecutionErrorDetails(
             message=message if message is not None else str(error),
@@ -35,6 +97,12 @@ def error_details_for_client(
 
 def error_for_client(error: Exception, *, expose_details: bool) -> Exception:
     """Return an exception suitable for serializers that accept an exception object."""
+    if isinstance(error, IntegrationError):
+        # Typed, machine-readable, and safe on every path: the status comes from
+        # the error itself (403 for an unauthorized connection, 401 for expired
+        # credentials, 429 for a rate limit) rather than collapsing into a 500.
+        details = _integration_details(error, expose_details=expose_details)
+        return HTTPException(status_code=error.http_status or 400, detail=details.as_client_body())
     if expose_details:
         return error
     if isinstance(error, HTTPException):

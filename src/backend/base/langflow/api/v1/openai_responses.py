@@ -19,6 +19,7 @@ from lfx.workflow.end_user_identity import (
 
 from langflow.api.utils import extract_global_variables_from_headers
 from langflow.api.utils.execution_errors import error_for_client
+from langflow.api.utils.execution_principal import FAMILY_OPENAI_RESPONSES
 from langflow.api.v1.endpoints import _caller_owns_flow, consume_and_yield, run_flow_generator, simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.events.event_manager import create_stream_tokens_event_manager
@@ -135,6 +136,7 @@ async def run_flow_for_openai_responses(
                         context=context,
                         expose_error_details=expose_error_details,
                         http_request=http_request,
+                        execution_family=FAMILY_OPENAI_RESPONSES,
                     )
                 )
 
@@ -491,6 +493,7 @@ async def run_flow_for_openai_responses(
             context=context,
             expose_error_details=expose_error_details,
             http_request=http_request,
+            execution_family=FAMILY_OPENAI_RESPONSES,
         )
 
     # Extract output text, tool calls, and usage from result

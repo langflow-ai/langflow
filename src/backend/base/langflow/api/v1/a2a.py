@@ -69,6 +69,11 @@ from sqlmodel import col, select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.utils.core import strip_secret_field_values
+from langflow.api.utils.execution_principal import (
+    FAMILY_A2A,
+    execution_principal_for,
+    stamp_execution_principal,
+)
 from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
 from langflow.api.v1.a2a_executor import FlowAgentExecutor, ResumeConflictError
 from langflow.api.v1.a2a_utils import (
@@ -340,6 +345,11 @@ async def _run_flow(
             # response instead of running through. Resume happens in _resume_flow.
             checkpoint_store=A2ACheckpointStore(),
             expose_error_details=False,
+            # A2A is its own matrix family. Public admission arrives as the
+            # anonymous execution user (never resolves a user connection); the
+            # API-key/OAuth sub-path executes as the flow owner and is owner-only,
+            # so an explicit share must not resolve there either.
+            execution_family=FAMILY_A2A,
         )
 
 
@@ -421,6 +431,14 @@ async def _resume_flow(
     # Shared HITL resume seam (restore + inject decision + un-build the paused vertex), so this path
     # can't drift from the CLI resume loop; see lfx.run.hitl.resume_graph_with_decision.
     graph = resume_graph_with_decision(checkpoint, store, pending.get("request_id"), decision)
+    # A checkpoint carries a user_id but never an execution principal, so the restored
+    # graph is ``unknown()``. Recompute from the principal THIS resume was admitted
+    # under (``_prepare_a2a_resume_checkpoint`` re-ran the public/owner admission
+    # above), rather than trusting anything persisted with the pause.
+    stamp_execution_principal(
+        graph,
+        execution_principal_for(FAMILY_A2A, user=provider_policy_user, flow_owner_id=provider_policy_flow.user_id),
+    )
 
     from langflow.api.v2.workflow_execution import _resolve_execution_timeout
     from langflow.processing.process import run_graph_internal
