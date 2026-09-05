@@ -36,6 +36,14 @@ from langflow.services.authorization.lifecycle import (
     stage_identity_mutation,
     validate_identity_mutation,
 )
+from langflow.services.creation_hooks import (
+    DENIED_STATUS_CODE,
+    RESOURCE_USER,
+    PreCreationContext,
+    PreCreationDenied,
+    pre_creation_denied_to_http,
+    run_pre_creation_hooks,
+)
 from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
@@ -187,6 +195,11 @@ async def add_user(
         )
         raise HTTPException(status_code=403, detail="Public user registration is disabled.")
 
+    # Snapshot the actor before any write: ``session.rollback()`` expires session-bound ORM
+    # instances, so reading ``current_user.id`` after a rollback would try to refresh the
+    # authenticated user from the rolled-back request transaction.
+    actor_user_id = current_user.id if current_user is not None else None
+
     new_user = User.model_validate(user, from_attributes=True)
     try:
         new_user.password = get_auth_service().get_password_hash(user.password)
@@ -198,6 +211,31 @@ async def add_user(
             entity_id=new_user.id,
             affected_user_ids=(new_user.id,),
         )
+        # Pre-creation hooks run inside the lock the authorization plugin just took (a no-op
+        # on non-PostgreSQL backends), so a plugin that counts users sees a serialized
+        # count-then-insert. Public signup and the admin "add user" flow share this route;
+        # ``is_public_signup`` lets a plugin word its refusal differently.
+        try:
+            await run_pre_creation_hooks(
+                PreCreationContext(
+                    resource=RESOURCE_USER,
+                    session=session,
+                    actor_user_id=actor_user_id,
+                    requested_name=new_user.username,
+                    is_public_signup=not is_admin_caller,
+                )
+            )
+        except PreCreationDenied as denied:
+            await session.rollback()
+            await _audit_deny(
+                user_id=actor_user_id,
+                action="user:create",
+                obj="user:*",
+                status_code=DENIED_STATUS_CODE,
+                reason=denied.error_code,
+                operation_id=operation_id,
+            )
+            raise pre_creation_denied_to_http(denied) from denied
         session.add(new_user)
         await session.flush()
         await session.refresh(new_user)

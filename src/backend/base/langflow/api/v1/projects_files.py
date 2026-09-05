@@ -32,6 +32,11 @@ from langflow.helpers.folders import generate_unique_folder_name
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.authorization import FlowAction, filter_visible_resources
 from langflow.services.authorization.utils import _resolve_authz_domain
+from langflow.services.creation_hooks import (
+    RESOURCE_PROJECT,
+    PreCreationContext,
+    enforce_pre_creation,
+)
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.folder.model import (
@@ -170,6 +175,18 @@ async def upload_project_flows(
     data["folder_name"] = project_name
 
     project = FolderCreate(name=data["folder_name"], description=data.get("folder_description", ""))
+
+    # Fourth project-creation entry point: this route builds the Folder itself instead of
+    # going through ``projects._new_project``, so it runs the same hooks through the same
+    # helper. Without this, a project limit would be bypassable by uploading an export.
+    await enforce_pre_creation(
+        PreCreationContext(
+            resource=RESOURCE_PROJECT,
+            session=session,
+            actor_user_id=current_user.id,
+            requested_name=project.name,
+        )
+    )
 
     new_project = Folder.model_validate(project, from_attributes=True)
     new_project.id = None
