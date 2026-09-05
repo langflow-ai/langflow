@@ -468,13 +468,14 @@
       "source": "api/v1/integrations.py",
       "resource": "integration",
       "domain": "caller-global integration policy scope",
-      "privacy": "responses carry manifest metadata and policy decisions only, never connection identifiers or credentials",
+      "privacy": "responses carry manifest metadata and the caller's own policy decisions only, never connection identifiers or credentials; the include_blocked view that enumerates non-approved providers and denied policy keys is superuser-only, matching /api/v1/all and the catalog template surfaces",
       "side_effects": "read-only; every route resolves the caller's effective integration policy before returning a catalog",
       "frontend": "connection pickers and the operator integration panel render only what this route returns; execution enforces the same policy independently",
       "personas": "canonical_v1",
       "test_references": [
         "src/backend/tests/unit/api/v1/test_integrations.py::test_list_integrations_omits_a_provider_outside_the_ceiling",
         "src/backend/tests/unit/api/v1/test_integrations.py::test_list_integrations_omits_a_blocked_action",
+        "src/backend/tests/unit/api/v1/test_integrations.py::test_include_blocked_is_refused_for_a_non_superuser",
         "src/backend/tests/unit/api/v1/test_integrations.py::test_integration_routes_require_authentication",
         "src/backend/tests/unit/api/v1/test_integration_execution_policy.py::test_resolve_denies_a_provider_outside_the_ceiling_before_reading_any_row"
       ],

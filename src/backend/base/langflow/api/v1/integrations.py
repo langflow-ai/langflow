@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, HTTPException, Query, status
 from lfx.integrations.models import PROVIDER_ID_PATTERN
 from lfx.services.deps import get_integration_policy_service
 from lfx.services.integration_policy import IntegrationPolicyPurpose, aresolve_integration_policy
@@ -122,8 +122,17 @@ async def list_integrations(
 
     Blocked providers and actions are omitted by default so a picker cannot
     advertise what execution would refuse. ``include_blocked`` returns them with
-    their decision attached, which is what the operator panel renders.
+    their decision attached, which is what the operator panel renders, and is
+    superuser-only for the same reason every other ``include_blocked`` surface
+    is (``/api/v1/all``, starter projects, basic examples): the deny decision is
+    operator information, not something a plain caller may enumerate.
     """
+    if include_blocked and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only superusers can include blocked integrations.",
+        )
+
     manifests = {
         integration.provider_id: integration.capability_manifest
         for integration in _loaded_integrations()
