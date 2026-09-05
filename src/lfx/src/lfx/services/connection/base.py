@@ -45,7 +45,17 @@ class BaseConnectionResolverService(Service, abc.ABC):
         owner_kind: Literal["user", "instance", "env"],
         allow_non_interactive: bool,
     ) -> IntegrationError | None:
-        """Apply the portable deny floor before a host adds share/policy checks."""
+        """Apply the portable deny floor before a host adds share/policy checks.
+
+        The floor never admits an explicit share: an owner mismatch on a user-owned
+        row is a denial here, and only a host that can evaluate share grants may
+        widen it. A host that does so must first honor
+        ``request.principal.allow_explicit_shares`` — owner-only route families
+        (legacy MCP transports, the authenticated A2A sub-path) set it to ``False``
+        and must not resolve a shared row. Instance-owned rows keep the floor's
+        rule: any principal except ``anonymous_public``/``unknown`` may resolve
+        them, and a host policy hook may narrow that further.
+        """
         principal = request.principal
         if owner_kind == "env":
             return (

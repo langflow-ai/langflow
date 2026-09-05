@@ -82,7 +82,15 @@ class AuthorizationPrincipal:
 
 @dataclass(frozen=True, slots=True)
 class ExecutionPrincipal:
-    """Identity and route family used for dependency credential resolution."""
+    """Identity and route family used for dependency credential resolution.
+
+    ``allow_explicit_shares`` is the owner-only switch for route families whose
+    admission never admits a delegated caller (legacy MCP transports and the
+    authenticated A2A sub-path). It is additive and defaults to ``True`` so the
+    resolver keeps honoring explicit shares for every family that already did;
+    a host resolver that supports shares must skip its share branch when it is
+    ``False``. The portable deny floor is unaffected either way.
+    """
 
     kind: ExecutionPrincipalKind
     user_id: str | None = None
@@ -91,6 +99,7 @@ class ExecutionPrincipal:
     interactive: bool = False
     end_user_id: str | None = None
     actor_label: str | None = None
+    allow_explicit_shares: bool = True
 
     @classmethod
     def unknown(cls) -> ExecutionPrincipal:
