@@ -90,9 +90,9 @@ def _create_trigger() -> None:
     op.create_index("ix_trigger_kind", "trigger", ["kind"])
     op.create_index("ix_trigger_state", "trigger", ["state"])
     op.create_index("ix_trigger_state_next_fire_at", "trigger", ["state", "next_fire_at"])
+    op.create_index("uq_trigger_public_id", "trigger", ["public_id"], unique=True)
     # Partial: reconciliation keys one row per canvas node, while API-created
     # triggers (node_id NULL) stay unconstrained.
-    op.create_index("uq_trigger_public_id", "trigger", ["public_id"], unique=True)
     op.create_index(
         "uq_trigger_flow_node",
         "trigger",

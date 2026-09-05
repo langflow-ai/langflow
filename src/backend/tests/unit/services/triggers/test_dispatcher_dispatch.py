@@ -7,6 +7,7 @@ edit, and a binding that is reported rather than silently rewritten.
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -21,7 +22,7 @@ from langflow.services.database.models.trigger.schemas import (
 )
 from langflow.services.deps import session_scope
 from langflow.services.triggers import dispatcher, ledger
-from langflow.services.triggers.constants import EXECUTION_FAMILY_REQUEST_KEY, FAMILY_TRIGGER_LISTENER
+from langflow.services.triggers.constants import TRIGGER_EVENT_FIELD
 
 pytestmark = pytest.mark.no_blockbuster
 
@@ -40,8 +41,8 @@ async def _event(event_id) -> TriggerEvent:
 
 
 async def test_one_event_becomes_exactly_one_job(make_trigger, fake_background_service) -> None:
-    trigger_id = await make_trigger()
-    event_id = await _append(trigger_id)
+    trigger_id = await make_trigger(node_id="ScheduleTrigger-abc12")
+    event_id = await _append(trigger_id, payload={"scheduled_at": "2026-09-07T08:00:00+00:00"})
 
     dispatched = await dispatcher.run_once(owner="solo")
     assert dispatched == 1
@@ -56,10 +57,20 @@ async def test_one_event_becomes_exactly_one_job(make_trigger, fake_background_s
     assert row.lease_expires_at is None
 
     request = fake_background_service.submits[0]["request"]
-    assert request[EXECUTION_FAMILY_REQUEST_KEY] == FAMILY_TRIGGER_LISTENER
     assert request["idempotency_key"] == f"trg:{event_id}:0"
-    assert request["tweaks"] == {}
-    assert request["trigger_event"]["event_id"] == str(event_id)
+    # The firing event rides tweaks, keyed by the trigger's canvas node, and it
+    # is a JSON string because that is what the component's template field
+    # holds. The fake service parsed this request through the real
+    # WorkflowRunRequest before recording it.
+    event = json.loads(request["tweaks"]["ScheduleTrigger-abc12"][TRIGGER_EVENT_FIELD])
+    assert event["event_id"] == str(event_id)
+    assert event["kind"] == "schedule"
+    assert event["payload"] == {"scheduled_at": "2026-09-07T08:00:00+00:00"}
+    # A run request may not carry keys WorkflowRunRequest does not declare.
+    assert "trigger_event" not in request
+    assert "execution_family" not in request
+    # Nothing was pinned, so no canvas copy rides the job row.
+    assert "data" not in request
 
     # A second pass has nothing left to claim.
     assert await dispatcher.run_once(owner="solo") == 0
@@ -260,3 +271,44 @@ async def test_a_finished_job_closes_its_ledger_row(make_trigger, fake_backgroun
     async with session_scope() as session:
         assert await dispatcher.reconcile_dispatched(session) == 1
     assert (await _event(event_id)).state == TriggerEventState.COMPLETED.value
+
+
+@pytest.mark.parametrize("pinned", [False, True])
+def test_the_submit_request_is_a_valid_workflow_run_request(pinned) -> None:
+    """The request the dispatcher builds must survive the worker's re-parse.
+
+    ``BackgroundExecutionService.submit`` commits the job row and then hands the
+    request to the frame-source factory, which rebuilds a ``WorkflowRunRequest``
+    — a model that forbids extra keys. A key the model does not declare
+    therefore fails the run *after* the job exists, and the event retries its way
+    to a dead letter while orphan QUEUED job rows pile up. No recorder can see
+    that, so the parser itself is the assertion here.
+    """
+    from uuid import uuid4
+
+    from langflow.api.v2.workflow import _parse_persisted_workflow_request
+
+    trigger = Trigger(
+        flow_id=uuid4(),
+        user_id=uuid4(),
+        name="digest",
+        kind="schedule",
+        node_id="ScheduleTrigger-1",
+        config={},
+        provider_state={},
+        concurrency_limit=1,
+        max_attempts=5,
+    )
+    event = TriggerEvent(trigger_id=trigger.id, dedupe_key="tick:1", payload={"scheduled_at": "2026-09-07T08:00:00Z"})
+    request = dispatcher.build_submit_request(
+        trigger=trigger,
+        event=event,
+        binding_data={"nodes": [], "edges": []} if pinned else None,
+    )
+
+    parsed = _parse_persisted_workflow_request(request)
+    assert parsed.flow_id == str(trigger.flow_id)
+    assert parsed.mode == "background"
+    assert parsed.session_id == request["session_id"]
+    assert json.loads(parsed.tweaks["ScheduleTrigger-1"][TRIGGER_EVENT_FIELD])["event_id"] == str(event.id)
+    assert (parsed.data is not None) is pinned
