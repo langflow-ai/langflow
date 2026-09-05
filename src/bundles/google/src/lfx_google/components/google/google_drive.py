@@ -105,7 +105,13 @@ class GoogleDriveComponent(Component):
 
     async def _resolve_credentials(self) -> Credentials:
         """Build credentials from exactly one of the connection or the token JSON."""
-        connection = (self.connection or "").strip() if self.connection else ""
+        # Normalize the handle in place, not just into a local: `resolve_connection`
+        # re-reads the field itself, so a padded handle that passed a locally-trimmed
+        # "is set" check would then fail inside `ConnectionRef.parse` with a grammar
+        # error rather than resolving.
+        connection = (self.connection or "").strip()
+        if connection != (self.connection or ""):
+            self.connection = connection
         json_string = self.json_string or ""
         if connection and json_string.strip():
             msg = "Set either a managed Google connection or a token JSON string on the Google Drive Loader, not both."

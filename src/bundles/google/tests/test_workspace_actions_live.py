@@ -228,7 +228,7 @@ async def test_live_calendar_create_then_delete(headless) -> None:
             summary=f"Langflow live suite {int(time.time())}",
             start_time="2030-01-01T10:00:00Z",
             end_time="2030-01-01T11:00:00Z",
-            description="Created by the lfx-google live suite.",
+            event_description="Created by the lfx-google live suite.",
             location="",
             attendees=[],
             send_updates="none",

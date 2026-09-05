@@ -53,8 +53,12 @@ class GoogleCalendarCreateComponent(Component):
             value="primary",
         ),
         MessageTextInput(name="summary", display_name="Title", required=True),
-        # Named start_time/end_time rather than the matrix's start/end: `start` is
-        # already a method on Component, so an input of that name would be shadowed.
+        # Named start_time/end_time/event_description rather than the matrix's
+        # start/end/description: `Component.start` and `Component.description` already
+        # exist on the base class, and a class attribute wins over `Component.__getattr__`,
+        # so an input under either of those names is read back as the base-class value and
+        # the user's value is silently discarded. `test_no_input_shadows_a_component_attribute`
+        # pins the whole bundle against that class of bug.
         MessageTextInput(
             name="start_time",
             display_name="Start",
@@ -67,7 +71,7 @@ class GoogleCalendarCreateComponent(Component):
             info="RFC 3339 timestamp, or a bare YYYY-MM-DD date for an all-day event.",
             required=True,
         ),
-        MessageTextInput(name="description", display_name="Description", advanced=True),
+        MessageTextInput(name="event_description", display_name="Description", advanced=True),
         MessageTextInput(name="location", display_name="Location", advanced=True),
         MessageTextInput(
             name="attendees",
@@ -94,7 +98,11 @@ class GoogleCalendarCreateComponent(Component):
         IntInput(
             name="conference_data_version",
             display_name="Conference Data Version",
-            info="Set to 1 to let the request create conference data.",
+            info=(
+                "Request parameter only, kept because the capability matrix lists it. It tells "
+                "Calendar to honour a conferenceData block in the request body; this component "
+                "never sends one, so setting it to 1 does not create a Meet link on its own."
+            ),
             value=0,
             advanced=True,
         ),
@@ -114,8 +122,8 @@ class GoogleCalendarCreateComponent(Component):
             "start": _event_time(str(self.start_time)),
             "end": _event_time(str(self.end_time)),
         }
-        if self.description:
-            body["description"] = self.description
+        if self.event_description:
+            body["description"] = self.event_description
         if self.location:
             body["location"] = self.location
         attendees = _string_list(self.attendees)
