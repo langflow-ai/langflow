@@ -8,8 +8,8 @@ from lfx.custom.custom_component.component import Component
 from lfx.io import DropdownInput, IntInput, MessageTextInput, Output
 from lfx.schema.data import Data
 
-from ._workspace_client import workspace_action
-from ._workspace_inputs import CALENDAR_EVENTS_SCOPE, google_connection_input
+from lfx_google.components.google._workspace_client import workspace_action
+from lfx_google.components.google._workspace_inputs import CALENDAR_EVENTS_SCOPE, google_connection_input
 
 CAPABILITY = "google.calendar.create"
 

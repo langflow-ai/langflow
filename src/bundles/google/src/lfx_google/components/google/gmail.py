@@ -19,7 +19,7 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.template.field.base import Output
 
-from ._workspace_inputs import GMAIL_READONLY_SCOPE, google_connection_input
+from lfx_google.components.google._workspace_inputs import GMAIL_READONLY_SCOPE, google_connection_input
 
 
 class GmailLoaderComponent(Component):

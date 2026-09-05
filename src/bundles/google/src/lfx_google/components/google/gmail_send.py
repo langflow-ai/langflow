@@ -14,8 +14,8 @@ from lfx.io import BoolInput, FileInput, MessageTextInput, Output
 from lfx.schema.data import Data
 from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 
-from ._workspace_client import workspace_action
-from ._workspace_inputs import GMAIL_SEND_SCOPE, google_connection_input
+from lfx_google.components.google._workspace_client import workspace_action
+from lfx_google.components.google._workspace_inputs import GMAIL_SEND_SCOPE, google_connection_input
 
 CAPABILITY = "google.gmail.send"
 

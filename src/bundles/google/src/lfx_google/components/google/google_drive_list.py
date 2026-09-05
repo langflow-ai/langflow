@@ -14,8 +14,8 @@ from lfx.io import BoolInput, IntInput, MessageTextInput, Output
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 
-from ._workspace_client import workspace_action
-from ._workspace_inputs import DRIVE_FILE_SCOPE, google_connection_input
+from lfx_google.components.google._workspace_client import workspace_action
+from lfx_google.components.google._workspace_inputs import DRIVE_FILE_SCOPE, google_connection_input
 
 CAPABILITY = "google.drive.list"
 
