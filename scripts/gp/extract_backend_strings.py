@@ -1,10 +1,37 @@
 """Extract translatable strings from Langflow component classes.
 
-Walks the lfx.components package, reads class-level display_name/description
-and field-level display_names directly from component class definitions
-(no running server needed), and writes a flat GP-compatible JSON file.
+Walks two component sources, reads class-level display_name/description and
+field-level display_names directly from component class definitions (no
+running server needed), and writes a flat GP-compatible JSON file:
 
-Output format — hybrid key: human-readable path + content-hash suffix:
+    1. ``lfx.components`` -- the in-tree component tree, including the
+       ``# lfx-bundles-shim`` compatibility packages that re-point at an
+       installed bundle distribution.
+    2. **Installed extension bundles** -- every pip-installed distribution
+       that ships an ``extension.json`` manifest (``src/bundles/*``, published
+       as ``lfx-<provider>``).  These are loaded through the extension
+       system's own ``load_installed_extensions()``, i.e. the exact call the
+       palette makes in ``lfx.interface.components``, so the bundle set here
+       equals the bundle set the palette shows.
+
+Source 2 exists because a shim is not a reliable bridge.  A shim that
+re-points ``sys.modules`` (``sys.modules[__name__] = import_module(...)``)
+leaves the re-pointed classes carrying their *canonical* ``__module__``
+(``lfx_datastax.components.cassandra.cassandra``), which does not match the
+``lfx.components.…`` name the walk is iterating, so the "defined in this
+module" guard below drops them.  Bundles with no shim at all (``lfx-ibm``,
+``lfx-docling``, ``lfx-oracle``, ``lfx-toolguard``) were never visible.
+Walking the installed distributions directly fixes both cases and means a
+new bundle needs no shim to be translated -- which matters because
+``scripts/ci/check_bare_names.py`` rejects new shims.
+
+Only *installed distributions* are walked.  The palette's other sources
+(``LANGFLOW_SEED_DIR``, the ``lfx.bundles`` metapackage, ``lfx extension
+dev`` registrations and ``LANGFLOW_COMPONENTS_PATH``) are operator- or
+developer-local: including them would make the generated catalog depend on
+the machine that ran the generator, and en.json is a committed artifact.
+
+Output format -- hybrid key: human-readable path + content-hash suffix:
     "components.chatinput.display_name.a1b2c3d4": "Chat Input"
     "components.chatinput.description.f9e8d7c6": "Get chat inputs from the Playground."
     "components.chatinput.inputs.input_value.display_name.12345678": "Input Text"
@@ -13,7 +40,11 @@ Output format — hybrid key: human-readable path + content-hash suffix:
 The norm_name is the component registry key lowercased with spaces removed.
 The 8-char suffix is SHA-256(english_value)[:8].  When an English string
 changes, its hash changes, the old key is orphaned, and GP issues a fresh
-translation for the new key on the next upload/download cycle.
+translation for the new key on the next upload/download cycle.  Bundle
+components use the identical key shape -- the key is derived from the
+component's registry name and the English value only, never from the module
+it was imported through -- so a component that is reachable through both
+sources produces one key, not two.
 
 Usage:
     # From repo root with the backend virtualenv active:
@@ -31,13 +62,132 @@ import json
 import pkgutil
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator
 
 OUTPUT_PATH = Path(__file__).parent.parent.parent / "src/backend/base/langflow/locales/en.json"
 STARTER_PROJECTS_DIR = Path(__file__).parent.parent.parent / "src/backend/base/langflow/initial_setup/starter_projects"
 
 
+def emit_component_strings(
+    cls: type,
+    flat: dict[str, str],
+    seen_names: set[str],
+    *,
+    component_field_key: Callable[[str, str, str], str],
+    normalize_component_key: Callable[[str], str],
+) -> bool:
+    """Write every translatable string on *cls* into *flat*.
+
+    Shared by both component sources so a bundle component and an in-tree
+    component are keyed by exactly the same rules.  Returns ``True`` when the
+    class contributed keys, ``False`` when it was skipped (not a component,
+    no usable display_name, or a duplicate registry name claimed earlier).
+    """
+    # Component marker set by the base class
+    if not getattr(cls, "code_class_base_inheritance", None):
+        return False
+    display_name = getattr(cls, "display_name", None)
+    # Skip if not a plain string (e.g. @property descriptors on the class)
+    if not isinstance(display_name, str) or not display_name:
+        return False
+
+    # Use cls.name if defined (stable identifier used in API), else class name
+    component_key = getattr(cls, "name", None) or cls.__name__
+    if not isinstance(component_key, str):
+        component_key = cls.__name__
+
+    if component_key in seen_names:
+        return False
+    seen_names.add(component_key)
+
+    norm_key = normalize_component_key(component_key)
+
+    # Tier 1 — component-level
+    flat[component_field_key(norm_key, "display_name", display_name)] = display_name
+    # If description is a @property, getattr on the class returns the descriptor
+    # object (not a string).  Fall back to _base_description when that happens.
+    raw_desc = cls.__dict__.get("description")
+    if isinstance(raw_desc, property):
+        description = getattr(cls, "_base_description", "") or ""
+    else:
+        description = getattr(cls, "description", "") or ""
+    if isinstance(description, str) and description:
+        flat[component_field_key(norm_key, "description", description)] = description
+
+    # Tier 2 — input field display_names, info, and placeholder
+    for inp in getattr(cls, "inputs", []) or []:
+        field_display = getattr(inp, "display_name", None)
+        field_name = getattr(inp, "name", None)
+        field_info = getattr(inp, "info", None)
+        field_placeholder = getattr(inp, "placeholder", None)
+        if isinstance(field_name, str) and field_name:
+            if isinstance(field_display, str) and field_display:
+                flat[component_field_key(norm_key, f"inputs.{field_name}.display_name", field_display)] = field_display
+            if isinstance(field_info, str) and field_info:
+                flat[component_field_key(norm_key, f"inputs.{field_name}.info", field_info)] = field_info
+            if isinstance(field_placeholder, str) and field_placeholder:
+                flat[component_field_key(norm_key, f"inputs.{field_name}.placeholder", field_placeholder)] = (
+                    field_placeholder
+                )
+
+    # Tier 2 — output display_names and info
+    for out in getattr(cls, "outputs", []) or []:
+        out_display = getattr(out, "display_name", None)
+        out_name = getattr(out, "name", None)
+        out_info = getattr(out, "info", None)
+        if isinstance(out_name, str) and out_name:
+            if isinstance(out_display, str) and out_display:
+                flat[component_field_key(norm_key, f"outputs.{out_name}.display_name", out_display)] = out_display
+            if isinstance(out_info, str) and out_info:
+                flat[component_field_key(norm_key, f"outputs.{out_name}.info", out_info)] = out_info
+
+    return True
+
+
+def iter_installed_bundle_classes() -> Iterator[tuple[str, type]]:
+    """Yield ``(bundle_name, component_class)`` for every installed extension bundle.
+
+    Delegates discovery *and* import to ``lfx.extension.load_installed_extensions``
+    -- the same call ``lfx.interface.components.import_extension_components``
+    makes -- so this walk cannot drift from what the palette loads.  The loader
+    already restricts each module's classes to those actually declared in it,
+    so a bundle that re-exports a base class does not double-register here.
+
+    Yield order is the loader's: lexicographic by canonical distribution name,
+    then the bundle's sorted file walk.  Deterministic for a given install set.
+
+    A missing or broken extension system is reported and skipped rather than
+    raised: en.json regeneration must not become impossible because one
+    distribution is in a bad state.
+    """
+    try:
+        from lfx.extension import load_installed_extensions
+    except ImportError as exc:
+        print(f"  SKIP installed extension bundles (extension system unavailable): {exc}")
+        return
+
+    try:
+        results = load_installed_extensions()
+    except Exception as exc:  # noqa: BLE001 - one bad distribution must not abort the extraction
+        print(f"  SKIP installed extension bundles (load failed): {exc}")
+        return
+
+    for result in results:
+        for error in getattr(result, "errors", []) or []:
+            print(f"  SKIP {getattr(result, 'distribution', '?')}: {getattr(error, 'message', error)}")
+        for component in getattr(result, "components", []) or []:
+            klass = getattr(component, "klass", None)
+            if not isinstance(klass, type):
+                continue
+            bundle = getattr(component, "bundle", None) or getattr(result, "extension_id", "") or "?"
+            yield bundle, klass
+
+
 def collect_strings() -> dict[str, str]:
-    """Walk lfx.components and extract all translatable display_name strings."""
+    """Walk lfx.components + installed bundles and extract translatable strings."""
     from langflow.utils.i18n_keys import component_field_key as _component_field_key
     from langflow.utils.i18n_keys import normalize_component_key as _normalize_component_key
     from langflow.utils.i18n_keys import safe_flow_key as _safe_key
@@ -67,67 +217,32 @@ def collect_strings() -> dict[str, str]:
             # Only process classes defined in this module (avoid re-processing imports)
             if getattr(cls, "__module__", None) != modname:
                 continue
-            # Component marker set by the base class
-            if not getattr(cls, "code_class_base_inheritance", None):
-                continue
-            display_name = getattr(cls, "display_name", None)
-            # Skip if not a plain string (e.g. @property descriptors on the class)
-            if not isinstance(display_name, str) or not display_name:
-                continue
+            emit_component_strings(
+                cls,
+                flat,
+                seen_names,
+                component_field_key=_component_field_key,
+                normalize_component_key=_normalize_component_key,
+            )
 
-            # Use cls.name if defined (stable identifier used in API), else class name
-            component_key = getattr(cls, "name", None) or cls.__name__
-            if not isinstance(component_key, str):
-                component_key = cls.__name__
+    # Installed extension bundles (src/bundles/* published as lfx-<provider>).
+    # Runs after the in-tree walk so a component reachable through both a
+    # compatibility shim and its bundle is claimed once; the two paths produce
+    # identical keys, so which one wins does not affect the output.
+    bundle_component_count = 0
+    bundle_names: set[str] = set()
+    for bundle_name, klass in iter_installed_bundle_classes():
+        bundle_names.add(bundle_name)
+        if emit_component_strings(
+            klass,
+            flat,
+            seen_names,
+            component_field_key=_component_field_key,
+            normalize_component_key=_normalize_component_key,
+        ):
+            bundle_component_count += 1
 
-            if component_key in seen_names:
-                continue
-            seen_names.add(component_key)
-
-            norm_key = _normalize_component_key(component_key)
-
-            # Tier 1 — component-level
-            flat[_component_field_key(norm_key, "display_name", display_name)] = display_name
-            # If description is a @property, getattr on the class returns the descriptor
-            # object (not a string).  Fall back to _base_description when that happens.
-            raw_desc = cls.__dict__.get("description")
-            if isinstance(raw_desc, property):
-                description = getattr(cls, "_base_description", "") or ""
-            else:
-                description = getattr(cls, "description", "") or ""
-            if isinstance(description, str) and description:
-                flat[_component_field_key(norm_key, "description", description)] = description
-
-            # Tier 2 — input field display_names, info, and placeholder
-            for inp in getattr(cls, "inputs", []) or []:
-                field_display = getattr(inp, "display_name", None)
-                field_name = getattr(inp, "name", None)
-                field_info = getattr(inp, "info", None)
-                field_placeholder = getattr(inp, "placeholder", None)
-                if isinstance(field_name, str) and field_name:
-                    if isinstance(field_display, str) and field_display:
-                        flat[_component_field_key(norm_key, f"inputs.{field_name}.display_name", field_display)] = (
-                            field_display
-                        )
-                    if isinstance(field_info, str) and field_info:
-                        flat[_component_field_key(norm_key, f"inputs.{field_name}.info", field_info)] = field_info
-                    if isinstance(field_placeholder, str) and field_placeholder:
-                        flat[_component_field_key(norm_key, f"inputs.{field_name}.placeholder", field_placeholder)] = (
-                            field_placeholder
-                        )
-
-            # Tier 2 — output display_names and info
-            for out in getattr(cls, "outputs", []) or []:
-                out_display = getattr(out, "display_name", None)
-                out_name = getattr(out, "name", None)
-                out_info = getattr(out, "info", None)
-                if isinstance(out_name, str) and out_name:
-                    if isinstance(out_display, str) and out_display:
-                        flat[_component_field_key(norm_key, f"outputs.{out_name}.display_name", out_display)] = (
-                            out_display
-                        )
-                    if isinstance(out_info, str) and out_info:
-                        flat[_component_field_key(norm_key, f"outputs.{out_name}.info", out_info)] = out_info
+    print(f"Found {bundle_component_count} component(s) across {len(bundle_names)} installed extension bundle(s).")
 
     # Tier 3 — starter project names & descriptions (auto-discovered from JSON files)
     starter_count = 0
@@ -201,11 +316,11 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    print("Scanning lfx.components for translatable strings...")
+    print("Scanning lfx.components and installed extension bundles for translatable strings...")
     strings = collect_strings()
     print(
         f"Found {len(strings)} translatable keys across "
-        f"{sum(1 for k in strings if k.endswith('.display_name') and '.inputs.' not in k and '.outputs.' not in k)}"
+        f"{sum(1 for k in strings if '.display_name.' in k and '.inputs.' not in k and '.outputs.' not in k)}"
         " components."
     )
 
