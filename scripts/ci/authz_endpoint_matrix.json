@@ -464,6 +464,27 @@
       ]
     },
     {
+      "family": "integrations",
+      "source": "api/v1/integrations.py",
+      "resource": "integration",
+      "domain": "caller-global integration policy scope",
+      "privacy": "responses carry manifest metadata and policy decisions only, never connection identifiers or credentials",
+      "side_effects": "read-only; every route resolves the caller's effective integration policy before returning a catalog",
+      "frontend": "connection pickers and the operator integration panel render only what this route returns; execution enforces the same policy independently",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_integrations.py::test_list_integrations_omits_a_provider_outside_the_ceiling",
+        "src/backend/tests/unit/api/v1/test_integrations.py::test_list_integrations_omits_a_blocked_action",
+        "src/backend/tests/unit/api/v1/test_integrations.py::test_integration_routes_require_authentication",
+        "src/backend/tests/unit/api/v1/test_integration_execution_policy.py::test_resolve_denies_a_provider_outside_the_ceiling_before_reading_any_row"
+      ],
+      "routes": [
+        "GET||list_integrations|read|authenticated",
+        "GET|/|list_integrations|read|authenticated",
+        "GET|/policy/effective|read_effective_integration_policy|read|authenticated"
+      ]
+    },
+    {
       "family": "workflow_public_v2",
       "source": "api/v2/workflow_public.py",
       "resource": "flow",
