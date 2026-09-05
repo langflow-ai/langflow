@@ -179,6 +179,15 @@ async def test_update_tools_keeps_the_raw_schemas_and_forwards_the_transport_pin
     assert client.connect_to_server.await_args.kwargs["allow_sse_fallback"] is False
 
 
+def test_a_pinned_transport_does_not_share_a_session_with_an_unpinned_caller(manager):
+    """Otherwise a pinned component could reuse a session an unpinned one opened over SSE."""
+    unpinned = manager._get_server_key(dict(CONNECTION_PARAMS), "streamable_http")
+    explicit = manager._get_server_key({**CONNECTION_PARAMS, "allow_sse_fallback": True}, "streamable_http")
+    pinned = manager._get_server_key({**CONNECTION_PARAMS, "allow_sse_fallback": False}, "streamable_http")
+    assert unpinned == explicit  # the default must not change any existing key
+    assert pinned != unpinned
+
+
 async def test_update_tools_defaults_to_allowing_the_sse_fallback():
     discovered = SimpleNamespace(
         name="search_messages",
