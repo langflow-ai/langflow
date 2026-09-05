@@ -151,6 +151,94 @@ Langflow includes multiple components that support Google Search, such as the fo
 * [**Serper Google Search API** component](/bundles-serper)
 * [**Web Search** component](/web-search)
 
+## Google Workspace actions
+
+The **Google Workspace** action components run Gmail, Drive, and Calendar operations
+against a [managed connection](/connection-oauth) instead of a pasted token. The
+connection stores the OAuth credential in encrypted server-side storage, refreshes it in
+the worker that uses it, and never places a token in flow JSON.
+
+| Component | Action | Scope requested |
+|---|---|---|
+| **Gmail: Send Email** | `users.messages.send` from the connected mailbox | `https://www.googleapis.com/auth/gmail.send` |
+| **Drive: List Files (app files)** | `files.list` | `https://www.googleapis.com/auth/drive.file` |
+| **Drive: Fetch File (app files)** | `files.get` plus `files.export` for Google-native documents | `https://www.googleapis.com/auth/drive.file` |
+| **Calendar: List Events** | `events.list` | `https://www.googleapis.com/auth/calendar.events.readonly` |
+| **Calendar: Create Event** | `events.insert` | `https://www.googleapis.com/auth/calendar.events` |
+
+Each component requests exactly one scope, the one its action needs. No component asks
+for a scope Google classifies as restricted, so the Langflow-managed OAuth app does not
+require a security assessment.
+
+### Drive reach on the drive.file scope
+
+`drive.file` is a non-sensitive scope that grants access **only to files this application
+created, or that the user explicitly opened with it**. The rest of the user's Drive is
+invisible to the listing and fetch components, so an empty listing is a normal result for
+a correctly configured connection rather than an error. Reaching arbitrary Drive content
+requires a restricted scope, which is deliberately out of scope for this release.
+
+### Connect a Google account
+
+1. Configure a Google registration on the server. See
+   [Configure connection OAuth](/connection-oauth).
+2. Create the connection record:
+
+    ```http
+    POST /api/v1/connections
+    Content-Type: application/json
+
+    {"provider_key":"google","name":"work","display_name":"Google (work)",
+     "ownership_mode":"user","executing_identity":{"identity":"user_delegated"},
+     "allow_non_interactive":false}
+    ```
+
+3. Start consent from the same authenticated browser, requesting only the scopes the
+   actions in your flow need:
+
+    ```http
+    POST /api/v1/connections/CONNECTION_ID/oauth/start
+    Content-Type: application/json
+
+    {"registration_id":"google-work",
+     "scopes":["https://www.googleapis.com/auth/gmail.send"]}
+    ```
+
+4. Navigate to the returned `authorization_url` and complete consent.
+5. In the flow, set the component's **Google Connection** field to the handle
+   `google/work`.
+
+Verify the grant with `POST /api/v1/connections/CONNECTION_ID/test`. A connection that is
+missing a scope fails the action with a `scope-missing` error rather than a partial result.
+
+### Error behavior
+
+Every action maps provider failures onto a stable, sanitized vocabulary: `auth-expired`
+when the credential is rejected (retried once against a freshly minted token before
+surfacing), `scope-missing` on a Google `403` that is not a rate limit, `rate-limited` on
+`429` and on `403` quota reasons, and `provider-unavailable` on `5xx`. Google response
+bodies are never passed through verbatim.
+
+### Swapping an action to a different substrate
+
+All five actions run on the Google Python SDK today. If a future release moves one of them
+to a different substrate — for example an MCP-backed Gmail send — the swap is contained by
+the capability manifest at
+`src/bundles/google/src/lfx_google/components/google/capabilities.v1.json`:
+
+1. Change the capability's `substrate` value and, if the new path needs different scopes,
+   its `required_scopes`. Leave its `id`, `policy_keys`, `component_ref`, and
+   `display_name` untouched so saved flows, operator policy, and the palette do not move.
+2. Reimplement the component's output method against the new substrate. The component
+   class name and its input and output names are the compatibility surface and must not
+   change; nothing else in the component is.
+3. Re-record the contract fixtures for that action and rerun
+   `pytest src/bundles/google/tests`. The manifest test asserts the manifest still matches
+   the capability matrix, so a scope change has to be made in
+   `design/dedicated-integrations/matrices/google.json` first.
+4. Ship it as a bundle minor version through
+   `python scripts/ci/bundle_release_plan.py update`. No Langflow release is required.
+
 ## Google Vertex AI
 
 For information about Vertex AI components, see the [**Vertex AI** bundle](/bundles-vertexai).
@@ -167,16 +255,30 @@ The following Google components are in legacy status:
 <details>
 <summary>Google OAuth Token</summary>
 
-The **Google OAuth Token** component was deprecated in Langflow 1.4.0.
+The **Google OAuth Token** component was deprecated in Langflow 1.4.0 and is hidden from the
+component palette. It runs a local-server OAuth flow, which cannot complete on a server
+deployment, and it puts a long-lived credential into flow data. Running it logs a
+deprecation warning.
 
-To connect your flows to Google OAuth services, use [Composio components](/bundles-composio).
+To connect your flows to Google services, use a [managed connection](/connection-oauth) with
+the [Google Workspace action components](#google-workspace-actions), or
+[Composio components](/bundles-composio).
 
 </details>
 
 <details>
 <summary>Gmail Loader</summary>
 
-This component loads emails from Gmail using [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account) credentials and label ID filters.
+This component loads emails from Gmail using label ID filters and either a
+[managed connection](/connection-oauth) or
+[Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account)
+credentials. Set exactly one of the two.
+
+The optional **Google Connection** field requires the restricted `gmail.readonly` scope.
+The Langflow-managed hosted and Desktop OAuth apps never request restricted scopes, so this
+field only resolves against a **self-managed, customer-owned** registration whose scope
+ceiling includes `gmail.readonly`. It is not exposed as a Google capability for policy or
+discovery.
 
 As an alternative, you can use [Composio components](/bundles-composio) to connect your flows to Google services.
 
@@ -185,9 +287,13 @@ As an alternative, you can use [Composio components](/bundles-composio) to conne
 <details>
 <summary>Google Drive Loader</summary>
 
-This component loads documents from Google Drive using [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account) credentials and document ID filters.
+This component loads a single document from Google Drive using a document ID and either a
+[managed connection](/connection-oauth) or
+[Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account)
+credentials. Set exactly one of the two. A managed connection resolves on `drive.file`, so it
+reaches only files this application created or the user opened with it.
 
-While there is no direct replacement, consider using the [**API Request** component](/api-request) to call the Google Drive API.
+For new flows, use [**Drive: Fetch File (app files)**](#google-workspace-actions).
 
 </details>
 
@@ -196,7 +302,9 @@ While there is no direct replacement, consider using the [**API Request** compon
 
 This component searches Google Drive using [Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account) credentials and various query strings and filters.
 
-While there is no direct replacement, consider using the [**API Request** component](/api-request) to call the Google Drive API.
+The connection-backed replacement is [**Drive: List Files (app files)**](#google-workspace-actions).
+It runs on `drive.file`, which is a narrower reach than a pasted token may have had: it lists
+only files this application created or the user opened with it.
 
 </details>
 

@@ -12,5 +12,12 @@
       "name": "google",
       "path": "components/google"
     }
+  ],
+  "integrations": [
+    {
+      "provider_id": "google",
+      "bundle": "google",
+      "path": "capabilities.v1.json"
+    }
   ]
 }

@@ -45,6 +45,9 @@ packages = ["src/lfx_google"]
 include = [
     "src/lfx_google/extension.json",
     "src/lfx_google/components/**/*.py",
+    # Capability manifests are runtime contract data the extension loader reads
+    # from the installed package, so they must ship inside the wheel.
+    "src/lfx_google/components/**/*.json",
 ]
 
 [tool.hatch.build.targets.sdist]

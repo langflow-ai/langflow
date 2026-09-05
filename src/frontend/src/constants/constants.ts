@@ -848,7 +848,21 @@ export const MODAL_CLASSES =
 
 export * from "./file-upload-constants";
 
-export const componentsToIgnoreUpdate = ["CustomComponent"];
+// Component types that never show the "update available" badge or banner.
+// Must stay in lockstep with COMPONENTS_TO_IGNORE_UPDATE in
+// src/lfx/src/lfx/upgrade/checker.py.
+//
+// The two legacy Google loaders are here because INT-10 added an optional
+// managed-connection field to them. That is a purely additive template change,
+// but it rewrites the component's code string, and any code-string change marks
+// every saved node outdated. These components are frozen legacy surfaces, so
+// prompting their users to "update" buys them nothing and contradicts the
+// requirement that a 1.12 flow using the Gmail loader opens without warnings.
+export const componentsToIgnoreUpdate = [
+  "CustomComponent",
+  "GmailLoaderComponent",
+  "GoogleDriveComponent",
+];
 
 export const ERROR_UPDATING_COMPONENT =
   "An unexpected error occurred while updating the Component. Please try again.";

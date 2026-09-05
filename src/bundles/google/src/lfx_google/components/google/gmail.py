@@ -1,3 +1,4 @@
+import asyncio
 import base64
 import json
 import re
@@ -18,20 +19,44 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.template.field.base import Output
 
+from ._workspace_inputs import GMAIL_READONLY_SCOPE, google_connection_input
+
 
 class GmailLoaderComponent(Component):
+    """Legacy Gmail loader, optionally backed by a managed connection (INT-10).
+
+    ``gmail.readonly`` is a *restricted* Google scope, and per
+    ``decisions/google-restricted-scopes.md`` the Langflow-owned hosted and
+    Desktop OAuth apps never request it. The connection field below therefore
+    only resolves against a **self-managed, customer-owned** registration whose
+    scope ceiling includes ``gmail.readonly`` — which is why this loader is not
+    declared as a capability in ``capabilities.v1.json``.
+    """
+
     display_name = "Gmail Loader"
-    description = "Loads emails from Gmail using provided credentials."
+    description = "Loads emails from Gmail using a managed connection or provided credentials."
     icon = "Google"
     legacy: bool = True
     replacement = ["composio.ComposioGmailAPIComponent"]
 
     inputs = [
+        google_connection_input(
+            required_scopes=[GMAIL_READONLY_SCOPE],
+            required=False,
+            info=(
+                "Optional managed Google connection ('google/<name>'). Requires a self-managed, "
+                "customer-owned registration that grants gmail.readonly. Leave empty to paste "
+                "token JSON instead."
+            ),
+        ),
         SecretStrInput(
             name="json_string",
             display_name="JSON String of the Service Account Token",
-            info="JSON string containing OAuth 2.0 access token information for service account access",
-            required=True,
+            info=(
+                "JSON string containing OAuth 2.0 access token information. Leave empty when a "
+                "managed connection is selected."
+            ),
+            required=False,
             value="""{
                 "account": "",
                 "client_id": "",
@@ -66,7 +91,7 @@ class GmailLoaderComponent(Component):
         Output(display_name="JSON", name="data", method="load_emails"),
     ]
 
-    def load_emails(self) -> Data:
+    async def load_emails(self) -> Data:
         class CustomGMailLoader(GMailLoader):
             def __init__(
                 self, creds: Any, *, n: int = 100, label_ids: list[str] | None = None, raise_error: bool = False
@@ -162,7 +187,6 @@ class GmailLoaderComponent(Component):
                         else:
                             logger.exception(f"Error processing message {message['id']}")
 
-        json_string = self.json_string
         label_ids = self.label_ids.split(",") if self.label_ids else ["INBOX"]
         try:
             max_results = int(self.max_results) if self.max_results else 100
@@ -170,20 +194,14 @@ class GmailLoaderComponent(Component):
             msg = f"Invalid max_results value: {self.max_results}"
             raise ValueError(msg) from e
 
-        # Load the token information from the JSON string
-        try:
-            token_info = json.loads(json_string)
-        except JSONDecodeError as e:
-            msg = "Invalid JSON string"
-            raise ValueError(msg) from e
-
-        creds = Credentials.from_authorized_user_info(token_info)
+        creds = await self._resolve_credentials()
 
         # Initialize the custom loader with the provided credentials
         loader = CustomGMailLoader(creds=creds, n=max_results, label_ids=label_ids)
 
         try:
-            docs = loader.load()
+            # GMailLoader.load() is blocking network I/O; keep it off the event loop.
+            docs = await asyncio.to_thread(loader.load)
         except RefreshError as e:
             msg = "Authentication error: Unable to refresh authentication token. Please try to reauthenticate."
             raise ValueError(msg) from e
@@ -194,3 +212,23 @@ class GmailLoaderComponent(Component):
         # Return the loaded documents
         self.status = docs
         return Data(data={"text": docs})
+
+    async def _resolve_credentials(self) -> Credentials:
+        """Build credentials from exactly one of the connection or the token JSON."""
+        connection = (self.connection or "").strip() if self.connection else ""
+        json_string = self.json_string or ""
+        if connection and json_string.strip():
+            msg = "Set either a managed Google connection or a token JSON string on the Gmail Loader, not both."
+            raise ValueError(msg)
+        if connection:
+            lease = self.resolve_connection("connection")
+            return Credentials(token=await lease.get_token())
+        if not json_string.strip():
+            msg = "The Gmail Loader needs either a managed Google connection or a token JSON string."
+            raise ValueError(msg)
+        try:
+            token_info = json.loads(json_string)
+        except JSONDecodeError as e:
+            msg = "Invalid JSON string"
+            raise ValueError(msg) from e
+        return Credentials.from_authorized_user_info(token_info)
