@@ -254,14 +254,59 @@ async def test_start_skips_explicitly_external_builtin_subclass(monkeypatch):
         "get_catalog_policy_service",
         lambda: SimpleNamespace(external_policy_snapshot=object()),
     )
+    # The worker refreshes one shared bundle, so it may only stand down when
+    # every decision that bundle carries is plugin-owned (INT-7).
+    monkeypatch.setattr(refresh_module, "_integration_policy_managed_externally", lambda: True)
     monkeypatch.setattr(refresh_module.logger, "adebug", debug)
 
     await worker.start()
 
     assert worker._task is None
     debug.assert_awaited_once_with(
-        "Policy-bundle refresh worker not started: provider and catalog policies are externally managed"
+        "Policy-bundle refresh worker not started: provider, catalog, and integration policies are externally managed"
     )
+
+
+async def test_start_keeps_refreshing_when_only_integration_policy_is_langflow_owned(monkeypatch):
+    """A Langflow-owned integration ceiling still needs cross-worker convergence."""
+    service = _ExternalBuiltinPolicyService()
+    worker = refresh_module.ModelProviderPolicyRefreshWorker(interval=5)
+    run_started = asyncio.Event()
+    keep_running = asyncio.Event()
+
+    async def run():
+        run_started.set()
+        await keep_running.wait()
+
+    monkeypatch.setattr(refresh_module, "get_model_provider_policy_service", lambda: service)
+    monkeypatch.setattr(
+        refresh_module,
+        "get_catalog_policy_service",
+        lambda: SimpleNamespace(external_policy_snapshot=object()),
+    )
+    monkeypatch.setattr(refresh_module, "_integration_policy_managed_externally", lambda: False)
+    monkeypatch.setattr(worker, "_run", run)
+
+    await worker.start()
+    try:
+        await asyncio.wait_for(run_started.wait(), timeout=5)
+        assert worker._task is not None
+    finally:
+        keep_running.set()
+        await worker.stop()
+
+
+def test_integration_policy_external_predicate_is_false_without_a_service(monkeypatch):
+    """A host that never registered the service owns nothing externally."""
+    from lfx.services import deps as lfx_deps
+
+    def _unavailable():
+        msg = "no integration policy service"
+        raise TypeError(msg)
+
+    monkeypatch.setattr(lfx_deps, "get_integration_policy_service", _unavailable)
+
+    assert refresh_module._integration_policy_managed_externally() is False
 
 
 async def test_start_refreshes_database_catalog_when_provider_policy_is_external(monkeypatch):
