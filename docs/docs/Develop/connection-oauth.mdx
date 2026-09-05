@@ -126,7 +126,57 @@ See Slack's [installation guide](https://docs.slack.dev/authentication/installin
 [token rotation](https://docs.slack.dev/authentication/using-token-rotation/), and
 [token revocation](https://docs.slack.dev/reference/methods/auth.revoke/).
 
-### Slack redirect URLs
+## Consent and revocation check
+
+Use the browser logged in to the configured Langflow origin. The existing connections
+API creates metadata first; use `executing_identity.identity: "user_delegated"` for
+Google, Microsoft, and Slack user connections, or `"bot"` for Slack bot connections.
+Instance-owned connections require a superuser. Tokens are not part of these requests.
+
+From an authenticated browser API client, start consent:
+
+```http
+POST /api/v1/connections/CONNECTION_ID/oauth/start
+Content-Type: application/json
+
+{"registration_id":"google-work","scopes":["https://www.googleapis.com/auth/calendar.events.readonly"]}
+```
+
+Navigate that same browser to the returned `authorization_url`. Starting consent sets
+an HttpOnly, SameSite=Lax cookie. An authorization URL copied to another browser cannot
+complete the connection. The callback returns a static success or failure page and never
+tokens. State expires after ten minutes, is consumed once even when the provider rejects
+the code, and is invalidated by a newer consent attempt or revocation.
+
+Verify the connection's metadata and scopes using `GET /api/v1/connections`, then call
+`POST /api/v1/connections/CONNECTION_ID/test` with the required scopes. Verify non-owner
+access is denied under your authorization policy. Set `allow_non_interactive` explicitly
+when this connection may be used by background or serving workers.
+
+Refresh happens within the executing worker. Database transaction locks serialize refresh,
+consent completion, health checks, revoke, and delete. No token is placed in a job payload.
+When a provider rejects a cached token, the worker supplies only its digest to coordinate
+one replacement with other workers. A successful rotating-token exchange is committed even
+if subsequent scope validation rejects execution.
+
+`POST /api/v1/connections/CONNECTION_ID/revoke` always removes local credentials and
+invalidates pending consent. Its `provider_revocation` field reports `revoked`,
+`unsupported`, `failed`, or `not_applicable`. On `failed`, revoke access in the provider's
+account/app console too. Delete attempts the same provider revocation before removing the
+record. A previously issued credential already held by an in-flight provider request cannot
+be recalled locally; subsequent connection resolution fails after revoke.
+
+The backend removes callback query strings from its access-log request scope. Configure
+reverse proxies and external request tracing to omit callback query strings as well, because
+those systems observe requests before Langflow does. Avoid capturing browser callback URLs
+in screenshots or support logs.
+
+{/* INT-12 (LE-2470): appended section. Keep additions to this page as new
+    trailing sections so stacked integration branches do not collide. */}
+
+## Slack redirect URLs and scopes per action
+
+### Redirect URLs
 
 Register both forms the deployment needs. A server redirect is used for hosted and
 self-managed instances; the loopback form is used by the Desktop PKCE app.
@@ -136,7 +186,7 @@ https://YOUR_INSTANCE/api/v1/connections/oauth/slack/callback
 http://localhost:7860/api/v1/connections/oauth/slack/callback
 ```
 
-### Slack scopes per action
+### Scopes per action
 
 The `lfx-slack` bundle declares these scopes per action. A registration's `scopes`
 array is the operator ceiling, so it must be a superset of the actions you intend to
@@ -201,48 +251,3 @@ only the user scopes; bot actions are unavailable there. For headless runtimes,
 provide the token directly as `LF_CONNECTION__SLACK__<NAME>` instead of registering
 an OAuth app. That path records no executing identity, so the bundle trusts the
 operator to supply the right token type.
-
-## Consent and revocation check
-
-Use the browser logged in to the configured Langflow origin. The existing connections
-API creates metadata first; use `executing_identity.identity: "user_delegated"` for
-Google, Microsoft, and Slack user connections, or `"bot"` for Slack bot connections.
-Instance-owned connections require a superuser. Tokens are not part of these requests.
-
-From an authenticated browser API client, start consent:
-
-```http
-POST /api/v1/connections/CONNECTION_ID/oauth/start
-Content-Type: application/json
-
-{"registration_id":"google-work","scopes":["https://www.googleapis.com/auth/calendar.events.readonly"]}
-```
-
-Navigate that same browser to the returned `authorization_url`. Starting consent sets
-an HttpOnly, SameSite=Lax cookie. An authorization URL copied to another browser cannot
-complete the connection. The callback returns a static success or failure page and never
-tokens. State expires after ten minutes, is consumed once even when the provider rejects
-the code, and is invalidated by a newer consent attempt or revocation.
-
-Verify the connection's metadata and scopes using `GET /api/v1/connections`, then call
-`POST /api/v1/connections/CONNECTION_ID/test` with the required scopes. Verify non-owner
-access is denied under your authorization policy. Set `allow_non_interactive` explicitly
-when this connection may be used by background or serving workers.
-
-Refresh happens within the executing worker. Database transaction locks serialize refresh,
-consent completion, health checks, revoke, and delete. No token is placed in a job payload.
-When a provider rejects a cached token, the worker supplies only its digest to coordinate
-one replacement with other workers. A successful rotating-token exchange is committed even
-if subsequent scope validation rejects execution.
-
-`POST /api/v1/connections/CONNECTION_ID/revoke` always removes local credentials and
-invalidates pending consent. Its `provider_revocation` field reports `revoked`,
-`unsupported`, `failed`, or `not_applicable`. On `failed`, revoke access in the provider's
-account/app console too. Delete attempts the same provider revocation before removing the
-record. A previously issued credential already held by an in-flight provider request cannot
-be recalled locally; subsequent connection resolution fails after revoke.
-
-The backend removes callback query strings from its access-log request scope. Configure
-reverse proxies and external request tracing to omit callback query strings as well, because
-those systems observe requests before Langflow does. Avoid capturing browser callback URLs
-in screenshots or support logs.

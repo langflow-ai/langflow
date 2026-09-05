@@ -1,6 +1,7 @@
 """Provider protocol differences, configuration restrictions, and redaction."""
 
 import json
+from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
 import httpx
@@ -243,3 +244,33 @@ async def test_google_restriction_verifies_signed_tenant_and_audience(monkeypatc
     )
     with pytest.raises(OAuthError, match="tenant"):
         await providers._google_account(registration, wrong_audience)
+
+
+def test_slack_bundle_manifest_pins_the_same_endpoints_as_the_broker():
+    """The lfx-slack auth profiles and the broker must not drift apart.
+
+    ``providers.endpoints`` hardcodes Slack's authorize and token URLs, while the
+    bundle manifest declares them for INT-8's connection picker. If either side
+    changes alone the picker sends a user to one authorization server and the
+    broker exchanges the code at another, so pin the equality here.
+    """
+    manifest_path = (
+        Path(__file__).resolve().parents[5]
+        / "bundles"
+        / "slack"
+        / "src"
+        / "lfx_slack"
+        / "components"
+        / "slack"
+        / "capabilities.v1.json"
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    authorize, token = providers.endpoints(
+        config(provider="slack", redirect_uri="http://localhost/api/v1/connections/oauth/slack/callback")
+    )
+
+    profiles = {profile["id"]: profile for profile in manifest["auth_profiles"]}
+    assert set(profiles) == {"slack-user-oauth", "slack-bot-install"}
+    for profile in profiles.values():
+        assert profile["authorization_url"] == authorize
+        assert profile["token_url"] == token
