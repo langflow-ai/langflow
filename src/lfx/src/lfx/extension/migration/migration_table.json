@@ -4955,6 +4955,46 @@
       "bare_class_name": "MrscraperRunManualScraper",
       "target": "ext:mrscraper:MrscraperRunManualScraper@official",
       "added_in": "1.12.0"
+    },
+    {
+      "bare_class_name": "OutlookSendComponent",
+      "target": "ext:microsoft:OutlookSendComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "OutlookSearchComponent",
+      "target": "ext:microsoft:OutlookSearchComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "OutlookCalendarListComponent",
+      "target": "ext:microsoft:OutlookCalendarListComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "OutlookCalendarCreateComponent",
+      "target": "ext:microsoft:OutlookCalendarCreateComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "TeamsChatPostComponent",
+      "target": "ext:microsoft:TeamsChatPostComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "TeamsChannelPostComponent",
+      "target": "ext:microsoft:TeamsChannelPostComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SharePointListComponent",
+      "target": "ext:microsoft:SharePointListComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SharePointFetchComponent",
+      "target": "ext:microsoft:SharePointFetchComponent@official",
+      "added_in": "1.13.0"
     }
   ],
   "ambiguous_bare_names": [
