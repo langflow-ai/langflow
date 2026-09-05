@@ -262,6 +262,7 @@ Service keys **must** match `ServiceType` enum values exactly:
 - `auth_service`
 - `authorization_service`
 - `catalog_policy_service`
+- `connection_resolver_service`
 - `model_provider_policy_service`
 - `storage_service`
 - `cache_service`
@@ -363,6 +364,64 @@ model_provider_policy_service = "acme_langflow.policy:AcmeModelProviderPolicySer
 The equivalent `pyproject.toml` section is `[tool.lfx.services]`. When both files exist, `lfx.toml` is preferred. Config-file registration has higher precedence than the built-in decorator; an `lfx.services` entry point alone does not replace the OSS default. The configured class must inherit `BaseModelProviderPolicyService`; service resolution fails closed for an incompatible implementation.
 
 This policy applies to shared unified model catalogs, configuration APIs, selectors, and runtime helpers. It does not hide provider-specific component classes from the component palette.
+
+### Connection resolver service
+
+`connection_resolver_service` resolves the portable connection references
+(`provider/name`) a flow stores into short-lived credentials. The built-in
+`EnvConnectionResolver` reads `LF_CONNECTION__<PROVIDER>__<NAME>` from the active
+request scope and then from the environment, which is what `lfx run`, `lfx serve`,
+and embedded LFX use when nothing is configured. A host with its own credential
+store replaces it with a subclass of `BaseConnectionResolverService`:
+
+```python
+from __future__ import annotations
+
+from lfx.services.connection.base import BaseConnectionResolverService
+
+
+class AcmeConnectionResolver(BaseConnectionResolverService):
+    def __init__(self) -> None:
+        super().__init__()
+        self._client = build_secret_store_client()
+        # Preload everything the resolver needs before advertising readiness:
+        # a resolver that is not ready fails closed rather than degrading to
+        # the environment resolver.
+        self.set_ready()
+
+    async def resolve(self, request):
+        denial = self.authorize_principal(
+            request,
+            connection_owner_id=None,
+            owner_kind="env",
+            allow_non_interactive=True,
+        )
+        if denial is not None:
+            raise denial
+        ...
+```
+
+`authorize_principal()` is the portable deny floor every implementation applies
+before adding its own share or policy checks: an `owner_kind="env"` credential is
+usable only by a `headless_operator` principal, and anonymous or unknown
+principals are denied outright.
+
+```toml
+# $LANGFLOW_CONFIG_DIR/lfx.toml
+[services]
+connection_resolver_service = "acme_langflow.connections:AcmeConnectionResolver"
+```
+
+The equivalent `pyproject.toml` section is `[tool.lfx.services]`, and `lfx.toml`
+wins when both exist. Selection fails closed in every failure mode: a module that
+cannot be imported, a class that does not subclass
+`BaseConnectionResolverService`, or a service that never became ready raises a
+`RuntimeError` at service resolution instead of silently reverting to the
+environment fallback. Only a genuinely absent plugin selects that fallback.
+
+A runnable end-to-end reference — an environment-backed host, a secret-manager
+resolver, and the flow that exercises them — is in
+`docs/docs/Lfx/lfx-connections.mdx` and `docs/docs/Lfx/samples/connections/`.
 
 ### Catalog policy service
 

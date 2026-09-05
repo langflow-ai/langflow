@@ -147,6 +147,32 @@ curl -X POST http://localhost:8000/flows/$FLOW_ID/run \
 </TabItem>
 </Tabs>
 
+## Supply variables and credentials per request
+
+The run and stream request bodies accept `global_vars`, a map of variables applied to a deep copy of the graph for that request only.
+Use it to send an API key or a connection credential without putting it in the server's environment, where it would become an ambient default for every other caller:
+
+```bash
+curl -X POST http://localhost:8000/flows/$FLOW_ID/run \
+  -H "Content-Type: application/json" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -d '{
+        "input_value": "Hello, world!",
+        "global_vars": {"LF_CONNECTION__GOOGLE__WORK": "ya29.a0-example"}
+      }'
+```
+
+Request-scoped values are consulted before the process environment, so a caller's value always wins.
+Start the server with `--no-env-fallback` to remove the environment from resolution entirely, which makes `global_vars` the only accepted source:
+
+```bash
+uv run lfx serve ./flows/ --no-env-fallback
+```
+
+Add `--reset-environ` to also restore `os.environ` after each run, so a flow that mutates the process environment cannot affect the next request on the same worker.
+
+For connection references, the `LF_CONNECTION__*` key derivation, the credential JSON format, and how to plug in your own resolver, see [Resolve connections in headless LFX](./lfx-connections).
+
 ## Serve multiple flows
 
 To serve multiple flows, pass a directory to `lfx serve` to load all `.json` flows at server startup:
@@ -160,6 +186,7 @@ uv run lfx serve ./flows/
 ## See also
 
 - [Run flows with LFX](./lfx-run)
+- [Resolve connections in headless LFX](./lfx-connections)
 - [About LFX](./lfx-overview)
 - [Install LFX](./lfx-install)
 - [Flow DevOps Toolkit SDK](./lfx-devops-sdk.mdx)

@@ -117,7 +117,7 @@ For more examples, see the [Complete Agent Example on PyPI](https://pypi.org/pro
 
 | Option | Description |
 |---|---|
-| `--check-variables` / `--no-check-variables` | Validate the flow's global variables. Default: check. |
+| `--check-variables` / `--no-check-variables` | Validate the flow's global variables and [connection references](./lfx-connections) before execution. Default: check. |
 | `--flow-json` | Load inline JSON flow content as a string. |
 | `--format`, `-f` | Output format: `json`, `text`, `message`, or `result`. Default: `json`. |
 | `--input-value` | Input value to pass to the graph. Required with `--stdin` and `--flow-json`. |
@@ -129,11 +129,35 @@ For more examples, see the [Complete Agent Example on PyPI](https://pypi.org/pro
 | `-vv` | Show detailed progress and debug information. |
 | `-vvv` | Show full debugging output including component logs. |
 
+## Run a flow that uses a connection
+
+A flow can store a connection reference, such as `google/work`, instead of a credential.
+`lfx run` resolves it from the environment, under the key `LF_CONNECTION__<PROVIDER>__<NAME>`:
+
+```bash
+export LF_CONNECTION__GOOGLE__WORK="ya29.a0-example"
+uv run lfx run connection_flow.json "describe my connection"
+```
+
+### Missing connections
+
+With the default `--check-variables`, `lfx run` validates every connection reference before it executes anything, and aborts when one cannot be resolved:
+
+```
+Connection 'google/work' could not be resolved. Set LF_CONNECTION__GOOGLE__WORK to a token or credential JSON object.
+```
+
+The message names the key and the expected wire format, never a value.
+With `--no-check-variables` the flow starts and fails at the point the component asks for the credential instead.
+
+For the credential wire format, the JSON form that carries expiry and scopes, and how to implement a resolver backed by a secret manager, see [Resolve connections in headless LFX](./lfx-connections).
+
 <LfxComponentCategories />
 
 ## See also
 
 - [Serve flows with LFX](./lfx-serve)
+- [Resolve connections in headless LFX](./lfx-connections)
 - [About LFX](./lfx-overview)
 - [Install LFX](./lfx-install)
 - [Flow DevOps Toolkit SDK](./lfx-devops-sdk.mdx)

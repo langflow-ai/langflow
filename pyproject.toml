@@ -416,6 +416,9 @@ external = ["RUF027"]
     "TRY003",  # Long exception messages
     "EM101",   # String literals in exceptions
 ]
+"docs/docs/Lfx/samples/connections/*" = [
+    "INP001", # Reference samples are standalone files, loaded by path, not a package
+]
 "src/backend/base/langflow/alembic/versions/*" = ["INP001", "D415", "PGH003"]
 "src/backend/base/langflow/custom/__init__.py" = [
     "I001",  # Import order affects initialization - must import custom module first
