@@ -130,6 +130,7 @@ module.exports = {
             "Develop/external-authentication",
             "Develop/authorization",
             "Develop/admin-api-cli",
+            "Develop/connection-oauth",
           ],
         },
         "Develop/install-custom-dependencies",
@@ -367,6 +368,11 @@ module.exports = {
           type: "doc",
           id: "Lfx/lfx-serve",
           label: "Serve flows with LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-connections",
+          label: "Resolve connections in headless LFX"
         },
         {
           type: "doc",
