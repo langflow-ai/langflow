@@ -213,6 +213,9 @@ def get_lifespan(*, fix_migration=False, version=None):
         # even when startup fails before it is created.
         lag_monitor = None
         warm_registry_task = None
+        # Started per worker below when trigger_dispatcher_enabled; the loops it
+        # owns are DB-leased singletons, so every replica may run one.
+        trigger_dispatcher = None
         # Bind ``temp_dirs`` before the ``try`` so the shutdown cleanup in the
         # ``finally`` block (which iterates it) never raises ``UnboundLocalError``
         # when startup fails before bundle loading assigns it below. Otherwise an
@@ -542,6 +545,16 @@ def get_lifespan(*, fix_migration=False, version=None):
             with suppress(Exception):
                 await get_background_execution_service().sweep_orphans_on_startup()
 
+            # Triggers: the dispatcher and the schedule tick producer. Both are
+            # singletons held by a ``trigger_lease`` row, so starting one in
+            # every API replica still fires each schedule once and runs each
+            # ledger event once. Best-effort: a trigger loop that cannot start
+            # must never stop the API from booting.
+            with suppress(Exception):
+                from langflow.services.triggers.dispatcher import start_dispatcher_if_enabled
+
+                trigger_dispatcher = start_dispatcher_if_enabled()
+
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")
 
@@ -781,6 +794,11 @@ def get_lifespan(*, fix_migration=False, version=None):
                     if warm_registry_task and not warm_registry_task.done():
                         warm_registry_task.cancel()
                         tasks_to_cancel.append(warm_registry_task)
+                    # Stops the loop AND hands the lease back, so another
+                    # replica takes over without waiting out the TTL.
+                    if trigger_dispatcher is not None:
+                        with suppress(Exception):
+                            await trigger_dispatcher.stop()
                     if tasks_to_cancel:
                         # Wait for all tasks to complete, capturing exceptions
                         results = await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
