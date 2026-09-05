@@ -27,21 +27,28 @@ self-contained and the table stays the source of truth for the runtime.
 | `id` | primary key |
 | `flow_id` | owning flow, `ON DELETE CASCADE` |
 | `user_id` | owner; the identity a dispatched run executes as |
+| `name` | owner-facing label |
 | `kind` | `schedule`, `inbound_webhook`, or a bundle-declared provider kind |
 | `provider` | null for core kinds; `slack`, `microsoft`, `google` for provider kinds |
-| `mechanism_id` | the `matrices/<provider>-events.json` mechanism this trigger uses, null for core kinds |
+| `node_id` | the canvas node this trigger reconciles from, null for API-created triggers; unique per flow when set |
 | `connection_id` | the INT-4 connection this trigger resolves, nullable |
-| `config` | JSON; node-configured fields copied on save (cron expression, timezone, filters) |
+| `config` | JSON; node-configured fields copied on save (cron expression, timezone, filters), and the `matrices/<provider>-events.json` `mechanism_id` for provider kinds |
 | `provider_state` | JSON; cursors owned by the runtime (`deltaLink`, `syncToken`, `startPageToken`, `historyId`) |
-| `state` | `pending`, `active`, `paused`, `expired`, `needs_reconnect`, `error`, `dead` |
+| `state` | `pending`, `active`, `paused`, `expired`, `needs_reconnect`, `error`, `dead`; `paused` **is** the owner and operator off switch, so there is no separate `enabled` column |
 | `last_error` | typed error code and sanitized message behind the trigger's state |
 | `binding_target` | `flow` or `deployment` |
 | `flow_version_id` | pinned flow version, nullable |
 | `deployment_id` | deployment target, nullable |
-| `session_policy` | `per_event` (default) or `provider_correlated` |
+| `session_policy` | `per_event` (default) or `shared` - see section 4 |
 | `concurrency_limit` | per-trigger cap on simultaneously dispatched events, default 1 |
 | `max_attempts` | per-event attempt cap, default 5 |
-| `enabled` | operator and owner switch, distinct from `state` |
+| `public_id` | opaque per-trigger ingress id, unique, null until TRG-4 mints one |
+| `signing_secret_encrypted` | the generic-HMAC secret for `inbound_webhook`, written by TRG-4 |
+| `next_fire_at`, `last_fired_at` | schedule bookkeeping for the tick producer |
+
+The mechanism a provider trigger uses is *derived*, not a column of its own: `kind` plus `provider` name the adapter
+and `config.mechanism_id` records which matrix row it was armed against, so TRG-5 and TRG-6 add mechanisms without a
+migration.
 
 ### `trigger_event`
 
@@ -52,17 +59,32 @@ The ledger. One row per accepted delivery.
 | `id` | primary key |
 | `trigger_id` | owning trigger |
 | `dedupe_key` | per-mechanism key from the matrices; **`UNIQUE (trigger_id, dedupe_key)`** |
-| `state` | `pending`, `claimed`, `dispatched`, `completed`, `failed`, `dead`, `replayed` |
+| `state` | `pending`, `claimed`, `dispatched`, `completed`, `failed`, `dead` |
 | `attempt`, `available_at`, `lease_owner`, `lease_expires_at` | claim and retry bookkeeping |
 | `payload` | the normalized event, never the raw provider body for thin mechanisms |
-| `job_id` | the background-execution job, `ON DELETE SET NULL` |
+| `session_id` | the session the dispatched run used, derived per section 4 and stored so the event log can link to it |
+| `job_id` | the background-execution job; **no foreign key**, deliberately, so purging a job row cannot cascade away ledger history |
 | `replay_of_event_id` | self-reference; a replay is a new row, never a mutation |
 | `error`, timestamps | last failure and audit trail |
 
+There is no `replayed` state. A replay appends a new row whose `replay_of_event_id` points at the original and whose
+`dedupe_key` carries the `replay` producer prefix; the original keeps whatever terminal state it reached. That is what
+makes the ledger append-only and the lineage readable in the event inspector (`frontend-surfaces.md` B5).
+
 ### `trigger_lease`
 
-Named singleton leases (`dispatcher`, `schedule_tick`, `purge`, `subscription_renewal`): `name` primary key,
-`owner`, `expires_at`. One row per loop, held with a heartbeat, so exactly one API worker runs each loop.
+Named singleton leases: `name` primary key, `owner`, `acquired_at`, `heartbeat_at`, `expires_at`. One row per loop,
+held with a heartbeat, so exactly one API worker runs each loop. The names are constants, not literals - TRG-3 through
+TRG-6 import them from `langflow.services.triggers.constants` rather than retyping them, because two loops that spell
+the same lease differently both believe they hold it and both drain the ledger:
+
+| Constant | Value | Loop |
+|---|---|---|
+| `DISPATCHER_LEASE_NAME` | `trigger_dispatcher` | drains the ledger and submits runs |
+| `SCHEDULER_LEASE_NAME` | `trigger_scheduler` | the schedule tick producer |
+
+Later loops (ledger purge, subscription renewal) add their own constant in the same module; they need no migration
+because `trigger_lease` is keyed by name.
 
 ### `trigger_listener_lease`
 
@@ -98,9 +120,24 @@ follow-up that wires it does not need a migration.
 
 ## 4. Correlation
 
-Default `session_policy` is `per_event`: the dispatched run's session id is `trigger:{trigger_id}:{event_id}`, so
-every event is its own conversation and nothing leaks between them. `provider_correlated` opts a trigger into the
-provider's own conversation key, taken from the `session_key` block of its mechanism row:
+Session derivation has one precedence, in this order:
+
+1. **The provider conversation key on the event payload.** A TRG-5 or TRG-6 adapter sets `payload.session_key` to the
+   value in the `session_key` block of its mechanism row, formatted `{provider}:{kind}:{id}`. When it is present it
+   wins, whatever the policy says, because two events from one thread must share a session for an agent to have
+   memory across it.
+2. **The trigger's `session_policy`**, which has exactly two values:
+
+| Policy | Session id | Use |
+|---|---|---|
+| `per_event` (default) | `trigger:{trigger_id}:{event_id}` | every event is its own conversation; nothing leaks between them |
+| `shared` | `trigger:{trigger_id}` | one session for every run of this trigger, so a schedule-driven agent accumulates memory across ticks |
+
+`session_policy` is a two-value enum on the trigger row and TRG-2's `CHECK` constraint rejects anything else. There is
+no third `provider_correlated` value: provider correlation is the payload override in step 1, which needs no column
+because the adapter already knows the conversation key.
+
+The `session_key` blocks the adapters read from:
 
 | Provider | Session key |
 |---|---|
@@ -113,7 +150,8 @@ provider's own conversation key, taken from the `session_key` block of its mecha
 | Gmail | `google:gmail:{threadId}` |
 
 The push and poll mechanisms of one provider derive the same session key, exactly as they derive the same dedupe
-key; a customer moving between transports keeps their conversations.
+key; a customer moving between transports keeps their conversations. The derived session id is stored on
+`trigger_event.session_id` so the event log can link an event to the run it started.
 
 ## 5. Executing identity
 
