@@ -119,6 +119,7 @@
         ],
         "lfx-google": [
           "lfx_google/extension.json",
+          "lfx_google/components/google/capabilities.v1.json",
           "lfx_google/components/google/google_generative_ai.py"
         ],
         "lfx-azure": [
@@ -315,6 +316,7 @@
         ],
         "lfx-google": [
           "lfx_google/extension.json",
+          "lfx_google/components/google/capabilities.v1.json",
           "lfx_google/components/google/google_generative_ai.py"
         ],
         "lfx-azure": [
