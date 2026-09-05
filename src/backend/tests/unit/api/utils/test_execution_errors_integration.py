@@ -13,6 +13,7 @@ from langflow.api.utils.execution_errors import (
     SAFE_WORKFLOW_ERROR_MESSAGE,
     error_details_for_client,
     error_for_client,
+    integration_http_error,
 )
 from lfx.integrations.errors import (
     AuthExpiredError,
@@ -117,3 +118,16 @@ def test_non_integration_errors_are_unchanged() -> None:
     assert isinstance(sanitized_http, HTTPException)
     assert sanitized_http.status_code == 418
     assert sanitized_http.detail == SAFE_WORKFLOW_ERROR_MESSAGE
+
+
+def test_integration_http_error_only_fires_for_integration_failures() -> None:
+    """The terminal-handler guard must not divert ordinary component failures."""
+    assert integration_http_error(ValueError("boom"), expose_details=False) is None
+    assert integration_http_error(HTTPException(status_code=418, detail="teapot"), expose_details=False) is None
+
+    typed = integration_http_error(ConnectionNotAuthorizedError(provider="google"), expose_details=False)
+
+    assert isinstance(typed, HTTPException)
+    assert typed.status_code == HTTP_FORBIDDEN
+    assert typed.detail["error_code"] == "connection-not-authorized"
+    assert typed.detail["hint"]

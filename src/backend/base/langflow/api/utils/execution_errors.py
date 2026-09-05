@@ -114,6 +114,20 @@ def error_for_client(error: Exception, *, expose_details: bool) -> Exception:
     return RuntimeError(SAFE_WORKFLOW_ERROR_MESSAGE)
 
 
+def integration_http_error(error: Exception, *, expose_details: bool) -> HTTPException | None:
+    """The typed HTTPException for an integration failure, or ``None`` for anything else.
+
+    Terminal run handlers wrap whatever a flow raised into a generic 500. That is
+    right for a component that blew up, but wrong for a connection the caller is
+    not allowed to use: the code, the status and the call to action all disappear.
+    Call this first and raise the result when it is not ``None``.
+    """
+    if not isinstance(error, IntegrationError):
+        return None
+    client_error = error_for_client(error, expose_details=expose_details)
+    return client_error if isinstance(client_error, HTTPException) else None
+
+
 def caller_owns_flow(flow: object, user: object) -> bool:
     """Return whether the request actor and stored flow owner are the same principal."""
     flow_user_id = getattr(flow, "user_id", None)
