@@ -85,6 +85,31 @@ async def aresolve_integration_policy(
     )
 
 
+def policy_keys_for_capabilities(capability_ids: Iterable[str]) -> tuple[str, ...]:
+    """Return the declared policy keys of loaded capability ids, in order.
+
+    The bundle registry is the source of truth for what a capability id means.
+    Ids whose manifest is not loaded in this process contribute no keys, so the
+    provider ceiling remains the only decision available for them.
+    """
+    ids = list(capability_ids)
+    if not ids:
+        return ()
+    try:
+        from lfx.extension.bundle_registry import get_default_registry
+
+        integrations = get_default_registry().list_integrations()
+    except Exception:  # noqa: BLE001
+        return ()
+    wanted = set(ids)
+    keys: list[str] = []
+    for integration in integrations:
+        for capability in integration.capability_manifest.capabilities:
+            if capability.id in wanted:
+                keys.extend(capability.policy_keys)
+    return tuple(dict.fromkeys(keys))
+
+
 def resolve_integration_policy_for_current_context(
     *,
     provider_ids: Iterable[str],

@@ -626,10 +626,14 @@ class Component(CustomComponent):
             raise ValueError(msg)
         graph = getattr(self, "graph", None)
         principal = getattr(graph, "execution_principal", ExecutionPrincipal.unknown())
+        # Refuse before a lease exists: no credential is minted, decrypted, or
+        # refreshed for a provider or action the deployment policy denies.
+        self._require_integration_policy_for_input(input_model)
         request = ConnectionResolutionRequest(
             ref=ref,
             principal=principal,
             required_scopes=frozenset(input_model.required_scopes),
+            capability_ids=frozenset(input_model.capabilities),
             component_id=self.get_id(),
             flow_id=str(graph.flow_id) if graph is not None and graph.flow_id is not None else None,
             run_id=str(graph.run_id) if graph is not None and graph.run_id else None,
@@ -1465,11 +1469,46 @@ class Component(CustomComponent):
         for provider_id in provider_ids:
             snapshot.require(provider_id)
 
+    def _integration_policy_inputs(self):
+        """Return every connection-reference input this component declares."""
+        from lfx.inputs.inputs import ConnectionRefInput
+
+        return [input_model for input_model in self._inputs.values() if isinstance(input_model, ConnectionRefInput)]
+
+    def _require_integration_policy_for_input(self, input_model) -> None:
+        """Gate one connection-reference input's provider and declared actions."""
+        from lfx.services.integration_policy import (
+            IntegrationPolicyPurpose,
+            policy_keys_for_capabilities,
+            require_integration_actions,
+        )
+
+        require_integration_actions(
+            user_id=self.user_id,
+            provider_id=input_model.provider,
+            policy_keys=policy_keys_for_capabilities(input_model.capabilities),
+            purpose=IntegrationPolicyPurpose.USE,
+        )
+
+    def require_integration_policy(self, purpose) -> None:
+        """Gate every declared integration action before any adapter can run.
+
+        A blocked action must fail before the component body executes, not only
+        when a credential is resolved: an API-key-mode component never calls
+        ``resolve_connection``, and a component may reach the provider before
+        its first lease.
+        """
+        _ = purpose
+        for input_model in self._integration_policy_inputs():
+            self._require_integration_policy_for_input(input_model)
+
     async def build_results(self):
         """Build the results of the component."""
+        from lfx.services.integration_policy import IntegrationPolicyPurpose
         from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 
         self.require_model_provider_policy(ModelProviderPolicyPurpose.USE)
+        self.require_integration_policy(IntegrationPolicyPurpose.USE)
 
         if hasattr(self, "graph"):
             session_id = self.graph.session_id

@@ -15,6 +15,7 @@ from lfx.services.integration_policy.service import IntegrationPolicyService
 from lfx.services.integration_policy.utils import (
     arequire_integration_actions,
     aresolve_integration_policy,
+    policy_keys_for_capabilities,
     require_integration_actions,
     require_integration_provider,
     resolve_integration_policy,
@@ -34,6 +35,7 @@ __all__ = [
     "integration_policy_key_prefix",
     "integration_policy_key_provider",
     "normalize_integration_policy_key",
+    "policy_keys_for_capabilities",
     "require_integration_actions",
     "require_integration_provider",
     "resolve_integration_policy",
