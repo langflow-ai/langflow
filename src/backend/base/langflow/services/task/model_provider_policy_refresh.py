@@ -19,6 +19,20 @@ from langflow.services.model_provider_policy import (
 DEFAULT_MODEL_PROVIDER_POLICY_REFRESH_INTERVAL_SECONDS = 10.0
 
 
+def _integration_policy_managed_externally() -> bool:
+    """Return whether a plugin owns the integration ceiling.
+
+    A host without a registered integration policy service owns nothing
+    externally, which keeps this predicate false and the worker running.
+    """
+    from lfx.services.deps import get_integration_policy_service
+
+    try:
+        return get_integration_policy_service().external_approved_integration_provider_ids is not None
+    except (TypeError, ImportError):
+        return False
+
+
 class ModelProviderPolicyRefreshWorker:
     """Poll the durable policy version so every backend worker converges."""
 
@@ -44,9 +58,13 @@ class ModelProviderPolicyRefreshWorker:
         service = get_model_provider_policy_service()
         if service.external_approved_provider_ids is not None:
             catalog_service = get_catalog_policy_service()
-            if catalog_service.external_policy_snapshot is not None:
+            # The worker refreshes one shared bundle, so it may only stand down
+            # when every decision the bundle carries is owned by a plugin. An
+            # integration ceiling Langflow still owns keeps the worker running.
+            if catalog_service.external_policy_snapshot is not None and _integration_policy_managed_externally():
                 await logger.adebug(
-                    "Policy-bundle refresh worker not started: provider and catalog policies are externally managed"
+                    "Policy-bundle refresh worker not started: provider, catalog, and integration policies "
+                    "are externally managed"
                 )
                 return
 

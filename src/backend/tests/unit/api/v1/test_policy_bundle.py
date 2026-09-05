@@ -70,6 +70,8 @@ def _snapshot(*, revision: int, actor_id=None, reason: str | None = None) -> Pol
         blocked_component_keys={"ZetaComponent", "AlphaComponent"},
         blocked_template_keys={"template-z", "template-a"},
         blocked_model_keys={"openai::gpt-blocked", "anthropic::claude-blocked"},
+        approved_integration_provider_ids={"slack", "google"},
+        blocked_integration_action_keys={"integrations.google.drive.delete"},
         content_hash=f"{revision:064x}",
         created_at=datetime(2026, 8, 5, 12, 30, tzinfo=timezone.utc),
         created_by=actor_id,
@@ -139,6 +141,8 @@ def test_get_returns_the_complete_active_bundle_with_stable_sorted_lists(monkeyp
         "blocked_component_keys": ["AlphaComponent", "ZetaComponent"],
         "blocked_template_keys": ["template-a", "template-z"],
         "blocked_model_keys": ["anthropic::claude-blocked", "openai::gpt-blocked"],
+        "approved_integration_provider_ids": ["google", "slack"],
+        "blocked_integration_action_keys": ["integrations.google.drive.delete"],
         "content_hash": f"{4:064x}",
         "created_by": str(admin.id),
         "created_at": "2026-08-05T12:30:00Z",
@@ -163,6 +167,8 @@ def test_put_forwards_one_complete_cas_replacement_and_publishes_committed_snaps
         "blocked_component_keys": ["AlphaComponent", "ZetaComponent"],
         "blocked_template_keys": ["template-a", "template-z"],
         "blocked_model_keys": ["OpenAI::gpt-blocked", "openai::gpt-blocked", "claude-blocked"],
+        "approved_integration_provider_ids": ["Slack", "google"],
+        "blocked_integration_action_keys": ["Integrations.Google.Drive.Delete"],
         "reason": "quarterly policy refresh",
     }
 
@@ -178,11 +184,66 @@ def test_put_forwards_one_complete_cas_replacement_and_publishes_committed_snaps
         blocked_component_keys=["AlphaComponent", "ZetaComponent"],
         blocked_template_keys=["template-a", "template-z"],
         blocked_model_keys=["claude-blocked", "openai::gpt-blocked"],
+        approved_integration_provider_ids=["google", "slack"],
+        blocked_integration_action_keys=["integrations.google.drive.delete"],
         actor_user_id=admin.id,
         reason="quarterly policy refresh",
     )
     apply_state.assert_called_once_with(committed)
     read_state.assert_not_awaited()
+
+
+def test_put_without_integration_fields_governs_no_integration_for_legacy_writers(monkeypatch):
+    """QA: OSS pass-through remains unchanged when no integration policy is set (INT-7)."""
+    client, admin, _read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+    committed = _snapshot(revision=8, actor_id=admin.id)
+    replace_state.return_value = committed
+
+    response = client.put(
+        "/api/v1/policy-bundle",
+        json={
+            "expected_revision": 7,
+            "approved_provider_ids": ["openai"],
+            "blocked_component_keys": [],
+            "blocked_template_keys": [],
+            "blocked_model_keys": [],
+        },
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert replace_state.await_args.kwargs["approved_integration_provider_ids"] == []
+    assert replace_state.await_args.kwargs["blocked_integration_action_keys"] == []
+    apply_state.assert_called_once_with(committed)
+
+
+@pytest.mark.parametrize(
+    "invalid_keys",
+    [
+        ["google.drive.search"],
+        ["integrations.google"],
+        ["integrations..search"],
+        ["   "],
+    ],
+    ids=["missing-prefix", "no-action-segment", "empty-segment", "blank"],
+)
+def test_put_rejects_malformed_integration_action_keys_without_writing(monkeypatch, invalid_keys):
+    """QA: malformed action keys are rejected before any write (INT-7)."""
+    client, _admin, _read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+
+    response = client.put(
+        "/api/v1/policy-bundle",
+        json={
+            "expected_revision": 7,
+            "approved_provider_ids": [],
+            "blocked_component_keys": [],
+            "blocked_template_keys": [],
+            "blocked_integration_action_keys": invalid_keys,
+        },
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    replace_state.assert_not_awaited()
+    apply_state.assert_not_called()
 
 
 def test_put_without_model_keys_blocks_no_models_for_legacy_writers(monkeypatch):
@@ -208,6 +269,8 @@ def test_put_without_model_keys_blocks_no_models_for_legacy_writers(monkeypatch)
         blocked_component_keys=[],
         blocked_template_keys=[],
         blocked_model_keys=[],
+        approved_integration_provider_ids=[],
+        blocked_integration_action_keys=[],
         actor_user_id=admin.id,
         reason=None,
     )
