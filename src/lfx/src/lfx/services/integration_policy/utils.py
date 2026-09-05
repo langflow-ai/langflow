@@ -85,6 +85,28 @@ async def aresolve_integration_policy(
     )
 
 
+def resolve_integration_policy_for_current_context(
+    *,
+    provider_ids: Iterable[str],
+    purpose: IntegrationPolicyPurpose,
+) -> IntegrationPolicySnapshot:
+    """Resolve a snapshot for the principal bound to the current request.
+
+    Synchronous discovery surfaces (template listing, agentic search) have no
+    user argument in scope; they run inside a request that already bound the
+    policy context, and fall back to an anonymous context when nothing is bound.
+    """
+    from lfx.services.model_provider_policy.context import current_model_provider_policy_context
+
+    principal = current_model_provider_policy_context()
+    return resolve_integration_policy(
+        user_id=principal.user_id if principal is not None else None,
+        provider_ids=provider_ids,
+        purpose=purpose,
+        attributes=principal.attributes if principal is not None else None,
+    )
+
+
 def require_integration_provider(
     *,
     user_id,

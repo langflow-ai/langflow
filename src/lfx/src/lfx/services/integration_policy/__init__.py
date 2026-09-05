@@ -18,6 +18,7 @@ from lfx.services.integration_policy.utils import (
     require_integration_actions,
     require_integration_provider,
     resolve_integration_policy,
+    resolve_integration_policy_for_current_context,
 )
 
 __all__ = [
@@ -36,4 +37,5 @@ __all__ = [
     "require_integration_actions",
     "require_integration_provider",
     "resolve_integration_policy",
+    "resolve_integration_policy_for_current_context",
 ]
