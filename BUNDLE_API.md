@@ -608,3 +608,17 @@ the deserialize half is covered by
   messages and winner selection are unchanged, and two physically distinct
   manifests for one canonical name still error.  No public symbol's name or
   signature changed.
+- **`ResolvedCredential.identity` (additive, optional).**
+  `lfx.integrations.models.ResolvedCredential` gained
+  `identity: Literal["user_delegated", "bot", "service"] | None = None`,
+  mirroring `lfx.integrations.capabilities.IntegrationIdentity`.  The
+  database-backed resolver populates it from the connection row's
+  `executing_identity`; the headless environment resolver leaves it `None`
+  because the `LF_CONNECTION__*` wire format has no place to declare one.
+  Providers whose user and bot tokens share scope names — Slack's `chat:write`
+  is both a User Token Scope and a Bot Token Scope — cannot distinguish the two
+  identities from `granted_scopes`, so a bundle capability that must run as a
+  bot compares this field and fails closed with `connection-not-authorized`
+  before its first request.  The field defaults to `None`, no existing field
+  changed name, type, or meaning, and every existing construction site keeps
+  working, so `BUNDLE_API_VERSION` remains `1`.
