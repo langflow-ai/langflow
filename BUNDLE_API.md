@@ -217,6 +217,13 @@ the deserialize half is covered by
 
 ### v0 (this release)
 
+- **`discovered_tool()` accepts a recorded `tools/list` entry.**
+  `lfx.base.mcp.pinned.discovered_tool()` (and therefore `tools_list_digest()`)
+  now normalizes a plain mapping in addition to a live MCP tool object, so a
+  bundle author can compute a pin's `tools_list_hash` directly from the recorded
+  `tools/list` response that the pin is derived from. Additive;
+  `BUNDLE_API_VERSION` remains `1`.
+
 - **Pinned action-to-tool mode for preset MCP components (additive).**
   `MCPPresetComponent` gains a `_pinned_spec()` hook returning a
   `PinnedServerSpec` (`lfx.base.mcp.pinned`); in pinned mode the component fixes
