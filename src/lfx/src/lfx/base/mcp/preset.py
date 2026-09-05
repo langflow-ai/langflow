@@ -206,17 +206,24 @@ class MCPPresetComponent(ComponentWithCache):
         Discovery-time comparison is not enough on its own: the engine's
         ``MCPStructuredTool`` forwards keys that are absent from the derived args
         schema, so an Agent could still hand a drifted argument to the provider.
+
+        ``update_tools`` builds every tool with BOTH an async ``coroutine`` and a
+        synchronous ``func``.  Langflow drives MCP tools through the coroutine
+        everywhere today, but a ``StructuredTool.run()`` from any other caller would
+        take the ``func`` path, so both are wrapped: the guard is unconditional, not
+        async-only.
         """
         pinned = spec.tool(getattr(tool, "name", "") or "")
         if pinned is None:
             return tool
         provider = self._pinned_provider()
         original = getattr(tool, "coroutine", None)
-        if original is None:
+        original_func = getattr(tool, "func", None)
+        if original is None and original_func is None:
             return tool
         property_order = list((pinned.input_schema or {}).get("properties") or {})
 
-        async def guarded(*args: Any, **kwargs: Any) -> Any:
+        def check(args: tuple[Any, ...], kwargs: dict[str, Any]) -> None:
             arguments = dict(kwargs)
             for index, value in enumerate(args):
                 if index >= len(property_order):
@@ -224,15 +231,28 @@ class MCPPresetComponent(ComponentWithCache):
                     raise IncompatibleToolError(msg, provider=provider, details={"tool": pinned.name})
                 arguments[property_order[index]] = value
             validate_pinned_arguments(pinned, arguments, provider=provider)
+
+        async def guarded(*args: Any, **kwargs: Any) -> Any:
+            check(args, kwargs)
             return await original(*args, **kwargs)
 
+        def guarded_sync(*args: Any, **kwargs: Any) -> Any:
+            check(args, kwargs)
+            return original_func(*args, **kwargs)
+
+        update: dict[str, Any] = {}
+        if original is not None:
+            update["coroutine"] = guarded
+        if original_func is not None:
+            update["func"] = guarded_sync
         try:
-            tool.coroutine = guarded
+            for attribute, value in update.items():
+                setattr(tool, attribute, value)
         except (AttributeError, TypeError, ValueError):
             copier = getattr(tool, "model_copy", None)
             if copier is None:
                 raise
-            return copier(update={"coroutine": guarded})
+            return copier(update=update)
         return tool
 
     async def _load_tools(self) -> tuple[list[StructuredTool], dict[str, StructuredTool]]:

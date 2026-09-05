@@ -111,6 +111,24 @@ def test_discovered_tool_reads_a_raw_tools_list_entry():
     )
 
 
+def test_a_tools_own_schema_attributes_do_not_shadow_the_recorded_ones():
+    """A LangChain tool is a ``Runnable``, which owns ``input_schema``/``output_schema``.
+
+    Those properties return pydantic model classes, not JSON Schema. Reading them
+    ahead of ``metadata`` compared an empty schema against the pin and reported
+    every real engine-built tool as re-shaped.
+    """
+    tool = SimpleNamespace(
+        name="search_messages",
+        metadata={"server_name": "slack", "input_schema": SEARCH_INPUT, "output_schema": SEARCH_OUTPUT},
+        input_schema=SimpleNamespace,
+        output_schema=SimpleNamespace,
+    )
+    view = discovered_tool(tool)
+    assert view.input_schema == SEARCH_INPUT
+    assert view.output_schema == SEARCH_OUTPUT
+
+
 def test_discovered_tool_without_schemas_is_empty_not_none():
     view = discovered_tool(SimpleNamespace(name="x"))
     assert view.input_schema == {}
@@ -263,11 +281,14 @@ def test_pinned_arguments_reject_unknown_keys():
     assert excinfo.value.details["unexpected"] == ["cursor"]
 
 
-def test_pinned_arguments_reject_missing_required_keys():
-    tool = _pin().tools[0]
-    with pytest.raises(IncompatibleToolError) as excinfo:
-        validate_pinned_arguments(tool, {"limit": 5})
-    assert excinfo.value.details["missing"] == ["query"]
+def test_a_missing_required_key_is_left_to_the_derived_args_schema():
+    """An omitted field is a caller mistake, not provider drift.
+
+    Calling it ``incompatible-tool`` would hand an agent a non-retryable error and
+    tell an operator to upgrade a bundle that cannot fix it; the derived args
+    schema already rejects it with a self-correctable message.
+    """
+    validate_pinned_arguments(_pin().tools[0], {"limit": 5})
 
 
 def test_pinned_arguments_accept_the_pinned_shape():
@@ -325,3 +346,23 @@ def test_pinned_spec_rejects_capabilities_that_disagree_about_the_server():
 def test_pinned_spec_requires_at_least_one_mcp_capability():
     with pytest.raises(ValueError, match="nothing to pin"):
         pinned_spec_from_capabilities([])
+
+
+def test_pinned_spec_accepts_a_hash_computed_over_exactly_the_pinned_tools():
+    digest = tools_list_digest(_matching())
+    capabilities = [
+        _capability("search", "search_messages", tools_list_hash=digest),
+        _capability("post", "post_message", tools_list_hash=digest),
+    ]
+    assert pinned_spec_from_capabilities(capabilities).tools_list_hash == digest
+
+
+def test_pinned_spec_rejects_a_hash_that_is_not_the_digest_of_its_tools():
+    """A hash taken over a wider recording than the manifest pins is a bundle error.
+
+    Left unchecked it would surface at every load as an added tool plus a digest
+    mismatch, which reads like the server drifted rather than like the pin is wrong.
+    """
+    whole_recording = tools_list_digest(_matching())
+    with pytest.raises(ValueError, match="is not the digest of the pinned tools"):
+        pinned_spec_from_capabilities([_capability("search", "search_messages", tools_list_hash=whole_recording)])
