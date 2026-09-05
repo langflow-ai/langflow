@@ -423,3 +423,36 @@ async def test_create_role_denied_by_hook_over_http(
     assert rows[0]["details"]["reason"] == "tier_limit_reached"
     assert rows[0]["details"]["status_code"] == 403
     assert rows[0]["user_id"] is not None
+
+
+async def test_create_role_http_refusal_passes_through(client: AsyncClient, logged_in_headers_super_user, monkeypatch):
+    """A role hook raising its own HTTPException reaches the client untouched.
+
+    The status and the error-code header are the hook's, not the 403 mapper's, and the
+    refusal still rolls back and writes one audit deny row naming the hook's own code.
+    """
+    from langflow.api.v1 import authz_roles
+
+    audit = AsyncMock()
+    monkeypatch.setattr(authz_roles, "audit_decision", audit)
+    _register_http_refusing_hook(RESOURCE_ROLE)
+
+    response = await client.post(
+        "api/v1/authz/roles/",
+        json={"name": "refused-role", "permissions": ["flow:read"]},
+        headers=logged_in_headers_super_user,
+    )
+
+    assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    assert response.headers[ERROR_CODE_HEADER] == "tier_limit_reached"
+    assert response.json()["detail"]["message"] == LIMIT_MESSAGE
+
+    async with session_scope() as session:
+        assert (await session.exec(select(AuthzRole).where(AuthzRole.name == "refused-role"))).first() is None
+
+    rows = _deny_rows(audit)
+    assert len(rows) == 1
+    assert rows[0]["action"] == "role:create"
+    assert rows[0]["details"]["status_code"] == 429
+    assert rows[0]["details"]["reason"] == "tier_limit_reached"
+    assert rows[0]["user_id"] is not None

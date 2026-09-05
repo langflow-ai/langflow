@@ -1620,6 +1620,72 @@ async def test_resume_cancellation_is_not_metered(active_user, echo_flow_data, m
     assert [event for event in pop_all() if event.run_id == str(uuid.UUID(task_id))] == []
 
 
+async def test_resume_failure_is_metered_as_a_failed_run(active_user, echo_flow_data, monkeypatch):
+    """An ordinary resume failure emits exactly one failed run event and drops the checkpoint.
+
+    The sibling test above covers ``CancelledError``, which derives from ``BaseException`` and
+    so never reaches ``except Exception``; this one pins the branch that does.
+    """
+    from langflow.api.v1 import a2a as a2a_module
+    from langflow.services.telemetry.run_event_store import pop_all
+    from lfx.graph.checkpoint.schema import GraphCheckpoint
+
+    flow_id = await _create_flow(active_user.id, data=echo_flow_data)
+    task_id = str(uuid.uuid4())
+    principal = str(a2a_module.PUBLIC_ANONYMOUS_ACTOR_ID)
+    checkpoint = GraphCheckpoint(
+        run_id=task_id,
+        flow_id=str(flow_id),
+        user_id=principal,
+        flow_payload=echo_flow_data,
+        pause_context={"data": {"request_id": "node:run"}},
+    )
+    deleted: list[str] = []
+
+    class FakeStore:
+        async def load_by_run_id(self, run_id):
+            assert run_id == task_id
+            return checkpoint
+
+        async def claim_by_run_id(self, run_id):
+            assert run_id == task_id
+            return True
+
+        async def delete_by_run_id(self, run_id):
+            deleted.append(run_id)
+
+    class FakeGraph:
+        session_id = "session-1"
+
+        def get_terminal_nodes(self):
+            return []
+
+    async def failing_run(*_args, **_kwargs):
+        msg = "component blew up"
+        raise RuntimeError(msg)
+
+    async def fake_prepare(data):
+        return data
+
+    monkeypatch.setattr(a2a_module, "A2ACheckpointStore", FakeStore)
+    monkeypatch.setattr(a2a_module, "validate_public_flow_no_code_execution", lambda _data: None)
+    monkeypatch.setattr(a2a_module, "prepare_public_flow_build", fake_prepare)
+    monkeypatch.setattr(a2a_module, "resume_graph_with_decision", lambda *_args: FakeGraph())
+    monkeypatch.setattr("langflow.processing.process.run_graph_internal", failing_run)
+
+    pop_all()
+    with pytest.raises(RuntimeError, match="component blew up"):
+        await a2a_module._resume_flow(flow_id, task_id, "Approve", admitted_user_id=principal)
+
+    # The checkpoint is dropped so the terminal task isn't orphaned.
+    assert deleted == [task_id]
+
+    events = [event for event in pop_all() if event.run_id == str(uuid.UUID(task_id))]
+    assert len(events) == 1
+    assert events[0].run_success is False
+    assert "component blew up" in events[0].run_error_message
+
+
 @pytest.mark.usefixtures("a2a_flag_on")
 async def test_unmatched_decision_re_parks_task(client: AsyncClient, active_user, human_input_flow_data):
     """A reply that matches no offered action re-parks the task instead of burning it.

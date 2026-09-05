@@ -103,6 +103,24 @@ describe("OSS auth customization seams", () => {
     expect(customShouldSkipAuthRefresh(error)).toBe(true);
   });
 
+  it("skips auth refresh for a tier denial readable only through headers.get", () => {
+    // Axios v1 hands the interceptor an AxiosHeaders instance, where the header
+    // is reachable through get() and not as a plain own property. The body here
+    // carries no error code, so only the get() fallback can answer.
+    const error = {
+      response: {
+        status: 403,
+        headers: {
+          get: (name: string) =>
+            name === "x-langflow-error-code" ? "tier_limit_reached" : undefined,
+        },
+        data: { detail: { message: "nope" } },
+      },
+    } as unknown as AxiosError;
+
+    expect(customShouldSkipAuthRefresh(error)).toBe(true);
+  });
+
   it("does not skip auth refresh for an unrelated error code", () => {
     const error = {
       response: {
