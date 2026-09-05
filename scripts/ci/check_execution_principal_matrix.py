@@ -24,6 +24,8 @@ REQUIRED_DIMENSIONS = frozenset(
         "tweaks",
         "revoke",
         "error_policy",
+        "connection_resolution",
+        "connection_resolution_note",
         "exception",
         "test_references",
     }
@@ -68,11 +70,51 @@ VALID_DIMENSION_VALUES = {
     "tweaks": {"owner_only", "owner_or_writer", "forbidden", "server_generated"},
     "revoke": {"new_and_resume", "new_only", "resume_rechecks_actor", "provider_controlled"},
     "error_policy": {"owner_debug_delegated_sanitized", "sanitized", "provider_sanitized"},
+    # INT-6: which connection a run of this family may resolve.
+    #   owner_or_explicit_share       the actor's own row, or one shared with them
+    #   owner_only                    the actor's own row; shares are not admitted
+    #   owner_non_interactive_opt_in  the resource owner's row, and only with
+    #                                 Connection.allow_non_interactive set
+    #   job_owner_reresolved          the job owner's row, recomputed on the worker
+    #   never                         no user connection, and no instance connection
+    "connection_resolution": {
+        "owner_or_explicit_share",
+        "owner_only",
+        "owner_non_interactive_opt_in",
+        "job_owner_reresolved",
+        "never",
+    },
 }
 
+# A family's dependency principal fixes which connection rules can be true of it.
+# An anonymous dependency principal that resolved anything but "never" would be a
+# credential leak; a job_owner one that did not re-resolve would trust a persisted
+# identity. Keeping the pair consistent is the point of encoding both.
+CONNECTION_RESOLUTION_BY_DEPENDENCY_PRINCIPAL = {
+    "actor": {"owner_only"},
+    "actor_or_explicit_share": {"owner_or_explicit_share"},
+    "anonymous_public": {"never"},
+    "flow_owner": {"owner_non_interactive_opt_in"},
+    "deployment_owner": {"owner_non_interactive_opt_in"},
+    "job_owner": {"job_owner_reresolved"},
+}
+
+# Each family maps to a list of term-groups; every group must be satisfied by SOME
+# test reference whose function name contains all of its terms. A generic smoke
+# test cannot stand in for a rule this specific.
 BEHAVIOR_SPECIFIC_REFERENCE_TERMS = {
-    "v1_run": ("v1_run",),
-    "webhook": ("webhook", "tweak"),
+    "v1_run": (("v1_run",),),
+    "webhook": (("webhook", "tweak"), ("webhook", "connection")),
+    # The two rules a reviewer most needs proof of: an anonymous caller resolving
+    # nothing, and an owner-only family ignoring a share.
+    "legacy_public_chat": (("public", "connection"),),
+    "workflow_public_v2": (("public", "connection"),),
+    "a2a": (("a2a", "connection"),),
+    "legacy_mcp": (("connection", "share"),),
+    "mcp_projects": (("mcp_projects", "non_interactive"),),
+    # A resume keeps the JOB's owner. The flow can belong to somebody who only
+    # shared it, so a test that uses one identity for both roles proves nothing.
+    "workflow_hitl_v2": (("hitl", "job_owner"),),
 }
 
 
@@ -146,6 +188,18 @@ def validate_matrix(matrix_path: Path = DEFAULT_MATRIX) -> list[str]:
             if value not in valid_values:
                 errors.append(f"entrypoint {family!r} has unknown {dimension} {value!r}")
 
+        dependency_principal = entrypoint["dependency_principal"]
+        allowed_resolutions = CONNECTION_RESOLUTION_BY_DEPENDENCY_PRINCIPAL.get(dependency_principal)
+        if allowed_resolutions is not None and entrypoint["connection_resolution"] not in allowed_resolutions:
+            errors.append(
+                f"entrypoint {family!r} pairs dependency_principal {dependency_principal!r} with "
+                f"connection_resolution {entrypoint['connection_resolution']!r}; expected one of "
+                f"{sorted(allowed_resolutions)}"
+            )
+        note = entrypoint["connection_resolution_note"]
+        if not isinstance(note, str) or not note.strip():
+            errors.append(f"entrypoint {family!r} must explain its connection_resolution in prose")
+
         if not isinstance(entrypoint["exception"], str) or not entrypoint["exception"].strip():
             errors.append(f"entrypoint {family!r} must document its exception status")
         if not entrypoint["test_references"]:
@@ -155,14 +209,14 @@ def validate_matrix(matrix_path: Path = DEFAULT_MATRIX) -> list[str]:
             for reference in entrypoint["test_references"]
             if (error := _validate_test_reference(reference))
         )
-        required_terms = BEHAVIOR_SPECIFIC_REFERENCE_TERMS.get(family)
-        if required_terms and not any(
-            all(term in reference.rsplit("::", 1)[-1].lower() for term in required_terms)
-            for reference in entrypoint["test_references"]
-        ):
-            errors.append(
-                f"entrypoint {family!r} needs a behavior-specific test reference containing {required_terms!r}"
+        errors.extend(
+            f"entrypoint {family!r} needs a behavior-specific test reference containing {required_terms!r}"
+            for required_terms in BEHAVIOR_SPECIFIC_REFERENCE_TERMS.get(family, ())
+            if not any(
+                all(term in reference.rsplit("::", 1)[-1].lower() for term in required_terms)
+                for reference in entrypoint["test_references"]
             )
+        )
 
     missing_families = REQUIRED_FAMILIES - seen
     unexpected_families = seen - REQUIRED_FAMILIES

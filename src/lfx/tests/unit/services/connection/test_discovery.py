@@ -28,6 +28,24 @@ def _request(principal: ExecutionPrincipal) -> ConnectionResolutionRequest:
         (ExecutionPrincipal(kind="actor", user_id="user-1", interactive=True), "user", "user-2", False, False),
         (ExecutionPrincipal(kind="flow_owner", user_id="user-1"), "user", "user-1", False, False),
         (ExecutionPrincipal(kind="flow_owner", user_id="user-1"), "user", "user-1", True, True),
+        # INT-6: owner-only families still resolve their OWN rows; allow_explicit_shares
+        # only governs the host's share branch, which the portable floor never reaches.
+        (
+            ExecutionPrincipal(kind="actor", user_id="user-1", interactive=True, allow_explicit_shares=False),
+            "user",
+            "user-1",
+            False,
+            True,
+        ),
+        (
+            ExecutionPrincipal(kind="actor", user_id="user-1", interactive=True, allow_explicit_shares=False),
+            "user",
+            "user-2",
+            False,
+            False,
+        ),
+        # INT-6: anonymous/public execution never reaches an instance credential either.
+        (ExecutionPrincipal(kind="anonymous_public", family="workflow_public_v2"), "instance", None, True, False),
     ],
 )
 def test_portable_principal_authorization_floor(

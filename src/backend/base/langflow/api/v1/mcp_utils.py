@@ -29,6 +29,7 @@ from mcp import types
 from sqlmodel import select
 
 from langflow.api.utils.core import strip_secret_field_values
+from langflow.api.utils.execution_principal import FAMILY_LEGACY_MCP, FAMILY_MCP_PROJECTS
 from langflow.api.utils.flow_utils import compute_virtual_flow_id, scope_session_to_namespace
 from langflow.api.v1.endpoints import simple_run_flow
 from langflow.api.v1.run_validation import HITL_UNSUPPORTED_DETAIL, flow_requires_hitl
@@ -506,6 +507,15 @@ async def handle_call_tool(
                             context=exec_context,
                             expose_error_details=caller_owns_resource(flow.user_id),
                             http_request=http_request_shim,
+                            # Both MCP families are owner-only: their admission never
+                            # admits a delegated caller, so an explicit connection
+                            # share must not resolve either.
+                            execution_family=(FAMILY_MCP_PROJECTS if project_id is not None else FAMILY_LEGACY_MCP),
+                            # A project transport authenticated with auth_type=none has
+                            # nobody at the keyboard: it already executes under the
+                            # anonymous principal (which resolves no user connection at
+                            # all), and marking it non-interactive keeps that explicit.
+                            interactive=not is_public_project_call,
                         )
                     # Process all outputs and messages, ensuring no duplicates
                     processed_texts = set()

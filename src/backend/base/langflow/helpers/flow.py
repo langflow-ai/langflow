@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from lfx.graph.graph.base import Graph
     from lfx.graph.schema import RunOutputs
     from lfx.graph.vertex.base import Vertex
+    from lfx.services.authorization.base import ExecutionPrincipal
 
     from langflow.services.database.models.user.model import User
 
@@ -370,7 +371,14 @@ async def run_flow(
     run_id: str | None = None,
     session_id: str | None = None,
     graph: Graph | None = None,
+    execution_principal: ExecutionPrincipal | None = None,
 ) -> list[RunOutputs]:
+    """Run a target flow as a sub-flow or flow-as-tool.
+
+    ``execution_principal`` is the calling graph's identity. A sub-flow runs inside
+    its parent's execution, so it inherits that principal verbatim rather than
+    minting one: the child is not a new entry point and has no family of its own.
+    """
     if user_id is None:
         msg = "Session is invalid"
         raise ValueError(msg)
@@ -399,6 +407,8 @@ async def run_flow(
         if session_id:
             graph.session_id = session_id
         graph.user_id = str(user_id)
+        if execution_principal is not None:
+            graph.execution_principal = execution_principal
 
         if inputs is None:
             inputs = []

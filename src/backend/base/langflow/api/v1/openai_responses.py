@@ -18,7 +18,8 @@ from lfx.workflow.end_user_identity import (
 )
 
 from langflow.api.utils import extract_global_variables_from_headers
-from langflow.api.utils.execution_errors import error_for_client
+from langflow.api.utils.execution_errors import error_details_for_client, error_for_client
+from langflow.api.utils.execution_principal import FAMILY_OPENAI_RESPONSES
 from langflow.api.v1.endpoints import _caller_owns_flow, consume_and_yield, run_flow_generator, simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.events.event_manager import create_stream_tokens_event_manager
@@ -135,6 +136,7 @@ async def run_flow_for_openai_responses(
                         context=context,
                         expose_error_details=expose_error_details,
                         http_request=http_request,
+                        execution_family=FAMILY_OPENAI_RESPONSES,
                     )
                 )
 
@@ -491,6 +493,7 @@ async def run_flow_for_openai_responses(
             context=context,
             expose_error_details=expose_error_details,
             http_request=http_request,
+            execution_family=FAMILY_OPENAI_RESPONSES,
         )
 
     # Extract output text, tool calls, and usage from result
@@ -747,6 +750,10 @@ async def create_response(
 
     except Exception as exc:  # noqa: BLE001
         await logger.aexception("Error processing OpenAI Responses request")
+        # This route answers in the OpenAI error envelope rather than raising, so an
+        # integration failure keeps its typed code and its sanitized sentence there
+        # instead of being stringified through an HTTPException the client cannot read.
+        integration_details = error_details_for_client(exc, expose_details=expose_error_details)
         client_error = error_for_client(exc, expose_details=expose_error_details)
 
         # Log telemetry for failed completion
@@ -763,8 +770,9 @@ async def create_response(
 
         # Return OpenAI-compatible error
         error_response = create_openai_error(
-            message=str(client_error),
+            message=integration_details.message if integration_details.code else str(client_error),
             type_="processing_error",
+            code=integration_details.code,
         )
         return OpenAIErrorResponse(error=error_response["error"])
 

@@ -19,10 +19,12 @@ from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
 from langflow.api.global_variable_fields import is_global_variable_eligible_field
+from langflow.api.utils.execution_principal import stamp_execution_principal
 from langflow.services.warm_registry.service import flow_version
 
 if TYPE_CHECKING:
     from lfx.graph.graph.base import Graph
+    from lfx.services.authorization.base import ExecutionPrincipal
 
     from langflow.api.v1.schemas import SimplifiedAPIRequest
     from langflow.services.database.models.flow.model import Flow
@@ -127,12 +129,15 @@ async def warm_deepcopy(
     user_id: Any,
     session_id: str | None,
     stream: bool = False,
+    execution_principal: ExecutionPrincipal | None = None,
 ) -> Graph | None:
     """Return a run-ready deepcopy of the warm template, or ``None`` to rebuild cold.
 
     Built-in fall-backs: warming disabled, cache miss (and not lazily warmable), or a
     transient store-availability failure. The returned graph carries the flow's structure
     (built at warm time) plus this run's ``user_id``/``session_id`` (applied to the copy),
+    plus this run's ``execution_principal`` (re-stamped AFTER ``apply_run_defaults``,
+    which would otherwise leave the copy on the lfx headless-operator identity),
     so callers use it exactly like a freshly-built graph. Per-request *policy* gates
     (tweaks / context / auto-bind / HITL) are the caller's responsibility — they differ by
     run path — and must be checked BEFORE calling this.
@@ -199,6 +204,12 @@ async def warm_deepcopy(
         user_id=run_user_id,
         overwrite_user_id=user_id is not None,
     )
+    # The warm template is user-agnostic and therefore carries
+    # ``ExecutionPrincipal.unknown()``, which ``apply_run_defaults`` stamps as the
+    # lfx headless operator. Re-stamp the caller's route-family principal so a warm
+    # hit resolves connections exactly like the cold ``Graph.from_payload`` path.
+    if execution_principal is not None:
+        stamp_execution_principal(graph, execution_principal)
     return graph
 
 
@@ -209,6 +220,7 @@ async def try_warm_run_graph(
     user_id: Any,
     context: dict | None,
     stream: bool = False,
+    execution_principal: ExecutionPrincipal | None = None,
 ) -> Graph | None:
     """v1 ``simple_run_flow`` warm resolver: gate on the v1 signals, then ``warm_deepcopy``.
 
@@ -230,4 +242,5 @@ async def try_warm_run_graph(
         user_id=user_id,
         session_id=input_request.session_id,
         stream=stream,
+        execution_principal=execution_principal,
     )

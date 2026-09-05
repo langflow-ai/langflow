@@ -13,6 +13,7 @@ from sqlalchemy import delete
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.api.utils.execution_principal import stamp_execution_principal
 from langflow.services.authorization.public_access import (
     PublicResourceAction,
     authorize_public_flow_access,
@@ -32,6 +33,8 @@ from langflow.services.database.models.user.model import UserRead
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 
 if TYPE_CHECKING:
+    from lfx.services.authorization.base import ExecutionPrincipal
+
     from langflow.services.chat.service import ChatService
 
 
@@ -45,7 +48,12 @@ async def _get_flow_name(flow_id: uuid.UUID) -> str:
 
 
 async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwargs):
-    """Build and cache the graph."""
+    """Build and cache the graph.
+
+    ``execution_principal`` (keyword) is the per-family identity that governs
+    dependency/connection resolution. Callers that omit it leave the graph on
+    ``ExecutionPrincipal.unknown()``, which fails closed for every connection.
+    """
     # Get flow name
     if "flow_name" not in kwargs:
         flow_name = await _get_flow_name(flow_id if isinstance(flow_id, uuid.UUID) else uuid.UUID(flow_id))
@@ -55,6 +63,8 @@ async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwarg
     session_id = kwargs.get("session_id") or str_flow_id
 
     graph = Graph.from_payload(payload, str_flow_id, flow_name, kwargs.get("user_id"))
+    if (execution_principal := kwargs.get("execution_principal")) is not None:
+        stamp_execution_principal(graph, execution_principal)
     for vertex_id in graph.has_session_id_vertices:
         vertex = graph.get_vertex(vertex_id)
         if vertex is None:
@@ -91,11 +101,19 @@ async def build_and_cache_graph_from_data(
     flow_id: uuid.UUID | str,
     chat_service: ChatService,
     graph_data: dict,
+    *,
+    execution_principal: ExecutionPrincipal | None = None,
 ):  # -> Graph | Any:
-    """Build and cache the graph."""
+    """Build and cache the graph.
+
+    This is the Playground's primary build seam, so it carries the same
+    ``execution_principal`` contract as ``build_graph_from_data``.
+    """
     # Convert flow_id to str if it's UUID
     str_flow_id = str(flow_id) if isinstance(flow_id, uuid.UUID) else flow_id
     graph = Graph.from_payload(graph_data, str_flow_id)
+    if execution_principal is not None:
+        stamp_execution_principal(graph, execution_principal)
     await chat_service.set_cache(str_flow_id, graph)
     return graph
 
