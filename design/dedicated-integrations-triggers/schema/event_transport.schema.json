@@ -1,0 +1,272 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://langflow.org/design/dedicated-integrations-triggers/schema/event_transport.schema.json",
+  "title": "Event-transport matrix",
+  "description": "One provider's event delivery mechanisms for the triggers discovery gate (TRG-1 exit criterion 2). Every mechanism records its track, ingress requirement, inbound authentication, subscription lifetime and renewal, payload shape, delivery guarantee, replay availability, rate limits, dedupe key, and the deployment contexts it supports. Rules a schema cannot express (source resolution, the no-ingress rule per context, the outbound-only fallback requirement) live in scripts/ci/event_transport_matrix.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "provider",
+    "display_name",
+    "wave",
+    "verified_on",
+    "public_ingress_by_context",
+    "decision_records",
+    "sources",
+    "mechanisms"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "provider": {
+      "$ref": "#/$defs/provider"
+    },
+    "display_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "wave": {
+      "const": 1
+    },
+    "verified_on": {
+      "$ref": "#/$defs/iso_date"
+    },
+    "public_ingress_by_context": {
+      "type": "object",
+      "description": "Whether a Langflow deployment in this context can expose a public HTTPS URL to the provider.",
+      "additionalProperties": false,
+      "required": ["hosted", "self_managed", "desktop", "headless"],
+      "properties": {
+        "hosted": { "$ref": "#/$defs/ingress_availability" },
+        "self_managed": { "$ref": "#/$defs/ingress_availability" },
+        "desktop": { "$ref": "#/$defs/ingress_availability" },
+        "headless": { "$ref": "#/$defs/ingress_availability" }
+      }
+    },
+    "decision_records": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^decisions/[a-z0-9-]+\\.md$"
+      }
+    },
+    "sources": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]*$" },
+      "additionalProperties": { "$ref": "#/$defs/source" }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "mechanisms": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/mechanism" }
+    }
+  },
+  "$defs": {
+    "iso_date": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "provider": {
+      "enum": ["google", "microsoft", "slack"]
+    },
+    "ingress_availability": {
+      "enum": ["available", "conditional", "unavailable"]
+    },
+    "source_kind": {
+      "enum": ["provider_docs", "provider_changelog", "provider_console"]
+    },
+    "track": {
+      "description": "a = push ingress (the provider posts to a Langflow URL); b = Langflow reaches out and holds or polls the connection.",
+      "enum": ["a", "b"]
+    },
+    "transport": {
+      "enum": ["http_push", "persistent_socket", "pull_subscription", "poll"]
+    },
+    "ingress_requirement": {
+      "enum": ["public_https", "outbound_only"]
+    },
+    "inbound_auth_method": {
+      "enum": [
+        "hmac_signature",
+        "validation_token",
+        "channel_token",
+        "oidc_token",
+        "app_level_token",
+        "oauth_access_token",
+        "none"
+      ]
+    },
+    "payload_shape": {
+      "enum": ["thin", "full"]
+    },
+    "delivery_guarantee": {
+      "enum": ["at_least_once", "at_most_once", "best_effort"]
+    },
+    "dedupe_stability": {
+      "enum": ["stable_across_retries", "per_delivery", "derived"]
+    },
+    "confidence": {
+      "enum": ["high", "medium", "low"]
+    },
+    "mechanism_status": {
+      "enum": ["wave_1", "deferred", "excluded"]
+    },
+    "deployment_context": {
+      "enum": ["hosted", "self_managed", "desktop", "headless"]
+    },
+    "sourced_claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["details", "source"],
+      "properties": {
+        "details": { "type": "string", "minLength": 1 },
+        "source": { "type": "string" }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "title", "kind", "verified_on"],
+      "properties": {
+        "url": { "type": "string", "pattern": "^https://" },
+        "title": { "type": "string", "minLength": 1 },
+        "kind": { "$ref": "#/$defs/source_kind" },
+        "verified_on": { "$ref": "#/$defs/iso_date" },
+        "notes": { "type": "string" }
+      }
+    },
+    "mechanism": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mechanism_id",
+        "display_name",
+        "track",
+        "transport",
+        "ingress_requirement",
+        "deployment_contexts",
+        "status",
+        "confidence",
+        "owning_ticket",
+        "rationale"
+      ],
+      "properties": {
+        "mechanism_id": {
+          "type": "string",
+          "pattern": "^(google|microsoft|slack)\\.[a-z0-9_]+$"
+        },
+        "display_name": { "type": "string", "minLength": 1 },
+        "track": { "$ref": "#/$defs/track" },
+        "transport": { "$ref": "#/$defs/transport" },
+        "ingress_requirement": { "$ref": "#/$defs/ingress_requirement" },
+        "deployment_contexts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/deployment_context" }
+        },
+        "status": { "$ref": "#/$defs/mechanism_status" },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "owning_ticket": {
+          "type": "string",
+          "pattern": "^TRG-[0-9]+$"
+        },
+        "rationale": { "type": "string", "minLength": 1 },
+        "fallback_mechanism": {
+          "type": "string",
+          "pattern": "^(google|microsoft|slack)\\.[a-z0-9_]+$"
+        },
+        "events": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "required_scopes": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "inbound_auth": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["method", "details", "source"],
+          "properties": {
+            "method": { "$ref": "#/$defs/inbound_auth_method" },
+            "details": { "type": "string", "minLength": 1 },
+            "source": { "type": "string" }
+          }
+        },
+        "subscription": {
+          "type": "object",
+          "description": "Whether Langflow must create and keep alive a provider-side object for this mechanism, and how. `required` is false when nothing is created through an API (app configuration, or a cursor Langflow owns); `max_ttl_seconds` is null when the provider returns the expiry rather than publishing a constant.",
+          "additionalProperties": false,
+          "required": ["required", "max_ttl_seconds", "renewal", "source"],
+          "properties": {
+            "required": { "type": "boolean" },
+            "max_ttl_seconds": { "type": ["integer", "null"], "minimum": 1 },
+            "renewal": { "type": "string", "minLength": 1 },
+            "source": { "type": "string" }
+          }
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["shape", "details", "source"],
+          "properties": {
+            "shape": { "$ref": "#/$defs/payload_shape" },
+            "details": { "type": "string", "minLength": 1 },
+            "source": { "type": "string" }
+          }
+        },
+        "delivery": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["guarantee", "ack_deadline_seconds", "retry_policy", "source"],
+          "properties": {
+            "guarantee": { "$ref": "#/$defs/delivery_guarantee" },
+            "ack_deadline_seconds": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+            "retry_policy": { "type": "string", "minLength": 1 },
+            "source": { "type": "string" }
+          }
+        },
+        "replay": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["available", "details", "source"],
+          "properties": {
+            "available": { "type": "boolean" },
+            "window": { "type": ["string", "null"] },
+            "details": { "type": "string", "minLength": 1 },
+            "source": { "type": "string" }
+          }
+        },
+        "rate_limit": { "$ref": "#/$defs/sourced_claim" },
+        "dedupe_key": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["field", "stability", "details", "source"],
+          "properties": {
+            "field": { "type": "string", "minLength": 1 },
+            "stability": { "$ref": "#/$defs/dedupe_stability" },
+            "details": { "type": "string", "minLength": 1 },
+            "source": { "type": "string" }
+          }
+        },
+        "session_key": { "$ref": "#/$defs/sourced_claim" },
+        "open_questions": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

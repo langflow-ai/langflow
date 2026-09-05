@@ -1,0 +1,232 @@
+{
+  "schema_version": 1,
+  "provider": "microsoft",
+  "display_name": "Microsoft 365",
+  "wave": 1,
+  "verified_on": "2026-09-05",
+  "public_ingress_by_context": {
+    "hosted": "available",
+    "self_managed": "conditional",
+    "desktop": "unavailable",
+    "headless": "unavailable"
+  },
+  "decision_records": [
+    "decisions/delivery-semantics.md",
+    "decisions/process-model.md",
+    "decisions/self-managed-ingress.md"
+  ],
+  "sources": {
+    "graph-change-notifications": {
+      "url": "https://learn.microsoft.com/en-us/graph/change-notifications-overview",
+      "title": "Microsoft Graph: Change notifications overview",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "An app subscribes to a resource and Microsoft Graph POSTs notifications to notificationUrl. Notifications are thin by default (resource, resourceData with id, @odata.type and @odata.id, changeType, subscriptionId, subscriptionExpirationDateTime, clientState, tenantId) and the app fetches the changed item itself. Subscriptions expire and must be renewed by PATCHing the subscription before subscriptionExpirationDateTime. Notifications can arrive out of order and can be duplicated."
+    },
+    "graph-webhook-delivery": {
+      "url": "https://learn.microsoft.com/en-us/graph/change-notifications-delivery-webhooks",
+      "title": "Microsoft Graph: Change notification delivery through webhooks",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "Subscription creation triggers a validation request: Graph POSTs to notificationUrl with a validationToken query parameter, and the endpoint must echo the decoded token as text/plain with HTTP 200 within 10 seconds or the subscription is not created. Notifications must be answered with 2xx within three seconds; Graph retries an unanswered or failed notification with a backoff for roughly four hours before dropping it. clientState, supplied at subscription creation, is echoed in every notification and is the value the receiver compares."
+    },
+    "graph-subscription": {
+      "url": "https://learn.microsoft.com/en-us/graph/api/resources/subscription",
+      "title": "Microsoft Graph: subscription resource type",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "Maximum subscription lifetimes are per resource; Outlook message, event and contact resources are documented at 4230 minutes (just under three days), and drive resources differ between OneDrive personal and OneDrive for Business or SharePoint. lifecycleNotificationUrl must be supplied at creation to receive lifecycle events. expirationDateTime is required and renewal is a PATCH of that property."
+    },
+    "graph-lifecycle-events": {
+      "url": "https://learn.microsoft.com/en-us/graph/change-notifications-lifecycle-events",
+      "title": "Microsoft Graph: Lifecycle notifications",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "Three lifecycle event types are delivered to lifecycleNotificationUrl: subscriptionRemoved (the subscription is gone and must be recreated), missed (notifications could not be delivered and the app must resync, typically with a delta query), and reauthorizationRequired (the subscription needs its authorization refreshed). Lifecycle notifications are themselves validated with the same validationToken handshake."
+    },
+    "graph-delta-query": {
+      "url": "https://learn.microsoft.com/en-us/graph/delta-query-overview",
+      "title": "Microsoft Graph: Use delta query to track changes",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "A delta function call returns changed items plus an @odata.deltaLink to use on the next round; the call is an ordinary outbound HTTPS request with the user's delegated token. A deltaLink that is no longer usable returns HTTP 410 Gone with the error code syncStateNotFound, and the caller must restart the enumeration from scratch. Delta is supported for mail folder messages, calendar events, and driveItem changes."
+    },
+    "graph-throttling": {
+      "url": "https://learn.microsoft.com/en-us/graph/throttling",
+      "title": "Microsoft Graph: Throttling guidance and service limits",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "Graph returns HTTP 429 with a Retry-After header when a service limit is exceeded. Outlook service limits are documented per mailbox per app (10,000 requests per 10 minutes) and are shared by every app acting on that mailbox, so a poll loop and a fetch-back path compete for the same budget."
+    },
+    "graph-teams-licenses": {
+      "url": "https://learn.microsoft.com/en-us/graph/teams-licenses",
+      "title": "Microsoft Graph: Licensing and payment requirements for Microsoft Teams APIs",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "Teams change notifications for chat and channel messages are protected APIs: they require application permissions with an approval request and a licensing or consumption (evaluation, model A, model B) billing model declared per request. There is no delegated-permission path that would fit the wave-1 user-delegated connection model."
+    },
+    "graph-resource-data": {
+      "url": "https://learn.microsoft.com/en-us/graph/change-notifications-with-resource-data",
+      "title": "Microsoft Graph: Change notifications with resource data",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-05",
+      "notes": "Rich notifications include the changed resource inline, encrypted with a public key the subscriber supplies at creation (includeResourceData, encryptionCertificate, encryptionCertificateId); the subscriber holds the private key and decrypts each notification. Only a subset of resources supports it."
+    }
+  },
+  "open_questions": [
+    "Maximum subscription lifetimes are documented per resource and differ between OneDrive personal, OneDrive for Business and SharePoint drives; the renewal job must read subscriptionExpirationDateTime from the created subscription rather than assume one number. The hosted-app owner re-verifies the per-resource ceilings before GA.",
+    "Microsoft Graph does not sign notifications; clientState is a shared secret echoed in the body. The gate accepts it because TRG-4 also enforces an opaque per-trigger ingress path and a body cap, but the security review (TRG-8) has to agree."
+  ],
+  "mechanisms": [
+    {
+      "mechanism_id": "microsoft.graph_change_notifications",
+      "display_name": "Microsoft Graph change notifications (webhook)",
+      "track": "a",
+      "transport": "http_push",
+      "ingress_requirement": "public_https",
+      "deployment_contexts": ["hosted", "self_managed"],
+      "fallback_mechanism": "microsoft.graph_delta_poll",
+      "status": "wave_1",
+      "confidence": "medium",
+      "owning_ticket": "TRG-6",
+      "rationale": "The only push delivery Graph offers for mail, calendar and drive items, and the mechanism the deferred record named as the Microsoft candidate. TRG-4 owns the handshake, the clientState check and the lifecycle route; TRG-6 owns the subscription provider and the fetch-back.",
+      "events": [
+        "me/mailFolders('Inbox')/messages created",
+        "me/events created and updated",
+        "me/drive/root changed (driveItem)",
+        "sites/{site-id}/drive/root changed (driveItem)"
+      ],
+      "required_scopes": ["Mail.Read", "Calendars.Read", "Files.Read", "Files.Read.All", "Sites.Read.All"],
+      "inbound_auth": {
+        "method": "validation_token",
+        "details": "Two checks, neither of them a signature. At creation Graph POSTs a validationToken query parameter that the route echoes as text/plain with 200 within ten seconds, before any database write. On every later notification the receiver compares the echoed clientState against the value stored on the subscription row in constant time, and the trigger is addressed by an opaque per-trigger ingress id so an unknown id costs the same as a bad clientState.",
+        "source": "graph-webhook-delivery"
+      },
+      "subscription": {
+        "required": true,
+        "max_ttl_seconds": 253800,
+        "renewal": "Langflow creates the subscription with an expirationDateTime and a lifecycleNotificationUrl, then renews by PATCHing expirationDateTime ahead of the value Graph returned; the renewal job keys off the stored subscriptionExpirationDateTime rather than a constant, because the ceiling differs per resource (4230 minutes for Outlook message, event and contact resources). subscriptionRemoved recreates the subscription, missed forces a delta resync, and reauthorizationRequired moves the trigger to needs_reconnect.",
+        "source": "graph-subscription"
+      },
+      "payload": {
+        "shape": "thin",
+        "details": "The notification carries resource, resourceData (id, @odata.type, @odata.id), changeType, subscriptionId, subscriptionExpirationDateTime, clientState and tenantId - not the message or event body. The flow's payload is hydrated inside the dispatched job with the owner's connection, never inside the ingress request.",
+        "source": "graph-change-notifications"
+      },
+      "delivery": {
+        "guarantee": "at_least_once",
+        "ack_deadline_seconds": 3,
+        "retry_policy": "A notification that is not answered with 2xx within three seconds is retried with a backoff for roughly four hours; after that Graph gives up and reports the gap through a missed lifecycle notification. Notifications may arrive out of order and may be duplicated.",
+        "source": "graph-webhook-delivery"
+      },
+      "replay": {
+        "available": true,
+        "window": "bounded by the delta token, not by a notification buffer",
+        "details": "There is no notification replay API. Recovery is a delta query from the stored deltaLink, which is what the missed lifecycle event instructs the app to do; that is also why the push and poll mechanisms must derive the same dedupe key.",
+        "source": "graph-lifecycle-events"
+      },
+      "rate_limit": {
+        "details": "Graph answers 429 with Retry-After; Outlook service limits are per mailbox per app (10,000 requests per 10 minutes) and are shared with the fetch-back path, so many triggers on one mailbox share one budget. SharePoint driveItem notifications fire on any update and can burst.",
+        "source": "graph-throttling"
+      },
+      "dedupe_key": {
+        "field": "derived from subscriptionId, resource, resourceData.id, changeType and the item's etag or lastModifiedDateTime",
+        "stability": "derived",
+        "details": "Graph notifications carry no provider event id, so the key is derived. The same derivation must be reachable from a delta item, because a subscription gap is recovered by delta; TRG-6's recorded-payload contract test pins that push and poll produce byte-identical keys for the same change. Notification duplication and out-of-order arrival make the (trigger_id, dedupe_key) unique index the only guard.",
+        "source": "graph-change-notifications"
+      },
+      "session_key": {
+        "details": "microsoft:outlook:{conversationId} for mail, microsoft:calendar:{iCalUId or seriesMasterId} for events, microsoft:files:{driveItem id} for drive items - so a mail thread and a recurring-event series each correlate to one conversation.",
+        "source": "graph-change-notifications"
+      },
+      "notes": "Graph does not sign notification bodies; clientState plus the opaque ingress id plus the per-route body cap are the whole inbound story. Rich (resource-data) notifications would add a signature-like guarantee but are deferred, see microsoft.graph_notifications_with_resource_data."
+    },
+    {
+      "mechanism_id": "microsoft.graph_delta_poll",
+      "display_name": "Microsoft Graph delta query (listener poll)",
+      "track": "b",
+      "transport": "poll",
+      "ingress_requirement": "outbound_only",
+      "deployment_contexts": ["self_managed", "desktop"],
+      "status": "wave_1",
+      "confidence": "high",
+      "owning_ticket": "TRG-6",
+      "rationale": "The documented no-ingress answer for Microsoft: an ordinary outbound HTTPS call with the user's delegated token, so it needs neither a public URL nor a provider-created subscription. Runs on the TRG-3 generic poll loop with the deltaLink stored on the trigger row.",
+      "events": [
+        "me/mailFolders('Inbox')/messages/delta",
+        "me/events/delta",
+        "me/drive/root/delta"
+      ],
+      "required_scopes": ["Mail.Read", "Calendars.Read", "Files.Read", "Files.Read.All", "Sites.Read.All"],
+      "inbound_auth": {
+        "method": "none",
+        "details": "Nothing arrives inbound. The listener authenticates outbound with the owner's delegated access token resolved through the INT-2 resolver as a trigger_listener principal; there is no ingress route and therefore no verifier.",
+        "source": "graph-delta-query"
+      },
+      "subscription": {
+        "required": false,
+        "max_ttl_seconds": null,
+        "renewal": "No provider object exists. The persisted @odata.deltaLink is the whole state; a 410 Gone with syncStateNotFound restarts the enumeration from scratch, and the ledger's unique index is what stops the resync from re-running flows for items already seen.",
+        "source": "graph-delta-query"
+      },
+      "payload": {
+        "shape": "full",
+        "details": "A delta round returns the changed items themselves, so no fetch-back is needed; the normalizer produces the same Data as the push path after its hydration step.",
+        "source": "graph-delta-query"
+      },
+      "delivery": {
+        "guarantee": "at_least_once",
+        "ack_deadline_seconds": null,
+        "retry_policy": "Langflow controls the cadence. A failed round leaves the stored deltaLink untouched and the next tick repeats it; a 429 backs off on Retry-After.",
+        "source": "graph-delta-query"
+      },
+      "replay": {
+        "available": true,
+        "window": "as far back as the deltaLink remains valid; unbounded after a full resync",
+        "details": "Re-running a stored deltaLink replays the same window, and a full resync replays everything - which is precisely why the dedupe key must not be delivery-scoped.",
+        "source": "graph-delta-query"
+      },
+      "rate_limit": {
+        "details": "The same Graph 429 / Retry-After behaviour and the same per-mailbox Outlook budget as the push path; polling many triggers on one mailbox must share that budget, so the poll interval is a per-connection setting rather than a per-trigger one.",
+        "source": "graph-throttling"
+      },
+      "dedupe_key": {
+        "field": "derived from resource, item id, changeType and the item's etag or lastModifiedDateTime",
+        "stability": "derived",
+        "details": "Derived to be identical to the push key for the same change, minus the subscriptionId component, which is why the derivation excludes any subscription-scoped value.",
+        "source": "graph-delta-query"
+      },
+      "session_key": {
+        "details": "Identical to the push mechanism: microsoft:outlook:{conversationId}, microsoft:calendar:{iCalUId or seriesMasterId}, microsoft:files:{driveItem id}.",
+        "source": "graph-change-notifications"
+      },
+      "notes": "Latency is the poll interval, not seconds. The self-managed-ingress decision records that as the accepted cost of running without an ingress."
+    },
+    {
+      "mechanism_id": "microsoft.graph_notifications_with_resource_data",
+      "display_name": "Microsoft Graph rich notifications (resource data included)",
+      "track": "a",
+      "transport": "http_push",
+      "ingress_requirement": "public_https",
+      "deployment_contexts": [],
+      "status": "deferred",
+      "confidence": "high",
+      "owning_ticket": "TRG-6",
+      "rationale": "Would remove the fetch-back and give the notification body a cryptographic guarantee, but it requires Langflow to own an encryption certificate and its private key per subscription, with rotation, and only a subset of resources supports it. No wave-1 ticket carries certificate lifecycle work.",
+      "notes": "Re-open when a customer needs sub-second latency on mail or when the security review rejects clientState as the only body check."
+    },
+    {
+      "mechanism_id": "microsoft.teams_message_notifications",
+      "display_name": "Teams chat and channel message change notifications",
+      "track": "a",
+      "transport": "http_push",
+      "ingress_requirement": "public_https",
+      "deployment_contexts": [],
+      "status": "excluded",
+      "confidence": "high",
+      "owning_ticket": "TRG-6",
+      "rationale": "Teams message change notifications are protected APIs: they need application permissions with an approval request and a declared licensing or consumption billing model. The wave-1 Microsoft substrate decision is delegated-only and excludes application permissions, so no Teams trigger ships. Teams send actions stay in the 1.13 action set; only Teams as an event source is excluded.",
+      "notes": "This is the gate's answer to the open question 'Teams messages'. Re-open when a customer commits to the Teams billing model and Enterprise accepts application permissions for a trigger connection."
+    }
+  ]
+}
