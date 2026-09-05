@@ -53,8 +53,10 @@ Two consequences worth stating plainly, because both are easy to get wrong:
    `server_url`, `transport`, `tools_list_hash`, `server_name`, and `server_version`.
 4. **Compute the pin values from the capture.** `tools_list_hash` is
    `lfx.base.mcp.pinned.tools_list_digest(recording["result"]["tools"])` — the helper accepts the raw recorded
-   entries. Set `server_name`/`server_version` only if the server actually publishes `serverInfo`; a pinned version
-   that the server later stops sending fails closed, by design.
+   entries. It must cover *exactly* the tools the manifest pins: `pinned_spec_from_capabilities()` recomputes the
+   digest and refuses a hash taken over a wider recording, so that authoring slip is a bundle error at build time
+   rather than a runtime "drift" complaint. Set `server_name`/`server_version` only if the server actually publishes
+   `serverInfo`; a pinned version that the server later stops sending fails closed, by design.
 5. **Swap the adapter.** Rebase the component on `MCPPresetComponent`, keep the class `name`, inputs, and outputs
    byte-identical, set `add_tool_output = False` if the pre-swap node had no Toolset output, implement
    `_pinned_spec()` to return the manifest pin, implement `_mcp_server_config()` to return the credential headers
@@ -68,7 +70,10 @@ Two consequences worth stating plainly, because both are easy to get wrong:
    example.
 8. **Prove it fails closed.** Add drift tests driven by a copy of the capture: a tool added, a tool removed, a tool
    renamed, an argument schema widened, a result schema drifted, a server version moved. Each must raise
-   `IncompatibleToolError` (`incompatible-tool`) and none may return a partial toolset.
+   `IncompatibleToolError` (`incompatible-tool`) and none may return a partial toolset. Drive at least one case
+   through the real engine (`update_tools` against a fake transport) rather than only through test doubles: a
+   double's attribute surface is not the pydantic tool `update_tools` actually builds, and that gap has already
+   hidden one defect (a LangChain tool is a `Runnable`, which owns `input_schema`/`output_schema` names of its own).
 9. **Release the bundle.** Bump the bundle version through `scripts/ci/bundle_release_plan.py`, raise the bundle's
    `lfx` floor through `scripts/ci/sync_bundle_lfx_pin.py` (pinned mode is new lfx surface), and add the
    `BUNDLE_API.md` changelog line if the bundle's own public surface moved.
@@ -82,7 +87,7 @@ release whose pin matches the server (or a provider-side rollback) — there is 
 override would silently reintroduce exactly the drift the pin exists to catch. Support answer: "this action's
 provider tools changed; upgrade the provider bundle."
 
-Three deliberate boundaries:
+Four deliberate boundaries:
 
 - The digest covers tool identity and schemas, not descriptions. Descriptions are prompt material that providers
   edit routinely; folding them in would turn a copy edit into an outage. Descriptions still pass through the MCP
@@ -91,6 +96,10 @@ Three deliberate boundaries:
   example, tolerating additive optional inputs) is a later decision record, not a runtime option.
 - The transport is part of the pin: pinned server configs set `allow_sse_fallback=False`, so an endpoint that only
   answers on the legacy transport surfaces as a failure rather than a silent downgrade.
+- Call-time argument checking covers *both* of a tool's call paths (the async `coroutine` the Agent and `run_tool`
+  use, and the synchronous `func`), and only an argument the pin does not declare is drift. An omitted **required**
+  argument is not: an agent forgetting a field is a caller mistake no bundle release can fix, so it falls through to
+  the derived args schema, whose validation error names the field and is self-correctable on the next turn.
 
 ## What was exercised for 1.13, and what was not
 
@@ -138,7 +147,9 @@ re-proved by the equivalence test before the PR merges.
 
 - The client-facing error mapping for `incompatible-tool` is INT-6's `IntegrationError` branch in
   `src/backend/base/langflow/api/utils/execution_errors.py`; until it lands, the typed code does not reach an API
-  client. INT-9 only adds the code to `INTEGRATION_ERROR_CODES`.
+  client. Nothing is owed there by INT-9 or by an adopting bundle: that branch is generic
+  (`isinstance(error, IntegrationError)`, reading `error.code`), not an enumerated code list, so `incompatible-tool`
+  crosses the boundary the moment INT-6 merges, as a 400 (the error sets no `http_status`).
 - The frontend keys its call to action on `code` (`connection-contract.md` section 7). `frontend-surfaces.md` has no
   MCP-drift row; INT-8 should add one whose action is "upgrade the provider bundle", not "reconnect".
 - Token rotation on a pinned server still orphans the MCP session, because `_get_server_key` hashes `url|headers`
