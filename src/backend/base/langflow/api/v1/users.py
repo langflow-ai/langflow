@@ -41,6 +41,7 @@ from langflow.services.creation_hooks import (
     RESOURCE_USER,
     PreCreationContext,
     PreCreationDenied,
+    http_denial_error_code,
     pre_creation_denied_to_http,
     run_pre_creation_hooks,
 )
@@ -236,6 +237,20 @@ async def add_user(
                 operation_id=operation_id,
             )
             raise pre_creation_denied_to_http(denied) from denied
+        except HTTPException as denied:
+            # A hook that answers with its own response still gets the same treatment: the
+            # response is passed through untouched, but the transaction is rolled back and the
+            # refusal is audited exactly like a PreCreationDenied.
+            await session.rollback()
+            await _audit_deny(
+                user_id=actor_user_id,
+                action="user:create",
+                obj="user:*",
+                status_code=denied.status_code,
+                reason=http_denial_error_code(denied),
+                operation_id=operation_id,
+            )
+            raise
         session.add(new_user)
         await session.flush()
         await session.refresh(new_user)

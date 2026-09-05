@@ -33,6 +33,7 @@ from langflow.services.creation_hooks import (
     RESOURCE_ROLE,
     PreCreationContext,
     PreCreationDenied,
+    http_denial_error_code,
     pre_creation_denied_to_http,
     run_pre_creation_hooks,
 )
@@ -244,6 +245,19 @@ async def create_role(
             operation_id=operation_id,
         )
         raise pre_creation_denied_to_http(denied) from denied
+    except HTTPException as denied:
+        # A hook that answers with its own response: pass it through untouched, but roll back
+        # and audit the refusal exactly like a PreCreationDenied.
+        await session.rollback()
+        await _audit_deny(
+            user_id=actor_user_id,
+            action="role:create",
+            obj="role:*",
+            status_code=denied.status_code,
+            reason=http_denial_error_code(denied),
+            operation_id=operation_id,
+        )
+        raise
 
     if payload.parent_role_id is not None:
         parent = await session.get(AuthzRole, payload.parent_role_id)

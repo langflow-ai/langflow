@@ -19,6 +19,7 @@ from langflow.services.creation_hooks import (
     PreCreationDenied,
     _pre_creation_hooks,
     enforce_pre_creation,
+    http_denial_error_code,
     pre_creation_denied_to_http,
     register_pre_creation_hook,
     registered_pre_creation_hooks,
@@ -216,3 +217,57 @@ def test_context_is_frozen():
     context = _ctx()
     with pytest.raises(FrozenInstanceError):
         context.resource = "user"
+
+
+async def test_an_http_exception_from_a_hook_is_not_swallowed():
+    """A hook that answers with its own response stops the creation.
+
+    The fail-open clause exists for *broken* hooks. A deliberate ``HTTPException``
+    (the shape LE-2488's enterprise hook may use) must reach the client, or every
+    limit written that way would silently allow the creation.
+    """
+    from fastapi import HTTPException
+
+    calls: list[str] = []
+
+    async def refusing(_context):
+        calls.append("refusing")
+        raise HTTPException(status_code=429, detail="too many projects")
+
+    async def never(_context):
+        calls.append("never")
+
+    register_pre_creation_hook(RESOURCE_PROJECT, refusing)
+    register_pre_creation_hook(RESOURCE_PROJECT, never)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await run_pre_creation_hooks(_ctx())
+
+    assert calls == ["refusing"]
+    assert excinfo.value.status_code == 429
+
+
+async def test_enforce_pre_creation_passes_a_hook_http_exception_through():
+    from fastapi import HTTPException
+
+    async def refusing(_context):
+        raise HTTPException(status_code=402, detail={"error_code": "payment_required"})
+
+    register_pre_creation_hook(RESOURCE_PROJECT, refusing)
+    with pytest.raises(HTTPException) as excinfo:
+        await enforce_pre_creation(_ctx())
+    assert excinfo.value.status_code == 402
+    assert excinfo.value.detail == {"error_code": "payment_required"}
+
+
+def test_http_denial_error_code_reads_the_header_then_the_body():
+    from fastapi import HTTPException
+
+    from_header = HTTPException(
+        status_code=403,
+        detail={"error_code": "ignored_when_a_header_is_present"},
+        headers={ERROR_CODE_HEADER: "tier_limit_reached"},
+    )
+    assert http_denial_error_code(from_header) == "tier_limit_reached"
+    assert http_denial_error_code(HTTPException(status_code=403, detail={"error_code": "from_body"})) == "from_body"
+    assert http_denial_error_code(HTTPException(status_code=403, detail="a plain string")) == "pre_creation_denied"

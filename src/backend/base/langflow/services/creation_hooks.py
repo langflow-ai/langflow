@@ -28,10 +28,14 @@ Contract
 * Hooks are awaited in registration order, inside the caller's request
   transaction, **before** the row is added to the session. A hook may read
   ``context.session`` to count existing rows in that same transaction.
-* Raising :class:`PreCreationDenied` is the ONLY authoritative way to stop a
-  creation. It short-circuits the remaining hooks and the caller maps it to
-  HTTP 403 through :func:`pre_creation_denied_to_http`.
-* Any other exception **fails open**: it is logged at WARNING and creation
+* Raising :class:`PreCreationDenied` is the intended way to stop a creation. It
+  short-circuits the remaining hooks and the caller maps it to HTTP 403 through
+  :func:`pre_creation_denied_to_http`.
+* A hook that would rather answer with its own response may raise an
+  ``HTTPException``: that also stops the creation and is propagated verbatim,
+  so a plugin never has to route a deliberate refusal through the fail-open
+  clause below.
+* Any *other* exception **fails open**: it is logged at WARNING and creation
   proceeds. A broken plugin must not take user/project/role creation down.
   (Same posture as the enterprise lifespan hooks in ``langflow.main``.)
 * :class:`PreCreationDenied` is deliberately NOT an
@@ -75,7 +79,10 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 # Resource keys the registry accepts. Kept as plain strings so plugins can
-# register without importing an enum.
+# register without importing an enum. These name the *call point* and are
+# singular; they are deliberately not the ``resource`` slug a denying hook puts
+# in ``details`` (which is the plane's own vocabulary, e.g. "projects" or
+# "rbac_roles"). OSS never inspects that slug.
 RESOURCE_PROJECT = "project"
 RESOURCE_USER = "user"
 RESOURCE_ROLE = "role"
@@ -181,13 +188,16 @@ def _hook_name(hook: PreCreationHook) -> str:
 async def run_pre_creation_hooks(context: PreCreationContext) -> None:
     """Run every hook registered for ``context.resource``.
 
-    Re-raises the first :class:`PreCreationDenied`. Any other exception is
-    logged and swallowed (fail open) so a broken plugin cannot block creation.
+    Re-raises the first :class:`PreCreationDenied`, and likewise an
+    ``HTTPException`` a hook raised itself: both are deliberate refusals, and
+    swallowing the second one would silently allow every creation a plugin
+    written that way meant to stop. Any other exception is logged and swallowed
+    (fail open) so a broken plugin cannot block creation.
     """
     for hook in list(_pre_creation_hooks.get(context.resource, [])):
         try:
             await hook(context)
-        except PreCreationDenied:
+        except (PreCreationDenied, HTTPException):
             raise
         except Exception as exc:  # noqa: BLE001
             await logger.awarning(
@@ -205,12 +215,25 @@ def pre_creation_denied_to_http(exc: PreCreationDenied) -> HTTPException:
     )
 
 
+def http_denial_error_code(exc: HTTPException) -> str:
+    """Best-effort machine code for an ``HTTPException`` a hook raised itself.
+
+    Used only to fill the ``reason`` of the audit deny row the identity call
+    points write; the response itself is passed through untouched.
+    """
+    code = (exc.headers or {}).get(ERROR_CODE_HEADER)
+    if not code and isinstance(exc.detail, Mapping):
+        code = exc.detail.get("error_code")
+    return str(code) if code else "pre_creation_denied"
+
+
 async def enforce_pre_creation(context: PreCreationContext) -> None:
     """Run the hooks and raise the mapped ``HTTPException`` on denial.
 
     The one helper every call point that has nothing extra to do (project
-    creation) uses. Call points that must also write an audit row catch
-    :class:`PreCreationDenied` themselves and call
+    creation) uses. An ``HTTPException`` a hook raised itself propagates
+    unchanged. Call points that must also write an audit row catch
+    :class:`PreCreationDenied` (and ``HTTPException``) themselves and call
     :func:`pre_creation_denied_to_http`.
     """
     try:
@@ -232,6 +255,7 @@ __all__ = [
     "PreCreationDenied",
     "PreCreationHook",
     "enforce_pre_creation",
+    "http_denial_error_code",
     "pre_creation_denied_to_http",
     "register_pre_creation_hook",
     "registered_pre_creation_hooks",

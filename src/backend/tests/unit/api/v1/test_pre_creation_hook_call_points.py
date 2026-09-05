@@ -13,6 +13,7 @@ import json
 import zipfile
 from types import SimpleNamespace
 from typing import Any
+from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
@@ -28,6 +29,7 @@ from langflow.services.creation_hooks import (
     _pre_creation_hooks,
     register_pre_creation_hook,
 )
+from langflow.services.database.models.auth import AuthzRole
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
@@ -57,6 +59,24 @@ def _register_denying_hook(resource: str, seen: list[PreCreationContext]) -> Non
         raise PreCreationDenied(LIMIT_MESSAGE, details=LIMIT_DETAILS)
 
     register_pre_creation_hook(resource, deny)
+
+
+def _register_http_refusing_hook(resource: str, *, status_code: int = 429) -> None:
+    """A hook that answers with its own response instead of a PreCreationDenied."""
+
+    async def refuse(_context: PreCreationContext) -> None:
+        raise HTTPException(
+            status_code=status_code,
+            detail={"error_code": "tier_limit_reached", "message": LIMIT_MESSAGE},
+            headers={ERROR_CODE_HEADER: "tier_limit_reached"},
+        )
+
+    register_pre_creation_hook(resource, refuse)
+
+
+def _deny_rows(audit: AsyncMock) -> list[dict[str, Any]]:
+    """The audit rows the route wrote with ``result="deny"``."""
+    return [call.kwargs for call in audit.await_args_list if call.kwargs.get("result") == "deny"]
 
 
 def _register_crashing_hook(resource: str) -> None:
@@ -143,12 +163,32 @@ async def test_upload_project_denied_by_hook(client: AsyncClient, logged_in_head
 
 
 async def test_create_project_survives_a_crashing_hook(client: AsyncClient, logged_in_headers, basic_project):
-    """A hook that raises anything but PreCreationDenied fails open."""
+    """A hook that raises anything but PreCreationDenied or an HTTPException fails open."""
     _register_crashing_hook(RESOURCE_PROJECT)
 
     response = await client.post("api/v1/projects/", json=basic_project, headers=logged_in_headers)
 
     assert response.status_code == status.HTTP_201_CREATED
+
+
+async def test_create_project_honours_an_http_exception_from_a_hook(client: AsyncClient, logged_in_headers):
+    """A hook may refuse with its own response; fail-open must not swallow it.
+
+    LE-2488's enterprise hook is described as raising an HTTPException directly, so a
+    deliberate refusal in that shape has to reach the client verbatim.
+    """
+    _register_http_refusing_hook(RESOURCE_PROJECT)
+
+    response = await client.post(
+        "api/v1/projects/",
+        json={"name": "Refused Project", "description": "", "flows_list": [], "components_list": []},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    assert response.headers[ERROR_CODE_HEADER] == "tier_limit_reached"
+    async with session_scope() as session:
+        assert (await session.exec(select(Folder).where(Folder.name == "Refused Project"))).all() == []
 
 
 # =====================================================================
@@ -187,6 +227,47 @@ async def test_admin_add_user_denied_by_hook(client: AsyncClient, logged_in_head
     _assert_denial_response(response)
     assert seen_contexts[0].is_public_signup is False
     assert seen_contexts[0].actor_user_id is not None
+
+
+async def test_user_denial_writes_an_audit_deny_row(client: AsyncClient, seen_contexts, monkeypatch):
+    """The denial path audits the refusal, naming the actor snapshotted before the rollback."""
+    from langflow.api.v1 import users
+
+    audit = AsyncMock()
+    monkeypatch.setattr(users, "audit_decision", audit)
+    _register_denying_hook(RESOURCE_USER, seen_contexts)
+
+    response = await client.post("api/v1/users/", json={"username": "auditeduser", "password": NEW_CREDENTIAL})
+
+    _assert_denial_response(response)
+    rows = _deny_rows(audit)
+    assert len(rows) == 1
+    assert rows[0]["action"] == "user:create"
+    assert rows[0]["obj"] == "user:*"
+    assert rows[0]["details"]["reason"] == "tier_limit_reached"
+    assert rows[0]["details"]["status_code"] == 403
+    # Public signup has no authenticated actor; the snapshot is taken all the same.
+    assert rows[0]["user_id"] is None
+
+
+async def test_user_creation_honours_an_http_exception_from_a_hook(client: AsyncClient, monkeypatch):
+    """A hook's own response is passed through, and the refusal is still rolled back and audited."""
+    from langflow.api.v1 import users
+
+    audit = AsyncMock()
+    monkeypatch.setattr(users, "audit_decision", audit)
+    _register_http_refusing_hook(RESOURCE_USER)
+
+    response = await client.post("api/v1/users/", json={"username": "refuseduser", "password": NEW_CREDENTIAL})
+
+    assert response.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    assert response.headers[ERROR_CODE_HEADER] == "tier_limit_reached"
+    rows = _deny_rows(audit)
+    assert len(rows) == 1
+    assert rows[0]["details"]["status_code"] == 429
+    assert rows[0]["details"]["reason"] == "tier_limit_reached"
+    async with session_scope() as session:
+        assert (await session.exec(select(User).where(User.username == "refuseduser"))).first() is None
 
 
 async def test_user_creation_survives_a_crashing_hook(client: AsyncClient):
@@ -306,3 +387,39 @@ async def test_create_role_survives_a_crashing_hook(role_route):
     assert result.name == "uncapped"
     assert len(session.added) == 1
     assert session.committed == 1
+
+
+async def test_create_role_denied_by_hook_over_http(
+    client: AsyncClient, logged_in_headers_super_user, seen_contexts, monkeypatch
+):
+    """The role denial over the real route: status, header, body, no row, audit row.
+
+    The direct-call test above pins the rollback and the context; this one pins what the
+    caller actually receives once FastAPI has rendered the mapped HTTPException.
+    """
+    from langflow.api.v1 import authz_roles
+
+    audit = AsyncMock()
+    monkeypatch.setattr(authz_roles, "audit_decision", audit)
+    _register_denying_hook(RESOURCE_ROLE, seen_contexts)
+
+    response = await client.post(
+        "api/v1/authz/roles/",
+        json={"name": "capped-role", "permissions": ["flow:read"]},
+        headers=logged_in_headers_super_user,
+    )
+
+    _assert_denial_response(response)
+    assert seen_contexts[0].resource == RESOURCE_ROLE
+    assert seen_contexts[0].requested_name == "capped-role"
+    assert seen_contexts[0].actor_user_id is not None
+
+    async with session_scope() as session:
+        assert (await session.exec(select(AuthzRole).where(AuthzRole.name == "capped-role"))).first() is None
+
+    rows = _deny_rows(audit)
+    assert len(rows) == 1
+    assert rows[0]["action"] == "role:create"
+    assert rows[0]["details"]["reason"] == "tier_limit_reached"
+    assert rows[0]["details"]["status_code"] == 403
+    assert rows[0]["user_id"] is not None
