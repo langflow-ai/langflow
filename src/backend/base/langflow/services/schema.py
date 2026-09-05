@@ -30,3 +30,4 @@ class ServiceType(str, Enum):
     MEMORY_BASE_SERVICE = "memory_base_service"
     BACKGROUND_EXECUTION_SERVICE = "background_execution_service"
     TELEMETRY_WRITER_SERVICE = "telemetry_writer_service"
+    TRIGGER_SERVICE = "triggers_service"

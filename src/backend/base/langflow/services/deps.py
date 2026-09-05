@@ -34,6 +34,7 @@ from lfx.services.settings.service import SettingsService  # noqa: TC002
 from langflow.services.job_queue.service import JobQueueService  # noqa: TC001
 from langflow.services.storage.service import StorageService  # noqa: TC001
 from langflow.services.telemetry.service import TelemetryService  # noqa: TC001
+from langflow.services.triggers.service import TriggerService  # noqa: TC001
 
 
 def get_service(service_type: ServiceType, default=None):
@@ -306,6 +307,13 @@ def get_connection_resolver_service() -> BaseConnectionResolverService:
     from langflow.services.connection.factory import ConnectionResolverServiceFactory
 
     return get_service(ServiceType.CONNECTION_RESOLVER_SERVICE, ConnectionResolverServiceFactory())
+
+
+def get_trigger_service() -> TriggerService:
+    """Retrieve the trigger persistence service."""
+    from langflow.services.triggers.factory import TriggerServiceFactory
+
+    return get_service(ServiceType.TRIGGER_SERVICE, TriggerServiceFactory())
 
 
 def get_catalog_policy_service() -> BaseCatalogPolicyService:

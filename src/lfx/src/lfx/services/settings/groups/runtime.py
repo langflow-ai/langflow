@@ -131,6 +131,42 @@ class RuntimeSettings(BaseModel):
     """How often the scaled worker's periodic watchdog scans for orphaned leases
     (a dead worker's in-flight job) and reconciles them WITHOUT requiring a
     restart. Must be > 0."""
+    # Triggers (TRG-2): the leased dispatcher, the schedule tick producer, and
+    # the ledger retention windows.
+    trigger_dispatcher_enabled: bool = True
+    """Run the leased trigger dispatcher and schedule tick producer inside this
+    process. Every API replica may set this: the loops are singletons held by a
+    ``trigger_lease`` row, so N replicas still produce one tick per schedule and
+    one run per event. Turn it off on replicas that must never execute triggers
+    (and when TRG-3's dedicated listener process hosts the loops instead)."""
+    trigger_dispatcher_poll_interval_s: float = Field(default=5.0, gt=0)
+    """How often the dispatcher scans the ledger for claimable events. The lower
+    bound on scheduling latency for an event that arrives just after a scan."""
+    trigger_lease_ttl_s: float = Field(default=30.0, gt=0)
+    """Lifetime of a dispatcher/scheduler singleton lease and of a per-event
+    claim. A holder that dies has its work re-dispatched this many seconds
+    later, so this is the worst-case duplicate-suppression window as well as the
+    worst-case stall. The loops renew on ``trigger_dispatcher_poll_interval_s``,
+    which must stay comfortably below this TTL so a healthy holder never looks
+    dead. TRG-3's listener process adds its own heartbeat knob when it has a
+    loop whose cadence differs from the poll."""
+    trigger_max_events_per_poll: int = Field(default=25, gt=0)
+    """Upper bound on events one dispatcher pass claims, so a large backlog is
+    drained in bounded batches instead of one unbounded transaction."""
+    trigger_retry_backoff_base_s: float = Field(default=5.0, gt=0)
+    """First retry delay for a failed dispatch. Subsequent attempts back off
+    exponentially up to ``trigger_retry_backoff_cap_s``."""
+    trigger_retry_backoff_cap_s: float = Field(default=300.0, gt=0)
+    """Ceiling on the exponential retry backoff."""
+    trigger_replay_window_days: int = Field(default=7, gt=0)
+    """How far back an owner may replay a ledger row, and how far back the
+    schedule catch-up may reach after downtime."""
+    trigger_event_retention_days: int = Field(default=30, gt=0)
+    """How long terminal ledger rows are kept before the purge job deletes them.
+    Must be at least ``trigger_replay_window_days`` for replay to be meaningful."""
+    trigger_purge_interval_s: float = Field(default=3600.0, gt=0)
+    """How often the purge pass runs inside the dispatcher loop."""
+
     test_redis_url: str | None = Field(default=None)
     """Redis URL used by tests that exercise the scaled background backend.
 

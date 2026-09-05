@@ -478,6 +478,35 @@
       "routes": [
         "POST||execute_public_workflow|execute|conditional"
       ]
+    },
+    {
+      "family": "triggers",
+      "source": "api/v1/triggers.py",
+      "resource": "flow",
+      "domain": "the workspace/project domain of the flow the trigger fires",
+      "privacy": "a trigger whose flow the caller cannot read is 404, never 403; ledger rows are addressed through their trigger, never by id alone",
+      "side_effects": "management mutates the trigger row; replay and test append ledger rows that the dispatcher will execute as the trigger owner",
+      "frontend": "the triggers surface lists only triggers on flows the caller can read and hides management controls without flow write",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_triggers.py::test_a_trigger_on_someone_elses_flow_is_invisible",
+        "src/backend/tests/unit/api/v1/test_triggers.py::test_owner_can_manage_a_trigger_end_to_end",
+        "src/backend/tests/unit/api/v1/test_triggers.py::test_pin_requires_a_version_of_the_same_flow",
+        "src/backend/tests/unit/api/v1/test_triggers.py::test_test_and_replay_write_linked_ledger_rows"
+      ],
+      "routes": [
+        "GET||list_triggers|read|authenticated",
+        "POST||create_trigger|write|authenticated",
+        "GET|/{trigger_id}|get_trigger|read|authenticated",
+        "PATCH|/{trigger_id}|update_trigger|write|authenticated",
+        "DELETE|/{trigger_id}|delete_trigger|write|authenticated",
+        "POST|/{trigger_id}/enable|enable_trigger|write|authenticated",
+        "POST|/{trigger_id}/disable|disable_trigger|write|authenticated",
+        "POST|/{trigger_id}/pin|pin_trigger|write|authenticated",
+        "GET|/{trigger_id}/events|list_trigger_events|read|authenticated",
+        "POST|/{trigger_id}/replay|replay_trigger_event|execute|authenticated",
+        "POST|/{trigger_id}/test|test_trigger|execute|authenticated"
+      ]
     }
   ]
 }
