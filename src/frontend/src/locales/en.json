@@ -810,6 +810,7 @@
   "sidebar.category.files": "Files",
   "sidebar.category.processing": "Processing",
   "sidebar.category.flowControl": "Flow Control",
+  "sidebar.category.triggers": "Triggers",
   "sidebar.category.utilities": "Utilities",
   "sidebar.category.prototypes": "Prototypes",
   "sidebar.category.tools": "Tools",

@@ -355,6 +355,11 @@ export const SIDEBAR_CATEGORIES = [
     icon: "ArrowRightLeft",
   },
   {
+    display_name: "sidebar.category.triggers",
+    name: "triggers",
+    icon: "Clock",
+  },
+  {
     display_name: "sidebar.category.utilities",
     name: "utilities",
     icon: "Wand2",
@@ -560,6 +565,7 @@ export const categoryIcons: Record<string, string> = {
   textsplitters: "Scissors",
   toolkits: "Package2",
   tools: "Hammer",
+  triggers: "Clock",
   custom: "Edit",
   custom_components: "GradientInfinity",
 };
@@ -587,6 +593,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   textsplitters: "Scissors",
   toolkits: "Package2",
   tools: "Hammer",
+  triggers: "Clock",
   custom_components: "GradientInfinity",
   ChatInput: "MessagesSquare",
   ChatOutput: "MessagesSquare",
