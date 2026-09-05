@@ -21,6 +21,11 @@ trigger-side capabilities and an app-token profile that the wave-1 action
 matrix does not describe. Every *matrix* row marked ``include`` must be
 present, and every capability whose id matches a matrix row must agree with it.
 
+A bundle may still depart from its matrix where the runtime forces it. Those
+departures are enumerated in ``DELIBERATE_DEVIATIONS`` with their exact
+expected values, so every *other* difference still fails, and a departure that
+has stopped being real is reported as stale rather than quietly accepted.
+
 Usage:
     python scripts/ci/check_capability_manifests.py
     python scripts/ci/check_capability_manifests.py --design-root design/dedicated-integrations
@@ -38,6 +43,33 @@ DEFAULT_DESIGN_ROOT = REPO_ROOT / "design" / "dedicated-integrations"
 DEFAULT_BUNDLES_ROOT = REPO_ROOT / "src" / "bundles"
 
 CONTEXT_ORDER = ("hosted", "self_managed", "desktop", "headless")
+
+# Departures from the matrix a bundle ships on purpose, keyed by provider id.
+#
+# ``display_name``            the provider label the manifest ships instead of
+#                             the matrix's.
+# ``registration_only_scopes``  scopes the matrix records per action that the
+#                             manifest must NOT repeat per action.
+#
+# Both are checked for staleness: if the manifest and the matrix have since
+# converged, or the matrix no longer carries the scope, the checker says so
+# instead of passing silently.
+DELIBERATE_DEVIATIONS: dict[str, dict[str, Any]] = {
+    "microsoft": {
+        # The matrix carries the long provider label. The bundle, its
+        # extension manifest, its docs page and the frontend sidebar group all
+        # ship the short one (INT-11).
+        "display_name": "Microsoft 365",
+        # Entra never echoes ``offline_access`` in a token response, and
+        # ``DatabaseConnectionResolverService`` computes ``required - granted``
+        # as a raw set difference, so transcribing the matrix literally would
+        # fail every Microsoft resolution with ``scope-missing``. The scope
+        # lives in the auth profile's default scopes and the registration
+        # ceiling instead. Pinned bundle-side by
+        # src/bundles/microsoft/tests/test_capabilities_manifest_contract.py.
+        "registration_only_scopes": ["offline_access"],
+    },
+}
 
 
 def _load_json(path: Path) -> Any:
@@ -72,14 +104,39 @@ def _expected_contexts(action: dict) -> list[str]:
     return [context for context in CONTEXT_ORDER if context in action["deployment_contexts"]]
 
 
-def _expected_scopes(action: dict) -> tuple[list[str], list[tuple[str, str, str, str]]]:
-    required = [scope["scope"] for scope in action["scopes"] if scope["role"] == "required"]
+def _expected_scopes(
+    action: dict, registration_only: frozenset[str] = frozenset()
+) -> tuple[list[str], list[tuple[str, str, str, str]]]:
+    required = [
+        scope["scope"]
+        for scope in action["scopes"]
+        if scope["role"] == "required" and scope["scope"] not in registration_only
+    ]
     conditional = [
         (scope["scope"], scope["role"], scope["condition"]["kind"], scope["condition"]["input"])
         for scope in action["scopes"]
-        if scope["role"] != "required"
+        if scope["role"] != "required" and scope["scope"] not in registration_only
     ]
     return required, conditional
+
+
+def _stale_deviations(provider_id: str, matrix: dict, rows: dict[str, dict]) -> list[str]:
+    """Report deviations that have stopped being deviations."""
+    deviations = DELIBERATE_DEVIATIONS.get(provider_id, {})
+    stale: list[str] = []
+    if "display_name" in deviations and deviations["display_name"] == matrix.get("display_name"):
+        stale.append(
+            f"display_name deviation {deviations['display_name']!r} now equals the matrix; "
+            f"drop it from DELIBERATE_DEVIATIONS[{provider_id!r}]"
+        )
+    matrix_scopes = {scope["scope"] for action in rows.values() for scope in action["scopes"]}
+    stale.extend(
+        f"registration-only scope {scope!r} is no longer required by any matrix row; "
+        f"drop it from DELIBERATE_DEVIATIONS[{provider_id!r}]"
+        for scope in deviations.get("registration_only_scopes", ())
+        if scope not in matrix_scopes
+    )
+    return stale
 
 
 def _actual_conditional(capability: dict) -> list[tuple[str, str, str, str]]:
@@ -107,13 +164,17 @@ def compare(provider_id: str, manifest_path: Path, matrix_path: Path) -> list[st
 
     if manifest.get("provider_id") != provider_id:
         errors.append(f"{where}: provider_id {manifest.get('provider_id')!r} does not match the extension manifest")
-    if manifest.get("display_name") != matrix.get("display_name"):
+    deviations = DELIBERATE_DEVIATIONS.get(provider_id, {})
+    registration_only = frozenset(deviations.get("registration_only_scopes", ()))
+    expected_display_name = deviations.get("display_name", matrix.get("display_name"))
+    if manifest.get("display_name") != expected_display_name:
         errors.append(
             f"{where}: display_name {manifest.get('display_name')!r} "
-            f"does not match the matrix ({matrix.get('display_name')!r})"
+            f"does not match the matrix ({expected_display_name!r})"
         )
 
     rows = _matrix_rows(matrix)
+    errors.extend(f"{where}: {message}" for message in _stale_deviations(provider_id, matrix, rows))
     capabilities = {capability["id"]: capability for capability in manifest.get("capabilities", [])}
     profiles = {profile["id"] for profile in manifest.get("auth_profiles", [])}
 
@@ -124,7 +185,7 @@ def compare(provider_id: str, manifest_path: Path, matrix_path: Path) -> list[st
     for action_id in sorted(set(rows) & set(capabilities)):
         action = rows[action_id]
         capability = capabilities[action_id]
-        required, conditional = _expected_scopes(action)
+        required, conditional = _expected_scopes(action, registration_only)
         checks = (
             ("display_name", capability.get("display_name"), action["display_name"]),
             ("identity", capability.get("identity"), action["identity"]),

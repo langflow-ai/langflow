@@ -42,6 +42,7 @@ dependencies = [
     "lfx-vllm>=0.1.3,<1.0.0",
     "lfx-openai-compatible>=0.1.5,<1.0.0",
     "lfx-google>=0.1.1,<1.0.0",
+    "lfx-microsoft>=0.1.0,<1.0.0",
     "lfx-slack>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
@@ -124,6 +125,7 @@ lfx-exa = { workspace = true }
 lfx-valkey = { workspace = true }
 lfx-google = { workspace = true }
 lfx-confluent = { workspace = true }
+lfx-microsoft = { workspace = true }
 lfx-slack = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
@@ -161,6 +163,7 @@ members = [
     "src/bundles/valkey",
     "src/bundles/google",
     "src/bundles/confluent",
+    "src/bundles/microsoft",
     "src/bundles/slack",
     # langflow-extensions:bundle-members-end
 ]

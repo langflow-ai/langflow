@@ -171,6 +171,31 @@ reverse proxies and external request tracing to omit callback query strings as w
 those systems observe requests before Langflow does. Avoid capturing browser callback URLs
 in screenshots or support logs.
 
+## Microsoft 365 bundle (INT-11)
+
+The [Microsoft 365 bundle](../Components/bundles-microsoft.mdx) resolves its connections through a
+`provider: "microsoft"` registration configured above. Its components hold a
+portable handle such as `microsoft/work`, never a token.
+
+[Register a Microsoft Entra application](./entra-app-registration.mdx) is the operator
+runbook for that registration: the per-action delegated permission table, the
+redirect URIs per deployment context, the consent and admin-consent rules, and
+the troubleshooting table. Two constraints are worth repeating here.
+
+Write the configured `scopes` in Microsoft's **short** form, such as `Mail.Read`.
+Requesting `https://graph.microsoft.com/Mail.Read` makes Entra echo the long form
+in the token response, and the components declare the short form; the resolver
+compares the two literally.
+
+Include `offline_access` in the registration's `scopes`, because it is what makes
+Entra issue a refresh token. No component requires it as an action permission:
+Entra never echoes `offline_access` in a token response, so requiring it per
+action would fail every Microsoft resolution.
+
+Only customer-owned single-tenant registrations are configurable today, since
+this broker uses a fixed-tenant authority. A Langflow-owned multitenant
+application, which also needs Entra publisher verification, is a follow-up.
+
 {/* INT-12 (LE-2470): appended section. Keep additions to this page as new
     trailing sections so stacked integration branches do not collide. */}
 

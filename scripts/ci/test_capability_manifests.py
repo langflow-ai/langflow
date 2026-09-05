@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from check_capability_manifests import (
     DEFAULT_BUNDLES_ROOT,
     DEFAULT_DESIGN_ROOT,
+    DELIBERATE_DEVIATIONS,
     compare,
     discover_manifests,
     validate_all,
@@ -20,6 +21,8 @@ from check_capability_manifests import (
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SLACK_MANIFEST = REPO_ROOT / "src/bundles/slack/src/lfx_slack/components/slack/capabilities.v1.json"
+MICROSOFT_MANIFEST = REPO_ROOT / "src/bundles/microsoft/src/lfx_microsoft/components/microsoft/capabilities.v1.json"
+MICROSOFT_MATRIX = DEFAULT_DESIGN_ROOT / "matrices" / "microsoft.json"
 
 
 def test_every_shipped_manifest_agrees_with_its_matrix() -> None:
@@ -30,6 +33,72 @@ def test_the_slack_bundle_is_discovered() -> None:
     discovered = {provider for provider, _extension, _manifest in discover_manifests(DEFAULT_BUNDLES_ROOT)}
 
     assert "slack" in discovered
+
+
+def test_the_microsoft_bundle_is_discovered() -> None:
+    """INT-11 and INT-12 ship side by side; one checker covers both."""
+    discovered = {provider for provider, _extension, _manifest in discover_manifests(DEFAULT_BUNDLES_ROOT)}
+
+    assert "microsoft" in discovered
+
+
+def test_slack_declares_no_deviations() -> None:
+    assert "slack" not in DELIBERATE_DEVIATIONS
+
+
+def test_the_microsoft_deviations_are_exactly_the_two_recorded_ones() -> None:
+    """Amending them must be a deliberate edit here, not a silent manifest change."""
+    assert DELIBERATE_DEVIATIONS["microsoft"] == {
+        "display_name": "Microsoft 365",
+        "registration_only_scopes": ["offline_access"],
+    }
+
+
+def test_the_microsoft_deviations_are_still_real() -> None:
+    matrix = json.loads(MICROSOFT_MATRIX.read_text(encoding="utf-8"))
+    manifest = json.loads(MICROSOFT_MANIFEST.read_text(encoding="utf-8"))
+
+    assert matrix["display_name"] != manifest["display_name"]
+    required = {
+        scope["scope"] for action in matrix["actions"] if action["decision"] == "include" for scope in action["scopes"]
+    }
+    assert "offline_access" in required
+    assert all("offline_access" not in c["required_scopes"] for c in manifest["capabilities"])
+
+
+def test_a_deviation_that_has_converged_is_reported_as_stale(tmp_path: Path) -> None:
+    matrix = json.loads(MICROSOFT_MATRIX.read_text(encoding="utf-8"))
+    matrix["display_name"] = DELIBERATE_DEVIATIONS["microsoft"]["display_name"]
+    matrix_path = tmp_path / "microsoft.json"
+    matrix_path.write_text(json.dumps(matrix), encoding="utf-8")
+
+    errors = compare("microsoft", MICROSOFT_MANIFEST, matrix_path)
+
+    assert any("now equals the matrix" in error for error in errors), errors
+
+
+def test_a_registration_only_scope_the_matrix_dropped_is_reported_as_stale(tmp_path: Path) -> None:
+    matrix = json.loads(MICROSOFT_MATRIX.read_text(encoding="utf-8"))
+    for action in matrix["actions"]:
+        action["scopes"] = [scope for scope in action["scopes"] if scope["scope"] != "offline_access"]
+    matrix_path = tmp_path / "microsoft.json"
+    matrix_path.write_text(json.dumps(matrix), encoding="utf-8")
+
+    errors = compare("microsoft", MICROSOFT_MANIFEST, matrix_path)
+
+    assert any("no longer required by any matrix row" in error for error in errors), errors
+
+
+def test_microsoft_drift_outside_the_deviations_still_fails(tmp_path: Path) -> None:
+    """The allowlist is scope-specific: any other scope drift is still a failure."""
+    manifest = json.loads(MICROSOFT_MANIFEST.read_text(encoding="utf-8"))
+    manifest["capabilities"][0]["required_scopes"] = ["offline_access"]
+    path = tmp_path / "capabilities.v1.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    errors = compare("microsoft", path, MICROSOFT_MATRIX)
+
+    assert any("required_scopes" in error for error in errors), errors
 
 
 def _write_variant(tmp_path: Path, mutate) -> Path:

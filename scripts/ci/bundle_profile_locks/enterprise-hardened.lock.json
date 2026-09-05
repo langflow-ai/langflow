@@ -93,6 +93,16 @@
       "resolved_version": "0.2.3"
     },
     {
+      "distribution": "lfx-microsoft",
+      "extras": [],
+      "providers": [
+        "lfx-microsoft"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-microsoft==0.1.0",
+      "resolved_version": "0.1.0"
+    },
+    {
       "distribution": "lfx-ollama",
       "extras": [],
       "providers": [
@@ -170,7 +180,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:c2e88a4ae7cbd00c",
+  "profile_digest": "sha256:ad31caea4d8e310d",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
@@ -180,6 +190,7 @@
     "lfx-docling",
     "lfx-google",
     "lfx-ibm",
+    "lfx-microsoft",
     "lfx-ollama",
     "lfx-openai",
     "lfx-openai-compatible",

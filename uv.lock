@@ -45,6 +45,7 @@ members = [
     "lfx-firecrawl",
     "lfx-google",
     "lfx-ibm",
+    "lfx-microsoft",
     "lfx-nextplaid",
     "lfx-ollama",
     "lfx-openai",
@@ -7891,6 +7892,7 @@ dependencies = [
     { name = "lfx-docling" },
     { name = "lfx-google" },
     { name = "lfx-ibm" },
+    { name = "lfx-microsoft" },
     { name = "lfx-ollama" },
     { name = "lfx-openai" },
     { name = "lfx-openai-compatible" },
@@ -8028,6 +8030,7 @@ requires-dist = [
     { name = "lfx-firecrawl", marker = "extra == 'bundles'", editable = "src/bundles/firecrawl" },
     { name = "lfx-google", editable = "src/bundles/google" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
+    { name = "lfx-microsoft", editable = "src/bundles/microsoft" },
     { name = "lfx-nextplaid", marker = "extra == 'bundles'", editable = "src/bundles/nextplaid" },
     { name = "lfx-ollama", editable = "src/bundles/ollama" },
     { name = "lfx-openai", editable = "src/bundles/openai" },
@@ -10300,6 +10303,17 @@ requires-dist = [
     { name = "lfx", editable = "src/lfx" },
     { name = "presto-python-client", specifier = ">=0.8,<1" },
 ]
+
+[[package]]
+name = "lfx-microsoft"
+version = "0.1.0"
+source = { editable = "src/bundles/microsoft" }
+dependencies = [
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "lfx", editable = "src/lfx" }]
 
 [[package]]
 name = "lfx-nextplaid"
