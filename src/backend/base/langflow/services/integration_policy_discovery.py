@@ -27,7 +27,7 @@ from lfx.services.integration_policy import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Iterable
+    from collections.abc import Iterable
 
     from lfx.integrations.capabilities import IntegrationCapability
     from lfx.services.integration_policy import IntegrationPolicySnapshot
@@ -38,13 +38,18 @@ INTEGRATION_CAPABILITIES_METADATA_KEY = "integration_capability_ids"
 
 
 class IntegrationCapabilityIndex:
-    """Immutable lookup from capability id and component class to policy keys."""
+    """Immutable lookup from manifest capability id to capability and policy keys.
 
-    __slots__ = ("_by_component_class", "_capabilities", "_provider_ids")
+    Component-class lookup deliberately lives in lfx
+    (``integration_policy_identity_for_component_class``): the API-key-mode
+    execution gate is the only caller that has a bare class name, and it runs
+    inside lfx where this module is not importable.
+    """
+
+    __slots__ = ("_capabilities", "_provider_ids")
 
     def __init__(self, integrations: Iterable[Any]) -> None:
         capabilities: dict[str, IntegrationCapability] = {}
-        by_component_class: dict[str, list[IntegrationCapability]] = {}
         provider_ids: set[str] = set()
         for integration in integrations:
             manifest = getattr(integration, "capability_manifest", None)
@@ -53,10 +58,7 @@ class IntegrationCapabilityIndex:
             provider_ids.add(manifest.provider_id)
             for capability in manifest.capabilities:
                 capabilities[capability.id] = capability
-                if capability.component_ref:
-                    by_component_class.setdefault(capability.component_ref, []).append(capability)
         self._capabilities = capabilities
-        self._by_component_class = {name: tuple(items) for name, items in by_component_class.items()}
         self._provider_ids = frozenset(provider_ids)
 
     @property
@@ -67,10 +69,6 @@ class IntegrationCapabilityIndex:
     def capability(self, capability_id: str) -> IntegrationCapability | None:
         """Return one loaded capability by its manifest id."""
         return self._capabilities.get(capability_id)
-
-    def capabilities_for_component_class(self, class_name: str) -> tuple[IntegrationCapability, ...]:
-        """Return the capabilities whose ``component_ref`` names this class."""
-        return self._by_component_class.get(class_name, ())
 
     def policy_keys(self, capability_ids: Iterable[str]) -> tuple[str, ...]:
         """Return the declared policy keys of known capability ids, in order."""
@@ -84,34 +82,46 @@ class IntegrationCapabilityIndex:
 
 
 _index_lock = threading.Lock()
-_cached_index: tuple[int, IntegrationCapabilityIndex] | None = None
+_cached_index: tuple[dict[str, Any], IntegrationCapabilityIndex] | None = None
+
+
+def _is_same_bundle_set(cached: dict[str, Any], current: dict[str, Any]) -> bool:
+    """True when both snapshots hold the very same ``BundleRecord`` objects.
+
+    The cache keeps the snapshot it was built from alive, so a record it names
+    can never be garbage-collected and a later install can never be handed the
+    freed address of one -- which is why this compares objects rather than a
+    hash of their ``id()``. ``BundleRecord`` is frozen and the reload pipeline
+    swaps in a brand-new record, so object identity is exactly "the installed
+    set has not changed".
+    """
+    if len(cached) != len(current):
+        return False
+    return all(name in cached and cached[name] is record for name, record in current.items())
 
 
 def build_integration_capability_index(registry: BundleRegistry | None = None) -> IntegrationCapabilityIndex:
     """Build (and cache per registry snapshot) the loaded capability index.
 
-    ``GET /all`` is a hot path, so the index is cached against the identity of
-    the registry's current bundle snapshot rather than rebuilt per request. A
-    bundle install or reload produces a new snapshot and therefore a new index.
+    ``GET /all`` is a hot path, so the index is cached against the registry's
+    current bundle snapshot rather than rebuilt per request. A bundle install or
+    reload produces a new snapshot and therefore a new index.
     """
     global _cached_index  # noqa: PLW0603
 
     active_registry = registry if registry is not None else get_default_registry()
     snapshot = active_registry.snapshot()
-    # BundleRecord is frozen, so the sorted (name, id) pairs of one snapshot are
-    # a stable fingerprint of the installed set without copying component lists.
-    fingerprint = hash(tuple(sorted((name, id(record)) for name, record in snapshot.items())))
     if registry is None:
         with _index_lock:
             cached = _cached_index
-            if cached is not None and cached[0] == fingerprint:
+            if cached is not None and _is_same_bundle_set(cached[0], snapshot):
                 return cached[1]
     index = IntegrationCapabilityIndex(
         capability for record in snapshot.values() for capability in getattr(record, "integrations", ())
     )
     if registry is None:
         with _index_lock:
-            _cached_index = (fingerprint, index)
+            _cached_index = (snapshot, index)
     return index
 
 
@@ -368,27 +378,6 @@ async def aenforce_integration_policy_for_component(
     raise IntegrationPolicyError(provider_id, purpose)
 
 
-def blocked_component_class_names(
-    *,
-    policy: IntegrationPolicySnapshot,
-    index: IntegrationCapabilityIndex,
-    class_names: Collection[str],
-) -> frozenset[str]:
-    """Return the class names whose every registry capability is blocked.
-
-    Used by template hiding and flow-write validation, where only the component
-    class name of a saved node is available.
-    """
-    blocked: set[str] = set()
-    for class_name in class_names:
-        capabilities = index.capabilities_for_component_class(class_name)
-        if not capabilities:
-            continue
-        if not any(policy.allows_capability(capability) for capability in capabilities):
-            blocked.add(class_name)
-    return frozenset(blocked)
-
-
 __all__ = [
     "CONNECTION_REF_FIELD_TYPE",
     "INTEGRATION_CAPABILITIES_METADATA_KEY",
@@ -396,7 +385,6 @@ __all__ = [
     "IntegrationCapabilityIndex",
     "ablocked_template_positions",
     "aenforce_integration_policy_for_component",
-    "blocked_component_class_names",
     "build_integration_capability_index",
     "candidate_provider_ids",
     "component_is_allowed",

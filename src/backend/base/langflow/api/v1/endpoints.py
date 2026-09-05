@@ -269,17 +269,17 @@ async def get_all(
             user_id=current_user.id,
             attributes=provider_policy_attributes,
         )
-        # Integration governance (INT-7) hides a component when its provider is
-        # outside the operator ceiling or every action it can perform is
-        # blocked. ``include_blocked`` is a superuser catalog-authoring view, so
-        # it lifts this filter for the same reason it lifts catalog blocks.
         if not include_blocked:
+            # Integration governance (INT-7) hides a component when its provider
+            # is outside the operator ceiling or every action it can perform is
+            # blocked. ``include_blocked`` is a superuser catalog-authoring
+            # view, so it lifts this filter for the same reason it lifts catalog
+            # blocks.
             visible_types_en = await filter_component_palette_by_integration_policy(
                 visible_types_en,
                 user_id=current_user.id,
                 attributes=provider_policy_attributes,
             )
-        if not include_blocked:
             visible_types_en = _filter_component_palette_by_catalog_policy(
                 visible_types_en,
                 blocked_component_keys=catalog_policy_snapshot.blocked_component_keys,
