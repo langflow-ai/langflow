@@ -73,6 +73,7 @@ For videos, see the **Twelve Labs** and **YouTube** <Icon name="Blocks" aria-hid
 | path | Files | Input parameter. The path to files to load. Can be local or in [Langflow file management](/concepts-file-management). Supports individual files and bundled archives. |
 | file_path | Server File Path | Input parameter. A `JSON` object with a `file_path` property pointing to a file in [Langflow file management](/concepts-file-management) or a `Message` object with a path to the file. Supersedes **Files** (`path`) but supports the same file types. |
 | separator | Separator | Input parameter. The separator to use between multiple outputs in `Message` format. |
+| csv_delimiter | CSV Delimiter | Input parameter. A single character separating CSV columns in **Structured Content** output. Default: comma (`,`). Use `;` for semicolon-separated files or `\t` for tab-separated files. |
 | silent_errors | Silent Errors | Input parameter. If `true`, errors in the component don't raise an exception. Default: Disabled (`false`). |
 | delete_server_file_after_processing | Delete Server File After Processing | Input parameter. If `true` (default), the **Server File Path** (`file_path`) is deleted after processing. |
 | ignore_unsupported_extensions | Ignore Unsupported Extensions | Input parameter. If enabled (`true`), files with unsupported extensions are accepted but not processed. If disabled (`false`), the **Read File** component either can throw an error if an unsupported file type is provided. The default is `true`. |
@@ -170,4 +171,3 @@ If you upload multiple files, the component outputs **Files**, which is a [`Tabl
 
 </TabItem>
 </Tabs>
-
