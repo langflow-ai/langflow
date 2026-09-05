@@ -26,6 +26,7 @@ INTEGRATION_ERROR_CODES = frozenset(
         "rate-limited",
         "provider-unavailable",
         "action-unsupported",
+        "incompatible-tool",
     }
 )
 
@@ -164,6 +165,35 @@ class ActionUnsupportedError(IntegrationError):
             "The provider does not support this action.",
             provider=provider,
             http_status=http_status,
+        )
+
+
+class IncompatibleToolError(IntegrationError):
+    """A pinned MCP server no longer matches the tool contract a bundle pinned.
+
+    Raised instead of degrading to whatever the server currently offers: an added,
+    removed, renamed, or re-shaped tool, a server-version or ``tools/list`` digest
+    mismatch, or a call whose arguments fall outside the pinned schema. Not
+    retryable -- only a bundle release (or a provider rollback) can resolve it.
+    """
+
+    code = "incompatible-tool"
+
+    def __init__(
+        self,
+        message: str = "The MCP server does not match the tool contract pinned by this action.",
+        *,
+        provider: str | None = None,
+        hint: str | None = None,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(
+            message,
+            hint=hint or "Upgrade to a bundle release whose pinned tools match the server, then retry.",
+            provider=provider,
+            retryable=False,
+            safe_message="This action's provider tools changed and no longer match what the bundle pinned.",
+            details=details,
         )
 
 

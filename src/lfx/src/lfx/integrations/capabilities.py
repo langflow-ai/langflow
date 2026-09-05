@@ -68,6 +68,30 @@ class OAuthProfile(BaseModel):
     tenant_param: StrictStr | None = None
 
 
+class McpToolPin(BaseModel):
+    """The frozen MCP contract for one ``substrate == "mcp"`` capability.
+
+    Pinning is manifest data, not component code, so a provider bundle can move an
+    action from its SDK/REST adapter to MCP without changing the component class,
+    its identity, or the saved-flow schema (see
+    ``design/dedicated-integrations/ga-swap-procedure.md``). ``tools_list_hash`` is
+    the content digest of the whole pinned ``tools/list``
+    (``lfx.base.mcp.pinned.tools_list_digest``); ``server_name`` and
+    ``server_version`` are the ``InitializeResult.serverInfo`` values, pinned only
+    when the server actually publishes them.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    server_url: StrictStr = Field(min_length=1)
+    transport: Literal["streamable_http"] = "streamable_http"
+    input_schema: dict[str, Any]
+    output_schema: dict[str, Any] | None = None
+    tools_list_hash: StrictStr | None = None
+    server_name: StrictStr | None = None
+    server_version: StrictStr | None = None
+
+
 class IntegrationCapability(BaseModel):
     """One executable provider action and its credential requirements."""
 
@@ -86,6 +110,7 @@ class IntegrationCapability(BaseModel):
     risk: Literal["read", "write", "destructive"]
     component_ref: StrictStr | None = Field(default=None, min_length=1)
     mcp_tool: StrictStr | None = Field(default=None, min_length=1)
+    mcp_pin: McpToolPin | None = None
 
     @field_validator("required_scopes", "policy_keys", "deployment_contexts")
     @classmethod
@@ -102,6 +127,29 @@ class IntegrationCapability(BaseModel):
     def _has_an_execution_target(self) -> IntegrationCapability:
         if self.component_ref is None and self.mcp_tool is None:
             msg = "An integration capability must declare component_ref or mcp_tool"
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _mcp_capabilities_are_pinned(self) -> IntegrationCapability:
+        """MCP actions run in pinned mode only: an unpinned MCP action fails validation.
+
+        Runtime discovery may not decide what an MCP action can do, so the manifest
+        must name the tool and freeze its endpoint and schemas before the loader
+        will accept the capability.
+        """
+        if self.substrate == "mcp":
+            if self.mcp_tool is None:
+                msg = "An integration capability with substrate 'mcp' must declare mcp_tool"
+                raise ValueError(msg)
+            if self.mcp_pin is None:
+                msg = (
+                    "An integration capability with substrate 'mcp' must declare mcp_pin "
+                    "(server endpoint plus argument and result schemas)"
+                )
+                raise ValueError(msg)
+        elif self.mcp_pin is not None:
+            msg = "mcp_pin is only valid on a capability whose substrate is 'mcp'"
             raise ValueError(msg)
         return self
 

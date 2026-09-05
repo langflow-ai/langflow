@@ -55,9 +55,19 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | `IntegrationError` and typed subclasses / `INTEGRATION_ERROR_CODES` | `lfx.integrations` |
 | `normalize_integration_error()` / `register_error_normalizer()` | `lfx.integrations` |
 | `IntegrationProvider` / `OAuthProfile` / `IntegrationCapability` / `ScopeSet` | `lfx.integrations` |
+| `McpToolPin` (pinned MCP action contract on a capability) | `lfx.integrations` |
 | `integration_action()` | `lfx.integrations` |
 | `Component.resolve_connection(field_name)` | `lfx.custom.custom_component.component.Component` |
 | `BaseConnectionResolverService` | `lfx.services.connection` |
+
+### Preset MCP components
+
+| Symbol | Source |
+| --- | --- |
+| `MCPPresetComponent` (`_mcp_server_config`, `_pinned_spec`, `_get_tools`, `run_tool`) | `lfx.base.mcp.preset` |
+| `preset_control_inputs()` | `lfx.base.mcp.preset` |
+| `PinnedServerSpec` / `PinnedToolSpec` / `PinnedToolDiff` | `lfx.base.mcp.pinned` |
+| `pinned_spec_from_capabilities()` / `tools_list_digest()` / `enforce_pinned_tools()` | `lfx.base.mcp.pinned` |
 
 ### Outputs
 
@@ -206,6 +216,22 @@ the deserialize half is covered by
 ## Changelog
 
 ### v0 (this release)
+
+- **Pinned action-to-tool mode for preset MCP components (additive).**
+  `MCPPresetComponent` gains a `_pinned_spec()` hook returning a
+  `PinnedServerSpec` (`lfx.base.mcp.pinned`); in pinned mode the component fixes
+  the endpoint and transport, refuses any tool that was added, removed, renamed,
+  or re-shaped relative to the pin, compares the `tools/list` content digest and
+  the `InitializeResult.serverInfo` name/version when they are pinned, keeps the
+  Tool dropdown off the live server, and re-checks call arguments against the
+  pinned schema. Drift raises the new `IncompatibleToolError`
+  (`incompatible-tool`, added to `INTEGRATION_ERROR_CODES`). Capabilities carry
+  the pin as `IntegrationCapability.mcp_pin: McpToolPin`; a capability whose
+  `substrate` is `mcp` must now declare both `mcp_tool` and `mcp_pin`. Tools
+  discovered by `update_tools` carry their raw `input_schema`/`output_schema` on
+  `metadata`, and a server config may set `allow_sse_fallback=False` to pin the
+  transport. Components that do not override `_pinned_spec()` are unaffected;
+  `BUNDLE_API_VERSION` remains `1`.
 
 - **Optional rejected-token digest for connection refresh.**
   `ConnectionResolutionRequest.rejected_token_digest` carries a SHA-256 digest only

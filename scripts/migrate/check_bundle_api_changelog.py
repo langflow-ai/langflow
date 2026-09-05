@@ -71,6 +71,9 @@ IN_SCOPE_PATHS: tuple[str, ...] = (
     "src/lfx/src/lfx/io/__init__.py",
     "src/lfx/src/lfx/custom/custom_component/component.py",
     "src/lfx/src/lfx/services/connection",
+    # Preset MCP base class + its pinned action-to-tool contract
+    "src/lfx/src/lfx/base/mcp/preset.py",
+    "src/lfx/src/lfx/base/mcp/pinned.py",
 )
 
 
