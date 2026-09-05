@@ -253,7 +253,6 @@ EXPECTED_FIELDS = {
     "trigger_dispatcher_enabled",
     "trigger_dispatcher_poll_interval_s",
     "trigger_lease_ttl_s",
-    "trigger_heartbeat_interval_s",
     "trigger_max_events_per_poll",
     "trigger_retry_backoff_base_s",
     "trigger_retry_backoff_cap_s",
