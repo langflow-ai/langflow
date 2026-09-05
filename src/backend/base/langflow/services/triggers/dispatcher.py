@@ -23,11 +23,12 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import json
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
-from sqlmodel import col, select, update
+from sqlmodel import col, func, select, update
 
 from langflow.services.database.models.trigger.model import Trigger, TriggerEvent
 from langflow.services.database.models.trigger.schemas import (
@@ -40,8 +41,8 @@ from langflow.services.triggers import leases
 from langflow.services.triggers.binding import resolve_binding
 from langflow.services.triggers.constants import (
     DISPATCHER_LEASE_NAME,
-    EXECUTION_FAMILY_REQUEST_KEY,
     FAMILY_TRIGGER_LISTENER,
+    TRIGGER_EVENT_FIELD,
 )
 from langflow.services.triggers.correlation import derive_session_id
 from langflow.services.triggers.errors import BindingUnsupportedError
@@ -88,8 +89,32 @@ def _backoff_seconds(attempt: int) -> float:
 # --------------------------------------------------------------------------- #
 
 
-async def _candidate_ids(session: AsyncSession, *, limit: int) -> list[UUID]:
-    """Pending rows that are due, oldest first.
+async def _due_trigger_ids(session: AsyncSession, *, limit: int) -> list[UUID]:
+    """Triggers with at least one due pending event, longest-waiting first.
+
+    The scan is per *trigger*, not per event, because the per-trigger
+    concurrency cap is applied afterwards. A flat oldest-first event scan lets
+    one busy trigger at its cap fill the whole candidate window: every candidate
+    belongs to it, at most ``concurrency_limit`` of them are claimable, and a
+    second trigger's single event never enters the window at all until the
+    backlog drains. Choosing the triggers first and then taking each one's
+    headroom is what makes the cap a cap rather than a queue head.
+    """
+    statement = (
+        select(TriggerEvent.trigger_id)
+        .where(
+            TriggerEvent.state == TriggerEventState.PENDING.value,
+            col(TriggerEvent.available_at) <= _now(),
+        )
+        .group_by(col(TriggerEvent.trigger_id))
+        .order_by(func.min(col(TriggerEvent.available_at)))
+        .limit(limit)
+    )
+    return list((await session.exec(statement)).all())
+
+
+async def _candidate_ids(session: AsyncSession, *, trigger_id: UUID, limit: int) -> list[UUID]:
+    """One trigger's due pending rows, oldest first, at most ``limit`` of them.
 
     On Postgres the scan takes row locks with ``SKIP LOCKED`` so concurrent
     dispatchers walk disjoint candidate sets instead of colliding on the same
@@ -100,6 +125,7 @@ async def _candidate_ids(session: AsyncSession, *, limit: int) -> list[UUID]:
     statement = (
         select(TriggerEvent.id)
         .where(
+            TriggerEvent.trigger_id == trigger_id,
             TriggerEvent.state == TriggerEventState.PENDING.value,
             col(TriggerEvent.available_at) <= _now(),
         )
@@ -137,33 +163,36 @@ async def _claim_one(session: AsyncSession, *, event_id: UUID, owner: str, lease
 
 
 async def claim_batch(session: AsyncSession, *, owner: str, limit: int, lease_ttl_s: float) -> list[TriggerEvent]:
-    """Claim up to ``limit`` due events for ``owner``, respecting concurrency caps."""
-    candidates = await _candidate_ids(session, limit=limit * 2)
-    if not candidates:
+    """Claim up to ``limit`` due events for ``owner``, respecting concurrency caps.
+
+    Triggers are visited round-robin (longest-waiting first) and each one may
+    contribute only its remaining headroom, so a trigger at its cap costs the
+    batch nothing and never crowds another trigger out of the window.
+    """
+    trigger_ids = await _due_trigger_ids(session, limit=limit)
+    if not trigger_ids:
         return []
     in_flight = await _in_flight_counts(session)
-    caps: dict[UUID, int] = {}
     claimed: list[TriggerEvent] = []
-    for event_id in candidates:
-        if len(claimed) >= limit:
+    for trigger_id in trigger_ids:
+        remaining = limit - len(claimed)
+        if remaining <= 0:
             break
-        event = await session.get(TriggerEvent, event_id)
-        if event is None or event.state != TriggerEventState.PENDING.value:
+        trigger = await session.get(Trigger, trigger_id)
+        if trigger is None:  # pragma: no cover - FK cascade makes this unreachable
             continue
-        cap = caps.get(event.trigger_id)
-        if cap is None:
-            trigger = await session.get(Trigger, event.trigger_id)
-            if trigger is None:  # pragma: no cover - FK cascade makes this unreachable
+        headroom = min(trigger.concurrency_limit - in_flight.get(trigger_id, 0), remaining)
+        if headroom <= 0:
+            continue
+        for event_id in await _candidate_ids(session, trigger_id=trigger_id, limit=headroom):
+            event = await session.get(TriggerEvent, event_id)
+            if event is None or event.state != TriggerEventState.PENDING.value:
                 continue
-            cap = trigger.concurrency_limit
-            caps[event.trigger_id] = cap
-        if in_flight.get(event.trigger_id, 0) >= cap:
-            continue
-        if not await _claim_one(session, event_id=event_id, owner=owner, lease_ttl_s=lease_ttl_s):
-            continue
-        in_flight[event.trigger_id] = in_flight.get(event.trigger_id, 0) + 1
-        await session.refresh(event)
-        claimed.append(event)
+            if not await _claim_one(session, event_id=event_id, owner=owner, lease_ttl_s=lease_ttl_s):
+                continue
+            in_flight[trigger_id] = in_flight.get(trigger_id, 0) + 1
+            await session.refresh(event)
+            claimed.append(event)
     return claimed
 
 
@@ -283,9 +312,18 @@ async def reconcile_dispatched(session: AsyncSession, *, limit: int = 200) -> in
 def _ensure_frame_source() -> None:
     """Install the background runner's build source if no route has yet.
 
-    ``BackgroundExecutionService`` is constructed without one and the v2
-    workflow routes install it lazily on their first POST. A dispatcher in a
-    freshly booted process would otherwise call ``None`` inside ``_enqueue``.
+    ``BackgroundExecutionService`` ships with ``frame_source_factory=None`` and
+    only the v2 workflow routes install one, lazily, on their first POST. A
+    dispatcher started from the API lifespan in a freshly booted process would
+    otherwise reach ``None`` inside ``_enqueue`` and every trigger run would die
+    on the first tick after a restart.
+
+    Reaching from a service into ``langflow.api.v2.workflow`` is a layering
+    inversion, and a deliberate one: the alternative is a second frame source
+    that would have to reproduce the build loop, the memory-base hook and the
+    telemetry drain the v2 factory already owns, and would drift from it. The
+    import is local so the module graph stays acyclic, and the assignment is
+    skipped whenever a route has already installed the same callable.
     """
     from langflow.api.v2.workflow import _default_frame_source_factory
     from langflow.services.deps import get_background_execution_service
@@ -295,14 +333,43 @@ def _ensure_frame_source() -> None:
         service._frame_source_factory = _default_frame_source_factory  # noqa: SLF001
 
 
+def build_event_envelope(trigger: Trigger, event: TriggerEvent) -> dict[str, Any]:
+    """What a trigger component sees as its ``Event`` output."""
+    return {
+        "trigger_id": str(trigger.id),
+        "event_id": str(event.id),
+        "kind": trigger.kind,
+        "provider": trigger.provider,
+        "dedupe_key": event.dedupe_key,
+        "attempt": event.attempt,
+        "payload": event.payload or {},
+    }
+
+
 def build_submit_request(
     *,
     trigger: Trigger,
     event: TriggerEvent,
     binding_data: dict[str, Any] | None,
-    family: str = FAMILY_TRIGGER_LISTENER,
 ) -> dict[str, Any]:
     """The background-run request for one ledger row.
+
+    Every key here is a field ``WorkflowRunRequest`` declares. That model is
+    ``extra="forbid"`` and the worker re-parses this dict before it builds
+    anything (``_parse_persisted_workflow_request``), so an invented key is not
+    a harmless annotation — it fails the run after the job row is already
+    committed, and the event retries its way to a dead letter. Two things that
+    look like they belong on the body therefore do not:
+
+    * the **execution family** travels as an argument, not a field (see
+      ``EXECUTION_FAMILY_KWARG``);
+    * the **firing event** rides ``tweaks``, keyed by the trigger's canvas node
+      id, exactly as the Webhook component's payload does. ``tweaks`` survives
+      the durable round trip in the authenticated override envelope, so a
+      scaled-mode worker re-parsing the job row sees the same event.
+
+    An API-created trigger with no ``node_id`` names no node to feed, so it
+    sends no tweak and a trigger component in that flow reads an empty event.
 
     ``idempotency_key`` includes the attempt: the background execution service
     dedupes on that key *including completed jobs*, so a retry that reused the
@@ -310,25 +377,20 @@ def build_submit_request(
 
     ``data`` carries a pinned version's canvas. It is the same override the v2
     route accepts from a flow writer; here it is server-generated from a version
-    of the trigger's own flow, and the run executes as that flow's owner.
+    of the trigger's own flow, and the run executes as that flow's owner. It is
+    sent only for a pinned trigger — an unpinned run builds from the saved flow,
+    so copying the canvas onto every event would bloat each job row for nothing.
     """
+    tweaks: dict[str, Any] = {}
+    if trigger.node_id:
+        tweaks[trigger.node_id] = {TRIGGER_EVENT_FIELD: json.dumps(build_event_envelope(trigger, event))}
     request: dict[str, Any] = {
         "flow_id": str(trigger.flow_id),
         "mode": "background",
         "input_value": "",
         "session_id": derive_session_id(trigger, event),
-        "tweaks": {},
+        "tweaks": tweaks,
         "idempotency_key": f"trg:{event.id}:{event.attempt}",
-        # Payload the trigger fired with, so a component can read the event.
-        "trigger_event": {
-            "trigger_id": str(trigger.id),
-            "event_id": str(event.id),
-            "kind": trigger.kind,
-            "provider": trigger.provider,
-            "dedupe_key": event.dedupe_key,
-            "payload": event.payload or {},
-        },
-        EXECUTION_FAMILY_REQUEST_KEY: family,
     }
     if binding_data is not None:
         request["data"] = binding_data
@@ -374,7 +436,7 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
         )
         return
 
-    request = build_submit_request(trigger=trigger, event=event, binding_data=binding.data, family=family)
+    request = build_submit_request(trigger=trigger, event=event, binding_data=binding.data)
     session_id = request["session_id"]
     try:
         _ensure_frame_source()
@@ -509,3 +571,26 @@ class TriggerDispatcher:
             removed = await purge_events(session, retention_days=settings.trigger_event_retention_days)
         if removed:
             await logger.adebug("Purged %s terminal trigger events", removed)
+
+
+def start_dispatcher_if_enabled() -> TriggerDispatcher | None:
+    """Start the lifespan-owned dispatcher, or return None when it is disabled.
+
+    The API lifespan calls this once per worker. It is a function rather than
+    four lines inline so the wiring itself — the setting is read, a dispatcher
+    is created, it is started, and the caller gets something it can stop on
+    shutdown — is testable; the lifespan body is not.
+
+    Failures are swallowed on purpose: a trigger loop that cannot start must
+    never stop the API from booting. The caller sees ``None`` and has nothing to
+    stop.
+    """
+    if not get_settings_service().settings.trigger_dispatcher_enabled:
+        return None
+    try:
+        dispatcher = TriggerDispatcher()
+        dispatcher.start()
+    except Exception as exc:  # noqa: BLE001 — boot must not depend on the trigger loop
+        logger.warning("Trigger dispatcher did not start: %s", type(exc).__name__)
+        return None
+    return dispatcher
