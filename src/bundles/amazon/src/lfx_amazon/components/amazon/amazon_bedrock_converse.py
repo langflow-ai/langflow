@@ -49,18 +49,14 @@ class AmazonBedrockConverseComponent(LCModelComponent):
         SecretStrInput(
             name="aws_access_key_id",
             display_name="AWS Access Key ID",
-            info="The access key for your AWS account. "
-            "Usually set in Python code as the environment variable 'AWS_ACCESS_KEY_ID'.",
-            value="AWS_ACCESS_KEY_ID",
-            required=True,
+            info="Optional explicit access key. Leave empty to use the AWS default credential chain.",
+            advanced=True,
         ),
         SecretStrInput(
             name="aws_secret_access_key",
             display_name="AWS Secret Access Key",
-            info="The secret key for your AWS account. "
-            "Usually set in Python code as the environment variable 'AWS_SECRET_ACCESS_KEY'.",
-            value="AWS_SECRET_ACCESS_KEY",
-            required=True,
+            info="Optional explicit secret key. Leave empty to use the AWS default credential chain.",
+            advanced=True,
         ),
         SecretStrInput(
             name="aws_session_token",
@@ -68,16 +64,15 @@ class AmazonBedrockConverseComponent(LCModelComponent):
             advanced=True,
             info="The session key for your AWS account. "
             "Only needed for temporary credentials. "
-            "Usually set in Python code as the environment variable 'AWS_SESSION_TOKEN'.",
+            "Leave empty to use the AWS default credential chain.",
             load_from_db=False,
         ),
         SecretStrInput(
             name="credentials_profile_name",
             display_name="Credentials Profile Name",
             advanced=True,
-            info="The name of the profile to use from your "
-            "~/.aws/credentials file. "
-            "If not provided, the default profile will be used.",
+            info="Optional profile from ~/.aws/credentials or ~/.aws/config. "
+            "If empty, the AWS SDK uses its default credential chain.",
             load_from_db=False,
         ),
         DropdownInput(
