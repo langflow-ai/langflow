@@ -12,10 +12,18 @@ from lfx.template.field.base import Output
 
 
 class GoogleDriveSearchComponent(Component):
+    """Legacy Drive search on pasted token JSON.
+
+    The connection-backed replacement is ``Drive: List Files (app files)``, which
+    runs on the non-sensitive ``drive.file`` scope. That is a narrower reach than
+    this component's pasted token may have had; see the bundle docs.
+    """
+
     display_name = "Google Drive Search"
     description = "Searches Google Drive files using provided credentials and query parameters."
     icon = "Google"
     legacy: bool = True
+    replacement = ["google.GoogleDriveListComponent"]
 
     inputs = [
         SecretStrInput(

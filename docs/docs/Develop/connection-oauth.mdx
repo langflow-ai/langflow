@@ -170,3 +170,52 @@ The backend removes callback query strings from its access-log request scope. Co
 reverse proxies and external request tracing to omit callback query strings as well, because
 those systems observe requests before Langflow does. Avoid capturing browser callback URLs
 in screenshots or support logs.
+
+## Google Workspace action scopes (INT-10)
+
+The wave-1 Google action components each request exactly one scope. Configure a Google
+registration whose `scopes` ceiling contains the ones your flows use:
+
+| Component | Scope |
+|---|---|
+| **Gmail: Send Email** | `https://www.googleapis.com/auth/gmail.send` |
+| **Drive: List Files (app files)** | `https://www.googleapis.com/auth/drive.file` |
+| **Drive: Fetch File (app files)** | `https://www.googleapis.com/auth/drive.file` |
+| **Calendar: List Events** | `https://www.googleapis.com/auth/calendar.events.readonly` |
+| **Calendar: Create Event** | `https://www.googleapis.com/auth/calendar.events` |
+
+```json
+{
+  "google-work": {
+    "provider": "google",
+    "owner": "customer",
+    "context": "self_managed",
+    "client_type": "confidential",
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET",
+    "redirect_uri": "https://langflow.example/api/v1/connections/oauth/google/callback",
+    "scopes": [
+      "https://www.googleapis.com/auth/gmail.send",
+      "https://www.googleapis.com/auth/drive.file",
+      "https://www.googleapis.com/auth/calendar.events.readonly",
+      "https://www.googleapis.com/auth/calendar.events"
+    ]
+  }
+}
+```
+
+`gmail.send`, `calendar.events`, and `calendar.events.readonly` are sensitive scopes and
+require Google's sensitive-scope verification before a published app can request them.
+`drive.file` is non-sensitive. No wave-1 action requests a restricted scope, so no Google
+security assessment is required for these components.
+
+Declare scopes as the full `https://www.googleapis.com/auth/...` URLs shown above. That is
+the form Google returns in the token response and therefore the form stored on the
+connection and compared against when an action resolves. A short suffix such as
+`drive.file` on its own fails resolution with `scope-missing`.
+
+Two legacy components — **Gmail Loader** and **Google Drive Loader** — accept an optional
+connection as an alternative to pasted token JSON. The Gmail Loader needs
+`https://www.googleapis.com/auth/gmail.readonly`, which is a **restricted** scope: it works
+only with a self-managed, customer-owned registration that includes it, never with a
+Langflow-owned hosted or Desktop registration.
