@@ -53,14 +53,16 @@ class GoogleCalendarCreateComponent(Component):
             value="primary",
         ),
         MessageTextInput(name="summary", display_name="Title", required=True),
+        # Named start_time/end_time rather than the matrix's start/end: `start` is
+        # already a method on Component, so an input of that name would be shadowed.
         MessageTextInput(
-            name="start",
+            name="start_time",
             display_name="Start",
             info="RFC 3339 timestamp, or a bare YYYY-MM-DD date for an all-day event.",
             required=True,
         ),
         MessageTextInput(
-            name="end",
+            name="end_time",
             display_name="End",
             info="RFC 3339 timestamp, or a bare YYYY-MM-DD date for an all-day event.",
             required=True,
@@ -104,13 +106,13 @@ class GoogleCalendarCreateComponent(Component):
         if not self.summary:
             msg = "summary is required."
             raise ValueError(msg)
-        if not self.start or not self.end:
-            msg = "start and end are required."
+        if not self.start_time or not self.end_time:
+            msg = "start_time and end_time are required."
             raise ValueError(msg)
         body: dict[str, Any] = {
             "summary": self.summary,
-            "start": _event_time(str(self.start)),
-            "end": _event_time(str(self.end)),
+            "start": _event_time(str(self.start_time)),
+            "end": _event_time(str(self.end_time)),
         }
         if self.description:
             body["description"] = self.description

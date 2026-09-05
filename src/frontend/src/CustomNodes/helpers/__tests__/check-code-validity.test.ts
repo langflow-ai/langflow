@@ -390,4 +390,53 @@ describe("checkCodeValidity", () => {
       userEdited: false,
     });
   });
+  // INT-10: the two legacy Google loaders gained an optional managed-connection
+  // field. That rewrites their code string, and a changed code string alone marks
+  // a saved node outdated, so they are exempt from update prompts. Mirrors
+  // COMPONENTS_TO_IGNORE_UPDATE in src/lfx/src/lfx/upgrade/checker.py.
+  it.each(["GmailLoaderComponent", "GoogleDriveComponent"])(
+    "never reports %s as outdated when only its code string changed",
+    (type) => {
+      const data = {
+        type,
+        node: {
+          edited: false,
+          template: { code: { value: "1.12 component code" } },
+        },
+      } as Parameters<typeof checkCodeValidity>[0];
+      const legacyTemplates = {
+        [type]: {
+          template: { code: { value: "1.13 component code" } },
+          outputs: [],
+        },
+      } as Parameters<typeof checkCodeValidity>[1];
+
+      expect(checkCodeValidity(data, legacyTemplates)).toMatchObject({
+        outdated: false,
+        blocked: false,
+        breakingChange: false,
+      });
+    },
+  );
+
+  it("still reports an unexempt component as outdated on the same change", () => {
+    const data = {
+      type: "SomeOtherComponent",
+      node: {
+        edited: false,
+        template: { code: { value: "1.12 component code" } },
+      },
+    } as Parameters<typeof checkCodeValidity>[0];
+    const otherTemplates = {
+      SomeOtherComponent: {
+        template: { code: { value: "1.13 component code" } },
+        outputs: [],
+      },
+    } as Parameters<typeof checkCodeValidity>[1];
+
+    expect(checkCodeValidity(data, otherTemplates)).toMatchObject({
+      outdated: true,
+      blocked: false,
+    });
+  });
 });

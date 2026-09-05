@@ -159,11 +159,19 @@ register_error_normalizer(PROVIDER_ID, normalize_google_error)
 
 
 def _build_service(api: str, version: str, token: str, http: Any | None) -> Any:
-    """Build one discovery client. Called only inside ``asyncio.to_thread``."""
-    if http is not None:
-        # Test seam: googleapiclient refuses http= together with credentials=.
-        return build(api, version, http=http, static_discovery=True, cache_discovery=False)
+    """Build one discovery client. Called only inside ``asyncio.to_thread``.
+
+    ``http`` is the recorded-fixture test seam. ``build`` refuses ``http=``
+    together with ``credentials=``, so the transport is wrapped in the same
+    ``AuthorizedHttp`` the credentialed path builds internally. That keeps the
+    token-attachment behaviour under test instead of bypassing it.
+    """
     credentials = Credentials(token=token)
+    if http is not None:
+        from google_auth_httplib2 import AuthorizedHttp
+
+        authorized = AuthorizedHttp(credentials, http=http)
+        return build(api, version, http=authorized, static_discovery=True, cache_discovery=False)
     return build(api, version, credentials=credentials, static_discovery=True, cache_discovery=False)
 
 
