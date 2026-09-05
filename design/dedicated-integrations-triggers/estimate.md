@@ -10,10 +10,12 @@ below apply the gate's findings ticket by ticket, and every delta names the reco
 **Release target.** The scaffold in this directory was written as a 1.14 candidate and
 [`../dedicated-integrations/estimate.md`](../dedicated-integrations/estimate.md) excludes triggers from the 1.13
 total. The release owner decided on 2026-09-04 that the triggers epic is 1.13 scope and that every TRG ticket gets a
-pull request now. That decision supersedes the "1.14 candidate" framing in the README and the exclusion line in the
-1.13 estimate; both are amended rather than left to contradict this record. The 48.75 engineer-week figure for
-INT-1 through INT-14 is unchanged - the triggers work is additional to it, not inside it, and Risk 7 of the governing
-plan is answered by adding capacity rather than by re-scoping the actions release.
+pull request now. That decision supersedes the "1.14 candidate" framing in the README, the exclusion line in the
+1.13 estimate, and the deferral in `../dedicated-integrations/triggers-deferred.md`; all three are amended in this
+pull request, each with a dated "release owner decision, 2026-09-04" note, rather than left to contradict this
+record. The 48.75 engineer-week figure for INT-1 through INT-14 is unchanged - the triggers work is additional to it,
+not inside it, and Risk 7 of the governing plan is answered by adding capacity rather than by re-scoping the actions
+release.
 
 Assumptions: the accepted records in `decisions/` hold (separate listener process with a subprocess mode;
 at-least-once collapsed in the ledger; no relay); one engineer per stream; TRG-3 and TRG-4 run in parallel on TRG-2;

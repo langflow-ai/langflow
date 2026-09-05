@@ -7,15 +7,19 @@ Last updated: 2026-09-05
 This directory is the discovery gate for the triggers initiative: persistent listeners, provider push delivery,
 subscription lifecycle, durable delivery, replay, deployment binding, and conversation correlation. It is the
 separate initiative that the 1.13 actions plan promised in Scope Boundary 1 and that
-[`../dedicated-integrations/triggers-deferred.md`](../dedicated-integrations/triggers-deferred.md) records as
-deferred. It is modeled on the INT-1 gate ([`../dedicated-integrations/README.md`](../dedicated-integrations/README.md)):
+[`../dedicated-integrations/triggers-deferred.md`](../dedicated-integrations/triggers-deferred.md) originally
+recorded as deferred - that record is amended here and re-opened. It is modeled on the INT-1 gate ([`../dedicated-integrations/README.md`](../dedicated-integrations/README.md)):
 the gate freezes what the triggers release ships before any listener or subscription code is written, and every
 other triggers ticket (TRG-2 onward) blocks on it.
 
 **Release target, decided 2026-09-04 by the release owner.** The triggers epic is 1.13 scope and every TRG ticket
-gets a pull request now. The scaffold created on 2026-09-02 called this directory a 1.14 candidate and
-[`../dedicated-integrations/estimate.md`](../dedicated-integrations/estimate.md) excludes triggers from the 1.13
-total; both are superseded by that decision and are amended rather than left to contradict this record.
+gets a pull request now. The scaffold created on 2026-09-02 called this directory a 1.14 candidate,
+[`../dedicated-integrations/estimate.md`](../dedicated-integrations/estimate.md) excluded triggers from the 1.13
+total, and [`../dedicated-integrations/triggers-deferred.md`](../dedicated-integrations/triggers-deferred.md) carried
+them as a deferred track. All three are amended in this pull request rather than left to contradict this record: the
+1.14 framing is gone from this file, the 1.13 estimate carries a dated "Amendment, 2026-09-04" under "What the
+estimate does not include", and the deferred record carries a dated "Amendment: re-opened 2026-09-04" section (the
+INT-1 gate's own exit-criterion row 6 is annotated to match). None of them changes the 1.13 actions total.
 [`estimate.md`](estimate.md) carries the new numbers: 39.5 engineer-weeks for TRG-1 through TRG-8, additional to the
 48.75 the actions release carries. Risk 7 of the governing plan (pulling triggers into 1.13 invalidates the actions
 estimate) is answered by adding capacity, not by re-scoping the actions release: no INT ticket loses scope here.
