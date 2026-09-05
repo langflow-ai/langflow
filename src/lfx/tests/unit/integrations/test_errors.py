@@ -30,6 +30,7 @@ def test_integration_error_codes_are_stable() -> None:
         "rate-limited",
         "provider-unavailable",
         "action-unsupported",
+        "incompatible-tool",
     } == INTEGRATION_ERROR_CODES
 
 
