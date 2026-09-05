@@ -21,6 +21,14 @@ from lfx_microsoft.manifest import connection_input
 
 HTTP_ACCEPTED = 202
 
+# ``sendMail`` inlines every attachment as base64 inside the request body, and
+# Graph caps that body at 4 MB. Microsoft documents 3 MB of raw bytes as the
+# largest set of attachments that survives the base64 expansion; anything
+# bigger needs an upload session against a draft message, which this action
+# deliberately does not create. Refuse before reading the file so a 2 GB path
+# never lands in memory on its way to a Graph 413.
+MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024
+
 
 class OutlookSendComponent(MicrosoftGraphComponent):
     """Send an Outlook message through delegated Microsoft Graph permissions."""
@@ -69,8 +77,17 @@ class OutlookSendComponent(MicrosoftGraphComponent):
 
     def _attachments(self) -> list[dict[str, Any]]:
         entries: list[dict[str, Any]] = []
+        total = 0
         for raw_path in as_list(getattr(self, "attachments", None)):
             resolved = Path(self.resolve_path(raw_path))
+            total += resolved.stat().st_size
+            if total > MAX_ATTACHMENT_BYTES:
+                msg = (
+                    f"Attachments exceed the {MAX_ATTACHMENT_BYTES // (1024 * 1024)} MB that Microsoft Graph "
+                    f"accepts inline on sendMail (reached at {resolved.name!r}). Send fewer or smaller files, "
+                    f"or share a link instead."
+                )
+                raise ValueError(msg)
             entries.append(
                 {
                     "@odata.type": "#microsoft.graph.fileAttachment",

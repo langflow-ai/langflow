@@ -170,6 +170,46 @@ async def test_download_truncates_at_max_bytes() -> None:
     assert content == b"0123"
 
 
+async def test_download_stops_reading_the_redirect_body_at_max_bytes() -> None:
+    """``max_bytes`` bounds memory: the stream is abandoned, not trimmed after the fact."""
+    download_url = "https://contoso-my.sharepoint.com/_layouts/15/download.aspx?SECRET=preauth"
+    served: list[int] = []
+
+    async def _chunks():
+        for index in range(100):
+            served.append(index)
+            yield b"x" * 1024
+
+    def _handler(request: httpx.Request) -> httpx.Response:
+        if request.url.host == "graph.microsoft.com":
+            return httpx.Response(302, headers={"Location": download_url})
+        return httpx.Response(200, content=_chunks())
+
+    recorder = TransportRecorder(_handler)
+    resolver = RecordingResolver([credential()])
+    async with GraphClient(lease_for(resolver), transport=recorder.transport) as client:
+        content = await client.download("/me/drive/items/item-1/content", max_bytes=2048)
+
+    assert len(content) == 2048
+    # Three chunks at most: the third is what trips the cap. The remaining 97
+    # were never pulled off the wire.
+    assert len(served) <= 3
+
+
+async def test_download_refuses_a_non_https_redirect_target() -> None:
+    """A redirect is a header on a response we then fetch; only absolute TLS URLs are followed."""
+    recorder = TransportRecorder(
+        lambda _request: httpx.Response(302, headers={"Location": "http://169.254.169.254/latest/meta-data/"})
+    )
+    resolver = RecordingResolver([credential()])
+    async with GraphClient(lease_for(resolver), transport=recorder.transport) as client:
+        with pytest.raises(ProviderUnavailableError):
+            await client.download("/me/drive/items/item-1/content")
+
+    # Only the Graph call happened; the redirect target was never dialled.
+    assert len(recorder.requests) == 1
+
+
 def test_registered_normalizer_is_used_by_the_shared_vocabulary() -> None:
     request = httpx.Request("GET", "https://graph.microsoft.com/v1.0/me/messages")
     response = httpx.Response(403, json={"error": {"code": "ErrorAccessDenied"}}, request=request)

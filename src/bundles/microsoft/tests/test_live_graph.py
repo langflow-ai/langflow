@@ -10,6 +10,11 @@ a token is supplied. To run it, export a delegated access token that carries
 
 Only read actions run here. Nothing sends mail, posts to Teams, or writes a
 calendar event.
+
+The assertions pin the *shape* Graph returns, not tenant contents: a live
+tenant may legitimately hold zero messages, zero events and an empty drive, so
+each test asserts that whatever comes back is a list of Data rows carrying the
+driveItem/message/event identity fields the downstream components read.
 """
 
 from __future__ import annotations
@@ -20,6 +25,7 @@ from types import SimpleNamespace
 
 import pytest
 from lfx.integrations.models import ConnectionRef
+from lfx.schema.data import Data
 from lfx.services.authorization.base import ExecutionPrincipal
 from lfx_microsoft import OutlookCalendarListComponent, OutlookSearchComponent, SharePointListComponent
 from microsoft_testkit import stub_graph
@@ -35,6 +41,15 @@ pytestmark = [
 ]
 
 
+def _assert_graph_rows(rows, required_keys: set[str]) -> None:
+    """Assert the rows are Data with Graph identity fields, tolerating an empty tenant."""
+    assert isinstance(rows, list)
+    for row in rows:
+        assert isinstance(row, Data)
+        assert isinstance(row.data, dict)
+        assert required_keys <= set(row.data), f"missing {required_keys - set(row.data)}"
+
+
 def _live(component_class, **inputs):
     """Build a component that talks to the real Graph endpoint."""
     component = component_class(connection="microsoft/live", **inputs)
@@ -45,7 +60,7 @@ def _live(component_class, **inputs):
 async def test_live_outlook_search_returns_messages() -> None:
     component = _live(OutlookSearchComponent, top=1)
     rows = await component.search_messages()
-    assert isinstance(rows, list)
+    _assert_graph_rows(rows, {"id", "subject"})
 
 
 async def test_live_calendar_list_returns_a_window() -> None:
@@ -57,10 +72,10 @@ async def test_live_calendar_list_returns_a_window() -> None:
         top=1,
     )
     rows = await component.list_events()
-    assert isinstance(rows, list)
+    _assert_graph_rows(rows, {"id", "start", "end"})
 
 
 async def test_live_onedrive_root_listing() -> None:
     component = _live(SharePointListComponent, top=1)
     rows = await component.list_items()
-    assert isinstance(rows, list)
+    _assert_graph_rows(rows, {"id", "name"})

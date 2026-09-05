@@ -66,6 +66,10 @@ class SharePointListComponent(MicrosoftGraphComponent):
     ]
 
     _next_link: str | None = None
+    # Both outputs come from a single Graph listing. The rows are cached on
+    # the instance so that evaluating "Next Link" first -- or evaluating both
+    # outputs -- costs one request, not two.
+    _rows: list[Data] | None = None
 
     def _scope_inputs(self) -> dict[str, str]:
         """Inputs the conditional-scope pre-flight predicates read."""
@@ -78,6 +82,9 @@ class SharePointListComponent(MicrosoftGraphComponent):
 
     async def list_items(self) -> list[Data]:
         """Return the folder's children as Data rows."""
+        if self._rows is not None:
+            self.status = f"{len(self._rows)} item(s)"
+            return self._rows
         scope = self._scope_inputs()
         root = drive_root(scope.get("drive_id", ""), scope.get("site_id", ""))
         target = drive_children_path(root, (self.item_id or "").strip(), (self.path or "").strip())
@@ -95,11 +102,12 @@ class SharePointListComponent(MicrosoftGraphComponent):
             )
         self._next_link = next_link
         rows = [Data(data=item) for item in items]
+        self._rows = rows
         self.status = f"{len(rows)} item(s)"
         return rows
 
     async def next_page_link(self) -> Message:
         """Return the unfollowed ``@odata.nextLink``, if Graph supplied one."""
-        if self._next_link is None:
+        if self._rows is None:
             await self.list_items()
         return Message(text=self._next_link or "")

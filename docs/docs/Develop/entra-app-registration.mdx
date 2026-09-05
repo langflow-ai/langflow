@@ -200,10 +200,16 @@ Entra. Access tokens already issued remain valid for their lifetime.
 
 ## Troubleshooting
 
+Registrations are validated lazily, on the first consent request that names
+them -- not at boot. A malformed entry therefore surfaces as a failed
+**Connect**, with `OAuth registration is not configured correctly.`, rather
+than as a startup error; check the JSON after editing it instead of waiting for
+the process to complain.
+
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| Registration rejected at startup | `tenant` is missing or is not a UUID | Use the directory (tenant) ID; `common` and `organizations` are not accepted |
-| Registration rejected at startup | `context` differs from `LANGFLOW_CONNECTION_OAUTH_CONTEXT` | One instance serves one context |
+| `OAuth registration is not configured correctly.` on Connect | `tenant` is missing or is not a UUID | Use the directory (tenant) ID; `common` and `organizations` are not accepted |
+| `OAuth registration is unavailable in this deployment context.` on Connect | `context` differs from `LANGFLOW_CONNECTION_OAUTH_CONTEXT` | One instance serves one context |
 | Consent prompt says approval is required | Tenant restricts user consent | Grant admin consent, or enable the admin consent workflow |
 | Connections fail with a missing-permission error | The registration's `scopes` use the long `https://graph.microsoft.com/...` form | Use the short form on both sides |
 | A connection stops working after an hour | `offline_access` is missing from the registration | Add it to the permissions and to `scopes`, then reconnect |

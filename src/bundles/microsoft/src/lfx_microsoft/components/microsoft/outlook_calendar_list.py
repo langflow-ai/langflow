@@ -69,6 +69,10 @@ class OutlookCalendarListComponent(MicrosoftGraphComponent):
     ]
 
     _next_link: str | None = None
+    # Both outputs come from a single Graph listing. The rows are cached on
+    # the instance so that evaluating "Next Link" first -- or evaluating both
+    # outputs -- costs one request, not two.
+    _rows: list[Data] | None = None
 
     def _path(self) -> str:
         calendar = (self.calendar_id or "").strip()
@@ -78,6 +82,9 @@ class OutlookCalendarListComponent(MicrosoftGraphComponent):
 
     async def list_events(self) -> list[Data]:
         """Return the expanded event instances as Data rows."""
+        if self._rows is not None:
+            self.status = f"{len(self._rows)} event(s)"
+            return self._rows
         params = odata_params(
             top=self.top or DEFAULT_TOP,
             select=as_list(self.select) or None,
@@ -94,11 +101,12 @@ class OutlookCalendarListComponent(MicrosoftGraphComponent):
             )
         self._next_link = next_link
         rows = [Data(data=item) for item in items]
+        self._rows = rows
         self.status = f"{len(rows)} event(s)"
         return rows
 
     async def next_page_link(self) -> Message:
         """Return the unfollowed ``@odata.nextLink``, if Graph supplied one."""
-        if self._next_link is None:
+        if self._rows is None:
             await self.list_events()
         return Message(text=self._next_link or "")
