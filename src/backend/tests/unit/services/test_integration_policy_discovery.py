@@ -7,7 +7,6 @@ from pathlib import Path
 import pytest
 from langflow.services.integration_policy_discovery import (
     IntegrationCapabilityIndex,
-    blocked_component_class_names,
     build_integration_capability_index,
     candidate_provider_ids,
     component_is_allowed,
@@ -17,7 +16,7 @@ from langflow.services.integration_policy_discovery import (
     integration_requirements,
     reset_integration_capability_index,
 )
-from lfx.extension.bundle_registry import BundleRecord, BundleRegistry
+from lfx.extension.bundle_registry import BundleRecord, BundleRegistry, get_default_registry
 from lfx.extension.loader._types import LoadedIntegration
 from lfx.integrations.capabilities import IntegrationCapabilityManifest
 from lfx.services.integration_policy import (
@@ -315,25 +314,13 @@ def test_graph_provider_ids_and_node_filtering(index) -> None:
     assert not graph_nodes_are_allowed(nodes, policy=blocked, index=index)
 
 
-def test_blocked_component_class_names_uses_the_registry_component_ref(index) -> None:
-    policy = _snapshot(allowed={"google"}, candidates={"google"}, blocked={DELETE_KEY})
-    blocked = blocked_component_class_names(
-        policy=policy,
-        index=index,
-        class_names=["GoogleDriveSearchComponent", "GoogleDriveActionComponent", "Prompt"],
-    )
-    assert blocked == frozenset({"GoogleDriveActionComponent"})
-
-
 # --------------------------------------------------------------------------- index
 
 
-def test_index_maps_capabilities_by_id_and_component_class(index) -> None:
+def test_index_maps_capabilities_by_id(index) -> None:
     assert index.provider_ids == frozenset({"google"})
     assert index.capability(SEARCH_CAPABILITY) is not None
     assert index.capability("nope") is None
-    refs = index.capabilities_for_component_class("GoogleDriveSearchComponent")
-    assert [capability.id for capability in refs] == [SEARCH_CAPABILITY]
     assert index.policy_keys([SEARCH_CAPABILITY, DELETE_CAPABILITY, "unknown"]) == (SEARCH_KEY, DELETE_KEY)
 
 
@@ -343,3 +330,48 @@ def test_default_index_is_cached_per_registry_snapshot() -> None:
     assert first is second
     reset_integration_capability_index()
     assert build_integration_capability_index() is not first
+
+
+def test_default_index_is_rebuilt_after_an_uninstall_and_reinstall() -> None:
+    """A reinstalled bundle must not be served from the previous index.
+
+    The cache holds the snapshot it was built from, so the record it names
+    stays alive and a new record can never be a false match for it -- the
+    property an ``id()``-keyed fingerprint would not have.
+    """
+    registry = get_default_registry()
+    record = BundleRecord(
+        bundle="google_cache_probe",
+        extension_id="lfx-google-probe",
+        extension_version="1.13.0",
+        slot="extra",
+        integrations=(
+            LoadedIntegration(
+                extension_id="lfx-google-probe",
+                extension_version="1.13.0",
+                bundle="google_cache_probe",
+                provider_id="google",
+                manifest_path=Path("capabilities.v1.json"),
+                capability_manifest=_manifest(),
+            ),
+        ),
+    )
+    try:
+        registry.install_bundle(record)
+        with_bundle = build_integration_capability_index()
+        assert "google" in with_bundle.provider_ids
+
+        registry.remove_bundle(record.bundle)
+        without_bundle = build_integration_capability_index()
+        assert without_bundle is not with_bundle
+        assert "google" not in without_bundle.provider_ids
+
+        # A brand-new record for the same bundle name: identity must not match
+        # the one the cache still holds, so the index is rebuilt.
+        registry.install_bundle(record)
+        reinstalled = build_integration_capability_index()
+        assert reinstalled is not without_bundle
+        assert "google" in reinstalled.provider_ids
+    finally:
+        registry.remove_bundle(record.bundle)
+        reset_integration_capability_index()
