@@ -35,9 +35,16 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
+
+# scripts/ci is a package-less directory of scripts, so the sibling module is imported by
+# name. That works when the file is run directly (sys.path[0] is scripts/ci) but not under
+# ``python -m scripts.ci.check_capability_matrices``, so put the directory on the path first.
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from event_transport_matrix import SCHEMA_NAME as EVENT_TRANSPORT_SCHEMA_NAME
 from event_transport_matrix import validate_event_transport_matrices

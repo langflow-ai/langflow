@@ -261,3 +261,28 @@ def test_require_accepted_rejects_a_draft_decision_record(tmp_path: Path) -> Non
 
     assert errors == [], "a draft record is fine outside gate-close mode"
     assert any("is draft, not accepted" in error for error in accepted_errors), accepted_errors
+
+
+def test_a_malformed_claim_block_is_reported_not_raised(tmp_path: Path) -> None:
+    # A gate checker must fail the gate, never fail itself: a scalar where an object belongs
+    # is a schema violation and must come back as an error string.
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "slack")
+    _mechanism(matrix, "slack.events_api")["inbound_auth"] = "signature"
+    _save(root, "slack", matrix)
+
+    errors = _validate(root)
+
+    assert any("inbound_auth must be an object" in error for error in errors), errors
+    assert sum("inbound_auth must be an object" in error for error in errors) == 1, errors
+
+
+def test_an_unhashable_mechanism_id_is_reported_not_raised(tmp_path: Path) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "slack")
+    _mechanism(matrix, "slack.socket_mode")["mechanism_id"] = ["slack", "socket_mode"]
+    _save(root, "slack", matrix)
+
+    errors = _validate(root)
+
+    assert any("mechanism_id must look like" in error for error in errors), errors

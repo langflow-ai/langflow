@@ -251,14 +251,21 @@ def _validate_mechanism(
 
     if mechanism.get("confidence") == "low" and not mechanism.get("open_questions"):
         errors.append(f"{label} is low confidence and must list open_questions")
-    if "inbound_auth" in mechanism:
-        _check_enum(mechanism["inbound_auth"].get("method"), "inbound_auth_method", f"{label} inbound_auth", errors)
-    if "payload" in mechanism:
-        _check_enum(mechanism["payload"].get("shape"), "payload_shape", f"{label} payload", errors)
-    if "delivery" in mechanism:
-        _check_enum(mechanism["delivery"].get("guarantee"), "delivery_guarantee", f"{label} delivery", errors)
-    if "dedupe_key" in mechanism:
-        _check_enum(mechanism["dedupe_key"].get("stability"), "dedupe_stability", f"{label} dedupe_key", errors)
+    # The schema already rejects a non-object block; these rules still run on a matrix that
+    # failed the schema, so read every nested block defensively - a malformed file must produce
+    # gate errors, never a traceback out of the checker.
+    for block_name, key, enum_name in (
+        ("inbound_auth", "method", "inbound_auth_method"),
+        ("payload", "shape", "payload_shape"),
+        ("delivery", "guarantee", "delivery_guarantee"),
+        ("dedupe_key", "stability", "dedupe_stability"),
+    ):
+        block = mechanism.get(block_name)
+        # A non-object block is reported once, by _validate_sourced_claims; skip the enum
+        # check rather than raising or reporting the same defect twice.
+        if not isinstance(block, dict):
+            continue
+        _check_enum(block.get(key), enum_name, f"{label} {block_name}", errors)
     _validate_sourced_claims(mechanism, sources, label, errors)
 
 
@@ -273,7 +280,9 @@ def _validate_no_ingress_rule(matrix: dict[str, Any], errors: list[str]) -> None
     mechanisms = matrix.get("mechanisms")
     if not isinstance(ingress, dict) or not isinstance(mechanisms, list):
         return
-    by_id = {mechanism.get("mechanism_id"): mechanism for mechanism in mechanisms if isinstance(mechanism, dict)}
+    # str() keys: a matrix that failed the schema can carry an unhashable mechanism_id, and this
+    # rule must still report gate errors rather than raise out of the checker.
+    by_id = {str(mechanism.get("mechanism_id")): mechanism for mechanism in mechanisms if isinstance(mechanism, dict)}
     outbound_wave_1 = [
         mechanism
         for mechanism in by_id.values()
@@ -352,7 +361,9 @@ def validate_event_transport_matrix(
         if not isinstance(mechanism, dict):
             errors.append(f"{provider}: every mechanism must be an object")
             continue
-        mechanism_id = mechanism.get("mechanism_id")
+        # str() rather than the raw value: a matrix that failed the schema can carry an
+        # unhashable mechanism_id, and the duplicate check must not raise on it.
+        mechanism_id = str(mechanism.get("mechanism_id"))
         if mechanism_id in seen:
             errors.append(f"{provider}:{mechanism_id} is declared more than once")
         seen.add(mechanism_id)
