@@ -326,6 +326,46 @@ def test_read_flows_list_uses_filter_visible_resources(routes):
 # ----------------------------------------------------------------------------- #
 
 
+def _resolve_guard_calls(
+    funcs: dict[str, ast.AsyncFunctionDef],
+    func_name: str,
+    _seen: frozenset[str] = frozenset(),
+) -> list[ast.Call]:
+    """Return the ensure_flow_permission calls reachable from *func_name* in its own module.
+
+    A route handler may be a thin wrapper that delegates to a private helper in
+    the same module. ``build_flow`` is exactly that: it fixes the execution
+    family and hands off to ``_build_flow_impl``, which the voice seam
+    (``build_flow_and_stream``) also calls, so the guard lives in the shared
+    implementation and both callers get it. Hoisting the guard back into the
+    route would leave the voice seam unguarded.
+
+    Following the in-module call graph keeps the invariant this test exists to
+    protect -- "this surface reaches a guard" -- while allowing that factoring.
+    Deleting the guard still fails the test, because no reachable helper would
+    carry it. A wrapper that has its own guard is not followed further.
+    """
+    if func_name in _seen or func_name not in funcs:
+        return []
+    func = funcs[func_name]
+    calls = _ensure_flow_permission_calls(func)
+    if calls:
+        return calls
+    seen = _seen | {func_name}
+    for node in ast.walk(func):
+        if not isinstance(node, ast.Call):
+            continue
+        target = node.func
+        if isinstance(target, ast.Name):
+            callee = target.id
+        elif isinstance(target, ast.Attribute):
+            callee = target.attr
+        else:
+            continue
+        calls.extend(_resolve_guard_calls(funcs, callee, seen))
+    return calls
+
+
 @pytest.mark.parametrize(
     ("module_path", "func_name"),
     [
@@ -346,10 +386,25 @@ def test_execute_surfaces_guard_with_flow_execute(module_path, func_name):
     """build/run/webhook handlers must call ensure_flow_permission(FlowAction.EXECUTE)."""
     funcs = _parse_async_funcs(module_path)
     assert func_name in funcs, f"{func_name} missing from {module_path.name}"
-    calls = _ensure_flow_permission_calls(funcs[func_name])
-    assert calls, f"{func_name} has no ensure_flow_permission call"
+    calls = _resolve_guard_calls(funcs, func_name)
+    assert calls, f"{func_name} reaches no ensure_flow_permission call"
     actions = {_action_arg(c) for c in calls}
     assert "FlowAction.EXECUTE" in actions, f"{func_name} actions={actions}, expected FlowAction.EXECUTE"
+
+
+def test_voice_build_seam_reaches_the_same_execute_guard():
+    """``build_flow_and_stream`` must reach the EXECUTE guard, not just the HTTP route.
+
+    Voice has no route of its own: it calls ``_build_flow_impl`` directly to
+    reuse the v1 build path under the ``voice`` family. That is why the guard
+    lives in the shared implementation rather than in ``build_flow``. Hoisting
+    it back into the route to satisfy the parametrized test above would leave
+    this seam building flows with no execute check at all, so pin it here.
+    """
+    funcs = _parse_async_funcs(_CHAT_FILE)
+    calls = _resolve_guard_calls(funcs, "build_flow_and_stream")
+    actions = {_action_arg(c) for c in calls}
+    assert "FlowAction.EXECUTE" in actions, f"build_flow_and_stream actions={actions}, expected FlowAction.EXECUTE"
 
 
 def test_check_flow_user_permission_is_gone():
