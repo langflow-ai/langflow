@@ -112,6 +112,9 @@ BEHAVIOR_SPECIFIC_REFERENCE_TERMS = {
     "a2a": (("a2a", "connection"),),
     "legacy_mcp": (("connection", "share"),),
     "mcp_projects": (("mcp_projects", "non_interactive"),),
+    # A resume keeps the JOB's owner. The flow can belong to somebody who only
+    # shared it, so a test that uses one identity for both roles proves nothing.
+    "workflow_hitl_v2": (("hitl", "job_owner"),),
 }
 
 

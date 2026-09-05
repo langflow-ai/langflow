@@ -75,6 +75,46 @@ def test_an_owner_family_runs_as_the_resource_owner_not_the_caller() -> None:
         assert principal.allow_explicit_shares is False
 
 
+def test_a_job_owner_family_runs_as_the_job_owner_not_the_flow_owner() -> None:
+    """The identity a resumed HITL run keeps is the JOB's owner.
+
+    A background run can be submitted against a flow the caller only holds a share
+    on, so ``flow.user_id`` and ``job.user_id`` genuinely differ. Reading the flow
+    owner here would let the share holder's resumed run resolve the flow owner's
+    opted-in connections -- the implicit identity borrowing this ticket exists to
+    prevent.
+    """
+    job_owner = _user()
+    flow_owner = uuid4()
+
+    principal = execution_principal_for(
+        FAMILY_WORKFLOW_HITL_V2,
+        user=job_owner,
+        flow_owner_id=flow_owner,
+    )
+
+    assert principal.kind == "job_owner"
+    assert principal.user_id == str(job_owner.id)
+    assert principal.actor_id == str(job_owner.id)
+    assert principal.user_id != str(flow_owner)
+    assert principal.interactive is False
+    assert principal.allow_explicit_shares is False
+
+
+def test_an_explicit_job_owner_outranks_the_effective_user() -> None:
+    """Worker paths that hold only a job row pass the owner id directly."""
+    job_owner = uuid4()
+
+    principal = execution_principal_for(
+        FAMILY_WORKFLOW_HITL_V2,
+        user=_user(),
+        flow_owner_id=uuid4(),
+        job_owner_id=job_owner,
+    )
+
+    assert principal.user_id == str(job_owner)
+
+
 def test_owner_only_families_refuse_explicit_shares() -> None:
     for family in (FAMILY_LEGACY_MCP, FAMILY_MCP_PROJECTS):
         assert execution_principal_for(family, user=_user()).allow_explicit_shares is False
@@ -264,15 +304,162 @@ async def test_a_sub_flow_inherits_the_parent_principal(monkeypatch: pytest.Monk
     assert child.execution_principal == parent_principal
 
 
-def test_the_lfx_sub_flow_component_forwards_its_graph_principal() -> None:
-    """The lfx half of the same seam: ``CustomComponent.run_flow`` passes it on."""
-    import inspect
+async def test_the_lfx_sub_flow_component_forwards_its_graph_principal(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The lfx half of the same seam: ``CustomComponent.run_flow`` passes it on.
 
-    from lfx.custom.custom_component.custom_component import CustomComponent
+    Asserted on the forwarded value rather than on the source text, so a broken
+    forward fails and a reformat does not.
+    """
+    from lfx.custom.custom_component import custom_component as custom_component_module
 
-    source = inspect.getsource(CustomComponent.run_flow)
+    forwarded: dict = {}
 
-    assert "execution_principal=getattr(self.graph" in source
+    async def _record_run_flow(**kwargs):
+        forwarded.update(kwargs)
+        return []
+
+    monkeypatch.setattr(custom_component_module, "run_flow", _record_run_flow)
+
+    principal = execution_principal_for(FAMILY_INTERACTIVE_CHAT, user=_user())
+    component = custom_component_module.CustomComponent()
+    # ``graph`` is a read-only property over the component's vertex.
+    component._vertex = SimpleNamespace(graph=SimpleNamespace(run_id="run-1", execution_principal=principal))
+    component._user_id = uuid4()
+
+    await component.run_flow(inputs={"input_value": "hi"}, flow_id=str(uuid4()))
+
+    assert forwarded["execution_principal"] == principal
+
+
+async def test_the_run_flow_component_forwards_its_graph_principal(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The palette 'Run Flow' node is the common sub-flow path and forwards too."""
+    from lfx.base.tools import run_flow as run_flow_module
+
+    forwarded: dict = {}
+
+    async def _record_run_flow(**kwargs):
+        forwarded.update(kwargs)
+        return []
+
+    monkeypatch.setattr(run_flow_module, "run_flow", _record_run_flow)
+
+    principal = execution_principal_for(FAMILY_INTERACTIVE_CHAT, user=_user())
+    component = run_flow_module.RunFlowBaseComponent()
+    child_graph = object()
+    monkeypatch.setattr(component, "get_graph", lambda **_kwargs: _awaitable(child_graph))
+    monkeypatch.setattr(component, "_build_flow_tweak_data", dict)
+    monkeypatch.setattr(component, "_build_inputs", lambda _tweaks: {})
+    component._vertex = SimpleNamespace(graph=SimpleNamespace(execution_principal=principal))
+    component.flow_name_selected = None
+    component.flow_id_selected = None
+    component.session_id = "session"
+    component._cached_flow_updated_at = None
+
+    await component._run_flow_with_cached_graph(user_id=str(uuid4()))
+
+    assert forwarded["execution_principal"] == principal
+    assert forwarded["graph"] is child_graph
+
+
+async def _awaitable(value):
+    return value
+
+
+async def _principal_from_a_build(monkeypatch: pytest.MonkeyPatch, **kwargs) -> ExecutionPrincipal:
+    """Drive the real ``generate_flow_events`` and return the principal it stamped.
+
+    Only the graph build and the service lookups are stubbed, so the identity
+    decision under test is the production one; the principal is read off the
+    ``build_graph_from_db`` call the build loop actually makes.
+    """
+    import asyncio
+    import contextlib
+    from unittest.mock import AsyncMock, MagicMock
+
+    from fastapi import BackgroundTasks
+    from langflow.api import build as build_module
+    from lfx.events.event_manager import create_default_event_manager
+
+    graph = MagicMock()
+    graph.source_flow_id = None
+    graph.run_id = None
+    graph.vertices = []
+    graph.vertices_to_run = set()
+    graph.sort_vertices.return_value = []
+    graph.set_run_id.side_effect = lambda value: setattr(graph, "run_id", value)
+    graph.end_all_traces = AsyncMock()
+
+    @contextlib.asynccontextmanager
+    async def _fake_session_scope():
+        yield MagicMock()
+
+    build_from_db = AsyncMock(return_value=graph)
+    chat_service = MagicMock()
+    chat_service.set_cache = AsyncMock()
+    monkeypatch.setattr(build_module, "get_chat_service", lambda: chat_service)
+    monkeypatch.setattr(build_module, "get_telemetry_service", lambda: MagicMock())
+    monkeypatch.setattr(build_module, "session_scope", _fake_session_scope)
+    monkeypatch.setattr(build_module, "build_graph_from_db", build_from_db)
+
+    await build_module.generate_flow_events(
+        background_tasks=BackgroundTasks(),
+        event_manager=create_default_event_manager(asyncio.Queue()),
+        inputs=None,
+        data=None,
+        files=None,
+        stop_component_id=None,
+        start_component_id=None,
+        log_builds=False,
+        flow_name="flow",
+        track_job_status=False,
+        expose_error_details=False,
+        **kwargs,
+    )
+
+    build_from_db.assert_awaited_once()
+    return build_from_db.await_args.kwargs["execution_principal"]
+
+
+async def test_the_build_loop_stamps_a_resume_with_the_job_owner(monkeypatch: pytest.MonkeyPatch) -> None:
+    """End of the wire for the job-owner rule: a shared flow's HITL resume.
+
+    ``BackgroundExecutionService.resume_job`` re-enqueues under a stub for
+    ``job.user_id``, so ``current_user`` here is the job owner while
+    ``source_flow_owner_id`` is whoever owns the shared flow. The stamped
+    principal must follow the job.
+    """
+    job_owner = uuid4()
+    flow_owner = uuid4()
+
+    principal = await _principal_from_a_build(
+        monkeypatch,
+        flow_id=uuid4(),
+        current_user=_user(job_owner),
+        source_flow_owner_id=flow_owner,
+        execution_family=FAMILY_WORKFLOW_HITL_V2,
+    )
+
+    assert principal.kind == "job_owner"
+    assert principal.user_id == str(job_owner)
+    assert principal.user_id != str(flow_owner)
+
+
+async def test_the_build_loop_still_stamps_a_webhook_with_the_flow_owner(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The owner families are unchanged: a webhook keeps running as the publisher."""
+    caller = uuid4()
+    flow_owner = uuid4()
+
+    principal = await _principal_from_a_build(
+        monkeypatch,
+        flow_id=uuid4(),
+        current_user=_user(caller),
+        source_flow_owner_id=flow_owner,
+        execution_family=FAMILY_WEBHOOK,
+    )
+
+    assert principal.kind == "flow_owner"
+    assert principal.user_id == str(flow_owner)
+    assert principal.actor_id == str(caller)
 
 
 def test_stamping_is_a_no_op_on_a_missing_graph() -> None:

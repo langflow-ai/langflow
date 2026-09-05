@@ -31,6 +31,7 @@ from langflow.api.utils.execution_principal import (
     FAMILY_LEGACY_PUBLIC_CHAT,
     FAMILY_MCP_PROJECTS,
     FAMILY_WEBHOOK,
+    FAMILY_WORKFLOW_HITL_V2,
     FAMILY_WORKFLOW_PUBLIC_V2,
     execution_principal_for,
 )
@@ -213,6 +214,43 @@ async def test_webhook_connection_with_opt_in_resolves_the_flow_owner(
     assert principal.user_id == row["owner_id"]
 
     resolved = await _resolve(row["name"], principal)
+
+    assert resolved.access_token.get_secret_value() == ACCESS_TOKEN
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_a_hitl_resume_runs_as_the_job_owner_not_the_flow_owner(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+) -> None:
+    """A share holder's resumed run must not borrow the flow owner's credential.
+
+    A v2 background run can be submitted against a flow the caller only holds an
+    execute share on, so ``flow.user_id`` and ``job.user_id`` genuinely differ.
+    The resume keeps the STARTING JOB's owner, which is what the matrix row
+    ``job_owner_reresolved`` means; reading the flow owner instead would resolve
+    somebody else's opted-in connection on a worker with nobody present.
+    """
+    row = await _create_connection(
+        client, logged_in_headers, name=f"hitl_{uuid4().hex[:8]}", allow_non_interactive=True
+    )
+    flow_owner_id = row["owner_id"]
+    job_owner = SimpleNamespace(id=uuid4())
+
+    borrowed = execution_principal_for(FAMILY_WORKFLOW_HITL_V2, user=job_owner, flow_owner_id=flow_owner_id)
+
+    assert borrowed.kind == "job_owner"
+    assert borrowed.user_id == str(job_owner.id)
+    assert borrowed.user_id != flow_owner_id
+
+    with pytest.raises(IntegrationError):
+        await _resolve(row["name"], borrowed)
+
+    # The owner resuming their OWN job still resolves the opted-in row.
+    own = execution_principal_for(
+        FAMILY_WORKFLOW_HITL_V2, user=SimpleNamespace(id=UUID(flow_owner_id)), flow_owner_id=flow_owner_id
+    )
+    resolved = await _resolve(row["name"], own)
 
     assert resolved.access_token.get_secret_value() == ACCESS_TOKEN
 

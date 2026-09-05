@@ -502,12 +502,19 @@ async def _generate_flow_events(
     # Identity for dependency (connection) resolution, shared by the cold build and
     # the HITL resume below. Public builds arrive with the stable anonymous execution
     # user, so the helper collapses them to ``anonymous_public`` no matter which family
-    # name was passed; the owner id is the SOURCE flow's owner, since a public visitor
-    # is never the owner.
+    # name was passed; the flow-owner id is the SOURCE flow's owner, since a public
+    # visitor is never the owner.
+    #
+    # The job owner is deliberately NOT the flow owner: a background/HITL run reaches
+    # this function with ``current_user`` set to the job row's owner (the v2 runner
+    # re-enqueues a resume under a stub for ``job.user_id``), while the flow may belong
+    # to somebody who merely shared it. Passing ``source_flow_owner_id`` here would let
+    # a share holder's resumed run resolve the flow owner's connections.
     execution_principal = execution_principal_for(
         execution_family,
         user=current_user,
         flow_owner_id=source_flow_owner_id,
+        job_owner_id=getattr(current_user, "id", None),
         end_user_id=end_user_id,
     )
 

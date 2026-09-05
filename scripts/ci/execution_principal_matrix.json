@@ -229,7 +229,8 @@
       "exception": "a continuation retains the starting job principal and rechecks that actor's execute grant before resume",
       "test_references": [
         "src/backend/tests/unit/api/v2/test_resume_route.py::test_resume_reenforces_flow_execute_permission",
-        "src/backend/tests/unit/api/v1/test_connection_resolution_families.py::test_connection_resolution_matches_the_matrix_for_every_family"
+        "src/backend/tests/unit/api/v1/test_connection_resolution_families.py::test_connection_resolution_matches_the_matrix_for_every_family",
+        "src/backend/tests/unit/api/v1/test_connection_resolution_families.py::test_a_hitl_resume_runs_as_the_job_owner_not_the_flow_owner"
       ]
     },
     {

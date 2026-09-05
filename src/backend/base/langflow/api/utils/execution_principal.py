@@ -178,6 +178,7 @@ def execution_principal_for(
     user: Any = None,
     user_id: str | UUID | None = None,
     flow_owner_id: str | UUID | None = None,
+    job_owner_id: str | UUID | None = None,
     interactive: bool | None = None,
     end_user_id: str | None = None,
 ) -> ExecutionPrincipal:
@@ -188,6 +189,17 @@ def execution_principal_for(
     the stable anonymous actor always collapses to ``anonymous_public`` no matter
     which family asked, so a public admission can never be widened by a caller
     passing an interactive family name.
+
+    ``flow_owner_id`` is the stored owner of the flow being run, and it is the
+    dependency identity only for the ``flow_owner`` / ``deployment_owner`` kinds
+    (webhook and deployment runs, which the publisher owns). ``job_owner_id`` is
+    the owner of the job row and is the dependency identity for the ``job_owner``
+    kind; it defaults to the effective execution user, which is what the resume
+    path already hands us (``BackgroundExecutionService.resume_job`` re-enqueues
+    under a stub for ``job.user_id``). The two must never be conflated: a share
+    holder resuming a HITL run on someone else's flow would otherwise resolve the
+    flow owner's connections, which is the implicit identity borrowing this
+    module exists to prevent.
 
     ``interactive`` overrides the family default for the one route that varies
     inside its family: MCP project transports authenticated with ``auth_type=none``
@@ -216,11 +228,16 @@ def execution_principal_for(
             allow_explicit_shares=False,
         )
 
-    # flow_owner / deployment_owner / job_owner run as the resource owner, not the
-    # caller. Fall back to the actor only when the route could not supply an owner.
-    owner_id = _identifier(flow_owner_id)
-    dependency_user_id = owner_id if rule.kind in {"flow_owner", "deployment_owner", "job_owner"} else actor_id
-    if dependency_user_id is None:
+    # flow_owner / deployment_owner run as the RESOURCE owner (the publisher), not
+    # the caller. job_owner runs as the JOB owner: the flow may belong to someone
+    # else entirely when the run was submitted through a share, and a resume must
+    # keep the starting job's identity rather than adopt the flow owner's. Fall
+    # back to the actor only when the route could not supply the owner.
+    if rule.kind == "job_owner":
+        dependency_user_id = _identifier(job_owner_id) or actor_id
+    elif rule.kind in {"flow_owner", "deployment_owner"}:
+        dependency_user_id = _identifier(flow_owner_id) or actor_id
+    else:
         dependency_user_id = actor_id
 
     return ExecutionPrincipal(
@@ -247,7 +264,7 @@ def execution_principal_for_job(
     to complete an OAuth prompt, so the owner's connection needs the per-connection
     non-interactive opt-in.
     """
-    return execution_principal_for(family, user_id=user_id, flow_owner_id=user_id, interactive=False)
+    return execution_principal_for(family, user_id=user_id, job_owner_id=user_id, interactive=False)
 
 
 def stamp_execution_principal(graph: Any, principal: ExecutionPrincipal) -> Any:
