@@ -896,25 +896,33 @@ class JobService(Service):
 
         Returns the ids transitioned to FAILED.
         """
+        from sqlmodel import update
+
         error_payload = {"type": "input_timed_out"}
         reconciled: list[UUID] = []
         async with session_scope() as session:
             result = await session.exec(select(Job).where(Job.status == JobStatus.SUSPENDED))
             now = datetime.now(timezone.utc)
+            deadline_expr = col(Job.job_metadata)["input_deadline_at"].as_string()
             for job in result.all():
                 deadline = (job.job_metadata or {}).get("input_deadline_at")
                 if not deadline or self._parse_deadline(deadline) is None or self._parse_deadline(deadline) > now:
                     continue
-                job.status = JobStatus.FAILED
-                job.error = dict(error_payload)
-                job.finished_timestamp = now
-                session.add(job)
-                reconciled.append(job.job_id)
+                claim = (
+                    update(Job)
+                    .where(
+                        Job.job_id == job.job_id,
+                        Job.status == JobStatus.SUSPENDED,
+                        deadline_expr == deadline,
+                    )
+                    .values(status=JobStatus.FAILED, error=dict(error_payload), finished_timestamp=now)
+                )
+                claim_result = await session.exec(claim)  # type: ignore[call-overload]
+                if claim_result.rowcount == 1:
+                    reconciled.append(job.job_id)
             await session.flush()
         for job_id in reconciled:
             await self.append_event(job_id, "input_timed_out", dict(error_payload))
-            # Why: a deadline timeout terminalizes the run, so its durable checkpoint is dead weight
-            # that _all() keeps full-scanning (expires_at is never set); drop it like the cancel path.
             with contextlib.suppress(Exception):
                 await self.delete_checkpoint(job_id, "graph")
         return reconciled
