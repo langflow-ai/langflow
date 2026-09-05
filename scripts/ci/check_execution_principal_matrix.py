@@ -43,6 +43,12 @@ REQUIRED_FAMILIES = frozenset(
         "workflow_v2",
         "workflow_hitl_v2",
         "workflow_public_v2",
+        # Triggers (TRG-2). ``trigger_push`` covers deliveries that arrive from
+        # outside (an owner's test/replay today, provider-signed ingress in
+        # TRG-4); ``trigger_listener`` covers the dispatcher's own unattended
+        # runs. Both execute as the trigger owner with interactive=False.
+        "trigger_push",
+        "trigger_listener",
     }
 )
 
@@ -55,6 +61,7 @@ VALID_DIMENSION_VALUES = {
         "deployment_actor",
         "job_owner",
         "public_visitor",
+        "trigger_dispatcher",
     },
     "execution_principal": {"actor", "anonymous_public", "flow_owner", "deployment_owner", "job_owner"},
     "dependency_principal": {
@@ -73,6 +80,8 @@ VALID_DIMENSION_VALUES = {
 BEHAVIOR_SPECIFIC_REFERENCE_TERMS = {
     "v1_run": ("v1_run",),
     "webhook": ("webhook", "tweak"),
+    "trigger_push": ("trigger",),
+    "trigger_listener": ("trigger", "connection"),
 }
 
 

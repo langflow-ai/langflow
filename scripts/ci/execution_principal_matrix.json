@@ -205,6 +205,38 @@
         "src/backend/tests/unit/api/v2/test_workflow_public.py::test_public_endpoint_runs_as_stable_non_owner_principal",
         "src/backend/tests/unit/api/v2/test_workflow_public.py::test_public_endpoint_rejects_tweaks_field"
       ]
+    },
+    {
+      "family": "trigger_push",
+      "authz_family": "triggers",
+      "source": "src/backend/base/langflow/api/v1/triggers.py",
+      "actor": "trigger_dispatcher",
+      "execution_principal": "flow_owner",
+      "dependency_principal": "flow_owner",
+      "tweaks": "server_generated",
+      "revoke": "new_only",
+      "error_policy": "owner_debug_delegated_sanitized",
+      "exception": "a trigger has no caller: the run executes as the trigger owner, non-interactively, and the event payload is server-generated from the provider delivery or the owner's own test/replay. Provider-signed ingress routes arrive in TRG-4 and will move this source; the identity contract does not change.",
+      "test_references": [
+        "src/backend/tests/unit/services/triggers/test_execution_identity.py::test_trigger_principal_is_the_flow_owner_and_never_anonymous",
+        "src/backend/tests/unit/services/triggers/test_execution_identity.py::test_trigger_tweaks_are_server_generated_and_never_caller_supplied"
+      ]
+    },
+    {
+      "family": "trigger_listener",
+      "authz_family": "triggers",
+      "source": "src/backend/base/langflow/services/triggers/dispatcher.py",
+      "actor": "trigger_dispatcher",
+      "execution_principal": "flow_owner",
+      "dependency_principal": "flow_owner",
+      "tweaks": "server_generated",
+      "revoke": "new_only",
+      "error_policy": "owner_debug_delegated_sanitized",
+      "exception": "the dispatcher runs with no request context at all. A user connection resolves only through the per-connection non-interactive opt-in and the dispatcher pre-denies the event when it is absent; an anonymous or unknown principal never reaches a trigger run because the trigger row's owner column is NOT NULL.",
+      "test_references": [
+        "src/backend/tests/unit/services/triggers/test_execution_identity.py::test_trigger_on_a_connection_without_the_optin_fails_closed",
+        "src/backend/tests/unit/services/triggers/test_execution_identity.py::test_trigger_on_a_connection_with_the_optin_is_authorized"
+      ]
     }
   ]
 }
