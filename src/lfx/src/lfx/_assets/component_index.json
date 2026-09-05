@@ -31561,6 +31561,7 @@
           "documentation": "https://docs.langflow.org/triggers",
           "edited": false,
           "field_order": [
+            "event_payload",
             "cron_expression",
             "timezone",
             "catchup_policy",
@@ -31673,6 +31674,34 @@
               "track_in_telemetry": false,
               "type": "str",
               "value": "0 8 * * 1-5"
+            },
+            "event_payload": {
+              "_input_type": "MultilineInput",
+              "advanced": true,
+              "ai_enabled": false,
+              "api_editable": false,
+              "copy_field": false,
+              "display_name": "Event",
+              "dynamic": false,
+              "info": "Set by the server when this trigger fires: the JSON event the run was started with. Leave it empty; a manual run simply reports that no trigger event was present. Paste an event here to rehearse the downstream flow by hand.",
+              "input_types": [],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "multiline": true,
+              "name": "event_payload",
+              "override_skip": false,
+              "password": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
             },
             "share_session": {
               "_input_type": "BoolInput",
@@ -32166,6 +32195,6 @@
     "num_components": 129,
     "num_modules": 17
   },
-  "sha256": "762062a22419ef432418ed0f144f6088f258a30c374b36b6356e7bad7b4b90d0",
+  "sha256": "a36e3c625de53ad53d75180c6286a0bbc0c320c500c2ae3d122b6bb4bf91b678",
   "version": "1.13.0"
 }

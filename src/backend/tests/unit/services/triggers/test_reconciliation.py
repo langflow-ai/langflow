@@ -156,3 +156,69 @@ async def test_two_trigger_nodes_become_two_rows(trigger_owner, owned_flow) -> N
         )
     assert touched == 2
     assert {row.node_id for row in await _triggers(owned_flow)} == {"ScheduleTrigger-a", "ScheduleTrigger-b"}
+
+
+async def test_a_racing_save_leaves_the_callers_transaction_usable(trigger_owner, owned_flow) -> None:
+    """A duplicate insert must cost the save nothing at all.
+
+    Two concurrent saves of one flow (an autosave PATCH racing a PUT) can both
+    see no row for a newly added trigger node and both insert
+    ``(flow_id, node_id)``. The loser violates ``uq_trigger_flow_node``. If the
+    reconciler only swallowed that exception, the caller's session would be left
+    in a failed transaction and the flow save would die at ``commit`` — a 500 on
+    the user's document, caused by trigger bookkeeping. The SAVEPOINT is what
+    makes the swallow honest.
+    """
+    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.triggers.reconciliation import reconcile_flow_triggers_safely
+
+    node = _schedule_node()
+
+    # The winner of the race.
+    async with session_scope() as session:
+        await reconcile_flow_triggers_safely(
+            session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=_flow_data(node)
+        )
+
+    # The loser: a session that has not yet seen the winner's row, so it tries
+    # the same insert, and then goes on to write the flow the user actually saved.
+    async with session_scope() as session:
+        session.expire_all()
+        duplicate = Trigger(
+            flow_id=owned_flow,
+            user_id=trigger_owner,
+            name="racing insert",
+            kind="schedule",
+            node_id=node["id"],
+            config={},
+            provider_state={},
+            concurrency_limit=1,
+            max_attempts=5,
+        )
+
+        async def _explode(*_args, **_kwargs):
+            session.add(duplicate)
+            await session.flush()
+
+        # Stand in for "both savers saw no row": force the duplicate insert
+        # through the same call path a real race takes.
+        import langflow.services.triggers.reconciliation as reconciliation_module
+
+        original = reconciliation_module.reconcile_flow_triggers
+        reconciliation_module.reconcile_flow_triggers = _explode
+        try:
+            await reconcile_flow_triggers_safely(
+                session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=_flow_data(node)
+            )
+        finally:
+            reconciliation_module.reconcile_flow_triggers = original
+
+        # The save the user asked for still lands, on the same session.
+        flow = await session.get(Flow, owned_flow)
+        flow.name = f"{flow.name}-saved-anyway"
+        session.add(flow)
+
+    async with session_scope() as session:
+        flow = await session.get(Flow, owned_flow)
+    assert flow.name.endswith("-saved-anyway")
+    assert len(await _triggers(owned_flow)) == 1
