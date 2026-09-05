@@ -1,0 +1,56 @@
+[project]
+name = "lfx-microsoft"
+version = "0.1.0"
+description = "Microsoft 365 and Teams actions backed by delegated Microsoft Graph permissions."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "microsoft", "graph", "teams", "outlook", "sharepoint"]
+
+# Runtime deps: lfx only. Every Graph adapter in this bundle speaks plain
+# HTTP through ``httpx``, which lfx already ships as a runtime dependency, so
+# the enterprise-hardened profile lock gains lfx-microsoft and nothing else.
+dependencies = [
+    "lfx>=1.13.0.dev0,<2.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+[project.entry-points."langflow.extensions"]
+lfx-microsoft = "lfx_microsoft"
+
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx_microsoft"]
+include = [
+    "src/lfx_microsoft/extension.json",
+    "src/lfx_microsoft/**/*.py",
+    "src/lfx_microsoft/components/microsoft/capabilities.v1.json",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_microsoft",
+    "README.md",
+    "pyproject.toml",
+]
+
+[tool.pytest.ini_options]
+# The bundle's own tests run in the clean lfx + bundle venv built by
+# .github/workflows/cross-bundle-test.yml, which holds pytest, pytest-asyncio
+# and nothing else. Keep every test dependent on lfx + httpx only.
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "unit: fast, isolated component test",
+    "api_key_required: needs a real provider credential; not run in CI",  # pragma: allowlist secret
+]

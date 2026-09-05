@@ -1,0 +1,23 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-microsoft",
+  "version": "0.1.0",
+  "name": "Microsoft 365",
+  "description": "Microsoft 365 and Teams actions backed by delegated Microsoft Graph permissions.",
+  "lfx": {
+    "compat": ["1"]
+  },
+  "bundles": [
+    {
+      "name": "microsoft",
+      "path": "components/microsoft"
+    }
+  ],
+  "integrations": [
+    {
+      "provider_id": "microsoft",
+      "bundle": "microsoft",
+      "path": "capabilities.v1.json"
+    }
+  ]
+}

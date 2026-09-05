@@ -68,6 +68,7 @@
         "lfx-docling",
         "lfx-google",
         "lfx-ibm",
+        "lfx-microsoft",
         "lfx-ollama",
         "lfx-openai",
         "lfx-openai-compatible",
@@ -100,6 +101,7 @@
           "lfx-docling",
           "lfx-google",
           "lfx-ibm",
+          "lfx-microsoft",
           "lfx-ollama",
           "lfx-openai",
           "lfx-openai-compatible",
@@ -120,6 +122,11 @@
         "lfx-google": [
           "lfx_google/extension.json",
           "lfx_google/components/google/google_generative_ai.py"
+        ],
+        "lfx-microsoft": [
+          "lfx_microsoft/extension.json",
+          "lfx_microsoft/components/microsoft/capabilities.v1.json",
+          "lfx_microsoft/components/microsoft/outlook_send.py"
         ],
         "lfx-azure": [
           "lfx_azure/extension.json",
@@ -220,6 +227,7 @@
           "lfx-firecrawl",
           "lfx-google",
           "lfx-ibm",
+          "lfx-microsoft",
           "lfx-nextplaid",
           "lfx-ollama",
           "lfx-openai",
@@ -316,6 +324,11 @@
         "lfx-google": [
           "lfx_google/extension.json",
           "lfx_google/components/google/google_generative_ai.py"
+        ],
+        "lfx-microsoft": [
+          "lfx_microsoft/extension.json",
+          "lfx_microsoft/components/microsoft/capabilities.v1.json",
+          "lfx_microsoft/components/microsoft/outlook_send.py"
         ],
         "lfx-azure": [
           "lfx_azure/extension.json",
