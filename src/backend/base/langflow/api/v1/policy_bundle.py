@@ -8,7 +8,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from lfx.base.models.provider_registry import resolve_provider_id
-from lfx.services.deps import get_catalog_policy_service, get_model_provider_policy_service
+from lfx.services.deps import (
+    get_catalog_policy_service,
+    get_integration_policy_service,
+    get_model_provider_policy_service,
+)
+from lfx.services.integration_policy import normalize_integration_policy_key
 from lfx.services.model_provider_policy import normalize_blocked_model_key
 from lfx.services.policy_bundle import PolicyBundleSnapshot
 from pydantic import BaseModel, Field, StringConstraints, field_validator
@@ -35,6 +40,10 @@ from langflow.services.policy_bundle import (
 router = APIRouter(prefix="/policy-bundle", tags=["Policy Bundle"])
 
 ProviderId = Annotated[str, StringConstraints(pattern=r"^[a-z0-9][a-z0-9._-]*$", max_length=255)]
+IntegrationProviderId = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, pattern=r"^[a-zA-Z0-9][a-zA-Z0-9._-]*$", max_length=120),
+]
 
 
 class PolicyBundleWrite(BaseModel):
@@ -47,6 +56,12 @@ class PolicyBundleWrite(BaseModel):
     # Defaulted so policy writers built before model blocking existed keep
     # working; omitting the field clears no other decision but blocks no models.
     blocked_model_keys: CatalogPolicyKeyList = Field(default_factory=list)
+    # Defaulted for the same reason: a policy writer built before integration
+    # governance existed keeps working and governs no integration.
+    approved_integration_provider_ids: Annotated[list[IntegrationProviderId], Field(max_length=1000)] = Field(
+        default_factory=list
+    )
+    blocked_integration_action_keys: CatalogPolicyKeyList = Field(default_factory=list)
     reason: str | None = Field(default=None, max_length=POLICY_BUNDLE_REASON_MAX_LENGTH)
 
     @field_validator("approved_provider_ids", mode="before")
@@ -78,6 +93,20 @@ class PolicyBundleWrite(BaseModel):
             raise ValueError(str(exc)) from exc
         return sorted(set(normalized))
 
+    @field_validator("approved_integration_provider_ids")
+    @classmethod
+    def normalize_integration_provider_ids(cls, provider_ids: list[str]) -> list[str]:
+        return sorted({provider_id.casefold() for provider_id in provider_ids})
+
+    @field_validator("blocked_integration_action_keys")
+    @classmethod
+    def normalize_integration_action_keys(cls, values: list[str]) -> list[str]:
+        try:
+            normalized = [normalize_integration_policy_key(value) for value in values]
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
+        return sorted(set(normalized))
+
 
 class PolicyBundleRollbackWrite(BaseModel):
     expected_revision: int = Field(ge=1)
@@ -92,6 +121,8 @@ class PolicyBundleRead(BaseModel):
     blocked_component_keys: list[str]
     blocked_template_keys: list[str]
     blocked_model_keys: list[str]
+    approved_integration_provider_ids: list[str]
+    blocked_integration_action_keys: list[str]
     content_hash: str
     created_at: datetime | None
     created_by: UUID | None
@@ -105,10 +136,25 @@ class PolicyBundleHistoryRead(BaseModel):
     next_before_revision: int | None
 
 
+def _integration_policy_managed_externally() -> bool:
+    """Return whether a plugin owns the integration ceiling.
+
+    A host that never registered an integration policy service (standalone lfx,
+    partial test harnesses) owns nothing externally, so a missing service is
+    "Langflow-owned" rather than a 500 on the administration read path.
+    """
+    try:
+        service = get_integration_policy_service()
+    except (TypeError, ImportError):
+        return False
+    return service.external_approved_integration_provider_ids is not None
+
+
 def _managed_externally() -> bool:
     return (
         get_model_provider_policy_service().external_approved_provider_ids is not None
         or get_catalog_policy_service().external_policy_snapshot is not None
+        or _integration_policy_managed_externally()
     )
 
 
@@ -121,6 +167,8 @@ def _response(snapshot: PolicyBundleSnapshot, *, managed_externally: bool = Fals
         blocked_component_keys=sorted(snapshot.blocked_component_keys),
         blocked_template_keys=sorted(snapshot.blocked_template_keys),
         blocked_model_keys=sorted(snapshot.blocked_model_keys),
+        approved_integration_provider_ids=sorted(snapshot.approved_integration_provider_ids),
+        blocked_integration_action_keys=sorted(snapshot.blocked_integration_action_keys),
         content_hash=snapshot.content_hash,
         created_at=snapshot.created_at,
         created_by=snapshot.created_by,
@@ -194,6 +242,8 @@ async def replace_policy_bundle(
             blocked_component_keys=payload.blocked_component_keys,
             blocked_template_keys=payload.blocked_template_keys,
             blocked_model_keys=payload.blocked_model_keys,
+            approved_integration_provider_ids=payload.approved_integration_provider_ids,
+            blocked_integration_action_keys=payload.blocked_integration_action_keys,
             actor_user_id=admin.id,
             reason=payload.reason,
         )

@@ -28,6 +28,7 @@ from lfx.log.logger import logger
 from lfx.observability import execution_protocol
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
+from lfx.services.integration_policy import IntegrationPolicyError
 from lfx.services.model_provider_policy import (
     ModelProviderPolicyError,
     ModelProviderPolicyPurpose,
@@ -115,6 +116,10 @@ from langflow.services.deps import (
     get_telemetry_service,
 )
 from langflow.services.event_manager import create_webhook_event_manager, webhook_event_manager
+from langflow.services.integration_policy_discovery import (
+    aenforce_integration_policy_for_component,
+    filter_component_palette_by_integration_policy,
+)
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
@@ -265,6 +270,16 @@ async def get_all(
             attributes=provider_policy_attributes,
         )
         if not include_blocked:
+            # Integration governance (INT-7) hides a component when its provider
+            # is outside the operator ceiling or every action it can perform is
+            # blocked. ``include_blocked`` is a superuser catalog-authoring
+            # view, so it lifts this filter for the same reason it lifts catalog
+            # blocks.
+            visible_types_en = await filter_component_palette_by_integration_policy(
+                visible_types_en,
+                user_id=current_user.id,
+                attributes=provider_policy_attributes,
+            )
             visible_types_en = _filter_component_palette_by_catalog_policy(
                 visible_types_en,
                 blocked_component_keys=catalog_policy_snapshot.blocked_component_keys,
@@ -1795,6 +1810,13 @@ async def custom_component(
         built_frontend_node, component_instance = build_custom_component_template(component, user_id=user.id)
         type_ = get_instance_name(component_instance)
         enforce_catalog_policy_for_component_type(type_, snapshot=catalog_policy_snapshot)
+        # Posting the source of a blocked integration component must not
+        # reconstruct what discovery hides (INT-7).
+        await aenforce_integration_policy_for_component(
+            built_frontend_node,
+            user_id=user.id,
+            attributes=provider_policy_attributes,
+        )
         if isinstance(component_instance, Component):
             # Dynamic configuration may resolve DB-backed credentials or call
             # provider APIs. Refresh the active hierarchy before either hook
@@ -1820,6 +1842,11 @@ async def custom_component(
                 field_name="tool_mode",
                 field_value=tool_mode,
             )
+    except IntegrationPolicyError as exc:
+        # Same reasoning as the model-provider denial below: a governed
+        # integration that discovery hides must not be distinguishable from one
+        # that does not exist.
+        raise HTTPException(status_code=404, detail="Integration not found") from exc
     except ModelProviderPolicyError as exc:
         # Keep scoped denials indistinguishable from unavailable providers and
         # avoid surfacing an authorization decision as a retryable server error.
@@ -1888,6 +1915,11 @@ async def custom_component_update(
         )
         component_type = get_instance_name(cc_instance)
         enforce_catalog_policy_for_component_type(component_type, snapshot=catalog_policy_snapshot)
+        await aenforce_integration_policy_for_component(
+            component_node,
+            user_id=user.id,
+            attributes=provider_policy_attributes,
+        )
 
         template = code_request.get_template()
         params = _raw_component_parameters(template)
@@ -1960,6 +1992,8 @@ async def custom_component_update(
 
     except CatalogPolicyHTTPException:
         raise
+    except IntegrationPolicyError as exc:
+        raise HTTPException(status_code=404, detail="Integration not found") from exc
     except ModelProviderPolicyError as exc:
         raise HTTPException(status_code=404, detail="Model provider not found") from exc
     except Exception as exc:

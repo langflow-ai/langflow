@@ -199,6 +199,8 @@ The referenced file uses this shape:
 
 `schema_version` is currently `1`. Authentication modes are declared by `auth_profiles[].kind`; actions reference a profile through `auth_profile_id`. Each action declares scopes, policy keys, execution substrate (`sdk`, `rest`, or `mcp`), maturity, supported deployment contexts, risk, and at least one execution target (`component_ref` or `mcp_tool`). Unknown fields are rejected throughout.
 
+Every entry in `policy_keys` must use the governance grammar `integrations.<provider_id>.<action>`, in lowercase, where `<provider_id>` is the manifest's own `provider_id`. Operators block actions by these keys through the [policy bundle](/api-governance-policy), so a key outside that namespace would make the action ungovernable and is rejected at load time. Blocking any one key of an action blocks the whole action; a component stays visible while at least one of its actions remains allowed.
+
 During loading, each valid file is exposed as a `LoadedIntegration` in `LoadResult.integrations` and retained in `BundleRecord.integrations`. Discovery and policy code can consume the parsed `capability_manifest` from the load result or call `BundleRegistry.list_integrations()` for the process-wide snapshot. Extensions that omit `integrations` continue to load with an empty list.
 
 After adding an integration manifest on a release branch, synchronize bundle dependency floors with the repository script instead of editing `pyproject.toml` by hand:

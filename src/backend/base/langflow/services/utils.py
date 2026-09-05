@@ -566,6 +566,7 @@ def register_all_service_factories() -> None:
 
     service_manager = get_service_manager()
     from lfx.services.executor import factory as executor_factory
+    from lfx.services.integration_policy.service import IntegrationPolicyService
     from lfx.services.mcp_composer import factory as mcp_composer_factory
     from lfx.services.model_provider_policy.service import ModelProviderPolicyService
     from lfx.services.policy_bundle.service import PolicyBundleService
@@ -651,6 +652,13 @@ def register_all_service_factories() -> None:
     service_manager.register_service_class(
         ServiceType.MODEL_PROVIDER_POLICY_SERVICE,
         ModelProviderPolicyService,
+        override=True,
+    )
+    # Integration governance shares the bundle coordinator with the provider and
+    # catalog services, so one published revision decides all three.
+    service_manager.register_service_class(
+        ServiceType.INTEGRATION_POLICY_SERVICE,
+        IntegrationPolicyService,
         override=True,
     )
     service_manager.register_factory(mcp_composer_factory.MCPComposerServiceFactory())

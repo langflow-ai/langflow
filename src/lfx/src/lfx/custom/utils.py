@@ -504,6 +504,41 @@ def build_custom_component_template_from_inputs(
     return frontend_node.to_dict(keep_name=False), cc_instance
 
 
+def _stamp_integration_policy_identity(frontend_node, custom_component) -> None:
+    """Stamp the integration provider and capability ids of a bundle action class.
+
+    The bundle registry is the source of truth: a capability declares the
+    component class that performs it through ``component_ref``. Nothing is
+    stamped when the class performs no declared capability, so unrelated
+    components in mixed bundles are unaffected, and a stale stamp from a reused
+    template is always cleared.
+    """
+    provider_id: str | None = None
+    capability_ids: list[str] = []
+    try:
+        from lfx.extension.bundle_registry import get_default_registry
+
+        class_name = type(custom_component).__name__
+        for integration in get_default_registry().list_integrations():
+            for capability in integration.capability_manifest.capabilities:
+                if capability.component_ref == class_name:
+                    provider_id = integration.provider_id
+                    capability_ids.append(capability.id)
+    except Exception as exc:  # noqa: BLE001
+        # Registry access must never break template building; a missing stamp
+        # only means the palette filter falls back to the component's
+        # ConnectionRefInput declarations.
+        logger.debug(f"Could not resolve integration capabilities for {type(custom_component).__name__}: {exc}")
+        return
+
+    if provider_id is None:
+        frontend_node.metadata.pop("integration_provider_id", None)
+        frontend_node.metadata.pop("integration_capability_ids", None)
+        return
+    frontend_node.metadata["integration_provider_id"] = provider_id
+    frontend_node.metadata["integration_capability_ids"] = sorted(set(capability_ids))
+
+
 def build_component_metadata(
     frontend_node: CustomComponentFrontendNode, custom_component: CustomComponent, module_name: str, ctype_name: str
 ):
@@ -549,6 +584,14 @@ def build_component_metadata(
             # standalone identity from a reused or pre-populated template.
             frontend_node.metadata.pop("model_provider_id", None)
             frontend_node.metadata.pop("model_provider_display_name", None)
+
+    # Integration governance identity (INT-7). A connection-backed component
+    # carries its provider and actions on its ConnectionRefInput, but an
+    # API-key-mode action component has no such input, so the loaded class name
+    # is matched against the bundle registry's capability component_ref. The
+    # stamp is produced from the loaded class, never inferred from the
+    # serialized source field.
+    _stamp_integration_policy_identity(frontend_node, custom_component)
 
     # Generate code hash for cache invalidation and debugging
     try:

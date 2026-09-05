@@ -26,6 +26,7 @@ INTEGRATION_ERROR_CODES = frozenset(
         "rate-limited",
         "provider-unavailable",
         "action-unsupported",
+        "policy-blocked",
     }
 )
 
@@ -154,6 +155,29 @@ class ProviderUnavailableError(IntegrationError):
             retryable=True,
             http_status=http_status,
         )
+
+
+class IntegrationPolicyBlockedError(IntegrationError):
+    """The provider or action is denied by the deployment's integration policy.
+
+    Discovery hides blocked capabilities, so reaching this error means a saved
+    or crafted flow named an action the operator has not approved. The message
+    is deliberately non-specific about *why* a key is denied: the sanitized
+    client body carries the stable ``policy-blocked`` code, and the blocked key
+    itself is only surfaced through ``details`` for the flow owner.
+    """
+
+    code = "policy-blocked"
+
+    def __init__(self, *, provider: str | None = None, policy_key: str | None = None) -> None:
+        super().__init__(
+            "This integration action is not available under the current integration policy.",
+            hint="Ask an administrator to approve the integration or unblock the action.",
+            provider=provider,
+            http_status=403,
+            details={"policy_key": policy_key} if policy_key else None,
+        )
+        self.policy_key = policy_key
 
 
 class ActionUnsupportedError(IntegrationError):

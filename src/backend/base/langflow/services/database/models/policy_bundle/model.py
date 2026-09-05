@@ -37,6 +37,17 @@ class PolicyBundleRevision(SQLModel, table=True):  # type: ignore[call-arg]
         default_factory=list,
         sa_column=sa.Column(sa.JSON, nullable=True, server_default=sa.text("'[]'")),
     )
+    # Integration governance (INT-7) follows the same EXPAND-phase shape: an
+    # empty approved set means "unrestricted" in OSS, and revisions written
+    # before the columns existed read back as governing nothing.
+    approved_integration_provider_ids: list[str] = Field(
+        default_factory=list,
+        sa_column=sa.Column(sa.JSON, nullable=True, server_default=sa.text("'[]'")),
+    )
+    blocked_integration_action_keys: list[str] = Field(
+        default_factory=list,
+        sa_column=sa.Column(sa.JSON, nullable=True, server_default=sa.text("'[]'")),
+    )
     content_hash: str = Field(sa_column=sa.Column(sa.String(64), nullable=False))
     source: str = Field(
         default="api",

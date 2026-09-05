@@ -123,6 +123,11 @@ class ConnectionResolutionRequest:
     ref: ConnectionRef
     principal: ExecutionPrincipal
     required_scopes: frozenset[str] = frozenset()
+    # INT-3 capability ids declared by the requesting input (INT-7). The host
+    # resolver enforces the action deny-list on these before it selects any
+    # candidate row, so a saved or crafted flow cannot reach a blocked action
+    # through a connection the caller legitimately owns.
+    capability_ids: frozenset[str] = frozenset()
     component_id: str | None = None
     flow_id: str | None = None
     run_id: str | None = None
