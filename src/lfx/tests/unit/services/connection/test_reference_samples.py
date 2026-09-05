@@ -9,6 +9,9 @@ long-lived secrets, typed expiry and scope failures, and fail-closed registratio
 from __future__ import annotations
 
 import json
+import os
+import shutil
+import subprocess
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -292,6 +295,97 @@ def test_wrong_resolver_class_fails_closed_instead_of_using_the_env_fallback() -
 
     with pytest.raises(RuntimeError, match="must subclass BaseConnectionResolverService"):
         manager._register_service_from_path("connection_resolver_service", "builtins:str")
+
+
+# --------------------------------------------------------------------------- #
+# serve_request.sh
+# --------------------------------------------------------------------------- #
+
+_CURL_STUB = """#!/usr/bin/env bash
+# Stand in for curl: emit the request body the sample would have sent, NUL-terminated
+# so a pretty-printed multi-line JSON body stays one record.
+prev=""
+for arg in "$@"; do
+  if [ "$prev" = "-d" ]; then printf '%s\\0' "$arg"; fi
+  prev="$arg"
+done
+"""
+
+requires_shell_tools = pytest.mark.skipif(
+    shutil.which("bash") is None or shutil.which("jq") is None,
+    reason="serve_request.sh needs bash and jq",
+)
+
+
+def _serve_request_bodies(tmp_path) -> list[dict]:
+    """Run the sample script with a curl stub and return the bodies it would POST."""
+    from tests.unit.services.connection.sample_loader import SAMPLES_DIR
+
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    stub = bin_dir / "curl"
+    stub.write_text(_CURL_STUB, encoding="utf-8")
+    stub.chmod(0o755)
+
+    served_credential = "served-token"  # pragma: allowlist secret
+    env = dict(os.environ)
+    env.update(
+        {
+            "PATH": f"{bin_dir}{os.pathsep}{env['PATH']}",
+            "FLOW_ID": "00000000-0000-0000-0000-0000000013a1",
+            "LANGFLOW_API_KEY": "int13-test-api-key",  # pragma: allowlist secret
+            "GOOGLE_ACCESS_TOKEN": served_credential,
+        }
+    )
+    result = subprocess.run(  # noqa: S603
+        [shutil.which("bash"), str(SAMPLES_DIR / "serve_request.sh")],
+        capture_output=True,
+        check=True,
+        env=env,
+    )
+    return [json.loads(record) for record in result.stdout.split(b"\0") if record.strip()]
+
+
+@requires_shell_tools
+async def test_serve_request_sample_sends_credentials_that_actually_resolve(env_sample, tmp_path) -> None:
+    """The documented curl bodies resolve; the sample is executed, not just displayed."""
+    bare, structured = _serve_request_bodies(tmp_path)
+
+    assert bare["global_vars"] == {"LF_CONNECTION__GOOGLE__WORK": "served-token"}
+    credential = await env_sample.resolve_with_request_scope(HANDLE, bare["global_vars"])
+    assert credential.access_token.get_secret_value() == "served-token"
+
+    # The JSON body is a JSON-encoded string, not a nested object: runtime_variables
+    # json.loads() the value and drops anything that is not a string.
+    raw = structured["global_vars"]["LF_CONNECTION__GOOGLE__WORK"]
+    assert isinstance(raw, str)
+    payload = json.loads(raw)
+    assert set(payload) <= {"access_token", "token_type", "expires_at", "scopes", "account"}
+
+    credential = await env_sample.resolve_with_request_scope(
+        HANDLE,
+        structured["global_vars"],
+        required_scopes=[DRIVE_SCOPE],
+    )
+    assert credential.scopes_verified is True
+    assert credential.account is not None
+    # A stale literal expiry would make every copy-pasted request fail auth-expired.
+    assert credential.expires_at is not None
+    assert credential.expires_at > datetime.now(timezone.utc)
+
+
+def test_samples_never_hardcode_a_timestamp_that_goes_stale() -> None:
+    """No sample ships a literal date: expiries are computed when the sample runs."""
+    import re
+
+    from tests.unit.services.connection.sample_loader import SAMPLES_DIR
+
+    offenders = {
+        path.name: re.findall(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", path.read_text(encoding="utf-8"))
+        for path in sorted(SAMPLES_DIR.iterdir())
+        if path.is_file()
+    }
+    assert {name: found for name, found in offenders.items() if found} == {}
 
 
 # --------------------------------------------------------------------------- #

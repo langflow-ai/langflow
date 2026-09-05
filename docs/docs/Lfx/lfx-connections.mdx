@@ -140,10 +140,10 @@ The v2 workflow router mounted at `/api/v2` and durable runs use the same reques
 
 ### watsonx Orchestrate and other tool runtimes
 
-The watsonx Orchestrate tool runtime (TRM) calls `POST /flows/{id}/run` with `global_vars`, and it can also send a `LANGFLOW_REQUEST_VARIABLES` key whose value is a JSON object of merged variables.
+The watsonx Orchestrate tool runtime (TRM) calls `POST /flows/{id}/run` with `global_vars`, and it can also send a `LANGFLOW_REQUEST_VARIABLES` key whose value is a *JSON-encoded string* holding an object of merged variables. A nested object sent in its place is not a string, so it is logged and dropped rather than resolved.
 Both channels feed the same request scope, and explicit keys beat keys carried inside the JSON blob.
 
-To satisfy a connection reference from watsonx Orchestrate, the connection variable must be named exactly `LF_CONNECTION__<PROVIDER>__<NAME>` — the same key `ConnectionRef.env_key()` derives — either as a `global_vars` key or as a key inside the `LANGFLOW_REQUEST_VARIABLES` object.
+To satisfy a connection reference from watsonx Orchestrate, the connection variable must be named exactly `LF_CONNECTION__<PROVIDER>__<NAME>` — the same key `ConnectionRef.env_key()` derives — either as a `global_vars` key or as a key inside the object encoded in `LANGFLOW_REQUEST_VARIABLES`.
 See [Deploy flows on watsonx Orchestrate](/deployment-wxo) for the deploy-time half, where those variables are bound to the deployed tool.
 
 :::note
@@ -200,6 +200,7 @@ Alongside `required_variables`, the manifest carries `required_connections`: the
   "flows": [
     {
       "id": "…",
+      "name": "Weekly digest",
       "path": "flows/….json",
       "sha256": "…",
       "size": 4096,

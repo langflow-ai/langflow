@@ -22,16 +22,21 @@ curl -sS -X POST "http://localhost:8000/flows/${FLOW_ID}/run" \
 
 # JSON credential: expiry and granted scopes are checked before the provider call,
 # so the run fails with auth-expired or scope-missing instead of a provider 401/403.
+#
+# expires_at is the expiry the injecting system holds for this token, so it is
+# computed at send time. A literal timestamp copied from a document is in the past
+# by the time anyone runs it, and every request then fails with auth-expired.
 curl -sS -X POST "http://localhost:8000/flows/${FLOW_ID}/run" \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${LANGFLOW_API_KEY}" \
-  -d "$(jq -n --arg token "${GOOGLE_ACCESS_TOKEN}" '{
+  -d "$(jq -n --arg token "${GOOGLE_ACCESS_TOKEN}" \
+          --argjson ttl "${GOOGLE_TOKEN_TTL_SECONDS:-3600}" '{
         input_value: "describe my connection",
         global_vars: {
           "LF_CONNECTION__GOOGLE__WORK": ({
             access_token: $token,
             token_type: "Bearer",
-            expires_at: "2026-01-01T00:00:00+00:00",
+            expires_at: (now + $ttl | todate),
             scopes: ["https://www.googleapis.com/auth/drive.readonly"],
             account: {id: "person@example.com"}
           } | tostring)
