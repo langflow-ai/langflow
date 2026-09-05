@@ -1,0 +1,267 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.langflow.org/design/dedicated-integrations/capability-matrix-v1.json",
+  "title": "Dedicated Integrations wave-1 capability matrix",
+  "description": "One provider's wave-1 capability matrix for the INT-1 discovery gate. Hand-written for the gate; INT-3 lifts the enums into Pydantic under src/lfx/src/lfx/extension/ and regenerates this file. The enum values here are asserted equal to VALID_VALUES in scripts/ci/check_capability_matrices.py.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "provider", "display_name", "bundle", "wave", "max_included_actions", "verified_on",
+    "oauth_app_owner_by_context", "oauth_client_type_by_context", "substrate_decision",
+    "restricted_scope_decisions", "sources",
+    "verification_programs", "actions"
+  ],
+  "properties": {
+    "schema_version": { "const": 1 },
+    "provider": { "$ref": "#/$defs/provider" },
+    "display_name": { "type": "string", "minLength": 1 },
+    "bundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["extension_id", "bundle_name", "distribution"],
+      "properties": {
+        "extension_id": { "type": "string", "minLength": 1 },
+        "bundle_name": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "distribution": { "type": "string", "minLength": 1 }
+      }
+    },
+    "wave": { "const": 1 },
+    "max_included_actions": { "type": "integer", "minimum": 1, "maximum": 8 },
+    "verified_on": { "$ref": "#/$defs/iso_date" },
+    "oauth_app_owner_by_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hosted", "self_managed", "desktop", "headless"],
+      "properties": {
+        "hosted": { "$ref": "#/$defs/oauth_app_owner" },
+        "self_managed": { "$ref": "#/$defs/oauth_app_owner" },
+        "desktop": { "$ref": "#/$defs/oauth_app_owner" },
+        "headless": { "$ref": "#/$defs/oauth_app_owner" }
+      }
+    },
+    "oauth_client_type_by_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["hosted", "self_managed", "desktop", "headless"],
+      "properties": {
+        "hosted": { "$ref": "#/$defs/oauth_client_type" },
+        "self_managed": { "$ref": "#/$defs/oauth_client_type" },
+        "desktop": { "$ref": "#/$defs/oauth_client_type" },
+        "headless": { "$ref": "#/$defs/oauth_client_type" }
+      }
+    },
+    "substrate_decision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["chosen", "decision_record"],
+      "properties": {
+        "chosen": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/substrate" } },
+        "decision_record": { "$ref": "#/$defs/decision_record_path" }
+      }
+    },
+    "restricted_scope_decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["scope", "decision", "rationale", "decision_record"],
+        "properties": {
+          "scope": { "type": "string", "minLength": 1 },
+          "decision": { "$ref": "#/$defs/restricted_scope_decision" },
+          "rationale": { "type": "string", "minLength": 1 },
+          "decision_record": { "$ref": "#/$defs/decision_record_path" }
+        }
+      }
+    },
+    "sources": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]*$" },
+      "additionalProperties": { "$ref": "#/$defs/source" }
+    },
+    "verification_programs": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]*$" },
+      "additionalProperties": { "$ref": "#/$defs/verification_program" }
+    },
+    "actions": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/action" } }
+  },
+  "$defs": {
+    "iso_date": { "type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+    "source_id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "decision_record_path": { "type": "string", "pattern": "^decisions/[a-z0-9-]+\\.md$" },
+    "provider": { "enum": ["google", "microsoft", "slack"] },
+    "decision": { "enum": ["include", "exclude", "defer"] },
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "substrate": { "enum": ["sdk", "rest", "mcp"] },
+    "substrate_ga_status": { "enum": ["ga", "preview", "developer_preview", "beta", "deprecated"] },
+    "identity": { "enum": ["user_delegated", "bot", "service"] },
+    "scope_role": { "enum": ["required", "optional", "alternative"] },
+    "auth_mode": {
+      "enum": [
+        "oauth2_authorization_code", "oauth2_client_credentials", "oauth2_device_code", "service_account",
+        "service_account_domain_wide_delegation", "bot_token_install", "api_key"
+      ]
+    },
+    "classification": { "enum": ["non_sensitive", "sensitive", "restricted"] },
+    "consent": { "enum": ["user", "admin", "both"] },
+    "callback": {
+      "enum": ["server_redirect", "loopback_redirect", "device_code", "app_install_redirect", "manual_token", "none"]
+    },
+    "restricted_scope_decision": { "enum": ["avoid", "accept_with_casa", "accept_exempt", "defer"] },
+    "oauth_app_owner": { "enum": ["langflow", "customer", "either"] },
+    "oauth_client_type": { "enum": ["confidential", "public", "external"] },
+    "scope_condition_kind": { "enum": ["input_present", "input_truthy"] },
+    "source_kind": { "enum": ["provider_docs", "provider_changelog", "provider_console", "mcp_tools_list"] },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url", "title", "kind", "verified_on"],
+      "properties": {
+        "url": { "type": "string", "pattern": "^https://" },
+        "title": { "type": "string", "minLength": 1 },
+        "kind": { "$ref": "#/$defs/source_kind" },
+        "verified_on": { "$ref": "#/$defs/iso_date" },
+        "notes": { "type": "string" }
+      }
+    },
+    "verification_program": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["description", "source", "blocking_for_contexts"],
+      "properties": {
+        "description": { "type": "string", "minLength": 1 },
+        "source": { "$ref": "#/$defs/source_id" },
+        "blocking_for_contexts": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["hosted", "self_managed", "desktop", "headless"] }
+        },
+        "lead_time": { "type": "string" },
+        "recurring": { "type": "string" }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope", "classification", "provider_classification", "source"],
+      "properties": {
+        "scope": { "type": "string", "minLength": 1 },
+        "classification": { "$ref": "#/$defs/classification" },
+        "provider_classification": { "type": "string", "minLength": 1 },
+        "source": { "$ref": "#/$defs/source_id" },
+        "role": { "$ref": "#/$defs/scope_role" },
+        "condition": { "$ref": "#/$defs/scope_condition" },
+        "notes": { "type": "string" }
+      }
+    },
+    "scope_condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "input"],
+      "properties": {
+        "kind": { "$ref": "#/$defs/scope_condition_kind" },
+        "input": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+      }
+    },
+    "sourced_text": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["behavior", "source"],
+      "properties": {
+        "behavior": { "type": "string", "minLength": 1 },
+        "source": { "$ref": "#/$defs/source_id" }
+      }
+    },
+    "io_field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "type": { "type": "string", "minLength": 1 },
+        "required": { "type": "boolean" },
+        "description": { "type": "string" }
+      }
+    },
+    "action": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "action_id", "display_name", "component_class", "decision", "rationale", "confidence", "identity",
+        "auth_mode", "substrate", "substrate_ga_status", "deployment_contexts", "scopes"
+      ],
+      "properties": {
+        "action_id": { "type": "string", "pattern": "^(google|microsoft|slack)\\.[a-z0-9_]+\\.[a-z0-9_]+$" },
+        "display_name": { "type": "string", "minLength": 1 },
+        "component_class": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]+Component$" },
+        "decision": { "$ref": "#/$defs/decision" },
+        "rationale": { "type": "string", "minLength": 1 },
+        "confidence": { "$ref": "#/$defs/confidence" },
+        "open_questions": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "schema": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["inputs", "outputs", "source"],
+          "properties": {
+            "inputs": { "type": "array", "items": { "$ref": "#/$defs/io_field" } },
+            "outputs": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/io_field" } },
+            "source": { "$ref": "#/$defs/source_id" }
+          }
+        },
+        "auth_mode": { "$ref": "#/$defs/auth_mode" },
+        "identity": { "$ref": "#/$defs/identity" },
+        "identity_notes": { "type": "string" },
+        "scopes": { "type": "array", "items": { "$ref": "#/$defs/scope" } },
+        "consent": { "$ref": "#/$defs/consent" },
+        "consent_notes": { "type": "string" },
+        "consent_source": { "$ref": "#/$defs/source_id" },
+        "reach": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["resource", "tenant", "source"],
+          "properties": {
+            "resource": { "type": "string", "minLength": 1 },
+            "tenant": { "type": "string", "minLength": 1 },
+            "source": { "$ref": "#/$defs/source_id" }
+          }
+        },
+        "deployment_contexts": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "hosted": { "$ref": "#/$defs/callback" },
+            "self_managed": { "$ref": "#/$defs/callback" },
+            "desktop": { "$ref": "#/$defs/callback" },
+            "headless": { "$ref": "#/$defs/callback" }
+          }
+        },
+        "refresh": { "$ref": "#/$defs/sourced_text" },
+        "revocation": { "$ref": "#/$defs/sourced_text" },
+        "substrate": { "$ref": "#/$defs/substrate" },
+        "substrate_ga_status": { "$ref": "#/$defs/substrate_ga_status" },
+        "substrate_notes": { "type": "string" },
+        "substrate_source": { "$ref": "#/$defs/source_id" },
+        "rate_limit": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["summary", "source"],
+          "properties": {
+            "summary": { "type": "string", "minLength": 1 },
+            "source": { "$ref": "#/$defs/source_id" },
+            "confidence": { "$ref": "#/$defs/confidence" }
+          }
+        },
+        "verification_dependencies": { "type": "array", "uniqueItems": true, "items": { "$ref": "#/$defs/source_id" } }
+      },
+      "if": { "properties": { "decision": { "const": "include" } } },
+      "then": {
+        "required": [
+          "schema", "consent", "consent_source", "reach", "refresh", "revocation", "substrate_source",
+          "rate_limit", "verification_dependencies"
+        ]
+      }
+    }
+  }
+}
