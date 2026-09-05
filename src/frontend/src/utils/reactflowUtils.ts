@@ -278,11 +278,26 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             expectedSourceHandle,
             sourceHandle,
           );
-          if (!sourceMatchResult && !hasAllowsLoop) {
+          // "Update Component" rewrites data.type to the component's
+          // current `name`, so a component renamed upstream (Prompt ->
+          // Prompt Template) leaves every outgoing edge holding the old
+          // dataType. The node id and output already matched here, so the
+          // rename is metadata drift, not a broken connection — migrate it.
+          const renamedSourceComponent =
+            !sourceMatchResult &&
+            parsedSourceHandle.dataType !== id.dataType &&
+            handlesMatch(
+              scapedJSONStringfy({
+                ...id,
+                dataType: parsedSourceHandle.dataType,
+              }),
+              sourceHandle,
+            );
+          if (!sourceMatchResult && !renamedSourceComponent && !hasAllowsLoop) {
             newEdges = newEdges.filter((e) => e !== edgeInNewEdges);
             brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
           } else if (
-            sourceMatchResult &&
+            (sourceMatchResult || renamedSourceComponent) &&
             expectedSourceHandle !== sourceHandle
           ) {
             // Handles match via migration but IDs differ — update edge to use current types
@@ -314,6 +329,9 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       edgeInNewEdges ?? edge,
       newEdges,
       targetNode,
+      () => {
+        brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
+      },
     );
   });
 
@@ -363,6 +381,7 @@ export function filterHiddenFieldsEdges(
   edge: EdgeType,
   newEdges: EdgeType[],
   targetNode: AllNodeType,
+  onRemoved?: (edge: EdgeType) => void,
 ) {
   if (targetNode) {
     const targetHandle = edge.data?.targetHandle;
@@ -373,7 +392,11 @@ export function filterHiddenFieldsEdges(
 
     // Only check the specific field the edge is connected to
     if (nodeTemplates[fieldName]?.show === false) {
+      const removed = newEdges.some((e) => e.id === edge.id);
       newEdges = newEdges.filter((e) => e.id !== edge.id);
+      // Dropping a connection because its target field went hidden used
+      // to leave no trace at all, so an upgrade could quietly unwire a flow.
+      if (removed) onRemoved?.(edge);
     }
   }
   return newEdges;

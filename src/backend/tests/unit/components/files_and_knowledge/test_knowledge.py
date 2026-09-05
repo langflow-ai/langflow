@@ -761,3 +761,83 @@ class TestOutputHandleTypesMatchStarterEdges:
         component = KnowledgeComponent()
         ingest = component._outputs_map["dataframe_output"]
         assert ingest.types == ["JSON"]
+
+
+class TestUpdateFrontendNodeRestoresModeVisibility:
+    """A saved node must come back with the ``show`` flags of *its* mode.
+
+    ``update_frontend_node`` rebuilds the template from the class defaults, which
+    are ingest-shaped. Before the fix it re-synced only the outputs, so a saved
+    ``mode=Retrieve`` node returned with ``search_query`` hidden and the canvas
+    silently deleted the edge feeding it.
+    """
+
+    async def _updated_template(self, mode: str) -> dict:
+        component = KnowledgeComponent()
+        template = _build_config_from_inputs(component)
+        template["mode"]["value"] = mode
+        frontend_node = {"template": template, "outputs": []}
+        await component.update_frontend_node(frontend_node, {"template": dict(template)})
+        return frontend_node["template"]
+
+    async def test_saved_retrieve_node_keeps_retrieve_inputs_visible(self) -> None:
+        component = KnowledgeComponent()
+        template = await self._updated_template(MODE_RETRIEVE)
+
+        assert template["search_query"]["show"] is True
+        for fname in component.mode_config[MODE_RETRIEVE]:
+            assert template[fname]["show"] is True, f"{fname} must stay visible in retrieve mode"
+        for fname in component.mode_config[MODE_INGEST]:
+            assert template[fname]["show"] is False, f"{fname} must be hidden in retrieve mode"
+
+    async def test_saved_ingest_node_keeps_ingest_inputs_visible(self) -> None:
+        component = KnowledgeComponent()
+        template = await self._updated_template(MODE_INGEST)
+
+        for fname in component.mode_config[MODE_INGEST]:
+            assert template[fname]["show"] is True, f"{fname} must stay visible in ingest mode"
+        for fname in component.mode_config[MODE_RETRIEVE]:
+            assert template[fname]["show"] is False, f"{fname} must be hidden in ingest mode"
+
+    async def test_default_keys_stay_visible_in_both_modes(self) -> None:
+        component = KnowledgeComponent()
+        for mode in (MODE_INGEST, MODE_RETRIEVE):
+            template = await self._updated_template(mode)
+            for fname in component.default_keys:
+                assert template[fname]["show"] is True, f"{fname} must stay visible in {mode}"
+
+
+class TestKbPathsBackwardCompatibleSymbols:
+    """Frozen 1.11.x component code imports these at module scope.
+
+    A saved flow embeds the component code it was built with, so removing a name
+    from ``_kb_paths`` makes every flow holding that code fail to build with
+    ``ImportError`` — the node can no longer be opened, edited or updated.
+    """
+
+    def test_removed_symbols_are_still_importable(self) -> None:
+        from lfx.components.files_and_knowledge._kb_paths import (
+            KBKeyDecryptError,
+            load_kb_metadata,
+        )
+
+        assert issubclass(KBKeyDecryptError, Exception)
+        assert callable(load_kb_metadata)
+
+    def test_load_kb_metadata_returns_empty_when_sidecar_is_gone(self, tmp_path) -> None:
+        from lfx.components.files_and_knowledge._kb_paths import load_kb_metadata
+
+        assert load_kb_metadata(tmp_path, log_label="kb") == {}
+
+    def test_load_kb_metadata_never_returns_a_stored_api_key(self, tmp_path) -> None:
+        from lfx.components.files_and_knowledge._kb_paths import load_kb_metadata
+
+        (tmp_path / "embedding_metadata.json").write_text(
+            json.dumps({"model": "text-embedding-3-small", "api_key": "encrypted"}),
+            encoding="utf-8",
+        )
+
+        metadata = load_kb_metadata(tmp_path, log_label="kb")
+
+        assert metadata["model"] == "text-embedding-3-small"
+        assert metadata["api_key"] is None
