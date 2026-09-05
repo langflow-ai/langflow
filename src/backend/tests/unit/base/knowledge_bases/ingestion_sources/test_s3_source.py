@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import pytest
 from lfx.base.knowledge_bases.ingestion_sources import (
+    GOOGLE_DRIVE_SOURCE_REGISTERED,
     GoogleDriveSource,
     OneDriveSource,
     S3Source,
@@ -84,9 +85,21 @@ class TestGoogleDriveSourceIsImplementedButUnregistered:
     """
 
     def test_not_in_the_default_registry(self):
+        """Registration is decided at import, so compare against that decision.
+
+        ``LANGFLOW_KB_GOOGLE_DRIVE_ENABLED`` is read once when the registry module is
+        imported and a test cannot undo the result, so a machine with the opt-in switch
+        set would fail a bare "not registered" assertion for a legitimate reason.
+        """
+        assert GOOGLE_DRIVE_SOURCE_REGISTERED is False, (
+            "This suite pins the default build. Unset LANGFLOW_KB_GOOGLE_DRIVE_ENABLED to run it."
+        )
         assert SourceType.GOOGLE_DRIVE not in registered_sources()
 
     def test_create_source_raises(self):
+        assert GOOGLE_DRIVE_SOURCE_REGISTERED is False, (
+            "This suite pins the default build. Unset LANGFLOW_KB_GOOGLE_DRIVE_ENABLED to run it."
+        )
         with pytest.raises(ValueError, match="not registered"):
             create_source(SourceType.GOOGLE_DRIVE, user_id=None, source_config={})
 

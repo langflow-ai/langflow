@@ -22,11 +22,12 @@ import httpx
 import pytest
 from lfx.base.knowledge_bases.ingestion_sources import (
     GOOGLE_DRIVE_ENABLED_ENV_VAR,
+    GOOGLE_DRIVE_SOURCE_REGISTERED,
     GoogleDriveSource,
     google_drive_source_enabled,
     registered_sources,
 )
-from lfx.base.knowledge_bases.ingestion_sources.base import SourceType
+from lfx.base.knowledge_bases.ingestion_sources.base import IngestionItem, SourceType
 from lfx.base.knowledge_bases.ingestion_sources.google_drive import DRIVE_FILE_SCOPE
 from lfx.integrations.errors import ConnectionNotAuthorizedError, ScopeMissingError
 from lfx.integrations.models import ResolvedCredential
@@ -137,12 +138,22 @@ def _json(payload: dict) -> httpx.Response:
 # -- registration -----------------------------------------------------------
 
 
-def test_source_is_not_registered_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_the_switch_is_off_when_the_variable_is_unset(monkeypatch: pytest.MonkeyPatch) -> None:
     """It stays out of the connector picker until INT-6 stamps a job principal."""
     monkeypatch.delenv(GOOGLE_DRIVE_ENABLED_ENV_VAR, raising=False)
 
     assert google_drive_source_enabled() is False
-    assert SourceType.GOOGLE_DRIVE not in registered_sources()
+
+
+def test_registration_follows_the_switch_as_it_stood_at_import() -> None:
+    """Registration happens once, at import, so assert against the recorded decision.
+
+    Clearing the variable in a test cannot un-register the source, so asserting
+    ``GOOGLE_DRIVE not in registered_sources()`` unconditionally would fail on any
+    machine that happens to have the opt-in switch set. What must hold is that the
+    registry and the recorded decision agree.
+    """
+    assert (SourceType.GOOGLE_DRIVE in registered_sources()) is GOOGLE_DRIVE_SOURCE_REGISTERED
 
 
 @pytest.mark.parametrize("value", ["true", "TRUE", "1", "yes", "on"])
@@ -340,3 +351,41 @@ def test_describe_reports_the_scope_and_leaks_no_credential() -> None:
     # The handle is a non-secret reference; no token ever reaches describe().
     assert described["config"]["connection"] == "google/work"
     assert FAKE_TOKEN not in json.dumps(described)
+
+
+@pytest.mark.usefixtures("resolver")
+async def test_fetching_exports_a_native_doc_this_instance_never_listed(mock_http) -> None:
+    """fetch_content must not depend on list_items having run on the same object.
+
+    The only consumer today interleaves listing and fetching on one source instance,
+    but a batched or resumed ingestion would not. The export target therefore comes
+    from the item's own recorded mime type; deriving it from listing state would send
+    ``alt=media`` for a Google Doc and get back a 403 fileNotDownloadable.
+    """
+    seen = mock_http([httpx.Response(200, content=b"Meeting notes body")])
+    listed = _source()
+    item = listed._to_item(NATIVE_DOC)
+    fresh = _source()  # a different instance: no listing state at all
+    assert fresh._export_targets == {}
+
+    content = await fresh.fetch_content(item)
+
+    assert content.raw_bytes == b"Meeting notes body"
+    assert content.file_name == "Meeting notes.txt"
+    assert seen[0].url.path.endswith("/export")
+    assert seen[0].url.params["mimeType"] == "text/plain"
+
+
+@pytest.mark.usefixtures("resolver")
+async def test_fetching_an_unexportable_native_type_fails_with_a_clear_message() -> None:
+    """A Form or Site reaching fetch_content is a caller error, not a 403 from Google."""
+    source = _source()
+    item = IngestionItem(
+        item_id="drive-form-survey",
+        display_name="Survey",
+        mime_type="application/vnd.google-apps.form",
+        source_metadata={"mime_type": "application/vnd.google-apps.form"},
+    )
+
+    with pytest.raises(ValueError, match="no text export"):
+        await source.fetch_content(item)

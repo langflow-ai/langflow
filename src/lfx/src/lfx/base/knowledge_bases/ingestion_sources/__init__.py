@@ -89,11 +89,18 @@ def google_drive_source_enabled() -> bool:
     return (os.getenv(GOOGLE_DRIVE_ENABLED_ENV_VAR) or "").casefold() in _TRUTHY
 
 
-if google_drive_source_enabled():
+# The registry is populated at import time, so the decision is recorded here as
+# well: a test cannot undo a registration by clearing the variable afterwards, and
+# a machine that had the switch set when this module was first imported must still
+# be able to assert the invariant (registered if and only if the switch was on).
+GOOGLE_DRIVE_SOURCE_REGISTERED = google_drive_source_enabled()
+
+if GOOGLE_DRIVE_SOURCE_REGISTERED:
     register_source(SourceType.GOOGLE_DRIVE, GoogleDriveSource)
 
 __all__ = [
     "GOOGLE_DRIVE_ENABLED_ENV_VAR",
+    "GOOGLE_DRIVE_SOURCE_REGISTERED",
     "FileUploadSource",
     "FolderSource",
     "GoogleDriveSource",

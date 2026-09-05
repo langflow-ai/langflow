@@ -90,8 +90,11 @@ class GoogleDriveSource(KBConnectorSource):
     def __init__(self, user_id, source_config: dict[str, Any]) -> None:
         super().__init__(user_id=user_id, source_config=source_config)
         self._lease = None
-        # Populated during listing so fetch_content knows how to retrieve each item
-        # without a second metadata round trip.
+        # Filled in during listing. This is a cache, NOT the source of truth:
+        # `fetch_content` derives the export target from the item's own recorded
+        # mime type, so a caller that fetches an item it did not list on this
+        # instance (a resumed or batched ingestion) still exports correctly
+        # instead of falling back to alt=media and getting fileNotDownloadable.
         self._export_targets: dict[str, str] = {}
 
     # -- configuration ----------------------------------------------------
@@ -221,11 +224,29 @@ class GoogleDriveSource(KBConnectorSource):
         )
         return name if name.endswith(suffix) else f"{name}{suffix}"
 
+    def _export_target(self, item: IngestionItem) -> str | None:
+        """Return the export MIME type for an item, or None to download it as-is.
+
+        Derived from the mime type the item carries in its own metadata, so the
+        answer does not depend on this instance having listed the item.
+        """
+        mime_type = (item.source_metadata or {}).get("mime_type") or item.mime_type or ""
+        if isinstance(mime_type, str) and mime_type.startswith(GOOGLE_NATIVE_MIME_PREFIX):
+            export = NATIVE_EXPORT_MIME_TYPES.get(mime_type)
+            if export is not None:
+                return export[0]
+            msg = (
+                f"Google Drive item {item.item_id} is a {mime_type}, which has no text export. "
+                "Only Docs, Sheets and Slides can be ingested among the Google-native types."
+            )
+            raise ValueError(msg)
+        return self._export_targets.get(item.item_id)
+
     async def fetch_content(self, item: IngestionItem) -> IngestionItemContent:
         """Download a binary file, or export a Google-native document."""
         import httpx
 
-        export_mime = self._export_targets.get(item.item_id)
+        export_mime = self._export_target(item)
         file_id = quote(item.item_id, safe="")
         if export_mime is None:
             url = f"{FILES_URL}/{file_id}"
