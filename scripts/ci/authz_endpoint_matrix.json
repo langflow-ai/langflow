@@ -468,7 +468,7 @@
       "source": "api/v1/integrations.py",
       "resource": "integration",
       "domain": "caller-global integration policy scope",
-      "privacy": "responses carry manifest metadata and the caller's own policy decisions only, never connection identifiers or credentials; the include_blocked view that enumerates non-approved providers and denied policy keys is superuser-only, matching /api/v1/all and the catalog template surfaces",
+      "privacy": "responses carry manifest metadata and the caller's own policy decisions only, never connection identifiers or credentials; the include_blocked view that enumerates non-approved providers and denied policy keys is superuser-only, matching /api/v1/all and the catalog template surfaces. /policy/effective is deliberately readable by every authenticated caller because a client must render its own allowances, but its blocked_action_keys and loaded_provider_ids together still describe the operator decision -- a narrower per-caller shape is an open question for INT-8, recorded in the INT-7 PR body",
       "side_effects": "read-only; every route resolves the caller's effective integration policy before returning a catalog",
       "frontend": "connection pickers and the operator integration panel render only what this route returns; execution enforces the same policy independently",
       "personas": "canonical_v1",
