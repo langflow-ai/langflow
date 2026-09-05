@@ -146,11 +146,10 @@ class RuntimeSettings(BaseModel):
     """Lifetime of a dispatcher/scheduler singleton lease and of a per-event
     claim. A holder that dies has its work re-dispatched this many seconds
     later, so this is the worst-case duplicate-suppression window as well as the
-    worst-case stall. Must comfortably exceed
-    ``trigger_heartbeat_interval_s``."""
-    trigger_heartbeat_interval_s: float = Field(default=10.0, gt=0)
-    """How often a lease holder refreshes its heartbeat. Kept well below
-    ``trigger_lease_ttl_s`` so a brief stall never looks like a death."""
+    worst-case stall. The loops renew on ``trigger_dispatcher_poll_interval_s``,
+    which must stay comfortably below this TTL so a healthy holder never looks
+    dead. TRG-3's listener process adds its own heartbeat knob when it has a
+    loop whose cadence differs from the poll."""
     trigger_max_events_per_poll: int = Field(default=25, gt=0)
     """Upper bound on events one dispatcher pass claims, so a large backlog is
     drained in bounded batches instead of one unbounded transaction."""
