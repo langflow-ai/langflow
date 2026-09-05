@@ -1,0 +1,210 @@
+---
+title: Register a Microsoft Entra application
+slug: /entra-app-registration
+---
+
+The Microsoft 365 components resolve their connections through a customer-owned
+Microsoft Entra application registration. This page is the operator runbook for
+creating that registration, choosing its delegated permissions, and verifying
+consent. It expands the **Customer-owned Microsoft registration** summary in
+[Configure connection OAuth](/connection-oauth); where the two differ, that page
+describes the broker and this page describes Entra.
+
+## What you need
+
+- A Microsoft Entra tenant, and permission to create an app registration in it.
+- The tenant's directory (tenant) ID, a UUID.
+- The public URL of the Langflow instance that will host the OAuth callback.
+- A way to load a JSON secret into the Langflow server's environment.
+
+## Supported registrations
+
+Langflow's connection broker uses a **fixed-tenant authority**:
+`https://login.microsoftonline.com/{tenant}/oauth2/v2.0`. The `common` and
+`organizations` authorities are rejected, so:
+
+- A registration serves exactly **one** Entra tenant. Guest (B2B) users of that
+  tenant can consent; users whose home tenant is elsewhere cannot use it as a
+  multitenant app.
+- Personal Microsoft accounts (Outlook.com, Hotmail, Live) are not supported.
+- A Langflow-owned multitenant application, which would additionally need
+  [publisher verification](https://learn.microsoft.com/en-us/entra/identity-platform/publisher-verification-overview),
+  is not configurable today. Customer-owned single-tenant registrations are the
+  supported path for the hosted, self-managed, Desktop, and headless contexts.
+
+Set the account type to **Accounts in this organizational directory only**
+when you create the registration.
+
+## Create the registration
+
+1. In the Microsoft Entra admin center, open **App registrations**, then
+   **New registration**.
+2. Give the application a name your users will recognize on the consent prompt:
+   the name and publisher are what they see when they connect their account.
+3. Under **Supported account types**, select **Accounts in this organizational
+   directory only (single tenant)**.
+4. Add a redirect URI for the context you are configuring, then click
+   **Register**.
+5. Record the **Application (client) ID** and the **Directory (tenant) ID** from
+   the registration's **Overview** page.
+
+### Redirect URIs
+
+Add the redirect on the platform that matches the deployment context. One
+registration can carry both a **Web** and a **Mobile and desktop applications**
+redirect.
+
+| Context | Platform | Redirect URI |
+| --- | --- | --- |
+| Hosted or self-managed server | Web | `https://YOUR_INSTANCE/api/v1/connections/oauth/microsoft/callback` |
+| Desktop | Mobile and desktop applications | `http://localhost:7860/api/v1/connections/oauth/microsoft/callback` |
+| Headless | none | no redirect; the operator supplies a token directly |
+
+Entra requires `https` for every redirect except loopback. Loopback redirects
+ignore the port when matching, Microsoft prefers `127.0.0.1` over `localhost`,
+and an `http` loopback URI is added through the application manifest's
+`replyUrlsWithType`. Use the same hostname in the browser and in the redirect:
+`localhost` and `127.0.0.1` are different cookie origins.
+
+See [Redirect URI (reply URL) restrictions](https://learn.microsoft.com/en-us/entra/identity-platform/reply-url).
+
+## Add delegated permissions
+
+Under **API permissions**, add **Microsoft Graph** &rarr; **Delegated
+permissions**. Add only the permissions the actions you intend to enable
+actually need. Do not add application permissions: the Microsoft 365 bundle
+never uses them, and their Graph variants require administrator consent.
+
+| Component | Delegated permission | Admin consent required |
+| --- | --- | --- |
+| Outlook: Send Mail | `Mail.Send` | No |
+| Outlook: Search Mail | `Mail.Read` | No |
+| Outlook Calendar: List Events | `Calendars.Read` | No |
+| Outlook Calendar: Create Event | `Calendars.ReadWrite` | No |
+| Teams: Post Chat Message | `ChatMessage.Send` | No |
+| Teams: Post Channel Message | `ChannelMessage.Send` | No |
+| SharePoint/OneDrive: List Items | `Files.Read` | No |
+| SharePoint/OneDrive: Fetch Item | `Files.Read` | No |
+| ... with an explicit **Drive ID** | `Files.Read.All` | No |
+| ... with an explicit **Site ID** | `Sites.Read.All` | No |
+
+Also add **`offline_access`**. It is what makes Entra issue a refresh token, so
+without it a connection stops working when its first access token expires. Keep
+it in the registration's permission list and in the broker's configured
+`scopes`, but **not** in a component's required permissions: Entra never echoes
+`offline_access` in the token response, so treating it as a per-action
+requirement would make every resolution fail with a missing-permission error.
+
+Every permission above shows **No** for admin consent in Microsoft's
+[permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference),
+which means an ordinary user can consent unless your tenant restricts that.
+Tenants commonly do:
+
+- **User consent settings** may be limited to verified publishers and low-impact
+  permissions, or disabled entirely. See
+  [Configure how users consent to applications](https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent).
+- If user consent is restricted, enable the **admin consent workflow** so users
+  can request approval, or grant tenant-wide admin consent from the
+  registration's **API permissions** page.
+
+## Add a client credential
+
+A server (hosted or self-managed) registration is a **confidential** client and
+needs one credential. A Desktop registration is a **public** client and must
+have none.
+
+- **Client secret:** under **Certificates & secrets**, create a new client
+  secret and copy its value immediately. Record its expiry and plan the
+  rotation; a secret can be rotated without re-consenting users.
+- **Certificate:** upload the certificate, then configure Langflow with the
+  matching RSA PEM private key and the certificate's SHA-256 thumbprint as 64
+  hexadecimal characters. Assertions are signed with PS256.
+
+For a Desktop registration, open **Authentication** and enable the public client
+flow; public clients cannot hold a secret. See
+[Public and confidential client apps](https://learn.microsoft.com/en-us/entra/identity-platform/msal-client-applications).
+
+## Configure Langflow
+
+Registrations reach the server through the `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS`
+JSON secret, keyed by registration name. The instance-wide
+`LANGFLOW_CONNECTION_OAUTH_CONTEXT` (`self_managed`, `hosted`, or `desktop`)
+must match each registration's `context`; one instance serves one context. A
+hosted registration owned by Langflow also requires
+`LANGFLOW_CONNECTION_OAUTH_HOSTED_ENABLED=true`.
+
+```json
+{
+  "microsoft-work": {
+    "provider": "microsoft",
+    "owner": "customer",
+    "context": "self_managed",
+    "client_type": "confidential",
+    "tenant": "00000000-0000-0000-0000-000000000000",
+    "client_id": "YOUR_APPLICATION_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET",
+    "redirect_uri": "https://langflow.example/api/v1/connections/oauth/microsoft/callback",
+    "scopes": ["Mail.Read", "Calendars.Read", "Files.Read", "offline_access"]
+  }
+}
+```
+
+Notes:
+
+- `scopes` is an operator-controlled **ceiling**. A consent request must select a
+  nonempty subset of it and cannot supply endpoints, a redirect URI, a client ID,
+  or secrets.
+- Write the permissions in the **short** form (`Mail.Read`). Requesting
+  `https://graph.microsoft.com/Mail.Read` makes Entra echo the long form, and the
+  components declare the short form.
+- A confidential registration carries either `client_secret` or `private_key`
+  plus `certificate_thumbprint`, never both.
+- Changing a registration's provider, client ID, scopes, tenant restrictions,
+  profile, or redirect invalidates pending consent and requires affected
+  connections to reconnect. Rotating only the secret or certificate does not.
+- Load the JSON through your deployment's secret manager. Never place it in flow
+  inputs, global variables, source control, or frontend configuration.
+
+## Verify consent
+
+1. Create a Microsoft connection with `executing_identity.identity` set to
+   `user_delegated`, then start consent:
+
+   ```http
+   POST /api/v1/connections/CONNECTION_ID/oauth/start
+   Content-Type: application/json
+
+   {"registration_id":"microsoft-work","scopes":["Mail.Read"]}
+   ```
+
+2. Navigate the **same browser** to the returned `authorization_url`. Starting
+   consent sets an HttpOnly, SameSite=Lax cookie, so an authorization URL pasted
+   into another browser cannot complete the connection.
+3. Confirm the consent prompt lists exactly the permissions you expect, and no
+   more.
+4. Check the stored permissions with `GET /api/v1/connections`, then call
+   `POST /api/v1/connections/CONNECTION_ID/test` with the permissions an action
+   needs.
+5. Confirm refresh works before relying on the connection for background or
+   serving runs, and set `allow_non_interactive` explicitly for those runs.
+
+## Revocation
+
+Microsoft does not expose a standard per-grant revocation endpoint for this
+flow. `POST /api/v1/connections/CONNECTION_ID/revoke` always deletes Langflow's
+stored credentials and invalidates pending consent, and reports
+`provider_revocation: "unsupported"`. To revoke upstream, a user removes the
+application from **My Account &rarr; Apps & devices**, or an administrator
+removes the enterprise application or revokes the user's refresh tokens in
+Entra. Access tokens already issued remain valid for their lifetime.
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| Registration rejected at startup | `tenant` is missing or is not a UUID | Use the directory (tenant) ID; `common` and `organizations` are not accepted |
+| Registration rejected at startup | `context` differs from `LANGFLOW_CONNECTION_OAUTH_CONTEXT` | One instance serves one context |
+| Consent prompt says approval is required | Tenant restricts user consent | Grant admin consent, or enable the admin consent workflow |
+| Connections fail with a missing-permission error | The registration's `scopes` use the long `https://graph.microsoft.com/...` form | Use the short form on both sides |
+| A connection stops working after an hour | `offline_access` is missing from the registration | Add it to the permissions and to `scopes`, then reconnect |
+| `AADSTS50011` redirect mismatch | The redirect URI or platform does not match | Add the exact callback path on the correct platform |
