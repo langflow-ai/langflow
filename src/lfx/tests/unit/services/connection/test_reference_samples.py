@@ -272,7 +272,10 @@ def test_secret_manager_sample_without_a_client_fails_loudly(secret_sample) -> N
 
 def test_lfx_toml_sample_registers_the_documented_resolver(secret_sample) -> None:
     """The path string in the sample ``lfx.toml`` resolves to a usable resolver."""
-    import tomllib
+    try:
+        import tomllib  # stdlib on 3.11+
+    except ModuleNotFoundError:  # pragma: no cover - exercised only on 3.10
+        import tomli as tomllib  # 3.10 fallback (lfx already depends on tomli)
 
     from tests.unit.services.connection.sample_loader import SAMPLES_DIR
 
