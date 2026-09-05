@@ -98,6 +98,23 @@ class IntegrationCapability(BaseModel):
             raise ValueError(msg)
         return value
 
+    @field_validator("policy_keys")
+    @classmethod
+    def _policy_keys_use_the_governance_grammar(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        """Reject action policy keys operators could never block (INT-7).
+
+        Governance blocks capabilities by their declared ``policy_keys``, so a
+        key outside the ``integrations.<provider_id>.<action>`` namespace is a
+        manifest bug that would make the capability ungovernable. The provider
+        segment itself is checked against the owning provider by
+        :class:`IntegrationProvider`.
+        """
+        from lfx.services.integration_policy.base import normalize_integration_policy_key
+
+        for key in value:
+            normalize_integration_policy_key(key)
+        return value
+
     @model_validator(mode="after")
     def _has_an_execution_target(self) -> IntegrationCapability:
         if self.component_ref is None and self.mcp_tool is None:
@@ -135,6 +152,21 @@ class IntegrationProvider(BaseModel):
             msg = (
                 f"Integration provider {self.provider_id!r} has capability ids outside its provider namespace: "
                 f"{', '.join(wrong_provider)}"
+            )
+            raise ValueError(msg)
+        from lfx.services.integration_policy.base import integration_policy_key_prefix
+
+        expected_prefix = integration_policy_key_prefix(self.provider_id)
+        foreign_keys = sorted(
+            key
+            for capability in self.capabilities
+            for key in capability.policy_keys
+            if not key.casefold().startswith(expected_prefix)
+        )
+        if foreign_keys:
+            msg = (
+                f"Integration provider {self.provider_id!r} has capability policy keys outside "
+                f"{expected_prefix!r}: {', '.join(foreign_keys)}"
             )
             raise ValueError(msg)
         unknown = sorted({cap.auth_profile_id for cap in self.capabilities} - set(profile_ids))

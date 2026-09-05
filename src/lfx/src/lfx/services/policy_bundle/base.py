@@ -23,12 +23,16 @@ def policy_bundle_content_hash(
     blocked_component_keys: Collection[str],
     blocked_template_keys: Collection[str],
     blocked_model_keys: Collection[str] = (),
+    approved_integration_provider_ids: Collection[str] = (),
+    blocked_integration_action_keys: Collection[str] = (),
 ) -> str:
     """Return the SHA-256 of the canonical complete decision payload.
 
-    ``blocked_model_keys`` joins the canonical payload only when non-empty so
-    every revision hashed before the field existed keeps its stored hash, and
-    a bundle without model blocks hashes identically across releases.
+    ``blocked_model_keys``, ``approved_integration_provider_ids`` and
+    ``blocked_integration_action_keys`` join the canonical payload only when
+    non-empty so every revision hashed before those fields existed keeps its
+    stored hash, and a bundle without model blocks or integration governance
+    hashes identically across releases.
     """
     payload = {
         "approved_provider_ids": sorted(set(approved_provider_ids)),
@@ -37,13 +41,17 @@ def policy_bundle_content_hash(
     }
     if blocked_model_keys:
         payload["blocked_model_keys"] = sorted(set(blocked_model_keys))
+    if approved_integration_provider_ids:
+        payload["approved_integration_provider_ids"] = sorted(set(approved_integration_provider_ids))
+    if blocked_integration_action_keys:
+        payload["blocked_integration_action_keys"] = sorted(set(blocked_integration_action_keys))
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
 
 
 @dataclass(frozen=True, slots=True)
 class PolicyBundleSnapshot:
-    """One immutable provider-and-catalog policy revision."""
+    """One immutable provider, catalog, and integration policy revision."""
 
     revision: int = 0
     initialized: bool = False
@@ -52,6 +60,12 @@ class PolicyBundleSnapshot:
     blocked_component_keys: frozenset[str] = frozenset()
     blocked_template_keys: frozenset[str] = frozenset()
     blocked_model_keys: frozenset[str] = frozenset()
+    # Integration governance (INT-7). Both default to empty so every caller
+    # written before integrations existed keeps producing an identical bundle.
+    # An empty ceiling means "unrestricted" in OSS; Enterprise policy plugins
+    # may read the same empty set as deny-all.
+    approved_integration_provider_ids: frozenset[str] = frozenset()
+    blocked_integration_action_keys: frozenset[str] = frozenset()
     content_hash: str = ""
     created_at: datetime | None = None
     created_by: UUID | None = None
@@ -66,6 +80,16 @@ class PolicyBundleSnapshot:
         object.__setattr__(self, "blocked_component_keys", frozenset(self.blocked_component_keys))
         object.__setattr__(self, "blocked_template_keys", frozenset(self.blocked_template_keys))
         object.__setattr__(self, "blocked_model_keys", frozenset(self.blocked_model_keys))
+        object.__setattr__(
+            self,
+            "approved_integration_provider_ids",
+            frozenset(self.approved_integration_provider_ids),
+        )
+        object.__setattr__(
+            self,
+            "blocked_integration_action_keys",
+            frozenset(self.blocked_integration_action_keys),
+        )
 
 
 class BasePolicyBundleService(Service, abc.ABC):

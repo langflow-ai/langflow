@@ -453,6 +453,12 @@ class ServiceManager:
             expected_bases[ServiceType.POLICY_BUNDLE_SERVICE] = BasePolicyBundleService
         except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
             logger.debug(f"BasePolicyBundleService unavailable; entry-point validation skipped: {exc}")
+        try:
+            from lfx.services.integration_policy.base import BaseIntegrationPolicyService
+
+            expected_bases[ServiceType.INTEGRATION_POLICY_SERVICE] = BaseIntegrationPolicyService
+        except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
+            logger.debug(f"BaseIntegrationPolicyService unavailable; entry-point validation skipped: {exc}")
 
         for ep in eps:
             try:
@@ -558,6 +564,12 @@ class ServiceManager:
                     "refusing to start with the built-in process-local fallback"
                 )
                 raise RuntimeError(msg)
+            if service_type == ServiceType.INTEGRATION_POLICY_SERVICE:
+                msg = (
+                    "Configured integration policy service could not be loaded; "
+                    "refusing to start with the OSS unrestricted fallback"
+                )
+                raise RuntimeError(msg)
             return
 
         if service_type == ServiceType.CONNECTION_RESOLVER_SERVICE:
@@ -586,6 +598,12 @@ class ServiceManager:
 
             if not isinstance(service_class, type) or not issubclass(service_class, BasePolicyBundleService):
                 msg = "Configured policy bundle service must subclass BasePolicyBundleService"
+                raise RuntimeError(msg)
+        if service_type == ServiceType.INTEGRATION_POLICY_SERVICE:
+            from lfx.services.integration_policy.base import BaseIntegrationPolicyService
+
+            if not isinstance(service_class, type) or not issubclass(service_class, BaseIntegrationPolicyService):
+                msg = "Configured integration policy service must subclass BaseIntegrationPolicyService"
                 raise RuntimeError(msg)
 
         self.register_service_class(service_type, service_class, override=True)
