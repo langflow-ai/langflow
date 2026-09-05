@@ -154,7 +154,15 @@ async def test_the_skip_policy_runs_nothing_and_simply_re_arms(make_trigger) -> 
 
 
 async def test_catch_up_never_reaches_past_the_replay_window(make_trigger) -> None:
-    """A month of downtime does not produce a month of runs."""
+    """Two months of downtime produce one run, dated inside the window.
+
+    The bound is the window, not just the report size: an event stamped with a
+    ``scheduled_at`` from eight weeks ago would hand the flow a fire time older
+    than any row the ledger still keeps.
+    """
+    from langflow.services.deps import get_settings_service
+
+    window_days = get_settings_service().settings.trigger_replay_window_days
     trigger_id = await make_trigger(config=_schedule_config(cron="0 * * * *"))
     now = datetime.now(timezone.utc)
     async with session_scope() as session:
@@ -166,6 +174,11 @@ async def test_catch_up_never_reaches_past_the_replay_window(make_trigger) -> No
     events = await _events(trigger_id)
     reported = events[0].payload.get("missed_ticks", [])
     assert len(reported) <= scheduler.MAX_REPORTED_MISSED_TICKS
+
+    window_start = now - timedelta(days=window_days)
+    scheduled_at = datetime.fromisoformat(events[0].payload["scheduled_at"])
+    assert scheduled_at >= window_start
+    assert all(datetime.fromisoformat(fire) >= window_start for fire in reported)
 
 
 async def test_a_broken_schedule_stops_itself_instead_of_erroring_every_poll(make_trigger) -> None:

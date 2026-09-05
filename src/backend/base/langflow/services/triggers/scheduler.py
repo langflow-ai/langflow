@@ -152,9 +152,12 @@ async def produce_ticks_for_trigger(
     if previous > now:
         return 0
 
+    # The window bounds the WHOLE catch-up, not just its first entry: a month of
+    # downtime on an hourly cron must not stamp an event with a fire time weeks
+    # in the past, so the walk starts at the window, not at the stale cursor.
     window_start = max(previous, now - timedelta(days=settings.trigger_replay_window_days))
     due = [previous] if previous >= window_start else []
-    due.extend(missed_fire_times(cron_expression, timezone_name=timezone_name, since=previous, until=now))
+    due.extend(missed_fire_times(cron_expression, timezone_name=timezone_name, since=window_start, until=now))
 
     created = 0
     if due:
