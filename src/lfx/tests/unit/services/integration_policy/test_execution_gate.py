@@ -170,3 +170,71 @@ def test_require_integration_policy_is_a_no_op_without_connection_inputs(monkeyp
         outputs = []
 
     Plain().require_integration_policy(IntegrationPolicyPurpose.USE)
+
+
+class DriveApiKeyComponent(Component):
+    """API-key-mode action component: no connection-reference input at all."""
+
+    inputs = []
+    outputs = [Output(name="result", display_name="Result", method="search")]
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.adapter_calls = 0
+
+    async def search(self):
+        self.adapter_calls += 1
+        return "searched"
+
+
+def _install_api_key_manifest(monkeypatch) -> None:
+    capability = SimpleNamespace(
+        id=SEARCH_CAPABILITY,
+        policy_keys=(SEARCH_KEY,),
+        component_ref="DriveApiKeyComponent",
+    )
+    integration = SimpleNamespace(
+        provider_id="google",
+        capability_manifest=SimpleNamespace(provider_id="google", capabilities=(capability,)),
+    )
+    monkeypatch.setattr(
+        "lfx.extension.bundle_registry.get_default_registry",
+        lambda: SimpleNamespace(list_integrations=lambda: [integration]),
+    )
+
+
+def test_api_key_mode_component_is_gated_by_its_registry_component_ref(monkeypatch) -> None:
+    """A component with no ConnectionRefInput is still governed at execution."""
+    from lfx.services.integration_policy import IntegrationPolicyPurpose
+
+    _install_policy(monkeypatch, _blocked_bundle(actions=frozenset({SEARCH_KEY})))
+    _install_api_key_manifest(monkeypatch)
+    component = DriveApiKeyComponent(_user_id="user-1")
+
+    with pytest.raises(IntegrationPolicyError) as excinfo:
+        component.require_integration_policy(IntegrationPolicyPurpose.USE)
+
+    assert excinfo.value.policy_key == SEARCH_KEY
+    assert component.adapter_calls == 0
+
+
+def test_api_key_mode_component_passes_when_its_action_is_allowed(monkeypatch) -> None:
+    from lfx.services.integration_policy import IntegrationPolicyPurpose
+
+    _install_policy(monkeypatch, PolicyBundleService())
+    _install_api_key_manifest(monkeypatch)
+
+    DriveApiKeyComponent(_user_id="user-1").require_integration_policy(IntegrationPolicyPurpose.USE)
+
+
+def test_components_no_capability_points_at_are_never_gated(monkeypatch) -> None:
+    from lfx.services.integration_policy import IntegrationPolicyPurpose
+
+    _install_policy(monkeypatch, _blocked_bundle(providers=frozenset({"slack"})))
+    _install_api_key_manifest(monkeypatch)
+
+    class Unrelated(Component):
+        inputs = []
+        outputs = []
+
+    Unrelated().require_integration_policy(IntegrationPolicyPurpose.USE)

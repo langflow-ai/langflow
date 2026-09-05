@@ -110,6 +110,34 @@ def policy_keys_for_capabilities(capability_ids: Iterable[str]) -> tuple[str, ..
     return tuple(dict.fromkeys(keys))
 
 
+def integration_policy_identity_for_component_class(class_name: str) -> tuple[str, tuple[str, ...]] | None:
+    """Return ``(provider_id, policy_keys)`` for the class a capability names.
+
+    An API-key-mode action component declares no connection-reference input, so
+    the bundle registry's ``component_ref`` is the only declaration that ties it
+    to a governed action. Returns ``None`` for every component no loaded
+    capability points at, which is every non-integration component.
+    """
+    if not class_name:
+        return None
+    try:
+        from lfx.extension.bundle_registry import get_default_registry
+
+        integrations = get_default_registry().list_integrations()
+    except Exception:  # noqa: BLE001
+        return None
+    provider_id: str | None = None
+    keys: list[str] = []
+    for integration in integrations:
+        for capability in integration.capability_manifest.capabilities:
+            if capability.component_ref == class_name:
+                provider_id = integration.provider_id
+                keys.extend(capability.policy_keys)
+    if provider_id is None:
+        return None
+    return provider_id, tuple(dict.fromkeys(keys))
+
+
 def resolve_integration_policy_for_current_context(
     *,
     provider_ids: Iterable[str],

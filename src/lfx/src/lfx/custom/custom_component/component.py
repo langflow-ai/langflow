@@ -1475,7 +1475,7 @@ class Component(CustomComponent):
 
         return [input_model for input_model in self._inputs.values() if isinstance(input_model, ConnectionRefInput)]
 
-    def _require_integration_policy_for_input(self, input_model) -> None:
+    def _require_integration_policy_for_input(self, input_model, purpose=None) -> None:
         """Gate one connection-reference input's provider and declared actions."""
         from lfx.services.integration_policy import (
             IntegrationPolicyPurpose,
@@ -1487,20 +1487,39 @@ class Component(CustomComponent):
             user_id=self.user_id,
             provider_id=input_model.provider,
             policy_keys=policy_keys_for_capabilities(input_model.capabilities),
-            purpose=IntegrationPolicyPurpose.USE,
+            purpose=purpose or IntegrationPolicyPurpose.USE,
         )
 
-    def require_integration_policy(self, purpose) -> None:
+    def require_integration_policy(self, purpose=None) -> None:
         """Gate every declared integration action before any adapter can run.
 
         A blocked action must fail before the component body executes, not only
-        when a credential is resolved: an API-key-mode component never calls
-        ``resolve_connection``, and a component may reach the provider before
-        its first lease.
+        when a credential is resolved. Two declarations are checked, for the
+        same reason discovery reads both: a connection-backed component names
+        its actions on its ``ConnectionRefInput``, while an API-key-mode action
+        component names none and is identified by the bundle capability whose
+        ``component_ref`` is this class.
         """
-        _ = purpose
+        from lfx.services.integration_policy import (
+            IntegrationPolicyPurpose,
+            integration_policy_identity_for_component_class,
+            require_integration_actions,
+        )
+
+        effective_purpose = purpose or IntegrationPolicyPurpose.USE
         for input_model in self._integration_policy_inputs():
-            self._require_integration_policy_for_input(input_model)
+            self._require_integration_policy_for_input(input_model, effective_purpose)
+
+        identity = integration_policy_identity_for_component_class(type(self).__name__)
+        if identity is None:
+            return
+        provider_id, policy_keys = identity
+        require_integration_actions(
+            user_id=self.user_id,
+            provider_id=provider_id,
+            policy_keys=policy_keys,
+            purpose=effective_purpose,
+        )
 
     async def build_results(self):
         """Build the results of the component."""
