@@ -6,17 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-# Component types that never report as outdated. Must stay in lockstep with
-# componentsToIgnoreUpdate in src/frontend/src/constants/constants.ts.
-#
-# GmailLoaderComponent and GoogleDriveComponent are listed because INT-10 gave
-# them an optional managed-connection field. The addition is safe by every
-# structural rule below, but it changes their code string, and a changed code
-# string alone marks a saved node outdated. They are frozen legacy components,
-# so there is nothing a user gains from being prompted to update them.
-COMPONENTS_TO_IGNORE_UPDATE: frozenset[str] = frozenset(
-    {"CustomComponent", "GmailLoaderComponent", "GoogleDriveComponent"}
-)
+COMPONENTS_TO_IGNORE_UPDATE: frozenset[str] = frozenset({"CustomComponent"})
 TRANSIENT_TEMPLATE_KEYS: frozenset[str] = frozenset({"is_refresh", "tools_metadata"})
 
 # Synthetic output name a component receives when it is switched to tool mode. Must match

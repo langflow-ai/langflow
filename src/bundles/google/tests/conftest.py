@@ -26,6 +26,12 @@ FIXTURES = Path(__file__).resolve().parent / "fixtures" / "google_workspace"
 FAKE_ACCESS_TOKEN = "fake-google-access-token-do-not-use"  # noqa: S105  # pragma: allowlist secret
 FAKE_REFRESHED_TOKEN = "fake-google-refreshed-token"  # noqa: S105  # pragma: allowlist secret
 
+# The executing flow id `wire` stamps on the graph. It is also the local-file access
+# scope (`component_file_access_scopes` reads graph.flow_id), so the containment tests
+# build their allowed storage root as `<config_dir>/<FLOW_ID>`.
+FLOW_ID = "11111111-1111-1111-1111-111111111111"
+RUN_ID = "22222222-2222-2222-2222-222222222222"
+
 
 def load_fixture(name: str) -> dict:
     """Return one recorded Google response body."""
@@ -93,8 +99,8 @@ def wire(component, responses: list[tuple[dict[str, str], bytes]], *, connection
         SimpleNamespace(
             graph=SimpleNamespace(
                 execution_principal=ExecutionPrincipal(kind="actor", user_id="user-1", interactive=True),
-                flow_id="11111111-1111-1111-1111-111111111111",
-                run_id="22222222-2222-2222-2222-222222222222",
+                flow_id=FLOW_ID,
+                run_id=RUN_ID,
             )
         )
     )

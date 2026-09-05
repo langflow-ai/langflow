@@ -13,11 +13,24 @@ from __future__ import annotations
 import base64
 import email
 import json
+from contextlib import contextmanager
+from unittest.mock import MagicMock, patch
 from urllib.parse import parse_qs, urlparse
 
+import lfx_google.components.google as google_bundle
 import pytest
-from conftest import FAKE_ACCESS_TOKEN, FAKE_REFRESHED_TOKEN, json_response, load_fixture, media_response, wire
+from conftest import (
+    FAKE_ACCESS_TOKEN,
+    FAKE_REFRESHED_TOKEN,
+    FLOW_ID,
+    json_response,
+    load_fixture,
+    media_response,
+    wire,
+)
+from lfx.custom.custom_component.component import Component
 from lfx.integrations import AuthExpiredError, ProviderUnavailableError, RateLimitedError, ScopeMissingError
+from lfx.utils.file_path_security import LocalFileAccessError
 from lfx_google.components.google import (
     GmailSendComponent,
     GoogleCalendarCreateComponent,
@@ -32,8 +45,44 @@ CALENDAR_READONLY_SCOPE = "https://www.googleapis.com/auth/calendar.events.reado
 CALENDAR_WRITE_SCOPE = "https://www.googleapis.com/auth/calendar.events"
 
 
+def test_no_input_shadows_a_component_attribute() -> None:
+    """No bundle input may be named after an attribute of the Component base class.
+
+    ``set_attributes`` stores input values in ``_attributes`` and they are read back
+    through ``Component.__getattr__`` — which Python only consults when ordinary
+    attribute lookup fails. An input named after a class attribute (``description``)
+    or a method (``start``) therefore resolves to the base-class value and the user's
+    value is silently dropped; ``set_attributes``' reserved-word guard does not catch
+    it, because it only looks at ``self.__dict__``. This covers every component the
+    bundle exports, not only the wave-1 actions.
+    """
+    reserved = set(dir(Component))
+    shadowed = {
+        f"{name}.{field.name}"
+        for name in google_bundle.__all__
+        for field in getattr(getattr(google_bundle, name), "inputs", [])
+        if field.name in reserved
+    }
+    assert shadowed == set()
+
+
 def query_of(uri: str) -> dict[str, list[str]]:
     return parse_qs(urlparse(uri).query)
+
+
+@contextmanager
+def restricted_file_access(config_dir):
+    """Turn on LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS containment for the duration.
+
+    Same shape as ``src/bundles/ibm/tests/test_db2_security.py::_restricted_file_access``.
+    """
+    with patch("lfx.utils.file_path_security.get_settings_service") as mock_get:
+        settings = MagicMock()
+        settings.settings.restrict_local_file_access = True
+        settings.settings.config_dir = str(config_dir)
+        settings.settings.database_url = ""
+        mock_get.return_value = settings
+        yield
 
 
 def _authorization(recorded_request) -> str:
@@ -105,7 +154,7 @@ def calendar_create_component(**overrides):
         "summary": "Langflow sync",
         "start_time": "2026-09-10T14:00:00Z",
         "end_time": "2026-09-10T15:00:00Z",
-        "description": "",
+        "event_description": "",
         "location": "",
         "attendees": [],
         "send_updates": "none",
@@ -179,10 +228,52 @@ async def test_gmail_send_with_attachments_uses_the_upload_endpoint(tmp_path) ->
 
     await component.send_message()
 
-    uri, method, _body, _headers = http.request_sequence[0]
+    uri, method, body, _headers = http.request_sequence[0]
     assert method == "POST"
     assert "/upload/" in uri
     assert query_of(uri)["uploadType"] == ["multipart"]
+    # The bytes on the wire really came from that file, under that filename.
+    wire_bytes = body if isinstance(body, bytes) else body.encode()
+    assert b"report.txt" in wire_bytes
+    assert base64.b64encode(b"quarterly numbers") in wire_bytes
+
+
+@pytest.mark.usefixtures("resolver")
+async def test_gmail_send_attachment_outside_the_storage_scope_is_denied(tmp_path) -> None:
+    """Attachment bytes leave the deployment by email, so containment is enforced.
+
+    Under LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS an attachment path outside the executing
+    flow's storage scope must be refused before it is read, or a flow editor could mail
+    themselves any file the server can read.
+    """
+    config_dir = tmp_path / "config"
+    (config_dir / FLOW_ID).mkdir(parents=True)
+    outside = tmp_path / "etc-passwd"
+    outside.write_text("root:x:0:0:", encoding="utf-8")
+    component = gmail_send_component(attachments=[str(outside)])
+    wire(component, [json_response("gmail_send_response")])
+
+    with restricted_file_access(config_dir), pytest.raises(LocalFileAccessError):
+        await component.send_message()
+
+
+@pytest.mark.usefixtures("resolver")
+async def test_gmail_send_attaches_a_file_inside_the_storage_scope(tmp_path) -> None:
+    """Containment is a boundary, not a ban: an in-scope upload still attaches."""
+    config_dir = tmp_path / "config"
+    scope_dir = config_dir / FLOW_ID
+    scope_dir.mkdir(parents=True)
+    attachment = scope_dir / "report.txt"
+    attachment.write_text("quarterly numbers", encoding="utf-8")
+    component = gmail_send_component(attachments=[str(attachment)])
+    http = wire(component, [json_response("gmail_send_response")])
+
+    with restricted_file_access(config_dir):
+        await component.send_message()
+
+    wire_bytes = http.request_sequence[0][2]
+    wire_bytes = wire_bytes if isinstance(wire_bytes, bytes) else wire_bytes.encode()
+    assert base64.b64encode(b"quarterly numbers") in wire_bytes
 
 
 @pytest.mark.usefixtures("resolver")
@@ -417,7 +508,7 @@ async def test_calendar_list_requests_only_the_readonly_scope(resolver) -> None:
 @pytest.mark.usefixtures("resolver")
 async def test_calendar_create_posts_the_event_body() -> None:
     component = calendar_create_component(
-        description="Weekly",
+        event_description="Weekly",
         location="Remote",
         attendees=["teammate@example.com"],
         send_updates="all",
@@ -434,11 +525,30 @@ async def test_calendar_create_posts_the_event_body() -> None:
     assert params["sendUpdates"] == ["all"]
     assert params["conferenceDataVersion"] == ["1"]
     payload = json.loads(body)
-    assert payload["summary"] == "Langflow sync"
-    assert payload["start"] == {"dateTime": "2026-09-10T14:00:00Z"}
-    assert payload["attendees"] == [{"email": "teammate@example.com"}]
-    assert payload["recurrence"] == ["RRULE:FREQ=WEEKLY;COUNT=4"]
+    # Every optional body field the component claims to send is asserted here: an
+    # input shadowed by a base-class attribute (the `description` bug) is invisible
+    # unless the value the user supplied is read back off the wire.
+    assert payload == {
+        "summary": "Langflow sync",
+        "start": {"dateTime": "2026-09-10T14:00:00Z"},
+        "end": {"dateTime": "2026-09-10T15:00:00Z"},
+        "description": "Weekly",
+        "location": "Remote",
+        "attendees": [{"email": "teammate@example.com"}],
+        "recurrence": ["RRULE:FREQ=WEEKLY;COUNT=4"],
+    }
     assert result.data == load_fixture("calendar_create_response")
+
+
+@pytest.mark.usefixtures("resolver")
+async def test_calendar_create_omits_the_optional_fields_it_was_not_given() -> None:
+    component = calendar_create_component()
+    http = wire(component, [json_response("calendar_create_response")])
+
+    await component.create_event()
+
+    payload = json.loads(http.request_sequence[0][2])
+    assert set(payload) == {"summary", "start", "end"}
 
 
 @pytest.mark.usefixtures("resolver")

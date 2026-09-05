@@ -12,6 +12,7 @@ from googleapiclient.http import MediaIoBaseUpload
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, FileInput, MessageTextInput, Output
 from lfx.schema.data import Data
+from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 
 from ._workspace_client import workspace_action
 from ._workspace_inputs import GMAIL_SEND_SCOPE, google_connection_input
@@ -115,7 +116,16 @@ class GmailSendComponent(Component):
             message.set_content(body)
 
         for path_str in _attachment_paths(self.attachments):
-            path = Path(path_str)
+            # An attachment path is a tenant-controlled input and the bytes leave the
+            # deployment by email, so containment matters more here than for a component
+            # that merely reads a file into the graph: without this an editor could mail
+            # itself /etc/passwd, the SQLite DB, or another tenant's upload. No-op unless
+            # LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS is on, matching every other file-reading
+            # component (data_source/csv_to_data.py, base/data/base_file.py, ibm/db2_security.py).
+            path = enforce_local_file_access(
+                Path(self.resolve_path(path_str)),
+                scope_ids=component_file_access_scopes(self),
+            )
             payload = path.read_bytes()
             guessed, _ = mimetypes.guess_type(path.name)
             maintype, _, subtype = (guessed or "application/octet-stream").partition("/")

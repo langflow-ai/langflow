@@ -5,15 +5,18 @@ definitions as they stood *before* this change (generated against the PR's base
 ref), so it carries the real pre-INT-10 template and code string rather than a
 hand-written approximation.
 
-Two properties are pinned:
-
-* the new optional connection field is not a breaking change — the structural
-  rules in ``lfx.upgrade.checker`` must never classify these nodes as
-  ``outdated_breaking`` or ``blocked``;
-* the nodes do not even report as outdated, because both classes are in
-  ``COMPONENTS_TO_IGNORE_UPDATE``. Without that entry a changed code string alone
-  would put an "update available" banner on every saved 1.12 flow, which is what
-  the ticket's "opens without upgrade warnings" requirement rules out.
+What is pinned here is the classification the release owner accepted for INT-10:
+the saved nodes are ``outdated_safe`` — never ``blocked`` and never
+``outdated_breaking``. The optional connection field is additive by every
+structural rule in ``lfx.upgrade.checker``; what makes the nodes outdated at all
+is only that the components' code string changed, which is true of any component
+edit. An earlier revision of this branch suppressed even that by adding both
+classes to ``COMPONENTS_TO_IGNORE_UPDATE``; that was reverted, because the
+exemption is checked *before* the registry lookup in ``_classify_node`` and would
+therefore also mask ``blocked`` (component missing from the registry) and any
+future genuinely breaking change to these two classes, permanently. The banner is
+the cheaper of the two, and ``outdated_safe`` is the accepted answer for INT-10
+(DECISIONS.md, release-owner decision 2026-09-04).
 """
 
 from __future__ import annotations
@@ -52,31 +55,51 @@ def test_fixture_predates_the_connection_field() -> None:
         assert "connection" in component_class().to_frontend_node()["data"]["node"]["template"]
 
 
-def test_saved_1_12_flow_opens_without_upgrade_warnings() -> None:
+def test_saved_1_12_flow_opens_without_a_blocking_or_breaking_verdict() -> None:
+    """The accepted INT-10 outcome: outdated_safe, nothing blocked, nothing breaking."""
     report = check_flow_compatibility(_flow(), {}, registry=_current_registry())
 
     assert len(report.nodes) == len(LEGACY_CLASSES)
     assert not report.has_blocked
     assert not report.has_breaking
-    assert [node.status for node in report.nodes] == ["ok"] * len(LEGACY_CLASSES)
+    assert [node.status for node in report.nodes] == ["outdated_safe"] * len(LEGACY_CLASSES)
 
 
-def test_both_legacy_loaders_are_exempt_from_update_prompts() -> None:
-    assert LEGACY_CLASSES.keys() <= COMPONENTS_TO_IGNORE_UPDATE
+def test_the_legacy_loaders_are_not_exempted_from_the_upgrade_checker() -> None:
+    """The exemption list short-circuits before the registry lookup.
+
+    ``_classify_node`` returns ``ok`` for an exempt type before it checks whether the
+    component is in the registry at all, so listing these classes would also hide a
+    ``blocked`` verdict (bundle uninstalled) and every future breaking change to them.
+    INT-10 accepts the update banner instead.
+    """
+    assert not (LEGACY_CLASSES.keys() & COMPONENTS_TO_IGNORE_UPDATE)
+
+
+def test_an_absent_registry_entry_is_still_reported_as_blocked() -> None:
+    """The property the exemption would have destroyed, pinned directly."""
+    report = check_flow_compatibility(_flow(), {}, registry={})
+
+    assert report.has_blocked
+    assert [node.status for node in report.nodes] == ["blocked"] * len(LEGACY_CLASSES)
 
 
 def test_the_added_field_is_structurally_non_breaking() -> None:
-    """Without the exemption the nodes would be outdated_safe, never breaking."""
+    """The connection field itself trips none of the breaking-change rules.
+
+    ``outdated_safe`` above already implies this, so this test isolates the reason:
+    strip the code-string difference (the only thing making the node outdated) and
+    the very same templates classify as ``ok``.
+    """
     registry = _current_registry()
     flow = _flow()
-    # Rename the types so the exemption does not apply and the structural rules run.
     for node in flow["nodes"]:
-        node["data"]["type"] = f"{node['data']['type']}ForTest"
-    renamed_registry = {f"{name}ForTest": entry for name, entry in registry.items()}
+        registry_code = registry[node["data"]["type"]]["template"]["code"]["value"]
+        node["data"]["node"]["template"]["code"]["value"] = registry_code
 
-    report = check_flow_compatibility(flow, {}, registry=renamed_registry)
+    report = check_flow_compatibility(flow, {}, registry=registry)
 
-    assert [node.status for node in report.nodes] == ["outdated_safe"] * len(LEGACY_CLASSES)
+    assert [node.status for node in report.nodes] == ["ok"] * len(LEGACY_CLASSES)
 
 
 def test_the_new_connection_field_is_optional_in_the_registry_template() -> None:
@@ -130,3 +153,27 @@ async def test_gmail_loader_builds_credentials_from_a_connection(resolver, monke
 
     assert captured["creds"].token == FAKE_ACCESS_TOKEN
     assert resolver.requests[0].required_scopes == frozenset({"https://www.googleapis.com/auth/gmail.readonly"})
+
+
+async def test_a_padded_connection_handle_still_resolves(resolver, monkeypatch) -> None:
+    """A pasted handle with surrounding whitespace resolves instead of failing late.
+
+    The either/or guard and ``resolve_connection`` must agree about the handle: the
+    guard used to trim into a local while ``resolve_connection`` re-read the raw field,
+    so ``" google/work "`` passed the "is set" check and then died inside
+    ``ConnectionRef.parse``.
+    """
+    from conftest import wire
+
+    monkeypatch.setattr(
+        "langchain_google_community.gmail.loader.GMailLoader.__init__",
+        lambda _self, _creds, _n=100, _raise_error=False: None,
+    )
+    monkeypatch.setattr("langchain_google_community.gmail.loader.GMailLoader.load", lambda _self: [])
+
+    component = GmailLoaderComponent(json_string="", label_ids="INBOX", max_results="5")
+    wire(component, [], connection="  google/work  ")
+
+    await component.load_emails()
+
+    assert resolver.requests[0].ref.to_handle() == "google/work"
