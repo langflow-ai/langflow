@@ -1,0 +1,136 @@
+---
+title: Microsoft 365 components
+slug: /bundles-microsoft
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="microsoft" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components available in the **Microsoft 365** bundle.
+Every component calls [Microsoft Graph](https://learn.microsoft.com/en-us/graph/overview) v1.0 with **delegated** permissions, acting as the signed-in user. Application (app-only) permissions are not used by any component in this bundle.
+
+## Connect a Microsoft account
+
+Each component has a **Microsoft Connection** field that holds a portable connection handle such as `microsoft/work`. The handle is not a credential: it names a connection that the Langflow server resolves to a short-lived Graph access token at run time, and it is safe to keep in an exported flow.
+
+Before a component can run:
+
+1. An operator registers a Microsoft Entra application with Langflow. See [Register a Microsoft Entra application](../Develop/entra-app-registration.mdx) and [Configure connection OAuth](../Develop/connection-oauth.mdx).
+2. A user connects their Microsoft account through that registration, granting the delegated permissions the selected actions need.
+3. The user selects that connection in the component's **Microsoft Connection** field.
+
+The connection must grant the permissions listed for the action. Missing permissions fail the run with a `scope-missing` error before any request reaches Microsoft, so a component never sends a call it knows will be refused.
+
+### Headless and CLI runs
+
+For headless runs (`lfx run`), supply the credential in the environment variable named after the handle. `microsoft/work` reads `LF_CONNECTION__MICROSOFT__WORK`:
+
+```bash
+export LF_CONNECTION__MICROSOFT__WORK='{"access_token":"<delegated access token>","scopes":["Mail.Read"]}'
+```
+
+Use the **short** permission names, exactly as Microsoft Entra returns them in the token response (`Mail.Read`, not `https://graph.microsoft.com/Mail.Read`). Do not include `offline_access`: Entra never echoes it, and it belongs to the OAuth registration rather than to an action.
+
+The JSON form accepts only `access_token`, `token_type`, `expires_at`, `scopes`, and `account`. Refresh tokens and client secrets are rejected. A bare token string is also accepted, in which case the permissions are not verified locally and Microsoft rejects the call instead.
+
+## Components
+
+### Outlook: Send Mail
+
+Sends a message as the connected user through `POST /me/sendMail`.
+
+- **Delegated permission:** `Mail.Send`
+- **Inputs:** **To**, **Cc**, **Bcc**, **Subject**, **Body**, **Body is HTML**, **Attachments**, **Save to Sent Items**
+- **Output:** **Result** — Graph answers `202 Accepted` with no body, so the output carries the accepted request and the status code.
+
+Attachments are uploaded inline as Graph `fileAttachment` entries. Exchange Online caps message size, by default at 35 MB and at most 150 MB when the tenant raises it.
+
+### Outlook: Search Mail
+
+Lists or searches the connected user's mailbox through `GET /me/messages`.
+
+- **Delegated permission:** `Mail.Read`
+- **Inputs:** **Search** (`$search`), **Filter** (`$filter`), **Mail Folder ID**, **Max Results** (1-1000), **Select Fields**, **Include Body**
+- **Outputs:** **Messages** (one `Data` per message) and **Next Link** (the `@odata.nextLink` that was not followed)
+
+Graph rejects `$search` combined with `$filter`; use one or the other. **Include Body** asks Graph for plain-text bodies through the `Prefer: outlook.body-content-type=text` header.
+
+### Outlook Calendar: List Events
+
+Lists events in a time window through `GET /me/calendarView`, with recurring series expanded into instances.
+
+- **Delegated permission:** `Calendars.Read`
+- **Inputs:** **Start**, **End** (ISO 8601, both required), **Calendar ID**, **Max Results**, **Select Fields**, **Time Zone**
+- **Outputs:** **Events** and **Next Link**
+
+**Time Zone** sets the `Prefer: outlook.timezone` header, so returned times use the zone you name rather than UTC.
+
+### Outlook Calendar: Create Event
+
+Creates an event through `POST /me/events`.
+
+- **Delegated permission:** `Calendars.ReadWrite`
+- **Inputs:** **Subject**, **Start**, **End**, **Time Zone**, **Body**, **Location**, **Attendees**, **Online Meeting**, **Recurrence**, **Calendar ID**, **Transaction ID**
+- **Output:** **Event** — the created Graph event resource
+
+Set **Transaction ID** to a value you generate to make a retried create idempotent: Microsoft ignores a repeat with the same transaction id for a period after the first call.
+
+### Teams: Post Chat Message
+
+Posts into an existing chat through `POST /chats/{chat-id}/messages`.
+
+- **Delegated permission:** `ChatMessage.Send`
+- **Inputs:** **Chat ID**, **Message**, **Content Type** (`text` or `html`), **Mentions**, **Attachments**
+- **Output:** **Message** — the created `chatMessage`
+
+This action posts into a chat that already exists; it cannot create one. Microsoft Graph does not support this action for personal Microsoft accounts.
+
+### Teams: Post Channel Message
+
+Posts into a channel through `POST /teams/{team-id}/channels/{channel-id}/messages`.
+
+- **Delegated permission:** `ChannelMessage.Send`
+- **Inputs:** **Team ID**, **Channel ID**, **Message**, **Content Type**, **Mentions**, **Attachments**
+- **Output:** **Message** — the created `chatMessage`, including its `webUrl`
+
+Personal Microsoft accounts are not supported.
+
+### SharePoint/OneDrive: List Items
+
+Lists the children of a folder through `GET .../children`.
+
+- **Delegated permission:** `Files.Read`, plus `Files.Read.All` when you supply a **Drive ID** and `Sites.Read.All` when you supply a **Site ID**
+- **Inputs:** **Drive ID**, **Site ID**, **Folder Item ID**, **Folder Path**, **Max Results**, **Select Fields**, **Order By**
+- **Outputs:** **Items** (one `Data` per `driveItem`) and **Next Link**
+
+With neither a drive nor a site id, the component lists the connected user's own OneDrive. A drive id takes precedence over a site id.
+
+### SharePoint/OneDrive: Fetch Item
+
+Fetches one file's metadata and content through `GET .../content`.
+
+- **Delegated permission:** `Files.Read`, plus `Files.Read.All` or `Sites.Read.All` as above
+- **Inputs:** **Item ID** or **Item Path** (one is required), **Drive ID**, **Site ID**, **Byte Range**, **Max Bytes**
+- **Output:** **File** — `driveItem` metadata plus `content_base64`, `content_bytes`, `truncated`, and `text` when the bytes decode as UTF-8
+
+Graph answers a content request with a redirect to a short-lived, preauthenticated download URL. Langflow follows that redirect without the access token and never returns, stores, or logs the URL, because the URL is itself a credential for anyone who holds it.
+
+## Rate limits
+
+Microsoft throttles per service and returns `429` (or `503`) with a `Retry-After` header. The components surface that as a `rate-limited` error carrying the retry interval; they do not retry on your behalf.
+
+- Outlook: 10,000 requests per 10 minutes and 4 concurrent requests per app per mailbox.
+- Teams: 1 request per second per chat and per channel, with higher per-app and per-tenant ceilings.
+- SharePoint and OneDrive: resource-unit budgets, roughly 3,000 requests per 5 minutes per user.
+
+For the authoritative numbers, see [Microsoft Graph throttling limits](https://learn.microsoft.com/en-us/graph/throttling-limits).
+
+## Limitations
+
+- Only delegated permissions are used. Sending mail as another mailbox, or reading a tenant's data without a signed-in user, requires application permissions and is out of scope for this bundle.
+- The connection broker uses a fixed-tenant authority, so a registration serves one Entra tenant. Personal Microsoft accounts and multi-tenant registrations are not supported yet.
+- Teams chat and channel posts are unavailable to personal Microsoft accounts even within a supported registration.

@@ -207,6 +207,13 @@ the deserialize half is covered by
 
 ### v0 (this release)
 
+- **2026-09-05 (INT-11, `lfx-microsoft`).** First consumer of the bundle-owned
+  integration manifest: `lfx-microsoft` ships eight Microsoft Graph delegated
+  actions and builds its `ConnectionRefInput` scopes *from* its own
+  `capabilities.v1.json`. No surface in this document changed --
+  `BUNDLE_API_VERSION` remains `1` -- the entry is recorded so the contract's
+  history names its first out-of-tree consumer.
+
 - **Optional rejected-token digest for connection refresh.**
   `ConnectionResolutionRequest.rejected_token_digest` carries a SHA-256 digest only
   after a provider rejects a cached credential. `CredentialLease` supplies it on

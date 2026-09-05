@@ -1,0 +1,255 @@
+{
+  "schema_version": 1,
+  "provider_id": "microsoft",
+  "display_name": "Microsoft 365",
+  "icon": "Microsoft",
+  "docs_url": "https://docs.langflow.org/bundles-microsoft",
+  "auth_profiles": [
+    {
+      "id": "user",
+      "kind": "oauth2_authorization_code",
+      "identity": "user_delegated",
+      "authorization_url": "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/authorize",
+      "token_url": "https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token",
+      "supports_pkce": true,
+      "supports_refresh": true,
+      "scope_separator": " ",
+      "default_scopes": [
+        "offline_access"
+      ],
+      "client_type_by_context": {
+        "hosted": "confidential",
+        "self_managed": "confidential",
+        "desktop": "public",
+        "headless": "external"
+      },
+      "owner_by_context": {
+        "hosted": "langflow",
+        "self_managed": "customer",
+        "desktop": "langflow",
+        "headless": "customer"
+      },
+      "tenant_param": "tenant"
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "microsoft.outlook.send",
+      "display_name": "Outlook: Send Mail",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "Mail.Send"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.microsoft.outlook.send"
+      ],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "OutlookSendComponent"
+    },
+    {
+      "id": "microsoft.outlook.search",
+      "display_name": "Outlook: Search Mail",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "Mail.Read"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.microsoft.outlook.search"
+      ],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "read",
+      "component_ref": "OutlookSearchComponent"
+    },
+    {
+      "id": "microsoft.calendar.list",
+      "display_name": "Outlook Calendar: List Events",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "Calendars.Read"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.microsoft.calendar.list"
+      ],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "read",
+      "component_ref": "OutlookCalendarListComponent"
+    },
+    {
+      "id": "microsoft.calendar.create",
+      "display_name": "Outlook Calendar: Create Event",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "Calendars.ReadWrite"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.microsoft.calendar.create"
+      ],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "OutlookCalendarCreateComponent"
+    },
+    {
+      "id": "microsoft.teams.chat_post",
+      "display_name": "Teams: Post Chat Message",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "ChatMessage.Send"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.microsoft.teams.chat_post"
+      ],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "TeamsChatPostComponent"
+    },
+    {
+      "id": "microsoft.teams.channel_post",
+      "display_name": "Teams: Post Channel Message",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "ChannelMessage.Send"
+      ],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.microsoft.teams.channel_post"
+      ],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "TeamsChannelPostComponent"
+    },
+    {
+      "id": "microsoft.files.list",
+      "display_name": "SharePoint/OneDrive: List Items",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "Files.Read"
+      ],
+      "conditional_scopes": [
+        {
+          "scope": "Files.Read.All",
+          "role": "optional",
+          "condition": {
+            "kind": "input_present",
+            "input": "drive_id"
+          }
+        },
+        {
+          "scope": "Sites.Read.All",
+          "role": "optional",
+          "condition": {
+            "kind": "input_present",
+            "input": "site_id"
+          }
+        }
+      ],
+      "policy_keys": [
+        "integrations.microsoft.files.list"
+      ],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "read",
+      "component_ref": "SharePointListComponent"
+    },
+    {
+      "id": "microsoft.files.fetch",
+      "display_name": "SharePoint/OneDrive: Fetch Item",
+      "auth_profile_id": "user",
+      "identity": "user_delegated",
+      "required_scopes": [
+        "Files.Read"
+      ],
+      "conditional_scopes": [
+        {
+          "scope": "Files.Read.All",
+          "role": "optional",
+          "condition": {
+            "kind": "input_present",
+            "input": "drive_id"
+          }
+        },
+        {
+          "scope": "Sites.Read.All",
+          "role": "optional",
+          "condition": {
+            "kind": "input_present",
+            "input": "site_id"
+          }
+        }
+      ],
+      "policy_keys": [
+        "integrations.microsoft.files.fetch"
+      ],
+      "substrate": "rest",
+      "maturity": "ga",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "read",
+      "component_ref": "SharePointFetchComponent"
+    }
+  ]
+}

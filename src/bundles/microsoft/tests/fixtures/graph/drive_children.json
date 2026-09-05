@@ -1,0 +1,22 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#drives('b!drive')/items('root')/children",
+  "value": [
+    {
+      "id": "01BYE5RZ6QN3ZWBTUFOFD3GSPGOHDJD36K",
+      "name": "Quarterly plan.docx",
+      "size": 24576,
+      "webUrl": "https://contoso.sharepoint.com/Documents/Quarterly%20plan.docx",
+      "file": {"mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"},
+      "lastModifiedDateTime": "2026-08-30T18:22:00Z",
+      "parentReference": {"driveId": "b!drive", "id": "root"}
+    },
+    {
+      "id": "01BYE5RZ7QN3ZWBTUFOFD3GSPGOHDJD37L",
+      "name": "Archive",
+      "size": 0,
+      "folder": {"childCount": 3},
+      "lastModifiedDateTime": "2026-08-20T10:00:00Z",
+      "parentReference": {"driveId": "b!drive", "id": "root"}
+    }
+  ]
+}
