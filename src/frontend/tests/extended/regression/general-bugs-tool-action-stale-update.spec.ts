@@ -63,12 +63,21 @@ test(
     await page.getByTestId("input_update_name").fill(NEW_SLUG);
     await page.getByTestId("input_update_description").fill(NEW_DESCRIPTION);
 
+    // The row refreshes as the edits above land, which can recreate the
+    // switch cell out from under a click; retry until the toggle takes.
     const toggle = page.getByTestId("requires-approval-toggle").first();
-    await toggle.click();
-    await expect(toggle).toHaveAttribute("aria-checked", "true");
+    await expect(async () => {
+      if ((await toggle.getAttribute("aria-checked")) !== "true") {
+        await toggle.click();
+      }
+      await expect(toggle).toHaveAttribute("aria-checked", "true", {
+        timeout: 1000,
+      });
+    }).toPass({ timeout: 30000 });
     // The switch renders instantly but persists onto the row after its slide
     // transition, so give that timer room before closing the editor.
     await page.waitForTimeout(600);
+    await expect(toggle).toHaveAttribute("aria-checked", "true");
 
     await page.keyboard.press("Escape");
     await expect(page.getByTestId("input_update_name")).toBeHidden({

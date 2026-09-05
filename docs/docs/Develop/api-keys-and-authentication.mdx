@@ -275,16 +275,17 @@ For more information, see [Secret Key Rotation](https://github.com/langflow-ai/l
 
 ### LANGFLOW_NEW_USER_IS_ACTIVE {#langflow-new-user-is-active}
 
-When `LANGFLOW_NEW_USER_IS_ACTIVE=False` (default), accounts created by superusers are inactive by default and must be explicitly activated before users can sign in to the visual editor.
-The superuser can also deactivate a user's account as needed.
+When `LANGFLOW_NEW_USER_IS_ACTIVE=False` (default), new accounts are inactive until a superuser activates them with the [Users API](/api-users).
+Inactive users cannot sign in to the visual editor.
+The superuser can also deactivate an account with the same API.
 
-When `LANGFLOW_NEW_USER_IS_ACTIVE=True`, accounts created by superusers are automatically activated.
+When `LANGFLOW_NEW_USER_IS_ACTIVE=True`, new accounts are automatically activated.
 
 ```text
 LANGFLOW_NEW_USER_IS_ACTIVE=False
 ```
 
-Only superusers can manage user accounts for a Langflow server, but user management only matters if your server has authentication enabled.
+Only superusers can manage user accounts for a Langflow server through the [Users API](/api-users).
 For more information, see [Start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled).
 
 ### LANGFLOW_ENABLE_SIGNUP {#langflow-enable-signup}
@@ -294,7 +295,7 @@ This variable controls whether public self-registration is allowed at the `POST 
 | Value | Description |
 |-------|-------------|
 | `True` (default) | Anyone can create a new Langflow account by calling the registration endpoint directly. |
-| `False` | Public registration is disabled. Only superusers can create new accounts through the admin interface. |
+| `False` | Public registration is disabled. Only superusers can create new accounts with the [Users API](/api-users). |
 
 Self-registration is always disabled when `LANGFLOW_AUTO_LOGIN=True`, because single-user mode has no multi-account concept.
 Superusers can create accounts regardless of this setting.
@@ -453,18 +454,21 @@ LANGFLOW_CORS_ALLOW_METHODS=["GET","POST","PUT"]
 
 ### LANGFLOW_ACCESS_* and LANGFLOW_REFRESH_* {#session-cookie-hardening}
 
-For a shared or public deployment served over HTTPS, harden the session cookies. These default to values that support local HTTP development and same-site deployments. The current frontend reads the access token in JavaScript, while the refresh token remains `HttpOnly`.
+For a shared or public deployment served over HTTPS, harden the session cookies.
+`Secure` and `SameSite` default to values that support local HTTP development.
+Both the access and refresh cookies are `HttpOnly` by default; the browser sends them automatically with requests.
 
 Set both `LANGFLOW_ACCESS_SECURE` and `LANGFLOW_REFRESH_SECURE` to `True` for HTTPS deployments. Cross-site HTTPS deployments must also set `LANGFLOW_REFRESH_SAME_SITE=none`.
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
 | `LANGFLOW_ACCESS_SECURE` | Boolean | `False` | When `true`, the `access_token_lf` cookie is sent only over HTTPS. Recommended `true` for any HTTPS deployment. |
-| `LANGFLOW_ACCESS_HTTPONLY` | Boolean | `False` | When `true`, the `access_token_lf` cookie is not readable by JavaScript. The default is `false` because the bundled frontend currently reads this cookie in JavaScript. |
+| `LANGFLOW_ACCESS_HTTPONLY` | Boolean | `True` | When `true`, the `access_token_lf` cookie is not readable by JavaScript. Set to `false` only if a client must read this cookie in JavaScript. |
 | `LANGFLOW_ACCESS_SAME_SITE` | String | `lax` | The `SameSite` attribute of the access-token cookie (`lax`, `strict`, or `none`). |
 | `LANGFLOW_REFRESH_SECURE` | Boolean | `False` | When `true`, the `refresh_token_lf` cookie is sent only over HTTPS. Set this to `true` for any HTTPS deployment. |
 | `LANGFLOW_REFRESH_HTTPONLY` | Boolean | `True` | When `true`, the `refresh_token_lf` cookie is not readable by JavaScript. |
 | `LANGFLOW_REFRESH_SAME_SITE` | String | `lax` | The `SameSite` attribute of the refresh-token cookie (`lax`, `strict`, or `none`). |
+| `LANGFLOW_COOKIE_DOMAIN` | String | Not set | Domain attribute for the access and refresh cookies. Leave unset for host-only cookies. Set to a parent domain, such as `.example.com`, when the frontend and API are on different subdomains. |
 
 ### Anonymous public-flow authorization
 
@@ -516,6 +520,7 @@ For more information, see [Docker image defaults](/deployment-docker#docker-imag
 | `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` | Boolean | `False` | When `true`, blocks execution of any flow containing a built-in arbitrary-code-execution component, including the [**Python Interpreter**](/python-interpreter), Python REPL/Code tools, [**Smart Transform**](/smart-transform), [**CSV Agent**](/bundles-langchain#csv-agent), and code-running agents such as [**CodeAct**](/bundles-codeagents#codeact-agent-smolagents), [**CUGA**](/bundles-cuga), and [**OpenDsStar**](/bundles-codeagents#opendstar-agent). |
 | `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS` | Boolean | `False` | When `true`, built-in file-reading components, including the [**File**](/read-file), [**Directory**](/legacy-core-components#legacy-data-components), [**JSON/CSV-to-Data**](/legacy-core-components#legacy-data-components), and the [**CSV Agent**](/bundles-langchain#csv-agent), [**JSON Agent**](/bundles-langchain#legacy-langchain-components), and [**OpenAPI Agent**](/bundles-langchain#openapi-agent) can only read and write paths inside the [`LANGFLOW_CONFIG_DIR`](/memory) storage directory. This also blocks `sqlite` and `duckdb` dialects in the [**SQL Database**](/sql-database) components and local-filesystem Git clones. |
 | `LANGFLOW_MCP_SERVER_DOCKER_HARDENING` | Boolean | `False` | When `true`, applies a strict Docker-argument policy to MCP stdio servers that use the `docker` transport. Rejects host filesystem or device mounts, `host/another-container` namespaces, non-default networks, privilege flags, and sandbox-disabling `--security-opt` values. Forms such as `--network none` / `bridge` and `--security-opt no-new-privileges` remain allowed. |
+| `LANGFLOW_TWEAKS_POLICY` | String | `permissive` | Which component fields a run request may set through `tweaks`. For more information, see [Restrict API tweaks](./deployment-tweaks-policy). |
 
 Enable these flags when untrusted users can build flows on this server.
 
@@ -528,10 +533,19 @@ To enable these flags, set the following:
 * `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true`: blocks built-in code-execution components.
 * `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true`: confines built-in file access to the upload sandbox.
 * `LANGFLOW_MCP_SERVER_DOCKER_HARDENING=true`: tightens Docker MCP server arguments.
+* `LANGFLOW_TWEAKS_POLICY=declared` or `off`: limits which component fields an API caller can override at run time. See [Restrict API tweaks](./deployment-tweaks-policy).
+
+To block named built-in components, starter templates, model providers, or models across the install, use the [catalog and model policy APIs](./api-governance-policy).
 
 Pair these settings with the [SSRF settings](#ssrf-protection) to reduce common escape hatches.
 
 These settings **do not** provide full user isolation. For more information, see [Security](/security).
+
+The flags above decide *whether* code is allowed to run. They do not constrain what it does once it runs, so they are authorization controls rather than an isolation boundary.
+
+To run permitted executions behind a kernel boundary instead of blocking them outright, set a [sandbox backend](./environment-variables.mdx). The built-in `exec-sandbox` backend runs code in a QEMU microVM on this host. Trusted third-party packages can register other backends.
+
+A sandbox backend covers the [**Python Interpreter**](/python-interpreter) and the legacy Python REPL tool only — the other surfaces listed above still need the blocking flags.
 
 :::tip
 Do not enable a shared tracer when users are untrusted. Instead, use [built-in local tracing](/traces).
@@ -755,7 +769,7 @@ LANGFLOW_REFRESH_TOKEN_EXPIRE_SECONDS=604800 # 7 days
 ## Start a Langflow server with authentication enabled {#start-a-langflow-server-with-authentication-enabled}
 
 This section shows you how to use the [authentication environment variables](/api-keys-and-authentication#authentication-environment-variables) to deploy a Langflow server with authentication enabled.
-This involves disabling automatic login, setting superuser credentials, generating a secret encryption key, and enabling user management.
+This involves disabling automatic login, setting superuser credentials, and generating a secret encryption key.
 
 This configuration is recommended for any deployment where Langflow is exposed to a shared or public network, or where multiple users access the same Langflow server.
 
@@ -766,7 +780,8 @@ For more information, see [Docker image defaults](/deployment-docker#docker-imag
 :::
 
 With authentication enabled, all users must sign in to the visual editor with valid credentials, and API requests require authentication with a Langflow API key.
-Additionally, you must sign in as a superuser to manage users and [create a Langflow API key](#create-a-langflow-api-key) with superuser privileges.
+Sign in as a superuser to [create a Langflow API key](#create-a-langflow-api-key) with superuser privileges.
+User management is through the [Users API](/api-users), not the visual editor.
 
 ### Start the Langflow server
 
@@ -778,11 +793,15 @@ Additionally, you must sign in as a superuser to manage users and [create a Lang
     LANGFLOW_SUPERUSER_PASSWORD=
     LANGFLOW_SECRET_KEY=
     LANGFLOW_NEW_USER_IS_ACTIVE=False
+    LANGFLOW_ENABLE_SIGNUP=False
     LANGFLOW_ENABLE_SUPERUSER_CLI=False
     ```
 
     Your `.env` file can have other environment variables.
     This example focuses on authentication variables.
+
+    `LANGFLOW_ENABLE_SIGNUP=False` restricts account creation to superusers.
+    `LANGFLOW_NEW_USER_IS_ACTIVE=False` keeps new accounts inactive until you activate them with the Users API.
 
 2. Set `LANGFLOW_SUPERUSER_PASSWORD` to your desired superuser password. Optionally set `LANGFLOW_SUPERUSER` to override the default `langflow` username.
 
@@ -803,6 +822,7 @@ Additionally, you must sign in as a superuser to manage users and [create a Lang
     LANGFLOW_SUPERUSER_PASSWORD=securepassword
     LANGFLOW_SECRET_KEY=dBuu...2kM2_fb
     LANGFLOW_NEW_USER_IS_ACTIVE=False
+    LANGFLOW_ENABLE_SIGNUP=False
     LANGFLOW_ENABLE_SUPERUSER_CLI=False
     ```
 
@@ -817,35 +837,170 @@ Additionally, you must sign in as a superuser to manage users and [create a Lang
 
 6. Verify the server is running. The default location is `http://localhost:7860`.
 
-Next, you can add users to your Langflow server to collaborate with others on flows.
+Next, add users with the Users API so they can collaborate on flows.
 
 ### Manage users as an administrator
 
-1. To complete your first-time login as a superuser, go to `http://localhost:7860/login`.
+As of Langflow 1.12, Langflow OSS has no **Admin Page** in the visual editor.
+Superusers add, activate, list, and delete users, set **Superuser**, and set other users' passwords with `PATCH /api/v1/users/{id}`. For more information, see [Users endpoints](/api-users).
+
+1. To complete your first-time login as a superuser, navigate to `http://localhost:7860/login`.
 
     If you aren't using the default location, replace `localhost:7860` with your server's address.
 
-2. Log in with the superuser credentials from your `.env`: the `LANGFLOW_SUPERUSER` username, or `langflow` if unset, and the `LANGFLOW_SUPERUSER_PASSWORD` password.
+2. Log in with the password you set in `LANGFLOW_SUPERUSER_PASSWORD` and the username from `LANGFLOW_SUPERUSER`.
+    If you did not set `LANGFLOW_SUPERUSER`, the username is `langflow`.
 
-3. To manage users on your server, navigate to `/admin`, such as `http://localhost:7860/admin`, click your profile icon, and then click **Admin Page**.
+3. [Create a Langflow API key](#create-a-langflow-api-key) while signed in as the superuser.
+    User-management requests require a Langflow API key in the `x-api-key` header.
 
-    As a superuser, you can add users, set permissions, reset passwords, and delete accounts.
+4. Create a user:
 
-4. To add a user, click **New User**, and then complete the user account form:
+    <Tabs groupId="users-api">
+    <TabItem value="Python" label="Python" default>
 
-    1. Enter a username and password.
-    2. To activate the account immediately, select **Active**. Inactive users cannot sign in or access flows they created before becoming inactive.
-    3. Deselect **Superuser** if you don't want the user to have full administrative privileges.
-    4. Click **Save**. The new user appears in the **Admin Page**.
+    ```python
+    import os
 
-5. Send the credentials to the user so they can sign in to Langflow. The superuser sets the initial password when creating the account, so users must receive their login credentials from the superuser.
+    import requests
 
-6. To test the new user's access, sign out of Langflow, and then sign in with the new user's credentials.
+    base = os.environ["LANGFLOW_URL"]
+    headers = {
+        "Content-Type": "application/json",
+        "x-api-key": os.environ["LANGFLOW_API_KEY"],
+    }
+    payload = {
+        "username": "newuser",
+        "password": "securepassword123",
+    }
 
-    Try to access the `/admin` page.
-    You are redirected to the `/flows` page if the new user isn't a superuser.
+    response = requests.post(f"{base}/api/v1/users/", headers=headers, json=payload, timeout=30)
+    response.raise_for_status()
+    print(response.json())
+    ```
+
+    </TabItem>
+    <TabItem value="typescript" label="TypeScript">
+
+    ```typescript
+    const url = `${process.env.LANGFLOW_URL}/api/v1/users/`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.LANGFLOW_API_KEY!,
+      },
+      body: JSON.stringify({
+        username: "newuser",
+        password: "securepassword123",
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    console.log(await response.json());
+    ```
+
+    </TabItem>
+    <TabItem value="curl" label="curl">
+
+    ```bash
+    curl -X POST \
+      "$LANGFLOW_URL/api/v1/users/" \
+      -H "Content-Type: application/json" \
+      -H "x-api-key: $LANGFLOW_API_KEY" \
+      -d '{
+        "username": "newuser",
+        "password": "securepassword123"
+      }'
+    ```
+
+    </TabItem>
+    </Tabs>
+
+    The response includes the user's `id`.
+    New accounts are inactive when `LANGFLOW_NEW_USER_IS_ACTIVE=False` (the default, and the value in the `.env` example above).
+
+5. Activate the account so the user can sign in.
+    Replace `USER_ID` with the `id` from the create response:
+
+    <Tabs groupId="users-api">
+    <TabItem value="Python" label="Python" default>
+
+    ```python
+    import os
+
+    import requests
+
+    base = os.environ["LANGFLOW_URL"]
+    user_id = "USER_ID"
+    headers = {
+        "Content-Type": "application/json",
+        "x-api-key": os.environ["LANGFLOW_API_KEY"],
+    }
+    payload = {"is_active": True}
+
+    response = requests.patch(
+        f"{base}/api/v1/users/{user_id}", headers=headers, json=payload, timeout=30
+    )
+    response.raise_for_status()
+    print(response.json())
+    ```
+
+    </TabItem>
+    <TabItem value="typescript" label="TypeScript">
+
+    ```typescript
+    const userId = "USER_ID";
+    const url = `${process.env.LANGFLOW_URL}/api/v1/users/${userId}`;
+
+    const response = await fetch(url, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.LANGFLOW_API_KEY!,
+      },
+      body: JSON.stringify({ is_active: true }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    console.log(await response.json());
+    ```
+
+    </TabItem>
+    <TabItem value="curl" label="curl">
+
+    ```bash
+    curl -X PATCH \
+      "$LANGFLOW_URL/api/v1/users/USER_ID" \
+      -H "Content-Type: application/json" \
+      -H "x-api-key: $LANGFLOW_API_KEY" \
+      -d '{
+        "is_active": true
+      }'
+    ```
+
+    </TabItem>
+    </Tabs>
+
+    To grant administrative privileges, include `"is_superuser": true` in the same request.
+    To reset another user's password, `PATCH /api/v1/users/{id}` with `"password": "<new password>"`. That path does not require the current password. `PATCH /api/v1/users/{id}/reset-password` is self-service: it must be called as that user and requires `current_password`. See [Update user](./api-users#update-user).
+    To list, deactivate, or delete a user, see [Users endpoints](/api-users).
+
+6. Send the username and password to the user.
+    The superuser sets the initial password when creating the account.
+
+7. To test the new user's access, sign out of Langflow, and then sign in at `/login` with the new user's credentials.
+    A non-superuser can use the visual editor and cannot call the Users API to manage other accounts.
 
 ## See also
 
 * [Langflow environment variables](/environment-variables)
+* [Users endpoints](/api-users)
 * [Langflow Security Policy](https://github.com/langflow-ai/langflow/blob/main/SECURITY.md) — reporting vulnerabilities, security configuration, and [secret key rotation](https://github.com/langflow-ai/langflow/blob/main/SECURITY.md#secret-key-rotation)

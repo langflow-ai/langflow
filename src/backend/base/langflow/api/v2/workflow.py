@@ -33,6 +33,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from fastapi.responses import EventSourceResponse, StreamingResponse
+from lfx.exceptions.tweaks import TweakRefusedError
 from lfx.log.logger import logger
 from lfx.memory.flow_context import derive_message_owner_uuid
 from lfx.schema.workflow import (
@@ -90,6 +91,10 @@ from langflow.services.auth.utils import get_current_user_for_workflow
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import deny_to_404_unless_readable
 from langflow.services.authorization.flow_data_override import resolve_flow_data_override
+from langflow.services.background_execution.service import (
+    InvalidRequestOverridesError,
+    RequestOverridesUnavailableError,
+)
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.jobs.model import Job, JobType
 from langflow.services.database.models.user.model import UserRead
@@ -105,6 +110,23 @@ from langflow.services.warm_registry.resolver import resolve_warm_flow_for_execu
 # Finished states a late /stop must not rewrite (CANCELLED is handled separately
 # with its own idempotent early return).
 _TERMINAL_JOB_STATUSES = frozenset({JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.TIMED_OUT})
+
+
+def _workflow_job_mode(job: Job) -> str | None:
+    """Return the persisted execution mode for a workflow job, if recognized.
+
+    Durable background submissions store their sanitized request under
+    ``job_metadata["request"]``. Sync and live-stream rows do not have that
+    durable execution handle, so missing or malformed metadata intentionally
+    resolves to ``None`` and is treated as non-cancellable.
+    """
+    metadata = job.job_metadata if isinstance(job.job_metadata, dict) else {}
+    request = metadata.get("request")
+    if not isinstance(request, dict):
+        return None
+    mode = request.get("mode")
+    return mode if mode in {"background", "stream", "sync"} else None
+
 
 # The langflow durable background routes (GET status, POST /stop, GET /pending,
 # POST /{job_id}/resume, GET /{job_id}/events). The POST run path is contributed
@@ -319,6 +341,8 @@ async def run_sync_with_mapping(
                 "timeout_seconds": timeout_seconds,
             },
         ) from None
+    except TweakRefusedError:
+        raise
     except (PydanticValidationError, WorkflowValidationError) as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -371,15 +395,17 @@ def build_stream_response(
     before the response is constructed so a bad request fails before streaming.
     """
     parsed = _apply_execution_gates(parsed, flow, current_user)
+    run_id = str(uuid4())
     adapter = get_stream_adapter(
         stream_protocol,
         StreamAdapterContext(
-            run_id=str(uuid4()),
+            run_id=run_id,
             thread_id=parsed.session_id or str(flow.id),
         ),
     )
     return _execute_streaming_workflow(
         adapter=adapter,
+        run_id=run_id,
         parsed=parsed,
         flow=flow,
         current_user=current_user,
@@ -406,6 +432,27 @@ async def submit_background_with_mapping(
             stream_protocol=stream_protocol,
             idempotency_key=getattr(parsed, "idempotency_key", None),
         )
+    except InvalidRequestOverridesError as err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "error": "Invalid request overrides",
+                "code": "INVALID_REQUEST_OVERRIDES",
+                "message": "globals and tweaks must contain JSON-compatible values.",
+                "field": err.field,
+                "flow_id": parsed.flow_id,
+            },
+        ) from err
+    except RequestOverridesUnavailableError as err:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "Service unavailable",
+                "code": "REQUEST_OVERRIDES_UNAVAILABLE",
+                "message": "Background request overrides are temporarily unavailable. Please try again.",
+                "flow_id": parsed.flow_id,
+            },
+        ) from err
     except WorkflowServiceUnavailableError as err:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -574,6 +621,7 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 background_tasks=fresh_background_tasks,
                 parsed=parsed,
                 current_user=user,
+                provider_policy_flow=flow,
                 source_flow_owner_id=flow.user_id,
                 expose_error_details=caller_owns_flow(flow, user),
                 job_id=job_id,
@@ -593,6 +641,11 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 # ``Job.result`` — protocol-neutral, so agui-protocol runs get a
                 # populated GET-status result too (not just langflow).
                 emit_output_capture=True,
+                # No client is waiting on a background run, so the sync HTTP ceiling is the wrong
+                # budget for it: nesting it inside the runner's asyncio.wait_for capped every
+                # background job at workflow_execution_timeout and made the documented
+                # background_job_timeout=None ("no timeout") unreachable. JobRunner owns it.
+                execution_timeout=None,
             ):
                 if terminal_error_type is not None and event_type == terminal_error_type:
                     errored = True
@@ -846,6 +899,7 @@ async def get_workflow_status(
                     flow=flow,
                     job_id=job_id_str,
                     user_id=str(current_user.id),
+                    is_superuser=bool(getattr(current_user, "is_superuser", False)),
                 )
             except ValueError:
                 if partial_stored_response is not None:
@@ -925,16 +979,18 @@ async def get_workflow_status(
 @router.post(
     "/stop",
     summary="Stop Workflow",
-    description="Stop a running workflow execution",
+    description="Stop a running background workflow execution",
 )
 async def stop_workflow(
     request: WorkflowStopRequest,
     http_request: Request,
     current_user: Annotated[UserRead, Depends(get_current_user_for_workflow)],
 ) -> WorkflowStopResponse:
-    """Stop a running workflow execution by job_id.
+    """Stop a running background workflow execution by job_id.
 
-    This endpoint allows clients to gracefully or forcefully stop a running workflow.
+    Sync and live-stream runs execute inside their caller's request and cannot be
+    interrupted by the durable background executor. Those modes are rejected
+    instead of reporting a cancellation that did not happen.
 
     Args:
         request: Stop request containing job_id and optional force flag
@@ -948,6 +1004,7 @@ async def stop_workflow(
         HTTPException:
             - 403: Developer API disabled or unauthorized
             - 404: Job ID not found
+            - 409: Job is not a cancellable background run
             - 500: Internal server error
     """
     job_id = request.job_id
@@ -1001,6 +1058,21 @@ async def stop_workflow(
                 "code": "JOB_NOT_FOUND",
                 "message": f"Job {job_id} not found",
                 "job_id": str(job_id),
+            },
+        )
+
+    job_mode = _workflow_job_mode(job)
+    if job_mode != "background":
+        display_mode = job_mode or "unknown"
+        await logger.ainfo("Rejected stop for workflow job %s in non-cancellable mode %s", job_id, display_mode)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Job cannot be stopped",
+                "code": "JOB_NOT_CANCELLABLE",
+                "message": "Only background workflow jobs can be stopped.",
+                "job_id": str(job_id),
+                "mode": display_mode,
             },
         )
 
@@ -1144,12 +1216,23 @@ async def resume_workflow(
     # Snapshot the card id before the continuation runs: it may reach another pause and
     # overwrite job metadata, and this decision must never stamp that later card.
     card_message_id = (job.job_metadata or {}).get("card_message_id")
-    accepted = await service.resume_job(
-        parsed_job_id,
-        current_user,
-        request_id=request.request_id,
-        decision=request.decision or {},
-    )
+    try:
+        accepted = await service.resume_job(
+            parsed_job_id,
+            current_user,
+            request_id=request.request_id,
+            decision=request.decision or {},
+        )
+    except RequestOverridesUnavailableError as err:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "error": "Service unavailable",
+                "code": "REQUEST_OVERRIDES_UNAVAILABLE",
+                "message": "Background request overrides are temporarily unavailable. Please try again.",
+                "job_id": job_id,
+            },
+        ) from err
     if not accepted:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

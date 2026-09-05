@@ -53,8 +53,8 @@ def test_profile_compilation_is_deterministic() -> None:
 
     assert first == second
     assert first["image_families"] == ["enterprise-ubi-hardened"]
-    assert first["application"]["requirement"] == "langflow==1.12.0"
-    assert first["bundle_api"]["requirement"] == "lfx==1.12.0"
+    assert first["application"]["requirement"] == "langflow==1.13.0"
+    assert first["bundle_api"]["requirement"] == "lfx==1.13.0"
     assert first["bundles"] == sorted(first["bundles"], key=lambda item: item["distribution"])
 
 

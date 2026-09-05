@@ -15,9 +15,13 @@ from lfx.io import DictInput, DropdownInput
 # this set can still opt in explicitly through Additional Model Fields.
 TOP_K_PROVIDERS = frozenset({"anthropic"})
 
-# Cross-region inference profile ids are prefixed with the geography, e.g.
-# "us.anthropic..."; "global" is the worldwide-routing profile.
-_INFERENCE_PROFILE_PREFIXES = frozenset({"us", "eu", "apac", "global"})
+# Inference profile ids are prefixed with the geography, e.g. "us.anthropic...";
+# "global" is the worldwide-routing profile. Mirrors MODEL_ID_GEO_PREFIXES in
+# langchain_aws.utils: ChatBedrockConverse strips exactly these before resolving the
+# provider, so a shorter set here would drop top_k for models the library still
+# resolves to Anthropic. Kept as a literal because the constant only exists in newer
+# langchain-aws releases than this bundle's floor.
+_INFERENCE_PROFILE_PREFIXES = frozenset({"us", "eu", "apac", "global", "us-gov", "sa", "amer", "jp", "au"})
 
 
 def _model_provider(model_id: str) -> str:

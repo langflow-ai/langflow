@@ -1,0 +1,102 @@
+---
+title: Valkey
+slug: /bundles-valkey
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+import PartialVectorSearchResults from '@site/docs/_partial-vector-search-results.mdx';
+import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instance.mdx';
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="valkey" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Valkey** bundle.
+
+[Valkey](https://valkey.io/) is an open source, high-performance key/value datastore forked from Redis.
+It supports workloads such as caching, message queues, and can act as a primary database.
+Valkey is wire-compatible with Redis, so existing Redis clients and tools work with it out of the box.
+
+## Start the Valkey server
+
+The **Valkey Chat Memory** component works with any Valkey server, with no additional modules required.
+To run a Valkey server with no vector store, run the standard `valkey/valkey` Docker image:
+
+```bash title="terminal"
+docker run -d --name valkey -p 6379:6379 valkey/valkey:8
+```
+
+The **Valkey Vector Store** requires the [valkey-search](https://github.com/valkey-io/valkey-search) module for `FT.CREATE` and `FT.SEARCH` commands. The standard `valkey/valkey` Docker image does **not** include this module. Instead, use the `valkey/valkey-bundle` Docker image, which includes search enabled by default.
+
+To start a Valkey server with search support, run:
+
+```bash title="terminal"
+docker run -d --name valkey -p 6379:6379 valkey/valkey-bundle:8.1
+```
+
+## Valkey Chat Memory component
+
+The **Valkey Chat Memory** component retrieves and stores chat messages using a Valkey server.
+
+Chat memories are passed between memory storage components as the [`Memory`](/data-types#memory) data type.
+The connection URL uses the `redis://` scheme.
+Under the hood, this component uses the `RedisChatMessageHistory` class from `langchain-community` to maintain wire compatibility between Valkey and Redis.
+
+For more information about using external chat memory in flows, see the [**Message History** component](/message-history).
+
+
+### Valkey Chat Memory parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| host | Hostname | Input parameter. The IP address or hostname of the Valkey server. Default: `localhost`. |
+| port | Port | Input parameter. The Valkey port number. Default: `6379`. |
+| database | Database | Input parameter. The Valkey database number. Default: `0`. |
+| username | Username | Input parameter. The Valkey username (optional). |
+| password | Valkey Password | Input parameter. The password for authentication (optional). |
+| key_prefix | Key prefix | Input parameter. A prefix for message keys in Valkey (optional). |
+| session_id | Session ID | Input parameter. The unique session identifier for the chat messages. |
+
+## Valkey vector store
+
+The **Valkey** vector store component reads and writes to Valkey vector stores using the [`ValkeyVectorStore`](https://docs.langchain.com/oss/python/integrations/vectorstores/valkey) class from `langchain-aws`.
+
+This component uses the `valkey-glide` client library to communicate with the Valkey server and supports the `FT.CREATE` and `FT.SEARCH` commands for vector indexing and similarity search.
+
+<details>
+<summary>About vector store instances</summary>
+
+<PartialVectorStoreInstance />
+
+</details>
+
+<PartialVectorSearchResults />
+
+:::tip
+For a tutorial using a vector database in a flow, see [Create a vector RAG chatbot](/chat-with-rag).
+:::
+
+### Valkey vector store parameters
+
+You can inspect a vector store component's parameters to learn more about the inputs it accepts, the features it supports, and how to configure it.
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+For information about accepted values and functionality, see the [Valkey documentation](https://valkey.io/docs/) or inspect [component code](/concepts-components#component-code).
+
+| Name | Type | Description |
+| ---- | ---- | ----------- |
+| valkey_server_url | SecretString | Input parameter. The Valkey server connection string (for example, `valkey://localhost:6379`). |
+| valkey_index_name | String | Input parameter. The name of the Valkey vector index. Required when no documents are provided. |
+| ingest_data | Data | Input parameter. The data to be ingested into the vector store. |
+| search_query | String | Input parameter. The query for similarity search. |
+| embedding | Embeddings | Input parameter. The embedding function to use. |
+| number_of_results | Integer | Input parameter. The number of results to return in search. Default: `4`. |
+| should_cache_vector_store | Boolean | Input parameter. If `true`, the component caches the vector store for the current build so multiple outputs can share it. |

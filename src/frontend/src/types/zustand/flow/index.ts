@@ -29,10 +29,13 @@ export type FlowPoolObjectType = {
   buildId: string;
 };
 
+// A store write that is not the user's edit - a template refresh on mount, a
+// model-input refresh after load - still belongs on the canvas but must not
+// trigger a save. Autosaving it writes the flow on someone's behalf, which
+// under an edit precondition would also take their turn to write.
+export type FlowMutationOptions = { autoSave?: boolean };
+
 export type FlowPoolObjectTypeNew = {
-  //build
-  //1 - error->logs
-  //2 - success-> result
   timestamp: string;
   valid: boolean;
   data: {
@@ -87,6 +90,9 @@ export type FlowStoreType = {
     [key: number]: number;
   }) => void;
   fitViewNode: (nodeId: string) => void;
+  /** Set by `requestFitView`; the canvas fits once every node is measured. */
+  fitViewRequest: { id: number; onFitted?: () => void };
+  requestFitView: (onFitted?: () => void) => void;
   autoSaveFlow: AutoSaveFlowType | undefined;
   componentsToUpdate: ComponentsToUpdateType[];
   setComponentsToUpdate: (
@@ -156,16 +162,23 @@ export type FlowStoreType = {
   onEdgesChange: OnEdgesChange<EdgeType>;
   setNodes: (
     update: AllNodeType[] | ((oldState: AllNodeType[]) => AllNodeType[]),
+    options?: FlowMutationOptions,
   ) => void;
   setEdges: (
     update: EdgeType[] | ((oldState: EdgeType[]) => EdgeType[]),
+    options?: FlowMutationOptions,
   ) => void;
-  setNodesAndEdges: (nodes: AllNodeType[], edges: EdgeType[]) => void;
+  setNodesAndEdges: (
+    nodes: AllNodeType[],
+    edges: EdgeType[],
+    options?: FlowMutationOptions,
+  ) => void;
   setNode: (
     id: string,
     update: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
     isUserChange?: boolean,
     callback?: () => void,
+    options?: FlowMutationOptions,
   ) => void;
   getNode: (id: string) => AllNodeType | undefined;
   deleteNode: (nodeId: string | Array<string>) => void;

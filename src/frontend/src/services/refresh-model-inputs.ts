@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
+import { appendProviderScope } from "@/controllers/API/helpers/provider-scope";
 import {
   getModelProvidersQueryOptions,
   type ModelProviderWithStatus,
@@ -65,6 +66,9 @@ export async function refreshAllModelInputs(
       await queryClient.invalidateQueries({
         queryKey: ["useGetEnabledModels"],
       });
+      await queryClient.invalidateQueries({
+        queryKey: ["useGetProviderVariables"],
+      });
     }
 
     const nodesWithModelFields = allNodes.filter(isModelNode);
@@ -81,7 +85,7 @@ export async function refreshAllModelInputs(
     if (queryClient) {
       try {
         const providers = await queryClient.fetchQuery(
-          getModelProvidersQueryOptions({}),
+          getModelProvidersQueryOptions({ flowId, purpose: "configure" }),
         );
         providerConfiguration = buildProviderConfiguration(providers);
       } catch {
@@ -174,8 +178,12 @@ async function refreshSingleNode(
 
     let response;
     try {
+      const queryParams = new URLSearchParams();
+      appendProviderScope(queryParams, { flowId });
       response = await api.post<APIClassType>(
-        getURL("CUSTOM_COMPONENT", { update: "update" }),
+        `${getURL("CUSTOM_COMPONENT", { update: "update" })}${
+          queryParams.toString() ? `?${queryParams.toString()}` : ""
+        }`,
         {
           code: nodeData.template.code?.value,
           template: requestPayload,
@@ -209,11 +217,25 @@ async function refreshSingleNode(
       providerConfiguration,
     );
 
+    // This response was authorized for the flow/project snapshot captured at
+    // refresh start. Never let it update a same-id node after navigation (or a
+    // project move) changes the active scope while the request is in flight.
+    const activeFlow = useFlowsManagerStore.getState();
+    if (
+      activeFlow.currentFlowId !== flowId ||
+      activeFlow.currentFlow?.folder_id !== folderId
+    ) {
+      return;
+    }
+
+    // Runs on every flow open, so the user has not asked for this write.
     setNode(
       node.id,
       (currentNode) =>
         createUpdatedNode(currentNode, validatedTemplate, responseData.outputs),
       false,
+      undefined,
+      { autoSave: false },
     );
   } catch (error) {
     console.warn(`Failed to refresh model node ${node.id}:`, error);
