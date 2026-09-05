@@ -330,7 +330,10 @@ def get_llm(
 
     # Build kwargs dynamically
     kwargs = {model_name_param: model_name, "streaming": stream}
-    if api_key:
+    # Preserve the historical Ollama constructor shape (`api_key=None`) while
+    # allowing registered SDK-authenticated providers such as Bedrock to omit
+    # the credential argument and use their SDK's default credential chain.
+    if api_key or provider == "Ollama":
         kwargs[api_key_param] = api_key
 
     if temperature is not None:
