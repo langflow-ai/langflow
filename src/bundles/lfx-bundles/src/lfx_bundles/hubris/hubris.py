@@ -54,9 +54,15 @@ class HubrisComponent(LCModelComponent):
     ]
 
     def fetch_models(self) -> list[dict]:
-        """Fetch the live catalogue. The endpoint is public, so no key is needed."""
+        """Fetch the live catalogue.
+
+        The endpoint is public, so the dropdown fills before a key is entered.
+        When a key is present it is still sent: a keyed response also carries the
+        user's own saved routes, which a public one does not.
+        """
+        headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
         try:
-            response = httpx.get(f"{HUBRIS_BASE_URL}/models", timeout=10.0)
+            response = httpx.get(f"{HUBRIS_BASE_URL}/models", headers=headers, timeout=10.0)
             response.raise_for_status()
             models = response.json().get("data", [])
         except (httpx.RequestError, httpx.HTTPStatusError, ValueError) as e:
