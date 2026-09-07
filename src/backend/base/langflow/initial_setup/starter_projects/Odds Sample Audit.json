@@ -1,4 +1,5 @@
 {
+  "id": "b4d95386-7c85-5601-8e02-ecefee6c756e",
   "name": "Odds Sample Audit",
   "description": "Audit market completeness and source timestamp presence in a fictional odds fixture. No keys or LLM required.",
   "is_component": false,
