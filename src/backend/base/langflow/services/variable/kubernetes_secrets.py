@@ -54,7 +54,7 @@ class KubernetesSecretManager:
         If it exists, it will be updated with new data while preserving existing keys.
 
         :param secret_name: Name of the secret
-        :param new_data: Dictionary containing new key-value pairs for the secret
+        :param data: Dictionary containing new key-value pairs for the secret
         :return: Created or updated secret object
         """
         try:
