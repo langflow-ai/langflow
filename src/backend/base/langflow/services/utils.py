@@ -751,6 +751,12 @@ async def initialize_services(*, fix_migration: bool = False, skip_superuser_set
         except sqlalchemy_exc.IntegrityError as exc:
             await logger.awarning(f"Error assigning orphaned flows to the superuser: {exc!s}")
 
+    # This path runs during both master preload and ordinary worker startup.
+    # Existing SSO users do not pass through the password-login initializer.
+    from langflow.services.deps import get_variable_service
+
+    await get_variable_service().initialize_all_user_variables()
+
     async with session_scope() as session:
         await clean_transactions(settings_service, session)
         await clean_vertex_builds(settings_service, session)

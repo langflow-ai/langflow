@@ -79,6 +79,14 @@ You can declare additional variables in `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONM
 For example, `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT=WATSONX_PROJECT_ID,WATSONX_API_KEY` creates global variables named `WATSONX_PROJECT_ID` and `WATSONX_API_KEY` in Langflow's database.
 Then, you can use these variables wherever they are needed in your component settings.
 
+With the default database variable store, Langflow imports configured environment variables for all existing users at startup, including SSO users.
+New users also receive these variables when their accounts are created.
+Variables imported by Langflow 1.12.1 or later follow environment value changes on subsequent startups until you edit them in Langflow.
+Creating or editing a variable yourself preserves your value over the environment, and unchanged environment values do not rewrite stored credentials.
+
+Variables stored before this behavior was introduced keep their existing values because their timestamps cannot reliably distinguish environment imports from user edits.
+Update these legacy values in **Settings** > **Global Variables** when you need to rotate them.
+
 <Tabs>
 <TabItem value="local" label="Local" default>
 

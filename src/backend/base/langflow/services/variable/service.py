@@ -9,7 +9,7 @@ from lfx.log.logger import logger
 from lfx.services.authorization.base import ResourceVisibilityScope
 from lfx.services.settings.constants import AGENTIC_VARIABLES
 from lfx.services.variable import VariableNotFoundError
-from sqlmodel import col, select
+from sqlmodel import col, select, update
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
@@ -42,6 +42,35 @@ class DatabaseVariableService(VariableService, Service):
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
 
+    async def initialize_all_user_variables(self) -> None:
+        """Import environment defaults for existing users independently of their login method.
+
+        Page through user IDs and commit each user's imports separately to bound
+        memory usage and transaction duration during startup.
+        """
+        settings = self.settings_service.settings
+        if not settings.store_environment_variables or not any(
+            os.environ.get(name, "").strip() for name in settings.variables_to_get_from_environment
+        ):
+            return
+
+        from langflow.services.database.models.user.model import User
+        from langflow.services.deps import session_scope
+
+        last_user_id: UUID | None = None
+        while True:
+            async with session_scope() as session:
+                query = select(User.id).order_by(User.id).limit(100)
+                if last_user_id is not None:
+                    query = query.where(User.id > last_user_id)
+                user_ids = (await session.exec(query)).all()
+            if not user_ids:
+                return
+            for user_id in user_ids:
+                async with session_scope() as session:
+                    await self.initialize_user_variables(user_id, session)
+            last_user_id = user_ids[-1]
+
     async def get_default_field_bindings(
         self,
         user_id: UUID | str,
@@ -71,7 +100,9 @@ class DatabaseVariableService(VariableService, Service):
             var_to_provider = {}
             provider_variables = {}
             metadata = get_model_provider_metadata()
-            principal = await session.get(User, UUID(str(user_id)))
+            # Serialize imports for the same user across PostgreSQL workers so
+            # concurrent startup/login imports cannot create duplicate rows.
+            principal = await session.get(User, UUID(str(user_id)), with_for_update=True)
             for provider, meta in metadata.items():
                 for var in meta.get("variables", []):
                     var_key = var.get("variable_key")
@@ -132,22 +163,17 @@ class DatabaseVariableService(VariableService, Service):
 
                 try:
                     if existing:
-                        # Check if the variable has been user-modified (updated_at != created_at)
-                        # If so, don't overwrite with environment variable
-                        is_user_modified = (
-                            existing.updated_at is not None
-                            and existing.created_at is not None
-                            and existing.updated_at > existing.created_at
-                        )
-
-                        if is_user_modified:
+                        # Only new environment imports have this marker. Legacy
+                        # rows (NULL or later updated_at) cannot be distinguished
+                        # from user-created/edited values and must be preserved.
+                        if existing.created_at is None or existing.updated_at != existing.created_at:
                             await logger.adebug(
-                                f"Skipping update of user-modified variable {var_name} with environment value"
+                                f"Preserving user-owned or legacy variable {var_name} during environment import"
                             )
-                        else:
-                            await self.update_variable(user_id, var_name, value, session=session)
+                        elif existing.type == CREDENTIAL_TYPE:
+                            await self._update_environment_variable(existing, value, session)
                     else:
-                        await self.create_variable(
+                        variable = await self.create_variable(
                             user_id=user_id,
                             name=var_name,
                             value=value,
@@ -156,6 +182,11 @@ class DatabaseVariableService(VariableService, Service):
                             type_=CREDENTIAL_TYPE,
                             session=session,
                         )
+                        # Equality marks an environment-managed row without a
+                        # schema change. User writes still set updated_at=now.
+                        variable.updated_at = variable.created_at
+                        session.add(variable)
+                        await session.flush()
                     await logger.adebug(f"Processed {var_name} variable from environment.")
                 except Exception as e:  # noqa: BLE001
                     await logger.aexception(f"Error processing {var_name} variable: {e!s}")
@@ -165,6 +196,27 @@ class DatabaseVariableService(VariableService, Service):
                             f"Session rolled back after error processing {var_name}. Stopping variable initialization."
                         )
                         break
+
+    async def _update_environment_variable(self, variable: Variable, value: str, session: AsyncSession) -> None:
+        """Rotate a managed credential only if no concurrent edit changed the row."""
+        if auth_utils.decrypt_api_key(variable.value) == value:
+            return
+        statement = (
+            update(Variable)
+            .where(
+                Variable.id == variable.id,
+                Variable.user_id == variable.user_id,
+                Variable.name == variable.name,
+                Variable.type == CREDENTIAL_TYPE,
+                Variable.created_at == variable.created_at,
+                Variable.updated_at == variable.updated_at,
+                Variable.value == variable.value,
+            )
+            .values(value=auth_utils.encrypt_api_key(value, settings_service=self.settings_service))
+            .execution_options(synchronize_session=False)
+        )
+        await session.exec(statement)
+        await session.refresh(variable)
 
     async def get_variable_object(
         self,

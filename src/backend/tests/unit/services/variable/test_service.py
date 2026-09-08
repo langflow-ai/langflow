@@ -1,5 +1,5 @@
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
@@ -41,6 +41,7 @@ async def session():
         await conn.run_sync(SQLModel.metadata.create_all)
     async with AsyncSession(engine, expire_on_commit=False) as session:
         yield session
+    await engine.dispose()
 
 
 async def test_initialize_user_variables__create_and_update(service, session: AsyncSession):
@@ -50,7 +51,8 @@ async def test_initialize_user_variables__create_and_update(service, session: As
     bad_vars = {"VAR1": "value1", "VAR2": "value2", "VAR3": "value3"}
     env_vars = {**good_vars, **bad_vars}
 
-    await service.create_variable(user_id, "OPENAI_API_KEY", "outdate", session=session)
+    with patch.dict("os.environ", {"OPENAI_API_KEY": "outdate"}, clear=True):  # pragma: allowlist secret
+        await service.initialize_user_variables(user_id=user_id, session=session)
     env_vars["OPENAI_API_KEY"] = "updated_value"
 
     with patch.dict("os.environ", env_vars, clear=True):
@@ -64,6 +66,123 @@ async def test_initialize_user_variables__create_and_update(service, session: As
 
     assert all(i in variables for i in good_vars)
     assert all(i not in variables for i in bad_vars)
+
+
+async def test_environment_sync_repeated_rotation(service, session, monkeypatch):
+    """Repeated imports must continue rotating environment-managed credentials."""
+    user_id = uuid4()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", ["OPENAI_API_KEY"])
+    for value in ["first-key", "first-key", "second-key", "third-key"]:
+        monkeypatch.setenv("OPENAI_API_KEY", value)
+        await service.initialize_user_variables(user_id, session)
+        stored = await service.get_variable(user_id, "OPENAI_API_KEY", "", session)
+        assert stored.get_secret_value() == value
+
+
+async def test_environment_sync_unchanged_value_does_not_write(service, session, monkeypatch):
+    """An unchanged import preserves both ciphertext and the modification marker."""
+    user_id = uuid4()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", ["OPENAI_API_KEY"])
+    monkeypatch.setenv("OPENAI_API_KEY", "same-key")
+    await service.initialize_user_variables(user_id, session)
+    variable = await service.get_variable_object(user_id, "OPENAI_API_KEY", session)
+    original = (variable.value, variable.updated_at)
+    await service.initialize_user_variables(user_id, session)
+    await session.refresh(variable)
+    assert (variable.value, variable.updated_at) == original
+
+
+async def test_environment_sync_preserves_user_created_variable(service, session, monkeypatch):
+    """A user-created variable is an override even before its first edit."""
+    user_id = uuid4()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", ["OPENAI_API_KEY"])
+    monkeypatch.setenv("OPENAI_API_KEY", "environment-key")
+    await service.create_variable(user_id, "OPENAI_API_KEY", "user-key", session=session)
+    await service.initialize_user_variables(user_id, session)
+    stored = await service.get_variable(user_id, "OPENAI_API_KEY", "", session)
+    assert stored.get_secret_value() == "user-key"
+
+
+@pytest.mark.parametrize("legacy_state", ["never_updated", "previously_updated", "missing_created_at"])
+async def test_environment_sync_preserves_ambiguous_legacy_rows(service, session, monkeypatch, legacy_state):
+    """Old timestamps cannot safely establish whether the user owns the value."""
+    user_id = uuid4()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", ["OPENAI_API_KEY"])
+    monkeypatch.setenv("OPENAI_API_KEY", "rotated-key")
+    variable = await service.create_variable(user_id, "OPENAI_API_KEY", "legacy-key", session=session)
+    if legacy_state == "previously_updated":
+        variable.updated_at = variable.created_at + timedelta(seconds=1)
+    elif legacy_state == "missing_created_at":
+        variable.created_at = None
+    await session.flush()
+
+    await service.initialize_user_variables(user_id, session)
+
+    stored = await service.get_variable(user_id, "OPENAI_API_KEY", "", session)
+    assert stored.get_secret_value() == "legacy-key"
+
+
+@pytest.mark.parametrize("edit_method", ["update_variable", "update_variable_fields"])
+async def test_environment_sync_preserves_user_edits(service, session, monkeypatch, edit_method):
+    """Explicitly saving an imported value transfers control to the user."""
+    user_id = uuid4()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", ["OPENAI_API_KEY"])
+    monkeypatch.setenv("OPENAI_API_KEY", "original-key")
+    await service.initialize_user_variables(user_id, session)
+    variable = await service.get_variable_object(user_id, "OPENAI_API_KEY", session)
+    if edit_method == "update_variable":
+        await service.update_variable(user_id, variable.name, "original-key", session)
+    else:
+        await service.update_variable_fields(
+            user_id, variable.id, VariableUpdate(id=variable.id, value="original-key"), session
+        )
+    monkeypatch.setenv("OPENAI_API_KEY", "rotated-key")
+
+    await service.initialize_user_variables(user_id, session)
+
+    stored = await service.get_variable(user_id, "OPENAI_API_KEY", "", session)
+    assert stored.get_secret_value() == "original-key"
+
+
+async def test_environment_sync_preserves_interleaved_user_edit(service, session, monkeypatch):
+    """A user edit committed after the import reads a row must win the race."""
+    user_id = uuid4()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", ["OPENAI_API_KEY"])
+    monkeypatch.setenv("OPENAI_API_KEY", "original-key")
+    await service.initialize_user_variables(user_id, session)
+    await session.commit()
+    monkeypatch.setenv("OPENAI_API_KEY", "rotated-key")
+    update_environment = service._update_environment_variable
+
+    async def edit_before_import(variable, value, import_session):
+        async with AsyncSession(session.bind, expire_on_commit=False) as editor:
+            await service.update_variable(user_id, variable.name, "user-key", editor)
+            await editor.commit()
+        await update_environment(variable, value, import_session)
+
+    monkeypatch.setattr(service, "_update_environment_variable", edit_before_import)
+
+    await service.initialize_user_variables(user_id, session)
+
+    stored = await service.get_variable(user_id, "OPENAI_API_KEY", "", session)
+    assert stored.get_secret_value() == "user-key"
+
+
+@pytest.mark.parametrize("mode", ["disabled", "missing_value"])
+async def test_all_user_initialization_skips_without_environment_imports(service, monkeypatch, mode):
+    """Disabled or unconfigured imports must not query every user at startup."""
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", mode != "disabled")
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", ["OPENAI_API_KEY"])
+    monkeypatch.setenv("OPENAI_API_KEY", " " if mode == "missing_value" else "environment-key")
+    with patch("langflow.services.deps.session_scope") as session_scope:
+        await service.initialize_all_user_variables()
+    session_scope.assert_not_called()
 
 
 @pytest.mark.parametrize("var_name", ["WATSONX_APIKEY", "WATSONX_PROJECT_ID"])
