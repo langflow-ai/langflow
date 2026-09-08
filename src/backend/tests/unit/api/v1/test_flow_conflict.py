@@ -367,3 +367,86 @@ async def test_a_failed_archive_does_not_take_the_writers_turn(client: AsyncClie
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     state = await client.get(f"api/v1/flows/{flow['id']}/version-state", headers=logged_in_headers)
     assert state.json()["version_token"] == reviewed, "a write that never happened must not consume the token"
+
+
+async def test_upsert_rotates_the_token_when_the_graph_changes(client: AsyncClient, logged_in_headers):
+    """PUT replaces the graph like any other write, so an open editor has to be told.
+
+    Without this the editor keeps a token the server still calls current, and its
+    next save is accepted straight over the version PUT just wrote.
+    """
+    flow = await _create_flow(client, logged_in_headers)
+
+    response = await client.put(
+        f"api/v1/flows/{flow['id']}",
+        json={"name": flow["name"], "data": _graph("via-put")},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()["version_token"] != flow["version_token"]
+
+
+async def test_upsert_leaves_the_token_alone_when_the_graph_does_not_change(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers)
+
+    response = await client.put(
+        f"api/v1/flows/{flow['id']}",
+        json={"name": f"renamed-{uuid.uuid4()}", "data": flow["data"]},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()["version_token"] == flow["version_token"]
+
+
+async def test_upsert_honours_a_stale_precondition(client: AsyncClient, logged_in_headers):
+    flow = await _create_flow(client, logged_in_headers)
+    await client.patch(f"api/v1/flows/{flow['id']}", json={"data": _graph("moved")}, headers=logged_in_headers)
+
+    response = await client.put(
+        f"api/v1/flows/{flow['id']}",
+        json={"name": flow["name"], "data": _graph("via-put")},
+        headers={**logged_in_headers, "If-Match": flow["version_token"]},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT, response.text
+
+
+async def test_importing_over_a_flow_rotates_the_token(client: AsyncClient, logged_in_headers):
+    """Re-importing an exported flow is a graph write, and the commonest one done from outside the editor."""
+    import json
+
+    flow = await _create_flow(client, logged_in_headers)
+    payload = {"id": flow["id"], "name": flow["name"], "data": _graph("imported"), "is_component": False}
+
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("flow.json", json.dumps(payload).encode(), "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED, response.text
+
+    after = await client.get(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)
+    assert after.json()["version_token"] != flow["version_token"]
+
+
+async def test_a_stale_editor_cannot_overwrite_an_import(client: AsyncClient, logged_in_headers):
+    """The whole point: the tab that was open when someone imported must be refused."""
+    import json
+
+    flow = await _create_flow(client, logged_in_headers)
+    payload = {"id": flow["id"], "name": flow["name"], "data": _graph("imported"), "is_component": False}
+    await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("flow.json", json.dumps(payload).encode(), "application/json")},
+        headers=logged_in_headers,
+    )
+
+    response = await client.patch(
+        f"api/v1/flows/{flow['id']}",
+        json={"data": _graph("clobber")},
+        headers={**logged_in_headers, "If-Match": flow["version_token"]},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT, response.text

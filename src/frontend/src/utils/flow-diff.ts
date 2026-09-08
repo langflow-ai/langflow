@@ -26,8 +26,20 @@ export type FlowChange = {
   targetId: string;
   badge: ChangeBadge;
   label: string;
+  /** The component the change belongs to, which is what the reader chooses. */
+  owner: string;
   sentence: ChangeSentence;
   detail?: { before: string; after: string };
+};
+
+/** Every change to one component, as the dialog offers it: together or not at all. */
+export type ChangeGroup = {
+  targetKey: string;
+  targetKind: "node" | "edge";
+  targetId: string;
+  label: string;
+  badge: ChangeBadge;
+  changes: FlowChange[];
 };
 
 type Graph = {
@@ -36,6 +48,9 @@ type Graph = {
 } | null;
 
 const INLINE_VALUE_LIMIT = 60;
+
+/** Stands in for an absent value, so a sentence never reads "updated from  to x". */
+const EMPTY_VALUE = "—";
 
 const nodeList = (graph: Graph): AllNodeType[] => graph?.nodes ?? [];
 const edgeList = (graph: Graph): EdgeType[] => graph?.edges ?? [];
@@ -77,6 +92,18 @@ const sortDeep = (value: unknown): unknown => {
   );
 };
 
+/** A list of named things reads as its names, not as the objects carrying them. */
+const namedList = (value: unknown): string | null => {
+  if (!Array.isArray(value)) return null;
+  if (value.length === 0) return "[]";
+  const names = value.map((item) =>
+    item !== null && typeof item === "object" && "name" in item
+      ? String((item as { name: unknown }).name)
+      : null,
+  );
+  return names.every((name) => name !== null) ? names.join(", ") : null;
+};
+
 /** Stable text for comparison and for the raw-diff view. */
 export const renderValue = (value: unknown): string => {
   if (value === null || value === undefined) return "";
@@ -84,6 +111,11 @@ export const renderValue = (value: unknown): string => {
   if (typeof value === "number" || typeof value === "boolean") {
     return String(value);
   }
+  // A model selection is a list of objects carrying icons, providers and metadata.
+  // Serialised whole it filled the dialog with twenty lines of JSON to say the model
+  // changed, and the name — the only part a reader wants — was buried in it.
+  const named = namedList(value);
+  if (named !== null) return named;
   try {
     // Not JSON.stringify's replacer-array form: on an array that argument is read
     // as a key allow-list of indices, which erased every field inside it — so two
@@ -127,17 +159,22 @@ const diffNodeFields = (
       targetId: next.id,
       badge: "modified",
       label: changeOwnerName(next),
+      owner: changeOwnerName(next),
       sentence: { key: "multiEdit.change.nodeMoved", params: {} },
     });
   }
 
   const baseTemplate = nodeTemplate(base);
   const nextTemplate = nodeTemplate(next);
-  const names = new Set([
-    ...Object.keys(baseTemplate),
-    ...Object.keys(nextTemplate),
-  ]);
-  const owner = changeOwnerName(next);
+  // Underscore-prefixed keys are node-template metadata (`_type`,
+  // `_frontend_node_flow_id`, ...), not component fields. The rest of the editor
+  // filters them out of every render path; listing them here offered the reader
+  // "_frontend_node_flow_id updated from c1cb7b3c to 64c4789a" as their own work.
+  const names = new Set(
+    [...Object.keys(baseTemplate), ...Object.keys(nextTemplate)].filter(
+      (name) => !name.startsWith("_"),
+    ),
+  );
 
   for (const name of names) {
     const baseEntry = baseTemplate[name];
@@ -148,6 +185,7 @@ const diffNodeFields = (
 
     const secret = isSecretEntry(nextEntry) || isSecretEntry(baseEntry);
     const label = fieldLabel(nextEntry ?? baseEntry, name);
+    const owner = changeOwnerName(next);
     const short = !secret && isShort(before, after);
 
     changes.push({
@@ -157,14 +195,19 @@ const diffNodeFields = (
       targetId: next.id,
       badge: "modified",
       label,
+      owner,
       sentence: short
         ? {
             key: "multiEdit.change.fieldShort",
-            params: { owner, field: label, before, after },
+            params: {
+              field: label,
+              before: before || EMPTY_VALUE,
+              after: after || EMPTY_VALUE,
+            },
           }
         : {
             key: "multiEdit.change.fieldLong",
-            params: { owner, field: label },
+            params: { field: label },
           },
       // A secret's value must not reach the sentence or the raw view.
       detail: secret ? undefined : { before, after },
@@ -187,6 +230,7 @@ export const diffGraphs = (base: Graph, next: Graph): FlowChange[] => {
         targetId: id,
         badge: "added",
         label: changeOwnerName(node),
+        owner: changeOwnerName(node),
         sentence: { key: "multiEdit.change.nodeAdded", params: {} },
       });
     }
@@ -201,6 +245,7 @@ export const diffGraphs = (base: Graph, next: Graph): FlowChange[] => {
         targetId: id,
         badge: "removed",
         label: changeOwnerName(node),
+        owner: changeOwnerName(node),
         sentence: { key: "multiEdit.change.nodeRemoved", params: {} },
       });
     }
@@ -225,6 +270,7 @@ export const diffGraphs = (base: Graph, next: Graph): FlowChange[] => {
       targetId: id,
       badge: "added",
       label: `${source} → ${target}`,
+      owner: `${source} → ${target}`,
       sentence: {
         key: "multiEdit.change.edgeAdded",
         params: { source, target },
@@ -242,6 +288,7 @@ export const diffGraphs = (base: Graph, next: Graph): FlowChange[] => {
       targetId: id,
       badge: "removed",
       label: `${source} → ${target}`,
+      owner: `${source} → ${target}`,
       sentence: {
         key: "multiEdit.change.edgeRemoved",
         params: { source, target },
@@ -250,6 +297,35 @@ export const diffGraphs = (base: Graph, next: Graph): FlowChange[] => {
   }
 
   return changes;
+};
+
+/**
+ * One row per component, because that is the unit of the decision.
+ *
+ * Listing every change separately gave a moved node and an edited field of the
+ * same component two checkboxes that always moved together, which promises a
+ * choice the merge cannot honour. The strongest badge wins the header: a component
+ * that was added and then edited reads as added.
+ */
+export const groupChangesByTarget = (changes: FlowChange[]): ChangeGroup[] => {
+  const groups = new Map<string, ChangeGroup>();
+  for (const change of changes) {
+    const existing = groups.get(change.targetKey);
+    if (!existing) {
+      groups.set(change.targetKey, {
+        targetKey: change.targetKey,
+        targetKind: change.targetKind,
+        targetId: change.targetId,
+        label: change.owner,
+        badge: change.badge,
+        changes: [change],
+      });
+      continue;
+    }
+    existing.changes.push(change);
+    if (change.badge !== "modified") existing.badge = change.badge;
+  }
+  return [...groups.values()];
 };
 
 /**
@@ -319,6 +395,16 @@ export const applySelectedChanges = (
     if (change.badge === "removed" && !theirEdge) {
       edges.delete(targetId);
     } else if (theirEdge) {
+      // A link they drew to a node they also added needs that node, and node and
+      // edge are separate rows the person ticks separately. Ticking only the link
+      // used to apply nothing at all while the footer still counted it, so the
+      // endpoints it depends on come with it -- but only where I have no node of
+      // that id, since replacing one of mine is a decision of its own.
+      for (const endpoint of [theirEdge.source, theirEdge.target]) {
+        if (nodes.has(endpoint)) continue;
+        const theirNode = theirNodes.get(endpoint);
+        if (theirNode) nodes.set(endpoint, theirNode);
+      }
       edges.set(targetId, theirEdge);
     }
   }

@@ -1,7 +1,7 @@
 import { renderHook } from "@testing-library/react";
 import useFileDrop from "../use-on-file-drop";
 
-const mockSaveFlow = jest.fn();
+const mockSaveFlow = jest.fn().mockResolvedValue(undefined);
 const mockSetFolderDragging = jest.fn();
 const mockSetFolderIdDragging = jest.fn();
 const mockUploadFlowToFolder = jest.fn();

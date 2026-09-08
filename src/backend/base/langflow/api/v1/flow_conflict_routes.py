@@ -12,6 +12,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.utils.mcp.flow_secrets import persist_and_strip_mcp_secrets
@@ -29,6 +30,7 @@ from langflow.services.database.models.flow.model import FlowRead, FlowUpdate
 from langflow.services.database.models.flow_version.crud import create_flow_version_entry
 from langflow.services.database.models.flow_version.exceptions import FlowVersionError
 from langflow.services.deps import get_catalog_policy_service, get_storage_service
+from langflow.services.flow_audit.recorder import SOURCE_OVERWRITE
 from langflow.services.storage.service import StorageService
 
 router = APIRouter(prefix="/flows", tags=["Flows"])
@@ -65,12 +67,24 @@ async def fork_flow(
     payload = build_fork_payload(flow, fork)
     _validate_catalog_policy_for_write(payload.data, snapshot=get_catalog_policy_service().snapshot)
     await persist_and_strip_mcp_secrets(payload.data, current_user.id, session)
-    return await _new_flow(
-        session=session,
-        flow=payload,
-        user_id=current_user.id,
-        storage_service=storage_service,
-    )
+
+    # Two forks that start together both read "no such name yet" and both try to
+    # write it. Retrying inside this request deadlocks on SQLite -- the loser waits
+    # on a write lock the winner only releases at commit -- so the collision is
+    # reported as the conflict it is, and the client is the one that tries again.
+    try:
+        return await _new_flow(
+            session=session,
+            flow=payload,
+            user_id=current_user.id,
+            storage_service=storage_service,
+            propagate_unhandled_errors=True,
+        )
+    except IntegrityError as exc:
+        raise HTTPException(
+            status_code=409,
+            detail="Another copy took that name first. Try duplicating again.",
+        ) from exc
 
 
 class FlowOverwrite(BaseModel):
@@ -150,4 +164,5 @@ async def overwrite_flow(
         user_id=current_user.id,
         storage_service=storage_service,
         expected_version_token=claimed,
+        audit_source=SOURCE_OVERWRITE,
     )

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { FlowChange } from "@/utils/flow-diff";
+import type { ChangeGroup, FlowChange } from "@/utils/flow-diff";
 import { cn } from "@/utils/utils";
 
 const BADGE_VARIANT = {
@@ -35,21 +35,65 @@ function RawDiff({ before, after }: { before: string; after: string }) {
   );
 }
 
+/** One change inside a component: the sentence, and its diff on demand. */
+function ChangeLine({ change }: { change: FlowChange }) {
+  const { t } = useTranslation();
+  const [showDiff, setShowDiff] = useState(false);
+
+  return (
+    <li className="text-mmd text-muted-foreground">
+      {t(change.sentence.key, change.sentence.params)}
+      {change.detail && (
+        <>
+          <button
+            type="button"
+            onClick={() => setShowDiff((open) => !open)}
+            aria-expanded={showDiff}
+            className="ml-2 inline-flex items-center gap-1 align-baseline text-mmd text-muted-foreground underline-offset-2 hover:underline"
+          >
+            <ForwardedIconComponent
+              name={showDiff ? "ChevronDown" : "ChevronRight"}
+              className="h-3 w-3"
+              aria-hidden="true"
+            />
+            {showDiff
+              ? t("multiEdit.dialog.hideChanges")
+              : t("multiEdit.dialog.showChanges")}
+          </button>
+          {showDiff && (
+            <RawDiff
+              before={change.detail.before}
+              after={change.detail.after}
+            />
+          )}
+        </>
+      )}
+    </li>
+  );
+}
+
 type ChangeRowProps = {
-  change: FlowChange;
+  group: ChangeGroup;
   checked: boolean;
   disabled?: boolean;
   /** Shown under the description; explains a trade the reader is making. */
   note?: string;
-  /** This change lost a component-level choice and will not reach the copy. */
+  /** This component lost the choice and will not reach the copy. */
   muted?: boolean;
-  /** Whose list this row is in. The same change can appear on both sides. */
+  /** Whose list this row is in. The same component can appear on both sides. */
   side: "mine" | "theirs";
-  onToggle?: (id: string) => void;
+  onToggle?: (targetKey: string) => void;
 };
 
+/**
+ * One component, one checkbox, however many things changed inside it.
+ *
+ * A component is adopted whole or not at all, so a row per change handed the
+ * reader several checkboxes that all moved together — a choice the merge was
+ * never able to offer.
+ */
 export function ChangeRow({
-  change,
+  group,
   checked,
   disabled,
   note,
@@ -58,9 +102,7 @@ export function ChangeRow({
   onToggle,
 }: ChangeRowProps) {
   const { t } = useTranslation();
-  const [showDiff, setShowDiff] = useState(false);
   const checkboxId = useId();
-  const hasDetail = Boolean(change.detail);
 
   return (
     <div
@@ -70,14 +112,14 @@ export function ChangeRow({
         // Not opacity: it composites into contrast and drops this text to 2.34:1.
         (disabled || muted) && "bg-muted/40",
       )}
-      data-testid={`conflict-change-${side}-${change.id}`}
+      data-testid={`conflict-change-${side}-${group.targetKey}`}
     >
       <div className="flex items-start gap-3">
         <Checkbox
           id={checkboxId}
           checked={checked}
           disabled={disabled}
-          onCheckedChange={() => onToggle?.(change.id)}
+          onCheckedChange={() => onToggle?.(group.targetKey)}
           aria-describedby={note ? `${checkboxId}-note` : undefined}
           className="mt-0.5"
         />
@@ -86,16 +128,18 @@ export function ChangeRow({
             htmlFor={checkboxId}
             className="flex flex-wrap items-center gap-2 text-sm font-medium text-foreground"
           >
-            <Badge variant={BADGE_VARIANT[change.badge]} size="xq">
-              {t(`multiEdit.badge.${change.badge}`)}
+            <Badge variant={BADGE_VARIANT[group.badge]} size="xq">
+              {t(`multiEdit.badge.${group.badge}`)}
             </Badge>
             <span className={cn("truncate", muted && "line-through")}>
-              {change.label}
+              {group.label}
             </span>
           </label>
-          <p className="mt-1 text-mmd text-muted-foreground">
-            {t(change.sentence.key, change.sentence.params)}
-          </p>
+          <ul className="mt-1 space-y-1">
+            {group.changes.map((change) => (
+              <ChangeLine key={change.id} change={change} />
+            ))}
+          </ul>
           {note && (
             <p
               id={`${checkboxId}-note`}
@@ -103,31 +147,6 @@ export function ChangeRow({
             >
               {note}
             </p>
-          )}
-          {hasDetail && (
-            <>
-              <button
-                type="button"
-                onClick={() => setShowDiff((open) => !open)}
-                aria-expanded={showDiff}
-                className="mt-2 flex items-center gap-1 text-mmd text-muted-foreground underline-offset-2 hover:underline"
-              >
-                <ForwardedIconComponent
-                  name={showDiff ? "ChevronDown" : "ChevronRight"}
-                  className="h-3 w-3"
-                  aria-hidden="true"
-                />
-                {showDiff
-                  ? t("multiEdit.dialog.hideChanges")
-                  : t("multiEdit.dialog.showChanges")}
-              </button>
-              {showDiff && change.detail && (
-                <RawDiff
-                  before={change.detail.before}
-                  after={change.detail.after}
-                />
-              )}
-            </>
           )}
         </div>
       </div>

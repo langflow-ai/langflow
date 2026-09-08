@@ -3,20 +3,22 @@ from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Header, HTTPException, Query
+from fastapi import APIRouter, Header, HTTPException, Query, status
 from lfx.log import logger
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlmodel import col, select
+from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils.author_names import attach_usernames
 from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.v1.flow_conflict import ensure_version_precondition, parse_if_match
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.mappers.deployments.helpers import get_owned_provider_account_or_404
 from langflow.api.v1.mappers.deployments.sync import sync_flow_version_attachments
 from langflow.services.authorization import FlowAction, ensure_flow_permission
+from langflow.services.database.lock_retry import is_database_lock_error
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow_version.crud import (
     create_flow_version_entry,
@@ -39,8 +41,8 @@ from langflow.services.database.models.flow_version.model import (
     FlowVersionRead,
     FlowVersionReadWithData,
 )
-from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_catalog_policy_service, get_settings_service
+from langflow.services.flow_audit.recorder import SOURCE_RESTORE, record_flow_edit
 
 router = APIRouter(prefix="/flows/{flow_id}/versions", tags=["Flow Versions"], include_in_schema=False)
 
@@ -113,22 +115,6 @@ def _ensure_deployments_enabled_for_provider_id(deployment_provider_id: UUID | N
 # it to omit `is_deployed` unless deployment status is explicitly requested.
 # If future nullable fields must be returned as explicit null, prefer splitting
 # response schemas/routes and disabling this global exclude-none behavior.
-async def _attach_usernames(session: AsyncSession, entries: list[FlowVersionRead]) -> list[FlowVersionRead]:
-    """Resolve every author in one query.
-
-    The history panel names who made each version, and a per-entry lookup would be
-    a query per row on a list that can hold fifty.
-    """
-    user_ids = {entry.user_id for entry in entries if entry.user_id is not None}
-    if not user_ids:
-        return entries
-    rows = (await session.exec(select(User.id, User.username).where(col(User.id).in_(user_ids)))).all()
-    names = dict(rows)
-    for entry in entries:
-        entry.username = names.get(entry.user_id) if entry.user_id else None
-    return entries
-
-
 @router.get("/", response_model_exclude_none=True)
 async def list_flow_versions(
     flow_id: UUID,
@@ -187,7 +173,7 @@ async def list_flow_versions(
 
     max_entries = get_settings_service().settings.max_flow_version_entries_per_flow
     return FlowVersionListResponse(
-        entries=await _attach_usernames(session, entries),
+        entries=list(await attach_usernames(session, entries)),
         max_entries=max_entries,
     )
 
@@ -289,7 +275,10 @@ async def activate_version(
     # Capture copies of both data dicts before the savepoint to avoid stale
     # reads if pruning inside create_flow_version_entry deletes old entries.
     try:
-        current_data = copy.deepcopy(flow.data) if save_draft else None
+        # Two copies with different jobs: one is archived as a version only when
+        # asked, the other describes the change and is needed either way.
+        replaced_data = copy.deepcopy(flow.data)
+        current_data = replaced_data if save_draft else None
         target_data = copy.deepcopy(target_entry.data)
     except Exception as exc:
         raise HTTPException(
@@ -315,12 +304,23 @@ async def activate_version(
                     description=f"Auto-saved before activating v{target_entry.version_number}",
                 )
 
+            previous_token = flow.version_token
             flow.data = target_data
             flow.updated_at = datetime.now(timezone.utc)
             # Not routed through _patch_flow, so it rotates the token itself: otherwise a
             # restore leaves open editors holding a token that still looks current.
             flow.version_token = uuid4()
             flow.last_modified_by = current_user.id
+            await record_flow_edit(
+                session,
+                flow_id=flow.id,
+                user_id=current_user.id,
+                before=replaced_data,
+                after=target_data,
+                source=SOURCE_RESTORE,
+                from_version_token=previous_token,
+                to_version_token=flow.version_token,
+            )
 
             session.add(flow)
             await session.flush()
@@ -332,6 +332,15 @@ async def activate_version(
             detail="Could not activate version — the flow was modified concurrently. Please try again.",
         ) from exc
     except SQLAlchemyError as exc:
+        # A restore that lands at the same moment as an autosave contends for the
+        # write lock, and reporting that as an internal error told the person their
+        # data was broken when the honest answer is "busy, ask again".
+        if is_database_lock_error(exc):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="The database is busy. Please retry the request.",
+                headers={"Retry-After": "1"},
+            ) from exc
         raise HTTPException(
             status_code=500,
             detail="Database error while activating version. Please try again.",

@@ -47,6 +47,7 @@ from langflow.services.database.models.flow.utils import get_webhook_component_i
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.folder.utils import get_default_folder_id
 from langflow.services.deps import get_settings_service
+from langflow.services.flow_audit.recorder import SOURCE_EDITOR, SOURCE_IMPORT, record_flow_edit
 from langflow.services.storage.service import StorageService
 
 if TYPE_CHECKING:
@@ -515,6 +516,7 @@ async def _update_existing_flow(
     flow: FlowCreate,
     current_user: User,
     storage_service: StorageService,
+    expected_version_token: UUID | None = None,
 ) -> FlowRead:
     """Update an existing flow (PUT update path).
 
@@ -648,7 +650,30 @@ async def _update_existing_flow(
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)
 
+    graph_changed = "data" in update_data and update_data["data"] != existing_flow.data
+    graph_before = existing_flow.data if graph_changed else None
+
     _apply_update_data(existing_flow, update_data)
+
+    if graph_changed:
+        # PUT and the import upsert replace the graph exactly like a PATCH does, so they
+        # take the writer's turn the same way. Leaving the token alone here let an editor
+        # that was open before the import save straight over it and be told nothing.
+        claimed = await claim_version_token(session, existing_flow, expected_version_token)
+        previous_token = existing_flow.version_token
+        existing_flow.version_token = claimed or uuid4()
+        existing_flow.last_modified_by = actor_user_id
+        await record_flow_edit(
+            session,
+            flow_id=existing_flow.id,
+            user_id=actor_user_id,
+            before=graph_before,
+            after=update_data["data"],
+            source=SOURCE_IMPORT,
+            from_version_token=previous_token,
+            to_version_token=existing_flow.version_token,
+        )
+
     await _validate_and_assign_folder(
         session,
         existing_flow,
@@ -677,6 +702,7 @@ async def _patch_flow(
     user_id: UUID,
     storage_service: StorageService,
     expected_version_token: UUID | None = None,
+    audit_source: str = SOURCE_EDITOR,
 ) -> FlowRead:
     """Apply a partial update (PATCH) to an existing flow and return a FlowRead.
 
@@ -753,6 +779,7 @@ async def _patch_flow(
 
     # Renames and no-op saves must not take someone's turn to write.
     graph_changed = "data" in update_data and update_data["data"] != db_flow.data
+    graph_before = db_flow.data if graph_changed else None
 
     _apply_update_data(db_flow, update_data)
 
@@ -760,8 +787,19 @@ async def _patch_flow(
         # Claimed here, not before: only a graph change takes the write turn, and the
         # claim has to be the same indivisible step that grants it.
         claimed = await claim_version_token(session, db_flow, expected_version_token)
+        previous_token = db_flow.version_token
         db_flow.version_token = claimed or uuid4()
         db_flow.last_modified_by = user_id
+        await record_flow_edit(
+            session,
+            flow_id=db_flow.id,
+            user_id=user_id,
+            before=graph_before,
+            after=update_data["data"],
+            source=audit_source,
+            from_version_token=previous_token,
+            to_version_token=db_flow.version_token,
+        )
 
     # Validate fs_path if it was changed (will raise HTTPException if invalid).
     # fs_path lives under the owner's storage namespace, so the owner id

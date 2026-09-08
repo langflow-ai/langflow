@@ -3,6 +3,7 @@ import {
   applySelectedChanges,
   contestedTargetKeys,
   diffGraphs,
+  groupChangesByTarget,
   siblingChangeIds,
 } from "../flow-diff";
 
@@ -83,7 +84,6 @@ describe("diffGraphs", () => {
     expect(changes[0].sentence).toEqual({
       key: "multiEdit.change.fieldShort",
       params: {
-        owner: "OpenAI Model",
         field: "temperature",
         before: "0.7",
         after: "0.3",
@@ -259,7 +259,7 @@ describe("applySelectedChanges", () => {
     expect(result.nodes.map((n) => n.id)).toEqual(["a"]);
   });
 
-  it("should drop an adopted edge whose endpoints are not both present", () => {
+  it("should bring the node an adopted edge needs, so the tick is not a no-op", () => {
     const mine = graph([node("a", "A", {})]);
     const theirs = graph(
       [node("a", "A", {}), node("b", "B", {})],
@@ -275,7 +275,8 @@ describe("applySelectedChanges", () => {
       new Set([edgeChange.id]),
     );
 
-    expect(result.edges).toEqual([]);
+    expect(result.edges.map((e) => e.id)).toEqual(["e1"]);
+    expect(result.nodes.map((n) => n.id)).toEqual(["a", "b"]);
   });
 
   it("should keep an adopted edge when its endpoints are adopted too", () => {
@@ -493,5 +494,99 @@ describe("targets whose id contains the key separator", () => {
       expect(change.targetKind).toMatch(/^(node|edge)$/);
       expect(change.targetKey).toBe(`${change.targetKind}:${change.targetId}`);
     }
+  });
+});
+
+describe("groupChangesByTarget", () => {
+  it("should put every change to one component under a single heading", () => {
+    // The dialog offers a component whole, so two checkboxes for one component
+    // promised a choice the merge could not honour.
+    const base = graph([node("a", "Chat Input", { text: { value: "one" } })]);
+    const theirs = graph([
+      { ...node("a", "Chat Input", { text: { value: "two" } }), position: { x: 90, y: 90 } },
+    ]);
+
+    const groups = groupChangesByTarget(diffGraphs(base, theirs));
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0].targetKey).toBe("node:a");
+    expect(groups[0].changes.length).toBeGreaterThan(1);
+  });
+
+  it("should name the group after the component, not the last field touched", () => {
+    const base = graph([node("a", "Chat Input", { text: { value: "one" } })]);
+    const theirs = graph([node("a", "Chat Input", { text: { value: "two" } })]);
+
+    const [group] = groupChangesByTarget(diffGraphs(base, theirs));
+
+    expect(group.label).toBe("Chat Input");
+  });
+
+  it("should keep separate components apart", () => {
+    const base = graph([node("a", "A", {}), node("b", "B", {})]);
+    const theirs = graph([
+      { ...node("a", "A", {}), position: { x: 50, y: 50 } },
+      { ...node("b", "B", {}), position: { x: 70, y: 70 } },
+    ]);
+
+    expect(groupChangesByTarget(diffGraphs(base, theirs))).toHaveLength(2);
+  });
+
+  it("should let the strongest badge speak for the component", () => {
+    const base = graph([]);
+    const theirs = graph([node("a", "A", { text: { value: "x" } })]);
+
+    const [group] = groupChangesByTarget(diffGraphs(base, theirs));
+
+    expect(group.badge).toBe("added");
+  });
+});
+
+describe("what a reader should not have to wade through", () => {
+  it("should read a model selection as its name, not as the object carrying it", () => {
+    const picked = [
+      { name: "claude-fable-5-1", provider: "Anthropic", icon: "Anthropic", metadata: { context_length: 128000 } },
+    ];
+    const base = graph([node("a", "Agent", { model: { value: picked } })]);
+    const theirs = graph([node("a", "Agent", { model: { value: [] } })]);
+
+    const [change] = diffGraphs(base, theirs);
+
+    expect(change.sentence.params.before).toBe("claude-fable-5-1");
+    expect(change.sentence.params.after).toBe("[]");
+    expect(JSON.stringify(change)).not.toContain("context_length");
+  });
+
+  it("should never show template metadata as somebody's edit", () => {
+    const base = graph([
+      node("a", "Agent", { _frontend_node_flow_id: { value: "flow-1" }, f: { value: "one" } }),
+    ]);
+    const theirs = graph([
+      node("a", "Agent", { _frontend_node_flow_id: { value: "flow-2" }, f: { value: "one" } }),
+    ]);
+
+    expect(diffGraphs(base, theirs)).toEqual([]);
+  });
+
+  it("should not repeat the component name inside its own group", () => {
+    const base = graph([node("a", "Chat Input", { text: { value: "one" } })]);
+    const theirs = graph([node("a", "Chat Input", { text: { value: "two" } })]);
+
+    const [group] = groupChangesByTarget(diffGraphs(base, theirs));
+
+    expect(group.label).toBe("Chat Input");
+    expect(group.changes[0].sentence.params).not.toHaveProperty("owner");
+  });
+});
+
+describe("a value that is not there", () => {
+  it("should read as a dash rather than leaving a hole in the sentence", () => {
+    const base = graph([node("a", "Agent", { model: { value: null } })]);
+    const theirs = graph([node("a", "Agent", { model: { value: [{ name: "claude-fable-5-1" }] } })]);
+
+    const [change] = diffGraphs(base, theirs);
+
+    expect(change.sentence.params.before).toBe("—");
+    expect(change.sentence.params.after).toBe("claude-fable-5-1");
   });
 });

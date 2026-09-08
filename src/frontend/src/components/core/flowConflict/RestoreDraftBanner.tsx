@@ -44,7 +44,7 @@ export function RestoreDraftBanner({ flowId }: { flowId: string }) {
     minute: "2-digit",
   });
 
-  const restore = () => {
+  const restore = async () => {
     // Applied without saving: it was refused once already, and saving now would
     // overwrite the very person the refusal protected.
     setNodes(draft.data?.nodes ?? [], { autoSave: false });
@@ -53,9 +53,18 @@ export function RestoreDraftBanner({ flowId }: { flowId: string }) {
     // it as theirs — and a later run would adopt the server's version straight
     // over the top of what was just restored.
     useFlowStore.setState({ userEditedSinceLoad: true });
-    void raiseConflictForStaleWork(flowId, draft.versionToken, userId ?? null);
-    clearConflictDraft(userId, flowId);
     setDraft(null);
+
+    // The stored copy is dropped only when the restored work is no longer at
+    // risk. Clearing it unconditionally disarmed the protection at the very
+    // moment it was needed again: the work was back on the canvas, unsaved, in
+    // conflict, and a second reload lost it for good.
+    const stillInConflict = await raiseConflictForStaleWork(
+      flowId,
+      draft.versionToken,
+      userId ?? null,
+    );
+    if (!stillInConflict) clearConflictDraft(userId, flowId);
   };
 
   const discard = () => {
@@ -95,7 +104,7 @@ export function RestoreDraftBanner({ flowId }: { flowId: string }) {
           </Button>
           <Button
             size="sm"
-            onClick={restore}
+            onClick={() => void restore()}
             data-testid="restore-draft-button"
           >
             {t("multiEdit.draft.restore")}

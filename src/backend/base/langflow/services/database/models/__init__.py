@@ -25,6 +25,7 @@ from .deployment import Deployment
 from .deployment_provider_account import DeploymentProviderAccount
 from .file import File
 from .flow import Flow
+from .flow_audit import FlowAuditEntry
 from .flow_version import FlowVersion
 from .flow_version_deployment_attachment import FlowVersionDeploymentAttachment
 from .folder import Folder
@@ -62,6 +63,7 @@ __all__ = [
     "ExecutionSignal",
     "File",
     "Flow",
+    "FlowAuditEntry",
     "FlowVersion",
     "FlowVersionDeploymentAttachment",
     "Folder",

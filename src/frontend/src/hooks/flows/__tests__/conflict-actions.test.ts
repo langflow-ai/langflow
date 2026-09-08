@@ -178,7 +178,9 @@ describe("conflict actions", () => {
 
 describe("adopting a version onto the canvas", () => {
   it("should put the server's graph on the canvas, not only in the baseline", async () => {
-    const { adoptServerVersionOnCanvas } = await import("../adopt-version-on-canvas");
+    const { adoptServerVersionOnCanvas } = await import(
+      "../adopt-version-on-canvas"
+    );
     const merged = {
       ...serverFlow(),
       data: {
@@ -208,11 +210,67 @@ describe("adopting a version onto the canvas", () => {
   });
 
   it("should not treat an adopted version as unsaved work", async () => {
-    const { adoptServerVersionOnCanvas } = await import("../adopt-version-on-canvas");
+    const { adoptServerVersionOnCanvas } = await import(
+      "../adopt-version-on-canvas"
+    );
     useFlowStore.setState({ userEditedSinceLoad: true });
 
     adoptServerVersionOnCanvas(serverFlow());
 
     expect(useFlowStore.getState().userEditedSinceLoad).toBe(false);
+  });
+});
+
+describe("keeping refused work recoverable", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useFlowConflictStore.setState({
+      conflict: null,
+      dialogOpen: false,
+      abandonedFlowIds: new Set<string>(),
+    });
+  });
+
+  const liveCanvas = (flowId = "flow-1") => {
+    useFlowStore.setState({
+      currentFlow: {
+        id: flowId,
+        name: "mine",
+        data: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+      } as unknown as FlowType,
+      nodes: [{ id: "n1", data: {} }] as never,
+      edges: [] as never,
+    });
+  };
+
+  it("should persist the draft as part of registering a conflict", () => {
+    // Not in the save path: the pre-run check and a restored draft reach the same
+    // state without a refused save, and their work used to live in the tab alone.
+    liveCanvas();
+
+    registerConflictState(conflictInput());
+
+    const stored = localStorage.getItem("lf_draft_user-1_flow-1");
+    expect(stored).not.toBeNull();
+    expect(JSON.parse(stored as string).data.nodes).toHaveLength(1);
+  });
+
+  it("should record the version the work was built on, so it conflicts again", () => {
+    liveCanvas();
+
+    registerConflictState(conflictInput({ expectedToken: "token-a" }));
+
+    const stored = JSON.parse(
+      localStorage.getItem("lf_draft_user-1_flow-1") as string,
+    );
+    expect(stored.versionToken).toBe("token-a");
+  });
+
+  it("should not write a draft for a flow that is not the one on screen", () => {
+    liveCanvas("another-flow");
+
+    registerConflictState(conflictInput());
+
+    expect(localStorage.getItem("lf_draft_user-1_flow-1")).toBeNull();
   });
 });

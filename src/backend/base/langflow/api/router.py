@@ -20,6 +20,7 @@ from langflow.api.v1 import (
     endpoints_router,
     extensions_router,
     files_router,
+    flow_audit_router,
     flow_conflict_router,
     flow_events_router,
     flow_version_router,
@@ -69,6 +70,7 @@ def include_deployment_router(target_router: APIRouter) -> None:
         target_router.include_router(deployment_router)
 
 
+router_v1.include_router(flow_audit_router)
 router_v1.include_router(flow_conflict_router)
 router_v1.include_router(chat_router)
 router_v1.include_router(endpoints_router)

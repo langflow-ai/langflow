@@ -2,8 +2,10 @@ import { cloneDeep } from "lodash";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import useFlowConflictStore from "@/stores/flowConflictStore";
+import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { FlowType } from "@/types/flow";
+import { saveConflictDraft } from "@/utils/conflict-draft";
 import { processFlows } from "@/utils/reactflowUtils";
 
 /**
@@ -89,6 +91,34 @@ export const registerConflictState = ({
     currentToken,
     theirFlow: null,
   });
+  persistConflictDraft(flowId, expectedToken, currentUserId);
+};
+
+/**
+ * Keep the stranded work somewhere a reload cannot take it.
+ *
+ * Here rather than in the save path because a refused save is only one of the ways
+ * a conflict is found: the pre-run version check and a restored draft reach the
+ * same state, and neither wrote a draft — so the work those two protected existed
+ * in the tab and nowhere else. Once a conflict stands, ``saveFlow`` refuses to run
+ * at all, so this is also the only place that can keep the draft current.
+ */
+export const persistConflictDraft = (
+  flowId: string,
+  builtOnToken: string | null,
+  currentUserId: string | null,
+): void => {
+  const live = useFlowStore.getState();
+  const liveFlow = live.currentFlow;
+  if (liveFlow?.id !== flowId) return;
+  saveConflictDraft(
+    currentUserId,
+    {
+      ...liveFlow,
+      data: { ...liveFlow.data, nodes: live.nodes, edges: live.edges },
+    } as FlowType,
+    builtOnToken,
+  );
 };
 
 /** Fetch the other version so the dialog can diff against it; the dialog degrades without it. */

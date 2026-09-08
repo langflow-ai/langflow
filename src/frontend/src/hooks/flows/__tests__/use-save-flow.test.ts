@@ -84,6 +84,9 @@ describe("useSaveFlow", () => {
       },
       onFlowPage: true,
       setCurrentFlow: mockSetCurrentFlow,
+      // Emptying the canvas is an edit, and only the person's own edits put the
+      // graph on the wire.
+      userEditedSinceLoad: true,
     };
 
     flowsManagerState = {

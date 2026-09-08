@@ -2,11 +2,14 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { isBlockedByCatalogPolicy } from "@/CustomNodes/helpers/check-code-validity";
 import { usePermissions } from "@/contexts/permissionsContext";
 import useAlertStore from "@/stores/alertStore";
+import useAuthStore from "@/stores/authStore";
+import useFlowConflictStore from "@/stores/flowConflictStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FlowType } from "@/types/flow";
 import { useDebounce } from "../use-debounce";
+import { persistConflictDraft } from "./conflict-actions";
 import useSaveFlow from "./use-save-flow";
 
 /**
@@ -114,9 +117,24 @@ const useAutoSaveFlow = () => {
         pendingAutoSaveRef.current = { flow, flowId };
         return;
       }
+      const conflict = useFlowConflictStore.getState().conflict;
+      if (flowId && conflict?.flowId === flowId) {
+        // No write can succeed here, but the work still has to survive a reload,
+        // and this is the only thing still running while a conflict stands.
+        pendingAutoSaveRef.current = null;
+        persistConflictDraft(
+          flowId,
+          conflict.expectedToken,
+          useAuthStore.getState().userData?.id ?? null,
+        );
+        return;
+      }
       if (can(flowId, "write")) {
         pendingAutoSaveRef.current = null;
-        return enqueueSave(flow);
+        // Swallowed: a save the queue could not make is reported by whoever asked
+        // for it, and an unhandled rejection from a background debounce is not a
+        // way to tell anybody anything.
+        return enqueueSave(flow).catch(() => undefined);
       }
     },
     autoSavingInterval,

@@ -240,6 +240,9 @@ test(
     await expect
       .poll(() => page.url(), { timeout: CONFLICT_WINDOW_MS })
       .not.toContain(flowId);
+    // The url changes before the copy has finished mounting, and going back while
+    // it is still settling lands on the copy again rather than on the source.
+    await page.waitForTimeout(3000);
 
     // The browser Back button, not a fresh load: this is a history pop inside the
     // app, and it is the path people actually take back to the flow they left.

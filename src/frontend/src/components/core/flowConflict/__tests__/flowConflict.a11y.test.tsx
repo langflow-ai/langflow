@@ -224,7 +224,7 @@ describe("duplicate dialog accessibility", () => {
 
     // Both sides edited prompt-1, so their row must be a choice, not a refusal.
     const contested = screen.getByTestId(
-      "conflict-change-theirs-node:prompt-1:field:template",
+      "conflict-change-theirs-node:prompt-1",
     );
     const theirs = contested.querySelector('button[role="checkbox"]');
 
@@ -243,7 +243,7 @@ describe("duplicate dialog accessibility", () => {
     await screen.findByTestId("duplicate-flow-modal");
 
     const contested = screen.getByTestId(
-      "conflict-change-theirs-node:prompt-1:field:template",
+      "conflict-change-theirs-node:prompt-1",
     );
     await user.click(
       contested.querySelector('button[role="checkbox"]') as HTMLElement,
@@ -292,7 +292,9 @@ describe("conflict UI during a version preview", () => {
 
     // Version history owns the screen with its own overlay, and none of the
     // actions here apply to a read-only view of the past.
-    expect(screen.queryByTestId("flow-conflict-banner")).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("flow-conflict-banner"),
+    ).not.toBeInTheDocument();
   });
 
   it("should_hide_the_canvas_frame_while_a_past_version_is_on_screen", () => {
