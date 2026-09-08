@@ -45,6 +45,7 @@ codeagents = ["smolagents>=1.8.0", "OpenDsStar==1.0.26; python_version >= '3.11'
 cometapi = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
 composio = ["composio==0.16.0", "composio-langchain==0.16.0"]
 confluence = ["atlassian-python-api==3.41.16", "langchain-community>=0.4.1,<1.0.0"]
+context = []
 couchbase = ["couchbase>=4.2.1", "langchain-community>=0.4.1,<1.0.0"]
 cuga = ["cuga>=0.2.20,<0.3.0; sys_platform != 'darwin' and python_version < '3.14'", "cuga>=0.2.20,<0.3.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'", "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'", "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'"]
 deepseek = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"]
@@ -119,6 +120,7 @@ all = [
     "lfx-bundles[cometapi]",
     "lfx-bundles[composio]",
     "lfx-bundles[confluence]",
+    "lfx-bundles[context]",
     "lfx-bundles[couchbase]",
     "lfx-bundles[cuga]",
     "lfx-bundles[deepseek]",
@@ -191,6 +193,7 @@ all-no-torch = [
     "lfx-bundles[cometapi]",
     "lfx-bundles[composio]",
     "lfx-bundles[confluence]",
+    "lfx-bundles[context]",
     "lfx-bundles[couchbase]",
     "lfx-bundles[deepseek]",
     "lfx-bundles[elastic]",
