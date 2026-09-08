@@ -75,8 +75,9 @@ class ComponentLibrarySearch(Component):
     def _component_library(self) -> pd.DataFrame:
         """Read the installed component library into ``file_path`` / ``text`` columns.
 
-        Mirrors what the flow's ``Directory`` node read before: the same ``*/*.py`` shape at
-        depth 2, minus package ``__init__`` files, which carry only re-export boilerplate.
+        The ``*/*.py`` shape at depth 2 the flow's ``Directory`` node read before, minus
+        package ``__init__`` files, which carry only re-export boilerplate, and minus
+        ``deactivated``, whose components the registry does not load.
         Errors propagate rather than yielding a partial table -- an unreadable component file
         means a broken install, and a silently short search result reads as "no such
         component", which is a wrong answer rather than a visible failure.
@@ -88,7 +89,11 @@ class ComponentLibrarySearch(Component):
 
         rows = []
         for path in sorted(root.glob("*/*.py")):
-            if path.name == "__init__.py":
+            # ``deactivated`` is source the registry never loads. Returning it lets the agent
+            # name a component confidently and then fail to add it -- the same wrong-answer
+            # shape as the empty library above, just harder to spot, because the component it
+            # cites is real and its code is right there in the result.
+            if path.name == "__init__.py" or path.parent.name == "deactivated":
                 continue
             # ``glob`` follows symlinks, so a link named ``*.py`` inside the package would be
             # read from wherever it points. Nothing ships one, and creating one needs write

@@ -150,3 +150,45 @@ class TestOutputSchemaIsStable:
         instance.number_candidates = 3
 
         assert len(instance.search()) <= 3
+
+
+class TestDeactivatedComponentsAreNotSearchable:
+    """``deactivated`` source must not reach the agent.
+
+    Those files sit under the same ``*/*.py`` shape the search reads, but the registry
+    never loads them, so an agent that finds one recommends a component it cannot add.
+    That is the wrong-answer shape this whole component exists to prevent -- and a worse
+    one than the empty library of GH #13618, because the component it names is real and
+    its source is right there in the result to back the claim up.
+    """
+
+    @pytest.mark.parametrize("class_name", ["AmazonKendraRetrieverComponent", "EmbedComponent"])
+    def test_should_not_find_a_class_that_only_exists_in_deactivated(self, class_name):
+        instance = _component_instance()
+        instance.column = "text"
+        instance.keywords = [class_name]
+        instance.number_candidates = 50
+
+        assert len(instance.search()) == 0, f"search surfaced deactivated component {class_name}"
+
+    def test_should_return_no_file_from_the_deactivated_directory(self):
+        """Broad sweep: a keyword every component file matches must still exclude them."""
+        instance = _component_instance()
+        instance.column = "text"
+        instance.keywords = ["Component"]
+        instance.number_candidates = 1000
+
+        paths = [str(p) for p in instance.search()["file_path"]]
+        assert paths, "sanity: the sweep matched nothing"
+        assert not [p for p in paths if "deactivated" in p]
+
+    def test_should_still_return_the_live_copy_of_a_shadowed_component(self):
+        """``sub_flow.py`` exists in both trees; the live one must survive the filter."""
+        instance = _component_instance()
+        instance.column = "text"
+        instance.keywords = ["SubFlowComponent"]
+        instance.number_candidates = 50
+
+        paths = [str(p) for p in instance.search()["file_path"]]
+        assert any("flow_controls" in p for p in paths), "the live SubFlowComponent was filtered out"
+        assert not [p for p in paths if "deactivated" in p]
