@@ -22,6 +22,8 @@ from lfx.template.field.base import Output
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 
+CP1252_CONTROL_BYTE_RANGE = range(0x80, 0xA0)
+
 
 class CSVAgentComponent(LCAgentComponent):
     display_name = "CSV Agent"
@@ -231,26 +233,32 @@ class CSVAgentComponent(LCAgentComponent):
         file_path = self._path()
         settings = get_settings_service().settings
 
-        # If using S3 storage, download the file to temp
         if settings.storage_type == "s3":
-            # Download from S3 to temp file. A genuine absolute local path is read from disk
-            # instead of S3 (#13798), so hand the reader the same scoped confinement the
-            # local-storage branch below applies.
             csv_bytes = run_until_complete(read_file_bytes(file_path, resolve_path=self._confine_local_path))
+            return self._normalize_csv_path(file_path, csv_bytes, force_temp=True)
 
-            # Create temp file with .csv extension
-            suffix = Path(file_path.split("/")[-1]).suffix or ".csv"
-            with tempfile.NamedTemporaryFile(mode="wb", suffix=suffix, delete=False) as tmp_file:
-                tmp_file.write(csv_bytes)
-                temp_path = tmp_file.name
+        local_path = self._confine_local_path(file_path)
+        if not Path(local_path).is_file():
+            return local_path
+        return self._normalize_csv_path(local_path, Path(local_path).read_bytes())
 
-            # Store temp path for cleanup
-            self._temp_file_path = temp_path
-            return temp_path
+    def _normalize_csv_path(self, file_path: str, csv_bytes: bytes, *, force_temp: bool = False) -> str:
+        try:
+            csv_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            encoding = "cp1252" if any(byte in CP1252_CONTROL_BYTE_RANGE for byte in csv_bytes) else "latin-1"
+            csv_bytes = csv_bytes.decode(encoding).encode("utf-8")
+        else:
+            if not force_temp:
+                return file_path
 
-        # Local storage - confine tenant-controlled path to the storage dir when
-        # LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS is enabled (blocks /etc/passwd etc.).
-        return self._confine_local_path(file_path)
+        suffix = Path(file_path.split("/")[-1]).suffix or ".csv"
+        with tempfile.NamedTemporaryFile(mode="wb", suffix=suffix, delete=False) as tmp_file:
+            tmp_file.write(csv_bytes)
+            temp_path = tmp_file.name
+
+        self._temp_file_path = temp_path
+        return temp_path
 
     def _confine_local_path(self, path: str) -> str:
         """Confine a tenant-controlled local path to this component's storage scope."""
