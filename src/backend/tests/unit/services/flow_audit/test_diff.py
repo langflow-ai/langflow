@@ -11,9 +11,7 @@ def node(node_id: str, display_name: str, fields: dict | None = None, position=(
             "id": node_id,
             "node": {
                 "display_name": display_name,
-                "template": {
-                    name: {"display_name": name, **spec} for name, spec in (fields or {}).items()
-                },
+                "template": {name: {"display_name": name, **spec} for name, spec in (fields or {}).items()},
             },
         },
     }
@@ -159,7 +157,14 @@ def test_a_node_whose_template_is_not_a_mapping_is_survivable():
 
 def test_a_model_selection_reads_as_its_name():
     """Serialised whole, one model change filled the dialog with twenty lines of JSON."""
-    picked = [{"name": "claude-fable-5-1", "provider": "Anthropic", "icon": "Anthropic", "metadata": {"context_length": 128000}}]
+    picked = [
+        {
+            "name": "claude-fable-5-1",
+            "provider": "Anthropic",
+            "icon": "Anthropic",
+            "metadata": {"context_length": 128000},
+        }
+    ]
     base = graph([node("a", "Agent", {"model": {"value": picked}})])
     after = graph([node("a", "Agent", {"model": {"value": []}})])
 

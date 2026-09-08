@@ -55,11 +55,7 @@ def _template(node: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
     # Underscore-prefixed keys are node-template metadata (`_type`,
     # `_frontend_node_flow_id`, ...), not component fields, and the rest of the
     # product filters them out of every render path.
-    return {
-        name: entry
-        for name, entry in template.items()
-        if isinstance(entry, dict) and not name.startswith("_")
-    }
+    return {name: entry for name, entry in template.items() if isinstance(entry, dict) and not name.startswith("_")}
 
 
 def _is_secret(entry: dict[str, Any] | None) -> bool:

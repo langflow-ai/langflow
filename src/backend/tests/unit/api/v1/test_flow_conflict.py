@@ -87,9 +87,7 @@ async def test_fresh_token_is_accepted(client: AsyncClient, logged_in_headers):
 async def test_stale_token_is_refused_with_context(client: AsyncClient, logged_in_headers):
     """The refusal has to name the other writer, or the dialog has nothing to say."""
     flow = await _create_flow(client, logged_in_headers)
-    first = await client.patch(
-        f"api/v1/flows/{flow['id']}", json={"data": _graph("theirs")}, headers=logged_in_headers
-    )
+    first = await client.patch(f"api/v1/flows/{flow['id']}", json={"data": _graph("theirs")}, headers=logged_in_headers)
     rotated = first.json()["version_token"]
 
     response = await client.patch(
@@ -287,9 +285,7 @@ async def test_overwrite_keeps_the_replaced_version_in_history(client: AsyncClie
     versions = await client.get(f"api/v1/flows/{flow['id']}/versions/", headers=logged_in_headers)
     entries = versions.json()["entries"]
     assert entries, "the replaced version must be recoverable"
-    archived = await client.get(
-        f"api/v1/flows/{flow['id']}/versions/{entries[0]['id']}", headers=logged_in_headers
-    )
+    archived = await client.get(f"api/v1/flows/{flow['id']}/versions/{entries[0]['id']}", headers=logged_in_headers)
     assert archived.json()["data"]["nodes"][0]["id"] == "n-theirs"
 
 

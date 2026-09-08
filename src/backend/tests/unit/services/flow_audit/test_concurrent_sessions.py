@@ -52,9 +52,7 @@ async def _seed_flow(session, user_id) -> Flow:
 
 async def _entries(session, flow_id):
     statement = (
-        select(FlowAuditEntry)
-        .where(FlowAuditEntry.flow_id == flow_id)
-        .order_by(desc(col(FlowAuditEntry.updated_at)))
+        select(FlowAuditEntry).where(FlowAuditEntry.flow_id == flow_id).order_by(desc(col(FlowAuditEntry.updated_at)))
     )
     return (await session.exec(statement)).all()
 
@@ -68,17 +66,29 @@ async def test_two_people_editing_in_one_window_get_one_session_each(client, act
         flow = await _seed_flow(session, alice)
 
         await record_flow_edit(
-            session, flow_id=flow.id, user_id=alice, before=graph("start"),
-            after=graph("alice-1"), source=SOURCE_EDITOR,
+            session,
+            flow_id=flow.id,
+            user_id=alice,
+            before=graph("start"),
+            after=graph("alice-1"),
+            source=SOURCE_EDITOR,
         )
         await record_flow_edit(
-            session, flow_id=flow.id, user_id=bob, before=graph("alice-1"),
-            after=graph("bob-1"), source=SOURCE_EDITOR,
+            session,
+            flow_id=flow.id,
+            user_id=bob,
+            before=graph("alice-1"),
+            after=graph("bob-1"),
+            source=SOURCE_EDITOR,
         )
         # Both keep going inside the same window.
         await record_flow_edit(
-            session, flow_id=flow.id, user_id=alice, before=graph("bob-1"),
-            after=graph("alice-2"), source=SOURCE_EDITOR,
+            session,
+            flow_id=flow.id,
+            user_id=alice,
+            before=graph("bob-1"),
+            after=graph("alice-2"),
+            source=SOURCE_EDITOR,
         )
         await session.commit()
 
@@ -95,8 +105,12 @@ async def test_one_person_in_two_tabs_stays_a_single_session(client, active_user
 
         for value in ("tab-a", "tab-b", "tab-a-again"):
             await record_flow_edit(
-                session, flow_id=flow.id, user_id=active_user.id, before=graph("start"),
-                after=graph(value), source=SOURCE_EDITOR,
+                session,
+                flow_id=flow.id,
+                user_id=active_user.id,
+                before=graph("start"),
+                after=graph(value),
+                source=SOURCE_EDITOR,
             )
         await session.commit()
 
@@ -105,9 +119,7 @@ async def test_one_person_in_two_tabs_stays_a_single_session(client, active_user
     assert len(entries) == 1
 
 
-async def test_a_resolved_conflict_never_folds_into_the_other_persons_session(
-    client, active_user, audit_on
-):  # noqa: ARG001
+async def test_a_resolved_conflict_never_folds_into_the_other_persons_session(client, active_user, audit_on):
     """Bob resolving with Update flow is his own act, not a line in Alice's session."""
     alice = active_user.id
     bob = uuid.uuid4()
@@ -116,12 +128,20 @@ async def test_a_resolved_conflict_never_folds_into_the_other_persons_session(
         flow = await _seed_flow(session, alice)
 
         await record_flow_edit(
-            session, flow_id=flow.id, user_id=alice, before=graph("start"),
-            after=graph("alice"), source=SOURCE_EDITOR,
+            session,
+            flow_id=flow.id,
+            user_id=alice,
+            before=graph("start"),
+            after=graph("alice"),
+            source=SOURCE_EDITOR,
         )
         await record_flow_edit(
-            session, flow_id=flow.id, user_id=bob, before=graph("alice"),
-            after=graph("bob-merged"), source=SOURCE_OVERWRITE,
+            session,
+            flow_id=flow.id,
+            user_id=bob,
+            before=graph("alice"),
+            after=graph("bob-merged"),
+            source=SOURCE_OVERWRITE,
         )
         await session.commit()
 
