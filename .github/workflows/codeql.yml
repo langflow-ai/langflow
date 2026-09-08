@@ -2,10 +2,15 @@ name: "CodeQL"
 
 on:
   push:
-    branches: [ 'dev', 'main' ]
+    branches: [ 'release-*', 'main' ]
   pull_request:
-    # The branches below must be a subset of the branches above
-    branches: [ 'dev' ]
+    # Mirrors the Mend workflow's trigger (.github/workflows/mend.yml) and
+    # CONTRIBUTING.md, which routes PRs to the active release-X.Y.Z branch
+    # and never to main. `dev` last received a commit in July 2024 and is
+    # 5700+ commits behind main, so a filter of just 'dev' never matched a
+    # real PR's base branch and this pull_request trigger has not fired on
+    # an actual contribution since the branching model changed.
+    branches: [ 'release-*', 'main' ]
   schedule:
     - cron: '17 2 * * 1'
 
