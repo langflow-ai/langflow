@@ -11,7 +11,7 @@ from collections import deque
 from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
-from threading import Lock, Semaphore
+from threading import Lock, Semaphore, local
 from typing import Any, TypedDict
 
 import orjson
@@ -957,6 +957,33 @@ def setup_log_file(log_file: Path, *, max_bytes: int, formatter: logging.Formatt
     logging.root.addHandler(_file_handler)
 
 
+def get_file_handler() -> logging.handlers.RotatingFileHandler | None:
+    """Return the rotating file handler ``setup_log_file`` installed, if any.
+
+    Callers that need to hand a stdlib logger a terminating handler -- rather than
+    relying on propagation to the root logger -- reach for this. See
+    ``langflow.server.Logger``, which has to do exactly that because
+    ``uvicorn.workers.UvicornWorker`` copies the gunicorn handler list onto the
+    uvicorn loggers and sets ``propagate = False``.
+    """
+    return _file_handler
+
+
+def structlog_routes_to_stdlib() -> bool:
+    """Report whether structlog writes back out through the stdlib logging tree.
+
+    ``configure()`` selects ``structlog.stdlib.LoggerFactory`` whenever a log file
+    is configured, which makes ``structlog.get_logger(name)`` resolve to *the stdlib
+    logger of that same name*. Installing an ``InterceptHandler`` on a stdlib logger
+    in that mode builds a cycle: the handler feeds structlog, which writes straight
+    back out to the logger the handler is attached to. Anything that installs an
+    intercept must check this first.
+    """
+    if not structlog.is_configured():
+        return False
+    return isinstance(structlog.get_config().get("logger_factory"), structlog.stdlib.LoggerFactory)
+
+
 class LogConfig(TypedDict):
     """Configuration for logging."""
 
@@ -1220,6 +1247,14 @@ def configure(
     )
     if json_mode and not log_file:
         _install_stdlib_intercept(numeric_level)
+    elif log_file:
+        # From here structlog resolves back into the stdlib tree, so a root
+        # intercept left over from an earlier stdout-mode configure() would feed
+        # every record back into the logger it just came from. The guard in
+        # ``InterceptHandler.emit`` keeps that from looping, but the record would
+        # still be written twice -- once by the intercept's structlog call and
+        # once by the original record reaching the file handler.
+        _remove_stdlib_intercept()
 
     # Apply per-logger level overrides last so user env beats library defaults.
     _apply_logger_level_overrides()
@@ -1307,6 +1342,14 @@ def add_stdlib_log_level_from_record(_logger: Any, method_name: str, event_dict:
 _RESERVED_LOGRECORD_ATTRS = frozenset(logging.makeLogRecord({}).__dict__) | {"message", "asctime"}
 
 
+# Set while a thread is inside ``InterceptHandler.emit``. Guards against the
+# handler being re-entered by the very structlog call it just made -- see
+# ``InterceptHandler.emit``. Thread-local because the cycle is synchronous and
+# within one thread; a global flag would make concurrent threads drop each
+# other's records.
+_emit_state = local()
+
+
 class InterceptHandler(logging.Handler):
     """Route stdlib logging records into structlog.
 
@@ -1317,6 +1360,17 @@ class InterceptHandler(logging.Handler):
     """
 
     def emit(self, record: logging.LogRecord) -> None:
+        # Re-entrancy guard. When structlog is backed by the stdlib factory
+        # (see ``structlog_routes_to_stdlib``), the structlog call below resolves
+        # to the same stdlib logger this handler is attached to, so the record
+        # comes straight back here -- carrying the previous lap's rendered payload
+        # as its message. Left alone that cycles until the process dies. Dropping
+        # the re-entrant record is the only safe answer: a logging handler must
+        # never take down the process it instruments, and the record is already
+        # being handled by the lap that caused the re-entry.
+        if getattr(_emit_state, "active", False):
+            return
+        _emit_state.active = True
         # Mirrors the stdlib Handler.emit safety net: a malformed third-party
         # log call (e.g. mismatched %-format args) must not propagate up and
         # crash the request path. Anything that raises here is routed to
@@ -1338,6 +1392,10 @@ class InterceptHandler(logging.Handler):
             getattr(structlog_logger, method_name)(record.getMessage(), **kwargs)
         except Exception:  # noqa: BLE001 - logging must never break the caller
             self.handleError(record)
+        finally:
+            # Released even when handleError ran, otherwise one malformed record
+            # would wedge the guard on and silence the thread's logging for good.
+            _emit_state.active = False
 
 
 def _install_stdlib_intercept(numeric_level: int) -> None:
@@ -1355,6 +1413,19 @@ def _install_stdlib_intercept(numeric_level: int) -> None:
         root.addHandler(handler)
     handler.setLevel(numeric_level)
     root.setLevel(numeric_level)
+
+
+def _remove_stdlib_intercept() -> None:
+    """Drop any ``InterceptHandler`` from the stdlib root logger.
+
+    The counterpart to ``_install_stdlib_intercept``, for the switch into log-file
+    mode. Leaving one installed once structlog routes back through stdlib is the
+    root-logger form of the cycle ``structlog_routes_to_stdlib`` exists to warn
+    about.
+    """
+    root = logging.root
+    for handler in [h for h in root.handlers if isinstance(h, InterceptHandler)]:
+        root.removeHandler(handler)
 
 
 # Initialize logger - will be reconfigured when configure() is called
