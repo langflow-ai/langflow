@@ -4,7 +4,6 @@
 > Status: Implemented, pending merge
 > Owner: Cristhian Zanforlin
 > Related: Epic [LE-2379](https://datastax.jira.com/browse/LE-2379) · Tasks LE-2399, LE-2400, LE-2401, LE-2402
-> Companion: [`flow-edit-audit-trail.md`](flow-edit-audit-trail.md) — the trail built on the same version stamp
 
 ---
 
@@ -67,7 +66,7 @@ Presence. Nobody is warned *before* a conflict happens — two people can work u
 ### Aggregate: Flow (root)
 - **Root entity:** `Flow`
 - **Concurrency state:** `version_token`, `last_modified_by`
-- **Child entities:** `FlowVersion` (snapshots), `FlowAuditEntry` (see companion doc)
+- **Child entities:** `FlowVersion` (snapshots)
 
 **Invariants**
 
@@ -85,7 +84,7 @@ Presence. Nobody is warned *before* a conflict happens — two people can work u
 
 | Event | Trigger | Payload | Consumers |
 |---|---|---|---|
-| Token rotated | Any accepted graph write | new `version_token`, `last_modified_by` | open editors (on their next save or run), audit trail |
+| Token rotated | Any accepted graph write | new `version_token`, `last_modified_by` | open editors (on their next save or run) |
 | Save refused | Precondition mismatch | `flow_version_conflict` + both tokens + author | conflict banner, dialog, draft store |
 
 ---

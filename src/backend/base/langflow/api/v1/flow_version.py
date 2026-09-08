@@ -42,7 +42,6 @@ from langflow.services.database.models.flow_version.model import (
     FlowVersionReadWithData,
 )
 from langflow.services.deps import get_catalog_policy_service, get_settings_service
-from langflow.services.flow_audit.recorder import SOURCE_RESTORE, record_flow_edit
 
 router = APIRouter(prefix="/flows/{flow_id}/versions", tags=["Flow Versions"], include_in_schema=False)
 
@@ -304,23 +303,12 @@ async def activate_version(
                     description=f"Auto-saved before activating v{target_entry.version_number}",
                 )
 
-            previous_token = flow.version_token
             flow.data = target_data
             flow.updated_at = datetime.now(timezone.utc)
             # Not routed through _patch_flow, so it rotates the token itself: otherwise a
             # restore leaves open editors holding a token that still looks current.
             flow.version_token = uuid4()
             flow.last_modified_by = current_user.id
-            await record_flow_edit(
-                session,
-                flow_id=flow.id,
-                user_id=current_user.id,
-                before=replaced_data,
-                after=target_data,
-                source=SOURCE_RESTORE,
-                from_version_token=previous_token,
-                to_version_token=flow.version_token,
-            )
 
             session.add(flow)
             await session.flush()

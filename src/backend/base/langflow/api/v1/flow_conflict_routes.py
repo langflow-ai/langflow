@@ -30,7 +30,6 @@ from langflow.services.database.models.flow.model import FlowRead, FlowUpdate
 from langflow.services.database.models.flow_version.crud import create_flow_version_entry
 from langflow.services.database.models.flow_version.exceptions import FlowVersionError
 from langflow.services.deps import get_catalog_policy_service, get_storage_service
-from langflow.services.flow_audit.recorder import SOURCE_OVERWRITE
 from langflow.services.storage.service import StorageService
 
 router = APIRouter(prefix="/flows", tags=["Flows"])
@@ -164,5 +163,4 @@ async def overwrite_flow(
         user_id=current_user.id,
         storage_service=storage_service,
         expected_version_token=claimed,
-        audit_source=SOURCE_OVERWRITE,
     )

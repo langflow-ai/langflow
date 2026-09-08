@@ -3,13 +3,10 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 
 /**
- * Two, three and four people on one flow, with the audit trail switched on.
+ * Two, three and four people on one flow at the same time.
  *
- * The point is the interaction between the two features: the conflict machinery
- * decides who may write, and the trail has to end up describing exactly the
- * writes that actually happened — no more, no fewer, and never a secret.
- *
- * Runs against a backend started with LANGFLOW_FLOW_AUDIT_ENABLED=true.
+ * The conflict machinery decides who may write. Whoever is refused has to be
+ * told — nobody's work may vanish without a word, under any number of writers.
  */
 
 test.use({
@@ -84,13 +81,6 @@ async function edit(person: Person, offset: number) {
   await person.page.mouse.up();
 }
 
-async function trail(page: Page, flowId: string) {
-  const response = await page.request.get(`/api/v1/flows/${flowId}/audit/`);
-  if (response.status() === 404) test.skip(true, "audit trail not enabled on this backend");
-  expect(response.status()).toBe(200);
-  return (await response.json()).entries as any[];
-}
-
 async function inConflict(person: Person): Promise<boolean> {
   return person.page
     .getByTestId("flow-conflict-banner")
@@ -98,12 +88,12 @@ async function inConflict(person: Person): Promise<boolean> {
     .catch(() => false);
 }
 
-test("two people: one writes, the other is told and the trail shows one session", async ({
+test("two people: one writes, the other is told", async ({
   page,
   browser,
 }) => {
   test.setTimeout(6 * 60 * 1000);
-  const { flowId, people, contexts } = await seatPeople(page, browser, 2);
+  const { people, contexts } = await seatPeople(page, browser, 2);
   const [a, b] = people;
 
   await edit(a, 0);
@@ -114,18 +104,12 @@ test("two people: one writes, the other is told and the trail shows one session"
   const conflicted = [];
   for (const p of people) if (await inConflict(p)) conflicted.push(p.name);
 
-  const entries = await trail(page, flowId);
   console.log(
     "2 people | writes:", people.map((p) => `${p.name}=${JSON.stringify(p.writes)}`).join(" "),
     "| conflicted:", conflicted,
-    "| audit entries:", entries.length,
-    "| sources:", entries.map((e) => e.source),
   );
 
   expect(conflicted, "exactly one person is refused").toHaveLength(1);
-  expect(entries.length, "only the accepted write is recorded").toBe(1);
-  expect(entries[0].source).toBe("editor");
-  expect(entries[0].username).toBeTruthy();
   for (const c of contexts) await c.close();
 });
 
@@ -134,7 +118,7 @@ test("three people: two lose the race, each takes a different exit", async ({
   browser,
 }) => {
   test.setTimeout(8 * 60 * 1000);
-  const { flowId, people, contexts } = await seatPeople(page, browser, 3);
+  const { people, contexts } = await seatPeople(page, browser, 3);
   const [a, b, c] = people;
 
   await edit(a, 0);
@@ -160,15 +144,10 @@ test("three people: two lose the race, each takes a different exit", async ({
     timeout: CONFLICT_WINDOW_MS,
   });
 
-  const entries = await trail(page, flowId);
-  const sources = entries.map((e) => e.source).sort();
   console.log(
-    "3 people | audit entries:", entries.length, "| sources:", sources,
-    "| c wrote nothing:", c.writes.filter((s) => s === 200).length === 0,
+    "3 people | c wrote nothing:", c.writes.filter((s) => s === 200).length === 0,
   );
 
-  // Two writes happened: a's edit and b's update. c discarded, so nothing of c's.
-  expect(sources, "the trail records both writers and only them").toEqual(["editor", "overwrite"]);
   expect(c.writes.filter((s) => s === 200), "discarding writes nothing").toHaveLength(0);
   for (const ctx of contexts) await ctx.close();
 });
@@ -192,14 +171,12 @@ test("four people: everyone edits at once, nobody's work vanishes silently", asy
     if (p.writes.filter((s) => s === 200).length > 0) accepted.push(p.name);
   }
 
-  const entries = await trail(page, flowId);
   const server = await (await page.request.get(`/api/v1/flows/${flowId}`)).json();
   const allWrites = people.flatMap((p) => p.writes);
 
   console.log(
     "4 people | writes:", people.map((p) => `${p.name}=${JSON.stringify(p.writes)}`).join(" "),
     "\n         | accepted:", accepted, "conflicted:", conflicted,
-    "\n         | audit entries:", entries.length,
     "| server token:", server.version_token?.slice(0, 8),
   );
 
@@ -214,9 +191,5 @@ test("four people: everyone edits at once, nobody's work vanishes silently", asy
     const wasTold = conflicted.includes(p.name);
     expect(wasAccepted || wasTold, `${p.name} must be either accepted or told`).toBe(true);
   }
-  // 4. The trail describes exactly the writes that landed, and no secret.
-  expect(entries.length, "one entry per accepted writer's session").toBe(accepted.length);
-  expect(JSON.stringify(entries)).not.toMatch(/sk-[a-z]/i);
-
   for (const ctx of contexts) await ctx.close();
 });
