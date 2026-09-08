@@ -28,6 +28,7 @@ from lfx.mcp.flow_builder_tools import (
 
 from langflow.agentic.flows.model_config import build_model_config
 from langflow.agentic.services.file_events import wrap_file_tool_with_event
+from langflow.agentic.services.flow_preparation import custom_components_policy_notice
 
 FLOW_BUILDER_PROMPT = """\
 You are a Langflow Flow Builder assistant. You build and modify flows directly \
@@ -600,7 +601,12 @@ async def get_graph(
     agent.set_input_value("model", copy.deepcopy(build_model_config(provider, model_name)))
     agent_config = {
         "input_value": chat_input.message_response,
-        "system_prompt": FLOW_BUILDER_PROMPT,
+        # The packaged JSON flow gets this appended per request by
+        # ``inject_component_policy_into_flow``; this flow composes its Agent here, so it has
+        # to ask for the same notice itself. Without it the builder keeps reaching for
+        # ``generate_component`` on a server that refuses generated components, spending a
+        # nested model call to arrive at a refusal it could have known about up front.
+        "system_prompt": FLOW_BUILDER_PROMPT + custom_components_policy_notice(),
         "tools": tools,
         "temperature": 0.1,
         "max_iterations": step_budget,

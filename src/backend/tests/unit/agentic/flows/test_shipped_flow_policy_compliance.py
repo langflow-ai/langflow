@@ -28,6 +28,7 @@ import pytest
 from langflow.agentic.helpers.validation import validate_component_runtime
 from langflow.agentic.services.flow_preparation import (
     CUSTOM_COMPONENTS_DISABLED_NOTICE,
+    custom_components_policy_notice,
     inject_component_policy_into_flow,
     load_and_prepare_flow,
 )
@@ -260,3 +261,44 @@ class TestPolicyDenialsAddressTheUser:
         assert message is not None
         assert "administrator" in message
         assert "build what you need from the components already in the library" in message
+
+
+class TestBuilderFlowFollowsTheSamePolicy:
+    """The Python builder flow has to learn the policy too, or it keeps reaching for the tool.
+
+    ``build_flow`` / ``component_then_flow`` / ``manage_files`` / ``run_flow`` route to
+    ``flow_builder_assistant``, which composes its Agent in Python and never passes through
+    ``inject_component_policy_into_flow``. Left uninformed it calls ``generate_component`` on
+    a server that refuses generated components, spending a nested model call to reach a
+    refusal it could have known about -- a smaller version of the retry burn in LE-2322.
+    """
+
+    def test_notice_is_empty_when_custom_components_are_allowed(self):
+        settings = get_settings_service().settings
+        saved = settings.allow_custom_components
+        settings.allow_custom_components = True
+        try:
+            assert custom_components_policy_notice() == ""
+        finally:
+            settings.allow_custom_components = saved
+
+    @pytest.mark.usefixtures("hardened_settings")
+    def test_notice_is_the_same_text_both_surfaces_use(self):
+        """One decision, one string -- so the two surfaces cannot drift apart."""
+        assert custom_components_policy_notice() == CUSTOM_COMPONENTS_DISABLED_NOTICE
+
+    @pytest.mark.usefixtures("hardened_settings")
+    def test_notice_tells_the_agent_not_to_reach_for_the_tool(self):
+        """Withdrawing the offer is not enough; the tool call is what costs the turn."""
+        assert "Do NOT try to create one through a tool" in custom_components_policy_notice()
+
+    @pytest.mark.usefixtures("hardened_settings")
+    async def test_builder_agent_prompt_carries_the_notice(self):
+        from langflow.agentic.flows import flow_builder_assistant
+
+        graph = await flow_builder_assistant.get_graph()
+        prompts = [
+            v.params.get("system_prompt") for v in graph.vertices if isinstance(v.params.get("system_prompt"), str)
+        ]
+        assert prompts, "builder graph exposed no Agent system prompt"
+        assert any(CUSTOM_COMPONENTS_DISABLED_NOTICE in p for p in prompts)

@@ -21,8 +21,14 @@ class ComponentLibrarySearch(Component):
     Reading the library here removes the need for either exemption. There is no path input --
     the root is derived from this package -- so no tenant-controlled path exists for
     ``enforce_local_file_access`` to gate, and the component is registered like any other, so
-    the custom-component gate resolves it normally. The source it returns is the same source
-    ``GET /api/v1/all`` already serves to every authenticated user.
+    the custom-component gate resolves it normally.
+
+    What it returns is first-party product source, the same source ``GET /api/v1/all`` serves
+    to every authenticated user -- but read off disk, so the equivalence is not exact. That
+    endpoint filters its catalog by provider policy and by blocked catalog keys
+    (``include_blocked`` is superuser-only); this read applies neither. It is deliberately
+    NOT an access-control boundary: treat it as "the shipped component sources are readable",
+    and gate anything narrower at the endpoint, not here.
     """
 
     display_name = "Component Library Search"

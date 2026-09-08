@@ -283,10 +283,27 @@ Custom component generation is turned off here by the Langflow administrator.
 - Do NOT offer or advertise custom component generation. When you describe what
   you can do, list only two capabilities: answering questions about Langflow, and
   building flows from the components already in the library.
+- Do NOT try to create one through a tool either. The server refuses generated
+  components before they run, so the attempt only spends the user's turn.
 - If the user asks for a custom component, say plainly that this deployment does
   not allow them, and offer to build what they need from the existing library
   instead. State it as a settled configuration choice their administrator made --
   not an error, not a temporary failure -- and do not suggest retrying."""
+
+
+def custom_components_policy_notice() -> str:
+    """The notice to append to an assistant system prompt, or ``""`` when it does not apply.
+
+    Both assistant surfaces need this and they build their prompts differently: the packaged
+    JSON flow is rewritten node by node here, while ``flow_builder_assistant`` composes its
+    Agent in Python. Sharing the decision keeps one answer to "does this deployment allow
+    custom components" instead of two that can drift apart.
+    """
+    from lfx.services.deps import get_settings_service
+
+    if get_settings_service().settings.allow_custom_components:
+        return ""
+    return CUSTOM_COMPONENTS_DISABLED_NOTICE
 
 
 def inject_component_policy_into_flow(flow_data: dict) -> dict:
@@ -300,9 +317,8 @@ def inject_component_policy_into_flow(flow_data: dict) -> dict:
     encoding a node id or a graph-shape assumption that the next edit to the flow silently
     invalidates. Idempotent, so a flow prepared twice does not accumulate the block.
     """
-    from lfx.services.deps import get_settings_service
-
-    if get_settings_service().settings.allow_custom_components:
+    notice = custom_components_policy_notice()
+    if not notice:
         return flow_data
 
     for node in flow_data.get("data", {}).get("nodes", []):
@@ -313,9 +329,9 @@ def inject_component_policy_into_flow(flow_data: dict) -> dict:
         if not isinstance(field, dict):
             continue
         value = field.get("value")
-        if not isinstance(value, str) or CUSTOM_COMPONENTS_DISABLED_NOTICE in value:
+        if not isinstance(value, str) or notice in value:
             continue
-        field["value"] = value.rstrip() + CUSTOM_COMPONENTS_DISABLED_NOTICE
+        field["value"] = value.rstrip() + notice
 
     return flow_data
 
