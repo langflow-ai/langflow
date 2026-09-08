@@ -144,8 +144,11 @@ class DatabaseVariableService(VariableService, Service):
                             await logger.adebug(
                                 f"Skipping update of user-modified variable {var_name} with environment value"
                             )
-                        else:
-                            await self.update_variable(user_id, var_name, value, session=session)
+                        elif self._stored_value(existing) != value:
+                            # bump_updated_at=False keeps this import from looking like a user
+                            # edit to the check above: stamping updated_at here would freeze the
+                            # row against every later environment change.
+                            await self.update_variable(user_id, var_name, value, session=session, bump_updated_at=False)
                     else:
                         await self.create_variable(
                             user_id=user_id,
@@ -165,6 +168,21 @@ class DatabaseVariableService(VariableService, Service):
                             f"Session rolled back after error processing {var_name}. Stopping variable initialization."
                         )
                         break
+
+    @staticmethod
+    def _stored_value(variable: Variable) -> str | None:
+        """Return the plaintext behind a stored variable, or None when it cannot be read.
+
+        An unreadable value (encrypted with a retired LANGFLOW_SECRET_KEY) compares unequal to
+        the environment value, so the environment import refreshes it rather than leaving a row
+        nothing can decrypt.
+        """
+        if variable.type != CREDENTIAL_TYPE:
+            return variable.value
+        try:
+            return auth_utils.decrypt_api_key(variable.value)
+        except Exception:  # noqa: BLE001
+            return None
 
     async def get_variable_object(
         self,
@@ -403,6 +421,8 @@ class DatabaseVariableService(VariableService, Service):
         name: str,
         value: str,
         session: AsyncSession,
+        *,
+        bump_updated_at: bool = True,
     ):
         stmt = select(Variable).where(Variable.user_id == user_id, Variable.name == name)
         variable = (await session.exec(stmt)).first()
@@ -423,7 +443,8 @@ class DatabaseVariableService(VariableService, Service):
             variable.value = auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
         else:
             variable.value = value
-        variable.updated_at = datetime.now(timezone.utc)
+        if bump_updated_at:
+            variable.updated_at = datetime.now(timezone.utc)
         session.add(variable)
         await session.flush()
         await session.refresh(variable)

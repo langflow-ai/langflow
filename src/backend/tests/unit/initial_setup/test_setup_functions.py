@@ -1,4 +1,5 @@
 import asyncio
+import secrets
 from copy import deepcopy
 from uuid import uuid4
 
@@ -422,3 +423,31 @@ def test_update_components_syncs_metadata_for_skipped_language_model():
     assert node["template"]["code"]["value"] == "new source"
     assert node["template"]["model"]["value"] == "persisted-model"
     assert node["metadata"] == {"code_hash": "new-hash", "module": "new.module"}
+
+
+async def test_initialize_env_variables_for_all_users_reaches_existing_users(async_session, monkeypatch) -> None:
+    """Users who already exist must pick up a newly added environment variable.
+
+    The login handler only imports these for the user that just signed in, which never happens
+    again for a user of an external identity provider: their credential is resolved on every
+    request and the returning-user path does no provisioning.
+    """
+    from langflow.initial_setup.setup import initialize_env_variables_for_all_users
+    from langflow.services.database.models.user.model import User
+    from langflow.services.deps import get_settings_service, get_variable_service
+
+    users = [
+        User(username=f"existing-user-{index}", password=secrets.token_urlsafe(8), is_active=True) for index in range(2)
+    ]
+    async_session.add_all(users)
+    await async_session.flush()
+
+    monkeypatch.setenv("NEW_SERVICE_URL", "https://service.internal")
+    monkeypatch.setattr(get_settings_service().settings, "variables_to_get_from_environment", ["NEW_SERVICE_URL"])
+
+    await initialize_env_variables_for_all_users(async_session)
+
+    variable_service = get_variable_service()
+    for user in users:
+        names = await variable_service.list_variables(user.id, async_session)
+        assert "NEW_SERVICE_URL" in names, f"{user.username} did not receive the new variable; has {names}"

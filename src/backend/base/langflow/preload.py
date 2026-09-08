@@ -60,6 +60,7 @@ class PreloadStep(Enum):
     BUNDLES = "bundles"
     TYPES_CACHED = "types_cached"
     STARTER_PROJECTS = "starter_projects"
+    ENV_GLOBALS = "env_globals"
     AGENTIC_GLOBALS = "agentic_globals"
     FLOWS = "flows"
 
@@ -69,6 +70,7 @@ _STEP_ATTR: Final[dict[PreloadStep, str]] = {
     PreloadStep.BUNDLES: "bundles_loaded",
     PreloadStep.TYPES_CACHED: "types_cached",
     PreloadStep.STARTER_PROJECTS: "starter_projects_created",
+    PreloadStep.ENV_GLOBALS: "env_globals_imported",
     PreloadStep.AGENTIC_GLOBALS: "agentic_globals_initialized",
     PreloadStep.FLOWS: "flows_loaded",
 }
@@ -79,6 +81,8 @@ _STEP_PREREQUISITES: Final[dict[PreloadStep, tuple[PreloadStep, ...]]] = {
     PreloadStep.BUNDLES: (),
     PreloadStep.TYPES_CACHED: (PreloadStep.BUNDLES,),
     PreloadStep.STARTER_PROJECTS: (PreloadStep.TYPES_CACHED,),
+    # Reads only the process environment and the user table, so nothing has to run first.
+    PreloadStep.ENV_GLOBALS: (),
     PreloadStep.AGENTIC_GLOBALS: (PreloadStep.TYPES_CACHED,),
     # MCP config may succeed even when globals failed (separate try/except in preload).
     PreloadStep.FLOWS: (PreloadStep.TYPES_CACHED,),
@@ -111,6 +115,7 @@ class _PreloadState:
     bundles_loaded: bool = False
     types_cached: bool = False
     starter_projects_created: bool = False
+    env_globals_imported: bool = False
     agentic_globals_initialized: bool = False
     flows_loaded: bool = False
 
@@ -197,6 +202,7 @@ async def _run_master_preload() -> None:
     from langflow.initial_setup.setup import (
         copy_profile_pictures,
         create_or_update_starter_projects,
+        initialize_env_variables_for_all_users,
         load_flows_from_directory,
     )
     from langflow.main import load_bundles_with_error_handling
@@ -245,6 +251,18 @@ async def _run_master_preload() -> None:
                 "starter projects init failed",
                 create_or_update_starter_projects(all_types_dict),
             )
+
+        await logger.adebug("[preload] importing environment global variables")
+
+        async def _run_env_globals() -> None:
+            async with session_scope() as session:
+                await initialize_env_variables_for_all_users(session)
+
+        await _best_effort(
+            PreloadStep.ENV_GLOBALS,
+            "environment global variables import failed",
+            _run_env_globals(),
+        )
 
         if settings_service.settings.agentic_experience:
             from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_global_variables
