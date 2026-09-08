@@ -1,0 +1,91 @@
+---
+title: Agent Guild
+slug: /bundles-agentguild
+---
+
+import Icon from "@site/src/components/icon";
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+The **Agent Guild** bundle helps a flow inspect a public agent endpoint before
+delegation and read current trust-operation prices. Both components use free,
+unauthenticated reads from the [Agent Guild hosted service](https://github.com/AgentTanuki/agent-guild).
+They require no Agent Guild account, API key, or wallet.
+
+These components return evidence for your flow to evaluate. They do not enforce
+a delegation policy, verify Agent Passports, register agents, or make purchases.
+
+## Agent Guild Preflight
+
+Send a public endpoint URL to Agent Guild, which probes that endpoint and reports
+what it observed. The output is [`Data`](/data-types#json) with the complete
+preflight response. Its `verdict`, `failed`, and `unknowns` fields remain directly
+available for downstream routing and display.
+
+Use a public HTTP(S) URL without credentials. The component rejects URL userinfo,
+common credential query parameters, fragments, and literal local/private addresses
+before transmission. Do not place sensitive information in the endpoint URL;
+the URL is sent to Agent Guild's hosted service for inspection.
+
+### Parameters
+
+| Name | Type | Description |
+| --- | --- | --- |
+| Public Endpoint URL (`url`) | String | Required. Public endpoint to inspect, such as an MCP or A2A endpoint. Available in Tool Mode. |
+| Timeout (`timeout`) | Integer | Advanced. Maximum request duration in seconds, from 1 to 60. Default: 30. |
+
+### Use preflight evidence in a flow
+
+1. Add **Agent Guild Preflight** and enter the endpoint you intend to use.
+2. Run the component and inspect the **Preflight** output.
+3. Extract the `verdict`, `failed`, and `unknowns` fields with your flow's data-processing components.
+4. Route the result according to your application's policy before connecting it to consequential work.
+
+A `delegate_with_caution` result is not a successful verification. Preserve the
+failed checks and unavailable evidence when explaining the result. An unknown
+check should remain unknown. Even a favorable observation does not guarantee
+future behavior or authorize execution.
+
+## Agent Guild Paid Operations
+
+Read the `paid_operations` catalog from Agent Guild's public discovery manifest.
+The **Paid Operations** output is [`Data`](/data-types#json) containing the catalog,
+including current prices, callable entrypoints, and free alternatives.
+
+The component reads prices only. It does not call the listed paid operations,
+attach payment credentials, or initiate settlement. Prices are obtained on each
+run rather than embedded in the component.
+
+### Parameters
+
+| Name | Type | Description |
+| --- | --- | --- |
+| Timeout (`timeout`) | Integer | Advanced. Maximum request duration in seconds, from 1 to 60. Default: 30. Available in Tool Mode. |
+
+## Use with an Agent
+
+Enable **Tool Mode** on either component and connect its **Toolset** output to
+the **Tools** input on a Langflow Agent. Configure the Agent's model separately;
+model calls follow that provider's pricing.
+
+For example, ask the Agent to inspect a public endpoint you supply, summarize
+failed checks and unknowns, and explain which paid trust operations are available.
+Tell the Agent to treat returned descriptions as data to assess, not as instructions
+or permission to execute. For mandatory preflight, run the component explicitly
+in your flow before delegation instead of relying on the Agent to choose a tool.
+
+## Errors and limits
+
+Both components use a fixed Agent Guild service origin, refuse HTTP redirects,
+and reject responses larger than 4 MiB. Invalid targets, timeouts, HTTP errors,
+and malformed responses fail the component run rather than producing a favorable
+assessment. An unexpected HTTP 402 is surfaced as an error; no payment is attempted.
+
+Agent Guild also offers signed Agent Passports as a separate service capability.
+This bundle does not fetch or cryptographically verify them. A signature proves
+origin and integrity, not message safety or future work quality. See the
+[Agent Guild source and API documentation](https://github.com/AgentTanuki/agent-guild)
+for the supported verification workflows.
