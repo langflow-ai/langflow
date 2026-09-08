@@ -977,6 +977,13 @@ class AuthService(BaseAuthService):
             profile.sso_last_login_at = now
             profile.updated_at = now
             await update_user_last_login_at(user.id, db)
+            # Sync environment variables on every SSO sign-in, not just
+            # the first.  Without this call, a variable added to
+            # LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT after the user
+            # was created never shows up for them.
+            from langflow.services.deps import get_variable_service
+
+            await get_variable_service().initialize_user_variables(user.id, db)
             return user
 
         username = await self._unique_external_username(db, identity)

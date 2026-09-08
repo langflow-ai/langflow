@@ -2924,3 +2924,62 @@ async def test_get_current_user_mcp_auto_login_skip_missing_superuser_rejects(
         )
 
     assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+
+
+# =============================================================================
+# Regression: SSO returning users must receive newly added env variables (#14983)
+# =============================================================================
+
+
+@pytest.mark.anyio
+async def test_returning_sso_user_gets_newly_added_env_variable(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+    async_session,
+):
+    """A returning SSO user must see variables added to
+    LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT after their account was created.
+
+    Before the fix, _materialize_external_user only synced variables for new
+    users (inside _initialize_jit_user_defaults).  Returning users hit the
+    early-return branch and never called initialize_user_variables.
+    """
+    from langflow.services.auth.external import identity_from_claims
+    from langflow.services.deps import get_settings_service, get_variable_service
+
+    auth_settings.EXTERNAL_AUTH_ENABLED = True
+    auth_settings.EXTERNAL_AUTH_PROVIDER = "external"
+
+    identity = identity_from_claims(
+        {"sub": "sub-1", "email": "u1@example.com", "preferred_username": "u1"},
+        auth_settings,
+    )
+
+    # First sign-in — provisions the user.
+    with patch(
+        "langflow.services.deps.get_variable_service",
+        return_value=get_variable_service(),
+    ):
+        user = await auth_service._materialize_external_user(identity, async_session)
+        await async_session.flush()
+
+        # Operator adds a new variable to the environment and redeploys.
+        monkeypatch_values = {
+            "NEW_SERVICE_URL": "https://svc.internal",
+        }
+        with patch.dict("os.environ", monkeypatch_values, clear=False):
+            # Make sure the setting includes the new variable.
+            original = get_settings_service().settings.variables_to_get_from_environment
+            get_settings_service().settings.variables_to_get_from_environment = [
+                *original,
+                "NEW_SERVICE_URL",
+            ]
+            try:
+                # Second sign-in — must pick up the new variable.
+                await auth_service._materialize_external_user(identity, async_session)
+                await async_session.flush()
+            finally:
+                get_settings_service().settings.variables_to_get_from_environment = original
+
+    names = await get_variable_service().list_variables(user.id, async_session)
+    assert "NEW_SERVICE_URL" in names

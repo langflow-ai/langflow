@@ -145,7 +145,20 @@ class DatabaseVariableService(VariableService, Service):
                                 f"Skipping update of user-modified variable {var_name} with environment value"
                             )
                         else:
-                            await self.update_variable(user_id, var_name, value, session=session)
+                            # Only write if the value actually changed; use
+                            # bump_updated_at=False so that an env-sync write
+                            # does not count as a user edit.  Without this,
+                            # the second sync sets updated_at > created_at
+                            # and every subsequent sync is skipped.
+                            existing_decrypted = auth_utils.decrypt_api_key(existing.value)
+                            if existing_decrypted != value:
+                                await self.update_variable(
+                                    user_id,
+                                    var_name,
+                                    value,
+                                    session=session,
+                                    bump_updated_at=False,
+                                )
                     else:
                         await self.create_variable(
                             user_id=user_id,
@@ -403,6 +416,8 @@ class DatabaseVariableService(VariableService, Service):
         name: str,
         value: str,
         session: AsyncSession,
+        *,
+        bump_updated_at: bool = True,
     ):
         stmt = select(Variable).where(Variable.user_id == user_id, Variable.name == name)
         variable = (await session.exec(stmt)).first()
@@ -423,7 +438,8 @@ class DatabaseVariableService(VariableService, Service):
             variable.value = auth_utils.encrypt_api_key(value, settings_service=self.settings_service)
         else:
             variable.value = value
-        variable.updated_at = datetime.now(timezone.utc)
+        if bump_updated_at:
+            variable.updated_at = datetime.now(timezone.utc)
         session.add(variable)
         await session.flush()
         await session.refresh(variable)

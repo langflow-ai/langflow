@@ -952,3 +952,62 @@ async def test_get_all_never_returns_decrypted_credential_as_generic(service, se
     leaked = [v for v in results if v.value and v.value.startswith("gAAAAA")]
     assert leaked == []
     assert all(v.id != saved_id for v in results if v.value is not None)
+
+
+# =============================================================================
+# Regression: env value change must reach user after repeat sync (#14983)
+# =============================================================================
+
+
+async def test_env_value_change_reaches_user_after_repeat_sync(
+    service, session: AsyncSession, monkeypatch
+):
+    """After two syncs the stored updated_at becomes newer than created_at,
+    which makes the is_user_modified check always True — blocking every
+    subsequent environment update.
+
+    Bug 2 of #14983: the sync itself calls update_variable, which sets
+    updated_at = now.  After sync 2, updated_at > created_at is permanently
+    true, so sync 3+ are all skipped even when the env value changed.
+    """
+    user_id = uuid4()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(
+        service.settings_service.settings,
+        "variables_to_get_from_environment",
+        ["OPENAI_API_KEY"],
+    )
+
+    monkeypatch.setenv("OPENAI_API_KEY", "v1")
+    await service.initialize_user_variables(user_id=user_id, session=session)
+    # sync 2 — must not lock out future updates
+    await service.initialize_user_variables(user_id=user_id, session=session)
+
+    monkeypatch.setenv("OPENAI_API_KEY", "v2")
+    await service.initialize_user_variables(user_id=user_id, session=session)
+    value = await service.get_variable(user_id, "OPENAI_API_KEY", "", session=session)
+    assert value.get_secret_value() == "v2"
+
+
+async def test_env_sync_skips_write_when_value_unchanged(
+    service, session: AsyncSession, monkeypatch
+):
+    """When the environment value hasn't changed, the sync must not touch the
+    row at all (no unnecessary write, no updated_at bump)."""
+    user_id = uuid4()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(
+        service.settings_service.settings,
+        "variables_to_get_from_environment",
+        ["OPENAI_API_KEY"],
+    )
+
+    monkeypatch.setenv("OPENAI_API_KEY", "same-value")
+    await service.initialize_user_variables(user_id=user_id, session=session)
+    var_after_create = await service.get_variable_object(user_id, "OPENAI_API_KEY", session)
+    created_ts = var_after_create.updated_at
+
+    # Second sync with the same value — should be a no-op.
+    await service.initialize_user_variables(user_id=user_id, session=session)
+    var_after_second = await service.get_variable_object(user_id, "OPENAI_API_KEY", session)
+    assert var_after_second.updated_at == created_ts
