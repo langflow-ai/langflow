@@ -5698,6 +5698,7 @@
             "storage_location",
             "path",
             "file_path",
+            "csv_delimiter",
             "separator",
             "silent_errors",
             "delete_server_file_after_processing",
@@ -5915,6 +5916,28 @@
               "track_in_telemetry": true,
               "type": "int",
               "value": 1
+            },
+            "csv_delimiter": {
+              "_input_type": "StrInput",
+              "advanced": true,
+              "api_editable": false,
+              "display_name": "CSV Delimiter",
+              "dynamic": false,
+              "info": "Single character separating CSV columns. Use \\t for a tab. Applies to Structured Content output.",
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "csv_delimiter",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ","
             },
             "delete_server_file_after_processing": {
               "_input_type": "BoolInput",
@@ -31034,6 +31057,6 @@
     "num_components": 127,
     "num_modules": 16
   },
-  "sha256": "31809b64285fb257fa37b03c2742bbc26872f217501e58ad5a58edde963f60e8",
+  "sha256": "f93391e2485f8fbde294aa5f272b854b326507edc12a66db4683f0ef25d1b76e",
   "version": "1.13.0"
 }

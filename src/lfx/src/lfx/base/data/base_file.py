@@ -3,6 +3,7 @@ import shutil
 import tarfile
 import threading
 from abc import ABC, abstractmethod
+from functools import partial
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -172,6 +173,13 @@ class BaseFileComponent(Component, ABC):
             required=False,
             input_types=["Data", "JSON", "Message"],
             is_list=True,
+            advanced=True,
+        ),
+        StrInput(
+            name="csv_delimiter",
+            display_name="CSV Delimiter",
+            value=",",
+            info=r"Single character separating CSV columns. Use \t for a tab. Applies to Structured Content output.",
             advanced=True,
         ),
         StrInput(
@@ -508,6 +516,18 @@ class BaseFileComponent(Component, ABC):
         # Get file extension in lowercase
         ext = Path(file_path).suffix.lower()
 
+        csv_reader: Callable[..., pd.DataFrame] = pd.read_csv
+        if ext == ".csv":
+            delimiter = getattr(self, "csv_delimiter", ",")
+            if delimiter == r"\t":
+                delimiter = "\t"
+            if not isinstance(delimiter, str) or len(delimiter) != 1 or delimiter in "\r\n\0":
+                msg = (
+                    r"CSV Delimiter must be a single character (or \t for a tab), excluding line breaks and null bytes."
+                )
+                raise ValueError(msg)
+            csv_reader = partial(pd.read_csv, sep=delimiter)
+
         settings = get_settings_service().settings
 
         # For S3 storage, download file bytes first
@@ -517,7 +537,7 @@ class BaseFileComponent(Component, ABC):
 
             # Map file extensions to pandas read functions that support BytesIO
             if ext == ".csv":
-                result = pd.read_csv(BytesIO(content))
+                result = csv_reader(BytesIO(content))
             elif ext == ".xlsx":
                 result = pd.read_excel(BytesIO(content))
             elif ext == ".parquet":
@@ -529,7 +549,7 @@ class BaseFileComponent(Component, ABC):
 
         # Local storage - read directly from filesystem
         file_readers: dict[str, Callable[[str], pd.DataFrame]] = {
-            ".csv": pd.read_csv,
+            ".csv": csv_reader,
             ".xlsx": pd.read_excel,
             ".parquet": pd.read_parquet,
             # TODO: sqlite and json support?
