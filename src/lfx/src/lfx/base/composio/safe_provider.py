@@ -344,4 +344,3 @@ def _patch_identifier_substitution_once() -> None:
 _patch_file_helper_once()
 _patch_pydantic_builder_once()
 _patch_identifier_substitution_once()
-
