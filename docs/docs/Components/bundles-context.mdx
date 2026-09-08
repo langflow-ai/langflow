@@ -1,0 +1,94 @@
+---
+title: Context.dev
+slug: /bundles-context
+---
+
+import Icon from "@site/src/components/icon";
+import PartialLfxBundlesInstall from "@site/docs/_partial-bundle-lfx-bundles-install.mdx";
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" />
+[**Bundles**](/components-bundle-components) contain custom components that
+support specific third-party integrations with Langflow.
+
+The **Context.dev** bundle searches and retrieves live web and company data. Create an API key in the [Context.dev dashboard](https://app.context.dev/api-keys), then provide it to the component you use.
+
+For more information, see the [Context.dev documentation](https://docs.context.dev).
+
+## Context.dev Web Search
+
+Search the live web with optional domain and freshness filters. The component can also include clean page Markdown with every result.
+
+| Name                                        | Type         | Description                                                          |
+| ------------------------------------------- | ------------ | -------------------------------------------------------------------- |
+| Context.dev API Key (`api_key`)             | SecretString | Your Context.dev API key.                                            |
+| Query (`query`)                             | String       | A natural-language query or Google-style search expression.          |
+| Number of Results (`num_results`)           | Integer      | Number of results to return, from 10 to 100. Default: `10`.          |
+| Include Domains (`include_domains`)         | String       | Optional comma-separated domain allowlist.                           |
+| Exclude Domains (`exclude_domains`)         | String       | Optional comma-separated domain blocklist.                           |
+| Freshness (`freshness`)                     | Dropdown     | Optional publication window from the last 24 hours to the last year. |
+| Include Page Markdown (`include_markdown`)  | Boolean      | Include scraped Markdown with each search result. Default: `false`.  |
+| Main Content Only (`use_main_content_only`) | Boolean      | Remove site chrome from included Markdown. Default: `true`.          |
+
+## Context.dev Company News
+
+Find recent news about a company using its domain, name, stock ticker, or ISIN.
+
+| Name                                   | Type         | Description                                                    |
+| -------------------------------------- | ------------ | -------------------------------------------------------------- |
+| Context.dev API Key (`api_key`)        | SecretString | Your Context.dev API key.                                      |
+| Company Identifier (`identifier_type`) | Dropdown     | Identify the company by `domain`, `name`, `ticker`, or `isin`. |
+| Identifier Value (`identifier`)        | String       | Value matching the selected identifier type.                   |
+| Sort By (`sort_by`)                    | Dropdown     | Sort by `newest` or `relevance`. Default: `newest`.            |
+| Result Limit (`limit`)                 | Integer      | Number of articles to return, from 1 to 100. Default: `10`.    |
+
+## Context.dev Scrape Markdown
+
+Convert webpages, PDFs, Office documents, and YouTube videos into clean Markdown. YouTube URLs return timestamped transcript Markdown.
+
+| Name                                        | Type         | Description                                                   |
+| ------------------------------------------- | ------------ | ------------------------------------------------------------- |
+| Context.dev API Key (`api_key`)             | SecretString | Your Context.dev API key.                                     |
+| URL (`url`)                                 | String       | Webpage, document, or YouTube URL to convert.                 |
+| Main Content Only (`use_main_content_only`) | Boolean      | Remove site chrome from webpage Markdown. Default: `true`.    |
+| Include Links (`include_links`)             | Boolean      | Preserve links in the Markdown. Default: `true`.              |
+| Include Images (`include_images`)           | Boolean      | Include image references. Default: `false`.                   |
+| Maximum Cache Age (`max_age_ms`)            | Integer      | Maximum accepted cache age in milliseconds. Default: one day. |
+
+## Context.dev Crawl Website
+
+Crawl a website and return clean Markdown for every discovered page.
+
+| Name                                        | Type         | Description                                         |
+| ------------------------------------------- | ------------ | --------------------------------------------------- |
+| Context.dev API Key (`api_key`)             | SecretString | Your Context.dev API key.                           |
+| Starting URL (`url`)                        | String       | URL where the crawl starts.                         |
+| Maximum Pages (`max_pages`)                 | Integer      | Maximum number of pages to crawl. Default: `10`.    |
+| Maximum Depth (`max_depth`)                 | Integer      | Link depth from the starting URL. Default: `2`.     |
+| Main Content Only (`use_main_content_only`) | Boolean      | Remove site chrome from each page. Default: `true`. |
+| Follow Subdomains (`follow_subdomains`)     | Boolean      | Include links on subdomains. Default: `false`.      |
+
+## Context.dev Extract Structured Data
+
+Crawl a website and extract an object matching your JSON Schema.
+
+| Name                                     | Type         | Description                                                              |
+| ---------------------------------------- | ------------ | ------------------------------------------------------------------------ |
+| Context.dev API Key (`api_key`)          | SecretString | Your Context.dev API key.                                                |
+| Starting URL (`url`)                     | String       | Website URL to analyze.                                                  |
+| JSON Schema (`schema`)                   | Dictionary   | JSON Schema describing the object to return.                             |
+| Extraction Instructions (`instructions`) | String       | Optional guidance about which facts to prioritize.                       |
+| Fact Check (`fact_check`)                | Boolean      | Require returned values to be grounded in source pages. Default: `true`. |
+| Maximum Pages (`max_pages`)              | Integer      | Maximum number of pages to analyze. Default: `5`.                        |
+
+## Context.dev Retrieve Brand
+
+Retrieve logos, colors, fonts, company metadata, and social links using a domain, company name, or stock ticker.
+
+| Name                                 | Type         | Description                                                         |
+| ------------------------------------ | ------------ | ------------------------------------------------------------------- |
+| Context.dev API Key (`api_key`)      | SecretString | Your Context.dev API key.                                           |
+| Brand Identifier (`identifier_type`) | Dropdown     | Identify the brand by `domain`, `name`, or `ticker`.                |
+| Identifier Value (`identifier`)      | String       | Value matching the selected identifier type.                        |
+| Prioritize Speed (`max_speed`)       | Boolean      | Return faster with less comprehensive enrichment. Default: `false`. |
