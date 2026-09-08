@@ -12,6 +12,17 @@ We sanitize ``tool.input_parameters`` in-place at wrap time, and also patch
 both the FileHelper file-substitution helpers and the pydantic schema builder
 so the agent path, the direct ``execute_action`` path, and the legacy
 ``tools.get`` path all see a schema with a ``"type"`` for every node.
+
+We also relax the ``attachment`` field specifically: Composio's raw schemas
+for Gmail/Outlook send/draft actions mark the attachment object (or its
+sub-fields) as ``required``, even though a real attachment is optional, you
+simply omit it to send an email without one. Left alone, an LLM building a
+tool call sees "attachment" in ``required`` and has to invent an empty
+placeholder (e.g. ``{"name": "", "data": ""}``) to satisfy the schema, which
+then reaches the real Gmail/Outlook API and fails validation there instead.
+Langflow's own node-execution path (``ComposioBaseComponent``) already treats
+this field as optional; ``_relax_attachment_requirements`` mirrors that for
+the raw tool-calling schema.
 """
 
 from __future__ import annotations
@@ -99,14 +110,99 @@ def _sanitize_schema(schema: Any) -> None:
                 _sanitize_schema(sub)
 
 
+def _is_attachment_field(name: Any) -> bool:
+    """True for "attachment" itself or any dotted sub-field ("attachment.name")."""
+    return isinstance(name, str) and (name.lower() == "attachment" or name.lower().startswith("attachment."))
+
+
+def _relax_attachment_requirements(schema: Any) -> None:
+    """Recursively drop attachment-related entries from every ``required`` list.
+
+    See the module docstring: Composio's raw schema requires the attachment
+    field on actions where it's actually optional, which forces an LLM to
+    fabricate an empty placeholder to pass validation. This mutates ``schema``
+    in place, walking the same JSON-schema shapes ``_sanitize_schema`` does,
+    since a "required" list can appear at any nesting level (a top-level
+    action schema, a $defs entry, a union arm, etc.).
+    """
+    if not isinstance(schema, dict):
+        return
+
+    required = schema.get("required")
+    if isinstance(required, list):
+        schema["required"] = [name for name in required if not _is_attachment_field(name)]
+
+    properties = schema.get("properties")
+    if isinstance(properties, dict):
+        for sub in properties.values():
+            _relax_attachment_requirements(sub)
+    items = schema.get("items")
+    if isinstance(items, dict):
+        _relax_attachment_requirements(items)
+    for union_key in ("anyOf", "oneOf", "allOf"):
+        for sub in schema.get(union_key, []) or []:
+            _relax_attachment_requirements(sub)
+    for defs_key in ("$defs", "definitions"):
+        defs = schema.get(defs_key)
+        if isinstance(defs, dict):
+            for sub in defs.values():
+                _relax_attachment_requirements(sub)
+
+
+def _harden_schema(schema: Any) -> None:
+    """Apply every schema patch (missing-``type`` + false-required-attachment) in one pass."""
+    _sanitize_schema(schema)
+    _relax_attachment_requirements(schema)
+
+
+def _is_blank_attachment(value: Any) -> bool:
+    """True for an attachment value with nothing real in it.
+
+    Covers the exact placeholder an LLM fabricates when it decides to submit
+    an "attachment" it was never actually asked for: ``{"name": "", "data":
+    ""}`` (every sub-field blank), or a bare empty string. A real attachment
+    always carries at least one non-empty field.
+    """
+    if value in (None, ""):
+        return True
+    if isinstance(value, dict):
+        return not any(v not in (None, "") for v in value.values())
+    return False
+
+
+def _strip_blank_attachment(arguments: Any) -> Any:
+    """Drop an ``attachment`` argument an LLM filled with only blank values.
+
+    ``_relax_attachment_requirements`` stops the schema from *forcing* an LLM
+    to supply attachment, but it can't stop a model from submitting one
+    anyway "to be safe" — that empty placeholder then passes local schema
+    validation (since the field is optional now) and reaches the real
+    Gmail/Outlook API, which rejects it there instead. This is the
+    execution-time half of the same fix: strip it right before the real call
+    goes out, exactly like ``ComposioBaseComponent.execute_action`` already
+    does for the direct node-execution path.
+    """
+    if not isinstance(arguments, dict) or "attachment" not in arguments:
+        return arguments
+    if not _is_blank_attachment(arguments["attachment"]):
+        return arguments
+    arguments = dict(arguments)
+    del arguments["attachment"]
+    return arguments
+
+
 if _COMPOSIO_AVAILABLE:
 
     class SafeLangchainProvider(LangchainProvider, name="langchain"):
         """LangchainProvider that patches tool schemas before delegating."""
 
         def wrap_tool(self, tool: Tool, execute_tool: Callable[..., Any]) -> StructuredTool:
-            _sanitize_schema(tool.input_parameters)
-            return super().wrap_tool(tool=tool, execute_tool=execute_tool)
+            _harden_schema(tool.input_parameters)
+
+            def safe_execute_tool(slug: str, arguments: dict) -> dict:
+                return execute_tool(slug, _strip_blank_attachment(arguments))
+
+            return super().wrap_tool(tool=tool, execute_tool=safe_execute_tool)
 
 
 def _extract_schema_arg(args: tuple, kwargs: dict, positional_index: int, keyword: str) -> Any:
@@ -155,11 +251,11 @@ def _patch_file_helper_once() -> None:
     # the wrapper to a stricter signature would silently break if a future
     # release switches to positionals.
     def safe_uploads(self, *args, **kwargs):
-        _sanitize_schema(_extract_schema_arg(args, kwargs, positional_index=1, keyword="schema"))
+        _harden_schema(_extract_schema_arg(args, kwargs, positional_index=1, keyword="schema"))
         return original_uploads(self, *args, **kwargs)
 
     def safe_downloads(self, *args, **kwargs):
-        _sanitize_schema(_extract_schema_arg(args, kwargs, positional_index=1, keyword="schema"))
+        _harden_schema(_extract_schema_arg(args, kwargs, positional_index=1, keyword="schema"))
         return original_downloads(self, *args, **kwargs)
 
     FileHelper._substitute_file_uploads_recursively = safe_uploads  # noqa: SLF001
@@ -187,7 +283,7 @@ def _patch_pydantic_builder_once() -> None:
     original_builder = _composio_shared.pydantic_model_from_param_schema
 
     def safe_builder(*args, **kwargs):
-        _sanitize_schema(_extract_schema_arg(args, kwargs, positional_index=0, keyword="param_schema"))
+        _harden_schema(_extract_schema_arg(args, kwargs, positional_index=0, keyword="param_schema"))
         return original_builder(*args, **kwargs)
 
     _composio_shared.pydantic_model_from_param_schema = safe_builder
@@ -248,3 +344,4 @@ def _patch_identifier_substitution_once() -> None:
 _patch_file_helper_once()
 _patch_pydantic_builder_once()
 _patch_identifier_substitution_once()
+

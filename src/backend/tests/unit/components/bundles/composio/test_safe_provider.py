@@ -13,7 +13,12 @@ import pytest
 composio = pytest.importorskip("composio", reason="composio extra not installed in this env")
 pytest.importorskip("composio_langchain", reason="composio extra not installed in this env")
 
-from lfx.base.composio.safe_provider import SafeLangchainProvider, _sanitize_schema  # noqa: E402
+from lfx.base.composio.safe_provider import (  # noqa: E402
+    SafeLangchainProvider,
+    _harden_schema,
+    _relax_attachment_requirements,
+    _sanitize_schema,
+)
 
 
 class TestSanitizeSchema:
@@ -170,6 +175,163 @@ class TestSafeLangchainProviderRegression:
         model = pydantic_model_from_param_schema(schema)
         # Defaulted type is "string", which maps to ``str`` in Composio's type table.
         assert "payload" in model.model_fields
+
+
+class TestRelaxAttachmentRequirements:
+    """Reproduces the GMAIL_CREATE_EMAIL_DRAFT / GMAIL_SEND_EMAIL bug report.
+
+    Composio's raw schema for these actions marks "attachment" required even
+    though a real send/draft never needs one, you just omit it. Left alone,
+    an LLM building a tool call fabricates an empty placeholder
+    ({"name": "", "data": ""}) to satisfy the schema, which the real Gmail
+    API then rejects: "Tool input validation error".
+    """
+
+    def test_gmail_create_email_draft_shaped_schema(self):
+        # Modeled on the real GMAIL_CREATE_EMAIL_DRAFT input_parameters shape
+        # from the bug report: recipient/subject/body genuinely required,
+        # attachment required only because of the upstream schema defect.
+        schema = {
+            "type": "object",
+            "properties": {
+                "user_id": {"type": "string"},
+                "recipient_email": {"type": "string"},
+                "subject": {"type": "string"},
+                "body": {"type": "string"},
+                "is_html": {"type": "boolean"},
+                "attachment": {
+                    "type": "object",
+                    "properties": {"name": {"type": "string"}, "data": {"type": "string"}},
+                },
+            },
+            "required": ["user_id", "recipient_email", "attachment"],
+        }
+        _relax_attachment_requirements(schema)
+        assert schema["required"] == ["user_id", "recipient_email"]
+        # The property itself is untouched — only its false "required" status is dropped.
+        assert "attachment" in schema["properties"]
+
+    def test_pydantic_model_no_longer_requires_attachment(self):
+        """End-to-end: after hardening, the built Pydantic model accepts a call with no attachment."""
+        from composio.utils.shared import pydantic_model_from_param_schema
+
+        schema = {
+            "title": "GmailCreateEmailDraft",
+            "type": "object",
+            "properties": {
+                "subject": {"type": "string", "title": "Subject"},
+                "attachment": {"type": "string", "title": "Attachment"},
+            },
+            "required": ["subject", "attachment"],
+        }
+        _harden_schema(schema)
+        model = pydantic_model_from_param_schema(schema)
+        # subject is still mandatory; attachment must now be optional.
+        assert model.model_fields["subject"].is_required() is True
+        assert model.model_fields["attachment"].is_required() is False
+        # Confirms the model can actually be built with attachment omitted —
+        # the exact call shape an LLM should now be free to make.
+        instance = model(subject="test")
+        assert instance.subject == "test"
+
+    def test_wrap_tool_calls_harden_schema_on_input_parameters(self):
+        """``wrap_tool`` must route through ``_harden_schema``, not just ``_sanitize_schema``.
+
+        Avoids constructing a full ``composio.types.Tool`` (its nested
+        ``ItemDeprecated``/``ItemToolkit`` shape is version-coupled and brittle
+        to pin in a test); a lightweight stand-in with the one attribute
+        ``wrap_tool`` reads (``input_parameters``) is enough to prove the
+        dispatch is wired to the attachment-relaxing patch, not just the
+        original type-defaulting one.
+        """
+
+        class _FakeTool:
+            input_parameters = {
+                "type": "object",
+                "properties": {"subject": {"type": "string"}, "attachment": {"type": "string"}},
+                "required": ["subject", "attachment"],
+            }
+
+        provider = SafeLangchainProvider()
+        fake_tool = _FakeTool()
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(SafeLangchainProvider.__bases__[0], "wrap_tool", lambda self, tool, execute_tool: tool)  # noqa: ARG005
+            result = provider.wrap_tool(tool=fake_tool, execute_tool=lambda **_kwargs: None)
+        assert result.input_parameters["required"] == ["subject"]
+
+    def test_wrap_tool_strips_blank_attachment_before_the_real_execute_call(self):
+        """End-to-end reproduction of the follow-up bug: schema-optional isn't enough.
+
+        Making "attachment" optional in the schema stops an LLM from being
+        *forced* to supply it, but doesn't stop one from submitting the exact
+        {"name": "", "data": ""} placeholder anyway "to be safe" — that now
+        passes local validation (the field is optional) and would reach the
+        real Gmail API, which rejects it there instead: "the email tool
+        rejected its attachment parameter, although no attachment was
+        requested". This drives the real ``wrap_tool``/``safe_execute_tool``
+        path with exactly that placeholder and asserts it never reaches the
+        underlying ``execute_tool`` call.
+        """
+        received_args: dict = {}
+
+        def fake_execute_tool(slug: str, arguments: dict) -> dict:
+            received_args["slug"] = slug
+            received_args["arguments"] = arguments
+            return {"successful": True, "data": {}}
+
+        def fake_base_wrap_tool(self, tool, execute_tool):  # noqa: ARG001
+            # Stand-in for composio_langchain's real wrap_tool: it eventually
+            # calls execute_tool with whatever kwargs the LLM's tool call
+            # produced. Drive it with the bug report's exact payload.
+            execute_tool(
+                "GMAIL_CREATE_EMAIL_DRAFT",
+                {"subject": "test", "attachment": {"name": "", "data": ""}},
+            )
+            return tool
+
+        class _FakeTool:
+            input_parameters = {
+                "type": "object",
+                "properties": {"subject": {"type": "string"}, "attachment": {"type": "string"}},
+                "required": ["subject", "attachment"],
+            }
+
+        provider = SafeLangchainProvider()
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(SafeLangchainProvider.__bases__[0], "wrap_tool", fake_base_wrap_tool)
+            provider.wrap_tool(tool=_FakeTool(), execute_tool=fake_execute_tool)
+
+        assert received_args["slug"] == "GMAIL_CREATE_EMAIL_DRAFT"
+        assert received_args["arguments"] == {"subject": "test"}
+
+    def test_wrap_tool_preserves_a_real_attachment_through_execute_call(self):
+        """Negative case: a genuine attachment must still reach the real call."""
+        received_args: dict = {}
+
+        def fake_execute_tool(_slug: str, arguments: dict) -> dict:
+            received_args["arguments"] = arguments
+            return {"successful": True, "data": {}}
+
+        def fake_base_wrap_tool(self, tool, execute_tool):  # noqa: ARG001
+            execute_tool(
+                "GMAIL_CREATE_EMAIL_DRAFT",
+                {"subject": "test", "attachment": {"name": "invoice.pdf", "data": "base64=="}},
+            )
+            return tool
+
+        class _FakeTool:
+            input_parameters = {
+                "type": "object",
+                "properties": {"subject": {"type": "string"}, "attachment": {"type": "string"}},
+                "required": ["subject", "attachment"],
+            }
+
+        provider = SafeLangchainProvider()
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(SafeLangchainProvider.__bases__[0], "wrap_tool", fake_base_wrap_tool)
+            provider.wrap_tool(tool=_FakeTool(), execute_tool=fake_execute_tool)
+
+        assert received_args["arguments"]["attachment"] == {"name": "invoice.pdf", "data": "base64=="}
 
 
 class TestNoOpOnAlreadyTypedSchemas:

@@ -2,6 +2,8 @@
 
 Covers:
 - _sanitize_schema: adds missing 'type' keys recursively
+- _relax_attachment_requirements: drops attachment fields from 'required'
+  lists so an LLM isn't forced to fabricate an empty attachment payload
 - _patch_identifier_substitution_once: renames invalid Python identifiers in
   action schemas (e.g. 'extension-id' -> 'extension_id') and tracks the
   reverse mapping so the original name is restored when the API is called
@@ -103,6 +105,193 @@ class TestSanitizeSchema:
         self._get_fn()(None)
         self._get_fn()("string")
         self._get_fn()(42)
+
+
+# ---------------------------------------------------------------------------
+# _relax_attachment_requirements
+# ---------------------------------------------------------------------------
+
+
+class TestRelaxAttachmentRequirements:
+    """_relax_attachment_requirements drops attachment fields from 'required' lists.
+
+    Reproduces the GMAIL_CREATE_EMAIL_DRAFT / GMAIL_SEND_EMAIL failure mode:
+    Composio's raw schema marks "attachment" required even though it's
+    optional, so an LLM building a tool call fabricates an empty placeholder
+    ({"name": "", "data": ""}) to satisfy validation, which the real Gmail API
+    then rejects.
+    """
+
+    def _get_fn(self):
+        from lfx.base.composio.safe_provider import _relax_attachment_requirements
+
+        return _relax_attachment_requirements
+
+    def test_drops_bare_attachment_from_required(self):
+        schema = {
+            "type": "object",
+            "properties": {"subject": {"type": "string"}, "attachment": {"type": "string"}},
+            "required": ["subject", "attachment"],
+        }
+        self._get_fn()(schema)
+        assert schema["required"] == ["subject"]
+
+    def test_drops_dotted_attachment_subfields_from_required(self):
+        schema = {
+            "type": "object",
+            "properties": {"subject": {"type": "string"}},
+            "required": ["subject", "attachment.name", "attachment.data"],
+        }
+        self._get_fn()(schema)
+        assert schema["required"] == ["subject"]
+
+    def test_is_case_insensitive(self):
+        schema = {"required": ["Attachment", "ATTACHMENT.NAME", "subject"]}
+        self._get_fn()(schema)
+        assert schema["required"] == ["subject"]
+
+    def test_leaves_other_required_fields_untouched(self):
+        schema = {"required": ["to", "subject", "body"]}
+        self._get_fn()(schema)
+        assert schema["required"] == ["to", "subject", "body"]
+
+    def test_recurses_into_nested_properties(self):
+        schema = {
+            "properties": {
+                "email": {
+                    "properties": {"attachment": {"type": "string"}},
+                    "required": ["attachment"],
+                }
+            }
+        }
+        self._get_fn()(schema)
+        assert schema["properties"]["email"]["required"] == []
+
+    def test_recurses_into_defs(self):
+        schema = {"$defs": {"Email": {"required": ["attachment", "subject"]}}}
+        self._get_fn()(schema)
+        assert schema["$defs"]["Email"]["required"] == ["subject"]
+
+    def test_recurses_into_anyof(self):
+        schema = {"anyOf": [{"required": ["attachment"]}, {"required": ["subject"]}]}
+        self._get_fn()(schema)
+        assert schema["anyOf"][0]["required"] == []
+        assert schema["anyOf"][1]["required"] == ["subject"]
+
+    def test_noop_when_no_required_key(self):
+        schema = {"properties": {"attachment": {"type": "string"}}}
+        self._get_fn()(schema)
+        assert "required" not in schema
+
+    def test_noop_on_non_dict(self):
+        # Should not raise
+        self._get_fn()(None)
+        self._get_fn()("string")
+        self._get_fn()(42)
+
+    def test_does_not_mutate_properties(self):
+        """Only the required list is touched — the attachment property itself stays."""
+        schema = {
+            "properties": {"attachment": {"type": "string", "description": "File attachment"}},
+            "required": ["attachment"],
+        }
+        self._get_fn()(schema)
+        assert "attachment" in schema["properties"]
+        assert schema["required"] == []
+
+
+# ---------------------------------------------------------------------------
+# _harden_schema
+# ---------------------------------------------------------------------------
+
+
+class TestHardenSchema:
+    """_harden_schema applies both the type-defaulting and attachment-relaxing patches."""
+
+    def _get_fn(self):
+        from lfx.base.composio.safe_provider import _harden_schema
+
+        return _harden_schema
+
+    def test_applies_both_patches(self):
+        schema = {
+            "properties": {"attachment": {}, "subject": {"type": "string"}},
+            "required": ["attachment", "subject"],
+        }
+        self._get_fn()(schema)
+        assert schema["type"] == "object"
+        assert schema["properties"]["attachment"]["type"] == "string"
+        assert schema["required"] == ["subject"]
+
+
+# ---------------------------------------------------------------------------
+# _is_blank_attachment / _strip_blank_attachment
+# ---------------------------------------------------------------------------
+
+
+class TestIsBlankAttachment:
+    """_is_blank_attachment recognizes the placeholder an LLM fabricates."""
+
+    def _get_fn(self):
+        from lfx.base.composio.safe_provider import _is_blank_attachment
+
+        return _is_blank_attachment
+
+    def test_none_is_blank(self):
+        assert self._get_fn()(None) is True
+
+    def test_empty_string_is_blank(self):
+        assert self._get_fn()("") is True
+
+    def test_dict_with_all_blank_values_is_blank(self):
+        # The exact placeholder from the bug report.
+        assert self._get_fn()({"name": "", "data": ""}) is True
+
+    def test_dict_with_none_values_is_blank(self):
+        assert self._get_fn()({"name": None, "data": None}) is True
+
+    def test_empty_dict_is_blank(self):
+        assert self._get_fn()({}) is True
+
+    def test_dict_with_a_real_value_is_not_blank(self):
+        assert self._get_fn()({"name": "invoice.pdf", "data": ""}) is False
+
+    def test_nonempty_string_is_not_blank(self):
+        assert self._get_fn()("some-file-id") is False
+
+
+class TestStripBlankAttachment:
+    """_strip_blank_attachment drops a blank attachment, keeps a real one."""
+
+    def _get_fn(self):
+        from lfx.base.composio.safe_provider import _strip_blank_attachment
+
+        return _strip_blank_attachment
+
+    def test_drops_the_bug_reports_exact_placeholder(self):
+        arguments = {"subject": "test", "attachment": {"name": "", "data": ""}}
+        result = self._get_fn()(arguments)
+        assert result == {"subject": "test"}
+
+    def test_keeps_a_real_attachment(self):
+        arguments = {"subject": "test", "attachment": {"name": "invoice.pdf", "data": "base64=="}}
+        result = self._get_fn()(arguments)
+        assert result == arguments
+
+    def test_noop_when_no_attachment_key(self):
+        arguments = {"subject": "test"}
+        result = self._get_fn()(arguments)
+        assert result == arguments
+
+    def test_does_not_mutate_the_original_dict(self):
+        arguments = {"subject": "test", "attachment": {"name": "", "data": ""}}
+        original = dict(arguments)
+        self._get_fn()(arguments)
+        assert arguments == original
+
+    def test_noop_on_non_dict(self):
+        assert self._get_fn()(None) is None
+        assert self._get_fn()("not a dict") == "not a dict"
 
 
 # ---------------------------------------------------------------------------
