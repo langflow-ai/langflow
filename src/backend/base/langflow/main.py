@@ -196,7 +196,12 @@ def get_lifespan(*, fix_migration=False, version=None):
     async def lifespan(_app: FastAPI):
         from lfx.interface.components import component_cache, get_and_cache_all_types_dict
 
-        from langflow.preload import PreloadStep, get_owned_temp_dirs, is_step_complete
+        from langflow.preload import (
+            PreloadStep,
+            get_owned_temp_dirs,
+            initialize_environment_variables,
+            is_step_complete,
+        )
 
         configure()
 
@@ -259,6 +264,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Even when preload state is inherited via fork, initialize_services() must run
             # so each worker rebuilds its own connection pool (idempotent otherwise).
             await initialize_services(fix_migration=fix_migration)
+            await initialize_environment_variables()
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
             # Surface env-driven pgVector so operators can confirm the deployment
