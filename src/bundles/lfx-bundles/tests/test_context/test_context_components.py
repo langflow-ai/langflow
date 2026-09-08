@@ -17,7 +17,6 @@ TEST_API_KEY = "test-context-api-key"
 
 @pytest.mark.unit
 class TestContextSearchWebComponent:
-    @pytest.mark.asyncio
     async def test_search_uses_public_web_search_api(self) -> None:
         response = {"results": [{"url": "https://example.com"}]}
         request = AsyncMock(return_value=response)
@@ -53,7 +52,6 @@ class TestContextSearchWebComponent:
 
 @pytest.mark.unit
 class TestContextSearchNewsComponent:
-    @pytest.mark.asyncio
     async def test_news_search_uses_company_news_api(self) -> None:
         response = {"data": [{"title": "Context launches a new API"}]}
         request = AsyncMock(return_value=response)
@@ -86,7 +84,6 @@ class TestContextSearchNewsComponent:
 
 @pytest.mark.unit
 class TestContextScrapeMarkdownComponent:
-    @pytest.mark.asyncio
     async def test_scrape_supports_youtube_urls(self) -> None:
         response = {"markdown": "[0:00] Transcript", "url": "https://youtu.be/demo"}
         request = AsyncMock(return_value=response)
@@ -119,7 +116,6 @@ class TestContextScrapeMarkdownComponent:
 
 @pytest.mark.unit
 class TestContextCrawlWebsiteComponent:
-    @pytest.mark.asyncio
     async def test_crawl_preserves_zero_depth(self) -> None:
         response = {"results": []}
         request = AsyncMock(return_value=response)
@@ -152,7 +148,6 @@ class TestContextCrawlWebsiteComponent:
 
 @pytest.mark.unit
 class TestContextExtractStructuredDataComponent:
-    @pytest.mark.asyncio
     async def test_extract_sends_json_schema(self) -> None:
         schema = {"type": "object", "properties": {"title": {"type": "string"}}}
         response = {"status": "ok", "data": {"title": "Example"}}
@@ -186,7 +181,6 @@ class TestContextExtractStructuredDataComponent:
 
 @pytest.mark.unit
 class TestContextRetrieveBrandComponent:
-    @pytest.mark.asyncio
     async def test_retrieve_brand_uses_selected_identifier(self) -> None:
         response = {"brand": {"domain": "context.dev"}}
         request = AsyncMock(return_value=response)

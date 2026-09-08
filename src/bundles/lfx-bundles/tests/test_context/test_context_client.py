@@ -10,7 +10,6 @@ TEST_API_KEY = "test-context-api-key"
 
 
 @pytest.mark.unit
-@pytest.mark.asyncio
 async def test_request_context_authenticates_against_production_api() -> None:
     response = MagicMock()
     response.raise_for_status.return_value = None
@@ -35,7 +34,6 @@ async def test_request_context_authenticates_against_production_api() -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.asyncio
 async def test_request_context_surfaces_api_error_message() -> None:
     request = httpx.Request("POST", f"{CONTEXT_API_BASE_URL}/web/search")
     response = httpx.Response(401, request=request, json={"message": "Invalid API key"})
@@ -52,7 +50,6 @@ async def test_request_context_surfaces_api_error_message() -> None:
 
 
 @pytest.mark.unit
-@pytest.mark.asyncio
 async def test_request_context_rejects_missing_api_key() -> None:
     with pytest.raises(ValueError, match="API key is required"):
         await request_context("GET", "/brand/retrieve", "")
