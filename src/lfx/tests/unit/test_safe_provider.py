@@ -206,14 +206,25 @@ class TestRelaxAttachmentRequirements:
 
 
 class TestHardenSchema:
-    """_harden_schema applies both the type-defaulting and attachment-relaxing patches."""
+    """_harden_schema always fixes types; attachment-relaxing is opt-in only."""
 
     def _get_fn(self):
         from lfx.base.composio.safe_provider import _harden_schema
 
         return _harden_schema
 
-    def test_applies_both_patches(self):
+    def test_relax_attachment_true_applies_both_patches(self):
+        schema = {
+            "properties": {"attachment": {}, "subject": {"type": "string"}},
+            "required": ["attachment", "subject"],
+        }
+        self._get_fn()(schema, relax_attachment=True)
+        assert schema["type"] == "object"
+        assert schema["properties"]["attachment"]["type"] == "string"
+        assert schema["required"] == ["subject"]
+
+    def test_default_does_not_relax_attachment(self):
+        """The default must stay False — most toolkits need attachment to stay required."""
         schema = {
             "properties": {"attachment": {}, "subject": {"type": "string"}},
             "required": ["attachment", "subject"],
@@ -221,7 +232,51 @@ class TestHardenSchema:
         self._get_fn()(schema)
         assert schema["type"] == "object"
         assert schema["properties"]["attachment"]["type"] == "string"
-        assert schema["required"] == ["subject"]
+        # Type got fixed, but "attachment" is still required — untouched.
+        assert schema["required"] == ["attachment", "subject"]
+
+    def test_relax_attachment_false_explicit_same_as_default(self):
+        schema = {"required": ["attachment"]}
+        self._get_fn()(schema, relax_attachment=False)
+        assert schema["required"] == ["attachment"]
+
+
+# ---------------------------------------------------------------------------
+# _slug_needs_attachment_relaxation
+# ---------------------------------------------------------------------------
+
+
+class TestSlugNeedsAttachmentRelaxation:
+    """The allowlist gate that scopes attachment relaxation to known-affected toolkits.
+
+    This is the regression guard for treating one Gmail action's schema
+    defect as a codebase-wide rule: only Gmail/Outlook slugs should ever
+    reach _relax_attachment_requirements or _strip_blank_attachment. Every
+    other toolkit (jira, dropbox, pandadoc, ...) must keep its own
+    "attachment" field's real required/optional status untouched.
+    """
+
+    def _get_fn(self):
+        from lfx.base.composio.safe_provider import _slug_needs_attachment_relaxation
+
+        return _slug_needs_attachment_relaxation
+
+    def test_gmail_slug_matches(self):
+        assert self._get_fn()("GMAIL_CREATE_EMAIL_DRAFT") is True
+
+    def test_outlook_slug_matches(self):
+        assert self._get_fn()("OUTLOOK_OUTLOOK_SEND_EMAIL") is True
+
+    def test_unrelated_toolkit_does_not_match(self):
+        assert self._get_fn()("JIRA_ATTACH_FILE_TO_ISSUE") is False
+        assert self._get_fn()("DROPBOX_UPLOAD_FILE") is False
+
+    def test_substring_match_is_not_enough_prefix_only(self):
+        assert self._get_fn()("SOME_GMAIL_ACTION") is False
+        assert self._get_fn()("gmail_lowercase_action") is False
+
+    def test_empty_string_does_not_match(self):
+        assert self._get_fn()("") is False
 
 
 # ---------------------------------------------------------------------------

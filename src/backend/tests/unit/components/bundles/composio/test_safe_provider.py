@@ -10,6 +10,15 @@ those raw subscripts succeed.
 
 import pytest
 
+# The bundle-guarded CI job discovers which tests to run by grepping for
+# ``pytest.importorskip("lfx_bundles"``, not by module name (see
+# .github/workflows/python_test.yml). Without this exact guard first, this
+# file is invisible to that job's file list — it still imports successfully
+# in the ordinary backend job, but there `composio` isn't installed, so
+# every test below importorskips and the suite reports green having run
+# nothing. This guard is what makes the file discoverable by the job that
+# actually has `composio` installed.
+pytest.importorskip("lfx_bundles", reason="bundles extra not installed in this env")
 composio = pytest.importorskip("composio", reason="composio extra not installed in this env")
 pytest.importorskip("composio_langchain", reason="composio extra not installed in this env")
 
@@ -18,6 +27,7 @@ from lfx.base.composio.safe_provider import (  # noqa: E402
     _harden_schema,
     _relax_attachment_requirements,
     _sanitize_schema,
+    _slug_needs_attachment_relaxation,
 )
 
 
@@ -224,7 +234,7 @@ class TestRelaxAttachmentRequirements:
             },
             "required": ["subject", "attachment"],
         }
-        _harden_schema(schema)
+        _harden_schema(schema, relax_attachment=True)
         model = pydantic_model_from_param_schema(schema)
         # subject is still mandatory; attachment must now be optional.
         assert model.model_fields["subject"].is_required() is True
@@ -246,6 +256,7 @@ class TestRelaxAttachmentRequirements:
         """
 
         class _FakeTool:
+            slug = "GMAIL_CREATE_EMAIL_DRAFT"
             input_parameters = {
                 "type": "object",
                 "properties": {"subject": {"type": "string"}, "attachment": {"type": "string"}},
@@ -290,6 +301,7 @@ class TestRelaxAttachmentRequirements:
             return tool
 
         class _FakeTool:
+            slug = "GMAIL_CREATE_EMAIL_DRAFT"
             input_parameters = {
                 "type": "object",
                 "properties": {"subject": {"type": "string"}, "attachment": {"type": "string"}},
@@ -320,6 +332,7 @@ class TestRelaxAttachmentRequirements:
             return tool
 
         class _FakeTool:
+            slug = "GMAIL_CREATE_EMAIL_DRAFT"
             input_parameters = {
                 "type": "object",
                 "properties": {"subject": {"type": "string"}, "attachment": {"type": "string"}},
@@ -332,6 +345,86 @@ class TestRelaxAttachmentRequirements:
             provider.wrap_tool(tool=_FakeTool(), execute_tool=fake_execute_tool)
 
         assert received_args["arguments"]["attachment"] == {"name": "invoice.pdf", "data": "base64=="}
+
+    def test_wrap_tool_does_not_relax_attachment_for_an_unrelated_toolkit(self):
+        """The core regression guard for I2: scoping must actually hold.
+
+        A toolkit where "attachment" is a real, meaningful requirement (e.g.
+        an action whose entire purpose is attaching a file) must keep it in
+        ``required`` and must NOT have a blank attachment silently stripped
+        before the real call. Relaxing it there would convert a legitimate
+        local validation error into a confusing API-side rejection instead.
+        """
+        received_args: dict = {}
+
+        def fake_execute_tool(slug: str, arguments: dict) -> dict:
+            received_args["slug"] = slug
+            received_args["arguments"] = arguments
+            return {"successful": True, "data": {}}
+
+        def fake_base_wrap_tool(self, tool, execute_tool):  # noqa: ARG001
+            execute_tool(
+                "JIRA_ATTACH_FILE_TO_ISSUE",
+                {"issue_key": "PROJ-1", "attachment": {"name": "", "data": ""}},
+            )
+            return tool
+
+        class _FakeUnrelatedTool:
+            slug = "JIRA_ATTACH_FILE_TO_ISSUE"
+            input_parameters = {
+                "type": "object",
+                "properties": {"issue_key": {"type": "string"}, "attachment": {"type": "string"}},
+                "required": ["issue_key", "attachment"],
+            }
+
+        provider = SafeLangchainProvider()
+        fake_tool = _FakeUnrelatedTool()
+        with pytest.MonkeyPatch.context() as mp:
+            mp.setattr(SafeLangchainProvider.__bases__[0], "wrap_tool", fake_base_wrap_tool)
+            result = provider.wrap_tool(tool=fake_tool, execute_tool=fake_execute_tool)
+
+        # Schema: "attachment" stays required — this toolkit's real contract.
+        assert result.input_parameters["required"] == ["issue_key", "attachment"]
+        # Execution: the blank attachment is NOT stripped — reaches the call
+        # verbatim, so Jira's own API can reject it with a real error instead
+        # of the call silently going out without the file the user asked for.
+        assert received_args["arguments"] == {
+            "issue_key": "PROJ-1",
+            "attachment": {"name": "", "data": ""},
+        }
+
+
+class TestSlugNeedsAttachmentRelaxation:
+    """The allowlist gate itself, independent of wrap_tool."""
+
+    def _get_fn(self):
+        return _slug_needs_attachment_relaxation
+
+    def test_gmail_slugs_match(self):
+        assert self._get_fn()("GMAIL_CREATE_EMAIL_DRAFT") is True
+        assert self._get_fn()("GMAIL_SEND_EMAIL") is True
+
+    def test_outlook_slugs_match(self):
+        assert self._get_fn()("OUTLOOK_OUTLOOK_SEND_EMAIL") is True
+
+    def test_unrelated_toolkits_do_not_match(self):
+        for slug in (
+            "JIRA_ATTACH_FILE_TO_ISSUE",
+            "FRESHDESK_CREATE_TICKET",
+            "PANDADOC_CREATE_DOCUMENT",
+            "DROPBOX_UPLOAD_FILE",
+            "ONEDRIVE_UPLOAD_FILE",
+            "MISSIVE_CREATE_DRAFT",
+            "FLEXISIGN_SEND_DOCUMENT",
+            "JOTFORM_SUBMIT_FORM",
+        ):
+            assert self._get_fn()(slug) is False
+
+    def test_case_sensitive_prefix_match_only(self):
+        # A slug that merely contains "gmail" lowercase, or elsewhere in the
+        # string, must not match — this is a prefix check, not a substring one.
+        assert self._get_fn()("gmail_create_email_draft") is False
+        assert self._get_fn()("SOME_GMAIL_RELATED_ACTION") is False
 
 
 class TestNoOpOnAlreadyTypedSchemas:
