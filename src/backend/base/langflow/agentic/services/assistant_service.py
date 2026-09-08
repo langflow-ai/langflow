@@ -805,8 +805,9 @@ async def execute_flow_with_validation_streaming(
     # its component-generation failure card.
     #
     # Deliberately not applied to ``component_then_flow``: that intent can still deliver the
-    # flow half from existing components, and the loop guard below stops its component half
-    # at the first refusal.
+    # flow half from existing components. Its component half reaches the packaged JSON flow
+    # through the nested ``generate_component`` tool, whose Agents carry the notice
+    # ``inject_component_policy_into_flow`` appends, so it declines rather than looping.
     if is_component_request and not get_settings_service().settings.allow_custom_components:
         logger.info("Component request refused before generation: allow_custom_components=false")
         reset_working_flow()
