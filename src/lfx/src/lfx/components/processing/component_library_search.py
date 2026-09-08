@@ -43,6 +43,7 @@ class ComponentLibrarySearch(Component):
             display_name="Keywords",
             info="Keywords to search for",
             is_list=True,
+            required=True,
             tool_mode=True,
         ),
         DropdownInput(

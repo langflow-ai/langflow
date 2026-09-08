@@ -25,7 +25,12 @@ import json
 from pathlib import Path
 
 import pytest
-from langflow.agentic.services.flow_preparation import load_and_prepare_flow
+from langflow.agentic.helpers.validation import validate_component_runtime
+from langflow.agentic.services.flow_preparation import (
+    CUSTOM_COMPONENTS_DISABLED_NOTICE,
+    inject_component_policy_into_flow,
+    load_and_prepare_flow,
+)
 from lfx.components.processing import component_library_search
 from lfx.interface.components import get_and_cache_all_types_dict
 from lfx.load import aload_flow_from_json
@@ -137,3 +142,121 @@ class TestShippedFlowsStayRegistered:
             f"{FLOW_PATH.name} embeds a stale copy of component_library_search.py; "
             "re-copy the file into the node's template.code.value"
         )
+
+
+class TestSearchNodeCanvasDefaults:
+    """The node has to make sense to a human who opens it, not only to the agent.
+
+    ``column`` and ``keywords`` are ``tool_mode`` inputs, so the agent supplies both on every
+    call and the stored values never run in the assistant's own turns. They are still what the
+    canvas renders and what someone inspecting or hand-running the node gets, which is the
+    only path these two guards cover.
+    """
+
+    @staticmethod
+    def _search_node_template() -> dict:
+        flow = json.loads(FLOW_PATH.read_text(encoding="utf-8"))
+        return next(
+            node["data"]["node"]["template"]
+            for node in flow["data"]["nodes"]
+            if node["data"].get("type") == "ComponentLibrarySearch"
+        )
+
+    def test_keywords_is_declared_required(self):
+        """``search`` raises without keywords, so the canvas must mark the field before the run.
+
+        Declared on the component; asserted on the shipped node because the flow JSON carries
+        its own serialized copy of the template, which is what the UI actually reads.
+        """
+        assert self._search_node_template()["keywords"]["required"] is True, (
+            "ComponentLibrarySearch.keywords is required at runtime but renders as optional; "
+            "the shipped node's template is out of sync with the component declaration"
+        )
+
+    def test_stored_keyword_default_matches_the_installed_library(self):
+        """A required field ships with a value, and that value has to find something.
+
+        The node inherited ``composio`` from the inline component it replaced. The installed
+        ``lfx/components/composio`` package holds only an ``__init__`` re-export, which the
+        search skips, so the shipped default returned zero rows for anyone running the node
+        by hand -- which reads as "the library has no such component".
+        """
+        template = self._search_node_template()
+        component = component_library_search.ComponentLibrarySearch()
+        component.column = template["column"]["value"]
+        component.keywords = template["keywords"]["value"]
+        component.match_type = template["match_type"]["value"]
+        component.case_sensitive = template["case_sensitive"]["value"]
+        component.number_candidates = template["number_candidates"]["value"]
+
+        assert len(component.search()) > 0, (
+            f"the shipped node's stored keywords {template['keywords']['value']!r} match no "
+            f"component in the installed library on column {template['column']['value']!r}"
+        )
+
+
+class TestAdvertisedCapabilitiesFollowServerPolicy:
+    """A capability the server forbids must not be offered in the greeting.
+
+    The shipped prompt tells the assistant to "mention all three capabilities", one of which
+    is generating custom components. Under ``allow_custom_components=false`` that offer costs
+    the user a turn to reach a refusal it could have avoided making.
+    """
+
+    @staticmethod
+    def _agent_prompts(flow: dict) -> list[str]:
+        return [
+            node["data"]["node"]["template"]["system_prompt"]["value"]
+            for node in flow["data"]["nodes"]
+            if node["data"].get("type") == "Agent"
+        ]
+
+    def test_permissive_settings_leave_the_prompt_untouched(self):
+        """The default deployment can honor all three, so nothing is added."""
+        settings = get_settings_service().settings
+        saved = settings.allow_custom_components
+        settings.allow_custom_components = True
+        try:
+            prompts = self._agent_prompts(_prepared(FLOW_PATH))
+        finally:
+            settings.allow_custom_components = saved
+
+        assert prompts, "shipped flow has no Agent with a system prompt"
+        assert all(CUSTOM_COMPONENTS_DISABLED_NOTICE not in p for p in prompts)
+
+    @pytest.mark.usefixtures("hardened_settings")
+    def test_hardened_settings_withdraw_the_offer_on_every_agent(self):
+        prompts = self._agent_prompts(_prepared(FLOW_PATH))
+        assert prompts, "shipped flow has no Agent with a system prompt"
+        assert all(CUSTOM_COMPONENTS_DISABLED_NOTICE in p for p in prompts)
+
+    @pytest.mark.usefixtures("hardened_settings")
+    def test_preparing_twice_does_not_stack_the_notice(self):
+        """``load_and_prepare_flow`` runs per request; the notice must not accumulate."""
+        flow = _prepared(FLOW_PATH)
+        inject_component_policy_into_flow(inject_component_policy_into_flow(flow))
+        for prompt in self._agent_prompts(flow):
+            assert prompt.count(CUSTOM_COMPONENTS_DISABLED_NOTICE) == 1
+
+
+class TestPolicyDenialsAddressTheUser:
+    """Denials an end user reads name the administrator, not the operator-only setting.
+
+    Same rule the file-access and SSRF denials follow in
+    ``lfx/tests/unit/utils/test_denial_messages_hide_settings.py``. This one was missed: it
+    returned the raw ``allow_custom_components=false`` to the chat (LE-2322 finding 1).
+    """
+
+    @pytest.mark.usefixtures("hardened_settings")
+    async def test_custom_component_denial_names_no_setting(self):
+        message = await validate_component_runtime("class X:\n    pass\n")
+        assert message is not None
+        assert "allow_custom_components" not in message
+        assert "LANGFLOW_" not in message
+
+    @pytest.mark.usefixtures("hardened_settings")
+    async def test_custom_component_denial_keeps_its_remediation(self):
+        message = await validate_component_runtime("class X:\n    pass\n")
+        assert message is not None
+        assert "administrator" in message
+        assert "build what you need from the components already in the library" in message

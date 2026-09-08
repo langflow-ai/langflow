@@ -54,7 +54,9 @@ async def test_validate_component_runtime_refuses_without_custom_components():
         result = await validation.validate_component_runtime(code, user_id="u1")
 
     assert result is not None
-    assert "disabled" in result.lower()
+    assert "does not allow custom components" in result.lower()
+    # The operator-only setting name stays in the log; the returned string reaches the user.
+    assert "allow_custom_components" not in result
     assert mock_build.call_count == 0  # never reached the exec path
 
 

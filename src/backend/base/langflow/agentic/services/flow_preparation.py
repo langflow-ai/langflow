@@ -263,6 +263,63 @@ def inject_assistant_fs_root(flow_data: dict) -> dict:
     return flow_data
 
 
+# Appended to every Agent's system prompt when the operator has disabled custom components.
+#
+# The shipped prompt tells the assistant to advertise three capabilities, one of which is
+# generating custom components. On a server with ``allow_custom_components=false`` -- the value
+# the enterprise image bakes in -- that offer cannot be honored: ``validate_component_runtime``
+# refuses before instantiating anything, by design and for good reason. So the greeting spent a
+# user's first impression on a capability the deployment had already ruled out, and taking it up
+# cost a turn to reach the refusal.
+#
+# Phrased the way this codebase phrases every other policy denial (see
+# ``lfx/tests/unit/utils/test_denial_messages_hide_settings.py``): name the administrator, not the
+# setting. An end user can neither read ``allow_custom_components`` nor change it.
+CUSTOM_COMPONENTS_DISABLED_NOTICE = """
+
+# Server policy for this deployment
+Custom component generation is turned off here by the Langflow administrator.
+
+- Do NOT offer or advertise custom component generation. When you describe what
+  you can do, list only two capabilities: answering questions about Langflow, and
+  building flows from the components already in the library.
+- If the user asks for a custom component, say plainly that this deployment does
+  not allow them, and offer to build what they need from the existing library
+  instead. State it as a settled configuration choice their administrator made --
+  not an error, not a temporary failure -- and do not suggest retrying."""
+
+
+def inject_component_policy_into_flow(flow_data: dict) -> dict:
+    """Tell the flow's Agents not to advertise a capability this server forbids.
+
+    A no-op when custom components are allowed, which is the default and the only case
+    where the shipped prompt's three-capability greeting is accurate.
+
+    Applied to every Agent rather than to the user-facing one alone: the notice reads
+    correctly for the component-generation Agent too, and picking a single node would mean
+    encoding a node id or a graph-shape assumption that the next edit to the flow silently
+    invalidates. Idempotent, so a flow prepared twice does not accumulate the block.
+    """
+    from lfx.services.deps import get_settings_service
+
+    if get_settings_service().settings.allow_custom_components:
+        return flow_data
+
+    for node in flow_data.get("data", {}).get("nodes", []):
+        node_data = node.get("data", {})
+        if node_data.get("type") != "Agent":
+            continue
+        field = node_data.get("node", {}).get("template", {}).get("system_prompt")
+        if not isinstance(field, dict):
+            continue
+        value = field.get("value")
+        if not isinstance(value, str) or CUSTOM_COMPONENTS_DISABLED_NOTICE in value:
+            continue
+        field["value"] = value.rstrip() + CUSTOM_COMPONENTS_DISABLED_NOTICE
+
+    return flow_data
+
+
 # Cache parsed templates by path+stat: re-reading + json.loads on every request
 # (x4 on validation retries) blocked the event loop; mtime/size change re-parses.
 _FLOW_TEMPLATE_CACHE: dict[str, tuple[tuple[int, int], dict]] = {}
@@ -322,5 +379,6 @@ def load_and_prepare_flow(
     flow_data = inject_iterations_into_flow(flow_data, iterations)
 
     flow_data = inject_assistant_fs_root(flow_data)
+    flow_data = inject_component_policy_into_flow(flow_data)
 
     return json.dumps(flow_data)

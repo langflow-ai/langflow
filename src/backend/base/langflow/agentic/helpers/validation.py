@@ -10,6 +10,7 @@ import ast
 import re
 
 from lfx.custom.validate import extract_class_name
+from lfx.log.logger import logger
 from pydantic import ValidationError
 
 from langflow.agentic.api.schemas import ValidationResult
@@ -255,6 +256,16 @@ async def _execute_output_methods_for_validation(cc_instance) -> str | None:
     return None
 
 
+# Returned to the caller -- and shown to the end user -- when the operator has disabled
+# custom components. Phrased for someone who can neither read ``allow_custom_components``
+# nor change it: what is disallowed, and who to ask. The setting name stays in the log.
+CUSTOM_COMPONENTS_DISABLED_MESSAGE = (
+    "This deployment does not allow custom components, so a generated component cannot be "
+    "validated or run here. Ask your Langflow administrator if you need them enabled, or "
+    "build what you need from the components already in the library."
+)
+
+
 async def validate_component_runtime(code: str, user_id: str | None = None) -> str | None:
     """Try to instantiate and execute the component at runtime.
 
@@ -286,10 +297,13 @@ async def validate_component_runtime(code: str, user_id: str | None = None) -> s
     from lfx.services.deps import get_settings_service
 
     if not get_settings_service().settings.allow_custom_components:
-        return (
-            "Custom component execution is disabled on this server "
-            "(allow_custom_components=false); generated components cannot be validated or run."
-        )
+        # The setting name goes to the log, where the operator who can change it looks. The
+        # returned string reaches the end user, who can neither read nor change it -- so it
+        # names the administrator and carries a remediation instead, the same split every
+        # other policy denial here makes (see
+        # ``lfx/tests/unit/utils/test_denial_messages_hide_settings.py``).
+        logger.warning("Component runtime validation refused: allow_custom_components=false")
+        return CUSTOM_COMPONENTS_DISABLED_MESSAGE
 
     # This helper is itself an in-process execution boundary. Keep the security
     # scan here as defense in depth so a future or direct caller cannot bypass
