@@ -123,8 +123,18 @@ test("two people editing the same flow without pause", async ({
     .catch(() => false);
 
   console.log(
-    "A patches:", a.patches, "refused:", a.refused, "banner:", bannerA,
-    "| B patches:", b.patches, "refused:", b.refused, "banner:", bannerB,
+    "A patches:",
+    a.patches,
+    "refused:",
+    a.refused,
+    "banner:",
+    bannerA,
+    "| B patches:",
+    b.patches,
+    "refused:",
+    b.refused,
+    "banner:",
+    bannerB,
   );
 
   // 1. Nothing may 5xx, however hard the two of them push.
@@ -146,10 +156,7 @@ test("two people editing the same flow without pause", async ({
   const loserPage = bannerA ? page : tabB;
   const winner = bannerA ? b : a;
   const winnerPage = bannerA ? tabB : page;
-  expect(
-    loser.refused,
-    "the loser is refused once, then left alone",
-  ).toBe(1);
+  expect(loser.refused, "the loser is refused once, then left alone").toBe(1);
   expect(bannerA && bannerB, "both tabs cannot lose to each other").toBe(false);
 
   // 3. The loser's work is recoverable, not stranded in memory.
@@ -201,7 +208,10 @@ test("two people editing the same flow without pause", async ({
   await keepEditing(loserPage, Date.now() + 12_000, 5);
   await loserPage.waitForTimeout(SETTLE_MS);
   console.log(
-    "copy patches:", copyTraffic.patches, "refused:", copyTraffic.refused,
+    "copy patches:",
+    copyTraffic.patches,
+    "refused:",
+    copyTraffic.refused,
   );
   expect(copyTraffic.patches, "the copy must save").toBeGreaterThan(0);
   expect(copyTraffic.refused, "the copy must not conflict").toBe(0);

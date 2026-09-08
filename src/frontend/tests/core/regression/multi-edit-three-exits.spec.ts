@@ -112,12 +112,17 @@ test("discarding asks first, then takes the other person's version", async ({
   expect(page.url()).toContain(flowId);
 
   await page.waitForTimeout(SETTLE_MS);
-  const after = await (await page.request.get(`/api/v1/flows/${flowId}`)).json();
+  const after = await (
+    await page.request.get(`/api/v1/flows/${flowId}`)
+  ).json();
   expect(
     after.version_token,
     "discarding must not write anything to the flow",
   ).toBe(theirGraph.version_token);
-  expect(writes.filter((s) => s === 409), "no refused save may follow").toHaveLength(0);
+  expect(
+    writes.filter((s) => s === 409),
+    "no refused save may follow",
+  ).toHaveLength(0);
 
   // The stranded draft went with the decision, so a reload does not offer it back.
   const drafts = await page.evaluate(() =>
@@ -147,6 +152,9 @@ test("after discarding, editing saves normally again", async ({ page }) => {
   await page.waitForTimeout(SETTLE_MS);
 
   expect(writes.length, "the flow must be saveable again").toBeGreaterThan(0);
-  expect(writes.filter((s) => s === 409), "and not refused").toHaveLength(0);
+  expect(
+    writes.filter((s) => s === 409),
+    "and not refused",
+  ).toHaveLength(0);
   await expect(page.getByTestId("flow-conflict-banner")).toBeHidden();
 });

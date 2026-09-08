@@ -31,7 +31,8 @@ async function editOneComponentTwice(page: Page, flowId: string) {
   const field = Object.keys(target.data.node.template).find(
     (f) => typeof target.data.node.template[f]?.value === "string",
   )!;
-  target.data.node.template[field].value = `changed by the other tab ${Date.now()}`;
+  target.data.node.template[field].value =
+    `changed by the other tab ${Date.now()}`;
 
   const write = await page.request.patch(`/api/v1/flows/${flowId}`, {
     data: { data: { ...flow.data, nodes } },

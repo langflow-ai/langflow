@@ -503,7 +503,10 @@ describe("groupChangesByTarget", () => {
     // promised a choice the merge could not honour.
     const base = graph([node("a", "Chat Input", { text: { value: "one" } })]);
     const theirs = graph([
-      { ...node("a", "Chat Input", { text: { value: "two" } }), position: { x: 90, y: 90 } },
+      {
+        ...node("a", "Chat Input", { text: { value: "two" } }),
+        position: { x: 90, y: 90 },
+      },
     ]);
 
     const groups = groupChangesByTarget(diffGraphs(base, theirs));
@@ -545,7 +548,12 @@ describe("groupChangesByTarget", () => {
 describe("what a reader should not have to wade through", () => {
   it("should read a model selection as its name, not as the object carrying it", () => {
     const picked = [
-      { name: "claude-fable-5-1", provider: "Anthropic", icon: "Anthropic", metadata: { context_length: 128000 } },
+      {
+        name: "claude-fable-5-1",
+        provider: "Anthropic",
+        icon: "Anthropic",
+        metadata: { context_length: 128000 },
+      },
     ];
     const base = graph([node("a", "Agent", { model: { value: picked } })]);
     const theirs = graph([node("a", "Agent", { model: { value: [] } })]);
@@ -559,10 +567,16 @@ describe("what a reader should not have to wade through", () => {
 
   it("should never show template metadata as somebody's edit", () => {
     const base = graph([
-      node("a", "Agent", { _frontend_node_flow_id: { value: "flow-1" }, f: { value: "one" } }),
+      node("a", "Agent", {
+        _frontend_node_flow_id: { value: "flow-1" },
+        f: { value: "one" },
+      }),
     ]);
     const theirs = graph([
-      node("a", "Agent", { _frontend_node_flow_id: { value: "flow-2" }, f: { value: "one" } }),
+      node("a", "Agent", {
+        _frontend_node_flow_id: { value: "flow-2" },
+        f: { value: "one" },
+      }),
     ]);
 
     expect(diffGraphs(base, theirs)).toEqual([]);
@@ -582,7 +596,9 @@ describe("what a reader should not have to wade through", () => {
 describe("a value that is not there", () => {
   it("should read as a dash rather than leaving a hole in the sentence", () => {
     const base = graph([node("a", "Agent", { model: { value: null } })]);
-    const theirs = graph([node("a", "Agent", { model: { value: [{ name: "claude-fable-5-1" }] } })]);
+    const theirs = graph([
+      node("a", "Agent", { model: { value: [{ name: "claude-fable-5-1" }] } }),
+    ]);
 
     const [change] = diffGraphs(base, theirs);
 

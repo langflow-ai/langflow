@@ -359,10 +359,9 @@ test(
       saved.nodes.length,
       "the server must still hold the merge, not the author's graph alone",
     ).toBe(canvasNodeCount);
-    expect(
-      writes.refused(),
-      "the resolved flow must keep saving cleanly",
-    ).toBe(0);
+    expect(writes.refused(), "the resolved flow must keep saving cleanly").toBe(
+      0,
+    );
   },
 );
 

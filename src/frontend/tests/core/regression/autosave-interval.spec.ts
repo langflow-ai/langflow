@@ -114,7 +114,10 @@ test(
     // eslint-disable-next-line no-console
     console.log(`writes for ${NUDGE_COUNT} edits: 2s=${atTwo}, 10s=${atTen}`);
 
-    expect(atTwo, "edits spaced above the interval each cost a write").toBeGreaterThan(1);
+    expect(
+      atTwo,
+      "edits spaced above the interval each cost a write",
+    ).toBeGreaterThan(1);
     expect(
       atTen,
       "the same edits spaced below the interval must collapse into fewer writes",
@@ -148,7 +151,9 @@ test(
 
     const unsavedFor = writes.stamps()[0] - start;
     // eslint-disable-next-line no-console
-    console.log(`first write landed ${Math.round(unsavedFor / 1000)}s into the burst`);
+    console.log(
+      `first write landed ${Math.round(unsavedFor / 1000)}s into the burst`,
+    );
     expect(
       unsavedFor,
       "work may not sit unsaved past the ceiling plus one interval",
@@ -176,7 +181,9 @@ test(
     });
     const detected = Date.now() - edited;
     // eslint-disable-next-line no-console
-    console.log(`conflict surfaced ${Math.round(detected / 1000)}s after the edit`);
+    console.log(
+      `conflict surfaced ${Math.round(detected / 1000)}s after the edit`,
+    );
 
     expect(
       detected,

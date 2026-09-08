@@ -20,15 +20,25 @@ async function openFlowFromStarter(page: Page, name: string): Promise<string> {
   await page.goto("/");
   await page.waitForSelector("body", { timeout: 30_000 });
   await expect
-    .poll(async () => (await page.request.get("/api/v1/flows/?get_all=true&header_flows=true")).status(), {
-      timeout: 60_000,
-    })
+    .poll(
+      async () =>
+        (
+          await page.request.get(
+            "/api/v1/flows/?get_all=true&header_flows=true",
+          )
+        ).status(),
+      {
+        timeout: 60_000,
+      },
+    )
     .toBe(200);
 
   const response = await page.request.get("/api/v1/starter-projects/");
   const body = await response.json();
   // The route has answered as a bare list and as a paginated envelope; take either.
-  const starters: any[] = Array.isArray(body) ? body : (body.items ?? body.starter_projects ?? []);
+  const starters: any[] = Array.isArray(body)
+    ? body
+    : (body.items ?? body.starter_projects ?? []);
   const template = starters.find((s: any) => (s.name ?? s.data?.name) === name);
   if (!template) throw new Error(`no starter project named ${name}`);
 
@@ -55,7 +65,8 @@ function flowIdFrom(page: Page): string {
 
 async function trail(page: Page, flowId: string) {
   const response = await page.request.get(`/api/v1/flows/${flowId}/audit/`);
-  if (response.status() === 404) test.skip(true, "audit trail not enabled on this backend");
+  if (response.status() === 404)
+    test.skip(true, "audit trail not enabled on this backend");
   expect(response.status()).toBe(200);
   return (await response.json()).entries as Array<Record<string, any>>;
 }
@@ -79,13 +90,17 @@ test("editing the canvas records who changed the flow and what they changed", as
   await adjustScreenView(page);
   await page.waitForTimeout(SETTLE_MS);
 
-  expect(await trail(page, flowId), "a flow nobody edited has no trail").toEqual([]);
+  expect(
+    await trail(page, flowId),
+    "a flow nobody edited has no trail",
+  ).toEqual([]);
 
   // A drag is the editor's own write path: the store marks the flow edited, the
   // autosave sends it, and the server describes what it did.
   const writes: string[] = [];
   page.on("response", (r) => {
-    if (r.request().method() === "PATCH" && r.url().includes("/flows/")) writes.push(`${r.status()}`);
+    if (r.request().method() === "PATCH" && r.url().includes("/flows/"))
+      writes.push(`${r.status()}`);
   });
   const nodesBefore = await page.locator(".react-flow__node").count();
   await deleteFirstNode(page);
@@ -95,11 +110,16 @@ test("editing the canvas records who changed the flow and what they changed", as
   await page.waitForTimeout(SETTLE_MS);
 
   const entries = await trail(page, flowId);
-  const server = await (await page.request.get(`/api/v1/flows/${flowId}`)).json();
+  const server = await (
+    await page.request.get(`/api/v1/flows/${flowId}`)
+  ).json();
   console.log(
-    "patches:", JSON.stringify(writes),
-    "nodes on server:", server.data.nodes.length,
-    "entries:", JSON.stringify(entries).slice(0, 400),
+    "patches:",
+    JSON.stringify(writes),
+    "nodes on server:",
+    server.data.nodes.length,
+    "entries:",
+    JSON.stringify(entries).slice(0, 400),
   );
 
   expect(entries, "one editing session, one entry").toHaveLength(1);
@@ -153,7 +173,12 @@ test("a secret changed on a flow never reaches the trail", async ({ page }) => {
   await page.goto("/");
   await expect
     .poll(
-      async () => (await page.request.get("/api/v1/flows/?get_all=true&header_flows=true")).status(),
+      async () =>
+        (
+          await page.request.get(
+            "/api/v1/flows/?get_all=true&header_flows=true",
+          )
+        ).status(),
       { timeout: 60_000 },
     )
     .toBe(200);
@@ -168,7 +193,9 @@ test("a secret changed on a flow never reaches the trail", async ({ page }) => {
           id: "n0",
           node: {
             display_name: "OpenAI",
-            template: { api_key: { display_name: "API Key", value, password: true } },
+            template: {
+              api_key: { display_name: "API Key", value, password: true },
+            },
           },
         },
       },
@@ -178,7 +205,11 @@ test("a secret changed on a flow never reaches the trail", async ({ page }) => {
   });
 
   const created = await page.request.post("/api/v1/flows/", {
-    data: { name: `audit-secret-${Date.now()}`, description: "", data: withSecret("sk-live-original") },
+    data: {
+      name: `audit-secret-${Date.now()}`,
+      description: "",
+      data: withSecret("sk-live-original"),
+    },
   });
   expect(created.status()).toBe(201);
   const flowId = (await created.json()).id;
@@ -190,8 +221,13 @@ test("a secret changed on a flow never reaches the trail", async ({ page }) => {
 
   const entries = await trail(page, flowId);
   console.log("secret entry:", JSON.stringify(entries).slice(0, 400));
-  expect(JSON.stringify(entries), "the secret is nowhere in the trail").not.toContain(secret);
-  expect(JSON.stringify(entries), "nor the value it replaced").not.toContain("sk-live-original");
+  expect(
+    JSON.stringify(entries),
+    "the secret is nowhere in the trail",
+  ).not.toContain(secret);
+  expect(JSON.stringify(entries), "nor the value it replaced").not.toContain(
+    "sk-live-original",
+  );
 
   const secretChange = entries
     .flatMap((e: any) => e.changes)
