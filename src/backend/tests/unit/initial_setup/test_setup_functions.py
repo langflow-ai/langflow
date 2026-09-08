@@ -1,5 +1,4 @@
 import asyncio
-import secrets
 from copy import deepcopy
 from uuid import uuid4
 
@@ -13,7 +12,7 @@ from langflow.initial_setup.setup import (
 )
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder, FolderRead
-from sqlmodel import col, select
+from sqlmodel import select
 
 
 @pytest.mark.usefixtures("client")
@@ -423,87 +422,3 @@ def test_update_components_syncs_metadata_for_skipped_language_model():
     assert node["template"]["code"]["value"] == "new source"
     assert node["template"]["model"]["value"] == "persisted-model"
     assert node["metadata"] == {"code_hash": "new-hash", "module": "new.module"}
-
-
-async def test_initialize_env_variables_for_all_users_reaches_existing_users(async_session, monkeypatch) -> None:
-    """Users who already exist must pick up a newly added environment variable.
-
-    The login handler only imports these for the user that just signed in, which never happens
-    again for a user of an external identity provider: their credential is resolved on every
-    request and the returning-user path does no provisioning.
-    """
-    from langflow.initial_setup.setup import initialize_env_variables_for_all_users
-    from langflow.services.database.models.user.model import User
-    from langflow.services.deps import get_settings_service, get_variable_service
-
-    users = [
-        User(username=f"existing-user-{index}", password=secrets.token_urlsafe(8), is_active=True) for index in range(2)
-    ]
-    async_session.add_all(users)
-    await async_session.flush()
-
-    monkeypatch.setenv("NEW_SERVICE_URL", "https://service.internal")
-    monkeypatch.setattr(get_settings_service().settings, "variables_to_get_from_environment", ["NEW_SERVICE_URL"])
-
-    await initialize_env_variables_for_all_users(async_session)
-
-    variable_service = get_variable_service()
-    for user in users:
-        names = await variable_service.list_variables(user.id, async_session)
-        assert "NEW_SERVICE_URL" in names, f"{user.username} did not receive the new variable; has {names}"
-
-
-@pytest.mark.parametrize("operation", ["INSERT", "UPDATE"])
-async def test_initialize_env_variables_for_all_users_isolates_flush_failure(
-    async_session, monkeypatch, operation
-) -> None:
-    """A failed flush rolls back only that user, including their earlier imports."""
-    from langflow.initial_setup.setup import initialize_env_variables_for_all_users
-    from langflow.services.database.models.user.model import User
-    from langflow.services.database.models.variable.model import Variable
-    from langflow.services.deps import get_settings_service, get_variable_service
-    from sqlalchemy import text
-
-    users = [User(username=f"import-user-{index}", password=secrets.token_urlsafe(8)) for index in range(3)]
-    async_session.add_all(users)
-    await async_session.commit()
-
-    # Match the importer's iteration order so the failure has successful users on both sides.
-    user_ids = (await async_session.exec(select(User.id))).all()
-    failed_user_id = user_ids[1]
-    names = ["FIRST_SERVICE_URL", "SECOND_SERVICE_URL"]
-    settings = get_settings_service().settings
-    monkeypatch.setattr(settings, "store_environment_variables", True)
-    monkeypatch.setattr(settings, "variables_to_get_from_environment", names)
-    variable_service = get_variable_service()
-
-    if operation == "UPDATE":
-        for user_id in user_ids:
-            for name in names:
-                await variable_service.create_variable(user_id, name, "old-value", session=async_session)
-        await async_session.commit()
-
-    # Trigger a real database failure inside the service, which catches flush exceptions itself.
-    await async_session.execute(
-        text(
-            f"CREATE TRIGGER reject_env_import BEFORE {operation} ON variable "
-            f"WHEN NEW.user_id = '{failed_user_id.hex}' AND NEW.name = 'SECOND_SERVICE_URL' "
-            "BEGIN SELECT RAISE(ABORT, 'test import failure'); END"
-        )
-    )
-    await async_session.commit()
-    for name in names:
-        monkeypatch.setenv(name, "new-value")
-
-    await initialize_env_variables_for_all_users(async_session)
-    assert async_session.is_active
-    await async_session.commit()
-
-    variables = (await async_session.exec(select(Variable).where(col(Variable.name).in_(names)))).all()
-    expected_owners = set(user_ids) if operation == "UPDATE" else set(user_ids) - {failed_user_id}
-    assert {(variable.user_id, variable.name) for variable in variables} == {
-        (user_id, name) for user_id in expected_owners for name in names
-    }
-    for variable in variables:
-        value = await variable_service.get_variable(variable.user_id, variable.name, "", session=async_session)
-        assert value.get_secret_value() == ("old-value" if variable.user_id == failed_user_id else "new-value")

@@ -47,7 +47,7 @@ from langflow.services.deps import get_authorization_service, get_memory_base_se
 from langflow.services.jobs import DuplicateJobError
 from langflow.services.memory_base.kb_path_helpers import BackendProvisioningError
 from langflow.services.memory_base.provider_scope import MemoryBaseFlowNotFoundError
-from langflow.services.memory_base.service import PreprocessingValidationError
+from langflow.services.memory_base.service import EmbeddingProviderValidationError, PreprocessingValidationError
 
 router = APIRouter(tags=["Memories"], prefix="/memories", include_in_schema=False)
 
@@ -160,7 +160,7 @@ async def create_memory_base(
     except ModelProviderPolicyError as exc:
         # Keep a hidden provider indistinguishable from one that does not exist.
         raise HTTPException(status_code=404, detail="Model provider not found") from exc
-    except PreprocessingValidationError as exc:
+    except (PreprocessingValidationError, EmbeddingProviderValidationError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     except BackendProvisioningError as exc:
         # Bad remote vector-store config (unreachable / wrong credentials) —
