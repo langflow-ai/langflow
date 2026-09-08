@@ -18,6 +18,12 @@ Two defects combined:
 The built-in components then had no registered hash, so ``check_flow_and_raise`` rejected
 them. It only surfaced with the gate on, because that check returns early when custom
 components are allowed.
+
+Fixing (2) by merging per component then exposed a third defect: the de-dup that retires the
+legacy copy of a component inline extension discovery also found matched only the component
+``name``. Lazy metadata loading never imports the file, so it keys the entry by the file's
+stem instead -- the pop missed and every custom component appeared twice, the second copy a
+stub with no code and no outputs.
 """
 
 from pathlib import Path
@@ -29,6 +35,7 @@ from lfx.interface.components import (
     BASE_COMPONENTS_PATH,
     _determine_loading_strategy,
     _merge_component_sources,
+    import_extension_components,
 )
 
 
@@ -126,6 +133,34 @@ class TestCategoryMergePreservesBuiltIns:
 
         assert set(merged["tools"]) == {"Calculator", "SearchAPI", extension_id}
 
+    def test_namespaced_extension_replaces_its_lazy_stub_keyed_by_file_name(self):
+        """Lazy metadata loading keys the legacy copy by file stem, not component name."""
+        builtin = {"tools": {"Calculator": {"id": "builtin"}}}
+        custom = {"tools": {"qa_custom_tool": {"id": "custom", "name": "qa_custom_tool", "lazy_loaded": True}}}
+        extension_id = "ext:tools:QACustomTool@extra"
+        extension = {
+            "tools": {extension_id: {"id": "extension", "name": "QACustomTool", "legacy_module": "qa_custom_tool"}}
+        }
+
+        merged = _merge_component_sources(builtin, custom, extension)
+
+        assert set(merged["tools"]) == {"Calculator", extension_id}, (
+            "the lazy stub survived beside its extension copy; it carries no code and no outputs, "
+            "so dragging it yields a node with no output handle"
+        )
+
+    def test_the_file_name_alias_does_not_evict_an_unrelated_builtin(self):
+        """Only a key the custom scanner actually produced may be retired."""
+        builtin = {"tools": {"qa_custom_tool": {"id": "builtin"}}}
+        extension_id = "ext:tools:QACustomTool@extra"
+        extension = {
+            "tools": {extension_id: {"id": "extension", "name": "QACustomTool", "legacy_module": "qa_custom_tool"}}
+        }
+
+        merged = _merge_component_sources(builtin, {}, extension)
+
+        assert set(merged["tools"]) == {"qa_custom_tool", extension_id}
+
     def test_namespaced_custom_override_hides_the_same_named_builtin(self):
         builtin = {"tools": {"Calculator": {"id": "builtin"}, "SearchAPI": {"id": "builtin"}}}
         custom = {"tools": {"Calculator": {"id": "custom"}}}
@@ -168,4 +203,48 @@ class TestRegistryParityAcrossModes:
         assert counts(lazy_registry) == counts(full_registry)
         assert any("ChatInput" in comps for comps in lazy_registry.values()), (
             "ChatInput missing from the lazy registry; built-in components would read as custom"
+        )
+
+
+class TestLazyModeDoesNotDuplicateCustomComponents:
+    """The reported symptom: one custom component, two palette entries.
+
+    Inline extension discovery and the legacy custom scanner walk the *same*
+    ``LANGFLOW_COMPONENTS_PATH`` directories, so every custom component is found twice.
+    Only the extension copy is usable -- the lazy stub is metadata-only.
+    """
+
+    @staticmethod
+    def _components_root(tmp_path: Path) -> Path:
+        root = tmp_path / "components_root"
+        tools = root / "tools"
+        tools.mkdir(parents=True)
+        (tools / "qa_custom_tool.py").write_text(
+            "class Component:\n    pass\n"
+            "class QACustomTool(Component):\n"
+            "    display_name = 'QA Custom Tool'\n"
+            "    def build(self):\n        return None\n",
+            encoding="utf-8",
+        )
+        return root
+
+    async def test_a_lazily_scanned_custom_component_appears_once(self, tmp_path: Path):
+        from unittest.mock import patch
+
+        root = self._components_root(tmp_path)
+        service = _SettingsService(_Settings(lazy=True, components_path=[str(root)]))
+
+        custom = _flatten(await _determine_loading_strategy(service))
+        assert "qa_custom_tool" in custom["tools"], "precondition: lazy mode keys the stub by file name"
+
+        def stub_template(*_args, **_kwargs):
+            return ({"display_name": "QA Custom Tool", "type": "tools", "template": {}}, object())
+
+        with patch("lfx.interface.components.create_component_template", side_effect=stub_template):
+            extension = await import_extension_components(service)
+
+        merged = _merge_component_sources({}, custom, extension)
+
+        assert set(merged["tools"]) == {"ext:tools:QACustomTool@extra"}, (
+            f"custom component duplicated in the palette: {sorted(merged['tools'])}"
         )
