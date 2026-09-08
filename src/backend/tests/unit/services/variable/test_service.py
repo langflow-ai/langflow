@@ -959,9 +959,7 @@ async def test_get_all_never_returns_decrypted_credential_as_generic(service, se
 # =============================================================================
 
 
-async def test_env_value_change_reaches_user_after_repeat_sync(
-    service, session: AsyncSession, monkeypatch
-):
+async def test_env_value_change_reaches_user_after_repeat_sync(service, session: AsyncSession, monkeypatch):
     """After two syncs the stored updated_at becomes newer than created_at,
     which makes the is_user_modified check always True — blocking every
     subsequent environment update.
@@ -989,11 +987,10 @@ async def test_env_value_change_reaches_user_after_repeat_sync(
     assert value.get_secret_value() == "v2"
 
 
-async def test_env_sync_skips_write_when_value_unchanged(
-    service, session: AsyncSession, monkeypatch
-):
+async def test_env_sync_skips_write_when_value_unchanged(service, session: AsyncSession, monkeypatch):
     """When the environment value hasn't changed, the sync must not touch the
-    row at all (no unnecessary write, no updated_at bump)."""
+    row at all (no unnecessary write, no updated_at bump).
+    """
     user_id = uuid4()
     monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
     monkeypatch.setattr(
