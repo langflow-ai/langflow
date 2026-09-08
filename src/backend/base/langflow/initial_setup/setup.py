@@ -1535,7 +1535,10 @@ async def initialize_env_variables_for_all_users(session: AsyncSession) -> None:
     variable_service = get_variable_service()
     for user_id in user_ids:
         try:
-            await variable_service.initialize_user_variables(user_id, session)
+            # The importer catches flush errors itself. A savepoint also restores the
+            # session after those errors without discarding earlier users' imports.
+            async with session.begin_nested():
+                await variable_service.initialize_user_variables(user_id, session)
         except Exception:  # noqa: BLE001
             await logger.aexception(f"Failed to import environment variables for user {user_id}")
 

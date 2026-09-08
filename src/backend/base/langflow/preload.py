@@ -143,6 +143,7 @@ class _PreloadState:
         self.bundles_loaded = False
         self.types_cached = False
         self.starter_projects_created = False
+        self.env_globals_imported = False
         self.agentic_globals_initialized = False
         self.flows_loaded = False
 

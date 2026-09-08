@@ -34,6 +34,7 @@ def reset_preload_state():
         "bundles_loaded": _STATE.bundles_loaded,
         "types_cached": _STATE.types_cached,
         "starter_projects_created": _STATE.starter_projects_created,
+        "env_globals_imported": _STATE.env_globals_imported,
         "agentic_globals_initialized": _STATE.agentic_globals_initialized,
         "flows_loaded": _STATE.flows_loaded,
     }
@@ -68,6 +69,7 @@ class _PreloadFixture:
     get_and_cache_all_types_dict: AsyncMock
     create_or_update_starter_projects: AsyncMock
     load_flows_from_directory: AsyncMock
+    initialize_env_variables_for_all_users: AsyncMock
     initialize_agentic_global_variables: AsyncMock
     logger: AsyncMock
 
@@ -101,6 +103,7 @@ def _preload_env(
     agentic_experience=False,
     dispose_side_effect=None,
     copy_profile_pictures=None,
+    initialize_env_variables_for_all_users=None,
     initialize_agentic_global_variables=None,
     cache_service=None,
     all_types_dict=None,
@@ -120,6 +123,7 @@ def _preload_env(
     get_and_cache = AsyncMock()
     create_starter = AsyncMock()
     load_flows = AsyncMock()
+    init_env = initialize_env_variables_for_all_users or AsyncMock()
     init_agentic = initialize_agentic_global_variables or AsyncMock()
     logger_mock = AsyncMock()
 
@@ -146,6 +150,7 @@ def _preload_env(
         stack.enter_context(
             patch("langflow.initial_setup.setup.load_flows_from_directory", load_flows),
         )
+        stack.enter_context(patch("langflow.initial_setup.setup.initialize_env_variables_for_all_users", init_env))
         stack.enter_context(patch("langflow.main.load_bundles_with_error_handling", load_bundles))
         stack.enter_context(
             patch("lfx.interface.components.get_and_cache_all_types_dict", get_and_cache),
@@ -172,6 +177,7 @@ def _preload_env(
             get_and_cache_all_types_dict=get_and_cache,
             create_or_update_starter_projects=create_starter,
             load_flows_from_directory=load_flows,
+            initialize_env_variables_for_all_users=init_env,
             initialize_agentic_global_variables=init_agentic,
             logger=logger_mock,
         )
@@ -276,6 +282,7 @@ def test_reset_clears_all_fields():
     _STATE.bundles_loaded = True
     _STATE.types_cached = True
     _STATE.starter_projects_created = True
+    _STATE.env_globals_imported = True
     _STATE.agentic_globals_initialized = True
     _STATE.flows_loaded = True
 
@@ -289,6 +296,7 @@ def test_reset_clears_all_fields():
     assert _STATE.bundles_loaded is False
     assert _STATE.types_cached is False
     assert _STATE.starter_projects_created is False
+    assert _STATE.env_globals_imported is False
     assert _STATE.agentic_globals_initialized is False
     assert _STATE.flows_loaded is False
 
@@ -441,14 +449,29 @@ async def test_run_master_preload_best_effort_step_failure_continues():
 @pytest.mark.asyncio
 async def test_run_master_preload_sets_completion_flags_on_success():
     """Every successful step must set its matching completion flag."""
-    with _preload_env(all_types_dict={"fake": "types_dict"}):
+    with _preload_env(all_types_dict={"fake": "types_dict"}) as fx:
         await _run_master_preload()
 
     assert _STATE.profile_pictures_copied is True
     assert _STATE.bundles_loaded is True
     assert _STATE.types_cached is True
     assert _STATE.starter_projects_created is True
+    fx.initialize_env_variables_for_all_users.assert_awaited_once()
+    assert _STATE.env_globals_imported is True
     assert _STATE.flows_loaded is True
+
+
+@pytest.mark.asyncio
+async def test_run_master_preload_env_globals_failure_allows_worker_retry():
+    """Failed environment imports leave the step incomplete while preload continues."""
+    failing_import = AsyncMock(side_effect=RuntimeError("Environment import failed"))
+    with _preload_env(initialize_env_variables_for_all_users=failing_import) as fx:
+        await _run_master_preload()
+
+    failing_import.assert_awaited_once()
+    assert _STATE.env_globals_imported is False
+    fx.load_flows_from_directory.assert_awaited_once()
+    fx.db_engine.dispose.assert_awaited_once()
 
 
 @pytest.mark.asyncio
