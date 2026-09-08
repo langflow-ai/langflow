@@ -49,6 +49,7 @@ from langflow.services.database.models.folder.constants import (
     LEGACY_FOLDER_NAMES,
 )
 from langflow.services.database.models.folder.model import Folder, FolderCreate, FolderRead
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import (
     get_settings_service,
     get_storage_service,
@@ -1513,6 +1514,33 @@ async def initialize_auto_login_default_superuser() -> None:
             await initialize_agentic_user_variables(super_user.id, async_session)
         _ = await get_or_create_default_folder(async_session, super_user.id)
     await logger.adebug("Super user initialized")
+
+
+async def initialize_env_variables_for_all_users(session: AsyncSession) -> None:
+    """Import ``LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT`` for every existing user.
+
+    The login handler imports these only for the user that just signed in. That never happens
+    again for a user of an external identity provider: their credential is resolved on every
+    request and the returning-user path does no provisioning, so a variable added to the list
+    would reach newly provisioned users only.
+
+    The process environment cannot change without a restart, which makes startup the point where
+    every user can be brought up to date at once, whatever they authenticate with. Failures are
+    per user so one bad row cannot stop the rest.
+    """
+    if not get_settings_service().settings.store_environment_variables:
+        return
+
+    user_ids = (await session.exec(select(User.id))).all()
+    variable_service = get_variable_service()
+    for user_id in user_ids:
+        try:
+            # The importer catches flush errors itself. A savepoint also restores the
+            # session after those errors without discarding earlier users' imports.
+            async with session.begin_nested():
+                await variable_service.initialize_user_variables(user_id, session)
+        except Exception:  # noqa: BLE001
+            await logger.aexception(f"Failed to import environment variables for user {user_id}")
 
 
 async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> FolderRead:

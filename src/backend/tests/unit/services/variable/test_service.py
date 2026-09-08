@@ -102,6 +102,46 @@ async def test_initialize_user_variables__preserves_existing_default_fields(
     assert variable.default_fields == default_fields
 
 
+async def test_initialize_user_variables__applies_changed_environment_value(
+    service, session: AsyncSession, monkeypatch
+):
+    """A rotated environment value reaches the user no matter how often the import has run.
+
+    The import used to stamp ``updated_at`` on its own writes, so from the third run onwards the
+    row looked user-modified and every later environment change was skipped.
+    """
+    user_id = uuid4()
+    var_name = "OPENAI_API_KEY"
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", [var_name])
+
+    monkeypatch.setenv(var_name, "first-value")
+    await service.initialize_user_variables(user_id=user_id, session=session)
+    await service.initialize_user_variables(user_id=user_id, session=session)
+
+    monkeypatch.setenv(var_name, "second-value")
+    await service.initialize_user_variables(user_id=user_id, session=session)
+
+    value = await service.get_variable(user_id, var_name, "", session=session)
+    assert value.get_secret_value() == "second-value"
+
+
+async def test_initialize_user_variables__keeps_user_edited_value(service, session: AsyncSession, monkeypatch):
+    """An explicit edit still wins over the environment."""
+    user_id = uuid4()
+    var_name = "OPENAI_API_KEY"
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", [var_name])
+
+    monkeypatch.setenv(var_name, "from-environment")
+    await service.initialize_user_variables(user_id=user_id, session=session)
+    await service.update_variable(user_id, var_name, "edited-in-the-ui", session=session)
+
+    monkeypatch.setenv(var_name, "rotated-in-the-environment")
+    await service.initialize_user_variables(user_id=user_id, session=session)
+
+    value = await service.get_variable(user_id, var_name, "", session=session)
+    assert value.get_secret_value() == "edited-in-the-ui"
+
+
 async def test_initialize_user_variables__not_found_variable(service, session: AsyncSession):
     with patch("langflow.services.variable.service.DatabaseVariableService.create_variable") as m:
         m.side_effect = Exception()
