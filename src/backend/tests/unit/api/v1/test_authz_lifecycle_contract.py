@@ -26,6 +26,9 @@ class _LifecycleService:
         self.events.append("lock")
         self.lock_requests.append(request)
 
+    async def is_user_credentials_managed_externally(self, *, session, user_id) -> bool:  # noqa: ARG002
+        return False
+
     async def validate_identity_mutation(self, *, session, mutation) -> None:  # noqa: ARG002
         self.events.append("validate")
         self.validated.append(mutation)

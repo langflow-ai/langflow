@@ -53,6 +53,7 @@ class AdminReconciler:
     def __init__(self, client: AdminClient, *, environ: Mapping[str, str] | None = None) -> None:
         self.client = client
         self.environ = os.environ if environ is None else environ
+        self._team_assignments_supported: bool | None = None
 
     def diff(self, state: AdminState, *, prune: bool = False) -> list[dict[str, Any]]:
         """Return a stable, secret-free ordered drift description."""
@@ -525,8 +526,12 @@ class AdminReconciler:
         raise RuntimeError(msg)
 
     def _team_assignments_available(self) -> bool:
-        capabilities = self.client.capabilities()
-        return bool(capabilities.get("features", {}).get("team_role_assignments", False))
+        if self._team_assignments_supported is None:
+            capabilities = self.client.capabilities()
+            self._team_assignments_supported = bool(
+                capabilities.get("features", {}).get("team_role_assignments", False)
+            )
+        return self._team_assignments_supported
 
 
 def _roles_in_parent_order(roles: list[ManifestRole]) -> list[ManifestRole]:

@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import uuid4
 
@@ -233,6 +234,63 @@ async def test_read_all_users_exact_username_filter(client: AsyncClient, logged_
             await client.delete(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
 
 
+async def test_read_all_users_exact_role_name_filter(client: AsyncClient, logged_in_headers_super_user):
+    suffix = uuid4().hex
+    users = []
+    roles = []
+    assignments = []
+    try:
+        for index, role_name in enumerate((f"role-filter-{suffix}", f"role-filter-{suffix}-suffix")):
+            user_response = await client.post(
+                "api/v1/users/",
+                json={"username": f"role-filter-user-{index}-{suffix}", "password": "password123"},
+                headers=logged_in_headers_super_user,
+            )
+            assert user_response.status_code == status.HTTP_201_CREATED
+            users.append(user_response.json())
+
+            role_response = await client.post(
+                "api/v1/authz/roles/",
+                json={"name": role_name, "permissions": ["flow:read"]},
+                headers=logged_in_headers_super_user,
+            )
+            assert role_response.status_code == status.HTTP_201_CREATED
+            roles.append(role_response.json())
+
+            assignment_response = await client.post(
+                "api/v1/authz/role-assignments/",
+                json={"user_id": users[-1]["id"], "role_id": roles[-1]["id"]},
+                headers=logged_in_headers_super_user,
+            )
+            assert assignment_response.status_code == status.HTTP_201_CREATED
+            assignments.append(assignment_response.json())
+
+        response = await client.get(
+            f"api/v1/users/?role_name={roles[0]['name']}",
+            headers=logged_in_headers_super_user,
+        )
+        missing_response = await client.get(
+            f"api/v1/users/?role_name=missing-{suffix}",
+            headers=logged_in_headers_super_user,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["total_count"] == 1
+        assert [row["id"] for row in response.json()["users"]] == [users[0]["id"]]
+        assert missing_response.status_code == status.HTTP_200_OK
+        assert missing_response.json() == {"total_count": 0, "users": []}
+    finally:
+        for assignment in assignments:
+            await client.delete(
+                f"api/v1/authz/role-assignments/{assignment['id']}",
+                headers=logged_in_headers_super_user,
+            )
+        for role in roles:
+            await client.delete(f"api/v1/authz/roles/{role['id']}", headers=logged_in_headers_super_user)
+        for user in users:
+            await client.delete(f"api/v1/users/{user['id']}", headers=logged_in_headers_super_user)
+
+
 async def test_authz_capabilities_are_fail_closed_in_oss(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/authz/capabilities", headers=logged_in_headers)
 
@@ -288,6 +346,39 @@ async def test_reset_password(client: AsyncClient, logged_in_headers, active_use
         data={"username": active_user.username, "password": REPLACEMENT_CREDENTIAL},
     )
     assert login_response.status_code == status.HTTP_200_OK
+
+
+async def test_external_identity_credentials_cannot_be_changed_locally(
+    client: AsyncClient,
+    logged_in_headers,
+    logged_in_headers_super_user,
+    active_user,
+    monkeypatch,
+) -> None:
+    authorization_service = SimpleNamespace(
+        can_administer=AsyncMock(return_value=True),
+        is_user_credentials_managed_externally=AsyncMock(return_value=True),
+    )
+    monkeypatch.setattr(
+        "langflow.api.v1.users.get_authorization_service",
+        lambda: authorization_service,
+    )
+
+    admin_response = await client.patch(
+        f"api/v1/users/{active_user.id}",
+        json={"password": REPLACEMENT_CREDENTIAL},
+        headers=logged_in_headers_super_user,
+    )
+    self_response = await client.patch(
+        f"api/v1/users/{active_user.id}/reset-password",
+        json={"current_password": CURRENT_CREDENTIAL, "password": REPLACEMENT_CREDENTIAL},
+        headers=logged_in_headers,
+    )
+
+    assert admin_response.status_code == status.HTTP_409_CONFLICT
+    assert self_response.status_code == status.HTTP_409_CONFLICT
+    assert admin_response.headers["X-Langflow-Error-Code"] == "external_credentials_managed"
+    assert self_response.headers["X-Langflow-Error-Code"] == "external_credentials_managed"
 
 
 async def test_reset_password_rejects_incorrect_current_password(client: AsyncClient, logged_in_headers, active_user):

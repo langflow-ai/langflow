@@ -980,12 +980,13 @@ async def test_create_assignment_emits_lifecycle_for_target_user(stub_authz, aud
     )
     actor = _make_user(is_superuser=True)
     payload = RoleAssignmentCreate(user_id=target_user.id, role_id=role.id)
+    response = Response()
 
     await authz_role_assignments.create_assignment(
         payload=payload,
         current_user=actor,
         session=session,
-        response=Response(),
+        response=response,
     )
     assert len(session.added) == 2
     assert session.added[1].source_kind == "manual"
@@ -1006,9 +1007,9 @@ async def test_create_assignment_emits_lifecycle_for_target_user(stub_authz, aud
     assert audit_calls[0]["result"] == "allow"
     assert audit_calls[0]["details"]["event"] == AUDIT_EVENT_MUTATION
     assert audit_calls[0]["details"]["user_id"] == str(target_user.id)
+    assert response.headers["Location"] == f"/api/v1/authz/role-assignments/{session.added[0].id}"
 
 
-@pytest.mark.asyncio
 async def test_create_assignment_enforces_plugin_access_ceiling(stub_authz):
     from langflow.api.v1 import authz_role_assignments
     from langflow.api.v1.schemas.authz_role_assignments import RoleAssignmentCreate
@@ -1474,7 +1475,6 @@ async def test_create_team_requires_superuser(stub_authz):
     assert excinfo.value.status_code == 403
 
 
-@pytest.mark.asyncio
 async def test_delegated_team_administrator_can_create_team(stub_authz):
     from langflow.api.v1 import authz_teams
     from langflow.api.v1.schemas.authz_teams import TeamCreate
@@ -1493,7 +1493,6 @@ async def test_delegated_team_administrator_can_create_team(stub_authz):
     assert created.adom_name == "engineering"
 
 
-@pytest.mark.asyncio
 async def test_delegated_team_administrator_cannot_create_roles(stub_authz):
     from langflow.api.v1 import authz_roles
     from langflow.api.v1.schemas.authz_roles import RoleCreate
@@ -1519,7 +1518,6 @@ def test_team_membership_mutations_accept_manual_source_only():
         TeamMemberCreate(user_id=uuid4(), source="sso")
 
 
-@pytest.mark.asyncio
 async def test_idp_team_membership_cannot_be_removed(stub_authz):
     from langflow.api.v1 import authz_teams
 
@@ -1539,6 +1537,7 @@ async def test_idp_team_membership_cannot_be_removed(stub_authz):
 
     assert excinfo.value.status_code == 409
     assert excinfo.value.detail == "Externally managed memberships cannot be removed through the manual membership API"
+    assert excinfo.value.headers == {"X-Langflow-Error-Code": "externally_managed"}
     assert session.deleted == []
 
 
@@ -1558,20 +1557,25 @@ async def test_add_member_emits_lifecycle_for_target_user(stub_authz, audit_call
     )
     actor = _make_user(is_superuser=True)
     payload = TeamMemberCreate(user_id=target_user.id)
+    response = Response()
 
     await authz_teams.add_member(
         team_id=team.id,
         payload=payload,
         current_user=actor,
         session=session,
-        response=Response(),
+        response=response,
     )
-    assert len(session.added) == 1
+    from langflow.services.database.models.auth import AuthzTeamMember, AuthzTeamMemberGrant
+
+    assert len([item for item in session.added if isinstance(item, AuthzTeamMember)]) == 1
+    assert len([item for item in session.added if isinstance(item, AuthzTeamMemberGrant)]) == 1
     assert authz.staged_mutations == authz.committed_mutations
     assert authz.staged_mutations[0].affected_user_ids == (target_user.id,)
     assert audit_calls[0]["action"] == "team_member:create"
     assert audit_calls[0]["obj"] == f"team:{team.id}"
     assert audit_calls[0]["details"]["event"] == AUDIT_EVENT_MUTATION
+    assert response.headers["Location"] == f"/api/v1/authz/teams/{team.id}/members/{target_user.id}"
 
 
 @pytest.mark.asyncio
@@ -1601,6 +1605,58 @@ async def test_add_member_duplicate_returns_409(stub_authz):
         )
     assert excinfo.value.status_code == 409
     assert "already a member" in excinfo.value.detail
+
+
+async def test_add_member_adds_manual_grant_to_directory_membership(stub_authz):
+    from langflow.api.v1 import authz_teams
+    from langflow.api.v1.schemas.authz_teams import TeamMemberCreate
+    from langflow.services.database.models.auth import AuthzTeam, AuthzTeamMember, AuthzTeamMemberGrant
+    from langflow.services.database.models.user.model import User
+
+    authz = stub_authz()
+    team = SimpleNamespace(id=uuid4(), team_name="Eng")
+    target_user = SimpleNamespace(id=uuid4())
+    member = AuthzTeamMember(team_id=team.id, user_id=target_user.id, source="directory")
+    session = _FakeAsyncSession(
+        {(AuthzTeam, team.id): team, (User, target_user.id): target_user},
+        exec_results=[[member], [], [], ["directory", "manual"]],
+    )
+
+    result = await authz_teams.add_member(
+        team_id=team.id,
+        payload=TeamMemberCreate(user_id=target_user.id),
+        current_user=_make_user(is_superuser=True),
+        session=session,
+        response=Response(),
+    )
+
+    assert result.id == member.id
+    assert member.source == "manual"
+    assert len([item for item in session.added if isinstance(item, AuthzTeamMemberGrant)]) == 1
+    assert authz.validated_mutations == []
+    assert authz.staged_mutations == []
+    assert authz.committed_mutations == []
+
+
+async def test_remove_manual_grant_preserves_directory_membership(stub_authz):
+    from langflow.api.v1 import authz_teams
+
+    stub_authz()
+    team_id = uuid4()
+    user_id = uuid4()
+    member = SimpleNamespace(id=uuid4(), team_id=team_id, user_id=user_id, source="manual")
+    manual_grant = SimpleNamespace(membership_id=member.id)
+    session = _FakeAsyncSession(exec_results=[[member], [manual_grant], ["directory"]])
+
+    await authz_teams.remove_member(
+        team_id=team_id,
+        user_id=user_id,
+        current_user=_make_user(is_superuser=True),
+        session=session,
+    )
+
+    assert session.deleted == [manual_grant]
+    assert member.source == "directory"
 
 
 # =====================================================================
@@ -1945,7 +2001,8 @@ async def test_remove_member_succeeds_when_committed_hook_fails(failing_committe
     team_id = uuid4()
     user_id = uuid4()
     member = SimpleNamespace(id=uuid4(), team_id=team_id, user_id=user_id, source="manual")
-    session = _FakeAsyncSession(exec_results=[[member]])
+    manual_grant = SimpleNamespace(membership_id=member.id)
+    session = _FakeAsyncSession(exec_results=[[member], [manual_grant], []])
     actor = _make_user(is_superuser=True)
 
     await authz_teams.remove_member(
@@ -1954,7 +2011,7 @@ async def test_remove_member_succeeds_when_committed_hook_fails(failing_committe
         current_user=actor,
         session=session,
     )
-    assert session.deleted == [member]
+    assert session.deleted == [manual_grant, member]
     assert session.committed == 1
     assert authz.staged_mutations == authz.committed_attempts
 
@@ -2143,7 +2200,6 @@ def test_list_endpoint_pagination_bounds_match_convention(endpoint_module):
     assert module._LIST_DEFAULT_LIMIT == 100
 
 
-@pytest.mark.asyncio
 async def test_team_list_supports_exact_adom_name_filter(stub_authz):
     from langflow.api.v1 import authz_teams
 
@@ -2164,7 +2220,6 @@ async def test_team_list_supports_exact_adom_name_filter(stub_authz):
     assert "authz_team.adom_name = 'engineering'" in compiled
 
 
-@pytest.mark.asyncio
 async def test_role_list_supports_exact_name_filter(stub_authz):
     from langflow.api.v1 import authz_roles
 

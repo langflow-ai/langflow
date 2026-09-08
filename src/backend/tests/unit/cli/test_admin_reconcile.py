@@ -37,6 +37,8 @@ class FakeAdminClient:
         self.members: dict[str, list[dict[str, Any]]] = {}
         self.assignments: dict[tuple[str, str], list[dict[str, Any]]] = {}
         self.calls: list[str] = []
+        self.capability_calls = 0
+        self.team_assignments_supported = False
         self._next_id = 100
 
     def _id(self) -> str:
@@ -44,7 +46,8 @@ class FakeAdminClient:
         return str(UUID(int=self._next_id))
 
     def capabilities(self) -> dict[str, Any]:
-        return {"features": {"team_role_assignments": False}}
+        self.capability_calls += 1
+        return {"features": {"team_role_assignments": self.team_assignments_supported}}
 
     def list_users(self) -> list[dict[str, Any]]:
         return deepcopy(self.users)
@@ -164,13 +167,21 @@ class FakeAdminClient:
             self.assignments[subject] = [row for row in rows if row["id"] != assignment_id]
 
     def _user(self, identifier: str) -> dict[str, Any]:
-        return next(row for row in self.users if identifier in (row["id"], row["username"]))
+        return self._lookup(self.users, identifier, "username", "user")
 
     def _team(self, identifier: str) -> dict[str, Any]:
-        return next(row for row in self.teams if identifier in (row["id"], row["adom_name"]))
+        return self._lookup(self.teams, identifier, "adom_name", "team")
 
     def _role(self, identifier: str) -> dict[str, Any]:
-        return next(row for row in self.roles if identifier in (row["id"], row["name"]))
+        return self._lookup(self.roles, identifier, "name", "role")
+
+    @staticmethod
+    def _lookup(rows: list[dict[str, Any]], identifier: str, name_field: str, kind: str) -> dict[str, Any]:
+        for row in rows:
+            if identifier in (row["id"], row[name_field]):
+                return row
+        msg = f"unknown {kind}: {identifier}"
+        raise KeyError(msg)
 
 
 def test_apply_is_dependency_ordered_and_rerun_converges() -> None:
@@ -273,6 +284,36 @@ def test_prune_removes_only_manual_records_and_reports_idp_skips() -> None:
         "user:alice/viewer@global",
     }
     assert all(item["reason"] == "externally_managed" for item in plan["skipped"])
+    assert {user["username"] for user in client.users} == {"alice", "bob", "carol"}
+    assert not [call for call in client.calls if call.startswith("user:")]
+
+
+def test_team_assignment_capability_is_cached_for_reconciler_lifetime() -> None:
+    client = FakeAdminClient()
+    client.team_assignments_supported = True
+    client.teams = [
+        {"id": TEAM_ID, "adom_name": "ops", "team_name": "Operators", "description": None, "is_active": True}
+    ]
+    state = AdminState.model_validate(
+        {
+            "apiVersion": "langflow.ai/v1",
+            "kind": "AdminState",
+            "teams": [{"adom_name": "ops", "display_name": "Operators"}],
+            "assignments": [
+                {
+                    "subject": {"type": "team", "name": "ops"},
+                    "role": "viewer",
+                    "domain": {"type": "global"},
+                }
+            ],
+        }
+    )
+    reconciler = AdminReconciler(client)
+
+    reconciler.diff(state)
+    reconciler.diff(state)
+
+    assert client.capability_calls == 1
 
 
 def test_apply_resolves_entire_manifest_before_writing() -> None:
