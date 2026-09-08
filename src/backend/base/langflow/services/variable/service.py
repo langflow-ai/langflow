@@ -54,10 +54,25 @@ class DatabaseVariableService(VariableService, Service):
         ):
             return
 
+        from lfx.base.models.unified_models import get_model_provider_metadata
+
         from langflow.services.database.models.user.model import User
         from langflow.services.deps import session_scope
 
+        secret_names = {
+            variable["variable_key"]
+            for provider in get_model_provider_metadata().values()
+            for variable in provider.get("variables", [])
+            if variable.get("is_secret") and variable.get("variable_key")
+        }
+        if not any(
+            (value := os.environ.get(name, "").strip()) and not (name in secret_names and value.lower() == "dummy")
+            for name in settings.variables_to_get_from_environment
+        ):
+            return
+
         last_user_id: UUID | None = None
+        failed_users = 0
         while True:
             async with session_scope() as session:
                 query = select(User.id).order_by(User.id).limit(100)
@@ -65,11 +80,20 @@ class DatabaseVariableService(VariableService, Service):
                     query = query.where(User.id > last_user_id)
                 user_ids = (await session.exec(query)).all()
             if not user_ids:
-                return
+                break
             for user_id in user_ids:
-                async with session_scope() as session:
-                    await self.initialize_user_variables(user_id, session)
+                try:
+                    async with session_scope() as session:
+                        await self.initialize_user_variables(user_id, session)
+                except Exception:  # noqa: BLE001
+                    failed_users += 1
+                    await logger.aexception("Environment variable import failed for user %s; continuing", user_id)
             last_user_id = user_ids[-1]
+        if failed_users:
+            # Let the startup gate remain incomplete so workers can retry a
+            # partial master sweep, after all other users have been processed.
+            msg = f"Environment variable import failed for {failed_users} users"
+            raise RuntimeError(msg)
 
     async def get_default_field_bindings(
         self,
@@ -163,15 +187,16 @@ class DatabaseVariableService(VariableService, Service):
 
                 try:
                     if existing:
-                        # Only new environment imports have this marker. Legacy
-                        # rows (NULL or later updated_at) cannot be distinguished
-                        # from user-created/edited values and must be preserved.
-                        if existing.created_at is None or existing.updated_at != existing.created_at:
-                            await logger.adebug(
-                                f"Preserving user-owned or legacy variable {var_name} during environment import"
-                            )
-                        elif existing.type == CREDENTIAL_TYPE:
+                        if existing.type != CREDENTIAL_TYPE or existing.is_environment_managed is False:
+                            continue
+                        if existing.is_environment_managed is None:
+                            await self._adopt_environment_variable(existing, value, session)
+                        elif existing.created_at is not None and existing.updated_at == existing.created_at:
                             await self._update_environment_variable(existing, value, session)
+                        else:
+                            # Older workers cannot write the origin flag. A
+                            # changed timestamp still protects their user edits.
+                            await logger.adebug("Preserving variable %s modified by an older worker", var_name)
                     else:
                         variable = await self.create_variable(
                             user_id=user_id,
@@ -182,8 +207,9 @@ class DatabaseVariableService(VariableService, Service):
                             type_=CREDENTIAL_TYPE,
                             session=session,
                         )
-                        # Equality marks an environment-managed row without a
-                        # schema change. User writes still set updated_at=now.
+                        variable.is_environment_managed = True
+                        # Keep the timestamp marker to detect edits by older
+                        # workers during a rolling upgrade.
                         variable.updated_at = variable.created_at
                         session.add(variable)
                         await session.flush()
@@ -197,6 +223,28 @@ class DatabaseVariableService(VariableService, Service):
                         )
                         break
 
+    async def _adopt_environment_variable(self, variable: Variable, value: str, session: AsyncSession) -> None:
+        """Adopt an unknown legacy credential only while it matches the environment."""
+        if auth_utils.decrypt_api_key(variable.value) != value:
+            return
+        created_at = variable.created_at or datetime.now(timezone.utc)
+        statement = (
+            update(Variable)
+            .where(
+                Variable.id == variable.id,
+                Variable.user_id == variable.user_id,
+                Variable.name == variable.name,
+                Variable.type == CREDENTIAL_TYPE,
+                col(Variable.is_environment_managed).is_(None),
+                Variable.updated_at == variable.updated_at,
+                Variable.value == variable.value,
+            )
+            .values(is_environment_managed=True, created_at=created_at, updated_at=created_at)
+            .execution_options(synchronize_session=False)
+        )
+        await session.exec(statement)
+        await session.refresh(variable)
+
     async def _update_environment_variable(self, variable: Variable, value: str, session: AsyncSession) -> None:
         """Rotate a managed credential only if no concurrent edit changed the row."""
         if auth_utils.decrypt_api_key(variable.value) == value:
@@ -208,6 +256,7 @@ class DatabaseVariableService(VariableService, Service):
                 Variable.user_id == variable.user_id,
                 Variable.name == variable.name,
                 Variable.type == CREDENTIAL_TYPE,
+                col(Variable.is_environment_managed).is_(True),
                 Variable.created_at == variable.created_at,
                 Variable.updated_at == variable.updated_at,
                 Variable.value == variable.value,
@@ -502,6 +551,7 @@ class DatabaseVariableService(VariableService, Service):
         else:
             variable.value = value
         variable.updated_at = datetime.now(timezone.utc)
+        variable.is_environment_managed = False
         session.add(variable)
         await session.flush()
         await session.refresh(variable)
@@ -549,7 +599,16 @@ class DatabaseVariableService(VariableService, Service):
                 variable.value = auth_utils.encrypt_api_key(variable.value, settings_service=self.settings_service)
             # GENERIC_TYPE variables are stored as plain text
 
-        db_variable.updated_at = datetime.now(timezone.utc)
+        claims_value = (
+            variable.value is not None
+            or (variable.name is not None and variable.name != db_variable.name)
+            or (variable.type is not None and variable.type != db_variable.type)
+        )
+        if claims_value:
+            db_variable.is_environment_managed = False
+        # Apply-to-fields edits must retain the marker on managed credentials.
+        if claims_value or db_variable.is_environment_managed is not True:
+            db_variable.updated_at = datetime.now(timezone.utc)
         variable_data = variable.model_dump(exclude_unset=True)
         for key, value in variable_data.items():
             setattr(db_variable, key, value)
@@ -606,7 +665,9 @@ class DatabaseVariableService(VariableService, Service):
             value=encrypted_value,
             default_fields=list(default_fields),
         )
-        variable = Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
+        variable = Variable.model_validate(
+            variable_base, from_attributes=True, update={"user_id": user_id, "is_environment_managed": False}
+        )
         session.add(variable)
         await session.flush()
         await session.refresh(variable)
