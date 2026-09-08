@@ -17,6 +17,7 @@ import orjson
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.custom.utils import abuild_custom_components, create_component_template
 from lfx.extension import (
+    SLOT_EXTRA,
     ExtensionError,
     LoadResult,
     discover_inline_bundles,
@@ -903,6 +904,7 @@ def _decorate_template_with_extension(
     extension_version: str,
     namespaced_id: str,
     legacy_name: str | None = None,
+    legacy_module: str | None = None,
 ) -> dict[str, Any]:
     """Stamp the AC-required identity fields onto a frontend-node template.
 
@@ -918,6 +920,13 @@ def _decorate_template_with_extension(
     ``getTemplateAliases``, ``lfx.utils.component_aliases``) lose the only
     bridge from a pre-move node type like ``AstraDB`` or ``Chroma`` to the
     current template -- leaving such nodes permanently unresolvable.
+
+    ``legacy_module`` is the stem of the file the component was loaded from.  It is
+    the *second* identity the legacy custom scanner can key this component under:
+    lazy metadata loading never imports the file, so it names the entry after the
+    file rather than the class.  Carried only for inline (``@extra``) bundles,
+    whose directories are exactly the ones the legacy scanner also walks, so
+    :func:`_merge_component_sources` can retire that copy.
     """
     template["extension"] = extension_id
     template["bundle"] = bundle
@@ -925,6 +934,8 @@ def _decorate_template_with_extension(
     template["namespaced_id"] = namespaced_id
     if legacy_name and not template.get("name"):
         template["name"] = legacy_name
+    if legacy_module:
+        template["legacy_module"] = legacy_module
     return template
 
 
@@ -1281,6 +1292,7 @@ async def import_extension_components(
                 extension_version=loaded.extension_version,
                 namespaced_id=loaded.namespaced_id,
                 legacy_name=getattr(instance, "name", None) or loaded.class_name,
+                legacy_module=loaded.file_path.stem if loaded.slot == SLOT_EXTRA else None,
             )
     return components_dict
 
@@ -1358,6 +1370,7 @@ def refresh_bundle_cache_from_record(record: "BundleRecord") -> None:
             extension_version=loaded.extension_version,
             namespaced_id=loaded.namespaced_id,
             legacy_name=getattr(instance, "name", None) or loaded.class_name,
+            legacy_module=loaded.file_path.stem if loaded.slot == SLOT_EXTRA else None,
         )
 
     expected = len(record.components)
@@ -1454,9 +1467,14 @@ def _merge_component_sources(
     flow that used one -- reporting first-party built-ins as custom components.
 
     Inline extension discovery is the canonical representation of components also found by the
-    legacy custom scanner. Its namespaced registry key differs from the legacy component name, so
-    replace that legacy copy by its ``name`` alias before publishing the extension. This prevents
-    one custom component from appearing twice while preserving unrelated built-in siblings.
+    legacy custom scanner. Its namespaced registry key differs from the legacy key, so replace
+    that legacy copy by alias before publishing the extension. This prevents one custom component
+    from appearing twice while preserving unrelated built-in siblings. Which alias applies
+    depends on how the legacy scanner ran: full loading imports the file and keys the component by
+    its ``name``, while lazy metadata loading never imports it and keys it by the source file's
+    stem (``legacy_module``). Matching only ``name`` left the lazy stub in place next to the real
+    entry -- and a stub carries no code and no outputs, so dragging it yields a node with no
+    output handle.
 
     Empty categories are dropped: the lazy metadata scanner emits a fixed set of legacy category
     names whether or not anything was found in them, and they would otherwise surface as empty
@@ -1476,9 +1494,10 @@ def _merge_component_sources(
         target = merged.setdefault(category, {})
         custom_components = custom.get(category, {})
         for component_id, component in components.items():
-            legacy_name = component.get("name") if isinstance(component, dict) else None
-            if isinstance(legacy_name, str) and legacy_name in custom_components:
-                target.pop(legacy_name, None)
+            aliases = (component.get("name"), component.get("legacy_module")) if isinstance(component, dict) else ()
+            for alias in aliases:
+                if isinstance(alias, str) and alias in custom_components:
+                    target.pop(alias, None)
             target[component_id] = component
     return merged
 
