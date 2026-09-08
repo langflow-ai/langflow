@@ -195,6 +195,11 @@ class Graph:
         self.persist_messages: bool = True
         self._start_time = datetime.now(timezone.utc)
         self.inactivated_vertices: set = set()
+        # Branch stops are transient and must be released by the vertex that
+        # created them. The graph can execute sibling vertices concurrently, so
+        # a graph-wide reset when one sibling finishes would otherwise revive a
+        # branch stopped by another sibling that is still running.
+        self.branch_inactivation_sources: dict[str, set[str]] = {}
         self.activated_vertices: list[str] = []
         self.vertices_layers: list[list[str]] = []
         self.vertices_to_run: set[str] = set()
@@ -1378,12 +1383,25 @@ class Graph:
         self.in_degree_map = self.build_in_degree(edges)
         self.parent_child_map = self.build_parent_child_map(vertices)
 
-    def reset_inactivated_vertices(self) -> None:
-        """Resets the inactivated vertices in the graph."""
-        for vertex_id in self.inactivated_vertices.copy():
+    def reset_inactivated_vertices(self, source_vertex_id: str | None = None) -> None:
+        """Reset branch inactivations owned by a completed source vertex.
+
+        Passing no source preserves the graph-wide reset used when initializing
+        a run. Cached graphs written before source ownership was introduced also
+        fall back to that legacy behavior.
+        """
+        if source_vertex_id is None or not self.branch_inactivation_sources:
+            vertices_to_activate = self.inactivated_vertices.copy()
+            self.branch_inactivation_sources.clear()
+        else:
+            owned_vertices = self.branch_inactivation_sources.pop(source_vertex_id, set())
+            still_owned = (
+                set().union(*self.branch_inactivation_sources.values()) if self.branch_inactivation_sources else set()
+            )
+            vertices_to_activate = owned_vertices - still_owned
+
+        for vertex_id in vertices_to_activate:
             self.mark_vertex(vertex_id, "ACTIVE")
-        self.inactivated_vertices = set()
-        self.inactivated_vertices = set()
 
     def mark_all_vertices(self, state: str) -> None:
         """Marks all vertices in the graph."""
@@ -1470,6 +1488,26 @@ class Graph:
             output_name=output_name,
             protected_vertices=protected_vertices,
         )
+        branch_vertices = visited - {vertex_id}
+        if state == VertexStates.INACTIVE:
+            tracked_vertices = branch_vertices.intersection(self.inactivated_vertices)
+            if tracked_vertices:
+                self.branch_inactivation_sources.setdefault(vertex_id, set()).update(tracked_vertices)
+        elif state == VertexStates.ACTIVE:
+            owned_vertices = self.branch_inactivation_sources.get(vertex_id)
+            if owned_vertices is not None:
+                released_vertices = owned_vertices.intersection(branch_vertices)
+                owned_vertices.difference_update(released_vertices)
+                if not owned_vertices:
+                    self.branch_inactivation_sources.pop(vertex_id)
+
+                still_owned = (
+                    set().union(*self.branch_inactivation_sources.values())
+                    if self.branch_inactivation_sources
+                    else set()
+                )
+                for owned_vertex_id in released_vertices.intersection(still_owned):
+                    self.mark_vertex(owned_vertex_id, VertexStates.INACTIVE)
         new_predecessor_map, _ = self.build_adjacency_maps(self.edges)
         new_predecessor_map = {k: v for k, v in new_predecessor_map.items() if k in visited}
         if vertex_id in self.cycle_vertices:
@@ -1582,6 +1620,7 @@ class Graph:
             "raw_graph_data": self.raw_graph_data,
             "top_level_vertices": self.top_level_vertices,
             "inactivated_vertices": self.inactivated_vertices,
+            "branch_inactivation_sources": self.branch_inactivation_sources,
             "run_manager": self.run_manager.to_dict(),
             "_run_id": self._run_id,
             "in_degree_map": self.in_degree_map,
@@ -1724,6 +1763,7 @@ class Graph:
         # Graphs cached before source-flow provenance was introduced remain
         # loadable and simply have no additional trusted storage namespace.
         state.setdefault("source_flow_id", None)
+        state.setdefault("branch_inactivation_sources", {})
         run_manager = state["run_manager"]
         if isinstance(run_manager, RunnableVerticesManager):
             state["run_manager"] = run_manager
@@ -2191,7 +2231,7 @@ class Graph:
         if self.stop_vertex and self.stop_vertex in next_runnable_vertices:
             next_runnable_vertices = [self.stop_vertex]
         self.extend_run_queue(next_runnable_vertices)
-        self.reset_inactivated_vertices()
+        self.reset_inactivated_vertices(vertex_id)
         self.reset_activated_vertices()
 
         if chat_service is not None:
