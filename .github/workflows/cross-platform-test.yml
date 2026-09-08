@@ -140,6 +140,8 @@ jobs:
 
   test-installation-stable:
     name: Install & Run - ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.python-version }}
+    env:
+      LANGFLOW_SUPERUSER_PASSWORD: ci-startup-only-password  # pragma: allowlist secret
     needs: [build-if-needed]
     if: |
       always() &&
@@ -476,6 +478,8 @@ jobs:
 
   test-installation-experimental:
     name: Install & Run - ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.python-version }} (Experimental)
+    env:
+      LANGFLOW_SUPERUSER_PASSWORD: ci-startup-only-password  # pragma: allowlist secret
     needs: [build-if-needed]
     if: |
       always() &&

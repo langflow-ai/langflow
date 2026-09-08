@@ -917,6 +917,8 @@ jobs:
           assert "langflow-base" not in entry_points
           PY
       - name: Test CLI
+        env:
+          LANGFLOW_SUPERUSER_PASSWORD: ci-startup-only-password  # pragma: allowlist secret
         run: |
           # TODO: Unsure why the whl is not built in src/backend/base/dist
           mkdir src/backend/base/dist
@@ -943,7 +945,8 @@ jobs:
           uv run --no-sync python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
-          timeout 120 bash -c 'until curl -f http://localhost:7860/api/v1/auto_login; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
+          timeout 120 bash -c 'until curl -f http://localhost:7860/health_check; do sleep 2; done' || (echo "Server did not start in time" && kill $SERVER_PID && exit 1)
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:7860/api/v1/auto_login)" = "403"
           # Terminate the server
           kill $SERVER_PID || (echo "Failed to terminate the server" && exit 1)
           sleep 20 # give the server some time to terminate
@@ -1151,6 +1154,8 @@ jobs:
           print(f"Verified {wheel.name}: direct base + curated defaults + opt-in bundles extra")
           PY
       - name: Test CLI
+        env:
+          LANGFLOW_SUPERUSER_PASSWORD: ci-startup-only-password  # pragma: allowlist secret
         run: |
           uv pip install dist/langflow-*.whl
           uv run python -m langflow run --host localhost --port 7860 --backend-only &

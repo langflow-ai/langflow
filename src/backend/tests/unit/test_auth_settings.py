@@ -11,6 +11,25 @@ from lfx.services.settings.constants import (
 from pydantic import SecretStr, ValidationError
 
 
+@pytest.mark.parametrize("environment_value", [None, "false", "true"])
+def test_auto_login_requires_explicit_opt_in(environment_value: str | None, tmp_path: Path, monkeypatch):
+    monkeypatch.delenv("LANGFLOW_AUTO_LOGIN", raising=False)
+    if environment_value is not None:
+        monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", environment_value)
+
+    settings = AuthSettings(CONFIG_DIR=tmp_path.as_posix())
+
+    assert settings.AUTO_LOGIN is (environment_value == "true")
+
+
+@pytest.mark.parametrize("environment_value", ["", "invalid"])
+def test_invalid_auto_login_value_fails_closed(environment_value: str, tmp_path: Path, monkeypatch):
+    monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", environment_value)
+
+    with pytest.raises(ValidationError, match="AUTO_LOGIN"):
+        AuthSettings(CONFIG_DIR=tmp_path.as_posix())
+
+
 @pytest.mark.parametrize("auto_login", [True, False])
 def test_superuser_password_is_secretstr(auto_login, tmp_path: Path):
     cfg_dir = tmp_path.as_posix()

@@ -109,6 +109,24 @@ async def test_login_unsuccessful_wrong_username(client):
     assert response.json()["detail"] == "Incorrect username or password"
 
 
+async def test_auto_login_is_disabled_until_explicitly_enabled(client, monkeypatch):
+    auth_settings = get_settings_service().auth_settings
+    response = await client.get("api/v1/auto_login")
+    assert response.status_code == 403
+    assert "access_token" not in response.json()
+
+    monkeypatch.setattr(auth_settings, "AUTO_LOGIN", True)
+    response = await client.get("api/v1/auto_login")
+    assert response.status_code == 200
+    assert response.json()["access_token"]
+
+    profile = await client.get(
+        "api/v1/users/whoami", headers={"Authorization": f"Bearer {response.json()['access_token']}"}
+    )
+    assert profile.status_code == 200
+    assert profile.json()["is_superuser"] is True
+
+
 async def test_login_unsuccessful_wrong_password(client, test_user, async_session):
     # Adding the test user to the database
     async_session.add(test_user)

@@ -84,11 +84,11 @@ class AuthSettings(BaseSettings):
     )
 
     AUTO_LOGIN: bool = Field(
-        default=True,  # TODO: Set to False in v2.0
+        default=False,
         description=(
             "Enable automatic login with a configured or generated bootstrap account. "
             "SECURITY WARNING: This bypasses authentication and should only be used in development environments. "
-            "Set to False in production. This will default to False in v2.0."
+            "Disabled by default. Set LANGFLOW_AUTO_LOGIN=true to opt in for trusted local development."
         ),
     )
     """If True, the application will attempt to log in automatically as a super user."""

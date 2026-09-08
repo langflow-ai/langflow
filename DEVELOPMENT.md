@@ -75,6 +75,9 @@ After running `make init`, you have two options for running Langflow:
 - Use `make run_cli` to build and run the application immediately.
 - Continue to the next section to run Langflow in Development mode.
 
+Automatic login is disabled by default. Set `LANGFLOW_SUPERUSER_PASSWORD` in your environment or `.env` file before starting the backend. The default username is `langflow`; set `LANGFLOW_SUPERUSER` to use a different username.
+For trusted local development without a login form, explicitly set `LANGFLOW_AUTO_LOGIN=true` in your environment or `.env` file, or use `make backend login=true`.
+
 ### Troubleshooting frontend build issues
 
 If you encounter frontend build problems or are upgrading from an older version of Langflow, run `make run_clic` once.
