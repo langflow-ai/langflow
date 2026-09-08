@@ -166,9 +166,7 @@ async def claim_version_token(
 
     claimed = uuid4()
     result = await session.exec(
-        update(Flow)
-        .where(Flow.id == db_flow.id, Flow.version_token == expected)
-        .values(version_token=claimed)
+        update(Flow).where(Flow.id == db_flow.id, Flow.version_token == expected).values(version_token=claimed)
     )
     if result.rowcount == 0:
         # No rollback here: rowcount 0 means nothing was written, and rolling back

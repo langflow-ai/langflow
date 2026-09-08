@@ -22,9 +22,14 @@ test("conflict dialog footer layout", async ({ page }) => {
   const flow = await (await page.request.get(`/api/v1/flows/${flowId}`)).json();
   const nodes = flow.data.nodes.map((n: any, i: number) => ({
     ...n,
-    position: { x: (n.position?.x ?? 0) + 60 * (i + 1), y: (n.position?.y ?? 0) + 40 },
+    position: {
+      x: (n.position?.x ?? 0) + 60 * (i + 1),
+      y: (n.position?.y ?? 0) + 40,
+    },
   }));
-  await page.request.patch(`/api/v1/flows/${flowId}`, { data: { data: { ...flow.data, nodes } } });
+  await page.request.patch(`/api/v1/flows/${flowId}`, {
+    data: { data: { ...flow.data, nodes } },
+  });
 
   const node = page.locator(".react-flow__node").first();
   const box = await node.boundingBox();
@@ -33,7 +38,9 @@ test("conflict dialog footer layout", async ({ page }) => {
   await page.mouse.move(box!.x + box!.width / 2, box!.y + 150, { steps: 12 });
   await page.mouse.up();
 
-  await expect(page.getByTestId("flow-conflict-banner")).toBeVisible({ timeout: 25_000 });
+  await expect(page.getByTestId("flow-conflict-banner")).toBeVisible({
+    timeout: 25_000,
+  });
   await page.getByTestId("flow-conflict-review-button").click();
   const modal = page.getByTestId("duplicate-flow-modal");
   await expect(modal).toBeVisible();
@@ -64,8 +71,10 @@ test("conflict dialog footer layout", async ({ page }) => {
   await page.waitForTimeout(800);
   const confirm = page.getByTestId("confirm-discard-my-changes");
   console.log(
-    "confirm button text:", JSON.stringify(await confirm.textContent()),
-    "| text-transform:", await confirm.evaluate((el) => getComputedStyle(el).textTransform),
+    "confirm button text:",
+    JSON.stringify(await confirm.textContent()),
+    "| text-transform:",
+    await confirm.evaluate((el) => getComputedStyle(el).textTransform),
   );
   await modal.screenshot({ path: "test-results/conflict-dialog-discard.png" });
 });

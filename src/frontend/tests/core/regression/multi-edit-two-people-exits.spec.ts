@@ -91,13 +91,19 @@ test("Bob takes the latest: Alice's version stands and nobody is refused", async
   await moveANode(alice, 3);
   await alice.waitForTimeout(SETTLE_MS);
 
-  const server = await (await alice.request.get(`/api/v1/flows/${flowId}`)).json();
+  const server = await (
+    await alice.request.get(`/api/v1/flows/${flowId}`)
+  ).json();
   console.log(
-    "take-latest: alice writes", JSON.stringify(aliceWrites),
+    "take-latest: alice writes",
+    JSON.stringify(aliceWrites),
     "| bob banner gone, token moved only by alice:",
     server.version_token !== aliceVersion.version_token,
   );
-  expect(aliceWrites.filter((s) => s === 409), "Alice is never refused").toHaveLength(0);
+  expect(
+    aliceWrites.filter((s) => s === 409),
+    "Alice is never refused",
+  ).toHaveLength(0);
   await expect(alice.getByTestId("flow-conflict-banner")).toBeHidden();
   await bob.close();
 });
@@ -119,7 +125,10 @@ test("Bob updates the flow: Alice is told her version is now out of date", async
   const versions = await (
     await bob.request.get(`/api/v1/flows/${flowId}/versions/`)
   ).json();
-  expect(versions.entries?.length, "the replaced version is archived").toBeGreaterThan(0);
+  expect(
+    versions.entries?.length,
+    "the replaced version is archived",
+  ).toBeGreaterThan(0);
   expect(versions.entries[0].username, "and it names its author").toBeTruthy();
 
   // Alice now holds a stale version, and learns it the moment she edits.
@@ -127,8 +136,12 @@ test("Bob updates the flow: Alice is told her version is now out of date", async
   await expect(alice.getByTestId("flow-conflict-banner")).toBeVisible({
     timeout: CONFLICT_WINDOW_MS,
   });
-  await expect(alice.getByTestId("flow-conflict-banner").getByText(/out of date/i)).toBeVisible();
-  console.log("update-flow: bob saved, alice correctly told her version is stale");
+  await expect(
+    alice.getByTestId("flow-conflict-banner").getByText(/out of date/i),
+  ).toBeVisible();
+  console.log(
+    "update-flow: bob saved, alice correctly told her version is stale",
+  );
   await bob.close();
 });
 
@@ -138,7 +151,9 @@ test("Bob duplicates: he keeps his work and Alice's flow is untouched", async ({
 }) => {
   test.setTimeout(5 * 60 * 1000);
   const { flowId, alice, bob } = await twoPeopleOnOneFlow(page, context);
-  const before = await (await alice.request.get(`/api/v1/flows/${flowId}`)).json();
+  const before = await (
+    await alice.request.get(`/api/v1/flows/${flowId}`)
+  ).json();
 
   await bob.getByTestId("flow-conflict-review-button").click();
   await bob.getByTestId("confirm-duplicate-flow").click();
@@ -147,8 +162,12 @@ test("Bob duplicates: he keeps his work and Alice's flow is untouched", async ({
     .not.toContain(flowId);
   await bob.waitForTimeout(SETTLE_MS);
 
-  const after = await (await alice.request.get(`/api/v1/flows/${flowId}`)).json();
-  expect(after.version_token, "Alice's flow is untouched").toBe(before.version_token);
+  const after = await (
+    await alice.request.get(`/api/v1/flows/${flowId}`)
+  ).json();
+  expect(after.version_token, "Alice's flow is untouched").toBe(
+    before.version_token,
+  );
 
   // And Alice keeps working with no conflict of her own.
   const aliceWrites: number[] = [];
@@ -158,7 +177,12 @@ test("Bob duplicates: he keeps his work and Alice's flow is untouched", async ({
   });
   await moveANode(alice, 5);
   await alice.waitForTimeout(SETTLE_MS);
-  console.log("duplicate: alice writes", JSON.stringify(aliceWrites), "bob at", bob.url());
+  console.log(
+    "duplicate: alice writes",
+    JSON.stringify(aliceWrites),
+    "bob at",
+    bob.url(),
+  );
   expect(aliceWrites.filter((s) => s === 409)).toHaveLength(0);
   await expect(alice.getByTestId("flow-conflict-banner")).toBeHidden();
   await bob.close();

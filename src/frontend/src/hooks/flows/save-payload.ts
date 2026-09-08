@@ -76,7 +76,10 @@ export const buildFlowUpdatePayload = ({
   // say — is writing that graph deliberately, whatever the person has touched.
   const writesItsOwnGraph =
     live !== undefined &&
-    payloadGraph !== asText(graphOf({ nodes: live.nodes, edges: live.edges } as FlowType["data"]));
+    payloadGraph !==
+      asText(
+        graphOf({ nodes: live.nodes, edges: live.edges } as FlowType["data"]),
+      );
   // Otherwise only the person's own edits travel. Opening a flow rewrites nodes
   // on its way in (component refreshes, model inputs), so comparing against the
   // baseline alone called a plain rename a graph write and had it refused.

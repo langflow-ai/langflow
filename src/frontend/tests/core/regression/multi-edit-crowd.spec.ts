@@ -41,14 +41,22 @@ async function seatPeople(
   await expect
     .poll(
       async () =>
-        (await page.request.get("/api/v1/flows/?get_all=true&header_flows=true")).status(),
+        (
+          await page.request.get(
+            "/api/v1/flows/?get_all=true&header_flows=true",
+          )
+        ).status(),
       { timeout: 60_000 },
     )
     .toBe(200);
 
-  const body = await (await page.request.get("/api/v1/starter-projects/")).json();
+  const body = await (
+    await page.request.get("/api/v1/starter-projects/")
+  ).json();
   const starters: any[] = Array.isArray(body) ? body : (body.items ?? []);
-  const template = starters.find((s: any) => (s.name ?? s.data?.name) === "Basic Prompting");
+  const template = starters.find(
+    (s: any) => (s.name ?? s.data?.name) === "Basic Prompting",
+  );
   const created = await page.request.post("/api/v1/flows/", {
     data: { name: `crowd-${Date.now()}`, description: "", data: template.data },
   });
@@ -77,7 +85,11 @@ async function edit(person: Person, offset: number) {
   if (!box) throw new Error("no bounding box");
   await person.page.mouse.move(box.x + box.width / 2, box.y + 10);
   await person.page.mouse.down();
-  await person.page.mouse.move(box.x + box.width / 2, box.y + 120 + offset * 25, { steps: 10 });
+  await person.page.mouse.move(
+    box.x + box.width / 2,
+    box.y + 120 + offset * 25,
+    { steps: 10 },
+  );
   await person.page.mouse.up();
 }
 
@@ -88,10 +100,7 @@ async function inConflict(person: Person): Promise<boolean> {
     .catch(() => false);
 }
 
-test("two people: one writes, the other is told", async ({
-  page,
-  browser,
-}) => {
+test("two people: one writes, the other is told", async ({ page, browser }) => {
   test.setTimeout(6 * 60 * 1000);
   const { people, contexts } = await seatPeople(page, browser, 2);
   const [a, b] = people;
@@ -105,8 +114,10 @@ test("two people: one writes, the other is told", async ({
   for (const p of people) if (await inConflict(p)) conflicted.push(p.name);
 
   console.log(
-    "2 people | writes:", people.map((p) => `${p.name}=${JSON.stringify(p.writes)}`).join(" "),
-    "| conflicted:", conflicted,
+    "2 people | writes:",
+    people.map((p) => `${p.name}=${JSON.stringify(p.writes)}`).join(" "),
+    "| conflicted:",
+    conflicted,
   );
 
   expect(conflicted, "exactly one person is refused").toHaveLength(1);
@@ -145,10 +156,14 @@ test("three people: two lose the race, each takes a different exit", async ({
   });
 
   console.log(
-    "3 people | c wrote nothing:", c.writes.filter((s) => s === 200).length === 0,
+    "3 people | c wrote nothing:",
+    c.writes.filter((s) => s === 200).length === 0,
   );
 
-  expect(c.writes.filter((s) => s === 200), "discarding writes nothing").toHaveLength(0);
+  expect(
+    c.writes.filter((s) => s === 200),
+    "discarding writes nothing",
+  ).toHaveLength(0);
   for (const ctx of contexts) await ctx.close();
 });
 
@@ -171,25 +186,42 @@ test("four people: everyone edits at once, nobody's work vanishes silently", asy
     if (p.writes.filter((s) => s === 200).length > 0) accepted.push(p.name);
   }
 
-  const server = await (await page.request.get(`/api/v1/flows/${flowId}`)).json();
+  const server = await (
+    await page.request.get(`/api/v1/flows/${flowId}`)
+  ).json();
   const allWrites = people.flatMap((p) => p.writes);
 
   console.log(
-    "4 people | writes:", people.map((p) => `${p.name}=${JSON.stringify(p.writes)}`).join(" "),
-    "\n         | accepted:", accepted, "conflicted:", conflicted,
-    "| server token:", server.version_token?.slice(0, 8),
+    "4 people | writes:",
+    people.map((p) => `${p.name}=${JSON.stringify(p.writes)}`).join(" "),
+    "\n         | accepted:",
+    accepted,
+    "conflicted:",
+    conflicted,
+    "| server token:",
+    server.version_token?.slice(0, 8),
   );
 
   // 1. No server error, ever.
-  expect(allWrites.filter((s) => s >= 500), "no 5xx under four writers").toHaveLength(0);
+  expect(
+    allWrites.filter((s) => s >= 500),
+    "no 5xx under four writers",
+  ).toHaveLength(0);
   // 2. Everyone who was refused knows it.
-  const refused = people.filter((p) => p.writes.includes(409)).map((p) => p.name);
-  expect(conflicted.sort(), "every refused person sees the banner").toEqual(refused.sort());
+  const refused = people
+    .filter((p) => p.writes.includes(409))
+    .map((p) => p.name);
+  expect(conflicted.sort(), "every refused person sees the banner").toEqual(
+    refused.sort(),
+  );
   // 3. Nobody is left in the dark: accepted or told.
   for (const p of people) {
     const wasAccepted = p.writes.includes(200);
     const wasTold = conflicted.includes(p.name);
-    expect(wasAccepted || wasTold, `${p.name} must be either accepted or told`).toBe(true);
+    expect(
+      wasAccepted || wasTold,
+      `${p.name} must be either accepted or told`,
+    ).toBe(true);
   }
   for (const ctx of contexts) await ctx.close();
 });
