@@ -396,7 +396,7 @@ For a minimal Dockerfile that adds `uv` to the 1.8.0 image, see the [release not
 ## Docker image defaults {#docker-image-security-defaults}
 
 As of Langflow 1.11.x, official Langflow Docker images set `LANGFLOW_AUTO_LOGIN=false` at image build time.
-The Langflow application also defaults to `false`, including source installations and Python packages.
+Official Python release packages and tagged source archives also default to `false`. Development branches and local builds from those branches default to `true`; Docker images, including DEV/CDK, explicitly default to `false`.
 
 Because auto-login is disabled, you must set `LANGFLOW_SUPERUSER_PASSWORD` (and optionally `LANGFLOW_SUPERUSER`) unless you explicitly set `LANGFLOW_AUTO_LOGIN=true`.
 

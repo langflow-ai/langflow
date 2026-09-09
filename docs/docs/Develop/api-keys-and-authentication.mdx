@@ -166,8 +166,9 @@ You must explicitly set [`LANGFLOW_SUPERUSER_PASSWORD`](#langflow-superuser) bef
 All users share the same visual editor environment without password protection, and they can run Langflow CLI commands as superusers.
 API requests still require a Langflow API key unless you also set [`LANGFLOW_SKIP_AUTH_AUTO_LOGIN`](#langflow-skip-auth-auto-login) to `true`.
 
-The default is `False` for source installations, Python packages, and official Docker images.
-For trusted local development, explicitly set `LANGFLOW_AUTO_LOGIN=True` to enable automatic login.
+The default is `True` for development branches and local builds from those branches. It is `False` for official release packages, source checkouts/downloads of official release tags, and Docker images, including DEV/CDK images.
+Official tags point to a release-only commit that disables auto-login, so GitHub's automatic source ZIP/TAR downloads use the same default as the wheels published to PyPI and GitHub Releases.
+For trusted local development with a release package or Docker image, explicitly set `LANGFLOW_AUTO_LOGIN=True` to enable automatic login.
 For more information about containers, see [Docker image defaults](/deployment-docker#docker-image-security-defaults).
 
 #### LANGFLOW_SKIP_AUTH_AUTO_LOGIN {#langflow-skip-auth-auto-login}

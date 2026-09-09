@@ -126,6 +126,15 @@ jobs:
 
           echo "Validated: '$RELEASE_REF' is a valid tag."
 
+      - name: Set up release source verification
+        if: ${{ !inputs.dry_run }}
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          python-version: "3.13"
+      - name: Verify tagged source disables auto-login
+        if: ${{ !inputs.dry_run }}
+        run: uv run --no-project python scripts/ci/release_auth_defaults.py verify-source
+
   validate-tag-format:
     name: Validate Tag Format and Check for Duplicates
     runs-on: ubuntu-latest
@@ -763,9 +772,11 @@ jobs:
           grep "langflow-sdk" pyproject.toml
       - name: Build project for distribution
         run: |
+          uv run --no-sync python scripts/ci/release_auth_defaults.py prepare
           cd src/lfx
           rm -rf dist/
           uv build --wheel --out-dir dist
+          uv run --no-sync python ../../scripts/ci/release_auth_defaults.py verify dist/*.whl
       - name: Verify built version
         run: |
           EXPECTED_VERSION="${{ needs.determine-lfx-version.outputs.version }}"

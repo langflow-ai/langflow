@@ -109,7 +109,7 @@ async def test_login_unsuccessful_wrong_username(client):
     assert response.json()["detail"] == "Incorrect username or password"
 
 
-async def test_auto_login_is_disabled_until_explicitly_enabled(client, monkeypatch):
+async def test_auto_login_endpoint_respects_auth_setting(client, monkeypatch):
     auth_settings = get_settings_service().auth_settings
     response = await client.get("api/v1/auto_login")
     assert response.status_code == 403

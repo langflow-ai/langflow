@@ -17,7 +17,7 @@ To use a different directory, set the location in `LANGFLOW_FS_TOOL_BASE_DIR` in
 
 If [`LANGFLOW_AUTO_LOGIN`](/api-keys-and-authentication#langflow-auto-login) is set to `true`, all agents share a single workspace at `LANGFLOW_FS_TOOL_BASE_DIR/shared/`.
 If `LANGFLOW_AUTO_LOGIN` is set to `false`, each authenticated user gets a private workspace at `LANGFLOW_FS_TOOL_BASE_DIR/users/HASH/`, where `HASH` is an opaque HMAC-derived identifier. Anonymous requests are refused.
-`LANGFLOW_AUTO_LOGIN` defaults to `false`, so each authenticated user gets a private workspace by default.
+Official release packages, tagged source archives, and Docker images default `LANGFLOW_AUTO_LOGIN` to `false`, so each authenticated user gets a private workspace. Development branches default to `true` and use the shared workspace.
 
 Tool errors are not raised as an unhandled exception.
 Tool errors are returned to the agent as structured JSON:

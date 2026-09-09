@@ -113,9 +113,11 @@ jobs:
 
       - name: Build LFX for distribution
         run: |
+          uv run --no-sync python scripts/ci/release_auth_defaults.py prepare
           cd src/lfx
           rm -rf dist/
           uv build --wheel --out-dir dist
+          uv run --no-sync python ../../scripts/ci/release_auth_defaults.py verify dist/*.whl
 
       - name: Test LFX CLI
         run: |

@@ -107,6 +107,10 @@ def test_backend_docker_images_disable_auto_login_by_default(dockerfile: Path) -
     assert _target_env(dockerfile).get("LANGFLOW_AUTO_LOGIN") == "false"
 
 
+def test_lfx_docker_image_disables_auto_login_by_default() -> None:
+    assert _target_env(REPO_ROOT / "src/lfx/docker/Dockerfile").get("LANGFLOW_AUTO_LOGIN") == "false"
+
+
 @pytest.mark.parametrize(("dockerfile", "target"), PUBLISHED_IMAGES)
 def test_published_images_use_writable_runtime_home(dockerfile: str, target: str | None) -> None:
     assert _target_env(REPO_ROOT / "docker" / dockerfile, target).get("HOME") == "/app/data"
