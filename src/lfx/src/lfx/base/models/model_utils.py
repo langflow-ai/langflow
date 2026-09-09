@@ -1,6 +1,5 @@
 import asyncio
 import hashlib
-import os
 import re
 import time
 from typing import Any
@@ -437,13 +436,17 @@ def _environment_variable_value(variable_key: str) -> str | None:
     replace OpenAI's curated chat catalog with that endpoint's raw ``/models``
     listing (whisper, tts, embeddings). The request-scoped no-env-fallback flag
     still wins, so a served flow stays isolated from process-wide environment.
+
+    Name shapes come from ``provider_variable_from_env``, the same reader
+    ``get_all_variables_for_provider`` uses, so enablement and discovery cannot
+    disagree about which environment spellings configure a provider.
     """
-    from lfx.base.models.unified_models import is_required_provider_variable
+    from lfx.base.models.unified_models import is_required_provider_variable, provider_variable_from_env
     from lfx.services.variable.request_scope import is_env_fallback_disabled
 
     if is_env_fallback_disabled() or not is_required_provider_variable(variable_key):
         return None
-    return _to_str(os.environ.get(variable_key))
+    return provider_variable_from_env(variable_key)
 
 
 def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -> str | None:

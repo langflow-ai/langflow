@@ -8,6 +8,10 @@ raise propagated up through ``fetch_live_ollama_models`` past its
 ``if not base_url: return []`` guard. These regression tests pin the
 contract: missing variables → ``None``, not an exception.
 
+The lookup later gained an environment step behind the database read, so the
+tests in this class delete the variable from the environment to assert the
+database half on its own. ``TestEnvironmentFallback`` covers the env step.
+
 Lives in its own module (not test_model_utils.py) because that module
 ``pytest.skip``s at import time on Python 3.14+ when ``langchain-ibm`` is
 unavailable — which would silently skip these tests too.
@@ -15,8 +19,25 @@ unavailable — which would silently skip these tests too.
 
 from __future__ import annotations
 
+import pytest
 from lfx.base.models import model_utils
 from lfx.base.models.model_utils import get_provider_variable_value
+
+_TOUCHED_VARIABLE_KEYS = ("OLLAMA_BASE_URL", "OPENAI_BASE_URL", "NOT_A_PROVIDER_VARIABLE")
+
+
+@pytest.fixture(autouse=True)
+def _isolate_provider_environment(monkeypatch):
+    """Start every test from an environment that configures no provider.
+
+    The lookup reads the environment behind the database, and accepts both the
+    bare key and its ``LANGFLOW_`` alias, so a developer with Ollama exported
+    would otherwise see the database-only assertions fail. Clearing both
+    spellings keeps each test's own ``setenv`` the only source of truth.
+    """
+    for key in _TOUCHED_VARIABLE_KEYS:
+        monkeypatch.delenv(key, raising=False)
+        monkeypatch.delenv(f"LANGFLOW_{key}", raising=False)
 
 
 class TestGetProviderVariableValue:
@@ -237,6 +258,51 @@ class TestEnvironmentFallback:
                 variable_key="OPENAI_BASE_URL",
             )
             == "https://proxy.example/v1"
+        )
+
+    def test_langflow_prefixed_alias_is_accepted(self, monkeypatch) -> None:
+        """Discovery must read the same env shapes ``get_all_variables_for_provider`` does.
+
+        Some .env templates prefix every key with ``LANGFLOW_``. Enablement's
+        variable resolution accepts that alias, so a discovery helper that only
+        read the bare name would recreate the connected-but-no-models split one
+        env-name shape over.
+        """
+        self._patch_empty_database(monkeypatch)
+        monkeypatch.setenv("LANGFLOW_OLLAMA_BASE_URL", "http://ollama:11434")
+
+        assert (
+            get_provider_variable_value(
+                user_id="00000000-0000-0000-0000-000000000001",
+                variable_key="OLLAMA_BASE_URL",
+            )
+            == "http://ollama:11434"
+        )
+
+    def test_bare_name_wins_over_the_prefixed_alias(self, monkeypatch) -> None:
+        self._patch_empty_database(monkeypatch)
+        monkeypatch.setenv("OLLAMA_BASE_URL", "http://bare:11434")
+        monkeypatch.setenv("LANGFLOW_OLLAMA_BASE_URL", "http://prefixed:11434")
+
+        assert (
+            get_provider_variable_value(
+                user_id="00000000-0000-0000-0000-000000000001",
+                variable_key="OLLAMA_BASE_URL",
+            )
+            == "http://bare:11434"
+        )
+
+    def test_whitespace_only_environment_value_counts_as_absent(self, monkeypatch) -> None:
+        """A blank value must not pass the caller's ``if not base_url`` guard."""
+        self._patch_empty_database(monkeypatch)
+        monkeypatch.setenv("OLLAMA_BASE_URL", "   ")
+
+        assert (
+            get_provider_variable_value(
+                user_id="00000000-0000-0000-0000-000000000001",
+                variable_key="OLLAMA_BASE_URL",
+            )
+            is None
         )
 
     def test_unrecognized_variable_is_not_read_from_environment(self, monkeypatch) -> None:

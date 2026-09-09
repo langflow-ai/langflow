@@ -67,7 +67,13 @@ async def test_ollama_as_sole_provider_resolves_without_explicit_selection():
 
 
 async def test_genuinely_unknown_provider_is_still_rejected():
-    """The guard must keep rejecting a provider the model catalog does not know."""
+    """The guard must keep rejecting a provider the model catalog does not know.
+
+    Pins the guard, not a reachable production path: enabled providers are built
+    from the catalog, so anything that clears the enablement check above already
+    satisfies recognition. Reaching this branch takes a mocked enablement result
+    that enablement itself could never produce. Kept as defense in depth.
+    """
     with (
         patch(
             f"{_ROUTER}.get_enabled_providers_for_user",

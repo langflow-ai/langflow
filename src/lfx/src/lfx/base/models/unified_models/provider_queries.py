@@ -142,15 +142,16 @@ def is_known_model_provider(provider: str) -> bool:
 
     Recognition is independent of credentials: a provider configured only by a
     base URL (Ollama) declares no secret variable, so a secret lookup returning
-    ``None`` says nothing about whether the provider exists. Bundle-registered
-    providers merge their metadata into the same table, and ids/aliases are
-    resolved first, so all three selector forms answer the same.
+    ``None`` says nothing about whether the provider exists.
+
+    Bundle-registered providers need no separate check — registration writes the
+    bundle's metadata into this same table and unregistration removes it — so a
+    single canonicalized membership test answers for every selector form (name,
+    provider id, alias) and for core and bundle providers alike.
 
     Deliberately uncached: bundles register and unregister providers at runtime.
     """
-    from lfx.base.models.provider_registry import is_registered
-
-    return _canonical_provider_name(provider) in model_provider_metadata or is_registered(provider)
+    return _canonical_provider_name(provider) in model_provider_metadata
 
 
 @lru_cache(maxsize=1)
