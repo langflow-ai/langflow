@@ -188,7 +188,14 @@ Langflow also emits `CUSTOM` events that generic AG-UI clients can ignore, such 
 
 The `STEP_STARTED` and `STEP_FINISHED` events carry the component id as their step name, and `STATE_SNAPSHOT` and `STATE_DELTA` carry each component's id, status, and full output payload. That is what the Langflow canvas uses to color nodes as a flow runs, but it means an AG-UI stream you expose to your own end users describes your flow's topology and intermediate outputs.
 
-Set `"expose_graph_state": false` to withhold all four event types. The run is unchanged; only the wire is narrower, leaving the run lifecycle, text messages, tool calls, and `CUSTOM` events:
+Set `"expose_graph_state": false` to withhold all four event types. The run is unchanged; only the wire is narrower, leaving the run lifecycle, text messages, tool calls, and `CUSTOM` events.
+
+Two `CUSTOM` channels are withheld too, because both name the components the option is meant to hide:
+
+- `langflow.event`, the side-channel that republishes raw Langflow events whose `properties.source` names the producing component. It exists for the Langflow playground's chat view, which keeps the default.
+- `langflow.log`, which carries component logs. Langflow stamps `component_id` and the producing output name onto every log payload, so these describe the graph as directly as the `STEP_*` events do.
+
+The remaining `CUSTOM` events are unaffected: `langflow.content.*`, `langflow.message.removed`, `langflow.run.cancelled`, and `langflow.human_input_required`. The last one still identifies a component in its pause id, deliberately — it is the handle a client needs to resume a suspended run, so withholding it would stall human-in-the-loop flows rather than just narrow the stream.
 
 ```json
 {

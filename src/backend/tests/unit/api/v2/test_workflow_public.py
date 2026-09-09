@@ -206,16 +206,21 @@ async def test_public_endpoint_rejects_tweaks_field(client: AsyncClient, public_
 
 @pytest.mark.benchmark
 @pytest.mark.security
-async def test_public_endpoint_accepts_expose_graph_state_false(client: AsyncClient, public_flow_id):
+async def test_public_endpoint_accepts_expose_graph_state_false(client: AsyncClient, public_flow_id, monkeypatch):
     """``expose_graph_state`` is accepted by the public wire schema.
 
     A public flow's AG-UI stream otherwise names every component and carries
     each one's output, so an anonymous visitor can read the flow's topology.
     The field must survive the ``extra="forbid"`` schema (a 422 would mean the
-    opt-out never reaches the translator).
+    opt-out never reaches the translator) and the run must still start, so this
+    asserts the stream opens with 200 rather than merely not-422 — which a 401,
+    404, or 500 would also satisfy.
     """
+    captured: dict = {}
+    _stub_generate_flow_events(monkeypatch, captured)
     _send_unauthenticated(client, "expose-graph-state-client")
-    response = await client.post(
+    async with client.stream(
+        "POST",
         "api/v2/workflows/public",
         json={
             "flow_id": str(public_flow_id),
@@ -224,8 +229,12 @@ async def test_public_endpoint_accepts_expose_graph_state_false(client: AsyncCli
             "expose_graph_state": False,
         },
         headers={"Content-Type": "application/json"},
-    )
-    assert response.status_code != codes.UNPROCESSABLE_ENTITY
+    ) as response:
+        assert response.status_code == codes.OK
+        await _read_stream(response)
+
+    # The run reached the build entry point rather than being rejected upstream.
+    assert captured
 
 
 @pytest.mark.benchmark

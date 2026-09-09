@@ -1382,3 +1382,42 @@ def test_expose_graph_state_defaults_on_for_the_canvas():
     assert [e for e in out if isinstance(e, StepStartedEvent)]
     assert [e for e in out if isinstance(e, StepFinishedEvent)]
     assert [e for e in out if isinstance(e, StateDeltaEvent)]
+
+
+def test_expose_graph_state_off_suppresses_component_logs():
+    """The ``langflow.log`` channel must not survive the opt-out.
+
+    ``Component._log_event`` stamps ``component_id`` and the producing
+    ``output`` name onto every log payload before it reaches the translator, so
+    leaving this channel on would republish exactly the component identities the
+    STEP_*/STATE_* suppression removes — the same reasoning that gates the
+    ``langflow.event`` side-channel in ``workflow_execution``. The payload below
+    is the real shape built at ``Component._log_event``.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1", expose_graph_state=False)
+    log_payload = {
+        "name": "retrieved docs",
+        "message": "3 documents",
+        "type": "text",
+        "output": "dataframe",
+        "component_id": "Agent-b3f21",
+    }
+
+    assert t.translate("log", log_payload) == []
+
+    # The default keeps it, so the playground's log view is unchanged.
+    default = AGUITranslator(run_id="r1", thread_id="t1")
+    emitted = default.translate("log", log_payload)
+    assert [e.name for e in emitted] == ["langflow.log"]
+
+
+def test_expose_graph_state_off_still_reports_human_input_pauses():
+    """The HITL pause is the resume handle, so it survives the opt-out.
+
+    Its id embeds the vertex id, but a client that never receives it cannot
+    resume the run — withholding it would hang every opt-out caller's
+    human-in-the-loop flow rather than merely narrowing the wire.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1", expose_graph_state=False)
+    out = t.translate("human_input_required", {"interrupt_id": "Agent-b3f21:run-1:i-0"})
+    assert [e.name for e in out] == ["langflow.human_input_required"]
