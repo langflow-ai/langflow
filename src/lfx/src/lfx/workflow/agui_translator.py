@@ -136,6 +136,16 @@ class AGUITranslator:
         if event_type == "add_message":
             return self._translate_add_message(data)
         if event_type == "log":
+            # ``Component._log_event`` stamps ``component_id`` (and the producing
+            # ``output`` name) onto every log payload, so this channel names the
+            # same components the STEP_*/STATE_* events do. Withhold it entirely
+            # rather than stripping those keys: the payload is a
+            # ``log.model_dump()`` that can grow new identifying fields, and a
+            # key blocklist would silently stop covering them. Component logs are
+            # flow-internal diagnostics, so a caller who hid the graph loses
+            # nothing conversational here.
+            if not self.expose_graph_state:
+                return []
             return [CustomEvent(name="langflow.log", value=data)]
         if event_type == "remove_message":
             removed_id = str(data.get("id") or "")
@@ -149,6 +159,11 @@ class AGUITranslator:
         if event_type == "human_input_required":
             # Non-terminal: the run suspends for human input. Must precede the end/error
             # branches so it never closes the open message or emits RUN_FINISHED/RUN_ERROR.
+            # Deliberately NOT gated on ``expose_graph_state``: the pause id is
+            # ``vertex_id:run_id:interrupt_id``, so this does name a component,
+            # but the client cannot resume the run without it and withholding it
+            # would hang every opt-out caller's human-in-the-loop flow. The id is
+            # the resume handle, not a description of the topology.
             return [CustomEvent(name="langflow.human_input_required", value=data)]
 
         # Only terminal events close an open text message. Non-terminal events
