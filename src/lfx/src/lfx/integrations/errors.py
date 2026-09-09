@@ -3,11 +3,8 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
-from typing import Any
-
-from lfx.base.mcp.util import extract_http_status
-from lfx.utils.url_redaction import redact_urls_in_text
+from collections.abc import Callable, Iterator
+from typing import Any, Literal
 
 _EMAIL_RE = re.compile(r"(?<![\w.+-])[\w.+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}(?![\w.-])")
 HTTP_UNAUTHORIZED = 401
@@ -31,6 +28,8 @@ INTEGRATION_ERROR_CODES = frozenset(
 
 
 def _sanitize(text: str) -> str:
+    from lfx.utils.url_redaction import redact_urls_in_text
+
     return _EMAIL_RE.sub("[redacted-email]", redact_urls_in_text(text))
 
 
@@ -87,10 +86,14 @@ class ConnectionUnresolvedError(IntegrationError):
 class ConnectionNotAuthorizedError(IntegrationError):
     code = "connection-not-authorized"
 
-    def __init__(self, *, provider: str | None = None) -> None:
+    def __init__(self, *, provider: str | None = None, reason: Literal["principal", "provider"] = "principal") -> None:
         super().__init__(
-            "This execution principal is not authorized to use the requested connection.",
-            hint="Use an owned or explicitly shared connection.",
+            "The provider denied this action."
+            if reason == "provider"
+            else "This execution principal is not authorized to use the requested connection.",
+            hint="Check the provider's access and administrator policy."
+            if reason == "provider"
+            else "Use an owned or explicitly shared connection.",
             provider=provider,
             http_status=403,
         )
@@ -191,24 +194,51 @@ def _retry_after(exc: BaseException) -> float | None:
         return None
 
 
+def _iter_errors(error: BaseException) -> Iterator[BaseException]:
+    """Visit wrappers, group members, causes and contexts once, including cycles."""
+    pending = [error]
+    seen: set[int] = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        yield current
+        if current.__context__ is not None:
+            pending.append(current.__context__)
+        if current.__cause__ is not None:
+            pending.append(current.__cause__)
+        # Supports both built-in ExceptionGroup and its Python 3.10 backport.
+        pending.extend(reversed(getattr(current, "exceptions", ())))
+
+
 def normalize_integration_error(exc: BaseException, *, provider: str) -> IntegrationError:
     """Map provider/transport failures into the stable sanitized error vocabulary."""
-    if isinstance(exc, IntegrationError):
-        return exc
+    from lfx.base.mcp.util import extract_http_status
 
     normalizer = _NORMALIZERS.get(provider)
-    if normalizer is not None:
-        normalized = normalizer(exc)
-        if normalized is not None:
-            return normalized
-
-    status = extract_http_status(exc)
-    if status == HTTP_UNAUTHORIZED:
-        return AuthExpiredError(provider=provider, http_status=status)
-    if status == HTTP_FORBIDDEN:
-        return ScopeMissingError(provider=provider)
-    if status == HTTP_TOO_MANY_REQUESTS:
-        return RateLimitedError(provider=provider, retry_after=_retry_after(exc), http_status=status)
-    if status in {HTTP_NOT_FOUND, HTTP_METHOD_NOT_ALLOWED, HTTP_NOT_IMPLEMENTED}:
-        return ActionUnsupportedError(provider=provider, http_status=status)
-    return ProviderUnavailableError(provider=provider, http_status=status)
+    for error in _iter_errors(exc):
+        if isinstance(error, IntegrationError):
+            return error
+        if normalizer is not None:
+            normalized = normalizer(error)
+            if normalized is not None:
+                return normalized
+        if getattr(error, "exceptions", None):
+            continue  # Inspect each leaf so status and Retry-After come from the same response.
+        status = extract_http_status(error)
+        if status == HTTP_UNAUTHORIZED:
+            return AuthExpiredError(provider=provider, http_status=status)
+        if status == HTTP_FORBIDDEN:
+            headers = getattr(getattr(error, "response", None), "headers", {})
+            challenge = headers.get("www-authenticate", "")
+            if re.search(r'\berror\s*=\s*"?insufficient_scope\b', challenge, re.IGNORECASE):
+                return ScopeMissingError(provider=provider)
+            return ConnectionNotAuthorizedError(provider=provider, reason="provider")
+        if status == HTTP_TOO_MANY_REQUESTS:
+            return RateLimitedError(provider=provider, retry_after=_retry_after(error), http_status=status)
+        if status in {HTTP_NOT_FOUND, HTTP_METHOD_NOT_ALLOWED, HTTP_NOT_IMPLEMENTED}:
+            return ActionUnsupportedError(provider=provider, http_status=status)
+        if status is not None:
+            return ProviderUnavailableError(provider=provider, http_status=status)
+    return ProviderUnavailableError(provider=provider)

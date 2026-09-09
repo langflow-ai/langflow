@@ -142,6 +142,18 @@ string is simpler for tweaks, env, and manifest sorting; the dict is the parsed 
   (`helpers/flow.py:580-611`). A `user` owner kind without an owner id fails closed; host implementations must not
   treat missing ownership metadata as an implicit match.
 
+  `authorize_principal` accepts the optional keyword `explicit_share_authorized=False`.
+  A host may set it only after authorizing `connection:execute` for an actor on a route
+  family that permits shares. It satisfies only an owner-id mismatch; unknown/anonymous
+  principals, missing actor or owner metadata, environment restrictions and non-interactive
+  opt-in still apply. The decision must never be accepted from flow JSON or component inputs.
+
+  Discovery currently runs lazily on the first non-settings service lookup. A broken
+  configured resolver aborts discovery and subsequent lookups continue to fail closed;
+  the environment fallback is never selected. Hosts that require failure before accepting
+  requests must invoke `ServiceManager.discover_plugins()` during startup. A separate
+  fallback cache permits later host registration and is disposed with the service manager.
+
 Rejected: piggybacking on `VARIABLE_SERVICE` (string-only; the DB variant has no share semantics; a variable named
 `LF_CONNECTION__X` could impersonate a connection in DB mode); a callable in `graph.context` (not picklable, copied
 by `_copy_graph`, invisible to the CI matrices); a method on `BaseAuthorizationService` (the OSS pass-through may be
@@ -301,9 +313,11 @@ now.**
   risk: read | write | destructive, component_ref, mcp_tool}`. `ConditionalScopeRequirement{scope, role,
   condition}` preserves `optional` versus `alternative`; `ScopeCondition{kind: input_present | input_truthy,
   input}` is evaluated against the action's declared input schema. The matrix checker rejects a condition that
-  names a missing input. `ScopeSet.covers(capability, inputs, granted) -> missing` first activates conditional
-  requirements, then performs provider-aware normalization (Google URL scopes, Graph short names, Slack bot versus
-  user scopes). The picker and resolver therefore apply the same executable rule instead of interpreting prose.
+  names a missing input. `ScopeSet.covers(capability, inputs, granted, provider=...) -> missing` first activates
+  conditional requirements, then calls `ScopeSet.missing(provider=..., required=..., granted=...)` for the same
+  normalization used by the resolver. Google URL scopes (provider ids `google` and `google_workspace`) and Graph
+  short names are normalized. Slack bot/user identity remains a separate auth-profile check; their scope names
+  are never treated as interchangeable. The provider is explicit because capability ids need not be qualified.
 - Capability ids are the matrices' `action_id` values. `required` rows become `required_scopes`; `optional` and
   `alternative` rows become `conditional_scopes` without losing their role or predicate. The capability's
   `auth_profile_id` and `identity` must match the selected connection before scope coverage is evaluated.

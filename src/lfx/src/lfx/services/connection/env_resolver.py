@@ -8,6 +8,7 @@ from typing import Any
 
 from pydantic import SecretStr
 
+from lfx.integrations.capabilities import ScopeSet
 from lfx.integrations.errors import AuthExpiredError, ConnectionUnresolvedError, ScopeMissingError
 from lfx.integrations.models import (
     ConnectionAccount,
@@ -18,6 +19,7 @@ from lfx.services.connection.base import BaseConnectionResolverService
 
 
 def _parse_expiry(value: Any) -> datetime | None:
+    """Interpret optional timestamps as UTC, rejecting invalid wire values."""
     if value is None:
         return None
     if isinstance(value, int | float) and not isinstance(value, bool):
@@ -31,6 +33,19 @@ def _parse_expiry(value: Any) -> datetime | None:
 
 
 def _parse_wire_value(raw: str, request: ConnectionResolutionRequest) -> ResolvedCredential:
+    """Keep raw wire values and validation exceptions out of public error chains."""
+    try:
+        return _parse_credential(raw, request)
+    except (ValueError, TypeError, OverflowError, OSError):
+        pass
+    # Raise outside the handler so even __context__ cannot retain a raw value.
+    raise ConnectionUnresolvedError(
+        request.ref.to_handle(), env_key=request.ref.env_key(), provider=request.ref.provider
+    )
+
+
+def _parse_credential(raw: str, request: ConnectionResolutionRequest) -> ResolvedCredential:
+    """Validate a token or credential JSON inside the sanitized parser boundary."""
     if not raw:
         raise ConnectionUnresolvedError(
             request.ref.to_handle(), env_key=request.ref.env_key(), provider=request.ref.provider
@@ -124,7 +139,9 @@ class EnvConnectionResolver(BaseConnectionResolverService):
         if credential.expires_at is not None and credential.expires_at <= datetime.now(timezone.utc):
             raise AuthExpiredError(provider=request.ref.provider)
         if credential.scopes_verified:
-            missing = request.required_scopes - credential.granted_scopes
+            missing = ScopeSet.missing(
+                provider=request.ref.provider, required=request.required_scopes, granted=credential.granted_scopes
+            )
             if missing:
                 raise ScopeMissingError(frozenset(missing), provider=request.ref.provider)
         return credential

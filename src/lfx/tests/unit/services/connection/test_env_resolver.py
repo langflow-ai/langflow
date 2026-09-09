@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import traceback
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -112,7 +113,7 @@ async def test_long_lived_secrets_are_rejected(variable_service: VariableService
         json.dumps({"access_token": "token", "refresh_token": "must-not-enter-runtime"}),
     )
 
-    with pytest.raises(ValueError, match="refresh_token"):
+    with pytest.raises(ConnectionUnresolvedError):
         await EnvConnectionResolver().resolve(_request())
 
 
@@ -142,3 +143,54 @@ async def test_non_headless_principal_cannot_use_environment_connection(variable
 
     with pytest.raises(ConnectionNotAuthorizedError):
         await EnvConnectionResolver().resolve(request)
+
+
+@pytest.mark.parametrize(
+    "invalid_fields",
+    [
+        {"account": {"id": "ok", "id_token": "sensitive-wire-value"}},
+        {"account": "sensitive-wire-value"},
+        {"expires_at": "sensitive-wire-value"},
+        {"expires_at": 1e300},
+        {"scopes": {"invalid": "sensitive-wire-value"}},
+        {"token_type": ["sensitive-wire-value"]},
+        {"sensitive-wire-value": "unknown field name"},
+        {"access_token": ""},
+    ],
+)
+async def test_malformed_credentials_are_typed_without_raw_exception_context(
+    variable_service: VariableService, invalid_fields: dict
+) -> None:
+    payload = {"access_token": "sensitive-wire-value", **invalid_fields}
+    variable_service.set_variable(_request().ref.env_key(), json.dumps(payload))
+
+    with pytest.raises(ConnectionUnresolvedError) as caught:
+        await EnvConnectionResolver().resolve(_request())
+
+    error = caught.value
+    assert error.__cause__ is None
+    assert error.__context__ is None
+    assert "sensitive-wire-value" not in "".join(traceback.format_exception(error))
+    assert "sensitive-wire-value" not in repr(vars(error))
+    assert error.env_key == _request().ref.env_key()
+
+
+async def test_malformed_json_is_typed(variable_service: VariableService) -> None:
+    variable_service.set_variable(_request().ref.env_key(), '{"access_token":"sensitive-wire-value"')
+    with pytest.raises(ConnectionUnresolvedError) as caught:
+        await EnvConnectionResolver().resolve(_request())
+    assert caught.value.__context__ is None
+
+
+@pytest.mark.parametrize("provider", ["google", "google_workspace"])
+async def test_resolver_applies_shared_scope_normalization(variable_service: VariableService, provider: str) -> None:
+    request = ConnectionResolutionRequest(
+        ref=ConnectionRef.parse(f"{provider}/work"),
+        principal=ExecutionPrincipal(kind="headless_operator"),
+        required_scopes=frozenset({"https://www.googleapis.com/auth/drive.readonly"}),
+    )
+    variable_service.set_variable(
+        request.ref.env_key(), json.dumps({"access_token": "token", "scopes": ["drive.readonly"]})
+    )
+
+    assert (await EnvConnectionResolver().resolve(request)).scopes_verified

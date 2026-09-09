@@ -44,8 +44,15 @@ class BaseConnectionResolverService(Service, abc.ABC):
         connection_owner_id: str | None,
         owner_kind: Literal["user", "instance", "env"],
         allow_non_interactive: bool,
+        explicit_share_authorized: bool = False,
     ) -> IntegrationError | None:
-        """Apply the portable deny floor before a host adds share/policy checks."""
+        """Apply the portable deny floor, including a host-verified share decision.
+
+        Only a host may set ``explicit_share_authorized``, after checking the
+        actor's connection:execute grant and the route family's share policy.
+        It must never come from flow JSON or component input. A share can satisfy
+        an actor's owner mismatch; it cannot override any other deny below.
+        """
         principal = request.principal
         if owner_kind == "env":
             return (
@@ -56,11 +63,13 @@ class BaseConnectionResolverService(Service, abc.ABC):
         if principal.kind in {"anonymous_public", "unknown"}:
             return ConnectionNotAuthorizedError(provider=request.ref.provider)
         if owner_kind == "user":
-            if connection_owner_id is None:
+            if connection_owner_id is None or principal.user_id is None:
                 return ConnectionNotAuthorizedError(provider=request.ref.provider)
             if not principal.interactive and not allow_non_interactive:
                 return ConnectionNotAuthorizedError(provider=request.ref.provider)
-            if str(principal.user_id) != str(connection_owner_id):
+            if str(principal.user_id) != str(connection_owner_id) and not (
+                principal.kind == "actor" and explicit_share_authorized
+            ):
                 return ConnectionNotAuthorizedError(provider=request.ref.provider)
         return None
 

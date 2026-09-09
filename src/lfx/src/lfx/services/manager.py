@@ -29,6 +29,7 @@ from lfx.utils.concurrency import KeyedMemoryLockManager
 
 if TYPE_CHECKING:
     from lfx.services.base import Service
+    from lfx.services.connection.base import BaseConnectionResolverService
     from lfx.services.factory import ServiceFactory
 
 
@@ -52,6 +53,7 @@ class ServiceManager:
         self.keyed_lock = KeyedMemoryLockManager()
         self.factory_registered = False
         self._plugins_discovered = False
+        self.connection_resolver_fallback: BaseConnectionResolverService | None = None
 
         # Always register settings service
         from lfx.services.settings.factory import SettingsServiceFactory
@@ -291,7 +293,7 @@ class ServiceManager:
                 first error after the table is cleared. Default False logs failures only.
         """
         errors: list[tuple[str, Exception]] = []
-        for service in list(self.services.values()):
+        for service in [*self.services.values(), self.connection_resolver_fallback]:
             if service is None:
                 continue
             # Registered services are duck-typed: the in-memory caches and the Noop
@@ -321,6 +323,7 @@ class ServiceManager:
             errors.append(("adapter_registries", exc))
 
         self.services = {}
+        self.connection_resolver_fallback = None
         self.factories = {}
         # ``teardown`` empties the factory registry, so the "registered" flag has
         # to drop too: get_service() re-registers factories only when

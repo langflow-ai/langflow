@@ -25,7 +25,7 @@ async def _emit(payload: IntegrationActionPayload) -> None:
 
         service = get_service_manager().services.get(ServiceType.TELEMETRY_SERVICE)
         if service is not None:
-            await service.send_telemetry_data(payload, "integration_action")
+            await service.log_integration_action(payload)
     except Exception:  # noqa: BLE001 - telemetry must never take down an action
         return
 

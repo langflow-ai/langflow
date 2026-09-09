@@ -210,6 +210,15 @@ the deserialize half is covered by
   integration-error, and telemetry contracts used by dedicated integration
   bundles. This is an additive surface change and does not change
   `BUNDLE_API_VERSION`.
+- Hardened the new connection contracts before their first release: integration
+  exports load lazily; `ScopeSet.covers` requires an explicit `provider` and shares
+  normalization with resolvers through `ScopeSet.missing`; leases activate
+  conditional scopes and support pre-run construction. Malformed credentials
+  produce sanitized typed errors; wrapped HTTP failures preserve their status,
+  and ambiguous 403s no longer claim missing scopes. The authorization floor
+  accepts an optional host-verified `explicit_share_authorized` decision for
+  actor ownership mismatches without bypassing other denies. No previously
+  released Bundle API signature changes; `BUNDLE_API_VERSION` remains 1.
 - `ExtensionManifest.version` now accepts the canonical PEP 440 stable, dev,
   alpha, beta, and release-candidate forms emitted by the repository's bundle
   release pipeline, in addition to the existing SemVer 2.0.0 forms.  Runtime
