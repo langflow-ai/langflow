@@ -1,10 +1,22 @@
 import { useEffect, useRef } from "react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 
-export const isSafari =
-  typeof navigator !== "undefined" &&
-  /safari/i.test(navigator.userAgent) &&
-  !/chrome|chromium|android/i.test(navigator.userAgent);
+// Engine detection, not browser-name detection.
+//
+// This workaround targets WebKit's scroll behaviour, but the gate used to sniff
+// for the browser name "Safari". An embedded WKWebView reports
+//   Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)
+// with no "Safari/" token, so the gate was false there — the workaround never
+// reached a WebKit runtime that needs it, while Safari itself got it.
+//
+// Chromium runtimes (Chrome, Edge, WebView2, Android WebView) also carry
+// "AppleWebKit" in their UA and must stay excluded.
+export const isWebKitEngine = (userAgent: string): boolean =>
+  /applewebkit/i.test(userAgent) &&
+  !/chrome|chromium|android|edg\//i.test(userAgent);
+
+export const isWebKitRuntime =
+  typeof navigator !== "undefined" && isWebKitEngine(navigator.userAgent);
 
 /** Minimum pixels to detect intentional touch scroll */
 const TOUCH_SCROLL_THRESHOLD = 10;
@@ -16,14 +28,14 @@ const BOTTOM_PROXIMITY_THRESHOLD = 20;
 const JITTER_THRESHOLD = 200;
 
 /**
- * Safari-specific workaround for scroll jitter when using stick-to-bottom behavior.
+ * WebKit workaround for scroll jitter when using stick-to-bottom behavior.
  *
- * Safari exhibits scroll position jumps when content height changes dynamically.
+ * WebKit exhibits scroll position jumps when content height changes dynamically.
  * This component uses a RAF loop to enforce scroll position and detect/block
  * unnatural scroll jumps while preserving user scroll intent.
  */
 export function SafariScrollFix() {
-  if (!isSafari) return null;
+  if (!isWebKitRuntime) return null;
   return <SafariScrollFixInner />;
 }
 

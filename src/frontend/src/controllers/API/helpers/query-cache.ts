@@ -22,6 +22,27 @@ export const isSettledSuccessfulQuery = (
   );
 };
 
+/**
+ * Returns true when an exact cache entry can no longer be trusted as a current
+ * snapshot: it was never fetched, it has been invalidated, or its data is
+ * older than ``staleTimeMs``.
+ *
+ * A refresh that is already in flight counts as fresh — the new snapshot is on
+ * its way, so asking for another one would only duplicate the request.
+ */
+export const isStaleQuery = (
+  queryClient: QueryClient,
+  queryKey: QueryKey,
+  staleTimeMs: number,
+): boolean => {
+  const state = queryClient.getQueryState(queryKey);
+  if (!state) return true;
+  if (state.fetchStatus !== "idle") return false;
+  if (state.status !== "success" || state.isInvalidated) return true;
+  if (!state.dataUpdatedAt) return true;
+  return Date.now() - state.dataUpdatedAt >= staleTimeMs;
+};
+
 export const getSettledSuccessfulQueryData = <T>(
   queryClient: QueryClient,
   queryKey: QueryKey,

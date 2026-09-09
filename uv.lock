@@ -9395,7 +9395,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.1.22"
+version = "1.1.23"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
