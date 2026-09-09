@@ -1,8 +1,8 @@
 from lfx.base.flow_controls.loop_utils import (
     execute_loop_body,
     extract_loop_output,
-    get_loop_body_start_edge,
-    get_loop_body_start_vertex,
+    get_loop_body_start_edges,
+    get_loop_body_start_vertices,
     get_loop_body_vertices,
     validate_data_input,
 )
@@ -128,17 +128,18 @@ class LoopComponent(Component):
             get_incoming_edge_by_target_param_fn=self.get_incoming_edge_by_target_param,
         )
 
-    def _get_loop_body_start_vertex(self) -> str | None:
-        """Get the first vertex in the loop body (connected to loop's item output).
+    def _get_loop_body_start_vertices(self) -> list[str]:
+        """Get every vertex directly connected to the loop's item output.
 
         Returns:
-            The vertex ID of the first vertex in the loop body, or None if not found
+            The vertex IDs of every vertex directly connected to the loop's output,
+            or an empty list if there is no graph context.
         """
         # Check if we have a proper graph context
         if not hasattr(self, "_vertex") or self._vertex is None:
-            return None
+            return []
 
-        return get_loop_body_start_vertex(vertex=self._vertex)
+        return get_loop_body_start_vertices(vertex=self._vertex)
 
     def _extract_loop_output(self, results: list) -> Data:
         """Extract the output from subgraph execution results.
@@ -168,16 +169,14 @@ class LoopComponent(Component):
         """
         # Get the loop body configuration once
         loop_body_vertex_ids = self.get_loop_body_vertices()
-        start_vertex_id = self._get_loop_body_start_vertex()
-        start_edge = get_loop_body_start_edge(self._vertex)
+        start_edges = get_loop_body_start_edges(self._vertex)
         end_vertex_id = self.get_incoming_edge_by_target_param("item")
 
         return await execute_loop_body(
             graph=self.graph,
             data_list=data_list,
             loop_body_vertex_ids=loop_body_vertex_ids,
-            start_vertex_id=start_vertex_id,
-            start_edge=start_edge,
+            start_edges=start_edges,
             end_vertex_id=end_vertex_id,
             event_manager=event_manager,
         )

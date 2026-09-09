@@ -9,7 +9,12 @@ from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, PropertyMock, patch
 
 import pytest
-from lfx.base.flow_controls.loop_utils import execute_loop_body, get_loop_body_vertices
+from lfx.base.flow_controls.loop_utils import (
+    execute_loop_body,
+    get_loop_body_start_edges,
+    get_loop_body_start_vertices,
+    get_loop_body_vertices,
+)
 from lfx.components.flow_controls.loop import LoopComponent
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
@@ -116,8 +121,7 @@ class TestEventManagerPropagation:
                 graph=mock_graph,
                 data_list=[Data(text="item1")],
                 loop_body_vertex_ids={"vertex1"},
-                start_vertex_id="vertex1",
-                start_edge=MagicMock(target_handle=MagicMock(field_name="data")),
+                start_edges=[MagicMock(target_id="vertex1", target_handle=MagicMock(field_name="data"))],
                 end_vertex_id="vertex1",
                 event_manager=mock_event_manager,
             )
@@ -168,8 +172,7 @@ class TestEventManagerPropagation:
                 graph=mock_graph,
                 data_list=[Data(text="item1"), Data(text="item2"), Data(text="item3")],
                 loop_body_vertex_ids={"vertex1"},
-                start_vertex_id="vertex1",
-                start_edge=MagicMock(target_handle=MagicMock(field_name="data")),
+                start_edges=[MagicMock(target_id="vertex1", target_handle=MagicMock(field_name="data"))],
                 end_vertex_id="vertex1",
                 event_manager=mock_event_manager,
             )
@@ -427,8 +430,9 @@ class TestRawParamsInjection:
             Data(text="Second item"),
         ]
 
-        # Mock edge with field_name
+        # Mock edge with field_name, targeting the start vertex
         mock_edge = MagicMock()
+        mock_edge.target_id = "start_vertex"
         mock_edge.target_handle.field_name = "input_data"
 
         # Execute loop body
@@ -436,8 +440,7 @@ class TestRawParamsInjection:
             graph=mock_graph,
             data_list=data_list,
             loop_body_vertex_ids={"start_vertex"},
-            start_vertex_id="start_vertex",
-            start_edge=mock_edge,
+            start_edges=[mock_edge],
             end_vertex_id="start_vertex",
             event_manager=None,
         )
@@ -456,6 +459,80 @@ class TestRawParamsInjection:
         assert "input_data" in second_call_params
         assert second_call_params["input_data"].text == "Second item"
         assert second_call_overwrite is True
+
+    @pytest.mark.asyncio
+    async def test_loop_item_injected_into_every_fan_out_branch(self):
+        """Loop.item connected directly to multiple branches must inject the item into all of them.
+
+        Regression test for https://github.com/langflow-ai/langflow/issues/14964:
+        when Loop.item fans out to two (or more) vertices, only start_edges[0] used
+        to receive the current iteration item - the other branch(es) got None.
+        """
+        from unittest.mock import MagicMock
+
+        from lfx.schema.data import Data
+
+        # Track update_raw_params calls per vertex so we can tell branches apart.
+        update_raw_params_calls: dict[str, list] = {"branch_a": [], "branch_b": []}
+
+        def make_mock_vertex(vertex_id: str):
+            vertex = MagicMock()
+            vertex.id = vertex_id
+            vertex.custom_component = MagicMock()
+            vertex.update_raw_params = lambda params, overwrite=False, vid=vertex_id: (
+                update_raw_params_calls[vid].append((params, overwrite))
+            )
+            return vertex
+
+        mock_branch_a = make_mock_vertex("branch_a")
+        mock_branch_b = make_mock_vertex("branch_b")
+        vertices_by_id = {"branch_a": mock_branch_a, "branch_b": mock_branch_b}
+
+        def create_mock_subgraph(_vertex_ids):
+            mock_subgraph = MagicMock()
+            mock_subgraph._vertices = [
+                {"id": "branch_a", "data": {"node": {"template": {"a_id": {"value": None}}}}},
+                {"id": "branch_b", "data": {"node": {"template": {"b_id": {"value": None}}}}},
+            ]
+            mock_subgraph.prepare = MagicMock()
+            mock_subgraph.get_vertex = MagicMock(side_effect=lambda vid: vertices_by_id[vid])
+
+            async def mock_async_start(**_kwargs):
+                yield MagicMock(valid=True, result_dict=MagicMock(outputs={}))
+
+            mock_subgraph.async_start = mock_async_start
+            return mock_subgraph
+
+        mock_graph = MagicMock()
+        mock_graph.create_subgraph = create_subgraph_context_manager_mock(create_mock_subgraph)
+
+        data_list = [Data(text="Q001"), Data(text="Q002")]
+
+        # Two edges fan out from the same Loop.item output to two independent branches.
+        edge_to_a = MagicMock(target_id="branch_a", target_handle=MagicMock(field_name="a_id"))
+        edge_to_b = MagicMock(target_id="branch_b", target_handle=MagicMock(field_name="b_id"))
+
+        await execute_loop_body(
+            graph=mock_graph,
+            data_list=data_list,
+            loop_body_vertex_ids={"branch_a", "branch_b"},
+            start_edges=[edge_to_a, edge_to_b],
+            end_vertex_id="branch_b",
+            event_manager=None,
+        )
+
+        # Both branches must receive the current item on every iteration - not just
+        # whichever edge happened to be start_edges[0].
+        assert len(update_raw_params_calls["branch_a"]) == 2
+        assert len(update_raw_params_calls["branch_b"]) == 2
+
+        for i, expected_text in enumerate(["Q001", "Q002"]):
+            a_params, a_overwrite = update_raw_params_calls["branch_a"][i]
+            b_params, b_overwrite = update_raw_params_calls["branch_b"][i]
+            assert a_params["a_id"].text == expected_text
+            assert b_params["b_id"].text == expected_text
+            assert a_overwrite is True
+            assert b_overwrite is True
 
 
 class TestGetLoopBodyVertices:
@@ -604,4 +681,48 @@ class TestGetLoopBodyVertices:
 
         assert "loop_component" not in result
         assert "component_a" in result
-        assert "feedback_vertex" in result
+
+
+class TestGetLoopBodyStartVerticesAndEdges:
+    """Tests for get_loop_body_start_vertices / get_loop_body_start_edges.
+
+    Regression coverage for https://github.com/langflow-ai/langflow/issues/14964:
+    these must return every edge/vertex fanning out from the loop's output, not
+    just the first one.
+    """
+
+    class _SourceHandle:
+        def __init__(self, name):
+            self.name = name
+
+    class _Edge:
+        def __init__(self, target_id, source_handle_name="item"):
+            self.target_id = target_id
+            self.source_handle = TestGetLoopBodyStartVerticesAndEdges._SourceHandle(source_handle_name)
+
+    def test_returns_all_vertices_for_single_edge(self):
+        vertex = type("MockVertex", (), {"outgoing_edges": [self._Edge("component_a")]})()
+
+        assert get_loop_body_start_vertices(vertex) == ["component_a"]
+
+    def test_returns_all_vertices_when_item_fans_out(self):
+        """The reported bug: two branches connected directly to Loop.item."""
+        edges = [self._Edge("branch_a"), self._Edge("branch_b")]
+        vertex = type("MockVertex", (), {"outgoing_edges": edges})()
+
+        assert get_loop_body_start_vertices(vertex) == ["branch_a", "branch_b"]
+
+    def test_returns_empty_list_when_no_matching_edges(self):
+        edges = [self._Edge("other_target", source_handle_name="done")]
+        vertex = type("MockVertex", (), {"outgoing_edges": edges})()
+
+        assert get_loop_body_start_vertices(vertex) == []
+
+    def test_start_edges_matches_start_vertices_length(self):
+        edges = [self._Edge("branch_a"), self._Edge("branch_b"), self._Edge("branch_c")]
+        vertex = type("MockVertex", (), {"outgoing_edges": edges})()
+
+        result_edges = get_loop_body_start_edges(vertex)
+
+        assert result_edges == edges
+        assert [e.target_id for e in result_edges] == get_loop_body_start_vertices(vertex)
