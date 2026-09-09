@@ -224,6 +224,31 @@ class TestGetTraces:
 
         assert resp.status_code == 422
 
+    def test_should_use_configured_db_timeout(self, client: TestClient):
+        captured_timeouts: list[float] = []
+
+        async def _fetch(*_args, **_kwargs):
+            return _empty_list_response()
+
+        async def _wait_for(coro, *, timeout):
+            captured_timeouts.append(timeout)
+            return await coro
+
+        settings = MagicMock()
+        settings.traces_db_timeout = 30.0
+        settings_service = MagicMock()
+        settings_service.settings = settings
+
+        with (
+            patch("langflow.api.v1.traces.get_settings_service", return_value=settings_service),
+            patch("langflow.api.v1.traces.asyncio.wait_for", side_effect=_wait_for),
+            patch("langflow.api.v1.traces.fetch_traces", side_effect=_fetch),
+        ):
+            resp = client.get(self._PATH)
+
+        assert resp.status_code == 200
+        assert captured_timeouts == [30.0]
+
 
 class TestGetTrace:
     def _path(self, trace_id: UUID | None = None) -> str:
