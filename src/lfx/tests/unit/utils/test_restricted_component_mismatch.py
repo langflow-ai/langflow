@@ -11,6 +11,9 @@ These tests pin the diagnosis appended to such a failure, and the cases it must 
 """
 
 import asyncio
+import json
+from copy import deepcopy
+from importlib.resources import files
 from types import SimpleNamespace
 
 import pytest
@@ -153,7 +156,7 @@ def test_explain_never_raises(monkeypatch):
     assert explain_restricted_component_mismatch("Agent", _customized_agent()) is None
 
 
-def test_build_error_carries_the_diagnosis(monkeypatch):
+async def test_build_error_carries_the_diagnosis(monkeypatch):
     """The failure a user actually sees names the policy, not just the stock component's complaint."""
     from lfx.exceptions.component import ComponentBuildError
     from lfx.graph.vertex.base import Vertex
@@ -172,9 +175,75 @@ def test_build_error_carries_the_diagnosis(monkeypatch):
     vertex.graph = SimpleNamespace(flow_id=None)
 
     with pytest.raises(ComponentBuildError) as excinfo:
-        asyncio.run(vertex._build_results(custom_component=None, custom_params={}, base_type="component"))
+        await vertex._build_results(custom_component=None, custom_params={}, base_type="component")
 
     message = str(excinfo.value)
     assert "No model selected" in message
     assert "LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false" in message
     assert "missing required input: model" in message
+
+
+@pytest.mark.parametrize(
+    ("allow_custom", "customized", "expect_hint"),
+    [(False, True, True), (False, False, False), (True, True, False)],
+)
+async def test_first_streamed_error_carries_the_diagnosis(monkeypatch, allow_custom, customized, expect_hint):
+    """The real Agent emits an error before the vertex wraps it; AG-UI stops on that first event."""
+    from ag_ui.core import RunErrorEvent
+    from lfx.events.event_manager import EventManager
+    from lfx.exceptions.component import ComponentBuildError
+    from lfx.graph import Graph
+    from lfx.services.deps import get_settings_service
+    from lfx.workflow.agui_translator import AGUITranslator
+
+    registry = dict(json.loads(files("lfx").joinpath("_assets/component_index.json").read_text())["entries"])
+    monkeypatch.setattr(component_cache, "all_types_dict", registry)
+    monkeypatch.setattr(component_cache, "all_types_ready", True)
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "allow_custom_components", allow_custom)
+    monkeypatch.setattr(settings, "substitute_outdated_component_code", True)
+    saved = deepcopy(registry["models_and_agents"]["Agent"])
+    if customized:
+        saved["template"].pop("model")
+        saved["template"]["code"]["value"] += "\n# Customized Agent\n"
+        saved["template"]["provider"] = {
+            "name": "provider",
+            "type": "str",
+            "value": "",
+            "required": True,
+            "show": True,
+        }
+    node = {"id": "Agent-repro", "data": {"id": "Agent-repro", "type": "Agent", "node": saved}}
+    graph = Graph.from_payload({"nodes": [node], "edges": []}, emit_extension_events=False)
+    graph.set_run_id()
+    graph.session_id = "restricted-component-stream-test"
+    graph.persist_messages = False
+    vertex = graph.get_vertex("Agent-repro")
+    queue = asyncio.Queue()
+    event_manager = EventManager(queue)
+    event_manager.register_event("on_error", "error")
+    vertex.custom_component.set_event_manager(event_manager)
+
+    with pytest.raises(ComponentBuildError, match="No model selected") as excinfo:
+        await vertex._build_results(custom_component=vertex.custom_component, custom_params={}, base_type="component")
+
+    _, raw, _ = await asyncio.wait_for(queue.get(), timeout=1)
+    payload = json.loads(raw)
+    events = AGUITranslator(run_id="run", thread_id=graph.session_id).translate(payload["event"], payload["data"])
+    assert len(events) == 1
+    assert isinstance(events[0], RunErrorEvent)
+    assert "No model selected" in events[0].message
+    assert ("LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false" in events[0].message) is expect_hint
+    assert isinstance(excinfo.value.__cause__, ValueError)
+    assert ("LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false" in str(excinfo.value)) is expect_hint
+    if expect_hint:
+        assert "missing required input: model" in events[0].message
+        reasons = [
+            content["reason"]
+            for block in payload["data"]["content_blocks"]
+            for content in block.get("contents", [])
+            if content["type"] == "error"
+        ]
+        assert len(reasons) == 1
+        assert "ValueError" in reasons[0]
+        assert "LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false" in reasons[0]
