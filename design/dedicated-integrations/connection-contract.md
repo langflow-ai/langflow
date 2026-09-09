@@ -176,6 +176,13 @@ defense in depth and pre-flight in interactive routes for UX.**
 | workflow_hitl_v2 | job_owner | as the job owner who started it; re-resolved on the worker, never persisted | per policy |
 | legacy_public_chat, a2a (anonymous), workflow_public_v2 | anonymous_public | never | deny by default; Enterprise policy may allow flagged instance connections |
 | a2a authenticated sub-path | actor | owner only | per policy |
+
+`allow_non_interactive` defaults to false and is connection-owner controlled through the API. INT-8 must expose
+the persisted value, explanation, deliberate opt-in and disable control on the Connections page (B1), including
+values changed via API. Deployment and project MCP publication with auth `none` must show the acting identity
+and block when the table would deny resolution (B10). Enabling this flag cannot override tenant/host policy or
+the anonymous-public prohibition. Disabling it prevents subsequent resolutions; publication is not permanent
+authorization. Deferred webhook setup must adopt the same preflight when implemented.
 | lfx run, embedded, lfx serve | headless_operator | not applicable (no database) | environment- or request-provisioned only (section 5) |
 
 ## 5. Headless implementations
@@ -266,6 +273,10 @@ construction.**
   (`owner_debug_delegated_sanitized`, `sanitized`, `provider_sanitized`) and adds `details` and traceback only when
   `expose_details=True`. The frontend keys calls to action on `code`: `auth-expired` reconnects, `scope-missing`
   grants, `connection-unresolved` connects.
+- `connection-not-authorized` and `action-unsupported` also have builder-owned surfaces (B11), including imported
+  nodes and policy changes after selection. Safe hints explain administrator policy or deployment availability
+  without revealing hidden configuration. Recognized provider admin-approval/tenant-denial outcomes are normalized
+  by INT-5 and rendered by B12; an ambiguous provider denial must not be presented as confirmed admin approval.
 
 Rejected: plain `ValueError` strings (the current `OAuthConnectorBase` style, not machine-readable); reusing
 `lfx.services.auth.exceptions.TokenExpiredError` (it means the Langflow session JWT); reusing the `ExtensionError`
@@ -296,6 +307,15 @@ now.**
 - Capability ids are the matrices' `action_id` values. `required` rows become `required_scopes`; `optional` and
   `alternative` rows become `conditional_scopes` without losing their role or predicate. The capability's
   `auth_profile_id` and `identity` must match the selected connection before scope coverage is evaluated.
+- INT-3 must expose the selected capability's executing identity and bundle-authored consent rationale/reach to
+  the builder. INT-8 presents them in action selection, node state and pre-consent review (A4/B2/B5), separately
+  from the connected account. Provider classification and content-read reach are independent; scope-risk decisions
+  live in the discovery gate, while required/conditional scopes drive runtime authorization. The additional copy
+  metadata is an additive manifest requirement to size and review with the INT-3 and bundle owners.
+- Stable ids survive a deployment-context change. Preserve unavailable nodes and connection handles on import,
+  fail execution explicitly, and never silently substitute a provider/action or expand scopes. The proposed
+  Option C portability requirements and owner sign-offs are in `cross-provider-capabilities.md`; Option C remains
+  deferred, not an additional 1.13 action set.
 - `ExtensionManifest.integrations: tuple[IntegrationProvider, ...] = ()` is added as an optional field (additive;
   `manifest.py` is in the changelog gate); loader wiring is INT-3.
 

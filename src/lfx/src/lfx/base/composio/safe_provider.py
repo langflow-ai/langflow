@@ -12,6 +12,34 @@ We sanitize ``tool.input_parameters`` in-place at wrap time, and also patch
 both the FileHelper file-substitution helpers and the pydantic schema builder
 so the agent path, the direct ``execute_action`` path, and the legacy
 ``tools.get`` path all see a schema with a ``"type"`` for every node.
+
+We also relax the ``attachment`` field, but only for the specific toolkits
+where this is a known issue: Composio's raw schema for
+``GMAIL_CREATE_EMAIL_DRAFT`` marks the attachment object (or its sub-fields)
+as ``required``, even though a real attachment is optional there, you simply
+omit it to send an email without one. Left alone, an LLM building a tool call
+sees "attachment" in ``required`` and has to invent an empty placeholder
+(e.g. ``{"name": "", "data": ""}``) to satisfy the schema, which then reaches
+the real Gmail API and fails validation there instead. Langflow's own
+node-execution path (``ComposioBaseComponent``) already treats this field as
+optional for that action; ``_relax_attachment_requirements`` mirrors that for
+the raw tool-calling schema. Outlook is included in the same allowlist as a
+precaution, its send/draft actions share the same general schema shape
+(composio_langchain's own reserved-keyword handling elsewhere in this file
+already special-cases Outlook's ``from`` field), but this has only been
+directly confirmed against Gmail, not independently verified for Outlook.
+
+This relaxation is deliberately NOT applied globally. Langflow ships dozens
+of Composio toolkits, and several (jira, freshdesk, pandadoc, dropbox,
+onedrive, missive, flexisign, jotform, ...) have actions whose entire purpose
+is attaching a file, where ``attachment`` in ``required`` is the real
+contract, not a schema defect. Relaxing it there would silently convert a
+clear local validation error ("you forgot the attachment") into an opaque
+API-side rejection instead. So the relaxation is gated by slug prefix
+(``_RELAX_ATTACHMENT_SLUG_PREFIXES``) and only ever applied at the one patch
+point that has the tool's identity available (``wrap_tool``, which sees
+``tool.slug``); the three process-wide monkeypatches below have no such
+context; and stay on ``_sanitize_schema`` alone.
 """
 
 from __future__ import annotations
@@ -99,14 +127,121 @@ def _sanitize_schema(schema: Any) -> None:
                 _sanitize_schema(sub)
 
 
+def _is_attachment_field(name: Any) -> bool:
+    """True for "attachment" itself or any dotted sub-field ("attachment.name")."""
+    return isinstance(name, str) and (name.lower() == "attachment" or name.lower().startswith("attachment."))
+
+
+def _relax_attachment_requirements(schema: Any) -> None:
+    """Recursively drop attachment-related entries from every ``required`` list.
+
+    See the module docstring: Composio's raw schema requires the attachment
+    field on actions where it's actually optional, which forces an LLM to
+    fabricate an empty placeholder to pass validation. This mutates ``schema``
+    in place, walking the same JSON-schema shapes ``_sanitize_schema`` does,
+    since a "required" list can appear at any nesting level (a top-level
+    action schema, a $defs entry, a union arm, etc.).
+    """
+    if not isinstance(schema, dict):
+        return
+
+    required = schema.get("required")
+    if isinstance(required, list):
+        schema["required"] = [name for name in required if not _is_attachment_field(name)]
+
+    properties = schema.get("properties")
+    if isinstance(properties, dict):
+        for sub in properties.values():
+            _relax_attachment_requirements(sub)
+    items = schema.get("items")
+    if isinstance(items, dict):
+        _relax_attachment_requirements(items)
+    for union_key in ("anyOf", "oneOf", "allOf"):
+        for sub in schema.get(union_key, []) or []:
+            _relax_attachment_requirements(sub)
+    for defs_key in ("$defs", "definitions"):
+        defs = schema.get(defs_key)
+        if isinstance(defs, dict):
+            for sub in defs.values():
+                _relax_attachment_requirements(sub)
+
+
+# Toolkits confirmed (Gmail) or suspected (Outlook, same schema family) to
+# over-require "attachment". NOT a general rule: most toolkits with an
+# attachment-like field require it for real (see module docstring), so this
+# list is the deliberate boundary, not a starting point to expand casually.
+_RELAX_ATTACHMENT_SLUG_PREFIXES = ("GMAIL_", "OUTLOOK_")
+
+
+def _slug_needs_attachment_relaxation(slug: str) -> bool:
+    """True only for toolkits where Composio's schema is known to over-require "attachment"."""
+    return slug.startswith(_RELAX_ATTACHMENT_SLUG_PREFIXES)
+
+
+def _harden_schema(schema: Any, *, relax_attachment: bool = False) -> None:
+    """Apply schema patches: always fix missing ``type`` keys.
+
+    ``relax_attachment`` must stay opt-in, defaulting to ``False``. It's only
+    correct for the toolkits ``_slug_needs_attachment_relaxation`` allows;
+    passing it ``True`` for anything else would silently mask a real
+    validation error on a toolkit where the field is genuinely required.
+    """
+    _sanitize_schema(schema)
+    if relax_attachment:
+        _relax_attachment_requirements(schema)
+
+
+def _is_blank_attachment(value: Any) -> bool:
+    """True for an attachment value with nothing real in it.
+
+    Covers the exact placeholder an LLM fabricates when it decides to submit
+    an "attachment" it was never actually asked for: ``{"name": "", "data":
+    ""}`` (every sub-field blank), or a bare empty string. A real attachment
+    always carries at least one non-empty field.
+    """
+    if value in (None, ""):
+        return True
+    if isinstance(value, dict):
+        return not any(v not in (None, "") for v in value.values())
+    return False
+
+
+def _strip_blank_attachment(arguments: Any) -> Any:
+    """Drop an ``attachment`` argument an LLM filled with only blank values.
+
+    ``_relax_attachment_requirements`` stops the schema from *forcing* an LLM
+    to supply attachment, but it can't stop a model from submitting one
+    anyway "to be safe" — that empty placeholder then passes local schema
+    validation (since the field is optional now) and reaches the real
+    Gmail/Outlook API, which rejects it there instead. This is the
+    execution-time half of the same fix: strip it right before the real call
+    goes out, exactly like ``ComposioBaseComponent.execute_action`` already
+    does for the direct node-execution path.
+    """
+    if not isinstance(arguments, dict) or "attachment" not in arguments:
+        return arguments
+    if not _is_blank_attachment(arguments["attachment"]):
+        return arguments
+    arguments = dict(arguments)
+    del arguments["attachment"]
+    return arguments
+
+
 if _COMPOSIO_AVAILABLE:
 
     class SafeLangchainProvider(LangchainProvider, name="langchain"):
         """LangchainProvider that patches tool schemas before delegating."""
 
         def wrap_tool(self, tool: Tool, execute_tool: Callable[..., Any]) -> StructuredTool:
-            _sanitize_schema(tool.input_parameters)
-            return super().wrap_tool(tool=tool, execute_tool=execute_tool)
+            relax_attachment = _slug_needs_attachment_relaxation(tool.slug)
+            _harden_schema(tool.input_parameters, relax_attachment=relax_attachment)
+
+            def safe_execute_tool(slug: str, arguments: dict) -> dict:
+                if relax_attachment:
+                    arguments = _strip_blank_attachment(arguments)
+                return execute_tool(slug, arguments)
+
+            return super().wrap_tool(tool=tool, execute_tool=safe_execute_tool)
 
 
 def _extract_schema_arg(args: tuple, kwargs: dict, positional_index: int, keyword: str) -> Any:
@@ -154,6 +289,9 @@ def _patch_file_helper_once() -> None:
     # keywords (composio/core/models/_files.py:236-240, :309-312), but pinning
     # the wrapper to a stricter signature would silently break if a future
     # release switches to positionals.
+    # No tool identity is available here (only the raw schema), so these stay
+    # on _sanitize_schema alone — never _harden_schema — since there is no
+    # slug to check against _slug_needs_attachment_relaxation.
     def safe_uploads(self, *args, **kwargs):
         _sanitize_schema(_extract_schema_arg(args, kwargs, positional_index=1, keyword="schema"))
         return original_uploads(self, *args, **kwargs)
@@ -186,6 +324,7 @@ def _patch_pydantic_builder_once() -> None:
 
     original_builder = _composio_shared.pydantic_model_from_param_schema
 
+    # No tool identity here either — same reasoning as safe_uploads/safe_downloads.
     def safe_builder(*args, **kwargs):
         _sanitize_schema(_extract_schema_arg(args, kwargs, positional_index=0, keyword="param_schema"))
         return original_builder(*args, **kwargs)

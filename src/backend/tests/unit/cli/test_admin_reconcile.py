@@ -222,6 +222,7 @@ def test_apply_is_dependency_ordered_and_rerun_converges() -> None:
 
 def test_prune_removes_only_manual_records_and_reports_idp_skips() -> None:
     client = FakeAdminClient()
+    client.team_assignments_supported = True
     client.users = [
         {"id": ALICE_ID, "username": "alice", "is_active": True},
         {"id": BOB_ID, "username": "bob", "is_active": True},
@@ -314,6 +315,42 @@ def test_team_assignment_capability_is_cached_for_reconciler_lifetime() -> None:
     reconciler.diff(state)
 
     assert client.capability_calls == 1
+
+
+def test_prune_skips_team_assignments_when_target_does_not_support_them() -> None:
+    team_assignment_requests: list[str] = []
+
+    class OssAdminClient(FakeAdminClient):
+        def list_role_assignments(self, *, user: str | None = None, team: str | None = None) -> list[dict[str, Any]]:
+            if team is not None:
+                team_assignment_requests.append(team)
+            return super().list_role_assignments(user=user, team=team)
+
+    client = OssAdminClient()
+    client.teams = [
+        {"id": TEAM_ID, "adom_name": "ops", "team_name": "Operators", "description": None, "is_active": True}
+    ]
+    state = AdminState.model_validate(
+        {
+            "apiVersion": "langflow.ai/v1",
+            "kind": "AdminState",
+            "teams": [{"adom_name": "ops", "display_name": "Operators"}],
+        }
+    )
+
+    report = AdminReconciler(client).apply(state, prune=True)
+
+    assert report["status"] == "success"
+    assert report["applied"] == []
+    assert team_assignment_requests == []
+    assert report["skipped"] == [
+        {
+            "action": "revoke",
+            "resource": "role_assignment",
+            "key": "team:ops/*",
+            "reason": "unsupported",
+        }
+    ]
 
 
 def test_apply_resolves_entire_manifest_before_writing() -> None:
