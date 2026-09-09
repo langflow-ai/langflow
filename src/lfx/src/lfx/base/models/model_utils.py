@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import os
 import re
 import time
 from typing import Any
@@ -427,8 +428,26 @@ def get_watsonx_embedding_models(
         return default_models
 
 
+def _environment_variable_value(variable_key: str) -> str | None:
+    """Process-environment value for *variable_key*, unless the request forbids it."""
+    from lfx.services.variable.request_scope import is_env_fallback_disabled
+
+    if is_env_fallback_disabled():
+        return None
+    return _to_str(os.environ.get(variable_key))
+
+
 def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -> str | None:
     """Get a variable value from global variables for a provider.
+
+    Resolution order matches provider enablement and model instantiation: the
+    user's stored variable first, then the process environment. Discovery used to
+    read the database alone, so a provider configured purely through the
+    environment (``OLLAMA_BASE_URL`` in a container) reported itself connected
+    while its live fetch returned nothing — callers then fell back to the static
+    catalog and offered models the server does not actually have. The environment
+    step honors the request-scoped no-env-fallback flag, so a served flow stays
+    isolated from process-wide environment.
 
     Args:
         user_id: The user ID to look up global variables for
@@ -445,7 +464,7 @@ def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -
         non-Ollama user crashed retrieval (Knowledge component BUG-01).
     """
     if user_id is None or (isinstance(user_id, str) and user_id == "None"):
-        return None
+        return _environment_variable_value(variable_key)
 
     async def _get_variable():
         async with session_scope() as session:
@@ -464,7 +483,7 @@ def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -
                 # treat absence as "no value" rather than propagating.
                 return None
 
-    return _to_str(run_until_complete(_get_variable()))
+    return _to_str(run_until_complete(_get_variable())) or _environment_variable_value(variable_key)
 
 
 def fetch_live_ollama_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:

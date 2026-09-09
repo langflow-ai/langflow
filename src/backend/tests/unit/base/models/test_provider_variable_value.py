@@ -84,3 +84,107 @@ class TestGetProviderVariableValue:
             )
             == "http://ollama.example:11434"
         )
+
+
+class TestEnvironmentFallback:
+    """A provider configured only through the process environment must be discoverable.
+
+    Provider enablement accepts a database variable OR the process environment, and
+    model instantiation reads connection config from the environment too. Live model
+    discovery read the database alone, so an environment-configured Ollama (the Docker
+    /compose shape) reported "connected" while its live fetch returned nothing — the
+    assistant then offered the static catalog and defaulted to a model the user had
+    never pulled, failing every turn with "model not found".
+    """
+
+    @staticmethod
+    def _patch_empty_database(monkeypatch) -> None:
+        import asyncio
+
+        class _MissingVar:
+            async def get_variable(self, **_kwargs):
+                msg = "OLLAMA_BASE_URL variable not found."
+                raise ValueError(msg)
+
+        class _FakeSessionScope:
+            async def __aenter__(self):
+                return None
+
+            async def __aexit__(self, *_exc):
+                return False
+
+        monkeypatch.setattr(model_utils, "session_scope", lambda: _FakeSessionScope())
+        monkeypatch.setattr(model_utils, "get_variable_service", lambda: _MissingVar())
+        monkeypatch.setattr(
+            model_utils,
+            "run_until_complete",
+            lambda coro: asyncio.new_event_loop().run_until_complete(coro),
+        )
+
+    def test_falls_back_to_environment_when_database_has_no_value(self, monkeypatch) -> None:
+        self._patch_empty_database(monkeypatch)
+        monkeypatch.setenv("OLLAMA_BASE_URL", "http://ollama:11434")
+
+        assert (
+            get_provider_variable_value(
+                user_id="00000000-0000-0000-0000-000000000001",
+                variable_key="OLLAMA_BASE_URL",
+            )
+            == "http://ollama:11434"
+        )
+
+    def test_database_value_wins_over_environment(self, monkeypatch) -> None:
+        import asyncio
+
+        class _PresentVar:
+            async def get_variable(self, **_kwargs):
+                return "http://from-database:11434"
+
+        class _FakeSessionScope:
+            async def __aenter__(self):
+                return None
+
+            async def __aexit__(self, *_exc):
+                return False
+
+        monkeypatch.setattr(model_utils, "session_scope", lambda: _FakeSessionScope())
+        monkeypatch.setattr(model_utils, "get_variable_service", lambda: _PresentVar())
+        monkeypatch.setattr(
+            model_utils,
+            "run_until_complete",
+            lambda coro: asyncio.new_event_loop().run_until_complete(coro),
+        )
+        monkeypatch.setenv("OLLAMA_BASE_URL", "http://from-environment:11434")
+
+        assert (
+            get_provider_variable_value(
+                user_id="00000000-0000-0000-0000-000000000001",
+                variable_key="OLLAMA_BASE_URL",
+            )
+            == "http://from-database:11434"
+        )
+
+    def test_environment_is_not_read_when_request_disables_env_fallback(self, monkeypatch) -> None:
+        """A flow served under ``no_env_fallback`` stays isolated from process env."""
+        from lfx.services.variable.request_scope import activate_no_env_fallback, reset_no_env_fallback
+
+        self._patch_empty_database(monkeypatch)
+        monkeypatch.setenv("OLLAMA_BASE_URL", "http://ollama:11434")
+
+        token = activate_no_env_fallback(disabled=True)
+        try:
+            assert (
+                get_provider_variable_value(
+                    user_id="00000000-0000-0000-0000-000000000001",
+                    variable_key="OLLAMA_BASE_URL",
+                )
+                is None
+            )
+        finally:
+            reset_no_env_fallback(token)
+
+    def test_no_user_still_falls_back_to_environment(self, monkeypatch) -> None:
+        """Discovery without a resolvable user must not lose an env-configured provider."""
+        monkeypatch.setenv("OLLAMA_BASE_URL", "http://ollama:11434")
+
+        assert get_provider_variable_value(None, "OLLAMA_BASE_URL") == "http://ollama:11434"

@@ -42,6 +42,7 @@ from .provider_queries import (
     get_provider_from_variable_key,
     get_provider_required_variable_keys,
     get_provider_secret_variable_key,
+    is_known_model_provider,
     model_provider_metadata,
 )
 
@@ -73,6 +74,7 @@ __all__ = [
     "get_provider_secret_variable_key",
     "get_unified_models_detailed",
     "handle_model_input_update",
+    "is_known_model_provider",
     "model_provider_metadata",
     "normalize_model_names_to_dicts",
     "update_model_options_in_build_config",
