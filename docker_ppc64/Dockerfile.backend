@@ -1,0 +1,91 @@
+#FROM docker.io/redhat/ubi9:9.7
+FROM docker.io/redhat/ubi9:9.8
+
+USER 0
+
+RUN yum install -y net-tools git pip 
+RUN yum install -y make cmake 
+RUN dnf install -y rust-toolset 
+RUN yum install -y openssl-devel sqlite-devel 
+RUN yum install -y python3.12-devel libxml2-devel libxslt-devel
+RUN yum install -y libpq-devel
+RUN yum install -y wget
+RUN yum install -y unixODBC-devel
+
+#main app dir
+RUN mkdir /app
+
+# app
+WORKDIR /app
+
+RUN wget https://public.dhe.ibm.com/software/server/POWER/Linux/toolchain/at/redhat/RHEL9/gpg-pubkey-615d762f-62f504a1 \
+	&& rpm --import gpg-pubkey-615d762f-62f504a1 \
+	&& echo -e "# Begin of configuration file\n[advance-toolchain]\nname=Advance Toolchain IBM FTP\nbaseurl=https://public.dhe.ibm.com/software/server/POWER/Linux/toolchain/at/redhat/RHEL9\nenabled=1\ngpgcheck=1\ngpgkey=https://public.dhe.ibm.com/software/server/POWER/Linux/toolchain/at/redhat/RHEL9/gpg-pubkey-615d762f-62f504a1\n# End of configuration file" > /etc/yum.repos.d/advance-toolchain.repo \
+    && yum install -y advance-toolchain-at17.0-runtime \
+advance-toolchain-at17.0-devel \
+advance-toolchain-at17.0-perf
+	
+RUN wget https://nodejs.org/dist/v24.14.1/node-v24.14.1-linux-ppc64le.tar.gz \
+    && tar -xvzf node-v24.14.1-linux-ppc64le.tar.gz
+	
+ENV PATH=/app/node-v24.14.1-linux-ppc64le/bin:/opt/at17.0/bin:/opt/at17.0/sbin:$PATH
+ENV RUSTFLAGS='--cfg reqwest_unstable'
+
+# copy
+COPY requirements.txt /app
+COPY langflow/src/lfx /app/lfx
+COPY langflow/src/backend/base /app/backend
+COPY .env /app
+
+RUN pip install --upgrade virtualenv pip
+
+# upgrade pip
+RUN virtualenv -p python3.12 penv \
+    && . penv/bin/activate \
+    && python3 -m pip install --upgrade pip
+	
+# Install dependencies
+RUN . penv/bin/activate \
+    && python3 -m pip install --no-cache-dir --extra-index-url https://wheels.developerfirst.ibm.com/ppc64le/linux --extra-index-url https://repo.fury.io/mgiessing --no-deps --prefer-binary -r requirements.txt 
+
+# Build lfx
+RUN . penv/bin/activate \
+    && python3 -m pip install --extra-index-url https://repo.fury.io/mgiessing --no-deps --prefer-binary /app/lfx
+
+# Build backend
+RUN . penv/bin/activate \
+    && python3 -m pip install --extra-index-url https://repo.fury.io/mgiessing --no-deps --prefer-binary /app/backend 
+
+RUN virtualenv -p python3.12 penv \
+    && . penv/bin/activate \
+    && python3 -m pip uninstall -y cryptography \
+    && python3 -m pip install --no-cache-dir --extra-index-url https://repo.fury.io/mgiessing --no-deps bcrypt cryptography==43.0.3
+
+#################
+COPY requirements_delta.txt /app
+
+RUN virtualenv -p python3.12 penv \
+    && . penv/bin/activate \
+    && python3 -m pip install --no-cache-dir --extra-index-url https://repo.fury.io/mgiessing --no-deps --prefer-binary -r requirements_delta.txt
+
+RUN virtualenv -p python3.12 penv \
+    && . penv/bin/activate \
+    && python3 -m pip install --no-cache-dir --extra-index-url https://repo.fury.io/mgiessing --no-deps --prefer-binary pysqlite3
+
+RUN git clone https://github.com/libspatialindex/libspatialindex.git \
+    && cd /app/libspatialindex \
+    && cmake . \
+    && make \
+    && make install
+
+COPY chromadb__init__.py /app/penv/lib64/python3.12/site-packages/chromadb/__init__.py
+
+USER 0
+
+EXPOSE 7860
+
+ENV PATH="/app/penv/bin:$PATH"
+ENV LD_LIBRARY_PATH="/usr/local/lib64/libspatialindex.so:$LD_LIBRARY_PATH"
+
+#CMD ["python3","/app/test.py"]
+CMD ["python3", "-m", "langflow", "run", "--backend-only", "--env-file", "/app/.env"]
