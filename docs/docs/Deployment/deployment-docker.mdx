@@ -316,11 +316,11 @@ The following environment variables are set by default:
 | `LANGFLOW_AUTO_LOGIN` | `false` | Require users to sign in unless explicitly enabled for local development |
 | `LANGFLOW_CONFIG_DIR` | `/var/lib/langflow` | Directory for Langflow config and data |
 
-Set `LANGFLOW_SUPERUSER_PASSWORD` to a strong password in your shell or `.env` file before startup. The Compose file forwards this value without providing a default password. For trusted local development, you can explicitly set `LANGFLOW_AUTO_LOGIN=true` to use automatic login instead. The legacy password `langflow` is not allowed when auto-login is disabled.
+Set `LANGFLOW_SUPERUSER_PASSWORD` to a strong password in the repository root `.env` file before startup. The service loads this file through `env_file: ../.env`; it does not override the authentication values in its `environment:` block. Set `LANGFLOW_SUPERUSER` in that file to use a different username. For trusted local development, set `LANGFLOW_AUTO_LOGIN=true` in the same file to use automatic login instead. When omitted, auto-login retains the image default of `false`. The legacy password `langflow` is not allowed when auto-login is disabled.
 
-To override the other values in the table, edit `docker/dev.docker-compose.yml` directly.
+Exporting these authentication variables in your shell alone does not forward them to this service; configure them in the repository root `.env` file.
 
-`docker/dev.docker-compose.yml` uses literal values in its `environment:` block, such as `- LANGFLOW_SUPERUSER=langflow`. Docker Compose v2 gives `environment:` block literal values higher precedence than shell-exported variables and `env_file:`, so neither `export LANGFLOW_SUPERUSER=myadmin` or a `.env` file will override them. Edit the file directly instead.
+`LANGFLOW_DATABASE_URL` and `LANGFLOW_CONFIG_DIR` remain literal values in the Compose `environment:` block to configure the bundled PostgreSQL service and container paths. These entries take precedence over `.env`; edit `docker/dev.docker-compose.yml` directly to change them.
 
 ## Upgrade the Langflow Docker image {#upgrade-the-langflow-docker-image}
 
