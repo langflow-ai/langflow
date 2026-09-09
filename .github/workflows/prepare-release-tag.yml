@@ -1,0 +1,36 @@
+name: Prepare Release Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "New official release tag (for example v1.13.0)"
+        required: true
+        type: string
+      ref:
+        description: "Version-prepared source branch or commit to release"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  prepare-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v10.0.0
+        with:
+          python-version: "3.13"
+      - name: Create and push the release source tag
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          git config user.name "Langflow Release Bot"
+          git config user.email "bot-releases@langflow.org"
+          uv run --no-project python scripts/ci/release_auth_defaults.py tag "$RELEASE_TAG"
+          git push origin "refs/tags/$RELEASE_TAG"

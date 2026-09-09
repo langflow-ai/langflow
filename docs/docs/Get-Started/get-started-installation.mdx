@@ -193,13 +193,15 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
     Both packages use the `langflow` command. In Langflow 1.12,
     `langflow-base` does not provide a `langflow-base` executable.
 
-4. Start Langflow:
+4. Set `LANGFLOW_SUPERUSER_PASSWORD` to a strong password in your environment or `.env` file, then start Langflow:
 
     ```bash
     uv run langflow run
     ```
 
     It can take a few minutes for Langflow to start.
+    Official release packages disable automatic login by default. Sign in with the username `langflow` (or your configured `LANGFLOW_SUPERUSER`) and the password you set.
+    For trusted local development, you can explicitly set `LANGFLOW_AUTO_LOGIN=true` to enable automatic login.
 
 5. To confirm that a local Langflow instance is running, navigate to the default Langflow URL `http://127.0.0.1:7860`.
 

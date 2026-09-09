@@ -15,11 +15,32 @@ on:
         required: true
         type: boolean
 
+permissions:
+  actions: read
+  contents: write
+
 jobs:
   create_release:
     name: Create Release Job
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v10.0.0
+        with:
+          python-version: "3.13"
+      - name: Prepare the official source tag
+        id: release_tag
+        env:
+          RELEASE_TAG: v${{ inputs.version }}
+        run: |
+          git config user.name "Langflow Release Bot"
+          git config user.email "bot-releases@langflow.org"
+          sha=$(uv run --no-project python scripts/ci/release_auth_defaults.py tag "$RELEASE_TAG")
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          git push origin "refs/tags/$RELEASE_TAG"
       - uses: actions/download-artifact@v8
         with:
           name: dist-main
@@ -33,4 +54,4 @@ jobs:
           generateReleaseNotes: true
           prerelease: ${{ inputs.pre_release }}
           tag: v${{ inputs.version }}
-          commit: ${{ inputs.ref }}
+          commit: ${{ steps.release_tag.outputs.sha }}

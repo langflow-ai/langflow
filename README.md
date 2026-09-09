@@ -51,6 +51,8 @@ For more information, see [Install and run the Langflow OSS Python package](http
 
 #### Run
 
+Official release packages and tagged source archives disable automatic login by default. Set `LANGFLOW_SUPERUSER_PASSWORD` before starting Langflow, then sign in with the username `langflow` (or your configured `LANGFLOW_SUPERUSER`). Development branches retain automatic login by default. See [authentication configuration](https://docs.langflow.org/api-keys-and-authentication#start-a-langflow-server-with-authentication-enabled).
+
 To start Langflow, run:
 ```shell
 uv run langflow run
@@ -72,7 +74,7 @@ For more information, see [DEVELOPMENT.md](./DEVELOPMENT.md).
 ### Docker
 Start a Langflow container with default settings:
 ```shell
-docker run -p 7860:7860 langflowai/langflow:latest
+docker run -p 7860:7860 -e LANGFLOW_SUPERUSER_PASSWORD langflowai/langflow:latest
 ```
 Langflow is available at http://localhost:7860/.
 For configuration options, see the [Docker deployment guide](https://docs.langflow.org/deployment-docker).
