@@ -1408,7 +1408,7 @@ def describe_restricted_component_mismatch(component_type: Any, node_info: Any) 
 def explain_restricted_component_mismatch(component_type: Any, node_info: Any) -> str | None:
     """Never-raising wrapper for :func:`describe_restricted_component_mismatch`.
 
-    The only caller is a build-error handler, where a diagnostic that raises would replace the
+    Callers are build-error handlers, where a diagnostic that raises would replace the
     component's real error with an unrelated one.
     """
     try:
