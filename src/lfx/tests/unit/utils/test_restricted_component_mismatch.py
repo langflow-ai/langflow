@@ -193,12 +193,16 @@ async def test_first_streamed_error_carries_the_diagnosis(monkeypatch, allow_cus
     from lfx.events.event_manager import EventManager
     from lfx.exceptions.component import ComponentBuildError
     from lfx.graph import Graph
+    from lfx.interface import components as components_module
     from lfx.services.deps import get_settings_service
     from lfx.workflow.agui_translator import AGUITranslator
 
     registry = dict(json.loads(files("lfx").joinpath("_assets/component_index.json").read_text())["entries"])
-    monkeypatch.setattr(component_cache, "all_types_dict", registry)
-    monkeypatch.setattr(component_cache, "all_types_ready", True)
+    # Keep the registry and its derived lookups isolated from earlier tests.
+    cache = components_module.ComponentCache()
+    cache.all_types_dict = registry
+    cache.all_types_ready = True
+    monkeypatch.setattr(components_module, "component_cache", cache)
     settings = get_settings_service().settings
     monkeypatch.setattr(settings, "allow_custom_components", allow_custom)
     monkeypatch.setattr(settings, "substitute_outdated_component_code", True)
