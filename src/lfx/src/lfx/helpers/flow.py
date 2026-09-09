@@ -66,9 +66,6 @@ def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
 async def list_flows(*, user_id: str | None = None) -> list[Data]:
     """List flows for a user.
 
-    In lfx, this is a stub that returns an empty list since we don't have
-    a database backend by default.
-
     Args:
         user_id: The user ID to list flows for.
 
@@ -79,10 +76,15 @@ async def list_flows(*, user_id: str | None = None) -> list[Data]:
         msg = "Session is invalid"
         raise ValueError(msg)
 
-    # In lfx, we don't have a database backend by default
-    # This is a stub implementation
-    logger.warning("list_flows called but lfx doesn't have database backend by default")
-    return []
+    # Try to use the backend implementation if available
+    try:
+        from langflow.helpers.flow import list_flows as backend_list_flows
+
+        return await backend_list_flows(user_id=user_id)
+    except (ImportError, ModuleNotFoundError):
+        # Fall back to stub implementation if backend is not available
+        logger.warning("list_flows called but lfx doesn't have database backend by default")
+        return []
 
 
 async def list_flows_by_flow_folder(
