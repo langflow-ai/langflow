@@ -393,14 +393,27 @@ def _current_check_sql() -> dict[str, object]:
 
 
 def _matches_check_contract(reflected: Mapping[str, object], expected: Mapping[str, object]) -> bool:
-    """Return whether reflected checks satisfy one complete contract."""
-    if expected.keys() != reflected.keys():
+    """Return whether reflected checks satisfy one complete contract.
+
+    Names are matched by definition, not literally: a name depends on the
+    naming-convention state when the table was created (plain, doubled
+    ck_<table>_ prefix, or PostgreSQL's truncated + hash-suffixed form), so it
+    is not a stable contract identifier. Compare parsed definitions instead,
+    consuming one reflected constraint per expected definition.
+    """
+    if len(expected) != len(reflected):
         return False
-    for name, sqltext in expected.items():
-        reflected_ast = _check_ast(reflected[name])
-        expected_ast = _check_ast(sqltext)
-        if reflected_ast is None or expected_ast is None or reflected_ast != expected_ast:
+    remaining_asts: list[tuple[object, ...]] = []
+    for sqltext in reflected.values():
+        reflected_ast = _check_ast(sqltext)
+        if reflected_ast is None:
             return False
+        remaining_asts.append(reflected_ast)
+    for sqltext in expected.values():
+        expected_ast = _check_ast(sqltext)
+        if expected_ast is None or expected_ast not in remaining_asts:
+            return False
+        remaining_asts.remove(expected_ast)
     return True
 
 
@@ -814,19 +827,19 @@ def upgrade() -> None:
             sa.PrimaryKeyConstraint("id"),
             sa.CheckConstraint(
                 _BASELINE_CHECK_SQL["ck_catalog_policy_rule_resource_kind"],
-                name="ck_catalog_policy_rule_resource_kind",
+                name=op.f("ck_catalog_policy_rule_resource_kind"),
             ),
             sa.CheckConstraint(
                 _BASELINE_CHECK_SQL["ck_catalog_policy_rule_mode"],
-                name="ck_catalog_policy_rule_mode",
+                name=op.f("ck_catalog_policy_rule_mode"),
             ),
             sa.CheckConstraint(
                 _BASELINE_CHECK_SQL["ck_catalog_policy_rule_scope"],
-                name="ck_catalog_policy_rule_scope",
+                name=op.f("ck_catalog_policy_rule_scope"),
             ),
             sa.CheckConstraint(
                 _BASELINE_CHECK_SQL["ck_catalog_policy_rule_scope_domain_consistency"],
-                name="ck_catalog_policy_rule_scope_domain_consistency",
+                name=op.f("ck_catalog_policy_rule_scope_domain_consistency"),
             ),
         )
 
