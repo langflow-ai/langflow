@@ -26,6 +26,7 @@ from langflow.api.v1.flow_conflict import (
 from langflow.api.v1.flow_fork import FlowFork, build_fork_payload
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.flows_helpers import _new_flow, _patch_flow
+from langflow.services.audit.events import REASON_OVERWRITE
 from langflow.services.database.models.flow.model import FlowRead, FlowUpdate
 from langflow.services.database.models.flow_version.crud import create_flow_version_entry
 from langflow.services.database.models.flow_version.exceptions import FlowVersionError
@@ -163,4 +164,5 @@ async def overwrite_flow(
         user_id=current_user.id,
         storage_service=storage_service,
         expected_version_token=claimed,
+        audit_reason=REASON_OVERWRITE,
     )

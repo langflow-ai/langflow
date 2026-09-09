@@ -17,6 +17,8 @@ from langflow.api.v1.flow_conflict import ensure_version_precondition, parse_if_
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.mappers.deployments.helpers import get_owned_provider_account_or_404
 from langflow.api.v1.mappers.deployments.sync import sync_flow_version_attachments
+from langflow.services.audit.events import FLOW_RESTORED
+from langflow.services.audit.recorder import record_audit_event
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.lock_retry import is_database_lock_error
 from langflow.services.database.models.flow.model import Flow, FlowRead
@@ -251,7 +253,7 @@ async def activate_version(
     if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ) -> FlowRead:
     flow = await _get_user_flow(session, flow_id, current_user.id)
-    await ensure_version_precondition(session, flow, parse_if_match(if_match))
+    await ensure_version_precondition(session, flow, parse_if_match(if_match), actor_user_id=current_user.id)
     await ensure_flow_permission(
         current_user,
         FlowAction.WRITE,
@@ -309,6 +311,13 @@ async def activate_version(
             # restore leaves open editors holding a token that still looks current.
             flow.version_token = uuid4()
             flow.last_modified_by = current_user.id
+            await record_audit_event(
+                session,
+                event=FLOW_RESTORED,
+                user_id=current_user.id,
+                resource_id=flow.id,
+                payload={"version_id": str(target_entry.id)},
+            )
 
             session.add(flow)
             await session.flush()

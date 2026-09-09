@@ -35,7 +35,7 @@ Flow Persistence — optimistic concurrency on the flow graph.
 ### Related Contexts
 - **Flow Version History** (Partnership): stores the version an update replaces, so it stays recoverable.
 - **Authorization** (Conformist): decides who may open a flow at all; in OSS the pass-through keeps flows owner-scoped.
-- **Flow Edit Audit Trail** (Customer-Supplier): consumes the same version stamp to describe accepted writes.
+- **Application Audit Log** (Customer-Supplier): records one row per accepted write and one per refusal, naming the fields touched. It reads the conflict outcome, not the version stamp.
 
 ### Explicitly not in this release
 Presence. Nobody is warned *before* a conflict happens — two people can work unaware of each other until one of them saves. The heartbeat/lock half of the epic was **dropped**, not deferred.

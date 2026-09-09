@@ -20,6 +20,8 @@ from fastapi import HTTPException
 from pydantic import BaseModel
 from sqlmodel import select, update
 
+from langflow.services.audit.events import FLOW_SAVE_DENIED, REASON_VERSION_CONFLICT
+from langflow.services.audit.recorder import record_audit_event_independently
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user.model import User
 
@@ -94,6 +96,7 @@ async def ensure_version_precondition(
     session: AsyncSession,
     db_flow: Flow,
     expected: UUID | None,
+    actor_user_id: UUID | None = None,
 ) -> None:
     """Refuse the write when *expected* is not the flow's current token.
 
@@ -108,6 +111,12 @@ async def ensure_version_precondition(
         return
 
     author_name = await resolve_author_name(session, db_flow.last_modified_by)
+    await record_audit_event_independently(
+        event=FLOW_SAVE_DENIED,
+        user_id=actor_user_id,
+        resource_id=db_flow.id,
+        payload={"reason": REASON_VERSION_CONFLICT},
+    )
     raise HTTPException(
         status_code=409,
         detail=build_conflict_detail(

@@ -69,6 +69,8 @@ from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_dep
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.api.v1.schemas.public_flows import PublicFlowRead
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.services.audit.events import FLOW_DELETED
+from langflow.services.audit.recorder import record_audit_event
 from langflow.services.auth.utils import get_current_active_user, get_optional_user
 from langflow.services.authorization import (
     FlowAction,
@@ -640,7 +642,11 @@ async def update_flow(
                 raise HTTPException(status_code=404, detail="Flow not found")
             # Compared against the row we just re-read under lock, so a writer that
             # committed between the client's read and this attempt is still caught.
-            await ensure_version_precondition(session, db_flow_for_attempt, expected_version_token)
+            # actor.id, not current_user.id: a rollback between attempts expires the
+            # ORM User, and reading it back here would need IO outside the greenlet.
+            await ensure_version_precondition(
+                session, db_flow_for_attempt, expected_version_token, actor_user_id=actor.id
+            )
             # TOCTOU: a concurrent PATCH could have moved this flow to a
             # different workspace/folder between the destination check above
             # and this retry attempt. Re-authorize against the freshly
@@ -878,7 +884,9 @@ async def upsert_flow(
                 effective_flow_data = flow.data if flow.data is not None else existing_flow_for_attempt.data
                 _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
                 await stage_mcp_secrets(carried_secrets, secret_variables, writer_id, session)
-                await ensure_version_precondition(session, existing_flow_for_attempt, expected_version_token)
+                await ensure_version_precondition(
+                    session, existing_flow_for_attempt, expected_version_token, actor_user_id=current_user.id
+                )
                 return await _update_existing_flow(
                     session=session,
                     existing_flow=existing_flow_for_attempt,
@@ -961,6 +969,9 @@ async def delete_flow(
             )
             flow_owner_ids[retry_target.id] = retry_target.user_id
             await cascade_delete_flow(session, target_flow_id)
+            await record_audit_event(
+                session, event=FLOW_DELETED, user_id=actor.id, resource_id=target_flow_id
+            )
 
         await retry_flow_operation_on_deployment_guard(
             db=session,

@@ -8,6 +8,7 @@ from lfx.workflow.router import create_workflow_router
 from langflow.api.v1 import (
     a2a_router,
     api_key_router,
+    audit_router,
     authz_audit_router,
     authz_capabilities_router,
     authz_me_router,
@@ -69,6 +70,7 @@ def include_deployment_router(target_router: APIRouter) -> None:
         target_router.include_router(deployment_router)
 
 
+router_v1.include_router(audit_router)
 router_v1.include_router(flow_conflict_router)
 router_v1.include_router(chat_router)
 router_v1.include_router(endpoints_router)
