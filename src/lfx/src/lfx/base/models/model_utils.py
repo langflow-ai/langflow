@@ -429,10 +429,19 @@ def get_watsonx_embedding_models(
 
 
 def _environment_variable_value(variable_key: str) -> str | None:
-    """Process-environment value for *variable_key*, unless the request forbids it."""
+    """Process-environment value for a provider's REQUIRED variable, when allowed.
+
+    Scoped to required variables so the fallback matches provider enablement
+    exactly. An optional variable is an opt-in switch: ``OPENAI_BASE_URL`` in the
+    environment would otherwise flip discovery to a compatible endpoint and
+    replace OpenAI's curated chat catalog with that endpoint's raw ``/models``
+    listing (whisper, tts, embeddings). The request-scoped no-env-fallback flag
+    still wins, so a served flow stays isolated from process-wide environment.
+    """
+    from lfx.base.models.unified_models import is_required_provider_variable
     from lfx.services.variable.request_scope import is_env_fallback_disabled
 
-    if is_env_fallback_disabled():
+    if is_env_fallback_disabled() or not is_required_provider_variable(variable_key):
         return None
     return _to_str(os.environ.get(variable_key))
 
@@ -440,14 +449,13 @@ def _environment_variable_value(variable_key: str) -> str | None:
 def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -> str | None:
     """Get a variable value from global variables for a provider.
 
-    Resolution order matches provider enablement and model instantiation: the
-    user's stored variable first, then the process environment. Discovery used to
-    read the database alone, so a provider configured purely through the
-    environment (``OLLAMA_BASE_URL`` in a container) reported itself connected
-    while its live fetch returned nothing — callers then fell back to the static
-    catalog and offered models the server does not actually have. The environment
-    step honors the request-scoped no-env-fallback flag, so a served flow stays
-    isolated from process-wide environment.
+    Resolution order matches provider enablement: the user's stored variable
+    first, then the process environment for the provider's REQUIRED variables.
+    Discovery used to read the database alone, so a provider configured purely
+    through the environment (``OLLAMA_BASE_URL`` in a container) reported itself
+    connected while its live fetch returned nothing — callers then fell back to
+    the static catalog and offered models the server does not actually have.
+    Optional variables stay database-only; see :func:`_environment_variable_value`.
 
     Args:
         user_id: The user ID to look up global variables for

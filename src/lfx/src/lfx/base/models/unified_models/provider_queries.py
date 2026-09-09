@@ -122,6 +122,21 @@ def get_provider_secret_variable_key(provider: str) -> str | None:
     return next((variable.get("variable_key") for variable in variables if variable.get("is_secret")), None)
 
 
+def is_required_provider_variable(variable_key: str) -> bool:
+    """True when *variable_key* is a required variable of some model provider.
+
+    "Required" is the same notion provider enablement uses: a provider counts as
+    configured once every required variable is present. Optional variables
+    (``OPENAI_BASE_URL``, ``AZURE_AI_FOUNDRY_API_VERSION``) are opt-in switches
+    that enablement never consults, so they must stay explicitly configured.
+    """
+    return any(
+        variable.get("required") and variable.get("variable_key") == variable_key
+        for meta in model_provider_metadata.values()
+        for variable in meta.get("variables", [])
+    )
+
+
 def is_known_model_provider(provider: str) -> bool:
     """True when *provider* names a provider the model catalog recognizes.
 

@@ -188,3 +188,65 @@ class TestEnvironmentFallback:
         monkeypatch.setenv("OLLAMA_BASE_URL", "http://ollama:11434")
 
         assert get_provider_variable_value(None, "OLLAMA_BASE_URL") == "http://ollama:11434"
+
+    def test_optional_variable_is_not_read_from_environment(self, monkeypatch) -> None:
+        """Only required variables fall back to env, so optional switches stay opt-in.
+
+        ``OPENAI_BASE_URL`` is optional: setting it flips OpenAI to a compatible
+        endpoint whose raw ``/models`` listing (whisper, tts, embeddings) would
+        replace the curated chat catalog. Enablement never consults it, so
+        discovery must not either.
+        """
+        self._patch_empty_database(monkeypatch)
+        monkeypatch.setenv("OPENAI_BASE_URL", "https://proxy.example/v1")
+
+        assert (
+            get_provider_variable_value(
+                user_id="00000000-0000-0000-0000-000000000001",
+                variable_key="OPENAI_BASE_URL",
+            )
+            is None
+        )
+
+    def test_optional_variable_still_resolves_from_the_database(self, monkeypatch) -> None:
+        """Narrowing the env fallback must not touch an explicitly stored value."""
+        import asyncio
+
+        class _PresentVar:
+            async def get_variable(self, **_kwargs):
+                return "https://proxy.example/v1"
+
+        class _FakeSessionScope:
+            async def __aenter__(self):
+                return None
+
+            async def __aexit__(self, *_exc):
+                return False
+
+        monkeypatch.setattr(model_utils, "session_scope", lambda: _FakeSessionScope())
+        monkeypatch.setattr(model_utils, "get_variable_service", lambda: _PresentVar())
+        monkeypatch.setattr(
+            model_utils,
+            "run_until_complete",
+            lambda coro: asyncio.new_event_loop().run_until_complete(coro),
+        )
+
+        assert (
+            get_provider_variable_value(
+                user_id="00000000-0000-0000-0000-000000000001",
+                variable_key="OPENAI_BASE_URL",
+            )
+            == "https://proxy.example/v1"
+        )
+
+    def test_unrecognized_variable_is_not_read_from_environment(self, monkeypatch) -> None:
+        self._patch_empty_database(monkeypatch)
+        monkeypatch.setenv("NOT_A_PROVIDER_VARIABLE", "value")
+
+        assert (
+            get_provider_variable_value(
+                user_id="00000000-0000-0000-0000-000000000001",
+                variable_key="NOT_A_PROVIDER_VARIABLE",
+            )
+            is None
+        )
