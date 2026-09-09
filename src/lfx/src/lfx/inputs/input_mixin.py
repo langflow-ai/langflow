@@ -407,6 +407,9 @@ class SliderMixin(BaseModel):
     slider_buttons: bool = Field(default=False)
     slider_buttons_options: list[str] = Field(default=[])
     slider_input: bool = Field(default=False)
+    # Flip the track/thumb gradient so the min end is the "hot" accent colour.
+    # Use for thresholds where a lower value means stricter behaviour.
+    invert_gradient: bool = Field(default=False)
 
 
 class TableMixin(BaseModel):

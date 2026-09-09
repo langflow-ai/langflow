@@ -12,6 +12,8 @@ import { SliderLabels } from "./components/slider-labels";
 import { buildColorByName } from "./helpers/build-color-by-name";
 
 const THRESHOLDS = [0.25, 0.5, 0.75, 1];
+// Palette for the slider_buttons variant. Intentionally not affected by
+// invertGradient; no slider combines the two today.
 const BACKGROUND_COLORS = ["#4f46e5", "#7c3aed", "#a21caf", "#c026d3"];
 const TEXT_COLORS = ["#fff", "#fff", "#fff", "#fff"];
 const PERCENTAGES = [0.125, 0.375, 0.625, 0.875];
@@ -52,6 +54,7 @@ export default function SliderComponent({
   handleOnNewValue,
   showParameter = true,
   ariaLabelledBy,
+  invertGradient = false,
 }: InputProps<string[] | number[], SliderComponentType>): JSX.Element | null {
   const min = rangeSpec?.min ?? -2;
   const max = rangeSpec?.max ?? 2;
@@ -200,20 +203,17 @@ export default function SliderComponent({
     document.documentElement,
   ).getPropertyValue("--accent-pink-foreground");
 
-  const getThumbColor = (percentage) => {
-    if (accentIndigoForeground && accentPinkForeground) {
-      return buildColorByName(
-        accentIndigoForeground,
-        accentPinkForeground,
-        percentage,
-      );
-    }
-    return buildColorByName(
-      DEFAULT_ACCENT_INDIGO_FOREGROUND_COLOR,
-      DEFAULT_ACCENT_PINK_FOREGROUND_COLOR,
-      percentage,
-    );
-  };
+  // The gradient runs indigo -> pink from min to max. Inverted sliders (e.g. a
+  // strictness threshold where a lower value is stricter) run pink -> indigo.
+  const indigo =
+    accentIndigoForeground || DEFAULT_ACCENT_INDIGO_FOREGROUND_COLOR;
+  const pink = accentPinkForeground || DEFAULT_ACCENT_PINK_FOREGROUND_COLOR;
+  const [gradientStart, gradientEnd] = invertGradient
+    ? [pink, indigo]
+    : [indigo, pink];
+
+  const getThumbColor = (percentage: number) =>
+    buildColorByName(gradientStart, gradientEnd, percentage);
 
   const ringClassInputClass = "ring-[1px] ring-slider-input-border";
 
@@ -300,10 +300,10 @@ export default function SliderComponent({
             )}
           >
             <SliderPrimitive.Range
-              className="absolute h-full rounded-full bg-gradient-to-r from-accent-indigo-foreground to-accent-pink-foreground"
+              className="absolute h-full rounded-full"
               style={{
                 width: `${percentage}%`,
-                background: `linear-gradient(to right, rgb(79, 70, 229) 0%, ${getThumbColor(percentage)} ${percentage}%)`,
+                background: `linear-gradient(to right, ${getThumbColor(0)} 0%, ${getThumbColor(percentage)} ${percentage}%)`,
               }}
             />
           </SliderPrimitive.Track>

@@ -13,29 +13,19 @@ export const SliderLabels = ({
 }) => {
   return (
     <>
-      <div className="text mt-2 grid grid-cols-2 gap-x-2 text-sm">
-        <div className="flex items-center">
+      <div className="mt-1 flex items-center justify-between text-[11px] leading-none text-placeholder-foreground">
+        <div className="flex items-center gap-1">
           <IconComponent
-            className="mr-1 h-4 w-4 text-placeholder-foreground"
+            className="h-3 w-3"
             name={minLabelIcon}
             aria-hidden="true"
           />
-          <span
-            data-testid="min_label"
-            className="text-xs text-placeholder-foreground"
-          >
-            {minLabel}
-          </span>
+          <span data-testid="min_label">{minLabel}</span>
         </div>
-        <div className="flex items-center justify-end">
-          <span
-            data-testid="max_label"
-            className="text-xs text-placeholder-foreground"
-          >
-            {maxLabel}
-          </span>
+        <div className="flex items-center gap-1">
+          <span data-testid="max_label">{maxLabel}</span>
           <IconComponent
-            className="ml-1 h-4 w-4 text-placeholder-foreground"
+            className="h-3 w-3"
             name={maxLabelIcon}
             aria-hidden="true"
           />

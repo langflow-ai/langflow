@@ -272,6 +272,7 @@ export function ParameterRenderComponent({
             sliderButtons={templateData?.slider_buttons}
             sliderButtonsOptions={templateData?.slider_buttons_options}
             sliderInput={templateData?.slider_input}
+            invertGradient={templateData?.invert_gradient}
             id={`slider_${id}`}
           />
         );
