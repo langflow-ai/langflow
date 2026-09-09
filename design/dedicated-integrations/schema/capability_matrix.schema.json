@@ -8,7 +8,7 @@
   "required": [
     "schema_version", "provider", "display_name", "bundle", "wave", "max_included_actions", "verified_on",
     "oauth_app_owner_by_context", "oauth_client_type_by_context", "substrate_decision",
-    "restricted_scope_decisions", "sources",
+    "restricted_scope_decisions", "scope_risk_decisions", "sources",
     "verification_programs", "actions"
   ],
   "properties": {
@@ -73,6 +73,20 @@
         }
       }
     },
+    "scope_risk_decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["scope", "decision", "rationale", "decision_record"],
+        "properties": {
+          "scope": { "type": "string", "minLength": 1 },
+          "decision": { "$ref": "#/$defs/scope_risk_decision" },
+          "rationale": { "type": "string", "minLength": 1 },
+          "decision_record": { "$ref": "#/$defs/decision_record_path" }
+        }
+      }
+    },
     "sources": {
       "type": "object",
       "minProperties": 1,
@@ -96,6 +110,8 @@
     "substrate": { "enum": ["sdk", "rest", "mcp"] },
     "substrate_ga_status": { "enum": ["ga", "preview", "developer_preview", "beta", "deprecated"] },
     "identity": { "enum": ["user_delegated", "bot", "service"] },
+    "content_read_reach": { "enum": ["none", "selected_resources", "cross_resource"] },
+    "scope_risk_decision": { "enum": ["accept_with_controls", "avoid", "defer"] },
     "scope_role": { "enum": ["required", "optional", "alternative"] },
     "auth_mode": {
       "enum": [
@@ -144,10 +160,11 @@
     "scope": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["scope", "classification", "provider_classification", "source"],
+      "required": ["scope", "classification", "provider_classification", "source", "content_read_reach"],
       "properties": {
         "scope": { "type": "string", "minLength": 1 },
         "classification": { "$ref": "#/$defs/classification" },
+        "content_read_reach": { "$ref": "#/$defs/content_read_reach" },
         "provider_classification": { "type": "string", "minLength": 1 },
         "source": { "$ref": "#/$defs/source_id" },
         "role": { "$ref": "#/$defs/scope_role" },
@@ -214,6 +231,16 @@
         "identity_notes": { "type": "string" },
         "scopes": { "type": "array", "items": { "$ref": "#/$defs/scope" } },
         "consent": { "$ref": "#/$defs/consent" },
+        "tenant_consent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "requirement", "source"],
+          "properties": {
+            "status": { "const": "deployment_validation_required" },
+            "requirement": { "type": "string", "minLength": 1 },
+            "source": { "$ref": "#/$defs/source_id" }
+          }
+        },
         "consent_notes": { "type": "string" },
         "consent_source": { "$ref": "#/$defs/source_id" },
         "reach": {
@@ -259,7 +286,7 @@
       "then": {
         "required": [
           "schema", "consent", "consent_source", "reach", "refresh", "revocation", "substrate_source",
-          "rate_limit", "verification_dependencies"
+          "rate_limit", "verification_dependencies", "tenant_consent"
         ]
       }
     }
