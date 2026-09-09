@@ -56,5 +56,8 @@ describe("loadLanguage", () => {
     expect(i18n.hasResourceBundle("sv", "translation")).toBe(false);
     await loadLanguage("sv");
     expect(i18n.hasResourceBundle("sv", "translation")).toBe(true);
+    expect(i18n.t("errors.generic", { lng: "sv" })).toBe(
+      "Något gick fel. Försök igen.",
+    );
   });
 });
