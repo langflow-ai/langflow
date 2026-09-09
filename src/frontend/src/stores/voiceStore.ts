@@ -13,6 +13,7 @@ export const useVoiceStore = create<VoiceStoreType>((set, get) => ({
   providersList: [
     { name: "OpenAI", value: "openai" },
     { name: "ElevenLabs", value: "elevenlabs" },
+    { name: "Gandr", value: "gandr" },
   ],
   setProvidersList: (
     providersList: {
