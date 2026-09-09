@@ -1,0 +1,77 @@
+---
+title: Use FuturMix AI Gateway models
+description: Configure Langflow's OpenAI Component to use FuturMix AI Gateway with a custom API base URL and reusable API key setup.
+sidebar_position: 5
+slug: /tutorial-futurmix
+---
+
+import Icon from "@site/src/components/icon";
+
+This tutorial shows you how to use [FuturMix](https://futurmix.ai) AI models in Langflow.
+
+FuturMix is an OpenAI-compatible AI gateway that provides access to 22+ models from multiple providers, including Anthropic Claude, Google Gemini, and OpenAI GPT, through a single API endpoint.
+
+Because FuturMix is OpenAI-compatible, you can use it with Langflow's built-in **OpenAI** component by changing the base URL.
+
+## Prerequisites
+
+* [Install and start Langflow](/get-started-installation)
+* A [FuturMix API key](https://futurmix.ai)
+
+## Configure the OpenAI component to use FuturMix
+
+1. In Langflow, click **New Flow**, and then select the **Basic Prompting** template.
+
+2. In the flow editor, click the **OpenAI** component to open the component inspection panel.
+
+3. In the **OpenAI API Base** field, enter:
+
+   ```text title="openai_api_base.txt"
+   https://futurmix.ai/v1
+   ```
+
+   :::tip
+   The **OpenAI API Base** field may be hidden. To show it, click **More Options** or expand the advanced parameters in the component inspection panel.
+   :::
+
+4. In the **OpenAI API Key** field, enter your FuturMix API key.
+
+5. In the **Model Name** field, enter the model you want to use. For example:
+
+   - `claude-sonnet-4-20250514` (Anthropic Claude Sonnet 4)
+   - `gemini-2.5-pro` (Google Gemini 2.5 Pro)
+   - `gpt-4o` (OpenAI GPT-4o)
+
+   You can type any model name supported by FuturMix. For the full list of available models, see the [FuturMix documentation](https://futurmix.ai).
+
+6. Open the **Playground**, and ask the LLM a question to test the connection.
+
+## Use FuturMix with a global variable
+
+To reuse your FuturMix API key across multiple flows, you can store it as a [global variable](/configuration-global-variables).
+
+1. In the Langflow header, click your profile icon, and then select **Settings**.
+2. Click **Global Variables**, and then click **Add New**.
+3. Set **Variable Name** to `FUTURMIX_API_KEY`.
+4. Set the **Value** to your FuturMix API key.
+5. In the **Apply To Fields** menu, select **OpenAI API Key**.
+6. Click **Save Variable**.
+
+After you save the variable, Langflow automatically applies your FuturMix API key to any **OpenAI API Key** field. You still need to change the **OpenAI API Base** to `https://futurmix.ai/v1` in each component.
+
+## Use FuturMix with an environment variable
+
+Alternatively, you can set the FuturMix API key as an environment variable:
+
+```bash title=".env"
+LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT=FUTURMIX_API_KEY
+FUTURMIX_API_KEY=your-api-key
+```
+
+Start Langflow with the `.env` file:
+
+```bash title="terminal"
+uv run langflow run --env-file .env
+```
+
+For more information, see [Global variables](/configuration-global-variables#add-custom-global-variables-from-the-environment).
