@@ -75,7 +75,9 @@ test("the banner offers the two direct exits and the dialog names all three", as
   await page.getByTestId("flow-conflict-review-button").click();
   const modal = page.getByTestId("duplicate-flow-modal");
   await expect(modal).toBeVisible();
-  await expect(modal.getByText(/review version changes/i).first()).toBeVisible();
+  await expect(
+    modal.getByText(/review version changes/i).first(),
+  ).toBeVisible();
   await expect(modal.getByTestId("confirm-overwrite-flow")).toHaveText(
     /update current flow/i,
   );
