@@ -275,15 +275,44 @@ describe("FlowVersionSidebarContent store behavior", () => {
     expect(restoreCalls).toHaveLength(0);
   });
 
-  it("restores original nodes/edges on unmount", () => {
+  // The defect: opening version history and closing it again rewrote the canvas
+  // with clones of the very nodes already on it. Same content, new identities,
+  // and the autosave that followed recorded the person as having edited a flow
+  // they only looked at — enough to turn the next version check into a conflict
+  // dialog about changes they never made.
+  it("leaves the canvas alone when nothing was previewed", () => {
     const { unmount } = render(<FlowVersionSidebarContent flowId="flow-1" />);
 
-    // Clear mock calls from mount
     setStateMock.mockClear();
-
     unmount();
 
-    // Should restore original nodes/edges
+    const rewroteTheCanvas = setStateMock.mock.calls.some(
+      ([arg]) => arg && "nodes" in arg,
+    );
+    expect(rewroteTheCanvas).toBe(false);
+  });
+
+  it("restores the draft on unmount once a version has been previewed", () => {
+    entryQueryData = {
+      id: "entry-1",
+      version_tag: "v1",
+      data: {
+        nodes: [{ id: "version-node" }],
+        edges: [{ id: "version-edge" }],
+      },
+    };
+
+    const { unmount } = render(<FlowVersionSidebarContent flowId="flow-1" />);
+    const entryRow = screen.getByText("v1").closest("[class*=cursor-pointer]");
+    if (entryRow) {
+      act(() => {
+        entryRow.click();
+      });
+    }
+
+    setStateMock.mockClear();
+    unmount();
+
     expect(setStateMock).toHaveBeenCalledWith(
       expect.objectContaining({
         nodes: [{ id: "draft-node" }],
