@@ -250,6 +250,7 @@ EXPECTED_FIELDS = {
     "background_watchdog_interval_s",
     "background_backend",
     "background_poll_interval_s",
+    "background_claim_candidates",
     # ---- Added in 1.10.1 ----
     # SecuritySettings
     "allow_public_custom_components",
