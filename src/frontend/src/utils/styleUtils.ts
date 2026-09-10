@@ -462,6 +462,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Exa", name: "exa", icon: "Exa" },
   { display_name: "FAISS", name: "faiss", icon: "FAISS" },
   { display_name: "Firecrawl", name: "firecrawl", icon: "FirecrawlCrawlApi" },
+  { display_name: "FXMacroData", name: "fxmacrodata", icon: "Globe" },
   { display_name: "Git", name: "git", icon: "GitLoader" },
   { display_name: "Glean", name: "glean", icon: "Glean" },
   { display_name: "Gmail", name: "gmail", icon: "Gmail" },

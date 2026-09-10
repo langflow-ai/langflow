@@ -43,6 +43,7 @@ members = [
     "lfx-empiriolabs",
     "lfx-exa",
     "lfx-firecrawl",
+    "lfx-fxmacrodata",
     "lfx-google",
     "lfx-ibm",
     "lfx-nextplaid",
@@ -4922,6 +4923,24 @@ wheels = [
 ]
 
 [[package]]
+name = "fxmacrodata-public-client"
+version = "0.1.0"
+source = { url = "https://github.com/fxmacrodata/fxmacrodata-public-client/releases/download/v0.1.0/fxmacrodata_public_client-0.1.0-py3-none-any.whl" }
+dependencies = [
+    { name = "jsonschema" },
+    { name = "requests" },
+]
+wheels = [
+    { url = "https://github.com/fxmacrodata/fxmacrodata-public-client/releases/download/v0.1.0/fxmacrodata_public_client-0.1.0-py3-none-any.whl", hash = "sha256:5c60ff217243ff4001f178d4fdd8c3c8ce29001ad1ea0a170ed96606f0dd07c8" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "jsonschema", specifier = ">=4.23,<5" },
+    { name = "requests", specifier = ">=2.32,<3" },
+]
+
+[[package]]
 name = "gassist"
 version = "0.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -7910,6 +7929,7 @@ bundles = [
     { name = "lfx-empiriolabs" },
     { name = "lfx-exa" },
     { name = "lfx-firecrawl" },
+    { name = "lfx-fxmacrodata" },
     { name = "lfx-nextplaid" },
     { name = "lfx-paddle" },
     { name = "lfx-valkey" },
@@ -8024,6 +8044,7 @@ requires-dist = [
     { name = "lfx-empiriolabs", marker = "extra == 'bundles'", editable = "src/bundles/empiriolabs" },
     { name = "lfx-exa", marker = "extra == 'bundles'", editable = "src/bundles/exa" },
     { name = "lfx-firecrawl", marker = "extra == 'bundles'", editable = "src/bundles/firecrawl" },
+    { name = "lfx-fxmacrodata", marker = "extra == 'bundles'", editable = "src/bundles/fxmacrodata" },
     { name = "lfx-google", editable = "src/bundles/google" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
     { name = "lfx-nextplaid", marker = "extra == 'bundles'", editable = "src/bundles/nextplaid" },
@@ -10238,6 +10259,32 @@ requires-dist = [
     { name = "firecrawl-py", specifier = ">=4.0.0,<5.0.0" },
     { name = "lfx", editable = "src/lfx" },
 ]
+
+[[package]]
+name = "lfx-fxmacrodata"
+version = "0.1.0"
+source = { editable = "src/bundles/fxmacrodata" }
+dependencies = [
+    { name = "fxmacrodata-public-client" },
+    { name = "langchain-core" },
+    { name = "lfx" },
+]
+
+[package.optional-dependencies]
+test = [
+    { name = "pytest" },
+    { name = "pytest-xdist" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fxmacrodata-public-client", url = "https://github.com/fxmacrodata/fxmacrodata-public-client/releases/download/v0.1.0/fxmacrodata_public_client-0.1.0-py3-none-any.whl" },
+    { name = "langchain-core", specifier = ">=1.2.28,<2" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "pytest", marker = "extra == 'test'", specifier = ">=8" },
+    { name = "pytest-xdist", marker = "extra == 'test'", specifier = ">=3" },
+]
+provides-extras = ["test"]
 
 [[package]]
 name = "lfx-google"
