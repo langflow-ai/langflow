@@ -113,7 +113,8 @@ For headless or serverless deployments that execute flows using provider compone
 uv pip install "lfx[bundles]"
 ```
 
-This is equivalent to installing `lfx` plus `lfx-bundles[all]`, including the PyTorch-based providers **CUGA** and **Code Agents**.
+This is equivalent to installing `lfx` plus `lfx-bundles[all]`, including CUGA and Smolagents dependencies that can pull in PyTorch.
+The **Code Agents** components require a [separate manual OpenDsStar installation](/bundles-codeagents#prerequisites); OpenDsStar is excluded from all managed extras.
 It does **not** install standalone packages such as `lfx-openai` or `lfx-exa`.
 `uv pip install langflow` installs the curated standalone `lfx-*` packages without `lfx-bundles`.
 Use `uv pip install "langflow[bundles]"` to add the `lfx-bundles[all-no-torch]` profile plus the opt-in standalone packages while keeping the full Langflow application torch-free.
