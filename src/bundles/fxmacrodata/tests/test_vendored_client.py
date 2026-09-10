@@ -15,13 +15,27 @@ from lfx_fxmacrodata import FXMacroDataQuery
 from lfx_fxmacrodata import _public_client as public_client
 
 CLIENT_ROOT = files(public_client)
-CHECKSUMS = re.findall(r"^([a-f0-9]{64})  ([^\n]+)$", CLIENT_ROOT.joinpath("NOTICE").read_text(), re.MULTILINE)
+NOTICE_TEXT = CLIENT_ROOT.joinpath("NOTICE").read_text(encoding="utf-8")
+CHECKSUMS = re.findall(r"^([a-f0-9]{64})  ([^\n]+)$", NOTICE_TEXT, re.MULTILINE)
+ORIGINAL_JSON_CHECKSUMS = re.findall(r"^Original JSON SHA-256: ([a-f0-9]{64})  ([^\n]+)$", NOTICE_TEXT, re.MULTILINE)
 
 
 @pytest.mark.parametrize(("expected", "filename"), CHECKSUMS, ids=[name for _, name in CHECKSUMS])
-def test_public_client_matches_original_release(expected, filename):
+def test_public_client_matches_documented_bundle_bytes(expected, filename):
     assert len(CHECKSUMS) == 6
     assert hashlib.sha256(CLIENT_ROOT.joinpath(filename).read_bytes()).hexdigest() == expected
+
+
+@pytest.mark.parametrize(
+    ("expected", "filename"), ORIGINAL_JSON_CHECKSUMS, ids=[name for _, name in ORIGINAL_JSON_CHECKSUMS]
+)
+def test_json_differs_from_public_release_only_by_line_endings(expected, filename):
+    assert len(ORIGINAL_JSON_CHECKSUMS) == 2
+    bundled = CLIENT_ROOT.joinpath(filename).read_bytes()
+    assert b"\r" not in bundled
+    original = bundled.replace(b"\n", b"\r\n")
+    assert hashlib.sha256(original).hexdigest() == expected
+    assert json.loads(bundled) == json.loads(original)
 
 
 def test_components_load_without_external_public_client():

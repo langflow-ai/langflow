@@ -14,7 +14,7 @@ Install the bundle from the Langflow repository into the Python environment used
 uv pip install ./src/bundles/fxmacrodata
 ```
 
-The bundle includes an unmodified copy of the MIT-licensed [public client](https://github.com/fxmacrodata/fxmacrodata-public-client). Its [NOTICE](src/lfx_fxmacrodata/_public_client/NOTICE) records the source commit, released wheel digest and file hashes for updates. The bundle requires Bundle API 1. Its `langflow.extensions` entry point and packaged `extension.json` enable normal extension discovery. Reopen your Langflow application after installation. The bundle is also included in `langflow[bundles]`.
+The bundle includes the MIT-licensed [public client](https://github.com/fxmacrodata/fxmacrodata-public-client). Its [NOTICE](src/lfx_fxmacrodata/_public_client/NOTICE) records the source commit, released wheel digest and file hashes for updates. Four client files are unchanged; the two JSON files have only CRLF-to-LF line-ending normalization for Langflow. The bundle requires Bundle API 1. Its `langflow.extensions` entry point and packaged `extension.json` enable normal extension discovery. Reopen your Langflow application after installation. The bundle is also included in `langflow[bundles]`.
 
 ## Visual workflows
 
