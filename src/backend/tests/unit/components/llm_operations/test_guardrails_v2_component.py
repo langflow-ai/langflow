@@ -60,6 +60,7 @@ class TestGuardrailsV2Component(ComponentTestBaseWithoutClient):
         verdict is reachable without one.
         """
         return {
+            "checking_method": "Rules only",
             "input_text": "Hello, this is a normal message.",
             "direction": "input",
             "enabled_guardrails": DEFAULT_GUARDRAILS,
@@ -86,6 +87,8 @@ class TestGuardrailsV2Component(ComponentTestBaseWithoutClient):
         ``_pre_run_setup`` is what resolves the inputs and env overrides into the
         private state the engine reads, so it must run before any output method.
         """
+        if overrides.get("llm_mode") in {"ambiguous", "always"}:
+            overrides.setdefault("checking_method", "Rules + AI")
         component = GuardrailsV2Component(**{**default_kwargs, **overrides})
         component._pre_run_setup()
         # ``stop`` routes the unused branch and needs a graph vertex, which a
@@ -391,8 +394,13 @@ class TestGuardrailsV2Component(ComponentTestBaseWithoutClient):
         assert component.pass_message().text == raw
         assert component._evaluate()["action"] == "pass"
 
-    def test_optional_model_does_not_prevent_rule_sanitization(self):
-        component = GuardrailsV2Component(input_text="Contact alice@example.com", enabled_guardrails=["PII"])
+    def test_rules_only_supports_explicit_sanitization(self):
+        component = GuardrailsV2Component(
+            input_text="Contact alice@example.com",
+            enabled_guardrails=["PII"],
+            checking_method="Rules only",
+            medium_risk_action="sanitize",
+        )
         component._pre_run_setup()
         component.stop = MagicMock()
         assert component.pass_message().text == "Contact [REDACTED:EMAIL]"
@@ -400,7 +408,7 @@ class TestGuardrailsV2Component(ComponentTestBaseWithoutClient):
 
     @pytest.mark.parametrize("mode", ["off", "ambiguous"])
     def test_custom_rule_requires_a_usable_model_configuration(self, default_kwargs, mode):
-        with pytest.raises(ValueError, match="Custom Guardrail requires"):
+        with pytest.raises(ValueError, match=r"Custom Guardrail requires|Language Model"):
             self._build(
                 default_kwargs,
                 enable_custom_guardrail=True,

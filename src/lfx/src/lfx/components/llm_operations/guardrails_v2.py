@@ -1,16 +1,15 @@
-"""Rule-based guardrails with at most one combined semantic model evaluation.
+"""Guardrails with the original evaluator and optional combined rule/model checks.
 
-An alternative to :class:`~lfx.components.llm_operations.guardrails.GuardrailsComponent`,
-which asks an LLM once per enabled category. Rules catch known patterns; a configured
-model evaluates the broader semantic categories together. Rule-only operation is
-available, but does not establish that unverified semantic categories are clean.
+AI checks reuses GuardrailsComponent without changing its evaluation contract.
+Rules + AI evaluates semantic categories in one combined call after rule checks.
+Rules only is explicit and cannot establish that unverified semantic categories are clean.
 
 Design rules
 ------------
 1. Rules are deterministic; model-assisted verdicts can vary between runs.
-2. All semantic categories share one model call. In ambiguous mode a decisive
+2. In Rules + AI, all semantic categories share one model call. In ambiguous mode a decisive
    rule-based block skips that call.
-3. The model can only raise risk. Failed or incomplete evaluations block by
+3. In Rules + AI, the model can only raise risk. Failed or incomplete evaluations block by
    default, and unsupported or unsuccessful sanitization never counts as a pass.
 4. Scope enforcement uses literal configured topic rules, independently of the model.
 
@@ -45,7 +44,7 @@ from lfx.base.models.unified_models import (
     get_llm,
     handle_model_input_update,
 )
-from lfx.custom import Component
+from lfx.components.llm_operations.guardrails import GuardrailsComponent, guardrail_descriptions
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import (
     BoolInput,
@@ -1125,15 +1124,17 @@ def redact_spans(text: str, spans: list[tuple[str, str]], mode: str = "mask") ->
     return out, redacted
 
 
-class GuardrailsV2Component(Component):
-    display_name = "Guardrails V2"
-    description = (
-        "Checks text using rules and one optional combined model evaluation. "
-        "Blocks violations or safely sanitizes supported findings; rules alone have limited semantic coverage."
-    )
+_AI_CATEGORIES = tuple(name for name in guardrail_descriptions if name != "Custom Guardrail")
+
+
+class GuardrailsV2Component(GuardrailsComponent):
+    display_name = "Guardrails"
+    description = "Check text for unsafe or sensitive content."
     icon = "shield-check"
-    documentation = "https://docs.langflow.org/guardrails-v2"
+    documentation = "https://docs.langflow.org/guardrails"
     name = "GuardrailValidatorV2"
+    legacy = False
+    replacement = None
 
     inputs = [
         MultilineInput(
@@ -1144,143 +1145,133 @@ class GuardrailsV2Component(Component):
             required=True,
         ),
         DropdownInput(
-            name="direction",
-            display_name="Direction",
+            name="checking_method",
+            display_name="Checking Method",
             info=(
-                "'input' guards what the user sends to the agent. 'output' guards what the agent "
-                "sends back - it adds credential-solicitation and system-prompt-leak detection."
+                "AI checks preserves the original Guardrails behavior. Rules + AI combines known patterns "
+                "with one AI check. Rules only checks known patterns and has limited coverage."
             ),
+            options=["AI checks", "Rules + AI", "Rules only"],
+            value="AI checks",
+            real_time_refresh=True,
+        ),
+        DropdownInput(
+            name="direction",
+            display_name="Message Type",
+            info="Choose input for user messages or output for assistant responses.",
             options=["input", "output"],
             value="input",
             real_time_refresh=True,
+            advanced=True,
+            show=False,
         ),
         MultiselectInput(
             name="enabled_guardrails",
             display_name="Guardrails",
             info="Checks to run. Connect a model for semantic coverage beyond known rule patterns.",
-            options=sorted(set(INPUT_CATEGORIES) | set(OUTPUT_CATEGORIES)),
+            options=list(_AI_CATEGORIES),
             required=True,
-            value=[
-                "PII",
-                "Tokens/Passwords",
-                "Jailbreak",
-                "Prompt Injection",
-                "Malicious Code",
-                "Enterprise Business",
-            ],
+            value=["PII", "Tokens/Passwords", "Jailbreak"],
+            real_time_refresh=True,
         ),
         # ---- scope boundary ------------------------------------------------
         DropdownInput(
             name="scope_mode",
-            display_name="Scope Mode",
-            info=(
-                "Deterministic subject-matter boundary. 'denylist' blocks only listed topics. "
-                "'allowlist' refuses anything matching no allowed topic - this is what stops "
-                "off-topic requests answering inconsistently, because the decision never depends "
-                "on model judgement. Requires 'Scope' in the guardrails list. "
-                "Env: LANGFLOW_GUARDRAILS_SCOPE_MODE."
-            ),
+            display_name="Topic Restrictions",
+            info="Allow listed topics, block listed topics, or both. Topics match words and phrases, not meaning.",
             options=["off", "denylist", "allowlist", "both"],
             value="off",
+            real_time_refresh=True,
+            advanced=True,
+            show=False,
         ),
         MultilineInput(
             name="allowed_topics",
             display_name="Allowed Topics",
-            info=(
-                "One term or phrase per line. Matched whole-word, case-insensitive. Include "
-                "synonyms and the plural forms your users actually type. Short conversational "
-                "turns (hi, yes, thanks, continue) are always allowed. "
-                "Env: LANGFLOW_GUARDRAILS_ALLOWED_TOPICS (comma-separated)."
-            ),
+            info="One phrase per line. Include synonyms and plurals. Short replies such as 'thanks' are allowed.",
             advanced=True,
+            show=False,
         ),
         MultilineInput(
             name="blocked_topics",
             display_name="Blocked Topics",
-            info=(
-                "One term or phrase per line. Any whole-word match is refused outright. "
-                "Env: LANGFLOW_GUARDRAILS_BLOCKED_TOPICS (comma-separated)."
-            ),
+            info="One word or phrase per line. Matching messages are blocked.",
             advanced=True,
+            show=False,
         ),
         MultilineInput(
             name="scope_refusal_message",
-            display_name="Scope Refusal Message",
+            display_name="Off-topic Reply",
             info="Sent out the Fail output when a request is out of scope. Keep it friendly.",
             value=_DEFAULT_SCOPE_REFUSAL,
             advanced=True,
+            show=False,
         ),
         # ---- thresholds ----------------------------------------------------
         SliderInput(
             name="block_threshold",
-            display_name="Block Threshold",
-            info=(
-                "Risk at or above which the input is blocked and routed to Fail. Strong signals "
-                "(a Luhn-valid card number, a live API key, 'ignore all previous instructions') "
-                "score 0.85-0.95 alone. Env: LANGFLOW_GUARDRAILS_BLOCK_THRESHOLD."
-            ),
+            display_name="Strictness",
+            info="Higher strictness blocks lower-risk findings. Advanced deployment settings can override this value.",
             value=0.75,
             range_spec=RangeSpec(min=0, max=1, step=0.05),
-            min_label="Strict",
-            min_label_icon="lock",
-            max_label="Permissive",
-            max_label_icon="lock-open",
+            min_label="Permissive",
+            min_label_icon="lock-open",
+            max_label="Strict",
+            max_label_icon="lock",
+            value_inverted=True,
+            slider_color="red",
+            advanced=True,
+            show=False,
         ),
         SliderInput(
             name="sanitize_threshold",
-            display_name="Sanitize Threshold",
-            info=(
-                "Risk at or above which the text is sanitized rather than blocked: directive lines "
-                "are stripped and detected PII/secrets redacted, then the cleaned text continues "
-                "out the Pass output. Findings that cannot be safely removed are blocked. "
-                "Env: LANGFLOW_GUARDRAILS_SANITIZE_THRESHOLD."
-            ),
+            display_name="Review Threshold",
+            info="Findings above this risk level use the selected action below, until Strictness requires blocking.",
             value=0.35,
             range_spec=RangeSpec(min=0, max=1, step=0.05),
             min_label="Aggressive",
             min_label_icon="eraser",
             max_label="Lenient",
             max_label_icon="check",
+            advanced=True,
+            show=False,
         ),
         DropdownInput(
             name="medium_risk_action",
-            display_name="Medium Risk Action",
-            info="What to do between the sanitize and block thresholds.",
+            display_name="Action for Flagged Text",
+            info="Block flagged text, remove supported findings (sanitize), or allow it unchanged (pass_through).",
             options=["sanitize", "block", "pass_through"],
-            value="sanitize",
+            value="block",
             advanced=True,
+            real_time_refresh=True,
+            show=False,
         ),
         DropdownInput(
             name="redaction_mode",
-            display_name="Redaction Mode",
-            info="mask -> [REDACTED:TAG], tokenize -> <TAG>, partial -> [TAG:***1234].",
+            display_name="Redaction Style",
+            info="Replace sensitive values with a label, a token, or a partially hidden value.",
             options=["mask", "tokenize", "partial"],
             value="mask",
             advanced=True,
+            show=False,
         ),
         # ---- LLM second opinion --------------------------------------------
         DropdownInput(
             name="llm_mode",
-            display_name="LLM Second Opinion",
-            info=(
-                "'env' reads LANGFLOW_GUARDRAILS_LLM_MODE (default: ambiguous). "
-                "'off' runs only known rules, with limited semantic coverage. "
-                "'ambiguous' makes one combined semantic check unless rules already block the text. "
-                "'always' checks even rule-blocked text. A configured model can only raise risk."
-            ),
-            options=["env", "off", "ambiguous", "always"],
+            display_name="Model Evaluation",
+            info="Use deployment settings, check when rules allow, or check every message including rule blocks.",
+            options=["env", "ambiguous", "always"],
             value="env",
             real_time_refresh=True,
+            advanced=True,
+            show=False,
         ),
         ModelInput(
             name="model",
             display_name="Language Model",
-            info=(
-                "Connect a model for semantic checks. Without one, only known rules run "
-                "and semantic categories remain unverified."
-            ),
+            info="Select or connect the model used to check your text. Required for either AI checking method.",
             real_time_refresh=True,
-            required=False,
+            required=True,
         ),
         SecretStrInput(
             name="api_key",
@@ -1293,90 +1284,93 @@ class GuardrailsV2Component(Component):
         # ---- enterprise boundary -------------------------------------------
         MultilineInput(
             name="enterprise_orgs",
-            display_name="Enterprise Org Names",
-            info=(
-                "OPT-IN, empty by default. Only needed if you police your OWN organisation's "
-                "internal document markers. With an org name set, a marker only counts when that "
-                "org is named in front of it ('Acme Confidential' flags, 'keep this confidential' "
-                "does not). Env: LANGFLOW_GUARDRAILS_ENTERPRISE_ORGS (comma-separated)."
-            ),
+            display_name="Organization Names",
+            info="Your organization names, one per line. Detect labels such as 'Acme Confidential'. Optional.",
             value="",
             advanced=True,
+            show=False,
         ),
         MultilineInput(
             name="enterprise_domains",
-            display_name="Enterprise Domains",
-            info=(
-                "OPT-IN, empty by default. Your own corporate domains, one per line. Drives "
-                "corporate email, internal host and internal SCM detection. Cloud platform "
-                "credentials (API keys, IAM tokens, CRNs, COS HMAC) are detected regardless and "
-                "need no configuration here. Env: LANGFLOW_GUARDRAILS_ENTERPRISE_DOMAINS."
-            ),
+            display_name="Organization Domains",
+            info="Organization domains, one per line, to identify corporate email and internal addresses. Optional.",
             value="",
             advanced=True,
+            show=False,
         ),
         MultilineInput(
             name="internal_host_labels",
-            display_name="Internal Host Labels",
-            info=(
-                "OPT-IN, empty by default. Subdomain labels marking a host internal-only, "
-                "combined with the enterprise domains above (e.g. 'corp' -> *.corp.acme.com). "
-                "Env: LANGFLOW_GUARDRAILS_INTERNAL_HOST_LABELS."
-            ),
+            display_name="Internal Subdomains",
+            info="Internal subdomain names, one per line. For example, 'corp' identifies corp.acme.com. Optional.",
             value="",
             advanced=True,
+            show=False,
         ),
         MultilineInput(
             name="classification_markers",
-            display_name="Classification Markers",
-            info=(
-                "OPT-IN, empty by default. Document classification labels to detect. With org "
-                "names configured a marker needs the org in front of it; without them, markers "
-                "match exactly as listed. Env: LANGFLOW_GUARDRAILS_CLASSIFICATION_MARKERS."
-            ),
+            display_name="Sensitive Document Labels",
+            info="Labels such as 'Confidential', one per line. Organization names, when configured, must precede them.",
             value="",
             advanced=True,
+            show=False,
         ),
         MultilineInput(
             name="url_allowlist",
-            display_name="URL Allowlist",
+            display_name="Allowed URLs",
             info="One URL prefix per line. Non-matching http(s) URLs raise the injection score.",
             advanced=True,
+            show=False,
         ),
         MultilineInput(
             name="custom_blocklist",
-            display_name="Custom Blocklist Terms",
+            display_name="Blocked Words and Phrases",
             info="One term per line. Any whole-word match blocks under Offensive Content.",
             advanced=True,
+            show=False,
         ),
         BoolInput(
             name="scan_encoded_payloads",
-            display_name="Scan Encoded Payloads",
-            info="Decode base64 blobs and fold leetspeak / zero-width obfuscation before matching.",
+            display_name="Check Hidden Text",
+            info="Check encoded text and disguised characters for known patterns.",
             value=True,
             advanced=True,
+            show=False,
         ),
         BoolInput(
             name="fail_closed",
-            display_name="Fail Closed",
-            info=(
-                "Block if the rule engine or a requested model evaluation fails or returns an incomplete verdict. "
-                "Env: LANGFLOW_GUARDRAILS_FAIL_CLOSED."
-            ),
+            display_name="Block When a Check Fails to Run",
+            info="Block if a check fails or the model returns an incomplete answer.",
             value=True,
             advanced=True,
+            show=False,
         ),
         BoolInput(
             name="enable_custom_guardrail",
             display_name="Enable Custom Guardrail",
-            info="An extra LLM-evaluated guardrail. Requires a configured model and llm_mode other than off.",
+            info="Add your own AI checking criteria. Requires an AI checking method and a model.",
             value=False,
             advanced=True,
+            real_time_refresh=True,
         ),
         MultilineInput(
             name="custom_guardrail_explanation",
             display_name="Custom Guardrail Description",
             info="What the custom guardrail should look for. Evaluated by the LLM only.",
+            advanced=True,
+            show=False,
+        ),
+        SliderInput(
+            name="heuristic_threshold",
+            display_name="Strictness",
+            info="Controls known jailbreak and prompt injection checks in AI checks mode. Higher is stricter.",
+            value=0.7,
+            range_spec=RangeSpec(min=0, max=1, step=0.1),
+            min_label="Permissive",
+            min_label_icon="lock-open",
+            max_label="Strict",
+            max_label_icon="lock",
+            value_inverted=True,
+            slider_color="red",
             advanced=True,
         ),
     ]
@@ -1395,13 +1389,91 @@ class GuardrailsV2Component(Component):
         self._token_usage = None
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
-        return handle_model_input_update(self, build_config, field_value, field_name)
+        """Show only settings that apply to the selected checking method and checks."""
+        build_config = handle_model_input_update(self, build_config, field_value, field_name)
+        if field_name in build_config:
+            build_config[field_name]["value"] = field_value
+        return self._configure_fields(build_config)
+
+    def _update_template(self, frontend_node: dict) -> dict:
+        frontend_node["template"] = self._configure_fields(frontend_node["template"])
+        return frontend_node
+
+    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict) -> dict:
+        new_frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)
+        return self._update_template(new_frontend_node)
+
+    @staticmethod
+    def _configure_fields(build_config: dict) -> dict:
+        """Derive visibility on creation, editing, and loading without discarding saved settings."""
+
+        def value(name, default=None):
+            return build_config.get(name, {}).get("value", default)
+
+        def show(name, visible):
+            if name in build_config:
+                build_config[name]["show"] = visible
+
+        method = value("checking_method", "AI checks")
+        classic = method == "AI checks"
+        ai = method != "Rules only"
+        enabled = value("enabled_guardrails", []) or []
+        direction = value("direction", "input")
+        if "enabled_guardrails" in build_config:
+            build_config["enabled_guardrails"]["options"] = (
+                list(_AI_CATEGORIES)
+                if classic
+                else list(OUTPUT_CATEGORIES if direction == "output" else INPUT_CATEGORIES)
+            )
+        show("model", ai)
+        show("api_key", ai)
+        if "model" in build_config:
+            build_config["model"]["required"] = ai
+        show("heuristic_threshold", classic)
+        for name in (
+            "direction",
+            "block_threshold",
+            "sanitize_threshold",
+            "medium_risk_action",
+            "scan_encoded_payloads",
+            "fail_closed",
+        ):
+            show(name, not classic)
+        show("llm_mode", method == "Rules + AI")
+        show("redaction_mode", not classic and value("medium_risk_action") == "sanitize")
+        show("enable_custom_guardrail", ai)
+        show("custom_guardrail_explanation", ai and bool(value("enable_custom_guardrail")))
+        scope = not classic and "Scope" in enabled
+        scope_mode = value("scope_mode", "off")
+        show("scope_mode", scope)
+        show("allowed_topics", scope and scope_mode in {"allowlist", "both"})
+        show("blocked_topics", scope and scope_mode in {"denylist", "both"})
+        show("scope_refusal_message", scope and scope_mode != "off")
+        for name in ("enterprise_orgs", "enterprise_domains", "internal_host_labels", "classification_markers"):
+            show(name, not classic and "Enterprise Business" in enabled)
+        show("url_allowlist", not classic and "Prompt Injection" in enabled)
+        show("custom_blocklist", not classic and "Offensive Content" in enabled)
+        return build_config
 
     # -- setup ------------------------------------------------------------
 
     def _pre_run_setup(self):
         self._result = None
         self._token_usage = None
+        self._checking_method = getattr(self, "checking_method", "AI checks")
+        if self._checking_method not in {"AI checks", "Rules + AI", "Rules only"}:
+            msg = "Invalid checking method. Choose AI checks, Rules + AI, or Rules only."
+            raise ValueError(msg)
+        if self._checking_method != "Rules only" and not getattr(self, "model", None):
+            msg = "Select or connect a Language Model, or choose Rules only for known-pattern checks."
+            raise ValueError(msg)
+        if self._checking_method == "AI checks":
+            if any(name not in _AI_CATEGORIES for name in (self.enabled_guardrails or [])):
+                msg = "Selected guardrails require Rules + AI or Rules only. Update the checking method or selection."
+                raise ValueError(msg)
+            # Reuse the original prompts, heuristics, fail-fast behavior, and output contract.
+            super()._pre_run_setup()
+            return
 
         raw = self._extract_text(getattr(self, "input_text", ""))
         if not raw or not raw.strip():
@@ -1460,6 +1532,11 @@ class GuardrailsV2Component(Component):
         if mode == "env":
             mode = env_str("LLM_MODE", "ambiguous") or "ambiguous"
         self._llm_mode = mode if mode in ("off", "ambiguous", "always") else "ambiguous"
+        if self._checking_method == "Rules only":
+            self._llm_mode = "off"
+        elif self._llm_mode == "off":
+            msg = "Model evaluation is disabled by configuration. Choose Rules only or enable model evaluation."
+            raise ValueError(msg)
         if self._custom_description and (self._llm_mode == "off" or not getattr(self, "model", None)):
             msg = "Custom Guardrail requires a configured model and an LLM mode other than off"
             raise ValueError(msg)
@@ -1809,7 +1886,7 @@ JSON:"""
 
         base = self._result_metadata(findings, llm_scores, llm_error)
 
-        medium_action = str(getattr(self, "medium_risk_action", "sanitize") or "sanitize")
+        medium_action = str(getattr(self, "medium_risk_action", "block") or "block")
 
         if blocking or (medium and medium_action == "block"):
             violations = blocking or medium
@@ -1943,11 +2020,15 @@ JSON:"""
 
     def pass_message(self) -> Message:
         """Original text on pass, sanitized text on medium risk, empty when blocked."""
+        if self._checking_method == "AI checks":
+            return super().pass_message()
         result = self._branch()
         return Message(text="" if result["action"] == "block" else result["text"])
 
     def fail_message(self) -> Message:
         """The refusal / justification when the text is blocked."""
+        if self._checking_method == "AI checks":
+            return super().fail_message()
         result = self._branch()
         if result["action"] != "block":
             return Message(text="")
@@ -1955,4 +2036,6 @@ JSON:"""
 
     def result_data(self) -> Data:
         """Full verdict: per-category scores, matched indicators and the action taken."""
+        if self._checking_method == "AI checks":
+            return super().result_data()
         return Data(data=self._branch(), default_value=None)
