@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { raiseConflictForStaleWork } from "@/hooks/flows/use-check-flow-version";
 import useAuthStore from "@/stores/authStore";
@@ -12,6 +11,7 @@ import {
   clearConflictDraft,
   readConflictDraft,
 } from "@/utils/conflict-draft";
+import { CanvasBanner } from "./CanvasBanner";
 
 /**
  * Offers back work that a refused save left stranded in a closed tab.
@@ -73,45 +73,32 @@ export function RestoreDraftBanner({ flowId }: { flowId: string }) {
   };
 
   return (
-    <div
-      className="pointer-events-none absolute inset-x-0 bottom-6 z-50 flex justify-center px-6"
-      data-testid="restore-draft-banner"
-    >
-      <div
-        role="status"
-        className="pointer-events-auto flex w-full max-w-3xl items-center gap-4 rounded-xl border border-border bg-background px-5 py-4 shadow-lg"
-      >
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted">
-          <ForwardedIconComponent
-            name="History"
-            className="h-5 w-5 text-muted-foreground"
-            aria-hidden="true"
-          />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-foreground">
-            {t("multiEdit.draft.title", { time: savedAt })}
-          </p>
-          <p className="text-mmd text-muted-foreground">
-            {draft.secretsCleared
-              ? t("multiEdit.draft.descriptionScrubbed")
-              : t("multiEdit.draft.description")}
-          </p>
-        </div>
-        <div className="flex shrink-0 gap-2">
-          <Button variant="outline" size="sm" onClick={discard}>
+    <CanvasBanner
+      testId="restore-draft-banner"
+      tone="neutral"
+      icon="History"
+      title={t("multiEdit.draft.title", { time: savedAt })}
+      description={
+        draft.secretsCleared
+          ? t("multiEdit.draft.descriptionScrubbed")
+          : t("multiEdit.draft.description")
+      }
+      actions={
+        <>
+          <Button variant="conflictSecondary" size="banner" onClick={discard}>
             {t("multiEdit.draft.discard")}
           </Button>
           <Button
-            size="sm"
+            variant="conflictPrimary"
+            size="banner"
             onClick={() => void restore()}
             data-testid="restore-draft-button"
           >
             {t("multiEdit.draft.restore")}
           </Button>
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    />
   );
 }
 

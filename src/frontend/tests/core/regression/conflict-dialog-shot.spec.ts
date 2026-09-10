@@ -54,13 +54,9 @@ test("conflict dialog footer layout", async ({ page }) => {
   await page.waitForTimeout(1500);
   await modal.screenshot({ path: "test-results/conflict-dialog.png" });
 
-  // The four actions must sit on one row: measure their vertical centres.
+  // The remaining actions must sit on one row: measure their vertical centres.
   const tops = await modal.evaluate(() => {
-    const ids = [
-      "discard-my-changes",
-      "confirm-duplicate-flow",
-      "confirm-overwrite-flow",
-    ];
+    const ids = ["confirm-duplicate-flow", "confirm-overwrite-flow"];
     const els = ids
       .map((id) => document.querySelector(`[data-testid="${id}"]`))
       .filter(Boolean) as HTMLElement[];
@@ -73,15 +69,19 @@ test("conflict dialog footer layout", async ({ page }) => {
   console.log("button tops:", JSON.stringify(tops));
   expect(new Set(tops).size, "all actions on a single row").toBe(1);
 
-  // And the confirmation step.
-  await page.getByTestId("discard-my-changes").click();
+  // And the confirmation step, which now lives off the banner.
+  await page.keyboard.press("Escape");
+  await expect(modal).toBeHidden();
+  await page.getByTestId("flow-conflict-load-latest-button").click();
   await page.waitForTimeout(800);
-  const confirm = page.getByTestId("confirm-discard-my-changes");
+  const confirm = page.getByTestId("load-latest-confirm-button");
   console.log(
     "confirm button text:",
     JSON.stringify(await confirm.textContent()),
     "| text-transform:",
     await confirm.evaluate((el) => getComputedStyle(el).textTransform),
   );
-  await modal.screenshot({ path: "test-results/conflict-dialog-discard.png" });
+  await page
+    .getByTestId("load-latest-dialog")
+    .screenshot({ path: "test-results/conflict-dialog-discard.png" });
 });

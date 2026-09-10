@@ -1,7 +1,6 @@
 import type { AllNodeType, EdgeType } from "@/types/flow";
 import {
   applySelectedChanges,
-  contestedTargetKeys,
   diffGraphs,
   groupChangesByTarget,
   siblingChangeIds,
@@ -169,34 +168,6 @@ describe("diffGraphs", () => {
   it("should treat a missing graph as empty rather than throwing", () => {
     expect(diffGraphs(null, graph([node("a", "N")]))).toHaveLength(1);
     expect(diffGraphs(graph([node("a", "N")]), null)).toHaveLength(1);
-  });
-});
-
-describe("contestedTargetKeys", () => {
-  it("should mark a component both people changed as contested", () => {
-    const mine = diffGraphs(
-      graph([node("a", "Prompt", { template: { value: "base" } })]),
-      graph([node("a", "Prompt", { template: { value: "mine" } })]),
-    );
-    const theirs = diffGraphs(
-      graph([node("a", "Prompt", { template: { value: "base" } })]),
-      graph([node("a", "Prompt", { template: { value: "theirs" } })]),
-    );
-
-    expect(contestedTargetKeys(mine, theirs)).toEqual(new Set(["node:a"]));
-  });
-
-  it("should not contest components only they touched", () => {
-    const mine = diffGraphs(
-      graph([node("a", "Prompt", { t: { value: "1" } })]),
-      graph([node("a", "Prompt", { t: { value: "2" } })]),
-    );
-    const theirs = diffGraphs(
-      graph([node("b", "Model", { t: { value: "1" } })]),
-      graph([node("b", "Model", { t: { value: "2" } })]),
-    );
-
-    expect(contestedTargetKeys(mine, theirs).size).toBe(0);
   });
 });
 

@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import useFlowConflictStore from "@/stores/flowConflictStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
+import { CanvasBanner } from "./CanvasBanner";
+import { LoadLatestDialog } from "./LoadLatestDialog";
 
 /**
  * Tells someone their flow moved on without them, and offers the way forward.
@@ -22,6 +24,7 @@ export function ConflictBanner({ flowId }: { flowId: string }) {
   const previewingVersion = useVersionPreviewStore(
     (state) => state.previewLabel !== null,
   );
+  const [loadLatestOpen, setLoadLatestOpen] = useState(false);
 
   if (!conflict || conflict.flowId !== flowId || previewingVersion) return null;
 
@@ -34,40 +37,40 @@ export function ConflictBanner({ flowId }: { flowId: string }) {
     : t("multiEdit.banner.description", { name });
 
   return (
-    <div
-      className="pointer-events-none absolute inset-x-0 bottom-6 z-50 flex justify-center px-6"
-      data-testid="flow-conflict-banner"
-    >
-      <div
-        role="status"
-        className="pointer-events-auto flex w-full max-w-3xl items-center gap-4 rounded-xl border border-accent-amber-foreground/40 bg-background px-5 py-4 shadow-lg"
-      >
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-amber">
-          <ForwardedIconComponent
-            name="TriangleAlert"
-            className="h-5 w-5 text-accent-amber-foreground"
-            aria-hidden="true"
-          />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-foreground">{title}</p>
-          <p className="text-mmd text-muted-foreground">{description}</p>
-        </div>
-        <Button
-          size="sm"
-          onClick={openDialog}
-          data-testid="flow-conflict-review-button"
-          className="shrink-0 gap-2"
-        >
-          <ForwardedIconComponent
-            name="GitCompare"
-            className="h-4 w-4"
-            aria-hidden="true"
-          />
-          {t("multiEdit.banner.review")}
-        </Button>
-      </div>
-    </div>
+    <>
+      <CanvasBanner
+        testId="flow-conflict-banner"
+        tone="warning"
+        icon="TriangleAlert"
+        title={title}
+        description={description}
+        actions={
+          <>
+            <Button
+              variant="conflictSecondary"
+              size="banner"
+              onClick={() => setLoadLatestOpen(true)}
+              data-testid="flow-conflict-load-latest-button"
+            >
+              {t("multiEdit.banner.loadLatest")}
+            </Button>
+            <Button
+              variant="conflictPrimary"
+              size="banner"
+              onClick={openDialog}
+              data-testid="flow-conflict-review-button"
+            >
+              {t("multiEdit.banner.review")}
+            </Button>
+          </>
+        }
+      />
+      <LoadLatestDialog
+        flowId={flowId}
+        open={loadLatestOpen}
+        onOpenChange={setLoadLatestOpen}
+      />
+    </>
   );
 }
 

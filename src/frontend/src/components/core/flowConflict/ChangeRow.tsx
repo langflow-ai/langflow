@@ -7,17 +7,17 @@ import type { ChangeGroup, FlowChange } from "@/utils/flow-diff";
 import { cn } from "@/utils/utils";
 
 const BADGE_VARIANT = {
-  added: "successStatic",
-  removed: "errorStatic",
-  modified: "purpleStatic",
+  added: "conflictAdded",
+  removed: "conflictRemoved",
+  modified: "conflictModified",
 } as const;
 
 /** Raw before/after, for values a sentence cannot honestly summarise. */
 function RawDiff({ before, after }: { before: string; after: string }) {
   const { t } = useTranslation();
   return (
-    <div className="mt-2 overflow-x-auto rounded-md border border-border font-mono text-xs">
-      <div className="border-b border-border bg-error-background/40 px-3 py-2">
+    <div className="mt-2 overflow-x-auto rounded-md border border-muted font-mono text-[12px] leading-[19.5px]">
+      <div className="border-b border-muted bg-error-background/40 px-3 py-2">
         <span className="mr-2 select-none text-error-foreground">-</span>
         <span className="whitespace-pre-wrap break-words text-error-foreground">
           {before || t("multiEdit.dialog.before")}
@@ -41,15 +41,17 @@ function ChangeLine({ change }: { change: FlowChange }) {
   const [showDiff, setShowDiff] = useState(false);
 
   return (
-    <li className="text-mmd text-muted-foreground">
+    <li className="text-[12px] font-medium leading-[19.5px] text-muted-foreground">
       {t(change.sentence.key, change.sentence.params)}
       {change.detail && (
         <>
+          {/* Its own line rather than trailing the sentence: inline, it landed
+              at a different place under every sentence length. */}
           <button
             type="button"
             onClick={() => setShowDiff((open) => !open)}
             aria-expanded={showDiff}
-            className="ml-2 inline-flex items-center gap-1 align-baseline text-mmd text-muted-foreground underline-offset-2 hover:underline"
+            className="flex items-center gap-1 text-[12px] font-medium leading-[19.5px] text-muted-foreground underline-offset-2 hover:underline"
           >
             <ForwardedIconComponent
               name={showDiff ? "ChevronDown" : "ChevronRight"}
@@ -76,10 +78,6 @@ type ChangeRowProps = {
   group: ChangeGroup;
   checked: boolean;
   disabled?: boolean;
-  /** Shown under the description; explains a trade the reader is making. */
-  note?: string;
-  /** This component lost the choice and will not reach the copy. */
-  muted?: boolean;
   /** Whose list this row is in. The same component can appear on both sides. */
   side: "mine" | "theirs";
   onToggle?: (targetKey: string) => void;
@@ -96,8 +94,6 @@ export function ChangeRow({
   group,
   checked,
   disabled,
-  note,
-  muted,
   side,
   onToggle,
 }: ChangeRowProps) {
@@ -107,10 +103,10 @@ export function ChangeRow({
   return (
     <div
       className={cn(
-        "rounded-lg border px-4 py-3",
-        checked && !disabled ? "border-primary" : "border-border",
-        // Not opacity: it composites into contrast and drops this text to 2.34:1.
-        (disabled || muted) && "bg-muted/40",
+        "rounded-[10px] border border-muted bg-muted/40 px-3 py-2.5",
+        // Dimmed only while it is not a choice: a row that can be ticked has to
+        // look like one.
+        disabled && "opacity-60",
       )}
       data-testid={`conflict-change-${side}-${group.targetKey}`}
     >
@@ -120,34 +116,25 @@ export function ChangeRow({
           checked={checked}
           disabled={disabled}
           onCheckedChange={() => onToggle?.(group.targetKey)}
-          aria-describedby={note ? `${checkboxId}-note` : undefined}
           className="mt-0.5"
         />
         <div className="min-w-0 flex-1">
           <label
             htmlFor={checkboxId}
-            className="flex flex-wrap items-center gap-2 text-sm font-medium text-foreground"
+            className="flex flex-wrap items-center gap-2 text-[13px] font-medium leading-[19.5px] text-note-neutral"
           >
-            <Badge variant={BADGE_VARIANT[group.badge]} size="xq">
-              {t(`multiEdit.badge.${group.badge}`)}
-            </Badge>
-            <span className={cn("truncate", muted && "line-through")}>
-              {group.label}
-            </span>
+            {side === "theirs" && (
+              <Badge variant={BADGE_VARIANT[group.badge]} size="change">
+                {t(`multiEdit.badge.${group.badge}`)}
+              </Badge>
+            )}
+            <span className="truncate">{group.label}</span>
           </label>
-          <ul className="mt-1 space-y-1">
+          <ul className="pt-0.5">
             {group.changes.map((change) => (
               <ChangeLine key={change.id} change={change} />
             ))}
           </ul>
-          {note && (
-            <p
-              id={`${checkboxId}-note`}
-              className="mt-1 text-mmd text-accent-amber-foreground"
-            >
-              {note}
-            </p>
-          )}
         </div>
       </div>
     </div>

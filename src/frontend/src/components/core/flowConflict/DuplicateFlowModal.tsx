@@ -10,13 +10,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { usePostCreateSnapshot } from "@/controllers/API/queries/flow-version/use-post-create-snapshot";
 import { usePostForkFlow } from "@/controllers/API/queries/flows/use-post-fork-flow";
 import { usePostOverwriteFlow } from "@/controllers/API/queries/flows/use-post-overwrite-flow";
 import { adoptServerVersionOnCanvas } from "@/hooks/flows/adopt-version-on-canvas";
 import {
   attachTheirFlow,
-  fetchAndAdoptServerVersion,
   refreshConflictState,
 } from "@/hooks/flows/conflict-actions";
 import useAlertStore from "@/stores/alertStore";
@@ -27,7 +25,6 @@ import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { clearConflictDraft } from "@/utils/conflict-draft";
 import {
   applySelectedChanges,
-  contestedTargetKeys,
   diffGraphs,
   groupChangesByTarget,
   siblingChangeIds,
@@ -67,7 +64,6 @@ export function DuplicateFlowModal() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const clearConflict = useFlowConflictStore((state) => state.clearConflict);
-  const { mutateAsync: archiveMyVersion } = usePostCreateSnapshot();
   const { mutate: forkFlow, isPending: isForking } = usePostForkFlow();
   const { mutate: overwriteFlow, isPending: isOverwriting } =
     usePostOverwriteFlow();
@@ -78,9 +74,7 @@ export function DuplicateFlowModal() {
   const [isRebuilding, setIsRebuilding] = useState(false);
   // Discarding cannot be undone, so it is asked twice: the first click states
   // what will be lost, the second does it.
-  const [confirmingDiscard, setConfirmingDiscard] = useState(false);
-  const [isDiscarding, setIsDiscarding] = useState(false);
-  const isPending = isForking || isOverwriting || isRebuilding || isDiscarding;
+  const isPending = isForking || isOverwriting || isRebuilding;
   // `isPending` disables the buttons a render too late to stop a double click, and
   // the second fork then lost the race for the copy's name and came back an error.
   // A ref is the only guard that is already true inside the same click.
@@ -94,37 +88,30 @@ export function DuplicateFlowModal() {
     submittingRef.current = false;
   };
 
-  const {
-    theirChanges,
-    myGroups,
-    theirGroups,
-    contested,
-    myGraph,
-    theirGraph,
-  } = useMemo(() => {
-    const baseFlow = useFlowsManagerStore.getState().currentFlow;
-    const live = useFlowStore.getState();
-    const base = baseFlow?.data ?? null;
-    const mine = { nodes: live.nodes, edges: live.edges };
-    const theirs = conflict?.theirFlow?.data ?? null;
+  const { theirChanges, myGroups, theirGroups, myGraph, theirGraph } =
+    useMemo(() => {
+      const baseFlow = useFlowsManagerStore.getState().currentFlow;
+      const live = useFlowStore.getState();
+      const base = baseFlow?.data ?? null;
+      const mine = { nodes: live.nodes, edges: live.edges };
+      const theirs = conflict?.theirFlow?.data ?? null;
 
-    // Without the version we loaded there is no way to tell our edits from
-    // theirs, so the dialog offers nothing to merge and still duplicates.
-    const mineDiff = base ? diffGraphs(base, mine) : [];
-    const theirsDiff = base && theirs ? diffGraphs(base, theirs) : [];
+      // Without the version we loaded there is no way to tell our edits from
+      // theirs, so the dialog offers nothing to merge and still duplicates.
+      const mineDiff = base ? diffGraphs(base, mine) : [];
+      const theirsDiff = base && theirs ? diffGraphs(base, theirs) : [];
 
-    return {
-      myChanges: mineDiff,
-      theirChanges: theirsDiff,
-      // One row per component: it is adopted whole or not at all, so a row per
-      // change offered checkboxes that could only ever move together.
-      myGroups: groupChangesByTarget(mineDiff),
-      theirGroups: groupChangesByTarget(theirsDiff),
-      contested: contestedTargetKeys(mineDiff, theirsDiff),
-      myGraph: mine,
-      theirGraph: theirs,
-    };
-  }, [conflict?.theirFlow]);
+      return {
+        myChanges: mineDiff,
+        theirChanges: theirsDiff,
+        // One row per component: it is adopted whole or not at all, so a row per
+        // change offered checkboxes that could only ever move together.
+        myGroups: groupChangesByTarget(mineDiff),
+        theirGroups: groupChangesByTarget(theirsDiff),
+        myGraph: mine,
+        theirGraph: theirs,
+      };
+    }, [conflict?.theirFlow]);
 
   if (!conflict) return null;
 
@@ -136,9 +123,6 @@ export function DuplicateFlowModal() {
     theirChanges
       .filter((change) => selected.has(change.id))
       .map((change) => change.targetKey),
-  );
-  const keptOfMine = myGroups.filter(
-    (group) => !takenFromThem.has(group.targetKey),
   );
   const takenGroups = theirGroups.filter((group) =>
     takenFromThem.has(group.targetKey),
@@ -196,63 +180,6 @@ export function DuplicateFlowModal() {
       .getState()
       .reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 };
     return { ...merged, viewport };
-  };
-
-  /**
-   * Leaves the conflict by giving up your own edits and taking the server's version.
-   *
-   * The exit the kickoff called "discard and take the latest" and the only one
-   * that asks for nothing in return: without it, someone who just wants their
-   * colleague's version has to duplicate a flow they do not want, and cannot
-   * leave the page while the conflict stands.
-   */
-  /** The canvas exactly as this person left it, read at the moment they leave. */
-  const captureMyCanvas = () => {
-    const live = useFlowStore.getState();
-    return {
-      nodes: live.nodes,
-      edges: live.edges,
-      viewport: live.reactFlowInstance?.getViewport() ?? {
-        x: 0,
-        y: 0,
-        zoom: 1,
-      },
-    } as unknown as Record<string, unknown>;
-  };
-
-  const onDiscard = async () => {
-    if (!claimSubmission()) return;
-    setIsDiscarding(true);
-    try {
-      // Archived before anything is thrown away, and the discard is abandoned
-      // if it cannot be: the button promises this work stays recoverable, and a
-      // discard that silently failed to keep that promise is the one outcome
-      // this dialog exists to prevent.
-      try {
-        await archiveMyVersion({
-          flowId: conflict.flowId,
-          description: t("multiEdit.dialog.discardArchiveLabel"),
-          data: captureMyCanvas(),
-        });
-      } catch {
-        setErrorData({ title: t("multiEdit.dialog.discardArchiveFailed") });
-        return;
-      }
-
-      const adopted = await fetchAndAdoptServerVersion(conflict.flowId);
-      if (!adopted) {
-        setErrorData({ title: t("multiEdit.dialog.overwriteFailed") });
-        return;
-      }
-      // Safe to drop now: the same work is in version history.
-      clearConflictDraft(useAuthStore.getState().userData?.id, conflict.flowId);
-      clearConflict();
-      setSuccessData({ title: t("multiEdit.dialog.discardSucceeded") });
-    } finally {
-      setIsDiscarding(false);
-      releaseSubmission();
-      setConfirmingDiscard(false);
-    }
   };
 
   const onOverwrite = () => {
@@ -330,49 +257,52 @@ export function DuplicateFlowModal() {
     setErrorData({ title: t("multiEdit.dialog.overwriteMovedAgain") });
   };
 
-  const footer =
-    takenFromThem.size > 0
-      ? t("multiEdit.dialog.footerBoth", {
-          yours: keptOfMine.length,
-          theirs: takenGroups.length,
-        })
-      : t("multiEdit.dialog.footerYours", { count: myGroups.length });
-
   return (
     <Dialog open={dialogOpen} onOpenChange={(open) => !open && closeDialog()}>
-      <DialogContent className="max-w-2xl" data-testid="duplicate-flow-modal">
-        <DialogHeader>
-          <DialogTitle>{t("multiEdit.dialog.title")}</DialogTitle>
-          <DialogDescription>
-            {t("multiEdit.dialog.subtitle", { name: authorName })}
-          </DialogDescription>
+      <DialogContent
+        hideCloseButton
+        overlayClassName="bg-black/60"
+        className="w-[560px] max-w-[560px] gap-0 overflow-hidden rounded-[14px] border-muted bg-background p-0 shadow-[0_24px_64px_rgba(0,0,0,0.6)]"
+        data-testid="duplicate-flow-modal"
+      >
+        <DialogHeader className="flex-row items-start justify-between space-y-0 border-b border-muted px-5 py-4 text-left">
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <DialogTitle className="text-base font-semibold leading-6 text-foreground">
+              {t("multiEdit.dialog.title")}
+            </DialogTitle>
+            <DialogDescription className="text-[13px] leading-[19.5px] text-muted-foreground">
+              {t("multiEdit.dialog.subtitle", { name: authorName })}
+            </DialogDescription>
+          </div>
+          <button
+            type="button"
+            onClick={closeDialog}
+            aria-label={t("common.close")}
+            className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ForwardedIconComponent
+              name="X"
+              className="h-4 w-4"
+              aria-hidden="true"
+            />
+          </button>
         </DialogHeader>
 
         {/* Padded on every side the scroll box clips: without the bottom, the last
             row's border sits exactly on the overflow edge and is shaved off. */}
-        <div className="max-h-[55vh] space-y-6 overflow-y-auto px-1 pb-1">
+        <div className="max-h-[55vh] space-y-5 overflow-y-auto px-5 py-4">
           <section>
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {t("multiEdit.dialog.yourChanges")}
-              </h3>
-              <span className="flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
-                <ForwardedIconComponent
-                  name="Lock"
-                  className="h-3 w-3"
-                  aria-hidden="true"
-                />
-                {takenFromThem.size > 0
-                  ? t("multiEdit.dialog.includedUnlessReplaced")
-                  : t("multiEdit.dialog.alwaysIncluded")}
-              </span>
-            </div>
             {myGroups.length === 0 ? (
-              <p className="text-mmd text-muted-foreground">
+              <p className="text-[13px] leading-[19.5px] text-muted-foreground">
                 {t("multiEdit.dialog.noYourChanges")}
               </p>
             ) : (
-              <div className="space-y-2">
+              <h3 className="mb-2.5 text-[11px] uppercase leading-[16.5px] tracking-[0.55px] text-muted-foreground">
+                {t("multiEdit.dialog.yourChanges")}
+              </h3>
+            )}
+            {myGroups.length > 0 && (
+              <div className="space-y-1.5">
                 {myGroups.map((group) => {
                   const replaced = takenFromThem.has(group.targetKey);
                   return (
@@ -381,15 +311,11 @@ export function DuplicateFlowModal() {
                       group={group}
                       side="mine"
                       checked={!replaced}
-                      disabled
-                      muted={replaced}
-                      note={
-                        replaced
-                          ? t("multiEdit.dialog.replacedByTheirs", {
-                              name: authorName,
-                            })
-                          : undefined
-                      }
+                      // Locked while it is included — that is what the heading
+                      // promises. Once their version replaces it the row becomes
+                      // the way back: ticking it drops theirs and takes mine again.
+                      disabled={!replaced}
+                      onToggle={replaced ? toggleComponent : undefined}
                     />
                   );
                 })}
@@ -398,36 +324,36 @@ export function DuplicateFlowModal() {
           </section>
 
           <section>
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {t("multiEdit.dialog.theirChanges", { name: authorName })}
-              </h3>
-              {theirGroups.length > 0 && (
-                <span className="text-xs text-muted-foreground">
+            {theirGroups.length === 0 ? (
+              <p className="text-[13px] leading-[19.5px] text-muted-foreground">
+                {t("multiEdit.dialog.noTheirChanges")}
+              </p>
+            ) : (
+              <div className="mb-2.5 flex items-end justify-between gap-2">
+                <div className="flex flex-col gap-0.5">
+                  <h3 className="text-[11px] uppercase leading-[16.5px] tracking-[0.55px] text-muted-foreground">
+                    {t("multiEdit.dialog.theirChanges", { name: authorName })}
+                  </h3>
+                  <span className="text-xs leading-[18px] text-placeholder">
+                    {t("multiEdit.dialog.selectChanges")}
+                  </span>
+                </div>
+                <span className="pb-0.5 text-[11px] leading-[16.5px] text-muted-foreground">
                   {t("multiEdit.dialog.selectedCount", {
                     selected: takenGroups.length,
                     total: theirGroups.length,
                   })}
                 </span>
-              )}
-            </div>
-            {theirGroups.length === 0 ? (
-              <p className="text-mmd text-muted-foreground">
-                {t("multiEdit.dialog.noTheirChanges")}
-              </p>
-            ) : (
-              <div className="space-y-2">
+              </div>
+            )}
+            {theirGroups.length > 0 && (
+              <div className="space-y-1.5">
                 {theirGroups.map((group) => (
                   <ChangeRow
                     key={group.targetKey}
                     group={group}
                     side="theirs"
                     checked={takenFromThem.has(group.targetKey)}
-                    note={
-                      contested.has(group.targetKey)
-                        ? t("multiEdit.dialog.replacesYours")
-                        : undefined
-                    }
                     onToggle={toggleComponent}
                   />
                 ))}
@@ -437,16 +363,10 @@ export function DuplicateFlowModal() {
         </div>
 
         <ConflictDialogFooter
-          summary={footer}
-          ownChangeCount={keptOfMine.length}
-          confirmingDiscard={confirmingDiscard}
-          setConfirmingDiscard={setConfirmingDiscard}
           isPending={isPending}
           isForking={isForking}
           isOverwriting={isOverwriting}
-          isDiscarding={isDiscarding}
           onCancel={closeDialog}
-          onDiscard={() => void onDiscard()}
           onDuplicate={onDuplicate}
           onOverwrite={onOverwrite}
         />

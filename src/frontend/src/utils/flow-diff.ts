@@ -329,25 +329,6 @@ export const groupChangesByTarget = (changes: FlowChange[]): ChangeGroup[] => {
 };
 
 /**
- * Components both people edited, where the copy can carry one version or the other.
- *
- * Component-level rather than field-level on purpose: a merge that interleaves two
- * people's edits inside one component can produce a configuration neither wrote. So
- * the choice is whole-component, and it is a choice — not a refusal.
- */
-export const contestedTargetKeys = (
-  mine: FlowChange[],
-  theirs: FlowChange[],
-): Set<string> => {
-  const minePerTarget = new Set(mine.map((change) => change.targetKey));
-  return new Set(
-    theirs
-      .map((change) => change.targetKey)
-      .filter((key) => minePerTarget.has(key)),
-  );
-};
-
-/**
  * Every change that travels with *change*, because taking one takes the component.
  *
  * Selection has to be grouped this way or the dialog lies: applying a change replaces

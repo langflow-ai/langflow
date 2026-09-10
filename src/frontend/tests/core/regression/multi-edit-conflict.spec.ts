@@ -137,8 +137,10 @@ test(
 
     await page.runA11yScan("duplicate-flow-modal");
 
-    // My own work is stated, and stated as not up for negotiation.
-    await expect(modal.getByText(/always included/i)).toBeVisible();
+    // My own work is stated.
+    await expect(
+      modal.getByRole("heading", { name: /your changes/i }),
+    ).toBeVisible();
 
     await page.getByTestId("confirm-duplicate-flow").click();
     await expect

@@ -75,9 +75,8 @@ test("Bob takes the latest: Alice's version stands and nobody is refused", async
     await alice.request.get(`/api/v1/flows/${flowId}`)
   ).json();
 
-  await bob.getByTestId("flow-conflict-review-button").click();
-  await bob.getByTestId("discard-my-changes").click();
-  await bob.getByTestId("confirm-discard-my-changes").click();
+  await bob.getByTestId("flow-conflict-load-latest-button").click();
+  await bob.getByTestId("load-latest-confirm-button").click();
   await expect(bob.getByTestId("flow-conflict-banner")).toBeHidden({
     timeout: CONFLICT_WINDOW_MS,
   });
@@ -137,7 +136,7 @@ test("Bob updates the flow: Alice is told her version is now out of date", async
     timeout: CONFLICT_WINDOW_MS,
   });
   await expect(
-    alice.getByTestId("flow-conflict-banner").getByText(/out of date/i),
+    alice.getByTestId("flow-conflict-banner").getByText(/newer version/i),
   ).toBeVisible();
   console.log(
     "update-flow: bob saved, alice correctly told her version is stale",

@@ -58,27 +58,27 @@ async function raiseConflict(page: Page): Promise<string> {
   return flowId;
 }
 
-test("the banner says the version is out of date and names all three exits", async ({
+test("the banner offers the two direct exits and the dialog names all three", async ({
   page,
 }) => {
   test.setTimeout(3 * 60 * 1000);
   await raiseConflict(page);
 
   const banner = page.getByTestId("flow-conflict-banner");
-  await expect(banner.getByText(/out of date/i)).toBeVisible();
+  await expect(banner.getByText(/newer version/i)).toBeVisible();
   // It used to offer duplicating only, long after a second exit shipped.
-  await expect(banner.getByText(/update this flow/i)).toBeVisible();
-  await expect(banner.getByText(/duplicate/i)).toBeVisible();
-  await expect(banner.getByText(/latest version/i)).toBeVisible();
+  await expect(
+    banner.getByTestId("flow-conflict-load-latest-button"),
+  ).toBeVisible();
+  await expect(banner.getByTestId("flow-conflict-review-button")).toBeVisible();
 
   await page.getByTestId("flow-conflict-review-button").click();
   const modal = page.getByTestId("duplicate-flow-modal");
   await expect(modal).toBeVisible();
-  await expect(modal.getByText(/out of date/i).first()).toBeVisible();
+  await expect(modal.getByText(/review version changes/i).first()).toBeVisible();
   await expect(modal.getByTestId("confirm-overwrite-flow")).toHaveText(
-    /update flow/i,
+    /update current flow/i,
   );
-  await expect(modal.getByTestId("discard-my-changes")).toBeVisible();
   await expect(modal.getByTestId("confirm-duplicate-flow")).toBeVisible();
 });
 
@@ -91,18 +91,15 @@ test("discarding asks first, then takes the other person's version", async ({
     await page.request.get(`/api/v1/flows/${flowId}`)
   ).json();
 
-  await page.getByTestId("flow-conflict-review-button").click();
-  await expect(page.getByTestId("duplicate-flow-modal")).toBeVisible();
-
   // Still asked twice: the work becomes recoverable, not unimportant.
-  await page.getByTestId("discard-my-changes").click();
-  await expect(page.getByText(/discard your changes/i)).toBeVisible();
+  await page.getByTestId("flow-conflict-load-latest-button").click();
+  await expect(page.getByTestId("load-latest-dialog")).toBeVisible();
   const writes: number[] = [];
   page.on("response", (r) => {
     if (r.request().method() === "PATCH" && r.url().includes("/flows/"))
       writes.push(r.status());
   });
-  await page.getByTestId("confirm-discard-my-changes").click();
+  await page.getByTestId("load-latest-confirm-button").click();
 
   // The conflict is over, the person stays on the flow, and nothing was written.
   await expect(page.getByTestId("flow-conflict-banner")).toBeHidden({
@@ -153,9 +150,8 @@ test("after discarding, editing saves normally again", async ({ page }) => {
   test.setTimeout(3 * 60 * 1000);
   const flowId = await raiseConflict(page);
 
-  await page.getByTestId("flow-conflict-review-button").click();
-  await page.getByTestId("discard-my-changes").click();
-  await page.getByTestId("confirm-discard-my-changes").click();
+  await page.getByTestId("flow-conflict-load-latest-button").click();
+  await page.getByTestId("load-latest-confirm-button").click();
   await expect(page.getByTestId("flow-conflict-banner")).toBeHidden({
     timeout: CONFLICT_WINDOW_MS,
   });
