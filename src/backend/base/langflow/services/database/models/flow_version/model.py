@@ -77,9 +77,16 @@ class FlowVersionReadWithData(FlowVersionRead):
 
 
 class FlowVersionCreate(BaseModel):
-    """Schema for creating a flow version — user only provides description."""
+    """Schema for creating a flow version.
+
+    ``data`` lets a caller archive a graph the server never had — the state on
+    somebody's canvas as they abandon it. Without it the only snapshot possible
+    is of what is already stored, which is exactly the state that is *not* at
+    risk of being lost.
+    """
 
     description: str | None = Field(default=None, max_length=500)
+    data: dict | None = Field(default=None)
 
 
 class FlowVersionListResponse(BaseModel):

@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { usePostCreateSnapshot } from "@/controllers/API/queries/flow-version/use-post-create-snapshot";
 import { usePostForkFlow } from "@/controllers/API/queries/flows/use-post-fork-flow";
 import { usePostOverwriteFlow } from "@/controllers/API/queries/flows/use-post-overwrite-flow";
 import { adoptServerVersionOnCanvas } from "@/hooks/flows/adopt-version-on-canvas";
@@ -66,6 +67,7 @@ export function DuplicateFlowModal() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const clearConflict = useFlowConflictStore((state) => state.clearConflict);
+  const { mutateAsync: archiveMyVersion } = usePostCreateSnapshot();
   const { mutate: forkFlow, isPending: isForking } = usePostForkFlow();
   const { mutate: overwriteFlow, isPending: isOverwriting } =
     usePostOverwriteFlow();
@@ -204,17 +206,45 @@ export function DuplicateFlowModal() {
    * colleague's version has to duplicate a flow they do not want, and cannot
    * leave the page while the conflict stands.
    */
+  /** The canvas exactly as this person left it, read at the moment they leave. */
+  const captureMyCanvas = () => {
+    const live = useFlowStore.getState();
+    return {
+      nodes: live.nodes,
+      edges: live.edges,
+      viewport: live.reactFlowInstance?.getViewport() ?? {
+        x: 0,
+        y: 0,
+        zoom: 1,
+      },
+    } as unknown as Record<string, unknown>;
+  };
+
   const onDiscard = async () => {
     if (!claimSubmission()) return;
     setIsDiscarding(true);
     try {
+      // Archived before anything is thrown away, and the discard is abandoned
+      // if it cannot be: the button promises this work stays recoverable, and a
+      // discard that silently failed to keep that promise is the one outcome
+      // this dialog exists to prevent.
+      try {
+        await archiveMyVersion({
+          flowId: conflict.flowId,
+          description: t("multiEdit.dialog.discardArchiveLabel"),
+          data: captureMyCanvas(),
+        });
+      } catch {
+        setErrorData({ title: t("multiEdit.dialog.discardArchiveFailed") });
+        return;
+      }
+
       const adopted = await fetchAndAdoptServerVersion(conflict.flowId);
       if (!adopted) {
         setErrorData({ title: t("multiEdit.dialog.overwriteFailed") });
         return;
       }
-      // The draft exists to protect work from being lost by accident. This is
-      // losing it on purpose, so it goes with the decision.
+      // Safe to drop now: the same work is in version history.
       clearConflictDraft(useAuthStore.getState().userData?.id, conflict.flowId);
       clearConflict();
       setSuccessData({ title: t("multiEdit.dialog.discardSucceeded") });

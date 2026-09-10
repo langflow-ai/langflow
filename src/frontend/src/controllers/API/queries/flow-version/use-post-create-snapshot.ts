@@ -8,6 +8,8 @@ import { UseRequestProcessor } from "../../services/request-processor";
 interface ICreateSnapshot {
   flowId: string;
   description?: string | null;
+  /** The graph to archive. Omitted, the server snapshots what it already has. */
+  data?: Record<string, unknown> | null;
 }
 
 export const usePostCreateSnapshot: useMutationFunctionType<
@@ -19,7 +21,10 @@ export const usePostCreateSnapshot: useMutationFunctionType<
   const createSnapshotFn = async (
     payload: ICreateSnapshot,
   ): Promise<FlowVersionEntry> => {
-    const body: FlowVersionCreate = { description: payload.description };
+    const body: FlowVersionCreate = {
+      description: payload.description,
+      data: payload.data,
+    };
     const response = await api.post<FlowVersionEntry>(
       `${getURL("FLOWS")}/${payload.flowId}/versions/`,
       body,

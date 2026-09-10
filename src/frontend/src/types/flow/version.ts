@@ -16,6 +16,8 @@ export type FlowVersionEntryWithData = FlowVersionEntry & {
 
 export type FlowVersionCreate = {
   description?: string | null;
+  /** The graph to archive. Omitted, the server snapshots what it already has. */
+  data?: Record<string, unknown> | null;
 };
 
 export type FlowVersionListResponse = {

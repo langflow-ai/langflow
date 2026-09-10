@@ -219,13 +219,20 @@ async def create_snapshot(
     )
     description = body.description if body else None
 
-    try:
-        data = copy.deepcopy(flow.data)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=422,
-            detail="Flow data could not be copied for snapshot. The data may be corrupted.",
-        ) from exc
+    # A caller may hand us the graph to archive. The permission check above
+    # already established they may write this flow, so recording a version of
+    # it from their own canvas is within what they can already do.
+    supplied = body.data if body else None
+    if supplied is not None:
+        data = supplied
+    else:
+        try:
+            data = copy.deepcopy(flow.data)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=422,
+                detail="Flow data could not be copied for snapshot. The data may be corrupted.",
+            ) from exc
 
     try:
         entry = await create_flow_version_entry(

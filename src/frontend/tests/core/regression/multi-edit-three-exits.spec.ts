@@ -94,7 +94,7 @@ test("discarding asks first, then takes the other person's version", async ({
   await page.getByTestId("flow-conflict-review-button").click();
   await expect(page.getByTestId("duplicate-flow-modal")).toBeVisible();
 
-  // Irreversible, so it is asked twice.
+  // Still asked twice: the work becomes recoverable, not unimportant.
   await page.getByTestId("discard-my-changes").click();
   await expect(page.getByText(/discard your changes/i)).toBeVisible();
   const writes: number[] = [];
@@ -123,6 +123,24 @@ test("discarding asks first, then takes the other person's version", async ({
     writes.filter((s) => s === 409),
     "no refused save may follow",
   ).toHaveLength(0);
+
+  // The whole point of the exit: the abandoned canvas is recoverable.
+  const versions = await (
+    await page.request.get(`/api/v1/flows/${flowId}/versions/`)
+  ).json();
+  const entries = versions.entries ?? versions;
+  const archived = entries.find((v: { description?: string }) =>
+    (v.description ?? "").toLowerCase().includes("discard"),
+  );
+  expect(archived, "discarding archives the canvas it threw away").toBeTruthy();
+
+  const archivedGraph = await (
+    await page.request.get(`/api/v1/flows/${flowId}/versions/${archived.id}`)
+  ).json();
+  expect(
+    JSON.stringify(archivedGraph.data),
+    "the archived version is the discarded work, not the version that won",
+  ).not.toBe(JSON.stringify(theirGraph.data));
 
   // The stranded draft went with the decision, so a reload does not offer it back.
   const drafts = await page.evaluate(() =>

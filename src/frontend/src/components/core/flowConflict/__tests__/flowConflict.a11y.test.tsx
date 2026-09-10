@@ -15,6 +15,16 @@ jest.mock("react-router-dom", () => ({
   useNavigate: () => jest.fn(),
 }));
 
+jest.mock(
+  "@/controllers/API/queries/flow-version/use-post-create-snapshot",
+  () => ({
+    usePostCreateSnapshot: () => ({
+      mutateAsync: jest.fn().mockResolvedValue({}),
+      isPending: false,
+    }),
+  }),
+);
+
 jest.mock("@/controllers/API/queries/flows/use-post-fork-flow", () => ({
   usePostForkFlow: () => ({ mutate: jest.fn(), isPending: false }),
 }));
