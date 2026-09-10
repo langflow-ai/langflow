@@ -13,6 +13,8 @@ from langflow.utils.connection_string_parser import transform_connection_string
         ("protocol::password@host", "protocol::password@host"),
         ("protocol:user:password@", "protocol:user:password@"),
         ("protocol:user:pa@ss@word@host", "protocol:user:pa%40ss%40word@host"),
+        ("protocol:user:p/ss@host", "protocol:user:p%2Fss@host"),
+        ("postgresql://user:p@ss/w0rd@host:5432/db", "postgresql://user:p%40ss%2Fw0rd@host:5432/db"),
     ],
 )
 def test_transform_connection_string(connection_string, expected):
