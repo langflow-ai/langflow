@@ -126,6 +126,14 @@ class BackgroundExecutionService(Service):
                 "background_backend=scaled: background jobs are drained by separate "
                 "'langflow worker' processes sharing this database; ensure at least one is running."
             )
+            if (self._settings.database_url or "").startswith("sqlite"):
+                # Loud, not just a docstring note: SQLite serializes writers, so
+                # every durable milestone across the whole fleet contends on one
+                # writer lock — and the file must be shared, so single host only.
+                logger.warning(
+                    "background_backend=scaled is running on SQLite: single-host only, and all "
+                    "workers contend on one writer lock. Use Postgres for real fleets."
+                )
         self._backend = backend
         self._executor = InProcessExecutor(max_concurrency=self._settings.background_max_concurrency)
         self._bus = InMemoryLiveBus()
@@ -166,7 +174,9 @@ class BackgroundExecutionService(Service):
             self._deadline_task.cancel()
             task, self._deadline_task = self._deadline_task, None
             await asyncio.gather(task, return_exceptions=True)
-        await self._executor.stop()
+        # Mirror start(): scaled mode never started the executor.
+        if not self._scaled:
+            await self._executor.stop()
 
     def _start_deadline_watchdog(self) -> None:
         """Run the input-deadline sweep on the watchdog interval (only when the budget is set).
@@ -247,14 +257,14 @@ class BackgroundExecutionService(Service):
             # scope: reading a JSON column off a row already detached from its session
             # would depend on the engine's expire_on_commit setting.
             stale_job_ids = [job.job_id for job in result.all() if self._effective_session(job) == effective_session]
-        cancelled: list[UUID] = []
-        for stale_job_id in stale_job_ids:
-            if self._scaled:
-                await self._backend.stop(str(stale_job_id))
-                cancelled.append(stale_job_id)
-            elif await self._cancel_suspended(stale_job_id, job_service):
-                cancelled.append(stale_job_id)
-        return cancelled
+        # A SUSPENDED job has no running worker in ANY mode, so cancel each row
+        # directly. A durable STOP signal would never be consumed (only a live
+        # runner polls it), leaving the row SUSPENDED forever and the stale
+        # STOP primed to self-cancel a later resume. Only CAS winners are
+        # reported, so callers never hear about a run a resume just revived.
+        return [
+            stale_job_id for stale_job_id in stale_job_ids if await self._cancel_suspended(stale_job_id, job_service)
+        ]
 
     async def submit(self, *, flow_id: UUID, request: dict[str, Any], user: UserRead) -> UUID:
         # Lazy-start the executor so the facade works whether or not the app
@@ -673,15 +683,17 @@ class BackgroundExecutionService(Service):
 
     async def stop_job(self, job_id: UUID, user: UserRead) -> None:
         job = await self._validate(job_id, user)
+        job_service = get_job_service()
+        # A SUSPENDED job has no running worker in ANY mode — cancel it directly
+        # (a durable STOP would sit unconsumed forever). A lost claim means a
+        # resume flipped it IN_PROGRESS mid-call — fall through to the
+        # running-job stop path instead of doing nothing.
+        if job.status == JobStatus.SUSPENDED and await self._cancel_suspended(job_id, job_service):
+            return
         if self._scaled:
             # Scaled mode: the owning worker runs in another process; backend.stop
             # writes the durable STOP signal its JobRunner polls at vertex boundaries.
             await self._backend.stop(str(job_id))
-            return
-        job_service = get_job_service()
-        # A lost claim means a resume flipped it IN_PROGRESS mid-call — fall
-        # through to the running-job stop path instead of doing nothing.
-        if job.status == JobStatus.SUSPENDED and await self._cancel_suspended(job_id, job_service):
             return
         await job_service.write_signal(job_id, SignalType.STOP)
         await self._executor.cancel(str(job_id))
