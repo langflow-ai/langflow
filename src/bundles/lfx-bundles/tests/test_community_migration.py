@@ -108,6 +108,19 @@ def test_cloudflare_rejects_http_errors():
         embeddings.embed_query("test")
 
 
+def test_cloudflare_embeddings_remain_picklable():
+    # The Redis cache serializes built vertex results; the retired Community class pickled.
+    import pickle
+
+    embeddings = (
+        CloudflareWorkersAIEmbeddingsComponent().set(account_id="account", api_token=TEST_TOKEN).build_embeddings()
+    )
+    restored = pickle.loads(pickle.dumps(embeddings))  # noqa: S301 - round-trips an object built in this test
+    assert type(restored) is type(embeddings)
+    assert restored.headers == {"Authorization": "Bearer test-token"}
+    assert restored._inference_url == embeddings._inference_url
+
+
 def test_chroma_persists_filtered_metadata_without_community(tmp_path):
     component = ChromaVectorStoreComponent().set(
         collection_name="migration-test",

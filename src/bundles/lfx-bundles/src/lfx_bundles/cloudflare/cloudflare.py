@@ -1,8 +1,8 @@
-from langchain_cloudflare import CloudflareWorkersAIEmbeddings
-from langchain_core.runnables.config import run_in_executor
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import Embeddings
 from lfx.io import BoolInput, DictInput, IntInput, MessageTextInput, Output, SecretStrInput
+
+from lfx_bundles.cloudflare.cloudflare_common import CompatibleCloudflareEmbeddings
 
 
 class CloudflareWorkersAIEmbeddingsComponent(LCModelComponent):
@@ -64,15 +64,6 @@ class CloudflareWorkersAIEmbeddingsComponent(LCModelComponent):
     ]
 
     def build_embeddings(self) -> Embeddings:
-        class CompatibleCloudflareEmbeddings(CloudflareWorkersAIEmbeddings):
-            # The new provider's async client adds a hard-coded five-second timeout.
-            # Keep the existing executor-backed behavior used by knowledge-base calls.
-            async def aembed_query(self, text: str) -> list[float]:
-                return await run_in_executor(None, self.embed_query, text)
-
-            async def aembed_documents(self, texts: list[str]) -> list[list[float]]:
-                return await run_in_executor(None, self.embed_documents, texts)
-
         try:
             embeddings = CompatibleCloudflareEmbeddings(
                 account_id=self.account_id,

@@ -27,7 +27,8 @@ identifiers stay unchanged.
   parsing, result formatting, empty metadata, and empty/error responses.
 - Cloudflare uses `langchain-cloudflare~=0.3.9`, explicitly disabling the newly
   implicit `AI_GATEWAY` routing default. An executor adapter preserves the old async
-  timeout behavior for slow successful responses. The provider validates empty credentials
+  timeout behavior for slow successful responses; it lives in an importable module so
+  built embeddings still pickle for the Redis cache. The provider validates empty credentials
   earlier and raises HTTP errors instead of parsing an error body as embeddings.
 - Cohere 0.6 and Google Community 5 drop their hard Community requirements. Google
   Drive retains our single-Google-Doc path and supplied OAuth credentials; it avoids
