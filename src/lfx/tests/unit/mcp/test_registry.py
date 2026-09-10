@@ -2,7 +2,50 @@
 
 from __future__ import annotations
 
+import pytest
 from lfx.mcp.registry import describe_component, load_registry, search_registry
+
+
+class TestDescribeConfigurationMetadata:
+    def test_exposes_options_defaults_and_bounds(self):
+        registry = {
+            "Example": {
+                "template": {
+                    "operator": {"type": "str", "options": ["equals", "contains"], "value": "equals", "required": True},
+                    "temperature": {
+                        "type": "float",
+                        "value": 0.0,
+                        "range_spec": {"min": 0.0, "max": 1.0, "step": 0.01, "step_type": "float", "other": "omit"},
+                    },
+                    "choice": {"type": "str", "options": ["known"], "combobox": True, "list": True, "value": []},
+                    "timeout": {"type": "duration", "options": ["Days"], "value": {"unit": "Days", "value": 3}},
+                }
+            }
+        }
+        fields = {field["name"]: field for field in describe_component(registry, "Example")["fields"]}
+        assert fields["operator"] == {
+            "name": "operator",
+            "type": "str",
+            "required": True,
+            "options": ["equals", "contains"],
+            "default": "equals",
+        }
+        assert fields["temperature"]["default"] == 0.0
+        assert fields["temperature"]["range_spec"] == {"min": 0.0, "max": 1.0, "step": 0.01, "step_type": "float"}
+        assert fields["choice"]["combobox"] is True
+        assert fields["choice"]["list"] is True
+        assert fields["timeout"]["default"] == {"unit": "Days", "value": 3}
+
+    @pytest.mark.parametrize(
+        ("name", "metadata"),
+        [("api_key", {}), ("credential", {"password": True}), ("credential", {"type": "SecretStr"})],
+    )
+    def test_omits_secret_defaults(self, name, metadata):
+        registry = {"Example": {"template": {name: {"type": "str", "value": "test-only-placeholder", **metadata}}}}
+        field = describe_component(registry, "Example")["fields"][0]
+        assert field["name"] == name
+        assert "default" not in field
+        assert "value" not in field
 
 
 class _StubClient:

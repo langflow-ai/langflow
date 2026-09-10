@@ -15,6 +15,26 @@ from tests.api_keys import has_api_key
 
 
 class TestFlowBuilderPrompt:
+    def test_should_use_declared_configuration_constraints(self):
+        prompt = " ".join(FLOW_BUILDER_PROMPT.split())
+
+        assert (
+            "For closed scalar `options`, use exact, case-sensitive values. "
+            "For `list` fields, select each item from the options."
+        ) in prompt
+        assert (
+            "A `combobox` allows free-text values; preserve structured values "
+            "(such as duration objects) and structured options in their declared shape."
+        ) in prompt
+        assert (
+            "Keep numeric values within `range_spec` bounds. When an optional field has a "
+            "`default`, omit it unless the user requests another value."
+        ) in prompt
+        assert (
+            "If configuration fails validation, correct the invalid parameter before retrying; "
+            "the rejected configuration call does not apply any of its parameter changes."
+        ) in prompt
+
     def test_should_mention_search_components_tool(self):
         assert "search_components" in FLOW_BUILDER_PROMPT
 

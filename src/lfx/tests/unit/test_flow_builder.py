@@ -5,6 +5,7 @@ no I/O, no network.
 """
 
 import json
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -121,6 +122,130 @@ def _fresh_flow(name="Test Flow"):
 # ---------------------------------------------------------------------------
 # Flow
 # ---------------------------------------------------------------------------
+
+
+class TestConfigureValidation:
+    @pytest.fixture
+    def configured_flow(self):
+        registry = {
+            "Configurable": _make_template(
+                "Configurable",
+                template_fields={
+                    "_type": "CustomComponent",
+                    "operator": {"type": "str", "options": ["equals", "contains"], "value": "equals"},
+                    "temperature": {"type": "float", "range_spec": {"min": 0.0, "max": 1.0}, "value": 0.1},
+                    "model": {"type": "model", "value": [], "options": []},
+                    "input_value": {"type": "str", "value": "EXISTING_GLOBAL", "load_from_db": True},
+                },
+            ),
+        }
+        flow = _fresh_flow()
+        component_id = add_component(flow, "Configurable", registry)["id"]
+        return flow, component_id
+
+    @pytest.mark.parametrize(
+        ("invalid_params", "message"),
+        [
+            ({"operator": "greater_than"}, "Expected one of"),
+            ({"temperature": -0.1}, "temperature"),
+            ({"temperature": 42.0}, "temperature"),
+            ({"temperature": 10**400}, "temperature"),
+            ({"temperature": "0.5"}, "Expected a number"),
+            ({"temperature": True}, "Expected a number"),
+            ({"temperature": float("nan")}, "temperature"),
+            ({"temperature": float("inf")}, "temperature"),
+            ({"not_a_field": "x"}, "Unknown parameter"),
+            ({"_type": "x"}, "reserved template entry"),
+        ],
+    )
+    def test_rejects_invalid_params_atomically(self, configured_flow, invalid_params, message):
+        flow, component_id = configured_flow
+        params = {"input_value": "literal", "model": '{"provider": "OpenAI", "name": "gpt-4o"}', **invalid_params}
+        before = deepcopy(flow)
+        original_model = params["model"]
+
+        with pytest.raises(ValueError, match=message):
+            configure_component(flow, component_id, params)
+
+        assert flow == before
+        assert params["model"] == original_model
+
+    @pytest.mark.parametrize("temperature", [0.0, 0.5, 1.0])
+    def test_accepts_valid_values_and_normalizes_model(self, configured_flow, temperature):
+        flow, component_id = configured_flow
+        params = {
+            "operator": "contains",
+            "temperature": temperature,
+            "input_value": "literal",
+            "model": '{"provider": "OpenAI", "name": "gpt-4o"}',
+        }
+        configure_component(flow, component_id, params)
+
+        fields = flow["data"]["nodes"][0]["data"]["node"]["template"]
+        assert fields["operator"]["value"] == "contains"
+        assert fields["temperature"]["value"] == temperature
+        assert fields["input_value"]["load_from_db"] is False
+        assert fields["model"]["value"] == params["model"] == [{"provider": "OpenAI", "name": "gpt-4o"}]
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ({"type": "str", "options": ["known"], "value": "known", "combobox": True}, "custom"),
+            ({"type": "str", "options": ["a", "b"], "value": ["a"], "list": True}, ["a", "b"]),
+            ({"type": "str", "options": [], "value": ""}, "custom"),
+            ({"type": "str", "options": ["a"], "value": "a"}, None),
+            (
+                {"type": "duration", "options": ["Minutes", "Hours", "Days"], "value": {"unit": "Days", "value": 3}},
+                {"unit": "Hours", "value": 2},
+            ),
+            (
+                {"type": "sortableList", "options": [{"name": "Local"}, {"name": "AWS"}], "value": [{"name": "Local"}]},
+                [{"name": "AWS"}],
+            ),
+            ({"type": "tab", "options": ["JSON", "Table"], "value": "JSON"}, "Data"),
+            ({"type": "tab", "options": ["JSON", "Table"], "value": "JSON"}, "DataFrame"),
+            ({"type": "tab", "options": ["JSON", "Table"], "value": "JSON"}, ""),
+        ],
+    )
+    def test_preserves_option_compatibility(self, configured_flow, field, value):
+        flow, component_id = configured_flow
+        fields = flow["data"]["nodes"][0]["data"]["node"]["template"]
+        fields["choice"] = field
+        configure_component(flow, component_id, {"choice": value})
+        assert fields["choice"]["value"] == value
+
+    def test_rejects_invalid_list_selection(self, configured_flow):
+        flow, component_id = configured_flow
+        fields = flow["data"]["nodes"][0]["data"]["node"]["template"]
+        fields["choice"] = {"type": "str", "options": ["a", "b"], "value": ["a"], "list": True}
+        before = deepcopy(flow)
+        with pytest.raises(ValueError, match="Expected one of"):
+            configure_component(flow, component_id, {"choice": ["a", "invalid"]})
+        assert flow == before
+
+    @pytest.mark.parametrize("combobox", [False, True])
+    def test_rejects_scalar_for_list_options(self, configured_flow, combobox):
+        flow, component_id = configured_flow
+        fields = flow["data"]["nodes"][0]["data"]["node"]["template"]
+        fields["choice"] = {
+            "type": "str",
+            "options": ["a", "b"],
+            "value": ["a"],
+            "list": True,
+            "combobox": combobox,
+        }
+        before = deepcopy(flow)
+        with pytest.raises(ValueError, match="Expected a list"):
+            configure_component(flow, component_id, {"choice": "a"})
+        assert flow == before
+
+    @pytest.mark.parametrize("node_data", [{}, {"node": {}}])
+    def test_unknown_field_does_not_create_template(self, node_data):
+        flow = {"data": {"nodes": [{"id": "test", "data": node_data}]}}
+        before = deepcopy(flow)
+        with pytest.raises(ValueError, match="Unknown parameter"):
+            configure_component(flow, "test", {"unknown": "value"})
+        assert flow == before
 
 
 class TestFlow:
