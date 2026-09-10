@@ -9,9 +9,10 @@ from alembic import context
 from lfx.log.logger import logger
 from sqlalchemy import pool, text
 from sqlalchemy.event import listen
-from sqlalchemy.exc import SAWarning
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+from langflow.alembic.expand_compat import filter_expand_revision_directives
+from langflow.alembic.warning_filters import filter_known_sqlite_reflection_warnings
 from langflow.services.database.service import SQLModel
 
 # this is the Alembic Config object, which provides
@@ -41,6 +42,31 @@ target_metadata.naming_convention = NAMING_CONVENTION
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
+VERSION_TABLE = "alembic_version"
+
+
+def include_name(name: str | None, type_: str, parent_names: dict[str, str | None]) -> bool:
+    """Restrict autogenerate to the tables Langflow owns.
+
+    Langflow shares its database with anything the user points at the same
+    connection string: LangChain vector stores (``langchain_pg_collection``,
+    ``langchain_pg_embedding``), the SQL Executor component, or an unrelated
+    application. Without this filter autogenerate reflects those tables, finds
+    no model behind them, and emits a ``remove_table`` diff -- which makes
+    ``alembic check`` fail and aborts startup with "There's a mismatch between
+    the models and the database" (GH #9117). Langflow never drops a table it
+    does not own, so those diffs are always false positives.
+
+    Drift inside Langflow's own tables is still compared normally.
+    """
+    if type_ != "table":
+        return True
+    if name == VERSION_TABLE:
+        return True
+    schema = parent_names.get("schema_name")
+    qualified = f"{schema}.{name}" if schema else name
+    return qualified in target_metadata.tables
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -61,6 +87,8 @@ def run_migrations_offline() -> None:
         "literal_binds": True,
         "dialect_opts": {"paramstyle": "named"},
         "render_as_batch": True,
+        "include_name": include_name,
+        "process_revision_directives": filter_expand_revision_directives,
     }
 
     # Only add prepare_threshold for PostgreSQL
@@ -93,6 +121,8 @@ def _do_run_migrations(connection):
         "connection": connection,
         "target_metadata": target_metadata,
         "render_as_batch": True,
+        "include_name": include_name,
+        "process_revision_directives": filter_expand_revision_directives,
     }
 
     # Only add prepare_threshold for PostgreSQL
@@ -115,19 +145,7 @@ def _do_run_migrations(connection):
             connection.execute(text(f"SELECT pg_advisory_xact_lock({lock_key});"))
         if connection.dialect.name == "sqlite":
             with warnings.catch_warnings():
-                warnings.filterwarnings(
-                    "ignore",
-                    message=".*SQL-parsed foreign key constraint.*could not be located in PRAGMA foreign_keys.*",
-                    category=SAWarning,
-                )
-                warnings.filterwarnings(
-                    "ignore",
-                    message=(
-                        "autogenerate skipping metadata-specified expression-based index "
-                        "'ix_message_session_metadata_(tenant|user)'; dialect 'sqlite'.*"
-                    ),
-                    category=UserWarning,
-                )
+                filter_known_sqlite_reflection_warnings()
                 context.run_migrations()
         else:
             context.run_migrations()

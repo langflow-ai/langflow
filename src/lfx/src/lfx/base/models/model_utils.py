@@ -133,9 +133,11 @@ def _ollama_cache_clear() -> None:
     _ollama_capability_cache.clear()
 
 
-# Extract model names from metadata for fallback defaults
-WATSONX_DEFAULT_LLM_MODEL_NAMES = [m["name"] for m in WATSONX_LLM_METADATA]
-WATSONX_DEFAULT_EMBEDDING_MODEL_NAMES = [m["name"] for m in WATSONX_EMBEDDING_METADATA]
+# Extract model names from metadata for fallback defaults. Deprecated seed
+# entries are withdrawn from IBM's catalog, so the API-failure fallback must
+# not offer them.
+WATSONX_DEFAULT_LLM_MODEL_NAMES = [m["name"] for m in WATSONX_LLM_METADATA if not m.get("deprecated")]
+WATSONX_DEFAULT_EMBEDDING_MODEL_NAMES = [m["name"] for m in WATSONX_EMBEDDING_METADATA if not m.get("deprecated")]
 
 
 def _to_str(value: Any) -> str | None:
@@ -1042,8 +1044,12 @@ def fetch_live_watsonx_models(user_id: UUID | str | None, model_type: str = "llm
         # Look up capability flags from the static catalog when known; otherwise
         # fall back to defaults. Without this, the live API path blanket-marks
         # every LLM as tool_calling=True, surfacing models like
-        # ibm/granite-3b-code-instruct and ibm/granite-guardian-3-8b in the
-        # Agent dropdown even though they don't support tool calling.
+        # ibm/granite-guardian-3-8b in the Agent dropdown even though they
+        # don't support tool calling. ``deprecated`` is intentionally NOT
+        # copied from the static seed: the live query already excludes
+        # withdrawn models (``!lifecycle_withdrawn``), and re-stamping the
+        # static flag once hid live, current models whenever the seed data
+        # went stale (the "IBM WatsonX shows 0 models" bug).
         static_metadata = WATSONX_LLM_METADATA if model_type == "llm" else WATSONX_EMBEDDING_METADATA
         known_by_name = {m["name"]: m for m in static_metadata}
         default_tool_calling = model_type == "llm"
@@ -1058,7 +1064,6 @@ def fetch_live_watsonx_models(user_id: UUID | str | None, model_type: str = "llm
                     icon="IBM",
                     model_type=model_type if model_type == "llm" else "embeddings",
                     tool_calling=known.get("tool_calling", default_tool_calling) if known else default_tool_calling,
-                    deprecated=bool(known.get("deprecated", False)) if known else False,
                     default=i < MIN_DEFAULT_MODELS,  # Mark first 5 as default
                 )
             )

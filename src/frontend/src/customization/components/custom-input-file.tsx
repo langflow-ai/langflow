@@ -14,6 +14,7 @@ export default function CustomInputFileComponent({
   tempFile = true,
   editNode = false,
   id,
+  ariaLabelledBy,
 }: InputProps<string, FileComponentType>): JSX.Element {
   return (
     <InputFileComponent
@@ -27,6 +28,7 @@ export default function CustomInputFileComponent({
       tempFile={tempFile}
       editNode={editNode}
       id={`inputfile_${id}`}
+      ariaLabelledBy={ariaLabelledBy}
     />
   );
 }

@@ -54,24 +54,40 @@ test(
       },
     );
 
+    const canvasNodes = page.locator(".react-flow__node");
+    const previousNodeCount = await canvasNodes.count();
+    await expect(
+      page.getByTestId(TID.sidebarCustomComponentButton),
+    ).toBeEnabled();
     await page.getByTestId(TID.sidebarCustomComponentButton).click();
+    await expect(canvasNodes).toHaveCount(previousNodeCount + 1);
     await adjustScreenView(page);
 
     await addComponentFromSidebar(page, {
       search: "chat output",
       testId: "input_outputChat Output",
-      position: { x: 400, y: 400 },
+      hoverAdd: true,
     });
 
     await adjustScreenView(page);
 
-    await page.getByTestId(TID.divGenericNode).nth(1).click();
-    await page.getByTestId("more-options-modal").click();
-    await page.getByTestId("expand-button-modal").click();
+    const chatOutputNode = page.locator(".react-flow__node").filter({
+      has: page.getByText("Chat Output", { exact: true }),
+    });
+    await expect(chatOutputNode).toHaveCount(1);
 
-    await page.getByTestId(TID.divGenericNode).nth(0).click();
+    const customComponentNode = page.locator(".react-flow__node").filter({
+      has: page.getByText("Custom Component", { exact: true }),
+    });
+    await expect(customComponentNode).toHaveCount(1);
+    await customComponentNode.getByTestId(TID.divGenericNode).click();
 
     await replaceComponentCode(page, SLEEP_60_CUSTOM_COMPONENT);
+    await adjustScreenView(page, { numberOfZoomOut: 2 });
+
+    await chatOutputNode.getByTestId(TID.divGenericNode).click();
+    await page.getByTestId("more-options-modal").click();
+    await page.getByTestId("expand-button-modal").click();
     await adjustScreenView(page, { numberOfZoomOut: 2 });
 
     // Connect Custom Component output → Chat Output input

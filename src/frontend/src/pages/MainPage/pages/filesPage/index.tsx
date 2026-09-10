@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import FilesTab from "./components/FilesTab";
 
 export const FilesPage = () => {
   const { t } = useTranslation();
+  useDocumentTitle(t("files.pageTitle"));
   // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [quantitySelected, setQuantitySelected] = useState(0);

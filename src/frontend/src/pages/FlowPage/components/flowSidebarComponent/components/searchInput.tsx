@@ -29,6 +29,7 @@ export const SearchInput = memo(function SearchInput({
         data-testid="sidebar-search-input"
         inputClassName="w-full rounded-lg bg-background text-sm"
         placeholder={t("sidebar.searchPlaceholder")}
+        aria-label={t("sidebar.searchAriaLabel")}
         onFocus={handleInputFocus}
         onBlur={handleInputBlur}
         onChange={handleInputChange}

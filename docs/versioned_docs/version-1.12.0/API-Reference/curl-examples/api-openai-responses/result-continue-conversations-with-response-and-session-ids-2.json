@@ -1,0 +1,23 @@
+{
+  "id": "c45f4ac8-772b-4675-8551-c560b1afd590",
+  "object": "response",
+  "created_at": 1756839043,
+  "status": "completed",
+  "model": "ced2ec91-f325-4bf0-8754-f3198c2b1563",
+  "output": [
+    {
+      "type": "message",
+      "id": "msg_c45f4ac8-772b-4675-8551-c560b1afd590",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "Your name is Alice. How can I help you today?",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "previous_response_id": "c45f4ac8-772b-4675-8551-c560b1afd590"
+}

@@ -307,11 +307,13 @@ class LCAgentComponent(Component):
                 if msg_id:
                     await delete_message(id_=msg_id)
             await self._send_message_event(e.agent_message, category="remove_message")
-            logger.error(f"ExceptionWithMessageError: {e}")
+            # exception(), not error(f"...{e}"): this class's str() interpolates the model's
+            # partial completion, and passing the exception rather than formatting it is what
+            # gives the exported record an error.type to triage on.
+            logger.exception("Agent run failed after a partial message was emitted")
             raise
-        except Exception as e:
-            # Log or handle any other exceptions
-            logger.error(f"Error: {e}")
+        except Exception:
+            logger.exception("Agent run failed")
             raise
 
         # Extract accumulated token usage from callback handler

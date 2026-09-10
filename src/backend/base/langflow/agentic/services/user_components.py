@@ -242,6 +242,16 @@ def _validate_code(code: str) -> None:
         msg = f"code size {encoded_size} bytes exceeds limit of {MAX_COMPONENT_SOURCE_BYTES} bytes"
         raise UserComponentError(msg)
 
+    # This is the only writer for the executable `.components` namespace.
+    # Re-scan at the persistence boundary so no future caller can store code
+    # that the registry overlay would later import and execute.
+    from langflow.agentic.helpers.code_security import scan_code_security
+
+    security_result = scan_code_security(code)
+    if not security_result.is_safe:
+        msg = "code failed security validation: " + "; ".join(security_result.violations)
+        raise UserComponentError(msg)
+
 
 def _resolve_components_dir(*, user_id: str | None) -> Path:
     """Resolve and create ``<sandbox>/.components/`` for the given user.

@@ -59,6 +59,28 @@ class TestPushAndGetRecent:
         recent = buf.get_recent(USER, "s1", limit=2)
         assert [t.user for t in recent] == ["u3", "u4"]
 
+    def test_get_recent_with_limit_zero_should_return_empty_list(self):
+        # Regression: turns[-0:] slices the WHOLE buffer, so limit=0 leaked
+        # the entire history instead of disabling it.
+        buf = ConversationBuffer()
+        for i in range(3):
+            buf.push(USER, "s1", ConversationTurn(user=f"u{i}", assistant=f"a{i}"))
+
+        assert buf.get_recent(USER, "s1", limit=0) == []
+
+    def test_get_recent_with_negative_limit_should_return_empty_list(self):
+        buf = ConversationBuffer()
+        buf.push(USER, "s1", ConversationTurn(user="u0", assistant="a0"))
+
+        assert buf.get_recent(USER, "s1", limit=-1) == []
+
+    def test_get_recent_with_limit_none_should_return_entire_buffer(self):
+        buf = ConversationBuffer()
+        for i in range(3):
+            buf.push(USER, "s1", ConversationTurn(user=f"u{i}", assistant=f"a{i}"))
+
+        assert len(buf.get_recent(USER, "s1", limit=None)) == 3
+
     def test_push_should_cap_at_max_turns_per_session(self):
         # Older turns dropped FIFO once the per-session cap is hit.
         buf = ConversationBuffer()

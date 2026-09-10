@@ -5,6 +5,7 @@ update_component_field_value, and list_component_fields.
 """
 
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
@@ -207,8 +208,11 @@ class TestUpdateComponentFieldValue:
         db_flow = MagicMock()
         db_flow.user_id = UUID(USER_ID)
         db_flow.data = flow.data.copy()
+        previous_updated_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
+        db_flow.updated_at = previous_updated_at
 
         mock_session = AsyncMock()
+        mock_session.add = MagicMock()
         mock_session.get = AsyncMock(return_value=db_flow)
         mock_session.commit = AsyncMock()
         mock_session.refresh = AsyncMock()
@@ -233,6 +237,8 @@ class TestUpdateComponentFieldValue:
         assert result["success"] is True
         assert result["old_value"] == "hello"
         assert result["new_value"] == "new_value"
+        assert db_flow.updated_at > previous_updated_at
+        assert db_flow.updated_at.tzinfo is timezone.utc
 
     @pytest.mark.asyncio
     async def test_should_return_error_for_missing_component(self):

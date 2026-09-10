@@ -1,9 +1,8 @@
 import { expect } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
 import { TEXTS } from "../../utils/constants/texts";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { unselectNodes } from "../../utils/unselect-nodes";
 import { uploadFile } from "../../utils/upload-file";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
@@ -12,15 +11,14 @@ withEventDeliveryModes(
   "user should be able to analyze text sentiment",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    skipIfMissing.openAiKey();
-    loadDotenvIfLocal(__dirname);
+    await seedLoopbackProvider(page);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page
       .getByRole("heading", { name: "Text Sentiment Analysis" })
       .click();
-    await initialGPTsetup(page);
+    await configureLoopbackOpenAI(page);
 
     await uploadFile(page, "test_file.txt");
 
@@ -32,24 +30,33 @@ withEventDeliveryModes(
     await page.getByTestId("icon-MoreHorizontal").click();
     await page.getByText("Expand").click();
     await unselectNodes(page);
-    await page.getByTestId("button_run_chat output").last().click();
-    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
-      timeout: 120000,
-    });
+    const [buildResponse] = await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          new URL(response.url()).pathname === "/api/v2/workflows",
+      ),
+      page.getByTestId("button_run_chat output").last().click(),
+    ]);
+    expect(buildResponse.ok()).toBeTruthy();
+    expect(await buildResponse.finished()).toBeNull();
 
     await page
       .getByRole("button", { name: TEXTS.playground, exact: true })
       .click();
-    await page
-      .getByText("Add a Chat Input component to your flow to send messages.", {
-        exact: true,
-      })
-      .last()
-      .isVisible();
+    await expect(
+      page
+        .getByText(
+          "Add a Chat Input component to your flow to send messages.",
+          {
+            exact: true,
+          },
+        )
+        .last(),
+    ).toBeVisible();
 
-    await page.waitForTimeout(5000);
-
-    const textAnalysis = await page.locator(".markdown").last().textContent();
-    expect(textAnalysis?.length).toBeGreaterThan(50);
+    await expect(page.locator(".markdown").last()).toContainText("positive", {
+      ignoreCase: true,
+    });
   },
 );

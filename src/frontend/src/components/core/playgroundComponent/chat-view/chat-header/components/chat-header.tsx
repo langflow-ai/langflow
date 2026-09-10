@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatedConditional } from "@/components/ui/animated-close";
 import useAlertStore from "@/stores/alertStore";
@@ -27,6 +27,7 @@ export function ChatHeader({
   onClose,
   openLogsModal,
   setOpenLogsModal,
+  logsModalTriggerRef,
   onRenameSession,
   onClearChat,
 }: ChatHeaderProps & { sessions: string[] }) {
@@ -34,6 +35,9 @@ export function ChatHeader({
   const { t } = useTranslation();
   const [sessionsDropdownOpen, setSessionsDropdownOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const internalLogsModalTriggerRef = useRef<HTMLElement | null>(null);
+  const resolvedLogsModalTriggerRef =
+    logsModalTriggerRef ?? internalLogsModalTriggerRef;
   // Determine the title based on the current session
   const sessionTitle = useMemo(
     () => getSessionTitle(currentSessionId, currentFlowId),
@@ -70,7 +74,10 @@ export function ChatHeader({
 
   const { onMessageLogs } = useSessionMoreMenuHandlers({
     currentSessionId,
-    onOpenLogs: () => setOpenLogsModal?.(true),
+    onOpenLogs: (triggerElement) => {
+      resolvedLogsModalTriggerRef.current = triggerElement;
+      setOpenLogsModal?.(true);
+    },
   });
 
   const hasMessages = useSessionHasMessages({
@@ -177,6 +184,7 @@ export function ChatHeader({
           flowId={currentFlowId}
           open={openLogsModal ?? false}
           setOpen={setOpenLogsModal ?? (() => {})}
+          triggerElementRef={resolvedLogsModalTriggerRef}
         />
       )}
     </div>

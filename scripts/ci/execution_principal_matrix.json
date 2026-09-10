@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "description": "Canonical endpoint-family contract for actor identity, runtime and dependency principals, caller overrides, revocation, and client-visible errors.",
+  "entrypoints": [
+    {
+      "family": "interactive_chat",
+      "authz_family": "flow_build_and_hitl",
+      "source": "src/backend/base/langflow/api/v1/chat.py",
+      "actor": "authenticated_user",
+      "execution_principal": "actor",
+      "dependency_principal": "actor_or_explicit_share",
+      "tweaks": "owner_or_writer",
+      "revoke": "new_and_resume",
+      "error_policy": "owner_debug_delegated_sanitized",
+      "exception": "none",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_chat_build_flow_authz.py::test_build_flow_shared_private_non_owner_succeeds",
+        "src/backend/tests/unit/api/v1/test_chat_build_flow_authz.py::test_build_flow_non_owner_cannot_override_flow_data",
+        "src/backend/tests/unit/api/v1/test_chat_build_flow_authz.py::test_build_flow_write_holder_may_override_someone_elses_flow"
+      ]
+    },
+    {
+      "family": "legacy_public_chat",
+      "authz_family": "flow_build_and_hitl",
+      "source": "src/backend/base/langflow/api/v1/chat.py",
+      "actor": "public_visitor",
+      "execution_principal": "anonymous_public",
+      "dependency_principal": "anonymous_public",
+      "tweaks": "forbidden",
+      "revoke": "new_only",
+      "error_policy": "sanitized",
+      "exception": "Flow.access_type=PUBLIC remains a compatibility-derived direct-link grant; execution uses an isolated non-user principal and visitor-virtual flow/session namespace",
+      "test_references": [
+        "src/backend/tests/unit/api/test_build_source_flow_provenance.py::test_generate_flow_events_sets_source_flow_provenance_for_public_graph"
+      ]
+    },
+    {
+      "family": "v1_run",
+      "authz_family": "flow_run_advanced_webhook",
+      "source": "src/backend/base/langflow/api/v1/endpoints.py",
+      "actor": "authenticated_user",
+      "execution_principal": "actor",
+      "dependency_principal": "actor_or_explicit_share",
+      "tweaks": "owner_only",
+      "revoke": "new_only",
+      "error_policy": "owner_debug_delegated_sanitized",
+      "exception": "none",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_execution_principal_contract.py::test_v1_run_non_owner_tweaks_are_hidden_as_not_found",
+        "src/backend/tests/unit/api/v1/test_execution_principal_contract.py::test_v1_advanced_shared_flow_executes_as_caller_without_owner_requery",
+        "src/backend/tests/unit/api/v1/test_execution_principal_contract.py::test_v1_run_stream_route_derives_error_policy_from_flow_ownership"
+      ]
+    },
+    {
+      "family": "webhook",
+      "authz_family": "flow_run_advanced_webhook",
+      "source": "src/backend/base/langflow/api/v1/endpoints.py",
+      "actor": "webhook_user",
+      "execution_principal": "flow_owner",
+      "dependency_principal": "flow_owner",
+      "tweaks": "server_generated",
+      "revoke": "new_only",
+      "error_policy": "owner_debug_delegated_sanitized",
+      "exception": "webhook authentication resolves the published flow owner; the request body is mapped server-side to that owner's Webhook component input",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_execution_principal_contract.py::test_webhook_server_generated_tweaks_remain_trusted"
+      ]
+    },
+    {
+      "family": "openai_responses",
+      "authz_family": "openai_responses",
+      "source": "src/backend/base/langflow/api/v1/openai_responses.py",
+      "actor": "authenticated_user",
+      "execution_principal": "actor",
+      "dependency_principal": "actor_or_explicit_share",
+      "tweaks": "forbidden",
+      "revoke": "new_only",
+      "error_policy": "owner_debug_delegated_sanitized",
+      "exception": "request variables use runtime context instead of component tweaks",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_openai_responses_execution_policy.py::test_openai_execute_denial_matches_missing_flow_response",
+        "src/backend/tests/unit/api/v1/test_openai_responses_execution_policy.py::test_openai_sync_error_depends_on_flow_ownership",
+        "src/backend/tests/unit/api/v1/test_openai_responses_execution_policy.py::test_openai_stream_fallback_error_depends_on_flow_ownership"
+      ]
+    },
+    {
+      "family": "legacy_mcp",
+      "authz_family": "mcp_legacy_transport",
+      "source": "src/backend/base/langflow/api/v1/mcp.py",
+      "actor": "authenticated_user",
+      "execution_principal": "actor",
+      "dependency_principal": "actor",
+      "tweaks": "forbidden",
+      "revoke": "new_only",
+      "error_policy": "owner_debug_delegated_sanitized",
+      "exception": "legacy MCP only exposes flows owned by the authenticated transport actor; shared-flow delegation is not admitted",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_mcp.py::test_mcp_sse_get_binds_authenticated_user_to_transport"
+      ]
+    },
+    {
+      "family": "mcp_projects",
+      "authz_family": "mcp_projects",
+      "source": "src/backend/base/langflow/api/v1/mcp_projects.py",
+      "actor": "project_auth_user",
+      "execution_principal": "actor",
+      "dependency_principal": "actor",
+      "tweaks": "forbidden",
+      "revoke": "new_only",
+      "error_policy": "owner_debug_delegated_sanitized",
+      "exception": "project admission is owner-scoped; auth type none resolves the project owner as its transport actor",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_mcp_projects.py::test_streamable_none_auth_project_runs_as_project_owner"
+      ]
+    },
+    {
+      "family": "a2a",
+      "authz_family": "a2a",
+      "source": "src/backend/base/langflow/api/v1/a2a.py",
+      "actor": "public_visitor",
+      "execution_principal": "anonymous_public",
+      "dependency_principal": "anonymous_public",
+      "tweaks": "forbidden",
+      "revoke": "new_and_resume",
+      "error_policy": "sanitized",
+      "exception": "auth_type=none is a compatibility-derived PUBLIC grant under the anonymous principal; API-key and OAuth A2A admission remains owner-only and executes as the authenticated owner",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_a2a.py::test_public_a2a_run_uses_server_sanitized_flow_data",
+        "src/backend/tests/unit/api/v1/test_a2a.py::test_public_a2a_resume_rechecks_compatibility_grant"
+      ]
+    },
+    {
+      "family": "voice",
+      "authz_family": "voice_flow_sessions",
+      "source": "src/backend/base/langflow/api/v1/voice_mode.py",
+      "actor": "authenticated_user",
+      "execution_principal": "actor",
+      "dependency_principal": "actor_or_explicit_share",
+      "tweaks": "forbidden",
+      "revoke": "new_only",
+      "error_policy": "owner_debug_delegated_sanitized",
+      "exception": "none",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_voice_mode_flow_authz.py::test_authorized_voice_flow_allows_share_aware_fetch_when_guard_allows"
+      ]
+    },
+    {
+      "family": "deployments",
+      "authz_family": "deployments",
+      "source": "src/backend/base/langflow/api/v1/deployments.py",
+      "actor": "deployment_actor",
+      "execution_principal": "deployment_owner",
+      "dependency_principal": "deployment_owner",
+      "tweaks": "forbidden",
+      "revoke": "provider_controlled",
+      "error_policy": "provider_sanitized",
+      "exception": "deployment authorization and audit use the actor while the external data plane retains its owner namespace",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_deployment_sync.py::test_shared_rows_use_provider_owner_namespace_for_sync"
+      ]
+    },
+    {
+      "family": "workflow_v2",
+      "authz_family": "workflow_status_and_hitl_v2",
+      "source": "src/backend/base/langflow/api/v2/workflow.py",
+      "actor": "authenticated_user",
+      "execution_principal": "actor",
+      "dependency_principal": "actor_or_explicit_share",
+      "tweaks": "owner_or_writer",
+      "revoke": "new_and_resume",
+      "error_policy": "owner_debug_delegated_sanitized",
+      "exception": "the POST route is mounted by the lfx workflow host; backend admission and execution live in this source",
+      "test_references": [
+        "src/backend/tests/unit/api/v2/test_workflow_agui.py::test_non_owner_tweaks_are_dropped",
+        "src/backend/tests/unit/api/v2/test_workflow_agui.py::test_sync_error_detail_depends_on_flow_ownership"
+      ]
+    },
+    {
+      "family": "workflow_hitl_v2",
+      "authz_family": "workflow_status_and_hitl_v2",
+      "source": "src/backend/base/langflow/api/v2/workflow.py",
+      "actor": "job_owner",
+      "execution_principal": "job_owner",
+      "dependency_principal": "job_owner",
+      "tweaks": "forbidden",
+      "revoke": "resume_rechecks_actor",
+      "error_policy": "owner_debug_delegated_sanitized",
+      "exception": "a continuation retains the starting job principal and rechecks that actor's execute grant before resume",
+      "test_references": [
+        "src/backend/tests/unit/api/v2/test_resume_route.py::test_resume_reenforces_flow_execute_permission"
+      ]
+    },
+    {
+      "family": "workflow_public_v2",
+      "authz_family": "workflow_public_v2",
+      "source": "src/backend/base/langflow/api/v2/workflow_public.py",
+      "actor": "public_visitor",
+      "execution_principal": "anonymous_public",
+      "dependency_principal": "anonymous_public",
+      "tweaks": "forbidden",
+      "revoke": "new_only",
+      "error_policy": "sanitized",
+      "exception": "Flow.access_type=PUBLIC remains a compatibility-derived direct-link grant; execution uses an isolated non-user principal and visitor-virtual flow/session namespaces",
+      "test_references": [
+        "src/backend/tests/unit/api/v2/test_workflow_public.py::test_public_endpoint_runs_as_stable_non_owner_principal",
+        "src/backend/tests/unit/api/v2/test_workflow_public.py::test_public_endpoint_rejects_tweaks_field"
+      ]
+    }
+  ]
+}

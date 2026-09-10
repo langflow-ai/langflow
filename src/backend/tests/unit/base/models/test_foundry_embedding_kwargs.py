@@ -23,6 +23,15 @@ def unified_models_module():
     return module
 
 
+@pytest.fixture(autouse=True)
+def _mock_protected_clients():
+    with patch(
+        "lfx.base.models.unified_models.instantiation.ssrf_protected_openai_clients_for_url",
+        return_value={},
+    ):
+        yield
+
+
 def test_foundry_embedding_kwargs_use_endpoint_when_api_base_blank(unified_models_module):
     composed = _compose_embedding_kwargs(
         "Azure AI Foundry",

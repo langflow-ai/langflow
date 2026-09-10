@@ -1,5 +1,6 @@
 """Flow component operations utilities for Langflow."""
 
+from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -285,6 +286,7 @@ async def update_component_field_value(
 
             # Update the flow data
             db_flow.data = flow_data
+            db_flow.updated_at = datetime.now(timezone.utc)
             session.add(db_flow)
             await session.commit()
             await session.refresh(db_flow)

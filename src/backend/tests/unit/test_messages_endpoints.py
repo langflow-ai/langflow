@@ -407,6 +407,67 @@ async def test_update_message_not_found(client: AsyncClient, logged_in_headers):
     assert response.json()["detail"] == "Message not found"
 
 
+async def test_update_message_returns_404_when_message_is_deleted_during_update(
+    client: AsyncClient,
+    logged_in_headers,
+    created_message,
+    monkeypatch,
+):
+    original_get_message_for_user = monitor_api.get_message_for_user
+    deleted_message = False
+
+    async def get_message_then_delete(session, user_id, message_id):
+        nonlocal deleted_message
+        db_message = await original_get_message_for_user(session, user_id, message_id)
+        if db_message is not None and not deleted_message:
+            deleted_message = True
+            async with session_scope() as deleting_session:
+                message_to_delete = await deleting_session.get(MessageTable, message_id)
+                assert message_to_delete is not None
+                await deleting_session.delete(message_to_delete)
+        return db_message
+
+    monkeypatch.setattr(monitor_api, "get_message_for_user", get_message_then_delete)
+
+    response = await client.put(
+        f"api/v1/monitor/messages/{created_message.id}",
+        json=MessageUpdate(text="Raced update").model_dump(),
+        headers=logged_in_headers,
+    )
+
+    assert deleted_message is True
+    assert response.status_code == 404, response.text
+    assert response.json() == {"detail": "Message not found"}
+
+
+async def test_update_message_sanitizes_unexpected_update_errors(
+    client: AsyncClient,
+    logged_in_headers,
+    created_message,
+    monkeypatch,
+):
+    sensitive_error = (
+        f"UPDATE message SET text='secret' WHERE id='{created_message.id}' "  # noqa: S608
+        "postgresql://admin:password@database.internal/langflow"  # pragma: allowlist secret
+    )
+
+    def fail_update(*_args, **_kwargs):
+        raise RuntimeError(sensitive_error)
+
+    monkeypatch.setattr(MessageTable, "sqlmodel_update", fail_update)
+
+    response = await client.put(
+        f"api/v1/monitor/messages/{created_message.id}",
+        json=MessageUpdate(text="Updated content").model_dump(),
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 500, response.text
+    assert response.json() == {"detail": monitor_api.MESSAGE_UPDATE_FAILED}
+    assert sensitive_error not in response.text
+    assert str(created_message.id) not in response.text
+
+
 @pytest.mark.api_key_required
 async def test_delete_messages_cannot_delete_other_users_messages(
     client: AsyncClient, logged_in_headers, cross_user_messages, other_logged_in_headers

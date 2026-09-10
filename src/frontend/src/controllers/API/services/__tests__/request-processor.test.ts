@@ -124,6 +124,10 @@ describe("UseRequestProcessor.query retry policy", () => {
 // ---------------------------------------------------------------------------
 
 describe("UseRequestProcessor.mutate retry policy", () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   const setup = (options: any = {}, fn: any = async () => ({})) => {
     const { mutate } = UseRequestProcessor();
     mutate(["k"], fn, options);
@@ -171,10 +175,25 @@ describe("UseRequestProcessor.mutate retry policy", () => {
     expect(retry).toBe(customRetry);
   });
 
-  it("respects a custom options.retryDelay", () => {
+  it("uses a custom options.retryDelay for in-band retries", async () => {
+    jest.useFakeTimers();
+    const error = axiosError(503, { "retry-after": "7" });
+    const inner = jest
+      .fn()
+      .mockRejectedValueOnce(error)
+      .mockResolvedValue("ok");
     const customDelay = jest.fn(() => 42);
-    const { retryDelay } = setup({ retryDelay: customDelay });
-    expect(retryDelay).toBe(customDelay);
+    const { mutationFn } = setup({ retryDelay: customDelay }, inner);
+    const promise = mutationFn(undefined);
+
+    await jest.advanceTimersByTimeAsync(0);
+    expect(inner).toHaveBeenCalledTimes(1);
+    expect(customDelay).toHaveBeenCalledWith(0, error);
+    await jest.advanceTimersByTimeAsync(41);
+    expect(inner).toHaveBeenCalledTimes(1);
+    await jest.advanceTimersByTimeAsync(1);
+    await expect(promise).resolves.toBe("ok");
+    expect(inner).toHaveBeenCalledTimes(2);
   });
 });
 

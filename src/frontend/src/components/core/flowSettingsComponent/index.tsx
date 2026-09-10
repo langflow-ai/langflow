@@ -65,6 +65,7 @@ const FlowSettingsComponent = ({
     flowData ? undefined : state.currentFlow,
   );
   const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
+  const pendingAutoSave = useFlowStore((state) => state.autoSaveFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const flows = useFlowsManagerStore((state) => state.flows);
   const flow = flowData ?? currentFlow;
@@ -91,15 +92,21 @@ const FlowSettingsComponent = ({
     const newFlow = updateFlowWithFormValues(flow, name, description, locked);
 
     if (autoSaving) {
-      saveFlow(newFlow)
-        ?.then(() => {
+      const persistSettings = async () => {
+        try {
+          // Canvas edits use a debounced save. Flush and await that exact save
+          // before persisting settings so a stale canvas snapshot cannot land
+          // after a lock-state update.
+          await pendingAutoSave?.flush();
+          await saveFlow(newFlow);
           setIsSaving(false);
           setSuccessData({ title: t("success.changesSaved") });
           close();
-        })
-        .catch(() => {
+        } catch {
           setIsSaving(false);
-        });
+        }
+      };
+      void persistSettings();
     } else {
       setCurrentFlow(newFlow);
       setIsSaving(false);

@@ -449,10 +449,23 @@ describe("Create mode — step navigation", () => {
       initialInstance: mockInstance,
     });
 
-    // Navigate all the way to step 4
-    act(() => result.current.handleNext());
-    act(() => result.current.handleNext());
-    act(() => result.current.handleNext());
+    // Navigate all the way to step 4, satisfying each step's gate on the way
+    // (handleNext now runs through the primitive's gated next()).
+    act(() => result.current.handleNext()); // → step 2
+    act(() => {
+      result.current.setDeploymentName("My Agent");
+      result.current.setSelectedLlm("gpt-4");
+    });
+    act(() => result.current.handleNext()); // → step 3
+    act(() => {
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
+    });
+    act(() => result.current.handleNext()); // → step 4
     act(() => result.current.handleNext()); // should stay at 4
 
     expect(result.current.currentStep).toBe(4);

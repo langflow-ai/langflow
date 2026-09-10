@@ -9,14 +9,14 @@ test(
     await openBlankFlow(page);
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("ollama");
+    await page.getByTestId("sidebar-search-input").fill("url");
 
-    await page.waitForSelector('[data-testid="ollamaOllama"]', {
+    await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 3000,
     });
 
     await page
-      .getByTestId("ollamaOllama")
+      .getByTestId("data_sourceURL")
       .dragTo(page.locator('//*[@id="react-flow-id"]'));
     await page.mouse.up();
     await page.mouse.down();
@@ -30,17 +30,17 @@ test(
     await page.getByTestId("generic-node-title-arrangement").click();
     await page.keyboard.press(`ControlOrMeta+d`);
 
-    let numberOfNodes = await page.getByTestId("title-Ollama")?.count();
+    let numberOfNodes = await page.getByTestId("title-URL")?.count();
     if (numberOfNodes != 2) {
       expect(false).toBeTruthy();
     }
 
-    const ollamaTitleElement = await page.getByTestId("title-Ollama").last();
+    const urlTitleElement = await page.getByTestId("title-URL").last();
 
-    await ollamaTitleElement.click();
+    await urlTitleElement.click();
     await page.keyboard.press("Backspace");
 
-    numberOfNodes = await page.getByTestId("title-Ollama")?.count();
+    numberOfNodes = await page.getByTestId("title-URL")?.count();
     if (numberOfNodes != 1) {
       expect(false).toBeTruthy();
     }
@@ -48,43 +48,43 @@ test(
     await page.getByTestId("generic-node-title-arrangement").click();
     await page.keyboard.press(`ControlOrMeta+c`);
 
-    await page.getByTestId("title-Ollama").click();
+    await page.getByTestId("title-URL").click();
     await page.keyboard.press(`ControlOrMeta+v`);
 
-    numberOfNodes = await page.getByTestId("title-Ollama")?.count();
+    numberOfNodes = await page.getByTestId("title-URL")?.count();
     if (numberOfNodes != 2) {
       expect(false).toBeTruthy();
     }
 
-    await ollamaTitleElement.click();
+    await urlTitleElement.click();
     await page.keyboard.press("Backspace");
 
-    await page.getByTestId("title-Ollama").click();
+    await page.getByTestId("title-URL").click();
     await page.keyboard.press(`ControlOrMeta+x`);
 
-    numberOfNodes = await page.getByTestId("title-Ollama")?.count();
+    numberOfNodes = await page.getByTestId("title-URL")?.count();
     if (numberOfNodes != 0) {
       expect(false).toBeTruthy();
     }
     await page.keyboard.press(`ControlOrMeta+v`);
-    numberOfNodes = await page.getByTestId("title-Ollama")?.count();
+    numberOfNodes = await page.getByTestId("title-URL")?.count();
     if (numberOfNodes != 1) {
       expect(false).toBeTruthy();
     }
 
     // Test undo (Command+Z or Control+Z)
-    await page.getByTestId("title-Ollama").click();
+    await page.getByTestId("title-URL").click();
     await page.keyboard.press("Backspace");
-    numberOfNodes = await page.getByTestId("title-Ollama")?.count();
+    numberOfNodes = await page.getByTestId("title-URL")?.count();
     expect(numberOfNodes).toBe(0);
 
     await page.keyboard.press(`ControlOrMeta+z`);
-    numberOfNodes = await page.getByTestId("title-Ollama")?.count();
+    numberOfNodes = await page.getByTestId("title-URL")?.count();
     expect(numberOfNodes).toBe(1);
 
     // Test redo (Command+Y or Control+Y)
     await page.keyboard.press(`ControlOrMeta+y`);
-    numberOfNodes = await page.getByTestId("title-Ollama")?.count();
+    numberOfNodes = await page.getByTestId("title-URL")?.count();
     expect(numberOfNodes).toBe(0);
   },
 );

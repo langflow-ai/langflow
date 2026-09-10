@@ -442,7 +442,7 @@ class APIRequestComponent(Component):
         else:
             try:
                 result = response.json()
-            except json.JSONDecodeError:
+            except (json.JSONDecodeError, UnicodeDecodeError):
                 self.log("Failed to decode JSON response")
                 result = response.text.encode("utf-8")
 

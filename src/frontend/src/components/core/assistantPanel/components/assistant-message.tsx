@@ -9,6 +9,7 @@ import { getRandomThinkingMessage } from "../helpers/messages";
 import { AssistantBuildTasks } from "./assistant-build-tasks";
 import { AssistantMessageBody } from "./assistant-message-body";
 import { AssistantModelNotice } from "./assistant-model-notice";
+import { AssistantRevertAction } from "./assistant-revert-action";
 import { FileContentModal } from "./file-content-modal";
 
 interface AssistantMessageItemProps {
@@ -20,6 +21,7 @@ interface AssistantMessageItemProps {
     status: "applied" | "dismissed",
   ) => void;
   onApplyFlowProposal?: (messageId: string, mode?: "replace" | "add") => void;
+  onRevertFlowProposal?: (messageId: string) => void;
   onDismissFlowProposal?: (messageId: string) => void;
   onApprovePlan?: (messageId: string) => void;
   onDismissPlan?: (messageId: string) => void;
@@ -38,15 +40,18 @@ interface AssistantMessageItemProps {
    * close/reopen doesn't bring the gate back.
    */
   onAcknowledgeValidation?: (messageId: string) => void;
+  /**
+   * v1 scope: the Revert action renders ONLY on the latest assistant
+   * message with a restore point — older ones are hidden to avoid
+   * mid-chain restore confusion.
+   */
+  isLatestRestorePoint?: boolean;
+  /** Marks the message as reverted after a successful restore. */
+  onReverted?: (messageId: string) => void;
 }
 
-// Steps where the dedicated AssistantLoadingState replaces the simple
-// "thinking" indicator. Covers component generation and flow building.
-//
-// ``generating_document`` is intentionally OUT — the manage_files path
-// shows only the simple thinking dots during the wait, then jumps
-// directly to the file card. A rich loading card that then morphs into
-// the file card looked like a glitch.
+// Steps where AssistantLoadingState replaces the simple thinking dots.
+// generating_document is OUT: dots → file card directly, no morphing glitch.
 const RICH_LOADING_STEPS = [
   "generating_component",
   "generating_plan",
@@ -88,6 +93,7 @@ export function AssistantMessageItem({
   onApprove,
   onUpdateFlowAction,
   onApplyFlowProposal,
+  onRevertFlowProposal,
   onDismissFlowProposal,
   onApprovePlan,
   onDismissPlan,
@@ -95,6 +101,8 @@ export function AssistantMessageItem({
   onRetry,
   skipApprovalGate = false,
   onAcknowledgeValidation,
+  isLatestRestorePoint = false,
+  onReverted,
 }: AssistantMessageItemProps) {
   const { t } = useTranslation();
   const isUser = message.role === "user";
@@ -104,17 +112,12 @@ export function AssistantMessageItem({
   // so the user always has clear focus on which file they're inspecting.
   const [openFilePath, setOpenFilePath] = useState<string | null>(null);
 
-  // Generate randomized messages once per message. For manage_files we
-  // override the random label with the static "Generating document..." so
-  // the thinking dots match the input placeholder (no rotating noise).
+  // Randomized once per message; manage_files overrides with the static
+  // "Generating document..." so the dots match the input placeholder.
   const randomThinking = useMemo(() => getRandomThinkingMessage(), []);
 
-  // Detect component code in streaming content (handles misclassified intent
-  // when the LLM emits a component class without a generating_component step).
-  // R5: regex was running on every render (every streaming chunk) — memoize so
-  // the test only runs when the inputs that drive it actually change. Hook
-  // MUST live above the `if (message.hidden) return null` early return below
-  // to keep the hook count stable (Rules of Hooks).
+  // Memoized misclassified-intent detector (regex per token was hot); must stay
+  // above the `message.hidden` early return to keep the hook count stable.
   const contentLooksLikeComponentCode = useMemo(
     () =>
       isStreaming &&
@@ -123,10 +126,8 @@ export function AssistantMessageItem({
     [isStreaming, message.content],
   );
 
-  // Hidden messages bypass rendering entirely. Used by skip-all to drop
-  // the propose_plan turn's preamble so the chat reads as "user prompt →
-  // built flow" with nothing in between. Guard AFTER hooks so the hook
-  // count stays stable across renders (Rules of Hooks).
+  // Skip-all hides the propose_plan preamble entirely; guard AFTER hooks
+  // so the hook count stays stable across renders (Rules of Hooks).
   if (message.hidden) {
     return null;
   }
@@ -141,13 +142,20 @@ export function AssistantMessageItem({
     (message.progress && RICH_LOADING_STEPS.includes(message.progress.step)) ||
     contentLooksLikeComponentCode;
 
-  // Show loading state during component generation or flow build.
-  const isGeneratingCode = isStreaming && Boolean(showsRichLoadingState);
+  // Suppress the "Working on the flow…" build spinner while a plan is still
+  // pending — the agent is only planning, no build is happening yet.
+  const planPending =
+    message.planProposalStatus === "pending" && !!message.pendingPlanProposal;
+  const inProgressTask = planPending ? undefined : message.inProgressTask;
 
-  // Show simple thinking when:
-  // 1. Streaming without content yet (both Q&A and component generation)
-  // 2. Component generation in early phase (before extraction/validation)
-  const isSimpleThinking = isStreaming && !isGeneratingCode && !message.content;
+  // One build indicator only: when the "Working on the flow…" row shows, drop
+  // the redundant rich "Building the flow…" loader so exactly one is visible.
+  const isGeneratingCode =
+    isStreaming && Boolean(showsRichLoadingState) && !inProgressTask;
+
+  // Simple thinking: streaming with no content, rich state, or build row yet.
+  const isSimpleThinking =
+    isStreaming && !isGeneratingCode && !message.content && !inProgressTask;
 
   if (isSimpleThinking && !isUser) {
     return (
@@ -200,9 +208,17 @@ export function AssistantMessageItem({
                 <AssistantModelNotice notices={message.notices} />
               )}
           </div>
-          {!isUser && message.buildTasks && message.buildTasks.length > 0 && (
-            <AssistantBuildTasks tasks={message.buildTasks} />
-          )}
+          {/* While a plan awaits the user the agent is only planning, so a
+              build spinner must not flash before/beside the plan card. */}
+          {!isUser &&
+            ((message.buildTasks && message.buildTasks.length > 0) ||
+              inProgressTask) && (
+              <AssistantBuildTasks
+                tasks={message.buildTasks ?? []}
+                inProgressTask={inProgressTask}
+                hasError={message.status === "error"}
+              />
+            )}
           <div className="mt-3 overflow-hidden">
             <AssistantMessageBody
               message={message}
@@ -211,6 +227,7 @@ export function AssistantMessageItem({
               onApprove={onApprove}
               onUpdateFlowAction={onUpdateFlowAction}
               onApplyFlowProposal={onApplyFlowProposal}
+              onRevertFlowProposal={onRevertFlowProposal}
               onDismissFlowProposal={onDismissFlowProposal}
               onApprovePlan={onApprovePlan}
               onDismissPlan={onDismissPlan}
@@ -220,6 +237,19 @@ export function AssistantMessageItem({
               onOpenFile={(path) => setOpenFilePath(path)}
             />
           </div>
+          {!isUser &&
+            message.status === "complete" &&
+            message.restoreVersionId &&
+            isLatestRestorePoint &&
+            // Gated proposals own their revert via the card's Revert button;
+            // suppress the version-based footer so there is a single affordance.
+            !message.pendingFlowProposal && (
+              <AssistantRevertAction
+                restoreVersionId={message.restoreVersionId}
+                reverted={Boolean(message.reverted)}
+                onReverted={() => onReverted?.(message.id)}
+              />
+            )}
         </div>
       </div>
       {openFilePath && (

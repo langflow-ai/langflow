@@ -3,6 +3,7 @@ export type {
   AgenticCancelledEvent,
   AgenticCompleteData,
   AgenticCompleteEvent,
+  AgenticErrorDetail,
   AgenticErrorEvent,
   AgenticFlowPreviewEvent,
   AgenticFlowUpdateEvent,
@@ -12,6 +13,7 @@ export type {
   AgenticSSEEvent,
   AgenticStepType,
   AgenticTokenEvent,
+  AgenticToolStartEvent,
   AssistantModelNotice,
   FlowAction,
 } from "./types";

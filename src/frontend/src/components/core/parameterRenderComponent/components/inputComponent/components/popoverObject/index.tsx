@@ -1,5 +1,6 @@
 import { PopoverAnchor } from "@radix-ui/react-popover";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   Command,
@@ -44,7 +45,9 @@ const CustomInputPopoverObject = ({
   handleKeyDown,
   showOptions,
   inspectionPanel,
+  ariaLabelledBy,
 }) => {
+  const { t } = useTranslation();
   const PopoverContentInput =
     editNode || inspectionPanel ? PopoverContent : PopoverContentWithoutPortal;
 
@@ -114,6 +117,7 @@ const CustomInputPopoverObject = ({
             if (blurOnEnter && e.key === "Enter") refInput.current?.blur();
           }}
           data-testid={id}
+          aria-labelledby={ariaLabelledBy}
         />
       </PopoverAnchor>
       <PopoverContentInput
@@ -124,6 +128,7 @@ const CustomInputPopoverObject = ({
         align="center"
       >
         <Command
+          label={optionsPlaceholder || t("input.searchOptions")}
           filter={(value, search) => {
             if (
               value.toLowerCase().includes(search.toLowerCase()) ||

@@ -362,6 +362,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert result == [{"field": "value"}]
         mock_get_chat_result.assert_called_once()
 
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(
         not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY is not set or is empty",
@@ -402,6 +403,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert result[0]["name"] == "John Doe"
         assert result[0]["age"] == 30
 
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(
         not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
@@ -528,6 +530,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert 1099.99 in prices
             assert 899.99 in prices
 
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(
         not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
@@ -580,6 +583,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
                 ]
             ), f"Expected max_tokens error but got: {error_message}"
 
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(
         not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
@@ -635,6 +639,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert result[0]["price"] == 129.99
         assert result[0]["rating"] == 4.0
 
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(
         not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
@@ -706,6 +711,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert result[0]["total_bill"] == 35.49
         assert result[0]["would_return"] is True
 
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(
         not (os.getenv("NVIDIA_API_KEY") or "").strip(),
         reason="NVIDIA_API_KEY environment variable not set",

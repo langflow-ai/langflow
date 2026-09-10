@@ -1,0 +1,103 @@
+---
+title: Choose a Langflow Docker image
+slug: /deployment/docker-image-profiles
+---
+
+Langflow publishes three application image profiles from
+`docker/build_and_push.Dockerfile` (`base`, `full`, and `full-bundles`).
+They share the same frontend, non-root runtime (uid 1000),
+`LANGFLOW_AUTO_LOGIN=false`, and `langflow` executable.
+None of them install PyTorch or TorchVision.
+All three include the `postgresql` extra so they can use an external Postgres
+database without a derived image.
+Choose the smallest profile that contains every extension used by your flows.
+
+| Profile | Docker Hub image | GitHub Container Registry image | Included inventory |
+| --- | --- | --- | --- |
+| Base | `langflowai/langflow:base-VERSION` | `ghcr.io/langflow-ai/langflow:base-VERSION` | `langflow-base` plus built-in LFX components. No `lfx-*` provider packages. |
+| Default | `langflowai/langflow:VERSION` | `ghcr.io/langflow-ai/langflow:VERSION` | Base plus the curated standalone `lfx-*` packages from `uv pip install langflow` |
+| Extended | `langflowai/langflow-all:VERSION` | `ghcr.io/langflow-ai/langflow-all:VERSION` | Default plus `langflow[bundles]`: non-PyTorch providers from `lfx-bundles` and opt-in standalone packages, including Confluent |
+
+The base and default profiles use the `langflow` image repository. The extended
+profile uses the separate `langflow-all` repository. All three profiles use the
+same Langflow 1.12 version.
+As of Langflow 1.12.x, there is no `langflow-core` image, and earlier `core-*` tags are not published.
+
+The base image is a complete, minimal Langflow with no provider extensions,
+not only the [additional bundles](/extensions-bundle-list#additional-bundles)
+omitted from the default `langflow` install.
+The default image matches `uv pip install langflow`.
+A flow that references an omitted component cannot run until you select a
+profile that provides it, or install the reviewed extension in a derived image.
+
+## Pin a release
+
+Use a versioned tag in deployments:
+
+```yaml
+services:
+  langflow:
+    image: langflowai/langflow:base-1.12.0
+```
+
+The moving tags are `langflowai/langflow:base-latest`,
+`langflowai/langflow:latest`, and `langflowai/langflow-all:latest`. They are
+convenient for local evaluation, but they can select a new release without a
+configuration change. Production deployments should pin a version tag and,
+when reproducibility is required, the registry digest:
+
+```yaml
+services:
+  langflow:
+    image: langflowai/langflow:base-1.12.0@sha256:IMAGE_DIGEST
+```
+
+Record both the tag and digest in release records. A tag identifies the
+Langflow release; the digest identifies the exact multi-platform image selected
+by the deployment.
+
+## Change profiles or versions safely
+
+Changing a profile changes the installed component inventory. Changing a
+version can also run database migrations at application startup. Treat either
+change as a deployment migration:
+
+1. Inventory the components used by production flows and select a profile that
+   contains them. Test custom components and provider integrations explicitly.
+2. Record the current image digest, configuration, and persistent volume
+   layout. Back up the database before starting a newer Langflow version.
+3. Start the candidate image against a copy of production data and run smoke
+   tests for login, flow loading, flow execution, file access, and provider
+   credentials.
+4. Deploy the candidate with the same persistent database and data mounts. Do
+   not copy mutable application files out of the old container.
+5. Confirm health and component availability before removing the previous
+   image from the registry or deployment platform.
+
+Moving from default or extended to base is safe only when no saved flow depends
+on a removed extension. To add a bounded provider set, derive an image from the
+versioned base image and install the reviewed extension packages at image-build
+time:
+
+```dockerfile
+FROM langflowai/langflow:base-1.12.0
+RUN uv pip install --python /app/.venv/bin/python \
+    "lfx-openai==COMPATIBLE_VERSION"
+```
+
+Build and test the derived image before deployment. Do not install or remove
+provider packages in a running container, because that makes replicas and
+rollbacks non-reproducible.
+
+## Roll back
+
+Keep the previous pinned image and database backup until the candidate passes
+production verification. To roll back a profile-only change on the same
+Langflow version, redeploy the previous digest with the unchanged persistent
+data. To roll back across Langflow versions after a database migration, stop
+the candidate, restore the pre-upgrade database backup, and redeploy the
+previous digest. Do not run an older application against a database that a
+newer version migrated unless that downgrade path is explicitly documented.
+
+For general Docker configuration, persistence, and source builds, see
+[Deploy Langflow on Docker](./deployment-docker.mdx).

@@ -13,7 +13,9 @@ to return an empty mapping, so no real database is required.
 """
 
 import uuid
+from contextlib import asynccontextmanager
 
+import pytest
 from lfx.base.models.unified_models import credentials
 from lfx.services.variable.request_scope import activate_no_env_fallback, reset_no_env_fallback
 
@@ -54,3 +56,23 @@ def test_post_db_miss_fallback_uses_env_when_fallback_enabled(monkeypatch):
     values = credentials.get_all_variables_for_provider(uuid.uuid4(), "OpenAI")
 
     assert values.get("OPENAI_API_KEY") == "env-secret"  # pragma: allowlist secret
+
+
+def test_db_resolution_error_does_not_fall_back_to_process_environment(monkeypatch):
+    """Only an actual missing variable may use the process-wide fallback."""
+
+    class BrokenVariableService:
+        async def get_variable(self, **_kwargs):
+            msg = "credential decryption failed"
+            raise ValueError(msg)
+
+    @asynccontextmanager
+    async def fake_session_scope():
+        yield object()
+
+    monkeypatch.setattr(credentials, "session_scope", fake_session_scope)
+    monkeypatch.setattr(credentials, "get_variable_service", BrokenVariableService)
+    monkeypatch.setenv("OPENAI_API_KEY", "server-wide-key")  # pragma: allowlist secret
+
+    with pytest.raises(ValueError, match="credential decryption failed"):
+        credentials.get_all_variables_for_provider(uuid.uuid4(), "OpenAI")

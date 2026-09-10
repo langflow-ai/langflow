@@ -44,11 +44,14 @@ let mockFilteredProviders = [
     models: [{ model_name: "gpt-4o" }],
   },
 ];
+let mockCatalogLoading = false;
+let mockCatalogError = false;
 
 jest.mock("../../hooks", () => ({
   useEnabledModels: () => ({
     filteredProviders: mockFilteredProviders,
-    isLoading: false,
+    isLoading: mockCatalogLoading,
+    isError: mockCatalogError,
   }),
 }));
 
@@ -59,6 +62,28 @@ describe("ModelSelector", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockCatalogLoading = false;
+    mockCatalogError = false;
+  });
+
+  it("renders an inert error state instead of a stale saved model", () => {
+    mockCatalogError = true;
+    render(
+      <ModelSelector
+        selectedModel={{
+          id: "OpenAI-gpt-4o",
+          name: "gpt-4o",
+          provider: "OpenAI",
+          displayName: "gpt-4o",
+        }}
+        {...defaultProps}
+      />,
+    );
+
+    expect(screen.getByTestId("assistant-model-catalog-error")).toBeDisabled();
+    expect(
+      screen.queryByTestId("assistant-model-selector"),
+    ).not.toBeInTheDocument();
   });
 
   describe("provider icon in trigger button", () => {

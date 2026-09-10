@@ -1,6 +1,11 @@
 import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs-button";
 import { testIdCase } from "@/utils/utils";
 import type { InputProps, TabComponentType } from "../../types";
 
@@ -12,6 +17,7 @@ export default function DurationComponent({
   options = [],
   handleOnNewValue,
   disabled,
+  ariaLabelledBy,
 }: InputProps<DurationValue, TabComponentType>): JSX.Element {
   const { t } = useTranslation();
   const units = options.length > 0 ? options : ["Minutes", "Hours", "Days"];
@@ -40,13 +46,14 @@ export default function DurationComponent({
         onChange={(event) => update({ value: Number(event.target.value) || 0 })}
         data-testid={`duration-value-${id}`}
         className="w-20 shrink-0"
+        aria-labelledby={ariaLabelledBy}
       />
       <Tabs
         value={current.unit}
         onValueChange={(unit) => update({ unit })}
         className={`flex-1 ${disabled ? "pointer-events-none opacity-70" : ""}`}
       >
-        <TabsList className="w-full">
+        <TabsList className="w-full" aria-labelledby={ariaLabelledBy}>
           {units.map((unit, index) => (
             <TabsTrigger
               key={`${id}_unit_${unit}`}
@@ -59,6 +66,14 @@ export default function DurationComponent({
             </TabsTrigger>
           ))}
         </TabsList>
+        {units.map((unit) => (
+          <TabsContent
+            key={`${id}_unit_content_${unit}`}
+            value={unit}
+            className="mt-0"
+            tabIndex={-1}
+          />
+        ))}
       </Tabs>
     </div>
   );

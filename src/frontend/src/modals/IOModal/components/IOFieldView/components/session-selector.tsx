@@ -9,7 +9,7 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-} from "@/components/ui/select-custom";
+} from "@/components/ui/select";
 import { useUpdateSessionName } from "@/controllers/API/queries/messages/use-rename-session";
 import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
 import useFlowStore from "@/stores/flowStore";
@@ -142,7 +142,20 @@ export default function SessionSelector({
       )}
     >
       <div className="flex w-full items-center justify-between overflow-hidden px-2 py-1 align-middle">
-        <div className="flex w-full min-w-0 items-center">
+        <div
+          className="flex w-full min-w-0 items-center"
+          role={isEditing ? undefined : "button"}
+          tabIndex={isEditing ? undefined : 0}
+          aria-pressed={isEditing ? undefined : isVisible}
+          onKeyDown={(e) => {
+            if (isEditing || e.target !== e.currentTarget) return;
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setNewSessionCloseVoiceAssistant(true);
+              toggleVisibility();
+            }
+          }}
+        >
           {isEditing ? (
             <div className="flex items-center">
               <Input
@@ -152,20 +165,23 @@ export default function SessionSelector({
                 onChange={handleInputChange}
                 onBlur={handleOnBlur}
                 autoFocus
+                aria-label={t("chat.renameSessionLabel")}
                 className="h-6 flex-grow px-1 py-0"
               />
               <button
                 onClick={handleCancel}
+                aria-label={t("chat.cancelRename")}
                 className="hover:text-status-red-hover ml-2 text-status-red"
               >
-                <IconComponent name="X" className="h-4 w-4" />
+                <IconComponent name="X" className="h-4 w-4" ariaHidden />
               </button>
               <button
                 onClick={handleConfirm}
                 data-confirm="true"
+                aria-label={t("chat.confirmRename")}
                 className="ml-2 text-accent-emerald-foreground hover:text-accent-emerald-foreground/80"
               >
-                <IconComponent name="Check" className="h-4 w-4" />
+                <IconComponent name="Check" className="h-4 w-4" ariaHidden />
               </button>
             </div>
           ) : (
@@ -204,6 +220,7 @@ export default function SessionSelector({
             content={t("chat.options")}
           >
             <SelectTrigger
+              variant="plain"
               onClick={(e) => {
                 e.stopPropagation();
               }}
@@ -211,16 +228,28 @@ export default function SessionSelector({
                 inputRef.current?.focus();
               }}
               data-confirm="true"
+              aria-label={t("chat.options")}
               className={cn(
                 "h-8 w-fit border-none bg-transparent p-2 focus:ring-0",
-                isVisible ? "visible" : "invisible group-hover:visible",
+                isVisible
+                  ? "opacity-100"
+                  : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
               )}
             >
-              <IconComponent name="MoreHorizontal" className="h-4 w-4" />
+              <IconComponent
+                name="MoreHorizontal"
+                className="h-4 w-4"
+                ariaHidden
+              />
             </SelectTrigger>
           </ShadTooltip>
-          <SelectContent side="right" align="start" className="p-0">
+          <SelectContent
+            side="right"
+            align="start"
+            className="min-w-[11.5rem] p-0"
+          >
             <SelectItem
+              variant="plain"
               value="rename"
               className="cursor-pointer px-3 py-2 focus:bg-muted"
             >
@@ -230,6 +259,7 @@ export default function SessionSelector({
               </div>
             </SelectItem>
             <SelectItem
+              variant="plain"
               value="messageLogs"
               className="cursor-pointer px-3 py-2 focus:bg-muted"
             >
@@ -241,6 +271,7 @@ export default function SessionSelector({
               </div>
             </SelectItem>
             <SelectItem
+              variant="plain"
               value="delete"
               className="cursor-pointer px-3 py-2 focus:bg-muted"
             >

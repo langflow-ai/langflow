@@ -90,8 +90,7 @@ component_management:
       name: "Backend Components"
       paths:
         - src/backend/base/langflow/components/**
-    # Note: Many components excluded by .coveragerc (bundled + legacy)
-    # This tracks coverage of remaining "core" components only
+    # Component coverage is governed by the canonical root pyproject.toml.
 
 # Files/directories to exclude from coverage calculations
 ignore:

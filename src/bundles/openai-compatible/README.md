@@ -32,7 +32,9 @@ Set the endpoint (and, if it requires one, an API key) under
 variables:
 
 - `OPENAI_COMPATIBLE_BASE_URL` — base URL of the endpoint, e.g.
-  `https://openrouter.ai/api/v1` or `http://localhost:8000/v1` (required).
+  `https://openrouter.ai/api` or `http://localhost:8000` (required). The bundle's
+  provider manifest declares `base_url_suffix: /v1`, so Langflow appends `/v1`
+  when it is missing and preserves endpoints that already include it.
 - `OPENAI_COMPATIBLE_API_KEY` — bearer token, if the endpoint enforces one
   (optional; local servers without auth do not need it).
 

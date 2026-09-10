@@ -20,6 +20,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { usePermissions } from "@/contexts/permissionsContext";
+import CustomResourceShareAction from "@/customization/components/custom-resource-share-action";
 import { cn } from "@/utils/utils";
 import {
   type Deployment,
@@ -236,6 +237,12 @@ export default function DeploymentsTable({
                           />
                           {t("deployments.updateAction")}
                         </DropdownMenuItem>
+                        <CustomResourceShareAction
+                          resourceId={deployment.id}
+                          resourceType="deployment"
+                          resourceName={resolvedDisplayName}
+                          display="menu"
+                        />
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           disabled={!canDeleteDeployment}

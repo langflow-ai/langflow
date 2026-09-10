@@ -41,6 +41,7 @@ from .provider_queries import (
     get_provider_for_model_name,
     get_provider_from_variable_key,
     get_provider_required_variable_keys,
+    get_provider_secret_variable_key,
     model_provider_metadata,
 )
 
@@ -69,6 +70,7 @@ __all__ = [
     "get_provider_for_model_name",
     "get_provider_from_variable_key",
     "get_provider_required_variable_keys",
+    "get_provider_secret_variable_key",
     "get_unified_models_detailed",
     "handle_model_input_update",
     "model_provider_metadata",

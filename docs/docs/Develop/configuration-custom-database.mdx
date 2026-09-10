@@ -17,6 +17,10 @@ In this configuration, all structured application data from Langflow, including 
 PostgreSQL is better suited for production environments due to its robust support for concurrent users, advanced data integrity features, and scalability.
 Langflow can more efficiently handle multiple users and larger workloads by using PostgreSQL as the database.
 
+:::note
+Setting [`LANGFLOW_DATABASE_URL`](#connect-langflow-to-a-local-postgresql-database) does not enable Postgres as a vector store for knowledge bases or memory bases, which instead use [DB Providers](/knowledge#configure-vector-database-providers).
+:::
+
 ## Prerequisites
 
 - A [PostgreSQL](https://www.pgadmin.org/download/) database version 15 or later
@@ -202,6 +206,7 @@ Since each Langflow instance runs in its own container on the Docker network, us
 
 ## See also
 
+* [Database migrations](./database-migrations)
 * [Langflow database guide for enterprise DBAs](/enterprise-database-guide)
 * [Memory management options](/memory)
 * [Logs](/logging)

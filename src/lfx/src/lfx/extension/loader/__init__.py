@@ -41,7 +41,7 @@ Internal layout (all underscore-prefixed; not part of the public surface):
     - ``_discovery``   -- filesystem walk + ``importlib.util`` orchestration.
     - ``_detection``   -- Component subclass identification (MRO heuristic).
     - ``_orchestrator``-- ``load_extension`` / ``discover_inline_bundles``;
-                          path-safety, multi-bundle re-check, identity tuple.
+                          path-safety, bundle selection, identity tuple.
     - ``_plugins``     -- manifest-first precedence over ``langflow.plugins``;
                           installed-distribution discovery primitives.
 
@@ -60,6 +60,7 @@ from lfx.extension.loader._discovery import DEFAULT_MODULE_NAMESPACE
 from lfx.extension.loader._orchestrator import (
     discover_inline_bundles,
     load_extension,
+    load_extension_bundles,
     load_inline_bundle,
 )
 from lfx.extension.loader._plugins import (
@@ -93,6 +94,7 @@ __all__ = [
     "filter_plugin_entry_points",
     "installed_extension_roots",
     "load_extension",
+    "load_extension_bundles",
     "load_inline_bundle",
     "load_installed_extensions",
     "load_lfx_bundles_extensions",

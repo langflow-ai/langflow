@@ -838,6 +838,7 @@ class TestGetTrustedCodeForValidation:
     def test_self_heals_from_all_types_dict_when_map_unbuilt(self, monkeypatch):
         trusted = "class Heal:\n    pass\n"
         monkeypatch.setattr(component_cache, "code_by_hash", None)
+        monkeypatch.setattr(component_cache, "all_types_ready", True)
         monkeypatch.setattr(
             component_cache,
             "all_types_dict",

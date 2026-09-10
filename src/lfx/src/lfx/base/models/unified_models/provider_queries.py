@@ -36,6 +36,17 @@ def get_model_provider_metadata() -> dict:
 model_provider_metadata = get_model_provider_metadata()
 
 
+def _canonical_provider_name(provider: str) -> str:
+    """Resolve a provider selector to the metadata table's legacy name key."""
+    from lfx.base.models.provider_registry import provider_name_for_id, resolve_provider_id
+
+    try:
+        provider_id = resolve_provider_id(provider)
+    except ValueError:
+        return provider
+    return provider_name_for_id(provider_id) or provider
+
+
 _STATIC_MODELS_DETAILED: list[list[dict]] = [
     ANTHROPIC_MODELS_DETAILED,
     OPENAI_MODELS_DETAILED,
@@ -71,10 +82,15 @@ def get_models_detailed() -> list[list[dict]]:
     # invalidate_catalog_cache).
     from lfx.base.models.models_dev_catalog import apply_models_dev_overrides, get_active_snapshot
 
+    # Provider-only extensions can contribute a static catalog without editing
+    # this core list. Import lazily to avoid a cycle during registry mutation.
+    from lfx.base.models.provider_registry import get_registered_model_catalogs
+
+    active_catalog = [*_STATIC_MODELS_DETAILED, *get_registered_model_catalogs()]
     snapshot = get_active_snapshot()
     if snapshot is None:
-        return _STATIC_MODELS_DETAILED
-    return apply_models_dev_overrides(_STATIC_MODELS_DETAILED, snapshot)
+        return active_catalog
+    return apply_models_dev_overrides(active_catalog, snapshot)
 
 
 # NOTE: ``MODELS_DETAILED`` is a back-compat binding for callers that imported
@@ -85,25 +101,44 @@ def get_models_detailed() -> list[list[dict]]:
 MODELS_DETAILED = _STATIC_MODELS_DETAILED
 
 
+def get_provider_secret_variable_key(provider: str) -> str | None:
+    """Return the provider's primary secret variable, never connection config.
+
+    Required secrets take precedence over optional secrets. Providers with no
+    declared secret (for example, a local API-key-optional endpoint configured
+    only by base URL) intentionally return ``None``.
+    """
+    variables = model_provider_metadata.get(_canonical_provider_name(provider), {}).get("variables", [])
+    required_secret = next(
+        (
+            variable.get("variable_key")
+            for variable in variables
+            if variable.get("required") and variable.get("is_secret")
+        ),
+        None,
+    )
+    if required_secret is not None:
+        return required_secret
+    return next((variable.get("variable_key") for variable in variables if variable.get("is_secret")), None)
+
+
 @lru_cache(maxsize=1)
 def get_model_provider_variable_mapping() -> dict[str, str]:
-    """Return primary (first required secret) variable for each provider.
+    """Return one primary variable for each provider.
 
-    Backward-compatible helper used in many callers that still expect a single
-    provider-level variable key.
+    This broad, backward-compatible mapping is used by provider UI and
+    enablement callers that need a representative variable even when a
+    provider has no secret. API-key resolution must instead use
+    :func:`get_provider_secret_variable_key`.
     """
     result = {}
     for provider, meta in model_provider_metadata.items():
         variables = meta.get("variables", [])
-        # Prefer a required secret (the canonical API key); then any secret
-        # (an *optional* API key, e.g. a local OpenAI-compatible server like
-        # vLLM whose VLLM_API_KEY is optional); only then fall back to the first
-        # variable. Without the "any secret" step the mapping would point at the
-        # first required *non-secret* connection field (e.g. a base URL), which
-        # get_api_key_for_provider would then resolve and send as the API key.
-        chosen = next((v["variable_key"] for v in variables if v.get("required") and v.get("is_secret")), None)
-        if chosen is None:
-            chosen = next((v["variable_key"] for v in variables if v.get("is_secret")), None)
+        # Prefer a required secret (the canonical API key), then any optional
+        # secret. Providers with no secret retain their first connection field
+        # for backward-compatible UI/enablement behavior; credential resolution
+        # deliberately uses get_provider_secret_variable_key directly.
+        chosen = get_provider_secret_variable_key(provider)
         if chosen is None and variables:
             chosen = variables[0]["variable_key"]
         if chosen is not None:
@@ -113,7 +148,7 @@ def get_model_provider_variable_mapping() -> dict[str, str]:
 
 def get_provider_all_variables(provider: str) -> list[dict]:
     """Get all variables for a provider."""
-    meta = model_provider_metadata.get(provider, {})
+    meta = model_provider_metadata.get(_canonical_provider_name(provider), {})
     return meta.get("variables", [])
 
 
@@ -143,10 +178,25 @@ def get_model_providers() -> list[str]:
     covers providers that ship no static catalog and rely entirely on live
     discovery -- including providers contributed by extension bundles via
     ``provider_registry`` (which merge their metadata in place).
+
+    Stable identity, rather than display text, owns deduplication. This folds
+    a legacy alias contributed by one catalog surface into the canonical
+    metadata provider without changing the public display-name response.
     """
-    providers = {md.get("provider", "Unknown") for group in get_models_detailed() for md in group}
-    providers.update(model_provider_metadata.keys())
-    return sorted(providers)
+    from lfx.base.models.provider_registry import resolve_provider_id
+
+    providers_by_id: dict[str, str] = {}
+    # Metadata is authoritative for the public provider name, so seed it
+    # before catalog aliases and retain the first spelling for each stable ID.
+    for provider in model_provider_metadata:
+        if isinstance(provider, str) and provider.strip():
+            providers_by_id.setdefault(resolve_provider_id(provider), provider)
+    for group in get_models_detailed():
+        for metadata in group:
+            provider = metadata.get("provider", "Unknown")
+            if isinstance(provider, str) and provider.strip():
+                providers_by_id.setdefault(resolve_provider_id(provider), provider)
+    return sorted(providers_by_id.values())
 
 
 def get_live_only_providers() -> list[str]:

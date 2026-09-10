@@ -4,6 +4,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.io import MultilineInput, Output, StrInput
 from lfx.schema.data import Data
 from lfx.utils.python_repl_security import ensure_code_execution_enabled, safe_builtins, validate_code_safety
+from lfx.utils.sandbox import is_sandbox_enabled, run_code_in_sandbox, sanitize_code
 
 
 class PythonREPLComponent(Component):
@@ -25,7 +26,12 @@ class PythonREPLComponent(Component):
         MultilineInput(
             name="python_code",
             display_name="Python Code",
-            info="The Python code to execute. Only modules specified in Global Imports can be used.",
+            info=(
+                "The Python code to execute. By default only modules specified in Global Imports "
+                "can be used. When a sandbox backend is configured (LANGFLOW_SANDBOX_BACKEND), the "
+                "code runs in an isolated microVM instead and may import any module available in "
+                "the sandbox image."
+            ),
             value="print('Hello, World!')",
             input_types=["Message"],
             tool_mode=True,
@@ -74,11 +80,37 @@ class PythonREPLComponent(Component):
             global_dict["__builtins__"] = safe_builtins()
             return global_dict
 
+    def _run_in_sandbox(self) -> Data:
+        """Run the code in the configured hardware-isolated sandbox backend.
+
+        The VM boundary replaces the in-process mitigations: the Python-level
+        import allow-list and AST escape-gadget checks are host-process
+        protections and are intentionally skipped here, so sandboxed code may
+        import anything available in the guest image. Sandbox infrastructure
+        errors (including a configured-but-unavailable backend) propagate —
+        never fall back to in-process exec.
+        """
+        # Same input normalization as the in-process path (which calls
+        # PythonREPL.sanitize_input): strip markdown fences so LLM-authored
+        # tool-mode code behaves identically in both modes.
+        result = run_code_in_sandbox(sanitize_code(self.python_code), global_imports=self.global_imports)
+        if not result.success:
+            error_message = result.error_message()
+            self.log(f"Sandboxed code execution failed: {error_message}")
+            return Data(data={"error": error_message})
+        self.log("Sandboxed code execution completed successfully")
+        return Data(data={"result": result.stdout.strip()})
+
     def run_python_repl(self) -> Data:
         try:
             # Refuse to run user code when allow_custom_components is disabled
             # (GHSA-8qpj-27x8-pwpq). Raised before any sanitize/exec.
             ensure_code_execution_enabled()
+
+            # Opt-in microVM isolation (LANGFLOW_SANDBOX_BACKEND, issue #12029):
+            # route the code into a dedicated VM instead of in-process exec.
+            if is_sandbox_enabled():
+                return self._run_in_sandbox()
             # Validate the exact code that will run: PythonREPL.run() strips a leading
             # "python"/backticks/whitespace prefix before exec, so validate the sanitized
             # form. Rejects inline imports and escape gadgets (e.g.

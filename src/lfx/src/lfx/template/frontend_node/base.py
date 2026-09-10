@@ -65,6 +65,14 @@ class FrontendNode(BaseModel):
     """Metadata for the component node."""
     tool_mode: bool = False
     """Whether the frontend node is in tool mode."""
+    add_tool_output: bool | None = None
+    """Whether the component synthesizes a toolset output without a tool_mode input.
+
+    The other half of ``Component._handle_tool_mode``. Serialized only when set
+    (None is excluded from ``to_dict``), so consumers reading a template — the
+    flow builder, the MCP registry — can state the runtime rule exactly instead
+    of guessing from output-side ``tool_mode``.
+    """
 
     def set_documentation(self, documentation: str) -> None:
         """Sets the documentation of the frontend node."""

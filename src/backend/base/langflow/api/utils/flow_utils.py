@@ -8,12 +8,16 @@ from typing import TYPE_CHECKING, Literal
 
 from fastapi import HTTPException
 from lfx.graph.graph.base import Graph
-from lfx.log.logger import logger
 from lfx.services.deps import session_scope
 from sqlalchemy import delete
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.services.authorization.public_access import (
+    PublicResourceAction,
+    authorize_public_flow_access,
+    public_execution_user,
+)
 from langflow.services.database.models.auth.authz import AuthzShare
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
@@ -24,7 +28,7 @@ from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.traces.model import SpanTable, TraceTable
 from langflow.services.database.models.transactions.model import TransactionTable
-from langflow.services.database.models.user.model import User
+from langflow.services.database.models.user.model import UserRead
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 
 if TYPE_CHECKING:
@@ -216,14 +220,15 @@ async def verify_public_flow_and_get_user(
     flow_id: uuid.UUID,
     client_id: str | None,
     authenticated_user_id: uuid.UUID | None = None,
-) -> tuple[User, uuid.UUID]:
+    request_host: str | None = None,
+) -> tuple[UserRead, uuid.UUID]:
     """Verify a public flow request and generate a deterministic flow ID.
 
     This utility function:
     1. Checks that a client_id cookie or authenticated_user_id is provided
-    2. Verifies the flow exists and is marked as PUBLIC
+    2. Verifies an explicit or compatibility-derived PUBLIC grant
     3. Creates a deterministic UUID based on the identifier and original flow_id
-    4. Retrieves the flow owner user for permission purposes
+    4. Returns the stable non-user execution principal
 
     When an authenticated_user_id is provided, it takes precedence over client_id
     for UUID v5 generation. This enables DB-persisted sessions for logged-in users
@@ -233,29 +238,30 @@ async def verify_public_flow_and_get_user(
         flow_id: The original flow ID to verify
         client_id: The client ID from the request cookie
         authenticated_user_id: The authenticated user's ID (takes precedence over client_id)
+        request_host: Trusted request hostname supplied to the tenant-resolution plugin seam.
 
     Returns:
-        tuple: (flow owner user, deterministic flow ID for tracking)
+        tuple: (anonymous execution principal, deterministic flow ID for tracking)
 
     Raises:
         HTTPException:
             - 400 if neither client_id nor authenticated_user_id is provided
-            - 403 if flow doesn't exist or isn't public
-            - 403 if unable to retrieve the flow owner user
-            - 403 if user is not found for public flow
+            - 404 if the flow or its direct-link grant is unavailable
     """
     if not client_id and not authenticated_user_id:
         raise HTTPException(status_code=400, detail="No client_id cookie found")
 
-    # Check if the flow is public
+    # Load only the exact direct-link resource; this path never enumerates flows.
     async with session_scope() as session:
-        from sqlmodel import select
-
-        from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
-
         flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
-        if not flow or flow.access_type is not AccessTypeEnum.PUBLIC:
-            raise HTTPException(status_code=403, detail="Flow is not public")
+        if flow is None:
+            raise HTTPException(status_code=404, detail="Flow not found")
+        await authorize_public_flow_access(
+            flow=flow,
+            action=PublicResourceAction.EXECUTE,
+            request_host=request_host,
+            session=session,
+        )
 
     # Use authenticated user_id for deterministic UUID when available, otherwise client_id.
     # Keep the branches explicit so identifier is non-optional at the UUID boundary.
@@ -269,17 +275,4 @@ async def verify_public_flow_and_get_user(
         principal_type = "client"
     new_flow_id = compute_virtual_flow_id(identifier, flow_id, principal_type=principal_type)
 
-    # Get the user associated with the flow
-    try:
-        from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
-
-        user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
-
-    except Exception as exc:
-        await logger.aexception("Error getting user for public flow %s", flow_id)
-        raise HTTPException(status_code=403, detail="Flow is not accessible") from exc
-
-    if not user:
-        raise HTTPException(status_code=403, detail="Flow is not accessible")
-
-    return user, new_flow_id
+    return public_execution_user(), new_flow_id

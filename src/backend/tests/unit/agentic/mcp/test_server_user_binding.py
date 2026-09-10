@@ -7,6 +7,7 @@ server spawned without a bound identity cannot read or write any user's flows.
 """
 
 import inspect
+from unittest.mock import AsyncMock
 
 import pytest
 from langflow.agentic.mcp import server as mcp_server
@@ -28,6 +29,74 @@ def test_bound_user_id_fails_closed_when_empty(monkeypatch):
     monkeypatch.setenv(AGENTIC_USER_ID_ENV_VAR, "")
     with pytest.raises(ValueError, match="not bound to an authenticated user"):
         mcp_server._bound_user_id()
+
+
+async def test_standalone_service_boot_starts_provider_policy_refresh(monkeypatch):
+    from langflow.services import utils as service_utils
+    from langflow.services.task import model_provider_policy_refresh as refresh_module
+
+    events = []
+
+    async def initialize_services():
+        events.append("initialize")
+
+    async def start_refresh():
+        events.append("start_refresh")
+
+    monkeypatch.setattr(mcp_server, "_services_initialized", False)
+    monkeypatch.setattr(mcp_server, "_policy_refresh_started", False)
+    monkeypatch.setattr(mcp_server, "get_db_service", lambda: object())
+    monkeypatch.setattr(service_utils, "initialize_services", initialize_services)
+    monkeypatch.setattr(
+        refresh_module.model_provider_policy_refresh_worker,
+        "start",
+        AsyncMock(side_effect=start_refresh),
+    )
+
+    await mcp_server._ensure_services()
+
+    assert events == ["initialize", "start_refresh"]
+    assert mcp_server._services_initialized is True
+    assert mcp_server._policy_refresh_started is True
+
+
+async def test_refresh_start_failure_retries_without_reinitializing_services(monkeypatch):
+    from langflow.services import utils as service_utils
+    from langflow.services.task import model_provider_policy_refresh as refresh_module
+
+    initialize_services = AsyncMock()
+    start_refresh = AsyncMock(side_effect=[RuntimeError("refresh start failed"), None])
+    monkeypatch.setattr(mcp_server, "_services_initialized", False)
+    monkeypatch.setattr(mcp_server, "_policy_refresh_started", False)
+    monkeypatch.setattr(mcp_server, "get_db_service", lambda: object())
+    monkeypatch.setattr(service_utils, "initialize_services", initialize_services)
+    monkeypatch.setattr(refresh_module.model_provider_policy_refresh_worker, "start", start_refresh)
+
+    with pytest.raises(RuntimeError, match="refresh start failed"):
+        await mcp_server._ensure_services()
+
+    assert mcp_server._services_initialized is True
+    assert mcp_server._policy_refresh_started is False
+
+    await mcp_server._ensure_services()
+
+    initialize_services.assert_awaited_once_with()
+    assert start_refresh.await_count == 2
+    assert mcp_server._policy_refresh_started is True
+
+
+async def test_mcp_lifespan_stops_started_policy_refresh(monkeypatch):
+    from langflow.services.task import model_provider_policy_refresh as refresh_module
+
+    stop_refresh = AsyncMock()
+    monkeypatch.setattr(mcp_server, "_policy_refresh_started", True)
+    monkeypatch.setattr(refresh_module.model_provider_policy_refresh_worker, "stop", stop_refresh)
+
+    async with mcp_server._service_lifespan(mcp_server.mcp):
+        pass
+
+    stop_refresh.assert_awaited_once_with()
+    assert mcp_server._policy_refresh_started is False
 
 
 @pytest.mark.parametrize(

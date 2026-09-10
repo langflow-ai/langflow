@@ -23,6 +23,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
+from lfx.workflow.adapters.langflow import WORKFLOW_OUTPUT_CAPTURE_EVENT
 
 from langflow.services.background_execution.live_bus import LiveFrame
 from langflow.services.database.models.jobs.model import JobStatus, SignalType
@@ -117,7 +118,10 @@ class JobRunner:
                 with contextlib.suppress(Exception):
                     await self._jobs.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
                 with contextlib.suppress(Exception):
-                    await self._jobs.set_error(job_id, {"type": "suspend_failed", "detail": str(suspend_exc)})
+                    await self._jobs.set_error(
+                        job_id,
+                        {"type": "suspend_failed", "detail": "Workflow suspension failed."},
+                    )
             else:
                 paused = True
                 await logger.adebug(f"Background job {job_id} suspended for human input")
@@ -146,15 +150,21 @@ class JobRunner:
         finalizer, or close the live bus — the run is resumable.
         """
         await self._jobs.append_event(job_id, HUMAN_INPUT_REQUIRED_EVENT, exc.payload)
-        await self._jobs.update_job_status(job_id, JobStatus.SUSPENDED)
         metadata: dict[str, Any] = {}
         if exc.request_id is not None:
             metadata["pending_request_id"] = exc.request_id
         if self._input_deadline_s is not None:
             deadline = datetime.now(timezone.utc) + timedelta(seconds=self._input_deadline_s)
             metadata["input_deadline_at"] = deadline.isoformat()
-        if metadata:
-            await self._jobs.update_job_metadata(job_id, metadata)
+        if exc.output_events:
+            # Durable stash of the pre-pause terminal outputs so the resumed pass can
+            # pre-seed its capture list. Deduped so a resume-pause-resume cycle does
+            # not accumulate duplicates (the pre-seed already folds the prior stash in).
+            metadata["pre_pause_outputs"] = self._dedup_outputs(exc.output_events)
+        # Publish SUSPENDED only when the resume guard and pre-pause captures are
+        # visible in the same committed row. Otherwise a racing resume can claim
+        # the job between separate status and metadata transactions.
+        await self._jobs.suspend_job(job_id, metadata)
 
     async def _finalize_terminal_event(self, job_id: UUID) -> None:
         """Backfill the error blob + terminal event for TIMED_OUT / CANCELLED.
@@ -232,20 +242,42 @@ class JobRunner:
         last_durable_seq = 0
         errored_payload: dict[str, Any] | None = None
         # Terminal outputs the run produced, captured so GET status can return
-        # the result without forcing a /events re-attach. The langflow adapter
-        # normalizes each terminal output into a durable ``output`` event whose
-        # ``data`` is the same ``OutputEvent`` (a ``ComponentOutput`` plus its
-        # component id) that sync returns in ``outputs[id]``. The agui adapter
-        # does not emit these, so agui-protocol runs leave this empty and their
-        # status stays result-less (the result is still on the /events log).
-        output_events: list[dict[str, Any]] = []
+        # the result without forcing a /events re-attach. The frame source emits
+        # a protocol-neutral off-wire capture for both langflow and AG-UI. The
+        # public langflow ``output`` event is also accepted as a fallback for
+        # injected/exported FrameSource implementations that do not emit the
+        # private capture; final deduplication keeps the two paths from doubling.
+        #
+        # A resumed run starts a FRESH frame stream and the output loop skips
+        # re-emitting checkpoint-restored vertices, so any terminal output the
+        # pre-pause pass produced would be lost. Pre-seed from the stash _suspend
+        # wrote to job_metadata; _dedup_outputs lets a re-emitted vertex overwrite
+        # its stale entry at finalize (resumed pass wins).
+        output_events: list[dict[str, Any]] = await self._load_pre_pause_outputs(job_id) if resume is not None else []
         async for frame_bytes, event_type in self._frame_source(**source_kwargs):
+            if event_type == WORKFLOW_OUTPUT_CAPTURE_EVENT:
+                # Off-wire terminal-output capture (both protocols): record it into
+                # the in-memory result ONLY. Deliberately no ``append_event`` (never
+                # in ``job_events``) and no ``publish`` (never on the live bus), so the
+                # wire is unchanged and both protocols populate ``Job.result``.
+                payload = self._decode_payload(frame_bytes)
+                output_data = payload.get("data")
+                if isinstance(output_data, dict):
+                    output_events.append(output_data)
+                continue
             if event_type == HUMAN_INPUT_REQUIRED_EVENT:
                 from langflow.services.jobs.service import _unwrap_pause_payload
 
                 payload = self._decode_payload(frame_bytes)
                 request = _unwrap_pause_payload(payload) or {}
-                raise PauseRequested(payload=payload, request_id=request.get("request_id"))
+                # Carry the pre-pause captures out with the exception so _suspend can
+                # stash them; without this the resumed pass starts empty and the final
+                # result drops every terminal output produced before the pause.
+                raise PauseRequested(
+                    payload=payload,
+                    request_id=request.get("request_id"),
+                    output_events=output_events,
+                )
             if self._adapter.is_durable(event_type):
                 # Vertex/milestone-boundary cooperative cancel: a STOP written to
                 # the durable signal table flips the job at the next durable
@@ -258,12 +290,14 @@ class JobRunner:
                 seq = await self._jobs.append_event(job_id, event_type, payload)
                 last_durable_seq = seq
                 await self._bus.publish(str(job_id), LiveFrame(seq=seq, data=self._restamp_id(frame_bytes, seq)))
-                if event_type == self._adapter.terminal_error_type:
-                    errored_payload = payload
-                elif event_type == "output":
+                if event_type == "output":
+                    # Fallback for custom frame sources that emit the standard
+                    # adapter event but not WORKFLOW_OUTPUT_CAPTURE_EVENT.
                     output_data = payload.get("data")
                     if isinstance(output_data, dict):
                         output_events.append(output_data)
+                if event_type == self._adapter.terminal_error_type:
+                    errored_payload = payload
             else:
                 await self._bus.publish(
                     str(job_id),
@@ -287,7 +321,42 @@ class JobRunner:
             # Surface as a failure so execute_with_status writes FAILED.
             msg = "Background job emitted a terminal error event"
             raise RuntimeError(msg)
-        await self._jobs.set_result(job_id, {"status": "completed", "outputs": output_events})
+        await self._jobs.set_result(job_id, {"status": "completed", "outputs": self._dedup_outputs(output_events)})
+
+    async def _load_pre_pause_outputs(self, job_id: UUID) -> list[dict[str, Any]]:
+        """Return terminal outputs a prior suspend stashed in job_metadata, or [].
+
+        Read once at the top of a resumed ``_drive`` to seed the capture list so
+        outputs produced before the pause survive into the completed-run result.
+        """
+        job = await self._jobs.get_job_by_job_id(job_id)
+        prior = (job.job_metadata or {}).get("pre_pause_outputs") if job else None
+        if isinstance(prior, list):
+            return [event for event in prior if isinstance(event, dict)]
+        return []
+
+    @staticmethod
+    def _dedup_outputs(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Merge pre-pause and resumed-pass captures keyed by ``component_id``.
+
+        A resumed run re-emits the branch vertices it had to rebuild, so one
+        ``component_id`` can appear both in the pre-seeded pre-pause outputs and in
+        the fresh captures. Keep each component's FIRST position (pre-pause outputs
+        stay ahead of ones produced after resume) but its LATEST value (the resumed
+        pass wins for anything it re-emitted). Events without a ``component_id`` are
+        passed through untouched, in order.
+        """
+        index: dict[str, int] = {}
+        merged: list[dict[str, Any]] = []
+        for event in events:
+            cid = event.get("component_id")
+            if cid is not None and cid in index:
+                merged[index[cid]] = event
+                continue
+            if cid is not None:
+                index[cid] = len(merged)
+            merged.append(event)
+        return merged
 
     async def _maybe_resume(self, job_id: UUID) -> dict[str, Any] | None:
         data = await self._pending_resume(job_id)

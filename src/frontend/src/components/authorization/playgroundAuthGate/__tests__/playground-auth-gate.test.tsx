@@ -1,227 +1,165 @@
 /**
- * Tests for PlaygroundAuthGate Decision Logic
+ * Tests for PlaygroundAuthGate decision logic.
  *
- * The PlaygroundAuthGate protects the /playground/:id/ route by:
- * - Allowing access when auto-login is enabled (autoLogin === true)
- * - Allowing access when user is already authenticated
- * - Redirecting to /login when auto-login is disabled and user is not authenticated
- * - Showing a loading state while auth checks are in progress
+ * The gate protects the /playground/:id/ route by holding the page in a loading
+ * state until the session has hydrated, then rendering it.
+ *
+ * It deliberately does NOT decide public access. It used to send any
+ * unauthenticated visitor to /login whenever auto-login was disabled, which made
+ * public direct links unreachable for anonymous visitors on exactly the
+ * deployments where anonymity is meaningful — the page never got to ask the
+ * server whether the flow was public. That decision now belongs to the page,
+ * which asks the server and routes to /login (with this URL preserved) only
+ * once the link is known to be unusable.
+ *
+ * These tests import the real implementation rather than re-deriving it, so a
+ * change to the gate's contract has to change this file too.
  */
 
 import { renderHook } from "@testing-library/react";
+import { computePlaygroundAuthState } from "../authState";
 
-type PlaygroundAuthState = "loading" | "authenticated" | "redirect";
-
-function computePlaygroundAuthState(
-  autoLogin: boolean | null,
-  isAuthenticated: boolean,
-  isAutoLoginFetched: boolean,
-  isSessionFetched: boolean,
-): PlaygroundAuthState {
-  const isAuthCheckComplete =
-    (isAutoLoginFetched || isAuthenticated) && isSessionFetched;
-
-  if (!isAuthCheckComplete) return "loading";
-  if (autoLogin === true || isAuthenticated) return "authenticated";
-  if (autoLogin === false && !isAuthenticated) return "redirect";
-  return "loading";
-}
-
-function usePlaygroundAuthState(
-  autoLogin: boolean | null,
-  isAuthenticated: boolean,
-  isAutoLoginFetched: boolean,
-  isSessionFetched: boolean,
-): PlaygroundAuthState {
-  return computePlaygroundAuthState(
-    autoLogin,
-    isAuthenticated,
-    isAutoLoginFetched,
-    isSessionFetched,
-  );
-}
-
-describe("PlaygroundAuthGate - Auth Decision Logic", () => {
-  describe("Auto-Login Enabled (autoLogin === true)", () => {
-    it("should_return_authenticated_when_autoLogin_is_true_and_fetched", () => {
-      const result = computePlaygroundAuthState(true, false, true, true);
-      expect(result).toBe("authenticated");
+describe("computePlaygroundAuthState", () => {
+  describe("Anonymous visitors (the public direct-link audience)", () => {
+    it("admits an anonymous visitor once the auth check completes", () => {
+      // The regression this guards: an anonymous visitor on a login-required
+      // deployment must still reach the page so the public flow can load.
+      expect(
+        computePlaygroundAuthState({
+          isAuthenticated: false,
+          isAutoLoginFetched: true,
+          isSessionProcessed: true,
+        }),
+      ).toBe("allowed");
     });
 
-    it("should_return_authenticated_when_autoLogin_true_regardless_of_isAuthenticated", () => {
-      expect(computePlaygroundAuthState(true, true, true, true)).toBe(
-        "authenticated",
-      );
-      expect(computePlaygroundAuthState(true, false, true, true)).toBe(
-        "authenticated",
-      );
+    it("does not accept autoLogin as an input at all", () => {
+      // Structural guard: re-introducing an auto-login-keyed redirect would
+      // have to widen this signature, which fails this assertion.
+      expect(computePlaygroundAuthState).toHaveLength(1);
+      expect(
+        computePlaygroundAuthState({
+          isAuthenticated: false,
+          isAutoLoginFetched: true,
+          isSessionProcessed: true,
+          // @ts-expect-error autoLogin is intentionally not part of the contract
+          autoLogin: false,
+        }),
+      ).toBe("allowed");
     });
   });
 
-  describe("User Already Authenticated (autoLogin === false)", () => {
-    it("should_return_authenticated_when_user_is_authenticated_and_autoLogin_false", () => {
-      const result = computePlaygroundAuthState(false, true, true, true);
-      expect(result).toBe("authenticated");
+  describe("Authenticated visitors", () => {
+    it("admits an authenticated visitor", () => {
+      expect(
+        computePlaygroundAuthState({
+          isAuthenticated: true,
+          isAutoLoginFetched: true,
+          isSessionProcessed: true,
+        }),
+      ).toBe("allowed");
     });
 
-    it("should_return_authenticated_when_user_is_authenticated_even_before_autoLogin_fetched", () => {
-      // isAuthenticated=true makes isAuthCheckComplete=true (skips autoLogin fetch)
-      const result = computePlaygroundAuthState(false, true, false, true);
-      expect(result).toBe("authenticated");
-    });
-  });
-
-  describe("Not Authenticated with Auto-Login Disabled", () => {
-    it("should_return_redirect_when_autoLogin_false_and_not_authenticated", () => {
-      const result = computePlaygroundAuthState(false, false, true, true);
-      expect(result).toBe("redirect");
-    });
-  });
-
-  describe("Loading States", () => {
-    it("should_return_loading_when_autoLogin_is_null_and_not_authenticated", () => {
-      const result = computePlaygroundAuthState(null, false, false, false);
-      expect(result).toBe("loading");
-    });
-
-    it("should_return_loading_when_session_not_yet_fetched", () => {
-      const result = computePlaygroundAuthState(false, false, true, false);
-      expect(result).toBe("loading");
-    });
-
-    it("should_return_loading_when_autoLogin_not_yet_fetched_and_not_authenticated", () => {
-      const result = computePlaygroundAuthState(null, false, false, true);
-      expect(result).toBe("loading");
+    it("admits an authenticated visitor before the auto-login probe settles", () => {
+      // isAuthenticated=true completes the auth check on its own.
+      expect(
+        computePlaygroundAuthState({
+          isAuthenticated: true,
+          isAutoLoginFetched: false,
+          isSessionProcessed: true,
+        }),
+      ).toBe("allowed");
     });
   });
 
-  describe("State Transitions", () => {
-    it("should_transition_from_loading_to_authenticated_when_autoLogin_becomes_true", () => {
+  describe("Loading states", () => {
+    it("waits while nothing has settled", () => {
+      expect(
+        computePlaygroundAuthState({
+          isAuthenticated: false,
+          isAutoLoginFetched: false,
+          isSessionProcessed: false,
+        }),
+      ).toBe("loading");
+    });
+
+    it("waits while the session check is pending", () => {
+      // The visitor may still hold a valid cookie; deciding now would be wrong.
+      expect(
+        computePlaygroundAuthState({
+          isAuthenticated: false,
+          isAutoLoginFetched: true,
+          isSessionProcessed: false,
+        }),
+      ).toBe("loading");
+    });
+
+    it("waits while the auto-login probe is pending and nobody is signed in", () => {
+      expect(
+        computePlaygroundAuthState({
+          isAuthenticated: false,
+          isAutoLoginFetched: false,
+          isSessionProcessed: true,
+        }),
+      ).toBe("loading");
+    });
+  });
+
+  describe("State transitions", () => {
+    it("moves from loading to allowed when the session restores auth", () => {
       const { result, rerender } = renderHook(
-        ({
-          autoLogin,
-          isAuthenticated,
-          isAutoLoginFetched,
-          isSessionFetched,
-        }) =>
-          usePlaygroundAuthState(
-            autoLogin,
-            isAuthenticated,
-            isAutoLoginFetched,
-            isSessionFetched,
-          ),
+        (props: {
+          isAuthenticated: boolean;
+          isAutoLoginFetched: boolean;
+          isSessionProcessed: boolean;
+        }) => computePlaygroundAuthState(props),
         {
           initialProps: {
-            autoLogin: null as boolean | null,
-            isAuthenticated: false,
-            isAutoLoginFetched: false,
-            isSessionFetched: false,
-          },
-        },
-      );
-
-      expect(result.current).toBe("loading");
-
-      rerender({
-        autoLogin: true,
-        isAuthenticated: true,
-        isAutoLoginFetched: true,
-        isSessionFetched: true,
-      });
-
-      expect(result.current).toBe("authenticated");
-    });
-
-    it("should_transition_from_loading_to_redirect_when_autoLogin_becomes_false_with_no_auth", () => {
-      const { result, rerender } = renderHook(
-        ({
-          autoLogin,
-          isAuthenticated,
-          isAutoLoginFetched,
-          isSessionFetched,
-        }) =>
-          usePlaygroundAuthState(
-            autoLogin,
-            isAuthenticated,
-            isAutoLoginFetched,
-            isSessionFetched,
-          ),
-        {
-          initialProps: {
-            autoLogin: null as boolean | null,
-            isAuthenticated: false,
-            isAutoLoginFetched: false,
-            isSessionFetched: false,
-          },
-        },
-      );
-
-      expect(result.current).toBe("loading");
-
-      rerender({
-        autoLogin: false,
-        isAuthenticated: false,
-        isAutoLoginFetched: true,
-        isSessionFetched: true,
-      });
-
-      expect(result.current).toBe("redirect");
-    });
-
-    it("should_transition_from_loading_to_authenticated_when_session_restores_auth", () => {
-      const { result, rerender } = renderHook(
-        ({
-          autoLogin,
-          isAuthenticated,
-          isAutoLoginFetched,
-          isSessionFetched,
-        }) =>
-          usePlaygroundAuthState(
-            autoLogin,
-            isAuthenticated,
-            isAutoLoginFetched,
-            isSessionFetched,
-          ),
-        {
-          initialProps: {
-            autoLogin: false as boolean | null,
             isAuthenticated: false,
             isAutoLoginFetched: true,
-            isSessionFetched: false,
+            isSessionProcessed: false,
           },
         },
       );
 
       expect(result.current).toBe("loading");
 
-      // Session check completes and restores auth (user had valid cookie)
       rerender({
-        autoLogin: false,
         isAuthenticated: true,
         isAutoLoginFetched: true,
-        isSessionFetched: true,
+        isSessionProcessed: true,
       });
 
-      expect(result.current).toBe("authenticated");
-    });
-  });
-
-  describe("Edge Cases", () => {
-    it("should_handle_all_false_states_as_loading", () => {
-      const result = computePlaygroundAuthState(null, false, false, false);
-      expect(result).toBe("loading");
+      expect(result.current).toBe("allowed");
     });
 
-    it("should_prioritize_isAuthenticated_over_autoLogin_false", () => {
-      // User manually logged in even though auto-login is disabled
-      const result = computePlaygroundAuthState(false, true, true, true);
-      expect(result).toBe("authenticated");
-    });
+    it("moves from loading to allowed for a visitor who never authenticates", () => {
+      const { result, rerender } = renderHook(
+        (props: {
+          isAuthenticated: boolean;
+          isAutoLoginFetched: boolean;
+          isSessionProcessed: boolean;
+        }) => computePlaygroundAuthState(props),
+        {
+          initialProps: {
+            isAuthenticated: false,
+            isAutoLoginFetched: false,
+            isSessionProcessed: false,
+          },
+        },
+      );
 
-    it("should_not_redirect_while_session_check_is_pending", () => {
-      // autoLogin=false but session not yet checked - user might have valid cookie
-      const result = computePlaygroundAuthState(false, false, true, false);
-      expect(result).toBe("loading");
+      expect(result.current).toBe("loading");
+
+      // Auto-login probe rejects (403) and the session says "not signed in" —
+      // previously a redirect to /login, now an admitted anonymous visitor.
+      rerender({
+        isAuthenticated: false,
+        isAutoLoginFetched: true,
+        isSessionProcessed: true,
+      });
+
+      expect(result.current).toBe("allowed");
     });
   });
 });

@@ -13,7 +13,7 @@ const toActionId = (label: string) =>
   label.trim().toLowerCase().replace(/ /g, "_");
 
 const baseInputClass =
-  "h-7 rounded-full border border-border bg-background px-2.5 text-sm outline-none focus:border-ring";
+  "h-7 rounded-full border border-control bg-background px-2.5 text-sm outline-none focus:border-ring";
 const inputClass = `${baseInputClass} w-32`;
 
 export default function ActionPickerComponent({
@@ -21,6 +21,7 @@ export default function ActionPickerComponent({
   handleOnNewValue,
   disabled,
   nodeId,
+  ariaLabelledBy,
 }: InputProps<string[], MultiselectComponentType>): JSX.Element {
   const { t } = useTranslation();
   const selected = Array.isArray(value) ? value : value ? [value] : [];
@@ -117,7 +118,11 @@ export default function ActionPickerComponent({
   }
 
   return (
-    <div className="flex w-full flex-wrap items-center gap-1.5">
+    <div
+      className="flex w-full flex-wrap items-center gap-1.5"
+      role="group"
+      aria-labelledby={ariaLabelledBy}
+    >
       {selected.map((action, index) =>
         editingIndex === index ? (
           <input

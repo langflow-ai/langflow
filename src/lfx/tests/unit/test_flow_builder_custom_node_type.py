@@ -19,7 +19,11 @@ These tests assert the emitted node TYPE -- the exact value the frontend keys on
 
 from __future__ import annotations
 
-from lfx.graph.flow_builder.component import add_component
+from lfx.graph.flow_builder.component import (
+    FLOW_BUILDER_REGISTRY_TYPE_KEY,
+    FLOW_BUILDER_UNTRUSTED_CUSTOM_KEY,
+    add_component,
+)
 
 
 def _entry(display_name: str) -> dict:
@@ -46,6 +50,8 @@ class TestUserGeneratedComponentNodeType:
         # The frontend keys the badge off data.type; it must be the canonical
         # custom-component type so the type resolves in the global templates.
         assert node["data"]["type"] == "CustomComponent"
+        assert node["data"][FLOW_BUILDER_REGISTRY_TYPE_KEY] == "RestaurantMenuTool"
+        assert node["data"][FLOW_BUILDER_UNTRUSTED_CUSTOM_KEY] is True
 
     def test_should_preserve_real_template_and_strip_internal_marker(self):
         registry = {"RestaurantMenuTool": {**_entry("Restaurant Menu Tool"), "custom": True}}

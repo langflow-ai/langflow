@@ -1,4 +1,5 @@
 import asyncio
+import builtins
 import contextlib
 import inspect
 import json
@@ -8,6 +9,7 @@ import shlex
 import shutil
 import unicodedata
 from collections.abc import AsyncIterator, Awaitable, Callable
+from pathlib import Path
 from types import UnionType
 from typing import Annotated, Any, TypedDict, Union, get_args, get_origin
 from urllib.parse import urlparse
@@ -30,12 +32,15 @@ from lfx.base.mcp.security import (
     validate_mcp_stdio_config,
 )
 from lfx.log.logger import logger
+from lfx.observability import outbound_call_span
 from lfx.schema.data import Data
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
+from lfx.utils.url_redaction import redact_urls_in_text, sanitize_url_for_display
 
+MCP_TOOL_SPAN_NAME = "mcp.tool.call"
 HTTP_ERROR_STATUS_CODE = httpx_codes.BAD_REQUEST  # HTTP status code for client errors
 
 # HTTP status codes used in validation
@@ -55,6 +60,9 @@ is_dangerous_mcp_env_var = mcp_security.is_dangerous_mcp_env_var
 # Minimum cleanup interval to prevent tight-loop CPU spin if settings return 0 or fail.
 _MCP_CLEANUP_INTERVAL_MIN = 30  # seconds
 _SESSION_VALIDATION_TIMEOUT_FLOOR = 10.0
+# Mirrors the McpSettings.mcp_server_timeout default. Only used when the settings object lacks
+# the field or carries a non-positive value, so a misconfiguration cannot resurrect a shorter cap.
+_SESSION_INIT_TIMEOUT_FALLBACK = 60.0
 
 
 def _validate_mcp_stdio_env(env: dict[str, str] | None) -> dict[str, str]:
@@ -97,6 +105,23 @@ def get_session_validation_timeout() -> float:
     if connect_timeout is None:
         return _SESSION_VALIDATION_TIMEOUT_FLOOR
     return max(_SESSION_VALIDATION_TIMEOUT_FLOOR, float(connect_timeout) / 3.0)
+
+
+def get_session_init_timeout() -> float:
+    """Budget for a new transport session to finish ``initialize``.
+
+    Derived from ``mcp_server_timeout`` so the inner readiness wait in the session
+    creators and the outer ``connect_to_server`` budget are the same number. This used
+    to be a hardcoded 30 s, which silently capped ``LANGFLOW_MCP_SERVER_TIMEOUT`` at 30
+    and, on the ``run_tool`` path (no outer connect budget), was the real connect limit.
+
+    Non-positive values are treated as unset, like ``_resolve_mcp_tool_execution_timeout``,
+    because ``asyncio.wait_for`` fails immediately for any timeout <= 0.
+    """
+    connect_timeout = _get_mcp_setting("mcp_server_timeout", None)
+    if connect_timeout is None or float(connect_timeout) <= 0:
+        return _SESSION_INIT_TIMEOUT_FALLBACK
+    return float(connect_timeout)
 
 
 def get_max_sessions_per_server() -> int:
@@ -705,7 +730,24 @@ def get_unique_name(base_name, max_length, existing_names):
         i += 1
 
 
-async def get_flow_snake_case(flow_name: str, user_id: str, session, *, is_action: bool | None = None):
+async def get_flow_snake_case(
+    flow_name: str,
+    user_id: str,
+    session,
+    *,
+    is_action: bool | None = None,
+    project_id: UUID | str | None = None,
+    mcp_enabled_only: bool = False,
+):
+    """Resolve an MCP tool name to a flow.
+
+    ``project_id`` and ``mcp_enabled_only`` default to the historical behavior because
+    this function is public ``lfx`` surface and still backs the global MCP server, where
+    user-only scoping is correct. Project-scoped callers must pass both: without them a
+    tool call resolves against every flow the user owns, so an unexposed flow is
+    reachable by name and two projects sharing an ``action_name`` collide on whichever
+    row the planner happens to return first.
+    """
     try:
         from langflow.services.database.models.flow.model import Flow
         from sqlmodel import select
@@ -716,6 +758,14 @@ async def get_flow_snake_case(flow_name: str, user_id: str, session, *, is_actio
     uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
 
     stmt = select(Flow).where(Flow.user_id == uuid_user_id).where(Flow.is_component == False)  # noqa: E712
+    if project_id is not None:
+        uuid_project_id = UUID(project_id) if isinstance(project_id, str) else project_id
+        stmt = stmt.where(Flow.folder_id == uuid_project_id)
+    if mcp_enabled_only:
+        stmt = stmt.where(Flow.mcp_enabled == True)  # noqa: E712
+    # ``action_name`` has no uniqueness constraint; without an explicit order the winner
+    # is heap-order dependent and an unrelated edit can flip which flow a tool call runs.
+    stmt = stmt.order_by(Flow.id)
     flows = (await session.exec(stmt)).all()
 
     for flow in flows:
@@ -800,6 +850,124 @@ def _inject_mcp_stdio_headers(args: list[str], headers: dict[str, str]) -> list[
     return [*final_args, *extra_args]
 
 
+GLOBAL_VARIABLE_PLACEHOLDER_PATTERN = re.compile(r"\{\{\s*([A-Za-z_][A-Za-z0-9_\-]*)\s*\}\}")
+
+HTTP_STATUS_IN_MESSAGE_PATTERN = re.compile(r"(?:HTTP|status(?:\s+code)?)[\s:=]*([45]\d{2})\b", re.IGNORECASE)
+
+
+def _exception_group_types() -> tuple[type[BaseException], ...]:
+    types_: list[type[BaseException]] = []
+    builtin_group = getattr(builtins, "BaseExceptionGroup", None)
+    if builtin_group is not None:
+        types_.append(builtin_group)
+    try:
+        from exceptiongroup import BaseExceptionGroup as BackportGroup
+    except ImportError:
+        pass
+    else:
+        if BackportGroup not in types_:
+            types_.append(BackportGroup)
+    return tuple(types_)
+
+
+_EXCEPTION_GROUP_TYPES = _exception_group_types()
+
+
+def _substitute_global_variables(value: str, request_variables: dict[str, str] | None) -> str:
+    """Resolve a whole-value variable name, or ``{{NAME}}`` placeholders inside a value.
+
+    Whole-value matching alone cannot compose a value, so a base URL could not be varied
+    per environment while keeping a project id. An unknown placeholder is left verbatim:
+    blanking it would build a URL that looks valid and points somewhere else.
+    """
+    if not request_variables or not value:
+        return value
+    if value in request_variables:
+        return request_variables[value]
+    return GLOBAL_VARIABLE_PLACEHOLDER_PATTERN.sub(
+        lambda match: request_variables.get(match.group(1), match.group(0)), value
+    )
+
+
+def resolve_global_variables_in_url(url: str, request_variables: dict[str, str] | None) -> str:
+    """Resolve global variables in a server URL, matching how headers are resolved."""
+    if not isinstance(url, str):
+        return url
+    return _substitute_global_variables(url, request_variables)
+
+
+def config_uses_global_variables(server_config: dict | None) -> bool:
+    """Report whether a server config references global variables anywhere.
+
+    Gating the variable load on headers alone meant a config whose only variable lived in
+    the URL never had anything to resolve against. ``env`` counts for the same reason and
+    is scrubbed into ``MCP_*`` names by the same code path: leaving it out handed the
+    stdio subprocess the variable name in place of the credential.
+    """
+    if not server_config:
+        return False
+    if server_config.get("headers") or server_config.get("env"):
+        return True
+    url = server_config.get("url")
+    return bool(isinstance(url, str) and GLOBAL_VARIABLE_PLACEHOLDER_PATTERN.search(url))
+
+
+def extract_http_status(error: BaseException) -> int | None:
+    """Find the HTTP status of an outbound failure, however deeply anyio grouped it.
+
+    The status never survives on the group itself: ``str()`` of a TaskGroup failure is
+    ``unhandled errors in a TaskGroup``, so reading the top-level exception tells the
+    operator nothing about why the server rejected the call.
+    """
+    for leaf in _iter_exception_leaves(error):
+        if isinstance(leaf, httpx.HTTPStatusError):
+            return leaf.response.status_code
+        if isinstance(leaf, McpError):
+            match = HTTP_STATUS_IN_MESSAGE_PATTERN.search(str(leaf))
+            if match:
+                return int(match.group(1))
+    return None
+
+
+def describe_mcp_tool_failure(tool_name: str, url: str | None, error: BaseException) -> str:
+    """Describe a tool call the remote server rejected, naming the status when there is one.
+
+    Connect-time reporting is not enough: a credential can expire after the session is
+    established, and the rejection then lands here instead.
+    """
+    status = extract_http_status(error)
+    target = f" at {sanitize_url_for_display(url)}" if url else ""
+    cause = redact_urls_in_text(str(error))
+    if status in (HTTP_UNAUTHORIZED, HTTP_FORBIDDEN):
+        return (
+            f"Tool '{tool_name}'{target} was rejected with HTTP {status}: "
+            f"the configured credential was refused. Cause: {cause}"
+        )
+    if status is not None:
+        return f"Tool '{tool_name}'{target} failed with HTTP {status}: {cause}"
+    return f"Tool '{tool_name}'{target} failed: {cause}"
+
+
+def describe_mcp_connection_failure(server_name: str, url: str, error: BaseException) -> str:
+    """Describe an outbound MCP failure by target, status and cause.
+
+    A wrong credential surfaced as ``unhandled errors in a TaskGroup`` with no indication
+    that authentication failed or which server rejected it.
+    """
+    target = sanitize_url_for_display(url) if urlparse(url).scheme else server_name
+    cause = redact_urls_in_text(str(error))
+
+    status = extract_http_status(error)
+    if status in (HTTP_UNAUTHORIZED, HTTP_FORBIDDEN):
+        return (
+            f"MCP server '{server_name}' at {target} rejected the request with HTTP {status}: "
+            f"the configured credential was refused. Cause: {cause}"
+        )
+    if status is not None:
+        return f"MCP server '{server_name}' at {target} failed with HTTP {status}: {cause}"
+    return f"MCP server '{server_name}' at {target} failed: {cause}"
+
+
 def _resolve_global_variables_in_headers(headers: dict, request_variables: dict[str, str] | None) -> dict:
     """Resolve global variable names in header values to their actual values.
 
@@ -813,14 +981,10 @@ def _resolve_global_variables_in_headers(headers: dict, request_variables: dict[
     if not request_variables:
         return headers
 
-    resolved = {}
-    for key, value in headers.items():
-        # If the value matches a global variable name, replace it with the actual value
-        if isinstance(value, str) and value in request_variables:
-            resolved[key] = request_variables[value]
-        else:
-            resolved[key] = value
-    return resolved
+    return {
+        key: _substitute_global_variables(value, request_variables) if isinstance(value, str) else value
+        for key, value in headers.items()
+    }
 
 
 def _validate_node_installation(command: str) -> str:
@@ -853,9 +1017,13 @@ STREAMABLE_HTTP_RETRY_BASE_DELAY_SEC = 0.35
 
 
 def _iter_exception_leaves(exc: BaseException) -> list[BaseException]:
-    """Flatten ExceptionGroup / TaskGroup failures to individual exceptions (Python 3.11+)."""
-    beg = getattr(__import__("builtins"), "BaseExceptionGroup", None)
-    if beg is not None and isinstance(exc, beg):
+    """Flatten ExceptionGroup / TaskGroup failures to individual exceptions.
+
+    On Python 3.10 the builtin does not exist and anyio raises the ``exceptiongroup``
+    backport instead, so checking builtins alone left every 3.10 deployment unable to
+    see the real cause inside a TaskGroup failure.
+    """
+    if isinstance(exc, _EXCEPTION_GROUP_TYPES):
         leaves: list[BaseException] = []
         for sub in exc.exceptions:
             leaves.extend(_iter_exception_leaves(sub))
@@ -970,7 +1138,7 @@ class MCPSessionManager:
     def __init__(self):
         # Structure: server_key -> {"sessions": {session_id: session_info}, "last_cleanup": timestamp}
         self.sessions_by_server = {}
-        self._background_tasks = set()  # Keep references to background tasks
+        self._background_tasks: set[asyncio.Task[Any]] = set()  # Keep references to background tasks
         # Backwards-compatibility maps: which context_id uses which (server_key, session_id)
         self._context_to_session: dict[str, tuple[str, str]] = {}
         # Reference count for each active (server_key, session_id)
@@ -1301,6 +1469,24 @@ class MCPSessionManager:
 
             return session
 
+    def _abort_session_task(self, task: asyncio.Task[Any]) -> None:
+        """Cancel and reap a transport task when session creation is interrupted."""
+        if task.done():
+            self._background_tasks.discard(task)
+            return
+
+        task.cancel()
+
+        async def reap_task() -> None:
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await task
+            self._background_tasks.discard(task)
+
+        # Reap outside the cancelled caller so transport shutdown can finish.
+        reaper = asyncio.create_task(reap_task())
+        self._background_tasks.add(reaper)
+        reaper.add_done_callback(self._background_tasks.discard)
+
     async def _create_stdio_session(self, session_id: str, connection_params):
         """Create a new stdio session as a background task to avoid context issues."""
         import asyncio
@@ -1337,9 +1523,13 @@ class MCPSessionManager:
         self._background_tasks.add(task)
         task.add_done_callback(self._background_tasks.discard)
 
-        # Wait for session to be ready (use longer timeout for remote connections)
+        # Wait for the session to be ready within the configured connect budget. A cold stdio
+        # server (e.g. a packaged interpreter importing Langflow) can take well over 20 s here.
         try:
-            session = await asyncio.wait_for(session_future, timeout=30.0)
+            session = await asyncio.wait_for(session_future, timeout=get_session_init_timeout())
+        except asyncio.CancelledError:
+            self._abort_session_task(task)
+            raise
         except asyncio.TimeoutError as timeout_err:
             # Clean up the failed task
             if not task.done():
@@ -1503,13 +1693,16 @@ class MCPSessionManager:
         task.add_done_callback(self._background_tasks.discard)
 
         try:
-            session = await asyncio.wait_for(session_future, timeout=30.0)
+            session = await asyncio.wait_for(session_future, timeout=get_session_init_timeout())
             if used_transport:
                 transport_used = used_transport[0]
                 await logger.ainfo(f"Session {session_id} successfully established using {transport_used}")
                 return session, task, transport_used, sse_preference_locked[0]
             msg = f"Session {session_id} established but transport not recorded"
             raise ValueError(msg)
+        except asyncio.CancelledError:
+            self._abort_session_task(task)
+            raise
         except asyncio.TimeoutError as timeout_err:
             if not task.done():
                 task.cancel()
@@ -1810,7 +2003,40 @@ class MCPStdioClient:
         session_manager = self._get_session_manager()
         return await session_manager.get_session(self._session_context, self._connection_params, "stdio")
 
+    def _tool_span_attributes(self, tool_name: str) -> dict[str, str]:
+        """Identifiers for the span: which tool, on which server, over which transport.
+
+        The server is the command and its first argument, basenames only. That is the part that
+        says which server this is (``uvx some-mcp-server``, ``python server.py``); later flags
+        are left out because they can carry tokens, and the span boundary is identifiers only.
+        """
+        attributes = {"mcp.tool.name": tool_name, "mcp.transport": "stdio"}
+        command = getattr(self._connection_params, "command", None)
+        if command:
+            args = getattr(self._connection_params, "args", None) or []
+            server = Path(command).name
+            if args:
+                server = f"{server} {Path(args[0]).name}"
+            attributes["mcp.server"] = server
+        return attributes
+
     async def run_tool(self, tool_name: str, arguments: dict[str, Any], timeout: float | None = None) -> Any:  # noqa: ASYNC109
+        """Run the tool, with one application span covering the call and any retries."""
+        with outbound_call_span(MCP_TOOL_SPAN_NAME, self._tool_span_attributes(tool_name)) as span:
+            result = await self._run_tool(tool_name, arguments, timeout)
+            # MCP reports a failed tool as isError on the result rather than by raising, and the
+            # caller only converts that to an exception after this span has closed. Without this
+            # a failed call exports as a success and the outbound error rate is always zero.
+            if getattr(result, "isError", False):
+                span.record_error("ToolError")
+            return result
+
+    async def _run_tool(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any],
+        timeout: float | None = None,  # noqa: ASYNC109
+    ) -> Any:
         """Run a tool with the given arguments using context-specific session.
 
         Args:
@@ -1841,6 +2067,7 @@ class MCPStdioClient:
 
         max_retries = 2
         last_error_type = None
+        last_error: Exception | None = None
 
         for attempt in range(max_retries):
             try:
@@ -1853,6 +2080,7 @@ class MCPStdioClient:
                     timeout=effective_timeout,
                 )
             except Exception as e:
+                last_error = e
                 current_error_type = type(e).__name__
                 await logger.awarning(f"Tool '{tool_name}' failed on attempt {attempt + 1}: {current_error_type} - {e}")
 
@@ -1863,6 +2091,15 @@ class MCPStdioClient:
                 except ImportError:
                     is_closed_resource_error = "ClosedResourceError" in str(type(e))
                     is_mcp_connection_error = "Connection closed" in str(e)
+
+                # A server that answered with a status is not a transport fault: the branches
+                # below match none of it, so it used to reach the caller as the raw TaskGroup
+                # string. Retrying is pointless — the same call gets the same answer.
+                if not (is_closed_resource_error or is_mcp_connection_error) and extract_http_status(e) is not None:
+                    msg = describe_mcp_tool_failure(tool_name, None, e)
+                    await logger.aerror(msg)
+                    self._connected = False
+                    raise ValueError(msg) from e
 
                 # Detect timeout errors
                 is_timeout_error = isinstance(e, asyncio.TimeoutError | TimeoutError)
@@ -1901,7 +2138,7 @@ class MCPStdioClient:
                     or is_mcp_connection_error
                     or is_timeout_error
                 ):
-                    msg = f"Failed to run tool '{tool_name}' after {attempt + 1} attempts: {e}"
+                    msg = describe_mcp_tool_failure(tool_name, None, e)
                     await logger.aerror(msg)
                     # Clean up failed session from cache
                     if self._session_context and self._component_cache:
@@ -1918,7 +2155,7 @@ class MCPStdioClient:
         # This should never be reached due to the exception handling above
         msg = f"Failed to run tool '{tool_name}': Maximum retries exceeded with repeated {last_error_type} errors"
         await logger.aerror(msg)
-        raise ValueError(msg)
+        raise ValueError(msg) from last_error
 
     async def disconnect(self):
         """Properly close the connection and clean up resources."""
@@ -2095,7 +2332,42 @@ class MCPStreamableHttpClient:
             # DELETE is advisory—log and continue
             logger.debug(f"Unable to send session DELETE to '{url}': {e}")
 
+    def _tool_span_attributes(self, tool_name: str) -> dict[str, str]:
+        """Identifiers for the span: which tool, on which server, over which transport.
+
+        The transport is read from the session manager rather than hardcoded, because this class
+        also serves SSE: ``MCPSseClient`` is an alias for it, and a streamable-http server can
+        fall back to SSE at runtime. A literal would label those calls streamable_http.
+
+        The server is the host, never the full URL: a URL can carry credentials in its query
+        string, which is the leak the export boundary exists to strip.
+        """
+        attributes = {"mcp.tool.name": tool_name, "mcp.transport": "streamable_http"}
+        params = self._connection_params
+        if isinstance(params, dict) and params.get("url"):
+            session_manager = self._get_session_manager()
+            server_key = session_manager._get_server_key(params, "streamable_http")
+            attributes["mcp.transport"] = session_manager._transport_preference.get(server_key, "streamable_http")
+            host = urlparse(params["url"]).netloc.rsplit("@", maxsplit=1)[-1]
+            if host:
+                attributes["mcp.server"] = host
+        return attributes
+
     async def run_tool(self, tool_name: str, arguments: dict[str, Any], timeout: float | None = None) -> Any:  # noqa: ASYNC109
+        """Run the tool, with one application span covering the call and any retries."""
+        with outbound_call_span(MCP_TOOL_SPAN_NAME, self._tool_span_attributes(tool_name)) as span:
+            result = await self._run_tool(tool_name, arguments, timeout)
+            # See the stdio client: MCP reports tool failure in the result, not by raising.
+            if getattr(result, "isError", False):
+                span.record_error("ToolError")
+            return result
+
+    async def _run_tool(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any],
+        timeout: float | None = None,  # noqa: ASYNC109
+    ) -> Any:
         """Run a tool with the given arguments using context-specific session.
 
         Args:
@@ -2126,6 +2398,7 @@ class MCPStreamableHttpClient:
 
         max_retries = 2
         last_error_type = None
+        last_error: Exception | None = None
 
         for attempt in range(max_retries):
             try:
@@ -2138,10 +2411,20 @@ class MCPStreamableHttpClient:
                     timeout=effective_timeout,
                 )
             except Exception as e:
+                last_error = e
                 current_error_type = type(e).__name__
                 await logger.awarning(f"Tool '{tool_name}' failed on attempt {attempt + 1}: {current_error_type} - {e}")
 
                 bust_session = _is_mcp_session_bust_error(e)
+
+                # A server that answered with a status is not a transport fault: the branches
+                # below match none of it, so it used to reach the caller as the raw TaskGroup
+                # string. Retrying is pointless — the same call gets the same answer.
+                if not bust_session and extract_http_status(e) is not None:
+                    msg = describe_mcp_tool_failure(tool_name, (self._connection_params or {}).get("url"), e)
+                    await logger.aerror(msg)
+                    self._connected = False
+                    raise ValueError(msg) from e
 
                 # Detect timeout errors
                 is_timeout_error = isinstance(e, asyncio.TimeoutError | TimeoutError)
@@ -2177,7 +2460,7 @@ class MCPStreamableHttpClient:
                     or bust_session
                     or is_timeout_error
                 ):
-                    msg = f"Failed to run tool '{tool_name}' after {attempt + 1} attempts: {e}"
+                    msg = describe_mcp_tool_failure(tool_name, (self._connection_params or {}).get("url"), e)
                     await logger.aerror(msg)
                     # Clean up failed session from cache
                     if self._session_context and self._component_cache:
@@ -2194,7 +2477,7 @@ class MCPStreamableHttpClient:
         # This should never be reached due to the exception handling above
         msg = f"Failed to run tool '{tool_name}': Maximum retries exceeded with repeated {last_error_type} errors"
         await logger.aerror(msg)
-        raise ValueError(msg)
+        raise ValueError(msg) from last_error
 
     async def disconnect(self):
         """Properly close the connection and clean up resources."""
@@ -2224,6 +2507,64 @@ class MCPStreamableHttpClient:
 MCPSseClient = MCPStreamableHttpClient
 
 
+def _internal_mcp_hosts() -> set[str]:
+    """Operator-allowlisted internal MCP hosts (lowercased ``host`` / ``host:port``), or empty.
+
+    Empty by default (feature off / unset) so nothing is treated as internal — the fail-closed
+    baseline for outbound end-user header injection.
+    """
+    try:
+        from lfx.services.deps import get_settings_service
+
+        raw = get_settings_service().settings.serving_internal_mcp_hosts
+    except (ImportError, AttributeError):
+        return set()
+    if not raw:
+        return set()
+    return {h.strip().lower() for h in raw.split(",") if h.strip()}
+
+
+def _is_internal_mcp_target(url: str) -> bool:
+    """Whether ``url``'s host is on the internal allowlist (exact host, or host:port).
+
+    Userinfo is stripped before matching (mirrors the session-key host parse elsewhere). A bare
+    ``host`` allowlist entry matches any port; a ``host:port`` entry matches only that port.
+    """
+    allowed = _internal_mcp_hosts()
+    if not allowed:
+        return False
+    netloc = urlparse(url).netloc.rsplit("@", maxsplit=1)[-1].lower()
+    if not netloc:
+        return False
+    candidates = {netloc}
+    # Also consider the bare host (strip a trailing :port; leave bracketed IPv6 intact).
+    if not netloc.startswith("[") and ":" in netloc:
+        candidates.add(netloc.rsplit(":", maxsplit=1)[0])
+    return bool(candidates & allowed)
+
+
+def _maybe_inject_end_user_header(headers: dict, url: str, end_user_id: str | None) -> dict:
+    """Append the serving end-user identity header for INTERNAL/owned MCP targets only.
+
+    Fail-closed: the end-user id is PII, so it is forwarded ONLY when (a) an id is present,
+    (b) the serving end-user header feature is configured, and (c) the target host is on the
+    operator's internal allowlist. External servers — or any run without an end user / with the
+    feature off — get the headers unchanged. This is what lets a sibling project on the same
+    plane attribute the call to the same end user without leaking identity off-deployment.
+    """
+    if not end_user_id:
+        return headers
+    try:
+        from lfx.services.deps import get_settings_service
+
+        header_name = get_settings_service().settings.serving_end_user_header
+    except (ImportError, AttributeError):
+        header_name = None
+    if not header_name or not _is_internal_mcp_target(url):
+        return headers
+    return validate_headers({**(headers or {}), header_name: end_user_id})
+
+
 async def update_tools(
     server_name: str,
     server_config: dict,
@@ -2233,6 +2574,8 @@ async def update_tools(
     request_variables: dict[str, str] | None = None,
     tool_execution_timeout: float | None = None,
     current_user_id: str | UUID | None = None,
+    end_user_id: str | None = None,
+    url_variables: dict[str, str] | None = None,
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
     """Fetch server config and update available tools.
 
@@ -2242,11 +2585,21 @@ async def update_tools(
         mcp_stdio_client: Optional stdio client instance
         mcp_streamable_http_client: Optional streamable HTTP client instance
         mcp_sse_client: Optional SSE client instance (backward compatibility)
-        request_variables: Optional dict of global variables to resolve in headers
+        request_variables: Optional dict of global variables to resolve in headers. On a run
+            these carry the caller's ``X-Langflow-Global-Var-*`` values, so they are trusted
+            for headers only.
+        url_variables: Global variables trusted to resolve the target URL. Kept separate from
+            ``request_variables`` on purpose: resolving the URL from caller-supplied values
+            would let whoever calls a flow choose where it connects — and the resolved
+            credential headers travel to that destination. SSRF validation rejects internal
+            targets, not an arbitrary external one.
         tool_execution_timeout: Optional timeout in seconds for tool execution (int or float)
         current_user_id: Authenticated user id of the caller. Injected into the env of the
             internal agentic MCP server (``langflow.agentic.mcp``) at spawn time so its tools are
             scoped to this user. Never sourced from the (tenant-controlled) server config.
+        end_user_id: Serving-plane end-user identity of the run. Forwarded as the end-user header
+            ONLY to operator-allowlisted internal hosts (fail-closed); external servers never
+            receive it. None / feature-off means no header is appended (BC).
     """
     if server_config is None:
         server_config = {}
@@ -2283,7 +2636,7 @@ async def update_tools(
         mode = "Stdio" if "command" in server_config else "Streamable_HTTP" if "url" in server_config else ""
 
     command = server_config.get("command", "")
-    url = server_config.get("url", "")
+    url = resolve_global_variables_in_url(server_config.get("url", ""), url_variables)
     tools = []
     headers = _process_headers(server_config.get("headers", {}), request_variables)
 
@@ -2297,7 +2650,10 @@ async def update_tools(
     client: MCPStdioClient | MCPStreamableHttpClient | None = None
     if mode == "Stdio":
         args = list(server_config.get("args", []))
-        env = server_config.get("env", {})
+        # Resolved from the database set only, never from request_variables: env is handed
+        # to a spawned process, so a caller-populated value is a worse hand-off than a URL.
+        # Left literal, the reference the scrub writes would reach the subprocess as its key.
+        env = _resolve_global_variables_in_headers(server_config.get("env", {}) or {}, url_variables)
         # SECURITY: A tenant-built flow can embed this stdio config directly in the
         # MCPTools component value, bypassing REST-layer model validation. Enforce the
         # shared policy here, then enforce it again at the final process-spawn boundary.
@@ -2330,8 +2686,19 @@ async def update_tools(
         # the cloud-metadata endpoint. Guard the URL with the same SSRF posture as other
         # outbound fetches (no-op when SSRF protection is disabled / host is allowlisted).
         validate_connector_url_for_ssrf(url)
+        # Serving-plane: forward the end-user identity to a SIBLING project (an operator-
+        # allowlisted internal host) so it attributes the run to the same end user. Fail-closed —
+        # external hosts never receive the PII header; no-op when the feature is off / no end user.
+        headers = _maybe_inject_end_user_header(headers, url, end_user_id)
         verify_ssl = server_config.get("verify_ssl", True)
-        tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)
+        try:
+            tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)
+        except Exception as exc:
+            # A rejected credential otherwise surfaced as "unhandled errors in a TaskGroup",
+            # naming neither the target nor the fact that authentication was the problem.
+            detail = describe_mcp_connection_failure(server_name, url, exc)
+            logger.error(detail)
+            raise ConnectionError(detail) from exc
         client = mcp_streamable_http_client
     else:
         logger.error(f"Invalid MCP server mode for '{server_name}': {mode}")

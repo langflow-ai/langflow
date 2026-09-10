@@ -79,13 +79,19 @@ src/
 │       ├── components/    # UI components
 │       ├── stores/        # Zustand state management
 │       └── icons/         # Component icons
-└── lfx/                   # Lightweight executor CLI
+├── langflow-core/         # Usable provider-free Langflow distribution
+├── bundles/               # Curated provider integrations
+└── lfx/                   # Lightweight executor and shared primitives
 ```
 
 ### Key Packages
-- **langflow**: Main package with all integrations
-- **langflow-base**: Core framework (api, services, graph engine)
-- **lfx**: Standalone CLI for running flows (`lfx serve`, `lfx run`)
+- **langflow**: Full end-user package; depends on `langflow-core` and curated provider bundles
+- **langflow-core**: Service-complete, provider-bundle-free distribution; owns the `langflow` CLI
+- **langflow-base**: Modular application platform (API, services, graph engine); extras add service integrations
+- **lfx**: Shared execution primitives and standalone CLI (`lfx serve`, `lfx run`)
+
+The public dependency direction is `langflow → langflow-core → langflow-base → lfx`.
+Provider packages under `src/bundles/` are added only by the full `langflow` distribution.
 
 ### Service Layer
 Backend services in `src/backend/base/langflow/services/`:

@@ -1,13 +1,10 @@
 import type { Locator } from "@playwright/test";
 import { test } from "../fixtures";
 
-// Some provider components (OpenAI, Astra DB, Oracle) ship in bundle
-// distributions that are temporarily unpublished on this branch — see the
-// "Re-enable ... after the PyPI projects are published" TODO in pyproject.toml.
-// While a bundle is absent its component never appears in the palette, so a
-// test built around it cannot run. Skip cleanly instead of failing; the guard
-// turns back into a no-op the moment the bundle is restored, so no revert is
-// needed when the dependencies return.
+// Some provider components ship in optional bundle distributions. While a
+// bundle is absent its component never appears in the palette, so a test built
+// around it cannot run. Skip cleanly instead of failing; tests for generic UI
+// behavior should prefer a base component instead of using this guard.
 export const skipIfComponentUnavailable = async (
   locator: Locator,
   componentName: string,
@@ -21,6 +18,6 @@ export const skipIfComponentUnavailable = async (
 
   test.skip(
     !available,
-    `${componentName} component unavailable (bundle temporarily disabled)`,
+    `${componentName} component unavailable (optional bundle is not installed)`,
   );
 };

@@ -1,12 +1,15 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { routeTestScopedDefaultFlowNames } from "../../utils/flow/route-test-scoped-default-flow-names";
+import { selectStarterTemplate } from "../../utils/flow/select-starter-template";
 import { openParametersPanel } from "../../utils/open-advanced-options";
 import { unselectNodes } from "../../utils/unselect-nodes";
+
+test.beforeEach(async ({ page }, testInfo) => {
+  await routeTestScopedDefaultFlowNames(page, testInfo, "structured-agent");
+});
 
 /**
  * E2E coverage for the Native Structured Output feature on the Agent
@@ -30,24 +33,8 @@ test(
   "manual scenarios A–G prerequisite — Agent exposes structured_response output handle alongside response",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
     await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page
-      .getByRole("heading", { name: TEXTS.templateSimpleAgent })
-      .first()
-      .click();
-
-    await initialGPTsetup(page);
+    await selectStarterTemplate(page, TEXTS.templateSimpleAgent);
 
     // The Agent declares two outputs (Response, Structured Response). On the
     // canvas they share a single combobox-style dropdown keyed by the
@@ -77,24 +64,8 @@ test(
   "manual scenarios A/D/E/F/G setup — inspection panel exposes Output Schema and Output Format Instructions",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
     await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page
-      .getByRole("heading", { name: TEXTS.templateSimpleAgent })
-      .first()
-      .click();
-
-    await initialGPTsetup(page);
+    await selectStarterTemplate(page, TEXTS.templateSimpleAgent);
 
     // Focus the Agent node so the inspection panel reflects its fields.
     const agentNode = page
@@ -123,24 +94,8 @@ test(
   "scenarios A–C wiring — switching the agent dropdown to Structured Response keeps the downstream edge",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
     await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page
-      .getByRole("heading", { name: TEXTS.templateSimpleAgent })
-      .first()
-      .click();
-
-    await initialGPTsetup(page);
+    await selectStarterTemplate(page, TEXTS.templateSimpleAgent);
 
     await adjustScreenView(page);
 

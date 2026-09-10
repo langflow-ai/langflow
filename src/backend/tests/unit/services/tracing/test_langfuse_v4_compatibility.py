@@ -189,12 +189,14 @@ class TestLangfuseTracerV4:
         assert tracer.ready
         root_kwargs = mock_langfuse["client"].start_observation.call_args.kwargs
         assert root_kwargs["as_type"] == "span"
-        assert root_kwargs["name"] == "flow-123"
+        # Root observation and trace are named after the flow's display name so
+        # traces stay findable by name in Langfuse; the id stays in metadata.
+        assert root_kwargs["name"] == "test-flow"
 
         propagation_kwargs = mock_langfuse["propagate"].call_args.kwargs
         assert propagation_kwargs["user_id"] == "auth-user"
         assert propagation_kwargs["session_id"] == "session-1"
-        assert propagation_kwargs["trace_name"] == "flow-123"
+        assert propagation_kwargs["trace_name"] == "test-flow"
         assert propagation_kwargs["metadata"]["langflow.tracing_user_id"] == "end-user-456"
 
     def test_child_observation_uses_v4_api_and_propagates_trace_attributes(self, mock_langfuse):

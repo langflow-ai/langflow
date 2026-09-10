@@ -21,6 +21,7 @@ export const LangflowCounts = () => {
         content={t("header.goToGithub")}
         side="bottom"
         styleClasses="z-10"
+        ariaDescribedBy={undefined}
       >
         <Button
           unstyled
@@ -43,6 +44,7 @@ export const LangflowCounts = () => {
         content={t("header.goToDiscord")}
         side="bottom"
         styleClasses="z-10"
+        ariaDescribedBy={undefined}
       >
         <Button
           unstyled

@@ -61,7 +61,7 @@ def data_to_messages(data: list[Data | Message]) -> list[BaseMessage]:
             else:
                 logger.warning("Skipping message with empty content in chat history")
         except (ValueError, AttributeError) as e:
-            logger.warning(f"Failed to convert message to BaseMessage: {e}")
+            logger.warning("Failed to convert message to BaseMessage", exc_info=e)
             continue
     return messages
 
@@ -179,7 +179,7 @@ def safe_cache_set(cache: CacheService, key, value):
     try:
         cache.set(key, value)
     except (AttributeError, TypeError) as e:
-        logger.warning(f"Failed to set cache key '{key}': {e}")
+        logger.warning(f"Failed to set cache key '{key}'", exc_info=e)
 
 
 def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:

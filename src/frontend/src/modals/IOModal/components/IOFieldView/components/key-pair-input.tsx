@@ -104,6 +104,7 @@ const IOKeyPairInput = ({
               <button
                 type="button"
                 onClick={handleAddRow}
+                aria-label={t("input.addRow")}
                 data-testid={testId ? `${testId}-plus-btn-0` : undefined}
               >
                 <IconComponent
@@ -115,6 +116,7 @@ const IOKeyPairInput = ({
               <button
                 type="button"
                 onClick={() => handleDeleteRow(item)}
+                aria-label={t("input.removeRow", { index: idx + 1 })}
                 data-testid={testId ? `${testId}-minus-btn-${idx}` : undefined}
               >
                 <IconComponent

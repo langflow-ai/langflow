@@ -17,6 +17,8 @@ export interface KnowledgeBaseUploadModalProps {
   };
   hideAdvanced?: boolean;
   existingKnowledgeBaseNames?: string[];
+  /** Called when the dialog closes and focus would return to the trigger. */
+  onCloseAutoFocus?: (event: Event) => void;
 }
 
 export interface ColumnConfigRow {

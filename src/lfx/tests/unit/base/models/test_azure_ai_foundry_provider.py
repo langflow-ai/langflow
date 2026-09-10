@@ -451,7 +451,8 @@ def test_language_model_options_filters_live_foundry_no_tool_models():
     async def fake_model_status(_user_id):
         return set(), enables
 
-    async def fake_enabled_providers(_user_id):
+    async def fake_enabled_providers(_user_id, *, provider_policy=None):
+        _ = provider_policy
         return {"Azure AI Foundry"}
 
     with (

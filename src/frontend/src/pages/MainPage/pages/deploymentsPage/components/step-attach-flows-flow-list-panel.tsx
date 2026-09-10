@@ -4,6 +4,10 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import type { FlowType } from "@/types/flow";
 import { cn } from "@/utils/utils";
+import {
+  WATSONX_ELIGIBILITY_MESSAGE_KEYS,
+  type WatsonxFlowEligibilityIssue,
+} from "../helpers/watsonx-flow-eligibility";
 import type { ConnectionItem, SelectedFlowVersion } from "../types";
 
 export const FlowListPanel = memo(function FlowListPanel({
@@ -12,6 +16,7 @@ export const FlowListPanel = memo(function FlowListPanel({
   selectedVersionByFlow,
   attachedConnectionByFlow,
   connections,
+  wxoDraftEligibilityByFlow,
   removedFlowIds,
   onSelectFlow,
 }: {
@@ -20,6 +25,7 @@ export const FlowListPanel = memo(function FlowListPanel({
   selectedVersionByFlow: Map<string, SelectedFlowVersion>;
   attachedConnectionByFlow: Map<string, string[]>;
   connections: ConnectionItem[];
+  wxoDraftEligibilityByFlow?: Map<string, WatsonxFlowEligibilityIssue>;
   removedFlowIds?: Set<string>;
   onSelectFlow: (flowId: string) => void;
 }) {
@@ -41,6 +47,22 @@ export const FlowListPanel = memo(function FlowListPanel({
           const activeEntries = entries.filter(
             (entry) => !(removedFlowIds?.has(entry.key) ?? false),
           );
+          const draftEligibilityIssue = wxoDraftEligibilityByFlow?.get(flow.id);
+          const wxoEligibilityIssues = !wxoDraftEligibilityByFlow
+            ? []
+            : attached
+              ? Array.from(
+                  new Set(
+                    activeEntries.flatMap((entry) =>
+                      entry.wxoEligibilityIssue
+                        ? [entry.wxoEligibilityIssue]
+                        : [],
+                    ),
+                  ),
+                )
+              : draftEligibilityIssue
+                ? [draftEligibilityIssue]
+                : [];
           const isRemoved = attached && activeEntries.length === 0;
           const versionLabels = activeEntries.map((entry) => entry.versionTag);
           const connectionIds = activeEntries.flatMap(
@@ -125,6 +147,22 @@ export const FlowListPanel = memo(function FlowListPanel({
                       })}
                     </p>
                   )}
+                  {wxoEligibilityIssues.map((wxoEligibilityIssue) => (
+                    <p
+                      key={wxoEligibilityIssue}
+                      className="mt-1 flex items-start gap-1 text-xs text-destructive"
+                    >
+                      <ForwardedIconComponent
+                        name="AlertTriangle"
+                        className="mt-0.5 h-3 w-3 shrink-0"
+                      />
+                      <span>
+                        {t(
+                          WATSONX_ELIGIBILITY_MESSAGE_KEYS[wxoEligibilityIssue],
+                        )}
+                      </span>
+                    </p>
+                  ))}
                 </div>
               </div>
             </div>

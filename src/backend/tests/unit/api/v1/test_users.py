@@ -250,7 +250,7 @@ async def test_reset_password_requires_current_password(client: AsyncClient, log
         headers=logged_in_headers,
     )
 
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 async def test_reset_password_rejects_current_password_as_new_password(

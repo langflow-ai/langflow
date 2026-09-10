@@ -41,6 +41,7 @@ _RESERVED_ENV_NAMES: frozenset[str] = frozenset(
         "DATABASE_URL",
         "SECRET_KEY",
         "POSTGRES_PASSWORD",
+        "PGVECTOR_CONNECTION_STRING",
         "PGPASSWORD",
         "MYSQL_PWD",
         "MYSQL_ROOT_PASSWORD",

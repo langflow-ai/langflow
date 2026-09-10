@@ -1,6 +1,7 @@
 import type { APIClassType, APIObjectType } from "../../../src/types/api";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
 
 /**
  * LE-2045: grouping succeeds but raises "Error while updating the Component".
@@ -110,8 +111,18 @@ test(
     expect(created.status()).toBe(201);
     const flowId = (await created.json()).id;
 
+    const flowLoadPromise = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname.endsWith(`/api/v1/flows/${flowId}`) &&
+        response.request().method() === "GET" &&
+        response.status() === 200,
+      { timeout: TIMEOUTS.standard },
+    );
     await page.goto(`/flow/${flowId}`);
-    await expect(page.getByTestId("div-generic-node")).toHaveCount(1);
+    await flowLoadPromise;
+    await expect(page.getByTestId("div-generic-node")).toHaveCount(1, {
+      timeout: TIMEOUTS.standard,
+    });
     await page.waitForTimeout(4000);
 
     await page.getByTestId("notification_button").click();

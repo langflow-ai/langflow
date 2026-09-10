@@ -41,21 +41,17 @@ test(
       .getByTestId(/anthropic\.claude-3-haiku-20240307-v1:0.*option/)
       .click();
 
-    let value = await page
-      .getByTestId(/anthropic\.claude-3-haiku-20240307-v1:0.*option/)
-      .first()
-      .innerText();
-    if (value !== "anthropic.claude-3-haiku-20240307-v1:0") {
-      expect(false).toBeTruthy();
-    }
+    const modelTrigger = page.getByTestId("dropdown_str_model_id");
+    await expect(modelTrigger).toContainText(
+      "anthropic.claude-3-haiku-20240307-v1:0",
+    );
+    await expect(
+      page.getByTestId(/anthropic\.claude-3-haiku-20240307-v1:0.*option/),
+    ).toHaveCount(0);
 
-    await page.getByTestId("dropdown_str_model_id").click();
+    await modelTrigger.click();
     await page.getByText("anthropic.claude-v2").last().click();
-
-    await page.waitForTimeout(1000);
-
-    value = await page.getByTestId("dropdown_str_model_id").innerText();
-    expect(value.length).toBeGreaterThan(10);
+    await expect(modelTrigger).toContainText("anthropic.claude-v2");
 
     await page.waitForSelector('[data-testid="more-options-modal"]', {
       timeout: 3000,
@@ -63,8 +59,6 @@ test(
 
     // LE-1810: values live on the node; the panel only manages visibility.
     await openParametersPanel(page);
-
-    await page.waitForTimeout(1000);
 
     // visibility round-trips through the panel Add/Remove actions
     await toggleParameterOnNode(page, "region_name");
@@ -101,12 +95,9 @@ test(
     await page.getByTestId("value-dropdown-dropdown_str_model_id").click();
     await page.getByText("cohere").last().click();
 
-    value = await page
-      .getByTestId("value-dropdown-dropdown_str_model_id")
-      .innerText();
-    if (value !== "cohere.command-r-plus-v1:0") {
-      expect(false).toBeTruthy();
-    }
+    await expect(
+      page.getByTestId("value-dropdown-dropdown_str_model_id"),
+    ).toHaveText("cohere.command-r-plus-v1:0");
     await page.getByTestId("code-button-modal").last().click();
 
     await page.locator("textarea").press("Control+a");

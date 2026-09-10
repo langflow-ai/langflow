@@ -9,6 +9,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
+from cryptography.exceptions import InvalidTag
 from cryptography.fernet import Fernet
 from httpx import AsyncClient
 from langflow.services.deps import get_settings_service
@@ -92,6 +93,14 @@ def sqlite_db():
             )
         """)
         )
+        conn.execute(
+            text("""
+            CREATE TABLE sso_config (
+                id TEXT PRIMARY KEY,
+                client_secret_encrypted TEXT
+            )
+        """)
+        )
         conn.commit()
     return engine
 
@@ -149,6 +158,37 @@ class TestEncryptDecrypt:
         encrypted = migrate_module.encrypt_with_key(plaintext, old_key)
         with pytest.raises(InvalidToken):
             migrate_module.decrypt_with_key(encrypted, new_key)
+
+    def test_sso_secret_rewrap_uses_replacement_key(self, migrate_module, old_key, new_key):
+        plaintext = "oidc-client-secret"
+        encrypted = migrate_module.encrypt_sso_secret_with_key(plaintext, old_key)
+
+        migrated = migrate_module.migrate_sso_secret(encrypted, old_key, new_key)
+
+        assert migrated is not None
+        assert migrated != encrypted
+        assert migrate_module.decrypt_sso_secret_with_key(migrated, new_key) == plaintext
+        with pytest.raises(InvalidTag):
+            migrate_module.decrypt_sso_secret_with_key(migrated, old_key)
+
+    @pytest.mark.parametrize("payload_index", [4, 5], ids=["nonce", "ciphertext"])
+    @pytest.mark.parametrize("invalid_character", ["!", "+", "/"])
+    def test_sso_secret_rewrap_rejects_non_base64url_payload_characters(
+        self,
+        migrate_module,
+        old_key,
+        new_key,
+        payload_index,
+        invalid_character,
+    ):
+        encrypted = migrate_module.encrypt_sso_secret_with_key("oidc-client-secret", old_key)
+        parts = encrypted.split(":")
+        parts[payload_index] = f"{invalid_character}{parts[payload_index][1:]}"
+        malformed_envelope = ":".join(parts)
+
+        with pytest.raises(ValueError, match="Invalid base64url data"):
+            migrate_module._decode_sso_envelope(malformed_envelope)
+        assert migrate_module.migrate_sso_secret(malformed_envelope, old_key, new_key) is None
 
     def test_encrypt_decrypt_with_short_keys(self, migrate_module, short_old_key):
         """Short keys should work for encryption/decryption."""
@@ -850,3 +890,18 @@ class TestVerifyMigration:
             verified, failed = migrate_module.verify_migration(conn, new_key)
             assert verified == 0
             assert failed == 0
+
+    def test_verify_migration_includes_sso_secrets(self, migrate_module, sqlite_db, new_key):
+        config_id = str(uuid4())
+        encrypted = migrate_module.encrypt_sso_secret_with_key("oidc-secret", new_key)
+        with sqlite_db.begin() as conn:
+            conn.execute(
+                text("INSERT INTO sso_config (id, client_secret_encrypted) VALUES (:id, :secret)"),
+                {"id": config_id, "secret": encrypted},
+            )
+
+        with sqlite_db.connect() as conn:
+            verified, failed = migrate_module.verify_migration(conn, new_key)
+
+        assert verified == 1
+        assert failed == 0

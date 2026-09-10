@@ -11,6 +11,9 @@ import sys
 from unittest.mock import MagicMock
 
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from lfx.components.weaviate.weaviate import WeaviateVectorStoreComponent
 from lfx.schema.data import Data
 

@@ -13,6 +13,12 @@ jest.mock("@/stores/alertStore", () => ({
   default: () => ({ setErrorData: jest.fn() }),
 }));
 
+jest.mock("@/stores/flowsManagerStore", () => ({
+  __esModule: true,
+  default: (selector: (state: { currentFlowId: string }) => unknown) =>
+    selector({ currentFlowId: "flow-one" }),
+}));
+
 jest.mock("@/hooks/use-refresh-model-inputs", () => ({
   useRefreshModelInputs: () => ({
     refreshAllModelInputs: jest.fn(),
@@ -192,25 +198,20 @@ describe("ModelInputComponent — revalidation after an auto-select", () => {
     jest.clearAllMocks();
   });
 
-  it("should_replace_an_auto_selected_model_once_its_provider_is_disconnected", async () => {
+  it("should_replace_a_selected_model_once_its_provider_is_disconnected", async () => {
     mockAnthropicConnected();
     const handleOnNewValue = jest.fn();
 
+    // Selection is given up front: an empty field is no longer auto-filled (LE-2168).
     const { rerender } = renderWithQueryClient(
       <ModelInputComponent
         {...baseProps}
+        value={[ANTHROPIC_MODEL]}
         handleOnNewValue={handleOnNewValue}
       />,
     );
 
-    await waitFor(() => {
-      expect(handleOnNewValue).toHaveBeenCalled();
-    });
-    expect(handleOnNewValue.mock.calls[0][0].value[0].name).toBe(
-      "claude-opus-5",
-    );
-
-    handleOnNewValue.mockClear();
+    expect(handleOnNewValue).not.toHaveBeenCalled();
     mockAnthropicDisconnectedOpenAiConnected();
 
     const queryClient = new QueryClient({

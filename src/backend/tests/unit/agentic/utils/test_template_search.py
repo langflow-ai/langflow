@@ -4,7 +4,9 @@ Tests list_templates, get_template_by_id, get_all_tags, get_templates_count,
 template structure validation, search functionality, edge cases, and integration scenarios.
 """
 
+import json
 import tempfile
+from types import SimpleNamespace
 
 import pytest
 from langflow.agentic.utils import (
@@ -13,6 +15,14 @@ from langflow.agentic.utils import (
     get_templates_count,
     list_templates,
 )
+from langflow.agentic.utils import template_search as template_search_module
+from lfx.services.catalog_policy import CatalogPolicySnapshot
+
+
+@pytest.fixture(autouse=True)
+def _allow_all_catalog_policy(monkeypatch):
+    service = SimpleNamespace(snapshot=CatalogPolicySnapshot())
+    monkeypatch.setattr(template_search_module, "get_catalog_policy_service", lambda: service)
 
 
 class TestListTemplates:
@@ -155,6 +165,19 @@ class TestListTemplates:
         """Test handling of nonexistent directory."""
         with pytest.raises(FileNotFoundError, match="Starter projects directory not found"):
             list_templates(starter_projects_path="/nonexistent/path")
+
+    def test_catalog_policy_hides_templates_from_all_discovery_surfaces(self, tmp_path, monkeypatch):
+        allowed = {"id": "allowed-id", "name": "Allowed Template", "description": "Allowed", "tags": ["safe"]}
+        blocked = {"id": "blocked-id", "name": "Blocked Template", "description": "Blocked", "tags": ["hidden"]}
+        (tmp_path / "allowed.json").write_text(json.dumps(allowed), encoding="utf-8")
+        (tmp_path / "blocked.json").write_text(json.dumps(blocked), encoding="utf-8")
+        service = SimpleNamespace(snapshot=CatalogPolicySnapshot(blocked_template_keys={"blocked_template"}))
+        monkeypatch.setattr(template_search_module, "get_catalog_policy_service", lambda: service)
+
+        assert list_templates(starter_projects_path=tmp_path) == [allowed]
+        assert get_template_by_id("blocked-id", starter_projects_path=tmp_path) is None
+        assert get_templates_count(starter_projects_path=tmp_path) == 1
+        assert get_all_tags(starter_projects_path=tmp_path) == ["safe"]
 
 
 class TestGetTemplateById:

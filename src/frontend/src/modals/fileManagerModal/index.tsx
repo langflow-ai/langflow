@@ -17,12 +17,14 @@ export default function FileManagerModal({
   types,
   isList,
   allowFolderSelection = false,
+  onOpenChange,
 }: {
   children?: ReactNode;
   selectedFiles?: string[];
   open?: boolean;
   handleSubmit: (files: string[]) => void;
   setOpen?: (open: boolean) => void;
+  onOpenChange?: (open: boolean) => void;
   disabled?: boolean;
   files: FileType[];
   types: string[];
@@ -42,6 +44,10 @@ export default function FileManagerModal({
     });
   }, [internalOpen]);
 
+  useEffect(() => {
+    onOpenChange?.(internalOpen);
+  }, [internalOpen]);
+
   const [internalSelectedFiles, setInternalSelectedFiles] = useState<string[]>(
     selectedFiles || [],
   );
@@ -51,8 +57,8 @@ export default function FileManagerModal({
   }, [internalOpen]);
 
   const handleUpload = (filesPaths: string[]) => {
-    setInternalSelectedFiles(
-      isList ? [...internalSelectedFiles, ...filesPaths] : [filesPaths[0]],
+    setInternalSelectedFiles((currentSelection) =>
+      isList ? [...currentSelection, ...filesPaths] : [filesPaths[0]],
     );
   };
 

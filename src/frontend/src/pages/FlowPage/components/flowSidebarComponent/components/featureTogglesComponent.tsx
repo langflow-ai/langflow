@@ -12,6 +12,7 @@ const FeatureToggles = ({
   const toggles = [
     {
       label: t("sidebar.betaLabel"),
+      ariaLabel: t("sidebar.showBetaComponents"),
       checked: showBeta,
       onChange: setShowBeta,
       badgeVariant: "purpleStatic" as const,
@@ -19,6 +20,7 @@ const FeatureToggles = ({
     },
     {
       label: t("sidebar.legacyLabel"),
+      ariaLabel: t("sidebar.showLegacyComponents"),
       checked: showLegacy,
       onChange: setShowLegacy,
       badgeVariant: "secondaryStatic" as const,
@@ -42,6 +44,7 @@ const FeatureToggles = ({
             checked={toggle.checked}
             onCheckedChange={toggle.onChange}
             data-testid={toggle.testId}
+            aria-label={toggle.ariaLabel}
             className="scale-90"
           />
         </div>

@@ -14,6 +14,12 @@ jest.mock("@/stores/alertStore", () => ({
   default: () => ({ setErrorData: jest.fn() }),
 }));
 
+jest.mock("@/stores/flowsManagerStore", () => ({
+  __esModule: true,
+  default: (selector: (state: { currentFlowId: string }) => unknown) =>
+    selector({ currentFlowId: "flow-one" }),
+}));
+
 jest.mock("@/hooks/use-refresh-model-inputs", () => ({
   useRefreshModelInputs: () => ({
     refreshAllModelInputs: jest.fn(),
@@ -94,7 +100,6 @@ const OPENAI_MODEL: ModelOption = {
   provider: "OpenAI",
   metadata: { model_type: "llm" },
 };
-
 const baseProps: BaseInputProps & ModelInputComponentType = {
   id: "test-model-input",
   value: [SAVED_MODEL],
@@ -277,7 +282,6 @@ describe("ModelInputComponent — provider disconnected after a model was saved"
       ).not.toBeInTheDocument();
     },
   );
-
   it("should_not_render_the_configure_wrench_next_to_the_setup_provider_button", () => {
     renderWithQueryClient(<ModelInputComponent {...baseProps} />);
 
@@ -357,7 +361,7 @@ describe("ModelInputComponent — provider disconnected after a model was saved"
     },
   ])(
     "should_not_replace_the_saved_model_while_$state",
-    async ({
+    ({
       providerFetching = false,
       providerError,
       enabledFetching = false,
@@ -386,7 +390,14 @@ describe("ModelInputComponent — provider disconnected after a model was saved"
         />,
       );
 
-      await screen.findByRole("combobox");
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+      if (providerFetching || enabledFetching) {
+        expect(screen.getByText("Loading models")).toBeInTheDocument();
+      } else {
+        expect(
+          screen.getByTestId("model-input-load-failed"),
+        ).toBeInTheDocument();
+      }
       expect(handleOnNewValue).not.toHaveBeenCalled();
     },
   );

@@ -119,6 +119,7 @@ const ChunkCard = ({ chunk, index, onCopy }: ChunkCardProps) => {
               isCopied && "text-accent-emerald-foreground",
             )}
             onClick={handleCopy}
+            aria-label={t("knowledge.copyChunk", { index })}
           >
             <ForwardedIconComponent
               name={isCopied ? "Check" : "Copy"}
@@ -132,12 +133,24 @@ const ChunkCard = ({ chunk, index, onCopy }: ChunkCardProps) => {
           </Button>
         </div>
         <div className="flex items-center gap-3">
-          <div className="w-4">
+          <div className="flex h-6 w-6 items-center justify-center">
             {isOverflowing && (
-              <ForwardedIconComponent
-                name={isExpanded ? "ChevronUp" : "ChevronDown"}
-                className="h-4 w-4 text-muted-foreground transition-transform duration-200"
-              />
+              <Button
+                variant="ghost"
+                size="icon"
+                className="group h-6 w-6"
+                aria-label={t("knowledge.toggleChunk", { index })}
+                aria-expanded={isExpanded}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsExpanded(!isExpanded);
+                }}
+              >
+                <ForwardedIconComponent
+                  name={isExpanded ? "ChevronUp" : "ChevronDown"}
+                  className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-hover:text-foreground"
+                />
+              </Button>
             )}
           </div>
         </div>

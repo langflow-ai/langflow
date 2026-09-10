@@ -35,7 +35,9 @@ test(
 
     await closeParametersPanel(page);
 
-    await page.locator(".react-flow__edge").nth(0).click();
+    const firstEdge = page.locator(".react-flow__edge").first();
+    await firstEdge.click();
+    await expect(firstEdge).toHaveClass(/selected/);
 
     await page.keyboard.press("Delete");
 
@@ -97,7 +99,9 @@ test(
 
     await closeParametersPanel(page);
 
-    await page.locator(".react-flow__edge").nth(0).click();
+    const firstEdge = page.locator(".react-flow__edge").first();
+    await firstEdge.click();
+    await expect(firstEdge).toHaveClass(/selected/);
 
     await page.keyboard.press("Delete");
 

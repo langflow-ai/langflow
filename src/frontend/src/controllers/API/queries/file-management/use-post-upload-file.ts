@@ -1,4 +1,5 @@
-import type { UseMutationResult } from "@tanstack/react-query";
+import type { QueryClient, UseMutationResult } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import type { useMutationFunctionType } from "@/types/api";
 import type { FileType } from "@/types/file_management";
 import { api } from "../../api";
@@ -10,13 +11,47 @@ interface IPostUploadFile {
   file: File;
 }
 
+let optimisticUploadSequence = 0;
+
+interface OptimisticUploadState {
+  inFlightIds: Set<string>;
+  invalidationPending: boolean;
+}
+
+const optimisticUploadStates = new WeakMap<
+  QueryClient,
+  OptimisticUploadState
+>();
+
+const getOptimisticUploadState = (
+  queryClient: QueryClient,
+): OptimisticUploadState => {
+  const existingState = optimisticUploadStates.get(queryClient);
+  if (existingState) return existingState;
+
+  const state = {
+    inFlightIds: new Set<string>(),
+    invalidationPending: false,
+  };
+  optimisticUploadStates.set(queryClient, state);
+  return state;
+};
+
+export const createOptimisticUploadId = (): string =>
+  `temp-${Date.now()}-${optimisticUploadSequence++}`;
+
 export const usePostUploadFileV2: useMutationFunctionType<
   undefined,
-  IPostUploadFile
-> = (params, options?) => {
+  IPostUploadFile,
+  FileType,
+  AxiosError<{ detail?: string }>
+> = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
+  const optimisticUploadState = getOptimisticUploadState(queryClient);
 
-  const postUploadFileFn = async (payload: IPostUploadFile): Promise<any> => {
+  const postUploadFileFn = async (
+    payload: IPostUploadFile,
+  ): Promise<FileType> => {
     const formData = new FormData();
 
     // Build set of existing paths (server-side path is typically full filename)
@@ -56,9 +91,11 @@ export const usePostUploadFileV2: useMutationFunctionType<
 
     formData.append("file", fileToUpload);
     const data = new Date().toISOString().split("Z")[0];
+    const optimisticUploadId = createOptimisticUploadId();
+    optimisticUploadState.inFlightIds.add(optimisticUploadId);
 
     const newFile = {
-      id: "temp",
+      id: optimisticUploadId,
       name: fileToUpload.name.split(".").slice(0, -1).join("."),
       path: fileToUpload.name,
       size: fileToUpload.size,
@@ -69,20 +106,20 @@ export const usePostUploadFileV2: useMutationFunctionType<
     };
     queryClient.setQueryData(["useGetFilesV2"], (old: FileType[]) => {
       if (!Array.isArray(old)) return [newFile];
-      return [...old.filter((file) => file.id !== "temp"), newFile];
+      return [...old, newFile];
     });
 
     try {
-      const response = await api.post<any>(
+      const response = await api.post<FileType>(
         `${getURL("FILE_MANAGEMENT", {}, true)}`,
         formData,
         {
           onUploadProgress: (progressEvent) => {
             if (progressEvent.progress) {
-              queryClient.setQueryData(["useGetFilesV2"], (old: any) => {
+              queryClient.setQueryData<FileType[]>(["useGetFilesV2"], (old) => {
                 if (!Array.isArray(old)) return [];
-                return old.map((file: any) => {
-                  if (file?.id === "temp") {
+                return old.map((file) => {
+                  if (file?.id === optimisticUploadId) {
                     return { ...file, progress: progressEvent.progress };
                   }
                   return file;
@@ -99,10 +136,10 @@ export const usePostUploadFileV2: useMutationFunctionType<
       // a race window where the optimistic path (just the filename) differs
       // from the server path (user_id/filename), causing checkboxes to
       // appear unchecked until the background refetch completes.
-      queryClient.setQueryData(["useGetFilesV2"], (old: any) => {
+      queryClient.setQueryData<FileType[]>(["useGetFilesV2"], (old) => {
         if (!Array.isArray(old)) return [response.data];
-        return old.map((file: any) =>
-          file?.id === "temp" ? { ...response.data } : file,
+        return old.map((file) =>
+          file?.id === optimisticUploadId ? { ...response.data } : file,
         );
       });
 
@@ -110,37 +147,57 @@ export const usePostUploadFileV2: useMutationFunctionType<
     } catch (e) {
       queryClient.setQueryData(["useGetFilesV2"], (old: FileType[]) => {
         if (!Array.isArray(old)) return [];
-        return old.map((file: any) => {
-          if (file?.id === "temp") {
+        return old.map((file) => {
+          if (file?.id === optimisticUploadId) {
             return { ...file, progress: -1 };
           }
           return file;
         });
       });
       throw e;
+    } finally {
+      optimisticUploadState.inFlightIds.delete(optimisticUploadId);
     }
   };
 
-  const mutation: UseMutationResult<IPostUploadFile, any, IPostUploadFile> =
-    mutate(
-      ["usePostUploadFileV2"],
-      async (payload: IPostUploadFile) => {
-        const res = await postUploadFileFn(payload);
-        return res;
+  const mutation: UseMutationResult<
+    FileType,
+    AxiosError<{ detail?: string }>,
+    IPostUploadFile
+  > = mutate(
+    ["usePostUploadFileV2"],
+    async (payload: IPostUploadFile) => {
+      const res = await postUploadFileFn(payload);
+      return res;
+    },
+    {
+      retry: 0,
+      ...options,
+      onSettled: async (data, error, variables, onMutateResult, context) => {
+        if (!error) {
+          optimisticUploadState.invalidationPending = true;
+        }
+
+        if (
+          optimisticUploadState.inFlightIds.size === 0 &&
+          optimisticUploadState.invalidationPending
+        ) {
+          optimisticUploadState.invalidationPending = false;
+          await queryClient.invalidateQueries({
+            queryKey: ["useGetFilesV2"],
+          });
+        }
+
+        await options?.onSettled?.(
+          data,
+          error,
+          variables,
+          onMutateResult,
+          context,
+        );
       },
-      {
-        onSettled: (data, error, variables, context) => {
-          if (!error) {
-            queryClient.invalidateQueries({
-              queryKey: ["useGetFilesV2"],
-            });
-          }
-          options?.onSettled?.(data, error, variables, context);
-        },
-        retry: 0,
-        ...options,
-      },
-    );
+    },
+  );
 
   return mutation;
 };

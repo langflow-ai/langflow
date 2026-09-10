@@ -206,6 +206,24 @@ class TestRunFlowInjectsVerifiedModel:
         m.assert_awaited_once()
         assert data.data["result"] == "ok"
 
+    def test_does_not_inject_runtime_model_when_configuration_is_disallowed(self):
+        from langflow.agentic.services.agent_run_context import set_agent_run_model
+
+        set_agent_run_model(
+            "Anthropic",
+            "claude-sonnet-4-5",
+            "ANTHROPIC_API_KEY",
+            allow_configuration=False,
+        )
+        init_working_flow(self._agent_flow(), "flow-1")
+
+        with patch(RWF, new_callable=AsyncMock, return_value={"result": "ok"}) as m:
+            _run(RunFlow())
+
+        flow_data = m.await_args.kwargs["flow_data"]
+        model_value = flow_data["data"]["nodes"][0]["data"]["node"]["template"]["model"]["value"]
+        assert model_value == ""
+
 
 class TestRunFlowEnforcesRequestedModel:
     """A model the USER explicitly named must win on the canvas.

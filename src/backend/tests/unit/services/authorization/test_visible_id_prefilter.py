@@ -138,11 +138,62 @@ def test_restrict_to_owned_or_visible_empty_ids_keeps_owner_rows():
     assert "flow.user_id =" in sql
 
 
+@pytest.mark.anyio
+async def test_apply_owned_or_visible_prefilter_unions_when_override_on(monkeypatch):
+    """Normal sessions: concrete visible ids still include owned rows."""
+    from langflow.services.authorization.listing import apply_owned_or_visible_prefilter
+
+    async def _override_on() -> bool:
+        return True
+
+    monkeypatch.setattr(authz_listing, "should_apply_owner_override", _override_on)
+
+    owner_id = uuid4()
+    constrained = await apply_owned_or_visible_prefilter(
+        select(Flow),
+        id_column=Flow.id,
+        owner_clause=Flow.user_id == owner_id,
+        visible_ids=[uuid4()],
+    )
+
+    sql = str(constrained)
+    assert "flow.id IN" in sql
+    assert "flow.user_id =" in sql
+    assert " OR " in sql
+
+
+@pytest.mark.anyio
+async def test_apply_owned_or_visible_prefilter_skips_owner_when_override_off(monkeypatch):
+    """Scoped API keys: concrete visible ids must not auto-include owned rows."""
+    from langflow.services.authorization.listing import apply_owned_or_visible_prefilter
+
+    async def _override_off() -> bool:
+        return False
+
+    monkeypatch.setattr(authz_listing, "should_apply_owner_override", _override_off)
+
+    owner_id = uuid4()
+    constrained = await apply_owned_or_visible_prefilter(
+        select(Flow),
+        id_column=Flow.id,
+        owner_clause=Flow.user_id == owner_id,
+        visible_ids=[uuid4()],
+    )
+
+    sql = str(constrained)
+    assert "flow.id IN" in sql
+    assert " OR " not in sql
+
+
 def test_helpers_are_exported_from_package():
-    """Both helpers are part of the authorization package's public surface."""
+    """Helpers are part of the authorization package's public surface."""
     from langflow.services import authorization
+    from langflow.services.authorization.listing import apply_owned_or_visible_prefilter
 
     assert authorization.visible_id_prefilter is visible_id_prefilter
     assert authorization.restrict_to_owned_or_visible is restrict_to_owned_or_visible
+    assert authorization.apply_owned_or_visible_prefilter is apply_owned_or_visible_prefilter
     # Same callables the listing module defines (no shadowing).
     assert authz_listing.visible_id_prefilter is visible_id_prefilter
+    assert authz_listing.restrict_to_owned_or_visible is restrict_to_owned_or_visible
+    assert authz_listing.apply_owned_or_visible_prefilter is apply_owned_or_visible_prefilter

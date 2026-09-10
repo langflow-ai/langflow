@@ -1,24 +1,25 @@
 import { useContext, useEffect, useState } from "react";
-import { Navigate, useParams } from "react-router-dom";
 import { AuthContext } from "@/contexts/authContext";
 import {
   useGetAuthSession,
   useGetAutoLogin,
 } from "@/controllers/API/queries/auth";
+import { LoadingPage } from "@/pages/LoadingPage";
 import useAuthStore from "@/stores/authStore";
 import type { Users } from "@/types/api";
-import { LoadingPage } from "@/pages/LoadingPage";
+import { computePlaygroundAuthState } from "./authState";
+
+export { computePlaygroundAuthState };
+export type { PlaygroundAuthState } from "./authState";
 
 export function PlaygroundAuthGate({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { id } = useParams();
   const { setUserData, storeApiKey } = useContext(AuthContext);
   const setIsAuthenticated = useAuthStore((state) => state.setIsAuthenticated);
   const setIsAdmin = useAuthStore((state) => state.setIsAdmin);
-  const autoLogin = useAuthStore((state) => state.autoLogin);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   const [sessionProcessed, setSessionProcessed] = useState(false);
@@ -48,16 +49,14 @@ export function PlaygroundAuthGate({
     setSessionProcessed(true);
   }, [sessionData, isSessionFetched]);
 
-  const isAuthCheckComplete =
-    (isAutoLoginFetched || isAuthenticated) && sessionProcessed;
+  const authState = computePlaygroundAuthState({
+    isAuthenticated,
+    isAutoLoginFetched,
+    isSessionProcessed: sessionProcessed,
+  });
 
-  if (!isAuthCheckComplete) {
+  if (authState === "loading") {
     return <LoadingPage />;
-  }
-
-  if (autoLogin === false && !isAuthenticated) {
-    const currentPath = `/playground/${id}/`;
-    return <Navigate to={`/login?redirect=${currentPath}`} replace />;
   }
 
   return <>{children}</>;

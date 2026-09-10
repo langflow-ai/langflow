@@ -48,8 +48,21 @@ class RoleAssignmentCreate(BaseModel):
         return self
 
 
+class RoleAssignmentGrantSummary(BaseModel):
+    """Non-secret provenance returned with an effective role assignment."""
+
+    source_kind: Literal["manual", "idp"]
+    provider_id: str | None
+    external_group: str | None
+    administrative_actor: UUID | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class RoleAssignmentRead(BaseModel):
-    """Serialized authz_role_assignment row returned by the API."""
+    """Serialized effective assignment plus its independent grant sources."""
 
     id: UUID
     user_id: UUID
@@ -58,5 +71,6 @@ class RoleAssignmentRead(BaseModel):
     domain_id: UUID | None
     assigned_at: datetime
     assigned_by: UUID | None
+    grant_sources: list[RoleAssignmentGrantSummary] = Field(default_factory=list)
 
     model_config = {"from_attributes": True}

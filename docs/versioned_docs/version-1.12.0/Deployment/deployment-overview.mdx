@@ -1,0 +1,24 @@
+---
+title: Langflow deployment overview
+slug: /deployment-overview
+---
+
+This section includes the different ways to bring your locally-built flows to the world.
+
+* To self-host your local server through an ngrok gateway, see [Deploy a public Langflow server](/deployment-public-server).
+This approach uses [ngrok](https://ngrok.com/docs/getting-started/) to forward traffic and share your local Langflow server over the internet, without deploying to a cloud provider or exposing your network directly.
+
+* To build and deploy a Langflow container that includes your flow files, see [Containerize a Langflow application](develop-application).
+This approach bundles your flows and dependencies into a portable, reproducible Docker image for easy deployment across different environments.
+
+* To deploy a Langflow server on a remote server with Docker and Caddy, see [Deploy Langflow on a remote server](/deployment-caddyfile).
+This approach is good for hosting your own Langflow instance on a remote server with secure web access, using Docker containers and Caddy as a reverse proxy for HTTPS support.
+
+* To deploy Langflow with Nginx and automatic SSL certificates, see [Deploy Langflow with Nginx and Let's Encrypt](/deployment-nginx-ssl).
+This approach uses Nginx as a reverse proxy with Let's Encrypt for automatic HTTPS certificate management to provide a secure deployment _without_ Docker.
+
+* To deploy Langflow on Kubernetes, see [Langflow Kubernetes architecture and best practices](/deployment-prod-best-practices)
+This approach creates production-grade deployments with high availability, scalability, and robust orchestration.
+
+* For cloud provider-specific deployment guides, see your cloud provider's documentation.
+The Langflow documentation provides a few examples, such as [Google Cloud Platform](/deployment-gcp) and [Hugging Face Spaces](/deployment-hugging-face-spaces), to help you get started.

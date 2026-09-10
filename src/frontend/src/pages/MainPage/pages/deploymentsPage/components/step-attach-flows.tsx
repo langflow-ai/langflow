@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { useGetDeploymentConfigs } from "@/controllers/API/queries/deployments/use-get-deployment-configs";
+import { getFlowVersionEntry } from "@/controllers/API/queries/flow-version/use-get-flow-version-entry";
 import { useGetFlowVersions } from "@/controllers/API/queries/flow-version/use-get-flow-versions";
 import { usePostCreateSnapshot } from "@/controllers/API/queries/flow-version/use-post-create-snapshot";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
@@ -10,12 +11,14 @@ import { usePostDetectEnvVars } from "@/controllers/API/queries/variables/use-po
 import useAlertStore from "@/stores/alertStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
+import { getWatsonxFlowEligibilityIssue } from "../helpers/watsonx-flow-eligibility";
 import { useConnectionPanelState } from "../hooks/use-connection-panel-state";
 import {
   type ConnectionItem,
   DEFAULT_FLOW_NAME,
   getDefaultDeploymentToolName,
   getSelectedFlowVersionKey,
+  WXO_PROVIDER_KEY,
 } from "../types";
 import { ConnectionPanel } from "./step-attach-flows-connection-panel";
 import { FlowListPanel } from "./step-attach-flows-flow-list-panel";
@@ -27,6 +30,7 @@ export default function StepAttachFlows() {
   const {
     isEditMode,
     initialFlowId,
+    selectedProvider,
     selectedInstance,
     connections,
     setConnections,
@@ -78,6 +82,21 @@ export default function StepAttachFlows() {
     }
     return filtered;
   }, [flowsData, currentFolderId, initialFlowId, selectedVersionByFlow]);
+  const isWatsonxProvider =
+    selectedInstance?.provider_key === WXO_PROVIDER_KEY ||
+    (selectedInstance === null && selectedProvider?.type === "watsonx");
+  const wxoDraftEligibilityByFlow = useMemo(() => {
+    const issues = new Map<
+      string,
+      NonNullable<ReturnType<typeof getWatsonxFlowEligibilityIssue>>
+    >();
+    if (!isWatsonxProvider) return issues;
+    flows.forEach((flow) => {
+      const issue = getWatsonxFlowEligibilityIssue(flow.data);
+      if (issue) issues.set(flow.id, issue);
+    });
+    return issues;
+  }, [flows, isWatsonxProvider]);
 
   // Fetch existing connections from the provider (tenant-scoped)
   const providerId = selectedInstance?.id ?? "";
@@ -123,7 +142,11 @@ export default function StepAttachFlows() {
     flowName: string;
     versionId: string;
     versionTag: string;
+    wxoEligibilityIssue?: NonNullable<
+      ReturnType<typeof getWatsonxFlowEligibilityIssue>
+    > | null;
   } | null>(null);
+  const latestAttachmentRequestRef = useRef(0);
   const [rightPanel, setRightPanel] = useState<RightPanelView>("versions");
   const preselectedAttachment = useMemo(
     () =>
@@ -142,6 +165,7 @@ export default function StepAttachFlows() {
         flowName: pendingAttachment.flowName,
         versionId: pendingAttachment.versionId,
         versionTag: pendingAttachment.versionTag,
+        wxoEligibilityIssue: pendingAttachment.wxoEligibilityIssue,
       });
       setToolNameByFlow((prev) => {
         if (prev.has(pendingAttachment.key)) {
@@ -159,6 +183,7 @@ export default function StepAttachFlows() {
   }, [pendingAttachment, onSelectVersion, setToolNameByFlow]);
 
   const resetPendingAttachment = useCallback(() => {
+    latestAttachmentRequestRef.current += 1;
     setPendingAttachment(null);
   }, []);
 
@@ -220,6 +245,7 @@ export default function StepAttachFlows() {
           flowName: resolvedFlowName,
           versionId: preSelected.versionId,
           versionTag: preSelected.versionTag,
+          wxoEligibilityIssue: preSelected.wxoEligibilityIssue,
         });
       }
       setToolNameByFlow((prev) => {
@@ -242,6 +268,28 @@ export default function StepAttachFlows() {
     initConnectionsForFlow(preSelected.key);
 
     const detect = async () => {
+      if (isWatsonxProvider) {
+        try {
+          const versionEntry = await getFlowVersionEntry({
+            flowId: preSelected.flowId,
+            versionId: preSelected.versionId,
+          });
+          const wxoEligibilityIssue = getWatsonxFlowEligibilityIssue(
+            versionEntry.data,
+          );
+          if (wxoEligibilityIssue !== preSelected.wxoEligibilityIssue) {
+            onSelectVersion({
+              flowId: preSelected.flowId,
+              flowName: resolvedFlowName ?? DEFAULT_FLOW_NAME,
+              versionId: preSelected.versionId,
+              versionTag: preSelected.versionTag,
+              wxoEligibilityIssue,
+            });
+          }
+        } catch {
+          // The backend remains authoritative if version inspection is unavailable.
+        }
+      }
       try {
         const result = await detectEnvVars({
           flow_version_ids: [preSelected.versionId],
@@ -259,6 +307,7 @@ export default function StepAttachFlows() {
     flows,
     detectEnvVars,
     initConnectionsForFlow,
+    isWatsonxProvider,
     onSelectVersion,
     preselectedAttachment,
     setErrorData,
@@ -282,7 +331,24 @@ export default function StepAttachFlows() {
       versionId: string,
       versionTag: string,
     ) => {
+      const requestId = latestAttachmentRequestRef.current + 1;
+      latestAttachmentRequestRef.current = requestId;
       const attachmentKey = getSelectedFlowVersionKey(flowId, versionId);
+      let wxoEligibilityIssue:
+        | NonNullable<ReturnType<typeof getWatsonxFlowEligibilityIssue>>
+        | null
+        | undefined;
+      if (isWatsonxProvider) {
+        try {
+          const versionEntry = await getFlowVersionEntry({ flowId, versionId });
+          wxoEligibilityIssue = getWatsonxFlowEligibilityIssue(
+            versionEntry.data,
+          );
+        } catch {
+          // The backend remains authoritative if version inspection is unavailable.
+        }
+      }
+      if (requestId !== latestAttachmentRequestRef.current) return;
       // Don't commit to context yet — wait for connection step to complete.
       setPendingAttachment({
         key: attachmentKey,
@@ -290,6 +356,7 @@ export default function StepAttachFlows() {
         flowName,
         versionId,
         versionTag,
+        wxoEligibilityIssue,
       });
       setRightPanel("connections");
       initConnectionsForFlow(attachmentKey);
@@ -299,8 +366,10 @@ export default function StepAttachFlows() {
         const result = await detectEnvVars({
           flow_version_ids: [versionId],
         });
+        if (requestId !== latestAttachmentRequestRef.current) return;
         updateDetectedEnvVars(result.variables ?? []);
       } catch {
+        if (requestId !== latestAttachmentRequestRef.current) return;
         updateDetectedEnvVars([]);
         setErrorData({
           title: t("deployments.cannotAutoDetectEnvVars"),
@@ -311,6 +380,7 @@ export default function StepAttachFlows() {
     [
       detectEnvVars,
       initConnectionsForFlow,
+      isWatsonxProvider,
       setErrorData,
       updateDetectedEnvVars,
     ],
@@ -367,11 +437,12 @@ export default function StepAttachFlows() {
 
   const handleSelectFlow = useCallback(
     (flowId: string) => {
+      resetPendingAttachment();
       setSelectedFlowId(flowId);
       setRightPanel("versions");
       setSelectedConnections(new Set());
     },
-    [setSelectedConnections],
+    [resetPendingAttachment, setSelectedConnections],
   );
 
   return (
@@ -385,6 +456,9 @@ export default function StepAttachFlows() {
           selectedVersionByFlow={selectedVersionByFlow}
           attachedConnectionByFlow={attachedConnectionByFlow}
           connections={connections}
+          wxoDraftEligibilityByFlow={
+            isWatsonxProvider ? wxoDraftEligibilityByFlow : undefined
+          }
           removedFlowIds={isEditMode ? removedFlowIds : undefined}
           onSelectFlow={handleSelectFlow}
         />

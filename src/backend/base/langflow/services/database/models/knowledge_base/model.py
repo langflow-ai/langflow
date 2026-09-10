@@ -1,23 +1,24 @@
 """Persistent KB identity + configuration.
 
-One row per Knowledge Base. Replaces the long-running
-``embedding_metadata.json`` + ``schema.json`` files as the source of
-truth — those files stay on disk indefinitely as a fallback (older
-service versions read them; a cold-boot backfill upserts rows for any
-KB that still lacks one).
+One row per Knowledge Base, and the sole source of truth. It replaced the
+``embedding_metadata.json`` + ``schema.json`` sidecars, which are no longer
+written or read: a KB exists because this row exists, not because a directory
+does. Directories left by a version that predates the row are adopted only by
+the explicit ``langflow reconcile-kb-from-disk`` command.
 
 Cached statistics (chunk / word / character counts, on-disk size,
 file-extension list) live alongside the config so list endpoints can
-answer without touching the vector store. The truth remains in
-ChromaDB; these columns are refreshed at the end of each ingestion
-run via ``KBAnalysisHelper.update_text_metrics``.
+answer without touching the vector store. The truth remains in the vector
+store; these columns are refreshed at the end of each ingestion run via
+``KBAnalysisHelper.update_text_metrics_via_backend``.
 
 Notable columns:
 
-* ``backend_type`` / ``backend_config`` — reserved for Phase 4
-  external vector-store backends (MongoDB / Astra / Postgres). Today
-  every row is ``"chroma"`` + empty config and nothing reads those
-  fields; adding them now keeps Phase 4 code-only.
+* ``backend_type`` / ``backend_config`` — where this KB's vectors live.
+  The authoritative routing for every read and write. Note that both
+  Chroma modes store ``"chroma"``; ``backend_config["mode"] == "cloud"``
+  is the discriminator, so use ``is_local_chroma`` rather than comparing
+  ``backend_type`` alone.
 * ``model_selection`` — the full unified-models dict captured at
   create time. Single source of truth for embedding config; the
   ``get_embedding_provider`` / ``get_embedding_model`` helpers in
@@ -27,9 +28,8 @@ Notable columns:
 * ``column_config`` — column roles (vectorize / identifier) from the
   tabular ingestion component. JSON array.
 
-Unique constraint on ``(user_id, name)`` because KB directories are
-scoped to ``{user}/{kb_name}`` on disk and two same-named KBs under
-one user would collide there.
+Unique constraint on ``(user_id, name)`` — the guard against duplicate KBs,
+and what makes ``{user}/{kb_name}`` a safe local-Chroma directory layout.
 """
 
 from datetime import datetime, timezone
@@ -97,7 +97,8 @@ class KnowledgeBaseRecordBase(SQLModel):
         sa_column=Column(JsonVariant, nullable=False),
     )
 
-    # Phase 4 surface, reserved today.
+    # Authoritative vector-store routing. See the module docstring on why
+    # ``backend_type`` alone does not distinguish local Chroma from Chroma Cloud.
     backend_type: str = Field(default="chroma", nullable=False)
     backend_config: dict[str, Any] = Field(
         default_factory=dict,

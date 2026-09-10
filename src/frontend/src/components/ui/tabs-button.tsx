@@ -45,6 +45,12 @@ const TabsContent = React.forwardRef<
     className={cn(
       "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
       className,
+      // Radix hides inactive panels with the `hidden` attribute, which only
+      // works via the UA stylesheet's `[hidden]{display:none}`. A consumer
+      // passing any display utility (e.g. `flex`) outranks that and leaves the
+      // panel rendered at zero height — still tabbable and still in the a11y
+      // tree. This attribute selector outranks a plain display class.
+      "data-[state=inactive]:hidden",
     )}
     {...props}
   />

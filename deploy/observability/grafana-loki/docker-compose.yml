@@ -11,15 +11,19 @@ services:
       timeout: 3s
       retries: 20
 
-  promtail:
-    image: grafana/promtail:3.2.0
-    container_name: lf-promtail
+  alloy:
+    image: grafana/alloy:v1.18.1
+    container_name: lf-alloy
     volumes:
-      - ./promtail/config.yml:/etc/promtail/config.yml
+      - ./alloy/config.alloy:/etc/alloy/config.alloy:ro
       # Mount the directory that holds your langflow JSON log file.
       # Override LANGFLOW_LOG_DIR to point at your real log location.
       - ${LANGFLOW_LOG_DIR:-./logs}:/var/log/langflow:ro
-    command: -config.file=/etc/promtail/config.yml
+    command:
+      - run
+      - --server.http.listen-addr=127.0.0.1:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
     depends_on:
       loki:
         condition: service_healthy

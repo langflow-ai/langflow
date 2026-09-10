@@ -101,13 +101,9 @@ test(
 
     await expect(page.getByTestId("add-provider-save")).toBeDisabled();
 
-    await page.getByPlaceholder("e.g. Production").fill("My Env");
-    await page
-      .getByPlaceholder("Enter your API key")
-      .fill("test-api-key-12345");
-    await page
-      .getByPlaceholder("https://api.example.com")
-      .fill("https://example.com");
+    await page.getByLabel(/^Name/).fill("My Env");
+    await page.getByLabel(/^API Key/).fill("test-api-key-12345");
+    await page.getByLabel(/^Service Instance URL/).fill("https://example.com");
 
     await expect(page.getByTestId("add-provider-save")).toBeEnabled();
   },
@@ -153,13 +149,9 @@ test(
 
     await page.getByTestId("add-provider-empty-btn").click();
 
-    await page.getByPlaceholder("e.g. Production").fill("My Env");
-    await page
-      .getByPlaceholder("Enter your API key")
-      .fill("test-api-key-12345");
-    await page
-      .getByPlaceholder("https://api.example.com")
-      .fill("https://example.com");
+    await page.getByLabel(/^Name/).fill("My Env");
+    await page.getByLabel(/^API Key/).fill("test-api-key-12345");
+    await page.getByLabel(/^Service Instance URL/).fill("https://example.com");
 
     const postRequest = page.waitForRequest(
       (req) =>

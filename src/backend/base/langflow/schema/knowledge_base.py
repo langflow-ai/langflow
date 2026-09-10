@@ -6,15 +6,19 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 from langflow.utils.kb_constants import MAX_CHUNK_OVERLAP, MAX_CHUNK_SIZE, MIN_CHUNK_OVERLAP, MIN_CHUNK_SIZE
 
-_REQUIRED_BACKEND_CONFIG: dict[str, tuple[str, ...]] = {
-    BackendType.OPENSEARCH.value: ("index_name",),
-}
+# Required ``backend_config`` fields per backend, enforced at request time.
+# OpenSearch no longer requires ``index_name``: the backend derives a unique
+# index per KB/MB from its name (created lazily on first write), so the index
+# does not need to exist — or even be named — at create / test-connection time.
+_REQUIRED_BACKEND_CONFIG: dict[str, tuple[str, ...]] = {}
 
 # Backends the API accepts for *new* KB creation. Other ``BackendType``
 # values exist as stubs so existing DB rows referencing them can still
 # be read back, but creating a new KB on a stubbed backend would just
 # fail at ingest time. Reject up front instead.
-_CREATION_ALLOWED_BACKENDS: frozenset[str] = frozenset({BackendType.CHROMA.value, BackendType.OPENSEARCH.value})
+_CREATION_ALLOWED_BACKENDS: frozenset[str] = frozenset(
+    {BackendType.CHROMA.value, BackendType.OPENSEARCH.value, BackendType.POSTGRES.value}
+)
 
 
 class KnowledgeBaseInfo(BaseModel):
@@ -56,19 +60,23 @@ class CreateKnowledgeBaseRequest(BaseModel):
     embedding_model: str
     model_selection: dict[str, Any] | list[dict[str, Any]] | None = None
     column_config: list[ColumnConfigItem] | None = None
-    # Phase 4 additions. Default keeps existing KBs on Chroma.
-    backend_type: str = "chroma"
+    # ``None`` means "auto" — the server resolves the default backend at create
+    # time (pgVector when PGVECTOR_CONNECTION_STRING is set, else Chroma). An
+    # explicit value (chroma / opensearch / postgres) is validated and honored.
+    backend_type: str | None = None
     backend_config: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("backend_type")
     @classmethod
-    def validate_backend_type(cls, value: str) -> str:
-        normalized = value or BackendType.CHROMA.value
+    def validate_backend_type(cls, value: str | None) -> str | None:
+        # Preserve "auto": an unset backend_type is resolved server-side, not here.
+        if value is None or not str(value).strip():
+            return None
         try:
-            backend = BackendType(normalized).value
+            backend = BackendType(value).value
         except ValueError as exc:
             allowed = ", ".join(sorted(_CREATION_ALLOWED_BACKENDS))
-            msg = f"Unknown vector-store backend {normalized!r}. Expected one of: {allowed}."
+            msg = f"Unknown vector-store backend {value!r}. Expected one of: {allowed}."
             raise ValueError(msg) from exc
         if backend not in _CREATION_ALLOWED_BACKENDS:
             allowed = ", ".join(sorted(_CREATION_ALLOWED_BACKENDS))
@@ -78,6 +86,8 @@ class CreateKnowledgeBaseRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_backend_config(self) -> "CreateKnowledgeBaseRequest":
+        if self.backend_type is None:
+            return self
         required_keys = _REQUIRED_BACKEND_CONFIG.get(self.backend_type, ())
         missing = [key for key in required_keys if not str(self.backend_config.get(key) or "").strip()]
         if missing:

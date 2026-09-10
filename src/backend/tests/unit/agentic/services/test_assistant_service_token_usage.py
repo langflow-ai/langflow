@@ -92,6 +92,7 @@ class TestAssistantPerTurnUsageReporting:
         blocked.is_safe = False
         blocked.violation = "blocked"
         blocked.sanitized_input = "forbidden"
+        blocked.refusal = "refused"
 
         with patch(f"{MODULE}.sanitize_input", return_value=blocked):
             gen = execute_flow_with_validation_streaming(

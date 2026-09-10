@@ -42,7 +42,7 @@ jobs:
     outputs:
       bundles: ${{ steps.find.outputs.bundles }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
       - id: find
@@ -78,11 +78,12 @@ jobs:
         # publishes (see header).
         python-version: ${{ github.event_name == 'schedule' && fromJson('["3.10", "3.11", "3.12", "3.13", "3.14"]') || fromJson('["3.10", "3.13"]') }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: ${{ matrix.python-version }}
@@ -156,7 +157,23 @@ jobs:
       - name: Run the bundle's own tests
         run: |
           if [ -d "${{ matrix.bundle }}/tests" ]; then
-            .venv/bin/python -m pytest "${{ matrix.bundle }}/tests" -q
+            # Provider regression tests for the manifest-less metapackage live
+            # with the provider code and need their provider's SDKs. These moved
+            # here from src/backend/tests/, where they skipped in every default
+            # install once lfx-bundles became opt-in (issue #14554), so this
+            # install is what makes them actually execute. `all-no-torch` is the
+            # aggregate langflow[bundles] itself resolves, keeping the job
+            # torch-free; respx/pytest-timeout are test-only deps the moved
+            # suites use. Installed HERE, not in the setup step, so the contract
+            # smoke above still runs against a bare bundle and keeps asserting
+            # the graceful-degradation-without-extras behaviour.
+            if [ "${{ matrix.bundle }}" = "src/bundles/lfx-bundles" ]; then
+              uv pip install "./${{ matrix.bundle }}[all-no-torch]" respx pytest-timeout
+            fi
+            # -m "not api_key_required": those tests need real provider credentials, which CI
+            # does not hold. They already self-skip on a missing env var, but deselecting makes
+            # the pyproject marker's "not run in CI" contract enforced rather than aspirational.
+            .venv/bin/python -m pytest "${{ matrix.bundle }}/tests" -q -m "not api_key_required"
           else
             echo "no tests/ directory in ${{ matrix.bundle }}; skipping"
           fi

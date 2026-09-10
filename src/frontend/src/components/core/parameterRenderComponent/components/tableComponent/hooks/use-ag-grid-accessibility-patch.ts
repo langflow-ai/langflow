@@ -92,18 +92,66 @@ export function patchEmptyRowGroups(container: HTMLElement) {
 }
 
 /**
+ * The rendered body row closest to the top of the viewport — where a keyboard
+ * user should land when they tab into the grid. AG Grid's `row-index` attribute
+ * is the source of truth rather than DOM position: DOM order only tracks visual
+ * order while `ensureDomOrder` is on, and consumers can turn it off through
+ * `gridOptions`. Falls back to the first rendered row if no row carries a
+ * usable index.
+ */
+function getTopRenderedRow(rows: HTMLElement[]): HTMLElement {
+  let topRow = rows[0];
+  let topIndex = Number.POSITIVE_INFINITY;
+  for (const row of rows) {
+    const index = Number.parseInt(row.getAttribute("row-index") ?? "", 10);
+    if (Number.isNaN(index) || index >= topIndex) continue;
+    topIndex = index;
+    topRow = row;
+  }
+  return topRow;
+}
+
+/**
  * A `treegrid`/`grid` must expose a tabbable `row` so keyboard users can reach
  * its content (IBM `aria_child_tabbable`, WCAG 2.1.1 / 4.1.2). AG Grid keeps all
  * rows at `tabindex="-1"` and relies on its tab guards instead. Apply a roving
- * tabindex: the first rendered body row becomes the grid's single tabbable row,
- * the rest stay `-1`. Actual cell navigation is unchanged (arrow keys / the tab
- * guards still drive focus into cells).
+ * tabindex: the topmost rendered body row becomes the grid's single tabbable
+ * row, the rest stay `-1`. When the body is empty (e.g. filtered to zero
+ * matches) the header still exposes `role="row"` descendants, so fall back to
+ * the first header row — otherwise IBM flags the treegrid for having no tabbable
+ * row. Actual cell navigation is unchanged (arrow keys / the tab guards still
+ * drive focus into cells).
+ *
+ * Row virtualization recycles the row holding the tab stop out of the DOM as
+ * soon as the user scrolls past it, which would leave the grid with zero
+ * tabbable rows and no way to enter it from the keyboard. The table component
+ * therefore re-runs this patch on `viewportChanged` and `modelUpdated`, so the
+ * tab stop follows the rendered window instead of dying with the row that
+ * happened to own it first.
  */
 export function patchTabbableRow(container: HTMLElement) {
-  const rows = container.querySelectorAll<HTMLElement>(
-    '.ag-center-cols-container [role="row"]',
+  const bodyRows = Array.from(
+    container.querySelectorAll<HTMLElement>(
+      '.ag-center-cols-container [role="row"]',
+    ),
   );
-  rows.forEach((row, index) => {
+  const headerRows = container.querySelectorAll<HTMLElement>(
+    '.ag-header [role="row"]',
+  );
+
+  if (bodyRows.length > 0) {
+    const tabStop = getTopRenderedRow(bodyRows);
+    bodyRows.forEach((row) => {
+      setAttributeIfChanged(row, "tabindex", row === tabStop ? "0" : "-1");
+    });
+    // Body rows own the roving tab stop — keep header rows out of the tab order.
+    headerRows.forEach((row) => {
+      setAttributeIfChanged(row, "tabindex", "-1");
+    });
+    return;
+  }
+
+  headerRows.forEach((row, index) => {
     setAttributeIfChanged(row, "tabindex", index === 0 ? "0" : "-1");
   });
 

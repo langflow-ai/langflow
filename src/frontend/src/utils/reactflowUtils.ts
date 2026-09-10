@@ -66,7 +66,7 @@ import {
   cleanMcpConfig,
   type MCPServerValue,
 } from "./helpers/clean-mcp-config";
-import { getLayoutedNodes } from "./layoutUtils";
+import { getFallbackGridPositions, getLayoutedNodes } from "./layoutUtils";
 import { createRandomKey, toTitleCase } from "./utils";
 
 const uid = new ShortUniqueId();
@@ -278,11 +278,26 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
             expectedSourceHandle,
             sourceHandle,
           );
-          if (!sourceMatchResult && !hasAllowsLoop) {
+          // "Update Component" rewrites data.type to the component's
+          // current `name`, so a component renamed upstream (Prompt ->
+          // Prompt Template) leaves every outgoing edge holding the old
+          // dataType. The node id and output already matched here, so the
+          // rename is metadata drift, not a broken connection — migrate it.
+          const renamedSourceComponent =
+            !sourceMatchResult &&
+            parsedSourceHandle.dataType !== id.dataType &&
+            handlesMatch(
+              scapedJSONStringfy({
+                ...id,
+                dataType: parsedSourceHandle.dataType,
+              }),
+              sourceHandle,
+            );
+          if (!sourceMatchResult && !renamedSourceComponent && !hasAllowsLoop) {
             newEdges = newEdges.filter((e) => e !== edgeInNewEdges);
             brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
           } else if (
-            sourceMatchResult &&
+            (sourceMatchResult || renamedSourceComponent) &&
             expectedSourceHandle !== sourceHandle
           ) {
             // Handles match via migration but IDs differ — update edge to use current types
@@ -314,6 +329,9 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       edgeInNewEdges ?? edge,
       newEdges,
       targetNode,
+      () => {
+        brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
+      },
     );
   });
 
@@ -363,6 +381,7 @@ export function filterHiddenFieldsEdges(
   edge: EdgeType,
   newEdges: EdgeType[],
   targetNode: AllNodeType,
+  onRemoved?: (edge: EdgeType) => void,
 ) {
   if (targetNode) {
     const targetHandle = edge.data?.targetHandle;
@@ -373,7 +392,11 @@ export function filterHiddenFieldsEdges(
 
     // Only check the specific field the edge is connected to
     if (nodeTemplates[fieldName]?.show === false) {
+      const removed = newEdges.some((e) => e.id === edge.id);
       newEdges = newEdges.filter((e) => e.id !== edge.id);
+      // Dropping a connection because its target field went hidden used
+      // to leave no trace at all, so an upgrade could quietly unwire a flow.
+      if (removed) onRemoved?.(edge);
     }
   }
   return newEdges;
@@ -609,7 +632,14 @@ export const processFlows = (DbData: FlowType[], skipUpdate = true) => {
 };
 
 export const needsLayout = (nodes: AllNodeType[]) => {
-  return nodes.some((node) => !node.position);
+  // Number.isFinite does not coerce, so this also rejects non-numeric
+  // coordinates as well as NaN and ±Infinity.
+  return nodes.some(
+    (node) =>
+      !node.position ||
+      !Number.isFinite(node.position.x) ||
+      !Number.isFinite(node.position.y),
+  );
 };
 
 export async function processDataFromFlow(
@@ -627,6 +657,11 @@ export async function processDataFromFlow(
     if (refreshIds) updateIds(data); // Assuming updateIds is defined elsewhere
     // add layout to nodes if not present
     if (needsLayout(data.nodes)) {
+      // Seed deterministic positions synchronously first. processFlows invokes
+      // this function without awaiting it, so anything that depends on the
+      // `await` below would still hand position-less nodes to React Flow (whose
+      // getNodePositionWithOrigin dereferences node.position.x unguarded).
+      data.nodes = getFallbackGridPositions(data.nodes);
       const layoutedNodes = await getLayoutedNodes(data.nodes, data.edges);
       data.nodes = layoutedNodes;
     }
@@ -863,7 +898,9 @@ export function updateEdges(edges: EdgeType[]) {
     });
 }
 
-export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
+export type NamedFlow = Pick<FlowType, "id" | "name">;
+
+export function addVersionToDuplicates(flow: FlowType, flows: NamedFlow[]) {
   const flowsWithoutUpdatedFlow = flows.filter((f) => f.id !== flow.id);
 
   const existingNames = flowsWithoutUpdatedFlow.map((item) => item.name);

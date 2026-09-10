@@ -31,10 +31,18 @@ jest.mock(
   "@/controllers/API/queries/flows/use-get-refresh-flows-query",
   () => ({ __esModule: true, useGetRefreshFlowsQuery: () => ({}) }),
 );
+let mockFolders = [
+  {
+    id: "f1",
+    name: "Folder",
+    owner_username: "current-user",
+    is_owner: true,
+  },
+];
 jest.mock("@/controllers/API/queries/folders/use-get-folders", () => ({
   __esModule: true,
   useGetFoldersQuery: () => ({
-    data: [{ id: "f1", name: "Folder" }],
+    data: mockFolders,
     isFetched: true,
   }),
 }));
@@ -128,6 +136,14 @@ jest.mock("lucide-react/dynamicIconImports", () => ({}), { virtual: true });
 describe("FlowMenu MenuBar", () => {
   beforeEach(() => {
     mockIsReadOnly = false;
+    mockFolders = [
+      {
+        id: "f1",
+        name: "Folder",
+        owner_username: "current-user",
+        is_owner: true,
+      },
+    ];
   });
 
   it("renders current folder and flow name, enables save", async () => {
@@ -141,6 +157,23 @@ describe("FlowMenu MenuBar", () => {
 
     const saveBtn = screen.getByTestId("save-flow-button");
     expect(saveBtn).not.toBeDisabled();
+  });
+
+  it("qualifies a foreign project in the breadcrumb", () => {
+    mockFolders = [
+      {
+        id: "f1",
+        name: "Starter Project",
+        owner_username: "other-user",
+        is_owner: false,
+      },
+    ];
+
+    render(<MenuBar />);
+
+    expect(
+      screen.getByRole("button", { name: "Starter Project — other-user" }),
+    ).toBeInTheDocument();
   });
 
   it("renders flow settings trigger as a named keyboard button", () => {

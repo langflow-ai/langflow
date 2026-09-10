@@ -1,4 +1,4 @@
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import type { APITemplateType } from "@/types/api";
 import type { AllNodeType } from "@/types/flow";
 
@@ -26,6 +26,8 @@ let mockComponentsToUpdate: Array<{
   userEdited: boolean;
 }> = [];
 let mockAllowCustomComponents = true;
+let mockCurrentFlowId = "flow-123";
+let mockCurrentFolderId = "folder-456";
 // biome-ignore lint/suspicious/noExplicitAny: legacy
 let mockTemplates: Record<string, any> = {};
 
@@ -83,8 +85,8 @@ jest.mock("@/stores/flowsManagerStore", () => ({
   __esModule: true,
   default: {
     getState: () => ({
-      currentFlowId: "flow-123",
-      currentFlow: { folder_id: "folder-456" },
+      currentFlowId: mockCurrentFlowId,
+      currentFlow: { folder_id: mockCurrentFolderId },
     }),
   },
 }));
@@ -99,6 +101,11 @@ import {
   refreshAllModelInputs,
   useRefreshModelInputs,
 } from "../use-refresh-model-inputs";
+
+beforeEach(() => {
+  mockCurrentFlowId = "flow-123";
+  mockCurrentFolderId = "folder-456";
+});
 
 // ============================================================================
 // Helper Function Tests
@@ -358,6 +365,9 @@ describe("refreshAllModelInputs", () => {
     expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: ["useGetEnabledModels"],
     });
+    expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["useGetProviderVariables"],
+    });
   });
 
   it("should not invalidate cache when queryClient is not provided", async () => {
@@ -511,6 +521,43 @@ describe("refreshAllModelInputs", () => {
 
     // Second call should be queued and run after first completes (2 total calls)
     expect(api.post).toHaveBeenCalledTimes(2);
+  });
+
+  it("discards a deferred response after the active flow scope changes", async () => {
+    mockNodes = [createMockModelNode("shared-node-id")];
+    let resolveResponse: ((value: unknown) => void) | undefined;
+    (api.post as jest.Mock).mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveResponse = resolve;
+        }),
+    );
+
+    // biome-ignore lint/suspicious/noExplicitAny: test query-client double
+    const refresh = refreshAllModelInputs(mockQueryClient as any, {
+      silent: true,
+    });
+    await waitFor(() => expect(api.post).toHaveBeenCalledTimes(1));
+
+    mockCurrentFlowId = "flow-456";
+    mockCurrentFolderId = "folder-789";
+    resolveResponse?.({
+      data: {
+        template: {
+          model: {
+            type: "model",
+            options: ["scope-a-model"],
+            required: true,
+            list: false,
+            show: true,
+            readonly: false,
+          },
+        },
+      },
+    });
+    await refresh;
+
+    expect(mockSetNode).not.toHaveBeenCalled();
   });
 });
 
@@ -929,7 +976,14 @@ describe("refreshAllModelInputs — disconnected provider", () => {
     expect(getRefreshedModelValue()).toEqual(ANTHROPIC_SAVED_VALUE);
     expect(mockQueryClient.fetchQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ["useGetModelProviders", undefined, undefined],
+        queryKey: [
+          "useGetModelProviders",
+          undefined,
+          undefined,
+          "flow-123",
+          undefined,
+          "configure",
+        ],
       }),
     );
     expect(

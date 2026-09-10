@@ -15,6 +15,7 @@ from langflow.preload import (
     PreloadStep,
     _run_master_preload,
     get_owned_temp_dirs,
+    initialize_environment_variables,
     is_master,
     is_preloaded,
     mark_step_complete,
@@ -31,11 +32,11 @@ def reset_preload_state():
         "temp_dirs": _STATE.temp_dirs.copy(),
         "bundles_components_paths": _STATE.bundles_components_paths.copy(),
         "profile_pictures_copied": _STATE.profile_pictures_copied,
+        "environment_variables_initialized": _STATE.environment_variables_initialized,
         "bundles_loaded": _STATE.bundles_loaded,
         "types_cached": _STATE.types_cached,
         "starter_projects_created": _STATE.starter_projects_created,
         "agentic_globals_initialized": _STATE.agentic_globals_initialized,
-        "agentic_mcp_configured": _STATE.agentic_mcp_configured,
         "flows_loaded": _STATE.flows_loaded,
     }
 
@@ -70,7 +71,7 @@ class _PreloadFixture:
     create_or_update_starter_projects: AsyncMock
     load_flows_from_directory: AsyncMock
     initialize_agentic_global_variables: AsyncMock
-    auto_configure_agentic_mcp_server: AsyncMock
+    initialize_all_user_variables: AsyncMock
     logger: AsyncMock
 
 
@@ -104,7 +105,7 @@ def _preload_env(
     dispose_side_effect=None,
     copy_profile_pictures=None,
     initialize_agentic_global_variables=None,
-    auto_configure_agentic_mcp_server=None,
+    initialize_all_user_variables=None,
     cache_service=None,
     all_types_dict=None,
 ):
@@ -124,7 +125,7 @@ def _preload_env(
     create_starter = AsyncMock()
     load_flows = AsyncMock()
     init_agentic = initialize_agentic_global_variables or AsyncMock()
-    auto_config = auto_configure_agentic_mcp_server or AsyncMock()
+    init_environment = initialize_all_user_variables or AsyncMock()
     logger_mock = AsyncMock()
 
     with ExitStack() as stack:
@@ -140,6 +141,12 @@ def _preload_env(
         )
         stack.enter_context(patch("langflow.services.deps.get_db_service", return_value=db_service))
         stack.enter_context(patch("langflow.services.deps.get_service", return_value=cache_service))
+        stack.enter_context(
+            patch(
+                "langflow.services.deps.get_variable_service",
+                return_value=MagicMock(initialize_all_user_variables=init_environment),
+            )
+        )
         stack.enter_context(
             patch("langflow.services.deps.session_scope", return_value=_async_cm(AsyncMock())),
         )
@@ -160,12 +167,6 @@ def _preload_env(
                 init_agentic,
             ),
         )
-        stack.enter_context(
-            patch(
-                "langflow.api.utils.mcp.agentic_mcp.auto_configure_agentic_mcp_server",
-                auto_config,
-            ),
-        )
         # Default ``component_cache.all_types_dict`` is None (skips starter-project branch).
         # Tests that exercise that branch must pass a truthy ``all_types_dict``.
         types_mock = MagicMock()
@@ -183,7 +184,7 @@ def _preload_env(
             create_or_update_starter_projects=create_starter,
             load_flows_from_directory=load_flows,
             initialize_agentic_global_variables=init_agentic,
-            auto_configure_agentic_mcp_server=auto_config,
+            initialize_all_user_variables=init_environment,
             logger=logger_mock,
         )
 
@@ -284,11 +285,11 @@ def test_reset_clears_all_fields():
     _STATE.temp_dirs = [MagicMock()]
     _STATE.bundles_components_paths = ["/a"]
     _STATE.profile_pictures_copied = True
+    _STATE.environment_variables_initialized = True
     _STATE.bundles_loaded = True
     _STATE.types_cached = True
     _STATE.starter_projects_created = True
     _STATE.agentic_globals_initialized = True
-    _STATE.agentic_mcp_configured = True
     _STATE.flows_loaded = True
 
     _STATE.reset()
@@ -298,11 +299,11 @@ def test_reset_clears_all_fields():
     assert _STATE.temp_dirs == []
     assert _STATE.bundles_components_paths == []
     assert _STATE.profile_pictures_copied is False
+    assert _STATE.environment_variables_initialized is False
     assert _STATE.bundles_loaded is False
     assert _STATE.types_cached is False
     assert _STATE.starter_projects_created is False
     assert _STATE.agentic_globals_initialized is False
-    assert _STATE.agentic_mcp_configured is False
     assert _STATE.flows_loaded is False
 
 
@@ -464,6 +465,36 @@ async def test_run_master_preload_sets_completion_flags_on_success():
     assert _STATE.flows_loaded is True
 
 
+async def test_environment_sweep_is_inherited_by_workers():
+    """Workers skip a sweep already completed by the preload master."""
+    with _preload_env() as fx:
+        await _run_master_preload()
+        await initialize_environment_variables()
+        await initialize_environment_variables()
+    fx.initialize_all_user_variables.assert_awaited_once()
+    assert _STATE.environment_variables_initialized is True
+
+
+async def test_environment_sweep_failure_continues_startup_and_retries():
+    """A failed master sweep leaves the worker fallback available without blocking boot."""
+    sweep = AsyncMock(side_effect=[RuntimeError("sweep failed"), None])
+    with _preload_env(initialize_all_user_variables=sweep) as fx:
+        await _run_master_preload()
+        assert _STATE.environment_variables_initialized is False
+        fx.load_flows_from_directory.assert_awaited_once()
+        fx.db_engine.dispose.assert_awaited_once()
+        await initialize_environment_variables()
+    assert sweep.await_count == 2
+    assert _STATE.environment_variables_initialized is True
+
+
+async def test_environment_sweep_service_lookup_failure_is_best_effort():
+    """Failure constructing the variable service must not prevent server readiness."""
+    with patch("langflow.services.deps.get_variable_service", side_effect=RuntimeError("unavailable")):
+        await initialize_environment_variables()
+    assert _STATE.environment_variables_initialized is False
+
+
 @pytest.mark.asyncio
 async def test_run_master_preload_closes_external_cache_service():
     """An ExternalAsyncBaseCacheService must have teardown() awaited before fork."""
@@ -509,42 +540,31 @@ async def test_run_master_preload_closes_external_cache_service():
 
 @pytest.mark.asyncio
 async def test_run_master_preload_agentic_experience_enabled():
-    """Both agentic steps run and set their flags when ``agentic_experience`` is True."""
+    """The agentic-globals step runs and sets its flag when ``agentic_experience`` is True."""
     init_agentic = AsyncMock()
-    auto_config = AsyncMock()
 
     with _preload_env(
         agentic_experience=True,
         all_types_dict={"fake": "types_dict"},
         initialize_agentic_global_variables=init_agentic,
-        auto_configure_agentic_mcp_server=auto_config,
     ):
         await _run_master_preload()
 
     init_agentic.assert_awaited_once()
-    auto_config.assert_awaited_once()
     assert _STATE.agentic_globals_initialized is True
-    assert _STATE.agentic_mcp_configured is True
 
 
 @pytest.mark.asyncio
-async def test_run_master_preload_agentic_partial_failure_tracked_separately():
-    """Independent try/except per agentic step: one failing must not block the other.
-
-    Guards the "split the one-try-wraps-two-ops block into two tries" claim.
-    """
+async def test_run_master_preload_agentic_failure_is_best_effort():
+    """A failing agentic-globals step must not break the preload; its flag stays False."""
     init_agentic = AsyncMock(side_effect=RuntimeError("agentic globals broke"))
-    auto_config = AsyncMock()
 
     with _preload_env(
         agentic_experience=True,
         all_types_dict={"fake": "types_dict"},
         initialize_agentic_global_variables=init_agentic,
-        auto_configure_agentic_mcp_server=auto_config,
     ):
         await _run_master_preload()
 
     init_agentic.assert_awaited_once()
-    auto_config.assert_awaited_once()
     assert _STATE.agentic_globals_initialized is False
-    assert _STATE.agentic_mcp_configured is True

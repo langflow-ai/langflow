@@ -20,7 +20,7 @@ export function ActionPickerAddButton({
       data-testid={`actionpicker-add-${testId ?? ""}`}
       onClick={onClick}
       className={cn(
-        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-border",
+        "flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-control",
         "text-muted-foreground hover:bg-muted hover:text-foreground",
         "disabled:cursor-not-allowed disabled:opacity-50",
       )}

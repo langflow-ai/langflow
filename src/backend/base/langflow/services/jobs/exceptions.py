@@ -28,7 +28,17 @@ class PauseRequested(JobError):  # noqa: N818
     re-raises it without writing a terminal status.
     """
 
-    def __init__(self, payload: dict | None = None, request_id: str | None = None) -> None:
+    def __init__(
+        self,
+        payload: dict | None = None,
+        request_id: str | None = None,
+        output_events: list[dict] | None = None,
+    ) -> None:
         super().__init__("Run paused for human input")
         self.payload = payload or {}
         self.request_id = request_id
+        # Terminal outputs the run captured BEFORE the pause (e.g. a fully-run
+        # sibling branch ending in an output component). The runner stashes these
+        # on suspend so the resumed pass — which starts a fresh capture list and
+        # skips re-emitting already-built vertices — does not drop them.
+        self.output_events = output_events or []

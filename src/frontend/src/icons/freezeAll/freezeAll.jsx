@@ -9,7 +9,6 @@ const FreezeAllSvg = ({ className, ...props }) => {
       className={cn("h-4 w-4 stroke-[1.5]", className)}
       {...props}
     >
-      <title>snowflake-svg</title>
       <path
         id="Layer copy"
         className="fill-none stroke-current"

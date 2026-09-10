@@ -9,9 +9,12 @@ import builtins
 import importlib
 import sys
 import types
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import langflow.api.v1.voice_mode as vm
 import pytest
+from fastapi import HTTPException
 
 
 def test_voice_mode_module_import_does_not_require_openai(monkeypatch):
@@ -63,6 +66,25 @@ async def test_get_or_create_elevenlabs_client_requires_user_and_session():
     """No user/session -> no client (avoids falling back to some other tenant's key)."""
     assert await vm.get_or_create_elevenlabs_client(None, None) is None
     assert await vm.get_or_create_elevenlabs_client("user", None) is None
+
+
+@pytest.mark.asyncio
+async def test_voice_catalog_denial_precedes_credential_and_provider_lookup(monkeypatch):
+    """A revoked voice grant reaches neither the variable service nor ElevenLabs."""
+    denied_guard = AsyncMock(side_effect=HTTPException(status_code=403, detail="denied"))
+    client_lookup = AsyncMock()
+    monkeypatch.setattr(vm, "ensure_voice_permission", denied_guard)
+    monkeypatch.setattr(vm, "get_or_create_elevenlabs_client", client_lookup)
+
+    with pytest.raises(HTTPException) as exc_info:
+        await vm.get_elevenlabs_voice_ids(
+            current_user=SimpleNamespace(id="revoked-user"),
+            session=object(),
+        )
+
+    assert exc_info.value.status_code == 403
+    denied_guard.assert_awaited_once()
+    client_lookup.assert_not_awaited()
 
 
 def test_get_voice_config_scoped_by_user():

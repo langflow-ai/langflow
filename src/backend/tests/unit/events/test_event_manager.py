@@ -146,7 +146,7 @@ class TestEventManager:
 
     # Ensuring the queue receives the correct event data format
     async def test_queue_receives_correct_event_data_format(self):
-        async def mock_queue_put_nowait(data):
+        def mock_queue_put_nowait(data):
             pass
 
         async def mock_queue_get():

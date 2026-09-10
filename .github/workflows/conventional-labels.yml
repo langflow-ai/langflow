@@ -6,6 +6,11 @@ on:
     types: [opened, edited, synchronize]
   merge_group:
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 jobs:
   validate-pr:
     name: Validate PR
@@ -13,17 +18,61 @@ jobs:
     steps:
       - name: Validate the pull request
         id: validate
-        uses: Namchee/conventional-pr@v0.15.6
+        uses: Namchee/conventional-pr@v0.16.0
         with:
           access_token: ${{ secrets.GITHUB_TOKEN }}
           issue: false
+          timeout: 15
 
   label:
     needs: validate-pr
     name: Label PR
     runs-on: ubuntu-latest
-    if: ${{ github.event.pull_request.user.type != 'Bot'}}
+    if: ${{ github.event_name == 'pull_request_target' && github.event.pull_request.user.type != 'Bot' }}
     steps:
-      - uses: bcoe/conventional-release-labels@v1
+      - name: Apply conventional release label
+        uses: actions/github-script@v9
         with:
-          type_labels: '{"feat": "enhancement","fix": "bug","docs": "documentation","style": "style","refactor": "refactor","perf": "performance","test": "test","chore": "chore","build": "build"}'
+          script: |
+            const typeLabels = {
+              feat: "enhancement",
+              fix: "bug",
+              docs: "documentation",
+              style: "style",
+              refactor: "refactor",
+              perf: "performance",
+              test: "test",
+              chore: "chore",
+              build: "build",
+            };
+            const match = context.payload.pull_request.title.match(
+              /^([a-zA-Z]+)(?:\([^)]+\))?(!)?:\s*/,
+            );
+            if (!match || !typeLabels[match[1]]) {
+              return;
+            }
+
+            const configuredLabels = [...new Set(Object.values(typeLabels))];
+            const currentLabels = new Set(
+              context.payload.pull_request.labels.map((label) => label.name),
+            );
+            for (const label of configuredLabels) {
+              if (!currentLabels.has(label)) {
+                continue;
+              }
+              try {
+                await github.rest.issues.removeLabel({
+                  ...context.repo,
+                  issue_number: context.issue.number,
+                  name: label,
+                });
+              } catch (error) {
+                if (error.status !== 404) throw error;
+              }
+            }
+
+            await github.rest.issues.addLabels({
+              ...context.repo,
+              issue_number: context.issue.number,
+              labels: [typeLabels[match[1]]],
+            });

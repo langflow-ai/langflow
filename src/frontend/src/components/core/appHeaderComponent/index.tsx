@@ -89,7 +89,11 @@ export default function AppHeader(): JSX.Element {
           notificationRef={notificationContentRef}
           onClose={() => setActiveState(null)}
         >
-          <ShadTooltip content={t("header.notifications")} side="bottom">
+          <ShadTooltip
+            content={t("header.notifications")}
+            side="bottom"
+            ariaDescribedBy={undefined}
+          >
             <AlertDropdown onClose={() => setActiveState(null)}>
               <Button
                 ref={notificationRef}

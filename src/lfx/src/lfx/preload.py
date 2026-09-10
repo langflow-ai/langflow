@@ -117,8 +117,10 @@ def _run_flow_once(graph, input_value: str) -> None:
     inputs = InputValueRequest(input_value=input_value) if input_value else None
 
     async def _run() -> None:
-        async for _ in graph.async_start(inputs=inputs):
-            pass
+        # A coroutine, so the span can be made current and the run nests under it.
+        with graph.flow_execution_span():
+            async for _ in graph.async_start(inputs=inputs, open_flow_span=False):
+                pass
 
     asyncio.run(_run())
 

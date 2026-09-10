@@ -1,0 +1,225 @@
+---
+title: IBM Confluent
+slug: /bundles-confluent
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialConditionalParams from '@site/docs/_partial-conditional-params.mdx';
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="confluent" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **IBM Confluent** bundle, and the zero-code ways to connect Langflow flows to Confluent that work with the components you already have.
+
+[IBM Confluent](https://www.ibm.com/products/confluent) is the data-in-motion half of IBM's streaming lakehouse: Apache Kafka® for streams, Apache Flink® for processing (including [Streaming Agents](https://docs.confluent.io/cloud/current/ai/streaming-agents/overview.html)), [Tableflow](https://docs.confluent.io/cloud/current/topics/tableflow/overview.html) to materialize topics as Apache Iceberg™ tables, and the [Real-Time Context Engine](https://docs.confluent.io/cloud/current/ai/real-time-context-engine/overview.html) to serve fresh, governed topic data to AI agents over MCP. The data-at-rest half — IBM watsonx.data — is covered by the [**IBM** bundle](./bundles-ibm.mdx).
+
+Every component in this bundle talks to Confluent over open protocols only (the Kafka wire protocol, the Iceberg REST catalog, and MCP over Streamable HTTP), so the same components work against Confluent Cloud, Confluent Platform, and WarpStream wherever the corresponding surface is exposed.
+
+:::tip
+The Kafka and Tableflow SDKs (`confluent-kafka`, `pyiceberg`) are loaded only when a component runs, so the bundle loads — and the Real-Time Context Engine component works — even on a platform where one of those wheels is unavailable.
+:::
+
+## Confluent Real-Time Context Engine
+
+This component gives an [**Agent** component](/agents) live, governed context from Kafka topics through Confluent's Real-Time Context Engine.
+
+The Real-Time Context Engine materializes schema'd Kafka topics into a low-latency serving layer and exposes it as an MCP server with three tools:
+
+- `list_topics` — the topics enabled for the Context Engine.
+- `get_metadata` — a topic's schema and metadata.
+- `query_data` — the latest data by key lookup, filters, ranges, and compound predicates.
+
+The component templates the regional MCP endpoint from your Confluent Cloud IDs, authenticates with a Confluent Cloud API key, and hands the tools to an Agent. It reuses Langflow's MCP client engine, so it behaves like the [**MCP Tools** component](/mcp-client) without asking you to assemble a server entry by hand.
+
+To use it, enable the Context Engine on one or more topics in Confluent Cloud, create a **Global** API key, and fill in the region, organization, environment, and Kafka cluster IDs. Then either:
+
+- Turn on **Tool Mode** and connect the **Toolset** output to an Agent's **Tools** input, or
+- Pick a **Tool**, enter its **Tool Arguments (JSON)**, and use the **Response** output directly.
+
+:::info
+The Real-Time Context Engine is available for Confluent Cloud clusters on AWS. If Confluent publishes a different host for your setup, set **Endpoint Override**.
+:::
+
+### Confluent Real-Time Context Engine parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Cloud Region (`region`) | String | Input parameter. Confluent Cloud region of the Kafka cluster, for example `us-east-1`. Default: `us-east-1`. |
+| Organization ID (`organization_id`) | String | Input parameter. Confluent Cloud organization ID. |
+| Environment ID (`environment_id`) | String | Input parameter. Confluent Cloud environment ID, for example `env-abc123`. |
+| Kafka Cluster ID (`kafka_cluster_id`) | String | Input parameter. Kafka cluster ID, for example `lkc-abc123`. |
+| API Key (`api_key`) | SecretString | Input parameter. Confluent Cloud Global API key with read access to the cluster and Schema Registry. |
+| API Secret (`api_secret`) | SecretString | Input parameter. Secret paired with the API key. |
+| Endpoint Override (`endpoint_override`) | String | Input parameter. Full MCP endpoint URL. Leave empty to build it from the region and IDs. |
+| Cloud Provider (`cloud`) | String | Input parameter. Cloud provider segment of the endpoint host. Default: `aws`. |
+| Tool (`tool`) | Dropdown | Input parameter. Tool to run for the **Response** output. Seeded with `list_topics`, `get_metadata`, `query_data`; the refresh button re-reads the list from the server. |
+| Tool Arguments (JSON) (`tool_arguments`) | String | Input parameter. JSON object passed as the selected tool's arguments when the **Response** output is used directly. Ignored in Tool Mode. |
+| Tool Execution Timeout (seconds) (`tool_execution_timeout`) | Float | Input parameter. `0` uses the system-configured MCP timeout. |
+| Verify SSL Certificate (`verify_ssl`) | Boolean | Input parameter. Default: `true`. |
+| Toolset | [Tools](/data-types#tool) | Output. Available when Tool Mode is on. Connect to an Agent's **Tools** input. |
+| Response | [DataFrame](/data-types#table) | Output. Result of running the selected tool once. |
+
+## Confluent Kafka Producer
+
+This component publishes a [Message](/data-types#message), a [Data](/data-types#json) object, or every row of a [DataFrame](/data-types#table) to a Kafka topic and returns the delivery report. Use it to write agent decisions, enriched records, or flow results back to a topic.
+
+Values are serialized as UTF-8 JSON by default (`string` publishes text as-is). Records are acknowledged with `flush`; the delivery report lists partition, offset, and timestamp per record.
+
+### Confluent Kafka Producer parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Bootstrap Servers (`bootstrap_servers`) | String | Input parameter. Comma-separated `host:port` list, for example `pkc-xxxxx.us-east-1.aws.confluent.cloud:9092`. |
+| API Key (`api_key`) | SecretString | Input parameter. Kafka cluster API key (SASL/PLAIN user name). Leave empty for an unauthenticated broker. |
+| API Secret (`api_secret`) | SecretString | Input parameter. Kafka cluster API secret. |
+| Topic (`topic`) | String | Input parameter. Topic to publish to. |
+| Message (`message`) | Message, Data, or DataFrame | Input parameter. What to publish. A DataFrame publishes one record per row. |
+| Message Key (`key`) | String | Input parameter. Optional record key. |
+| Value Serialization (`serialization`) | Dropdown | Input parameter. `json` (default) or `string`. |
+| Record Headers (`headers`) | Dictionary | Input parameter. Optional Kafka record headers added to every record. |
+| Flush Timeout (seconds) (`flush_timeout`) | Integer | Input parameter. Default: `10`. |
+| Extra Client Config (`client_config`) | Dictionary | Input parameter. Additional librdkafka producer settings, for example `acks: all`. |
+| Delivery Report | [Data](/data-types#json) | Output. `records_sent`, `delivered`, `failed`, and per-record `reports`. |
+
+## Confluent Kafka Consumer
+
+This component reads a **bounded** batch of records from one or more topics into a DataFrame — one row per record — and stops at the message limit or the timeout, whichever comes first. It is a pull-style source for flows that run on demand or on a schedule; it is not a resident listener. For push-style triggering, see [Trigger a flow from Kafka](#trigger-a-flow-from-kafka).
+
+Record values are decoded as JSON by default (falling back to text); `string` keeps the raw text; `avro` and `json_schema` decode with Confluent Schema Registry. JSON object fields are promoted to columns, and the raw value is kept in the `value` column alongside `topic`, `partition`, `offset`, `timestamp`, `key`, and `headers`.
+
+### Confluent Kafka Consumer parameters
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Bootstrap Servers (`bootstrap_servers`) | String | Input parameter. Comma-separated `host:port` list. |
+| API Key (`api_key`) | SecretString | Input parameter. Kafka cluster API key. |
+| API Secret (`api_secret`) | SecretString | Input parameter. Kafka cluster API secret. |
+| Topics (`topics`) | String | Input parameter. Comma-separated topic names. |
+| Consumer Group ID (`group_id`) | String | Input parameter. Consumer group used to track offsets. Leave empty to derive one from the flow ID. |
+| Max Messages (`max_messages`) | Integer | Input parameter. Stop after this many records. Default: `100`, capped at `10000`. |
+| Timeout (seconds) (`timeout_seconds`) | Float | Input parameter. Stop waiting after this long. Default: `5`, capped at `300`. |
+| Start From (`auto_offset_reset`) | Dropdown | Input parameter. `latest` (default) or `earliest` for a new consumer group. |
+| Commit Offsets (`commit_offsets`) | Boolean | Input parameter. Commit consumed offsets so the next run continues where this one stopped. Default: `true`. |
+| Value Format (`value_format`) | Dropdown | Input parameter. `json` (default), `string`, `avro`, or `json_schema`. |
+| Schema Registry URL / API Key / API Secret | String, SecretString | Input parameters. Shown for `avro` and `json_schema`. |
+| Extra Client Config (`client_config`) | Dictionary | Input parameter. Additional librdkafka consumer settings. |
+| Records | [DataFrame](/data-types#table) | Output. One row per record. |
+
+## Confluent Tableflow Reader
+
+This component reads a Kafka topic that Tableflow has materialized as an Apache Iceberg table, through the Tableflow Iceberg REST catalog, into a DataFrame. It uses `pyiceberg` (no JVM), so it runs anywhere Langflow runs, and applies an optional row filter, a column projection, and a hard row limit before the data reaches the flow.
+
+Tableflow tables are read-only from external engines. To change the data, publish to the source topic. To query the same tables with SQL alongside your other lakehouse data, register the Tableflow catalog in watsonx.data and use the [**IBM watsonx.data Presto** component](./bundles-ibm.mdx#ibm-watsonxdata-presto).
+
+To use it, enable Tableflow on the topic in Confluent Cloud, capture the REST catalog endpoint, and create a Tableflow API key. The Kafka cluster ID doubles as the Iceberg warehouse and namespace. Use the **Tables** output to list the tables in a cluster, and the **Result Table** output to read one.
+
+### Confluent Tableflow Reader parameters
+
+<PartialParams />
+
+<PartialConditionalParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Cloud Region (`region`) | String | Input parameter. Confluent Cloud region. Default: `us-east-1`. |
+| Organization ID (`organization_id`) | String | Input parameter. Confluent Cloud organization ID. |
+| Environment ID (`environment_id`) | String | Input parameter. Confluent Cloud environment ID. |
+| Kafka Cluster ID (`kafka_cluster_id`) | String | Input parameter. Kafka cluster ID; used as the Iceberg warehouse and namespace. |
+| Tableflow API Key (`api_key`) | SecretString | Input parameter. Tableflow (Iceberg REST catalog) API key. |
+| Tableflow API Secret (`api_secret`) | SecretString | Input parameter. Secret paired with the key. |
+| Table (Topic) (`table_name`) | String | Input parameter. Tableflow table name — the Kafka topic name. |
+| Row Filter (`row_filter`) | String | Input parameter. Optional Iceberg row filter expression, for example `status == 'shipped' AND amount > 10`. |
+| Columns (`selected_fields`) | String | Input parameter. Optional comma-separated list of columns. Empty returns every column. |
+| Row Limit (`limit`) | Integer | Input parameter. Default: `1000`, capped at `100000`. |
+| Storage (`storage_mode`) | Dropdown | Input parameter. `confluent_managed` (default) or `byos`. `byos` shows the S3 fields. |
+| S3 Access Key ID / Secret Access Key / Region | SecretString, String | Input parameters. Shown for `byos`. |
+| Access Delegation (`access_delegation`) | Dropdown | Input parameter. Iceberg REST access-delegation mode. Default: `vended-credentials`. |
+| Namespace Override (`namespace`) | String | Input parameter. Defaults to the Kafka cluster ID. |
+| Snapshot ID (`snapshot_id`) | String | Input parameter. Optional Iceberg snapshot ID for a point-in-time read. |
+| Catalog URI Override (`catalog_uri_override`) | String | Input parameter. Full Iceberg REST catalog URI. Leave empty to build it from the region and IDs. |
+| Cloud Provider (`cloud`) | String | Input parameter. Default: `aws`. |
+| Result Table | [DataFrame](/data-types#table) | Output. Rows of the table after filter, projection, and limit. |
+| Tables | [Data](/data-types#json) | Output. The tables in the namespace. |
+
+## Connect Confluent and Langflow without new components
+
+These recipes use components and endpoints that ship with every Langflow installation. They are the fastest way to prove an end-to-end flow before you adopt the bundle's components.
+
+### Use the Real-Time Context Engine through the MCP Tools component
+
+The Context Engine is a standard MCP server, so the generic [**MCP Tools** component](/mcp-client) can use it. Add an MCP server with the JSON configuration below, replacing the placeholders, then connect the component's Toolset output to an Agent.
+
+```json
+{
+  "mcpServers": {
+    "confluent-context-engine": {
+      "url": "https://mcp.<REGION>.aws.confluent.cloud/mcp/v1/context-engine/organizations/<ORG_ID>/environments/<ENV_ID>/kafka-clusters/<LKC_ID>",
+      "headers": {
+        "Authorization": "CONFLUENT_RTCE_AUTH"
+      }
+    }
+  }
+}
+```
+
+`CONFLUENT_RTCE_AUTH` is a Langflow [global variable](/configuration-global-variables) that holds `Basic <base64 of API_KEY:API_SECRET>`. Langflow resolves header values that name a global variable, so the credential never lives in the flow.
+
+The same approach works for Confluent's [managed MCP servers](https://docs.confluent.io/cloud/current/ai/ai-tools/managed-mcp-server.html) (`https://api.confluent.cloud/mcp/v1` and the regional `https://mcp.<region>.<cloud>.confluent.cloud/mcp/v1/organizations/<org_id>`), which expose environment, cluster, topic, and Schema Registry inspection tools.
+
+### Trigger a flow from Kafka
+
+Langflow flows can be started by an HTTP request. Use Confluent's **HTTP Sink Connector** to POST each record (or a batch) to a flow's [webhook endpoint](/webhook):
+
+1. Add a **Webhook** component to the flow and copy its endpoint, `POST /api/v1/webhook/<flow-id-or-endpoint-name>`.
+2. Create a Langflow API key.
+3. Configure the HTTP Sink Connector with the webhook URL and a request header `x-api-key: <langflow-api-key>`.
+
+Every record now runs the flow, and the Webhook component's output carries the record payload.
+
+### Let a Flink Streaming Agent call a Langflow flow as a tool
+
+Confluent's Streaming Agents can call external MCP servers, and every Langflow project is an MCP server. Publish the flows you want to expose from a project's [**MCP Server** tab](/mcp-server), then in Flink SQL:
+
+```sql
+CREATE CONNECTION langflow_mcp
+WITH (
+  'type' = 'mcp_server',
+  'endpoint' = 'https://<langflow-host>/api/v1/mcp/project/<project-id>/streamable?x-api-key=<langflow-api-key>'
+);
+
+CREATE TOOL langflow_flows
+USING CONNECTION langflow_mcp
+WITH (
+  'type' = 'mcp',
+  'request_timeout' = '60'
+);
+```
+
+Reference `langflow_flows` in `CREATE AGENT`, and the agent can invoke your flows on every event it processes.
+
+:::warning
+Langflow's MCP endpoint accepts the API key as an `x-api-key` header or query parameter, and Confluent's `mcp_server` connection sends only the credential form it defines, so the example puts the key in the URL. Confluent stores connection secrets in its secret store, but query-string credentials can still surface in proxy and server access logs. Scope the key to the project, rotate it regularly, and prefer the connection's OAuth options when your Langflow deployment fronts the MCP server with OAuth (MCP Composer).
+:::
+
+### Query Tableflow tables from watsonx.data
+
+Register the Tableflow REST catalog as an Iceberg datasource in watsonx.data (Presto: `connector.name=iceberg`, `iceberg.catalog.type=REST`, `iceberg.rest.uri=<Tableflow catalog URI>`, `iceberg.rest.auth.type=OAUTH2`, `iceberg.rest.auth.oauth2.credential=<key>:<secret>`), then query the tables with the [**IBM watsonx.data Presto** component](./bundles-ibm.mdx#ibm-watsonxdata-presto) or any SQLAlchemy URL in the [**SQL Database** component](/sql-database). See [Integrating Confluent Tableflow in watsonx.data](https://www.ibm.com/docs/en/watsonxdata/standard/2.3.x?topic=integrations-integrating-confluent-tableflow-in-watsonxdata).
+
+## See also
+
+- [IBM bundle](./bundles-ibm.mdx) — watsonx.ai, watsonx.data Presto and MCP, Db2 Vector Store
+- [MCP client](/mcp-client) and [MCP server](/mcp-server)
+- [Confluent Real-Time Context Engine](https://docs.confluent.io/cloud/current/ai/real-time-context-engine/overview.html)
+- [Confluent Tableflow](https://docs.confluent.io/cloud/current/topics/tableflow/overview.html)
+- [Confluent Streaming Agents](https://docs.confluent.io/cloud/current/ai/streaming-agents/overview.html)

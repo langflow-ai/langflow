@@ -7,11 +7,17 @@ import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { CustomIOModal } from "@/customization/components/custom-new-modal";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
+import { useDocumentTitle } from "@/hooks/use-document-title";
+import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { type CookieOptions, getCookie, setCookie } from "@/utils/utils";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { getInputsAndOutputs } from "../../utils/storeUtils";
+import {
+  canOpenPublicPlayground,
+  unreachablePlaygroundDestination,
+} from "./publicPlaygroundAccess";
 export default function PlaygroundPage() {
   useGetConfig({});
   const setCurrentFlow = useFlowsManagerStore((state) => state.setCurrentFlow);
@@ -27,13 +33,31 @@ export default function PlaygroundPage() {
   const setIsLoading = useFlowsManagerStore((state) => state.setIsLoading);
   const setPlaygroundPage = useFlowStore((state) => state.setPlaygroundPage);
 
+  useDocumentTitle(currentSavedFlow?.name);
+
+  // The route gate admits anonymous visitors so a public link resolves without
+  // a session; if the server declines the link, this is where they are sent.
+  // Auth state is read at call time, not captured: this runs from an async
+  // effect that was created on the first render, when the store still holds
+  // the pre-hydration `autoLogin: null` and would misroute the visitor home.
+  const leaveUnreachableFlow = () => {
+    const { autoLogin, isAuthenticated } = useAuthStore.getState();
+    navigate(
+      unreachablePlaygroundDestination({
+        flowId: id,
+        autoLogin,
+        isAuthenticated,
+      }),
+    );
+  };
+
   async function getFlowData() {
     try {
       const flow = await getFlow({ id: id!, public: true });
       return flow;
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      navigate("/");
+      leaveUnreachableFlow();
     }
   }
 
@@ -45,7 +69,7 @@ export default function PlaygroundPage() {
         if (flow) {
           setCurrentFlow(flow);
         } else {
-          navigate("/");
+          leaveUnreachableFlow();
         }
       }
     };
@@ -60,17 +84,15 @@ export default function PlaygroundPage() {
   }, []);
 
   useEffect(() => {
-    document.title = currentSavedFlow?.name || "Langflow";
     if (currentSavedFlow?.data) {
       const { inputs, outputs } = getInputsAndOutputs(
         currentSavedFlow?.data?.nodes || [],
       );
       if (
         (inputs.length === 0 && outputs.length === 0) ||
-        currentSavedFlow?.access_type !== "PUBLIC"
+        !canOpenPublicPlayground(currentSavedFlow)
       ) {
-        // redirect to the home page
-        navigate("/");
+        leaveUnreachableFlow();
       }
     }
   }, [currentSavedFlow]);
@@ -92,7 +114,7 @@ export default function PlaygroundPage() {
   }, []);
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center align-middle">
+    <main className="flex h-full w-full flex-col items-center justify-center align-middle">
       <div className="fixed bottom-4 left-4 z-[999]">
         <AlertDisplayArea />
       </div>
@@ -106,6 +128,6 @@ export default function PlaygroundPage() {
           <></>
         </CustomIOModal>
       )}
-    </div>
+    </main>
   );
 }

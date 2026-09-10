@@ -11,9 +11,8 @@ previously escaped the external access ceiling:
 These tests drive the real route handlers with the data services mocked,
 verifying two invariants for each newly-guarded action:
 
-1. A viewer-ceiling caller is denied with HTTP 403 *before* the data service is
-   touched (the deny-only ceiling fires ahead of owner-override and the
-   ``AUTHZ_ENABLED`` gate).
+1. A viewer-ceiling caller is denied *before* the mutating data service is
+   touched (normally with HTTP 403; UUID-private resources may mask it as 404).
 2. With no ceiling installed, the owner-override path returns early and the
    route proceeds to the underlying service — preserving feature-off behavior.
 """
@@ -281,7 +280,7 @@ async def test_memory_delete_viewer_denied(monkeypatch, owner):
     from langflow.api.v1 import memories
 
     delete_spy = AsyncMock(return_value=True)
-    mb = SimpleNamespace(user_id=owner.id, kb_name="kb")
+    mb = SimpleNamespace(id=uuid4(), user_id=owner.id, kb_name="kb")
     _install_memory_service(monkeypatch, delete=delete_spy, get=AsyncMock(return_value=mb))
 
     set_current_external_access_context(_viewer_ceiling())
@@ -291,7 +290,7 @@ async def test_memory_delete_viewer_denied(monkeypatch, owner):
     finally:
         set_current_external_access_context(None)
 
-    assert exc_info.value.status_code == 403
+    assert exc_info.value.status_code == 404
     delete_spy.assert_not_awaited()
 
 
@@ -300,7 +299,7 @@ async def test_memory_flush_viewer_denied(monkeypatch, owner):
     from langflow.api.v1 import memories
 
     trigger_spy = AsyncMock(return_value=uuid4())
-    mb = SimpleNamespace(user_id=owner.id, kb_name="kb")
+    mb = SimpleNamespace(id=uuid4(), user_id=owner.id, kb_name="kb")
     _install_memory_service(monkeypatch, trigger_ingestion=trigger_spy, get=AsyncMock(return_value=mb))
 
     set_current_external_access_context(_viewer_ceiling())
@@ -312,7 +311,7 @@ async def test_memory_flush_viewer_denied(monkeypatch, owner):
     finally:
         set_current_external_access_context(None)
 
-    assert exc_info.value.status_code == 403
+    assert exc_info.value.status_code == 404
     trigger_spy.assert_not_awaited()
 
 
@@ -321,7 +320,7 @@ async def test_memory_regenerate_viewer_denied(monkeypatch, owner):
     from langflow.api.v1 import memories
 
     regen_spy = AsyncMock(return_value=[])
-    mb = SimpleNamespace(user_id=owner.id, kb_name="kb")
+    mb = SimpleNamespace(id=uuid4(), user_id=owner.id, kb_name="kb")
     _install_memory_service(monkeypatch, regenerate=regen_spy, get=AsyncMock(return_value=mb))
 
     set_current_external_access_context(_viewer_ceiling())
@@ -331,7 +330,7 @@ async def test_memory_regenerate_viewer_denied(monkeypatch, owner):
     finally:
         set_current_external_access_context(None)
 
-    assert exc_info.value.status_code == 403
+    assert exc_info.value.status_code == 404
     regen_spy.assert_not_awaited()
 
 
@@ -341,7 +340,7 @@ async def test_memory_delete_owner_proceeds(monkeypatch, owner):
     from langflow.api.v1 import memories
 
     delete_spy = AsyncMock(return_value=True)
-    mb = SimpleNamespace(user_id=owner.id, kb_name="kb")
+    mb = SimpleNamespace(id=uuid4(), user_id=owner.id, kb_name="kb")
     _install_memory_service(monkeypatch, delete=delete_spy, get=AsyncMock(return_value=mb))
 
     set_current_external_access_context(ExternalAccessContext(provider="openrag", subject="s-1", level="editor"))
@@ -373,7 +372,12 @@ async def test_custom_component_viewer_denied_before_build(monkeypatch, owner):
     set_current_external_access_context(_viewer_ceiling())
     try:
         with pytest.raises(HTTPException) as exc_info:
-            await endpoints.custom_component(raw_code=raw_code, user=owner, request=MagicMock())
+            await endpoints.custom_component(
+                raw_code=raw_code,
+                user=owner,
+                request=MagicMock(),
+                provider_policy_attributes={},
+            )
     finally:
         set_current_external_access_context(None)
 
@@ -392,7 +396,12 @@ async def test_custom_component_update_viewer_denied_before_build(monkeypatch, o
     set_current_external_access_context(_viewer_ceiling())
     try:
         with pytest.raises(HTTPException) as exc_info:
-            await endpoints.custom_component_update(code_request=code_request, user=owner, request=MagicMock())
+            await endpoints.custom_component_update(
+                code_request=code_request,
+                user=owner,
+                request=MagicMock(),
+                provider_policy_attributes={},
+            )
     finally:
         set_current_external_access_context(None)
 
@@ -415,7 +424,6 @@ async def test_custom_component_editor_passes_ceiling(monkeypatch, owner):
         MagicMock(return_value=({"tool_mode": False}, instance)),
     )
     monkeypatch.setattr(endpoints, "get_instance_name", lambda _i: "MyComponent")
-    monkeypatch.setattr(endpoints, "_requires_component_hash_lookups", lambda *_a, **_k: False)
     # Settings: custom components allowed, no admin-only gate.
     settings = SimpleNamespace(allow_custom_components=True, custom_component_admin_only=False)
     monkeypatch.setattr(endpoints, "get_settings_service", lambda: SimpleNamespace(settings=settings))
@@ -426,7 +434,12 @@ async def test_custom_component_editor_passes_ceiling(monkeypatch, owner):
 
     set_current_external_access_context(ExternalAccessContext(provider="openrag", subject="s-1", level="editor"))
     try:
-        result = await endpoints.custom_component(raw_code=raw_code, user=owner, request=request)
+        result = await endpoints.custom_component(
+            raw_code=raw_code,
+            user=owner,
+            request=request,
+            provider_policy_attributes={},
+        )
     finally:
         set_current_external_access_context(None)
 
@@ -548,7 +561,12 @@ async def test_update_enabled_models_viewer_denied(monkeypatch, owner):
     set_current_external_access_context(_viewer_ceiling())
     try:
         with pytest.raises(HTTPException) as exc_info:
-            await models.update_enabled_models(session=MagicMock(), current_user=owner, updates=[])
+            await models.update_enabled_models(
+                session=MagicMock(),
+                current_user=owner,
+                provider_policy_attributes={},
+                updates=[],
+            )
     finally:
         set_current_external_access_context(None)
 
@@ -562,12 +580,17 @@ async def test_set_default_model_viewer_denied(monkeypatch, owner):
 
     svc_spy = MagicMock()
     monkeypatch.setattr(models, "get_variable_service", svc_spy)
-    request = SimpleNamespace(model_type="language", model_name="m", provider="p")
+    request = SimpleNamespace(model_type="language", model_name="m", provider="OpenAI")
 
     set_current_external_access_context(_viewer_ceiling())
     try:
         with pytest.raises(HTTPException) as exc_info:
-            await models.set_default_model(session=MagicMock(), current_user=owner, request=request)
+            await models.set_default_model(
+                session=MagicMock(),
+                current_user=owner,
+                provider_policy_attributes={},
+                request=request,
+            )
     finally:
         set_current_external_access_context(None)
 
@@ -585,7 +608,12 @@ async def test_clear_default_model_viewer_denied(monkeypatch, owner):
     set_current_external_access_context(_viewer_ceiling())
     try:
         with pytest.raises(HTTPException) as exc_info:
-            await models.clear_default_model(session=MagicMock(), current_user=owner, model_type="language")
+            await models.clear_default_model(
+                session=MagicMock(),
+                current_user=owner,
+                _provider_policy_attributes={},
+                model_type="language",
+            )
     finally:
         set_current_external_access_context(None)
 
@@ -602,9 +630,14 @@ async def test_set_default_model_owner_proceeds(monkeypatch, owner):
     var_service.get_variable_object = AsyncMock(return_value=SimpleNamespace(id=uuid4()))
     var_service.update_variable_fields = AsyncMock()
     monkeypatch.setattr(models, "get_variable_service", lambda: var_service)
-    request = SimpleNamespace(model_type="language", model_name="m", provider="p")
+    request = SimpleNamespace(model_type="language", model_name="m", provider="OpenAI")
 
-    result = await models.set_default_model(session=MagicMock(), current_user=owner, request=request)
+    result = await models.set_default_model(
+        session=MagicMock(),
+        current_user=owner,
+        provider_policy_attributes={},
+        request=request,
+    )
 
     var_service.update_variable_fields.assert_awaited_once()
     assert result["default_model"]["model_name"] == "m"

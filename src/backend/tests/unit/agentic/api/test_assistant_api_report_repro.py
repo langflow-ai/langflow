@@ -92,6 +92,7 @@ async def test_assist_rejects_cross_user_flow_id(client, active_user, user_two_a
                 await session.commit()
 
 
+@pytest.mark.api_key_required
 @_NEEDS_KEY
 async def test_execute_named_assistant_flow_is_graceful_not_500(client, logged_in_headers):
     """Issue 3: executing the built-in assistant flow must not 500."""

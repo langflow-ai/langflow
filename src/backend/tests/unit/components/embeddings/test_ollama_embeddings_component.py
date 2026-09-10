@@ -13,6 +13,9 @@ import re
 from unittest.mock import AsyncMock, MagicMock, mock_open, patch
 
 import pytest
+
+pytest.importorskip("lfx_ollama")
+
 from lfx.components.ollama.ollama_embeddings import OllamaEmbeddingsComponent
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -40,6 +43,24 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         """Return the file names mapping for different versions."""
         # Provide an empty list or the actual mapping if versioned files exist
         return []
+
+    @pytest.fixture
+    def mock_ollama_embeddings(self, component_class):
+        """Patch the constructor in the exact globals used by the component method.
+
+        The legacy ``lfx.components`` compatibility alias can be reloaded as a
+        second module object during the full suite, so patching it by import
+        path is order-dependent.
+        """
+        constructor = MagicMock()
+        with patch.dict(component_class.build_embeddings.__globals__, {"OllamaEmbeddings": constructor}):
+            yield constructor
+
+    @pytest.fixture
+    def mock_ollama_logger(self, component_class):
+        logger = MagicMock()
+        with patch.dict(component_class.build_embeddings.__globals__, {"logger": logger}):
+            yield logger
 
     # =========================================================================
     # Headers Property Tests
@@ -82,7 +103,6 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
     # Build Embeddings Tests
     # =========================================================================
 
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
     def test_build_embeddings_basic(self, mock_ollama_embeddings, component_class, default_kwargs):
         """Test build_embeddings with basic parameters."""
         mock_instance = MagicMock()
@@ -97,7 +117,6 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         )
         assert result == mock_instance
 
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
     def test_build_embeddings_with_api_key(self, mock_ollama_embeddings, component_class):
         """Test build_embeddings passes headers via client_kwargs when API key is set."""
         mock_instance = MagicMock()
@@ -117,7 +136,6 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         )
         assert result == mock_instance
 
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
     def test_build_embeddings_without_api_key_no_client_kwargs(self, mock_ollama_embeddings, component_class):
         """Test build_embeddings doesn't pass client_kwargs when no API key."""
         mock_instance = MagicMock()
@@ -134,7 +152,6 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         call_kwargs = mock_ollama_embeddings.call_args[1]
         assert "client_kwargs" not in call_kwargs
 
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
     def test_build_embeddings_connection_error(self, mock_ollama_embeddings, component_class):
         """Test build_embeddings raises ValueError on connection error."""
         mock_ollama_embeddings.side_effect = Exception("connection error")
@@ -151,10 +168,8 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
     # URL Handling Tests - /v1 Suffix Stripping
     # =========================================================================
 
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
-    @patch("lfx.components.ollama.ollama_embeddings.logger")
     def test_build_embeddings_strips_v1_suffix_and_logs_warning(
-        self, mock_logger, mock_ollama_embeddings, component_class
+        self, mock_ollama_logger, mock_ollama_embeddings, component_class
     ):
         """Test that /v1 suffix is automatically stripped and a warning is logged."""
         mock_instance = MagicMock()
@@ -168,8 +183,8 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         component.build_embeddings()
 
         # Verify warning was logged
-        mock_logger.warning.assert_called_once()
-        warning_message = mock_logger.warning.call_args[0][0]
+        mock_ollama_logger.warning.assert_called_once()
+        warning_message = mock_ollama_logger.warning.call_args[0][0]
         assert "Detected '/v1' suffix in base URL" in warning_message
         assert "https://docs.ollama.com/openai#openai-compatibility" in warning_message
 
@@ -177,9 +192,9 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         call_kwargs = mock_ollama_embeddings.call_args[1]
         assert call_kwargs["base_url"] == "http://localhost:11434"
 
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
-    @patch("lfx.components.ollama.ollama_embeddings.logger")
-    def test_build_embeddings_strips_v1_trailing_slash(self, mock_logger, mock_ollama_embeddings, component_class):
+    def test_build_embeddings_strips_v1_trailing_slash(
+        self, mock_ollama_logger, mock_ollama_embeddings, component_class
+    ):
         """Test that /v1/ suffix is also automatically stripped."""
         mock_instance = MagicMock()
         mock_ollama_embeddings.return_value = mock_instance
@@ -192,7 +207,7 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         component.build_embeddings()
 
         # Verify warning was logged
-        mock_logger.warning.assert_called_once()
+        mock_ollama_logger.warning.assert_called_once()
 
         # Verify OllamaEmbeddings was called without /v1
         call_kwargs = mock_ollama_embeddings.call_args[1]
@@ -204,9 +219,8 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
 
     @patch("socket.getaddrinfo")
     @patch("lfx.utils.util.Path")
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
     def test_build_embeddings_transforms_localhost_in_docker_container(
-        self, mock_ollama_embeddings, mock_path_class, mock_getaddrinfo, component_class
+        self, mock_path_class, mock_getaddrinfo, mock_ollama_embeddings, component_class
     ):
         """Test that localhost URLs are transformed to host.docker.internal in Docker container."""
 
@@ -240,9 +254,8 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
         assert result == mock_model
 
     @patch("lfx.utils.util.Path")
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
     def test_build_embeddings_no_transform_outside_container(
-        self, mock_ollama_embeddings, mock_path_class, component_class
+        self, mock_path_class, mock_ollama_embeddings, component_class
     ):
         """Test that localhost URLs are NOT transformed when running outside a container."""
         # Mock no container environment
@@ -267,9 +280,8 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
 
     @patch("socket.getaddrinfo")
     @patch("lfx.utils.util.Path")
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
     def test_build_embeddings_transforms_localhost_in_podman_container(
-        self, mock_ollama_embeddings, mock_path_class, mock_getaddrinfo, component_class
+        self, mock_path_class, mock_getaddrinfo, mock_ollama_embeddings, component_class
     ):
         """Test that localhost URLs are transformed to host.containers.internal in Podman container."""
         # Mock Podman container detection (no .dockerenv, but has podman in cgroup)
@@ -309,9 +321,8 @@ class TestOllamaEmbeddingsComponent(ComponentTestBaseWithoutClient):
 
     @patch("socket.getaddrinfo")
     @patch("lfx.utils.util.Path")
-    @patch("lfx.components.ollama.ollama_embeddings.OllamaEmbeddings")
     def test_build_embeddings_transforms_127_0_0_1_in_container(
-        self, mock_ollama_embeddings, mock_path_class, mock_getaddrinfo, component_class
+        self, mock_path_class, mock_getaddrinfo, mock_ollama_embeddings, component_class
     ):
         """Test that 127.0.0.1 URLs are also transformed in container."""
 

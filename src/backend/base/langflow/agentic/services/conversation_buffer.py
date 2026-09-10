@@ -23,11 +23,34 @@ storage without an explicit user opt-in).
 from __future__ import annotations
 
 import asyncio
+import os
 from collections import OrderedDict, deque
 from dataclasses import dataclass
 
 MAX_TURNS_PER_SESSION = 10
 MAX_SESSIONS = 100
+HISTORY_TURN_LIMIT = 6
+MAX_TURN_FIELD_CHARS = 2000
+
+
+def history_turn_limit() -> int:
+    """Turns injected into the prompt per request (buffer retention is separate).
+
+    The injected block is re-sent on EVERY agent iteration, so it is a direct
+    per-turn cost multiplier — bounded by default, env-tunable for users who
+    want longer memory and accept the token cost.
+    """
+    raw = os.environ.get("LANGFLOW_ASSISTANT_HISTORY_TURNS", "")
+    try:
+        return max(0, int(raw))
+    except ValueError:
+        return HISTORY_TURN_LIMIT
+
+
+def _truncate(text: str, max_chars: int) -> str:
+    if len(text) <= max_chars:
+        return text
+    return f"{text[:max_chars]}\n... [truncated]"
 
 
 @dataclass(frozen=True)
@@ -41,14 +64,17 @@ class ConversationTurn:
     user: str
     assistant: str
 
-    def format_for_prompt(self) -> str:
+    def format_for_prompt(self, max_field_chars: int | None = None) -> str:
         """Render this turn as a compact ``User: … / Assistant: …`` block.
 
         Deterministic so the LLM sees the same framing every time —
         prompt-injection resistance depends on the structure being
-        predictable from the agent's perspective.
+        predictable from the agent's perspective. ``max_field_chars``
+        truncates each field so one giant reply cannot dominate the prompt.
         """
-        return f"User: {self.user}\nAssistant: {self.assistant}"
+        user = self.user if max_field_chars is None else _truncate(self.user, max_field_chars)
+        assistant = self.assistant if max_field_chars is None else _truncate(self.assistant, max_field_chars)
+        return f"User: {user}\nAssistant: {assistant}"
 
 
 class ConversationBuffer:
@@ -64,10 +90,8 @@ class ConversationBuffer:
     """
 
     def __init__(self) -> None:
-        # OrderedDict preserves insertion-order, and ``move_to_end`` lets us
-        # bump a (user, session) pair to the most-recently-used slot on
-        # every push. Keying by tuple is the security boundary — never key
-        # by session_id alone, or you reintroduce the cross-tenant leak.
+        # The tuple key is the security boundary — keying by session_id alone
+        # reintroduces the cross-tenant leak.
         self._sessions: OrderedDict[tuple[str, str], deque[ConversationTurn]] = OrderedDict()
         self._lock = asyncio.Lock()
 
@@ -102,9 +126,11 @@ class ConversationBuffer:
         """Return up to ``limit`` most recent turns for ``(user_id, session_id)``, oldest-first.
 
         Unknown ``(user_id, session_id)`` → empty list. ``limit=None`` returns
-        the entire buffer for that pair. A different ``user_id`` reusing the
-        same ``session_id`` MUST receive an empty list — that is the
-        cross-tenant isolation contract this method guarantees.
+        the entire buffer for that pair; ``limit <= 0`` returns none (zero
+        means "history disabled", and ``turns[-0:]`` would leak the whole
+        buffer). A different ``user_id`` reusing the same ``session_id``
+        MUST receive an empty list — that is the cross-tenant isolation
+        contract this method guarantees.
         """
         buf = self._sessions.get((user_id, session_id))
         if buf is None:
@@ -112,6 +138,8 @@ class ConversationBuffer:
         turns = list(buf)
         if limit is None:
             return turns
+        if limit <= 0:
+            return []
         return turns[-limit:]
 
     def clear(self, user_id: str, session_id: str) -> None:
@@ -119,9 +147,8 @@ class ConversationBuffer:
         self._sessions.pop((user_id, session_id), None)
 
 
-# Process-local singleton accessor. The buffer is intentionally not in
-# the langflow service registry: it has no async startup, no shutdown
-# resources, and zero configuration knobs the user controls.
+# Intentionally NOT in the langflow service registry: no async startup,
+# no shutdown resources, no user-controlled configuration.
 _singleton: ConversationBuffer | None = None
 
 

@@ -246,7 +246,7 @@ def http_status_for_deployment_error(exc: DeploymentServiceError) -> int:
     if isinstance(exc, InvalidDeploymentTypeError):
         return status.HTTP_400_BAD_REQUEST
     if isinstance(exc, InvalidContentError):
-        return status.HTTP_422_UNPROCESSABLE_ENTITY
+        return status.HTTP_422_UNPROCESSABLE_CONTENT
     if isinstance(exc, DeploymentNotFoundError):
         return status.HTTP_404_NOT_FOUND
     if isinstance(exc, ResourceNotFoundError):

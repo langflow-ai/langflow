@@ -74,6 +74,22 @@ async def test_validate_component_runtime_attempts_build_when_allowed():
     assert result is None  # build path reached; no error
 
 
+async def test_validate_component_runtime_refuses_unsafe_code_before_build():
+    """The execution helper enforces the scanner even when called directly."""
+    from langflow.agentic.helpers import validation
+
+    code = "import os\nos.spawnv()\n"
+    with (
+        patch("lfx.services.deps.get_settings_service", return_value=_settings(allow_custom=True)),
+        patch("lfx.custom.utils.build_custom_component_template") as mock_build,
+    ):
+        result = await validation.validate_component_runtime(code, user_id="u1")
+
+    assert result is not None
+    assert "security validation" in result.lower()
+    mock_build.assert_not_called()
+
+
 def test_overlay_skips_user_components_without_custom_components():
     """With allow_custom_components=false the overlay returns only the base registry (no exec)."""
     from langflow.agentic.services import user_components_overlay as overlay

@@ -12,7 +12,7 @@ from httpx import AsyncClient
 
 @pytest.mark.usefixtures("active_user")
 async def test_optional_auth_returns_user_with_valid_bearer(client: AsyncClient, logged_in_headers):
-    """Valid Bearer token should resolve the user (build returns job_id or error, not 403)."""
+    """Valid Bearer token should resolve the user before the missing-flow check."""
     # We test indirectly via build_public_tmp: if auth resolves,
     # the endpoint proceeds (may fail on flow validation, but NOT on auth)
     fake_flow_id = "00000000-0000-0000-0000-000000000099"
@@ -21,11 +21,9 @@ async def test_optional_auth_returns_user_with_valid_bearer(client: AsyncClient,
         headers=logged_in_headers,
         json={"inputs": None},
     )
-    # Should not be 401/403 — auth resolved. Expect 400 or 403 (flow not found/not public)
-    assert response.status_code in (
-        status.HTTP_400_BAD_REQUEST,
-        status.HTTP_403_FORBIDDEN,
-    )
+    # Auth resolved, so the endpoint reaches the non-leaking public-flow lookup
+    # instead of rejecting the request for a missing anonymous client id.
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 async def test_optional_auth_returns_none_without_credentials(

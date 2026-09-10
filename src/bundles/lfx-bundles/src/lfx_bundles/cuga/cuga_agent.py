@@ -2,7 +2,7 @@ import asyncio
 import json
 import traceback
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Mapping
 from typing import TYPE_CHECKING, Any, cast
 
 from langchain_core.agents import AgentFinish
@@ -199,6 +199,46 @@ class CugaComponent(ToolCallingAgentComponent):
             advanced=True,
         ),
     ]
+
+    async def _additional_model_provider_policy_ids(self, purpose, parameters=None) -> tuple[str, ...]:
+        """Map CUGA's legacy provider dropdown into the shared policy gate."""
+        _ = purpose
+        from lfx.base.models.provider_registry import resolve_provider_id
+
+        effective_parameters = parameters if isinstance(parameters, Mapping) else getattr(self, "_parameters", None)
+        selected = effective_parameters.get("agent_llm") if isinstance(effective_parameters, Mapping) else None
+        if selected is None:
+            selected = getattr(self, "agent_llm", None)
+        if not isinstance(selected, str) or selected not in MODEL_PROVIDERS_DICT:
+            return ()
+        return (resolve_provider_id(selected),)
+
+    async def _filter_model_provider_options(self, build_config: Mapping[str, Any]) -> None:
+        """Hide provider dropdown choices unavailable in the active scope."""
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, aresolve_model_provider_policy
+
+        provider_field = build_config.get("agent_llm")
+        if not isinstance(provider_field, dict):
+            return
+        options = provider_field.get("options")
+        if not isinstance(options, list):
+            return
+        candidates = [option for option in options if isinstance(option, str) and option != "Custom"]
+        if not candidates:
+            return
+
+        snapshot = await aresolve_model_provider_policy(
+            user_id=self.user_id,
+            providers=candidates,
+            purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        )
+        allowed = set(snapshot.filter(candidates))
+        keep_indexes = [index for index, option in enumerate(options) if option == "Custom" or option in allowed]
+        provider_field["options"] = [options[index] for index in keep_indexes]
+        metadata = provider_field.get("options_metadata")
+        if isinstance(metadata, list) and len(metadata) == len(options):
+            provider_field["options_metadata"] = [metadata[index] for index in keep_indexes]
+
     outputs = [
         Output(name="response", display_name="Response", method="message_response"),
     ]
@@ -556,6 +596,12 @@ class CugaComponent(ToolCallingAgentComponent):
         Raises:
             ValueError: If the model provider is invalid or model initialization fails
         """
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        # CUGA invokes the selected provider's ``build_model`` directly rather
+        # than its normal component build pipeline. Keep this local guard in
+        # addition to the vertex preflight so direct callers cannot bypass it.
+        await self.arequire_model_provider_policy(ModelProviderPolicyPurpose.USE)
         logger.debug("[CUGA] Getting language model for the agent.")
         logger.debug(f"[CUGA] Requested LLM provider: {self.agent_llm}")
 
@@ -675,6 +721,17 @@ class CugaComponent(ToolCallingAgentComponent):
         Raises:
             ValueError: If required keys are missing from the configuration
         """
+        from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        policy_parameters = dict(getattr(self, "_parameters", {}) or {})
+        if field_name:
+            policy_parameters[field_name] = field_value
+        # Provider-specific update hooks may read credentials or call provider
+        # APIs, so authorize the raw dropdown selection before dispatch.
+        await self.arequire_model_provider_policy(
+            ModelProviderPolicyPurpose.CONFIGURE,
+            parameters=policy_parameters,
+        )
         if field_name in ("agent_llm",):
             build_config["agent_llm"]["value"] = field_value
             provider_info = MODEL_PROVIDERS_DICT.get(field_value)
@@ -762,6 +819,7 @@ class CugaComponent(ToolCallingAgentComponent):
                     build_config = await update_component_build_config(
                         component_class, build_config, field_value, "model_name"
                     )
+        await self._filter_model_provider_options(build_config)
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
 
     async def _get_tools(self) -> list[Tool]:

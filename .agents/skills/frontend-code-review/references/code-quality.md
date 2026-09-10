@@ -26,6 +26,12 @@ import { cn } from "@/utils/utils";
 <div className={cn("px-4", isActive ? "text-primary" : "text-muted-foreground")}>
 ```
 
+## Control boundaries use the control token
+
+An interactive control's visible boundary — text inputs, textareas, search fields, select/dropdown/combobox triggers, outlined buttons, radios, chat composers — must use `border-control` (`--control-boundary`, held to WCAG 1.4.11's 3:1 in both themes by `style/__tests__/control-boundary-contrast.test.ts`). `border-border` and `border-input` are for decorative edges and fills only: dividers, card edges, table rules, read-only display boxes, hover backgrounds.
+
+Two traps reviewers should catch: a `focus:border-border`/`focus:border-input` utility on an element styled by `.primary-input` silently overrides the components-layer boundary exactly when focus matters most (utilities outrank `@layer components`); and a hover *fill* (`hover:bg-*`) can drop the boundary below 3:1 against itself even when the token is right — check the pair, not the token.
+
 ## Tailwind-first styling
 
 IsUrgent: True

@@ -8,4 +8,7 @@ export const TOOLTIP_MESSAGES = {
     "Cannot add Chat Input when Webhook is present",
   CANNOT_ADD_WEBHOOK_WITH_CHAT_INPUT:
     "Cannot add Webhook when Chat Input is present",
+  // Not a placement constraint: an administrator's catalog policy refuses this
+  // component outright, so it can never be added to any flow.
+  BLOCKED_BY_CATALOG_POLICY: "Blocked by your organization's catalog policy",
 } as const;

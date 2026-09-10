@@ -386,8 +386,9 @@ def test_outdated_breaking_when_tool_mode_component_declares_no_tool_input():
     """Without a tool_mode input the component is not known to still produce the toolset output.
 
     ``Component._handle_tool_mode`` also creates that output for components that set the
-    ``add_tool_output`` class attribute, but it is not serialized into the component index and
-    cannot be detected here. Treating "no inputs at all" as tool-capable would be wrong in the
+    ``add_tool_output`` class attribute; the flag reaches the component index now, but neither
+    this checker nor its frontend mirror reads it yet, so it stays undetected on both sides
+    until they change together. Treating "no inputs at all" as tool-capable would be wrong in the
     dangerous direction: ``MockDataGenerator`` has no inputs and produces no toolset output at
     runtime, so a node of it would be called safe and re-stamped while its saved
     ``component_as_tool`` output still failed to resolve.

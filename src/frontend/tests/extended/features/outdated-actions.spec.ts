@@ -1,5 +1,6 @@
 import { readFileSync } from "fs";
 import { expect, test } from "../../fixtures";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
 import { openFlowsList } from "../../utils/flow/open-flows-list";
 
 test.describe.configure({ mode: "serial" });
@@ -89,13 +90,12 @@ test(
 
     await page.getByRole("button", { name: "Update Components" }).click();
 
-    await expect(page.getByTestId("update-button")).toHaveCount(0, {
-      timeout: 5000,
-    });
+    // No explicit timeout: each component update is a validate/code round
+    // trip, so five of them blow a hardcoded 5s budget on Windows CI. The
+    // platform-aware expect timeout in playwright.config.ts is the right one.
+    await expect(page.getByTestId("update-button")).toHaveCount(0);
 
-    await expect(page.getByTestId("review-button")).toHaveCount(0, {
-      timeout: 5000,
-    });
+    await expect(page.getByTestId("review-button")).toHaveCount(0);
   },
 );
 
@@ -169,22 +169,15 @@ test(
 
     await page.getByRole("button", { name: "Update Component" }).click();
 
-    await expect(page.getByTestId("update-button")).toHaveCount(0, {
-      timeout: 5000,
-    });
+    await expect(page.getByTestId("update-button")).toHaveCount(0);
 
     await expect(page.getByTestId("review-button")).toHaveCount(
       outdatedBreakingComponents - 1,
-      {
-        timeout: 5000,
-      },
     );
 
-    await expect(page.getByText(/\d+ components? needs? updates?/)).toBeVisible(
-      {
-        timeout: 5000,
-      },
-    );
+    await expect(
+      page.getByText(/\d+ components? needs? updates?/),
+    ).toBeVisible();
 
     expect(await page.getByTestId("update-all-button")).toHaveText(
       "Review All",
@@ -192,6 +185,10 @@ test(
 
     await openFlowsList(page);
 
-    expect(await page.getByText("Backup").count()).toBeGreaterThan(0);
+    // The backup flow row renders after the list refetch settles; a bare
+    // count() snapshot races it on slow runners.
+    await expect(page.getByText("Backup").first()).toBeVisible({
+      timeout: TIMEOUTS.medium,
+    });
   },
 );

@@ -19,7 +19,7 @@ import pytest
 from httpx import AsyncClient
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.jobs.model import Job, JobType
-from lfx.schema.workflow import JobStatus
+from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
 from lfx.services.deps import session_scope
 from sqlalchemy.exc import OperationalError
 
@@ -203,7 +203,7 @@ class TestWorkflowStatus:
         client: AsyncClient,
         created_api_key,
     ):
-        """Test GET /workflow returns reconstructed response for a completed job."""
+        """Vertex-build fallback keeps the submitted session for a data-only result."""
         job_id = uuid4()
 
         flow_id = uuid4()
@@ -213,6 +213,8 @@ class TestWorkflowStatus:
         mock_job.status = JobStatus.COMPLETED
         mock_job.type = JobType.WORKFLOW
         mock_job.user_id = None
+        mock_job.result = None
+        mock_job.job_metadata = {"request": {"session_id": "submitted-session"}}
 
         with (
             patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service,
@@ -227,7 +229,12 @@ class TestWorkflowStatus:
             mock_flow.id = flow_id
             mock_get_flow.return_value = mock_flow
 
-            mock_reconstruct.return_value = {"flow_id": str(flow_id), "status": "completed", "outputs": {}}
+            mock_reconstruct.return_value = WorkflowExecutionResponse(
+                flow_id=str(flow_id),
+                status=JobStatus.COMPLETED,
+                outputs={},
+                session_id=None,
+            )
 
             headers = {"x-api-key": created_api_key.api_key}
             response = await client.get(f"api/v2/workflows?job_id={job_id}", headers=headers)
@@ -235,7 +242,72 @@ class TestWorkflowStatus:
             assert response.status_code == 200
             result = response.json()
             assert result["status"] == "completed"
+            assert result["session_id"] == "submitted-session"
             mock_reconstruct.assert_called_once()
+
+    async def test_get_status_malformed_stored_output_falls_back_to_vertex_builds(
+        self,
+        client: AsyncClient,
+        created_api_key,
+    ):
+        """A truthy but incomplete Job.result must not suppress valid vertex-build recovery."""
+        job_id = uuid4()
+        flow_id = uuid4()
+        mock_job = MagicMock(
+            job_id=job_id,
+            flow_id=flow_id,
+            status=JobStatus.COMPLETED,
+            type=JobType.WORKFLOW,
+            user_id=None,
+            result={
+                "outputs": [
+                    {"component_id": 123, "type": "message", "status": "completed", "content": "ignored"},
+                    {"component_id": [], "type": "message", "status": "completed", "content": "ignored"},
+                ]
+            },
+            job_metadata={"request": {"session_id": "submitted-session"}},
+        )
+
+        with (
+            patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service,
+            patch("langflow.api.v2.workflow.get_flow_by_id_or_endpoint_name") as mock_get_flow,
+            patch("langflow.api.v2.workflow.reconstruct_workflow_response_from_job_id") as mock_reconstruct,
+        ):
+            mock_service = MagicMock()
+            mock_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
+            mock_get_job_service.return_value = mock_service
+
+            mock_flow = MagicMock(id=flow_id)
+            mock_get_flow.return_value = mock_flow
+            mock_reconstruct.return_value = WorkflowExecutionResponse(
+                flow_id=str(flow_id),
+                status=JobStatus.COMPLETED,
+                outputs={
+                    "DataOutput-1": {
+                        "type": "data",
+                        "status": JobStatus.COMPLETED,
+                        "content": {"ok": True},
+                    }
+                },
+            )
+
+            response = await client.get(
+                f"api/v2/workflows?job_id={job_id}",
+                headers={"x-api-key": created_api_key.api_key},
+            )
+
+        assert response.status_code == 200
+        assert response.json()["outputs"] == {
+            "DataOutput-1": {
+                "type": "data",
+                "status": "completed",
+                "display_name": None,
+                "content": {"ok": True},
+                "metadata": None,
+            }
+        }
+        assert response.json()["session_id"] == "submitted-session"
+        mock_reconstruct.assert_awaited_once()
 
     async def test_get_status_timed_out(
         self,
@@ -285,6 +357,7 @@ class TestWorkflowStop:
         mock_job.status = JobStatus.IN_PROGRESS
         mock_job.type = JobType.WORKFLOW
         mock_job.user_id = None
+        mock_job.job_metadata = {"request": {"mode": "background"}}
 
         with (
             patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service,
@@ -314,6 +387,70 @@ class TestWorkflowStop:
             mock_task_service.revoke_task.assert_awaited_once_with(UUID(job_id))
             mock_bg_service.stop_job.assert_awaited_once()
             mock_job_service.update_job_status.assert_awaited_once_with(UUID(job_id), JobStatus.CANCELLED)
+
+    @pytest.mark.parametrize(
+        ("job_metadata", "job_status", "expected_mode"),
+        [
+            ({"request": {"mode": "sync"}}, JobStatus.IN_PROGRESS, "sync"),
+            ({"request": {"mode": "stream"}}, JobStatus.IN_PROGRESS, "stream"),
+            (None, JobStatus.IN_PROGRESS, "unknown"),
+            (None, JobStatus.CANCELLED, "unknown"),
+            ({"request": {"mode": "sync"}}, JobStatus.COMPLETED, "sync"),
+            ({"request": {"mode": "stream"}}, JobStatus.FAILED, "stream"),
+            ({"request": {"mode": "sync"}}, JobStatus.TIMED_OUT, "sync"),
+        ],
+    )
+    async def test_stop_workflow_rejects_non_background_jobs(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        job_metadata,
+        job_status,
+        expected_mode,
+    ):
+        """Jobs not owned by the background executor must not report cancellation."""
+        job_id = uuid4()
+        mock_job = MagicMock(
+            job_id=job_id,
+            status=job_status,
+            type=JobType.WORKFLOW,
+            user_id=None,
+            job_metadata=job_metadata,
+        )
+
+        with (
+            patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service,
+            patch("langflow.api.v2.workflow.get_task_service") as mock_get_task_service,
+            patch("langflow.api.v2.workflow.get_background_execution_service") as mock_get_bg_service,
+        ):
+            mock_job_service = MagicMock()
+            mock_job_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
+            mock_job_service.update_job_status = AsyncMock()
+            mock_get_job_service.return_value = mock_job_service
+            mock_task_service = MagicMock()
+            mock_task_service.revoke_task = AsyncMock()
+            mock_get_task_service.return_value = mock_task_service
+            mock_bg_service = MagicMock()
+            mock_bg_service.stop_job = AsyncMock()
+            mock_get_bg_service.return_value = mock_bg_service
+
+            response = await client.post(
+                "api/v2/workflows/stop",
+                json={"job_id": str(job_id)},
+                headers={"x-api-key": created_api_key.api_key},
+            )
+
+        assert response.status_code == 409
+        assert response.json()["detail"] == {
+            "error": "Job cannot be stopped",
+            "code": "JOB_NOT_CANCELLABLE",
+            "message": "Only background workflow jobs can be stopped.",
+            "job_id": str(job_id),
+            "mode": expected_mode,
+        }
+        mock_task_service.revoke_task.assert_not_awaited()
+        mock_bg_service.stop_job.assert_not_awaited()
+        mock_job_service.update_job_status.assert_not_awaited()
 
     async def test_stop_workflow_not_found(
         self,
@@ -348,6 +485,7 @@ class TestWorkflowStop:
         mock_job.status = JobStatus.CANCELLED
         mock_job.type = JobType.WORKFLOW
         mock_job.user_id = None
+        mock_job.job_metadata = {"request": {"mode": "background"}}
 
         with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
             mock_service = MagicMock()
@@ -506,6 +644,7 @@ class TestWorkflowIDORProtection:
                 status=JobStatus.CANCELLED,
                 type=JobType.WORKFLOW,
                 user_id=owner_user_id,
+                job_metadata={"request": {"mode": "background"}},
             )
             session.add(job)
             await session.flush()
@@ -581,6 +720,7 @@ class TestWorkflowIDORProtection:
                 status=JobStatus.IN_PROGRESS,
                 type=JobType.WORKFLOW,
                 user_id=None,
+                job_metadata={"request": {"mode": "background"}},
             )
             session.add(job)
             await session.flush()

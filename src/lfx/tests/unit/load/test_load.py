@@ -56,7 +56,7 @@ async def test_aload_flow_from_json_fail_closed_when_hashes_are_unavailable():
             return_value=_settings_service(allow_custom_components=False),
         ),
         patch(
-            "lfx.utils.flow_validation.ensure_component_hash_lookups_loaded",
+            "lfx.load.load.ensure_component_hash_lookups_loaded",
             new=AsyncMock(return_value=None),
         ),
         patch.object(component_cache, "type_to_current_hash", None),
@@ -97,7 +97,7 @@ async def test_aload_flow_from_json_allows_legacy_url_aliases():
             return_value=_settings_service(allow_custom_components=False),
         ),
         patch(
-            "lfx.utils.flow_validation.ensure_component_hash_lookups_loaded",
+            "lfx.load.load.ensure_component_hash_lookups_loaded",
             new=AsyncMock(return_value=type_to_current_hash),
         ),
         patch.object(component_cache, "type_to_current_hash", type_to_current_hash),

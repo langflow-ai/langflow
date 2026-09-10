@@ -169,15 +169,19 @@ async def test_secret_inputs_are_redacted_at_tracing_boundary_by_field_metadata(
         def build_output(self) -> str:
             return self.region
 
-    component = _TraceSecretsComponent(_user_id=str(uuid.uuid4()))
-    component.set_attributes(
-        {
-            "aws_secret_access_key": "aws-secret-sentinel",  # pragma: allowlist secret
-            "access_token": "token-secret-sentinel",  # pragma: allowlist secret
-            "token_budget": 4096,
-            "region": "us-west-2",
-        }
-    )
+    # This test exercises trace redaction, not provider credential discovery.
+    # Keep construction from starting the synchronous provider-variable bridge
+    # while pytest's event loop is already running.
+    with patch("lfx.base.models.unified_models.get_all_variables_for_provider", return_value={}):
+        component = _TraceSecretsComponent(_user_id=str(uuid.uuid4()))
+        component.set_attributes(
+            {
+                "aws_secret_access_key": "aws-secret-sentinel",  # pragma: allowlist secret
+                "access_token": "token-secret-sentinel",  # pragma: allowlist secret
+                "token_budget": 4096,
+                "region": "us-west-2",
+            }
+        )
 
     tracing_service = MagicMock()
     trace_context = MagicMock()

@@ -5,15 +5,15 @@
 # - No frontend code or assets
 # - No Playwright
 
+ARG UV_VERSION=0.10.4
+ARG PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal
+ARG NODE_VERSION=22.23.2
+
 ################################
 # BUILDER
 ################################
-# Toolchain versions shared by every stage below. Keeping the Node version here
-# means the build and runtime stages cannot silently resolve different Nodes.
-ARG NODE_VERSION=22.23.2
-
-FROM ghcr.io/astral-sh/uv:latest AS uv_installer
-FROM registry.access.redhat.com/ubi10/python-314-minimal AS builder
+FROM ghcr.io/astral-sh/uv:${UV_VERSION} AS uv_installer
+FROM ${PYTHON_IMAGE} AS builder
 USER root
 COPY --from=uv_installer /uv /usr/local/bin/uv
 COPY --from=uv_installer /uvx /usr/local/bin/uvx
@@ -45,12 +45,9 @@ ENV BASH_ENV="" \
     PROMPT_COMMAND=""
 ENV VIRTUAL_ENV="/app/.venv"
 
-# Install langflow-base with all extras except dev (which includes Playwright).
-# This image ships the langflow-base core only.  Extension bundles
-# (lfx-duckduckgo, lfx-arxiv, lfx-ibm, lfx-docling, lfx-oracle, lfx-firecrawl) are intentionally NOT
-# installed here -- they belong to the full ``langflow`` distribution, not
-# the lean core.  Use the ``langflow`` image, or ``pip install`` the bundle
-# alongside this image, to add those components.
+# Install the runnable base with PostgreSQL. ``complete`` is retained as an
+# empty 1.12 compatibility alias. Provider extensions are intentionally absent;
+# use a Langflow application image or install the required extension packages.
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install \
         ./src/sdk \
@@ -60,7 +57,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 ################################
 # RUNTIME
 ################################
-FROM registry.access.redhat.com/ubi10/python-314-minimal AS runtime
+FROM ${PYTHON_IMAGE} AS runtime
 USER root
 # Install minimal runtime dependencies
 RUN microdnf update -y \
@@ -71,7 +68,7 @@ RUN microdnf update -y \
         gnupg \
         xz tar \
     && microdnf clean all
-RUN python3.14 -m pip install --upgrade pip
+RUN python3.14 -m pip install --no-cache-dir --upgrade "pip==26.2.1"
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
 # Install Node.js (required for npx-based MCP stdio servers).
@@ -80,13 +77,15 @@ COPY --from=builder /usr/local/bin/uvx /usr/local/bin/uvx
 # @latest, so the next npm major raising its engines floor cannot break this
 # layer unannounced against a pinned NODE_VERSION.
 ARG NODE_VERSION
+COPY ./docker/install_hardened_npm.sh /tmp/install_hardened_npm.sh
 RUN ARCH=$(uname -m) \
     && if [ "$ARCH" = "x86_64" ]; then NODE_ARCH="x64"; \
        elif [ "$ARCH" = "aarch64" ]; then NODE_ARCH="arm64"; \
        else NODE_ARCH="$ARCH"; fi \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1 \
-    && npm install -g npm@12
+    && sh /tmp/install_hardened_npm.sh \
+    && rm -f /tmp/install_hardened_npm.sh
 
 # Create non-root user
 RUN useradd --uid 1000 --gid 0 --no-create-home --home-dir /app/data user

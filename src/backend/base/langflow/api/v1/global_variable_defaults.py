@@ -23,21 +23,13 @@ import copy
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
-from lfx.utils.constants import DIRECT_TYPES
 
+from langflow.api.global_variable_fields import is_global_variable_eligible_field
 from langflow.services.deps import get_variable_service, session_scope
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
     from uuid import UUID
-
-
-# Field ``type`` values that should be considered for automatic global-variable
-# binding. Mirrors what the frontend's ``StrRenderComponent`` actually delegates
-# to ``InputGlobalComponent`` -- str-like inputs without options. Other DIRECT_TYPES
-# entries (dict, code, table, NestedDict, sortableList, ...) never render the
-# global-variable picker, so we leave them alone here too.
-_GLOBAL_VARIABLE_ELIGIBLE_TYPES: frozenset[str] = frozenset({"str"})
 
 
 def build_unavailable_fields_map(
@@ -60,24 +52,6 @@ def build_unavailable_fields_map(
             if isinstance(field, str) and field:
                 result[field] = name
     return result
-
-
-def _is_eligible_field(field: dict[str, Any]) -> bool:
-    """Return True if this template field can accept an auto-bound global variable."""
-    if not isinstance(field, dict):
-        return False
-    # Field must be visible (mirrors frontend rendering gate) and a text-ish input.
-    if field.get("show") is False:
-        return False
-    field_type = field.get("type")
-    if field_type not in DIRECT_TYPES or field_type not in _GLOBAL_VARIABLE_ELIGIBLE_TYPES:
-        return False
-    # Don't clobber an explicit user choice already persisted to the template.
-    if field.get("load_from_db") is True:
-        return False
-    # Only fill empty fields -- never overwrite a real value.
-    existing = field.get("value")
-    return existing in (None, "")
 
 
 def apply_unavailable_fields_to_graph(
@@ -116,7 +90,7 @@ def apply_unavailable_fields_to_graph(
         if not isinstance(template, dict):
             continue
         for field_name, field in template.items():
-            if field_name == "_type" or not _is_eligible_field(field):
+            if field_name == "_type" or not is_global_variable_eligible_field(field):
                 continue
             display_name = field.get("display_name")
             if not isinstance(display_name, str):
@@ -148,7 +122,7 @@ async def apply_global_variable_defaults(
     try:
         variable_service = get_variable_service()
         async with session_scope() as session:
-            variables = await variable_service.get_all(user_id=user_id, session=session)
+            bindings = await variable_service.get_default_field_bindings(user_id=user_id, session=session)
     except Exception as exc:  # noqa: BLE001 - never block flow runs on variable lookup
         await logger.awarning(
             "Could not load global variables for user %s while applying default_fields: %s",
@@ -157,6 +131,5 @@ async def apply_global_variable_defaults(
         )
         return graph_data
 
-    pairs = [(v.name, v.default_fields) for v in variables if v.name]
-    unavailable_fields = build_unavailable_fields_map(pairs)
+    unavailable_fields = build_unavailable_fields_map(bindings)
     return apply_unavailable_fields_to_graph(graph_data, unavailable_fields)

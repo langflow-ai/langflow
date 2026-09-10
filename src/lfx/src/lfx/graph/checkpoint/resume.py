@@ -136,7 +136,11 @@ def resume_graph_with_decision(
 def restore_graph_from_checkpoint(checkpoint: GraphCheckpoint, *, store: CheckpointStore | None = None) -> Graph:
     from lfx.graph.graph.base import Graph
 
-    graph = Graph.from_payload(checkpoint.flow_payload, flow_id=checkpoint.flow_id)
+    graph = Graph.from_payload(
+        checkpoint.flow_payload,
+        flow_id=checkpoint.flow_id,
+        user_id=checkpoint.user_id,
+    )
     graph.source_flow_id = checkpoint.source_flow_id
     if not graph._prepared:  # noqa: SLF001
         graph.prepare()

@@ -52,3 +52,16 @@ class InvalidTokenError(AuthenticationError):
 
     def __init__(self, message: str = "Invalid authentication token"):
         super().__init__(message, error_code="invalid_token")
+
+
+class AuthBackendUnavailableError(AuthenticationError):
+    """Raised when authentication could not complete because a backend failed.
+
+    This is an infrastructure failure, not a verdict on the credential: the
+    credential was never judged, so the caller may retry it unchanged. Keeping
+    it distinct from the credential errors stops a transient database failure
+    from being reported to the user as an authentication failure.
+    """
+
+    def __init__(self, message: str = "Authentication is temporarily unavailable"):
+        super().__init__(message, error_code="auth_backend_unavailable")

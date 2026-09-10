@@ -304,6 +304,34 @@ describe("useAssistantChat — refining plan UX", () => {
       expect(request.input_value).not.toContain("Plan v1");
       expect(request.input_value).not.toContain("Plan v2");
     });
+
+    it("should_consume_the_stash_after_one_send_even_when_the_turn_never_replans", async () => {
+      // The refinement turn may answer without a new propose_plan event;
+      // the stale plan must not ride along on every later prompt.
+      const { hook, assistantMsg } = await setupWithPlan("Plan v1");
+      act(() => {
+        hook.result.current.handleDismissPlan(assistantMsg.id);
+      });
+      mockPostAssistStream.mockClear();
+      mockPostAssistStream.mockResolvedValue(undefined);
+      // The refinement turn completes with a plain answer — no propose_plan.
+      mockPostAssistStream.mockImplementationOnce(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onComplete({ event: "complete", data: { result: "ok" } });
+        },
+      );
+
+      await act(async () => {
+        await hook.result.current.handleSend("use Claude instead", TEST_MODEL);
+      });
+      await act(async () => {
+        await hook.result.current.handleSend("any followup", TEST_MODEL);
+      });
+
+      const [followupRequest] = mockPostAssistStream.mock.calls[1];
+      expect(followupRequest.input_value).toBe("any followup");
+      expect(followupRequest.input_value).not.toContain("Plan v1");
+    });
   });
 
   describe("isRefiningPlan flag exposed for input UX", () => {

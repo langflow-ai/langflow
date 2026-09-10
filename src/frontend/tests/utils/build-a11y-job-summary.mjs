@@ -76,9 +76,9 @@ const remainingRoutes = routesByIssues.slice(10);
 const lines = [
   `Generated: \`${summary.generatedAt}\``,
   "",
-  "| Routes scanned | Issues | Rules |",
-  "| ---: | ---: | ---: |",
-  `| ${summary.routeCount} | ${summary.issueCount} | ${summary.ruleCount} |`,
+  "| Scans | Scans with issues | Issues | Rules |",
+  "| ---: | ---: | ---: | ---: |",
+  `| ${summary.scanCount ?? summary.routeCount} | ${summary.scansWithIssues ?? "n/a"} | ${summary.issueCount} | ${summary.ruleCount} |`,
   "",
   "### Worst Routes",
   "",

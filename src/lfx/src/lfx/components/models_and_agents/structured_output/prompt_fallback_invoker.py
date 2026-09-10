@@ -16,6 +16,8 @@ _MISSING_SCHEMA_HINT = "Try setting an output schema"
 def parse_and_validate_fallback_content(
     content: str,
     output_model: type[BaseModel] | None,
+    *,
+    envelope_key: str | None = None,
 ) -> dict[str, Any] | list[dict[str, Any]]:
     """Extract JSON from free text and validate it against output_model.
 
@@ -29,6 +31,11 @@ def parse_and_validate_fallback_content(
     parsed = extract_json_from_text(content)
     if parsed is None:
         return {"content": content, "error": _MISSING_SCHEMA_HINT}
+
+    # The prompt asks for a list container, but models answer with a bare record or a
+    # bare array just as often. Accept every shape rather than failing validation.
+    if envelope_key and isinstance(parsed, dict) and isinstance(parsed.get(envelope_key), list):
+        parsed = parsed[envelope_key]
 
     if output_model is None:
         if isinstance(parsed, dict):

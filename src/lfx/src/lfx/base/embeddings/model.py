@@ -4,6 +4,10 @@ from lfx.io import Output
 
 
 class LCEmbeddingsModel(Component):
+    model_provider_policy_mode: str = "standalone"
+    # Optional explicit override for policy identity. Most subclasses are
+    # classified systemically from their provider package/module.
+    model_provider_id: str | None = None
     trace_type = "embedding"
 
     outputs = [

@@ -16,6 +16,8 @@ responsibility-scoped submodules.
   - ``mutate_tools``— Add / Remove / Connect / Configure (push events)
   - ``run_tools``   — Propose / Build / Run / Generate
                        (orchestration + run helpers)
+  - ``template_tools`` — ListTemplates / UseTemplate (starter projects,
+                       proposed via the same ``set_flow`` gate)
 
 Importing from ``lfx.mcp.flow_builder_tools`` keeps the original public
 surface — every prior caller's ``from lfx.mcp.flow_builder_tools import X``
@@ -33,6 +35,7 @@ from ._state import _load_registry_user_aware as _load_registry_user_aware
 from ._state import _readable_preview as _readable_preview
 from ._state import (
     drain_flow_events,
+    emit_tool_start,
     get_working_flow,
     init_working_flow,
     isolate_flow_run_context,
@@ -40,6 +43,7 @@ from ._state import (
     reset_working_flow,
     set_apply_edits_live,
     set_propose_existing_edits,
+    set_tool_start_listener,
     should_apply_edits_live,
     should_propose_existing_edits,
 )
@@ -62,6 +66,7 @@ from .run_tools import (
     ProposePlan,
     RunFlow,
 )
+from .template_tools import ListTemplates, UseTemplate
 
 __all__ = [
     "AddComponent",
@@ -72,12 +77,15 @@ __all__ = [
     "DescribeFlowIO",
     "GenerateComponent",
     "GetFieldValue",
+    "ListTemplates",
     "ProposeFieldEdit",
     "ProposePlan",
     "RemoveComponent",
     "RunFlow",
     "SearchComponentTypes",
+    "UseTemplate",
     "drain_flow_events",
+    "emit_tool_start",
     "get_working_flow",
     "init_working_flow",
     "isolate_flow_run_context",
@@ -85,6 +93,7 @@ __all__ = [
     "reset_working_flow",
     "set_apply_edits_live",
     "set_propose_existing_edits",
+    "set_tool_start_listener",
     "should_apply_edits_live",
     "should_propose_existing_edits",
 ]

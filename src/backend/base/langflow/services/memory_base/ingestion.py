@@ -6,18 +6,18 @@ The MemoryBaseService delegates to these functions for all ingestion-related wor
 
 from __future__ import annotations
 
-import asyncio
-import types
 import uuid
 from typing import TYPE_CHECKING
 
-import chromadb.errors
-from langchain_chroma import Chroma
-from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
+from lfx.base.knowledge_bases.backends import create_backend
 from lfx.log.logger import logger
 from sqlmodel import col, func, select
 
-from langflow.api.utils.kb_helpers import KBAnalysisHelper, KBIngestionHelper, KBStorageHelper
+from langflow.api.utils.kb_helpers import (
+    resolve_backend_selection,
+    resolve_embedding_selection,
+    resolve_local_store_path,
+)
 from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
 from langflow.services.database.models.memory_base.model import (
     MemoryBase,
@@ -28,10 +28,12 @@ from langflow.services.deps import get_job_service, get_task_service, session_sc
 from langflow.services.jobs import DuplicateJobError
 from langflow.services.memory_base.kb_path_helpers import (
     hash_session_id,
-    resolve_embedding,
     resolve_kb_username,
     resolve_kb_username_by_user_id,
-    validate_kb_path,
+)
+from langflow.services.memory_base.provider_scope import (
+    preflight_memory_provider_use,
+    resolve_memory_provider_scope,
 )
 from langflow.services.memory_base.task import IngestionRequest, ingest_memory_task
 
@@ -41,7 +43,8 @@ if TYPE_CHECKING:
 
 async def trigger_ingestion(
     memory_base_id: uuid.UUID,
-    user_id: uuid.UUID,
+    owner_user_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
     session_id: str,
     *,
     get_mb_or_raise,
@@ -57,8 +60,27 @@ async def trigger_ingestion(
         RuntimeError: If a job is already active (caller should return 409).
     """
     async with session_scope() as db:
-        mb = await get_mb_or_raise(db, memory_base_id, user_id)
+        mb = await get_mb_or_raise(db, memory_base_id, owner_user_id)
+        provider_scope = await resolve_memory_provider_scope(
+            db,
+            memory_base_id=memory_base_id,
+            owner_user_id=owner_user_id,
+            actor_user_id=actor_user_id,
+            memory_base=mb,
+        )
 
+    embedding_provider, embedding_model = await resolve_embedding_selection(
+        user_id=owner_user_id,
+        kb_name=mb.kb_name,
+    )
+    await preflight_memory_provider_use(
+        provider_scope,
+        embedding_provider=embedding_provider,
+        preprocessing=mb.preprocessing,
+        preproc_model=mb.preproc_model,
+    )
+
+    async with session_scope() as db:
         # Ensure a session record exists
         mbs = await get_or_create_session(db, memory_base_id, session_id)
 
@@ -72,7 +94,6 @@ async def trigger_ingestion(
             dedupe_key = f"ingestion:{memory_base_id}:{session_id}:{latest_job_id}"
 
         kb_username = await resolve_kb_username(db, mb.user_id)
-        embedding_provider, embedding_model = resolve_embedding(mb.kb_name, kb_username)
 
     # Create tracking job
     job_service = get_job_service()
@@ -98,7 +119,8 @@ async def trigger_ingestion(
             flow_id=mb.flow_id,
             kb_name=mb.kb_name,
             kb_username=kb_username,
-            user_id=mb.user_id,
+            owner_user_id=mb.user_id,
+            actor_user_id=actor_user_id,
             embedding_provider=embedding_provider,
             embedding_model=embedding_model,
             cursor_id=cursor_id_snapshot,
@@ -177,9 +199,23 @@ async def _maybe_trigger(
         if latest_wf_job_id is not None:
             dedupe_key = f"ingestion:{mb.id}:{session_id}:{latest_wf_job_id}"
 
-        kb_username = await resolve_kb_username(db, mb.user_id)
+        provider_scope = await resolve_memory_provider_scope(
+            db,
+            memory_base_id=mb.id,
+            owner_user_id=mb.user_id,
+            actor_user_id=mb.user_id,
+            memory_base=mb,
+        )
 
-    embedding_provider, embedding_model = resolve_embedding(mb.kb_name, kb_username)
+    embedding_provider, embedding_model = await resolve_embedding_selection(user_id=mb.user_id, kb_name=mb.kb_name)
+    await preflight_memory_provider_use(
+        provider_scope,
+        embedding_provider=embedding_provider,
+        preprocessing=mb.preprocessing,
+        preproc_model=mb.preproc_model,
+    )
+    async with session_scope() as db:
+        kb_username = await resolve_kb_username(db, mb.user_id)
 
     job_service = get_job_service()
     job_id = uuid.uuid4()
@@ -208,7 +244,8 @@ async def _maybe_trigger(
             flow_id=mb.flow_id,
             kb_name=mb.kb_name,
             kb_username=kb_username,
-            user_id=mb.user_id,
+            owner_user_id=mb.user_id,
+            actor_user_id=mb.user_id,
             embedding_provider=embedding_provider,
             embedding_model=embedding_model,
             cursor_id=cursor_id_snapshot,
@@ -241,21 +278,54 @@ async def check_mismatch(
         return False
 
     kb_username = await resolve_kb_username_by_user_id(user_id)
-    kb_root = KBStorageHelper.get_root_path()
-    if not kb_root:
-        return False
-    kb_path = kb_root / kb_username / mb.kb_name
-    validate_kb_path(kb_root, kb_path)
-    if not await asyncio.to_thread(kb_path.exists):
+
+    # Ask the vector store, not the filesystem. For a remote-backed Memory Base
+    # the local directory says nothing about whether the vectors are actually
+    # there, and on a replica that never ran an ingestion it may not exist at
+    # all — which the old check read as "empty" and would answer by regenerating
+    # a Memory Base that was perfectly intact.
+    try:
+        backend_type, backend_config = await resolve_backend_selection(user_id=user_id, kb_name=mb.kb_name)
+    except ValueError:
+        # No ``knowledge_base`` row: nothing was ever provisioned, so the
+        # processed-rows count genuinely has no vectors behind it.
         return True
 
-    metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
-    return int(metadata.get("chunks", 0)) == 0
+    kb_path = resolve_local_store_path(
+        mb.kb_name,
+        kb_username,
+        backend_type=backend_type,
+        backend_config=backend_config,
+    )
+    backend = create_backend(
+        backend_type,
+        kb_name=mb.kb_name,
+        kb_path=kb_path,
+        backend_config=backend_config,
+        embedding_function=None,
+        user_id=user_id,
+    )
+    try:
+        await backend.ensure_ready()
+        return await backend.count() == 0
+    except Exception:  # noqa: BLE001
+        # A transient backend failure must not be read as "empty" — the caller
+        # answers a mismatch by regenerating, and regenerating on a connection
+        # blip would discard a healthy Memory Base.
+        await logger.awarning(
+            "Could not count chunks for memory_base=%s; assuming no mismatch",
+            memory_base_id,
+            exc_info=True,
+        )
+        return False
+    finally:
+        await backend.teardown()
 
 
 async def regenerate(
     memory_base_id: uuid.UUID,
-    user_id: uuid.UUID,
+    owner_user_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
     *,
     get_mb_or_raise,
     trigger_ingestion_fn,
@@ -276,7 +346,24 @@ async def regenerate(
     )
 
     async with session_scope() as db:
-        await get_mb_or_raise(db, memory_base_id, user_id)
+        mb = await get_mb_or_raise(db, memory_base_id, owner_user_id)
+        provider_scope = await resolve_memory_provider_scope(
+            db,
+            memory_base_id=memory_base_id,
+            owner_user_id=owner_user_id,
+            actor_user_id=actor_user_id,
+            memory_base=mb,
+        )
+        embedding_provider, _embedding_model = await resolve_embedding_selection(
+            user_id=owner_user_id,
+            kb_name=mb.kb_name,
+        )
+        await preflight_memory_provider_use(
+            provider_scope,
+            embedding_provider=embedding_provider,
+            preprocessing=mb.preprocessing,
+            preproc_model=mb.preproc_model,
+        )
 
         stmt = select(MemoryBaseSession).where(MemoryBaseSession.memory_base_id == memory_base_id)
         result = await db.exec(stmt)
@@ -302,7 +389,12 @@ async def regenerate(
     job_ids: list[str] = []
     for s in sessions:
         try:
-            jid = await trigger_ingestion_fn(memory_base_id, user_id, s.session_id)
+            jid = await trigger_ingestion_fn(
+                memory_base_id=memory_base_id,
+                owner_user_id=owner_user_id,
+                actor_user_id=actor_user_id,
+                session_id=s.session_id,
+            )
             job_ids.append(jid)
         except DuplicateJobError:
             await logger.awarning(
@@ -356,25 +448,26 @@ async def purge_session_data(
 
         kb_username = await resolve_kb_username(db, user_id)
 
-    # ---- 1. Delete Chroma chunks (best-effort, outside the DB session) ----
-    kb_root = KBStorageHelper.get_root_path()
-    if kb_root:
-        for mb, mbs in pairs:
-            try:
-                await _delete_chunks_for_session(
-                    kb_root=kb_root,
-                    kb_username=kb_username,
-                    kb_name=mb.kb_name,
-                    user_id=user_id,
-                    session_id=mbs.session_id,
-                )
-            except (OSError, ValueError, chromadb.errors.ChromaError):
-                await logger.aerror(
-                    "Failed to purge chunks for memory_base=%s session=%s",
-                    mb.id,
-                    hash_session_id(mbs.session_id),
-                    exc_info=True,
-                )
+    # ---- 1. Delete vector-store chunks (best-effort, outside the DB session) ----
+    for mb, mbs in pairs:
+        try:
+            await _delete_chunks_for_session(
+                kb_username=kb_username,
+                kb_name=mb.kb_name,
+                user_id=user_id,
+                session_id=mbs.session_id,
+            )
+        # Broad on purpose: the purge runs against whichever backend the KB is
+        # on, so the failure modes include remote transport errors, not just the
+        # local Chroma/OS set. One session's failure must not abort the purge for
+        # the rest.
+        except Exception:  # noqa: BLE001
+            await logger.aerror(
+                "Failed to purge chunks for memory_base=%s session=%s",
+                mb.id,
+                hash_session_id(mbs.session_id),
+                exc_info=True,
+            )
 
     # ---- 2. Delete tracking rows in a single transaction ----
     pair_keys = [(mb.id, mbs.session_id) for mb, mbs in pairs]
@@ -410,57 +503,53 @@ async def purge_session_data(
 
 async def _delete_chunks_for_session(
     *,
-    kb_root,
     kb_username: str,
     kb_name: str,
     user_id: uuid.UUID,
     session_id: str,
 ) -> None:
-    """Open the KB's Chroma collection and delete every chunk tagged with ``session_id``.
+    """Delete every chunk tagged with ``session_id`` from the KB's vector store.
 
-    Uses the canonical ``$eq`` operator (matching the retrieval filter) so the
-    delete and query paths agree on the metadata key shape.
+    The filter is a flat ``{key: value}`` dict, which is the contract
+    ``BaseVectorStoreBackend.delete_by`` accepts across backends — Chroma treats
+    it as ``$eq`` shorthand and OpenSearch translates it into a bool-must query.
+    Passing Chroma's explicit ``{"$eq": ...}`` operator form here would silently
+    match nothing on a remote backend.
     """
-    kb_path = kb_root / kb_username / kb_name
-    validate_kb_path(kb_root, kb_path)
-    if not await asyncio.to_thread(kb_path.exists):
-        return
-
-    embedding_provider, embedding_model = resolve_embedding(kb_name, kb_username)
-    user_stub = types.SimpleNamespace(id=user_id)
-    embeddings = await KBIngestionHelper.build_embeddings(embedding_provider, embedding_model, user_stub)
-
-    client = KBStorageHelper.get_fresh_chroma_client(kb_path)
+    backend_type, backend_config = await resolve_backend_selection(user_id=user_id, kb_name=kb_name)
+    kb_path = resolve_local_store_path(
+        kb_name,
+        kb_username,
+        backend_type=backend_type,
+        backend_config=backend_config,
+    )
+    backend = create_backend(
+        backend_type,
+        kb_name=kb_name,
+        kb_path=kb_path,
+        backend_config=backend_config,
+        embedding_function=None,
+        user_id=user_id,
+    )
     try:
-        chroma = Chroma(
-            client=client,
-            embedding_function=embeddings,
-            collection_name=kb_name,
-            **chroma_langchain_collection_kwargs(),
-        )
-        await chroma.adelete(where={"session_id": {"$eq": session_id}})
-        # Refresh on-disk metrics so the UI reflects the post-purge state.
-        try:
-            await asyncio.to_thread(_sync_metrics_after_purge, kb_path, chroma)
-        except (OSError, ValueError):
-            await logger.awarning(
-                "Could not refresh KB metrics after session purge for %s/%s",
-                kb_username,
-                kb_name,
-                exc_info=True,
-            )
+        await backend.ensure_ready()
+        await backend.delete_by({"session_id": session_id})
+        # Refresh the knowledge_base row's cached counts so the UI reflects the
+        # post-purge state. Row-driven (not the sidecar), so it's replica-safe.
+        await _sync_metrics_after_purge(user_id=user_id, kb_name=kb_name, backend=backend)
     finally:
-        KBStorageHelper.release_chroma_resources(kb_path)
+        await backend.teardown()
 
 
-def _sync_metrics_after_purge(kb_path, chroma: Chroma) -> None:
-    """Refresh chunk/word/character counts on the KB's embedding_metadata.json."""
-    import json
+async def _sync_metrics_after_purge(*, user_id: uuid.UUID, kb_name: str, backend) -> None:
+    """Refresh the knowledge_base row's cached counts after a session purge.
 
-    metadata = KBAnalysisHelper.get_metadata(kb_path, fast=True)
-    KBAnalysisHelper.update_text_metrics(kb_path, metadata, chroma=chroma)
-    metadata["size"] = KBStorageHelper.get_directory_size(kb_path)
-    (kb_path / "embedding_metadata.json").write_text(json.dumps(metadata, indent=2))
+    Delegates to the shared, best-effort :func:`sync_kb_stats_to_record` so the
+    post-purge metrics land on the DB row rather than an on-disk sidecar.
+    """
+    from langflow.services.memory_base.document_builders import sync_kb_stats_to_record
+
+    await sync_kb_stats_to_record(user_id=user_id, kb_name=kb_name, backend=backend)
 
 
 async def cancel_active_jobs(*, memory_base_id: uuid.UUID, db: AsyncSession) -> None:

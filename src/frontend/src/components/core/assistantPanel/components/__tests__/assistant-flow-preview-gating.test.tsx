@@ -228,6 +228,71 @@ describe("AssistantFlowPreview gating", () => {
         screen.queryByTestId("assistant-flow-dismiss-button"),
       ).not.toBeInTheDocument();
     });
+
+    it("should_render_revert_button_when_status_is_applied", () => {
+      render(
+        <AssistantFlowPreview
+          flowPreview={SAMPLE_PREVIEW}
+          status="applied"
+          onApply={jest.fn()}
+          onRevert={jest.fn()}
+          onDismiss={jest.fn()}
+        />,
+      );
+      expect(
+        screen.getByTestId("assistant-flow-revert-button"),
+      ).toBeInTheDocument();
+    });
+
+    it("should_call_onRevert_when_revert_button_clicked", () => {
+      const onRevert = jest.fn();
+      render(
+        <AssistantFlowPreview
+          flowPreview={SAMPLE_PREVIEW}
+          status="applied"
+          onApply={jest.fn()}
+          onRevert={onRevert}
+          onDismiss={jest.fn()}
+        />,
+      );
+      fireEvent.click(screen.getByTestId("assistant-flow-revert-button"));
+      expect(onRevert).toHaveBeenCalledTimes(1);
+    });
+
+    it("should_offer_revert_in_pending_state_when_a_snapshot_exists", () => {
+      // After the 3s re-enable the card is pending again but the last apply
+      // stays undoable — Revert sits alongside Add/Replace/Dismiss.
+      render(
+        <AssistantFlowPreview
+          flowPreview={SAMPLE_PREVIEW}
+          status="pending"
+          canRevert
+          onApply={jest.fn()}
+          onRevert={jest.fn()}
+          onDismiss={jest.fn()}
+        />,
+      );
+      expect(
+        screen.getByTestId("assistant-flow-add-button"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("assistant-flow-revert-button"),
+      ).toBeInTheDocument();
+    });
+
+    it("should_not_offer_revert_in_pending_state_without_a_snapshot", () => {
+      render(
+        <AssistantFlowPreview
+          flowPreview={SAMPLE_PREVIEW}
+          status="pending"
+          onApply={jest.fn()}
+          onDismiss={jest.fn()}
+        />,
+      );
+      expect(
+        screen.queryByTestId("assistant-flow-revert-button"),
+      ).not.toBeInTheDocument();
+    });
   });
 
   describe("dismissed status", () => {

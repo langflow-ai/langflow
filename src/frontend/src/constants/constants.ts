@@ -590,21 +590,6 @@ export const OPENRAG_FOLDER = "OpenRAG";
 
 export const MAX_MCP_SERVER_NAME_LENGTH = 30;
 
-/**
- * Header text for admin page
- * @constant
- *
- */
-export const ADMIN_HEADER_TITLE = "Admin Page";
-
-/**
- * Header description for admin page
- * @constant
- *
- */
-export const ADMIN_HEADER_DESCRIPTION =
-  "Navigate through this section to efficiently oversee all application users. From here, you can seamlessly manage user accounts.";
-
 export const BASE_URL_API = CUSTOM_BASE_URL_API || "/api/v1/";
 
 export const BASE_URL_API_V2 = CUSTOM_BASE_URL_API_V2 || "/api/v2/";
@@ -1018,6 +1003,13 @@ export const OPENAI_VOICES = [
   { name: "shimmer", value: "shimmer" },
   { name: "verse", value: "verse" },
 ];
+
+/**
+ * Fallback for the Assistant composer's character cap, used until /config replies.
+ * Matches the backend default of LANGFLOW_ASSISTANT_MAX_MESSAGE_LENGTH so the two
+ * agree even when the config request is in flight or unauthenticated.
+ */
+export const DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH = 2000;
 
 export const DEFAULT_POLLING_INTERVAL = 5000;
 export const DEFAULT_TIMEOUT = 30000;

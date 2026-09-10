@@ -66,11 +66,22 @@ class ChromaLocalBackend(BaseVectorStoreBackend):
     def __init__(
         self,
         kb_name: str,
-        kb_path: Path,
+        kb_path: Path | None = None,
         backend_config: dict[str, Any] | None = None,
         embedding_function: Embeddings | None = None,
         user_id: UUID | str | None = None,
     ) -> None:
+        # Local Chroma is the one backend that genuinely needs a directory, so it
+        # is also the one that must refuse ``None``. Failing here — at
+        # construction, naming the KB — beats a downstream ``str(None)`` that
+        # would quietly persist the collection into a directory called "None".
+        if kb_path is None:
+            msg = (
+                f"Local Chroma requires an on-disk path but none was resolved for knowledge base {kb_name!r}. "
+                "This usually means the KB's backend was resolved as local Chroma on a deployment that "
+                "does not provide local storage; configure a remote vector store for it instead."
+            )
+            raise ValueError(msg)
         super().__init__(
             kb_name=kb_name,
             kb_path=kb_path,
@@ -256,7 +267,7 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
     def __init__(
         self,
         kb_name: str,
-        kb_path: Path,
+        kb_path: Path | None = None,
         backend_config: dict[str, Any] | None = None,
         embedding_function: Embeddings | None = None,
         user_id: UUID | str | None = None,

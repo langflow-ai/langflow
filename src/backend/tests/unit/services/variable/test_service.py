@@ -1,17 +1,26 @@
 import secrets
-from datetime import datetime
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 from cryptography.fernet import Fernet
 from langflow.services.auth.service import AuthService
-from langflow.services.auth.utils import ensure_fernet_key
-from langflow.services.database.models.variable.model import VariableUpdate
+from langflow.services.auth.utils import encrypt_api_key, ensure_fernet_key
+from langflow.services.database.models.user.model import User
+from langflow.services.database.models.variable.model import Variable, VariableUpdate
 from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
-from langflow.services.variable.service import DatabaseVariableService
+from langflow.services.variable.service import DatabaseVariableService, has_variable_value
+from lfx.services.authorization.base import ResourceVisibilityScope
+from lfx.services.model_provider_policy import (
+    ModelProviderPolicyContext,
+    ModelProviderPolicyPurpose,
+    ModelProviderPolicySnapshot,
+)
 from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
+from lfx.services.variable import VariableNotFoundError
 from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
@@ -33,6 +42,7 @@ async def session():
         await conn.run_sync(SQLModel.metadata.create_all)
     async with AsyncSession(engine, expire_on_commit=False) as session:
         yield session
+    await engine.dispose()
 
 
 async def test_initialize_user_variables__create_and_update(service, session: AsyncSession):
@@ -42,7 +52,8 @@ async def test_initialize_user_variables__create_and_update(service, session: As
     bad_vars = {"VAR1": "value1", "VAR2": "value2", "VAR3": "value3"}
     env_vars = {**good_vars, **bad_vars}
 
-    await service.create_variable(user_id, "OPENAI_API_KEY", "outdate", session=session)
+    with patch.dict("os.environ", {"OPENAI_API_KEY": "outdate"}, clear=True):  # pragma: allowlist secret
+        await service.initialize_user_variables(user_id=user_id, session=session)
     env_vars["OPENAI_API_KEY"] = "updated_value"
 
     with patch.dict("os.environ", env_vars, clear=True):
@@ -56,6 +67,233 @@ async def test_initialize_user_variables__create_and_update(service, session: As
 
     assert all(i in variables for i in good_vars)
     assert all(i not in variables for i in bad_vars)
+
+
+async def test_environment_sync_repeated_rotation(service, session, monkeypatch):
+    """Repeated imports must continue rotating environment-managed credentials."""
+    user_id = uuid4()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", ["OPENAI_API_KEY"])
+    for value in ["first-key", "first-key", "second-key", "third-key"]:
+        monkeypatch.setenv("OPENAI_API_KEY", value)
+        await service.initialize_user_variables(user_id, session)
+        stored = await service.get_variable(user_id, "OPENAI_API_KEY", "", session)
+        assert stored.get_secret_value() == value
+
+
+async def test_environment_sync_unchanged_value_does_not_write(service, session, monkeypatch):
+    """An unchanged import preserves both ciphertext and the modification marker."""
+    user_id = uuid4()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", ["OPENAI_API_KEY"])
+    monkeypatch.setenv("OPENAI_API_KEY", "same-key")
+    await service.initialize_user_variables(user_id, session)
+    variable = await service.get_variable_object(user_id, "OPENAI_API_KEY", session)
+    original = (variable.value, variable.updated_at)
+    await service.initialize_user_variables(user_id, session)
+    await session.refresh(variable)
+    assert (variable.value, variable.updated_at) == original
+
+
+@pytest.mark.parametrize("environment_value", ["user-key", "environment-key"])
+async def test_environment_sync_preserves_user_created_variable(service, session, monkeypatch, environment_value):
+    """A user-created variable is an override even before its first edit."""
+    user_id = uuid4()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", ["OPENAI_API_KEY"])
+    monkeypatch.setenv("OPENAI_API_KEY", environment_value)
+    await service.create_variable(user_id, "OPENAI_API_KEY", "user-key", session=session)
+    await service.initialize_user_variables(user_id, session)
+    monkeypatch.setenv("OPENAI_API_KEY", "rotated-key")
+    await service.initialize_user_variables(user_id, session)
+    stored = await service.get_variable(user_id, "OPENAI_API_KEY", "", session)
+    assert stored.get_secret_value() == "user-key"
+
+
+async def test_environment_sync_metadata_edit_keeps_rotation(service, session, monkeypatch):
+    """Changing field bindings must not freeze an imported credential."""
+    user_id = uuid4()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", ["OPENAI_API_KEY"])
+    monkeypatch.setenv("OPENAI_API_KEY", "original-key")
+    await service.initialize_user_variables(user_id, session)
+    variable = await service.get_variable_object(user_id, "OPENAI_API_KEY", session)
+    await service.update_variable_fields(
+        user_id, variable.id, VariableUpdate(id=variable.id, default_fields=["API Key"]), session
+    )
+    monkeypatch.setenv("OPENAI_API_KEY", "rotated-key")
+    await service.initialize_user_variables(user_id, session)
+    stored = await service.get_variable(user_id, "OPENAI_API_KEY", "", session)
+    assert stored.get_secret_value() == "rotated-key"
+    assert variable.default_fields == ["API Key"]
+
+
+@pytest.mark.parametrize("legacy_state", ["never_updated", "previously_updated", "missing_created_at"])
+async def test_environment_sync_adopts_matching_legacy_value(service, session, monkeypatch, legacy_state):
+    """A matching legacy credential becomes eligible for the next rotation."""
+    user_id = uuid4()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", ["OPENAI_API_KEY"])
+    monkeypatch.setenv("OPENAI_API_KEY", "legacy-key")
+    variable = Variable(
+        user_id=user_id, name="OPENAI_API_KEY", type=CREDENTIAL_TYPE, value=encrypt_api_key("legacy-key")
+    )
+    session.add(variable)
+    await session.flush()
+    if legacy_state == "previously_updated":
+        variable.updated_at = variable.created_at + timedelta(seconds=1)
+    elif legacy_state == "missing_created_at":
+        variable.created_at = None
+    await session.flush()
+    ciphertext = variable.value
+    await service.initialize_user_variables(user_id, session)
+    assert variable.value == ciphertext
+    assert variable.is_environment_managed is True
+    monkeypatch.setenv("OPENAI_API_KEY", "rotated-key")
+    await service.initialize_user_variables(user_id, session)
+    stored = await service.get_variable(user_id, "OPENAI_API_KEY", "", session)
+    assert stored.get_secret_value() == "rotated-key"
+
+
+async def test_environment_sync_preserves_edits_by_older_workers(service, session, monkeypatch):
+    """The timestamp guard protects writes from workers unaware of the origin flag."""
+    user_id = uuid4()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", ["OPENAI_API_KEY"])
+    monkeypatch.setenv("OPENAI_API_KEY", "original-key")
+    await service.initialize_user_variables(user_id, session)
+    variable = await service.get_variable_object(user_id, "OPENAI_API_KEY", session)
+    variable.value = encrypt_api_key("user-key")
+    variable.updated_at = variable.created_at + timedelta(seconds=1)
+    await session.flush()
+    assert variable.is_environment_managed is True
+    for value in ["user-key", "rotated-key"]:
+        monkeypatch.setenv("OPENAI_API_KEY", value)
+        await service.initialize_user_variables(user_id, session)
+        stored = await service.get_variable(user_id, "OPENAI_API_KEY", "", session)
+        assert stored.get_secret_value() == "user-key"
+
+
+async def test_all_user_initialization_continues_after_commit_failure(service, session, monkeypatch):
+    """One user's transaction failure must not discard later users' imports."""
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", ["OPENAI_API_KEY"])
+    monkeypatch.setenv("OPENAI_API_KEY", "environment-key")
+    users = [User(username=f"sweep-user-{index}", password="unused") for index in range(2)]  # noqa: S106  # pragma: allowlist secret
+    session.add_all(users)
+    await session.commit()
+    user_ids = sorted(user.id for user in users)
+    scopes = 0
+
+    @asynccontextmanager
+    async def failing_commit_scope():
+        nonlocal scopes
+        scopes += 1
+        async with AsyncSession(session.bind, expire_on_commit=False) as scoped:
+            try:
+                yield scoped
+                if scopes == 2:  # First user's commit, after the page query.
+                    msg = "simulated commit failure"
+                    raise RuntimeError(msg)
+                await scoped.commit()
+            except Exception:
+                await scoped.rollback()
+                raise
+
+    monkeypatch.setattr("langflow.services.deps.session_scope", failing_commit_scope)
+    with pytest.raises(RuntimeError):
+        await service.initialize_all_user_variables()
+    assert await service.list_variables(user_ids[0], session) == []
+    value = await service.get_variable(user_ids[1], "OPENAI_API_KEY", "", session)
+    assert value.get_secret_value() == "environment-key"
+
+
+@pytest.mark.parametrize("legacy_state", ["never_updated", "previously_updated", "missing_created_at"])
+async def test_environment_sync_preserves_ambiguous_legacy_rows(service, session, monkeypatch, legacy_state):
+    """Old timestamps cannot safely establish whether the user owns the value."""
+    user_id = uuid4()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", ["OPENAI_API_KEY"])
+    monkeypatch.setenv("OPENAI_API_KEY", "rotated-key")
+    variable = await service.create_variable(user_id, "OPENAI_API_KEY", "legacy-key", session=session)
+    variable.is_environment_managed = None
+    if legacy_state == "previously_updated":
+        variable.updated_at = variable.created_at + timedelta(seconds=1)
+    elif legacy_state == "missing_created_at":
+        variable.created_at = None
+    await session.flush()
+
+    await service.initialize_user_variables(user_id, session)
+
+    stored = await service.get_variable(user_id, "OPENAI_API_KEY", "", session)
+    assert stored.get_secret_value() == "legacy-key"
+
+
+@pytest.mark.parametrize("edit_method", ["update_variable", "update_variable_fields"])
+async def test_environment_sync_preserves_user_edits(service, session, monkeypatch, edit_method):
+    """Explicitly saving an imported value transfers control to the user."""
+    user_id = uuid4()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", ["OPENAI_API_KEY"])
+    monkeypatch.setenv("OPENAI_API_KEY", "original-key")
+    await service.initialize_user_variables(user_id, session)
+    variable = await service.get_variable_object(user_id, "OPENAI_API_KEY", session)
+    if edit_method == "update_variable":
+        await service.update_variable(user_id, variable.name, "original-key", session)
+    else:
+        await service.update_variable_fields(
+            user_id, variable.id, VariableUpdate(id=variable.id, value="original-key"), session
+        )
+    await service.initialize_user_variables(user_id, session)
+    assert variable.is_environment_managed is False
+    monkeypatch.setenv("OPENAI_API_KEY", "rotated-key")
+
+    await service.initialize_user_variables(user_id, session)
+
+    stored = await service.get_variable(user_id, "OPENAI_API_KEY", "", session)
+    assert stored.get_secret_value() == "original-key"
+
+
+@pytest.mark.parametrize("operation", ["_update_environment_variable", "_adopt_environment_variable"])
+async def test_environment_sync_preserves_interleaved_user_edit(service, session, monkeypatch, operation):
+    """A user edit committed after the import reads a row must win the race."""
+    user_id = uuid4()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", ["OPENAI_API_KEY"])
+    monkeypatch.setenv("OPENAI_API_KEY", "original-key")
+    await service.initialize_user_variables(user_id, session)
+    if operation == "_adopt_environment_variable":
+        variable = await service.get_variable_object(user_id, "OPENAI_API_KEY", session)
+        variable.is_environment_managed = None
+    await session.commit()
+    if operation == "_update_environment_variable":
+        monkeypatch.setenv("OPENAI_API_KEY", "rotated-key")
+    update_environment = getattr(service, operation)
+
+    async def edit_before_import(variable, value, import_session):
+        async with AsyncSession(session.bind, expire_on_commit=False) as editor:
+            await service.update_variable(user_id, variable.name, "user-key", editor)
+            await editor.commit()
+        await update_environment(variable, value, import_session)
+
+    monkeypatch.setattr(service, operation, edit_before_import)
+
+    await service.initialize_user_variables(user_id, session)
+
+    stored = await service.get_variable(user_id, "OPENAI_API_KEY", "", session)
+    assert stored.get_secret_value() == "user-key"
+
+
+@pytest.mark.parametrize("mode", ["disabled", "missing_value", "placeholder"])
+async def test_all_user_initialization_skips_without_environment_imports(service, monkeypatch, mode):
+    """Disabled or unconfigured imports must not query every user at startup."""
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", mode != "disabled")
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", ["OPENAI_API_KEY"])
+    value = " " if mode == "missing_value" else "dummy" if mode == "placeholder" else "environment-key"
+    monkeypatch.setenv("OPENAI_API_KEY", value)
+    with patch("langflow.services.deps.session_scope") as session_scope:
+        await service.initialize_all_user_variables()
+    session_scope.assert_not_called()
 
 
 @pytest.mark.parametrize("var_name", ["WATSONX_APIKEY", "WATSONX_PROJECT_ID"])
@@ -101,10 +339,171 @@ async def test_initialize_user_variables__not_found_variable(service, session: A
     assert True
 
 
+async def test_get_default_field_bindings_never_decrypts_values(service, session: AsyncSession):
+    user_id = uuid4()
+    session.add(
+        Variable(
+            user_id=user_id,
+            name="OPENAI_API_KEY",
+            value="encrypted-secret",  # pragma: allowlist secret
+            type=CREDENTIAL_TYPE,
+            default_fields=["OpenAI API Key"],
+        )
+    )
+    await session.flush()
+
+    with patch(
+        "langflow.services.auth.utils.decrypt_api_key",
+        side_effect=AssertionError("default-field lookup must not decrypt values"),
+    ):
+        result = await service.get_default_field_bindings(user_id, session)
+
+    assert result == [("OPENAI_API_KEY", ["OpenAI API Key"])]
+
+
+async def test_default_field_binding_order_matches_variable_list(service, session: AsyncSession):
+    user_id = uuid4()
+    session.add_all(
+        [
+            Variable(
+                user_id=user_id,
+                name="Z_LAST",
+                value="encrypted-secret",  # pragma: allowlist secret
+                type=CREDENTIAL_TYPE,
+                default_fields=["Shared Field"],
+            ),
+            Variable(
+                user_id=user_id,
+                name="A_FIRST",
+                value="encrypted-secret",  # pragma: allowlist secret
+                type=CREDENTIAL_TYPE,
+                default_fields=["Shared Field"],
+            ),
+        ]
+    )
+    await session.flush()
+
+    bindings = await service.get_default_field_bindings(user_id, session)
+    with patch("langflow.services.auth.utils.decrypt_api_key", return_value="secret"):
+        variables = await service.get_all(user_id, session)
+
+    assert [name for name, _default_fields in bindings] == ["A_FIRST", "Z_LAST"]
+    assert [variable.name for variable in variables] == ["A_FIRST", "Z_LAST"]
+
+
 async def test_initialize_user_variables__skipping_environment_variable_storage(service, session: AsyncSession):
     service.settings_service.settings.store_environment_variables = False
     await service.initialize_user_variables(uuid4(), session=session)
     assert True
+
+
+async def test_initialize_user_variables_skips_policy_hidden_provider_before_validation(
+    service,
+    session: AsyncSession,
+    monkeypatch,
+):
+    user_id = uuid4()
+    monkeypatch.setattr(
+        service.settings_service.settings,
+        "variables_to_get_from_environment",
+        ["ANTHROPIC_API_KEY"],
+    )
+    snapshot = ModelProviderPolicySnapshot(
+        context=ModelProviderPolicyContext(user_id=user_id),
+        purpose=ModelProviderPolicyPurpose.CONFIGURE,
+        candidate_provider_ids=frozenset({"openai", "anthropic"}),
+        allowed_provider_ids=frozenset({"openai"}),
+    )
+
+    with (
+        patch.dict(
+            "os.environ",
+            {"ANTHROPIC_API_KEY": "hidden-secret"},  # pragma: allowlist secret
+            clear=True,
+        ),
+        patch("lfx.services.model_provider_policy.resolve_model_provider_policy", return_value=snapshot),
+        patch(
+            "lfx.base.models.unified_models.validate_model_provider_key",
+            side_effect=AssertionError("hidden provider credential must not be validated"),
+        ),
+    ):
+        await service.initialize_user_variables(user_id=user_id, session=session)
+
+    assert await service.list_variables(user_id, session=session) == []
+
+
+async def test_initialize_user_variables_stops_when_policy_resolution_fails(
+    service,
+    session: AsyncSession,
+    monkeypatch,
+):
+    user_id = uuid4()
+    monkeypatch.setattr(
+        service.settings_service.settings,
+        "variables_to_get_from_environment",
+        ["OPENAI_API_KEY"],
+    )
+
+    with (
+        patch.dict("os.environ", {"OPENAI_API_KEY": "must-not-import"}, clear=True),  # pragma: allowlist secret
+        patch(
+            "lfx.services.model_provider_policy.resolve_model_provider_policy",
+            side_effect=RuntimeError("policy unavailable"),
+        ),
+    ):
+        await service.initialize_user_variables(user_id=user_id, session=session)
+
+    assert await service.list_variables(user_id, session=session) == []
+
+
+async def test_initialize_user_variables_passes_trusted_superuser_context(
+    service,
+    session: AsyncSession,
+    monkeypatch,
+):
+    user = User(
+        username=f"provider_superuser_{uuid4().hex}",
+        password="test-password",  # noqa: S106 - inert test fixture credential  # pragma: allowlist secret
+        is_active=True,
+        is_superuser=True,
+    )
+    session.add(user)
+    await session.flush()
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(
+        service.settings_service.settings,
+        "variables_to_get_from_environment",
+        ["OPENAI_API_KEY"],
+    )
+    seen_attributes = None
+
+    def allow_superuser(*, user_id, providers, purpose, attributes=None):
+        nonlocal seen_attributes
+        seen_attributes = attributes
+        assert user_id == user.id
+        assert purpose is ModelProviderPolicyPurpose.CONFIGURE
+        assert "OpenAI" in providers
+        return ModelProviderPolicySnapshot(
+            context=ModelProviderPolicyContext(user_id=user_id, attributes=attributes or {}),
+            purpose=purpose,
+            candidate_provider_ids=frozenset({"openai"}),
+            allowed_provider_ids=frozenset({"openai"}),
+        )
+
+    with (
+        patch.dict(
+            "os.environ",
+            {"OPENAI_API_KEY": "superuser-env-key"},  # pragma: allowlist secret
+            clear=True,
+        ),
+        patch("lfx.services.model_provider_policy.resolve_model_provider_policy", side_effect=allow_superuser),
+        patch("lfx.base.models.unified_models.validate_model_provider_key"),
+    ):
+        await service.initialize_user_variables(user_id=user.id, session=session)
+
+    assert seen_attributes == {"is_superuser": True}
+    imported = await service.get_variable_object(user.id, "OPENAI_API_KEY", session)
+    assert imported.user_id == user.id
 
 
 async def test_get_variable(service, session: AsyncSession):
@@ -126,8 +525,120 @@ async def test_get_variable__valueerror(service, session: AsyncSession):
     name = "name"
     field = ""
 
-    with pytest.raises(ValueError, match=f"{name} variable not found."):
+    with pytest.raises(VariableNotFoundError, match=f"{name} variable not found."):
         await service.get_variable(user_id, name, field, session=session)
+
+
+async def test_get_variable_resolves_one_explicitly_shared_runtime_value(service, session: AsyncSession):
+    owner_id = uuid4()
+    actor_id = uuid4()
+    shared = await service.create_variable(
+        owner_id,
+        "SHARED_TOKEN",
+        "shared-secret",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+
+    authz = MagicMock()
+    authz.is_enabled = AsyncMock(return_value=True)
+    authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+    authz.get_resource_visibility = None
+    authz.list_visible_resource_ids = AsyncMock(return_value=[shared.id])
+
+    with patch("langflow.services.deps.get_authorization_service", return_value=authz):
+        result = await service.get_variable(actor_id, "SHARED_TOKEN", "", session=session)
+
+    assert isinstance(result, SecretStr)
+    assert result.get_secret_value() == "shared-secret"
+
+
+async def test_get_variable_resolves_scope_native_global_runtime_value(service, session: AsyncSession):
+    owner_id = uuid4()
+    actor_id = uuid4()
+    await service.create_variable(
+        owner_id,
+        "GLOBAL_SHARED_TOKEN",
+        "shared-secret",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+
+    authz = MagicMock()
+    authz.is_enabled = AsyncMock(return_value=True)
+    authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+    authz.get_resource_visibility = AsyncMock(return_value=ResourceVisibilityScope(all_resources=True))
+    authz.list_visible_resource_ids = AsyncMock(side_effect=AssertionError("legacy visibility hook used"))
+
+    with patch("langflow.services.deps.get_authorization_service", return_value=authz):
+        result = await service.get_variable(actor_id, "GLOBAL_SHARED_TOKEN", "", session=session)
+
+    assert isinstance(result, SecretStr)
+    assert result.get_secret_value() == "shared-secret"
+    authz.get_resource_visibility.assert_awaited_once()
+    authz.list_visible_resource_ids.assert_not_awaited()
+
+
+async def test_get_variable_fails_closed_for_domain_only_runtime_scope(service, session: AsyncSession):
+    owner_id = uuid4()
+    actor_id = uuid4()
+    await service.create_variable(
+        owner_id,
+        "DOMAIN_ONLY_TOKEN",
+        "shared-secret",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+
+    authz = MagicMock()
+    authz.is_enabled = AsyncMock(return_value=True)
+    authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+    authz.get_resource_visibility = AsyncMock(
+        return_value=ResourceVisibilityScope(workspace_ids=(uuid4(),), project_ids=(uuid4(),))
+    )
+    authz.list_visible_resource_ids = AsyncMock(side_effect=AssertionError("legacy visibility hook used"))
+
+    with (
+        patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        pytest.raises(VariableNotFoundError, match="DOMAIN_ONLY_TOKEN variable not found"),
+    ):
+        await service.get_variable(actor_id, "DOMAIN_ONLY_TOKEN", "", session=session)
+
+    authz.get_resource_visibility.assert_awaited_once()
+    authz.list_visible_resource_ids.assert_not_awaited()
+
+
+async def test_get_all_redacts_shared_generic_values(service, session: AsyncSession):
+    owner_id = uuid4()
+    actor_id = uuid4()
+    owned = await service.create_variable(
+        actor_id,
+        "OWNED_VALUE",
+        "owned-plaintext",
+        type_=GENERIC_TYPE,
+        session=session,
+    )
+    shared = await service.create_variable(
+        owner_id,
+        "SHARED_VALUE",
+        "shared-plaintext",
+        type_=GENERIC_TYPE,
+        session=session,
+    )
+
+    rows = await service.get_all(
+        actor_id,
+        session,
+        visibility=ResourceVisibilityScope(resource_ids=(shared.id,)),
+    )
+    by_id = {row.id: row for row in rows}
+
+    assert by_id[owned.id].value == "owned-plaintext"
+    assert by_id[owned.id].is_owner is True
+    assert by_id[owned.id].can_manage_shares is True
+    assert by_id[shared.id].value is None
+    assert by_id[shared.id].is_owner is False
+    assert by_id[shared.id].can_manage_shares is False
 
 
 async def test_get_variable__typeerror(service, session: AsyncSession):
@@ -198,6 +709,66 @@ async def test_list_variables__empty(service, session: AsyncSession):
 
     assert not result
     assert isinstance(result, list)
+
+
+async def test_get_available_variable_names_only_checks_requested_owned_rows(service, session: AsyncSession):
+    user_id = uuid4()
+    other_user_id = uuid4()
+    session.add_all(
+        [
+            Variable(
+                user_id=user_id,
+                name="REQUESTED_VALID",
+                value="valid-ciphertext",
+                type=CREDENTIAL_TYPE,
+                default_fields=[],
+            ),
+            Variable(
+                user_id=user_id,
+                name="REQUESTED_BROKEN",
+                value="broken-ciphertext",
+                type=CREDENTIAL_TYPE,
+                default_fields=[],
+            ),
+            Variable(
+                user_id=user_id,
+                name="UNRELATED",
+                value="unrelated-ciphertext",
+                type=CREDENTIAL_TYPE,
+                default_fields=[],
+            ),
+            Variable(
+                user_id=other_user_id,
+                name="OTHER_USER_KEY",
+                value="other-user-ciphertext",
+                type=CREDENTIAL_TYPE,
+                default_fields=[],
+            ),
+        ]
+    )
+    await session.flush()
+
+    checked_values = []
+
+    def decrypt_requested_value(value: str) -> str:
+        checked_values.append(value)
+        return {
+            "valid-ciphertext": "usable-secret",
+            "broken-ciphertext": "",
+        }[value]
+
+    with patch(
+        "langflow.services.variable.service.auth_utils.decrypt_api_key",
+        side_effect=decrypt_requested_value,
+    ):
+        result = await service.get_available_variable_names(
+            user_id=user_id,
+            names={"REQUESTED_VALID", "REQUESTED_BROKEN", "OTHER_USER_KEY"},
+            session=session,
+        )
+
+    assert result == {"REQUESTED_VALID"}
+    assert set(checked_values) == {"valid-ciphertext", "broken-ciphertext"}
 
 
 async def test_update_variable(service, session: AsyncSession):
@@ -454,6 +1025,99 @@ async def test_get_all__empty_value_warns_and_skips(service, session: AsyncSessi
     warning_calls = [str(c) for c in mock_logger.awarning.call_args_list]
     assert any("EMPTY_VAR" in c for c in warning_calls)
     assert any("no stored value" in c for c in warning_calls)
+
+
+async def test_get_all__empty_provider_setting_preserves_row_identity(service, session: AsyncSession):
+    """Cleared provider settings remain addressable so later edits reuse their UUID."""
+    user_id = uuid4()
+    variable = await service.create_variable(
+        user_id,
+        "OPENAI_BASE_URL",
+        "https://example.com/v1",
+        type_=GENERIC_TYPE,
+        session=session,
+    )
+    variable.value = ""
+    session.add(variable)
+    await session.flush()
+
+    result = await service.get_all(user_id, session=session, include_empty_names={"OPENAI_BASE_URL"})
+    cleared = next(item for item in result if item.name == "OPENAI_BASE_URL")
+
+    assert cleared.id == variable.id
+    assert cleared.value == ""
+    assert cleared.has_value is False
+
+
+async def test_get_all__empty_required_provider_variable_stays_hidden(service, session: AsyncSession):
+    """An empty required provider row must not make the provider look configured."""
+    user_id = uuid4()
+    variable = await service.create_variable(
+        user_id,
+        "WATSONX_PROJECT_ID",
+        "project-id",
+        type_=GENERIC_TYPE,
+        session=session,
+    )
+    variable.value = ""
+    session.add(variable)
+    await session.flush()
+
+    result = await service.get_all(user_id, session=session)
+
+    assert not any(item.name == "WATSONX_PROJECT_ID" for item in result)
+
+
+async def test_get_all__empty_agentic_placeholder_is_debug_only(service, session: AsyncSession):
+    """Known agentic placeholders are intentionally empty until an agent run populates them."""
+    user_id = uuid4()
+    variable = await service.create_variable(user_id, "FLOW_ID", "initial", type_=GENERIC_TYPE, session=session)
+    variable.value = ""
+    session.add(variable)
+    await session.flush()
+
+    mock_logger = MagicMock(adebug=AsyncMock(), awarning=AsyncMock())
+    with patch("langflow.services.variable.service.logger", mock_logger):
+        result = await service.get_all(user_id, session=session)
+
+    assert not any(item.name == "FLOW_ID" for item in result)
+    mock_logger.adebug.assert_awaited_once()
+    mock_logger.awarning.assert_not_awaited()
+
+
+async def test_get_all_reports_whether_masked_credentials_have_a_value(service, session: AsyncSession):
+    user_id = uuid4()
+    await service.create_variable(
+        user_id,
+        "CONFIGURED_CREDENTIAL",
+        "secret-value",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+    await service.create_variable(
+        user_id,
+        "EMPTY_CREDENTIAL",
+        "",
+        type_=CREDENTIAL_TYPE,
+        session=session,
+    )
+
+    variables = {variable.name: variable for variable in await service.get_all(user_id, session=session)}
+
+    assert variables["CONFIGURED_CREDENTIAL"].value is None
+    assert variables["CONFIGURED_CREDENTIAL"].has_value is True
+    assert variables["EMPTY_CREDENTIAL"].value is None
+    assert variables["EMPTY_CREDENTIAL"].has_value is False
+
+
+def test_has_variable_value_returns_false_when_decrypt_yields_nothing():
+    """An unreadable credential must report has_value=False, not crash listing."""
+    from langflow.services.database.models.variable.model import Variable
+
+    variable = Variable(name="BROKEN_CREDENTIAL", value="ciphertext", type=CREDENTIAL_TYPE, user_id=uuid4())
+    for unreadable in (None, ""):
+        with patch("langflow.services.auth.utils.decrypt_api_key", return_value=unreadable):
+            assert has_variable_value(variable) is False
 
 
 async def test_get_all__decrypt_failure_warns_and_skips(service, session: AsyncSession):

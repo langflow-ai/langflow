@@ -7,7 +7,7 @@ Covers the AC items for the @official slot:
     - failure modes: missing manifest, missing bundle dir, empty bundle,
       no Component subclass, module import failure, duplicate component
       class names within a bundle
-    - schema-vs-runtime multi-bundle rejection (both layers checked)
+    - single-bundle API selection for multi-bundle manifests
     - dunder/conftest skip; recursive subdirectory walk;
       deterministic component order; re-imported class de-duplication
     - ``load_extension`` rejects unknown slot values up front
@@ -23,6 +23,7 @@ from lfx.extension import (
     SLOT_OFFICIAL,
     LoadedComponent,
     load_extension,
+    load_extension_bundles,
 )
 
 from .conftest import _BASE_MANIFEST, component_source, make_extension
@@ -94,57 +95,46 @@ def test_missing_manifest(tmp_path: Path) -> None:
     assert result.errors[0].ref_url
 
 
-def test_schema_rejects_multi_bundle(tmp_path: Path) -> None:
-    """The schema rejects multi-bundle and the loader surfaces it as ``manifest-invalid``.
-
-    The dedicated ``multi-bundle-deferred-in-this-milestone`` code is
-    exercised by the validator's test suite and by the runtime-bypass test
-    below; here we only confirm the schema-side rejection still produces a
-    clean failure at the loader's boundary.
-    """
+def test_multi_bundle_requires_selection_for_single_result_api(tmp_path: Path) -> None:
     multi = {**_BASE_MANIFEST, "bundles": [{"name": "alpha", "path": "alpha"}, {"name": "bravo", "path": "bravo"}]}
     (tmp_path / "extension.json").write_text(json.dumps(multi), encoding="utf-8")
     (tmp_path / "alpha").mkdir()
     (tmp_path / "bravo").mkdir()
     result = load_extension(tmp_path)
     assert not result.ok
-    assert result.errors[0].code == "manifest-invalid"
+    assert result.errors[0].code == "multi-bundle-unsupported"
 
 
-def test_runtime_multi_bundle_check(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Loader-side multi-bundle guard.
+def test_unknown_bundle_selection_reports_the_requested_name(tmp_path: Path) -> None:
+    multi = {**_BASE_MANIFEST, "bundles": [{"name": "alpha", "path": "alpha"}, {"name": "bravo", "path": "bravo"}]}
+    (tmp_path / "extension.json").write_text(json.dumps(multi), encoding="utf-8")
 
-    Even if a forged manifest somehow bypassed the schema, the loader still
-    rejects with the dedicated ``multi-bundle-deferred-in-this-milestone`` code.
-    """
-    from lfx.extension.loader import _orchestrator
-    from lfx.extension.manifest import (
-        BundleRef,
-        ExtensionManifest,
-        LfxCompat,
-        ManifestSource,
-    )
+    result = load_extension(tmp_path, bundle_name="charlie")
 
-    (tmp_path / "alpha").mkdir()
-    (tmp_path / "bravo").mkdir()
-    (tmp_path / "extension.json").write_text("{}", encoding="utf-8")  # placeholder
+    assert not result.ok
+    assert result.errors[0].code == "reload-bundle-name-mismatch"
+    assert result.errors[0].content == "charlie"
 
-    # Build a manifest that bypasses the post-init validator via
-    # ``model_construct``; this models a forged on-disk manifest reaching
-    # the loader without re-validation.
-    forged = ExtensionManifest.model_construct(
-        id="lfx-pilot",
-        version="1.2.3",
-        name="Pilot",
-        lfx=LfxCompat(compat=["1"]),
-        bundles=[BundleRef(name="alpha", path="alpha"), BundleRef(name="bravo", path="bravo")],
-    )
-    source = ManifestSource.model_construct(manifest=forged, path=tmp_path / "extension.json", kind="extension.json")
 
-    monkeypatch.setattr(_orchestrator, "load_manifest", lambda _root: source)
-    result = load_extension(tmp_path)
-    codes = [e.code for e in result.errors]
-    assert codes == ["multi-bundle-unsupported"]
+def test_load_extension_bundles_loads_every_manifest_entry(tmp_path: Path) -> None:
+    manifest = {
+        **_BASE_MANIFEST,
+        "bundles": [
+            {"name": "alpha", "path": "alpha"},
+            {"name": "bravo", "path": "bravo"},
+        ],
+    }
+    (tmp_path / "extension.json").write_text(json.dumps(manifest), encoding="utf-8")
+    for name in ("alpha", "bravo"):
+        bundle = tmp_path / name
+        bundle.mkdir()
+        (bundle / f"{name}.py").write_text(component_source(f"{name.title()}Thing"), encoding="utf-8")
+
+    results = load_extension_bundles(tmp_path, distribution="lfx-pilot")
+
+    assert [result.bundle for result in results] == ["alpha", "bravo"]
+    assert all(result.ok for result in results)
+    assert [result.components[0].bundle for result in results] == ["alpha", "bravo"]
 
 
 def test_version_constraint_unsatisfied(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -2,6 +2,7 @@ import pytest
 from lfx.base.mcp.security import validate_mcp_stdio_config
 from lfx.base.mcp.source_policy import (
     is_package_manager_config_env_var,
+    parse_mcp_shell_wrapper,
     validate_mcp_stdio_source_policy,
 )
 
@@ -299,6 +300,21 @@ def test_npx_noninteractive_flag_remains_allowed_by_shared_policy():
 def test_interpreter_hardening_rejects_tenant_selected_code(command, args):
     with pytest.raises(ValueError, match=r"not allowed"):
         validate_mcp_stdio_source_policy(command, args, interpreter_hardening=True)
+
+
+@pytest.mark.parametrize("switch", ["/c", "/C", "/k", "/K", "/r", "/R", "/q/k", "/s/k", "/d/k"])
+def test_cmd_wrapper_parser_recognises_every_execution_switch(switch):
+    """Every cmd.exe switch that runs a command line must expose the wrapped payload.
+
+    The parser result is what binds a wrapper to the command allowlist; returning ``None``
+    silently skips that check for the switch in question.
+    """
+    assert parse_mcp_shell_wrapper("cmd", [switch, "whoami"]) == ("whoami", [])
+
+
+@pytest.mark.parametrize("switch", ["/a", "/d", "/e:on", "/f:off", "/q", "/s", "/t:0a", "/u", "/v:on"])
+def test_cmd_wrapper_parser_skips_switches_that_do_not_execute(switch):
+    assert parse_mcp_shell_wrapper("cmd", [switch, "/c", "uvx", "mcp-proxy"]) == ("uvx", ["mcp-proxy"])
 
 
 def test_interpreter_hardening_preserves_authenticated_agentic_module():

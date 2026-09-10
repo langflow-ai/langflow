@@ -685,8 +685,14 @@ class FileSystemToolComponent(Component):
         pinned = _pinned_user_id_var.get()
         if pinned is not None:
             return pinned
-        candidates: list[object | None] = [getattr(self, "_user_id", None)]
         graph = getattr(self, "graph", None)
+        candidates: list[object | None] = []
+        # Serving-plane: an identified end user owns the files they write during their session, so
+        # their id wins the sandbox namespace over the executing service account. None on editor /
+        # anonymous / feature-off runs -> falls through to the SID exactly as before (strict BC).
+        if graph is not None:
+            candidates.append(getattr(graph, "end_user_id", None))
+        candidates.append(getattr(self, "_user_id", None))
         if graph is not None:
             candidates.append(getattr(graph, "user_id", None))
 

@@ -61,41 +61,46 @@ export default function PublishDropdown({
   const { t } = useTranslation();
 
   const handlePublishedSwitch = async (checked: boolean) => {
-    mutateAsync(
-      {
-        id: flowId ?? "",
-        access_type: checked ? "PRIVATE" : "PUBLIC",
-      },
-      {
-        onSuccess: (updatedFlow) => {
-          if (flows) {
-            setFlows(
-              flows.map((flow) => {
-                if (flow.id === updatedFlow.id) {
-                  return updatedFlow;
-                }
-                return flow;
-              }),
-            );
-            setCurrentFlow(updatedFlow);
-          } else {
+    try {
+      await mutateAsync(
+        {
+          id: flowId ?? "",
+          access_type: checked ? "PRIVATE" : "PUBLIC",
+        },
+        {
+          onSuccess: (updatedFlow) => {
+            if (flows) {
+              setFlows(
+                flows.map((flow) => {
+                  if (flow.id === updatedFlow.id) {
+                    return updatedFlow;
+                  }
+                  return flow;
+                }),
+              );
+              setCurrentFlow(updatedFlow);
+            } else {
+              setErrorData({
+                title: t("errors.failedToSaveFlow"),
+                list: [t("errors.flowsVariableUndefined")],
+              });
+            }
+          },
+          // biome-ignore lint/suspicious/noExplicitAny: legacy
+          onError: (e: any) => {
+            const detail =
+              e.response?.data?.detail || e.message || "Unknown error";
             setErrorData({
               title: t("errors.failedToSaveFlow"),
-              list: [t("errors.flowsVariableUndefined")],
+              list: [detail],
             });
-          }
+          },
         },
-        // biome-ignore lint/suspicious/noExplicitAny: legacy
-        onError: (e: any) => {
-          const detail =
-            e.response?.data?.detail || e.message || "Unknown error";
-          setErrorData({
-            title: t("errors.failedToSaveFlow"),
-            list: [detail],
-          });
-        },
-      },
-    );
+      );
+    } catch {
+      // mutateAsync rejects after invoking onError; the alert above is the
+      // user-facing failure path, so consume the handled rejection here.
+    }
   };
 
   return (
@@ -224,7 +229,7 @@ export default function PublishDropdown({
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    handlePublishedSwitch(isPublished);
+                    void handlePublishedSwitch(isPublished);
                   }}
                 />
               </div>

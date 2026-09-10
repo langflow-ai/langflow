@@ -3,6 +3,29 @@ import userEvent from "@testing-library/user-event";
 import { useUtilityStore } from "@/stores/utilityStore";
 import SidebarMenuButtons from "../sidebarFooterButtons";
 
+let mockPermissionPending = false;
+let mockPermissionDenied = false;
+// Read-only is true for both halves of the gate, mirroring the real hook.
+const mockUseIsFlowReadOnly = jest.fn(
+  (_flowId: string | undefined) =>
+    mockPermissionPending || mockPermissionDenied,
+);
+const mockUseIsFlowPermissionPending = jest.fn(
+  (_flowId: string | undefined) => mockPermissionPending,
+);
+jest.mock("@/contexts/permissionsContext", () => ({
+  useIsFlowReadOnly: (flowId: string | undefined) =>
+    mockUseIsFlowReadOnly(flowId),
+  useIsFlowPermissionPending: (flowId: string | undefined) =>
+    mockUseIsFlowPermissionPending(flowId),
+}));
+
+jest.mock("@/stores/flowStore", () => ({
+  __esModule: true,
+  default: (selector: (state: { currentFlow: { id: string } }) => unknown) =>
+    selector({ currentFlow: { id: "flow-1" } }),
+}));
+
 // Mock the UI components
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
@@ -113,6 +136,16 @@ describe("SidebarMenuButtons", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockNavigate.mockClear();
+    mockPermissionPending = false;
+    mockPermissionDenied = false;
+    // Reinstate the flag-driven implementation so a test that overrides it
+    // with `mockReturnValue` cannot leak that return into the next one.
+    mockUseIsFlowReadOnly.mockImplementation(
+      () => mockPermissionPending || mockPermissionDenied,
+    );
+    mockUseIsFlowPermissionPending.mockImplementation(
+      () => mockPermissionPending,
+    );
     useUtilityStore.setState({ allowCustomComponents: true });
     // Reset to default sidebar state
     mockUseSidebar.mockReturnValue({
@@ -191,6 +224,7 @@ describe("SidebarMenuButtons", () => {
       const customButton = screen.getByTestId(
         "sidebar-custom-component-button",
       );
+      expect(customButton).toBeDisabled();
       await user.click(customButton);
 
       expect(mockAddComponent).not.toHaveBeenCalled();
@@ -208,8 +242,24 @@ describe("SidebarMenuButtons", () => {
       const customButton = screen.getByTestId(
         "sidebar-custom-component-button",
       );
+      expect(customButton).toBeDisabled();
       await user.click(customButton);
 
+      expect(mockAddComponent).not.toHaveBeenCalled();
+    });
+
+    it("should disable the custom component button while the flow is read-only", async () => {
+      mockUseIsFlowReadOnly.mockReturnValue(true);
+      const user = userEvent.setup();
+
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      const customButton = screen.getByTestId(
+        "sidebar-custom-component-button",
+      );
+      expect(customButton).toBeDisabled();
+      await user.click(customButton);
+      expect(mockUseIsFlowReadOnly).toHaveBeenCalledWith("flow-1");
       expect(mockAddComponent).not.toHaveBeenCalled();
     });
 
@@ -250,6 +300,68 @@ describe("SidebarMenuButtons", () => {
         "sidebar-custom-component-button",
       );
       expect(customButton).not.toBeDisabled();
+    });
+
+    it("should look unavailable while loading, like it does for a pending check", () => {
+      // Both reasons refuse the click, so both must look refused. Dimming one
+      // and not the other reads as a bug rather than a policy.
+      render(<SidebarMenuButtons {...defaultProps} isLoading={true} />);
+
+      expect(screen.getByTestId("sidebar-custom-component-button")).toHaveClass(
+        "cursor-not-allowed",
+        "opacity-70",
+      );
+    });
+
+    // The add path refuses to run while the flow permission query resolves.
+    // Without gating the button too, the click is discarded with nothing
+    // reported and the control looks exactly like a working one (LE-2176).
+    it("should disable custom component button while the permission check is pending", () => {
+      mockPermissionPending = true;
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(
+        screen.getByTestId("sidebar-custom-component-button"),
+      ).toBeDisabled();
+    });
+
+    it("should look unavailable while the permission check is pending", () => {
+      // `unstyled` opts out of the base class carrying `disabled:opacity-70`,
+      // so without an explicit class the button would block the click while
+      // still looking enabled — the exact defect being fixed.
+      mockPermissionPending = true;
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(screen.getByTestId("sidebar-custom-component-button")).toHaveClass(
+        "cursor-not-allowed",
+        "opacity-70",
+      );
+    });
+
+    it("should not call addComponent while the permission check is pending", async () => {
+      const user = userEvent.setup();
+      mockPermissionPending = true;
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      await user.click(screen.getByTestId("sidebar-custom-component-button"));
+
+      expect(mockAddComponent).not.toHaveBeenCalled();
+    });
+
+    it("should add normally once the permission check resolves", async () => {
+      const user = userEvent.setup();
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      const customButton = screen.getByTestId(
+        "sidebar-custom-component-button",
+      );
+      await user.click(customButton);
+
+      expect(customButton).not.toHaveClass("cursor-not-allowed");
+      expect(mockAddComponent).toHaveBeenCalledWith(
+        mockCustomComponent,
+        "CustomComponent",
+      );
     });
 
     it("should not call addComponent when button is disabled and clicked", async () => {
@@ -715,6 +827,37 @@ describe("SidebarMenuButtons", () => {
       expect(async () => {
         await user.click(customButton);
       }).not.toThrow();
+    });
+  });
+
+  describe("Denied Permission", () => {
+    it("should disable the custom component button when write is denied", () => {
+      mockPermissionDenied = true;
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(
+        screen.getByTestId("sidebar-custom-component-button"),
+      ).toBeDisabled();
+    });
+
+    it("should look unavailable when write is denied", () => {
+      mockPermissionDenied = true;
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      expect(screen.getByTestId("sidebar-custom-component-button")).toHaveClass(
+        "cursor-not-allowed",
+        "opacity-70",
+      );
+    });
+
+    it("should not call addComponent when write is denied", async () => {
+      const user = userEvent.setup();
+      mockPermissionDenied = true;
+      render(<SidebarMenuButtons {...defaultProps} />);
+
+      await user.click(screen.getByTestId("sidebar-custom-component-button"));
+
+      expect(mockAddComponent).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,3 +1,5 @@
+import type { WatsonxFlowEligibilityIssue } from "./helpers/watsonx-flow-eligibility";
+
 export type DeploymentProviderType = "watsonx" | "kubernetes";
 
 export const DEFAULT_FLOW_NAME = "Flow";
@@ -53,6 +55,8 @@ export interface SelectedFlowVersion {
   flowName?: string;
   versionId: string;
   versionTag: string;
+  /** Undefined means unchecked; null means checked and eligible. */
+  wxoEligibilityIssue?: WatsonxFlowEligibilityIssue | null;
 }
 
 export function getSelectedFlowVersionKey(flowId: string, versionId: string) {

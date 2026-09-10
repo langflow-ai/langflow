@@ -7,6 +7,7 @@ import { decorateWxoUrl } from "@/utils/decorate-wxo-url";
 import { cn } from "@/utils/utils";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
 import type { DeploymentProvider, ProviderAccount } from "../types";
+import { handleTabListKeyDown } from "../utils/tab-keyboard-navigation";
 import ProviderCredentialsForm from "./provider-credentials-form";
 import { RadioSelectItem } from "./radio-select-item";
 
@@ -21,6 +22,8 @@ const PROVIDERS: DeploymentProvider[] = [
 
 type EnvironmentTab = "existing" | "new";
 
+const ENVIRONMENT_TABS: EnvironmentTab[] = ["existing", "new"];
+
 function EnvironmentTabToggle({
   activeTab,
   onTabChange,
@@ -29,14 +32,33 @@ function EnvironmentTabToggle({
   onTabChange: (tab: EnvironmentTab) => void;
 }) {
   const { t } = useTranslation();
+
   return (
     <div className="rounded-xl border border-border bg-muted p-1">
-      <div className="grid grid-cols-2 gap-4">
-        {(["existing", "new"] as const).map((tab) => (
+      <div
+        role="tablist"
+        aria-label={t("deployments.environmentTabsAriaLabel")}
+        className="grid grid-cols-2 gap-4"
+      >
+        {ENVIRONMENT_TABS.map((tab, index) => (
           <button
             key={tab}
+            id={`environment-tab-${tab}`}
             type="button"
+            role="tab"
+            aria-selected={activeTab === tab}
+            aria-controls={`environment-panel-${tab}`}
+            tabIndex={activeTab === tab ? 0 : -1}
             onClick={() => onTabChange(tab)}
+            onKeyDown={(event) =>
+              handleTabListKeyDown(
+                event,
+                index,
+                ENVIRONMENT_TABS,
+                onTabChange,
+                "environment-tab",
+              )
+            }
             className={cn(
               "rounded-lg py-2 text-sm transition-colors",
               activeTab === tab
@@ -180,19 +202,30 @@ export default function StepProvider() {
             activeTab={environmentTab}
             onTabChange={setEnvironmentTab}
           />
-          {environmentTab === "existing" ? (
+          <div
+            id="environment-panel-existing"
+            role="tabpanel"
+            aria-labelledby="environment-tab-existing"
+            hidden={environmentTab !== "existing"}
+          >
             <EnvironmentList
               environments={environments}
               selectedEnvironment={selectedInstance}
               onSelectEnvironment={setSelectedInstance}
             />
-          ) : (
+          </div>
+          <div
+            id="environment-panel-new"
+            role="tabpanel"
+            aria-labelledby="environment-tab-new"
+            hidden={environmentTab !== "new"}
+          >
             <ProviderCredentialsForm
               credentials={credentials}
               onCredentialsChange={setCredentials}
               layout="two-column"
             />
-          )}
+          </div>
         </div>
       ) : (
         <ProviderCredentialsForm

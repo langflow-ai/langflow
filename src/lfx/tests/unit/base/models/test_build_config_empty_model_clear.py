@@ -8,11 +8,14 @@ the node was never configured for. Because ``POST /api/v2/workflows``
 carries the live-canvas ``data`` override, the substituted model is what
 actually executes, silently, billed to the wrong provider account.
 
-The auto-default (user's ``__default_language_model__`` variable, falling
-back to ``options[0]``) remains intentional for the initial-load event
-(``field_name=None``, e.g. a freshly dropped node) and for non-model field
-triggers. Only an explicit model-field update with an empty value must be
-left empty.
+LE-2168 narrowed it again: a bare initial load (``field_name=None``, a freshly
+dropped node or a reopened flow) no longer falls back to ``options[0]`` either,
+because an unvalidated credential harvested from the environment is enough to
+mark a provider enabled, so the fallback pre-selected a provider the user never
+set up. Only the user's stored ``__default_language_model__`` fills there. A
+user-triggered update such as entering an api_key still fills, and so does the
+replacement of a selection that filters or provider policy just took away.
+See ``test_build_config_no_unconfigured_default.py``.
 """
 
 from __future__ import annotations
@@ -109,9 +112,9 @@ class TestExplicitModelClearStaysEmpty:
         assert result["model"]["value"][0]["provider"] == "OpenAI"
 
 
-class TestAutoDefaultStillFiresForOtherTriggers:
-    def test_initial_load_still_auto_fills_default(self):
-        """field_name=None (new node dropped on canvas) keeps the default fill."""
+class TestAutoDefaultNoLongerGuessesAProvider:
+    def test_initial_load_does_not_auto_fill_without_explicit_default(self):
+        """field_name=None (new node dropped on canvas) must not guess a provider (LE-2168)."""
         build_config = {"model": {"value": [], "options": []}}
 
         result = update_model_options_in_build_config(
@@ -123,12 +126,10 @@ class TestAutoDefaultStillFiresForOtherTriggers:
             field_value=None,
         )
 
-        value = result["model"]["value"]
-        assert isinstance(value, list)
-        assert value, "initial load must still auto-select a default model"
+        assert not result["model"]["value"]
 
-    def test_non_model_field_trigger_still_auto_fills_default(self):
-        """A non-model trigger (e.g. api_key entry) keeps the default fill."""
+    def test_non_model_field_trigger_still_auto_fills(self):
+        """A non-model trigger (e.g. api_key entry) is an explicit act and keeps the fill."""
         build_config = {"model": {"value": [], "options": []}}
 
         result = update_model_options_in_build_config(
@@ -140,9 +141,7 @@ class TestAutoDefaultStillFiresForOtherTriggers:
             field_value="sk-test",
         )
 
-        value = result["model"]["value"]
-        assert isinstance(value, list)
-        assert value
+        assert result["model"]["value"]
 
     def test_model_refresh_with_existing_selection_is_preserved(self):
         """Refresh (field_name="model") with a real selection never rewrites it."""
