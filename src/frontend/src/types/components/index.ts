@@ -247,6 +247,8 @@ export type SliderComponentType = {
     id: number;
   }[];
   sliderInput?: boolean;
+  valueInverted?: boolean;
+  sliderColor?: "default" | "red";
 };
 
 export type FilePreviewType = {

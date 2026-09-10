@@ -2401,5 +2401,7 @@
   "sharing.file.level.execute.desc": "查看此文件。文件不使用“可运行”权限级别。",
   "sharing.file.level.write.desc": "查看和编辑此文件。",
   "sharing.file.level.admin.desc": "查看、编辑和删除此文件。",
-  "sharing.permission.for": "{{target}} 的权限"
+  "sharing.permission.for": "{{target}} 的权限",
+  "slider.strict": "严格",
+  "slider.permissive": "宽松"
 }
