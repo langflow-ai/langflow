@@ -4,18 +4,29 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import SecretStr
 
-from lfx.integrations.capabilities import ScopeSet
-from lfx.integrations.errors import AuthExpiredError, ConnectionUnresolvedError, ScopeMissingError
+from lfx.integrations.errors import AuthExpiredError, ConnectionUnresolvedError
 from lfx.integrations.models import (
     ConnectionAccount,
     ConnectionResolutionRequest,
     ResolvedCredential,
 )
-from lfx.services.connection.base import BaseConnectionResolverService
+from lfx.services.connection.base import BaseConnectionResolverService, ConnectionAccessPolicy
+from lfx.services.variable.request_scope import is_env_fallback_disabled
+
+if TYPE_CHECKING:
+    from lfx.integrations.errors import ConnectionUnresolvedReason
+
+
+class _InvalidCredentialError(ValueError):
+    """Carry only a fixed reason across the private parser boundary."""
+
+    def __init__(self, *, reason: ConnectionUnresolvedReason) -> None:
+        self.reason = reason
+        super().__init__(reason)
 
 
 def _parse_expiry(value: Any) -> datetime | None:
@@ -34,22 +45,23 @@ def _parse_expiry(value: Any) -> datetime | None:
 
 def _parse_wire_value(raw: str, request: ConnectionResolutionRequest) -> ResolvedCredential:
     """Keep raw wire values and validation exceptions out of public error chains."""
+    reason: ConnectionUnresolvedReason = "invalid-credential"
     try:
         return _parse_credential(raw, request)
+    except _InvalidCredentialError as exc:
+        reason = exc.reason
     except (ValueError, TypeError, OverflowError, OSError):
         pass
     # Raise outside the handler so even __context__ cannot retain a raw value.
     raise ConnectionUnresolvedError(
-        request.ref.to_handle(), env_key=request.ref.env_key(), provider=request.ref.provider
+        request.ref.to_handle(), env_key=request.ref.env_key(), provider=request.ref.provider, reason=reason
     )
 
 
 def _parse_credential(raw: str, request: ConnectionResolutionRequest) -> ResolvedCredential:
     """Validate a token or credential JSON inside the sanitized parser boundary."""
     if not raw:
-        raise ConnectionUnresolvedError(
-            request.ref.to_handle(), env_key=request.ref.env_key(), provider=request.ref.provider
-        )
+        raise _InvalidCredentialError(reason="invalid-access-token")
     if not raw.lstrip().startswith("{"):
         return ResolvedCredential(
             access_token=SecretStr(raw),
@@ -59,40 +71,39 @@ def _parse_credential(raw: str, request: ConnectionResolutionRequest) -> Resolve
         )
     try:
         payload = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        msg = "Connection credential JSON is malformed"
-        raise ValueError(msg) from exc
+    except json.JSONDecodeError:
+        raise _InvalidCredentialError(reason="malformed-json") from None
     if not isinstance(payload, dict):
-        msg = "Connection credential JSON must be an object"
-        raise TypeError(msg)
+        raise _InvalidCredentialError(reason="malformed-json")
     forbidden = {"refresh_token", "client_secret", "password"} & payload.keys()
     if forbidden:
-        names = ", ".join(sorted(forbidden))
-        msg = f"Connection credential JSON must not contain long-lived secret fields: {names}"
-        raise ValueError(msg)
+        raise _InvalidCredentialError(reason="long-lived-secret")
     allowed = {"access_token", "token_type", "expires_at", "scopes", "account"}
     unknown = set(payload) - allowed
     if unknown:
-        msg = f"Connection credential JSON contains unsupported fields: {', '.join(sorted(unknown))}"
-        raise ValueError(msg)
+        raise _InvalidCredentialError(reason="unsupported-fields")
     access_token = payload.get("access_token")
     if not isinstance(access_token, str) or not access_token:
-        msg = "Connection credential JSON requires a non-empty access_token"
-        raise ValueError(msg)
+        raise _InvalidCredentialError(reason="invalid-access-token")
     scopes = payload.get("scopes", [])
     if not isinstance(scopes, list) or any(not isinstance(scope, str) or not scope for scope in scopes):
-        msg = "Connection credential JSON scopes must be a list of non-empty strings"
-        raise ValueError(msg)
+        raise _InvalidCredentialError(reason="invalid-scopes")
     token_type = payload.get("token_type", "Bearer")
     if not isinstance(token_type, str) or not token_type:
-        msg = "Connection credential JSON token_type must be a non-empty string"
-        raise ValueError(msg)
+        raise _InvalidCredentialError(reason="invalid-token-type")
     account_payload = payload.get("account")
-    account = ConnectionAccount.model_validate(account_payload) if account_payload is not None else None
+    try:
+        account = ConnectionAccount.model_validate(account_payload) if account_payload is not None else None
+    except (ValueError, TypeError):
+        raise _InvalidCredentialError(reason="invalid-account") from None
+    try:
+        expires_at = _parse_expiry(payload.get("expires_at"))
+    except (ValueError, TypeError, OverflowError, OSError):
+        raise _InvalidCredentialError(reason="invalid-expiry") from None
     return ResolvedCredential(
         access_token=SecretStr(access_token),
         token_type=token_type,
-        expires_at=_parse_expiry(payload.get("expires_at")),
+        expires_at=expires_at,
         granted_scopes=frozenset(scopes),
         scopes_verified="scopes" in payload,
         account=account,
@@ -110,17 +121,15 @@ class EnvConnectionResolver(BaseConnectionResolverService):
         self._fallback_variable_service = None
         self.set_ready()
 
-    async def resolve(self, request: ConnectionResolutionRequest) -> ResolvedCredential:
-        """Resolve and validate the bare-token or JSON headless wire format."""
-        denial = self.authorize_principal(
-            request,
-            connection_owner_id=None,
-            owner_kind="env",
-            allow_non_interactive=True,
-        )
-        if denial is not None:
-            raise denial
+    async def _get_access_policy(self, request: ConnectionResolutionRequest) -> ConnectionAccessPolicy:
+        _ = request
+        return ConnectionAccessPolicy(owner_kind="env", allow_non_interactive=True)
 
+    async def _resolve(
+        self, request: ConnectionResolutionRequest, policy: ConnectionAccessPolicy
+    ) -> ResolvedCredential:
+        """Resolve and validate the bare-token or JSON headless wire format."""
+        _ = policy
         from lfx.services.deps import get_variable_service
 
         variable_service = get_variable_service()
@@ -133,17 +142,14 @@ class EnvConnectionResolver(BaseConnectionResolverService):
         raw = await variable_service.get_variable(request.ref.env_key())
         if raw is None:
             raise ConnectionUnresolvedError(
-                request.ref.to_handle(), env_key=request.ref.env_key(), provider=request.ref.provider
+                request.ref.to_handle(),
+                env_key=request.ref.env_key(),
+                provider=request.ref.provider,
+                reason="env-fallback-disabled" if is_env_fallback_disabled() else "missing",
             )
         credential = _parse_wire_value(str(raw), request)
         if credential.expires_at is not None and credential.expires_at <= datetime.now(timezone.utc):
             raise AuthExpiredError(provider=request.ref.provider)
-        if credential.scopes_verified:
-            missing = ScopeSet.missing(
-                provider=request.ref.provider, required=request.required_scopes, granted=credential.granted_scopes
-            )
-            if missing:
-                raise ScopeMissingError(frozenset(missing), provider=request.ref.provider)
         return credential
 
     async def teardown(self) -> None:

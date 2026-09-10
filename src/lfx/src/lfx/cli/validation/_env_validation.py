@@ -81,12 +81,18 @@ def validate_connection_refs_for_env(graph: Graph) -> list[ConnectionUnresolvedE
     from lfx.integrations.models import ConnectionRef
     from lfx.services.connection.env_resolver import EnvConnectionResolver
     from lfx.services.deps import get_connection_resolver
-    from lfx.services.variable.request_scope import normalize_parsed_variables
+    from lfx.services.variable.request_scope import (
+        get_active_request_variables,
+        is_env_fallback_disabled,
+        normalize_parsed_variables,
+    )
     from lfx.utils.env_var_security import safe_getenv
 
     errors: list[ConnectionUnresolvedError] = []
-    request_variables = normalize_parsed_variables(graph.context.get("request_variables") or {})
-    no_env_fallback = bool(graph.context.get("no_env_fallback"))
+    request_variables = normalize_parsed_variables(
+        graph.context.get("request_variables") or get_active_request_variables() or {}
+    )
+    no_env_fallback = bool(graph.context.get("no_env_fallback")) or is_env_fallback_disabled()
     uses_environment: bool | None = None
 
     for vertex in graph.vertices:
@@ -114,5 +120,12 @@ def validate_connection_refs_for_env(graph: Graph) -> list[ConnectionUnresolvedE
             if not injected and not no_env_fallback:
                 injected = safe_getenv(env_key) or safe_getenv(alias)
             if not injected:
-                errors.append(ConnectionUnresolvedError(ref.to_handle(), env_key=env_key, provider=ref.provider))
+                errors.append(
+                    ConnectionUnresolvedError(
+                        ref.to_handle(),
+                        env_key=env_key,
+                        provider=ref.provider,
+                        reason="env-fallback-disabled" if no_env_fallback else "missing",
+                    )
+                )
     return errors

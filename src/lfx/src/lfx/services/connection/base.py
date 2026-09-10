@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import abc
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING, Literal, final
 
-from lfx.integrations.errors import ConnectionNotAuthorizedError, IntegrationError
+from pydantic import BaseModel, ConfigDict, StrictStr
+
+from lfx.integrations.capabilities import ScopeSet
+from lfx.integrations.errors import ConnectionNotAuthorizedError, IntegrationError, ScopeMissingError
 from lfx.services.base import Service
 from lfx.services.schema import ServiceType
 
@@ -19,14 +22,74 @@ if TYPE_CHECKING:
     from lfx.services.authorization.base import ExecutionPrincipal
 
 
+class ConnectionAccessPolicy(BaseModel):
+    """Host-owned metadata, loaded without decrypting or refreshing credentials.
+
+    This policy must describe the same connection passed to ``_resolve``. Share
+    decisions come from host authorization, never flow JSON or component input.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
+
+    owner_kind: Literal["user", "instance", "env"]
+    connection_owner_id: StrictStr | None = None
+    connection_id: StrictStr | None = None
+    allow_non_interactive: bool = False
+    explicit_share_authorized: bool = False
+
+
 class BaseConnectionResolverService(Service, abc.ABC):
     """Resolve portable connection handles inside the current host boundary."""
 
     name = ServiceType.CONNECTION_RESOLVER_SERVICE.value
 
-    @abc.abstractmethod
+    def __init_subclass__(cls) -> None:
+        super().__init_subclass__()
+        if cls.resolve is not BaseConnectionResolverService.resolve:
+            msg = "Connection resolvers must implement _get_access_policy and _resolve; resolve cannot be overridden"
+            raise TypeError(msg)
+
+    @final
     async def resolve(self, request: ConnectionResolutionRequest) -> ResolvedCredential:
-        """Resolve a reference to a short-lived credential."""
+        """Enforce the portable floor before invoking the host's credential hook."""
+        if request.principal.kind in {"anonymous_public", "unknown"}:
+            raise ConnectionNotAuthorizedError(provider=request.ref.provider)
+        policy = await self._get_access_policy(request)
+        if not isinstance(policy, ConnectionAccessPolicy):
+            raise ConnectionNotAuthorizedError(provider=request.ref.provider)
+        denial = BaseConnectionResolverService.authorize_principal(
+            self,
+            request,
+            connection_owner_id=policy.connection_owner_id,
+            owner_kind=policy.owner_kind,
+            allow_non_interactive=policy.allow_non_interactive,
+            explicit_share_authorized=policy.explicit_share_authorized,
+        )
+        if denial is not None:
+            raise denial
+        credential = await self._resolve(request, policy)
+        if request.required_scopes and not credential.scopes_verified:
+            raise ScopeMissingError(request.required_scopes, provider=request.ref.provider, scopes_verified=False)
+        missing = ScopeSet.missing(
+            provider=request.ref.provider, required=request.required_scopes, granted=credential.granted_scopes
+        )
+        if missing:
+            raise ScopeMissingError(frozenset(missing), provider=request.ref.provider)
+        return credential
+
+    @abc.abstractmethod
+    async def _get_access_policy(self, request: ConnectionResolutionRequest) -> ConnectionAccessPolicy:
+        """Load ownership/opt-in metadata and verify any explicit share, without reading secrets."""
+
+    @abc.abstractmethod
+    async def _resolve(
+        self, request: ConnectionResolutionRequest, policy: ConnectionAccessPolicy
+    ) -> ResolvedCredential:
+        """Read/refresh only the connection identified by the authorized policy.
+
+        Hosts must keep policy and credential lookup consistent, using the same
+        connection id and checking for ownership/policy changes during resolution.
+        """
 
     async def describe(
         self,

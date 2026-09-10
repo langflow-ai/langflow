@@ -5,7 +5,7 @@ Decision ID: connection-contract
 Applies to: INT-2 (lfx), with the langflow-base obligations INT-4 and INT-5 must meet and the Enterprise seams
 Owners (sign-off roles): lfx owner, langflow-base owner, Enterprise owner, frontend owner
 Last verified: 2026-09-01
-Last amended: 2026-09-03 (INT-2 implementation review)
+Last amended: 2026-09-10 (resolver authorization and credential diagnostics review)
 
 This document is the INT-2 design that the discovery gate asks the lfx, langflow-base, and Enterprise owners to sign
 off before INT-2 is built. Each section states the recommended decision, why, and what was rejected. Section 12
@@ -124,6 +124,20 @@ string is simpler for tweaks, env, and manifest sorting; the dict is the parsed 
   is a frozen dataclass `{ref, principal: ExecutionPrincipal, required_scopes: frozenset[str], component_id,
   flow_id, run_id}`; optional `async def describe(self, ref, principal) -> ConnectionStatus | None` for pickers and
   health (default `None`).
+- `resolve()` is the base-owned, final entry point; subclass creation rejects direct or inherited overrides.
+  Hosts implement two abstract hooks: `_get_access_policy(request) -> ConnectionAccessPolicy` and
+  `_resolve(request, policy) -> ResolvedCredential`. The first loads only non-secret ownership/opt-in metadata
+  and any host-verified share decision. The base rejects unknown/anonymous principals before that lookup and
+  applies the complete portable deny floor before the credential hook can decrypt or refresh anything.
+  Overriding `authorize_principal()` cannot weaken this path. The base also checks required scope coverage
+  before returning a credential. These runtime checks apply to the persistent, OAuth and Enterprise resolvers;
+  they do not depend on each implementation remembering a helper or a route-matrix entry.
+  Existing unreleased host resolvers must move their credential logic from `resolve` into `_resolve` and add
+  the policy hook. `ConnectionAccessPolicy` is immutable, strictly validated host data: `owner_kind`,
+  `connection_owner_id`, optional `connection_id`, `allow_non_interactive=False` and
+  `explicit_share_authorized=False`. Hosts must resolve the same connection that was authorized, and guard
+  against ownership/policy changes between the metadata lookup and secret access. Host Python code remains
+  trusted; this contract prevents omitted checks, not malicious plugins or forged host metadata.
 - The member is added to `src/lfx/src/lfx/services/schema.py` and
   `src/backend/base/langflow/services/schema.py`. `deps.get_connection_resolver()` follows the
   `get_checkpoint_service()` pattern (`src/lfx/src/lfx/services/deps.py:204`): registered service, else the built-in
@@ -202,12 +216,16 @@ authorization. Deferred webhook setup must adopt the same preflight when impleme
 **Decision: one `EnvConnectionResolver` in lfx serves `lfx run`, embedded Python, and `lfx serve`, because the serve
 request scope is already a ContextVar the variable service reads.**
 
-- `lfx/services/connection/env_resolver.py`: `resolve()` computes `ref.env_key()` and calls
+- `lfx/services/connection/env_resolver.py`: `_get_access_policy()` supplies environment ownership;
+  `_resolve()` computes `ref.env_key()` and calls
   `get_variable_service().get_variable(key)`. That one call already implements request scope
   (`activate_request_variables` in `src/lfx/src/lfx/cli/common.py:447-449`, `LANGFLOW_REQUEST_VARIABLES` JSON via
   `runtime_variables.py`, the `x-langflow-global-var-*` alias), then `safe_getenv` with reserved names denied,
   skipped under `no_env_fallback`. No new ContextVar. If the owners want the ticket's two names,
   `RequestScopedConnectionResolver` is a trivial subclass (question 12.a.1).
+- `run_flow` activates its graph's request-variable and no-environment-fallback ContextVars for execution,
+  including human-input runs, then restores both in `finally`, matching serve execution. Supplied request
+  credentials therefore take precedence over ambient process credentials and cannot leak into later runs.
 - Trust boundary: in standalone lfx the request scope is the intended injection channel, not a bypass. There is no
   database, no user, and no connection-provisioning permission to enforce; the only principal is the serve caller,
   who is authenticated by the serve API key and already controls the flow's inputs. A caller can substitute only a
@@ -222,9 +240,21 @@ request scope is already a ContextVar the variable service reads.**
   `{"access_token", "token_type", "expires_at", "scopes", "account": {"id", "display", "tenant_id"}}`;
   `normalize_parsed_variables` (`request_scope.py:28`) already serializes nested JSON, so detection is "starts with
   `{`". Refresh is the injector's job (`refreshable=False`).
+- When an action declares any `required_scopes`, bare tokens and JSON without `scopes` fail with
+  `ScopeMissingError`, `details.scopes_verified=False`, and an instruction to supply scope metadata.
+  Verified but insufficient scopes fail with the same error code and `details.scopes_verified=True`.
+  Bare tokens remain supported for actions with no declared scopes. For headless injection, "verified" means
+  the operator supplied scope metadata; lfx does not introspect the token at the provider.
 - Failure: `ConnectionUnresolvedError` names the handle, the env key, and the JSON form, never a value. `lfx run`
   gains `validate_connection_refs_for_env` beside `validate_global_variables_for_env` so the run fails before
   execution under `--check-variables`. `lfx serve` surfaces the typed error through the normal component-error path.
+- Resolution errors expose a fixed `reason` in both the attribute and `details`, plus source-authored guidance:
+  `missing`, `env-fallback-disabled`, `malformed-json`, `long-lived-secret`, `unsupported-fields`,
+  `invalid-access-token`, `invalid-scopes`, `invalid-token-type`, `invalid-account`, `invalid-expiry`, or
+  `invalid-credential`. Long-lived-secret guidance names only the static forbidden field list; unsupported
+  field names and values are never echoed. Public parsing errors are raised outside the exception handler,
+  retaining neither the raw exception cause nor context. With `no_env_fallback`, runtime and CLI preflight
+  direct the operator to request-scoped injection or the host secret provider instead of setting process env.
 - Identity: the `serve_identity.py` label becomes `ExecutionPrincipal(kind="headless_operator", actor_label=...)`;
   the `run/_defaults.py` throwaway UUID maps to the same kind. The resolver treats both as instance-or-environment
   only.

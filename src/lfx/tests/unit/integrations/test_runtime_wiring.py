@@ -80,7 +80,8 @@ async def test_component_builds_lazy_lease_from_graph_principal(monkeypatch: pyt
     assert resolver.request.required_scopes == frozenset({"drive.read"})
 
 
-def test_headless_preflight_reports_missing_connection(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("no_env_fallback", [False, True])
+def test_headless_preflight_reports_missing_connection(monkeypatch: pytest.MonkeyPatch, no_env_fallback) -> None:
     monkeypatch.delenv("LF_CONNECTION__TEST_2EPROVIDER__WORK", raising=False)
     vertex = SimpleNamespace(
         data={
@@ -92,13 +93,16 @@ def test_headless_preflight_reports_missing_connection(monkeypatch: pytest.Monke
         },
         params={"connection": "test.provider/work"},
     )
-    graph = SimpleNamespace(vertices=[vertex], context={})
+    graph = SimpleNamespace(vertices=[vertex], context={"no_env_fallback": no_env_fallback})
 
     errors = validate_connection_refs_for_env(graph)
 
     assert len(errors) == 1
     assert isinstance(errors[0], ConnectionUnresolvedError)
     assert errors[0].env_key == "LF_CONNECTION__TEST_2EPROVIDER__WORK"
+    assert errors[0].reason == ("env-fallback-disabled" if no_env_fallback else "missing")
+    if no_env_fallback:
+        assert "Set LF_CONNECTION" not in str(errors[0])
 
 
 @pytest.mark.asyncio
@@ -238,7 +242,7 @@ async def test_run_flow_uses_configured_resolver_without_environment(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     from lfx.run.base import run_flow
-    from lfx.services.connection.base import BaseConnectionResolverService
+    from lfx.services.connection.base import BaseConnectionResolverService, ConnectionAccessPolicy
     from lfx.services.manager import get_service_manager
 
     class HostResolver(BaseConnectionResolverService):
@@ -246,7 +250,10 @@ async def test_run_flow_uses_configured_resolver_without_environment(
             super().__init__()
             self.set_ready()
 
-        async def resolve(self, request):
+        async def _get_access_policy(self, _request):
+            return ConnectionAccessPolicy(owner_kind="env", allow_non_interactive=True)
+
+        async def _resolve(self, request, _policy):
             return ResolvedCredential(access_token=SecretStr("host-only"), provider=request.ref.provider)
 
     manager = get_service_manager()

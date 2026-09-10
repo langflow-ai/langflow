@@ -57,7 +57,7 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | `IntegrationProvider` / `OAuthProfile` / `IntegrationCapability` / `ScopeSet` | `lfx.integrations` |
 | `integration_action()` | `lfx.integrations` |
 | `Component.resolve_connection(field_name)` | `lfx.custom.custom_component.component.Component` |
-| `BaseConnectionResolverService` | `lfx.services.connection` |
+| `BaseConnectionResolverService`, `ConnectionAccessPolicy` | `lfx.services.connection` |
 
 ### Outputs
 
@@ -205,6 +205,14 @@ the deserialize half is covered by
 
 ### v0 (this release)
 
+- Enforced the unreleased connection resolver contract through a final `resolve`
+  entry point. Hosts now implement `_get_access_policy` and `_resolve`; ownership
+  and non-interactive/share checks run before credential access. Required scopes
+  reject unverified credentials with a typed diagnostic. Resolution failures carry
+  fixed reason codes and actionable guidance without raw credential values or
+  exception chains. `run_flow` now activates its injected variables and environment
+  policy for credential lookups, restoring the prior scope after execution.
+  No previously released API changes; `BUNDLE_API_VERSION` remains 1.
 - Initial surface enumerated above.  Frozen as `BUNDLE_API_VERSION = 1`.
 - Added the provider-neutral connection-reference, resolver, capability,
   integration-error, and telemetry contracts used by dedicated integration

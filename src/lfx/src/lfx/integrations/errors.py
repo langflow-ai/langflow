@@ -69,18 +69,67 @@ class IntegrationError(Exception):
         super().__init__(self.safe_message)
 
 
+ConnectionUnresolvedReason = Literal[
+    "missing",
+    "env-fallback-disabled",
+    "malformed-json",
+    "long-lived-secret",
+    "unsupported-fields",
+    "invalid-access-token",
+    "invalid-scopes",
+    "invalid-token-type",
+    "invalid-account",
+    "invalid-expiry",
+    "invalid-credential",
+]
+
+_CONNECTION_UNRESOLVED_HINTS: dict[ConnectionUnresolvedReason, str] = {
+    "missing": "Configure the connection for this execution environment.",
+    "env-fallback-disabled": (
+        "Supply the connection through request-scoped variables or the host's secret provider; "
+        "environment fallback is disabled."
+    ),
+    "malformed-json": "Supply a valid credential JSON object containing access_token.",
+    "long-lived-secret": (
+        "Remove refresh_token, client_secret, and password fields; supply only a short-lived access token "
+        "and supported credential metadata."
+    ),
+    "unsupported-fields": "Use only access_token, token_type, expires_at, scopes, and account in credential JSON.",
+    "invalid-access-token": "Supply a non-empty string in access_token.",
+    "invalid-scopes": "Supply scopes as a list of non-empty strings.",
+    "invalid-token-type": "Supply token_type as a non-empty string.",
+    "invalid-account": "Supply account as an object with id and optional display and tenant_id strings.",
+    "invalid-expiry": "Supply expires_at as a valid ISO-8601 string or Unix timestamp.",
+    "invalid-credential": "Supply a token or a credential JSON object with valid metadata.",
+}
+
+
 class ConnectionUnresolvedError(IntegrationError):
     code = "connection-unresolved"
 
-    def __init__(self, handle: str, *, env_key: str | None = None, provider: str | None = None) -> None:
-        location = f" Set {env_key} to a token or credential JSON object." if env_key else ""
+    def __init__(
+        self,
+        handle: str,
+        *,
+        env_key: str | None = None,
+        provider: str | None = None,
+        reason: ConnectionUnresolvedReason = "missing",
+    ) -> None:
+        if reason not in _CONNECTION_UNRESOLVED_HINTS:
+            msg = "Unknown connection resolution reason"
+            raise ValueError(msg)
+        hint = _CONNECTION_UNRESOLVED_HINTS[reason]
+        if reason == "missing" and env_key:
+            hint = f"Set {env_key} to a token or credential JSON object."
         super().__init__(
-            f"Connection {handle!r} could not be resolved.{location}",
-            hint="Configure the connection for this execution environment.",
+            f"Connection {handle!r} could not be resolved. {hint}",
+            hint=hint,
             provider=provider,
+            details={"reason": reason},
         )
         self.handle = handle
         self.env_key = env_key
+        self.reason = reason
 
 
 class ConnectionNotAuthorizedError(IntegrationError):
@@ -114,13 +163,23 @@ class AuthExpiredError(IntegrationError):
 class ScopeMissingError(IntegrationError):
     code = "scope-missing"
 
-    def __init__(self, missing: frozenset[str] = frozenset(), *, provider: str | None = None) -> None:
+    def __init__(
+        self,
+        missing: frozenset[str] = frozenset(),
+        *,
+        provider: str | None = None,
+        scopes_verified: bool = True,
+    ) -> None:
         super().__init__(
-            "The connection does not grant every scope required by this action.",
-            hint="Grant the missing scopes and reconnect.",
+            "The connection does not grant every scope required by this action."
+            if scopes_verified
+            else "The connection's granted scopes are unverified; this action requires verified scope metadata.",
+            hint="Grant the missing scopes and reconnect."
+            if scopes_verified
+            else "Supply credential JSON with scopes, or use a host resolver that verifies granted scopes.",
             provider=provider,
             http_status=403,
-            details={"missing": sorted(missing)},
+            details={"missing": sorted(missing), "scopes_verified": scopes_verified},
         )
         self.missing = missing
 
