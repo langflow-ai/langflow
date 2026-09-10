@@ -61,6 +61,10 @@ def _coerce_uuid(job_id: Any) -> Any:
 class DBBackgroundQueue:
     """Database-backed backend behind the BackgroundExecutionService facade."""
 
+    # Separate ``langflow worker`` processes claim and run the jobs; the API
+    # process must never execute one itself.
+    external_workers = True
+
     def __init__(
         self,
         *,
@@ -85,8 +89,23 @@ class DBBackgroundQueue:
         # ponytail: claim is poll-based; add a pg NOTIFY wake here if the
         # up-to-one-poll claim latency ever matters for background jobs.
 
+    async def start(self) -> None:
+        """Nothing to start: workers run in their own processes."""
+
     async def teardown(self) -> None:
         """Nothing to close: the backend holds no connection of its own."""
+
+    async def dispatch(self, job_id: Any, *, flow_id: Any, request: Any, user: Any) -> None:  # noqa: ARG002
+        """The QUEUED row persisted by submit IS the dispatch; workers claim it."""
+        await self.enqueue(str(job_id))
+
+    async def hand_back(self, job_id: Any, *, flow_id: Any, request: Any, user: Any, owner: str) -> bool:  # noqa: ARG002
+        """Resume hand-off: give this owner's claim back to the queue for a worker.
+
+        True iff the owner-guarded IN_PROGRESS->QUEUED flip won; the facade rolls
+        the resume back to SUSPENDED when it did not.
+        """
+        return await self._job_service.requeue_resumed_job(_coerce_uuid(job_id), owner=owner)
 
     # ----------------------------------------------------------- worker claim
 
@@ -173,6 +192,11 @@ class DBBackgroundQueue:
         return requeued
 
     # ------------------------------------------------------------- event tail
+
+    async def tail(self, job_id: str, *, last_seq: int, frame_row: Any) -> AsyncIterator[Any]:
+        """Durable rows framed for the wire: ``events()`` with the facade's framer applied."""
+        async for row in self.events(job_id, last_event_id=last_seq):
+            yield frame_row(row)
 
     async def events(self, job_id: str, last_event_id: int = 0) -> AsyncIterator[Any]:
         """Replay durable events after last_event_id, then poll for new ones.
