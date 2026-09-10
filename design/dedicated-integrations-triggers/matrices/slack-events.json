@@ -44,6 +44,13 @@
       "verified_on": "2026-09-05",
       "notes": "App-level tokens (xapp-) are issued per app, are not workspace-scoped, do not expire, and carry only connection-level scopes such as connections:write and authorizations:read. They are created in the app configuration and cannot be obtained through the OAuth install flow."
     },
+    "slack-socket-lifecycle": {
+      "url": "https://docs.slack.dev/apis/events-api/using-socket-mode/",
+      "title": "Slack: Socket Mode multiple connections and disconnect handling",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-10",
+      "notes": "Up to ten open sockets per app; temporary overlap supports refresh and graceful restart. Payloads can arrive on any active socket. A disconnect warning may arrive about ten seconds ahead but is not guaranteed. No stale-socket timeout or app-lockout behavior is established by this source."
+    },
     "slack-events-reference": {
       "url": "https://docs.slack.dev/reference/events",
       "title": "Slack: Event types reference",
@@ -181,8 +188,8 @@
       "subscription": {
         "required": false,
         "max_ttl_seconds": null,
-        "renewal": "The connection is the subscription. Slack sends a disconnect message with reason warning or refresh_requested before closing, and the listener reconnects; the TRG-3 lease guarantees exactly one replica holds each app's connection, because stale connections count against the ten-connection cap until they time out.",
-        "source": "slack-socket-mode"
+        "renewal": "The connection is the subscription. Handle refresh_requested and unexpected disconnects without relying on advance warning. Slack permits bounded socket overlap for refresh and graceful restart within its ten-open-connection app cap. The TRG-3 lease elects a logical listener owner; the handover must drain and close the retiring socket and use the same dedupe/write-before-ack path for arrivals on either socket, as specified in decisions/process-model.md. Lease expiry does not prove that an old socket has closed.",
+        "source": "slack-socket-lifecycle"
       },
       "payload": {
         "shape": "full",
