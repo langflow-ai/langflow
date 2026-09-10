@@ -68,11 +68,13 @@ class DBBackgroundQueue:
         owner: str | None = None,
         lease_ttl_s: float = 45.0,
         poll_interval_s: float = 0.5,
+        claim_candidates: int = 5,
     ) -> None:
         self._job_service = job_service
         self._owner = owner
         self._lease_ttl_s = lease_ttl_s
         self._poll_interval_s = poll_interval_s
+        self._claim_candidates = claim_candidates
 
     async def enqueue(self, job_id: str) -> None:
         """No-op: the QUEUED row ``submit`` persisted IS the enqueue.
@@ -102,6 +104,7 @@ class DBBackgroundQueue:
         job_id = await self._job_service.claim_next_queued_lease(
             owner=self._owner or "worker:unknown",
             lease_ttl_s=self._lease_ttl_s,
+            candidates=self._claim_candidates,
         )
         if job_id is not None:
             return str(job_id)

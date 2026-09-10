@@ -579,6 +579,10 @@ class JobService(Service):
             job = await session.get(Job, job_id)
             if job is None:
                 return False
+            # The dead worker's owner/heartbeat_at are deliberately kept: the next
+            # claimant's staleness check overwrites both, and dropping them here
+            # would widen this UPDATE beyond the attempt CAS. Do not key off
+            # ``owner`` on a QUEUED row — it can name a dead worker.
             merged = {**(job.job_metadata or {}), "attempt": expected_attempt + 1}
             stmt = (
                 update(Job)

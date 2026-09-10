@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import random
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
@@ -131,11 +132,17 @@ async def _watchdog_loop(
     no recovery pass: the durable row is the queue, so a stale-leased QUEUED
     row is directly re-claimable.
     """
+    # Random initial offset so a fleet started together does not scan in
+    # lockstep: every worker runs this loop, and without jitter their passes
+    # converge into a synchronized full-table read burst every interval.
+    with contextlib.suppress(asyncio.TimeoutError):
+        await asyncio.wait_for(stop_event.wait(), timeout=random.uniform(0, interval_s))  # noqa: S311
     while not stop_event.is_set():
         with contextlib.suppress(Exception):
             await backend.requeue_lost(lease_ttl_s=lease_ttl_s)
         try:
-            await asyncio.wait_for(stop_event.wait(), timeout=interval_s)
+            # +/-25% jitter so ticks stay spread out instead of re-converging.
+            await asyncio.wait_for(stop_event.wait(), timeout=interval_s * random.uniform(0.75, 1.25))  # noqa: S311
         except asyncio.TimeoutError:
             continue
 
@@ -234,6 +241,7 @@ async def build_worker(*, owner: str | None = None):
         owner=owner,
         lease_ttl_s=settings.background_lease_ttl_s,
         poll_interval_s=settings.background_poll_interval_s,
+        claim_candidates=settings.background_claim_candidates,
     )
     runner = WorkerJobRunner(settings=settings, live_bus=InMemoryLiveBus(), owner=owner)
 

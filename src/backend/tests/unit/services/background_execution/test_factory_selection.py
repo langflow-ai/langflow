@@ -13,6 +13,7 @@ class _ScaledSettings:
     background_backend_is_scaled = True
     background_lease_ttl_s = 45.0
     background_poll_interval_s = 0.5
+    background_claim_candidates = 5
 
 
 class _DefaultSettings:

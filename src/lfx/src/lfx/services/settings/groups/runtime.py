@@ -131,6 +131,11 @@ class RuntimeSettings(BaseModel):
     """How often the scaled worker's periodic watchdog scans for orphaned leases
     (a dead worker's in-flight job) and reconciles them WITHOUT requiring a
     restart. Must be > 0."""
+    background_claim_candidates: int = Field(default=5, gt=0)
+    """How many oldest QUEUED jobs a scaled worker reads per claim attempt before
+    lease-racing them in order. Size it roughly to the worker fleet: with more
+    workers than candidates the extras lose every race and back off a full idle
+    window. Must be > 0."""
     background_backend: Literal["default", "scaled"] = "default"
     """Which background-execution backend runs v2 background workflow jobs.
 
