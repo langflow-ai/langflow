@@ -7,7 +7,8 @@ import os
 from typing import TYPE_CHECKING
 
 import pytest
-from lfx.extension import load_extension, validate_extension
+from lfx.base.models import provider_registry
+from lfx.extension import load_extension, load_extension_bundles, validate_extension
 from lfx.extension.bundle_registry import BundleRecord, BundleRegistry
 
 if TYPE_CHECKING:
@@ -52,7 +53,14 @@ def _capability_manifest(*, provider_id: str = "google") -> dict:
     }
 
 
-def _write_extension(tmp_path: Path, *, capability_manifest: dict | None = None) -> None:
+@pytest.fixture(autouse=True)
+def _isolate_registry():
+    provider_registry.clear()
+    yield
+    provider_registry.clear()
+
+
+def _write_extension(tmp_path: Path, *, capability_manifest: dict | None = None, with_provider: bool = False) -> None:
     manifest = {
         "id": "lfx-google",
         "version": "1.13.0",
@@ -60,6 +68,14 @@ def _write_extension(tmp_path: Path, *, capability_manifest: dict | None = None)
         "lfx": {"compat": ["1"]},
         "bundles": [{"name": "google", "path": "google"}],
     }
+    if with_provider:
+        manifest["providers"] = [
+            {
+                "name": "IntegrationTestProvider",
+                "provider_id": "integration-test",
+                "metadata": {"mapping": {"model_class": "ChatOpenAI", "model_param": "model"}},
+            }
+        ]
     if capability_manifest is not None:
         manifest["integrations"] = [{"provider_id": "google", "bundle": "google", "path": "capabilities.v1.json"}]
     (tmp_path / "extension.json").write_text(json.dumps(manifest), encoding="utf-8")
@@ -150,7 +166,8 @@ def test_validate_rejects_malformed_capability_manifest(tmp_path: Path, mutation
 
 
 def test_loader_rejects_capability_manifest_for_another_provider(tmp_path: Path) -> None:
-    _write_extension(tmp_path, capability_manifest=_capability_manifest(provider_id="microsoft"))
+    _write_extension(tmp_path, capability_manifest=_capability_manifest(provider_id="microsoft"), with_provider=True)
+    before = provider_registry.get_registry_snapshot()
 
     result = load_extension(tmp_path)
 
@@ -158,6 +175,47 @@ def test_loader_rejects_capability_manifest_for_another_provider(tmp_path: Path)
     assert result.integrations == []
     assert [error.code for error in result.errors] == ["manifest-invalid"]
     assert "microsoft" in result.errors[0].message
+    assert provider_registry.get_registry_snapshot() == before
+
+
+@pytest.mark.parametrize("failure", [None, "manifest-invalid", "module-import-failed"])
+def test_multi_bundle_provider_registration_requires_all_bundles_to_load(tmp_path: Path, failure: str | None) -> None:
+    _write_extension(tmp_path, capability_manifest=_capability_manifest(), with_provider=True)
+    manifest_path = tmp_path / "extension.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["bundles"].append({"name": "microsoft", "path": "microsoft"})
+    manifest["integrations"].append({"provider_id": "microsoft", "bundle": "microsoft", "path": "capabilities.v1.json"})
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    bundle = tmp_path / "microsoft"
+    bundle.mkdir()
+    capability_manifest = _capability_manifest(provider_id="microsoft")
+    capability_manifest["capabilities"][0]["id"] = "microsoft.drive.files.search"
+    if failure == "manifest-invalid":
+        capability_manifest["schema_version"] = 2
+    (bundle / "capabilities.v1.json").write_text(json.dumps(capability_manifest), encoding="utf-8")
+    component_source = (tmp_path / "google" / "component.py").read_text(encoding="utf-8")
+    if failure == "module-import-failed":
+        component_source += "\nraise RuntimeError('bundle import failed')\n"
+    (bundle / "component.py").write_text(component_source, encoding="utf-8")
+    before = provider_registry.get_registry_snapshot()
+
+    results = load_extension_bundles(tmp_path, distribution="lfx-google")
+
+    assert [result.bundle for result in results] == ["google", "microsoft"]
+    assert results[0].ok, results[0].errors
+    assert results[0].integrations[0].provider_id == "google"
+    if failure:
+        assert not results[1].ok
+        assert [error.code for error in results[1].errors] == [failure]
+        assert provider_registry.get_registry_snapshot() == before
+    else:
+        assert results[1].ok, results[1].errors
+        assert results[1].integrations[0].provider_id == "microsoft"
+        after = provider_registry.get_registry_snapshot()
+        assert after.generation == before.generation + 1
+        provider = after.descriptors_by_id["integration-test"]
+        assert provider.origin.distribution == "lfx-google"
+    assert all(not result.warnings for result in results)
 
 
 def test_validate_rejects_missing_capability_manifest(tmp_path: Path) -> None:

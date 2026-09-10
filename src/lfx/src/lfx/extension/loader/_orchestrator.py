@@ -594,17 +594,22 @@ def load_extension_bundles(
             )
         ]
 
-    return [
+    results = [
         load_extension(
             root_path,
             slot=slot,
             distribution=distribution,
             module_namespace=module_namespace,
             bundle_name=name,
-            _register_providers=index == 0,
+            _register_providers=False,
         )
-        for index, name in enumerate(bundle_names)
+        for name in bundle_names
     ]
+    # A later bundle can fail validation or import after an earlier one loads.
+    # Register extension-wide providers only after every bundle succeeds.
+    if all(result.ok for result in results):
+        _register_manifest_providers(source.manifest, source, results[0])
+    return results
 
 
 # ---------------------------------------------------------------------------

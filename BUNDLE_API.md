@@ -219,6 +219,9 @@ the deserialize half is covered by
   process-wide discovery and policy reads through
   `BundleRegistry.list_integrations()`. Manifests that omit `integrations`
   still load with an empty list; `BUNDLE_API_VERSION` remains `1`.
+  Capability paths require a lowercase `.json` suffix in both the runtime
+  validator and exported schema. Multi-bundle loading registers extension-wide
+  model providers only after every bundle validates and loads successfully.
 
 - Enforced the unreleased connection resolver contract through a final `resolve`
   entry point. Hosts now implement `_get_access_policy` and `_resolve`; ownership

@@ -122,6 +122,8 @@ def test_oauth_profile_kinds_match_discovery_schema() -> None:
 
 def test_capability_enums_match_discovery_schema() -> None:
     schema_path = Path(__file__).parents[5] / "design/dedicated-integrations/schema/capability_matrix.schema.json"
+    if not schema_path.is_file():
+        pytest.skip("The discovery schema is only available in the full repository")
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
 
     assert set(get_args(ExecutionSubstrate)) == set(schema["$defs"]["substrate"]["enum"])

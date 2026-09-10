@@ -515,7 +515,7 @@ class IntegrationManifestRef(BaseModel):
         if any(part == ".." for part in path.parts):
             msg = f"Integration capability-manifest path {value!r} must not contain '..'"
             raise ValueError(msg)
-        if path.suffix.casefold() != ".json":
+        if path.suffix != ".json":
             msg = f"Integration capability-manifest path {value!r} must name a JSON file"
             raise ValueError(msg)
         return value
