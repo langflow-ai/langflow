@@ -533,6 +533,7 @@ module.exports = {
             "Components/bundles-faiss",
             "Components/bundles-files-ingestion",
             "Components/bundles-firecrawl",
+            "Components/bundles-fxmacrodata",
             "Components/bundles-glean",
             "Components/bundles-google",
             "Components/bundles-groq",
