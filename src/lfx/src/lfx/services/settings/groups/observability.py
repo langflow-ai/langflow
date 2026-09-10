@@ -21,4 +21,3 @@ class ObservabilitySettings(BaseModel):
     If retroactively lowered below the current count for a flow,
     the oldest entries are deleted only when the next entry is created.
     """
-
