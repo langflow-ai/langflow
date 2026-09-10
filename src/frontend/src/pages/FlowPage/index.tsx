@@ -94,6 +94,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -141,8 +142,11 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
     // succeed and the blocker's autosave branch proceeds regardless.
     const conflictState = useFlowConflictStore.getState();
     if (conflictState.conflict?.flowId === currentFlowId) {
+      // Stay on the flow so the unsaved work is not walked away from, but do not
+      // raise the dialog: navigating is not a request to open one. The banner is
+      // there, and clicking it is how the person asks.
       blocker.reset?.();
-      conflictState.openDialog();
+      setNoticeData({ title: t("multiEdit.banner.title") });
       return;
     }
     void saveBeforeLeaving({

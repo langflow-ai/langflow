@@ -870,11 +870,18 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     // None of this belongs on the shared playground: a visitor there is running
     // somebody else's published flow, has nothing to save and no dialog to be
     // sent to, so a staleness check could only refuse a run for no reason.
+    // The dialog is never opened for the person: it is a decision they take, not
+    // one taken for them, and a modal appearing unbidden over the canvas reads as
+    // the application seizing control. The banner already stands while a conflict
+    // is unresolved, and it is the thing that opens the dialog when clicked.
     const isEditor = !get().playgroundPage;
     const conflictState = useFlowConflictStore.getState();
     const conflictedFlowId = useFlowsManagerStore.getState().currentFlowId;
     if (isEditor && conflictState.conflict?.flowId === conflictedFlowId) {
-      conflictState.openDialog();
+      useAlertStore.getState().setNoticeData({
+        title:
+          "This flow moved on while you were editing. Review the changes to run it.",
+      });
       return;
     }
 
@@ -886,7 +893,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         useAuthStore.getState().userData?.id ?? null,
       );
       if (check.outcome === "conflict") {
-        useFlowConflictStore.getState().openDialog();
+        // Same rule as above: the run stops, the banner speaks, the dialog waits
+        // to be asked for.
+        useAlertStore.getState().setNoticeData({
+          title:
+            "This flow moved on while you were editing. Review the changes to run it.",
+        });
         return;
       }
       if (check.outcome === "adopted") {

@@ -16,9 +16,13 @@ import { FlowSaveBlockedError } from "./save-blocked-error";
 export const handleBlockedSave = (error: unknown): boolean => {
   if (!(error instanceof FlowSaveBlockedError)) return false;
 
-  const { conflict, openDialog } = useFlowConflictStore.getState();
+  const { conflict } = useFlowConflictStore.getState();
   if (conflict?.flowId === error.flowId) {
-    openDialog();
+    // Handled, and deliberately silent. The conflict banner is on screen for as
+    // long as this lasts and already says what happened; a toast per refused
+    // autosave would repeat it on every keystroke burst, and opening the dialog
+    // would put a modal over the canvas nobody asked for. Returning true is what
+    // matters here — it stops the caller announcing a save that never happened.
     return true;
   }
   // No conflict left to resolve means the flow was duplicated out of one, and

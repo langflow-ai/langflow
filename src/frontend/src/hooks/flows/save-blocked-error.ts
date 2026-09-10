@@ -15,6 +15,11 @@ export class FlowSaveBlockedError extends Error {
     super(
       "This flow is in conflict, so it cannot be saved until that is resolved.",
     );
+    // Required when the build target predates native class semantics: extending
+    // Error there loses the prototype chain, so `instanceof` answers false for a
+    // genuine instance and every caller's guard falls through — which is exactly
+    // the "saved!" over a write that never happened this class exists to stop.
+    Object.setPrototypeOf(this, FlowSaveBlockedError.prototype);
     this.name = "FlowSaveBlockedError";
     this.flowId = flowId;
   }

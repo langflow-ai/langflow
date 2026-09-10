@@ -1,8 +1,10 @@
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { diffGraphs } from "@/utils/flow-diff";
 import {
   attachTheirFlow,
   fetchAndAdoptServerVersion,
+  fetchServerFlow,
   readFlowVersionState,
   registerConflictState,
 } from "./conflict-actions";
@@ -37,6 +39,26 @@ export const checkFlowVersion = async (
   // Whether the person edited, not whether the graph differs: hydration rewrites
   // nodes on every open, so a diff here turned a plain run into a conflict.
   if (!useFlowStore.getState().userEditedSinceLoad) {
+    await fetchAndAdoptServerVersion(flowId);
+    return { outcome: "adopted", author: state.last_modified_by_username };
+  }
+
+  // A token can move without the graph moving with it — a save whose response
+  // never updated this client's baseline leaves the two out of step while the
+  // content on both sides is identical. Raising a conflict then produces a
+  // dialog offering a choice between nothing and nothing: "you have no unsaved
+  // changes", "no changes to choose from". There is nothing to resolve, so the
+  // newer token is simply taken.
+  const theirFlow = await fetchServerFlow(flowId);
+  const live = useFlowStore.getState();
+  const base = baseline.data ?? null;
+  const mine = { nodes: live.nodes, edges: live.edges };
+  const nothingDiffers =
+    theirFlow !== null &&
+    base !== null &&
+    diffGraphs(base, theirFlow.data ?? null).length === 0 &&
+    diffGraphs(base, mine).length === 0;
+  if (nothingDiffers) {
     await fetchAndAdoptServerVersion(flowId);
     return { outcome: "adopted", author: state.last_modified_by_username };
   }

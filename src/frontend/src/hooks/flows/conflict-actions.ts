@@ -122,6 +122,18 @@ export const persistConflictDraft = (
 };
 
 /** Fetch the other version so the dialog can diff against it; the dialog degrades without it. */
+/** The flow as the server currently holds it, or null if it cannot be read. */
+export const fetchServerFlow = async (
+  flowId: string,
+): Promise<FlowType | null> => {
+  try {
+    const fresh = await api.get<FlowType>(`${getURL("FLOWS")}/${flowId}`);
+    return fresh.data;
+  } catch {
+    return null;
+  }
+};
+
 export const attachTheirFlow = async (flowId: string): Promise<void> => {
   try {
     const fresh = await api.get<FlowType>(`${getURL("FLOWS")}/${flowId}`);
