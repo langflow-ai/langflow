@@ -32,6 +32,7 @@ from lfx.log.logger import (
     log_buffer,
     setup_gunicorn_logger,
     setup_uvicorn_logger,
+    structlog_routes_to_stdlib,
 )
 from loguru import logger as loguru_logger
 
@@ -479,6 +480,116 @@ class TestInterceptHandler:
 
         self.handler.emit(record)
         self.mock_logger.info.assert_called_once_with("Message with string and 42")
+
+
+class TestInterceptHandlerReentrancy:
+    """Regression cover for the LE-2454 / #14776 logging cycle.
+
+    When structlog is backed by the stdlib factory, the structlog call inside
+    ``emit`` resolves to the same stdlib logger the handler is attached to, so the
+    record comes straight back in -- carrying the previous lap's rendered payload.
+    ``emit`` drops a record that arrives while the thread is already inside it.
+    """
+
+    # A regression here recurses until memory runs out. Cap the laps so the test
+    # fails an assert in milliseconds instead of taking CI down with it.
+    LAP_CAP = 10
+
+    def _record(self, message="boom"):
+        return logging.LogRecord(
+            name="gunicorn.error",
+            level=logging.ERROR,
+            pathname="test.py",
+            lineno=1,
+            msg=message,
+            args=(),
+            exc_info=None,
+        )
+
+    def test_reentrant_record_is_dropped(self):
+        """The record that re-enters emit() is dropped rather than forwarded again."""
+        handler = InterceptHandler()
+        forwarded = []
+
+        class CyclingLogger:
+            """Stands in for the stdlib-backed structlog logger that feeds emit()."""
+
+            def error(inner_self, message, **_kwargs):  # noqa: N805
+                forwarded.append(message)
+                if len(forwarded) > TestInterceptHandlerReentrancy.LAP_CAP:
+                    msg = "emit() cycled past the lap cap -- the re-entrancy guard is gone"
+                    raise AssertionError(msg)
+                # Exactly what the stdlib logger does in file mode: hand the
+                # rendered payload straight back to the handler that emitted it.
+                handler.emit(self._record(f"rendered({message})"))
+
+        with patch("structlog.get_logger", return_value=CyclingLogger()):
+            handler.emit(self._record())
+
+        assert forwarded == ["boom"]
+
+    def test_guard_is_released_after_a_successful_emit(self):
+        """A completed emit must not leave the thread's logging wedged shut."""
+        handler = InterceptHandler()
+        mock_logger = Mock()
+
+        with patch("structlog.get_logger", return_value=mock_logger):
+            handler.emit(self._record("first"))
+            handler.emit(self._record("second"))
+
+        assert [call.args[0] for call in mock_logger.error.call_args_list] == ["first", "second"]
+
+    def test_guard_is_released_after_handle_error(self):
+        """One malformed record must not silence every record after it."""
+        handler = InterceptHandler()
+        mock_logger = Mock()
+
+        with (
+            patch("structlog.get_logger", side_effect=RuntimeError("broken")),
+            patch.object(handler, "handleError") as mock_handle_error,
+        ):
+            handler.emit(self._record("explodes"))
+        assert mock_handle_error.called
+
+        with patch("structlog.get_logger", return_value=mock_logger):
+            handler.emit(self._record("still works"))
+        mock_logger.error.assert_called_once_with("still works")
+
+
+class TestStructlogRoutesToStdlib:
+    """``structlog_routes_to_stdlib()`` is what callers check before intercepting."""
+
+    def test_false_without_a_log_file(self):
+        """Stdout mode renders directly, so an intercept terminates safely."""
+        configure(log_level="ERROR")
+
+        assert structlog_routes_to_stdlib() is False
+
+    def test_true_with_a_log_file(self, tmp_path):
+        """File mode routes structlog back through stdlib -- intercepting would cycle."""
+        configure(log_level="ERROR", log_file=tmp_path / "langflow.log")
+
+        assert structlog_routes_to_stdlib() is True
+
+
+class TestRootInterceptAcrossModes:
+    """The root intercept must not survive the switch into log-file mode.
+
+    ``--log-file`` carries no ``envvar``, so a JSON-mode process can install the
+    root intercept at import time (``json_mode and not log_file``) and only learn
+    about the log file on the next ``configure()``. Left in place, that handler is
+    the root-logger form of the LE-2454 cycle.
+    """
+
+    def test_root_intercept_is_dropped_when_a_log_file_arrives(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_LOG_ENV", "container")
+
+        configure(log_level="ERROR", log_env="container")
+        assert any(isinstance(h, InterceptHandler) for h in logging.root.handlers)
+
+        configure(log_level="ERROR", log_env="container", log_file=tmp_path / "langflow.log")
+
+        assert not any(isinstance(h, InterceptHandler) for h in logging.root.handlers)
 
 
 class TestSetupFunctions:
