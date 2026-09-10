@@ -102,8 +102,12 @@ jobs:
       - name: Run real-service tests
         env:
           LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
+          # Headroom over the suite's default 90s/120s watchdogs: these tests run
+          # real sweeps and restarts against the service Postgres, and contended
+          # shared runners have twice pushed a locally-seconds test past 90s.
+          LANGFLOW_TEST_HARD_TIMEOUT: "200"
         run: |
-          uv run pytest src/backend/tests/unit/background_execution -m real_services -x -v
+          uv run pytest src/backend/tests/unit/background_execution -m real_services -x -v --timeout=180
 
   validate-migration:
     name: Migration Pattern Validation
