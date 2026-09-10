@@ -357,7 +357,7 @@ _ROLE_FORGERY = [
     r"\[/?(?:INST|SYS)\]",
     r"<</?SYS>>",
     r"</?\|?(?:system|assistant|user)\|?>\s*[:\n]",
-    r"^\s*(?:system|assistant)\s*:\s*you are\b",
+    r"(?m:^\s*(?:system|assistant)\s*:\s*you are\b)",
     r"###\s*(?:system|instruction)\s*:",
     r"<\|start_header_id\|>",
 ]
@@ -389,6 +389,7 @@ _JAILBREAK_WEAK = [
 ]
 
 _URL_REGEX = re.compile(r"https?://[^\s<>\"')]+", re.IGNORECASE)
+_URL_PATH_REGEX = re.compile(r"(https?://[^\s<>\"')/?#]+)(/[^\s<>\"')?#]*)", re.IGNORECASE)
 
 # ---------------------------------------------------------------------------
 # Malicious code
@@ -835,7 +836,11 @@ def _empty() -> dict[str, Any]:
 
 
 def detect_prompt_injection(
-    text: str, url_allowlist: list[str] | None = None, structural: str | None = None
+    text: str,
+    url_allowlist: list[str] | None = None,
+    structural: str | None = None,
+    *,
+    role_text: str | None = None,
 ) -> dict[str, Any]:
     """Weighted multi-signal scoring - extends mcp-composer default_heuristic_score.
 
@@ -856,7 +861,9 @@ def detect_prompt_injection(
         "prompt_manip": _find(_PROMPT_MANIPULATION, text),
         # Matched against the raw/structural copy: leetspeak folding mangles
         # the pipe and bracket characters these markers are built from.
-        "role_forgery": sorted(set(_find(_ROLE_FORGERY, struct)) | set(_find(_ROLE_FORGERY, text))),
+        "role_forgery": sorted(
+            {pattern for value in (struct, text, role_text or "") for pattern in _find(_ROLE_FORGERY, value)}
+        ),
         "compact_override": _find(_COMPACT_OVERRIDE, compact(text)),
         "disallowed_urls": [],
     }
@@ -963,7 +970,11 @@ def detect_secrets(text: str) -> dict[str, Any]:
         found += [(f"KEYED_{key.upper()}", m.group(0)) for m in pat.finditer(text)]
 
     entropy_hits: list[tuple[str, str]] = []
-    for m in _ENTROPY_CANDIDATE.finditer(text):
+    # Asset names and document IDs in URL paths are not credentials merely
+    # because they have high entropy. Explicit credential patterns above still
+    # scan the full text; query strings, fragments and userinfo retain entropy checks.
+    entropy_text = _URL_PATH_REGEX.sub(lambda m: m.group(1) + " " * len(m.group(2)), text)
+    for m in _ENTROPY_CANDIDATE.finditer(entropy_text):
         token = m.group(0)
         classes = sum(
             [
@@ -1037,16 +1048,20 @@ def detect_system_prompt_leak(text: str) -> dict[str, Any]:
 
 
 def _topic_hit(term: str, text: str) -> bool:
-    """Match a topic term at word start, allowing an inflectional tail.
-
-    Topic terms are subjects, not exact tokens: configuring "skill" has to match
-    "skills", "deployment" has to match "deployments". Anchored at the start of a
-    word so "art" cannot match "start".
-    """
-    if not term:
+    """Match whole words or phrases, including regular English plural forms."""
+    words = term.split()
+    if not words:
         return False
-    escaped = r"\s+".join(re.escape(part) for part in term.split())
-    return re.search(rf"\b{escaped}\w*", text, re.IGNORECASE) is not None
+    last = words[-1]
+    if re.search(r"[^aeiou]y$", last, re.IGNORECASE):
+        plural = last[:-1] + "ies"
+    elif last.lower().endswith(("s", "x", "z", "ch", "sh")):
+        plural = last + "es"
+    else:
+        plural = last + "s"
+    escaped = r"\s+".join(re.escape(part) for part in words)
+    plural_escaped = r"\s+".join(re.escape(part) for part in [*words[:-1], plural])
+    return re.search(rf"\b(?:{escaped}|{plural_escaped})\b", text, re.IGNORECASE) is not None
 
 
 def detect_scope(
@@ -1588,7 +1603,14 @@ class GuardrailsV2Component(GuardrailsComponent):
             structural, prose = norm, norm.lower()
 
         dispatch = {
-            "Prompt Injection": lambda: detect_prompt_injection(prose, self._url_allowlist, structural),
+            "Prompt Injection": lambda: detect_prompt_injection(
+                prose,
+                self._url_allowlist,
+                structural,
+                # General normalization collapses newlines. Preserve them for
+                # turn-boundary detection while retaining Unicode normalization.
+                role_text="\n".join(normalize(line) for line in raw.splitlines()),
+            ),
             "Jailbreak": lambda: detect_jailbreak(prose),
             "Malicious Code": lambda: detect_malicious_code(structural),
             "Offensive Content": lambda: detect_offensive(prose, self._blocklist),

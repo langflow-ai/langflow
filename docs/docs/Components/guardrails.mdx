@@ -40,7 +40,9 @@ Rule methods also expose **Review Threshold** and **Action for Flagged Text**. F
 
 **Redaction Style** appears only when `sanitize` is selected. **Block When a Check Fails to Run** is enabled by default for rule methods, including incomplete or malformed model verdicts in Rules + AI. Disabling it permits fallback to rule results and records errors and unverified categories.
 
-**Message Type** selects user input or assistant output. Output supports additional solicitation and system-prompt-leak checks. Selecting **Scope** reveals **Topic Restrictions** and the relevant allowed/blocked topic lists. Topic matching uses literal words and phrases; include synonyms and plural forms. Organization-specific settings appear only with **Enterprise Business** selected.
+**Message Type** selects user input or assistant output. Output supports additional solicitation and system-prompt-leak checks. Selecting **Scope** reveals **Topic Restrictions** and the relevant allowed/blocked topic lists. Topic matching uses whole words and phrases, including regular English plurals; list synonyms and irregular forms explicitly. For example, `car` matches `cars`, but not `career`. Organization-specific settings appear only with **Enterprise Business** selected.
+
+For **Tokens/Passwords**, a random-looking HTTP(S) URL path alone does not count as a secret. Known credential formats and labeled secrets are still checked inside paths; query strings, fragments, and URL credentials retain entropy checks.
 
 **Model Evaluation** in Rules + AI supports `env` (deployment setting, defaulting to `ambiguous`), `ambiguous` (skip AI when rules already block), or `always` (evaluate even rule-blocked messages). A deployment setting of `off` is rejected in Rules + AI; choose Rules only explicitly instead.
 
