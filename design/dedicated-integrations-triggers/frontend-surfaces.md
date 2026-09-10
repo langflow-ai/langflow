@@ -2,12 +2,18 @@
 
 Status: accepted
 Owners (sign-off roles): frontend owner, release owner
-Last verified: 2026-09-05 against `release-1.13.0`
+Last verified: 2026-09-10 (connection consent ownership and recovery path)
 
 TRG-1 exit criterion 8. Every surface the triggers release needs, tagged with the ticket that owns it and whether it
 extends something that exists or is net new. Paths are under `src/frontend/src/`. TRG-7 builds these on the TRG-2 API
 without waiting for INT-8's shared connection picker (release owner decision, 2026-09-05); the interim connection
 field is called out below and is swapped for the shared picker when INT-8 lands.
+TRG-7 also owns the interim per-connection consent control; INT-8 owns its permanent home on the Connections page.
+API prerequisite verified 2026-09-10: INT-4 [PR #14921](https://github.com/langflow-ai/langflow/pull/14921), at
+`2e3225bd0ca2d7c86de9a03c6d7a35132cc9a801`, accepts and returns `allow_non_interactive` on creation/read but has no
+mutation endpoint for an existing connection. INT-4 must add an authenticated, connection-owner-only update that
+changes this flag without replacing credentials. B9 depends on that addition; it is not an API already available
+on the release branch. Creating a replacement connection or reconnecting OAuth is not the withdrawal/recovery path.
 
 ## Naming rule for trigger components
 
@@ -53,6 +59,7 @@ so the two never collide alphabetically in a provider group.
 | B6 | Transport and latency-class label on a trigger ("push" versus "poll every N") | the self-managed-ingress decision makes the transport context-dependent, so hiding it would make poll latency read as a bug | TRG-7 |
 | B7 | Signing-secret panel for inbound-webhook triggers: URL, secret show-once, rotate | `secretKeyModal` is the closest pattern but is bound to API keys | TRG-7 behind TRG-4 |
 | B8 | Trigger policy state ("blocked by policy") surfaced read-only on the badge and the row | no policy state is rendered on a node today | TRG-8 |
+| B9 | Explicit "Allow background runs" consent for the selected user connection, beside A10 and reachable from `needs_reconnect`; show current state and allow the connection owner to enable or withdraw it | `allow_non_interactive` is required by the resolver, but selecting a connection or enabling a trigger is not consent; TRG-7 needs this before INT-8's Connections page exists | TRG-7 interim; INT-8 permanent Connections-page control |
 
 ## Constraints the design must record
 
@@ -71,10 +78,22 @@ so the two never collide alphabetically in a provider group.
    check; every new settings route ships an axe baseline.
 6. **Hiding a control is presentation, not enforcement.** B3 and B8 hide operator and policy controls in React; the
    API rejects the same actions independently.
+7. **Consent is per connection, explicit, and off by default.** B9 persists `allow_non_interactive` through the
+   authenticated connection-update API owned by INT-4, with backend ownership enforcement. It explains that the
+   permission applies to all eligible background uses of that connection, not just this trigger. Picking a
+   connection, enabling a trigger, or retrying never sets it implicitly. A user who can edit a flow but does not
+   own its connection cannot grant consent; show an owner-action message or let them select their own connection.
+   Instance connections remain governed by policy and do not show this user-consent toggle.
+8. **Missing consent has a recovery path.** Before enabling a provider trigger, show the missing permission and B9.
+   If the runtime reports missing consent as `needs_reconnect`, route to B9 rather than an OAuth loop. After the
+   update succeeds, re-fetch connection state and use the server-allowed resume/retry action; the backend rechecks
+   credentials and policy. A failed update leaves the trigger blocked. Withdrawal takes effect on subsequent
+   credential resolutions. Test default-off, opt-in and retry, withdrawal, failed save, and non-owner denial.
+   TRG-7 cannot ship provider-trigger enablement without both the interim control and INT-4's update API.
 
 ## MVP versus defer
 
-MVP for this release: A1 to A10, B1, B2, B4, B5, B6, B7.
+MVP for this release: A1 to A10, B1, B2, B4, B5, B6, B7, B9.
 Defer: B3 to a follow-up if the operator view needs more than a filter and a bulk toggle; B8 until TRG-8's policy
 field exists.
 

@@ -4,7 +4,7 @@ Status: accepted
 Decision ID: process-model
 Applies to: every Track B mechanism in `matrices/*-events.json`; the TRG-2 dispatcher; TRG-3 packaging
 Owners (sign-off roles): platform owner, langflow-base owner, Enterprise owner, release owner
-Last verified: 2026-09-05
+Last verified: 2026-09-10 (Slack connection lifecycle and handover correction)
 
 ## Context
 
@@ -29,7 +29,7 @@ not.
 | 3 | Nothing in the repo supervises a long-lived process; Celery exists (`core/celery_app.py`) but is not wired to flow execution in OSS | README "Runtime seams" | 2026-09-02 | high |
 | 4 | A guarded-`UPDATE` lease idiom already exists and is proven on SQLite and PostgreSQL | `src/backend/base/langflow/services/jobs/service.py` claim/renew helpers | 2026-09-05 | high |
 | 5 | `lfx run` and `lfx serve` do not host listeners; the headless entry points build and serve a graph only | `src/lfx/src/lfx/cli/serve_app.py`, `serve_durable.py`, `serve_workflow.py` | 2026-09-02 | high |
-| 6 | Slack counts a stale Socket Mode connection against the ten-per-app cap until it times out, so two replicas holding one app's connection can lock the app out | https://docs.slack.dev/apis/socket-mode/ | 2026-09-05 | high |
+| 6 | Slack allows up to ten open Socket Mode WebSocket connections per app and supports temporary overlap during connection refresh or service restart; payloads may arrive on any active connection | https://docs.slack.dev/apis/events-api/using-socket-mode/#using-multiple-connections | 2026-09-10 | high |
 | 7 | `origin/mock-orchestra` ran one Discord gateway client per bot from the API lifespan; `origin/feat-native-triggers-v2` ran one asyncio worker per uvicorn worker from the API lifespan | README "Precedents" | 2026-09-02 | high |
 
 ## Options
@@ -43,8 +43,8 @@ Cost: low now, high later.
 
 ### Option B: separate service only
 
-Pros: the clean shape - listeners scale, restart, and fail independently of the API; matches fact 6's requirement
-that exactly one process holds each provider connection.
+Pros: listeners scale, restart, and fail independently of the API; a lease elects one logical owner per provider
+connection without tying that ownership to the API replica count.
 Cons: Desktop and single-container Docker have no second process to run, so those contexts lose Track B entirely,
 and every developer running `langflow run` locally loses it too.
 Cost: an operator Deployment, a Compose service, and docs.
@@ -53,6 +53,22 @@ Cost: an operator Deployment, a Compose service, and docs.
 
 The separate service is the supported shape; the lifespan subprocess is the single-replica convenience shape.
 Cost: Option B's cost plus a subprocess supervisor and its single-worker guard.
+
+### Bounded Socket Mode overlap during handover
+
+This is compatible with Options B and C. The earlier fact 6 overstated the source: the cited public documentation
+does not establish a stale-connection timeout or an app-lockout consequence, and no additional source is recorded
+here. It therefore cannot justify rejecting bounded overlap or choosing a lease TTL.
+
+Slack supports opening a replacement before closing an existing socket. Its
+[disconnect guidance](https://docs.slack.dev/apis/events-api/using-socket-mode/#3-handle-disconnects-gracefully)
+says a warning may precede a disconnect by about ten seconds; the warning is not guaranteed. TRG-3/TRG-5 must
+consider bounded overlap for graceful refresh and handover: cap it within the app's total connection budget,
+drain and close the retiring socket, and handle arrivals on either socket with the same durable dedupe and
+write-before-ack path. The lease still elects one logical listener owner; controlled socket overlap does not
+authorize independent workers to process the same connection without ownership coordination. Unclean failover
+needs cancellation on lease loss and retry/backoff, without assuming the provider has already closed an old socket.
+The bound, ownership handoff, and forced-disconnect cases need implementation tests before this option ships.
 
 ## Decision
 
@@ -67,8 +83,10 @@ workers runs them; the listener process may host the same loop when the API is n
 
 Lease semantics, one lease per provider connection in `trigger_listener_lease`: TTL 30 s, heartbeat 10 s, reconcile
 poll 5 s, failover within two TTLs of an unclean death, claim and renew through the guarded-`UPDATE` idiom of fact 4
-so SQLite and PostgreSQL behave the same. A replica that loses its lease cancels its adapter tasks before another
-replica's claim can succeed in the common case, and fact 6 is the reason the TTL is short rather than generous.
+so SQLite and PostgreSQL behave the same. A replica that loses its lease cancels its adapter tasks. These intervals
+are Langflow recovery targets, not Slack timeout guarantees; expiry cannot prove that the old process or socket has
+stopped. The handover protocol must account for that overlap. Process isolation is selected for supervision and
+independent scaling, not because Slack requires exactly one physical socket.
 
 Per context:
 

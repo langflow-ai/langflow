@@ -3,7 +3,7 @@
 Status: draft
 Author: <platform owner - Gabriel Almeida> (sections 3 and 4 are the author's; sections 1 and 2 are the evidence pack this stub carries for them)
 Owners (sign-off roles): platform owner, release owner
-Last verified: 2026-09-05
+Last verified: 2026-09-10 (Slack evidence correction; author sections remain draft)
 
 TRG-1 exit criterion 1, and the first of the three re-open triggers recorded in
 [`../dedicated-integrations/triggers-deferred.md`](../dedicated-integrations/triggers-deferred.md). The criterion asks
@@ -49,7 +49,7 @@ initiative should reuse; the worker-per-uvicorn-worker shape is the part it must
 | Constraint | Evidence | Consequence for a listener in the API process |
 |---|---|---|
 | The API runs several worker processes by default (`(cpu_count() * 2) + 1`) | `__main__.py` worker default | every worker would open its own provider connection |
-| Slack counts stale Socket Mode connections against a ten-per-app cap until they time out | https://docs.slack.dev/apis/socket-mode/ | duplicated connections can lock a customer's app out, not merely waste one |
+| Slack allows ten open Socket Mode sockets per app and temporary overlap for graceful restarts | https://docs.slack.dev/apis/events-api/using-socket-mode/#using-multiple-connections | budget connections across replicas and bound handover overlap; the source does not establish stale timeout or app lockout |
 | A Slack Events API delivery must be answered in three seconds, and Graph's validation handshake in ten | https://docs.slack.dev/apis/events-api/, https://learn.microsoft.com/en-us/graph/change-notifications-delivery-webhooks | anything that shares the API's event loop with flow execution risks the ack deadline |
 | Enterprise lifespan hooks are best-effort and in-process only | `main.py:87`, run at `:653` and `:697` | there is no supervision, restart, or health for a long-lived task today |
 | `lfx run` and `lfx serve` host no background work | `src/lfx/src/lfx/cli/serve_app.py` and siblings | the headless contexts cannot host Track B at all |

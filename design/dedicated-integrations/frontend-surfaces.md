@@ -3,6 +3,7 @@
 Status: draft
 Owners (sign-off roles): frontend owner, release owner
 Last verified: 2026-09-01 against `release-1.12.0`
+Last amended: 2026-09-10 (B10 consent control and interim trigger ownership)
 
 This is the gate's exit criterion "frontend surface list". Every surface is tagged with the ticket that owns it and
 whether it is an extension of something that exists or net new. Paths are under `src/frontend/src/`.
@@ -39,6 +40,7 @@ whether it is an extension of something that exists or net new. Paths are under 
 | B7 | Connection choice per node when a user has two accounts for one provider | global variables have `PermissionsProvider` sharing but no account-selection-per-node concept | INT-8 |
 | B8 | Connectors sidebar section with live connection state (grey out unconnected providers, inline connect) | `SIDEBAR_BUNDLES` entries are static records with no runtime binding; `extension_id` is not populated, which is also why bundle reload is flagged off | INT-8 (MVP: none; defer to 1.14) |
 | B9 | Operator integration-policy panel within `/settings/connections`: provider enable/disable, allowed capability ids, allowed connection owner kinds, and hosted-registration readiness; hidden from non-operators and backed by the governance service rather than frontend-only flags | no current settings surface exposes provider/capability policy; the model-provider policy precedent is API and plugin wiring, not a reusable integration-policy UI | INT-7 |
+| B10 | Per-user-connection "Allow background runs" control on the Connections page; display and explicitly update `allow_non_interactive`, default off, with consent and withdrawal restricted to the connection owner through INT-4's authenticated API | non-interactive execution requires an opt-in that account selection and OAuth consent do not grant; explain that it applies to all eligible background uses of the connection. TRG-7 supplies the interim control and missing-consent recovery before this page ships; see `../dedicated-integrations-triggers/frontend-surfaces.md` B9 | INT-8 permanent control; TRG-7 interim control |
 
 ## Constraints the design must record
 

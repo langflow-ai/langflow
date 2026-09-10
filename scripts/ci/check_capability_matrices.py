@@ -26,8 +26,11 @@ another discovery gate. A design root that publishes
 ``schema/event_transport.schema.json`` is a triggers gate
 (``design/dedicated-integrations-triggers``): its ``matrices/`` hold
 event-transport matrices rather than capability matrices, and
-``event_transport_matrix`` supplies their rules. Without the flag the checker
-behaves exactly as it did for INT-1.
+``event_transport_matrix`` supplies their rules. In gate-close mode the triggers
+gate also requires accepted findings and contract records, no unfinished findings
+markers, and dated completion of every README exit criterion. These checks validate
+recorded acceptance; owners still review the findings and merged-PR conformance.
+Without the flag the checker behaves exactly as it did for INT-1.
 """
 
 from __future__ import annotations
@@ -78,6 +81,13 @@ MIN_SIGN_OFF_ROW_CELLS = 4
 ROLES_COVERING_EVERY_RECORD = frozenset({"release owner"})
 # Files that carry an Owners line but are not sign-off records themselves.
 SIGN_OFF_EXEMPT_FILES = frozenset({"README.md", "TEMPLATE.md"})
+TRIGGER_GATE_RECORDS = frozenset(
+    {"findings/2026-09-listeners.md", "trigger-contract.md", "frontend-surfaces.md", "estimate.md"}
+)
+TRIGGER_EXIT_CRITERIA_HEADING = "## Exit criteria and where each one lives"
+TRIGGER_EXIT_CRITERIA = frozenset(str(number) for number in range(1, 10))
+TRIGGER_EXIT_CRITERIA_COLUMNS = 5
+UNFINISHED_FINDINGS_RE = re.compile(r"\b(?:TODO|TBD|to be written)\b", re.IGNORECASE)
 
 VALID_VALUES: dict[str, frozenset[str]] = {
     "provider": REQUIRED_PROVIDERS,
@@ -663,6 +673,59 @@ def is_event_transport_root(design_root: Path) -> bool:
     return (design_root / "schema" / EVENT_TRANSPORT_SCHEMA_NAME).is_file()
 
 
+def validate_trigger_gate_close(design_root: Path) -> list[str]:
+    """Check recorded acceptance without substituting for the owners' substantive review."""
+    errors: list[str] = []
+    records = TRIGGER_GATE_RECORDS | {
+        path.relative_to(design_root).as_posix()
+        for path in (design_root / "findings").rglob("*.md")
+        if path.name not in SIGN_OFF_EXEMPT_FILES
+    }
+    for relative in sorted(records):
+        record = design_root / relative
+        if not record.is_file():
+            errors.append(f"gate-close: record {relative!r} does not exist")
+            continue
+        text = record.read_text(encoding="utf-8")
+        # A single, unambiguous status is required; a second accepted line cannot mask a draft.
+        statuses = re.findall(r"^Status:[^\n]*", text, flags=re.MULTILINE)
+        if relative != "estimate.md" and statuses != ["Status: accepted"]:
+            errors.append(f"gate-close: record {relative!r} must have exactly one 'Status: accepted' line")
+        if relative.startswith("findings/") and UNFINISHED_FINDINGS_RE.search(text):
+            errors.append(f"gate-close: findings record {relative!r} contains unfinished TODO/TBD/to be written text")
+
+    readme = design_root / "README.md"
+    if not readme.is_file():
+        errors.append("gate-close: README.md does not exist")
+        return errors
+    text = readme.read_text(encoding="utf-8")
+    heading = re.compile(rf"^{re.escape(TRIGGER_EXIT_CRITERIA_HEADING)}[ \t]*$", re.MULTILINE)
+    if len(heading.findall(text)) != 1:
+        errors.append(f"gate-close: README.md must contain exactly one '{TRIGGER_EXIT_CRITERIA_HEADING}' section")
+        return errors
+    section = heading.split(text, maxsplit=1)[1].split("\n## ", 1)[0]
+    rows = _table_rows(section)
+    seen: set[str] = set()
+    for row in rows:
+        criterion = row[0]
+        if criterion not in TRIGGER_EXIT_CRITERIA or len(row) != TRIGGER_EXIT_CRITERIA_COLUMNS:
+            errors.append(
+                f"gate-close: malformed exit criterion row {row!r}; expected #, criterion, artifact, check, status"
+            )
+            continue
+        if criterion in seen:
+            errors.append(f"gate-close: exit criterion {criterion} is declared more than once")
+        seen.add(criterion)
+        status = re.fullmatch(r"done (\d{4}-\d{2}-\d{2})", row[4])
+        if status is None:
+            errors.append(f"gate-close: exit criterion {criterion} must be 'done YYYY-MM-DD', got {row[4]!r}")
+        else:
+            _check_date(status.group(1), f"gate-close: exit criterion {criterion} completion date", errors)
+    if missing := TRIGGER_EXIT_CRITERIA - seen:
+        errors.append(f"gate-close: README.md is missing exit criteria {sorted(missing)}")
+    return errors
+
+
 def validate_all(
     matrix_dir: Path = DEFAULT_MATRIX_DIR,
     *,
@@ -679,6 +742,8 @@ def validate_all(
             require_accepted=require_accepted,
         )
         errors.extend(validate_decision_records(root, require_accepted=require_accepted))
+        if require_accepted:
+            errors.extend(validate_trigger_gate_close(root))
         return errors
 
     errors: list[str] = []
@@ -717,7 +782,10 @@ def main() -> int:
     parser.add_argument(
         "--require-accepted",
         action="store_true",
-        help="gate-close mode: every decision must be accepted and every declared owner signature complete",
+        help=(
+            "gate-close mode: accepted decisions and completed owner signatures; "
+            "triggers also require accepted findings/contracts and dated completion of every exit criterion"
+        ),
     )
     args = parser.parse_args()
     if args.design_root is not None:

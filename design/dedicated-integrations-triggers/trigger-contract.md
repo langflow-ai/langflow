@@ -170,6 +170,17 @@ only with the per-connection `allow_non_interactive` opt-in, an instance connect
 floor, and an anonymous or unknown principal never resolves anything. A trigger whose connection lacks the opt-in
 fails closed with a typed `IntegrationError` and moves to `needs_reconnect`; it does not run without credentials.
 
+Consent surface ownership: INT-8 owns the permanent per-connection "Allow background runs" control on the
+Connections page. Because TRG-7 ships ahead of that page, it must provide the interim control alongside its
+connection selector and in the missing-consent recovery path (`frontend-surfaces.md` B9). INT-4 must add the
+authenticated connection-update API (absent from its current PR, as recorded beside B9). Only the connection
+owner can change the flag through that API; flow write permission does not
+grant that authority. The flag defaults to false, applies to all eligible background uses of the connection, and
+is never set by selecting a connection or enabling a trigger. Successful opt-in re-fetches state and offers the
+server-allowed retry/resume action. Revocation makes subsequent non-interactive resolutions fail closed. This is
+a local connection permission, distinct from provider OAuth scopes; a missing opt-in must not send the user into
+an OAuth reconnect loop. Instance connections continue to use the policy floor, not this user-consent control.
+
 Authorization rides on the flow resource: managing a trigger requires flow **write**, and replay and test require
 flow **execute**. No new authz resource word is introduced, which also spares Enterprise a `roles.py` vocabulary
 addition at the next pin bump.

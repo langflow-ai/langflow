@@ -44,6 +44,12 @@ TRG-5 and TRG-6 run in parallel once TRG-3, TRG-4 and their bundles exist.
 | 3 | TRG-5 (TRG-3 + TRG-4 + INT-12), TRG-6 (TRG-3 + TRG-4 + INT-10 / INT-11) | bundle branches must exist first; TRG-6 ships as a Microsoft pull request and a Google pull request rather than one |
 | 4 | TRG-8 | needs every source and every packaging shape to exist before the context matrix can be filled |
 
+Consent sequencing clarification, 2026-09-10: TRG-7's interim connection field includes the explicit
+`allow_non_interactive` control and recovery path in `frontend-surfaces.md` B9. Provider-trigger enablement depends
+on INT-4's authenticated connection-update API as well as TRG-2. INT-8 later owns the permanent Connections-page
+control. The frontend owner must include consent, withdrawal, and non-owner denial in the existing TRG-7 review
+and sizing before sign-off; the table above remains the last issued estimate.
+
 ## External lead times (calendar risk, not engineer-weeks)
 
 | Dependency | Context | Lead time | Source |

@@ -2,7 +2,7 @@
 
 Status: records written; every decision record is `Status: accepted`; exit criterion 1 (the platform owner's findings) is a stub and the sign-off tables are outstanding
 Jira: LE-2398 "Dedicated Integrations" is the parent epic; LE-2477 "Integration Triggers" is the triggers epic; TRG-1 is LE-2480
-Last updated: 2026-09-05
+Last updated: 2026-09-10
 
 This directory is the discovery gate for the triggers initiative: persistent listeners, provider push delivery,
 subscription lifecycle, durable delivery, replay, deployment binding, and conversation correlation. It is the
@@ -56,9 +56,14 @@ What 1.13 owes this initiative, and nothing more:
 | The connection record carries no trigger-specific fields, and the INT-3 manifest `integrations` field reserves no event fields | `../dedicated-integrations/triggers-deferred.md`, "Interaction with the actions release" | held: trigger state lives on the `trigger` and `trigger_subscription` tables, and TRG-6 adds an additive bundle-owned `triggers` list rather than event fields on a capability |
 | One gap found while writing this gate: the contract assigns the `connection_resolution` matrix dimension and its checker vocabulary to INT-4 and INT-5, and neither open pull request delivers it | `../dedicated-integrations/connection-contract.md` section 11 | filed against 1.13 and picked up by INT-6, which now owns the dimension; TRG-2 adds family rows only |
 
-Exit criterion 7 asks for this table to be checked against the **merged** INT-2, INT-5 and INT-6 pull requests. Those
-are open at the time of writing, so the criterion stays open with the gap above recorded; it is re-walked when the
-INT stack merges and before gate close.
+Exit criterion 7 asks for this table to be checked against the **merged** INT-2
+([#14919](https://github.com/langflow-ai/langflow/pull/14919)), INT-5
+([#14935](https://github.com/langflow-ai/langflow/pull/14935)) and INT-6
+([#14946](https://github.com/langflow-ai/langflow/pull/14946)) pull requests. All three remain open as of 2026-09-10,
+so the criterion stays open with the gap above recorded. Before marking criterion 7 done, the reviewing owners
+must record the merged commit for each PR, the reviewed boundary obligations and test evidence, and the disposition
+of each gap here. The checker requires dated completion of criterion 7; it does not query GitHub or establish
+semantic conformance from a signature. That review is repeated when the INT stack merges and before gate close.
 
 What this gate must not do: reopen a 1.13 decision, add to the 1.13 actions estimate, or block a 1.13 sign-off.
 
@@ -87,20 +92,27 @@ mechanism, which is what makes the no-relay rule liveable.
 
 | # | Exit criterion | Artifact | Machine check | Status |
 |---|---|---|---|---|
-| 1 | Findings document covering both precedents and the sidecar position, authored by the platform owner | `findings/2026-09-listeners.md` | sign-off coverage | **open**: stub written 2026-09-05 with the evidence pack; sections 3 and 4 are the platform owner's |
+| 1 | Findings document covering both precedents and the sidecar position, authored by the platform owner | `findings/2026-09-listeners.md` | required file, accepted status, no TODO/TBD/to-be-written markers, sign-offs, dated criterion completion | **open**: stub written 2026-09-05 with the evidence pack; sections 3 and 4 are the platform owner's |
 | 2 | Event-transport matrix per wave-1 provider: every push and pull mechanism with its ingress requirement, inbound authentication, subscription TTL and renewal, payload shape (thin or full), delivery guarantee, replay availability, rate limits, and the deployment contexts it supports | `matrices/<provider>-events.json`, `schema/event_transport.schema.json` | `check_capability_matrices.py --design-root`: schema, sourced claims, and the no-ingress rule per context | done 2026-09-05 |
-| 3 | Process-model decision: subprocess supervisor under the API lifespan, separate service, or both; lease semantics for singleton listeners; behaviour on Desktop, `lfx serve`, single-container Docker, and multi-replica Kubernetes | `decisions/process-model.md` | `Status:` line and `## Decision` heading parsed by the checker | accepted 2026-09-05 |
-| 4 | Self-managed ingress decision: which Track A sources require public HTTPS, which Track B fallback exists per provider, and the explicit statement that Langflow operates no relay | `decisions/self-managed-ingress.md` | the checker's no-ingress rule enforces the fallback per context | accepted 2026-09-05 |
-| 5 | Delivery-semantics decision: at-least-once with idempotency keys, replay window, dead-letter, ordering, and backpressure toward the run path | `decisions/delivery-semantics.md` | `Status:` line and `## Decision` heading parsed by the checker | accepted 2026-09-05 |
-| 6 | Trigger contract: the trigger entity and its binding to a flow version or deployment; correlation of a triggered run to a conversation; executing identity per trigger kind as new `execution_principal_matrix.json` families (`trigger_push`, `trigger_listener`); signed off by the lfx, langflow-base, Enterprise, and platform owners | `trigger-contract.md` | sign-off coverage | written and accepted 2026-09-05; four sign-offs outstanding |
-| 7 | 1.13 conformance: the boundary table above checked against the merged INT-2, INT-5, and INT-6 pull requests | this file, "Boundary with 1.13" | none | **open**: those pull requests are unmerged; one gap already filed (the `connection_resolution` dimension) |
-| 8 | Frontend surface list: trigger node, subscription status, event log and replay, operator controls | `frontend-surfaces.md` | sign-off coverage | done 2026-09-05 |
-| 9 | Estimate and ticket breakdown, TRG-2 onward | `estimate.md` | none | done 2026-09-05; TRG-2 (LE-2481) through TRG-8 (LE-2482) exist in Jira under LE-2477 |
+| 3 | Process-model decision: subprocess supervisor under the API lifespan, separate service, or both; lease semantics for singleton listeners; behaviour on Desktop, `lfx serve`, single-container Docker, and multi-replica Kubernetes | `decisions/process-model.md` | `Status:` line and `## Decision` heading parsed by the checker | done 2026-09-05 |
+| 4 | Self-managed ingress decision: which Track A sources require public HTTPS, which Track B fallback exists per provider, and the explicit statement that Langflow operates no relay | `decisions/self-managed-ingress.md` | the checker's no-ingress rule enforces the fallback per context | done 2026-09-05 |
+| 5 | Delivery-semantics decision: at-least-once with idempotency keys, replay window, dead-letter, ordering, and backpressure toward the run path | `decisions/delivery-semantics.md` | `Status:` line and `## Decision` heading parsed by the checker | done 2026-09-05 |
+| 6 | Trigger contract: the trigger entity and its binding to a flow version or deployment; correlation of a triggered run to a conversation; executing identity per trigger kind as new `execution_principal_matrix.json` families (`trigger_push`, `trigger_listener`); signed off by the lfx, langflow-base, Enterprise, and platform owners | `trigger-contract.md` | required file, accepted status, sign-offs, dated criterion completion | **open**: record accepted 2026-09-05; four sign-offs outstanding |
+| 7 | 1.13 conformance: the boundary table above checked against the merged INT-2, INT-5, and INT-6 pull requests | this file, "Boundary with 1.13" | dated criterion completion required; merged-commit and behavioral evidence reviewed by owners | **open**: those pull requests are unmerged; one gap already filed (the `connection_resolution` dimension) |
+| 8 | Frontend surface list: trigger node, subscription status, event log and replay, operator controls | `frontend-surfaces.md` | required file, accepted status, sign-off coverage, dated criterion completion | done 2026-09-05 |
+| 9 | Estimate and ticket breakdown, TRG-2 onward | `estimate.md` | required file and dated criterion completion; ticket breakdown reviewed by release owner | done 2026-09-05 |
 
-Gate close means: every row above is done, every instantiated decision record under `decisions/` except
-`TEMPLATE.md` is `Status: accepted`, and every declared owner has completed both sign-off tables. Two rows (1 and 7)
-are open, so the gate is not closed; `--require-accepted` is the machine expression of gate close and does not pass
-yet, by design.
+Gate close requires substantive owner review plus a passing `--require-accepted` check. The check requires exactly
+one row for each criterion 1 through 9, with the completed Status cell exactly `done YYYY-MM-DD` (a valid, non-future
+date; move explanations into the other cells). Every instantiated decision record under `decisions/` except
+`TEMPLATE.md`, every findings record, `trigger-contract.md`, and `frontend-surfaces.md` must be `Status: accepted`;
+the estimate must exist; findings must contain no TODO, TBD, or "to be written" markers; and every declared owner
+must complete both sign-off tables. Criteria 1, 6, and 7 remain open. Filling signatures alone cannot close them.
+
+These are necessary machine checks of recorded completion, not proof of the findings' substance or merged-code
+conformance. The platform owner still authors findings sections 3 and 4, and the owners still perform the boundary
+review described above. Ready for QA means the gate records and checker changes are ready to review; it does not
+close the discovery gate or supply those approvals.
 
 ## Precedents (verified against the branches on 2026-09-02)
 
@@ -140,7 +152,7 @@ Role placeholders remain until the release owner assigns names.
 ## Running the checker
 
 ```bash
-python scripts/ci/check_capability_matrices.py --design-root design/dedicated-integrations-triggers
+uv run python scripts/ci/check_capability_matrices.py --design-root design/dedicated-integrations-triggers
 ```
 
 `--design-root` points the INT-1 checker at this directory. A design root that publishes
@@ -150,8 +162,9 @@ rule is enforced per deployment context - a mechanism that needs public HTTPS ma
 `public_ingress_by_context` says ingress is unavailable, and a `conditional` context is allowed only when the
 mechanism names an `outbound_only` fallback covering that same context. Every provider must ship at least one
 outbound-only wave-1 mechanism. Decision-record parsing (`Status:` line, `## Decision` heading) and sign-off coverage
-run exactly as they do for INT-1. Adding `--require-accepted` is gate-close mode and fails today, correctly: the
-sign-off tables are empty.
+run exactly as they do for INT-1. Adding `--require-accepted` also checks the triggers-specific records and all nine
+exit-criterion statuses described above. It fails today on the draft/unfinished findings, open criteria 1, 6 and 7,
+and outstanding signatures. Ordinary structural validation continues to accept work in progress.
 
 The rules live in `scripts/ci/event_transport_matrix.py`; `scripts/ci/test_event_transport_matrices.py` covers them
 and runs in the CI Scripts Tests workflow, which now watches this directory.

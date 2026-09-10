@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sys
 from pathlib import Path
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -11,6 +14,7 @@ from check_capability_matrices import (
     DESIGN_ROOT,
     TRIGGERS_DESIGN_ROOT,
     is_event_transport_root,
+    main,
     validate_all,
     validate_sign_offs,
 )
@@ -60,6 +64,136 @@ def test_gate_close_mode_still_fails_because_signatures_are_outstanding() -> Non
 
     assert errors, "gate close cannot pass while the sign-off tables are empty"
     assert all("must complete Name, Date, and PR" in error for error in errors), errors
+
+
+def _complete_signatures(root: Path) -> None:
+    """Synthetic signatures for negative tests; never modify the real gate."""
+    for record in root.rglob("*.md"):
+        text = record.read_text(encoding="utf-8")
+        text = text.replace("| | | |", "| Test reviewer | 2026-09-05 | #1 |")
+        record.write_text(text, encoding="utf-8")
+
+
+def _complete_gate(root: Path) -> None:
+    _complete_signatures(root)
+    findings = root / "findings" / "2026-09-listeners.md"
+    findings.write_text(
+        findings.read_text(encoding="utf-8")
+        .replace("Status: draft", "Status: accepted")
+        .replace("To be written by the platform owner.", "Reviewed in this synthetic test fixture."),
+        encoding="utf-8",
+    )
+    readme = root / "README.md"
+    text = readme.read_text(encoding="utf-8")
+    before, section = text.split("## Exit criteria and where each one lives", 1)
+    section, after = section.split("\n## ", 1)
+    section = re.sub(r"^(\| [1-9] \|.*\|)[^|]+\|$", r"\1 done 2026-09-05 |", section, flags=re.MULTILINE)
+    readme.write_text(before + "## Exit criteria and where each one lives" + section + "\n## " + after, "utf-8")
+
+
+def test_gate_close_rejects_signed_findings_stub(tmp_path: Path, monkeypatch, capsys) -> None:
+    root = _copy_design(tmp_path)
+    _complete_signatures(root)
+    (root / "findings" / "2026-09-listeners.md").write_text(
+        "# Findings\n\nStatus: draft\nOwners (sign-off roles): platform owner, release owner\n\n"
+        "TODO: write this document\n\n## Sign-off\n\n| Role | Name | Date | PR |\n|---|---|---|---|\n"
+        "| platform owner | Test reviewer | 2026-09-05 | #1 |\n"
+        "| release owner | Test reviewer | 2026-09-05 | #1 |\n",
+        encoding="utf-8",
+    )
+    assert validate_sign_offs(root, require_complete=True) == []
+    monkeypatch.setattr(sys, "argv", ["checker", "--design-root", str(root), "--require-accepted"])
+
+    assert main() == 1
+    output = capsys.readouterr().out
+    assert "findings/2026-09-listeners.md" in output
+    assert "exit criterion 1" in output
+    assert "exit criterion 7" in output
+
+
+def test_completed_gate_passes_cli(tmp_path: Path, monkeypatch, capsys) -> None:
+    root = _copy_design(tmp_path)
+    _complete_gate(root)
+    monkeypatch.setattr(sys, "argv", ["checker", "--design-root", str(root), "--require-accepted"])
+
+    assert main() == 0
+    assert "matrices are complete" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("status", ["draft", "proposed", "superseded", "missing"])
+def test_gate_close_requires_accepted_findings(tmp_path: Path, status: str) -> None:
+    root = _copy_design(tmp_path)
+    _complete_gate(root)
+    record = root / "findings" / "2026-09-listeners.md"
+    record.write_text(record.read_text().replace("Status: accepted", f"Status: {status}"), "utf-8")
+
+    errors = validate_all(root / "matrices", design_root=root, require_accepted=True)
+
+    assert any("findings/2026-09-listeners.md" in error and "accepted" in error for error in errors), errors
+
+
+@pytest.mark.parametrize(
+    "record", ["findings/2026-09-listeners.md", "trigger-contract.md", "frontend-surfaces.md", "estimate.md"]
+)
+def test_gate_close_requires_each_gate_artifact(tmp_path: Path, record: str) -> None:
+    root = _copy_design(tmp_path)
+    _complete_gate(root)
+    (root / record).unlink()
+
+    errors = validate_all(root / "matrices", design_root=root, require_accepted=True)
+
+    assert any(record in error and "does not exist" in error for error in errors), errors
+
+
+@pytest.mark.parametrize("criterion", range(1, 10))
+def test_gate_close_requires_every_exit_criterion_done(tmp_path: Path, criterion: int) -> None:
+    root = _copy_design(tmp_path)
+    _complete_gate(root)
+    readme = root / "README.md"
+    text = re.sub(
+        rf"^(\| {criterion} \|.*\|) done 2026-09-05 \|$",
+        r"\1 **open**: needs review |",
+        readme.read_text(),
+        flags=re.MULTILINE,
+    )
+    readme.write_text(text, "utf-8")
+
+    errors = validate_all(root / "matrices", design_root=root, require_accepted=True)
+
+    assert any(f"exit criterion {criterion} " in error for error in errors), errors
+
+
+@pytest.mark.parametrize("change", ["missing", "duplicate", "bad_date", "future_date", "ambiguous_status"])
+def test_gate_close_rejects_invalid_conformance_row(tmp_path: Path, change: str) -> None:
+    root = _copy_design(tmp_path)
+    _complete_gate(root)
+    readme = root / "README.md"
+    text = readme.read_text()
+    row = next(line for line in text.splitlines() if line.startswith("| 7 | 1.13 conformance"))
+    replacement = {
+        "missing": "",
+        "duplicate": row + "\n" + row,
+        "bad_date": row.replace("2026-09-05", "2026-02-30"),
+        "future_date": row.replace("2026-09-05", "2099-01-01"),
+        "ambiguous_status": row.replace("done 2026-09-05", "done 2026-09-05; conformance still open"),
+    }[change]
+    readme.write_text(text.replace(row, replacement), "utf-8")
+
+    errors = validate_all(root / "matrices", design_root=root, require_accepted=True)
+
+    assert any("exit criteri" in error for error in errors), errors
+
+
+@pytest.mark.parametrize("body", ["TODO: write this document", "To be written by the platform owner."])
+def test_gate_close_rejects_accepted_findings_placeholder(tmp_path: Path, body: str) -> None:
+    root = _copy_design(tmp_path)
+    _complete_gate(root)
+    record = root / "findings" / "2026-09-listeners.md"
+    record.write_text(record.read_text() + "\n" + body, "utf-8")
+
+    errors = validate_all(root / "matrices", design_root=root, require_accepted=True)
+
+    assert any("findings/2026-09-listeners.md" in error and "unfinished" in error for error in errors), errors
 
 
 def test_every_required_provider_has_an_events_matrix() -> None:
