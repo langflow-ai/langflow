@@ -32,6 +32,7 @@ class ScopeCondition(BaseModel):
     input: StrictStr = Field(pattern=r"^[a-z][a-z0-9_]*$")
 
     def is_active(self, inputs: dict[str, Any]) -> bool:
+        """Evaluate presence separately from truthiness for conditional scopes."""
         if self.kind == "input_present":
             return self.input in inputs and inputs[self.input] is not None
         return bool(inputs.get(self.input))
@@ -177,12 +178,25 @@ class ScopeSet:
 
     @staticmethod
     def _normalize(provider: str, scope: str) -> str:
+        """Compare provider scope aliases without conflating token identities."""
         normalized = scope.strip()
-        if provider == "google":
+        if provider in {"google", "google_workspace"}:
             normalized = normalized.removeprefix("https://www.googleapis.com/auth/")
         elif provider == "microsoft":
             normalized = normalized.removeprefix("https://graph.microsoft.com/")
         return normalized.casefold()
+
+    @classmethod
+    def missing(
+        cls, *, provider: str, required: set[str] | frozenset[str], granted: set[str] | frozenset[str]
+    ) -> frozenset[str]:
+        """Return uncovered scopes, preserving their original spelling in errors.
+
+        Token identity and auth-profile compatibility are separate host checks;
+        Slack user and bot scope names must never be treated as interchangeable.
+        """
+        normalized_granted = {cls._normalize(provider, scope) for scope in granted}
+        return frozenset(scope for scope in required if cls._normalize(provider, scope) not in normalized_granted)
 
     @classmethod
     def covers(
@@ -191,15 +205,13 @@ class ScopeSet:
         inputs: dict[str, Any],
         granted: set[str] | frozenset[str],
         *,
-        provider: str | None = None,
+        provider: str,
     ) -> frozenset[str]:
         """Return required active scopes not covered by ``granted``."""
-        provider_id = provider or capability.id.partition(".")[0]
         required = set(capability.required_scopes)
         required.update(
             requirement.scope
             for requirement in capability.conditional_scopes
             if requirement.condition.is_active(inputs)
         )
-        normalized_granted = {cls._normalize(provider_id, scope) for scope in granted}
-        return frozenset(scope for scope in required if cls._normalize(provider_id, scope) not in normalized_granted)
+        return cls.missing(provider=provider, required=required, granted=granted)

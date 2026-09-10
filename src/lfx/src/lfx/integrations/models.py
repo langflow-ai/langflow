@@ -10,11 +10,10 @@ from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, StrictStr
 
-from lfx.integrations.errors import AuthExpiredError
-
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from lfx.integrations.errors import AuthExpiredError
     from lfx.services.authorization.base import ExecutionPrincipal
     from lfx.services.interfaces import ConnectionResolverProtocol
 
@@ -191,6 +190,8 @@ class CredentialLease:
 
     async def get_token_after_auth_error(self, error: AuthExpiredError) -> str:
         """Re-resolve once after a provider rejects a no-expiry or stale token."""
+        from lfx.integrations.errors import AuthExpiredError
+
         if not isinstance(error, AuthExpiredError):
             msg = "error must be an AuthExpiredError"
             raise TypeError(msg)

@@ -3,12 +3,11 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import {
   appendProviderScope,
+  PROVIDER_POLICY_STALE_TIME_MS,
   type ProviderScopeParams,
   providerScopeQueryKey,
 } from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
-
-const PROVIDER_POLICY_STALE_TIME_MS = 30_000;
 
 export interface ModelProviderInfo {
   provider: string;

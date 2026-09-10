@@ -626,13 +626,21 @@ class Component(CustomComponent):
             raise ValueError(msg)
         graph = getattr(self, "graph", None)
         principal = getattr(graph, "execution_principal", ExecutionPrincipal.unknown())
+        required_scopes = set(input_model.required_scopes)
+        inputs = {name: getattr(self, name, model.value) for name, model in self._inputs.items()}
+        required_scopes.update(
+            requirement.scope
+            for requirement in input_model.conditional_scopes
+            if requirement.condition.is_active(inputs)
+        )
+        run_id = getattr(graph, "_run_id", None)
         request = ConnectionResolutionRequest(
             ref=ref,
             principal=principal,
-            required_scopes=frozenset(input_model.required_scopes),
+            required_scopes=frozenset(required_scopes),
             component_id=self.get_id(),
             flow_id=str(graph.flow_id) if graph is not None and graph.flow_id is not None else None,
-            run_id=str(graph.run_id) if graph is not None and graph.run_id else None,
+            run_id=str(run_id) if run_id else None,
         )
         return CredentialLease(get_connection_resolver(), request)
 

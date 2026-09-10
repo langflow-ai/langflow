@@ -113,6 +113,8 @@ def test_scope_set_activates_conditional_requirements() -> None:
 
 def test_oauth_profile_kinds_match_discovery_schema() -> None:
     schema_path = Path(__file__).parents[5] / "design/dedicated-integrations/schema/capability_matrix.schema.json"
+    if not schema_path.is_file():
+        pytest.skip("The discovery schema is only available in the full repository")
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
 
     assert set(get_args(OAuthKind)) == set(schema["$defs"]["auth_mode"]["enum"])
@@ -177,3 +179,29 @@ def test_integration_provider_rejects_profile_identity_mismatch() -> None:
 
     with pytest.raises(ValidationError, match="identity does not match"):
         IntegrationProvider.model_validate(provider)
+
+
+@pytest.mark.parametrize(
+    ("provider", "required", "granted"),
+    [
+        ("google", "https://www.googleapis.com/auth/drive.readonly", "drive.readonly"),
+        ("google_workspace", "https://www.googleapis.com/auth/drive.readonly", "drive.readonly"),
+        ("microsoft", "https://graph.microsoft.com/Mail.Read", "mail.read"),
+    ],
+)
+def test_scope_coverage_uses_explicit_provider_for_unqualified_capability_ids(
+    provider: str, required: str, granted: str
+) -> None:
+    capability = _provider().capabilities[0].model_copy(update={"id": "read", "required_scopes": (required,)})
+
+    assert ScopeSet.covers(capability, {}, {granted}, provider=provider) == frozenset()
+    assert ScopeSet.missing(provider=provider, required={required}, granted={granted}) == frozenset()
+    assert ScopeSet.missing(provider=provider, required={required}, granted=set()) == frozenset({required})
+
+
+def test_scope_coverage_requires_provider_and_preserves_distinct_slack_scopes() -> None:
+    with pytest.raises(TypeError, match="provider"):
+        ScopeSet.covers(_provider().capabilities[0], {}, set())
+    assert ScopeSet.missing(provider="slack", required={"chat:write"}, granted={"chat:write:user"}) == frozenset(
+        {"chat:write"}
+    )

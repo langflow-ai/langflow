@@ -12,6 +12,46 @@ entries:
   fix_pr: https://github.com/langflow-ai/langflow/pull/13538
   workaround: Rebuild the step with the Python Interpreter (PythonREPLComponent) component.
 
+- id: GH-13636
+  title: Loop component rejects Data and Message inputs, so a Message-producing component cannot connect to it
+  status: resolved
+  area: components
+  first_bad_version: unknown
+  last_known_good_version: unknown
+  resolved_in_version: 1.10.1
+  fix_pr: https://github.com/langflow-ai/langflow/pull/13646
+  workaround: Convert the Message to a DataFrame before the Loop input.
+
+- id: GH-13735
+  title: Langflow Assistant reports no model provider configured when only IBM WatsonX is configured
+  status: resolved
+  area: integrations
+  first_bad_version: 1.10.0
+  last_known_good_version: unknown
+  resolved_in_version: 1.10.1
+  fix_pr: https://github.com/langflow-ai/langflow/pull/13771
+  workaround: Configure a second provider so the Assistant finds one it recognises.
+
+- id: GH-14163
+  title: Upgrading with a SECRET_KEY under 32 characters permanently breaks stored credentials
+  status: resolved
+  area: auth
+  first_bad_version: 1.10.1
+  last_known_good_version: 1.10.0
+  resolved_in_version: 1.11.0
+  fix_pr: https://github.com/langflow-ai/langflow/pull/14163
+  workaround: Keep the original SECRET_KEY and re-enter every encrypted credential after upgrading.
+
+- id: GH-14288
+  title: New Flow click is silently dropped before the flows list finishes painting
+  status: resolved
+  area: flow_editor
+  first_bad_version: 1.10.1
+  last_known_good_version: 1.10.0
+  resolved_in_version: 1.11.2
+  fix_pr: https://github.com/langflow-ai/langflow/pull/14288
+  workaround: Wait for the flow cards to render before clicking, and reload the page if the button stops responding.
+
 # To add an entry, copy the template below and fill in the fields.
 # For more information, see regressions/README.md.
 #

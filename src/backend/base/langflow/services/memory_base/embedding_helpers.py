@@ -38,6 +38,12 @@ _MODEL_TO_PROVIDER: list[tuple[list[str], str]] = [
 def infer_embedding_provider(embedding_model: str) -> str:
     """Derive embedding provider name from a model string.
 
+    Fallback only: used when the caller did not supply the provider it
+    selected. Inference is a guess — it has no user context, so it cannot see
+    live-discovered models (an OpenAI-Compatible endpoint's catalog is
+    per-user) and mislabels them via the ``"OpenAI"`` default. Callers that
+    know the selected provider must pass it instead.
+
     Looks up the model in the unified models catalog first so the answer
     matches what the UI dropdown shows; falls back to pattern-based
     inference for legacy/edge cases.
