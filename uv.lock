@@ -4923,24 +4923,6 @@ wheels = [
 ]
 
 [[package]]
-name = "fxmacrodata-public-client"
-version = "0.1.0"
-source = { url = "https://github.com/fxmacrodata/fxmacrodata-public-client/releases/download/v0.1.0/fxmacrodata_public_client-0.1.0-py3-none-any.whl" }
-dependencies = [
-    { name = "jsonschema" },
-    { name = "requests" },
-]
-wheels = [
-    { url = "https://github.com/fxmacrodata/fxmacrodata-public-client/releases/download/v0.1.0/fxmacrodata_public_client-0.1.0-py3-none-any.whl", hash = "sha256:5c60ff217243ff4001f178d4fdd8c3c8ce29001ad1ea0a170ed96606f0dd07c8" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "jsonschema", specifier = ">=4.23,<5" },
-    { name = "requests", specifier = ">=2.32,<3" },
-]
-
-[[package]]
 name = "gassist"
 version = "0.0.1"
 source = { registry = "https://pypi.org/simple" }
@@ -10265,9 +10247,10 @@ name = "lfx-fxmacrodata"
 version = "0.1.0"
 source = { editable = "src/bundles/fxmacrodata" }
 dependencies = [
-    { name = "fxmacrodata-public-client" },
+    { name = "jsonschema" },
     { name = "langchain-core" },
     { name = "lfx" },
+    { name = "requests" },
 ]
 
 [package.optional-dependencies]
@@ -10278,11 +10261,12 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fxmacrodata-public-client", url = "https://github.com/fxmacrodata/fxmacrodata-public-client/releases/download/v0.1.0/fxmacrodata_public_client-0.1.0-py3-none-any.whl" },
+    { name = "jsonschema", specifier = ">=4.23,<5" },
     { name = "langchain-core", specifier = ">=1.2.28,<2" },
     { name = "lfx", editable = "src/lfx" },
     { name = "pytest", marker = "extra == 'test'", specifier = ">=8" },
     { name = "pytest-xdist", marker = "extra == 'test'", specifier = ">=3" },
+    { name = "requests", specifier = ">=2.32,<3" },
 ]
 provides-extras = ["test"]
 

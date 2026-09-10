@@ -1,0 +1,19 @@
+FXMacroData Public Client 0.1.0 (MIT)
+
+The six files listed below are copied without changes from the published client.
+Upstream: https://github.com/fxmacrodata/fxmacrodata-public-client
+Source commit: 2c08da3bac18f5d6cae3295a2b70a8bbee60be8a
+Wheel: https://github.com/fxmacrodata/fxmacrodata-public-client/releases/download/v0.1.0/fxmacrodata_public_client-0.1.0-py3-none-any.whl
+Wheel SHA-256: 5c60ff217243ff4001f178d4fdd8c3c8ce29001ad1ea0a170ed96606f0dd07c8
+
+The client is bundled so installation and publication use standard package-index
+dependencies. Review upstream changes and refresh these hashes when updating.
+See LICENSE in this directory for the original copyright and licence terms.
+
+File SHA-256:
+27d483d5389fc6d65f96522628dfa41d6f469c1443082d648ff683fa30ca0d00  __init__.py
+cd6ac9c9ef204fc5c877cbafd3c44ff21b9665352d1a86daf19c1149f956a1cf  client.py
+0b4087e5bef68199c5ef265cee794a7af7ad0126f0bd3249395072b95fe8d29e  mcp-tools.json
+3026fe43040a0f45e3059c05fd857bed98e4b321e8d709a3727d3f51b1df893a  operations.json
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  py.typed
+27df3304e36d89818f6f529fddc5b38c8930dd57adb7aa4bd0d28ecbd77e7001  transport.py

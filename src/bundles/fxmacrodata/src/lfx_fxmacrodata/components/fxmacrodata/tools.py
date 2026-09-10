@@ -4,10 +4,10 @@ from collections.abc import Callable
 from copy import deepcopy
 from typing import Any, ClassVar
 
-from fxmacrodata_public import Operation, list_operations
 from langchain_core.tools import StructuredTool
 from lfx.io import IntInput, Output, SecretStrInput
 
+from lfx_fxmacrodata._public_client import Operation, list_operations
 from lfx_fxmacrodata.client import DOCUMENTATION, query
 from lfx_fxmacrodata.component import CredentialSafeComponent
 

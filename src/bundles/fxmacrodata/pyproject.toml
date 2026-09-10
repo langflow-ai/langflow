@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.31,<2"]
+requires = ["hatchling==1.31.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
 license-files = ["LICENSE"]
-dependencies = ["fxmacrodata-public-client @ https://github.com/fxmacrodata/fxmacrodata-public-client/releases/download/v0.1.0/fxmacrodata_public_client-0.1.0-py3-none-any.whl#sha256=5c60ff217243ff4001f178d4fdd8c3c8ce29001ad1ea0a170ed96606f0dd07c8", "lfx>=1.13.0.dev0,<2.0.0", "langchain-core>=1.2.28,<2"]
+dependencies = ["requests>=2.32,<3", "jsonschema>=4.23,<5", "lfx>=1.13.0.dev0,<2.0.0", "langchain-core>=1.2.28,<2"]
 
 [project.urls]
 Homepage = "https://fxmacrodata.com"
@@ -34,11 +34,10 @@ testpaths = ["tests"]
 addopts = "-q"
 
 [tool.ruff]
+extend-exclude = ["src/lfx_fxmacrodata/_public_client"]
 line-length = 120
 target-version = "py310"
 
 [project.entry-points."langflow.extensions"]
 lfx-fxmacrodata = "lfx_fxmacrodata"
 
-[tool.hatch.metadata]
-allow-direct-references = true

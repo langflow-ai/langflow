@@ -354,6 +354,7 @@ exclude = [
     "src/frontend/tests/assets/*",
     "src/lfx/src/lfx/_assets/component_index.json",
     "docs/**/API-Reference/python-examples/**",
+    "src/bundles/fxmacrodata/src/lfx_fxmacrodata/_public_client/**",  # Unmodified upstream public client.
 ]
 line-length = 120
 
