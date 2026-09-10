@@ -720,8 +720,7 @@ class TestDB2VectorStoreComponent:
             mock_connection = MagicMock()
             mock_connect.return_value = mock_connection
 
-            from langchain_community.vectorstores.utils import DistanceStrategy
-            from lfx_ibm.components.ibm.db2vs import DB2VS
+            from lfx_ibm.components.ibm.db2vs import DB2VS, DistanceStrategy
 
             # Test COSINE
             component.distance_strategy = "COSINE"
