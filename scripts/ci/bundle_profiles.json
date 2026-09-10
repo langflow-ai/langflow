@@ -39,7 +39,7 @@
         {
           "distribution": "lfx-docling",
           "extras": [],
-          "version": ">=0.1.6,<1.0.0",
+          "version": ">=0.1.7,<1.0.0",
           "providers": [
             "lfx-docling"
           ]

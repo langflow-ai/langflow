@@ -29,7 +29,7 @@ dependencies = [
     # The cross-bundle CI matrix verifies these ranges resolve together across
     # the supported lfx axis.
     "lfx-ibm>=0.2.3,<1.0.0",
-    "lfx-docling>=0.1.6,<1.0.0",
+    "lfx-docling>=0.1.7,<1.0.0",
     "lfx-datastax>=0.1.8,<1.0.0",
     "lfx-toolguard>=0.1.2,<1.0.0",
     "lfx-openai>=0.1.4,<1.0.0",
@@ -184,15 +184,15 @@ bundles = [
 ]
 
 docling = [
-    "lfx-docling[local]>=0.1.6,<1.0.0",
+    "lfx-docling[local]>=0.1.7,<1.0.0",
 ]
 
 docling-chunking = [
-    "lfx-docling[chunking]>=0.1.6,<1.0.0",
+    "lfx-docling[chunking]>=0.1.7,<1.0.0",
 ]
 
 docling-image-description = [
-    "lfx-docling[image-description]>=0.1.6,<1.0.0",
+    "lfx-docling[image-description]>=0.1.7,<1.0.0",
 ]
 
 audio = [
