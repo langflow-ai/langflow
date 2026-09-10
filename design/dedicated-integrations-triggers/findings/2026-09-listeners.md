@@ -6,7 +6,7 @@ Owners (sign-off roles): platform owner, release owner
 Last verified: 2026-09-10 (Slack evidence correction; author sections remain draft)
 
 TRG-1 exit criterion 1, and the first of the three re-open triggers recorded in
-[`../dedicated-integrations/triggers-deferred.md`](../dedicated-integrations/triggers-deferred.md). The criterion asks
+[`../../dedicated-integrations/triggers-deferred.md`](../../dedicated-integrations/triggers-deferred.md). The criterion asks
 the platform owner for a written document on both precedents and on the sidecar position. This file is the stub the
 gate PR ships: the repository evidence is gathered and dated here so the author writes judgement rather than
 archaeology, and the two sections that need the author's own words are marked. It stays `Status: draft` and exit
@@ -63,7 +63,7 @@ initiative should reuse; the worker-per-uvicorn-worker shape is the part it must
 > `decisions/process-model.md` is written against that position and is `Status: accepted` by the release owner. If
 > this section lands differently, that record is amended in the same pull request rather than left to drift.
 
-## 4. Recommendation and risks the author wants recorded (author's section)
+## 4. Recommendation and risks to be recorded (author's section)
 
 > To be written by the platform owner. The gate needs, at minimum: whether Track A may ship before Track B; whether
 > the subprocess mode is acceptable for single-container and Desktop deployments; and the operational cost the

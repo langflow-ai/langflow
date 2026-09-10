@@ -10,9 +10,9 @@ Every matrix is validated against ``schema/event_transport.schema.json``
 (Draft 2020-12, via ``jsonschema``) and then against the three rules a schema
 cannot express:
 
-* **sourced claims** - every claim block on a wave-1 mechanism names a source id
-  that resolves in ``sources``, and every source carries an https URL, a kind,
-  and a non-future ``verified_on`` date;
+* **sourced claims** - every claim block, including an optional ``exclusion_basis``
+  on deferred or excluded mechanisms, names a source id that resolves in ``sources``,
+  and every source carries an https URL, a kind, and a non-future ``verified_on`` date;
 * **the no-ingress rule per context** - a mechanism that needs public HTTPS may
   not claim a deployment context whose ``public_ingress_by_context`` entry is
   ``unavailable``, and a context marked ``conditional`` is only allowed when the
@@ -93,7 +93,7 @@ REQUIRED_TOP_LEVEL = frozenset(
 # A wave-1 mechanism is the contract TRG-3 through TRG-6 build against; deferred and excluded rows
 # only need enough to say what was ruled out and why.
 REQUIRED_WAVE_1_BLOCKS = ("inbound_auth", "subscription", "payload", "delivery", "replay", "rate_limit", "dedupe_key")
-SOURCED_BLOCKS = (*REQUIRED_WAVE_1_BLOCKS, "session_key")
+SOURCED_BLOCKS = (*REQUIRED_WAVE_1_BLOCKS, "session_key", "exclusion_basis")
 
 
 def _parse_date(raw: Any) -> date | None:
@@ -114,7 +114,7 @@ def _check_date(raw: Any, label: str, errors: list[str]) -> None:
 
 
 def _check_enum(value: Any, dimension: str, label: str, errors: list[str]) -> None:
-    if value not in VALID_VALUES[dimension]:
+    if not isinstance(value, str) or value not in VALID_VALUES[dimension]:
         errors.append(f"{label} has unknown {dimension} {value!r}")
 
 
@@ -236,7 +236,11 @@ def _validate_mechanism(
         errors.append(f"{label} needs a rationale")
 
     contexts = mechanism.get("deployment_contexts")
-    if not isinstance(contexts, list) or not set(contexts) <= DEPLOYMENT_CONTEXTS:
+    if (
+        not isinstance(contexts, list)
+        or not all(isinstance(context, str) for context in contexts)
+        or not set(contexts) <= DEPLOYMENT_CONTEXTS
+    ):
         errors.append(f"{label} deployment_contexts must be a list drawn from {sorted(DEPLOYMENT_CONTEXTS)}")
 
     status = mechanism.get("status")
@@ -246,7 +250,7 @@ def _validate_mechanism(
             errors.append(f"{label} is a wave-1 mechanism and is missing {missing}")
         if not contexts:
             errors.append(f"{label} is a wave-1 mechanism and must support at least one deployment context")
-    elif status in {"deferred", "excluded"} and contexts:
+    elif status in ("deferred", "excluded") and contexts:
         errors.append(f"{label} is {status} and must not claim deployment contexts")
 
     if mechanism.get("confidence") == "low" and not mechanism.get("open_questions"):
@@ -300,8 +304,11 @@ def _validate_no_ingress_rule(matrix: dict[str, Any], errors: list[str]) -> None
         if not isinstance(contexts, list):
             continue
         fallback_id = mechanism.get("fallback_mechanism")
-        fallback = by_id.get(fallback_id) if fallback_id is not None else None
+        fallback = by_id.get(fallback_id) if isinstance(fallback_id, str) else None
+        fallback_contexts = fallback.get("deployment_contexts") if fallback is not None else None
         for context in contexts:
+            if not isinstance(context, str):
+                continue
             availability = ingress.get(context)
             if availability == "unavailable":
                 errors.append(
@@ -319,7 +326,7 @@ def _validate_no_ingress_rule(matrix: dict[str, Any], errors: list[str]) -> None
                         f"{label} fallback_mechanism {fallback_id!r} is not outbound-only, "
                         f"so it does not answer context {context!r}"
                     )
-                elif context not in (fallback.get("deployment_contexts") or []):
+                elif not isinstance(fallback_contexts, list) or context not in fallback_contexts:
                     errors.append(f"{label} fallback_mechanism {fallback_id!r} does not support context {context!r}")
         if fallback_id is not None and fallback is None:
             errors.append(f"{label} names unknown fallback_mechanism {fallback_id!r}")

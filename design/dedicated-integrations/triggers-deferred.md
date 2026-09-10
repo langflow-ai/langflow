@@ -2,7 +2,7 @@
 
 Status: deferred, then re-opened 2026-09-04 by release owner decision - see "Amendment" below
 Owners (sign-off roles): release owner, platform owner
-Last verified: 2026-09-01
+Last verified: 2026-09-10 (re-verification target aligned with the reopened scope)
 
 ## What this record is
 
@@ -47,7 +47,7 @@ connection record must not grow trigger-specific fields in 1.13.
 - Two of the three providers' event-delivery mechanisms are confirmed usable from a self-managed instance without
   a public ingress (otherwise the hosted-only constraint changes the design).
 
-Re-verify by: the 1.14 planning gate.
+Re-verify by: the 1.13 release sign-off, following the reopened scope in the amendment below.
 
 ## Amendment: re-opened 2026-09-04 (release owner decision)
 

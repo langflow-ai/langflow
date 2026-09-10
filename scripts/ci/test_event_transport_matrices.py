@@ -420,3 +420,81 @@ def test_an_unhashable_mechanism_id_is_reported_not_raised(tmp_path: Path) -> No
     errors = _validate(root)
 
     assert any("mechanism_id must look like" in error for error in errors), errors
+
+
+@pytest.mark.parametrize("bad_value", [[], {}], ids=["list", "object"])
+@pytest.mark.parametrize(
+    ("field_path", "dimension"),
+    [
+        (("provider",), "provider"),
+        (("sources", "slack-events-api", "kind"), "source_kind"),
+        (("public_ingress_by_context", "hosted"), "ingress_availability"),
+        (("mechanisms", 0, "track"), "track"),
+        (("mechanisms", 0, "transport"), "transport"),
+        (("mechanisms", 0, "ingress_requirement"), "ingress_requirement"),
+        (("mechanisms", 0, "confidence"), "confidence"),
+        (("mechanisms", 0, "status"), "mechanism_status"),
+        (("mechanisms", 0, "inbound_auth", "method"), "inbound_auth_method"),
+        (("mechanisms", 0, "payload", "shape"), "payload_shape"),
+        (("mechanisms", 0, "delivery", "guarantee"), "delivery_guarantee"),
+        (("mechanisms", 0, "dedupe_key", "stability"), "dedupe_stability"),
+    ],
+)
+def test_malformed_enum_is_reported_not_raised(tmp_path: Path, field_path: tuple, dimension: str, bad_value) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "slack")
+    parent = matrix
+    for key in field_path[:-1]:
+        parent = parent[key]
+    parent[field_path[-1]] = bad_value
+    _save(root, "slack", matrix)
+
+    errors = _validate(root)
+
+    assert any(f"unknown {dimension}" in error for error in errors), errors
+
+
+@pytest.mark.parametrize("contexts", [[[]], [{}], {"self_managed": True}, 1])
+@pytest.mark.parametrize("mechanism_id", ["slack.events_api", "slack.socket_mode"])
+def test_malformed_deployment_contexts_are_reported_not_raised(tmp_path: Path, mechanism_id: str, contexts) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "slack")
+    _mechanism(matrix, mechanism_id)["deployment_contexts"] = contexts
+    _save(root, "slack", matrix)
+
+    errors = _validate(root)
+
+    assert any("deployment_contexts must be a list" in error for error in errors), errors
+    if mechanism_id == "slack.socket_mode":
+        assert any("does not support context 'self_managed'" in error for error in errors), errors
+
+
+@pytest.mark.parametrize("fallback_id", [[], {}, ["slack.socket_mode"], {"id": "slack.socket_mode"}])
+def test_malformed_fallback_identifier_fails_cli(tmp_path: Path, monkeypatch, capsys, fallback_id) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "slack")
+    _mechanism(matrix, "slack.events_api")["fallback_mechanism"] = fallback_id
+    _save(root, "slack", matrix)
+    monkeypatch.setattr(sys, "argv", ["checker", "--design-root", str(root)])
+
+    assert main() == 1
+    assert "names unknown fallback_mechanism" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("provider", "mechanism_id"),
+    [
+        ("slack", "slack.rtm_api"),
+        ("microsoft", "microsoft.graph_notifications_with_resource_data"),
+        ("microsoft", "microsoft.teams_message_notifications"),
+    ],
+)
+def test_exclusion_basis_source_must_resolve(tmp_path: Path, provider: str, mechanism_id: str) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, provider)
+    _mechanism(matrix, mechanism_id)["exclusion_basis"] = {"details": "Out of scope", "source": "no-such-source"}
+    _save(root, provider, matrix)
+
+    errors = _validate(root)
+
+    assert any("exclusion_basis references unknown source 'no-such-source'" in error for error in errors), errors

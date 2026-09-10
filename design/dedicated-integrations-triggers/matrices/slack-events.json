@@ -3,7 +3,7 @@
   "provider": "slack",
   "display_name": "Slack",
   "wave": 1,
-  "verified_on": "2026-09-05",
+  "verified_on": "2026-09-10",
   "public_ingress_by_context": {
     "hosted": "available",
     "self_managed": "conditional",
@@ -20,7 +20,7 @@
       "url": "https://docs.slack.dev/apis/events-api/",
       "title": "Slack: Events API",
       "kind": "provider_docs",
-      "verified_on": "2026-09-05",
+      "verified_on": "2026-09-10",
       "notes": "Events are delivered as HTTP POST to the app's Request URL. The first POST to a new Request URL is a url_verification event carrying a challenge that the app echoes. Each delivery must be answered with a 2xx within three seconds; Slack retries a failed or slow delivery three times (immediately, after one minute, after five minutes) carrying X-Slack-Retry-Num and X-Slack-Retry-Reason, and disables event delivery after sustained failures. The envelope carries event_id, event_time, team_id, api_app_id, authorizations and the full event object. Slack documents a per-workspace hourly ceiling on event delivery (30,000 events per hour per workspace)."
     },
     "slack-verify-requests": {
@@ -66,11 +66,11 @@
       "notes": "Web API tiers 1 to 4 plus special tiers, applied per method per workspace per app; 429 responses carry Retry-After in seconds. These govern the calls a triggered flow makes back into Slack, not the inbound event stream."
     },
     "slack-rtm": {
-      "url": "https://docs.slack.dev/apis/rtm-api/",
+      "url": "https://docs.slack.dev/legacy/legacy-rtm-api/",
       "title": "Slack: RTM API",
       "kind": "provider_docs",
-      "verified_on": "2026-09-05",
-      "notes": "The RTM API is the legacy WebSocket transport, available only to classic apps and to apps that cannot use the Events API; it does not support the granular scope model that the wave-1 Slack app uses."
+      "verified_on": "2026-09-10",
+      "notes": "Granular-permission Slack apps cannot use RTM. Slack directs new integrations to the Events API or Socket Mode."
     }
   },
   "open_questions": [
@@ -134,8 +134,8 @@
         "source": "slack-events-api"
       },
       "rate_limit": {
-        "details": "Event delivery is capped per workspace per app per hour (Slack publishes 30,000 events per hour); the flow's own calls back into Slack are governed by the Web API method tiers, including the reduced conversations.replies tier for commercially distributed non-Marketplace apps.",
-        "source": "slack-rate-limits"
+        "details": "Event delivery is capped at 30,000 events per workspace per app per 60 minutes.",
+        "source": "slack-events-api"
       },
       "dedupe_key": {
         "field": "event_id",
@@ -209,8 +209,8 @@
         "source": "slack-socket-mode"
       },
       "rate_limit": {
-        "details": "Up to ten concurrent Socket Mode connections per app; the per-workspace hourly event ceiling is shared with the Events API.",
-        "source": "slack-socket-mode"
+        "details": "Socket Mode delivers Events API subscriptions, with the same limit of 30,000 events per workspace per app per 60 minutes. The separate connection cap is recorded in subscription.renewal.",
+        "source": "slack-events-api"
       },
       "dedupe_key": {
         "field": "event_id",
@@ -234,7 +234,11 @@
       "status": "excluded",
       "confidence": "high",
       "owning_ticket": "TRG-5",
-      "rationale": "Legacy WebSocket transport limited to classic apps and to apps that cannot use the Events API; it does not support the granular scope model the wave-1 Slack app registration uses. Socket Mode is its replacement and is already the no-ingress answer.",
+      "rationale": "RTM does not support the granular scope model the wave-1 Slack app registration uses. Socket Mode is already the no-ingress answer.",
+      "exclusion_basis": {
+        "details": "Slack explicitly excludes granular-permission apps from RTM and recommends the Events API or Socket Mode.",
+        "source": "slack-rtm"
+      },
       "notes": "Recorded so a future reader does not re-open it as an alternative to Socket Mode."
     }
   ]

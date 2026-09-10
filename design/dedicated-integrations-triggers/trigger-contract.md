@@ -4,7 +4,7 @@ Status: accepted
 Decision ID: trigger-contract
 Applies to: TRG-2 (entity, ledger, dispatcher, families), TRG-3 (listener leases), TRG-4 (ingress and subscriptions), TRG-5 and TRG-6 (source adapters), TRG-7 (frontend)
 Owners (sign-off roles): platform owner, lfx owner, langflow-base owner, Enterprise owner, release owner
-Last verified: 2026-09-05
+Last verified: 2026-09-10 (API loop ownership clarified)
 
 TRG-1 exit criterion 6. This is the contract every other triggers ticket builds against: the entity and its tables,
 the ledger's delivery rule, how a trigger binds to what it runs, how a triggered run correlates to a conversation,
@@ -74,7 +74,9 @@ makes the ledger append-only and the lineage readable in the event inspector (`f
 ### `trigger_lease`
 
 Named singleton leases: `name` primary key, `owner`, `acquired_at`, `heartbeat_at`, `expires_at`. One row per loop,
-held with a heartbeat, so exactly one API worker runs each loop. The names are constants, not literals - TRG-3 through
+held with a heartbeat, so exactly one API worker runs each loop. Only API workers acquire and renew the dispatcher
+and scheduler leases; listener processes never host these loops (`decisions/process-model.md`).
+The names are constants, not literals - TRG-3 through
 TRG-6 import them from `langflow.services.triggers.constants` rather than retyping them, because two loops that spell
 the same lease differently both believe they hold it and both drain the ledger:
 

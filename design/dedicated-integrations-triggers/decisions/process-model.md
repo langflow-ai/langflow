@@ -4,7 +4,7 @@ Status: accepted
 Decision ID: process-model
 Applies to: every Track B mechanism in `matrices/*-events.json`; the TRG-2 dispatcher; TRG-3 packaging
 Owners (sign-off roles): platform owner, langflow-base owner, Enterprise owner, release owner
-Last verified: 2026-09-10 (Slack connection lifecycle and handover correction)
+Last verified: 2026-09-10 (Slack connection lifecycle, handover, and API loop ownership)
 
 ## Context
 
@@ -79,7 +79,8 @@ in the listener process, so the two never converge again by accident.
 
 The dispatcher and the schedule tick are not listeners and stay in the API lifespan, gated on
 `trigger_dispatcher_enabled` and held by a `trigger_lease` heartbeat singleton so that only one of the several API
-workers runs them; the listener process may host the same loop when the API is not running it.
+workers runs each loop. Listener processes do not acquire these loop leases or host either loop. When the API
+dispatcher is disabled or unavailable, committed events wait in the ledger until an API worker resumes dispatch.
 
 Lease semantics, one lease per provider connection in `trigger_listener_lease`: TTL 30 s, heartbeat 10 s, reconcile
 poll 5 s, failover within two TTLs of an unclean death, claim and renew through the guarded-`UPDATE` idiom of fact 4

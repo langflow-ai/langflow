@@ -20,7 +20,8 @@ them as a deferred track. All three are amended in this pull request rather than
 1.14 framing is gone from this file, the 1.13 estimate carries a dated "Amendment, 2026-09-04" under "What the
 estimate does not include", and the deferred record carries a dated "Amendment: re-opened 2026-09-04" section (the
 INT-1 gate's own exit-criterion row 6 is annotated to match). None of them changes the 1.13 actions total.
-[`estimate.md`](estimate.md) carries the new numbers: 39.5 engineer-weeks for TRG-1 through TRG-8, additional to the
+[`estimate.md`](estimate.md) carries the last issued baseline: 39.5 engineer-weeks for TRG-1 through TRG-8, pending
+frontend consent sizing and a revised total (criterion 9 reopened 2026-09-10). Triggers work is additional to the
 48.75 the actions release carries. Risk 7 of the governing plan (pulling triggers into 1.13 invalidates the actions
 estimate) is answered by adding capacity, not by re-scoping the actions release: no INT ticket loses scope here.
 
@@ -100,14 +101,14 @@ mechanism, which is what makes the no-relay rule liveable.
 | 6 | Trigger contract: the trigger entity and its binding to a flow version or deployment; correlation of a triggered run to a conversation; executing identity per trigger kind as new `execution_principal_matrix.json` families (`trigger_push`, `trigger_listener`); signed off by the lfx, langflow-base, Enterprise, and platform owners | `trigger-contract.md` | required file, accepted status, sign-offs, dated criterion completion | **open**: record accepted 2026-09-05; four sign-offs outstanding |
 | 7 | 1.13 conformance: the boundary table above checked against the merged INT-2, INT-5, and INT-6 pull requests | this file, "Boundary with 1.13" | dated criterion completion required; merged-commit and behavioral evidence reviewed by owners | **open**: those pull requests are unmerged; one gap already filed (the `connection_resolution` dimension) |
 | 8 | Frontend surface list: trigger node, subscription status, event log and replay, operator controls | `frontend-surfaces.md` | required file, accepted status, sign-off coverage, dated criterion completion | done 2026-09-05 |
-| 9 | Estimate and ticket breakdown, TRG-2 onward | `estimate.md` | required file and dated criterion completion; ticket breakdown reviewed by release owner | done 2026-09-05 |
+| 9 | Estimate and ticket breakdown, TRG-2 onward | `estimate.md` | required file and dated criterion completion; ticket breakdown reviewed by release owner | **open**: reopened 2026-09-10 pending frontend consent, withdrawal, and non-owner denial sizing and a re-issued total |
 
 Gate close requires substantive owner review plus a passing `--require-accepted` check. The check requires exactly
 one row for each criterion 1 through 9, with the completed Status cell exactly `done YYYY-MM-DD` (a valid, non-future
 date; move explanations into the other cells). Every instantiated decision record under `decisions/` except
 `TEMPLATE.md`, every findings record, `trigger-contract.md`, and `frontend-surfaces.md` must be `Status: accepted`;
 the estimate must exist; findings must contain no TODO, TBD, or "to be written" markers; and every declared owner
-must complete both sign-off tables. Criteria 1, 6, and 7 remain open. Filling signatures alone cannot close them.
+must complete both sign-off tables. Criteria 1, 6, 7, and 9 remain open. Filling signatures alone cannot close them.
 
 These are necessary machine checks of recorded completion, not proof of the findings' substance or merged-code
 conformance. The platform owner still authors findings sections 3 and 4, and the owners still perform the boundary
@@ -163,7 +164,7 @@ rule is enforced per deployment context - a mechanism that needs public HTTPS ma
 mechanism names an `outbound_only` fallback covering that same context. Every provider must ship at least one
 outbound-only wave-1 mechanism. Decision-record parsing (`Status:` line, `## Decision` heading) and sign-off coverage
 run exactly as they do for INT-1. Adding `--require-accepted` also checks the triggers-specific records and all nine
-exit-criterion statuses described above. It fails today on the draft/unfinished findings, open criteria 1, 6 and 7,
+exit-criterion statuses described above. It fails today on the draft/unfinished findings, open criteria 1, 6, 7, and 9,
 and outstanding signatures. Ordinary structural validation continues to accept work in progress.
 
 The rules live in `scripts/ci/event_transport_matrix.py`; `scripts/ci/test_event_transport_matrices.py` covers them
@@ -197,6 +198,6 @@ estimate.md                            criterion 9, with the TRG ticket breakdow
 | 3 | process-model and self-managed ingress decisions | done |
 | 4 | delivery-semantics decision and the trigger contract | written; awaiting the lfx, langflow-base, Enterprise, and platform sign-offs |
 | 5 | frontend surfaces | done |
-| 6 | estimate and TRG ticket breakdown; gate close | estimate done; gate close waits on criteria 1 and 7 |
+| 6 | estimate and TRG ticket breakdown; gate close | estimate revision pending; gate close waits on criteria 1, 6, 7, and 9 |
 
 Re-verify by: the 1.13 release sign-off.

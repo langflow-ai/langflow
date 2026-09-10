@@ -180,6 +180,7 @@
           "pattern": "^TRG-[0-9]+$"
         },
         "rationale": { "type": "string", "minLength": 1 },
+        "exclusion_basis": { "$ref": "#/$defs/sourced_claim" },
         "fallback_mechanism": {
           "type": "string",
           "pattern": "^(google|microsoft|slack)\\.[a-z0-9_]+$"

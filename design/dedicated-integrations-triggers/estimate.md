@@ -1,11 +1,13 @@
 # Re-issued estimate for TRG-1 through TRG-8
 
-Status: re-issued 2026-09-05 under the release owner's 1.13 decision and the accepted gate records
+Status: last issued 2026-09-05; criterion 9 reopened 2026-09-10 pending consent sizing and a revised total
 Owners (sign-off roles): release owner
-Last verified: 2026-09-05
+Last verified: 2026-09-10
 
 TRG-1's last exit criterion. The original ticket breakdown summed to 34 engineer-weeks including TRG-1. The numbers
-below apply the gate's findings ticket by ticket, and every delta names the record or fact that caused it.
+below are the last issued baseline, applying the gate's findings ticket by ticket; every delta names its record or
+fact. The frontend consent work clarified on 2026-09-10 still needs sizing, so the frontend and total estimates
+must be re-issued before criterion 9 closes. The recorded 2026-09-05 sign-off applies only to that baseline.
 
 **Release target.** The scaffold in this directory was written as a 1.14 candidate and
 [`../dedicated-integrations/estimate.md`](../dedicated-integrations/estimate.md) excludes triggers from the 1.13
@@ -23,7 +25,7 @@ TRG-5 and TRG-6 run in parallel once TRG-3, TRG-4 and their bundles exist.
 
 ## Per ticket
 
-| Ticket | Jira | Original | Re-issued | Delta | Why |
+| Ticket | Jira | Original | Last issued (2026-09-05) | Delta | Why |
 |---|---|---|---|---|---|
 | TRG-1 Discovery gate | LE-2480 | 3 | 3 | 0 | as sized; this pull request |
 | TRG-2 Trigger entity, ledger, dispatcher | LE-2481 | 6 | 6.5 | +0.5 | one migration now creates all five tables (`trigger-contract.md` section 1) so TRG-3 and TRG-4 add none; the dispatcher needs its own background-execution frame source, because the default one cannot load a pinned `FlowVersion` and is not installed in a fresh process |
@@ -48,7 +50,8 @@ Consent sequencing clarification, 2026-09-10: TRG-7's interim connection field i
 `allow_non_interactive` control and recovery path in `frontend-surfaces.md` B9. Provider-trigger enablement depends
 on INT-4's authenticated connection-update API as well as TRG-2. INT-8 later owns the permanent Connections-page
 control. The frontend owner must include consent, withdrawal, and non-owner denial in the existing TRG-7 review
-and sizing before sign-off; the table above remains the last issued estimate.
+and sizing before sign-off. Criterion 9 remains open until that review and the release owner's re-issued frontend
+and total estimates are recorded; the table above remains the last issued baseline.
 
 ## External lead times (calendar risk, not engineer-weeks)
 
@@ -58,7 +61,7 @@ and sizing before sign-off; the table above remains the last issued estimate.
 | Slack Marketplace listing | hosted | Slack review, weeks; already a 1.13 dependency for the action rate tier | `../dedicated-integrations/estimate.md` |
 | Customer Cloud project with a Pub/Sub topic and a publish grant for the Gmail service account | self-managed, desktop | customer task; blocks every Gmail trigger | `matrices/google-events.json` source `gmail-push` |
 | Public HTTPS ingress on a self-managed instance | self-managed | customer task; not having one costs latency, not function (`decisions/self-managed-ingress.md`) | this gate |
-| Teams change-notification licensing (protected APIs, model A or B billing) | any | not pursued; Teams is excluded as an event source | `matrices/microsoft-events.json` source `graph-teams-licenses` |
+| Teams event-source scope and permission review | any | not sized; Teams remains excluded pending separate discovery; the former metered billing model is no longer a prerequisite | `matrices/microsoft-events.json` sources `graph-teams-notifications` and `graph-teams-licenses` |
 | Two Slack apps for the opt-in live suite (a distributed confidential app and a customer-owned Socket Mode app) plus a workspace, with credentials in CI custody | validation | no such secret exists in `scripts/ci` today | TRG-5, TRG-8 |
 
 ## What this estimate does not include

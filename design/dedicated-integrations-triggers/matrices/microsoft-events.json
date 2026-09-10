@@ -3,7 +3,7 @@
   "provider": "microsoft",
   "display_name": "Microsoft 365",
   "wave": 1,
-  "verified_on": "2026-09-05",
+  "verified_on": "2026-09-10",
   "public_ingress_by_context": {
     "hosted": "available",
     "self_managed": "conditional",
@@ -62,14 +62,21 @@
       "url": "https://learn.microsoft.com/en-us/graph/teams-licenses",
       "title": "Microsoft Graph: Licensing and payment requirements for Microsoft Teams APIs",
       "kind": "provider_docs",
-      "verified_on": "2026-09-05",
-      "notes": "Teams change notifications for chat and channel messages are protected APIs: they require application permissions with an approval request and a licensing or consumption (evaluation, model A, model B) billing model declared per request. There is no delegated-permission path that would fit the wave-1 user-delegated connection model."
+      "verified_on": "2026-09-10",
+      "notes": "The listed Teams APIs stopped being metered on 2025-08-25; billing configuration and the model query parameter are no longer required. The historical model A/model B requirements do not justify excluding Teams message notifications. Resource-specific permission requirements are recorded in graph-teams-notifications."
+    },
+    "graph-teams-notifications": {
+      "url": "https://learn.microsoft.com/en-us/graph/teams-changenotifications-chatmessage",
+      "title": "Microsoft Graph: Change notifications for Teams channel and chat messages",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-10",
+      "notes": "Tenant-wide /teams/getAllMessages and /chats/getAllMessages subscriptions require application permissions. Individual channel subscriptions support delegated ChannelMessage.Read.All; individual chat subscriptions support delegated Chat.Read. Teams cannot be ruled out categorically on delegated-permission grounds."
     },
     "graph-resource-data": {
       "url": "https://learn.microsoft.com/en-us/graph/change-notifications-with-resource-data",
       "title": "Microsoft Graph: Change notifications with resource data",
       "kind": "provider_docs",
-      "verified_on": "2026-09-05",
+      "verified_on": "2026-09-10",
       "notes": "Rich notifications include the changed resource inline, encrypted with a public key the subscriber supplies at creation (includeResourceData, encryptionCertificate, encryptionCertificateId); the subscriber holds the private key and decrypts each notification. Only a subset of resources supports it."
     }
   },
@@ -213,6 +220,10 @@
       "confidence": "high",
       "owning_ticket": "TRG-6",
       "rationale": "Would remove the fetch-back and give the notification body a cryptographic guarantee, but it requires Langflow to own an encryption certificate and its private key per subscription, with rotation, and only a subset of resources supports it. No wave-1 ticket carries certificate lifecycle work.",
+      "exclusion_basis": {
+        "details": "Rich notifications require a subscriber-provided encryption certificate, private-key management, and key rotation, which are outside wave-1 scope.",
+        "source": "graph-resource-data"
+      },
       "notes": "Re-open when a customer needs sub-second latency on mail or when the security review rejects clientState as the only body check."
     },
     {
@@ -225,8 +236,12 @@
       "status": "excluded",
       "confidence": "high",
       "owning_ticket": "TRG-6",
-      "rationale": "Teams message change notifications are protected APIs: they need application permissions with an approval request and a declared licensing or consumption billing model. The wave-1 Microsoft substrate decision is delegated-only and excludes application permissions, so no Teams trigger ships. Teams send actions stay in the 1.13 action set; only Teams as an event source is excluded.",
-      "notes": "This is the gate's answer to the open question 'Teams messages'. Re-open when a customer commits to the Teams billing model and Enterprise accepts application permissions for a trigger connection."
+      "rationale": "Teams remains outside the wave-1 event-source scope pending separate discovery of supported subscription resources, scopes, and adapter behavior. Tenant-wide message subscriptions require application permissions, but individual channel and chat subscriptions have delegated paths; the exclusion is a scope decision, not a claim that all Teams notifications require application permissions. Teams send actions stay in the 1.13 action set.",
+      "exclusion_basis": {
+        "details": "Tenant-wide subscriptions are application-only; individual channels and chats permit delegated access. The gate must separately review which resources and permissions a Teams trigger would support before expanding wave 1.",
+        "source": "graph-teams-notifications"
+      },
+      "notes": "Re-open after provider discovery and owner review of the Teams event-source scope. Billing is not a prerequisite: see sources.graph-teams-licenses and https://learn.microsoft.com/en-us/graph/teams-licenses for the retirement of the metered model."
     }
   ]
 }
