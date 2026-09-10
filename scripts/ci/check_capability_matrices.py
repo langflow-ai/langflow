@@ -20,6 +20,17 @@ Sign-off coverage is checked alongside the matrices: every record under the
 design directory that declares ``Owners (sign-off roles):`` must be listed in
 the README sign-off table under each of those roles, and its own ``## Sign-off``
 table must carry a row per declared role.
+
+``--design-root`` points the same decision-record and sign-off validation at
+another discovery gate. A design root that publishes
+``schema/event_transport.schema.json`` is a triggers gate
+(``design/dedicated-integrations-triggers``): its ``matrices/`` hold
+event-transport matrices rather than capability matrices, and
+``event_transport_matrix`` supplies their rules. In gate-close mode the triggers
+gate also requires accepted findings and contract records, no unfinished findings
+markers, and dated completion of every README exit criterion. These checks validate
+recorded acceptance; owners still review the findings and merged-PR conformance.
+Without the flag the checker behaves exactly as it did for INT-1.
 """
 
 from __future__ import annotations
@@ -27,9 +38,19 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
+
+# scripts/ci is a package-less directory of scripts, so the sibling module is imported by
+# name. That works when the file is run directly (sys.path[0] is scripts/ci) but not under
+# ``python -m scripts.ci.check_capability_matrices``, so put the directory on the path first.
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from event_transport_matrix import SCHEMA_NAME as EVENT_TRANSPORT_SCHEMA_NAME
+from event_transport_matrix import validate_event_transport_matrices
 
 try:
     from jsonschema import Draft202012Validator
@@ -38,6 +59,7 @@ except ImportError:  # pragma: no cover - exercised only when the dependency is 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DESIGN_ROOT = REPO_ROOT / "design" / "dedicated-integrations"
+TRIGGERS_DESIGN_ROOT = REPO_ROOT / "design" / "dedicated-integrations-triggers"
 DEFAULT_MATRIX_DIR = DESIGN_ROOT / "matrices"
 SCHEMA_PATH = DESIGN_ROOT / "schema" / "capability_matrix.schema.json"
 
@@ -60,6 +82,13 @@ MIN_SIGN_OFF_ROW_CELLS = 4
 ROLES_COVERING_EVERY_RECORD = frozenset({"release owner"})
 # Files that carry an Owners line but are not sign-off records themselves.
 SIGN_OFF_EXEMPT_FILES = frozenset({"README.md", "TEMPLATE.md"})
+TRIGGER_GATE_RECORDS = frozenset(
+    {"findings/2026-09-listeners.md", "trigger-contract.md", "frontend-surfaces.md", "estimate.md"}
+)
+TRIGGER_EXIT_CRITERIA_HEADING = "## Exit criteria and where each one lives"
+TRIGGER_EXIT_CRITERIA = frozenset(str(number) for number in range(1, 10))
+TRIGGER_EXIT_CRITERIA_COLUMNS = 5
+UNFINISHED_FINDINGS_RE = re.compile(r"\b(?:TODO|TBD|to be written)\b", re.IGNORECASE)
 
 VALID_VALUES: dict[str, frozenset[str]] = {
     "provider": REQUIRED_PROVIDERS,
@@ -672,8 +701,84 @@ def validate_sign_offs(design_root: Path = DESIGN_ROOT, *, require_complete: boo
     return errors
 
 
-def validate_all(matrix_dir: Path = DEFAULT_MATRIX_DIR, *, require_accepted: bool = False) -> list[str]:
+def is_event_transport_root(design_root: Path) -> bool:
+    """A design root that publishes an event-transport schema is a triggers gate, not a capability gate."""
+    return (design_root / "schema" / EVENT_TRANSPORT_SCHEMA_NAME).is_file()
+
+
+def validate_trigger_gate_close(design_root: Path) -> list[str]:
+    """Check recorded acceptance without substituting for the owners' substantive review."""
+    errors: list[str] = []
+    records = TRIGGER_GATE_RECORDS | {
+        path.relative_to(design_root).as_posix()
+        for path in (design_root / "findings").rglob("*.md")
+        if path.name not in SIGN_OFF_EXEMPT_FILES
+    }
+    for relative in sorted(records):
+        record = design_root / relative
+        if not record.is_file():
+            errors.append(f"gate-close: record {relative!r} does not exist")
+            continue
+        text = record.read_text(encoding="utf-8")
+        # A single, unambiguous status is required; a second accepted line cannot mask a draft.
+        statuses = re.findall(r"^Status:[^\n]*", text, flags=re.MULTILINE)
+        if relative != "estimate.md" and statuses != ["Status: accepted"]:
+            errors.append(f"gate-close: record {relative!r} must have exactly one 'Status: accepted' line")
+        if relative.startswith("findings/") and UNFINISHED_FINDINGS_RE.search(text):
+            errors.append(f"gate-close: findings record {relative!r} contains unfinished TODO/TBD/to be written text")
+
+    readme = design_root / "README.md"
+    if not readme.is_file():
+        errors.append("gate-close: README.md does not exist")
+        return errors
+    text = readme.read_text(encoding="utf-8")
+    heading = re.compile(rf"^{re.escape(TRIGGER_EXIT_CRITERIA_HEADING)}[ \t]*$", re.MULTILINE)
+    if len(heading.findall(text)) != 1:
+        errors.append(f"gate-close: README.md must contain exactly one '{TRIGGER_EXIT_CRITERIA_HEADING}' section")
+        return errors
+    section = heading.split(text, maxsplit=1)[1].split("\n## ", 1)[0]
+    rows = _table_rows(section)
+    seen: set[str] = set()
+    for row in rows:
+        criterion = row[0]
+        if criterion not in TRIGGER_EXIT_CRITERIA or len(row) != TRIGGER_EXIT_CRITERIA_COLUMNS:
+            errors.append(
+                f"gate-close: malformed exit criterion row {row!r}; expected #, criterion, artifact, check, status"
+            )
+            continue
+        if criterion in seen:
+            errors.append(f"gate-close: exit criterion {criterion} is declared more than once")
+        seen.add(criterion)
+        status = re.fullmatch(r"done (\d{4}-\d{2}-\d{2})", row[4])
+        if status is None:
+            errors.append(f"gate-close: exit criterion {criterion} must be 'done YYYY-MM-DD', got {row[4]!r}")
+        else:
+            _check_date(status.group(1), f"gate-close: exit criterion {criterion} completion date", errors)
+    if missing := TRIGGER_EXIT_CRITERIA - seen:
+        errors.append(f"gate-close: README.md is missing exit criteria {sorted(missing)}")
+    return errors
+
+
+def validate_all(
+    matrix_dir: Path = DEFAULT_MATRIX_DIR,
+    *,
+    require_accepted: bool = False,
+    design_root: Path | None = None,
+) -> list[str]:
     """Validate every provider matrix and require one file per wave-1 provider."""
+    root = design_root if design_root is not None else matrix_dir.resolve().parent
+    if is_event_transport_root(root):
+        errors = validate_event_transport_matrices(
+            matrix_dir,
+            design_root=root,
+            record_errors=_decision_record_errors,
+            require_accepted=require_accepted,
+        )
+        errors.extend(validate_decision_records(root, require_accepted=require_accepted))
+        if require_accepted:
+            errors.extend(validate_trigger_gate_close(root))
+        return errors
+
     errors: list[str] = []
     present = {path.stem for path in matrix_dir.glob("*.json")} if matrix_dir.is_dir() else set()
     missing = REQUIRED_PROVIDERS - present
@@ -692,21 +797,47 @@ def validate_all(matrix_dir: Path = DEFAULT_MATRIX_DIR, *, require_accepted: boo
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--matrix-dir", type=Path, default=DEFAULT_MATRIX_DIR)
+    parser.add_argument(
+        "--design-root",
+        type=Path,
+        default=None,
+        help=(
+            "discovery-gate directory to validate (default design/dedicated-integrations); "
+            "a root publishing schema/event_transport.schema.json is validated as a triggers gate"
+        ),
+    )
+    parser.add_argument(
+        "--matrix-dir",
+        type=Path,
+        default=None,
+        help="matrix directory (default <design-root>/matrices)",
+    )
     parser.add_argument(
         "--require-accepted",
         action="store_true",
-        help="gate-close mode: every decision must be accepted and every declared owner signature complete",
+        help=(
+            "gate-close mode: accepted decisions and completed owner signatures; "
+            "triggers also require accepted findings/contracts and dated completion of every exit criterion"
+        ),
     )
     args = parser.parse_args()
-    errors = validate_all(args.matrix_dir, require_accepted=args.require_accepted)
-    errors.extend(validate_sign_offs(args.matrix_dir.resolve().parent, require_complete=args.require_accepted))
+    if args.design_root is not None:
+        design_root = args.design_root.resolve()
+    elif args.matrix_dir is not None:
+        design_root = args.matrix_dir.resolve().parent
+    else:
+        design_root = DESIGN_ROOT
+    matrix_dir = args.matrix_dir if args.matrix_dir is not None else design_root / "matrices"
+
+    label = "Event-transport" if is_event_transport_root(design_root) else "Capability"
+    errors = validate_all(matrix_dir, require_accepted=args.require_accepted, design_root=design_root)
+    errors.extend(validate_sign_offs(design_root, require_complete=args.require_accepted))
     if errors:
-        print("Capability matrix validation failed:")
+        print(f"{label} matrix validation failed for {design_root}:")
         for error in errors:
             print(f"- {error}")
         return 1
-    print("Capability matrices are complete.")
+    print(f"{label} matrices are complete for {design_root}.")
     return 0
 
 
