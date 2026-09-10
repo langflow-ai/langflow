@@ -16,8 +16,11 @@ the policy decision close to the UX rather than baked into a shared loader.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from typing import Any
 
+from lfx.log.logger import logger
 from lfx.services.deps import get_settings_service
 
 _KNOWLEDGE_BASES_ROOT_PATH: Path | None = None
@@ -45,3 +48,46 @@ def reset_knowledge_bases_root_path_cache() -> None:
     """Clear the cached KB root path. Intended for tests that mutate settings."""
     global _KNOWLEDGE_BASES_ROOT_PATH  # noqa: PLW0603
     _KNOWLEDGE_BASES_ROOT_PATH = None
+
+
+class KBKeyDecryptError(Exception):
+    """The stored embedding API key could not be decrypted.
+
+    Kept for backward compatibility only. Saved flows embed a frozen copy of the
+    component code they were built with, and 1.11.x Knowledge components import
+    this name at module scope — removing it made those flows unopenable with
+    ``ImportError: Cannot import name 'KBKeyDecryptError'``. Current
+    code resolves embedding config from the ``knowledge_base`` row instead.
+    """
+
+
+def load_kb_metadata(
+    kb_path: Path,
+    *,
+    log_label: str,
+    require_api_key: bool = False,  # noqa: ARG001
+) -> dict[str, Any]:
+    """Load the legacy ``embedding_metadata.json`` sidecar from a KB directory.
+
+    Kept for backward compatibility with the frozen 1.11.x component code saved
+    inside existing flows. The sidecar is no longer written, so this
+    returns ``{}`` for any KB created by a current version; the
+    ``knowledge_base`` row is the sole authority now.
+    """
+    metadata_file = kb_path / "embedding_metadata.json"
+    if not metadata_file.exists():
+        logger.warning("Embedding metadata file not found for %s", log_label)
+        return {}
+
+    try:
+        with metadata_file.open("r", encoding="utf-8") as f:
+            metadata = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        logger.error("Error decoding embedding metadata JSON for %s", log_label)
+        return {}
+
+    if not isinstance(metadata, dict):
+        return {}
+    if metadata.get("api_key"):
+        metadata["api_key"] = None
+    return metadata

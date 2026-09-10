@@ -66,14 +66,42 @@ class AdminClient:
                 detail = _safe_api_detail(detail_value)
             except ValueError:
                 detail = response.text or response.reason_phrase
+            error_code = response.headers.get("X-Langflow-Error-Code")
+            if (
+                response.status_code == httpx.codes.NOT_FOUND
+                and path.lstrip("/").startswith("authz/directory/")
+                and not error_code
+                and detail == "Not Found"
+            ):
+                # A missing route and a missing resource both return 404. Only
+                # diagnose the plugin when capability discovery confirms it.
+                self._check_directory_available()
             raise AdminAPIError(
                 status_code=response.status_code,
                 detail=detail,
-                error_code=response.headers.get("X-Langflow-Error-Code"),
+                error_code=error_code,
             )
         if response.status_code == httpx.codes.NO_CONTENT or not response.content:
             return None
         return response.json()
+
+    def _check_directory_available(self) -> None:
+        try:
+            capabilities = self.capabilities()
+        except AdminAPIError as exc:
+            if exc.status_code != httpx.codes.NOT_FOUND:
+                raise
+            capabilities = {}
+        directory = capabilities.get("features", {}).get("directory", {})
+        if not directory.get("enabled", False):
+            raise AdminAPIError(
+                status_code=httpx.codes.SERVICE_UNAVAILABLE,
+                error_code="enterprise_directory_unavailable",
+                detail=(
+                    "This command requires the Enterprise directory plugin on the target server. "
+                    "Install and enable the plugin before using langflow admin directory."
+                ),
+            )
 
     def _list_collection(
         self,

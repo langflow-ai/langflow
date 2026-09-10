@@ -3,7 +3,7 @@
 
 The matrices under ``design/dedicated-integrations/matrices/`` are the INT-1
 discovery-gate contract: at most eight included actions per provider, every
-scope classified and sourced, every restricted scope decided, and every
+scope classified and sourced, every restricted or broad content-read scope decided, and every
 substrate choice recorded in a decision record. ``--require-accepted`` is the
 gate-close mode: every referenced decision record must carry
 ``Status: accepted`` and every declared owner must have a completed signature.
@@ -65,6 +65,7 @@ SCHEMA_PATH = DESIGN_ROOT / "schema" / "capability_matrix.schema.json"
 
 REQUIRED_PROVIDERS = frozenset({"google", "microsoft", "slack"})
 DEFAULT_MAX_INCLUDED = 8
+MAX_EVIDENCE_AGE_DAYS = 30
 DEPLOYMENT_CONTEXTS = frozenset({"hosted", "self_managed", "desktop", "headless"})
 
 ACTION_ID_RE = re.compile(r"^(google|microsoft|slack)\.[a-z0-9_]+\.[a-z0-9_]+$")
@@ -108,6 +109,8 @@ VALID_VALUES: dict[str, frozenset[str]] = {
         }
     ),
     "classification": frozenset({"non_sensitive", "sensitive", "restricted"}),
+    "content_read_reach": frozenset({"none", "selected_resources", "cross_resource"}),
+    "scope_risk_decision": frozenset({"accept_with_controls", "avoid", "defer"}),
     "scope_role": frozenset({"required", "optional", "alternative"}),
     "consent": frozenset({"user", "admin", "both"}),
     "callback": frozenset(
@@ -133,6 +136,7 @@ REQUIRED_TOP_LEVEL = frozenset(
         "oauth_client_type_by_context",
         "substrate_decision",
         "restricted_scope_decisions",
+        "scope_risk_decisions",
         "sources",
         "verification_programs",
         "actions",
@@ -166,10 +170,11 @@ REQUIRED_INCLUDE_FIELDS = frozenset(
         "substrate_source",
         "rate_limit",
         "verification_dependencies",
+        "tenant_consent",
     }
 )
 CONDITIONAL_SCOPE_ROLES = frozenset({"optional", "alternative"})
-SOURCED_BLOCKS = ("schema", "reach", "refresh", "revocation", "rate_limit")
+SOURCED_BLOCKS = ("schema", "reach", "refresh", "revocation", "rate_limit", "tenant_consent")
 SOURCED_SCALARS = ("consent_source", "substrate_source")
 
 
@@ -182,16 +187,22 @@ def _parse_date(raw: Any) -> date | None:
         return None
 
 
-def _check_date(raw: Any, label: str, errors: list[str]) -> None:
+def _check_date(raw: Any, label: str, errors: list[str], *, evidence: bool = False) -> None:
+    """Reject invalid/future dates and stale evidence without expiring historical signatures."""
     parsed = _parse_date(raw)
+    today = datetime.now(tz=UTC).date()
     if parsed is None:
         errors.append(f"{label} must be an ISO date (YYYY-MM-DD), got {raw!r}")
-    elif parsed > datetime.now(tz=UTC).date():
+    elif parsed > today:
         errors.append(f"{label} {raw!r} is in the future")
+    elif evidence and (today - parsed).days > MAX_EVIDENCE_AGE_DAYS:
+        errors.append(
+            f"{label} {raw!r} is older than {MAX_EVIDENCE_AGE_DAYS} days; re-read the source and review its claims"
+        )
 
 
 def _check_enum(value: Any, dimension: str, label: str, errors: list[str]) -> None:
-    if value not in VALID_VALUES[dimension]:
+    if not isinstance(value, str) or value not in VALID_VALUES[dimension]:
         errors.append(f"{label} has unknown {dimension} {value!r}")
 
 
@@ -233,7 +244,7 @@ def _validate_sources(matrix: dict[str, Any], errors: list[str]) -> dict[str, An
         if "kind" in source:
             _check_enum(source["kind"], "source_kind", label, errors)
         if "verified_on" in source:
-            _check_date(source["verified_on"], f"{label} verified_on", errors)
+            _check_date(source["verified_on"], f"{label} verified_on", errors, evidence=True)
     return sources
 
 
@@ -292,7 +303,7 @@ def _validate_top_level(matrix: dict[str, Any], stem: str, errors: list[str]) ->
     max_included = matrix.get("max_included_actions")
     if not isinstance(max_included, int) or not 0 < max_included <= DEFAULT_MAX_INCLUDED:
         errors.append(f"max_included_actions must be an integer between 1 and {DEFAULT_MAX_INCLUDED}")
-    _check_date(matrix.get("verified_on"), "verified_on", errors)
+    _check_date(matrix.get("verified_on"), "verified_on", errors, evidence=True)
     owners = matrix.get("oauth_app_owner_by_context")
     if not isinstance(owners, dict) or set(owners) != DEPLOYMENT_CONTEXTS:
         errors.append(f"oauth_app_owner_by_context must cover exactly {sorted(DEPLOYMENT_CONTEXTS)}")
@@ -333,23 +344,25 @@ def _validate_substrate_decision(
     return set(chosen)
 
 
-def _validate_restricted_decisions(
-    matrix: dict[str, Any], design_root: Path, errors: list[str], *, require_accepted: bool
+def _validate_scope_decisions(
+    matrix: dict[str, Any], design_root: Path, errors: list[str], *, kind: str, require_accepted: bool
 ) -> dict[str, str]:
-    entries = matrix.get("restricted_scope_decisions")
+    """Validate provider-classification and effective-reach decisions through the same record checks."""
+    field = f"{kind}_decisions"
+    entries = matrix.get(field)
     if not isinstance(entries, list):
-        errors.append("restricted_scope_decisions must be a list")
+        errors.append(f"{field} must be a list")
         return {}
     decisions: dict[str, str] = {}
     for entry in entries:
         scope = entry.get("scope") if isinstance(entry, dict) else None
-        label = f"restricted scope decision for {scope!r}"
+        label = f"{kind.replace('_', ' ')} decision for {scope!r}"
         if not isinstance(entry, dict) or not isinstance(scope, str) or not scope:
-            errors.append("every restricted_scope_decisions entry needs a scope")
+            errors.append(f"every {field} entry needs a scope")
             continue
         if scope in decisions:
             errors.append(f"{label} is declared more than once")
-        _check_enum(entry.get("decision"), "restricted_scope_decision", label, errors)
+        _check_enum(entry.get("decision"), f"{kind}_decision", label, errors)
         if not str(entry.get("rationale", "")).strip():
             errors.append(f"{label} needs a written rationale")
         errors.extend(
@@ -405,6 +418,7 @@ def _validate_scopes(
             errors.append(f"{label} has a scope entry without a scope string")
             continue
         scope_label = f"{label} scope {scope['scope']!r}"
+        _check_enum(scope.get("content_read_reach"), "content_read_reach", scope_label, errors)
         if "classification" not in scope:
             errors.append(f"{scope_label} is not classified")
         else:
@@ -459,6 +473,7 @@ def _validate_action(
     programs: set[str],
     chosen_substrates: set[str],
     restricted_decisions: dict[str, str],
+    scope_risk_decisions: dict[str, str],
     errors: list[str],
 ) -> None:
     action_id = action.get("action_id", "<unnamed>")
@@ -507,6 +522,20 @@ def _validate_action(
                     f"{label} is included but its restricted scope {scope!r} is decided "
                     f"{restricted_decisions[scope]!r}; that is a contradiction"
                 )
+        scopes = action.get("scopes")
+        for scope in scopes if isinstance(scopes, list) else []:
+            if not isinstance(scope, dict) or scope.get("content_read_reach") != "cross_resource":
+                continue
+            name = scope.get("scope")
+            if not isinstance(name, str):
+                continue  # The schema and scope validator report malformed names.
+            if name not in scope_risk_decisions:
+                errors.append(f"{label} carries broad content-read scope {name!r} with no scope_risk_decisions entry")
+            elif decision == "include" and scope_risk_decisions[name] in {"avoid", "defer"}:
+                errors.append(
+                    f"{label} is included but its broad content-read scope {name!r} is decided "
+                    f"{scope_risk_decisions[name]!r}; that is a contradiction"
+                )
     _validate_sourced_claims(action, sources, programs, label, errors)
 
 
@@ -527,8 +556,11 @@ def validate_matrix(matrix_path: Path, *, require_accepted: bool = False) -> lis
     sources = _validate_sources(matrix, errors)
     programs = _validate_verification_programs(matrix, sources, errors)
     chosen = _validate_substrate_decision(matrix, design_root, errors, require_accepted=require_accepted)
-    restricted_decisions = _validate_restricted_decisions(
-        matrix, design_root, errors, require_accepted=require_accepted
+    restricted_decisions = _validate_scope_decisions(
+        matrix, design_root, errors, kind="restricted_scope", require_accepted=require_accepted
+    )
+    scope_risk_decisions = _validate_scope_decisions(
+        matrix, design_root, errors, kind="scope_risk", require_accepted=require_accepted
     )
 
     actions = matrix.get("actions")
@@ -552,6 +584,7 @@ def validate_matrix(matrix_path: Path, *, require_accepted: bool = False) -> lis
             programs=programs,
             chosen_substrates=chosen,
             restricted_decisions=restricted_decisions,
+            scope_risk_decisions=scope_risk_decisions,
             errors=errors,
         )
 

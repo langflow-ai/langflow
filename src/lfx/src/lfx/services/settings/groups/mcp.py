@@ -16,8 +16,19 @@ class McpSettings(BaseModel):
     When empty (default): the backend builds URLs from host/port (0.0.0.0 -> localhost) and the
     frontend falls back to the browser's window.location.origin."""
 
-    mcp_server_timeout: int = 20
-    """The number of seconds to wait before giving up on establishing a connection to the MCP server."""
+    mcp_server_timeout: int = 60
+    """The number of seconds to wait before giving up on establishing a connection to the MCP server.
+
+    Bounds the outer ``connect_to_server`` call for every transport and the wait for a new
+    stdio or Streamable HTTP session to become ready. It does not change the per-attempt 2 s
+    cap on the Streamable HTTP ``initialize`` handshake, so a slow-to-start server is only
+    tolerated over stdio. The default is sized for a cold stdio server inside a packaged
+    interpreter (Langflow Desktop's bundled ``langflow.agentic.mcp`` takes 18-25 s to import
+    on first launch), not a warm developer venv.
+
+    It also acts as a floor for ``mcp_tool_execution_timeout``: tool calls wait for the larger
+    of the two, so lowering the tool timeout below this value has no effect.
+    Env var: LANGFLOW_MCP_SERVER_TIMEOUT."""
 
     mcp_tool_execution_timeout: float = 180.0
     """Maximum seconds to wait for MCP tool execution before timing out.

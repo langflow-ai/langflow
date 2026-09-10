@@ -197,6 +197,9 @@ async def create_team(
     operation_id: OperationId = None,
 ) -> TeamRead:
     await _require_team_administrator(current_user, action="team:create", obj="team:*", operation_id=operation_id)
+    # Preserve the actor across a rollback: JWT authentication returns a
+    # session-bound User that rollback expires, unlike API-key authentication.
+    actor_user_id = current_user.id
     authorization_service = get_authorization_service()
     await acquire_identity_mutation_lock(
         authorization_service,
@@ -224,7 +227,7 @@ async def create_team(
     except IntegrityError as exc:
         await session.rollback()
         await _audit_deny(
-            user_id=current_user.id,
+            user_id=actor_user_id,
             action="team:create",
             obj="team:*",
             status_code=status.HTTP_409_CONFLICT,
@@ -266,6 +269,7 @@ async def update_team(
         obj=f"team:{team_id}",
         operation_id=operation_id,
     )
+    actor_user_id = current_user.id
     authorization_service = get_authorization_service()
     await acquire_identity_mutation_lock(
         authorization_service,
@@ -306,7 +310,7 @@ async def update_team(
     mutation = AuthorizationMutation(
         kind=AuthorizationMutationKind.TEAM_UPDATED,
         entity_id=team.id,
-        actor_user_id=current_user.id,
+        actor_user_id=actor_user_id,
         team_id=team.id,
         policy_relevant_fields=tuple(sorted(set(changed_fields) & {"adom_name", "is_active"})),
         previous_identifier=previous_adom_name if team.adom_name != previous_adom_name else None,
@@ -318,7 +322,7 @@ async def update_team(
     except IntegrityError as exc:
         await session.rollback()
         await _audit_deny(
-            user_id=current_user.id,
+            user_id=actor_user_id,
             action="team:update",
             obj=f"team:{team_id}",
             status_code=status.HTTP_409_CONFLICT,
@@ -455,6 +459,7 @@ async def add_member(
         obj=f"team:{team_id}",
         operation_id=operation_id,
     )
+    actor_user_id = current_user.id
     authorization_service = get_authorization_service()
     await acquire_identity_mutation_lock(
         authorization_service,
@@ -507,7 +512,7 @@ async def add_member(
     mutation = AuthorizationMutation(
         kind=AuthorizationMutationKind.TEAM_MEMBER_ADDED,
         entity_id=member.id,
-        actor_user_id=current_user.id,
+        actor_user_id=actor_user_id,
         affected_user_ids=(payload.user_id,),
         team_id=team_id,
         policy_relevant_fields=("team_id", "user_id", "source"),
@@ -520,7 +525,7 @@ async def add_member(
             team_id=team_id,
             user_id=payload.user_id,
             source_kind="manual",
-            administrative_actor=current_user.id,
+            administrative_actor=actor_user_id,
             membership=member,
             membership_is_new=member_is_new,
         )
@@ -530,7 +535,7 @@ async def add_member(
         await session.commit()
     except AuthorizationMutationRejected as exc:
         await _audit_deny(
-            user_id=current_user.id,
+            user_id=actor_user_id,
             action="team_member:create",
             obj=f"team:{team_id}",
             status_code=status.HTTP_409_CONFLICT,
@@ -545,7 +550,7 @@ async def add_member(
     except IntegrityError as exc:
         await session.rollback()
         await _audit_deny(
-            user_id=current_user.id,
+            user_id=actor_user_id,
             action="team_member:create",
             obj=f"team:{team_id}",
             status_code=status.HTTP_409_CONFLICT,
