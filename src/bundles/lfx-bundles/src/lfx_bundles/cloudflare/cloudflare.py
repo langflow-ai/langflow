@@ -1,4 +1,5 @@
-from langchain_community.embeddings.cloudflare_workersai import CloudflareWorkersAIEmbeddings
+from langchain_cloudflare import CloudflareWorkersAIEmbeddings
+from langchain_core.runnables.config import run_in_executor
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import Embeddings
 from lfx.io import BoolInput, DictInput, IntInput, MessageTextInput, Output, SecretStrInput
@@ -63,8 +64,17 @@ class CloudflareWorkersAIEmbeddingsComponent(LCModelComponent):
     ]
 
     def build_embeddings(self) -> Embeddings:
+        class CompatibleCloudflareEmbeddings(CloudflareWorkersAIEmbeddings):
+            # The new provider's async client adds a hard-coded five-second timeout.
+            # Keep the existing executor-backed behavior used by knowledge-base calls.
+            async def aembed_query(self, text: str) -> list[float]:
+                return await run_in_executor(None, self.embed_query, text)
+
+            async def aembed_documents(self, texts: list[str]) -> list[list[float]]:
+                return await run_in_executor(None, self.embed_documents, texts)
+
         try:
-            embeddings = CloudflareWorkersAIEmbeddings(
+            embeddings = CompatibleCloudflareEmbeddings(
                 account_id=self.account_id,
                 api_base_url=self.api_base_url,
                 api_token=self.api_token,
@@ -72,6 +82,8 @@ class CloudflareWorkersAIEmbeddingsComponent(LCModelComponent):
                 headers=self.headers,
                 model_name=self.model_name,
                 strip_new_lines=self.strip_new_lines,
+                # Existing flows do not opt into the new package's AI_GATEWAY environment default.
+                ai_gateway=None,
             )
         except Exception as e:
             msg = f"Could not connect to CloudflareWorkersAIEmbeddings API: {e!s}"
