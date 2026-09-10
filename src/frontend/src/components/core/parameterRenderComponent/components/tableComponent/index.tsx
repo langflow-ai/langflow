@@ -90,12 +90,9 @@ const TableComponent = forwardRef<
       currentRowValue: any,
     ) => {
       try {
-        // Check if this is a single-toggle column (Vectorize or Identifier)
+        // Vectorize flags are independent; only Identifier is single-toggle.
         const isSingleToggleColumn =
-          colField === "Vectorize" ||
-          colField === "vectorize" ||
-          colField === "Identifier" ||
-          colField === "identifier";
+          colField === "Identifier" || colField === "identifier";
 
         if (!isSingleToggleColumn) return true;
 
@@ -169,12 +166,9 @@ const TableComponent = forwardRef<
             props.editable.every((field) => typeof field === "string") &&
             (props.editable as Array<string>).includes(newCol.field ?? ""))
         ) {
-          // Special handling for single-toggle columns (Vectorize and Identifier)
+          // Special handling for single-toggle Identifier columns
           const isSingleToggleColumn =
-            newCol.field === "Vectorize" ||
-            newCol.field === "vectorize" ||
-            newCol.field === "Identifier" ||
-            newCol.field === "identifier";
+            newCol.field === "Identifier" || newCol.field === "identifier";
 
           if (isSingleToggleColumn) {
             newCol = {
@@ -226,12 +220,9 @@ const TableComponent = forwardRef<
             }>
           ).find((field) => field.field === newCol.field);
           if (field) {
-            // Special handling for single-toggle columns (Vectorize and Identifier)
+            // Special handling for single-toggle Identifier columns
             const isSingleToggleColumn =
-              newCol.field === "Vectorize" ||
-              newCol.field === "vectorize" ||
-              newCol.field === "Identifier" ||
-              newCol.field === "identifier";
+              newCol.field === "Identifier" || newCol.field === "identifier";
 
             if (isSingleToggleColumn) {
               newCol = {
@@ -285,6 +276,10 @@ const TableComponent = forwardRef<
               newCol = {
                 ...newCol,
                 editable: field.editableCell,
+                cellRendererParams: {
+                  ...newCol.cellRendererParams,
+                  editableCell: field.editableCell,
+                },
                 onCellValueChanged: (e) => field.onUpdate(e),
               };
             }
@@ -666,10 +661,8 @@ const TableComponent = forwardRef<
           onCellValueChanged={
             props.onCellValueChanged
               ? (e) => {
-                  // Handle single-toggle column changes (Vectorize and Identifier) to refresh grid editability
+                  // Refresh grid editability after single-toggle Identifier changes
                   const isSingleToggleField =
-                    e.colDef.field === "Vectorize" ||
-                    e.colDef.field === "vectorize" ||
                     e.colDef.field === "Identifier" ||
                     e.colDef.field === "identifier";
 
@@ -692,10 +685,7 @@ const TableComponent = forwardRef<
                           ?.filter((col) => {
                             const field = col.getColDef().field;
                             return (
-                              field === "Vectorize" ||
-                              field === "vectorize" ||
-                              field === "Identifier" ||
-                              field === "identifier"
+                              field === "Identifier" || field === "identifier"
                             );
                           });
                         if (
