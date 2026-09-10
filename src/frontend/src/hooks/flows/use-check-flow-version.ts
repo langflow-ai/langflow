@@ -59,8 +59,12 @@ export const checkFlowVersion = async (
     diffGraphs(base, theirFlow.data ?? null).length === 0 &&
     diffGraphs(base, mine).length === 0;
   if (nothingDiffers) {
+    // "current", not "adopted": adopting aborts the run so the person can look at
+    // what arrived, and here nothing arrived — the graph is identical and only the
+    // token moved. Stopping would swallow a run and ask them to press it again for
+    // no reason they could see.
     await fetchAndAdoptServerVersion(flowId);
-    return { outcome: "adopted", author: state.last_modified_by_username };
+    return { outcome: "current" };
   }
 
   registerConflictState({
