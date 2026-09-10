@@ -91,3 +91,21 @@ def test_worker_adapter_honors_expose_graph_state():
     # Absent (legacy rows written before the field existed) keeps today's behavior.
     legacy = WorkerJobRunner._build_adapter({"stream_protocol": "langflow"}, uuid.uuid4(), uuid.uuid4())
     assert legacy.context.expose_graph_state is True
+
+
+def test_in_process_backend_adapter_honors_expose_graph_state():
+    """The default path narrows the stream the same way the worker does.
+
+    InProcessBackend carries the facade's adapter builder, so the flag the v2
+    route persisted has to survive the move. Without it the default backend
+    would expose graph state a caller asked to hide.
+    """
+    from langflow.services.background_execution.in_process_backend import InProcessBackend
+
+    hidden = InProcessBackend._build_adapter(
+        {"stream_protocol": "langflow", "expose_graph_state": False}, uuid.uuid4(), uuid.uuid4()
+    )
+    assert hidden.context.expose_graph_state is False
+
+    legacy = InProcessBackend._build_adapter({"stream_protocol": "langflow"}, uuid.uuid4(), uuid.uuid4())
+    assert legacy.context.expose_graph_state is True
