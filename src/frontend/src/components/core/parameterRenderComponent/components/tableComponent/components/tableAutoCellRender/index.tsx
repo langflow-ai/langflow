@@ -162,10 +162,11 @@ export default function TableAutoCellRender({
             editNode={true}
             id={"toggle" + colDef?.colId + uniqueId()}
             disabled={
-              colDef?.cellRendererParams?.isSingleToggleColumn &&
+              colDef?.cellRendererParams?.editableCell === false ||
+              (colDef?.cellRendererParams?.isSingleToggleColumn &&
               colDef?.cellRendererParams?.checkSingleToggleEditable
                 ? !colDef.cellRendererParams.checkSingleToggleEditable(props)
-                : false
+                : false)
             }
           />
         ) : (
