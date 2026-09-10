@@ -200,11 +200,6 @@ async def add_user(
         )
         raise HTTPException(status_code=403, detail="Public user registration is disabled.")
 
-    # Snapshot the actor before any write: ``session.rollback()`` expires session-bound ORM
-    # instances, so reading ``current_user.id`` after a rollback would try to refresh the
-    # authenticated user from the rolled-back request transaction.
-    actor_user_id = current_user.id if current_user is not None else None
-
     new_user = User.model_validate(user, from_attributes=True)
     try:
         new_user.password = get_auth_service().get_password_hash(user.password)

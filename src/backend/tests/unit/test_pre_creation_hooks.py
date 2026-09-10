@@ -3,7 +3,9 @@
 Testing library and framework: pytest
 """
 
+import os
 import uuid
+from unittest.mock import AsyncMock
 
 import pytest
 from langflow.services.creation_hooks import (
@@ -25,6 +27,10 @@ from langflow.services.creation_hooks import (
     registered_pre_creation_hooks,
     run_pre_creation_hooks,
 )
+from sqlalchemy import text
+from sqlalchemy.engine import make_url
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 @pytest.fixture(autouse=True)
@@ -107,6 +113,70 @@ async def test_non_denial_exception_fails_open_and_later_hooks_still_run():
     # Must not raise: anything that is not a PreCreationDenied fails open.
     await run_pre_creation_hooks(_ctx(RESOURCE_ROLE))
     assert calls == ["survivor"]
+
+
+@pytest.mark.parametrize("backend", ["sqlite", "postgres"])
+@pytest.mark.parametrize("resource", RESOURCES)
+async def test_failed_hook_query_preserves_request_transaction(backend, resource, tmp_path):
+    """A failed SELECT must not poison later hooks, writes, or an existing identity lock."""
+    if backend == "postgres":
+        raw = os.environ.get("LANGFLOW_TEST_DATABASE_URI")
+        if not raw:
+            pytest.skip("LANGFLOW_TEST_DATABASE_URI not set")
+        url = make_url(raw).set(drivername="postgresql+psycopg")
+    else:
+        url = f"sqlite+aiosqlite:///{tmp_path}/hooks.db"
+    engine = create_async_engine(url)
+    seen_counts = []
+
+    async def broken(context):
+        await context.session.execute(text("SELECT * FROM missing_pre_creation_hook_table"))
+
+    async def following(context):
+        result = await context.session.execute(text("SELECT COUNT(*) FROM pre_creation_hook_probe"))
+        seen_counts.append(result.scalar_one())
+
+    register_pre_creation_hook(resource, broken)
+    register_pre_creation_hook(resource, following)
+    try:
+        async with AsyncSession(engine) as session:
+            await session.execute(text("CREATE TEMPORARY TABLE pre_creation_hook_probe (id INTEGER PRIMARY KEY)"))
+            await session.execute(text("INSERT INTO pre_creation_hook_probe VALUES (1)"))
+            if backend == "postgres":
+                await session.execute(text("SELECT pg_advisory_xact_lock(14959)"))
+
+            await run_pre_creation_hooks(PreCreationContext(resource=resource, session=session))
+
+            assert seen_counts == [1]
+            await session.execute(text("INSERT INTO pre_creation_hook_probe VALUES (2)"))
+            result = await session.execute(text("SELECT COUNT(*) FROM pre_creation_hook_probe"))
+            assert result.scalar_one() == 2
+            if backend == "postgres":
+                locks = await session.execute(
+                    text("SELECT COUNT(*) FROM pg_locks WHERE pid = pg_backend_pid() AND locktype = 'advisory'")
+                )
+                assert locks.scalar_one() == 1
+            await session.commit()
+    finally:
+        await engine.dispose()
+
+
+async def test_failed_hook_warning_does_not_include_exception_payload(monkeypatch):
+    from langflow.services import creation_hooks
+
+    warning = AsyncMock()
+    monkeypatch.setattr(creation_hooks.logger, "awarning", warning)
+    private_value = "private-query-parameter"
+
+    async def broken(_context):
+        raise RuntimeError(private_value)
+
+    register_pre_creation_hook(RESOURCE_PROJECT, broken)
+    await run_pre_creation_hooks(_ctx())
+
+    warning.assert_awaited_once()
+    assert private_value not in str(warning.call_args)
+    assert "RuntimeError" in str(warning.call_args)
 
 
 async def test_unknown_resource_is_a_noop():

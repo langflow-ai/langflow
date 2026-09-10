@@ -223,9 +223,6 @@ async def create_role(
         session,
         kind=AuthorizationMutationKind.ROLE_CREATED,
     )
-    # Snapshot the actor before any write: a denial rolls the request transaction back, and a
-    # rollback expires session-bound ORM instances, so ``current_user.id`` must be read first.
-    actor_user_id = current_user.id
     # Pre-creation hooks run inside the lock the authorization plugin just took, so a plugin
     # counting custom roles sees a serialized count-then-insert. Only this route creates
     # ``is_system=False`` roles; system roles are seeded by plugins and never pass here.

@@ -11,6 +11,7 @@ Testing library and framework: pytest
 import io
 import json
 import zipfile
+from contextlib import nullcontext
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock
@@ -308,6 +309,9 @@ class _FakeAsyncSession:
 
     async def get(self, _model: type, _key: UUID, **_kwargs: Any) -> Any:
         return None
+
+    def begin_nested(self):
+        return nullcontext()
 
     def add(self, obj: Any) -> None:
         self.added.append(obj)

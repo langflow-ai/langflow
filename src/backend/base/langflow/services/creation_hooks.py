@@ -28,6 +28,8 @@ Contract
 * Hooks are awaited in registration order, inside the caller's request
   transaction, **before** the row is added to the session. A hook may read
   ``context.session`` to count existing rows in that same transaction.
+  Each hook runs in a savepoint so a failed query cannot abort the caller's
+  transaction or release an identity lock acquired before the hook.
 * Raising :class:`PreCreationDenied` is the intended way to stop a creation. It
   short-circuits the remaining hooks and the caller maps it to HTTP 403 through
   :func:`pre_creation_denied_to_http`.
@@ -61,12 +63,13 @@ Call points (OSS)
 For ``user`` and ``role`` the hook runs *after* ``acquire_identity_mutation_lock``,
 so a count-then-insert is serialized by whatever lock the authorization plugin
 takes. That lock is a no-op on non-PostgreSQL backends, and project creation
-takes no lock at all, so concurrent creates can exceed a limit by one there.
+takes no lock at all, so concurrent creates can exceed a limit there.
 """
 
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Mapping
+from contextlib import nullcontext
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -196,13 +199,17 @@ async def run_pre_creation_hooks(context: PreCreationContext) -> None:
     """
     for hook in list(_pre_creation_hooks.get(context.resource, [])):
         try:
-            await hook(context)
+            # PostgreSQL aborts a transaction on statement errors. Roll back only
+            # the hook's savepoint so fail-open preserves prior work and locks.
+            transaction = context.session.begin_nested() if context.session is not None else nullcontext()
+            async with transaction:
+                await hook(context)
         except (PreCreationDenied, HTTPException):
             raise
         except Exception as exc:  # noqa: BLE001
             await logger.awarning(
                 f"Pre-creation hook {_hook_name(hook)} for {context.resource!r} failed "
-                f"and was ignored (creation allowed): {exc}"
+                f"and was ignored (creation allowed): {type(exc).__name__}"
             )
 
 
