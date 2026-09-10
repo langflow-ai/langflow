@@ -199,9 +199,7 @@ async def test_snapshot_archives_a_graph_the_server_never_had(client: AsyncClien
     )
     assert response.status_code in (status.HTTP_200_OK, status.HTTP_201_CREATED), response.text
 
-    entry = await client.get(
-        f"api/v1/flows/{flow['id']}/versions/{response.json()['id']}", headers=logged_in_headers
-    )
+    entry = await client.get(f"api/v1/flows/{flow['id']}/versions/{response.json()['id']}", headers=logged_in_headers)
     assert entry.json()["data"] == abandoned, "the canvas state is what got archived"
 
     current = await client.get(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)
@@ -216,18 +214,14 @@ async def test_snapshot_without_a_graph_still_captures_the_stored_one(client: As
 
     snap = await _create_snapshot(client, logged_in_headers, flow["id"], description="no data supplied")
 
-    entry = await client.get(
-        f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers
-    )
+    entry = await client.get(f"api/v1/flows/{flow['id']}/versions/{snap['id']}", headers=logged_in_headers)
     assert entry.json()["data"] == stored
 
 
 async def test_archiving_a_canvas_does_not_take_the_writers_turn(client: AsyncClient, logged_in_headers):
     """A discard must not look like an edit to everyone else holding the flow open."""
     flow = await _create_flow(client, logged_in_headers)
-    token_before = (
-        await client.get(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)
-    ).json()["version_token"]
+    token_before = (await client.get(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)).json()["version_token"]
 
     await client.post(
         f"api/v1/flows/{flow['id']}/versions/",
@@ -235,9 +229,7 @@ async def test_archiving_a_canvas_does_not_take_the_writers_turn(client: AsyncCl
         headers=logged_in_headers,
     )
 
-    token_after = (
-        await client.get(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)
-    ).json()["version_token"]
+    token_after = (await client.get(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)).json()["version_token"]
     assert token_after == token_before, "archiving is history only; it never claims the write turn"
 
 

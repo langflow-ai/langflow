@@ -1,4 +1,5 @@
 import type { UseMutationResult } from "@tanstack/react-query";
+import type { AxiosError } from "axios";
 import type { useMutationFunctionType } from "@/types/api";
 import type { FlowVersionCreate, FlowVersionEntry } from "@/types/flow/version";
 import { api } from "../../api";
@@ -32,15 +33,18 @@ export const usePostCreateSnapshot: useMutationFunctionType<
     return response.data;
   };
 
-  const mutation: UseMutationResult<FlowVersionEntry, any, ICreateSnapshot> =
-    mutate(["usePostCreateSnapshot"], createSnapshotFn, {
-      ...options,
-      onSettled: (_, __, variables) => {
-        queryClient.refetchQueries({
-          queryKey: ["useGetFlowVersions", { flowId: variables?.flowId }],
-        });
-      },
-    });
+  const mutation: UseMutationResult<
+    FlowVersionEntry,
+    AxiosError,
+    ICreateSnapshot
+  > = mutate(["usePostCreateSnapshot"], createSnapshotFn, {
+    ...options,
+    onSettled: (_, __, variables) => {
+      queryClient.refetchQueries({
+        queryKey: ["useGetFlowVersions", { flowId: variables?.flowId }],
+      });
+    },
+  });
 
   return mutation;
 };
