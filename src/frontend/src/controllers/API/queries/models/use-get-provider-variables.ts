@@ -4,14 +4,13 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import {
   appendProviderScope,
+  PROVIDER_POLICY_STALE_TIME_MS,
   type ProviderScopeParams,
   providerScopeQueryKey,
 } from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 export type ProviderVariablesMapping = Record<string, ProviderVariable[]>;
-
-const PROVIDER_POLICY_STALE_TIME_MS = 30_000;
 
 export const getProviderVariablesQueryKey = (params?: ProviderScopeParams) =>
   ["useGetProviderVariables", ...providerScopeQueryKey(params)] as const;

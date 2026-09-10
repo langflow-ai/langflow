@@ -2,14 +2,14 @@
   "application": {
     "distribution": "langflow",
     "requested": ">=1.12.0,<1.13.0",
-    "requirement": "langflow==1.12.0",
-    "resolved_version": "1.12.0"
+    "requirement": "langflow==1.12.1",
+    "resolved_version": "1.12.1"
   },
   "bundle_api": {
     "distribution": "lfx",
     "requested": ">=1.12.0.dev0,<1.13.0",
-    "requirement": "lfx==1.12.0",
-    "resolved_version": "1.12.0"
+    "requirement": "lfx==1.12.1",
+    "resolved_version": "1.12.1"
   },
   "bundles": [
     {
