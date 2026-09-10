@@ -4698,12 +4698,14 @@
               "show": true,
               "slider_buttons": false,
               "slider_buttons_options": [],
+              "slider_color": "default",
               "slider_input": false,
               "title_case": false,
               "tool_mode": false,
               "track_in_telemetry": false,
               "type": "slider",
-              "value": 1
+              "value": 1,
+              "value_inverted": false
             },
             "prevent_outside": {
               "_input_type": "BoolInput",
@@ -22156,12 +22158,14 @@
               "show": true,
               "slider_buttons": false,
               "slider_buttons_options": [],
+              "slider_color": "default",
               "slider_input": false,
               "title_case": false,
               "tool_mode": false,
               "track_in_telemetry": false,
               "type": "slider",
-              "value": 0.1
+              "value": 0.1,
+              "value_inverted": false
             }
           },
           "tool_mode": false
@@ -31939,6 +31943,6 @@
     "num_components": 128,
     "num_modules": 16
   },
-  "sha256": "6e073073e3918a6377114246542ea3babb3d2d0ff6a7e3d3175c1caecd293093",
+  "sha256": "bcf03eedb2294dce832fe9bf8b1666e59847e5df02856f79b850f81b54cd2087",
   "version": "1.12.2"
 }
