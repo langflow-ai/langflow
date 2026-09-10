@@ -47,7 +47,7 @@ def upgrade() -> None:
         sa.CheckConstraint(
             "(source_kind = 'manual' AND provider_id IS NULL AND external_group IS NULL) "
             "OR (source_kind = 'idp' AND provider_id IS NOT NULL AND external_group IS NOT NULL)",
-            name="ck_authz_role_assignment_grant_source",
+            name=op.f("ck_authz_role_assignment_grant_source"),
         ),
         sa.ForeignKeyConstraint(
             ["administrative_actor"],

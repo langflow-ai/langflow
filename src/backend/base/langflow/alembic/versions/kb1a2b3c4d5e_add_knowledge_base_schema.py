@@ -101,7 +101,7 @@ def upgrade() -> None:
             # Value allow-list mirrors the ``KnowledgeBaseStatus`` Python
             # enum. A typo in app code now fails at COMMIT instead of
             # silently storing an invalid state.
-            sa.CheckConstraint(f"status IN ({kb_status_values})", name="ck_knowledge_base_status"),
+            sa.CheckConstraint(f"status IN ({kb_status_values})", name=op.f("ck_knowledge_base_status")),
         )
 
         with op.batch_alter_table(KB_TABLE, schema=None) as batch_op:
@@ -153,7 +153,7 @@ def upgrade() -> None:
             # Value allow-list mirrors ``IngestionRunStatus``. Prevents
             # typos ("Running" vs "running") from silently storing an
             # invalid state that list filters can't match.
-            sa.CheckConstraint(f"status IN ({run_status_values})", name="ck_ingestion_run_status"),
+            sa.CheckConstraint(f"status IN ({run_status_values})", name=op.f("ck_ingestion_run_status")),
         )
 
         with op.batch_alter_table(RUN_TABLE, schema=None) as batch_op:
