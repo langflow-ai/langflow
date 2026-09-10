@@ -214,10 +214,8 @@ def _scope_roots(
         roots.append(data_dir)
 
     if not roots:
-        msg = (
-            "Local-file access requires an authenticated user or flow scope "
-            "when LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true."
-        )
+        logger.warning("Local-file access denied: no user or flow scope (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true).")
+        msg = "Local-file access requires an authenticated user or flow scope."
         raise LocalFileAccessError(msg)
     return tuple(roots)
 
@@ -265,9 +263,14 @@ def enforce_local_file_access(
         raise LocalFileAccessError(msg) from e
 
     if not any(candidate == root or candidate.is_relative_to(root) for root in allowed_roots):
+        logger.warning(
+            "Local-file access denied for %s: outside the caller's storage scope "
+            "(LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true).",
+            candidate,
+        )
         msg = (
-            "Access to local file paths outside the authenticated user's storage scope is disabled "
-            "(LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true). Use an uploaded file instead."
+            "Access to local file paths outside the authenticated user's storage scope is disabled. "
+            "Use an uploaded file, or ask your administrator."
         )
         raise LocalFileAccessError(msg)
 
@@ -278,6 +281,10 @@ def enforce_local_file_access(
     # DB out of reach, not a redundant second line. Covered by
     # test_read_file_bytes_denies_reserved_secret_key.
     if candidate in _reserved_secret_paths(data_dir):
-        msg = "Access to this server-managed file is not permitted (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true)."
+        logger.warning(
+            "Local-file access denied for reserved server file %s (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true).",
+            candidate,
+        )
+        msg = "Access to this server-managed file is not permitted. Ask your administrator if you need access."
         raise LocalFileAccessError(msg)
     return candidate

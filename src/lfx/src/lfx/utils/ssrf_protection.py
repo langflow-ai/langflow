@@ -716,9 +716,10 @@ def validate_database_url_for_ssrf(url: str, *, validate_network_host: bool = Tr
     dialect, _separator, driver = (parsed.scheme or "").lower().partition("+")
     if dialect in _LOCAL_FILE_DB_DIALECTS:
         if file_restricted:
+            logger.warning("Local-file database dialect %r denied (LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true).", dialect)
             msg = (
-                f"Database dialect '{dialect}' accesses the local filesystem and is not permitted "
-                "(LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true). Use a network database (e.g. postgresql, mysql)."
+                f"Database dialect '{dialect}' accesses the local filesystem and is not permitted. "
+                "Use a network database (e.g. postgresql, mysql)."
             )
             raise SSRFProtectionError(msg)
         # Not restricted: local-file DBs are allowed (single-tenant default).

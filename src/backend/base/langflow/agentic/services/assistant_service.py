@@ -24,6 +24,7 @@ from lfx.mcp.flow_builder_tools import (
     set_propose_existing_edits,
 )
 from lfx.mcp.tool_cache import reset_tool_cache
+from lfx.services.deps import get_settings_service
 from lfx.services.model_provider_policy import ModelProviderPolicyPurpose, aresolve_model_provider_policy
 
 from langflow.agentic.helpers.code_extraction import extract_component_code, extract_flow_json
@@ -53,7 +54,11 @@ from langflow.agentic.helpers.sse import (
     format_tool_start_event,
 )
 from langflow.agentic.helpers.streaming_retry import emit_execution_retry_events
-from langflow.agentic.helpers.validation import validate_component_code, validate_component_runtime
+from langflow.agentic.helpers.validation import (
+    CUSTOM_COMPONENTS_DISABLED_MESSAGE,
+    validate_component_code,
+    validate_component_runtime,
+)
 from langflow.agentic.services.agent_run_context import (
     reset_agent_run_iterations,
     reset_agent_run_model,
@@ -789,6 +794,25 @@ async def execute_flow_with_validation_streaming(
     # the FlowBuilderAssistant toolkit only because that's where run_flow lives.
     is_run_request = intent_result.intent == "run_flow"
     logger.info(f"Intent classification: {intent_result.intent}")
+
+    # A pure component request on a server that forbids custom components cannot succeed:
+    # ``validate_component_runtime`` refuses every candidate before instantiating it. Answer
+    # from the policy now rather than generating code four times to reach the same refusal --
+    # the observed cost of not doing so was 78 seconds and 552.1K tokens, ending in
+    # "the selected model was unable to generate valid component code", which blamed the
+    # model for a decision the operator made. Emitted as an ordinary assistant reply (no
+    # ``validated``/``validation_error``) so the UI renders a policy statement rather than
+    # its component-generation failure card.
+    #
+    # Deliberately not applied to ``component_then_flow``: that intent can still deliver the
+    # flow half from existing components. Its component half reaches the packaged JSON flow
+    # through the nested ``generate_component`` tool, whose Agents carry the notice
+    # ``inject_component_policy_into_flow`` appends, so it declines rather than looping.
+    if is_component_request and not get_settings_service().settings.allow_custom_components:
+        logger.info("Component request refused before generation: allow_custom_components=false")
+        reset_working_flow()
+        yield _complete({"result": CUSTOM_COMPONENTS_DISABLED_MESSAGE})
+        return
 
     # Inject current flow context for all intents so the agent
     # can answer questions about or modify the user's canvas.

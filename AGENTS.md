@@ -229,6 +229,8 @@ changes:
 
 ## Pull Request Guidelines
 
+- Langflow OSS usually uses a `release-*` base branch. Verify the actual base
+  branch for the task rather than assuming it is `main`.
 - Follow [semantic commit conventions](https://www.conventionalcommits.org/)
 - Reference any issues fixed (e.g., `Fixes #1234`)
 - Ensure all tests pass before submitting

@@ -9,12 +9,7 @@ from pathlib import Path
 
 from lfx.base.models.model_metadata import MODEL_PROVIDER_METADATA, get_provider_param_mapping
 
-import lfx
 from langflow.agentic.helpers.assistant_workspace import resolve_assistant_fs_root
-
-# Resolves only from the monorepo root; inject_lfx_components_path rewrites it to
-# an absolute path at runtime so packaged installs (Desktop, pip, Docker) work.
-LFX_COMPONENTS_PATH_SENTINEL = "./src/lfx/src/lfx/components/"
 
 logger = logging.getLogger(__name__)
 
@@ -231,32 +226,6 @@ def inject_model_into_flow(
     return flow_data
 
 
-def inject_lfx_components_path(flow_data: dict) -> dict:
-    """Rewrite Directory nodes targeting bundled lfx components to an absolute path.
-
-    The bundled LangflowAssistant flow hardcodes a relative path that only
-    resolves from the monorepo root. In any packaged install the process CWD
-    is different and the Directory component raises "Path ... must exist and
-    be a directory.", causing the Langflow Assistant to fail with
-    "An internal error occurred while executing the flow." on first use.
-
-    This function walks the flow nodes and, for each Directory node whose
-    `path` value equals LFX_COMPONENTS_PATH_SENTINEL, replaces it with the
-    absolute path derived from the installed lfx package.
-    """
-    absolute_path = str(Path(lfx.__file__).parent / "components")
-
-    for node in flow_data.get("data", {}).get("nodes", []):
-        node_data = node.get("data", {})
-        if node_data.get("type") != "Directory":
-            continue
-        path_field = node_data.get("node", {}).get("template", {}).get("path")
-        if path_field and path_field.get("value") == LFX_COMPONENTS_PATH_SENTINEL:
-            path_field["value"] = absolute_path
-
-    return flow_data
-
-
 def inject_assistant_fs_root(flow_data: dict) -> dict:
     """Replace empty FileSystemTool.root_path with the resolved sandbox path.
 
@@ -290,6 +259,79 @@ def inject_assistant_fs_root(flow_data: dict) -> dict:
         if isinstance(current, str) and current.strip():
             continue
         root_field["value"] = resolved
+
+    return flow_data
+
+
+# Appended to every Agent's system prompt when the operator has disabled custom components.
+#
+# The shipped prompt tells the assistant to advertise three capabilities, one of which is
+# generating custom components. On a server with ``allow_custom_components=false`` -- the value
+# the enterprise image bakes in -- that offer cannot be honored: ``validate_component_runtime``
+# refuses before instantiating anything, by design and for good reason. So the greeting spent a
+# user's first impression on a capability the deployment had already ruled out, and taking it up
+# cost a turn to reach the refusal.
+#
+# Phrased the way this codebase phrases every other policy denial (see
+# ``lfx/tests/unit/utils/test_denial_messages_hide_settings.py``): name the administrator, not the
+# setting. An end user can neither read ``allow_custom_components`` nor change it.
+CUSTOM_COMPONENTS_DISABLED_NOTICE = """
+
+# Server policy for this deployment
+Custom component generation is turned off here by the Langflow administrator.
+
+- Do NOT offer or advertise custom component generation. When you describe what
+  you can do, list only two capabilities: answering questions about Langflow, and
+  building flows from the components already in the library.
+- Do NOT try to create one through a tool either. The server refuses generated
+  components before they run, so the attempt only spends the user's turn.
+- If the user asks for a custom component, say plainly that this deployment does
+  not allow them, and offer to build what they need from the existing library
+  instead. State it as a settled configuration choice their administrator made --
+  not an error, not a temporary failure -- and do not suggest retrying."""
+
+
+def custom_components_policy_notice() -> str:
+    """The notice to append to an assistant system prompt, or ``""`` when it does not apply.
+
+    Both assistant surfaces need this and they build their prompts differently: the packaged
+    JSON flow is rewritten node by node here, while ``flow_builder_assistant`` composes its
+    Agent in Python. Sharing the decision keeps one answer to "does this deployment allow
+    custom components" instead of two that can drift apart.
+    """
+    from lfx.services.deps import get_settings_service
+
+    if get_settings_service().settings.allow_custom_components:
+        return ""
+    return CUSTOM_COMPONENTS_DISABLED_NOTICE
+
+
+def inject_component_policy_into_flow(flow_data: dict) -> dict:
+    """Tell the flow's Agents not to advertise a capability this server forbids.
+
+    A no-op when custom components are allowed, which is the default and the only case
+    where the shipped prompt's three-capability greeting is accurate.
+
+    Applied to every Agent rather than to the user-facing one alone: the notice reads
+    correctly for the component-generation Agent too, and picking a single node would mean
+    encoding a node id or a graph-shape assumption that the next edit to the flow silently
+    invalidates. Idempotent, so a flow prepared twice does not accumulate the block.
+    """
+    notice = custom_components_policy_notice()
+    if not notice:
+        return flow_data
+
+    for node in flow_data.get("data", {}).get("nodes", []):
+        node_data = node.get("data", {})
+        if node_data.get("type") != "Agent":
+            continue
+        field = node_data.get("node", {}).get("template", {}).get("system_prompt")
+        if not isinstance(field, dict):
+            continue
+        value = field.get("value")
+        if not isinstance(value, str) or notice in value:
+            continue
+        field["value"] = value.rstrip() + notice
 
     return flow_data
 
@@ -352,7 +394,7 @@ def load_and_prepare_flow(
             iterations = int(raw_iterations)
     flow_data = inject_iterations_into_flow(flow_data, iterations)
 
-    flow_data = inject_lfx_components_path(flow_data)
     flow_data = inject_assistant_fs_root(flow_data)
+    flow_data = inject_component_policy_into_flow(flow_data)
 
     return json.dumps(flow_data)
