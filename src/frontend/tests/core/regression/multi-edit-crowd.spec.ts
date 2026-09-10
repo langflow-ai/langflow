@@ -1,6 +1,9 @@
-import type { Browser, Page } from "@playwright/test";
+import type { Browser, BrowserContext, Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
+
+/** A starter project as the API lists it. */
+type StarterProject = { name?: string; data?: { name?: string } };
 
 /**
  * Two, three and four people on one flow at the same time.
@@ -36,7 +39,7 @@ async function seatPeople(
   page: Page,
   browser: Browser,
   count: number,
-): Promise<{ flowId: string; people: Person[]; contexts: any[] }> {
+): Promise<{ flowId: string; people: Person[]; contexts: BrowserContext[] }> {
   await page.goto("/");
   await expect
     .poll(
@@ -53,9 +56,11 @@ async function seatPeople(
   const body = await (
     await page.request.get("/api/v1/starter-projects/")
   ).json();
-  const starters: any[] = Array.isArray(body) ? body : (body.items ?? []);
+  const starters: StarterProject[] = Array.isArray(body)
+    ? body
+    : (body.items ?? []);
   const template = starters.find(
-    (s: any) => (s.name ?? s.data?.name) === "Basic Prompting",
+    (s: StarterProject) => (s.name ?? s.data?.name) === "Basic Prompting",
   );
   const created = await page.request.post("/api/v1/flows/", {
     data: { name: `crowd-${Date.now()}`, description: "", data: template.data },
@@ -64,7 +69,7 @@ async function seatPeople(
   const flowId = (await created.json()).id as string;
 
   const people: Person[] = [];
-  const contexts: any[] = [];
+  const contexts: BrowserContext[] = [];
   for (let i = 0; i < count; i++) {
     const seat = i === 0 ? page : await (await browser.newContext()).newPage();
     if (i > 0) contexts.push(seat.context());

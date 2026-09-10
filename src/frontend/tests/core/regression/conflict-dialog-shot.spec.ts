@@ -3,6 +3,13 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 
+/** The shape of a node as the flows API returns it. */
+type ServerNode = {
+  id: string;
+  position?: { x?: number; y?: number };
+  data?: { node?: { template?: Record<string, { value?: unknown }> } };
+};
+
 const SETTLE_MS = 12_000;
 
 function flowIdFrom(page: Page): string {
@@ -20,7 +27,7 @@ test("conflict dialog footer layout", async ({ page }) => {
 
   // Someone else changes several components, so both lists have content.
   const flow = await (await page.request.get(`/api/v1/flows/${flowId}`)).json();
-  const nodes = flow.data.nodes.map((n: any, i: number) => ({
+  const nodes = flow.data.nodes.map((n: ServerNode, i: number) => ({
     ...n,
     position: {
       x: (n.position?.x ?? 0) + 60 * (i + 1),

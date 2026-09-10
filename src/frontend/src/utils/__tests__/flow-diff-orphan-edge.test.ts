@@ -1,3 +1,4 @@
+import type { AllNodeType, EdgeType } from "@/types/flow";
 import { applySelectedChanges, diffGraphs } from "../flow-diff";
 
 /** Mirrors the dialog: diff, then apply exactly what the person ticked. */
@@ -7,10 +8,10 @@ const node = (id: string) =>
     type: "genericNode",
     position: { x: 0, y: 0 },
     data: { id, type: "Prompt", node: { display_name: id, template: {} } },
-  }) as any;
+  }) as unknown as AllNodeType;
 
 const edge = (id: string, source: string, target: string) =>
-  ({ id, source, target, data: {} }) as any;
+  ({ id, source, target, data: {} }) as unknown as EdgeType;
 
 describe("every selection the dialog counts is a selection it applies", () => {
   it("applies their new edge by bringing the new node it needs", () => {

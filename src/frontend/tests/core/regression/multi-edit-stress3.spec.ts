@@ -3,6 +3,13 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 
+/** The shape of a node as the flows API returns it. */
+type ServerNode = {
+  id: string;
+  position?: { x?: number; y?: number };
+  data?: { node?: { template?: Record<string, { value?: unknown }> } };
+};
+
 const SETTLE_MS = 12_000;
 
 function flowIdFrom(page: Page): string {
@@ -69,16 +76,12 @@ test("rapid editing never leaves the server behind the canvas", async ({
   }
   await page.waitForTimeout(SETTLE_MS * 2);
 
-  const canvas = await page.evaluate(() => {
-    const st = (window as any).__lfFlowStore;
-    return null;
-  });
   const server = await (
     await page.request.get(`/api/v1/flows/${flowId}`)
   ).json();
   const positions = (server.data?.nodes ?? []).map(
-    (n: any) =>
-      `${n.id}:${Math.round(n.position.x)},${Math.round(n.position.y)}`,
+    (n: ServerNode) =>
+      `${n.id}:${Math.round(n.position?.x ?? 0)},${Math.round(n.position?.y ?? 0)}`,
   );
   console.log("D5 server positions after the burst:", positions.join(" | "));
 
@@ -90,7 +93,7 @@ test("rapid editing never leaves the server behind the canvas", async ({
   console.log("D5 canvas transform:", domPos);
   const nodeId = await node.getAttribute("data-id");
   const serverNode = (server.data?.nodes ?? []).find(
-    (n: any) => n.id === nodeId,
+    (n: ServerNode) => n.id === nodeId,
   );
   const m = domPos.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/);
   if (m && serverNode) {

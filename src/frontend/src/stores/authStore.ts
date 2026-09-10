@@ -8,7 +8,7 @@ import {
 } from "@/constants/constants";
 import type { AuthStoreType } from "@/types/zustand/auth";
 import { clearAllConflictDrafts } from "@/utils/conflict-draft";
-import { cookieManager, getCookiesInstance } from "@/utils/cookie-manager";
+import { cookieManager } from "@/utils/cookie-manager";
 
 const useAuthStore = create<AuthStoreType>((set, get) => ({
   isAdmin: false,

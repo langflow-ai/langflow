@@ -11,7 +11,7 @@ export type FlowVersionEntry = {
 };
 
 export type FlowVersionEntryWithData = FlowVersionEntry & {
-  data: Record<string, any> | null;
+  data: Record<string, unknown> | null;
 };
 
 export type FlowVersionCreate = {

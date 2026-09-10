@@ -3,6 +3,13 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
 
+/** The shape of a node as the flows API returns it. */
+type ServerNode = {
+  id: string;
+  position?: { x?: number; y?: number };
+  data?: { node?: { template?: Record<string, { value?: unknown }> } };
+};
+
 const SETTLE_MS = 12_000;
 const CONFLICT_WINDOW_MS = 25_000;
 
@@ -17,7 +24,7 @@ async function editOneComponentTwice(page: Page, flowId: string) {
   const read = await page.request.get(`/api/v1/flows/${flowId}`);
   const flow = await read.json();
   const nodes = flow.data?.nodes ?? [];
-  const target = nodes.find((n: any) =>
+  const target = nodes.find((n: ServerNode) =>
     Object.keys(n.data?.node?.template ?? {}).some(
       (f) => typeof n.data.node.template[f]?.value === "string",
     ),

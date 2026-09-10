@@ -143,7 +143,7 @@ test("double-clicking Duplicate must not fail or create two copies", async ({
     await page.request.get(`/api/v1/flows/?get_all=true&header_flows=true`)
   ).json();
   const names = (Array.isArray(copies) ? copies : (copies.items ?? []))
-    .map((f: any) => f.name)
+    .map((f: { name?: string }) => f.name)
     .filter((n: string) => n.includes("(copy)"));
   console.log("S2 copies now present:", names);
   expect(
