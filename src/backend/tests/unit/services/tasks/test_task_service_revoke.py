@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from types import SimpleNamespace
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -10,7 +9,12 @@ from langflow.services.task.service import TaskService
 
 
 def _celery_enabled_service() -> TaskService:
-    return TaskService(SimpleNamespace(settings=SimpleNamespace(celery_enabled=True)))
+    # Bypass __init__/get_backend so the sync/async tests run in envs
+    # without the optional celery dependency installed.
+    service = TaskService.__new__(TaskService)
+    service.use_celery = True
+    service.backend = None
+    return service
 
 
 def test_revoke_task_with_sync_backend_result():
@@ -54,4 +58,8 @@ def test_revoke_task_celery_backend_broadcast():
         Celery("test-revoke", broker="memory://", set_as_current=False) as app,
         patch("langflow.worker.celery_app", app),
     ):
-        assert asyncio.run(_celery_enabled_service().revoke_task(uuid4())) is True
+        from langflow.services.task.backends.celery import CeleryBackend
+
+        service = _celery_enabled_service()
+        service.backend = CeleryBackend()
+        assert asyncio.run(service.revoke_task(uuid4())) is True
