@@ -24,9 +24,10 @@ def _job_block(path: Path, start_job: str, end_job: str) -> str:
 def test_finalized_bundles_do_not_influence_shared_rc_number() -> None:
     rc_job = _job_block(WORKFLOW_PATH, "determine-rc-number", "determine-base-version")
 
-    assert 'if grep -Fxq "$version" "$output_file"; then' in rc_job
+    assert 'if grep -Fxq "$base_version" "$versions_file"; then' in rc_job
     assert "excluding its historical RCs" in rc_job
-    assert 'consider_versions "PyPI ${package_name}"' in rc_job
+    assert 'consider_unreleased_versions "PyPI ${package_name}"' in rc_job
+    assert 'consider_unreleased_versions "PyPI langflow-sdk"' in rc_job
     assert "langflow-core" not in rc_job
 
 
