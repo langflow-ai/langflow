@@ -121,7 +121,7 @@ dependencies = [
     # owned by lfx-* extension distributions.
     "redis>=7.4.0,<8.0.0",
     "chromadb>=1.0.0,<2.0.0",
-    "langfuse~=3.8",
+    "langfuse>=4.7,<5",
     "langwatch~=0.10.0; python_version < '3.14'",
     "langsmith>=0.3.42,<1.0.0",
     "arize-phoenix-otel>=0.6.1",
@@ -269,7 +269,7 @@ ctransformers = ["ctransformers>=0.2.10"]
 # the langfuse SDK raises pydantic.v1.errors.ConfigError on import in Python
 # 3.14 environments (e.g. the official Docker image), causing tracing to
 # silently no-op. See https://github.com/langflow-ai/langflow/issues/13317.
-langfuse = ["langfuse~=3.8", "pydantic>=2.13.0"]
+langfuse = ["langfuse>=4.7,<5", "pydantic>=2.13.0"]
 langwatch = ["langwatch~=0.10.0; python_version < '3.14'"]
 langsmith = ["langsmith>=0.3.42,<1.0.0"]
 arize = ["arize-phoenix-otel>=0.6.1"]

@@ -1,7 +1,7 @@
 """Regression tests for the Langfuse orphan-generation fix (issue #13429).
 
 When a model runs as the *root* LangChain run — i.e. invoked directly with no
-wrapping chain, as reproduced with Ollama — the langfuse v3 ``CallbackHandler``
+wrapping chain, as reproduced with Ollama — the Langfuse ``CallbackHandler``
 emitted the LLM generation as a separate, orphan trace: ``parent = None``,
 ``userId = None``, ``sessionId = None``, and the token usage detached from the
 flow trace. The langfuse SDK only applies the constructor ``trace_context`` on
@@ -18,7 +18,7 @@ happens inside the SDK's generation path.
 
 import os
 import uuid
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -327,10 +327,16 @@ class TestFlowNameParsing:
     @staticmethod
     def _make_tracer(trace_name: str):
         pytest.importorskip("langfuse")
+        import langfuse as langfuse_pkg
         from langflow.services.tracing.langfuse import LangFuseTracer
 
-        with patch("langflow.services.tracing.langfuse._get_or_create_shared_client") as mock_client:
+        with (
+            patch("langflow.services.tracing.langfuse._get_or_create_shared_client") as mock_client,
+            patch.object(langfuse_pkg, "propagate_attributes") as mock_propagate,
+        ):
             mock_client.return_value.auth_check.return_value = True
+            mock_propagate.return_value.__enter__ = MagicMock(return_value=None)
+            mock_propagate.return_value.__exit__ = MagicMock(return_value=False)
             tracer = LangFuseTracer(
                 trace_name=trace_name,
                 trace_type="flow",
@@ -338,7 +344,7 @@ class TestFlowNameParsing:
                 trace_id=uuid.uuid4(),
             )
         assert tracer.ready, "tracer setup failed; the SDK calls below were never made"
-        return tracer, mock_client.return_value
+        return tracer, mock_client.return_value, mock_propagate
 
     @pytest.mark.parametrize(
         ("trace_name", "expected_name", "expected_flow_id"),
@@ -349,23 +355,23 @@ class TestFlowNameParsing:
         ],
     )
     def test_trace_is_named_after_the_flow(self, trace_name, expected_name, expected_flow_id):
-        tracer, client = self._make_tracer(trace_name)
+        tracer, client, propagate = self._make_tracer(trace_name)
 
         assert tracer.flow_name == expected_name
         assert tracer.flow_id == expected_flow_id
-        assert client.start_span.call_args.kwargs["name"] == expected_name
-        assert client.start_span.call_args.kwargs["metadata"]["flow_id"] == expected_flow_id
-        trace_update = client.start_span.return_value.update_trace.call_args.kwargs
-        assert trace_update["name"] == expected_name
-        assert trace_update["metadata"]["flow_id"] == expected_flow_id
+        assert client.start_observation.call_args.kwargs["name"] == expected_name
+        assert client.start_observation.call_args.kwargs["metadata"]["flow_id"] == expected_flow_id
+        propagation_kwargs = propagate.call_args.kwargs
+        assert propagation_kwargs["trace_name"] == expected_name
+        assert propagation_kwargs["metadata"]["flow_id"] == expected_flow_id
 
     def test_unnamed_flow_falls_back_to_flow_id(self):
         # An unnamed graph formats its run name as "None - <id>"; the trace must not be called "None".
-        tracer, client = self._make_tracer("None - flow-xyz")
+        tracer, client, propagate = self._make_tracer("None - flow-xyz")
 
         assert tracer.flow_id == "flow-xyz"
-        assert client.start_span.call_args.kwargs["name"] == "flow-xyz"
-        assert client.start_span.return_value.update_trace.call_args.kwargs["name"] == "flow-xyz"
+        assert client.start_observation.call_args.kwargs["name"] == "flow-xyz"
+        assert propagate.call_args.kwargs["trace_name"] == "flow-xyz"
 
 
 class TestGraphRunNamesTraceAfterFlow:
@@ -505,10 +511,9 @@ def test_handler_deepcopy_returns_self(monkeypatch):
 
     with patch("langflow.services.tracing.langfuse._get_or_create_shared_client") as mock_client:
         mock_client.return_value.auth_check.return_value = True
-        mock_client.return_value.start_span.return_value.__enter__ = lambda s: s
-        mock_client.return_value.start_span.return_value.__exit__ = lambda *_: None
-        mock_client.return_value.start_span.return_value.id = "root-span-id"
-        mock_client.return_value.start_span.return_value.update_trace = lambda **_: None
+        mock_client.return_value.start_observation.return_value.__enter__ = lambda s: s
+        mock_client.return_value.start_observation.return_value.__exit__ = lambda *_: None
+        mock_client.return_value.start_observation.return_value.id = "root-span-id"
 
         tracer = LangFuseTracer(
             trace_name="test-flow - abc",
