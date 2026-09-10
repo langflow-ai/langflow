@@ -2,12 +2,12 @@
 
 from typing import ClassVar
 
-from fxmacrodata_public import list_operations
 from lfx.io import DictInput, DropdownInput, IntInput, Output, SecretStrInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 
+from lfx_fxmacrodata._public_client import list_operations
 from lfx_fxmacrodata.client import DOCUMENTATION, query
 from lfx_fxmacrodata.component import CredentialSafeComponent
 

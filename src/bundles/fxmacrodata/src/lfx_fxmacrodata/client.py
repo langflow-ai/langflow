@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from fxmacrodata_public import FXMacroDataClient, FXMacroDataError
+from lfx_fxmacrodata._public_client import FXMacroDataClient, FXMacroDataError
 
 SITE_URL = (
     "https://fxmacrodata.com/?utm_source=langflow&utm_medium=integration"

@@ -5,7 +5,6 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from fxmacrodata_public import Result, list_operations
 from lfx.extension.loader import load_extension, load_installed_extensions
 from lfx.extension.validate import validate_extension
 from lfx.schema.data import Data
@@ -13,6 +12,7 @@ from lfx.schema.dataframe import DataFrame
 from pydantic import SecretStr
 
 from lfx_fxmacrodata import FXMacroDataQuery, FXMacroDataTools
+from lfx_fxmacrodata._public_client import Result, list_operations
 
 PAYLOAD = {"data": [{"fixture": "synthetic", "announcement_datetime": "2026-01-01T12:00:00Z", "value": None}]}
 

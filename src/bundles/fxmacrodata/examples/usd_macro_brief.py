@@ -9,14 +9,23 @@ def main() -> None:
     today = date.today()
     operations = [
         ("data_catalogue", {"currency": "USD"}),
-        ("indicator_history", {
-            "currency": "USD", "indicator": "inflation",
-            "start_date": (today - timedelta(days=90)).isoformat(), "end_date": today.isoformat(),
-        }),
-        ("release_calendar", {
-            "currency": "USD", "start_date": today.isoformat(),
-            "end_date": (today + timedelta(days=30)).isoformat(),
-        }),
+        (
+            "indicator_history",
+            {
+                "currency": "USD",
+                "indicator": "inflation",
+                "start_date": (today - timedelta(days=90)).isoformat(),
+                "end_date": today.isoformat(),
+            },
+        ),
+        (
+            "release_calendar",
+            {
+                "currency": "USD",
+                "start_date": today.isoformat(),
+                "end_date": (today + timedelta(days=30)).isoformat(),
+            },
+        ),
     ]
     for operation, arguments in operations:
         component = FXMacroDataQuery()
