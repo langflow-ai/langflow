@@ -247,6 +247,7 @@ export type SliderComponentType = {
     id: number;
   }[];
   sliderInput?: boolean;
+  invertGradient?: boolean;
 };
 
 export type FilePreviewType = {

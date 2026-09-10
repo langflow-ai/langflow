@@ -114,6 +114,7 @@ class GuardrailsComponent(Component):
             min_label_icon="lock",
             max_label="Permissive",
             max_label_icon="lock-open",
+            invert_gradient=True,
             advanced=True,
         ),
     ]
