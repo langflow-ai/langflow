@@ -47,10 +47,11 @@ class CeleryBackend(TaskBackend):
         return AsyncResult(task_id, app=self.celery_app)
 
     def revoke_task(self, task_id: str) -> bool:
+        import contextlib
+
         from celery.exceptions import TaskRevokedError
         from celery.result import AsyncResult
 
-        try:
-            return AsyncResult(task_id, app=self.celery_app).revoke(terminate=True)
-        except TaskRevokedError:
-            return True
+        with contextlib.suppress(TaskRevokedError):
+            AsyncResult(task_id, app=self.celery_app).revoke(terminate=True)
+        return True

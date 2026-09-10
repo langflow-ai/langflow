@@ -92,7 +92,8 @@ class TaskService(Service):
 
     async def revoke_task(self, task_id: UUID | str) -> bool:
         if self.use_celery:
-            return await self.backend.revoke_task(str(task_id))
+            result = self.backend.revoke_task(str(task_id))
+            return await result if isinstance(result, Coroutine) else result
 
         job_queue_service = get_queue_service()
         try:
