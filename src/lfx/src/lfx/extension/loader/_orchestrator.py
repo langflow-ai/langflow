@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Literal
 
 from lfx.extension._paths import SKIP_DIR_NAMES, is_within
 from lfx.extension.errors import ExtensionError
+from lfx.extension.integration_compat import IntegrationVersionError
 from lfx.extension.integration_manifest import resolve_integration_manifest
 from lfx.extension.loader._detection import collect_component_classes
 from lfx.extension.loader._discovery import (
@@ -452,6 +453,16 @@ def load_extension(
                     "Create an extension.json at the extension root or add a "
                     "[tool.langflow.extension] section to pyproject.toml."
                 ),
+            )
+        )
+        return result
+    except IntegrationVersionError as exc:
+        result.errors.append(
+            ExtensionError(
+                code="lfx-version-too-old",
+                message=str(exc),
+                location=str(root_path),
+                hint="Upgrade lfx; the integration reference does not need to be rewritten.",
             )
         )
         return result

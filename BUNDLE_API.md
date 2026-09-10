@@ -205,6 +205,18 @@ the deserialize half is covered by
 
 ## Changelog
 
+### 2026-09-10 — Integration identity ownership and runtime floors
+
+- The bundle registry rejects duplicate integration provider IDs, capability IDs,
+  and policy keys across providers or bundles with `integration-identity-conflict`.
+  Policy keys may group actions within one provider. Startup reports rejected
+  bundles, and reload validates before swapping modules or registry metadata.
+- Integration references require `lfx>=1.13.0.dev0`. The loader and validator
+  report `lfx-version-too-old` before schema parsing on older runtimes. CI checks
+  every declaring bundle's runtime dependency against the same feature floor;
+  `scripts/ci/sync_bundle_lfx_pin.py 1.13.0` remains the floor update mechanism.
+  Manifests without integrations retain their existing behavior.
+
 ### v0 (this release)
 
 - **Bundle-owned integration capability manifests (additive).**

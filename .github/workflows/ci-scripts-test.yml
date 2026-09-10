@@ -29,6 +29,8 @@ on:
       - "src/lfx/src/lfx/schema/message.py"
       - "src/lfx/tests/unit/schema/test_message_content_blocks.py"
       - "src/lfx/src/lfx/workflow/**"
+      - "src/lfx/src/lfx/extension/integration_compat.py"
+      - "src/bundles/**/extension.json"
   workflow_dispatch:
 
 jobs:
