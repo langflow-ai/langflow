@@ -1,24 +1,26 @@
 # Mend scan triage notes
 
-Last verified: **2026-09-10**, against PR #15019 commit
-`6adb1ccaac945b718d8b9f63d9f0272bc205323f` and the released packages below.
+Last verified: **2026-09-10**. Upstream advisory evidence was initially checked
+against PR #15019 commit `6adb1ccaac945b718d8b9f63d9f0272bc205323f`;
+the DiskCache removal below is a subsequent update to the same PR.
 These are engineering findings, **not security-approved waivers**. An unavailable
 fix or an unused built-in code path does not close an advisory.
 
 ## Release scope
 
 PR #15019 addresses the Transformers and PyTorch findings with published dependency
-floors and a compatible Docling upgrade. The four additional dependencies below
-remain unresolved. Their removals or replacements need separate implementation
-and feature validation; target 1.12.3/1.13.0 subject to release planning. A decision
-to defer them is not a remediation or non-impact approval.
+floors and a compatible Docling upgrade. It also removes OpenDsStar and DiskCache
+from the managed dependency graph, while retaining component code for manual
+opt-in installations. Accelerate, LangChain Community, and Chroma remain unresolved;
+target their broader remediation for 1.12.3/1.13.0 subject to release planning.
+A decision to defer them is not a remediation or non-impact approval.
 
-| Dependency in the lock | Current evidence | Follow-up and compatibility impact |
+| Dependency | Current evidence | Follow-up and compatibility impact |
 | --- | --- | --- |
 | `accelerate==1.14.0` | Both checkpoint path escape and FIFO blocking reproduce in **1.15.0**. | Maintain a reviewed fix for both paths, or replace the local-model consumers. A version-only upgrade is insufficient. |
 | `langchain-community==0.4.2` | No built-in `SitemapLoader` reference found; exact runtime/custom-flow scope still needs security review. | Migrate the actual consumers to maintained packages, retaining saved component identities and testing old flows. |
 | `chromadb==1.5.9` | No newer PyPI release; existing collection-creation hardening is not evidence for every advisory. | Assess each finding; replacing Chroma also requires knowledge-base storage migration and retrieval validation. |
-| `diskcache==5.6.3` | Pulled directly by OpenDsStar and transitively through Unitxt. | Retire/replace OpenDsStar or replace both cache consumers. Retirement affects OpenDsStar, CodeAct Smolagents, and File Description Generator flows. |
+| `diskcache` | Removed from the managed lock and full-workspace export with OpenDsStar and Unitxt. | OpenDsStar, CodeAct Smolagents, and File Description Generator require manual installation, which reintroduces DiskCache. |
 
 ## How to verify a finding before acting on it
 
@@ -60,7 +62,9 @@ export contains every optional extra and development group; the compile applies
 the target platform's markers. Removing a dependency from a default install while
 retaining it in an extra does not remove it from this scan scope.
 
-The export at the verified commit contains all four versions in the table.
+The export at the initial review commit contained all four packages in the table.
+The updated export excludes OpenDsStar, ragworkbench, Unitxt, and DiskCache across
+all workspace packages, extras, and groups; the other three findings remain.
 [The Mend run at that commit](https://github.com/langflow-ai/langflow/actions/runs/34513056033)
 completed successfully, but scan completion does not establish that its inventory
 has no advisories. No per-finding Mend report or approved non-impact decision was
@@ -173,32 +177,42 @@ Chroma backs knowledge-base storage, ingestion, querying, retrieval, and deletio
 as well as the Chroma component. Replacement requires a storage migration for
 existing knowledge bases, plus behavior and saved-flow compatibility validation.
 
-## DiskCache — removal must cover OpenDsStar and Unitxt
+## DiskCache — removed from managed dependencies; manual opt-in remains affected
 
 [CVE-2025-69872 / GHSA-w8v5-vhqr-4h9v](https://github.com/advisories/GHSA-w8v5-vhqr-4h9v)
 covers unsafe pickle deserialization from attacker-writable cache storage. PyPI
-still reports 5.6.3 as the latest release; no patched version is recorded. Cache
-permissions and actual writers/readers require assessment before a non-impact
-claim can be approved.
+still reports 5.6.3 as the latest release; no patched version is recorded. This PR
+removes the dependency rather than patching DiskCache or claiming non-impact.
 
-The current lock contains **both** paths:
+The previous lock contained **both** paths:
 
 - `OpenDsStar -> diskcache`
 - `OpenDsStar -> ragworkbench -> unitxt -> diskcache`
 
-OpenDsStar is declared in `lfx[opendsstar]`, `langflow-base[opendsstar]`, and
-`lfx-bundles[codeagents]`. The latter is included in **`lfx-bundles[all]`**;
-`all-no-torch` excludes it. Thus the earlier claim that it is excluded from every
-`all` extra was incorrect. The full Mend export includes it on supported platforms
-(Python 3.11–3.13, excluding Intel macOS).
+Removed the `lfx[opendsstar]` and `langflow-base[opendsstar]` extras and the
+OpenDsStar requirement from `lfx-bundles[codeagents]`, including the generator's
+dependency map. The latter extra is included in `lfx-bundles[all]`; previously it
+pulled OpenDsStar into every full-workspace export on supported platforms. The
+separate Smolagents requirement remains. `lfx-bundles` is bumped to 1.1.24 and
+application/LFX bundle floors require that release.
 
-Retiring the integration requires removing every dependency path and handling
 `OpenDsStarAgentComponent`, `CodeActAgentSmolagentsComponent`, and
-`FileDescriptionGeneratorComponent`, their installation guidance, import shims,
-and existing saved flows. Both agent implementations import their engines from
-OpenDsStar. File Description Generator imports OpenDsStar's
-`DoclingDescriptionBuilder` in its subprocess and enables caching
-(`src/lfx/src/lfx/components/files_ingestion/file_description_generator.py`).
-If retaining OpenDsStar, replacing its direct cache alone is insufficient: Unitxt's
-cache consumer also needs remediation. Re-export and verify that `diskcache` is
-absent, or demonstrate both consumers are remediated, before claiming closure.
+`FileDescriptionGeneratorComponent` retain their classes, inputs, outputs, and
+import shims for saved flows. Without a manual installation, execution reports
+how to install the missing dependency. File Description Generator preserves its
+subprocess boundary and includes the installation guidance in the child error.
+No dependency is installed automatically at runtime.
+
+See [manual installation instructions](../src/bundles/lfx-bundles/README.md#opendsstar-manual-installation-only).
+That opt-in restores the upstream cache consumers, including File Description
+Generator's `DoclingDescriptionBuilder` with caching enabled. **Such environments
+remain affected** and require their own security assessment. This removal covers
+Langflow-managed dependencies, not user-installed OpenDsStar environments.
+
+The dependency regression check rejects OpenDsStar or DiskCache in `uv.lock` and
+in the bundle generator. The full-workspace export, Mend's Python 3.12/Linux
+requirements, GP requirements, and built `lfx`, `langflow-base`, and `lfx-bundles`
+wheel metadata were checked and exclude the retired dependencies. All 34 focused
+metadata/component tests passed, including real subprocess error coverage.
+Manual opt-in resolves with the new wheels and restores DiskCache as documented;
+external-model execution was not rerun. The Mend workflow and scan scope are unchanged.

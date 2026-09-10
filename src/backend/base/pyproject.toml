@@ -281,11 +281,6 @@ pytube = ["pytube==15.0.0"]
 # crewai is commented out due to httpx version conflict
 # crewai = ["crewai>=0.126.0"]
 smolagents = ["smolagents>=1.8.0"]
-opendsstar = [
-    "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
-    # Temporary compatibility valve: newer langchain-litellm releases require cryptography<49.
-    "langchain-litellm==0.5.1; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
-]
 
 # Individual tools
 beautifulsoup = ["lfx~=1.12.2"]  # beautifulsoup4 is now a hard lfx dependency

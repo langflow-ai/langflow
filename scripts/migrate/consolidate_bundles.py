@@ -142,10 +142,9 @@ PROVIDER_DEPS: dict[str, list[str]] = {
         "agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     ],
     "codeagents": [
+        # OpenDsStar is a manual opt-in: its DiskCache dependency has no released fix.
+        # Keep the component code, but never add it to managed extras or aggregates.
         "smolagents>=1.8.0",
-        "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",  # noqa: E501
-        # Temporary compatibility valve: newer releases require cryptography<49.
-        "langchain-litellm==0.5.1; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",  # noqa: E501
     ],
     # --- tranche 8: agent/model SDKs (needed the lfx dynamic-import test decoupling) ---
     "composio": ["composio==0.9.2", "composio-langchain==0.9.2"],

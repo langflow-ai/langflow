@@ -54,6 +54,18 @@ def test_workspace_security_overrides_enforce_patched_versions() -> None:
     _assert_floor(h2, "4.4.1")
 
 
+def test_managed_dependency_graph_excludes_opendsstar_and_diskcache() -> None:
+    """Even opt-in extras and test groups must not reintroduce the retired dependency."""
+    with (REPO_ROOT / "uv.lock").open("rb") as lock_file:
+        packages = tomllib.load(lock_file)["package"]
+    package_names = {package["name"] for package in packages}
+    assert not {"opendsstar", "diskcache"} & package_names
+
+    generator = runpy.run_path(str(REPO_ROOT / "scripts/migrate/consolidate_bundles.py"))
+    requirements = {Requirement(spec).name.lower() for specs in generator["PROVIDER_DEPS"].values() for spec in specs}
+    assert not {"opendsstar", "diskcache"} & requirements
+
+
 def test_published_packages_enforce_patched_h2_floor() -> None:
     for relative_path in (
         "src/backend/base/pyproject.toml",

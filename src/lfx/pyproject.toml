@@ -81,11 +81,6 @@ dependencies = [
 sandbox = [
     "exec-sandbox>=0.22.0,<1.0.0; python_version >= '3.12'",
 ]
-opendsstar = [
-    "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
-    # Temporary compatibility valve: newer langchain-litellm releases require cryptography<49.
-    "langchain-litellm==0.5.1; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
-]
 # Optional deps for built-in LFX components that import them lazily (a missing
 # install degrades to a clear "pip install ..." error, not an import-time crash).
 # Relocated out of langflow-base[complete], where they were the de-facto provider
@@ -114,7 +109,7 @@ otel = [
 #
 # Documented as a headless/serverless deployment footnote, not a
 # getting-started headline.  There is intentionally NO ``lfx[all]``.
-bundles = ["lfx-bundles[all]>=1.0,<2.0"]
+bundles = ["lfx-bundles[all]>=1.1.24,<2.0"]
 
 [project.scripts]
 lfx = "lfx.__main__:main"

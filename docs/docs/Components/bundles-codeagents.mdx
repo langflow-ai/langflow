@@ -6,7 +6,8 @@ slug: /bundles-codeagents
 import Icon from "@site/src/components/icon";
 import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
 
-These components require a [torch opt-in install](/components-bundle-components#torch-opt-in).
+These components require a separate manual OpenDsStar installation, described in [Prerequisites](#prerequisites).
+Installing `lfx-bundles[codeagents]`, `lfx-bundles[all]`, or `lfx[bundles]` does not install OpenDsStar.
 
 <PartialLfxBundlesInstall />
 
@@ -20,15 +21,21 @@ Code Agents components are in **beta** and can change in future releases.
 
 ## Prerequisites
 
-* **OpenDsStar package**: Code Agents components require the `OpenDsStar` package and Python 3.11 or later.
+* **OpenDsStar package**: Code Agents components require a manual installation of `OpenDsStar`. The last managed combination supported Python 3.11–3.13, excluding Intel macOS.
 
     Install the dependency with:
 
     ```bash
-    uv pip install OpenDsStar
+    uv pip install 'OpenDsStar==1.0.26' 'langchain-litellm==0.5.1'
     ```
 
     For more information, see [Install custom dependencies](/install-custom-dependencies).
+
+OpenDsStar was removed from Langflow's managed dependencies because it pulls in DiskCache with an unpatched [CVE-2025-69872](https://github.com/advisories/GHSA-w8v5-vhqr-4h9v).
+Manual installation reintroduces this dependency and requires your own security assessment.
+The `lfx[opendsstar]` and `langflow-base[opendsstar]` extras are no longer available.
+Existing component and saved-flow identifiers are preserved, but execution requires the manual installation in the same environment as Langflow.
+An exact `uv sync` can remove manually installed packages; reinstall them afterward or manage the opt-in in your own environment requirements.
 
 ## Use Code Agents components in a flow
 
