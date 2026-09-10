@@ -24,6 +24,7 @@ if TYPE_CHECKING:
         AuthServiceProtocol,
         CacheServiceProtocol,
         ChatServiceProtocol,
+        ConnectionResolverProtocol,
         DatabaseServiceProtocol,
         DeploymentServiceProtocol,
         SettingsServiceProtocol,
@@ -173,6 +174,56 @@ def get_variable_service() -> VariableServiceProtocol | None:
     from lfx.services.schema import ServiceType
 
     return get_service(ServiceType.VARIABLE_SERVICE)
+
+
+_connection_resolver_fallback_lock = threading.Lock()
+
+
+def get_connection_resolver() -> ConnectionResolverProtocol:
+    """Return the configured resolver or the stable headless environment fallback.
+
+    Only a genuinely absent plugin selects the fallback. Import, construction,
+    type, and readiness failures remain operator-visible so a broken connection
+    plugin cannot silently change credential sources.
+    """
+    from lfx.services.connection.base import BaseConnectionResolverService
+    from lfx.services.connection.env_resolver import EnvConnectionResolver
+    from lfx.services.manager import NoFactoryRegisteredError, get_service_manager
+
+    service_manager = get_service_manager()
+    cached = service_manager.services.get(ServiceType.CONNECTION_RESOLVER_SERVICE)
+    if cached is not None:
+        if not isinstance(cached, BaseConnectionResolverService) or not cached.ready:
+            msg = "A configured connection_resolver_service must be valid and ready"
+            raise RuntimeError(msg)
+        return cast("ConnectionResolverProtocol", cached)
+
+    try:
+        service = service_manager.get(ServiceType.CONNECTION_RESOLVER_SERVICE)
+    except NoFactoryRegisteredError:
+        if (
+            ServiceType.CONNECTION_RESOLVER_SERVICE in service_manager.service_classes
+            or ServiceType.CONNECTION_RESOLVER_SERVICE in service_manager.factories
+        ):
+            raise  # A configured resolver can fail because one of its dependencies is absent.
+        service = None
+
+    if service is not None:
+        if not isinstance(service, BaseConnectionResolverService) or not service.ready:
+            msg = "A configured connection_resolver_service must be valid and ready"
+            raise RuntimeError(msg)
+        return cast("ConnectionResolverProtocol", service)
+
+    with _connection_resolver_fallback_lock:
+        cached = service_manager.services.get(ServiceType.CONNECTION_RESOLVER_SERVICE)
+        if cached is not None:
+            if not isinstance(cached, BaseConnectionResolverService) or not cached.ready:
+                msg = "A configured connection_resolver_service must be valid and ready"
+                raise RuntimeError(msg)
+            return cast("ConnectionResolverProtocol", cached)
+        if service_manager.connection_resolver_fallback is None:
+            service_manager.connection_resolver_fallback = EnvConnectionResolver()
+        return service_manager.connection_resolver_fallback
 
 
 def get_shared_component_cache_service() -> CacheServiceProtocol | None:

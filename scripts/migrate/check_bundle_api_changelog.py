@@ -64,6 +64,13 @@ IN_SCOPE_PATHS: tuple[str, ...] = (
     # The package facade (re-exports define the surface)
     "src/lfx/src/lfx/extension/__init__.py",
     "src/lfx/src/lfx/extension/validate.py",
+    # Dedicated-integration public surface
+    "src/lfx/src/lfx/integrations",
+    "src/lfx/src/lfx/inputs/input_mixin.py",
+    "src/lfx/src/lfx/inputs/inputs.py",
+    "src/lfx/src/lfx/io/__init__.py",
+    "src/lfx/src/lfx/custom/custom_component/component.py",
+    "src/lfx/src/lfx/services/connection",
 )
 
 

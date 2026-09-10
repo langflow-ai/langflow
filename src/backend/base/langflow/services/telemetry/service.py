@@ -33,6 +33,8 @@ if TYPE_CHECKING:
     from lfx.services.settings.service import SettingsService
     from pydantic import BaseModel
 
+    from langflow.services.telemetry.schema import IntegrationActionPayload
+
 
 class TelemetryService(Service):
     name = "telemetry_service"
@@ -118,6 +120,10 @@ class TelemetryService(Service):
 
     async def log_package_deployment(self, payload: DeploymentPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "deployment"))
+
+    async def log_integration_action(self, payload: IntegrationActionPayload) -> None:
+        """Queue an integration event through the normal tracking-consent boundary."""
+        await self._queue_event((self.send_telemetry_data, payload, "integration_action"))
 
     async def log_package_deployment_provider(self, payload: DeploymentPayload) -> None:
         await self._queue_event((self.send_telemetry_data, payload, "deployment_provider"))

@@ -43,6 +43,21 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | `DictInput` / `NestedDictInput` | `lfx.io` |
 | `FileInput` / `LinkInput` | `lfx.io` |
 | `HandleInput` | `lfx.io` |
+| `ConnectionInput` (legacy Composio connection flow) | `lfx.inputs` |
+| `ConnectionRefInput` (portable host-resolved reference) | `lfx.io` |
+
+### Integrations
+
+| Symbol | Source |
+| --- | --- |
+| `ConnectionRef` / `ResolvedCredential` / `CredentialLease` | `lfx.integrations` |
+| `ConnectionResolutionRequest` / `ConnectionStatus` | `lfx.integrations` |
+| `IntegrationError` and typed subclasses / `INTEGRATION_ERROR_CODES` | `lfx.integrations` |
+| `normalize_integration_error()` / `register_error_normalizer()` | `lfx.integrations` |
+| `IntegrationProvider` / `OAuthProfile` / `IntegrationCapability` / `ScopeSet` | `lfx.integrations` |
+| `integration_action()` | `lfx.integrations` |
+| `Component.resolve_connection(field_name)` | `lfx.custom.custom_component.component.Component` |
+| `BaseConnectionResolverService`, `ConnectionAccessPolicy` | `lfx.services.connection` |
 
 ### Outputs
 
@@ -71,6 +86,7 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | Manifest schema (`extension.json` / `[tool.langflow.extension]`) | `lfx.extension.manifest.ExtensionManifest` |
 | `BundleRef` (one entry in optional `bundles[]`; bundle names must be unique) | `lfx.extension.manifest.BundleRef` |
 | `ProviderManifestEntry` (one entry in the optional `providers[]`) | `lfx.extension.manifest.ProviderManifestEntry` |
+| `IntegrationProvider` entries in optional `integrations[]` | `lfx.integrations.IntegrationProvider` |
 | `LfxCompat` (declared as `manifest.lfx`) | `lfx.extension.manifest.LfxCompat` |
 | `BUNDLE_API_VERSION` (the integer this lfx ships) | `lfx.extension.manifest` |
 | `EXTENSION_SCHEMA_URL` / `SCHEMA_VERSION` | `lfx.extension.manifest` |
@@ -189,7 +205,28 @@ the deserialize half is covered by
 
 ### v0 (this release)
 
+- Enforced the unreleased connection resolver contract through a final `resolve`
+  entry point. Hosts now implement `_get_access_policy` and `_resolve`; ownership
+  and non-interactive/share checks run before credential access. Required scopes
+  reject unverified credentials with a typed diagnostic. Resolution failures carry
+  fixed reason codes and actionable guidance without raw credential values or
+  exception chains. `run_flow` now activates its injected variables and environment
+  policy for credential lookups, restoring the prior scope after execution.
+  No previously released API changes; `BUNDLE_API_VERSION` remains 1.
 - Initial surface enumerated above.  Frozen as `BUNDLE_API_VERSION = 1`.
+- Added the provider-neutral connection-reference, resolver, capability,
+  integration-error, and telemetry contracts used by dedicated integration
+  bundles. This is an additive surface change and does not change
+  `BUNDLE_API_VERSION`.
+- Hardened the new connection contracts before their first release: integration
+  exports load lazily; `ScopeSet.covers` requires an explicit `provider` and shares
+  normalization with resolvers through `ScopeSet.missing`; leases activate
+  conditional scopes and support pre-run construction. Malformed credentials
+  produce sanitized typed errors; wrapped HTTP failures preserve their status,
+  and ambiguous 403s no longer claim missing scopes. The authorization floor
+  accepts an optional host-verified `explicit_share_authorized` decision for
+  actor ownership mismatches without bypassing other denies. No previously
+  released Bundle API signature changes; `BUNDLE_API_VERSION` remains 1.
 - `ExtensionManifest.version` now accepts the canonical PEP 440 stable, dev,
   alpha, beta, and release-candidate forms emitted by the repository's bundle
   release pipeline, in addition to the existing SemVer 2.0.0 forms.  Runtime
