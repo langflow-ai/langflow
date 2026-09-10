@@ -348,7 +348,7 @@ async def test_a_failed_archive_does_not_take_the_writers_turn(client: AsyncClie
     flow = await _create_flow(client, logged_in_headers)
     reviewed = flow["version_token"]
 
-    async def explode(*args, **kwargs):
+    async def explode(*_args, **_kwargs):
         msg = "archive unavailable"
         raise FlowVersionError(msg)
 
