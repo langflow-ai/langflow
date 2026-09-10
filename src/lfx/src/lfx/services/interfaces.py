@@ -11,6 +11,12 @@ if TYPE_CHECKING:
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from lfx.integrations.models import (
+        ConnectionRef,
+        ConnectionResolutionRequest,
+        ConnectionStatus,
+        ResolvedCredential,
+    )
     from lfx.services.adapters.deployment.schema import (
         ConfigListParams,
         ConfigListResult,
@@ -37,6 +43,7 @@ if TYPE_CHECKING:
         VerifyCredentials,
         VerifyCredentialsResult,
     )
+    from lfx.services.authorization.base import ExecutionPrincipal
     from lfx.services.settings.base import Settings
 
 
@@ -150,6 +157,25 @@ class VariableServiceProtocol(Protocol):
         Returns:
             Dictionary mapping variable names to decrypted values
         """
+        ...
+
+
+@runtime_checkable
+class ConnectionResolverProtocol(Protocol):
+    """Portable surface implemented by host connection resolvers."""
+
+    @abstractmethod
+    async def resolve(self, request: ConnectionResolutionRequest) -> ResolvedCredential:
+        """Resolve a non-secret reference for the current execution principal."""
+        ...
+
+    @abstractmethod
+    async def describe(
+        self,
+        ref: ConnectionRef,
+        principal: ExecutionPrincipal,
+    ) -> ConnectionStatus | None:
+        """Return credential-free connection status when supported."""
         ...
 
 

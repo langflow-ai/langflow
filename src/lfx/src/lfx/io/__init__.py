@@ -1,6 +1,7 @@
 from lfx.inputs import (
     BoolInput,
     CodeInput,
+    ConnectionRefInput,
     DataDisplayInput,
     DataFrameInput,
     DataInput,
@@ -36,6 +37,7 @@ from lfx.template import Output
 __all__ = [
     "BoolInput",
     "CodeInput",
+    "ConnectionRefInput",
     "DBProviderInput",
     "DataDisplayInput",
     "DataFrameInput",
