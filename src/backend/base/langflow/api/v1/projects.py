@@ -7,8 +7,10 @@ from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
+from lfx.projects import all_project_types
 from lfx.services.mcp_composer.service import MCPComposerService
 from lfx.utils.util_strings import escape_like_pattern
+from pydantic import BaseModel
 from sqlalchemy import literal, null, or_, update
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
@@ -288,6 +290,41 @@ async def create_project(
             log_message="op=create_project",
         )
         raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_CREATE_FAILED)) from e
+
+
+class ProjectTypeRead(BaseModel):
+    """A project type and the form the UI renders for it."""
+
+    name: str
+    display_name: str
+    icon: str
+    description: str
+    #: The form, keyed by field name, in the same shape as a component's template. The frontend
+    #: renders it with the field renderer it already uses on the canvas.
+    template: dict[str, dict]
+
+
+# Declared before ``/{project_id}`` so "types" is not parsed as a project id.
+@router.get("/types", response_model=list[ProjectTypeRead], status_code=200)
+async def read_project_types(
+    *,
+    current_user: CurrentActiveUser,  # noqa: ARG001
+):
+    """The project types a project may be set to.
+
+    Read straight out of the lfx registry. There is no database and no component cache behind
+    this, so it answers before the component index is built.
+    """
+    return [
+        ProjectTypeRead(
+            name=project_type.name,
+            display_name=project_type.display_name,
+            icon=project_type.icon,
+            description=project_type.description,
+            template=project_type.to_template(),
+        )
+        for project_type in all_project_types()
+    ]
 
 
 @router.get("/", response_model=list[FolderListRead], status_code=200)
