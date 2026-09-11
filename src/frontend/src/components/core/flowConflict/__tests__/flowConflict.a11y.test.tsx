@@ -180,16 +180,29 @@ describe("conflict banner accessibility", () => {
 });
 
 describe("load latest confirmation accessibility", () => {
-  beforeEach(seedStores);
+  beforeEach(() => {
+    useFlowConflictStore.setState({
+      conflict: conflict(),
+      dialogOpen: false,
+      abandonedFlowIds: new Set<string>(),
+    });
+  });
 
   const openConfirm = async () => {
     const user = userEvent.setup();
-    render(<DuplicateFlowModal />);
-    await screen.findByTestId("duplicate-flow-modal");
-    await user.click(screen.getByTestId("dialog-load-latest-button"));
-    await screen.findByTestId("load-latest-confirm");
+    render(<ConflictBanner flowId="flow-1" />);
+    await user.click(screen.getByTestId("flow-conflict-load-latest-button"));
+    await screen.findByTestId("load-latest-dialog");
     return user;
   };
+
+  it("should_expose_the_load_latest_action_as_a_named_button", () => {
+    render(<ConflictBanner flowId="flow-1" />);
+
+    expect(
+      screen.getByTestId("flow-conflict-load-latest-button"),
+    ).toHaveAccessibleName(/latest/i);
+  });
 
   it("should_have_no_violations_while_asking_for_confirmation", async () => {
     await openConfirm();
@@ -197,30 +210,24 @@ describe("load latest confirmation accessibility", () => {
     expect(await axe(document.body)).toHaveNoViolations();
   });
 
-  it("should_replace_the_actions_rather_than_stack_a_second_layer", async () => {
+  it("should_name_the_action_it_is_about_to_take", async () => {
     await openConfirm();
 
-    // The band it replaces is the one the reader was already looking at, so the
-    // exits it is asking about must not still be clickable behind it.
-    expect(
-      screen.queryByTestId("confirm-overwrite-flow"),
-    ).not.toBeInTheDocument();
     expect(
       screen.getByTestId("load-latest-confirm-button"),
     ).toHaveAccessibleName(/load latest/i);
   });
 
-  it("should_go_back_to_the_exits_when_cancelled", async () => {
+  it("should_close_without_taking_anything_when_cancelled", async () => {
     const user = await openConfirm();
 
     await user.click(
-      within(screen.getByTestId("load-latest-confirm")).getByRole("button", {
+      within(screen.getByTestId("load-latest-dialog")).getByRole("button", {
         name: /cancel/i,
       }),
     );
 
-    expect(screen.queryByTestId("load-latest-confirm")).not.toBeInTheDocument();
-    expect(screen.getByTestId("confirm-overwrite-flow")).toBeInTheDocument();
+    expect(screen.queryByTestId("load-latest-dialog")).not.toBeInTheDocument();
   });
 });
 

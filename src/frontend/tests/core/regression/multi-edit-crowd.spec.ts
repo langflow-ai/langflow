@@ -153,9 +153,7 @@ test("three people: two lose the race, each takes a different exit", async ({
     timeout: CONFLICT_WINDOW_MS,
   });
 
-  await c.page.getByTestId("flow-conflict-review-button").click();
-
-  await c.page.getByTestId("dialog-load-latest-button").click();
+  await c.page.getByTestId("flow-conflict-load-latest-button").click();
   await c.page.getByTestId("load-latest-confirm-button").click();
   await expect(c.page.getByTestId("flow-conflict-banner")).toBeHidden({
     timeout: CONFLICT_WINDOW_MS,

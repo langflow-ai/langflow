@@ -17,7 +17,6 @@ import {
   attachTheirFlow,
   refreshConflictState,
 } from "@/hooks/flows/conflict-actions";
-import { useTakeLatestVersion } from "@/hooks/flows/use-take-latest-version";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import useFlowConflictStore from "@/stores/flowConflictStore";
@@ -67,8 +66,6 @@ export function DuplicateFlowModal() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const clearConflict = useFlowConflictStore((state) => state.clearConflict);
-  const { takeLatestVersion, isTaking: isLoadingLatest } =
-    useTakeLatestVersion();
   const { mutate: forkFlow, isPending: isForking } = usePostForkFlow();
   const { mutate: overwriteFlow, isPending: isOverwriting } =
     usePostOverwriteFlow();
@@ -79,8 +76,7 @@ export function DuplicateFlowModal() {
   const [isRebuilding, setIsRebuilding] = useState(false);
   // Discarding cannot be undone, so it is asked twice: the first click states
   // what will be lost, the second does it.
-  const isPending =
-    isForking || isOverwriting || isRebuilding || isLoadingLatest;
+  const isPending = isForking || isOverwriting || isRebuilding;
   // `isPending` disables the buttons a render too late to stop a double click, and
   // the second fork then lost the race for the copy's name and came back an error.
   // A ref is the only guard that is already true inside the same click.
@@ -202,15 +198,6 @@ export function DuplicateFlowModal() {
       .getState()
       .reactFlowInstance?.getViewport() ?? { x: 0, y: 0, zoom: 1 };
     return { ...merged, viewport };
-  };
-
-  const onLoadLatest = async () => {
-    if (!claimSubmission()) return;
-    try {
-      await takeLatestVersion(conflict.flowId);
-    } finally {
-      releaseSubmission();
-    }
   };
 
   const onOverwrite = () => {
@@ -435,9 +422,7 @@ export function DuplicateFlowModal() {
           isPending={isPending}
           isForking={isForking}
           isOverwriting={isOverwriting}
-          isLoadingLatest={isLoadingLatest}
           onCancel={closeDialog}
-          onLoadLatest={() => void onLoadLatest()}
           onDuplicate={onDuplicate}
           onOverwrite={onOverwrite}
         />

@@ -75,9 +75,7 @@ test("Bob takes the latest: Alice's version stands and nobody is refused", async
     await alice.request.get(`/api/v1/flows/${flowId}`)
   ).json();
 
-  await bob.getByTestId("flow-conflict-review-button").click();
-
-  await bob.getByTestId("dialog-load-latest-button").click();
+  await bob.getByTestId("flow-conflict-load-latest-button").click();
   await bob.getByTestId("load-latest-confirm-button").click();
   await expect(bob.getByTestId("flow-conflict-banner")).toBeHidden({
     timeout: CONFLICT_WINDOW_MS,
