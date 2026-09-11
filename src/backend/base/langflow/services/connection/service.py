@@ -7,8 +7,10 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
 
+from lfx.integrations.capabilities import ScopeSet
 from lfx.integrations.errors import (
     AuthExpiredError,
+    ConnectionNotAuthorizedError,
     ConnectionUnresolvedError,
     IntegrationError,
     ScopeMissingError,
@@ -19,14 +21,18 @@ from lfx.integrations.models import (
     ConnectionStatus,
     ResolvedCredential,
 )
-from lfx.services.connection.base import BaseConnectionResolverService
+from lfx.log.logger import logger
+from lfx.services.connection.base import BaseConnectionResolverService, ConnectionAccessPolicy
 from pydantic import SecretStr
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import col, or_, select
+from sqlmodel import and_, col, false, or_, select
 
 from langflow.services.auth import utils as auth_utils
 from langflow.services.authorization import filter_visible_resources, visible_scope_prefilter
-from langflow.services.authorization.listing import apply_owned_or_visible_scope_prefilter
+from langflow.services.authorization.listing import (
+    apply_owned_or_visible_scope_prefilter,
+    restrict_to_owned_or_visible_scope,
+)
 from langflow.services.connection.oauth import broker
 from langflow.services.connection.oauth.config import OAuthError
 from langflow.services.connection.oauth.locking import lock_connection
@@ -48,6 +54,18 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.user.model import User, UserRead
+
+
+# Route families whose dependency principal is ``actor_or_explicit_share``
+# (connection-contract.md section 4, scripts/ci/execution_principal_matrix.json).
+# Every other family resolves owner or instance connections only.
+_SHARE_PERMITTING_FAMILIES = frozenset({"interactive_chat", "v1_run", "openai_responses", "voice", "workflow_v2"})
+
+# Upper bound on foreign rows one share lookup loads and authorizes. Handles are
+# owner-neutral, so without it a plugin that cannot prefilter by visibility
+# would make every resolution scan every user's connection with that handle.
+# Past the bound, resolution fails closed like any other ambiguous share.
+_MAX_SHARE_CANDIDATES = 50
 
 
 class ConnectionConflictError(ValueError):
@@ -123,8 +141,33 @@ def _parse_expiry(value: object) -> datetime | None:
     return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
 
 
+def _principal_user_id(principal: ExecutionPrincipal) -> UUID | None:
+    if principal.user_id is None:
+        return None
+    try:
+        return UUID(str(principal.user_id))
+    except ValueError:
+        return None
+
+
+def _access_policy(row: Connection, *, explicit_share_authorized: bool) -> ConnectionAccessPolicy:
+    return ConnectionAccessPolicy(
+        owner_kind=row.ownership_mode,
+        connection_owner_id=str(row.owner_id) if row.owner_id is not None else None,
+        connection_id=str(row.id),
+        allow_non_interactive=bool(row.allow_non_interactive),
+        explicit_share_authorized=explicit_share_authorized,
+    )
+
+
 class DatabaseConnectionResolverService(BaseConnectionResolverService):
     """Resolve encrypted database connections while exposing only safe metadata."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        # Direct service-class registration does not call set_ready(), unlike
+        # factory creation, and lfx's connection lookup rejects unready resolvers.
+        self.set_ready()
 
     async def create(
         self,
@@ -283,7 +326,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         required_scopes: frozenset[str] = frozenset(),
     ) -> ConnectionRead:
         try:
-            await self._resolved_from_row(session, row=row, principal=principal, required_scopes=required_scopes)
+            await self._check_row_credential(session, row=row, principal=principal, required_scopes=required_scopes)
         except AuthExpiredError:
             row.status = PersistedConnectionStatus.EXPIRED.value
             row.health = ConnectionHealth.UNHEALTHY.value
@@ -299,44 +342,41 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         await session.refresh(row)
         return self.to_read(row, has_credentials=await self.has_credentials(session, row.id))
 
-    async def resolve(self, request: ConnectionResolutionRequest) -> ResolvedCredential:
+    async def _get_access_policy(self, request: ConnectionResolutionRequest) -> ConnectionAccessPolicy:
+        user_id = _principal_user_id(request.principal)
         async with session_scope() as session:
-            candidates = list(
-                (
-                    await session.exec(
-                        select(Connection)
-                        .where(
-                            Connection.provider_key == request.ref.provider,
-                            Connection.name == request.ref.name,
-                        )
-                        .order_by(col(Connection.id))
-                    )
-                ).all()
-            )
-            row = await self._select_authorized_candidate(candidates, request)
-            if row is None:
-                raise ConnectionUnresolvedError(request.ref.to_handle(), provider=request.ref.provider)
-            connection_id = row.id
-        # End discovery's read transaction before acquiring the write lock.
+            row = await self._owned_or_instance_row(session, request.ref, user_id)
+            if row is not None:
+                return _access_policy(row, explicit_share_authorized=False)
+            shared = await self._authorized_share(session, request, user_id)
+        if shared is None:
+            raise ConnectionUnresolvedError(request.ref.to_handle(), provider=request.ref.provider)
+        return _access_policy(shared, explicit_share_authorized=True)
+
+    async def _resolve(
+        self, request: ConnectionResolutionRequest, policy: ConnectionAccessPolicy
+    ) -> ResolvedCredential:
+        if policy.connection_id is None:
+            raise ConnectionUnresolvedError(request.ref.to_handle(), provider=request.ref.provider)
+        # _get_access_policy's read transaction has already ended, so the write
+        # lock is the first statement of a fresh transaction.
         async with session_scope() as session:
-            row = await lock_connection(session, connection_id)
-            if row is None:
+            row = await lock_connection(session, UUID(policy.connection_id))
+            if row is None or (row.provider_key, row.name) != (request.ref.provider, request.ref.name):
                 raise ConnectionUnresolvedError(request.ref.to_handle(), provider=request.ref.provider)
-            authorized = await self._select_authorized_candidate([row], request)
-            if authorized is None:
-                raise ConnectionUnresolvedError(request.ref.to_handle(), provider=request.ref.provider)
+            # Fail closed if ownership or the non-interactive opt-in changed
+            # after the base class authorized the policy.
+            if _access_policy(row, explicit_share_authorized=policy.explicit_share_authorized) != policy:
+                raise ConnectionNotAuthorizedError(provider=request.ref.provider)
             resolution_error = None
             try:
-                credential = await self._resolved_from_row(
-                    session,
-                    row=row,
-                    principal=request.principal,
-                    required_scopes=request.required_scopes,
-                    rejected_token_digest=request.rejected_token_digest,
+                credential = await self._credential_from_row(
+                    session, row=row, rejected_token_digest=request.rejected_token_digest
                 )
             except IntegrationError as exc:
                 # A rotating refresh token may already have been exchanged. Keep
-                # that encrypted update even if the provider narrowed its scopes.
+                # that encrypted update; the base class checks scopes only after
+                # this transaction commits, so narrowed scopes keep it as well.
                 resolution_error = exc
         if resolution_error is not None:
             raise resolution_error
@@ -361,55 +401,95 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
             account=credential.account,
         )
 
-    async def _select_authorized_candidate(
-        self,
-        candidates: list[Connection],
-        request: ConnectionResolutionRequest,
+    @staticmethod
+    async def _owned_or_instance_row(
+        session: AsyncSession,
+        ref: ConnectionRef,
+        user_id: UUID | None,
     ) -> Connection | None:
-        own: list[Connection] = []
-        instance: list[Connection] = []
-        shared: list[Connection] = []
-        for row in candidates:
-            if row.ownership_mode == ConnectionOwnershipMode.INSTANCE.value:
-                instance.append(row)
-            elif request.principal.user_id is not None and str(row.owner_id) == str(request.principal.user_id):
-                own.append(row)
-            else:
-                shared.append(row)
-        # An owned record shadows the instance fallback. If its execution
-        # policy denies this principal, do not silently switch identities by
-        # resolving an instance credential with the same handle.
-        for group in (own, instance):
-            if not group:
-                continue
-            row = group[0]
-            authorization_error = self.authorize_principal(
-                request,
-                connection_owner_id=str(row.owner_id) if row.owner_id is not None else None,
-                owner_kind=row.ownership_mode,
-                allow_non_interactive=row.allow_non_interactive,
+        """Return the caller's row for a handle, else the instance row.
+
+        The partial unique indexes allow at most one of each, so this never
+        loads another user's rows. An owned record shadows the instance
+        fallback: if its policy denies this principal, the base class's portable
+        floor raises instead of silently switching identities to an instance
+        credential with the same handle.
+        """
+        ownership = Connection.ownership_mode == ConnectionOwnershipMode.INSTANCE.value
+        if user_id is not None:
+            ownership = or_(
+                and_(
+                    Connection.ownership_mode == ConnectionOwnershipMode.USER.value,
+                    Connection.owner_id == user_id,
+                ),
+                ownership,
             )
-            if authorization_error is not None:
-                raise authorization_error
-            return row
-        if request.principal.user_id is None or not shared:
-            return None
-        shared = [row for row in shared if request.principal.interactive or row.allow_non_interactive]
-        if not shared:
+        rows = (
+            await session.exec(
+                select(Connection).where(
+                    Connection.provider_key == ref.provider,
+                    Connection.name == ref.name,
+                    ownership,
+                )
+            )
+        ).all()
+        by_mode = {row.ownership_mode: row for row in rows}
+        return by_mode.get(ConnectionOwnershipMode.USER.value) or by_mode.get(ConnectionOwnershipMode.INSTANCE.value)
+
+    async def _authorized_share(
+        self,
+        session: AsyncSession,
+        request: ConnectionResolutionRequest,
+        user_id: UUID | None,
+    ) -> Connection | None:
+        """Return the one foreign row host authorization lets this actor execute."""
+        principal = request.principal
+        # Shares satisfy only an actor's owner mismatch, and only on route
+        # families that permit shares; every other principal is owner-only.
+        if principal.kind != "actor" or principal.family not in _SHARE_PERMITTING_FAMILIES or user_id is None:
             return None
         settings = get_settings_service()
         authz = get_authorization_service()
         if not settings.auth_settings.AUTHZ_ENABLED or not await authz.supports_cross_user_fetch():
             return None
-        try:
-            user_id = UUID(str(request.principal.user_id))
-        except ValueError:
+        context = {"execution_principal_kind": principal.kind}
+        stmt = select(Connection).where(
+            Connection.provider_key == request.ref.provider,
+            Connection.name == request.ref.name,
+            Connection.ownership_mode == ConnectionOwnershipMode.USER.value,
+            Connection.owner_id != user_id,
+        )
+        if not principal.interactive:
+            stmt = stmt.where(col(Connection.allow_non_interactive).is_(True))
+        # Duck-typed services that predate the visibility hook fall back to the
+        # capped scan below, as list endpoints do.
+        get_visibility = getattr(authz, "get_resource_visibility", None)
+        visibility = (
+            await get_visibility(user_id=user_id, resource_type="connection", act="execute", context=context)
+            if get_visibility is not None
+            else None
+        )
+        if visibility is not None:
+            if not visibility.has_cross_user_access:
+                return None
+            stmt = restrict_to_owned_or_visible_scope(
+                stmt, id_column=Connection.id, owner_clause=false(), visibility=visibility
+            )
+        shared = list((await session.exec(stmt.order_by(col(Connection.id)).limit(_MAX_SHARE_CANDIDATES + 1))).all())
+        if not shared:
+            return None
+        if len(shared) > _MAX_SHARE_CANDIDATES:
+            logger.warning(
+                "Not resolving shared connection %s: more than %d candidate rows share the handle",
+                request.ref.to_handle(),
+                _MAX_SHARE_CANDIDATES,
+            )
             return None
         decisions = await authz.batch_enforce(
             user_id=user_id,
             domain="*",
             requests=[(f"connection:{row.id}", "execute") for row in shared],
-            context={"execution_principal_kind": request.principal.kind},
+            context=context,
         )
         authorized = [row for row, allowed in zip(shared, decisions, strict=True) if allowed]
         # A handle is intentionally owner-neutral. More than one shared match is
@@ -417,48 +497,61 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         # incidental database order.
         return authorized[0] if len(authorized) == 1 else None
 
-    async def _resolved_from_row(
+    async def _check_row_credential(
         self,
         session: AsyncSession,
         *,
         row: Connection,
         principal: ExecutionPrincipal,
         required_scopes: frozenset[str],
-        rejected_token_digest: str | None = None,
     ) -> ResolvedCredential:
+        """Validate one route-authorized row through the same floor and scope checks as ``resolve``.
+
+        ``resolve`` selects by owner-neutral handle, so a health check of a
+        specific row cannot go through it. The connections route has already
+        authorized ``connection:execute`` for this row, which is the host share
+        decision; the portable floor still applies to every other denial.
+        """
         request = ConnectionResolutionRequest(
             ref=ConnectionRef(provider=row.provider_key, name=row.name),
             principal=principal,
             required_scopes=required_scopes,
         )
-        portable_error = self.authorize_principal(
-            request,
-            connection_owner_id=str(row.owner_id) if row.owner_id is not None else None,
-            owner_kind=row.ownership_mode,
-            allow_non_interactive=row.allow_non_interactive,
+        is_foreign_user_row = row.ownership_mode == ConnectionOwnershipMode.USER.value and str(row.owner_id) != str(
+            principal.user_id
         )
-        if portable_error is not None:
-            is_explicit_share = (
-                row.ownership_mode == ConnectionOwnershipMode.USER.value
-                and principal.user_id is not None
-                and str(row.owner_id) != str(principal.user_id)
-            )
-            # The portable floor deliberately reports an owner mismatch for a
-            # shared connection. Callers reach this private method only after
-            # the host authorization service has approved that share. Every
-            # other portable denial, including anonymous and non-interactive
-            # use without the per-connection opt-in, remains authoritative.
-            if not is_explicit_share or (not principal.interactive and not row.allow_non_interactive):
-                raise portable_error
+        policy = _access_policy(row, explicit_share_authorized=is_foreign_user_row)
+        denial = BaseConnectionResolverService.authorize_principal(
+            self,
+            request,
+            connection_owner_id=policy.connection_owner_id,
+            owner_kind=policy.owner_kind,
+            allow_non_interactive=policy.allow_non_interactive,
+            explicit_share_authorized=policy.explicit_share_authorized,
+        )
+        if denial is not None:
+            raise denial
+        credential = await self._credential_from_row(session, row=row)
+        missing = ScopeSet.missing(
+            provider=row.provider_key, required=required_scopes, granted=credential.granted_scopes
+        )
+        if missing:
+            raise ScopeMissingError(frozenset(missing), provider=row.provider_key)
+        return credential
+
+    async def _credential_from_row(
+        self, session: AsyncSession, *, row: Connection, rejected_token_digest: str | None = None
+    ) -> ResolvedCredential:
+        handle = ConnectionRef(provider=row.provider_key, name=row.name).to_handle()
         if row.status == PersistedConnectionStatus.REVOKED.value:
-            raise ConnectionUnresolvedError(request.ref.to_handle(), provider=row.provider_key)
+            raise ConnectionUnresolvedError(handle, provider=row.provider_key)
         secret = await session.get(ConnectionSecret, row.id)
         if secret is None:
-            raise ConnectionUnresolvedError(request.ref.to_handle(), provider=row.provider_key)
+            raise ConnectionUnresolvedError(handle, provider=row.provider_key)
         try:
             payload = _decrypt_credential_payload(secret.encrypted_payload)
         except ConnectionSecretError as exc:
-            raise ConnectionUnresolvedError(request.ref.to_handle(), provider=row.provider_key) from exc
+            raise ConnectionUnresolvedError(handle, provider=row.provider_key) from exc
         try:
             payload = await broker.refresh_if_needed(session, row, payload, rejected_token_digest=rejected_token_digest)
         except OAuthError:
@@ -467,9 +560,6 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         if expires_at is not None and expires_at <= _utc_now():
             raise AuthExpiredError(provider=row.provider_key)
         granted = frozenset(row.granted_scopes)
-        missing = required_scopes - granted
-        if missing:
-            raise ScopeMissingError(missing, provider=row.provider_key)
         identity = ExecutingIdentityDescriptor.model_validate(row.executing_identity)
         return ResolvedCredential(
             access_token=SecretStr(payload["access_token"]),

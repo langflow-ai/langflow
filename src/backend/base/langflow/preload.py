@@ -57,6 +57,7 @@ class PreloadStep(Enum):
     """Ordered preload phases; completion flags must advance via ``mark_step_complete`` only."""
 
     PROFILE_PICTURES = "profile_pictures"
+    ENVIRONMENT_VARIABLES = "environment_variables"
     BUNDLES = "bundles"
     TYPES_CACHED = "types_cached"
     STARTER_PROJECTS = "starter_projects"
@@ -66,6 +67,7 @@ class PreloadStep(Enum):
 
 _STEP_ATTR: Final[dict[PreloadStep, str]] = {
     PreloadStep.PROFILE_PICTURES: "profile_pictures_copied",
+    PreloadStep.ENVIRONMENT_VARIABLES: "environment_variables_initialized",
     PreloadStep.BUNDLES: "bundles_loaded",
     PreloadStep.TYPES_CACHED: "types_cached",
     PreloadStep.STARTER_PROJECTS: "starter_projects_created",
@@ -76,6 +78,7 @@ _STEP_ATTR: Final[dict[PreloadStep, str]] = {
 # Explicit prerequisite DAG matching ``_run_master_preload`` ordering (comments + pipeline).
 _STEP_PREREQUISITES: Final[dict[PreloadStep, tuple[PreloadStep, ...]]] = {
     PreloadStep.PROFILE_PICTURES: (),
+    PreloadStep.ENVIRONMENT_VARIABLES: (),
     PreloadStep.BUNDLES: (),
     PreloadStep.TYPES_CACHED: (PreloadStep.BUNDLES,),
     PreloadStep.STARTER_PROJECTS: (PreloadStep.TYPES_CACHED,),
@@ -108,6 +111,7 @@ class _PreloadState:
     bundles_components_paths: list[str] = field(default_factory=list)
     # Per-step completion flags to prevent silent data loss
     profile_pictures_copied: bool = False
+    environment_variables_initialized: bool = False
     bundles_loaded: bool = False
     types_cached: bool = False
     starter_projects_created: bool = False
@@ -135,6 +139,7 @@ class _PreloadState:
         self.temp_dirs = []
         self.bundles_components_paths = []
         self.profile_pictures_copied = False
+        self.environment_variables_initialized = False
         self.bundles_loaded = False
         self.types_cached = False
         self.starter_projects_created = False
@@ -152,6 +157,24 @@ async def _best_effort(step: PreloadStep, log_suffix: str, awaitable: Awaitable[
         mark_step_complete(step)
     except Exception:  # noqa: BLE001
         await logger.aexception(f"[preload] {log_suffix}")
+
+
+async def initialize_environment_variables() -> None:
+    """Run the server-only sweep unless inherited from a successful master preload."""
+    if is_step_complete(PreloadStep.ENVIRONMENT_VARIABLES):
+        await logger.adebug("Skipping environment variables: already initialized during server startup")
+        return
+
+    async def _initialize() -> None:
+        from langflow.services.deps import get_variable_service
+
+        await get_variable_service().initialize_all_user_variables()
+
+    await _best_effort(
+        PreloadStep.ENVIRONMENT_VARIABLES,
+        "environment variable import failed; server startup will continue",
+        _initialize(),
+    )
 
 
 def is_preloaded() -> bool:
@@ -219,6 +242,7 @@ async def _run_master_preload() -> None:
     # would leave an open connection pool in the master process, and that pool
     # would be inherited (fork-unsafe) by every worker.
     try:
+        await initialize_environment_variables()
         await logger.adebug("[preload] copying profile pictures")
         await _best_effort(
             PreloadStep.PROFILE_PICTURES,

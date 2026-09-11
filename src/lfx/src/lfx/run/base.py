@@ -8,6 +8,7 @@ from io import StringIO
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from lfx.cli.runtime_variables import build_request_variables_from_global_vars
 from lfx.cli.script_loader import (
     extract_structured_result,
     extract_text_from_result,
@@ -19,6 +20,14 @@ from lfx.execution import aget_default_coordinator
 from lfx.log.logger import logger
 from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars, validate_provided_id
 from lfx.schema.schema import InputValueRequest
+from lfx.services.variable.request_scope import (
+    activate_no_env_fallback,
+    activate_request_variables,
+    get_active_request_variables,
+    is_env_fallback_disabled,
+    reset_no_env_fallback,
+    reset_request_variables,
+)
 from lfx.utils.flow_envelope import split_flow_envelope
 
 if TYPE_CHECKING:
@@ -499,6 +508,13 @@ async def run_flow(
     execution_step_start = execution_start_time if timing else None
     result_count = 0
 
+    # Match serve execution: resolver lookups must see this graph's injection
+    # channel and environment policy, including during human-input execution.
+    scope_vars = build_request_variables_from_global_vars(graph.context.get("request_variables"))
+    scope_token = activate_request_variables(scope_vars or get_active_request_variables())
+    no_env_token = activate_no_env_fallback(
+        disabled=bool(graph.context.get("no_env_fallback")) or is_env_fallback_disabled()
+    )
     try:
         sys.stdout = captured_stdout
         # Don't capture stderr at high verbosity levels to avoid duplication with direct logging
@@ -642,6 +658,8 @@ async def run_flow(
     finally:
         sys.stdout = original_stdout
         sys.stderr = original_stderr
+        reset_no_env_fallback(no_env_token)
+        reset_request_variables(scope_token)
 
     execution_end_time = time.monotonic() if timing else None
 

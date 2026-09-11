@@ -285,3 +285,76 @@ def test_directory_resolution_errors_use_stable_cli_output(monkeypatch, tmp_path
     assert result.exit_code == 2
     assert error_message in result.output
     assert "Traceback" not in result.output
+
+
+@pytest.mark.parametrize("command", [["users", "list"], ["groups", "list"], ["role-mappings", "list"], ["export"]])
+@pytest.mark.parametrize("capability_status", [200, 404])
+def test_directory_commands_explain_missing_enterprise_plugin(monkeypatch, capsys, command, capability_status):
+    def handler(request):
+        if request.url.path.endswith("/authz/capabilities") and capability_status == 200:
+            return httpx.Response(200, json={"features": {"team_role_assignments": False}})
+        return httpx.Response(404, json={"detail": "Not Found"})
+
+    client = AdminClient(
+        url="https://langflow.example",
+        api_key="test-key",  # pragma: allowlist secret
+        operation_id="missing-plugin",
+        transport=httpx.MockTransport(handler),
+    )
+    monkeypatch.setattr("langflow.cli.admin.commands._client_from_context", lambda _ctx: client)
+    result = CliRunner().invoke(app, ["admin", "directory", *command])
+    assert result.exit_code == 1
+    assert "requires the Enterprise directory plugin on the target server" in result.output + capsys.readouterr().err
+    assert "Traceback" not in result.output
+    client.close()
+
+
+@pytest.mark.parametrize(
+    ("status", "detail", "code"),
+    [
+        (404, "Directory connection not found", "directory_connection_not_found"),
+        (404, "User not found", "directory_user_not_found"),
+        (404, "directory synchronization is not enabled", "directory_sync_disabled"),
+        (403, "Forbidden", None),
+        (401, "Unauthorized", None),
+        (503, "Directory trust validation is unavailable", "directory_trust_unavailable"),
+    ],
+)
+def test_directory_client_preserves_typed_resource_and_access_errors(status, detail, code):
+    def handler(request):
+        assert request.url.path.endswith("/authz/directory/connection")
+        return httpx.Response(status, json={"detail": detail}, headers={"X-Langflow-Error-Code": code} if code else {})
+
+    with (
+        AdminClient(
+            url="https://langflow.example",
+            api_key="test-key",  # pragma: allowlist secret
+            operation_id="error-contract",
+            transport=httpx.MockTransport(handler),
+        ) as client,
+        pytest.raises(AdminAPIError) as error,
+    ):
+        client.get_directory_connection()
+    assert error.value.status_code == status
+    assert error.value.detail == detail
+    assert error.value.error_code == code
+
+
+def test_directory_client_preserves_bare_resource_404_when_plugin_is_available():
+    def handler(request):
+        if request.url.path.endswith("/authz/capabilities"):
+            return httpx.Response(200, json={"features": {"directory": {"enabled": True}}})
+        return httpx.Response(404, json={"detail": "Not Found"})
+
+    with (
+        AdminClient(
+            url="https://langflow.example",
+            api_key="test-key",  # pragma: allowlist secret
+            operation_id="resource-404",
+            transport=httpx.MockTransport(handler),
+        ) as client,
+        pytest.raises(AdminAPIError) as error,
+    ):
+        client.get_directory_user("missing-user")
+    assert error.value.status_code == 404
+    assert error.value.detail == "Not Found"

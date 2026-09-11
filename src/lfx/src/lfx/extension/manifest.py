@@ -51,6 +51,7 @@ from pydantic import (
     model_validator,
 )
 
+from lfx.extension.integration_compat import INTEGRATIONS_MIN_LFX_VERSION, check_integration_runtime
 from lfx.integrations.models import provider_env_segment
 
 # ---------------------------------------------------------------------------
@@ -486,7 +487,10 @@ class IntegrationManifestRef(BaseModel):
     provider_id: StrictStr = Field(
         ...,
         pattern=_PROVIDER_ID_RE.pattern,
-        description="Stable provider key used by discovery, policy, and connection resolution.",
+        description=(
+            "Stable provider key used by discovery, policy, and connection resolution. "
+            "Owned by one installed bundle; cross-bundle claims are rejected."
+        ),
     )
     bundle: StrictStr = Field(
         ...,
@@ -515,7 +519,7 @@ class IntegrationManifestRef(BaseModel):
         if any(part == ".." for part in path.parts):
             msg = f"Integration capability-manifest path {value!r} must not contain '..'"
             raise ValueError(msg)
-        if path.suffix.casefold() != ".json":
+        if path.suffix != ".json":
             msg = f"Integration capability-manifest path {value!r} must name a JSON file"
             raise ValueError(msg)
         return value
@@ -607,7 +611,10 @@ class ExtensionManifest(BaseModel):
 
     integrations: tuple[IntegrationManifestRef, ...] = Field(
         default=(),
-        description="Bundle-owned, versioned provider capability-manifest references.",
+        description=(
+            "Bundle-owned, versioned provider capability-manifest references. "
+            f"Requires an lfx>={INTEGRATIONS_MIN_LFX_VERSION} runtime dependency."
+        ),
     )
 
     # ------------------------------------------------------------------
@@ -790,12 +797,14 @@ def load_manifest(root: Path | str) -> ManifestSource:
 
     if extension_json.is_file():
         data = _read_extension_json(extension_json)
+        check_integration_runtime(data)
         manifest = ExtensionManifest.model_validate(data)
         return ManifestSource(manifest=manifest, path=extension_json, kind="extension.json")
 
     if pyproject.is_file():
         section = _read_pyproject_extension(pyproject)
         if section is not None:
+            check_integration_runtime(section)
             manifest = ExtensionManifest.model_validate(section)
             return ManifestSource(manifest=manifest, path=pyproject, kind="pyproject.toml")
 

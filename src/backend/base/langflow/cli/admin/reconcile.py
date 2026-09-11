@@ -412,9 +412,20 @@ class AdminReconciler:
             desired_assignments_by_subject.setdefault((item.subject.type, item.subject.name), set()).add(
                 (item.role, item.domain.type, str(item.domain.domain_id) if item.domain.domain_id else None)
             )
-        prune_subjects = {("user", item.username) for item in state.users} | {
-            ("team", item.adom_name) for item in state.teams
-        }
+        prune_subjects = {("user", item.username) for item in state.users}
+        if prune and state.teams:
+            if self._team_assignments_available():
+                prune_subjects.update(("team", item.adom_name) for item in state.teams)
+            else:
+                skipped.extend(
+                    {
+                        "action": "revoke",
+                        "resource": "role_assignment",
+                        "key": f"team:{item.adom_name}/*",
+                        "reason": "unsupported",
+                    }
+                    for item in sorted(state.teams, key=lambda team: team.adom_name)
+                )
         subjects = set(desired_assignments_by_subject) | (prune_subjects if prune else set())
         for subject_type, subject_name in sorted(subjects):
             if subject_type == "user":
