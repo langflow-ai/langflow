@@ -261,6 +261,12 @@ the deserialize half is covered by
   exception chains. `run_flow` now activates its injected variables and environment
   policy for credential lookups, restoring the prior scope after execution.
   No previously released API changes; `BUNDLE_API_VERSION` remains 1.
+- Added the `credential-undecryptable` `ConnectionUnresolvedReason`, raised when
+  a stored credential exists but cannot be decrypted (for example after the server
+  secret key changed). It keeps that case distinct from a missing credential, and
+  its guidance tells the user to reconnect. Code that matches on reason values
+  should handle the new value. Additive to the unreleased connection contract;
+  `BUNDLE_API_VERSION` remains 1.
 - Initial surface enumerated above.  Frozen as `BUNDLE_API_VERSION = 1`.
 - Added the provider-neutral connection-reference, resolver, capability,
   integration-error, and telemetry contracts used by dedicated integration
