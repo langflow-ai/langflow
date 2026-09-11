@@ -1022,6 +1022,13 @@ async def build_vertex_stream(
             graph = None
         else:
             graph = cache.get("result")
+            # Restamp as ``build_vertex`` does: the cache is keyed by flow UUID, and the
+            # Redis backend round-trips the graph through ``__getstate__``, which omits
+            # the principal. The owner-only lookup above keeps the actor correct.
+            stamp_execution_principal(
+                graph,
+                execution_principal_for(FAMILY_INTERACTIVE_CHAT, user=current_user, flow_owner_id=flow.user_id),
+            )
             try:
                 _validate_graph_for_execution(graph)
             except HTTPException:

@@ -196,6 +196,69 @@ async def test_the_playground_cache_seam_stamps_too() -> None:
     assert chat_service.cached[str(flow_id)] is graph
 
 
+async def test_the_vertex_stream_route_restamps_a_redis_restored_graph(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A graph back from ``RedisCache`` is unstamped; the stream route must restamp it.
+
+    ``Graph.__getstate__`` omits the principal, so the cache's dill round trip
+    yields ``unknown()``. ``build_vertex`` already restamps its cached graph;
+    without the same step in ``build_vertex_stream``, a lazy credential lease
+    resolved during ``vertex.stream()`` is refused.
+    """
+    from contextlib import asynccontextmanager
+    from unittest.mock import AsyncMock
+
+    import dill
+    from langflow.api.v1 import chat
+
+    actor = _user()
+    built = await build_graph_from_data(
+        uuid4(),
+        _MINIMAL_FLOW,
+        flow_name="flow",
+        user_id=str(actor.id),
+        execution_principal=execution_principal_for(FAMILY_INTERACTIVE_CHAT, user=actor),
+    )
+    restored = dill.loads(dill.dumps(built, recurse=True))  # noqa: S301 - a graph this test built
+    assert restored.execution_principal.kind == "unknown"
+
+    flow = SimpleNamespace(id=uuid4(), user_id=actor.id, workspace_id=None, folder_id=None)
+
+    class _Rows:
+        def first(self):
+            return flow
+
+    class _Session:
+        async def exec(self, _stmt):
+            return _Rows()
+
+    @asynccontextmanager
+    async def _session_scope():
+        yield _Session()
+
+    class _ChatService:
+        async def get_cache(self, _key):
+            return {"result": restored}
+
+    streamed: dict[str, object] = {}
+
+    async def _capture(_flow_id, _vertex_id, _chat_service, graph, _flow, _user):
+        streamed["graph"] = graph
+        yield ""
+
+    monkeypatch.setattr(chat, "session_scope", _session_scope)
+    monkeypatch.setattr(chat, "ensure_flow_permission", AsyncMock())
+    monkeypatch.setattr(chat, "get_chat_service", _ChatService)
+    monkeypatch.setattr(chat, "_stream_vertex_with_provider_scope", _capture)
+
+    response = await chat.build_vertex_stream(flow_id=flow.id, vertex_id="vertex", current_user=actor)
+    async for _ in response.body_iterator:
+        pass
+
+    assert streamed["graph"].execution_principal == execution_principal_for(
+        FAMILY_INTERACTIVE_CHAT, user=actor, flow_owner_id=flow.user_id
+    )
+
+
 class _WarmTemplate:
     """The subset of the warm-template surface ``warm_deepcopy`` touches."""
 
