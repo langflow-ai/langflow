@@ -65,6 +65,8 @@ from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_dep
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.api.v1.schemas.public_flows import PublicFlowRead
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
+from langflow.services.audit.events import FLOW_DELETED
+from langflow.services.audit.recorder import record_audit_event
 from langflow.services.auth.utils import get_current_active_user, get_optional_user
 from langflow.services.authorization import (
     FlowAction,
@@ -951,6 +953,9 @@ async def delete_flow(
             )
             flow_owner_ids[retry_target.id] = retry_target.user_id
             memory_base_cleanups.extend(await cascade_delete_flow(session, target_flow_id))
+            await record_audit_event(
+                session, event=FLOW_DELETED, user_id=actor.id, resource_id=target_flow_id
+            )
 
         await retry_flow_operation_on_deployment_guard(
             db=session,

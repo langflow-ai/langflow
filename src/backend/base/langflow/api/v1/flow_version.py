@@ -15,6 +15,8 @@ from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.mappers.deployments.helpers import get_owned_provider_account_or_404
 from langflow.api.v1.mappers.deployments.sync import sync_flow_version_attachments
+from langflow.services.audit.events import FLOW_RESTORED
+from langflow.services.audit.recorder import record_audit_event
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow_version.crud import (
@@ -297,6 +299,13 @@ async def activate_version(
 
             flow.data = target_data
             flow.updated_at = datetime.now(timezone.utc)
+            await record_audit_event(
+                session,
+                event=FLOW_RESTORED,
+                user_id=current_user.id,
+                resource_id=flow.id,
+                payload={"version_id": str(target_entry.id)},
+            )
 
             session.add(flow)
             await session.flush()
