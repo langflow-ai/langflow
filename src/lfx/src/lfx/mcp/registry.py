@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from lfx.mcp.redact import is_sensitive_field
+
 if TYPE_CHECKING:
     from lfx.mcp.client import LangflowClient
 
@@ -83,6 +85,39 @@ def search_registry(
     return results
 
 
+def _field_description(field_name: str, field_data: dict[str, Any]) -> dict[str, Any]:
+    """Return the safe, useful configuration metadata for one field."""
+    field_info: dict[str, Any] = {
+        "name": field_name,
+        "type": field_data.get("type", ""),
+    }
+    if field_data.get("required"):
+        field_info["required"] = True
+
+    options = field_data.get("options")
+    if isinstance(options, list) and options:
+        field_info["options"] = options
+    for flag in ("combobox", "list"):
+        if field_data.get(flag):
+            field_info[flag] = True
+
+    # Defaults help the Assistant omit optional fields safely, but never expose
+    # a credential through discovery metadata. A load_from_db value is a global
+    # variable *name*, not a default: advertising it invites the Assistant to
+    # send it back as a literal, which would sever the variable binding.
+    is_secret = is_sensitive_field(field_name) or field_data.get("password") is True
+    if "value" in field_data and not is_secret and not field_data.get("load_from_db"):
+        field_info["default"] = field_data["value"]
+
+    range_spec = field_data.get("range_spec")
+    if isinstance(range_spec, dict):
+        field_info["range_spec"] = {
+            key: range_spec[key] for key in ("min", "max", "step", "step_type") if key in range_spec
+        }
+
+    return field_info
+
+
 def describe_component(registry: dict[str, dict], component_type: str) -> dict[str, Any]:
     """Describe a component type's inputs, outputs, and fields. Pure function."""
     if component_type not in registry:
@@ -156,14 +191,12 @@ def describe_component(registry: dict[str, dict], component_type: str) -> dict[s
         elif fdata.get("show", True) and fdata.get("type") and fname != "code":
             if is_advanced:
                 advanced_fields.append(fname)
+                # configure_component enforces options/range_spec on advanced
+                # fields too, so the Assistant must be able to discover them.
+                if fdata.get("options") or fdata.get("range_spec"):
+                    fields.append({**_field_description(fname, fdata), "advanced": True})
             else:
-                field_info: dict[str, Any] = {
-                    "name": fname,
-                    "type": fdata.get("type", ""),
-                }
-                if fdata.get("required"):
-                    field_info["required"] = True
-                fields.append(field_info)
+                fields.append(_field_description(fname, fdata))
 
     # Template wins on a name collision (mirrors connect.py's priority):
     # never describe the same port twice.
