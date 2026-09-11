@@ -723,7 +723,7 @@ async def build_vertex(
         result_data_response.timedelta = timedelta
         vertex.add_build_time(timedelta)
         inactivated_vertices = list(graph.inactivated_vertices)
-        graph.reset_inactivated_vertices()
+        graph.reset_inactivated_vertices(vertex.id)
         graph.reset_activated_vertices()
 
         await chat_service.set_cache(flow_id_str, graph)
