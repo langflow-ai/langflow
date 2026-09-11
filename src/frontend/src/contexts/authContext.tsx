@@ -1,4 +1,4 @@
-import { createContext, useState } from "react";
+import { createContext, useEffect, useState } from "react";
 import {
   LANGFLOW_API_TOKEN,
   LANGFLOW_AUTO_LOGIN_OPTION,
@@ -117,6 +117,15 @@ export function AuthProvider({ children }): React.ReactElement {
     // Cookies are set by the server and browser handles them automatically
     executeAuthRequests();
   }
+
+  // The store is what code outside React reads — autosave, the conflict paths,
+  // the draft that keeps refused work alive. Only a fresh sign-in used to write
+  // it, so opening a flow by URL or reloading the page left it empty: the draft
+  // was silently never kept, and your own edit from another tab was attributed
+  // to a stranger. Mirroring here covers every path that learns who you are.
+  useEffect(() => {
+    useAuthStore.getState().setUserData(userData);
+  }, [userData]);
 
   function storeApiKey(apikey: string) {
     setApiKey(apikey);

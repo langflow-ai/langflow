@@ -37,7 +37,7 @@ export function CanvasBanner({
         <div
           className={cn(
             "mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-[10px]",
-            tone === "warning" ? "bg-accent-amber/25" : "bg-muted",
+            tone === "warning" ? "bg-accent-amber-foreground/10" : "bg-muted",
           )}
         >
           <ForwardedIconComponent

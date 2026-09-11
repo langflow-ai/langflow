@@ -32,6 +32,8 @@ const badgeVariants = cva(
           "border-accent-emerald-foreground/30 bg-accent-emerald-foreground/15 text-accent-emerald-foreground",
         conflictModified:
           "border-accent-indigo-foreground/30 bg-accent-indigo-foreground/15 text-accent-indigo-foreground",
+        conflictContested:
+          "border-accent-amber-foreground/40 bg-accent-amber-foreground/15 text-accent-amber-foreground",
         conflictRemoved:
           "border-accent-red-foreground/30 bg-accent-red-foreground/15 text-accent-red-foreground",
       },

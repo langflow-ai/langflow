@@ -107,11 +107,11 @@ export const persistConflictDraft = (
   flowId: string,
   builtOnToken: string | null,
   currentUserId: string | null,
-): void => {
+): boolean => {
   const live = useFlowStore.getState();
   const liveFlow = live.currentFlow;
-  if (liveFlow?.id !== flowId) return;
-  saveConflictDraft(
+  if (liveFlow?.id !== flowId) return false;
+  return saveConflictDraft(
     currentUserId,
     {
       ...liveFlow,

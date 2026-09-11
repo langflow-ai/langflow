@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { isBlockedByCatalogPolicy } from "@/CustomNodes/helpers/check-code-validity";
 import { usePermissions } from "@/contexts/permissionsContext";
 import useAlertStore from "@/stores/alertStore";
@@ -55,7 +56,11 @@ const blockedComponentNames = (): string[] => {
     .map((component) => component.display_name ?? component.id);
 };
 
+/** Flows already told that their stranded work has no safety net. */
+const warnedUnprotected = new Set<string>();
+
 const useAutoSaveFlow = () => {
+  const { t } = useTranslation();
   const { can, isLoading } = usePermissions();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const reportedBlockedRef = useRef(false);
@@ -122,11 +127,17 @@ const useAutoSaveFlow = () => {
         // No write can succeed here, but the work still has to survive a reload,
         // and this is the only thing still running while a conflict stands.
         pendingAutoSaveRef.current = null;
-        persistConflictDraft(
+        const kept = persistConflictDraft(
           flowId,
           conflict.expectedToken,
           useAuthStore.getState().userData?.id ?? null,
         );
+        // Said once per conflict, not once per keystroke: the autosave that
+        // calls this runs every few seconds for as long as the conflict lasts.
+        if (!kept && !warnedUnprotected.has(flowId)) {
+          warnedUnprotected.add(flowId);
+          setErrorData({ title: t("multiEdit.error.draftNotKept") });
+        }
         return;
       }
       if (can(flowId, "write")) {

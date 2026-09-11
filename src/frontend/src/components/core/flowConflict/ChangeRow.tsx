@@ -76,6 +76,8 @@ function ChangeLine({ change }: { change: FlowChange }) {
 
 type ChangeRowProps = {
   group: ChangeGroup;
+  /** Shown when this component was replaced by the other person's version. */
+  replacedBy?: string;
   checked: boolean;
   disabled?: boolean;
   /** Whose list this row is in. The same component can appear on both sides. */
@@ -94,6 +96,7 @@ export function ChangeRow({
   group,
   checked,
   disabled,
+  replacedBy,
   side,
   onToggle,
 }: ChangeRowProps) {
@@ -121,14 +124,26 @@ export function ChangeRow({
         <div className="min-w-0 flex-1">
           <label
             htmlFor={checkboxId}
-            className="flex flex-wrap items-center gap-2 text-[13px] font-medium leading-[19.5px] text-note-neutral"
+            className="flex flex-wrap items-center gap-2 text-[13px] font-medium leading-[19.5px] text-secondary-foreground"
           >
             {side === "theirs" && (
               <Badge variant={BADGE_VARIANT[group.badge]} size="change">
                 {t(`multiEdit.badge.${group.badge}`)}
               </Badge>
             )}
-            <span className="truncate">{group.label}</span>
+            <span
+              className={cn(
+                "truncate",
+                replacedBy && "line-through opacity-70",
+              )}
+            >
+              {group.label}
+            </span>
+            {replacedBy && (
+              <Badge variant="conflictContested" size="change">
+                {replacedBy}
+              </Badge>
+            )}
           </label>
           <ul className="pt-0.5">
             {group.changes.map((change) => (

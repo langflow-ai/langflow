@@ -397,3 +397,14 @@ export const applySelectedChanges = (
 
   return { nodes: [...nodes.values()], edges: survivingEdges };
 };
+
+/** Components both people changed: the only choices that cost something. */
+export const contestedTargetKeys = (
+  mine: FlowChange[],
+  theirs: FlowChange[],
+): Set<string> => {
+  const mineKeys = new Set(mine.map((change) => change.targetKey));
+  return new Set(
+    theirs.map((change) => change.targetKey).filter((key) => mineKeys.has(key)),
+  );
+};

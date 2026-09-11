@@ -1,10 +1,8 @@
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import useFlowConflictStore from "@/stores/flowConflictStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
 import { CanvasBanner } from "./CanvasBanner";
-import { LoadLatestDialog } from "./LoadLatestDialog";
 
 /**
  * Tells someone their flow moved on without them, and offers the way forward.
@@ -24,8 +22,6 @@ export function ConflictBanner({ flowId }: { flowId: string }) {
   const previewingVersion = useVersionPreviewStore(
     (state) => state.previewLabel !== null,
   );
-  const [loadLatestOpen, setLoadLatestOpen] = useState(false);
-
   if (!conflict || conflict.flowId !== flowId || previewingVersion) return null;
 
   const name = conflict.author.username || t("multiEdit.unknownAuthor");
@@ -37,40 +33,23 @@ export function ConflictBanner({ flowId }: { flowId: string }) {
     : t("multiEdit.banner.description", { name });
 
   return (
-    <>
-      <CanvasBanner
-        testId="flow-conflict-banner"
-        tone="warning"
-        icon="TriangleAlert"
-        title={title}
-        description={description}
-        actions={
-          <>
-            <Button
-              variant="conflictSecondary"
-              size="banner"
-              onClick={() => setLoadLatestOpen(true)}
-              data-testid="flow-conflict-load-latest-button"
-            >
-              {t("multiEdit.banner.loadLatest")}
-            </Button>
-            <Button
-              variant="conflictPrimary"
-              size="banner"
-              onClick={openDialog}
-              data-testid="flow-conflict-review-button"
-            >
-              {t("multiEdit.banner.review")}
-            </Button>
-          </>
-        }
-      />
-      <LoadLatestDialog
-        flowId={flowId}
-        open={loadLatestOpen}
-        onOpenChange={setLoadLatestOpen}
-      />
-    </>
+    <CanvasBanner
+      testId="flow-conflict-banner"
+      tone="warning"
+      icon="TriangleAlert"
+      title={title}
+      description={description}
+      actions={
+        <Button
+          variant="conflictPrimary"
+          size="banner"
+          onClick={openDialog}
+          data-testid="flow-conflict-review-button"
+        >
+          {t("multiEdit.banner.review")}
+        </Button>
+      }
+    />
   );
 }
 
