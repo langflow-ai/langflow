@@ -86,7 +86,10 @@ def test_sanitized_policy_drops_structured_details() -> None:
     error = ScopeMissingError(frozenset({"calendar.write"}), provider="google")
 
     assert error_details_for_client(error, expose_details=False).details == {}
-    assert error_details_for_client(error, expose_details=True).details == {"missing": ["calendar.write"]}
+    assert error_details_for_client(error, expose_details=True).details == {
+        "missing": ["calendar.write"],
+        "scopes_verified": True,
+    }
 
 
 def test_retry_after_survives_for_a_rate_limited_provider() -> None:
