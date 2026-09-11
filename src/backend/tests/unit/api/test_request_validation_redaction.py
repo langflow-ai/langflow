@@ -10,7 +10,7 @@ but 422 bodies land in proxy logs, browser devtools and error trackers.
 from typing import Annotated, Literal
 
 import pytest
-from fastapi import FastAPI, status
+from fastapi import FastAPI, Header, Query, status
 from fastapi.exceptions import RequestValidationError
 from httpx import ASGITransport, AsyncClient
 from langflow.api.validation_errors import redact_validation_errors, request_validation_exception_handler
@@ -66,6 +66,13 @@ async def connection_client():
     async def create_connection(connection: _ConnectionCreate) -> dict:
         return {"provider_key": connection.provider_key}
 
+    @app.get("/api/v1/connections")
+    async def list_connections(
+        limit: Annotated[int, Query()] = 50,
+        x_api_key: Annotated[str | None, Header(max_length=64)] = None,
+    ) -> list:
+        return [limit, x_api_key]
+
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
         yield client
 
@@ -115,6 +122,33 @@ async def test_connection_422_does_not_echo_credential_material(connection_clien
     response = await connection_client.post("/api/v1/connections", json=body)
 
     _assert_redacted(response, canary, loc=loc, error_type=error_type)
+
+
+@pytest.mark.parametrize(
+    ("params", "headers", "loc", "error_type"),
+    [
+        pytest.param({"limit": CANARY}, {}, ["query", "limit"], "int_parsing", id="query-param"),
+        pytest.param({}, {"x-api-key": CANARY * 4}, ["header", "x-api-key"], "string_too_long", id="header"),
+    ],
+)
+async def test_parameter_422_does_not_echo_the_value(connection_client, params, headers, loc, error_type):
+    response = await connection_client.get("/api/v1/connections", params=params, headers=headers)
+
+    _assert_redacted(response, CANARY, loc=loc, error_type=error_type)
+
+
+async def test_malformed_json_body_is_still_a_422(connection_client):
+    # FastAPI builds this entry itself: an int position in loc and a str in ctx["error"].
+    truncated = f'{{"credentials": {{"access_token": "{CANARY}"'.encode()
+
+    response = await connection_client.post(
+        "/api/v1/connections", content=truncated, headers={"Content-Type": "application/json"}
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    assert CANARY not in response.text
+    [error] = response.json()["detail"]
+    assert error == {"type": "json_invalid", "loc": ["body", len(truncated)], "msg": "JSON decode error"}
 
 
 async def test_connection_422_keeps_schema_constraints_in_ctx(connection_client):
@@ -196,6 +230,13 @@ def test_validator_message_that_quotes_the_value_is_scrubbed():
         "loc": ("token",),
         "msg": "Value error, token [redacted] is not recognised",
     }
+
+
+def test_short_submitted_values_stay_in_the_message():
+    # Redacting a two-letter value would shred the validator's own wording; see MIN_REDACTED_LENGTH.
+    [error] = redact_validation_errors(_errors_for(_TokenInterpolatingModel, {"token": "id"}))
+
+    assert error["msg"] == "Value error, token id is not recognised"
 
 
 def test_input_derived_ctx_is_dropped_and_schema_ctx_kept():

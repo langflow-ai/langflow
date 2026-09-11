@@ -21,6 +21,12 @@ so a client still sees which field failed and why, and removes the values:
   own message). Submitted strings of at least ``MIN_REDACTED_LENGTH``
   characters are replaced with ``REDACTED`` there.
 
+The ``msg`` scrub is a backstop, not a licence. It matches submitted strings
+verbatim, so a validator that quotes a transformed value (lower-cased,
+stripped, sliced) is not caught, and neither is a value shorter than
+``MIN_REDACTED_LENGTH``. Validators must not put submitted values in their
+messages.
+
 Response-model validation is untouched: FastAPI raises ``ResponseValidationError``
 for that, a different exception this handler is not registered for.
 """
