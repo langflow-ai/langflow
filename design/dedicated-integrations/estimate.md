@@ -36,6 +36,22 @@ migration work established by the required `tools/list` capture. Accepting CASA 
 scopes adds no engineer-weeks to INT-10 but adds several weeks of calendar lead time and an annual recurring
 assessment that no ticket currently carries.
 
+## Review additions awaiting owner sizing (2026-09-09)
+
+48.75 engineer-weeks is the previously accepted baseline, not a re-approval of the expanded requirements below.
+The release owner must reissue the total with the named owners before gate close; no additional effort is assumed
+to fit for free. The discovery gate remains open on this sizing review as well as signatures.
+
+| Work | Sizing owner |
+|---|---|
+| Broad-read risk controls and per-action consent/identity metadata | INT-3 and INT-10/11/12 owners |
+| Persisted non-interactive opt-in and deployment/MCP publication preflight (B1/B10) | INT-4/6 and INT-8 owners |
+| Pre-consent rationale, executing identity, builder policy, tenant approval and Drive empty states (A4/B2/B5/B11/B12/B14) | INT-5/7/8 owners, with INT-10 provider support |
+| Actual tenant consent cases, opt-in transitions, identity labels and fresh/populated Drive validation | INT-14 owner |
+
+Google Picker (B13) and the restricted-profile portability implementation (Option C) remain deferred and outside
+the 1.13 baseline. Capturing their rules here does not accept or size either feature.
+
 ## External lead times (calendar risk, not engineer-weeks)
 
 | Dependency | Context | Lead time | Source |

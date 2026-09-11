@@ -6,7 +6,7 @@ from typing import Any
 
 from gunicorn import glogging
 from gunicorn.app.base import BaseApplication
-from lfx.log.logger import InterceptHandler
+from lfx.log.logger import InterceptHandler, get_file_handler, structlog_routes_to_stdlib
 from uvicorn.workers import UvicornWorker
 
 
@@ -59,9 +59,15 @@ class LangflowUvicornWorker(UvicornWorker):
 class Logger(glogging.Logger):
     """Implements and overrides the gunicorn logging interface.
 
-    This class inherits from the standard gunicorn logger and overrides it by
-    replacing the handlers with `InterceptHandler` in order to route the
-    gunicorn logs to loguru.
+    This class inherits from the standard gunicorn logger and overrides it so
+    gunicorn's records join Langflow's log output instead of gunicorn's own.
+
+    How they get there depends on which mode structlog is in, because
+    ``uvicorn.workers.UvicornWorker.__init__`` copies whatever handler list ends up
+    on ``gunicorn.error``/``gunicorn.access`` onto ``uvicorn.error``/``uvicorn.access``
+    and sets ``propagate = False``. Whatever is installed here is therefore also
+    what every uvicorn record in the worker gets, with no fallback to the root
+    logger. See ``_install_handlers``.
     """
 
     def __init__(self, cfg) -> None:
@@ -69,8 +75,42 @@ class Logger(glogging.Logger):
         logging.getLogger("gunicorn.error").setLevel(logging.WARNING)
         logging.getLogger("gunicorn.access").setLevel(logging.WARNING)
 
-        logging.getLogger("gunicorn.error").handlers = [InterceptHandler()]
-        logging.getLogger("gunicorn.access").handlers = [InterceptHandler()]
+        self._install_handlers("gunicorn.error")
+        self._install_handlers("gunicorn.access")
+
+    @staticmethod
+    def _install_handlers(name: str) -> None:
+        """Give ``name`` a handler that terminates, never one that cycles.
+
+        In stdout mode structlog renders directly, so an ``InterceptHandler`` is a
+        terminating sink and the behaviour is unchanged.
+
+        In log-file mode structlog is backed by the stdlib factory, so
+        ``InterceptHandler`` would hand the record to a structlog logger that
+        resolves right back to *this* logger -- a cycle that grows the payload
+        every lap until the process is OOM-killed. Attach the rotating file handler
+        directly instead. It has to be the handler itself rather than an empty list
+        plus ``propagate = True``: ``UvicornWorker`` copies this list and turns
+        propagation off, so an empty list would silently drop every uvicorn record.
+        """
+        stdlib_logger = logging.getLogger(name)
+
+        if not structlog_routes_to_stdlib():
+            stdlib_logger.handlers = [InterceptHandler()]
+            return
+
+        file_handler = get_file_handler()
+        if file_handler is None:
+            # File mode without a file handler should not happen, but falling back
+            # to propagation loses records rather than looping them.
+            stdlib_logger.handlers = []
+            stdlib_logger.propagate = True
+            return
+
+        stdlib_logger.handlers = [file_handler]
+        # The handler is attached directly, so propagating to root -- which owns
+        # that same handler -- would write every record twice.
+        stdlib_logger.propagate = False
 
     def error(self, msg, *args, **kwargs):
         """Override error method to filter out SIGSEGV messages."""

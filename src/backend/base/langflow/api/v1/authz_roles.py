@@ -204,6 +204,10 @@ async def create_role(
 ) -> RoleRead:
     """Create a custom (non-system) role."""
     await _require_role_administrator(current_user, action="role:create", obj="role:*", operation_id=operation_id)
+    # Rollback expires the JWT-authenticated ORM user because authentication
+    # and this handler share a request session. Keep the scalar actor id usable
+    # by the conflict audit after rollback.
+    actor_user_id = current_user.id
     authorization_service = get_authorization_service()
     await acquire_identity_mutation_lock(
         authorization_service,
@@ -233,13 +237,13 @@ async def create_role(
         is_system=False,
         permissions=list(payload.permissions),
         parent_role_id=payload.parent_role_id,
-        created_by=current_user.id,
+        created_by=actor_user_id,
     )
     session.add(role)
     mutation = AuthorizationMutation(
         kind=AuthorizationMutationKind.ROLE_CREATED,
         entity_id=role.id,
-        actor_user_id=current_user.id,
+        actor_user_id=actor_user_id,
         role_id=role.id,
         policy_relevant_fields=("name", "permissions", "parent_role_id"),
     )
@@ -251,7 +255,7 @@ async def create_role(
         await session.rollback()
         is_name_conflict = _is_role_name_conflict(exc)
         await _audit_deny(
-            user_id=current_user.id,
+            user_id=actor_user_id,
             action="role:create",
             obj="role:*",
             status_code=status.HTTP_409_CONFLICT,
@@ -303,6 +307,7 @@ async def update_role(
         obj=f"role:{role_id}",
         operation_id=operation_id,
     )
+    actor_user_id = current_user.id
     authorization_service = get_authorization_service()
     await acquire_identity_mutation_lock(
         authorization_service,
@@ -434,7 +439,7 @@ async def update_role(
     mutation = AuthorizationMutation(
         kind=AuthorizationMutationKind.ROLE_UPDATED,
         entity_id=role.id,
-        actor_user_id=current_user.id,
+        actor_user_id=actor_user_id,
         role_id=role.id,
         policy_relevant_fields=tuple(sorted(fields_set & {"name", "permissions", "parent_role_id"})),
         previous_identifier=previous_name if role.name != previous_name else None,
@@ -447,7 +452,7 @@ async def update_role(
         await session.rollback()
         is_name_conflict = _is_role_name_conflict(exc)
         await _audit_deny(
-            user_id=current_user.id,
+            user_id=actor_user_id,
             action="role:update",
             obj=f"role:{role_id}",
             status_code=status.HTTP_409_CONFLICT,

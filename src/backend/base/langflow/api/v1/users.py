@@ -163,6 +163,10 @@ async def add_user(
 
     User activation is controlled by the NEW_USER_IS_ACTIVE setting.
     """
+    # Rollback expires session-bound ORM instances. Snapshot the actor before
+    # any write so conflict auditing never tries to refresh the authenticated
+    # user from the rolled-back request transaction.
+    actor_user_id = current_user.id if current_user is not None else None
     settings_service = get_settings_service()
     auth_settings = settings_service.auth_settings
     # An authenticated active administrator (the admin "add user" flow) may always
@@ -178,7 +182,7 @@ async def add_user(
     )
     if not is_admin_caller and (auth_settings.AUTO_LOGIN or not auth_settings.ENABLE_SIGNUP):
         await _audit_deny(
-            user_id=current_user.id if current_user is not None else None,
+            user_id=actor_user_id,
             action="user:create",
             obj="user:*",
             status_code=403,
@@ -205,7 +209,7 @@ async def add_user(
         if not folder:
             await session.rollback()
             await _audit_deny(
-                user_id=current_user.id if current_user is not None else None,
+                user_id=actor_user_id,
                 action="user:create",
                 obj=f"user:{new_user.id}",
                 status_code=500,
@@ -216,7 +220,7 @@ async def add_user(
     except IntegrityError as e:
         await session.rollback()
         await _audit_deny(
-            user_id=current_user.id if current_user is not None else None,
+            user_id=actor_user_id,
             action="user:create",
             obj="user:*",
             status_code=400,
@@ -228,7 +232,7 @@ async def add_user(
     lifecycle_mutation = AuthorizationMutation(
         kind=AuthorizationMutationKind.USER_CREATED,
         entity_id=new_user.id,
-        actor_user_id=current_user.id if current_user is not None else None,
+        actor_user_id=actor_user_id,
         affected_user_ids=(new_user.id,),
         policy_relevant_fields=("is_active", "is_superuser"),
         user_before=None,
@@ -249,7 +253,7 @@ async def add_user(
         await stage_identity_mutation(authorization_service, session, lifecycle_mutation)
         audit_staged = stage_audit_decision(
             session=session,
-            user_id=current_user.id if current_user is not None else new_user.id,
+            user_id=actor_user_id if actor_user_id is not None else new_user.id,
             action="user:create",
             obj=f"user:{new_user.id}",
             result="allow",

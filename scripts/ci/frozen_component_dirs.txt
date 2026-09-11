@@ -80,6 +80,7 @@ output_parsers
 perplexity
 pgvector
 pinecone
+plivo
 processing
 prototypes
 qdrant

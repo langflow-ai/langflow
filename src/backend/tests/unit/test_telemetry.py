@@ -10,7 +10,7 @@ from langflow.services.telemetry.opentelemetry import (
     OpenTelemetry,
     ThreadSafeSingletonMetaUsingWeakref,
 )
-from langflow.services.telemetry.schema import DeploymentPayload
+from langflow.services.telemetry.schema import DeploymentPayload, IntegrationActionPayload
 from langflow.services.telemetry.service import TelemetryService
 
 
@@ -41,6 +41,30 @@ async def test_log_package_deployment(telemetry_service):
     assert func == telemetry_service.send_telemetry_data
     assert queued_payload == payload
     assert path == "deployment"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("do_not_track", [False, True])
+async def test_integration_action_uses_telemetry_queue(telemetry_service, do_not_track):
+    telemetry_service.do_not_track = do_not_track
+    payload = IntegrationActionPayload(
+        provider="google",
+        capability="drive.read",
+        owner_kind="env",
+        principal_kind="headless_operator",
+        ms=1,
+        success=True,
+    )
+    await telemetry_service.log_integration_action(payload)
+    if do_not_track:
+        assert telemetry_service.telemetry_queue.empty()
+    else:
+        send, queued, path = telemetry_service.telemetry_queue.get_nowait()
+        assert send == telemetry_service.send_telemetry_data
+        assert queued == payload
+        assert path == "integration_action"
+        telemetry_service.telemetry_queue.task_done()
+    await telemetry_service.client.aclose()
 
 
 @pytest.mark.asyncio

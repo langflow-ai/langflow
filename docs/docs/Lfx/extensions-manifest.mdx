@@ -201,6 +201,10 @@ The referenced file uses this shape:
 
 During loading, each valid file is exposed as a `LoadedIntegration` in `LoadResult.integrations` and retained in `BundleRecord.integrations`. Discovery and policy code can consume the parsed `capability_manifest` from the load result or call `BundleRegistry.list_integrations()` for the process-wide snapshot. Extensions that omit `integrations` continue to load with an empty list.
 
+Provider IDs are owned identities in the installed registry: one bundle owns each provider ID. Capability IDs and policy keys cannot be claimed by another provider or bundle. A provider may group several of its own actions under one policy key. This lets discovery, connection resolution, and policy use the provider key without depending on an extension-qualified identity. Alternative SDK, Composio, and MCP bundles must use distinct provider and policy namespaces when installed together.
+
+The registry rejects a conflicting installation with `integration-identity-conflict`, naming both extensions and the conflicting key. Startup skips the rejected bundle's components and integration metadata and emits the error; an already installed owner remains active. Hot reload checks ownership before swapping live modules or metadata, so a rejected reload preserves the previous bundle. Reloading the owning bundle is allowed, and removing it releases its keys.
+
 After adding an integration manifest on a release branch, synchronize bundle dependency floors with the repository script instead of editing `pyproject.toml` by hand:
 
 ```bash
@@ -208,6 +212,10 @@ uv run python scripts/ci/sync_bundle_lfx_pin.py 1.13.0
 ```
 
 The command is idempotent and applies the canonical `lfx>=1.13.0.dev0,<2.0.0` floor to bundles that need an update.
+
+The `Integration manifests - lfx dependency floor` CI check enforces this pairing for every bundle that declares integrations, including JSON and TOML manifests. It reads `[project].dependencies` and requires an unconditional lfx dependency whose lower bound is at least `1.13.0.dev0`; declaring `lfx.compat = ["1"]` alone is insufficient because that names the bundle API contract, not the lfx release. Bundles without integrations are exempt. The guard applies when future provider bundles add their manifests, even if the synchronization command produces no changes today.
+
+The validator and loader check the feature's runtime floor before parsing the strict manifest schema and report `lfx-version-too-old` with the installed and required versions. Earlier lfx builds cannot inherit this diagnostic; dependency resolution and the CI guard prevent installing these manifests with older releases. Unreleased development builds that used the earlier inline integration shape must be updated to a build supporting bundle-owned references; those shapes were never a released compatibility contract.
 
 ## Deferred fields
 
@@ -250,6 +258,8 @@ The loader and validator both emit typed errors keyed by the manifest field that
 | Code | Cause |
 | --- | --- |
 | `manifest-invalid` | The extension manifest or a referenced integration capability manifest fails schema validation. |
+| `integration-identity-conflict` | Two registered integrations claim the same provider ID, capability ID, or policy key. |
+| `lfx-version-too-old` | The running lfx version predates bundle-owned integration references; upgrade lfx. |
 | `manifest-not-found` | No `extension.json` and no `[tool.langflow.extension]` section at the extension root. |
 | `version-constraint-unsatisfied` | `lfx.compat` does not include this Langflow's `BUNDLE_API_VERSION`. |
 | `field-deferred-in-this-milestone` | A reserved field was set to a non-null value. |

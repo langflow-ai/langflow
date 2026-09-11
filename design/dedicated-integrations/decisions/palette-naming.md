@@ -58,6 +58,10 @@ Option B, with these sidebar rules:
    both identities (Slack).
 5. Class names are `<Product><Verb><Object>Component` and are checked against the migration table's bare names
    before INT-10 to INT-12 open.
+6. Drive list/fetch labels and help must expose the app-authorized-file limitation from `drive.file`, with the
+   required empty state in `frontend-surfaces.md` B14. INT-8 owns shared copy/rendering, INT-10 owns provider
+   metadata, and INT-14 validates fresh connections. Keep component class identifiers stable; a label or empty
+   state is not a reason to rename a saved-flow component. Google Picker remains deferred in B13.
 
 ## Consequences
 
