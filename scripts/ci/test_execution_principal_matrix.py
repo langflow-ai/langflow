@@ -8,6 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from check_execution_principal_matrix import (
+    CONNECTION_RESOLUTION_BY_DEPENDENCY_PRINCIPAL,
     DEFAULT_MATRIX,
     REPO_ROOT,
     REQUIRED_DIMENSIONS,
@@ -268,10 +269,17 @@ def test_matrix_connection_rules_match_the_runtime_family_table() -> None:
 
 
 def _matrix_with(tmp_path: Path, family: str, dependency_principal: str) -> Path:
+    """Re-declare one family's dependency principal, as a consistent matrix edit.
+
+    The connection rule moves with it, so the pairing check stays quiet and the
+    only error left is the one a test is looking for.
+    """
+    (connection_resolution,) = CONNECTION_RESOLUTION_BY_DEPENDENCY_PRINCIPAL[dependency_principal]
     source = json.loads(DEFAULT_MATRIX.read_text(encoding="utf-8"))
     for entrypoint in source["entrypoints"]:
         if entrypoint["family"] == family:
             entrypoint["dependency_principal"] = dependency_principal
+            entrypoint["connection_resolution"] = connection_resolution
     changed = tmp_path / "execution-principal-matrix.json"
     changed.write_text(json.dumps(source), encoding="utf-8")
     return changed
