@@ -18,7 +18,7 @@ from lfx.workflow.end_user_identity import (
 )
 
 from langflow.api.utils import extract_global_variables_from_headers
-from langflow.api.utils.execution_errors import error_for_client
+from langflow.api.utils.execution_errors import SAFE_TOOL_ERROR_MESSAGE, error_for_client
 from langflow.api.v1.endpoints import _caller_owns_flow, consume_and_yield, run_flow_generator, simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.events.event_manager import create_stream_tokens_event_manager
@@ -62,6 +62,15 @@ def _tool_error_text(error: Any) -> str:
         return json.dumps(error, default=str)
     except (TypeError, ValueError):
         return str(error)
+
+
+def _client_tool_error(error: Any, *, expose_details: bool) -> str:
+    """Tool-error text that may cross the API boundary.
+
+    Same ownership policy as ``error_for_client``: the flow owner sees the tool's own
+    message, a delegated or shared caller only learns that the tool failed.
+    """
+    return _tool_error_text(error) if expose_details else SAFE_TOOL_ERROR_MESSAGE
 
 
 def has_chat_input(flow_data: dict | None) -> bool:
@@ -353,9 +362,12 @@ async def run_flow_for_openai_responses(
                                                         # error text, mirroring OpenAI's server-executed call
                                                         # items (mcp_call / web_search_call), so consumers can
                                                         # render the failure instead of an in-flight call.
-                                                        tool_status = (
-                                                            "failed" if tool_error is not None else "completed"
-                                                        )
+                                                        # The outcome follows ``output``: on_tool_end only fires
+                                                        # when a run succeeds and the same block is rebound across
+                                                        # retry attempts, so output + error together mean "failed
+                                                        # once, then succeeded". Only an output-less error fails.
+                                                        tool_failed = tool_output is None and tool_error is not None
+                                                        tool_status = "failed" if tool_failed else "completed"
                                                         # Check if include parameter requests tool_call.results
                                                         include_results = (
                                                             request.include and "tool_call.results" in request.include
@@ -392,9 +404,9 @@ async def run_flow_for_openai_responses(
                                                                     "name": tool_name,
                                                                 },
                                                             }
-                                                        if tool_error is not None:
-                                                            tool_done_event["item"]["error"] = _tool_error_text(
-                                                                tool_error
+                                                        if tool_failed:
+                                                            tool_done_event["item"]["error"] = _client_tool_error(
+                                                                tool_error, expose_details=expose_error_details
                                                             )
 
                                                         yield (
@@ -616,9 +628,11 @@ async def run_flow_for_openai_responses(
 
     tool_call_id_counter = 1
     for tool_call in tool_calls:
-        # Same failure contract as the stream: status="failed" plus the error text.
+        # Same contract as the stream: an output-less error is a failure; otherwise the
+        # output wins (a retried call that eventually succeeded keeps its stale error).
         tool_error = tool_call.get("error")
-        tool_status = "failed" if tool_error is not None else "completed"
+        tool_failed = tool_call.get("output") is None and tool_error is not None
+        tool_status = "failed" if tool_failed else "completed"
         if include_results:
             # Format as detailed tool call with results (like file_search_call in sample)
             tool_call_item = {
@@ -640,8 +654,8 @@ async def run_flow_for_openai_responses(
                 "name": tool_call["name"],
                 "arguments": json.dumps(tool_call["input"]) if tool_call["input"] is not None else "{}",
             }
-        if tool_error is not None:
-            tool_call_item["error"] = _tool_error_text(tool_error)
+        if tool_failed:
+            tool_call_item["error"] = _client_tool_error(tool_error, expose_details=expose_error_details)
 
         output_items.append(tool_call_item)
         tool_call_id_counter += 1
