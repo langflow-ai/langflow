@@ -237,22 +237,9 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         # Add documents with minimal metadata only to avoid storing file/session-related fields.
         if documents_to_add and self.embedding is not None:
             self.log(f"Adding {len(documents_to_add)} documents to the Vector Store.")
-            try:
-                from langchain_community.vectorstores.utils import filter_complex_metadata
-
-                filtered_documents = filter_complex_metadata(documents_to_add)
-                minimal_documents = []
-                for doc in filtered_documents:
-                    doc.metadata = {}
-                    minimal_documents.append(doc)
-                vector_store.add_documents(minimal_documents)
-            except ImportError:
-                self.log("Warning: Could not import filter_complex_metadata. Adding documents with stripped metadata.")
-                minimal_documents = []
-                for doc in documents_to_add:
-                    doc.metadata = {}
-                    minimal_documents.append(doc)
-                vector_store.add_documents(minimal_documents)
+            for doc in documents_to_add:
+                doc.metadata = {}
+            vector_store.add_documents(documents_to_add)
         else:
             self.log("No documents to add to the Vector Store.")
 
@@ -261,8 +248,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         """Build and return the DB2 vector store instance."""
         try:
             import ibm_db_dbi
-            from langchain_community.vectorstores.utils import DistanceStrategy
-            from lfx_ibm.components.ibm.db2vs import DB2VS
+            from lfx_ibm.components.ibm.db2vs import DB2VS, DistanceStrategy
         except ImportError as e:
             msg = "Could not import required DB2 packages. Please install ibm_db and ibm_db_dbi."
             raise ImportError(msg) from e

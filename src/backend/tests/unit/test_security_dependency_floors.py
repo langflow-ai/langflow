@@ -98,3 +98,27 @@ def test_published_extras_enforce_patched_gitpython_floor() -> None:
 
     generator = runpy.run_path(str(REPO_ROOT / "scripts/migrate/consolidate_bundles.py"))
     assert generator["PROVIDER_DEPS"]["git"] == bundle_extras["git"]
+
+
+def test_first_community_migration_has_no_direct_dependency_edges() -> None:
+    generator = runpy.run_path(str(REPO_ROOT / "scripts/migrate/consolidate_bundles.py"))
+    extras = _load_pyproject("src/bundles/lfx-bundles/pyproject.toml")["project"]["optional-dependencies"]
+    for name in ("apify", "chroma", "cloudflare", "needle"):
+        assert extras[name] == generator["PROVIDER_DEPS"][name]
+        assert "langchain-community" not in {Requirement(spec).name for spec in extras[name]}
+    for name in ("ibm", "oracle"):
+        deps = _load_pyproject(f"src/bundles/{name}/pyproject.toml")["project"]["dependencies"]
+        assert "langchain-community" not in {Requirement(spec).name for spec in deps}
+    oracle = _load_pyproject("src/bundles/oracle/pyproject.toml")["project"]["dependencies"]
+    _assert_floor(_requirement(oracle, "langchain-oracledb"), "1.5.0")
+
+
+def test_provider_upgrades_remove_indirect_community_requirements() -> None:
+    with (REPO_ROOT / "uv.lock").open("rb") as lock_file:
+        packages = tomllib.load(lock_file)["package"]
+    for name, minimum in (("langchain-cohere", "0.6.0"), ("langchain-google-community", "5.0.0")):
+        matches = [package for package in packages if package["name"] == name]
+        assert matches
+        for package in matches:
+            assert Version(package["version"]) >= Version(minimum)
+            assert "langchain-community" not in {dep["name"] for dep in package.get("dependencies", [])}
