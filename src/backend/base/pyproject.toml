@@ -247,7 +247,7 @@ mongodb-vectors = ["langchain-mongodb>=0.11.0"]
 google = [
     "langchain-google-genai~=4.1.2",
     "langchain-google-vertexai>=3.2.0",
-    "langchain-google-community~=3.0.2",
+    "langchain-google-community~=5.0.0",
     "langchain-google-calendar-tools~=0.0.1",
     "google-api-python-client~=2.161",
 ]

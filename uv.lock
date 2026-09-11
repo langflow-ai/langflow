@@ -6963,19 +6963,36 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-cloudflare"
+version = "0.3.9"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "langchain-core" },
+    { name = "pydantic" },
+    { name = "requests" },
+    { name = "sqlalchemy" },
+    { name = "sqlalchemy-cloudflare-d1" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b9/f5/e13697ccc1ccba18eb4c8ec92af12468551bc272fdc121fb0e6cc1c76790/langchain_cloudflare-0.3.9.tar.gz", hash = "sha256:cf812066cc944861e10ec9b8935f3c86c85659fc945c4a53b72485af0e333118", size = 288190, upload-time = "2026-08-28T02:18:45.89Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/30/58/096067178647173ea1ffce4d0641b7e760f95fe2d6a52f6aa9c8b71a5021/langchain_cloudflare-0.3.9-py3-none-any.whl", hash = "sha256:9da96559a1518325ff6164ac512bfdce71b75dcd3422a560a7041c4bfd7a006d", size = 70190, upload-time = "2026-08-28T02:18:44.955Z" },
+]
+
+[[package]]
 name = "langchain-cohere"
-version = "0.5.1"
+version = "0.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cohere" },
-    { name = "langchain-community" },
     { name = "langchain-core" },
     { name = "pydantic" },
     { name = "types-pyyaml" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d6/d3/a890492d77ba46b01297398c7d614f3f8750f3224a36fca1076554ff19ff/langchain_cohere-0.5.1.tar.gz", hash = "sha256:11128c04e0cf3d0731b7db4af0fdc2edc41be135647fc1e534ab60a9236a01b0", size = 37207, upload-time = "2026-04-15T17:35:11.24Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5a/11/de374cbd215d49185c5f70228528887da5253f681291adaad9b86ef52522/langchain_cohere-0.6.0.tar.gz", hash = "sha256:5e45b56d0a5cc6f3de9f61bcd4fd449b9f3ece85e6b569c3d7c304992808bb0c", size = 39408, upload-time = "2026-06-01T15:55:41.954Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/33/8a/b6a99085e0ac2fd97d831a30b964508fa79256dc0779cc6f8d0733a46fea/langchain_cohere-0.5.1-py3-none-any.whl", hash = "sha256:db58cd05b80340d903c31cbc402f7dcad87c8bbe57bb61b7b2a076bf7beeb7fb", size = 43013, upload-time = "2026-04-15T17:35:09.949Z" },
+    { url = "https://files.pythonhosted.org/packages/c5/5e/90f88e0316411fedf2dfdb7c5d53b106ac0186b2e432b93980acdf2ee250/langchain_cohere-0.6.0-py3-none-any.whl", hash = "sha256:524bc2f390b96a0b1bb98ec6e97f209fe7cd1654e6608e6e89db2e78b6c75838", size = 45108, upload-time = "2026-06-01T15:55:41.037Z" },
 ]
 
 [[package]]
@@ -7079,22 +7096,26 @@ wheels = [
 
 [[package]]
 name = "langchain-google-community"
-version = "3.0.5"
+version = "5.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "aiohttp" },
     { name = "google-api-core" },
     { name = "google-api-python-client" },
     { name = "google-cloud-core" },
     { name = "google-cloud-modelarmor" },
     { name = "grpcio" },
     { name = "langchain" },
-    { name = "langchain-community" },
     { name = "langchain-core" },
     { name = "langgraph" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
+    { name = "numpy", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
+    { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/86/53/f96c2bf1164984dbf6887556b759e33ce27e34d262226e9c36486cdf8ce2/langchain_google_community-3.0.5.tar.gz", hash = "sha256:63fbfb30c9937137662d88d9db805daa455c60518abf4ad50a1f72dcef37fa14", size = 357242, upload-time = "2026-01-16T14:36:41.756Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9c/ff/04f5de80d90c66d7d1849994e3a62d6a1b45a2043fef4392cad3165eb92e/langchain_google_community-5.0.0.tar.gz", hash = "sha256:8d4944ff36a44a7db5b908ad4a70f23838e51a94ce1e64650319b54d1fcd40a7", size = 999871, upload-time = "2026-06-18T18:17:49.736Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d2/15/079e971437d09236368a9804ad575142af3c3733a1a7589889aff73f4d5a/langchain_google_community-3.0.5-py3-none-any.whl", hash = "sha256:ec16c57243a995792880e74687f383f9be42566216570ba91029f7101add1d9b", size = 148493, upload-time = "2026-01-16T14:36:40.791Z" },
+    { url = "https://files.pythonhosted.org/packages/d9/34/564cd5f66932b48394a299edb54030b2054bdfb71d9dfed3f48e723117f9/langchain_google_community-5.0.0-py3-none-any.whl", hash = "sha256:6339de40860ee31bb1f221ba73962f0ce5668dabe55c35c9fb3eca7a14c84aab", size = 168601, upload-time = "2026-06-18T18:17:48.398Z" },
 ]
 
 [[package]]
@@ -8264,7 +8285,7 @@ requires-dist = [
     { name = "langchain-elasticsearch", marker = "extra == 'elasticsearch'", specifier = "~=1.0.0" },
     { name = "langchain-experimental", specifier = "~=0.4.1" },
     { name = "langchain-google-calendar-tools", marker = "extra == 'google'", specifier = "~=0.0.1" },
-    { name = "langchain-google-community", marker = "extra == 'google'", specifier = "~=3.0.2" },
+    { name = "langchain-google-community", marker = "extra == 'google'", specifier = "~=5.0.0" },
     { name = "langchain-google-genai", marker = "extra == 'google'", specifier = "~=4.1.2" },
     { name = "langchain-google-vertexai", marker = "extra == 'google'", specifier = ">=3.2.0" },
     { name = "langchain-groq", marker = "extra == 'groq'", specifier = "~=1.1.1" },
@@ -8978,7 +8999,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.1.24"
+version = "1.1.25"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -9012,6 +9033,7 @@ all = [
     { name = "huggingface-hub" },
     { name = "jigsawstack" },
     { name = "langchain-chroma" },
+    { name = "langchain-cloudflare" },
     { name = "langchain-community" },
     { name = "langchain-elasticsearch" },
     { name = "langchain-google-vertexai" },
@@ -9080,6 +9102,7 @@ all-no-torch = [
     { name = "huggingface-hub" },
     { name = "jigsawstack" },
     { name = "langchain-chroma" },
+    { name = "langchain-cloudflare" },
     { name = "langchain-community" },
     { name = "langchain-elasticsearch" },
     { name = "langchain-google-vertexai" },
@@ -9130,7 +9153,6 @@ altk = [
 apify = [
     { name = "apify-client", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "apify-client", version = "3.1.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "langchain-community" },
 ]
 assemblyai = [
     { name = "assemblyai" },
@@ -9148,7 +9170,6 @@ bing = [
 chroma = [
     { name = "chromadb" },
     { name = "langchain-chroma" },
-    { name = "langchain-community" },
 ]
 cleanlab = [
     { name = "cleanlab-tlm" },
@@ -9158,7 +9179,7 @@ clickhouse = [
     { name = "langchain-community" },
 ]
 cloudflare = [
-    { name = "langchain-community" },
+    { name = "langchain-cloudflare" },
 ]
 codeagents = [
     { name = "smolagents" },
@@ -9251,7 +9272,6 @@ mrscraper = [
     { name = "mrscraper-sdk" },
 ]
 needle = [
-    { name = "langchain-community" },
     { name = "needle-python" },
 ]
 notion = [
@@ -9387,19 +9407,16 @@ requires-dist = [
     { name = "huggingface-hub", marker = "extra == 'huggingface'", specifier = ">=1.0.0,<2.0.0" },
     { name = "jigsawstack", marker = "extra == 'jigsawstack'", specifier = "==0.2.7" },
     { name = "langchain-chroma", marker = "extra == 'chroma'", specifier = "~=0.2.6" },
-    { name = "langchain-community", marker = "extra == 'apify'", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-cloudflare", marker = "extra == 'cloudflare'", specifier = "~=0.3.9" },
     { name = "langchain-community", marker = "extra == 'baidu'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'bing'", specifier = ">=0.4.1,<1.0.0" },
-    { name = "langchain-community", marker = "extra == 'chroma'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'clickhouse'", specifier = ">=0.4.1,<1.0.0" },
-    { name = "langchain-community", marker = "extra == 'cloudflare'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'confluence'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'couchbase'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'faiss'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'git'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'huggingface'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'maritalk'", specifier = ">=0.4.1,<1.0.0" },
-    { name = "langchain-community", marker = "extra == 'needle'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'pgvector'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'redis'", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-community", marker = "extra == 'searchapi'", specifier = ">=0.4.1,<1.0.0" },
@@ -9617,7 +9634,7 @@ provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "b
 
 [[package]]
 name = "lfx-cohere"
-version = "0.1.3"
+version = "0.1.4"
 source = { editable = "src/bundles/cohere" }
 dependencies = [
     { name = "langchain-cohere" },
@@ -9626,7 +9643,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "langchain-cohere", specifier = "~=0.5.0" },
+    { name = "langchain-cohere", specifier = "~=0.6.0" },
     { name = "lfx", editable = "src/lfx" },
 ]
 
@@ -9821,7 +9838,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-google"
-version = "0.1.1"
+version = "0.1.2"
 source = { editable = "src/bundles/google" }
 dependencies = [
     { name = "google-api-python-client" },
@@ -9846,7 +9863,7 @@ requires-dist = [
     { name = "google-genai", specifier = ">=1.75.0,<2.0.0" },
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-core", specifier = ">=1.2.28,<2.0.0" },
-    { name = "langchain-google-community", specifier = "~=3.0.2" },
+    { name = "langchain-google-community", specifier = "~=5.0.0" },
     { name = "langchain-google-genai", specifier = "~=4.1.2" },
     { name = "lfx", editable = "src/lfx" },
     { name = "requests", specifier = ">=2.32.0" },
@@ -9854,7 +9871,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-ibm"
-version = "0.2.3"
+version = "0.2.4"
 source = { editable = "src/bundles/ibm" }
 dependencies = [
     { name = "ibm-cloud-sdk-core" },
@@ -9863,9 +9880,12 @@ dependencies = [
     { name = "ibm-watsonx-ai", version = "1.6.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'" },
     { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'" },
-    { name = "langchain-community" },
+    { name = "langchain-core" },
     { name = "langchain-ibm" },
     { name = "lfx" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
+    { name = "numpy", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14'" },
     { name = "presto-python-client" },
 ]
 
@@ -9876,9 +9896,10 @@ requires-dist = [
     { name = "ibm-watsonx-ai", specifier = ">=1.3.1,<2.0.0" },
     { name = "ibm-watsonx-orchestrate-clients", marker = "python_full_version >= '3.11'", specifier = "~=2.12.0" },
     { name = "ibm-watsonx-orchestrate-core", marker = "python_full_version >= '3.11'", specifier = "~=2.12.0" },
-    { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-core", specifier = ">=1.2.28,<2.0.0" },
     { name = "langchain-ibm", specifier = "~=1.1.0" },
     { name = "lfx", editable = "src/lfx" },
+    { name = "numpy", specifier = ">=1.26.4,<3.0.0" },
     { name = "presto-python-client", specifier = ">=0.8,<1" },
 ]
 
@@ -9954,10 +9975,9 @@ requires-dist = [
 
 [[package]]
 name = "lfx-oracle"
-version = "0.1.3"
+version = "0.1.4"
 source = { editable = "src/bundles/oracle" }
 dependencies = [
-    { name = "langchain-community" },
     { name = "langchain-oracledb" },
     { name = "lfx" },
     { name = "oracledb" },
@@ -9965,8 +9985,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
-    { name = "langchain-oracledb", specifier = ">=1.0.1,<2.0.0" },
+    { name = "langchain-oracledb", specifier = ">=1.5.0,<2.0.0" },
     { name = "lfx", editable = "src/lfx" },
     { name = "oracledb", specifier = ">=2.2.0,<4.0.0" },
 ]
@@ -18253,6 +18272,20 @@ postgresql-psycopg = [
 ]
 postgresql-psycopg2binary = [
     { name = "psycopg2-binary" },
+]
+
+[[package]]
+name = "sqlalchemy-cloudflare-d1"
+version = "0.3.11"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "sqlalchemy" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/ae/ff/e12e1f4688bff666b8c4dc93487ef96a1673c83e4e079fb27ea27b80cbcb/sqlalchemy_cloudflare_d1-0.3.11.tar.gz", hash = "sha256:88def2dcb2a37129697d0c6e6d2c61c62d0c692608ee532620894ba88a6f24f8", size = 423523, upload-time = "2026-06-21T21:46:28.278Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6c/08/c40d527e4467535c3a8d3158d2c5d21dcf8dbbedeb2e5f32d93db790afc9/sqlalchemy_cloudflare_d1-0.3.11-py3-none-any.whl", hash = "sha256:655a9c085703f6386f3bf21fcdc542a3163901c7a1a749c0b364e24061ab8890", size = 29021, upload-time = "2026-06-21T21:46:26.774Z" },
 ]
 
 [[package]]
