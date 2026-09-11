@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID, uuid4
 
 from lfx.graph.exceptions import GraphPausedException
@@ -36,6 +36,12 @@ from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT, Duplic
 # Bounded retries for append_event's optimistic seq assignment — contention is at most a
 # couple of concurrent appenders per job (worker + orphan sweep, or scaled-out processes).
 _APPEND_EVENT_MAX_RETRIES = 50
+
+# Statuses that mean the run is over and the row is retention-eligible. Every
+# other status (QUEUED, IN_PROGRESS, SUSPENDED) is live work: a SUSPENDED run
+# is waiting on a human who may answer weeks later, so age never makes it
+# eligible.
+_RETAINABLE_STATUSES = (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.TIMED_OUT)
 
 
 def _unwrap_pause_payload(payload: dict | None) -> dict | None:
@@ -821,6 +827,44 @@ class JobService(Service):
 
         msg = f"fail_queued_job exhausted {_APPEND_EVENT_MAX_RETRIES} retries for job {job_id} (event seq contention)"
         raise RuntimeError(msg) from last_exc
+
+    async def purge_terminal_jobs(self, *, older_than_days: float, limit: int = 5000) -> int:
+        """Delete terminal jobs older than the window plus their child rows. Returns rows deleted.
+
+        Retention for the durable queue: the job table IS the work queue in the
+        scaled backend, so terminal rows accumulate under every claim scan and
+        ``job_events`` grows a row per durable milestone forever. Only terminal
+        runs are eligible (see ``_RETAINABLE_STATUSES``); live work is never
+        purged at any age.
+
+        The child tables (``job_events``, ``execution_signals``,
+        ``job_checkpoints``) carry ``job_id`` as a plain indexed column with NO
+        foreign key, so nothing cascades: they are deleted explicitly here, or
+        they survive as orphans no query can reach again.
+
+        Age comes from the terminal timestamp, falling back to creation for a
+        row that reached a terminal status without one. Deletes are chunked by
+        ``limit`` so a pass never takes a long lock or bloats one transaction;
+        a caller with a backlog loops until a pass returns fewer than ``limit``.
+        Concurrent callers are safe: the delete is keyed by id, so a racer
+        simply finds fewer rows.
+        """
+        from sqlmodel import delete
+
+        cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
+        aged_at = func.coalesce(col(Job.finished_timestamp), col(Job.created_timestamp))
+        async with session_scope() as session:
+            result = await session.exec(
+                select(Job.job_id).where(col(Job.status).in_(_RETAINABLE_STATUSES), aged_at < cutoff).limit(limit)
+            )
+            job_ids = list(result.all())
+            if not job_ids:
+                return 0
+            for child in (JobEvent, ExecutionSignal, JobCheckpoint):
+                await session.exec(delete(child).where(col(child.job_id).in_(job_ids)))  # type: ignore[call-overload]
+            await session.exec(delete(Job).where(col(Job.job_id).in_(job_ids)))  # type: ignore[call-overload]
+            await session.flush()
+            return len(job_ids)
 
     async def requeue_resumed_job(self, job_id: UUID, *, owner: str) -> bool:
         """Hand this owner's resumed IN_PROGRESS claim back to the queue. True iff we won.

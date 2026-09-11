@@ -136,6 +136,18 @@ class RuntimeSettings(BaseModel):
     lease-racing them in order. Size it roughly to the worker fleet: with more
     workers than candidates the extras lose every race and back off a full idle
     window. Must be > 0."""
+    background_retention_days: int = Field(default=0, ge=0)
+    """How many days to keep TERMINAL background job rows (and their events,
+    signals and checkpoints) before deleting them. ``0``, the default, disables
+    retention entirely and keeps every row forever.
+
+    Enable this on any long-lived deployment, and especially with
+    ``background_backend=scaled``, where the job table IS the work queue: every
+    terminal row sits under the claim scan and ``job_events`` grows a row per
+    durable milestone, so an install with no window set grows without bound.
+    Live runs are never deleted at any age: QUEUED, IN_PROGRESS and SUSPENDED
+    rows are excluded (a suspended run is waiting on a human who may answer
+    weeks later)."""
     background_backend: Literal["default", "scaled"] = "default"
     """Which background-execution backend runs v2 background workflow jobs.
 
