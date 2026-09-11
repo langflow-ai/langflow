@@ -9,11 +9,12 @@ from urllib.parse import parse_qs, urlsplit
 from uuid import UUID
 
 import pytest
+from cryptography.fernet import Fernet
 from langflow.services.auth import utils as auth_utils
 from langflow.services.connection.oauth import providers
 from langflow.services.connection.oauth.config import OAuthError
 from langflow.services.connection.service import _decrypt_credential_payload, _encrypt_credential_payload
-from langflow.services.database.models.connection import ConnectionSecret
+from langflow.services.database.models.connection import Connection, ConnectionSecret
 from langflow.services.database.models.connection.oauth import ConnectionOAuth
 from langflow.services.deps import get_connection_resolver_service, session_scope
 from lfx.integrations.errors import AuthExpiredError, ConnectionUnresolvedError, ScopeMissingError
@@ -146,6 +147,36 @@ async def test_callback_pkce_storage_replay_and_revoke(client, logged_in_headers
     assert calls[-1]["token"] == "refresh-must-not-leak"  # noqa: S105 - test fixture
     with pytest.raises(ConnectionUnresolvedError):
         await resolver.resolve(resolution(row))
+
+
+@pytest.mark.usefixtures("active_user", "oauth_config")
+async def test_reauthorization_clears_an_undecryptable_error(client, logged_in_headers, monkeypatch):
+    row, query = await begin(client, logged_in_headers)
+    provider_double(monkeypatch, query)
+    assert (await callback(client, query)).status_code == 200
+    async with session_scope() as session:
+        secret = await session.get(ConnectionSecret, UUID(row["id"]))
+        # What a restart under a different secret key leaves behind.
+        secret.encrypted_payload = Fernet(Fernet.generate_key()).encrypt(b'{"version":1}').decode()
+        session.add(secret)
+    broken = (await client.post(f"/api/v1/connections/{row['id']}/health", headers=logged_in_headers)).json()
+    assert (broken["status"], broken["status_reason"]) == ("error", "credential-undecryptable")
+
+    restarted = await client.post(
+        f"/api/v1/connections/{row['id']}/oauth/start",
+        headers=logged_in_headers,
+        json={"registration_id": "google-work", "scopes": ["calendar.readonly"]},
+    )
+    assert restarted.status_code == 200, restarted.text
+    requery = parse_qs(urlsplit(restarted.json()["authorization_url"]).query)
+    provider_double(monkeypatch, requery)
+    assert (await callback(client, requery)).status_code == 200
+
+    async with session_scope() as session:
+        stored = await session.get(Connection, UUID(row["id"]))
+        assert (stored.status, stored.status_reason) == ("ready", None)
+    token = await get_connection_resolver_service().resolve(resolution(row))
+    assert token.access_token.get_secret_value() == "access-must-not-leak"
 
 
 @pytest.mark.parametrize(

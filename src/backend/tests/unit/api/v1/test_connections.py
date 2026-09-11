@@ -477,14 +477,22 @@ async def test_instance_connections_are_changed_only_by_superusers(
     checked = await client.post(f"{connection_url}/health", headers=member_headers)
     assert checked.status_code == 200, checked.text
 
-    # ...but cannot change or remove it, even with authorization disabled.
-    denied = [
-        await client.patch(connection_url, json={"display_name": "Mine now"}, headers=member_headers),
-        await client.patch(connection_url, json={"allow_non_interactive": True}, headers=member_headers),
-        await client.post(f"{connection_url}/revoke", headers=member_headers),
-        await client.delete(connection_url, headers=member_headers),
-    ]
-    assert [response.status_code for response in denied] == [403, 403, 403, 403]
+    # ...but cannot change, re-authorize, or remove it, even with authorization
+    # disabled, and is refused before the row lock is taken.
+    with _connection_row_updates() as locks:
+        denied = [
+            await client.patch(connection_url, json={"display_name": "Mine now"}, headers=member_headers),
+            await client.patch(connection_url, json={"allow_non_interactive": True}, headers=member_headers),
+            await client.post(
+                f"{connection_url}/oauth/start",
+                json={"registration_id": "google", "scopes": ["calendar.readonly"]},
+                headers=member_headers,
+            ),
+            await client.post(f"{connection_url}/revoke", headers=member_headers),
+            await client.delete(connection_url, headers=member_headers),
+        ]
+    assert [response.status_code for response in denied] == [403, 403, 403, 403, 403]
+    assert locks == []
     unchanged = (await client.get("api/v1/connections", headers=member_headers)).json()[0]
     assert (unchanged["display_name"], unchanged["allow_non_interactive"], unchanged["status"]) == (
         "Work Google",

@@ -146,6 +146,8 @@ async def store_tokens(session: AsyncSession, row: Connection, payload: dict, sc
     secret.encrypted_payload = _encrypt_credential_payload(json.dumps(payload))
     row.granted_scopes = scopes
     row.status = "ready"
+    # Fresh tokens resolve whatever put the connection in error.
+    row.status_reason = None
     row.health = "healthy"
     row.health_checked_at = datetime.now(timezone.utc)
     row.updated_at = row.health_checked_at
