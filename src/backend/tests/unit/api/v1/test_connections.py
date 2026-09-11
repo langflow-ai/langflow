@@ -2,15 +2,17 @@
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import pytest
-from langflow.services.auth.utils import get_auth_service
+from cryptography.fernet import Fernet
+from langflow.services.auth.utils import encrypt_api_key, get_auth_service
 from langflow.services.database.models.connection import ConnectionSecret
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_connection_resolver_service, session_scope
-from lfx.integrations.errors import ConnectionNotAuthorizedError, ScopeMissingError
+from lfx.integrations.errors import ConnectionNotAuthorizedError, ConnectionUnresolvedError, ScopeMissingError
 from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
 from lfx.services.authorization.base import ExecutionPrincipal
 from sqlmodel import select
@@ -57,6 +59,22 @@ def _assert_no_credentials(value: object) -> None:
             _assert_no_credentials(item)
     elif isinstance(value, str):
         assert value not in {"access-token-do-not-return", "refresh-token-do-not-return"}
+
+
+async def _replace_envelope(connection_id: str, encrypted_payload: str | None) -> None:
+    """Overwrite or remove a stored envelope, as a key change or data loss would."""
+    async with session_scope() as session:
+        secret = await session.get(ConnectionSecret, UUID(connection_id))
+        assert secret is not None
+        if encrypted_payload is None:
+            await session.delete(secret)
+        else:
+            secret.encrypted_payload = encrypted_payload
+            session.add(secret)
+
+
+def _envelope(**fields: object) -> str:
+    return json.dumps({"version": 1, "access_token": "restored-access-token", **fields})
 
 
 @pytest.mark.usefixtures("active_user")
@@ -210,3 +228,63 @@ async def test_superuser_can_create_and_list_instance_connection(
     listed = await client.get("api/v1/connections", headers=logged_in_headers_super_user)
     assert listed.status_code == 200, listed.text
     assert [item["id"] for item in listed.json()] == [created.json()["id"]]
+
+
+@pytest.mark.usefixtures("active_user")
+@pytest.mark.parametrize(
+    "unreadable_envelope",
+    [
+        # Written under a different secret key: what a restart with a rotated key leaves behind.
+        pytest.param(lambda: Fernet(Fernet.generate_key()).encrypt(_envelope().encode()).decode(), id="foreign-key"),
+        pytest.param(lambda: encrypt_api_key(_envelope(expires_at="not-a-date")), id="corrupt-envelope"),
+    ],
+)
+async def test_unreadable_credential_is_an_error_not_a_missing_connection(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+    unreadable_envelope,
+) -> None:
+    created = await client.post("api/v1/connections", json=_payload(), headers=logged_in_headers)
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert (body["status"], body["status_reason"]) == ("ready", None)
+    resolver = get_connection_resolver_service()
+    ref = ConnectionRef(provider="google_workspace", name="work")
+    owner = ExecutionPrincipal(kind="actor", user_id=body["owner_id"], actor_id=body["owner_id"], interactive=True)
+
+    await _replace_envelope(body["id"], unreadable_envelope())
+    checked = await client.post(f"api/v1/connections/{body['id']}/health", headers=logged_in_headers)
+    assert checked.status_code == 200, checked.text
+    assert {key: checked.json()[key] for key in ("status", "status_reason", "health", "has_credentials")} == {
+        "status": "error",
+        "status_reason": "credential-undecryptable",
+        "health": "unhealthy",
+        "has_credentials": True,
+    }
+    listed = (await client.get("api/v1/connections", headers=logged_in_headers)).json()
+    assert [(item["status"], item["status_reason"]) for item in listed] == [("error", "credential-undecryptable")]
+
+    with pytest.raises(ConnectionUnresolvedError) as undecryptable:
+        await resolver.resolve(ConnectionResolutionRequest(ref=ref, principal=owner))
+    assert undecryptable.value.details == {"reason": "credential-undecryptable"}
+    assert "could not be decrypted" in str(undecryptable.value)
+    assert "Configure the connection" not in str(undecryptable.value)
+    # Neither the decryption failure nor decrypted plaintext is reachable from the public error.
+    assert undecryptable.value.__cause__ is None
+    assert undecryptable.value.__context__ is None
+    assert (await resolver.describe(ref, owner)).status == "unavailable"
+
+    # Control: a lost envelope is a different cause, and says so.
+    await _replace_envelope(body["id"], None)
+    lost = (await client.post(f"api/v1/connections/{body['id']}/health", headers=logged_in_headers)).json()
+    assert (lost["status"], lost["status_reason"], lost["has_credentials"]) == ("error", "credential-missing", False)
+    with pytest.raises(ConnectionUnresolvedError) as missing:
+        await resolver.resolve(ConnectionResolutionRequest(ref=ref, principal=owner))
+    assert missing.value.details == {"reason": "missing"}
+    assert (await resolver.describe(ref, owner)).status == "missing"
+
+    # A readable envelope and a passing check clear the error and its reason.
+    async with session_scope() as session:
+        session.add(ConnectionSecret(connection_id=UUID(body["id"]), encrypted_payload=encrypt_api_key(_envelope())))
+    restored = (await client.post(f"api/v1/connections/{body['id']}/health", headers=logged_in_headers)).json()
+    assert (restored["status"], restored["status_reason"], restored["health"]) == ("ready", None, "healthy")

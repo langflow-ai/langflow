@@ -24,6 +24,16 @@ class PersistedConnectionStatus(str, Enum):
     ERROR = "error"
 
 
+class ConnectionStatusReason(str, Enum):
+    """Why a connection is in the ``error`` status; every other status carries no reason."""
+
+    # The connection had credentials, and its encrypted envelope is gone.
+    CREDENTIAL_MISSING = "credential-missing"
+    # The envelope exists but does not decrypt or decode with the server's
+    # current key. One key change puts every connection in this state.
+    CREDENTIAL_UNDECRYPTABLE = "credential-undecryptable"
+
+
 class ConnectionHealth(str, Enum):
     UNKNOWN = "unknown"
     HEALTHY = "healthy"
@@ -98,6 +108,7 @@ class ConnectionRead(BaseModel):
     name: str
     display_name: str
     status: PersistedConnectionStatus
+    status_reason: ConnectionStatusReason | None = None
     health: ConnectionHealth
     granted_scopes: list[str]
     executing_identity: ExecutingIdentityDescriptor

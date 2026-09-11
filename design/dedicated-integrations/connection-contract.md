@@ -319,6 +319,12 @@ construction.**
   nodes and policy changes after selection. Safe hints explain administrator policy or deployment availability
   without revealing hidden configuration. Recognized provider admin-approval/tenant-denial outcomes are normalized
   by INT-5 and rendered by B12; an ambiguous provider denial must not be presented as confirmed admin approval.
+- The database resolver raises `connection-unresolved` with reason `credential-undecryptable` when a stored
+  credential exists but does not decrypt or decode with the server's current key, and reason `missing` only when
+  none is stored; `describe()` reports the former as `unavailable`, never `missing`. Health checks persist the same
+  distinction as `status: error` with `status_reason` `credential-undecryptable` or `credential-missing`
+  (`status_reason` is null for every other status), so a secret-key change reads as one infrastructure cause rather
+  than N unconfigured connections. For `credential-undecryptable` the call to action is reconnect, not connect.
 
 Rejected: plain `ValueError` strings (the current `OAuthConnectorBase` style, not machine-readable); reusing
 `lfx.services.auth.exceptions.TokenExpiredError` (it means the Langflow session JWT); reusing the `ExtensionError`

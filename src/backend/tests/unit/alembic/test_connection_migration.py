@@ -80,7 +80,9 @@ def test_connection_migration_round_trip_sqlite_and_postgres(db_url):  # noqa: F
         with engine.connect() as connection:
             inspector = inspect(connection)
             assert {"connection", "connection_secret"} <= set(inspector.get_table_names())
-            assert "encrypted_payload" not in {column["name"] for column in inspector.get_columns("connection")}
+            connection_columns = {column["name"]: column for column in inspector.get_columns("connection")}
+            assert "encrypted_payload" not in connection_columns
+            assert connection_columns["status_reason"]["nullable"] is True
             assert "encrypted_payload" in {column["name"] for column in inspector.get_columns("connection_secret")}
     finally:
         engine.dispose()

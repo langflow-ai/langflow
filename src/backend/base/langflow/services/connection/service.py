@@ -40,6 +40,7 @@ from langflow.services.database.models.connection import (
     ConnectionOwnershipMode,
     ConnectionRead,
     ConnectionSecret,
+    ConnectionStatusReason,
     ExecutingIdentityDescriptor,
     PersistedConnectionStatus,
 )
@@ -62,6 +63,12 @@ _SHARE_PERMITTING_FAMILIES = frozenset({"interactive_chat", "v1_run", "openai_re
 # would make every resolution scan every user's connection with that handle.
 # Past the bound, resolution fails closed like any other ambiguous share.
 _MAX_SHARE_CANDIDATES = 50
+
+# Statuses in which a connection deliberately holds no credential, so a missing
+# envelope is expected rather than an error.
+_CREDENTIAL_FREE_STATUSES = frozenset(
+    {PersistedConnectionStatus.PENDING.value, PersistedConnectionStatus.REVOKED.value}
+)
 
 
 class ConnectionConflictError(ValueError):
@@ -117,6 +124,7 @@ def _decrypt_credential_payload(encrypted_payload: str) -> dict:
         if not isinstance(access_token, str) or not access_token:
             msg = "credential envelope has no access token"
             raise ValueError(msg)
+        _parse_expiry(decoded.get("expires_at"))
     except Exception as exc:
         msg = "Stored connection credential could not be decoded"
         raise ConnectionSecretError(msg) from exc
@@ -135,6 +143,15 @@ def _parse_expiry(value: object) -> datetime | None:
         msg = "Stored connection credential has an invalid expiry"
         raise ConnectionSecretError(msg) from exc
     return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
+
+
+def _set_status(
+    row: Connection,
+    status: PersistedConnectionStatus,
+    reason: ConnectionStatusReason | None = None,
+) -> None:
+    row.status = status.value
+    row.status_reason = reason.value if reason is not None else None
 
 
 def _principal_user_id(principal: ExecutionPrincipal) -> UUID | None:
@@ -294,7 +311,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         secret = await session.get(ConnectionSecret, row.id)
         if secret is not None:
             await session.delete(secret)
-        row.status = PersistedConnectionStatus.REVOKED.value
+        _set_status(row, PersistedConnectionStatus.REVOKED)
         row.health = ConnectionHealth.UNHEALTHY.value
         row.health_checked_at = _utc_now()
         row.updated_at = row.health_checked_at
@@ -318,12 +335,23 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         try:
             await self._check_row_credential(session, row=row, principal=principal, required_scopes=required_scopes)
         except AuthExpiredError:
-            row.status = PersistedConnectionStatus.EXPIRED.value
+            _set_status(row, PersistedConnectionStatus.EXPIRED)
+            row.health = ConnectionHealth.UNHEALTHY.value
+        except ConnectionUnresolvedError as exc:
+            # The stored credential is unusable. Pending and revoked rows hold
+            # none by design; any other row is in error, with the cause recorded
+            # so a key change does not read as N unrelated user problems.
+            if exc.reason == "credential-undecryptable":
+                _set_status(row, PersistedConnectionStatus.ERROR, ConnectionStatusReason.CREDENTIAL_UNDECRYPTABLE)
+            elif row.status not in _CREDENTIAL_FREE_STATUSES:
+                _set_status(row, PersistedConnectionStatus.ERROR, ConnectionStatusReason.CREDENTIAL_MISSING)
             row.health = ConnectionHealth.UNHEALTHY.value
         except IntegrationError:
+            # Scope coverage and principal denials describe this request, not
+            # the stored credential, so the connection's status stands.
             row.health = ConnectionHealth.UNHEALTHY.value
         else:
-            row.status = PersistedConnectionStatus.READY.value
+            _set_status(row, PersistedConnectionStatus.READY)
             row.health = ConnectionHealth.HEALTHY.value
         row.health_checked_at = _utc_now()
         row.updated_at = row.health_checked_at
@@ -366,8 +394,10 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
             return ConnectionStatus(ref=ref, status="expired")
         except ScopeMissingError:
             return ConnectionStatus(ref=ref, status="scope_missing")
-        except ConnectionUnresolvedError:
-            return ConnectionStatus(ref=ref, status="missing")
+        except ConnectionUnresolvedError as exc:
+            # An undecryptable credential is configured; "missing" would send
+            # the builder to configure it again instead of reconnecting.
+            return ConnectionStatus(ref=ref, status="missing" if exc.reason == "missing" else "unavailable")
         except IntegrationError:
             return ConnectionStatus(ref=ref, status="unavailable")
         return ConnectionStatus(
@@ -524,8 +554,17 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
             raise ConnectionUnresolvedError(handle, provider=row.provider_key)
         try:
             payload = _decrypt_credential_payload(secret.encrypted_payload)
-        except ConnectionSecretError as exc:
-            raise ConnectionUnresolvedError(handle, provider=row.provider_key) from exc
+        except ConnectionSecretError:
+            payload = None
+        if payload is None:
+            # Raised outside the handler so neither the decryption failure nor
+            # any decrypted plaintext stays reachable from the public error.
+            logger.warning(
+                "Stored credential for connection %s could not be decrypted; "
+                "if many connections report this, the server secret key may have changed",
+                row.id,
+            )
+            raise ConnectionUnresolvedError(handle, provider=row.provider_key, reason="credential-undecryptable")
         expires_at = _parse_expiry(payload.get("expires_at"))
         if expires_at is not None and expires_at <= _utc_now():
             raise AuthExpiredError(provider=row.provider_key)
@@ -549,6 +588,9 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         return ConnectionRead.model_validate(
             {
                 **row.model_dump(),
+                # A reason explains only the error status, so a writer that
+                # restores another status cannot leave a stale cause visible.
+                "status_reason": row.status_reason if row.status == PersistedConnectionStatus.ERROR.value else None,
                 "has_credentials": has_credentials,
             }
         )

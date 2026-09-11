@@ -39,6 +39,7 @@ def upgrade() -> None:
             sa.Column("display_name", sa.String(length=255), nullable=False),
             sa.Column("ownership_mode", sa.String(length=16), nullable=False),
             sa.Column("status", sa.String(length=16), nullable=False),
+            sa.Column("status_reason", sa.String(length=32), nullable=True),
             sa.Column("health", sa.String(length=16), nullable=False),
             sa.Column("granted_scopes", sa.JSON(), nullable=False),
             sa.Column("executing_identity", sa.JSON(), nullable=False),
