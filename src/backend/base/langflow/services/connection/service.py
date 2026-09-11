@@ -55,7 +55,8 @@ if TYPE_CHECKING:
 
 
 # Route families whose dependency principal is ``actor_or_explicit_share``
-# (connection-contract.md section 4, scripts/ci/execution_principal_matrix.json).
+# (connection-contract.md section 4). scripts/ci/check_execution_principal_matrix.py
+# fails when this set and scripts/ci/execution_principal_matrix.json disagree.
 # Every other family resolves owner or instance connections only.
 _SHARE_PERMITTING_FAMILIES = frozenset({"interactive_chat", "v1_run", "openai_responses", "voice", "workflow_v2"})
 
