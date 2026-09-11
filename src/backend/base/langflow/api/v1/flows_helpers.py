@@ -28,6 +28,9 @@ from langflow.api.utils import (
     remove_api_keys,
     strip_flow_secrets,
 )
+from langflow.services.audit.changes import summarize_flow_changes
+from langflow.services.audit.events import FLOW_CREATED, FLOW_UPDATED
+from langflow.services.audit.recorder import record_audit_event
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_move_allowed
@@ -404,6 +407,27 @@ async def _canonicalize_flow_destination(
     return workspace_id, folder_id
 
 
+async def _record_flow_update(
+    session: AsyncSession,
+    flow: Flow,
+    graph_before: dict[str, Any] | None,
+    actor_user_id: UUID | None,
+    reason: str | None = None,
+) -> None:
+    """Record who changed the flow and which fields they touched — names only."""
+    changes, total = summarize_flow_changes(graph_before, flow.data)
+    payload: dict[str, Any] = {"changes": changes, "changes_total": total}
+    if reason:
+        payload["reason"] = reason
+    await record_audit_event(
+        session,
+        event=FLOW_UPDATED,
+        user_id=actor_user_id,
+        resource_id=flow.id,
+        payload=payload,
+    )
+
+
 async def _new_flow(
     *,
     session: AsyncSession,
@@ -466,6 +490,7 @@ async def _new_flow(
 
         session.add(db_flow)
         await session.flush()
+        await record_audit_event(session, event=FLOW_CREATED, user_id=user_id, resource_id=db_flow.id)
         await session.refresh(db_flow)
         await _save_flow_to_fs(db_flow, user_id, storage_service)
 
@@ -648,7 +673,14 @@ async def _update_existing_flow(
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)
 
+    graph_changed = "data" in update_data and update_data["data"] != existing_flow.data
+    graph_before = existing_flow.data if graph_changed else None
+
     _apply_update_data(existing_flow, update_data)
+
+    if graph_changed:
+        await _record_flow_update(session, existing_flow, graph_before, actor_user_id)
+
     await _validate_and_assign_folder(
         session,
         existing_flow,
@@ -676,6 +708,7 @@ async def _patch_flow(
     flow: FlowUpdate,
     user_id: UUID,
     storage_service: StorageService,
+    audit_reason: str | None = None,
 ) -> FlowRead:
     """Apply a partial update (PATCH) to an existing flow and return a FlowRead.
 
@@ -750,7 +783,14 @@ async def _patch_flow(
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)
 
+    # A rename or a no-op save changes no graph, so there is nothing to record.
+    graph_changed = "data" in update_data and update_data["data"] != db_flow.data
+    graph_before = db_flow.data if graph_changed else None
+
     _apply_update_data(db_flow, update_data)
+
+    if graph_changed:
+        await _record_flow_update(session, db_flow, graph_before, user_id, reason=audit_reason)
 
     # Validate fs_path if it was changed (will raise HTTPException if invalid).
     # fs_path lives under the owner's storage namespace, so the owner id

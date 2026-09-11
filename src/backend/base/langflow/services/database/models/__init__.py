@@ -1,5 +1,6 @@
 from .a2a import A2ACheckpoint, A2ATask
 from .api_key import ApiKey
+from .audit_log import AuditLog
 from .auth import (
     AuthzAuditLog,
     AuthzEditLock,
@@ -46,6 +47,7 @@ __all__ = [
     "A2ACheckpoint",
     "A2ATask",
     "ApiKey",
+    "AuditLog",
     "AuthzAuditLog",
     "AuthzEditLock",
     "AuthzRole",
