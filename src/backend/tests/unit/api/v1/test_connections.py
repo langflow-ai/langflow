@@ -61,6 +61,23 @@ def _assert_no_credentials(value: object) -> None:
         assert value not in {"access-token-do-not-return", "refresh-token-do-not-return"}
 
 
+async def _login_new_user(client: AsyncClient, *, is_superuser: bool = False) -> dict[str, str]:
+    """Create a second account; the shared fixtures all reuse one username."""
+    username = f"user-{uuid4().hex}"
+    password = "test-connection-password"  # noqa: S105  # pragma: allowlist secret
+    async with session_scope() as session:
+        user = User(
+            username=username,
+            password=get_auth_service().get_password_hash(password),
+            is_active=True,
+            is_superuser=is_superuser,
+        )
+        session.add(user)
+    login = await client.post("api/v1/login", data={"username": username, "password": password})
+    assert login.status_code == 200, login.text
+    return {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+
 async def _replace_envelope(connection_id: str, encrypted_payload: str | None) -> None:
     """Overwrite or remove a stored envelope, as a key change or data loss would."""
     async with session_scope() as session:
@@ -288,3 +305,82 @@ async def test_unreadable_credential_is_an_error_not_a_missing_connection(
         session.add(ConnectionSecret(connection_id=UUID(body["id"]), encrypted_payload=encrypt_api_key(_envelope())))
     restored = (await client.post(f"api/v1/connections/{body['id']}/health", headers=logged_in_headers)).json()
     assert (restored["status"], restored["status_reason"], restored["health"]) == ("ready", None, "healthy")
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_owner_changes_non_interactive_use_without_reauthorizing(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+) -> None:
+    created = await client.post(
+        "api/v1/connections", json=_payload(allow_non_interactive=True), headers=logged_in_headers
+    )
+    assert created.status_code == 201, created.text
+    body = created.json()
+    resolver = get_connection_resolver_service()
+    request = ConnectionResolutionRequest(
+        ref=ConnectionRef(provider="google_workspace", name="work"),
+        principal=ExecutionPrincipal(
+            kind="flow_owner", user_id=body["owner_id"], actor_id=body["owner_id"], interactive=False
+        ),
+    )
+    assert (await resolver.resolve(request)).access_token.get_secret_value() == "access-token-do-not-return"
+
+    withdrawn = await client.patch(
+        f"api/v1/connections/{body['id']}", json={"allow_non_interactive": False}, headers=logged_in_headers
+    )
+    assert withdrawn.status_code == 200, withdrawn.text
+    assert withdrawn.json()["allow_non_interactive"] is False
+    # Same handle, same credential: nothing to re-authorize.
+    assert {key: withdrawn.json()[key] for key in ("id", "name", "status", "has_credentials")} == {
+        "id": body["id"],
+        "name": "work",
+        "status": "ready",
+        "has_credentials": True,
+    }
+    _assert_no_credentials(withdrawn.json())
+    with pytest.raises(ConnectionNotAuthorizedError):
+        await resolver.resolve(request)
+
+    restored = await client.patch(
+        f"api/v1/connections/{body['id']}",
+        json={"allow_non_interactive": True, "display_name": "  Automation Google  "},
+        headers=logged_in_headers,
+    )
+    assert restored.status_code == 200, restored.text
+    assert (restored.json()["allow_non_interactive"], restored.json()["display_name"]) == (True, "Automation Google")
+    assert (await resolver.resolve(request)).access_token.get_secret_value() == "access-token-do-not-return"
+
+    for invalid in (
+        {},
+        {"allow_non_interactive": None},
+        {"display_name": "   "},
+        {"name": "renamed"},
+        {"granted_scopes": ["calendar.write"]},
+        {"credentials": {"access_token": "replacement"}},  # pragma: allowlist secret
+    ):
+        rejected = await client.patch(f"api/v1/connections/{body['id']}", json=invalid, headers=logged_in_headers)
+        assert rejected.status_code == 422, (invalid, rejected.text)
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_only_the_owner_may_enable_non_interactive_use(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+) -> None:
+    created = await client.post(
+        "api/v1/connections", json=_payload(allow_non_interactive=True), headers=logged_in_headers
+    )
+    assert created.status_code == 201, created.text
+    connection_url = f"api/v1/connections/{created.json()['id']}"
+    admin_headers = await _login_new_user(client, is_superuser=True)
+
+    # Narrowing someone else's exposure is allowed; widening it is not.
+    narrowed = await client.patch(connection_url, json={"allow_non_interactive": False}, headers=admin_headers)
+    assert narrowed.status_code == 200, narrowed.text
+    widened = await client.patch(connection_url, json={"allow_non_interactive": True}, headers=admin_headers)
+    assert widened.status_code == 403, widened.text
+
+    by_owner = await client.patch(connection_url, json={"allow_non_interactive": True}, headers=logged_in_headers)
+    assert by_owner.status_code == 200, by_owner.text
+    assert by_owner.json()["allow_non_interactive"] is True

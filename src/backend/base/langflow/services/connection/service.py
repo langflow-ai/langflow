@@ -41,6 +41,7 @@ from langflow.services.database.models.connection import (
     ConnectionRead,
     ConnectionSecret,
     ConnectionStatusReason,
+    ConnectionUpdate,
     ExecutingIdentityDescriptor,
     PersistedConnectionStatus,
 )
@@ -319,6 +320,18 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         await session.flush()
         await session.refresh(row)
         return self.to_read(row, has_credentials=False)
+
+    async def update(self, session: AsyncSession, row: Connection, payload: ConnectionUpdate) -> ConnectionRead:
+        """Apply owner-editable metadata; the stored credential is untouched."""
+        if payload.display_name is not None:
+            row.display_name = payload.display_name
+        if payload.allow_non_interactive is not None:
+            row.allow_non_interactive = payload.allow_non_interactive
+        row.updated_at = _utc_now()
+        session.add(row)
+        await session.flush()
+        await session.refresh(row)
+        return self.to_read(row, has_credentials=await self.has_credentials(session, row.id))
 
     async def delete(self, session: AsyncSession, row: Connection) -> None:
         await session.delete(row)

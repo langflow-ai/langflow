@@ -8,7 +8,7 @@ from uuid import UUID
 
 from lfx.integrations.capabilities import IntegrationIdentity
 from lfx.integrations.models import CONNECTION_NAME_PATTERN, PROVIDER_ID_PATTERN, ConnectionAccount
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, StrictStr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, StrictStr, field_validator, model_validator
 
 
 class ConnectionOwnershipMode(str, Enum):
@@ -94,6 +94,40 @@ class ConnectionCreate(BaseModel):
             msg = "granted_scopes must not contain duplicates"
             raise ValueError(msg)
         return normalized
+
+
+class ConnectionUpdate(BaseModel):
+    """Connection metadata that changes without re-authorizing the provider.
+
+    The handle (provider and name), ownership, scopes, executing identity, and
+    credentials are fixed by creation or re-authorization.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    display_name: StrictStr | None = Field(default=None, min_length=1, max_length=255)
+    allow_non_interactive: bool | None = None
+
+    @field_validator("display_name")
+    @classmethod
+    def _display_name_not_blank(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            msg = "display_name must not be blank"
+            raise ValueError(msg)
+        return value
+
+    @model_validator(mode="after")
+    def _changes_something(self) -> ConnectionUpdate:
+        if not self.model_fields_set:
+            msg = "Provide display_name or allow_non_interactive"
+            raise ValueError(msg)
+        if any(getattr(self, field) is None for field in self.model_fields_set):
+            msg = "display_name and allow_non_interactive must not be null"
+            raise ValueError(msg)
+        return self
 
 
 class ConnectionRead(BaseModel):

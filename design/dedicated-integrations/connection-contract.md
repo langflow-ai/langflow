@@ -202,14 +202,18 @@ defense in depth and pre-flight in interactive routes for UX.**
 | workflow_hitl_v2 | job_owner | as the job owner who started it; re-resolved on the worker, never persisted | per policy |
 | legacy_public_chat, a2a (anonymous), workflow_public_v2 | anonymous_public | never | deny by default; Enterprise policy may allow flagged instance connections |
 | a2a authenticated sub-path | actor | owner only | per policy |
+| lfx run, embedded, lfx serve | headless_operator | not applicable (no database) | environment- or request-provisioned only (section 5) |
 
-`allow_non_interactive` defaults to false and is connection-owner controlled through the API. INT-8 must expose
+`allow_non_interactive` defaults to false and is connection-owner controlled through the API:
+`PATCH /api/v1/connections/{connection_id}` changes it, and `display_name`, without touching the handle or the
+stored credential. Only the owner may enable it (a superuser, for an instance connection), because enabling widens
+which executions reach the owner's account. Anyone with connection `write` may disable it, so narrowing an exposure
+never costs a re-authorization. INT-8 must expose
 the persisted value, explanation, deliberate opt-in and disable control on the Connections page (B1), including
 values changed via API. Deployment and project MCP publication with auth `none` must show the acting identity
 and block when the table would deny resolution (B10). Enabling this flag cannot override tenant/host policy or
 the anonymous-public prohibition. Disabling it prevents subsequent resolutions; publication is not permanent
 authorization. Deferred webhook setup must adopt the same preflight when implemented.
-| lfx run, embedded, lfx serve | headless_operator | not applicable (no database) | environment- or request-provisioned only (section 5) |
 
 ## 5. Headless implementations
 

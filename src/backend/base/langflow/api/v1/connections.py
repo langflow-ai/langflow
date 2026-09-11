@@ -15,8 +15,10 @@ from langflow.services.connection import ConnectionConflictError, DatabaseConnec
 from langflow.services.database.models.connection import (
     Connection,
     ConnectionCreate,
+    ConnectionOwnershipMode,
     ConnectionRead,
     ConnectionTestRequest,
+    ConnectionUpdate,
 )
 from langflow.services.deps import get_connection_resolver_service
 
@@ -66,6 +68,13 @@ async def _authorized_row(
         connection_owner_id=row.owner_id,
     )
     return row
+
+
+def _may_enable_non_interactive(user: CurrentActiveUser, row: Connection) -> bool:
+    """Only a credential's owner may widen it to unattended executions."""
+    if row.ownership_mode == ConnectionOwnershipMode.INSTANCE.value:
+        return bool(user.is_superuser)
+    return str(row.owner_id) == str(user.id)
 
 
 @router.get("", response_model=list[ConnectionRead])
@@ -149,6 +158,40 @@ async def refresh_connection_health(
         row=row,
         principal=_interactive_principal(current_user),
     )
+
+
+@router.patch("/{connection_id}", response_model=ConnectionRead)
+async def update_connection(
+    connection_id: UUID,
+    payload: ConnectionUpdate,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    service: ConnectionService,
+) -> ConnectionRead:
+    """Rename a connection or change its non-interactive opt-in without re-authorizing.
+
+    Anyone who may write the connection may withdraw the opt-in. Granting it
+    widens which executions reach the owner's account, so only the owner (a
+    superuser, for an instance connection) may turn it on.
+    """
+    row = await _authorized_row(
+        service=service,
+        session=session,
+        user=current_user,
+        connection_id=connection_id,
+        action=ConnectionAction.WRITE,
+        for_update=True,
+    )
+    if (
+        payload.allow_non_interactive
+        and not row.allow_non_interactive
+        and not _may_enable_non_interactive(current_user, row)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the connection owner may allow non-interactive use.",
+        )
+    return await service.update(session, row, payload)
 
 
 @router.post("/{connection_id}/revoke", response_model=ConnectionRead)

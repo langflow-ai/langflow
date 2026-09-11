@@ -382,6 +382,7 @@ The following endpoints are most often used when contributing to the Langflow co
   * POST `/v1/connections`: Create connection metadata and optionally provide credentials for encrypted storage.
   * POST `/v1/connections/{connection_id}/test`: Test the stored credential and required scope coverage.
   * POST `/v1/connections/{connection_id}/health`: Refresh the stored connection health.
+  * PATCH `/v1/connections/{connection_id}`: Change `display_name` or `allow_non_interactive` without re-authorizing the provider. Only the connection owner can enable `allow_non_interactive`; anyone who can modify the connection can disable it.
   * POST `/v1/connections/{connection_id}/revoke`: Remove stored credentials and mark the connection revoked.
   * DELETE `/v1/connections/{connection_id}`: Delete a connection.
 
