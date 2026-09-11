@@ -4162,6 +4162,100 @@ class TestStreamableHttpTransportPolicy:
         assert _should_attempt_sse_after_streamable_failure(ConnectionError("x")) is False
 
 
+class TestExplicitSseMode:
+    """Regression tests: explicit SSE mode must not probe Streamable HTTP, and an
+    HTTP 400 from an SSE-only server must trigger the SSE fallback instead of
+    being retried as transient."""
+
+    def _connection_params(self):
+        return {
+            "url": "http://test-mcp.example/mcp",
+            "headers": {},
+            "timeout_seconds": 30,
+            "verify_ssl": True,
+        }
+
+    def _fake_client_session(self):
+        inst = MagicMock()
+        inst.initialize = AsyncMock()
+        inst.__aenter__ = AsyncMock(return_value=inst)
+        inst.__aexit__ = AsyncMock(return_value=None)
+        return inst
+
+    def test_400_is_not_transient(self):
+        req = httpx.Request("GET", "http://x")
+        resp_400 = httpx.Response(400, request=req)
+        assert _is_transient_streamable_http_error(httpx.HTTPStatusError("x", request=req, response=resp_400)) is False
+
+    def test_sse_fallback_after_400(self):
+        req = httpx.Request("GET", "http://x")
+        resp_400 = httpx.Response(400, request=req)
+        e = httpx.HTTPStatusError("x", request=req, response=resp_400)
+        assert _should_attempt_sse_after_streamable_failure(e) is True
+
+    @pytest.mark.asyncio
+    async def test_explicit_sse_preference_skips_streamable_probe(self):
+        manager = MCPSessionManager()
+        try:
+            fake_sse = self._fake_client_session()
+            stream_cm = MagicMock()
+            sse_cm = MagicMock()
+            sse_cm.return_value.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock()))
+            sse_cm.return_value.__aexit__ = AsyncMock(return_value=None)
+            with (
+                patch("lfx.base.mcp.util.ClientSession", return_value=fake_sse),
+                patch("mcp.client.streamable_http.streamablehttp_client", stream_cm),
+                patch("mcp.client.sse.sse_client", sse_cm),
+            ):
+                _session, task, transport, sse_lock = await manager._create_streamable_http_session(
+                    "test_sess", self._connection_params(), "sse"
+                )
+                assert transport == "sse"
+                assert sse_lock is True
+                stream_cm.assert_not_called()
+                sse_cm.assert_called_once()
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
+        finally:
+            await manager.cleanup_all()
+
+    @pytest.mark.asyncio
+    async def test_get_session_forwards_explicit_sse_preference(self):
+        manager = MCPSessionManager()
+        try:
+            fake = self._fake_client_session()
+            create = AsyncMock(return_value=(fake, MagicMock(), "sse", True))
+            manager._create_streamable_http_session = create
+            params = self._connection_params()
+            params["preferred_transport"] = "sse"
+            session = await manager.get_session("ctx-1", params, "streamable_http")
+            assert session is fake
+            assert create.call_args.args[2] == "sse"
+        finally:
+            await manager.cleanup_all()
+
+    @pytest.mark.asyncio
+    async def test_update_tools_sse_mode_forces_sse_transport(self):
+        client = MagicMock()
+        client._connected = True
+        client.connect_to_server = AsyncMock(return_value=[])
+        server_config = {"mode": "SSE", "url": "http://test-mcp.example/sse"}
+        with patch("lfx.base.mcp.util.validate_connector_url_for_ssrf"):
+            await update_tools("test-server", server_config, mcp_streamable_http_client=client)
+        assert client.connect_to_server.call_args.kwargs["force_sse"] is True
+
+    @pytest.mark.asyncio
+    async def test_update_tools_streamable_mode_does_not_force_sse(self):
+        client = MagicMock()
+        client._connected = True
+        client.connect_to_server = AsyncMock(return_value=[])
+        server_config = {"mode": "Streamable_HTTP", "url": "http://test-mcp.example/mcp"}
+        with patch("lfx.base.mcp.util.validate_connector_url_for_ssrf"):
+            await update_tools("test-server", server_config, mcp_streamable_http_client=client)
+        assert client.connect_to_server.call_args.kwargs["force_sse"] is False
+
+
 # ---------------------------------------------------------------------------
 # Regression tests for the CPU-spin / workflow-hang fix
 # ---------------------------------------------------------------------------
