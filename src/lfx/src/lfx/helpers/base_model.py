@@ -65,7 +65,7 @@ def coalesce_bool(value: Any) -> bool:
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
-        return value.lower() in TRUE_VALUES
+        return value.strip().lower() in TRUE_VALUES
     if isinstance(value, int):
         return bool(value)
     return False

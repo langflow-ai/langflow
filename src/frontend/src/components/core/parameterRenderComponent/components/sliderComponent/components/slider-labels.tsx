@@ -13,10 +13,10 @@ export const SliderLabels = ({
 }) => {
   return (
     <>
-      <div className="text mt-2 grid grid-cols-2 gap-x-2 text-sm">
+      <div className="mt-1 grid grid-cols-2 gap-x-2 text-xs">
         <div className="flex items-center">
           <IconComponent
-            className="mr-1 h-4 w-4 text-placeholder-foreground"
+            className="mr-1 h-3 w-3 text-placeholder-foreground"
             name={minLabelIcon}
             aria-hidden="true"
           />
@@ -35,7 +35,7 @@ export const SliderLabels = ({
             {maxLabel}
           </span>
           <IconComponent
-            className="ml-1 h-4 w-4 text-placeholder-foreground"
+            className="ml-1 h-3 w-3 text-placeholder-foreground"
             name={maxLabelIcon}
             aria-hidden="true"
           />

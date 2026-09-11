@@ -1,6 +1,8 @@
 import re
 from typing import Any
 
+from langchain_core.messages import BaseMessage
+
 from lfx.base.models.unified_models import (
     get_llm,
     handle_model_input_update,
@@ -34,11 +36,13 @@ guardrail_descriptions = {
 
 
 class GuardrailsComponent(Component):
-    display_name = "Guardrails"
+    display_name = "Guardrails (Legacy)"
     description = "Validates input text against multiple security and safety guardrails using LLM-based detection."
-    documentation = "https://docs.langflow.org/guardrails"
+    documentation = "https://docs.langflow.org/guardrails-legacy"
     icon = "shield-check"
     name = "GuardrailValidator"
+    legacy = True
+    replacement = ["llm_operations.GuardrailValidatorV2"]
 
     inputs = [
         ModelInput(
@@ -327,7 +331,10 @@ Now analyze the user input above and respond according to the instructions:"""
             if hasattr(llm, "invoke"):
                 response = llm.invoke(prompt)
                 self._token_usage = accumulate_usage(self._token_usage, extract_usage_from_message(response))
-                result = response.content.strip() if hasattr(response, "content") else str(response).strip()
+                # Gemini 3 returns content as a list of blocks. The text accessor joins
+                # only text blocks, so model reasoning never reaches the YES/NO parser.
+                content = response.text if isinstance(response, BaseMessage) else getattr(response, "content", response)
+                result = str(content).strip()
             else:
                 result = str(llm(prompt)).strip()
 

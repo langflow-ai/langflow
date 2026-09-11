@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import (
     BaseModel,
@@ -407,6 +407,9 @@ class SliderMixin(BaseModel):
     slider_buttons: bool = Field(default=False)
     slider_buttons_options: list[str] = Field(default=[])
     slider_input: bool = Field(default=False)
+    value_inverted: bool = Field(default=False)
+    """Display min + max - value while preserving the stored numeric value."""
+    slider_color: Literal["default", "red"] = Field(default="default")
 
 
 class TableMixin(BaseModel):
