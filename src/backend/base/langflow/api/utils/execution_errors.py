@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from fastapi import HTTPException
 
 SAFE_WORKFLOW_ERROR_MESSAGE = "Workflow execution failed."
+SAFE_TOOL_ERROR_MESSAGE = "Tool execution failed."
 
 
 @dataclass(frozen=True, slots=True)

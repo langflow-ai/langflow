@@ -22,6 +22,7 @@ from langchain_core.messages import AIMessage
 from lfx.base.agents.events import (
     handle_on_chain_stream,
     handle_on_tool_end,
+    handle_on_tool_error,
     handle_on_tool_start,
     process_agent_events,
 )
@@ -261,3 +262,54 @@ async def test_terminal_tool_event_restarts_narration_timer(monkeypatch, termina
 
     text_durations = [block.duration for block in result.content_blocks if isinstance(block, TextContent)]
     assert text_durations == [10000, 5000]
+
+
+async def _rehydrating_send(*, message: Message, **_kwargs) -> Message:
+    """Mimic Component.send_message: every publication hands back a fresh Message built from the dump."""
+    return Message(**message.model_dump())
+
+
+@pytest.mark.parametrize(
+    ("raised", "expected"),
+    [
+        (
+            ValueError("Tool 'flow_tool' execution failed: inner flow blew up"),
+            "Tool 'flow_tool' execution failed: inner flow blew up",
+        ),
+        (RuntimeError(), "RuntimeError"),
+    ],
+)
+async def test_tool_error_exception_is_kept_as_text(raised, expected):
+    """astream_events hands on_tool_error the raw exception; the block must carry its text, not ``{}``.
+
+    ``ToolContent.error`` is re-serialized on every publication. An exception object has no
+    JSON form and degraded to ``{}`` through ``jsonable_encoder``'s ``vars()`` fallback, so the
+    chat history and the OpenAI Responses stream showed an "Error using" step with no reason.
+    """
+    tool_blocks_map: dict[str, ToolContent] = {}
+    message = Message(sender="Machine", sender_name="AI", text="", content_blocks=[])
+
+    start_event = {"event": "on_tool_start", "name": "flow_tool", "run_id": "r1", "data": {"input": {"q": "x"}}}
+    message, _ = await handle_on_tool_start(start_event, message, tool_blocks_map, _rehydrating_send, perf_counter())
+
+    error_event = {"event": "on_tool_error", "name": "flow_tool", "run_id": "r1", "data": {"error": raised}}
+    message, _ = await handle_on_tool_error(error_event, message, tool_blocks_map, _rehydrating_send, perf_counter())
+
+    block = message.content_blocks[-1]
+    assert isinstance(block, ToolContent)
+    assert block.error == expected
+    assert block.output is None
+    assert block.header["title"] == "Error using **flow_tool**"
+    # The wire form (what the event stream and the DB row carry) keeps the text too.
+    assert message.model_dump()["content_blocks"][-1]["error"] == expected
+
+
+async def test_tool_error_string_payload_passes_through():
+    """Handlers fed a plain string (tests, non-LangChain producers) keep it verbatim."""
+    tool_blocks_map: dict[str, ToolContent] = {}
+    message = Message(sender="Machine", sender_name="AI", text="", content_blocks=[])
+    start_event = {"event": "on_tool_start", "name": "t", "run_id": "r1", "data": {"input": {"q": "x"}}}
+    message, _ = await handle_on_tool_start(start_event, message, tool_blocks_map, _passthrough, perf_counter())
+    error_event = {"event": "on_tool_error", "name": "t", "run_id": "r1", "data": {"error": "tool failed"}}
+    message, _ = await handle_on_tool_error(error_event, message, tool_blocks_map, _passthrough, perf_counter())
+    assert message.content_blocks[-1].error == "tool failed"
