@@ -276,6 +276,9 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         for_update: bool = False,
     ) -> Connection | None:
         if for_update:
+            # The lock is taken before the owner filter below, so callers must
+            # authorize the row in a separate read first (see the connections
+            # API's _authorized_row); this lookup then repeats under the lock.
             await lock_connection(session, connection_id)
         authz = get_authorization_service()
         may_fetch_cross_user = bool(getattr(user, "is_superuser", False)) or (

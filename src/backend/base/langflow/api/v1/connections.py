@@ -11,6 +11,7 @@ from fastapi.routing import APIRoute
 from lfx.integrations.models import PROVIDER_ID_PATTERN
 from lfx.services.authorization.base import ExecutionPrincipal
 from pydantic import BaseModel, ConfigDict, Field
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
 from langflow.services.authorization import ConnectionAction, ensure_connection_permission
@@ -24,7 +25,7 @@ from langflow.services.database.models.connection import (
     ConnectionTestRequest,
 )
 from langflow.services.database.models.connection.schemas import ConnectionRevokeRead
-from langflow.services.deps import get_connection_resolver_service
+from langflow.services.deps import get_connection_resolver_service, session_scope
 
 
 class _ConnectionRoute(APIRoute):
@@ -92,6 +93,26 @@ def _interactive_principal(user: CurrentActiveUser) -> ExecutionPrincipal:
     )
 
 
+async def _visible_row(
+    *,
+    service: DatabaseConnectionResolverService,
+    session: AsyncSession,
+    user: CurrentActiveUser,
+    connection_id: UUID,
+    action: ConnectionAction,
+) -> Connection:
+    row = await service.get_for_user(session, user=user, connection_id=connection_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
+    await ensure_connection_permission(
+        user,
+        action,
+        connection_id=row.id,
+        connection_owner_id=row.owner_id,
+    )
+    return row
+
+
 async def _authorized_row(
     *,
     service: DatabaseConnectionResolverService,
@@ -101,15 +122,23 @@ async def _authorized_row(
     action: ConnectionAction,
     for_update: bool = False,
 ) -> Connection:
-    row = await service.get_for_user(session, user=user, connection_id=connection_id, for_update=for_update)
-    if row is None:
+    if not for_update:
+        return await _visible_row(
+            service=service, session=session, user=user, connection_id=connection_id, action=action
+        )
+    # Taking the lock writes the row, so authorize in a separate read
+    # transaction first: a caller who may not act on this connection must
+    # never hold its lock, even briefly on the way to a 404 or 403.
+    async with session_scope() as read_session:
+        authorized = await _visible_row(
+            service=service, session=read_session, user=user, connection_id=connection_id, action=action
+        )
+        authorized_owner = (authorized.ownership_mode, authorized.owner_id)
+    # get_for_user repeats the scoped lookup under the lock. Fail closed if the
+    # row disappeared or changed owner after the permission check.
+    row = await service.get_for_user(session, user=user, connection_id=connection_id, for_update=True)
+    if row is None or (row.ownership_mode, row.owner_id) != authorized_owner:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
-    await ensure_connection_permission(
-        user,
-        action,
-        connection_id=row.id,
-        connection_owner_id=row.owner_id,
-    )
     return row
 
 
