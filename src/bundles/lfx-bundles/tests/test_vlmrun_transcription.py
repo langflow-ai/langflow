@@ -1,12 +1,12 @@
+import sys
 from unittest.mock import Mock, patch
 
 import pytest
-from langflow.schema.data import Data
-from lfx.components.vlmrun import VLMRunTranscription
-from tests.base import ComponentTestBaseWithoutClient
+from lfx.schema.data import Data
+from lfx_bundles.vlmrun import VLMRunTranscription
 
 
-class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
+class TestVLMRunTranscription:
     """Test class for VLM Run Transcription component."""
 
     def _create_mock_usage(self, total_tokens=100, prompt_tokens=70, completion_tokens=30):
@@ -58,12 +58,6 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
             "media_type": "audio",
             "_session_id": "test-session-123",
         }
-
-    @pytest.fixture
-    def file_names_mapping(self):
-        """Return file names mapping for different versions."""
-        # Since this is a new component, return empty list
-        return []
 
     def test_component_metadata(self, component_class):
         """Test component metadata attributes."""
@@ -163,24 +157,26 @@ class TestVLMRunTranscription(ComponentTestBaseWithoutClient):
         if component.status != "Either media files or media URL must be provided":
             pytest.fail(f"Expected status mismatch, got '{component.status}'")
 
-    @patch("builtins.__import__")
-    def test_vlmrun_import_error(self, mock_import, component_class, default_kwargs):
+    async def test_run_builds_result_output_via_process_media(self, component_class, default_kwargs):
+        """Test that Component.run() builds the 'result' output by dispatching to process_media."""
+        component = component_class(**default_kwargs)
+
+        results, _artifacts = await component.run()
+
+        if set(results) != {"result"}:
+            pytest.fail(f"Expected run() to build only the 'result' output, got {sorted(results)}")
+        if results["result"].data.get("error") != "Either media files or media URL must be provided":
+            pytest.fail(f"Expected the process_media no-input error, got {results['result'].data!r}")
+
+    def test_vlmrun_import_error(self, component_class, default_kwargs):
         """Test handling of VLM Run SDK import error."""
-        # Configure mock import to raise ImportError for vlmrun.client
-        original_import = __import__
-
-        def side_effect(name, *args):
-            if name == "vlmrun.client":
-                error_msg = "No module named 'vlmrun'"
-                raise ImportError(error_msg)
-            return original_import(name, *args)
-
-        mock_import.side_effect = side_effect
-
         component = component_class(**default_kwargs)
         component.media_files = ["/path/to/test.mp3"]
 
-        result = component.process_media()
+        # A None entry in sys.modules makes `from vlmrun.client import VLMRun` raise ModuleNotFoundError
+        # (an ImportError) without intercepting every other import the way patching builtins.__import__ does.
+        with patch.dict(sys.modules, {"vlmrun.client": None}):
+            result = component.process_media()
 
         if not isinstance(result, Data):
             pytest.fail(f"Expected result to be Data instance, got {type(result)}")
