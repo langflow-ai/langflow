@@ -20,6 +20,12 @@ def _parse_async_funcs(path: Path) -> dict[str, ast.AsyncFunctionDef]:
     return {node.name: node for node in ast.walk(tree) if isinstance(node, ast.AsyncFunctionDef)}
 
 
+def _module_level_async_funcs(source: str) -> dict[str, ast.AsyncFunctionDef]:
+    """Return the module's top-level async functions, the only ones a bare-name call can reach."""
+    tree = ast.parse(source)
+    return {node.name: node for node in tree.body if isinstance(node, ast.AsyncFunctionDef)}
+
+
 def _parse_flow_routes() -> dict[str, ast.AsyncFunctionDef]:
     """Return the AST of every async route handler in flows.py keyed by function name."""
     return _parse_async_funcs(_FLOWS_FILE)
@@ -344,26 +350,43 @@ def _resolve_guard_calls(
     protect -- "this surface reaches a guard" -- while allowing that factoring.
     Deleting the guard still fails the test, because no reachable helper would
     carry it. A wrapper that has its own guard is not followed further.
+
+    Only calls the function makes itself count: nested defs, lambdas and classes
+    may never run. Only a bare-name call is followed, and only to a module-level
+    function in *funcs*: ``svc.helper()`` may name something else entirely.
     """
     if func_name in _seen or func_name not in funcs:
         return []
-    func = funcs[func_name]
-    calls = _ensure_flow_permission_calls(func)
-    if calls:
-        return calls
+    own_calls = _calls_in_own_scope(funcs[func_name])
+    guards = [call for call in own_calls if _is_ensure_flow_permission(call)]
+    if guards:
+        return guards
     seen = _seen | {func_name}
-    for node in ast.walk(func):
-        if not isinstance(node, ast.Call):
+    for call in own_calls:
+        if isinstance(call.func, ast.Name):
+            guards.extend(_resolve_guard_calls(funcs, call.func.id, seen))
+    return guards
+
+
+def _calls_in_own_scope(func: ast.AsyncFunctionDef) -> list[ast.Call]:
+    """Return the calls in *func*'s own body, skipping nested functions, lambdas and classes."""
+    calls: list[ast.Call] = []
+    pending: list[ast.AST] = list(func.body)
+    while pending:
+        node = pending.pop()
+        if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef | ast.Lambda | ast.ClassDef):
             continue
-        target = node.func
-        if isinstance(target, ast.Name):
-            callee = target.id
-        elif isinstance(target, ast.Attribute):
-            callee = target.attr
-        else:
-            continue
-        calls.extend(_resolve_guard_calls(funcs, callee, seen))
+        if isinstance(node, ast.Call):
+            calls.append(node)
+        pending.extend(ast.iter_child_nodes(node))
     return calls
+
+
+def _is_ensure_flow_permission(call: ast.Call) -> bool:
+    target = call.func
+    return (isinstance(target, ast.Name) and target.id == "ensure_flow_permission") or (
+        isinstance(target, ast.Attribute) and target.attr == "ensure_flow_permission"
+    )
 
 
 @pytest.mark.parametrize(
@@ -384,12 +407,69 @@ def _resolve_guard_calls(
 )
 def test_execute_surfaces_guard_with_flow_execute(module_path, func_name):
     """build/run/webhook handlers must call ensure_flow_permission(FlowAction.EXECUTE)."""
-    funcs = _parse_async_funcs(module_path)
+    funcs = _module_level_async_funcs(module_path.read_text())
     assert func_name in funcs, f"{func_name} missing from {module_path.name}"
     calls = _resolve_guard_calls(funcs, func_name)
     assert calls, f"{func_name} reaches no ensure_flow_permission call"
     actions = {_action_arg(c) for c in calls}
     assert "FlowAction.EXECUTE" in actions, f"{func_name} actions={actions}, expected FlowAction.EXECUTE"
+
+
+_GUARDED_HELPER = """
+async def guarded_helper(user):
+    await ensure_flow_permission(user, FlowAction.EXECUTE)
+"""
+
+
+@pytest.mark.parametrize(
+    ("surface", "reaches_guard"),
+    [
+        pytest.param(
+            """
+async def surface(user):
+    await guarded_helper(user)
+""",
+            True,
+            id="bare-name-call-to-module-helper",
+        ),
+        pytest.param(
+            """
+async def surface(user):
+    async def never_called():
+        await ensure_flow_permission(user, FlowAction.EXECUTE)
+    return None
+""",
+            False,
+            id="guard-only-in-uncalled-closure",
+        ),
+        pytest.param(
+            """
+async def surface(user, svc):
+    await svc.guarded_helper(user)
+""",
+            False,
+            id="attribute-call-sharing-a-helper-name",
+        ),
+        pytest.param(
+            """
+async def surface(user):
+    callback = lambda: guarded_helper(user)
+    return callback
+""",
+            False,
+            id="call-inside-a-lambda",
+        ),
+    ],
+)
+def test_guard_reachability_follows_only_calls_the_surface_makes(surface, reaches_guard):
+    """The walker behind the execute-surface tests must not pass vacuously.
+
+    A guard in a closure the surface never runs, or a ``svc.helper()`` call that
+    merely shares a module function's name, does not protect the surface.
+    """
+    funcs = _module_level_async_funcs(_GUARDED_HELPER + surface)
+
+    assert bool(_resolve_guard_calls(funcs, "surface")) is reaches_guard
 
 
 def test_voice_build_seam_reaches_the_same_execute_guard():
@@ -401,7 +481,7 @@ def test_voice_build_seam_reaches_the_same_execute_guard():
     it back into the route to satisfy the parametrized test above would leave
     this seam building flows with no execute check at all, so pin it here.
     """
-    funcs = _parse_async_funcs(_CHAT_FILE)
+    funcs = _module_level_async_funcs(_CHAT_FILE.read_text())
     calls = _resolve_guard_calls(funcs, "build_flow_and_stream")
     actions = {_action_arg(c) for c in calls}
     assert "FlowAction.EXECUTE" in actions, f"build_flow_and_stream actions={actions}, expected FlowAction.EXECUTE"
