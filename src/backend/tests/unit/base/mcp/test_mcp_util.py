@@ -4165,7 +4165,8 @@ class TestStreamableHttpTransportPolicy:
 class TestExplicitSseMode:
     """Regression tests: explicit SSE mode must not probe Streamable HTTP, and an
     HTTP 400 from an SSE-only server must trigger the SSE fallback instead of
-    being retried as transient."""
+    being retried as transient.
+    """
 
     def _connection_params(self):
         return {

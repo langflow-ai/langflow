@@ -1094,7 +1094,16 @@ def _should_attempt_sse_after_streamable_failure(exc: BaseException) -> bool:
             msg = str(leaf).lower()
             if any(
                 x in msg
-                for x in ("400", "404", "405", "406", "not found", "method not allowed", "not acceptable", "bad request")
+                for x in (
+                    "400",
+                    "404",
+                    "405",
+                    "406",
+                    "not found",
+                    "method not allowed",
+                    "not acceptable",
+                    "bad request",
+                )
             ):
                 return True
     lowered = str(exc).lower()
@@ -2309,7 +2318,10 @@ class MCPStreamableHttpClient:
         """
         return await asyncio.wait_for(
             self._connect_to_server(
-                url, headers, sse_read_timeout_seconds=sse_read_timeout_seconds, verify_ssl=verify_ssl,
+                url,
+                headers,
+                sse_read_timeout_seconds=sse_read_timeout_seconds,
+                verify_ssl=verify_ssl,
                 force_sse=force_sse,
             ),
             timeout=get_settings_service().settings.mcp_server_timeout,
