@@ -46,6 +46,7 @@ from lfx.base.models.unified_models import get_embedding_model_options, get_embe
 from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.components.processing.converter import convert_to_dataframe
 from lfx.custom import Component
+from lfx.helpers.base_model import coalesce_bool
 from lfx.io import (
     BoolInput,
     DBProviderInput,
@@ -109,6 +110,17 @@ def _is_retrieve_mode(value: Any) -> bool:
     keeps those loading without forcing a flow rewrite.
     """
     return isinstance(value, str) and "Retrieve" in value
+
+
+# Boolean flags of a ``column_config`` row. Toggled cells hold real booleans,
+# but a typed cell (or a flow saved while the cell rendered as plain text)
+# keeps the raw string, e.g. ``"true"`` — read them with ``coalesce_bool``.
+_COLUMN_FLAGS = ("vectorize", "identifier")
+
+
+def _normalize_column_config(config_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return copies of the rows with every flag as a real boolean."""
+    return [{**row, **{key: coalesce_bool(row.get(key)) for key in _COLUMN_FLAGS}} for row in config_list]
 
 
 # Error message used by both the ingest and retrieve paths when the user is
@@ -887,7 +899,9 @@ class KnowledgeComponent(Component):
                 user_id=user_id,
                 name=name,
                 model_selection=model_selection,
-                column_config=self.column_config if isinstance(self.column_config, list) else [],
+                column_config=_normalize_column_config(self.column_config)
+                if isinstance(self.column_config, list)
+                else [],
                 backend_type=backend_type,
                 backend_config=backend_config,
             )
@@ -906,8 +920,8 @@ class KnowledgeComponent(Component):
 
         for config in config_list:
             col_name = config.get("column_name")
-            vectorize = config.get("vectorize") == "True" or config.get("vectorize") is True
-            identifier = config.get("identifier") == "True" or config.get("identifier") is True
+            vectorize = coalesce_bool(config.get("vectorize"))
+            identifier = coalesce_bool(config.get("identifier"))
 
             metadata["columns"].append(
                 {
@@ -1005,12 +1019,10 @@ class KnowledgeComponent(Component):
 
         for config in config_list:
             col_name = config.get("column_name")
-            vectorize = config.get("vectorize") == "True" or config.get("vectorize") is True
-            identifier = config.get("identifier") == "True" or config.get("identifier") is True
 
-            if vectorize:
+            if coalesce_bool(config.get("vectorize")):
                 content_cols.append(col_name)
-            if identifier:
+            if coalesce_bool(config.get("identifier")):
                 identifier_cols.append(col_name)
 
         for _, row in df_source.iterrows():

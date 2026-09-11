@@ -6,7 +6,7 @@ import ObjectRender from "@/components/common/objectRender";
 import StringReader from "@/components/common/stringReaderComponent";
 import DateReader from "@/components/core/dateReaderComponent";
 import { Badge } from "@/components/ui/badge";
-import { cn, isTimeStampString } from "@/utils/utils";
+import { cn, isTimeStampString, isTruthyCellValue } from "@/utils/utils";
 import InputGlobalComponent from "../../../inputGlobalComponent";
 import ToggleShadComponent from "../../../toggleShadComponent";
 
@@ -147,11 +147,7 @@ export default function TableAutoCellRender({
       case "null":
         return "";
       case "boolean":
-        value =
-          (typeof value === "string" && value.toLowerCase() === "true") ||
-          value === true
-            ? true
-            : false;
+        value = isTruthyCellValue(value);
         return !!colDef?.onCellValueChanged ||
           !!api.getGridOption("onCellValueChanged") ? (
           <ToggleShadComponent

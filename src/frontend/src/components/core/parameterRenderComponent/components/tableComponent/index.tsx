@@ -6,7 +6,7 @@ import "@/style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
 import type { CellKeyDownEvent, ColDef } from "ag-grid-community";
 import type { TableOptionsTypeAPI } from "@/types/api";
 import { suppressAutofillOnElement } from "@/utils/inputAutofill";
-import { cn } from "@/utils/utils";
+import { cn, isTruthyCellValue } from "@/utils/utils";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-quartz.css"; // Optional Theme applied to the grid
 import { AgGridReact, type AgGridReactProps } from "ag-grid-react";
@@ -101,25 +101,18 @@ const TableComponent = forwardRef<
           return true;
         }
 
-        // Normalize the current value to boolean
-        const normalizedCurrentValue =
-          currentRowValue === true ||
-          currentRowValue === "true" ||
-          currentRowValue === 1;
-
         // If current row is true, always allow editing (to turn it off)
-        if (normalizedCurrentValue) {
+        if (isTruthyCellValue(currentRowValue)) {
           return true;
         }
 
         // If current row is false, only allow editing if no other row is true
-        const hasAnyTrue = props.rowData.some((row) => {
-          if (!row || typeof row !== "object") return false;
-          const value = row[colField];
-          const normalizedValue =
-            value === true || value === "true" || value === 1;
-          return normalizedValue;
-        });
+        const hasAnyTrue = props.rowData.some(
+          (row) =>
+            !!row &&
+            typeof row === "object" &&
+            isTruthyCellValue(row[colField]),
+        );
 
         return !hasAnyTrue;
       } catch (_error) {
