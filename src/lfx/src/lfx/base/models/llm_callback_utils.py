@@ -40,6 +40,17 @@ def detect_provider_from_model(model_name: str | None) -> str | None:
 
     model_lower = model_name.lower()
 
+    # Azure first, and the order is the whole point. Detection is substring matching, and an
+    # Azure deployment is conventionally named after the model it serves ("azure-gpt-4",
+    # "gpt-4-azure"), so such a name matches both branches. Checking "gpt" first attributed
+    # every realistically-named Azure deployment to OpenAI, which reads as an OpenAI outage
+    # when Azure is down and misattributes per-provider cost and latency for anyone on Azure.
+    #
+    # Azure is who serves the call, so it wins over the model's own vendor. That also covers
+    # the non-OpenAI models Azure serves, such as "azure-claude".
+    if "azure" in model_lower:
+        return "azure"
+
     # Pattern-based detection works across different LangChain integrations
     if "gpt" in model_lower or "o1" in model_lower or model_lower.startswith("text-"):
         return "openai"
@@ -55,7 +66,4 @@ def detect_provider_from_model(model_name: str | None) -> str | None:
         return "cohere"
     if "titan" in model_lower or "nova" in model_lower:
         return "amazon"
-    if "azure" in model_lower:
-        return "azure"
-
     return None
