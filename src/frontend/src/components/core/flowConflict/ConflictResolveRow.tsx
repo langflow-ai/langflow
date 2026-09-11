@@ -17,7 +17,17 @@ type ConflictResolveRowProps = {
 /** The one line of each side, so the choice reads as a comparison. */
 function summarise(group: ChangeGroup, t: (k: string, p?: object) => string) {
   return group.changes
-    .map((change) => t(change.sentence.key, change.sentence.params))
+    .map((change) =>
+      // Values are dropped here even when they are short enough to inline.
+      // Two of these sit one above the other, and a pair of long quotations is
+      // read as prose rather than compared; the raw diff is where the values
+      // are meant to be weighed.
+      change.sentence.key === "multiEdit.change.fieldShort"
+        ? t("multiEdit.change.fieldLong", {
+            field: change.sentence.params.field,
+          })
+        : t(change.sentence.key, change.sentence.params),
+    )
     .join(" ");
 }
 

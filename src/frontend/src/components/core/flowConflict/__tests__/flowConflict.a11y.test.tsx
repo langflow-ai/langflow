@@ -373,6 +373,38 @@ describe("duplicate dialog accessibility", () => {
     expect(theirsRadio()).not.toBeChecked();
   });
 
+  it("should_offer_the_raw_diff_only_where_a_version_is_being_chosen", async () => {
+    render(<DuplicateFlowModal />);
+    await screen.findByTestId("duplicate-flow-modal");
+
+    // prompt-1 is contested, so comparing the two versions is the point.
+    expect(
+      within(
+        screen.getByTestId("conflict-change-mine-node:prompt-1"),
+      ).getByRole("button", { name: /show changes/i }),
+    ).toBeInTheDocument();
+
+    // kb-1 is theirs alone: an ordinary change to include or not, with no
+    // version of mine to weigh it against, so the control would only add noise.
+    expect(
+      within(
+        screen.getByTestId("conflict-change-theirs-node:kb-1"),
+      ).queryByRole("button", { name: /show changes/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should_keep_values_out_of_the_two_versions_it_compares", async () => {
+    render(<DuplicateFlowModal />);
+    await screen.findByTestId("duplicate-flow-modal");
+
+    const card = screen.getByTestId("conflict-resolve-node:prompt-1");
+
+    // Both sides name the field and stop there. Quoting each value inside the
+    // card turns a comparison into two paragraphs of prose.
+    expect(within(card).getAllByText(/template updated\.$/i).length).toBe(2);
+    expect(within(card).queryByText(/updated from/i)).not.toBeInTheDocument();
+  });
+
   it("should_never_render_a_secret_value_in_any_state", async () => {
     const user = userEvent.setup();
     render(<DuplicateFlowModal />);

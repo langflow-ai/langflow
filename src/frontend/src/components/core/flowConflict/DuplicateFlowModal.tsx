@@ -343,6 +343,9 @@ export function DuplicateFlowModal() {
                       key={group.targetKey}
                       group={group}
                       side="mine"
+                      // Only a contested component asks the reader to compare
+                      // two versions; elsewhere the sentence is the whole story.
+                      expandable={contested.has(group.targetKey)}
                       replacedBy={
                         replaced
                           ? t("multiEdit.dialog.usingTheirs", {

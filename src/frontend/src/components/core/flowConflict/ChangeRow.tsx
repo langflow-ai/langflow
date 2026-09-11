@@ -36,14 +36,20 @@ function RawDiff({ before, after }: { before: string; after: string }) {
 }
 
 /** One change inside a component: the sentence, and its diff on demand. */
-function ChangeLine({ change }: { change: FlowChange }) {
+function ChangeLine({
+  change,
+  expandable,
+}: {
+  change: FlowChange;
+  expandable: boolean;
+}) {
   const { t } = useTranslation();
   const [showDiff, setShowDiff] = useState(false);
 
   return (
     <li className="text-[12px] font-medium leading-[19.5px] text-muted-foreground">
       {t(change.sentence.key, change.sentence.params)}
-      {change.detail && (
+      {expandable && change.detail && (
         <>
           {/* Its own line rather than trailing the sentence: inline, it landed
               at a different place under every sentence length. */}
@@ -80,6 +86,10 @@ type ChangeRowProps = {
   replacedBy?: string;
   checked: boolean;
   disabled?: boolean;
+  /** Whether the raw before/after may be opened. Only a contested component
+   * asks the reader to compare two versions; everywhere else the sentence is
+   * the whole story and the control is noise. */
+  expandable?: boolean;
   /** Whose list this row is in. The same component can appear on both sides. */
   side: "mine" | "theirs";
   onToggle?: (targetKey: string) => void;
@@ -96,6 +106,7 @@ export function ChangeRow({
   group,
   checked,
   disabled,
+  expandable = false,
   replacedBy,
   side,
   onToggle,
@@ -147,7 +158,11 @@ export function ChangeRow({
           </label>
           <ul className="pt-0.5">
             {group.changes.map((change) => (
-              <ChangeLine key={change.id} change={change} />
+              <ChangeLine
+                key={change.id}
+                change={change}
+                expandable={expandable}
+              />
             ))}
           </ul>
         </div>
