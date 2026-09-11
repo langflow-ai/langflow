@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.1.23"
+version = "1.1.25"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -31,17 +31,17 @@ dependencies = [
 agentql = []
 aiml = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
 altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
-apify = ["apify-client>=1.8.1", "langchain-community>=0.4.1,<1.0.0"]
+apify = ["apify-client>=1.8.1"]
 assemblyai = ["assemblyai>=0.33.0,<1.0.0"]
 azure = ["lfx-azure>=0.1.0,<1.0.0"]
 baidu = ["qianfan==0.3.5", "langchain-community>=0.4.1,<1.0.0"]
 bing = ["langchain-community>=0.4.1,<1.0.0"]
 # chromadb 1.5.9 is the newest release; CVE-2026-45829 is unpatched upstream. See .github/mend-scan-notes.md.
-chroma = ["chromadb>=1.0.0,<2.0.0", "langchain-chroma~=0.2.6", "langchain-community>=0.4.1,<1.0.0"]
+chroma = ["chromadb>=1.0.0,<2.0.0", "langchain-chroma~=0.2.6"]
 cleanlab = ["cleanlab-tlm>=1.1.2,<2.0.0"]
 clickhouse = ["clickhouse-connect==0.7.19", "langchain-community>=0.4.1,<1.0.0"]
-cloudflare = ["langchain-community>=0.4.1,<1.0.0"]
-codeagents = ["smolagents>=1.8.0", "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')", "langchain-litellm==0.5.1; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')"]
+cloudflare = ["langchain-cloudflare~=0.3.9"]
+codeagents = ["smolagents>=1.8.0"]
 cometapi = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
 composio = ["composio==0.16.0", "composio-langchain==0.16.0"]
 confluence = ["atlassian-python-api==3.41.16", "langchain-community>=0.4.1,<1.0.0"]
@@ -67,7 +67,7 @@ milvus = ["langchain-milvus~=0.3.2"]
 mistral = ["langchain-mistralai~=1.1.1"]
 mongodb = ["pymongo>=4.10.1", "langchain-mongodb>=0.11.0"]
 mrscraper = ["mrscraper-sdk>=0.2.1,<0.3.0"]
-needle = ["needle-python>=0.4.0", "langchain-community>=0.4.1,<1.0.0"]
+needle = ["needle-python>=0.4.0"]
 notdiamond = []
 notion = ["requests>=2.32.0", "Markdown>=3.8.0"]
 novita = ["langchain-openai>=1.1.6", "requests>=2.32.0"]

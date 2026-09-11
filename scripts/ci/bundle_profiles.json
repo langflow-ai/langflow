@@ -31,7 +31,7 @@
         {
           "distribution": "lfx-ibm",
           "extras": [],
-          "version": ">=0.2.3,<1.0.0",
+          "version": ">=0.2.4,<1.0.0",
           "providers": [
             "lfx-ibm"
           ]
@@ -39,7 +39,7 @@
         {
           "distribution": "lfx-docling",
           "extras": [],
-          "version": ">=0.1.6,<1.0.0",
+          "version": ">=0.1.7,<1.0.0",
           "providers": [
             "lfx-docling"
           ]
@@ -103,7 +103,7 @@
         {
           "distribution": "lfx-cohere",
           "extras": [],
-          "version": ">=0.1.3,<1.0.0",
+          "version": ">=0.1.4,<1.0.0",
           "providers": [
             "lfx-cohere"
           ]
@@ -111,7 +111,7 @@
         {
           "distribution": "lfx-oracle",
           "extras": [],
-          "version": ">=0.1.3,<1.0.0",
+          "version": ">=0.1.4,<1.0.0",
           "providers": [
             "lfx-oracle"
           ]
@@ -135,7 +135,7 @@
         {
           "distribution": "lfx-google",
           "extras": [],
-          "version": ">=0.1.1,<1.0.0",
+          "version": ">=0.1.2,<1.0.0",
           "providers": [
             "lfx-google"
           ]

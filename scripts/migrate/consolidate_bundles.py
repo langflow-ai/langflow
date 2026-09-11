@@ -65,7 +65,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "yahoosearch": ["yfinance==0.2.50"],
     "wolframalpha": ["wolframalpha==5.1.3", _LC_COMMUNITY],
     # --- tranche 2: vector stores ---
-    "chroma": ["chromadb>=1.0.0,<2.0.0", "langchain-chroma~=0.2.6", _LC_COMMUNITY],
+    "chroma": ["chromadb>=1.0.0,<2.0.0", "langchain-chroma~=0.2.6"],
     "clickhouse": ["clickhouse-connect==0.7.19", _LC_COMMUNITY],
     "couchbase": ["couchbase>=4.2.1", _LC_COMMUNITY],
     "milvus": ["langchain-milvus~=0.3.2"],
@@ -86,7 +86,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "perplexity": ["langchain-perplexity>=1.0.0,<2.0.0"],
     "sambanova": ["langchain-sambanova~=1.0.0"],
     # --- tranche 2: tools / memory / data ---
-    "apify": ["apify-client>=1.8.1", _LC_COMMUNITY],
+    "apify": ["apify-client>=1.8.1"],
     "assemblyai": ["assemblyai>=0.33.0,<1.0.0"],
     "confluence": ["atlassian-python-api==3.41.16", _LC_COMMUNITY],
     "firecrawl": ["firecrawl-py>=1.0.16,<2.0.0"],
@@ -95,7 +95,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "icosacomputing": ["requests>=2.32.0"],
     "mem0": ["mem0ai>=2.0.2,<3.0.0"],
     "mrscraper": ["mrscraper-sdk>=0.2.1,<0.3.0"],
-    "needle": ["needle-python>=0.4.0", _LC_COMMUNITY],
+    "needle": ["needle-python>=0.4.0"],
     "scrapegraph": ["scrapegraph-py>=1.12.0"],
     "serpapi": ["google-search-results>=2.4.1,<3.0.0", _LC_COMMUNITY],
     "unstructured": ["langchain-unstructured~=1.0.0"],
@@ -126,7 +126,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "redis": ["redis>=7.4.0,<8.0.0", _LC_COMMUNITY],
     "elastic": ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0", "opensearch-py==2.8.0"],
     "bing": [_LC_COMMUNITY],  # BingSearchAPIWrapper (community, httpx-based)
-    "cloudflare": [_LC_COMMUNITY],  # CloudflareWorkersAI (community)
+    "cloudflare": ["langchain-cloudflare~=0.3.9"],
     "maritalk": [_LC_COMMUNITY],  # ChatMaritalk (community)
     "searchapi": [_LC_COMMUNITY],  # SearchApiAPIWrapper (community)
     "vectara": [_LC_COMMUNITY],  # Vectara (community)
@@ -142,10 +142,9 @@ PROVIDER_DEPS: dict[str, list[str]] = {
         "agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
     ],
     "codeagents": [
+        # OpenDsStar is a manual opt-in: its DiskCache dependency has no released fix.
+        # Keep the component code, but never add it to managed extras or aggregates.
         "smolagents>=1.8.0",
-        "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",  # noqa: E501
-        # Temporary compatibility valve: newer releases require cryptography<49.
-        "langchain-litellm==0.5.1; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",  # noqa: E501
     ],
     # --- tranche 8: agent/model SDKs (needed the lfx dynamic-import test decoupling) ---
     "composio": ["composio==0.9.2", "composio-langchain==0.9.2"],
