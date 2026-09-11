@@ -6,7 +6,7 @@ from collections.abc import AsyncGenerator
 from typing import Annotated, Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from lfx.log.logger import logger
 from lfx.observability import execution_protocol
 from lfx.schema.openai_responses_schemas import create_openai_error, create_openai_error_chunk
@@ -774,6 +774,11 @@ async def create_response(
             type_="processing_error",
             code=integration_details.code,
         )
+        if integration_details.code and isinstance(client_error, HTTPException):
+            # A typed integration failure keeps the status error_for_client mapped
+            # (401 expired, 403 not authorized, 429 rate limited). OpenAI SDKs branch
+            # on it, and a 200 would read as a successful response.
+            return JSONResponse(status_code=client_error.status_code, content={"error": error_response["error"]})
         return OpenAIErrorResponse(error=error_response["error"])
 
     # Log telemetry for successful completion
