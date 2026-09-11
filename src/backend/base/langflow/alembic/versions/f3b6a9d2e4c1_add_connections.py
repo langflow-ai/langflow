@@ -1,7 +1,7 @@
 """Add connection metadata and encrypted credential tables.
 
 Revision ID: f3b6a9d2e4c1
-Revises: c9f2e5a7b1d4
+Revises: e8f0a2c4d6b9
 Create Date: 2026-09-03
 
 Phase: EXPAND
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 revision: str = "f3b6a9d2e4c1"  # pragma: allowlist secret
-down_revision: str | None = "c9f2e5a7b1d4"  # pragma: allowlist secret
+down_revision: str | None = "e8f0a2c4d6b9"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
