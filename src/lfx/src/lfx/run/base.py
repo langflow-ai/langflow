@@ -453,6 +453,11 @@ async def run_flow(
                     component_types.add(vertex.display_name)
             logger.debug(f"Component types in graph: {', '.join(sorted(component_types))}")
 
+        if script_path is not None:
+            # A flow run from a file can call its siblings in the same folder. lfx has no
+            # database to look them up in, so the folder travels on the graph context.
+            graph.context["project_dir"] = str(script_path.parent)
+
         graph.prepare()
         logger.info("Graph preparation completed")
 
