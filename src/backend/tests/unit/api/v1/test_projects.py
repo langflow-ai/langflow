@@ -22,6 +22,7 @@ from langflow.services.database.models.flow_version_deployment_attachment.model 
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import session_scope
 from lfx.services.adapters.deployment.schema import DeploymentType
+from sqlmodel import select
 
 CYRILLIC_NAME = "Новый проект"
 CYRILLIC_DESC = "Описание проекта с кириллицей"  # noqa: RUF001
@@ -427,6 +428,144 @@ async def test_delete_project_recovers_from_concurrent_write_lock(
 
     get_resp = await client.get(f"api/v1/projects/{project_id}", headers=logged_in_headers)
     assert get_resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_delete_project_retry_does_not_leak_stale_memory_base_handle(
+    client: AsyncClient, active_user, logged_in_headers, basic_case, monkeypatch
+):
+    """A retry that finds the project already gone must not carry a stale cleanup handle.
+
+    Regression for: attempt 0 populates ``memory_base_cleanups`` with a handle for
+    flow F1's Memory Base, then hits lock contention and its DB transaction rolls
+    back — but the in-memory ``memory_base_cleanups`` list is a plain Python list
+    the rollback never touches. Before the retry, a concurrent request moves F1
+    out of the project and deletes the (now-empty) project. The retry's
+    ``_load_project()`` returns None so ``_delete_attempt`` returns early, BEFORE
+    the ``.clear()`` inside ``_delete_project_operation`` (which never runs on
+    this attempt) would have reset the list. Without the fix,
+    ``finalize_flow_memory_base_cleanup`` is then called with F1's now-stale
+    handle even though F1 survived — only moved — dropping its live collection.
+
+    Uses the REAL ``run_with_lock_retry``. On the first attempt a competing
+    connection commits the flow move + project delete, then the attempt raises a
+    genuine SQLite "database is locked" error (the same wrapped-``OperationalError``
+    shape ``test_delete_project_does_not_leak_sql_on_database_error`` uses) so the
+    real retry logic rolls back and re-runs — deterministically, without relying
+    on SQLite snapshot-conflict timing. Only ``cascade_delete_flow`` is stubbed,
+    to record the handle into the list without taking the writer lock.
+    """
+    import sqlite3
+
+    from langflow.api.v1 import projects as projects_module
+    from langflow.services.database.models.flow.model import Flow as FlowModel
+    from langflow.services.database.models.memory_base.model import MemoryBase
+    from langflow.services.memory_base import flow_cleanup as flow_cleanup_module
+    from langflow.services.memory_base.flow_cleanup import FlowMemoryBaseCleanup
+    from sqlalchemy.exc import OperationalError
+
+    create_resp = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+    assert create_resp.status_code == status.HTTP_201_CREATED
+    project_id = UUID(create_resp.json()["id"])
+    owner_id = active_user.id
+
+    flow_payload = FlowCreate(name=f"MB Flow {uuid4()}", description="d", data={}, folder_id=project_id)
+    flow_resp = await client.post("api/v1/flows/", json=flow_payload.model_dump(mode="json"), headers=logged_in_headers)
+    assert flow_resp.status_code == status.HTTP_201_CREATED
+    flow_id = UUID(flow_resp.json()["id"])
+
+    kb_name = f"kb_{uuid4().hex[:8]}"
+    async with session_scope() as db:
+        db.add(MemoryBase(name=f"mb-{uuid4().hex[:6]}", flow_id=flow_id, user_id=owner_id, kb_name=kb_name))
+
+    async with session_scope() as db:
+        other_project = Folder(name=f"other-project-{uuid4()}", user_id=owner_id)
+        db.add(other_project)
+        await db.flush()
+        other_project_id = other_project.id
+
+    recorded_handles: list[list] = []
+
+    async def _record_finalize(handles):
+        recorded_handles.append(list(handles))
+
+    monkeypatch.setattr(flow_cleanup_module, "finalize_flow_memory_base_cleanup", _record_finalize)
+
+    # Stub cascade_delete_flow to populate the cleanup list WITHOUT taking the
+    # writer lock, so the competing commit below is free to land. The handle it
+    # records is the one that must NOT survive into the retry.
+    async def _fake_cascade_delete_flow(session, target_flow_id):  # noqa: ARG001
+        return [
+            FlowMemoryBaseCleanup(
+                kb_name=kb_name,
+                user_id=owner_id,
+                kb_username="activeuser",
+                backend_type="chroma",
+                backend_config={},
+            )
+        ]
+
+    monkeypatch.setattr(projects_module, "cascade_delete_flow", _fake_cascade_delete_flow)
+
+    # Wrap the REAL run_with_lock_retry so we can prove a second attempt ran.
+    # (attempts on the check hook alone can't prove it: the retry returns early
+    # at `target is None` before check_project_has_deployments is reached.)
+    real_run_with_lock_retry = projects_module.run_with_lock_retry
+    op_attempts = {"max": 0}
+
+    async def counting_run_with_lock_retry(operation, **kwargs):
+        async def counting_operation(attempt):
+            op_attempts["max"] = max(op_attempts["max"], attempt + 1)
+            return await operation(attempt)
+
+        return await real_run_with_lock_retry(counting_operation, **kwargs)
+
+    monkeypatch.setattr(projects_module, "run_with_lock_retry", counting_run_with_lock_retry)
+
+    original_check = projects_module.check_project_has_deployments
+    attempts = {"count": 0}
+
+    async def check_with_flow_moved_and_project_deleted(session, *, project_id):
+        # First attempt only: a genuinely separate request moves F1 to another
+        # project and deletes the (now-empty) original project, committed on its
+        # own connection. Then raise a real SQLite lock error so the REAL
+        # run_with_lock_retry rolls back attempt 0's transaction and retries —
+        # while memory_base_cleanups (a plain Python list) keeps F1's handle.
+        attempts["count"] += 1
+        if attempts["count"] == 1:
+            async with session_scope() as competing_session:
+                flow_row = await competing_session.get(FlowModel, flow_id)
+                flow_row.folder_id = other_project_id
+                competing_session.add(flow_row)
+                folder_row = await competing_session.get(Folder, project_id)
+                await competing_session.delete(folder_row)
+            lock_statement = "UPDATE ..."
+            raise OperationalError(lock_statement, {}, sqlite3.OperationalError("database is locked"))
+        return await original_check(session, project_id=project_id)
+
+    monkeypatch.setattr(projects_module, "check_project_has_deployments", check_with_flow_moved_and_project_deleted)
+
+    delete_resp = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+
+    assert delete_resp.status_code == status.HTTP_204_NO_CONTENT, delete_resp.text
+    assert op_attempts["max"] >= 2, "a retry attempt never ran — the test no longer exercises the bug path"
+    assert attempts["count"] == 1, "the lock error was injected on exactly the first attempt"
+
+    # The finalizer must have been called, but with NO handle for the surviving
+    # flow's Memory Base — the fix clears the list at the top of the retry.
+    assert recorded_handles, "finalize_flow_memory_base_cleanup was never called"
+    leaked_kb_names = {h.kb_name for handles in recorded_handles for h in handles}
+    assert kb_name not in leaked_kb_names, (
+        f"stale handle for surviving flow's Memory Base ({kb_name}) leaked into finalize: {recorded_handles}"
+    )
+
+    # F1 itself survived (moved, not deleted) and its Memory Base row is intact.
+    async with session_scope() as db:
+        surviving_flow = await db.get(FlowModel, flow_id)
+        surviving_mb = (await db.exec(select(MemoryBase).where(MemoryBase.flow_id == flow_id))).first()
+    assert surviving_flow is not None
+    assert surviving_flow.folder_id == other_project_id
+    assert surviving_mb is not None
+    assert surviving_mb.kb_name == kb_name
 
 
 async def test_delete_project_does_not_leak_sql_on_database_error(

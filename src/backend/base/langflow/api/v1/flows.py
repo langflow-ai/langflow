@@ -927,13 +927,17 @@ async def delete_flow(
     current_user: CurrentActiveUser,
 ):
     """Delete a flow."""
+    from langflow.services.memory_base.flow_cleanup import FlowMemoryBaseCleanup, finalize_flow_memory_base_cleanup
+
     actor = UserRead.model_validate(current_user, from_attributes=True)
     target_flow_id = flow_id
     flow_owner_ids: dict[UUID, UUID] = {target_flow_id: flow.user_id}
+    memory_base_cleanups: list[FlowMemoryBaseCleanup] = []
 
     async def _delete_attempt(_attempt: int) -> None:
         async def _delete_operation() -> None:
             flow_owner_ids.clear()
+            memory_base_cleanups.clear()
             retry_target = await _read_flow(session, target_flow_id, actor.id)
             if retry_target is None:
                 return
@@ -946,7 +950,7 @@ async def delete_flow(
                 folder_id=retry_target.folder_id,
             )
             flow_owner_ids[retry_target.id] = retry_target.user_id
-            await cascade_delete_flow(session, target_flow_id)
+            memory_base_cleanups.extend(await cascade_delete_flow(session, target_flow_id))
 
         await retry_flow_operation_on_deployment_guard(
             db=session,
@@ -956,6 +960,10 @@ async def delete_flow(
 
     try:
         await run_with_lock_retry(_delete_attempt, session=session, description=f"delete_flow {target_flow_id}")
+        # Commit the deletion before the best-effort external teardown so a
+        # remote collection is dropped only for a flow that is actually gone.
+        await session.commit()
+        await finalize_flow_memory_base_cleanup(memory_base_cleanups)
     except HTTPException:
         raise
     except Exception as exc:
@@ -1220,12 +1228,16 @@ async def delete_multiple_flows(
     db: DbSession,
 ):
     """Delete multiple flows by their IDs."""
+    from langflow.services.memory_base.flow_cleanup import FlowMemoryBaseCleanup, finalize_flow_memory_base_cleanup
+
     actor = UserRead.model_validate(user, from_attributes=True)
     try:
         authorized_flow_owner_ids: dict[UUID, UUID] = {}
+        memory_base_cleanups: list[FlowMemoryBaseCleanup] = []
 
         async def _delete_operation() -> int:
             authorized_flow_owner_ids.clear()
+            memory_base_cleanups.clear()
             if not flow_ids:
                 return 0
             # Widen fetch when cross-user DELETE is supported; else owner-scoped.
@@ -1250,7 +1262,7 @@ async def delete_multiple_flows(
                 )
             authorized_flow_owner_ids.update((flow.id, flow.user_id) for flow in flows_to_delete)
             for flow in flows_to_delete:
-                await cascade_delete_flow(db, flow.id)
+                memory_base_cleanups.extend(await cascade_delete_flow(db, flow.id))
             await db.flush()
             return len(flows_to_delete)
 
@@ -1266,6 +1278,10 @@ async def delete_multiple_flows(
             session=db,
             description=f"delete_multiple_flows count={len(flow_ids)}",
         )
+        # Commit the deletions before the best-effort external teardown so a
+        # remote collection is dropped only for flows that are actually gone.
+        await db.commit()
+        await finalize_flow_memory_base_cleanup(memory_base_cleanups)
     except HTTPException:
         raise
     except Exception as exc:
