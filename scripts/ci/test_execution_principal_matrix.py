@@ -7,7 +7,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from check_execution_principal_matrix import DEFAULT_MATRIX, REQUIRED_DIMENSIONS, validate_matrix
+from check_execution_principal_matrix import (
+    DEFAULT_MATRIX,
+    REPO_ROOT,
+    REQUIRED_DIMENSIONS,
+    SHARE_RESOLVER_SOURCE,
+    resolver_share_families,
+    validate_matrix,
+)
 
 CI_SCRIPTS_WORKFLOW = DEFAULT_MATRIX.parents[2] / ".github" / "workflows" / "ci-scripts-test.yml"
 
@@ -60,11 +67,15 @@ def test_every_entrypoint_declares_each_principal_and_safety_dimension() -> None
 def test_ci_workflow_watches_every_canonical_source_and_test_reference() -> None:
     matrix = json.loads(DEFAULT_MATRIX.read_text(encoding="utf-8"))
     workflow_paths = _workflow_pull_request_paths()
-    canonical_paths = {entrypoint["source"] for entrypoint in matrix["entrypoints"]} | {
-        reference.split("::", 1)[0]
-        for entrypoint in matrix["entrypoints"]
-        for reference in entrypoint["test_references"]
-    }
+    canonical_paths = (
+        {entrypoint["source"] for entrypoint in matrix["entrypoints"]}
+        | {
+            reference.split("::", 1)[0]
+            for entrypoint in matrix["entrypoints"]
+            for reference in entrypoint["test_references"]
+        }
+        | {SHARE_RESOLVER_SOURCE.relative_to(REPO_ROOT).as_posix()}
+    )
 
     uncovered = sorted(
         path for path in canonical_paths if not any(_github_path_matches(path, pattern) for pattern in workflow_paths)
@@ -115,3 +126,61 @@ def test_checker_rejects_generic_non_behavioral_test_references(tmp_path: Path) 
     errors = validate_matrix(incomplete)
     assert any("v1_run" in error and "behavior-specific" in error for error in errors)
     assert any("webhook" in error and "behavior-specific" in error for error in errors)
+
+
+def _matrix_with(tmp_path: Path, family: str, dependency_principal: str) -> Path:
+    source = json.loads(DEFAULT_MATRIX.read_text(encoding="utf-8"))
+    for entrypoint in source["entrypoints"]:
+        if entrypoint["family"] == family:
+            entrypoint["dependency_principal"] = dependency_principal
+    changed = tmp_path / "execution-principal-matrix.json"
+    changed.write_text(json.dumps(source), encoding="utf-8")
+    return changed
+
+
+def _resolver_with(tmp_path: Path, assignment: str) -> Path:
+    resolver = tmp_path / "service.py"
+    resolver.write_text(f'"""Stand-in resolver module."""\n\n{assignment}\n', encoding="utf-8")
+    return resolver
+
+
+def test_resolver_share_families_are_the_matrix_share_families() -> None:
+    matrix = json.loads(DEFAULT_MATRIX.read_text(encoding="utf-8"))
+
+    assert resolver_share_families() == {
+        entrypoint["family"]
+        for entrypoint in matrix["entrypoints"]
+        if entrypoint["dependency_principal"] == "actor_or_explicit_share"
+    }
+
+
+def test_checker_fails_when_the_matrix_tightens_a_family_the_resolver_still_shares(tmp_path: Path) -> None:
+    tightened = _matrix_with(tmp_path, "voice", "actor")
+
+    errors = validate_matrix(tightened)
+
+    assert len(errors) == 1
+    assert "['voice']" in errors[0]
+    assert "fails open" in errors[0]
+
+
+def test_checker_fails_when_the_resolver_omits_a_share_family(tmp_path: Path) -> None:
+    resolver = _resolver_with(
+        tmp_path,
+        '_SHARE_PERMITTING_FAMILIES = frozenset({"interactive_chat", "v1_run", "openai_responses", "workflow_v2"})',
+    )
+
+    errors = validate_matrix(resolver_source=resolver)
+
+    assert len(errors) == 1
+    assert "['voice']" in errors[0]
+    assert "never resolve" in errors[0]
+
+
+def test_checker_rejects_a_share_family_set_it_cannot_read(tmp_path: Path) -> None:
+    for assignment in ("OTHER = frozenset()", "_SHARE_PERMITTING_FAMILIES = frozenset(load_families())"):
+        errors = validate_matrix(resolver_source=_resolver_with(tmp_path, assignment))
+
+        assert len(errors) == 1
+        assert "_SHARE_PERMITTING_FAMILIES" in errors[0]
+        assert "could not read" in errors[0]

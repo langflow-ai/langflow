@@ -22,6 +22,7 @@ from langflow.services.authorization.access_ceiling import (
     get_current_external_access_context,
 )
 from langflow.services.authorization.actions import (
+    ConnectionAction,
     DeploymentAction,
     FileAction,
     FlowAction,
@@ -50,6 +51,7 @@ _ACTION_ENUMS = (
     FileAction,
     ShareAction,
     ProviderAccountAction,
+    ConnectionAction,
     VoiceAction,
 )
 
@@ -64,6 +66,7 @@ _OWNER_CONTEXT_KEYS = (
     "file_user_id",
     "share_user_id",
     "provider_account_user_id",
+    "connection_owner_id",
     "voice_user_id",
 )
 
@@ -179,6 +182,7 @@ def _coerce_action(
     | FileAction
     | ShareAction
     | ProviderAccountAction
+    | ConnectionAction
     | VoiceAction
     | str,
 ) -> str:
@@ -440,6 +444,16 @@ _RESOURCE_SPECS: dict[str, _ResourceSpec] = {
         workspace_kw=None,
         scope_kw=None,
         # A newly-created provider account always belongs to the caller.
+        owner_override_on_create=True,
+    ),
+    "connection": _ResourceSpec(
+        resource_type="connection",
+        owner_kw="connection_owner_id",
+        id_kw="connection_id",
+        workspace_kw=None,
+        scope_kw=None,
+        # User-owned creates belong to the caller. Instance-owned creates are
+        # additionally restricted to superusers by the API route.
         owner_override_on_create=True,
     ),
     "voice": _ResourceSpec(
@@ -755,6 +769,27 @@ async def ensure_provider_account_permission(
         kwargs={
             "provider_account_id": provider_account_id,
             "provider_account_user_id": provider_account_user_id,
+        },
+        domain_override=domain,
+    )
+
+
+async def ensure_connection_permission(
+    user: User | UserRead,
+    act: ConnectionAction | str,
+    *,
+    connection_id: UUID | None = None,
+    connection_owner_id: UUID | None = None,
+    domain: str | None = None,
+) -> None:
+    """Check permission for connection metadata or credential use."""
+    await _ensure_typed(
+        user,
+        spec_key="connection",
+        act_str=_coerce_action(act),
+        kwargs={
+            "connection_id": connection_id,
+            "connection_owner_id": connection_owner_id,
         },
         domain_override=domain,
     )

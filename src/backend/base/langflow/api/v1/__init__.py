@@ -9,6 +9,7 @@ from langflow.api.v1.authz_shares import router as authz_shares_router
 from langflow.api.v1.authz_teams import router as authz_teams_router
 from langflow.api.v1.catalog_policy import router as catalog_policy_router
 from langflow.api.v1.chat import router as chat_router
+from langflow.api.v1.connections import router as connections_router
 from langflow.api.v1.endpoints import router as endpoints_router
 from langflow.api.v1.extensions import router as extensions_router
 from langflow.api.v1.files import router as files_router
@@ -48,6 +49,7 @@ __all__ = [
     "authz_teams_router",
     "catalog_policy_router",
     "chat_router",
+    "connections_router",
     "endpoints_router",
     "extensions_router",
     "files_router",
