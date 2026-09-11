@@ -22,6 +22,7 @@ table so they survive restart and are visible across workers.
 
 import asyncio
 import hashlib
+import time
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -370,6 +371,53 @@ def _suspended_response(flow_id: UUID, task_id: str, session_id: str | None, pen
     )
 
 
+async def _log_a2a_resume_run(
+    *,
+    task_id: str,
+    run_seconds: int,
+    success: bool,
+    error_message: str | None = None,
+) -> None:
+    """Record a completed A2A resume segment as a run event.
+
+    The v2 sync and streaming paths already emit a ``RunPayload`` for every run they
+    finish, and both deliberately skip the emission when the run parks for human input
+    (the run is not over yet). Resume is the other half of that contract: it is the call
+    that actually finishes a HITL run, and it runs through ``run_graph_internal`` rather
+    than through ``execute_sync_workflow``, so without this the whole run was never
+    metered. ``log_package_run`` appends to ``run_event_store`` before the do-not-track
+    gate, so enterprise metering sees it even when outbound telemetry is off.
+
+    ``run_id`` is the A2A task id, normalized the way ``_run_flow`` derives its ``job_id``
+    (a UUID-shaped task id becomes its canonical string), so the two A2A segments of one
+    run carry the same id and a consumer that dedups by run id counts it exactly once.
+    """
+    try:
+        run_id = str(UUID(task_id))
+    except ValueError:
+        # A client task id that is not a UUID: the sync path mints a fresh job_id in that
+        # case, so there is nothing to line up with; key the event on the task id itself.
+        run_id = task_id
+    try:
+        from langflow.services.deps import get_telemetry_service
+        from langflow.services.telemetry.schema import RunPayload
+
+        telemetry = get_telemetry_service()
+        if telemetry is None:
+            return
+        await telemetry.log_package_run(
+            RunPayload(
+                run_is_webhook=False,
+                run_seconds=run_seconds,
+                run_success=success,
+                run_error_message="" if success else (error_message or "workflow error"),
+                run_id=run_id,
+            )
+        )
+    except Exception:  # noqa: BLE001
+        await logger.awarning("Telemetry hook failed for A2A resume %s", task_id, exc_info=True)
+
+
 async def _resume_flow(
     flow_id: UUID,
     task_id: str,
@@ -437,6 +485,12 @@ async def _resume_flow(
         msg = f"A2A task {task_id} is already being resumed"
         raise ResumeConflictError(msg)
 
+    # Meter this segment: a re-pause emits nothing (the run is still going, mirroring
+    # execute_sync_workflow), while completion and failure each emit exactly one run event.
+    # Cancellation (client disconnect, shutdown) raises asyncio.CancelledError, which derives
+    # from BaseException and so never reaches the failure branch: like the streaming path, a
+    # closed connection is never metered as a failed run.
+    resume_start = time.perf_counter()
     try:
         # No flow_execution_span here: run_graph_internal reaches Graph.arun, which opens one.
         with (
@@ -460,10 +514,22 @@ async def _resume_flow(
     except GraphPausedException as exc:
         # Paused again (multi-step HITL): the new checkpoint is already saved under this run_id.
         return _suspended_response(flow_id, task_id, graph.session_id, exc.data or {})
-    except Exception:
+    except Exception as exc:
         # Failure/timeout: drop the now-unusable checkpoint so it doesn't orphan a terminal task.
         await store.delete_by_run_id(task_id)
+        await _log_a2a_resume_run(
+            task_id=task_id,
+            run_seconds=int(time.perf_counter() - resume_start),
+            success=False,
+            error_message=str(exc),
+        )
         raise
+    else:
+        await _log_a2a_resume_run(
+            task_id=task_id,
+            run_seconds=int(time.perf_counter() - resume_start),
+            success=True,
+        )
 
     await store.delete_by_run_id(task_id)
     from langflow.api.v1.schemas import RunResponse
