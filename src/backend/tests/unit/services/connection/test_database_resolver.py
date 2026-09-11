@@ -7,12 +7,14 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import pytest
+from langflow.services.connection import DatabaseConnectionResolverService
 from langflow.services.connection import service as connection_service
 from langflow.services.database.models.connection import Connection
 from langflow.services.deps import get_connection_resolver_service, session_scope
 from lfx.integrations.errors import ConnectionNotAuthorizedError, ConnectionUnresolvedError
 from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
 from lfx.services.authorization.base import ExecutionPrincipal
+from lfx.services.deps import get_connection_resolver
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -70,6 +72,15 @@ def share_authz(monkeypatch: pytest.MonkeyPatch) -> _ShareAuthz:
         lambda: SimpleNamespace(auth_settings=SimpleNamespace(AUTHZ_ENABLED=True)),
     )
     return authz
+
+
+@pytest.mark.usefixtures("client")
+async def test_component_lookup_returns_the_database_resolver() -> None:
+    # Components resolve through lfx's lookup, which rejects resolvers that are not ready.
+    resolver = get_connection_resolver()
+
+    assert isinstance(resolver, DatabaseConnectionResolverService)
+    assert resolver is get_connection_resolver_service()
 
 
 @pytest.mark.usefixtures("active_user")

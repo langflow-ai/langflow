@@ -140,6 +140,12 @@ def _access_policy(row: Connection, *, explicit_share_authorized: bool) -> Conne
 class DatabaseConnectionResolverService(BaseConnectionResolverService):
     """Resolve encrypted database connections while exposing only safe metadata."""
 
+    def __init__(self) -> None:
+        super().__init__()
+        # Direct service-class registration does not call set_ready(), unlike
+        # factory creation, and lfx's connection lookup rejects unready resolvers.
+        self.set_ready()
+
     async def create(
         self,
         session: AsyncSession,
