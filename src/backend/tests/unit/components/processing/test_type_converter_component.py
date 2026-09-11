@@ -18,6 +18,11 @@ class TestTypeConverterComponent(ComponentTestBaseWithoutClient):
         return TypeConverterComponent
 
     @pytest.fixture
+    def default_kwargs(self):
+        """Return the default kwargs for the component."""
+        return {"input_data": Message(text="Hello World"), "output_type": "Message"}
+
+    @pytest.fixture
     def file_names_mapping(self):
         """Return an empty list since this component doesn't have version-specific files."""
         return []

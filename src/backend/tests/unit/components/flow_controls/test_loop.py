@@ -41,14 +41,9 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
     def default_kwargs(self):
         """Return the default kwargs for the component."""
         return {
-            "data": [[Data(text="Hello World")]],
+            "data": [Data(text="Hello World")],
             "loop_input": [Data(text=TEXT)],
         }
-
-    def test_latest_version(self, component_class, default_kwargs) -> None:
-        """Test that the component works with the latest version."""
-        result = component_class(**default_kwargs)
-        assert result is not None, "Component returned None for the latest version."
 
     async def _create_flow(self, client, json_loop_test, logged_in_headers):
         vector_store = orjson.loads(json_loop_test)

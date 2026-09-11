@@ -42,6 +42,15 @@ class TestFlowToolComponent(ComponentTestBaseWithClient):
         chat_output.set(input_value=chat_input.message_response)
         return Graph(chat_input, chat_output)
 
+    async def test_latest_version(self, component_class, default_kwargs, skipped_outputs, flow_graph):
+        # Serve the saved flow offline; building the tool from it runs for real.
+        flow_data = Data(data={"id": uuid4(), "name": "test_flow", "description": "Flow description"})
+        with (
+            patch.object(component_class, "get_flow", return_value=flow_data),
+            patch.object(component_class, "load_flow", return_value=flow_graph),
+        ):
+            await super().test_latest_version(component_class, default_kwargs, skipped_outputs)
+
     async def test_component_initialization(self, component_class, default_kwargs):
         """Test proper initialization of FlowToolComponent."""
         component = await self.component_setup(component_class, default_kwargs)

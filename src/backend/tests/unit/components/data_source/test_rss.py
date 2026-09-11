@@ -69,6 +69,16 @@ class TestRSSReaderComponent(ComponentTestBaseWithoutClient):
         """Return an empty list since this component doesn't have version-specific files."""
         return []
 
+    async def test_latest_version(self, component_class, default_kwargs, skipped_outputs):
+        # Serve the feed offline; the component's parsing of it runs for real.
+        feed = b"""<?xml version="1.0" encoding="UTF-8"?>
+        <rss version="2.0"><channel><item>
+            <title>Test Article</title><link>https://example.com/1</link>
+            <pubDate>2024-03-20</pubDate><description>Test summary</description>
+        </item></channel></rss>"""
+        with patch("requests.get", return_value=_mock_response(content=feed)):
+            await super().test_latest_version(component_class, default_kwargs, skipped_outputs)
+
     def test_successful_rss_fetch(self):
         # Mock RSS feed content
         mock_rss_content = """

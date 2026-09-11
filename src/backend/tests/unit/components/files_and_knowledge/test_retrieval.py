@@ -118,6 +118,12 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         """New-style component: no legacy filenames."""
         return []
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "retrieve_data": "embeds the query with a live embedding provider",
+        }
+
     # ---- update_build_config ----------------------------------------
 
     async def test_get_knowledge_bases_utility(self, tmp_path, active_user):
