@@ -1,9 +1,8 @@
 from collections import Counter
+from contextlib import nullcontext
 from datetime import datetime
 from types import MethodType  # near the imports
 from typing import TYPE_CHECKING, Any
-
-from langflow.helpers.flow import get_flow_by_id_or_name, scoped_model_provider_policy_for_target_flow
 
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
 from lfx.custom.custom_component.component import Component, get_component_toolkit
@@ -12,7 +11,7 @@ from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
 
 # TODO: switch to lfx
-from lfx.helpers import get_flow_inputs, run_flow
+from lfx.helpers import get_flow_by_id_or_name, get_flow_inputs, run_flow
 from lfx.inputs.inputs import BoolInput, DropdownInput, InputTypes, MessageTextInput, StrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
@@ -25,6 +24,20 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from lfx.base.tools.component_tool import ComponentToolkit
+
+
+def _model_provider_policy(user_id, flow_id, flow_name):
+    """Scope model provider credentials to the target flow, when langflow is installed.
+
+    ``scoped_model_provider_policy_for_target_flow`` resolves per-flow provider credentials out
+    of langflow's database. Standalone lfx has no database, so there is nothing to scope and the
+    run proceeds unscoped.
+    """
+    try:
+        from langflow.helpers.flow import scoped_model_provider_policy_for_target_flow
+    except ImportError:
+        return nullcontext()
+    return scoped_model_provider_policy_for_target_flow(user_id=user_id, flow_id=flow_id, flow_name=flow_name)
 
 
 class RunFlowBaseComponent(Component):
@@ -146,7 +159,7 @@ class RunFlowBaseComponent(Component):
         if not (flow_name_selected or flow_id_selected):
             msg = "Flow name or id is required"
             raise ValueError(msg)
-        async with scoped_model_provider_policy_for_target_flow(
+        async with _model_provider_policy(
             user_id=self.user_id,
             flow_id=flow_id_selected,
             flow_name=flow_name_selected,
