@@ -182,7 +182,6 @@ describe("NodeToolbar Focused Tests", () => {
 
           expect(isMinimal).toBe(expectedMinimal);
           expect(canMinimizeWhenShown).toBe(expectedCanMinimize);
-
         },
       );
     });
