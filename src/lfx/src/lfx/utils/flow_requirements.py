@@ -120,6 +120,9 @@ _PROVIDER_PACKAGE_FALLBACKS: dict[str, set[str]] = {
     # (get_provider_param_mapping -> model_class "ChatOpenAI" -> langchain_openai),
     # but is not in MODEL_PROVIDERS_DICT, so only this fallback can supply its package.
     "OpenRouter": {"langchain-openai"},
+    # Requesty mirrors OpenRouter: unified-selectable, ChatOpenAI at runtime,
+    # not in MODEL_PROVIDERS_DICT.
+    "Requesty": {"langchain-openai"},
     "SambaNova": {"langchain-sambanova"},
 }
 
