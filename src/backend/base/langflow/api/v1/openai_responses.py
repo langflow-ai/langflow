@@ -29,7 +29,6 @@ from langflow.schema import (
     OpenAIResponsesResponse,
     OpenAIResponsesStreamChunk,
 )
-from langflow.schema.content_types import ToolContent
 from langflow.services.auth.utils import api_key_security
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.models.flow.model import FlowRead
@@ -48,6 +47,21 @@ def _flow_not_found_response(model: str) -> OpenAIErrorResponse:
         code="flow_not_found",
     )
     return OpenAIErrorResponse(error=error_response["error"])
+
+
+def _is_tool_step(block: Any) -> bool:
+    """True for a ``tool_use`` content block, whichever content-types module built it."""
+    return getattr(block, "type", None) == "tool_use"
+
+
+def _tool_error_text(error: Any) -> str:
+    """Render a ``ToolContent.error`` payload as the ``error`` string of a tool-call item."""
+    if isinstance(error, str):
+        return error
+    try:
+        return json.dumps(error, default=str)
+    except (TypeError, ValueError):
+        return str(error)
 
 
 def has_chat_input(flow_data: dict | None) -> bool:
@@ -266,10 +280,16 @@ async def run_flow_for_openai_responses(
                                                     tool_name = step.get("name", "")
                                                     tool_input = step.get("tool_input", {})
                                                     tool_output = step.get("output")
+                                                    tool_error = step.get("error")
+                                                    # A step is terminal once it carries an output OR an
+                                                    # error. A failed tool never gets an output, so gating
+                                                    # on output alone dropped every failed call from the
+                                                    # stream while the persisted message still showed it.
+                                                    tool_finished = tool_output is not None or tool_error is not None
 
                                                     # Only emit tool calls with explicit tool names and
-                                                    # meaningful arguments
-                                                    if tool_name and tool_input is not None and tool_output is not None:
+                                                    # meaningful arguments, once the step has resolved
+                                                    if tool_name and tool_input is not None and tool_finished:
                                                         # Create unique identifier for this tool call
                                                         tool_signature = (
                                                             f"{tool_name}:{hash(str(sorted(tool_input.items())))}"
@@ -328,51 +348,64 @@ async def run_flow_for_openai_responses(
                                                             tool_name,
                                                         )
 
-                                                        # If there's output, send completion event
-                                                        if tool_output is not None:
-                                                            # Check if include parameter requests tool_call.results
-                                                            include_results = (
-                                                                request.include
-                                                                and "tool_call.results" in request.include
+                                                        # The step resolved (output or error): send the completion
+                                                        # event. A failed call carries status="failed" plus the
+                                                        # error text, mirroring OpenAI's server-executed call
+                                                        # items (mcp_call / web_search_call), so consumers can
+                                                        # render the failure instead of an in-flight call.
+                                                        tool_status = (
+                                                            "failed" if tool_error is not None else "completed"
+                                                        )
+                                                        # Check if include parameter requests tool_call.results
+                                                        include_results = (
+                                                            request.include and "tool_call.results" in request.include
+                                                        )
+
+                                                        if include_results:
+                                                            # Format with detailed results
+                                                            tool_done_event = {
+                                                                "type": "response.output_item.done",
+                                                                "item": {
+                                                                    "id": f"{tool_name}_{tool_id}",
+                                                                    "inputs": tool_input,  # Raw inputs as-is
+                                                                    "status": tool_status,
+                                                                    "type": "tool_call",
+                                                                    "tool_name": f"{tool_name}",
+                                                                    # Raw output as-is; a failed call has none
+                                                                    "results": tool_output
+                                                                    if tool_output is not None
+                                                                    else [],
+                                                                },
+                                                                "output_index": 0,
+                                                                "sequence_number": tool_call_counter + 5,
+                                                            }
+                                                        else:
+                                                            # Regular function call format
+                                                            tool_done_event = {
+                                                                "type": "response.output_item.done",
+                                                                "item": {
+                                                                    "id": tool_id,
+                                                                    "type": "function_call",  # Match OpenAI format
+                                                                    "status": tool_status,
+                                                                    "arguments": arguments_str,
+                                                                    "call_id": call_id,
+                                                                    "name": tool_name,
+                                                                },
+                                                            }
+                                                        if tool_error is not None:
+                                                            tool_done_event["item"]["error"] = _tool_error_text(
+                                                                tool_error
                                                             )
 
-                                                            if include_results:
-                                                                # Format with detailed results
-                                                                tool_done_event = {
-                                                                    "type": "response.output_item.done",
-                                                                    "item": {
-                                                                        "id": f"{tool_name}_{tool_id}",
-                                                                        "inputs": tool_input,  # Raw inputs as-is
-                                                                        "status": "completed",
-                                                                        "type": "tool_call",
-                                                                        "tool_name": f"{tool_name}",
-                                                                        "results": tool_output,  # Raw output as-is
-                                                                    },
-                                                                    "output_index": 0,
-                                                                    "sequence_number": tool_call_counter + 5,
-                                                                }
-                                                            else:
-                                                                # Regular function call format
-                                                                tool_done_event = {
-                                                                    "type": "response.output_item.done",
-                                                                    "item": {
-                                                                        "id": tool_id,
-                                                                        "type": "function_call",  # Match OpenAI format
-                                                                        "status": "completed",
-                                                                        "arguments": arguments_str,
-                                                                        "call_id": call_id,
-                                                                        "name": tool_name,
-                                                                    },
-                                                                }
-
-                                                            yield (
-                                                                f"event: response.output_item.done\n"
-                                                                f"data: {json.dumps(tool_done_event)}\n\n"
-                                                            )
-                                                            await logger.adebug(
-                                                                "[OpenAIResponses][stream] tool_call.done name=%s",
-                                                                tool_name,
-                                                            )
+                                                        yield (
+                                                            f"event: response.output_item.done\n"
+                                                            f"data: {json.dumps(tool_done_event)}\n\n"
+                                                        )
+                                                        await logger.adebug(
+                                                            "[OpenAIResponses][stream] tool_call.done %s status=%s",
+                                                            tool_name,
+                                                            tool_status,
+                                                        )
 
                                     # Extract text content for streaming (only AI responses)
                                     if (
@@ -547,18 +580,21 @@ async def run_flow_for_openai_responses(
                                 # The agent's flat log carries tool_use as top-level
                                 # ToolContent leaves; the legacy/grouped shape nests
                                 # them inside a group's ``contents``. Handle both.
-                                if isinstance(block, ToolContent):
-                                    leaves = [block]
-                                else:
-                                    leaves = getattr(block, "contents", None) or []
+                                # Match on the ``type`` discriminator rather than
+                                # ``isinstance``: the agent builds its blocks from
+                                # ``lfx.schema.content_types``, a different class than
+                                # the langflow-side copy, so an isinstance check never
+                                # matched a real message and no tool call was returned.
+                                leaves = [block] if _is_tool_step(block) else getattr(block, "contents", None) or []
                                 tool_calls.extend(
                                     {
                                         "name": content.name,
                                         "input": content.tool_input,
                                         "output": content.output,
+                                        "error": content.error,
                                     }
                                     for content in leaves
-                                    if isinstance(content, ToolContent)
+                                    if _is_tool_step(content)
                                 )
                     if output_text:
                         break
@@ -580,6 +616,9 @@ async def run_flow_for_openai_responses(
 
     tool_call_id_counter = 1
     for tool_call in tool_calls:
+        # Same failure contract as the stream: status="failed" plus the error text.
+        tool_error = tool_call.get("error")
+        tool_status = "failed" if tool_error is not None else "completed"
         if include_results:
             # Format as detailed tool call with results (like file_search_call in sample)
             tool_call_item = {
@@ -587,7 +626,7 @@ async def run_flow_for_openai_responses(
                 "queries": list(tool_call["input"].values())
                 if isinstance(tool_call["input"], dict)
                 else [str(tool_call["input"])],
-                "status": "completed",
+                "status": tool_status,
                 "tool_name": f"{tool_call['name']}",
                 "type": "tool_call",
                 "results": tool_call["output"] if tool_call["output"] is not None else [],
@@ -597,10 +636,12 @@ async def run_flow_for_openai_responses(
             tool_call_item = {
                 "id": f"fc_{tool_call_id_counter}",
                 "type": "function_call",
-                "status": "completed",
+                "status": tool_status,
                 "name": tool_call["name"],
                 "arguments": json.dumps(tool_call["input"]) if tool_call["input"] is not None else "{}",
             }
+        if tool_error is not None:
+            tool_call_item["error"] = _tool_error_text(tool_error)
 
         output_items.append(tool_call_item)
         tool_call_id_counter += 1
