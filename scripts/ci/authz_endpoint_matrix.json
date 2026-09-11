@@ -443,13 +443,14 @@
       "resource": "connection",
       "domain": "caller-global owner or explicit share scope",
       "privacy": "connection identifier denials are returned as 404; responses contain metadata and health only",
-      "side_effects": "authorize before credential decryption, health checks, metadata updates, revocation, or deletion; only the owner enables non-interactive use",
+      "side_effects": "authorize before credential decryption, health checks, metadata updates, revocation, or deletion; instance connections change only by superuser; only the owner enables non-interactive use",
       "frontend": "connection pickers list only owned, instance, or explicitly shared metadata and never receive token material",
       "personas": "canonical_v1",
       "test_references": [
         "src/backend/tests/unit/api/v1/test_connections.py::test_non_owner_cannot_test_or_delete_connection",
         "src/backend/tests/unit/api/v1/test_connections.py::test_connection_responses_never_include_tokens",
-        "src/backend/tests/unit/api/v1/test_connections.py::test_only_the_owner_may_enable_non_interactive_use"
+        "src/backend/tests/unit/api/v1/test_connections.py::test_only_the_owner_may_enable_non_interactive_use",
+        "src/backend/tests/unit/api/v1/test_connections.py::test_instance_connections_are_changed_only_by_superusers"
       ],
       "routes": [
         "GET||list_connections|read|authenticated",

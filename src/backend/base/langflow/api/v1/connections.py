@@ -24,6 +24,11 @@ from langflow.services.deps import get_connection_resolver_service
 
 router = APIRouter(prefix="/connections", tags=["Connections"])
 
+# Every user can see and use instance connections, but only superusers create
+# them, so only superusers may change or remove them. This floor holds even
+# when authorization is disabled or a plugin would allow the action.
+_INSTANCE_OPERATOR_ACTIONS = frozenset({ConnectionAction.WRITE, ConnectionAction.DELETE})
+
 
 def _database_service() -> DatabaseConnectionResolverService:
     service = get_connection_resolver_service()
@@ -61,6 +66,15 @@ async def _authorized_row(
     row = await service.get_for_user(session, user=user, connection_id=connection_id, for_update=for_update)
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
+    if (
+        row.ownership_mode == ConnectionOwnershipMode.INSTANCE.value
+        and action in _INSTANCE_OPERATOR_ACTIONS
+        and not user.is_superuser
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only a superuser may change or remove an instance connection.",
+        )
     await ensure_connection_permission(
         user,
         action,

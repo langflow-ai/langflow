@@ -384,3 +384,46 @@ async def test_only_the_owner_may_enable_non_interactive_use(
     by_owner = await client.patch(connection_url, json={"allow_non_interactive": True}, headers=logged_in_headers)
     assert by_owner.status_code == 200, by_owner.text
     assert by_owner.json()["allow_non_interactive"] is True
+
+
+@pytest.mark.usefixtures("active_super_user")
+async def test_instance_connections_are_changed_only_by_superusers(
+    client: AsyncClient,
+    logged_in_headers_super_user: dict[str, str],
+) -> None:
+    created = await client.post(
+        "api/v1/connections", json=_payload(ownership_mode="instance"), headers=logged_in_headers_super_user
+    )
+    assert created.status_code == 201, created.text
+    connection_url = f"api/v1/connections/{created.json()['id']}"
+    member_headers = await _login_new_user(client)
+
+    # Every user can see and use the instance connection...
+    listed = await client.get("api/v1/connections", headers=member_headers)
+    assert [item["id"] for item in listed.json()] == [created.json()["id"]]
+    checked = await client.post(f"{connection_url}/health", headers=member_headers)
+    assert checked.status_code == 200, checked.text
+
+    # ...but cannot change or remove it, even with authorization disabled.
+    denied = [
+        await client.patch(connection_url, json={"display_name": "Mine now"}, headers=member_headers),
+        await client.patch(connection_url, json={"allow_non_interactive": True}, headers=member_headers),
+        await client.post(f"{connection_url}/revoke", headers=member_headers),
+        await client.delete(connection_url, headers=member_headers),
+    ]
+    assert [response.status_code for response in denied] == [403, 403, 403, 403]
+    unchanged = (await client.get("api/v1/connections", headers=member_headers)).json()[0]
+    assert (unchanged["display_name"], unchanged["allow_non_interactive"], unchanged["status"]) == (
+        "Work Google",
+        False,
+        "ready",
+    )
+
+    renamed = await client.patch(
+        connection_url,
+        json={"display_name": "Shared Google", "allow_non_interactive": True},
+        headers=logged_in_headers_super_user,
+    )
+    assert renamed.status_code == 200, renamed.text
+    deleted = await client.delete(connection_url, headers=logged_in_headers_super_user)
+    assert deleted.status_code == 204, deleted.text

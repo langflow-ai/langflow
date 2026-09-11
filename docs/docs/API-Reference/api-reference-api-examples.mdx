@@ -386,7 +386,7 @@ The following endpoints are most often used when contributing to the Langflow co
   * POST `/v1/connections/{connection_id}/revoke`: Remove stored credentials and mark the connection revoked.
   * DELETE `/v1/connections/{connection_id}`: Delete a connection.
 
-  Connection responses contain metadata, status, health, granted scopes, and a `has_credentials` flag. They never contain access tokens, refresh tokens, or encrypted credential payloads. A connection with `status: error` also has a `status_reason`: `credential-missing` when its stored credential is gone, or `credential-undecryptable` when the stored credential can't be decrypted with the server's current secret key. User-owned connections can be used non-interactively only when `allow_non_interactive` is enabled; connections cannot be shared publicly.
+  Connection responses contain metadata, status, health, granted scopes, and a `has_credentials` flag. They never contain access tokens, refresh tokens, or encrypted credential payloads. A connection with `status: error` also has a `status_reason`: `credential-missing` when its stored credential is gone, or `credential-undecryptable` when the stored credential can't be decrypted with the server's current secret key. User-owned connections can be used non-interactively only when `allow_non_interactive` is enabled; connections cannot be shared publicly. Instance connections are visible to every user, but only superusers can create, change, revoke, or delete them.
 
 * [Use voice mode](/concepts-voice-mode):
   * WS `/v1/voice/ws/flow_tts/{flow_id}`: Speech-to-text session that runs a flow and returns TTS.
