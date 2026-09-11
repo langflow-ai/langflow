@@ -81,6 +81,7 @@ ConnectionUnresolvedReason = Literal[
     "invalid-account",
     "invalid-expiry",
     "invalid-credential",
+    "credential-undecryptable",
 ]
 
 _CONNECTION_UNRESOLVED_HINTS: dict[ConnectionUnresolvedReason, str] = {
@@ -101,6 +102,10 @@ _CONNECTION_UNRESOLVED_HINTS: dict[ConnectionUnresolvedReason, str] = {
     "invalid-account": "Supply account as an object with id and optional display and tenant_id strings.",
     "invalid-expiry": "Supply expires_at as a valid ISO-8601 string or Unix timestamp.",
     "invalid-credential": "Supply a token or a credential JSON object with valid metadata.",
+    "credential-undecryptable": (
+        "The stored credential could not be decrypted. Reconnect the integration; if many connections "
+        "report this, check whether the server's secret key changed."
+    ),
 }
 
 

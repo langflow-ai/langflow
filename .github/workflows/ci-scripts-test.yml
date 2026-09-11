@@ -21,6 +21,7 @@ on:
       - "src/backend/base/langflow/api/v2/workflow*.py"
       - "src/backend/base/langflow/api/utils/execution_errors.py"
       - "src/backend/base/langflow/services/background_execution/**"
+      - "src/backend/base/langflow/services/connection/service.py"
       - "src/backend/base/langflow/services/job_queue/**"
       - "src/backend/tests/unit/api/**"
       - "src/backend/tests/unit/background_execution/**"

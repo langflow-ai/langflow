@@ -60,6 +60,15 @@ jobs:
         run: |
           uv run pytest src/backend/tests/unit/alembic/test_migration_execution.py -x -v
 
+      # Unit-test jobs have no database URI, so they run only the SQLite arm of
+      # backend-parametrized migration tests. Partial unique indexes are written
+      # per backend, so run the PostgreSQL arm here against the job's database.
+      - name: Run connection migration tests on PostgreSQL
+        env:
+          LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
+        run: |
+          uv run pytest src/backend/tests/unit/alembic/test_connection_migration.py -x -v
+
   background-real-service:
     name: Background Execution Real-Service Tests (real Postgres + Redis)
     runs-on: ubuntu-latest

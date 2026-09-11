@@ -5,7 +5,7 @@ Decision ID: connection-contract
 Applies to: INT-2 (lfx), with the langflow-base obligations INT-4 and INT-5 must meet and the Enterprise seams
 Owners (sign-off roles): lfx owner, langflow-base owner, Enterprise owner, frontend owner
 Last verified: 2026-09-01
-Last amended: 2026-09-10 (resolver authorization and credential diagnostics review; connection persistence implementation review)
+Last amended: 2026-09-11 (resolver authorization and credential diagnostics review; connection persistence implementation review; connection status, opt-in updates and instance ownership)
 
 This document is the INT-2 design that the discovery gate asks the lfx, langflow-base, and Enterprise owners to sign
 off before INT-2 is built. Each section states the recommended decision, why, and what was rejected. Section 12
@@ -202,14 +202,25 @@ defense in depth and pre-flight in interactive routes for UX.**
 | workflow_hitl_v2 | job_owner | as the job owner who started it; re-resolved on the worker, never persisted | per policy |
 | legacy_public_chat, a2a (anonymous), workflow_public_v2 | anonymous_public | never | deny by default; Enterprise policy may allow flagged instance connections |
 | a2a authenticated sub-path | actor | owner only | per policy |
+| lfx run, embedded, lfx serve | headless_operator | not applicable (no database) | environment- or request-provisioned only (section 5) |
 
-`allow_non_interactive` defaults to false and is connection-owner controlled through the API. INT-8 must expose
+`allow_non_interactive` defaults to false and is connection-owner controlled through the API:
+`PATCH /api/v1/connections/{connection_id}` changes it, and `display_name`, without touching the handle or the
+stored credential. Only the owner may enable it (a superuser, for an instance connection), because enabling widens
+which executions reach the owner's account. Anyone with connection `write` may disable it, so narrowing an exposure
+never costs a re-authorization. INT-8 must expose
 the persisted value, explanation, deliberate opt-in and disable control on the Connections page (B1), including
 values changed via API. Deployment and project MCP publication with auth `none` must show the acting identity
 and block when the table would deny resolution (B10). Enabling this flag cannot override tenant/host policy or
 the anonymous-public prohibition. Disabling it prevents subsequent resolutions; publication is not permanent
 authorization. Deferred webhook setup must adopt the same preflight when implemented.
-| lfx run, embedded, lfx serve | headless_operator | not applicable (no database) | environment- or request-provisioned only (section 5) |
+
+Instance connections are provisioned and changed only by superusers: create, `PATCH`, revoke and delete stay
+superuser-only when authorization is disabled and when a plugin would allow them. Their metadata, including
+`executing_identity.account`, is visible to every user who may resolve them, because that account is the acting
+identity their executions run as (B10). Until the referenceable flag in section 1 (question 12.b.1) exists, that is
+every authenticated user. Making instance metadata operator-only therefore also requires gating resolution; hiding
+the account from users who can still execute as it is not a boundary.
 
 ## 5. Headless implementations
 
@@ -319,6 +330,12 @@ construction.**
   nodes and policy changes after selection. Safe hints explain administrator policy or deployment availability
   without revealing hidden configuration. Recognized provider admin-approval/tenant-denial outcomes are normalized
   by INT-5 and rendered by B12; an ambiguous provider denial must not be presented as confirmed admin approval.
+- The database resolver raises `connection-unresolved` with reason `credential-undecryptable` when a stored
+  credential exists but does not decrypt or decode with the server's current key, and reason `missing` only when
+  none is stored; `describe()` reports the former as `unavailable`, never `missing`. Health checks persist the same
+  distinction as `status: error` with `status_reason` `credential-undecryptable` or `credential-missing`
+  (`status_reason` is null for every other status), so a secret-key change reads as one infrastructure cause rather
+  than N unconfigured connections. For `credential-undecryptable` the call to action is reconnect, not connect.
 
 Rejected: plain `ValueError` strings (the current `OAuthConnectorBase` style, not machine-readable); reusing
 `lfx.services.auth.exceptions.TokenExpiredError` (it means the Langflow session JWT); reusing the `ExtensionError`
