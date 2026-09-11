@@ -168,9 +168,7 @@ async def test_a_deleted_flow_keeps_its_history(client: AsyncClient, logged_in_h
     assert response.status_code in (status.HTTP_200_OK, status.HTTP_204_NO_CONTENT), response.text
 
     async with session_scope() as session:
-        rows = (
-            await session.exec(select(AuditLog).where(col(AuditLog.resource_id) == uuid.UUID(flow["id"])))
-        ).all()
+        rows = (await session.exec(select(AuditLog).where(col(AuditLog.resource_id) == uuid.UUID(flow["id"])))).all()
 
     events = {row.event for row in rows}
     assert "langflow.audit.flow.created" in events, "the trail survives the flow"

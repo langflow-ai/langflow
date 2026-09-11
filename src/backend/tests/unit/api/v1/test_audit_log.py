@@ -5,7 +5,6 @@ somebody was refused, an edit somebody made, and the guarantee that neither ever
 carries a secret.
 """
 
-import asyncio
 import uuid
 
 import pytest

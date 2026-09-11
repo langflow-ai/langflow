@@ -953,9 +953,7 @@ async def delete_flow(
             )
             flow_owner_ids[retry_target.id] = retry_target.user_id
             memory_base_cleanups.extend(await cascade_delete_flow(session, target_flow_id))
-            await record_audit_event(
-                session, event=FLOW_DELETED, user_id=actor.id, resource_id=target_flow_id
-            )
+            await record_audit_event(session, event=FLOW_DELETED, user_id=actor.id, resource_id=target_flow_id)
 
         await retry_flow_operation_on_deployment_guard(
             db=session,
