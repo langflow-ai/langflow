@@ -47,13 +47,6 @@ describe("SortableListComponent reproduction", () => {
     // Wait a tick to ensure effects run
     await waitFor(() => {}, { timeout: 0 });
 
-    if (handleOnNewValue.mock.calls.length > 0) {
-      console.log(
-        "handleOnNewValue was called with:",
-        handleOnNewValue.mock.calls[0][0],
-      );
-    }
-
     expect(handleOnNewValue).not.toHaveBeenCalled();
   });
 });
