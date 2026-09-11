@@ -5030,6 +5030,11 @@
       "legacy_slot": "ext:plivo:PlivoSendSMSComponent@official-pre-a",
       "target": "ext:plivo:PlivoSendSMSComponent@official",
       "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "SerplySearchComponent",
+      "target": "ext:serply:SerplySearchComponent@official",
+      "added_in": "1.13.0"
     }
   ],
   "ambiguous_bare_names": [
