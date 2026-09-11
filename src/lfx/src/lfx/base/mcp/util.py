@@ -1046,15 +1046,19 @@ def _is_transient_streamable_http_error(exc: BaseException) -> bool:
                 return True
             if leaf.response.status_code == HTTP_TOO_MANY_REQUESTS:
                 return True
-            # 404/405/406: try SSE; other 4xx: retry Streamable HTTP
+            # 400/404/405/406: try SSE; other 4xx: retry Streamable HTTP
+            # (400 is how many SSE-only servers answer a Streamable HTTP POST)
             return leaf.response.status_code not in (
+                HTTP_BAD_REQUEST,
                 HTTP_NOT_FOUND,
                 HTTP_METHOD_NOT_ALLOWED,
                 HTTP_NOT_ACCEPTABLE,
             )
         if isinstance(leaf, McpError):
             msg = str(leaf).lower()
-            return not any(x in msg for x in ("404", "405", "406", "not found", "method not allowed"))
+            return not any(
+                x in msg for x in ("400", "404", "405", "406", "not found", "method not allowed", "bad request")
+            )
         msg = str(leaf).lower()
         if any(
             x in msg
@@ -1080,6 +1084,7 @@ def _should_attempt_sse_after_streamable_failure(exc: BaseException) -> bool:
         return False
     for leaf in _iter_exception_leaves(exc):
         if isinstance(leaf, httpx.HTTPStatusError) and leaf.response.status_code in (
+            HTTP_BAD_REQUEST,
             HTTP_NOT_FOUND,
             HTTP_METHOD_NOT_ALLOWED,
             HTTP_NOT_ACCEPTABLE,
@@ -1087,10 +1092,25 @@ def _should_attempt_sse_after_streamable_failure(exc: BaseException) -> bool:
             return True
         if isinstance(leaf, McpError):
             msg = str(leaf).lower()
-            if any(x in msg for x in ("404", "405", "406", "not found", "method not allowed", "not acceptable")):
+            if any(
+                x in msg
+                for x in (
+                    "400",
+                    "404",
+                    "405",
+                    "406",
+                    "not found",
+                    "method not allowed",
+                    "not acceptable",
+                    "bad request",
+                )
+            ):
                 return True
     lowered = str(exc).lower()
-    return any(x in lowered for x in ("404", "405", "406", "not found", "method not allowed", "not acceptable"))
+    return any(
+        x in lowered
+        for x in ("400", "404", "405", "406", "not found", "method not allowed", "not acceptable", "bad request")
+    )
 
 
 def _is_mcp_session_bust_error(exc: BaseException) -> bool:
@@ -1443,7 +1463,9 @@ class MCPSessionManager:
                 actual_transport = "stdio"
             elif transport_type == "streamable_http":
                 # Pass the cached transport preference if available (SSE only when last success required it)
-                preferred_transport = self._transport_preference.get(server_key)
+                preferred_transport = connection_params.get("preferred_transport") or self._transport_preference.get(
+                    server_key
+                )
                 session, task, actual_transport, sse_pref_lock = await self._create_streamable_http_session(
                     session_id, connection_params, preferred_transport
                 )
@@ -2223,8 +2245,13 @@ class MCPStreamableHttpClient:
         sse_read_timeout_seconds: int = 30,
         *,
         verify_ssl: bool = True,
+        force_sse: bool = False,
     ) -> list[StructuredTool]:
-        """Connect to MCP server using Streamable HTTP transport with SSE fallback (SDK style)."""
+        """Connect to MCP server using Streamable HTTP transport with SSE fallback (SDK style).
+
+        When ``force_sse`` is true (the server is explicitly configured for SSE mode), the
+        Streamable HTTP probe is skipped entirely and the session goes straight to SSE.
+        """
         # Validate and sanitize headers early
         validated_headers = _process_headers(headers)
 
@@ -2248,6 +2275,8 @@ class MCPStreamableHttpClient:
                 "sse_read_timeout_seconds": sse_read_timeout_seconds,
                 "verify_ssl": verify_ssl,
             }
+            if force_sse:
+                self._connection_params["preferred_transport"] = "sse"
         elif headers:
             self._connection_params["headers"] = validated_headers
 
@@ -2280,11 +2309,20 @@ class MCPStreamableHttpClient:
         sse_read_timeout_seconds: int = 30,
         *,
         verify_ssl: bool = True,
+        force_sse: bool = False,
     ) -> list[StructuredTool]:
-        """Connect to MCP server using Streamable HTTP with SSE fallback transport (SDK style)."""
+        """Connect to MCP server using Streamable HTTP with SSE fallback transport (SDK style).
+
+        Pass ``force_sse=True`` when the server is explicitly configured for SSE mode to
+        skip the Streamable HTTP probe and connect over SSE directly.
+        """
         return await asyncio.wait_for(
             self._connect_to_server(
-                url, headers, sse_read_timeout_seconds=sse_read_timeout_seconds, verify_ssl=verify_ssl
+                url,
+                headers,
+                sse_read_timeout_seconds=sse_read_timeout_seconds,
+                verify_ssl=verify_ssl,
+                force_sse=force_sse,
             ),
             timeout=get_settings_service().settings.mcp_server_timeout,
         )
@@ -2692,7 +2730,9 @@ async def update_tools(
         headers = _maybe_inject_end_user_header(headers, url, end_user_id)
         verify_ssl = server_config.get("verify_ssl", True)
         try:
-            tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)
+            tools = await mcp_streamable_http_client.connect_to_server(
+                url, headers=headers, verify_ssl=verify_ssl, force_sse=(mode == "SSE")
+            )
         except Exception as exc:
             # A rejected credential otherwise surfaced as "unhandled errors in a TaskGroup",
             # naming neither the target nor the fact that authentication was the problem.
