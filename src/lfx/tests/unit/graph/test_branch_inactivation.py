@@ -65,7 +65,7 @@ def test_start_releases_the_sources_branch_ownership():
     assert graph.branch_inactivation_sources == {}
 
 
-def test_shared_descendant_stays_inactive_until_every_source_releases_it():
+def _shared_descendant() -> Graph:
     graph = Graph()
     for component_id, component in (
         ("first", Source(_id="first")),
@@ -82,6 +82,11 @@ def test_shared_descendant_stays_inactive_until_every_source_releases_it():
     graph.add_component_edge("second_branch", ("out", "input_value"), "merge")
     graph.add_component_edge("merge", ("out", "input_value"), "victim")
     graph.prepare()
+    return graph
+
+
+def test_shared_descendant_stays_inactive_until_every_source_releases_it():
+    graph = _shared_descendant()
 
     graph.mark_branch("first", VertexStates.INACTIVE, output_name="done")
     graph.mark_branch("second", VertexStates.INACTIVE, output_name="done")
@@ -92,3 +97,67 @@ def test_shared_descendant_stays_inactive_until_every_source_releases_it():
     graph.reset_inactivated_vertices("second")
 
     assert graph.get_vertex("victim").state == VertexStates.ACTIVE
+
+
+def test_start_does_not_override_a_stop_another_source_still_holds():
+    graph = _shared_descendant()
+    graph.mark_branch("first", VertexStates.INACTIVE, output_name="done")
+
+    # "second" never stopped anything, so it has nothing of its own to release.
+    graph.mark_branch("second", VertexStates.ACTIVE, output_name="done")
+
+    assert graph.get_vertex("second_branch").state == VertexStates.ACTIVE
+    assert graph.get_vertex("victim").state == VertexStates.INACTIVE
+    assert "victim" in graph.inactivated_vertices
+
+    graph.reset_inactivated_vertices("first")
+
+    assert graph.get_vertex("victim").state == VertexStates.ACTIVE
+
+
+def test_unowned_inactivation_keeps_legacy_release_alongside_owned_stops():
+    graph = _parallel_branches()
+    graph.mark_branch("stopper", VertexStates.INACTIVE, output_name="done")
+    # Graphs cached or checkpointed before ownership was tracked carry inactive
+    # vertices with no recorded source.
+    graph.mark_vertex("sibling_output", VertexStates.INACTIVE)
+
+    graph.reset_inactivated_vertices("sibling")
+
+    assert graph.get_vertex("sibling_output").state == VertexStates.ACTIVE
+    assert graph.get_vertex("victim").state == VertexStates.INACTIVE
+    assert graph.inactivated_vertices == {"victim"}
+
+
+def test_resorting_the_graph_drops_stale_branch_ownership():
+    graph = _shared_descendant()
+    graph.mark_branch("first", VertexStates.INACTIVE, output_name="done")
+
+    graph.sort_vertices()
+
+    assert graph.inactivated_vertices == set()
+    assert graph.branch_inactivation_sources == {}
+    # A stop left over from the previous run must not re-inactivate the branch.
+    graph.mark_branch("second", VertexStates.ACTIVE, output_name="done")
+    assert graph.get_vertex("victim").state == VertexStates.ACTIVE
+
+
+def test_branch_ownership_survives_the_graph_cache_round_trip():
+    graph = _parallel_branches()
+    graph.mark_branch("stopper", VertexStates.INACTIVE, output_name="done")
+
+    restored = Graph.__new__(Graph)
+    restored.__setstate__(graph.__getstate__())
+
+    assert restored.branch_inactivation_sources == {"stopper": {"victim"}}
+
+
+def test_graph_cached_before_branch_ownership_loads_without_it():
+    graph = _parallel_branches()
+    state = graph.__getstate__()
+    state.pop("branch_inactivation_sources")
+
+    restored = Graph.__new__(Graph)
+    restored.__setstate__(state)
+
+    assert restored.branch_inactivation_sources == {}

@@ -1383,28 +1383,30 @@ class Graph:
         self.in_degree_map = self.build_in_degree(edges)
         self.parent_child_map = self.build_parent_child_map(vertices)
 
-    def reset_inactivated_vertices(self, source_vertex_id: str | None = None) -> None:
-        """Reset branch inactivations owned by a completed source vertex.
+    def _held_branch_inactivations(self) -> set[str]:
+        """Vertices a source vertex stopped and has not released yet."""
+        return set().union(*self.branch_inactivation_sources.values())
 
-        Passing no source preserves the graph-wide reset used when initializing
-        a run. Cached graphs written before source ownership was introduced also
-        fall back to that legacy behavior.
+    def reset_inactivated_vertices(self, source_vertex_id: str | None = None) -> None:
+        """Reactivate inactivated vertices.
+
+        With ``source_vertex_id``, release only the branch stops that completed
+        vertex made; a vertex another source still holds stays inactive.
+        Inactivations with no recorded source (graphs cached or checkpointed
+        before ownership was tracked) keep the legacy behavior and are released
+        by any completion. Without a source, every inactivation is reset.
         """
-        if source_vertex_id is None or not self.branch_inactivation_sources:
-            vertices_to_activate = self.inactivated_vertices.copy()
+        if source_vertex_id is None:
             self.branch_inactivation_sources.clear()
         else:
-            owned_vertices = self.branch_inactivation_sources.pop(source_vertex_id, set())
-            still_owned = (
-                set().union(*self.branch_inactivation_sources.values()) if self.branch_inactivation_sources else set()
-            )
-            vertices_to_activate = owned_vertices - still_owned
-
-        for vertex_id in vertices_to_activate:
+            self.branch_inactivation_sources.pop(source_vertex_id, None)
+        for vertex_id in self.inactivated_vertices - self._held_branch_inactivations():
             self.mark_vertex(vertex_id, "ACTIVE")
 
     def mark_all_vertices(self, state: str) -> None:
         """Marks all vertices in the graph."""
+        # Every vertex now shares one state, so no earlier branch stop is held.
+        self.branch_inactivation_sources.clear()
         for vertex in self.vertices:
             vertex.set_state(state)
 
@@ -1488,26 +1490,7 @@ class Graph:
             output_name=output_name,
             protected_vertices=protected_vertices,
         )
-        branch_vertices = visited - {vertex_id}
-        if state == VertexStates.INACTIVE:
-            tracked_vertices = branch_vertices.intersection(self.inactivated_vertices)
-            if tracked_vertices:
-                self.branch_inactivation_sources.setdefault(vertex_id, set()).update(tracked_vertices)
-        elif state == VertexStates.ACTIVE:
-            owned_vertices = self.branch_inactivation_sources.get(vertex_id)
-            if owned_vertices is not None:
-                released_vertices = owned_vertices.intersection(branch_vertices)
-                owned_vertices.difference_update(released_vertices)
-                if not owned_vertices:
-                    self.branch_inactivation_sources.pop(vertex_id)
-
-                still_owned = (
-                    set().union(*self.branch_inactivation_sources.values())
-                    if self.branch_inactivation_sources
-                    else set()
-                )
-                for owned_vertex_id in released_vertices.intersection(still_owned):
-                    self.mark_vertex(owned_vertex_id, VertexStates.INACTIVE)
+        self._track_branch_inactivation(vertex_id, state, visited - {vertex_id})
         new_predecessor_map, _ = self.build_adjacency_maps(self.edges)
         new_predecessor_map = {k: v for k, v in new_predecessor_map.items() if k in visited}
         if vertex_id in self.cycle_vertices:
@@ -1520,6 +1503,22 @@ class Graph:
             run_predecessors=new_predecessor_map,
             vertices_to_run=self.vertices_to_run,
         )
+
+    def _track_branch_inactivation(self, source_vertex_id: str, state: str, branch_vertices: set[str]) -> None:
+        """Record which source holds each stopped vertex so a completion releases only its own stops."""
+        if state == VertexStates.INACTIVE:
+            stopped = branch_vertices & self.inactivated_vertices
+            if stopped:
+                held = self.branch_inactivation_sources.get(source_vertex_id, set())
+                self.branch_inactivation_sources[source_vertex_id] = held | stopped
+        elif state == VertexStates.ACTIVE:
+            remaining = self.branch_inactivation_sources.pop(source_vertex_id, set()) - branch_vertices
+            if remaining:
+                self.branch_inactivation_sources[source_vertex_id] = remaining
+            # start() releases only this source's stops; one another still-running
+            # vertex holds on a shared descendant stays in effect.
+            for held_vertex_id in branch_vertices & self._held_branch_inactivations():
+                self.mark_vertex(held_vertex_id, VertexStates.INACTIVE)
 
     def _replace_conditional_exclusions(self, vertex_id: str, excluded: set[str]) -> None:
         """Replace ``vertex_id``'s conditional exclusions with ``excluded``.
