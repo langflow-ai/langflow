@@ -92,6 +92,24 @@ def test_sanitized_policy_drops_structured_details() -> None:
     }
 
 
+def test_owner_error_body_carries_structured_details_and_delegated_does_not() -> None:
+    """An owner's response names the missing scopes; a delegated caller gets only the code.
+
+    The traceback is not part of this body: the build stream already sends it
+    as ``stackTrace`` beside the typed body, and HTTP responses never carry one.
+    """
+    error = ScopeMissingError(frozenset({"calendar.write"}), provider="google")
+
+    owner = error_for_client(error, expose_details=True)
+    delegated = error_for_client(error, expose_details=False)
+
+    assert isinstance(owner, HTTPException)
+    assert isinstance(delegated, HTTPException)
+    assert owner.detail["details"] == {"missing": ["calendar.write"], "scopes_verified": True}
+    assert "details" not in delegated.detail
+    assert "stack_trace" not in owner.detail
+
+
 def test_retry_after_survives_for_a_rate_limited_provider() -> None:
     details = error_details_for_client(RateLimitedError(provider="google", retry_after=30.0), expose_details=False)
 

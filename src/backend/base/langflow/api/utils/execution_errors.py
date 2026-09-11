@@ -48,6 +48,11 @@ class ExecutionErrorDetails:
         body["retryable"] = self.retryable
         if self.retry_after is not None:
             body["retry_after"] = self.retry_after
+        # Owner diagnostics only: ``_integration_details`` leaves ``details`` empty
+        # for a delegated or public caller. The traceback is not repeated here; the
+        # build stream sends it as ``stackTrace`` beside this body.
+        if self.details:
+            body["details"] = self.details
         return body
 
 
