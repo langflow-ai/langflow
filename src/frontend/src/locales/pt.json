@@ -2402,5 +2402,7 @@
   "sharing.file.level.write.desc": "View and edit this file.",
   "sharing.file.level.admin.desc": "View, edit, and delete this file.",
   "sharing.permission.for": "Permission for {{target}}",
-  "_translationNeeded.le1905EnterpriseSharing": "TODO(LE-1905): Review the English Enterprise sharing values in this locale."
+  "_translationNeeded.le1905EnterpriseSharing": "TODO(LE-1905): Review the English Enterprise sharing values in this locale.",
+  "slider.strict": "Rigoroso",
+  "slider.permissive": "Permissivo"
 }
