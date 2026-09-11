@@ -226,8 +226,9 @@ the deserialize half is covered by
   transports) stamp it `False`, and a host resolver that evaluates share grants
   must skip its share branch for those principals. The portable deny floor in
   `BaseConnectionResolverService.authorize_principal` is unchanged in behavior:
-  it still never admits an explicit share, and its docstring now states that a
-  host may only widen it subject to this flag. Additive for bundles and
+  it admits a share only when the host passes `explicit_share_authorized`, and
+  its docstring now states that a host must never authorize a share for a
+  principal with this flag set to `False`. Additive for bundles and
   resolvers alike; `BUNDLE_API_VERSION` remains `1`.
 
 - **Optional rejected-token digest for connection refresh.**
