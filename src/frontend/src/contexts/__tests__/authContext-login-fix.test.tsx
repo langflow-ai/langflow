@@ -40,15 +40,20 @@ jest.mock("@/utils/local-storage-util", () => ({
 
 const mockSetIsAuthenticated = jest.fn();
 const mockSetIsAdmin = jest.fn();
+// The store mirrors whoever the provider knows about; code outside React
+// (autosave, the conflict paths) reads the store, not the context.
+const mockSetUserData = jest.fn();
 
 type MockAuthState = {
   setIsAuthenticated: typeof mockSetIsAuthenticated;
   setIsAdmin: typeof mockSetIsAdmin;
+  setUserData: typeof mockSetUserData;
 };
 
 const getMockAuthState = (): MockAuthState => ({
   setIsAuthenticated: mockSetIsAuthenticated,
   setIsAdmin: mockSetIsAdmin,
+  setUserData: mockSetUserData,
 });
 
 const mockAuthStore = Object.assign(
@@ -56,6 +61,7 @@ const mockAuthStore = Object.assign(
     const state = {
       setIsAuthenticated: mockSetIsAuthenticated,
       setIsAdmin: mockSetIsAdmin,
+      setUserData: mockSetUserData,
     };
     return selector(state);
   },

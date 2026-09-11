@@ -123,6 +123,7 @@ const config = {
         "flow-icon": "var(--flow-icon)",
         "low-indigo": "var(--low-indigo)",
         "chat-send": "var(--chat-send)",
+        "conflict-outline": "hsl(var(--accent-amber-foreground) / 0.15)",
         connection: "var(--connection)",
         "almost-dark-gray": "var(--almost-dark-gray)",
         "almost-light-blue": "var(--almost-light-blue)",

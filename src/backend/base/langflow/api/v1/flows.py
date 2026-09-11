@@ -9,7 +9,7 @@ from typing import Annotated
 from uuid import UUID
 
 import orjson
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Header, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
@@ -46,6 +46,10 @@ from langflow.api.v1.authz_route_dependencies import (
     AuthorizedReadFlow,
     AuthorizedWriteFlow,
     RequireFlowCreate,
+)
+from langflow.api.v1.flow_conflict import (
+    ensure_version_precondition,
+    parse_if_match,
 )
 from langflow.api.v1.flows_helpers import (
     _build_flows_download_response,
@@ -578,9 +582,11 @@ async def update_flow(
     flow: FlowUpdate,
     current_user: CurrentActiveUser,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ):
     """Update a flow."""
     actor = UserRead.model_validate(current_user, from_attributes=True)
+    expected_version_token = parse_if_match(if_match)
     try:
         catalog_policy_snapshot = get_catalog_policy_service().snapshot
         # Destination check: resolve the actual owner-folder/workspace tuple
@@ -632,6 +638,9 @@ async def update_flow(
             )
             if not db_flow_for_attempt:
                 raise HTTPException(status_code=404, detail="Flow not found")
+            # Compared against the row we just re-read under lock, so a writer that
+            # committed between the client's read and this attempt is still caught.
+            await ensure_version_precondition(session, db_flow_for_attempt, expected_version_token)
             # TOCTOU: a concurrent PATCH could have moved this flow to a
             # different workspace/folder between the destination check above
             # and this retry attempt. Re-authorize against the freshly
@@ -688,6 +697,7 @@ async def update_flow(
                 flow=flow,
                 user_id=actor.id,
                 storage_service=storage_service,
+                expected_version_token=expected_version_token,
             )
 
         async def update_attempt(_attempt: int) -> FlowRead:
@@ -736,6 +746,7 @@ async def upsert_flow(
     flow: FlowCreate,
     current_user: CurrentActiveUser,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
+    if_match: Annotated[str | None, Header(alias="If-Match")] = None,
 ):
     """Create or update a flow with a specific ID (upsert).
 
@@ -746,6 +757,7 @@ async def upsert_flow(
     # Read once, outside the retry loop: a rollback between attempts expires the ORM User
     # and a later attribute read would lazy-load outside the greenlet.
     writer_id = current_user.id
+    expected_version_token = parse_if_match(if_match)
     # Extract once: a rollback between retry attempts discards the staged rows but not the
     # in-place rewrite, so a second extraction would find only its own reference.
     carried_secrets, secret_variables = extract_and_strip_mcp_secrets(flow.data)
@@ -866,12 +878,14 @@ async def upsert_flow(
                 effective_flow_data = flow.data if flow.data is not None else existing_flow_for_attempt.data
                 _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
                 await stage_mcp_secrets(carried_secrets, secret_variables, writer_id, session)
+                await ensure_version_precondition(session, existing_flow_for_attempt, expected_version_token)
                 return await _update_existing_flow(
                     session=session,
                     existing_flow=existing_flow_for_attempt,
                     flow=flow,
                     current_user=current_user,
                     storage_service=storage_service,
+                    expected_version_token=expected_version_token,
                 )
 
             if folder_id_will_change:

@@ -23,6 +23,7 @@ import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
+import useFlowConflictStore from "@/stores/flowConflictStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import { useTypesStore } from "@/stores/typesStore";
@@ -93,6 +94,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   const currentFlow = useFlowStore((state) => state.currentFlow);
   const currentSavedFlow = useFlowsManagerStore((state) => state.currentFlow);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -136,6 +138,17 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   useWebhookEvents();
 
   const handleSave = () => {
+    // Leaving during a conflict is a discard: the save on the way out cannot
+    // succeed and the blocker's autosave branch proceeds regardless.
+    const conflictState = useFlowConflictStore.getState();
+    if (conflictState.conflict?.flowId === currentFlowId) {
+      // Stay on the flow so the unsaved work is not walked away from, but do not
+      // raise the dialog: navigating is not a request to open one. The banner is
+      // there, and clicking it is how the person asks.
+      blocker.reset?.();
+      setNoticeData({ title: t("multiEdit.banner.title") });
+      return;
+    }
     void saveBeforeLeaving({
       saveFlow,
       autoSaving,

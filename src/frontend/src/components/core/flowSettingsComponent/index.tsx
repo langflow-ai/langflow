@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
+import { handleBlockedSave } from "@/hooks/flows/handle-blocked-save";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -102,8 +103,12 @@ const FlowSettingsComponent = ({
           setIsSaving(false);
           setSuccessData({ title: t("success.changesSaved") });
           close();
-        } catch {
+        } catch (error) {
           setIsSaving(false);
+          // "Changes saved" used to appear here for a save the store had refused
+          // to attempt, and the dialog closed over settings that were never
+          // written. Stay open, and send the person to the conflict instead.
+          if (handleBlockedSave(error)) close();
         }
       };
       void persistSettings();

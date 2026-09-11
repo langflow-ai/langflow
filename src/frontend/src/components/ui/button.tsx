@@ -30,6 +30,13 @@ const buttonVariants = cva(
         "menu-active":
           "font-semibold hover:bg-muted hover:text-accent-foreground focus-visible:!ring-offset-0",
         link: "underline-offset-4 hover:underline text-primary",
+        conflictPrimary:
+          "bg-[linear-gradient(167deg,hsl(var(--accent-indigo-foreground))_0%,var(--medium-indigo)_100%)] text-white hover:opacity-90",
+        conflictQuiet: "text-muted-foreground hover:text-foreground",
+        conflictSecondary:
+          "border border-border text-note-neutral hover:bg-muted",
+        conflictConfirm:
+          "border border-muted bg-muted text-note-neutral hover:bg-muted",
       },
       size: {
         default: "h-10 py-2 px-4",
@@ -41,6 +48,11 @@ const buttonVariants = cva(
         icon: "p-1 rounded-md",
         iconSm: "p-0.5 rounded-md",
         "node-toolbar": "py-[6px] px-[6px] rounded-md",
+        banner: "px-3.5 py-1.5 rounded-[10px] text-[13px] leading-[19.5px]",
+        dialogAction:
+          "px-4 py-2 rounded-[10px] text-[13px] leading-[19.5px] gap-2 [&_svg]:size-3.5",
+        dialogFooter:
+          "px-3.5 py-[7px] rounded-lg text-xs leading-[18px] gap-1.5",
       },
     },
     defaultVariants: {

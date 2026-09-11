@@ -11,7 +11,7 @@ import re
 import zipfile
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import aiofiles
 from anyio import Path
@@ -28,6 +28,7 @@ from langflow.api.utils import (
     remove_api_keys,
     strip_flow_secrets,
 )
+from langflow.api.v1.flow_conflict import claim_version_token
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_move_allowed
@@ -118,9 +119,8 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
     return Path(resolved_str)
 
 
-# Fields that may be updated via setattr on a Flow ORM instance.
-# Any key not in this set is silently dropped to prevent callers from
-# overwriting internal fields (e.g. ``id``, ``user_id``).
+# Updatable via setattr on a Flow ORM instance; anything else is dropped so callers
+# cannot overwrite internal fields such as ``id``, ``user_id`` or ``version_token``.
 _UPDATABLE_FLOW_FIELDS: frozenset[str] = frozenset(
     {
         "name",
@@ -130,12 +130,8 @@ _UPDATABLE_FLOW_FIELDS: frozenset[str] = frozenset(
         "endpoint_name",
         "tags",
         "folder_id",
-        # ``workspace_id`` is part of the FlowUpdate / FlowCreate contract and
-        # the PATCH/PUT routes re-authorize WRITE at the destination scope when
-        # the payload changes it (see flows.py). Omitting it here would silently
-        # accept the payload, pass the authorization check, and then drop the
-        # write — leaving the flow in its old workspace despite the API saying
-        # the move succeeded.
+        # Omitting ``workspace_id`` would accept the payload, pass the destination
+        # authorization in flows.py, then drop the write — a move the API claims succeeded.
         "workspace_id",
         "icon",
         "icon_bg_color",
@@ -462,6 +458,10 @@ async def _new_flow(
             db_flow.id = effective_id
 
         db_flow.updated_at = datetime.now(timezone.utc)
+        # Stamped at creation so the very first concurrent edit is already protected;
+        # without it a brand-new flow has nothing to compare and saves unconditionally.
+        db_flow.version_token = uuid4()
+        db_flow.last_modified_by = user_id
         await _validate_and_assign_folder(session, db_flow, user_id, widen_for_authz=widen_for_authz)
 
         session.add(db_flow)
@@ -515,6 +515,7 @@ async def _update_existing_flow(
     flow: FlowCreate,
     current_user: User,
     storage_service: StorageService,
+    expected_version_token: UUID | None = None,
 ) -> FlowRead:
     """Update an existing flow (PUT update path).
 
@@ -648,7 +649,18 @@ async def _update_existing_flow(
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)
 
+    graph_changed = "data" in update_data and update_data["data"] != existing_flow.data
+
     _apply_update_data(existing_flow, update_data)
+
+    if graph_changed:
+        # PUT and the import upsert replace the graph exactly like a PATCH does, so they
+        # take the writer's turn the same way. Leaving the token alone here let an editor
+        # that was open before the import save straight over it and be told nothing.
+        claimed = await claim_version_token(session, existing_flow, expected_version_token)
+        existing_flow.version_token = claimed or uuid4()
+        existing_flow.last_modified_by = actor_user_id
+
     await _validate_and_assign_folder(
         session,
         existing_flow,
@@ -676,6 +688,7 @@ async def _patch_flow(
     flow: FlowUpdate,
     user_id: UUID,
     storage_service: StorageService,
+    expected_version_token: UUID | None = None,
 ) -> FlowRead:
     """Apply a partial update (PATCH) to an existing flow and return a FlowRead.
 
@@ -750,7 +763,17 @@ async def _patch_flow(
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)
 
+    # Renames and no-op saves must not take someone's turn to write.
+    graph_changed = "data" in update_data and update_data["data"] != db_flow.data
+
     _apply_update_data(db_flow, update_data)
+
+    if graph_changed:
+        # Claimed here, not before: only a graph change takes the write turn, and the
+        # claim has to be the same indivisible step that grants it.
+        claimed = await claim_version_token(session, db_flow, expected_version_token)
+        db_flow.version_token = claimed or uuid4()
+        db_flow.last_modified_by = user_id
 
     # Validate fs_path if it was changed (will raise HTTPException if invalid).
     # fs_path lives under the owner's storage namespace, so the owner id

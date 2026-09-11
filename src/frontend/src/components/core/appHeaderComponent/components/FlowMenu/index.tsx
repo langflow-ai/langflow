@@ -16,6 +16,7 @@ import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { handleBlockedSave } from "@/hooks/flows/handle-blocked-save";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 import useAlertStore from "@/stores/alertStore";
@@ -81,9 +82,15 @@ export const MenuBar = memo((): JSX.Element => {
 
   const handleSave = () => {
     if (!onFlowPage || isReadOnly) return;
-    saveFlow().then(() => {
-      setSuccessData({ title: t("flow.savedSuccessfully") });
-    });
+    saveFlow()
+      .then(() => {
+        setSuccessData({ title: t("flow.savedSuccessfully") });
+      })
+      .catch((error) => {
+        // Announcing success over a save that was never attempted is how someone
+        // walks away from a conflict believing their work is on the server.
+        handleBlockedSave(error);
+      });
   };
 
   const changes = useShortcutsStore((state) => state.changesSave);
