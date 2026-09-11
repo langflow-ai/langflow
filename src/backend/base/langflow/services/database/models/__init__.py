@@ -23,6 +23,7 @@ from .auth import (
 )
 from .catalog_policy import CatalogPolicyMode, CatalogPolicyRule, CatalogPolicyScope, CatalogResourceKind
 from .connection import Connection, ConnectionSecret
+from .connection.oauth import ConnectionOAuth
 from .deployment import Deployment
 from .deployment_provider_account import DeploymentProviderAccount
 from .file import File
@@ -61,6 +62,7 @@ __all__ = [
     "CatalogPolicyScope",
     "CatalogResourceKind",
     "Connection",
+    "ConnectionOAuth",
     "ConnectionSecret",
     "Deployment",
     "DeploymentProviderAccount",

@@ -215,12 +215,12 @@ and block when the table would deny resolution (B10). Enabling this flag cannot 
 the anonymous-public prohibition. Disabling it prevents subsequent resolutions; publication is not permanent
 authorization. Deferred webhook setup must adopt the same preflight when implemented.
 
-Instance connections are provisioned and changed only by superusers: create, `PATCH`, revoke and delete stay
-superuser-only when authorization is disabled and when a plugin would allow them. Their metadata, including
-`executing_identity.account`, is visible to every user who may resolve them, because that account is the acting
-identity their executions run as (B10). Until the referenceable flag in section 1 (question 12.b.1) exists, that is
-every authenticated user. Making instance metadata operator-only therefore also requires gating resolution; hiding
-the account from users who can still execute as it is not a boundary.
+Instance connections are provisioned and changed only by superusers: create, `PATCH`, OAuth start, revoke and
+delete stay superuser-only when authorization is disabled and when a plugin would allow them. Their metadata,
+including `executing_identity.account`, is visible to every user who may resolve them, because that account is the
+acting identity their executions run as (B10). Until the referenceable flag in section 1 (question 12.b.1) exists,
+that is every authenticated user. Making instance metadata operator-only therefore also requires gating
+resolution; hiding the account from users who can still execute as it is not a boundary.
 
 ## 5. Headless implementations
 
@@ -499,3 +499,17 @@ identifiers.**
 | langflow-base owner | | | |
 | Enterprise owner | | | |
 | frontend owner | | | |
+
+
+## OAuth broker implementation
+
+The backend broker and operator runbooks are documented in
+`docs/docs/Develop/connection-oauth.mdx`. Consent uses hashed one-time state, an encrypted
+PKCE verifier, browser binding, and a durable connection generation. The database lock is
+a transaction-scoped no-op update: PostgreSQL takes a row lock and SQLite reserves the
+writer. The worker re-reads encrypted credentials under that lock before deciding whether
+to exchange, and revoke/delete use the same lock.
+
+`ConnectionResolutionRequest.rejected_token_digest` is optional, non-secret, and excluded
+from repr. A lease supplies it only after an authentication error so concurrent workers
+reuse a token already replaced by another worker rather than rotating again.
