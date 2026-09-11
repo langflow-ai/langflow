@@ -558,6 +558,11 @@ class RunFlowBaseComponent(Component):
                 session_id=self.session_id,
                 output_type=output_type,
                 graph=graph,
+                # The target is a sub-flow of THIS execution, so it resolves
+                # connections under the calling graph's principal. A freshly
+                # loaded child graph carries the fail-closed ``unknown()``, which
+                # would deny every connection inside a Run Flow node.
+                execution_principal=getattr(self.graph, "execution_principal", None),
             )
 
         except Exception as exc:

@@ -142,6 +142,7 @@ async def test_stream_pause_does_not_emit_terminal_run_telemetry(monkeypatch):
             run_id="job-1",
             job_id=uuid4(),
             protocol="langflow",
+            execution_family="workflow_v2",
         )
     ]
 
@@ -178,6 +179,7 @@ async def test_stream_client_disconnect_does_not_emit_run_telemetry(monkeypatch)
             run_id="job-2",
             job_id=uuid4(),
             protocol="langflow",
+            execution_family="workflow_v2",
         )
         # Exhaust initial events then simulate the consumer task being cancelled
         async for _frame, _event_type in gen:
@@ -218,6 +220,7 @@ async def test_stream_non_job_tracked_run_emits_run_id_none(monkeypatch):
         run_id=None,  # explicitly no job tracking
         job_id=None,
         protocol="langflow",
+        execution_family="workflow_v2",
     ):
         pass
 

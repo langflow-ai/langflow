@@ -196,11 +196,11 @@ defense in depth and pre-flight in interactive routes for UX.**
 |---|---|---|---|
 | interactive_chat, v1_run, openai_responses, voice, workflow_v2 | actor_or_explicit_share | owner or explicit share | per policy |
 | legacy_mcp | actor | owner only (no shares) | per policy |
-| mcp_projects | actor | owner only; project auth `none` runs as the owner non-interactively, so it requires the per-connection opt-in | per policy |
+| mcp_projects | actor; project auth `none` executes as anonymous_public | owner only (no shares); an auth `none` call runs anonymously and non-interactively, so it resolves no user connection, opt-in or not | per policy; auth `none` is denied like anonymous_public |
 | webhook | flow_owner | only with per-connection `allow_non_interactive` | per policy |
 | deployments | deployment_owner | only with per-connection `allow_non_interactive` | per policy |
 | workflow_hitl_v2 | job_owner | as the job owner who started it; re-resolved on the worker, never persisted | per policy |
-| legacy_public_chat, a2a (anonymous), workflow_public_v2 | anonymous_public | never | deny by default; Enterprise policy may allow flagged instance connections |
+| legacy_public_chat, a2a (anonymous), workflow_public_v2 | anonymous_public | never | hard deny in 1.13, no override (INT-6; `decisions/instance-connection-referenceability.md`) |
 | a2a authenticated sub-path | actor | owner only | per policy |
 | lfx run, embedded, lfx serve | headless_operator | not applicable (no database) | environment- or request-provisioned only (section 5) |
 
@@ -443,6 +443,20 @@ identifiers.**
   `src/backend/tests/unit/api/v1/test_execution_principal_contract.py`; the `error_details_for_client`
   `IntegrationError` branch under all three policies.
 
+  AMENDED by INT-6 (LE-2464), 2026-09-05. Only the `authz_endpoint_matrix.json` `connections` family arrived with
+  INT-4/INT-5. INT-6 delivered the rest: the matrix `connection_resolution` dimension (plus a
+  `connection_resolution_note` and a `dependency_principal` consistency rule in
+  `check_execution_principal_matrix.py`), the `error_details_for_client` / `error_for_client` `IntegrationError`
+  branch, and per-family allow/deny coverage in
+  `src/backend/tests/unit/api/v1/test_connection_resolution_families.py` rather than by growing
+  `test_execution_principal_contract.py`, which is an admission-contract file.
+
+  Two further items this section did not anticipate, also built in INT-6 because nothing resolves without them:
+  the stamping itself (`src/backend/base/langflow/api/utils/execution_principal.py` and the route wiring — the
+  section-4 bullet above lists only the builders, and `serve_app.py`/`run/base.py` never touched
+  `execution_principal`; lfx stays on the `apply_run_defaults` stamp), and the precedence fix that stops
+  `apply_run_defaults` overwriting a host-stamped principal with the headless operator on the warm-graph path.
+
 ## 12. Open questions by sign-off owner
 
 ### a. lfx owner
@@ -463,7 +477,8 @@ identifiers.**
 
 1. Handle-only versus handle plus owner kind, and the default user-to-instance fallback policy.
 2. Connection as a new share resource type for explicit shares.
-3. Per-connection `allow_non_interactive` semantics, including `mcp_projects` with auth `none`.
+3. Per-connection `allow_non_interactive` semantics. (`mcp_projects` with auth `none` is settled: the call
+   executes anonymously and resolves no user connection, so the opt-in does not apply to it.)
 4. Cross-worker single-flight refresh: a DB lease column versus a Redis lock; the `background_execution`
    lease-claim code is the precedent.
 5. Encryption envelope decision: use the existing Fernet `encrypt_api_key` path used by MCP and variables, and

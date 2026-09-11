@@ -560,6 +560,10 @@ class CustomComponent(BaseComponent):
             tweaks=tweaks,
             user_id=str(self.user_id),
             run_id=self.graph.run_id,
+            # A sub-flow is part of the parent's execution, not a new entry point:
+            # it must resolve connections under exactly the parent's principal, and
+            # never fall back to the fail-closed unknown() a fresh graph carries.
+            execution_principal=getattr(self.graph, "execution_principal", None),
         )
 
     def list_flows(self) -> list[Data]:

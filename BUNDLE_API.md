@@ -219,6 +219,18 @@ the deserialize half is covered by
 
 ### v0 (this release)
 
+- **Owner-only route families on the execution principal (additive).**
+  `ExecutionPrincipal.allow_explicit_shares` is a new field defaulting to `True`,
+  so every family that already honored explicit shares keeps doing so. Route
+  families whose admission never admits a delegated caller (the legacy MCP
+  transports) stamp it `False`, and a host resolver that evaluates share grants
+  must skip its share branch for those principals. The portable deny floor in
+  `BaseConnectionResolverService.authorize_principal` is unchanged in behavior:
+  it admits a share only when the host passes `explicit_share_authorized`, and
+  its docstring now states that a host must never authorize a share for a
+  principal with this flag set to `False`. Additive for bundles and
+  resolvers alike; `BUNDLE_API_VERSION` remains `1`.
+
 - **Optional rejected-token digest for connection refresh.**
   `ConnectionResolutionRequest.rejected_token_digest` carries a SHA-256 digest only
   after a provider rejects a cached credential. `CredentialLease` supplies it on

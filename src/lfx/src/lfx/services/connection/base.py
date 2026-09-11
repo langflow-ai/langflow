@@ -115,6 +115,12 @@ class BaseConnectionResolverService(Service, abc.ABC):
         actor's connection:execute grant and the route family's share policy.
         It must never come from flow JSON or component input. A share can satisfy
         an actor's owner mismatch; it cannot override any other deny below.
+
+        The family's share policy includes ``request.principal.allow_explicit_shares``:
+        owner-only route families (the legacy MCP transports) set it to ``False``,
+        and a host must then never authorize a share. Instance-owned rows keep the
+        floor's rule: any principal except ``anonymous_public``/``unknown`` may
+        resolve them, and a host policy hook may narrow that further.
         """
         principal = request.principal
         if owner_kind == "env":
