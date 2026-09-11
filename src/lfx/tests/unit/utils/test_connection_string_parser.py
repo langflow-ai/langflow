@@ -20,6 +20,15 @@ from lfx.utils.connection_string_parser import transform_connection_string
             "postgresql://user:p@ss/w0rd@host:5432/db",  # pragma: allowlist secret
             "postgresql://user:p%40ss%2Fw0rd@host:5432/db",  # pragma: allowlist secret
         ),
+        # no password: the last ':' is the scheme separator, so there is nothing to encode
+        ("postgresql://user@host:5432/db", "postgresql://user@host:5432/db"),
+        ("postgresql+psycopg://user@host:5432/db", "postgresql+psycopg://user@host:5432/db"),
+        ("postgresql://@host:5432/db", "postgresql://@host:5432/db"),
+        # a password that starts with '//' is still encoded
+        (
+            "postgresql://user://pw@host:5432/db",  # pragma: allowlist secret
+            "postgresql://user:%2F%2Fpw@host:5432/db",  # pragma: allowlist secret
+        ),
     ],
 )
 def test_transform_connection_string(connection_string, expected):
