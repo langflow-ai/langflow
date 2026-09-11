@@ -1,7 +1,11 @@
 from unittest.mock import patch
+from uuid import uuid4
 
 import pytest
+from lfx.base.tools.flow_tool import FlowTool
 from lfx.components.flow_controls.flow_tool import FlowToolComponent
+from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.graph import Graph
 from lfx.schema.data import Data
 
 from tests.base import ComponentTestBaseWithClient
@@ -31,13 +35,21 @@ class TestFlowToolComponent(ComponentTestBaseWithClient):
         return []
 
     @pytest.fixture
-    def skipped_outputs(self):
-        return {
-            "api_build_tool": (
-                "loads a saved flow from the database, and FlowTool.model_rebuild() cannot resolve its "
-                "Graph annotation (the build_tool tests patch it out)"
-            ),
-        }
+    def flow_graph(self):
+        """A small real graph (Chat Input -> Chat Output) standing in for the loaded flow."""
+        chat_input = ChatInput(_id="chat_input")
+        chat_output = ChatOutput(_id="chat_output")
+        chat_output.set(input_value=chat_input.message_response)
+        return Graph(chat_input, chat_output)
+
+    async def test_latest_version(self, component_class, default_kwargs, skipped_outputs, flow_graph):
+        # Serve the saved flow offline; building the tool from it runs for real.
+        flow_data = Data(data={"id": uuid4(), "name": "test_flow", "description": "Flow description"})
+        with (
+            patch.object(component_class, "get_flow", return_value=flow_data),
+            patch.object(component_class, "load_flow", return_value=flow_graph),
+        ):
+            await super().test_latest_version(component_class, default_kwargs, skipped_outputs)
 
     async def test_component_initialization(self, component_class, default_kwargs):
         """Test proper initialization of FlowToolComponent."""
@@ -174,11 +186,9 @@ class TestFlowToolComponent(ComponentTestBaseWithClient):
     async def test_build_tool_no_flow_name(self, component_class, default_kwargs):
         """Test build_tool raises error when flow_name is not provided."""
         component = await self.component_setup(component_class, default_kwargs)
-        from lfx.base.tools.flow_tool import FlowTool
 
         with (
             patch.object(component, "_attributes", {}),
-            patch.object(FlowTool, "model_rebuild"),  # Mock to avoid Graph annotation error
             pytest.raises(ValueError, match="Flow name is required"),
         ):
             await component.build_tool()
@@ -187,11 +197,9 @@ class TestFlowToolComponent(ComponentTestBaseWithClient):
     async def test_build_tool_empty_flow_name(self, component_class, default_kwargs):
         """Test build_tool raises error when flow_name is empty."""
         component = await self.component_setup(component_class, default_kwargs)
-        from lfx.base.tools.flow_tool import FlowTool
 
         with (
             patch.object(component, "_attributes", {"flow_name": ""}),
-            patch.object(FlowTool, "model_rebuild"),  # Mock to avoid Graph annotation error
             pytest.raises(ValueError, match="Flow name is required"),
         ):
             await component.build_tool()
@@ -200,15 +208,68 @@ class TestFlowToolComponent(ComponentTestBaseWithClient):
     async def test_build_tool_flow_not_found(self, component_class, default_kwargs):
         """Test build_tool raises error when flow is not found."""
         component = await self.component_setup(component_class, default_kwargs)
-        from lfx.base.tools.flow_tool import FlowTool
 
         with (
             patch.object(component, "_attributes", {"flow_name": "Nonexistent Flow"}),
             patch.object(component, "get_flow", return_value=None),
-            patch.object(FlowTool, "model_rebuild"),  # Mock to avoid Graph annotation error
             pytest.raises(ValueError, match="Flow not found"),
         ):
             await component.build_tool()
+
+    @pytest.mark.asyncio
+    async def test_build_tool_returns_flow_tool(self, component_class, default_kwargs, flow_graph):
+        """build_tool returns a FlowTool wired to the loaded flow's graph and inputs.
+
+        Regression: FlowTool's ``graph``/``inputs`` annotations name ``Graph``/``Vertex``, which were
+        TYPE_CHECKING-only imports, so ``build_tool`` always raised ``PydanticUndefinedAnnotation``.
+        """
+        component = await self.component_setup(component_class, default_kwargs)
+        run_id = str(uuid4())
+        user_id = str(uuid4())
+        component.graph.run_id = run_id
+        component.graph.user_id = user_id
+        flow_id = uuid4()
+        flow_data = Data(data={"id": flow_id, "name": "test_flow", "description": "Flow description"})
+
+        with (
+            patch.object(component, "get_flow", return_value=flow_data) as get_flow,
+            patch.object(component, "load_flow", return_value=flow_graph) as load_flow,
+        ):
+            tool = await component.build_tool()
+
+        get_flow.assert_awaited_once_with("test_flow")
+        load_flow.assert_awaited_once_with(str(flow_id))
+        assert isinstance(tool, FlowTool)
+        assert tool.name == "test_tool"
+        assert tool.description == "Test tool description"
+        assert tool.return_direct is False
+        assert tool.graph is flow_graph
+        assert [vertex.id for vertex in tool.inputs] == ["chat_input"]
+        assert tool.flow_id == str(flow_id)
+        assert tool.user_id == user_id
+        assert tool.session_id == component.graph.session_id
+        assert flow_graph.run_id == run_id
+        assert set(tool.args) == {"chat_input"}
+        assert tool.args["chat_input"]["type"] == "string"
+        assert tool.args["chat_input"]["description"] == "Get chat inputs from the Playground."
+        assert component.status == (
+            "Test tool description\nArguments:\n- chat_input: Get chat inputs from the Playground."
+        )
+
+    @pytest.mark.asyncio
+    async def test_build_tool_falls_back_to_flow_description(self, component_class, default_kwargs, flow_graph):
+        """A blank tool_description falls back to the selected flow's description."""
+        component = await self.component_setup(component_class, {**default_kwargs, "tool_description": "  "})
+        flow_data = Data(data={"id": uuid4(), "name": "test_flow", "description": "Flow description"})
+
+        with (
+            patch.object(component, "get_flow", return_value=flow_data),
+            patch.object(component, "load_flow", return_value=flow_graph),
+        ):
+            tool = await component.build_tool()
+
+        assert isinstance(tool, FlowTool)
+        assert tool.description == "Flow description"
 
     async def test_component_inheritance(self, component_class, default_kwargs):
         """Test that component properly inherits from LCToolComponent."""
