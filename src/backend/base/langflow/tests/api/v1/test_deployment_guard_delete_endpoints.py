@@ -166,18 +166,20 @@ async def test_cascade_delete_flow_prunes_orphan_attachments_before_delete_state
         side_effect=[
             _ExecResult(None, rowcount=1),  # prune orphan attachments
             _ExecResult(None),  # live deployment attachment lookup
+            _ExecResult([]),  # memory base lookup (no memory bases -> early return)
             _ExecResult(None),  # message delete
             _ExecResult(None),  # transaction delete
             _ExecResult(None),  # vertex_build delete
             _ExecResult(None),  # flow_version delete
             _ExecResult([]),  # trace id lookup
+            _ExecResult(None),  # authz_share delete
             _ExecResult(None),  # flow delete
         ]
     )
 
     await cascade_delete_flow(session, flow_id)
 
-    assert session.exec.await_count == 8
+    assert session.exec.await_count == 10
 
 
 @pytest.mark.asyncio
