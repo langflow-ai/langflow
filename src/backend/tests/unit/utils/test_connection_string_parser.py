@@ -1,20 +1,8 @@
-import pytest
-from langflow.utils.connection_string_parser import transform_connection_string
+from langflow.utils import connection_string_parser as langflow_parser
+from lfx.utils import connection_string_parser as lfx_parser
 
 
-@pytest.mark.parametrize(
-    ("connection_string", "expected"),
-    [
-        ("protocol:user:password@host", "protocol:user:password@host"),
-        ("protocol:user@host", "protocol:user@host"),
-        ("protocol:user:pass@word@host", "protocol:user:pass%40word@host"),
-        ("protocol:user:pa:ss:word@host", "protocol:user:pa:ss:word@host"),
-        ("user:password@host", "user:password@host"),
-        ("protocol::password@host", "protocol::password@host"),
-        ("protocol:user:password@", "protocol:user:password@"),
-        ("protocol:user:pa@ss@word@host", "protocol:user:pa%40ss%40word@host"),
-    ],
-)
-def test_transform_connection_string(connection_string, expected):
-    result = transform_connection_string(connection_string)
-    assert result == expected
+def test_langflow_reexports_lfx_helper():
+    """The langflow module is a shim; behavior is tested in src/lfx/tests/unit/utils."""
+    assert langflow_parser.transform_connection_string is lfx_parser.transform_connection_string
+    assert langflow_parser.transform_connection_string("protocol:user:p/ss@host") == "protocol:user:p%2Fss@host"
