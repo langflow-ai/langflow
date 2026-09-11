@@ -49,6 +49,7 @@ export function ParameterRenderComponent({
   isToolMode,
   nodeInformationMetadata,
   ariaLabelledBy,
+  providerScope,
 }: {
   handleOnNewValue:
     | handleOnNewValueType
@@ -67,6 +68,12 @@ export function ParameterRenderComponent({
   isToolMode?: boolean;
   nodeInformationMetadata?: NodeInfoType;
   ariaLabelledBy?: string;
+  /**
+   * Which resource the model widget scopes provider credentials to. It defaults to the open
+   * flow, which is right on the canvas and wrong anywhere there is no flow: a project-level
+   * form has to say `{ projectId }` or the widget waits on a flow id that never arrives.
+   */
+  providerScope?: { flowId?: string } | { projectId?: string };
 }) {
   const { t } = useTranslation();
   const id = (
@@ -365,6 +372,7 @@ export function ParameterRenderComponent({
             options={templateData?.options || []}
             placeholder={templateData?.placeholder}
             externalOptions={templateData?.external_options}
+            providerScope={providerScope}
           />
         );
       case "knowledge_backend":

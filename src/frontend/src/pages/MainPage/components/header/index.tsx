@@ -36,6 +36,10 @@ interface HeaderComponentProps {
   setSearch: (search: string) => void;
   isEmptyFolder: boolean;
   selectedFlows: string[];
+  /** The open project's type. Anything other than "flows" renders its own tab. */
+  projectType?: string;
+  /** That type's own label, so the tab names the thing rather than a hardcoded word. */
+  projectTypeLabel?: string;
 }
 
 const HeaderComponent = ({
@@ -49,6 +53,8 @@ const HeaderComponent = ({
   setSearch,
   isEmptyFolder,
   selectedFlows,
+  projectType,
+  projectTypeLabel,
 }: HeaderComponentProps) => {
   const { t } = useTranslation();
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -78,11 +84,13 @@ const HeaderComponent = ({
   useEffect(() => {
     if (
       (flowType === "mcp" && !isMCPEnabled) ||
-      (flowType === "components" && isMCPEnabled)
+      (flowType === "components" && isMCPEnabled) ||
+      // Switching to a project that has no form leaves the harness tab selected but gone.
+      (flowType === "harness" && (!projectType || projectType === "flows"))
     ) {
       setFlowType("flows");
     }
-  }, [flowType, isMCPEnabled, setFlowType]);
+  }, [flowType, isMCPEnabled, projectType, setFlowType]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDebouncedSearch(e.target.value);
@@ -93,11 +101,16 @@ const HeaderComponent = ({
   );
   const hideNewFlowButton = useUtilityStore((s) => s.hideNewFlowButton);
 
+  // A typed project keeps its own tab, which is how its form is reached. "flows" is the
+  // default type and has no form, so it adds nothing here.
+  const hasProjectForm = Boolean(projectType) && projectType !== "flows";
+
   // Determine which tabs to show based on feature flags
   const tabTypes = [
     "flows",
     ...(isMCPEnabled ? ["mcp"] : ["components"]),
     ...(isDeploymentsEnabled ? ["deployments"] : []),
+    ...(hasProjectForm ? ["harness"] : []),
   ];
 
   const handleDownload = () => {
@@ -151,7 +164,9 @@ const HeaderComponent = ({
         </div>
         {folderName}
       </div>
-      {!isEmptyFolder && (
+      {/* A project with a form keeps its tabs even while it holds no flows, or a just-created
+          typed project would have no way to reach the form. */}
+      {(!isEmptyFolder || hasProjectForm) && (
         <>
           <div className={cn("flex pb-4")}>
             {tabTypes.map((type) => (
@@ -183,7 +198,9 @@ const HeaderComponent = ({
                         ? t("mainPage.tabDeployments")
                         : type === "components"
                           ? t("mainPage.tabComponents")
-                          : type.charAt(0).toUpperCase() + type.slice(1)}
+                          : type === "harness"
+                            ? projectTypeLabel || t("mainPage.tabHarness")
+                            : type.charAt(0).toUpperCase() + type.slice(1)}
                   {type === "deployments" && (
                     <Badge
                       variant="purpleStatic"
@@ -199,129 +216,134 @@ const HeaderComponent = ({
             <div className="w-full border-b dark:border-border" />
           </div>
           {/* Search and filters */}
-          {flowType !== "mcp" && flowType !== "deployments" && (
-            <div className="flex justify-between">
-              <div className="flex w-full xl:w-5/12">
-                <Input
-                  icon="Search"
-                  data-testid="search-store-input"
-                  type="text"
-                  placeholder={t("mainPage.searchPlaceholder", {
-                    flowType: t(`mainPage.flowType.${flowType}`),
-                  })}
-                  className="mr-2 !text-mmd"
-                  inputClassName="!text-mmd"
-                  value={debouncedSearch}
-                  onChange={handleSearch}
-                />
-                <div className="relative mr-2 flex h-fit rounded-lg border border-muted bg-muted">
-                  {/* Sliding Indicator */}
-                  <div
-                    className={`absolute top-[2px] h-[32px] w-8 transform rounded-md bg-background shadow-md transition-transform duration-300 ${
-                      view === "list"
-                        ? "left-[2px] translate-x-0"
-                        : "left-[6px] translate-x-full"
-                    }`}
-                  ></div>
-
-                  {/* Buttons */}
-                  {["list", "grid"].map((viewType) => (
-                    <Button
-                      key={viewType}
-                      unstyled
-                      size="icon"
-                      className={`group relative z-10 m-[2px] flex-1 rounded-lg p-2 ${
-                        view === viewType
-                          ? "text-foreground"
-                          : "text-muted-foreground hover:bg-muted"
+          {flowType !== "mcp" &&
+            flowType !== "deployments" &&
+            flowType !== "harness" &&
+            !isEmptyFolder && (
+              <div className="flex justify-between">
+                <div className="flex w-full xl:w-5/12">
+                  <Input
+                    icon="Search"
+                    data-testid="search-store-input"
+                    type="text"
+                    placeholder={t("mainPage.searchPlaceholder", {
+                      flowType: t(`mainPage.flowType.${flowType}`),
+                    })}
+                    className="mr-2 !text-mmd"
+                    inputClassName="!text-mmd"
+                    value={debouncedSearch}
+                    onChange={handleSearch}
+                  />
+                  <div className="relative mr-2 flex h-fit rounded-lg border border-muted bg-muted">
+                    {/* Sliding Indicator */}
+                    <div
+                      className={`absolute top-[2px] h-[32px] w-8 transform rounded-md bg-background shadow-md transition-transform duration-300 ${
+                        view === "list"
+                          ? "left-[2px] translate-x-0"
+                          : "left-[6px] translate-x-full"
                       }`}
-                      onClick={() => setView(viewType as "list" | "grid")}
-                      aria-label={t(
-                        viewType === "list"
-                          ? "flows.viewList"
-                          : "flows.viewGrid",
-                      )}
-                      aria-pressed={view === viewType}
-                    >
-                      <ForwardedIconComponent
-                        name={viewType === "list" ? "Menu" : "LayoutGrid"}
-                        aria-hidden="true"
-                        className="h-4 w-4 group-hover:text-foreground"
-                      />
-                    </Button>
-                  ))}
+                    ></div>
+
+                    {/* Buttons */}
+                    {["list", "grid"].map((viewType) => (
+                      <Button
+                        key={viewType}
+                        unstyled
+                        size="icon"
+                        className={`group relative z-10 m-[2px] flex-1 rounded-lg p-2 ${
+                          view === viewType
+                            ? "text-foreground"
+                            : "text-muted-foreground hover:bg-muted"
+                        }`}
+                        onClick={() => setView(viewType as "list" | "grid")}
+                        aria-label={t(
+                          viewType === "list"
+                            ? "flows.viewList"
+                            : "flows.viewGrid",
+                        )}
+                        aria-pressed={view === viewType}
+                      >
+                        <ForwardedIconComponent
+                          name={viewType === "list" ? "Menu" : "LayoutGrid"}
+                          aria-hidden="true"
+                          className="h-4 w-4 group-hover:text-foreground"
+                        />
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center">
-                <div
-                  className={cn(
-                    "flex w-0 items-center gap-2 overflow-hidden opacity-0 transition-all duration-300",
-                    selectedFlows.length > 0 && "w-36 opacity-100",
-                  )}
-                >
-                  <Button
-                    variant="outline"
-                    size="iconMd"
-                    className="h-8 w-8"
-                    data-testid="download-bulk-btn"
-                    onClick={handleDownload}
-                    loading={isDownloading}
-                    disabled={!canBulkDownload}
-                    tabIndex={hasSelection && canBulkDownload ? 0 : -1}
-                    aria-label={t("flows.downloadSelected")}
-                  >
-                    <ForwardedIconComponent name="Download" />
-                  </Button>
-                  <DeleteConfirmationModal
-                    asChild
-                    onConfirm={handleDelete}
-                    description={"flow" + (selectedFlows.length > 1 ? "s" : "")}
-                    note={
-                      "and " +
-                      (selectedFlows.length > 1 ? "their" : "its") +
-                      " message history"
-                    }
+                <div className="flex items-center">
+                  <div
+                    className={cn(
+                      "flex w-0 items-center gap-2 overflow-hidden opacity-0 transition-all duration-300",
+                      selectedFlows.length > 0 && "w-36 opacity-100",
+                    )}
                   >
                     <Button
-                      variant="destructive"
+                      variant="outline"
                       size="iconMd"
-                      className="px-2.5 !text-mmd"
-                      data-testid="delete-bulk-btn"
-                      loading={isDeleting}
-                      disabled={!canBulkDelete}
-                      tabIndex={hasSelection && canBulkDelete ? 0 : -1}
+                      className="h-8 w-8"
+                      data-testid="download-bulk-btn"
+                      onClick={handleDownload}
+                      loading={isDownloading}
+                      disabled={!canBulkDownload}
+                      tabIndex={hasSelection && canBulkDownload ? 0 : -1}
+                      aria-label={t("flows.downloadSelected")}
                     >
-                      <ForwardedIconComponent name="Trash2" />
-                      {t("mainPage.delete")}
+                      <ForwardedIconComponent name="Download" />
                     </Button>
-                  </DeleteConfirmationModal>
-                </div>
-                {!hideNewFlowButton && (
-                  <ShadTooltip content={t("mainPage.newFlow")} side="bottom">
-                    <Button
-                      variant="default"
-                      size="iconMd"
-                      className="z-50 px-2.5 !text-mmd"
-                      onClick={() =>
-                        onNewFlow ? onNewFlow() : setNewProjectModal(true)
+                    <DeleteConfirmationModal
+                      asChild
+                      onConfirm={handleDelete}
+                      description={
+                        "flow" + (selectedFlows.length > 1 ? "s" : "")
                       }
-                      id="new-project-btn"
-                      data-testid="new-project-btn"
+                      note={
+                        "and " +
+                        (selectedFlows.length > 1 ? "their" : "its") +
+                        " message history"
+                      }
                     >
-                      <ForwardedIconComponent
-                        name="Plus"
-                        aria-hidden="true"
-                        className="h-4 w-4"
-                      />
-                      <span className="hidden whitespace-nowrap font-semibold md:inline">
-                        {t("mainPage.newFlow")}
-                      </span>
-                    </Button>
-                  </ShadTooltip>
-                )}
+                      <Button
+                        variant="destructive"
+                        size="iconMd"
+                        className="px-2.5 !text-mmd"
+                        data-testid="delete-bulk-btn"
+                        loading={isDeleting}
+                        disabled={!canBulkDelete}
+                        tabIndex={hasSelection && canBulkDelete ? 0 : -1}
+                      >
+                        <ForwardedIconComponent name="Trash2" />
+                        {t("mainPage.delete")}
+                      </Button>
+                    </DeleteConfirmationModal>
+                  </div>
+                  {!hideNewFlowButton && (
+                    <ShadTooltip content={t("mainPage.newFlow")} side="bottom">
+                      <Button
+                        variant="default"
+                        size="iconMd"
+                        className="z-50 px-2.5 !text-mmd"
+                        onClick={() =>
+                          onNewFlow ? onNewFlow() : setNewProjectModal(true)
+                        }
+                        id="new-project-btn"
+                        data-testid="new-project-btn"
+                      >
+                        <ForwardedIconComponent
+                          name="Plus"
+                          aria-hidden="true"
+                          className="h-4 w-4"
+                        />
+                        <span className="hidden whitespace-nowrap font-semibold md:inline">
+                          {t("mainPage.newFlow")}
+                        </span>
+                      </Button>
+                    </ShadTooltip>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </>
       )}
     </>

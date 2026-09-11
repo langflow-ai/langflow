@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useParams } from "react-router-dom";
 import PaginatorComponent from "@/components/common/paginatorComponent";
@@ -7,6 +7,7 @@ import { useStartNewFlow } from "@/components/core/flowBuilderWelcome/hooks/use-
 import { IS_MAC } from "@/constants/constants";
 import { PermissionsProvider } from "@/contexts/permissionsContext";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
+import { useGetProjectTypesQuery } from "@/controllers/API/queries/folders/use-get-project-types";
 import { CustomBanner } from "@/customization/components/custom-banner";
 import { CustomMcpServerTab } from "@/customization/components/custom-McpServerTab";
 import {
@@ -26,6 +27,11 @@ import useFileDrop from "../../hooks/use-on-file-drop";
 import type { FlowTabType } from "../../types";
 import DeploymentsPage from "../deploymentsPage/deployments-page";
 import EmptyFolder from "../emptyFolder";
+
+// Loaded on demand: the project form renders through the canvas field widgets, which is a far
+// bigger tree than the rest of this page needs.
+const HarnessPage = lazy(() => import("../harnessPage/harness-page"));
+
 import { isFolderEmpty } from "./utils/isFolderEmpty";
 
 // Keyed by the active tab, not the route: Flows and Deployments share /flows
@@ -35,6 +41,7 @@ const PAGE_TITLE_KEYS: Record<FlowTabType, string> = {
   deployments: "mainPage.tabDeployments",
   components: "mainPage.tabComponents",
   mcp: "mainPage.mcpServer",
+  harness: "mainPage.tabHarness",
 };
 
 const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
@@ -67,6 +74,8 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const folderDisplayName = currentFolder
     ? getProjectDisplayName(currentFolder, t)
     : "";
+  // Cached for the session, so this costs nothing beyond the first project page.
+  const { data: projectTypes } = useGetProjectTypesQuery();
   const flows = useFlowsManagerStore((state) => state.flows);
   // The primary "New Flow" handler — creates an empty flow, primes the
   // welcome overlay store, and navigates to the canvas. Replaces the old
@@ -105,6 +114,9 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     description: folderData?.folder?.description ?? "",
     parent_id: folderData?.folder?.parent_id ?? "",
     components: folderData?.folder?.components ?? [],
+    project_type:
+      folderData?.folder?.project_type ?? currentFolder?.project_type,
+    project_config: folderData?.folder?.project_config ?? null,
     pagination: {
       page: folderData?.flows?.page ?? 1,
       size: folderData?.flows?.size ?? 12,
@@ -112,6 +124,11 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
       pages: folderData?.flows?.pages ?? 0,
     },
   };
+
+  // The open project's type, so the tab can name it rather than use a fixed word.
+  const openProjectType = projectTypes?.find(
+    (candidate) => candidate.name === data.project_type,
+  );
 
   // Flow ids to evaluate for the permission gate. Only the flows/components
   // tabs render selectable, gated cards; other tabs send no ids so the query
@@ -333,12 +350,27 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                   setSearch={onSearch}
                   isEmptyFolder={isEmptyFolder === true}
                   selectedFlows={selectedFlows}
+                  projectType={data.project_type}
+                  projectTypeLabel={openProjectType?.display_name}
                 />
                 {isEmptyFolder === true ? (
-                  <EmptyFolder
-                    setOpenModal={setNewProjectModal}
-                    onNewFlow={startNewFlow}
-                  />
+                  // A typed project is configurable before it holds any flow, so its form wins
+                  // over the "this project is empty" prompt while its tab is selected.
+                  flowType === "harness" && currentFolderId ? (
+                    <Suspense fallback={null}>
+                      <HarnessPage
+                        key={currentFolderId}
+                        projectId={currentFolderId}
+                        projectType={data.project_type ?? "flows"}
+                        projectConfig={data.project_config}
+                      />
+                    </Suspense>
+                  ) : (
+                    <EmptyFolder
+                      setOpenModal={setNewProjectModal}
+                      onNewFlow={startNewFlow}
+                    />
+                  )
                 ) : (
                   <div className="flex h-full flex-col">
                     {isLoading || isEmptyFolder === null ? (
@@ -357,6 +389,17 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                       <CustomMcpServerTab folderName={folderName} />
                     ) : flowType === "deployments" ? (
                       <DeploymentsPage />
+                    ) : flowType === "harness" && currentFolderId ? (
+                      <Suspense fallback={null}>
+                        <HarnessPage
+                          // Remounts per project: unsaved edits must not follow the user
+                          // into a different project's form.
+                          key={currentFolderId}
+                          projectId={currentFolderId}
+                          projectType={data.project_type ?? "flows"}
+                          projectConfig={data.project_config}
+                        />
+                      </Suspense>
                     ) : (flowType === "flows" || flowType === "components") &&
                       data &&
                       data.pagination.total > 0 ? (

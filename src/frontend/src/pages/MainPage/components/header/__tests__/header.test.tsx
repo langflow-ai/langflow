@@ -309,3 +309,107 @@ describe("HeaderComponent - TabIndex Behavior with Bulk Actions", () => {
     });
   });
 });
+
+describe("HeaderComponent - project type tab", () => {
+  const defaultProps = {
+    flowType: "flows" as const,
+    setFlowType: jest.fn(),
+    view: "list" as const,
+    setView: jest.fn(),
+    setNewProjectModal: jest.fn(),
+    setSearch: jest.fn(),
+    isEmptyFolder: false,
+    selectedFlows: [],
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    act(() => {
+      useUtilityStore.setState({ featureFlags: {}, hideNewFlowButton: false });
+    });
+  });
+
+  it("shows no extra tab for a plain flows project", () => {
+    render(<HeaderComponent {...defaultProps} projectType="flows" />);
+
+    expect(screen.queryByTestId("harness-btn")).not.toBeInTheDocument();
+  });
+
+  it("shows no extra tab when the project type is unknown to the page", () => {
+    render(<HeaderComponent {...defaultProps} />);
+
+    expect(screen.queryByTestId("harness-btn")).not.toBeInTheDocument();
+  });
+
+  it("shows the harness tab for a typed project", () => {
+    render(<HeaderComponent {...defaultProps} projectType="agent-harness" />);
+
+    expect(screen.getByTestId("harness-btn")).toBeInTheDocument();
+  });
+
+  it("keeps the harness tab reachable in a project with no flows yet", () => {
+    render(
+      <HeaderComponent
+        {...defaultProps}
+        isEmptyFolder={true}
+        projectType="agent-harness"
+      />,
+    );
+
+    expect(screen.getByTestId("harness-btn")).toBeInTheDocument();
+  });
+
+  it("hides the tabs in an empty plain project, as before", () => {
+    render(
+      <HeaderComponent
+        {...defaultProps}
+        isEmptyFolder={true}
+        projectType="flows"
+      />,
+    );
+
+    expect(screen.queryByTestId("flows-btn")).not.toBeInTheDocument();
+  });
+
+  it("falls back to flows when the harness tab is selected on a project without a form", () => {
+    const setFlowType = jest.fn();
+
+    render(
+      <HeaderComponent
+        {...defaultProps}
+        flowType={"harness" as never}
+        setFlowType={setFlowType}
+        projectType="flows"
+      />,
+    );
+
+    expect(setFlowType).toHaveBeenCalledWith("flows");
+  });
+
+  it("leaves the harness tab selected on a project that has a form", () => {
+    const setFlowType = jest.fn();
+
+    render(
+      <HeaderComponent
+        {...defaultProps}
+        flowType={"harness" as never}
+        setFlowType={setFlowType}
+        projectType="agent-harness"
+      />,
+    );
+
+    expect(setFlowType).not.toHaveBeenCalled();
+  });
+
+  it("hides the search box on the harness tab", () => {
+    render(
+      <HeaderComponent
+        {...defaultProps}
+        flowType={"harness" as never}
+        projectType="agent-harness"
+      />,
+    );
+
+    expect(screen.queryByTestId("search-store-input")).not.toBeInTheDocument();
+  });
+});

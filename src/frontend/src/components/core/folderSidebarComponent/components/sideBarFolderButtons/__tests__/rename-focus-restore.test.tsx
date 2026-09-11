@@ -86,6 +86,7 @@ jest.mock("@/controllers/API/queries/auth", () => ({
 }));
 
 jest.mock("@/controllers/API/queries/folders", () => ({
+  useGetProjectTypesQuery: () => ({ data: undefined, isLoading: false }),
   usePatchFolders: () => ({ mutate: mockMutateUpdateFolder }),
   usePostFolders: () => ({
     mutate: mockMutateAddFolder,

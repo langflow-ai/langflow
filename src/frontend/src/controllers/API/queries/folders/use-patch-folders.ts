@@ -5,7 +5,11 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface IPatchPatchFolders {
-  data: AddFolderType;
+  /**
+   * PATCH applies per field, so a caller only sends what it means to change. A form that edits
+   * the project's config has no business naming or renaming it.
+   */
+  data: Partial<AddFolderType>;
   folderId: string;
 }
 
@@ -18,11 +22,28 @@ export const usePatchFolders: useMutationFunctionType<
   const patchFoldersFn = async (
     newFolder: IPatchPatchFolders,
   ): Promise<void> => {
+    // A key left out of the payload leaves the stored value alone. An explicit null
+    // project_config is a real value (it clears the config), which is why that one checks for
+    // the key rather than for a truthy value.
     const payload = {
-      name: newFolder.data.name,
-      description: newFolder.data.description,
-      flows_list: newFolder.data.flows ?? [],
-      components_list: newFolder.data.components ?? [],
+      ...(newFolder.data.name !== undefined
+        ? { name: newFolder.data.name }
+        : {}),
+      ...(newFolder.data.description !== undefined
+        ? { description: newFolder.data.description }
+        : {}),
+      ...(newFolder.data.flows !== undefined
+        ? { flows_list: newFolder.data.flows }
+        : {}),
+      ...(newFolder.data.components !== undefined
+        ? { components_list: newFolder.data.components }
+        : {}),
+      ...(newFolder.data.project_type
+        ? { project_type: newFolder.data.project_type }
+        : {}),
+      ...(Object.hasOwn(newFolder.data, "project_config")
+        ? { project_config: newFolder.data.project_config }
+        : {}),
     };
 
     const res = await api.patch(
@@ -36,6 +57,9 @@ export const usePatchFolders: useMutationFunctionType<
     ...options,
     onSettled: () => {
       queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
+      // The open project is read through its own query, so a saved form has to invalidate it
+      // too or the page keeps rendering the config it had before the save.
+      queryClient.refetchQueries({ queryKey: ["useGetFolder"] });
     },
   });
 

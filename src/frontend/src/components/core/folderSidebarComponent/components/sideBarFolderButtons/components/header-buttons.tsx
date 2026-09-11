@@ -4,6 +4,7 @@ import IconComponent from "@/components/common/genericIconComponent";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useUpdateUser } from "@/controllers/API/queries/auth";
 import CustomGetStartedProgress from "@/customization/components/custom-get-started-progress";
+import type { ProjectTypeType } from "@/pages/MainPage/entities";
 import useAuthStore from "@/stores/authStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { AddFolderButton } from "./add-folder-button";
@@ -14,11 +15,13 @@ export const HeaderButtons = ({
   isUpdatingFolder,
   isPending,
   addNewFolder,
+  projectTypes,
 }: {
   handleUploadFlowsToFolder: () => void;
   isUpdatingFolder: boolean;
   isPending: boolean;
-  addNewFolder: () => void;
+  addNewFolder: (projectType?: string) => void;
+  projectTypes?: ProjectTypeType[];
 }) => {
   const { t } = useTranslation();
   const userData = useAuthStore((state) => state.userData);
@@ -97,6 +100,7 @@ export const HeaderButtons = ({
               onClick={addNewFolder}
               disabled={isUpdatingFolder}
               loading={isPending}
+              projectTypes={projectTypes}
             />
           )}
         </div>
