@@ -132,7 +132,7 @@
       "error_policy": "owner_debug_delegated_sanitized",
       "connection_resolution": "owner_only",
       "connection_resolution_note": "owner-only admission, so an explicit share is not resolved either; an auth type none transport is anonymous and non-interactive",
-      "exception": "project admission is owner-scoped; auth type none resolves the project owner as its transport actor",
+      "exception": "project admission is owner-scoped; auth type none resolves the project owner as its transport actor for admission only, and the tool call executes as anonymous_public, non-interactively, so it resolves no user or instance connection",
       "test_references": [
         "src/backend/tests/unit/api/v1/test_mcp_projects.py::test_streamable_none_auth_project_runs_as_project_owner",
         "src/backend/tests/unit/api/v1/test_connection_resolution_families.py::test_connection_resolution_matches_the_matrix_for_every_family",

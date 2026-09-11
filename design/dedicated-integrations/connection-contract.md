@@ -196,14 +196,7 @@ defense in depth and pre-flight in interactive routes for UX.**
 |---|---|---|---|
 | interactive_chat, v1_run, openai_responses, voice, workflow_v2 | actor_or_explicit_share | owner or explicit share | per policy |
 | legacy_mcp | actor | owner only (no shares) | per policy |
-| mcp_projects | actor | owner only; project auth `none` runs as the owner non-interactively, so it requires the per-connection opt-in | per policy |
-<!-- AMENDED by INT-6 (LE-2464), 2026-09-05: the mcp_projects auth-`none` row above does not describe the code.
-     `mcp_utils.py` swaps the execution user for `public_execution_user()` on an unauthenticated project call
-     (asserted by `test_mcp_utils.py::test_streamable_none_auth_project_...`), so such a call already executes
-     anonymously and resolves NO user connection, opt-in or not. Implementing the row as written would let an
-     unauthenticated caller use the owner's credential — a widening, not a hardening. INT-6 keeps the code:
-     auth `none` stamps `anonymous_public` and is marked non-interactive; `apikey`/`oauth` stay owner-only actor.
-     The matrix's `mcp_projects` exception text is the authority for the transport actor. -->
+| mcp_projects | actor; project auth `none` executes as anonymous_public | owner only (no shares); an auth `none` call runs anonymously and non-interactively, so it resolves no user connection, opt-in or not | per policy; auth `none` is denied like anonymous_public |
 | webhook | flow_owner | only with per-connection `allow_non_interactive` | per policy |
 | deployments | deployment_owner | only with per-connection `allow_non_interactive` | per policy |
 | workflow_hitl_v2 | job_owner | as the job owner who started it; re-resolved on the worker, never persisted | per policy |
@@ -484,7 +477,8 @@ identifiers.**
 
 1. Handle-only versus handle plus owner kind, and the default user-to-instance fallback policy.
 2. Connection as a new share resource type for explicit shares.
-3. Per-connection `allow_non_interactive` semantics, including `mcp_projects` with auth `none`.
+3. Per-connection `allow_non_interactive` semantics. (`mcp_projects` with auth `none` is settled: the call
+   executes anonymously and resolves no user connection, so the opt-in does not apply to it.)
 4. Cross-worker single-flight refresh: a DB lease column versus a Redis lock; the `background_execution`
    lease-claim code is the precedent.
 5. Encryption envelope decision: use the existing Fernet `encrypt_api_key` path used by MCP and variables, and
