@@ -16,8 +16,8 @@ pip install lfx-serply
 
 The bundle is registered automatically via the `langflow.extensions`
 entry-point. After install, restart your Langflow server; the
-`SerplySearchComponent` will appear in the palette under the `serply`
-bundle group.
+`SerplySearchComponent` will appear in the palette's **Bundles** section
+under **Serply**.
 
 ## Configure
 
@@ -25,12 +25,14 @@ Set the **Serply API Key** input to your own key from
 [serply.io](https://serply.io). The component is optional and does nothing
 until a key is supplied, so it changes nothing for anyone who does not use it.
 
+In tool mode, the component exposes a single tool named `serply_search`.
+
 ## Develop
 
 ```bash
 cd src/bundles/serply
 pip install -e .
-lfx extension validate .
+lfx extension validate src/lfx_serply
 ```
 
 ## Manifest
