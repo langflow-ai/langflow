@@ -134,12 +134,12 @@ async def test_status_rejects_cross_user(active_user, user_two):
 
 
 async def test_submit_runs_in_process_when_job_queue_type_redis(active_user, monkeypatch):
-    # With job_queue_type=redis the scaled backend is not shipped on this branch
-    # (no redis_backend / worker modules). The facade must fall back to the
-    # in-process executor, not raise ModuleNotFoundError building a scaled backend.
+    # job_queue_type=redis selects the v1 build-event queue only — it does NOT
+    # flip the background backend to scaled (selection is the explicit
+    # background_backend setting), so the facade runs jobs in-process.
     settings_service = get_settings_service()
     monkeypatch.setattr(settings_service.settings, "job_queue_type", "redis")
-    assert settings_service.settings.background_backend_is_scaled is True
+    assert settings_service.settings.background_backend_is_scaled is False
 
     svc = BackgroundExecutionService(
         settings_service=settings_service,
