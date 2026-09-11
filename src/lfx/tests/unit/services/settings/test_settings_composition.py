@@ -254,6 +254,7 @@ EXPECTED_FIELDS = {
     "background_lease_ttl_s",
     "background_heartbeat_interval_s",
     "background_watchdog_interval_s",
+    "background_retention_days",
     "test_redis_url",
     # Triggers (TRG-2)
     "trigger_dispatcher_enabled",

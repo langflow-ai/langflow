@@ -190,3 +190,35 @@ async def test_stop_cancels_job(active_user):
         assert st["status"] == JobStatus.CANCELLED
     finally:
         await svc.stop()
+
+
+async def test_retention_sweep_is_opt_in(monkeypatch):
+    """No retention window configured means no sweep task at all.
+
+    Retention deletes run history, so it stays off until an operator sets a
+    window: a default deployment must spawn no purge loop.
+    """
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "background_retention_days", 0)
+
+    svc = BackgroundExecutionService(settings_service, frame_source_factory=lambda **_kw: _scripted_source)
+    await svc.start()
+    try:
+        assert svc._retention_task is None
+    finally:
+        await svc.stop()
+
+
+async def test_retention_sweep_starts_when_a_window_is_set(monkeypatch):
+    """A configured window starts the periodic purge, and stop() tears it down."""
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "background_retention_days", 30)
+
+    svc = BackgroundExecutionService(settings_service, frame_source_factory=lambda **_kw: _scripted_source)
+    await svc.start()
+    try:
+        assert svc._retention_task is not None
+        assert not svc._retention_task.done()
+    finally:
+        await svc.stop()
+    assert svc._retention_task is None
