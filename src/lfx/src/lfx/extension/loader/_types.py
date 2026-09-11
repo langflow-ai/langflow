@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from lfx.extension.errors import ExtensionError
+    from lfx.integrations import IntegrationCapabilityManifest
 
 # ---------------------------------------------------------------------------
 # Slot names
@@ -94,6 +95,19 @@ class LoadedComponent:
         return f"ext:{self.bundle}:{self.class_name}@{self.slot}"
 
 
+@dataclass(frozen=True)
+class LoadedIntegration:
+    """Validated provider capability metadata exposed by the extension loader."""
+
+    extension_id: str
+    extension_version: str
+    bundle: str
+    provider_id: str
+    manifest_path: Path
+    capability_manifest: IntegrationCapabilityManifest
+    distribution: str | None = None
+
+
 # ---------------------------------------------------------------------------
 # LoadResult
 # ---------------------------------------------------------------------------
@@ -129,6 +143,7 @@ class LoadResult:
     """
 
     components: list[LoadedComponent] = field(default_factory=list)
+    integrations: list[LoadedIntegration] = field(default_factory=list)
     errors: list[ExtensionError] = field(default_factory=list)
     warnings: list[ExtensionError] = field(default_factory=list)
     extension_id: str | None = None

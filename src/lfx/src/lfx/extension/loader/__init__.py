@@ -78,6 +78,7 @@ from lfx.extension.loader._types import (
     SLOT_OFFICIAL,
     SLOT_VALUES,
     LoadedComponent,
+    LoadedIntegration,
     LoadResult,
 )
 
@@ -89,6 +90,7 @@ __all__ = [
     "SLOT_VALUES",
     "LoadResult",
     "LoadedComponent",
+    "LoadedIntegration",
     "discover_inline_bundles",
     "filter_component_entry_points",
     "filter_plugin_entry_points",

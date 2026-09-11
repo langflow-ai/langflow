@@ -7,6 +7,7 @@ if TYPE_CHECKING:
     from lfx.integrations.capabilities import (
         ConditionalScopeRequirement,
         IntegrationCapability,
+        IntegrationCapabilityManifest,
         IntegrationProvider,
         OAuthProfile,
         ScopeCondition,
@@ -48,6 +49,7 @@ __all__ = [
     "ConnectionUnresolvedError",
     "CredentialLease",
     "IntegrationCapability",
+    "IntegrationCapabilityManifest",
     "IntegrationError",
     "IntegrationProvider",
     "OAuthProfile",
@@ -67,6 +69,7 @@ _MODULES = {
         (
             "ConditionalScopeRequirement",
             "IntegrationCapability",
+            "IntegrationCapabilityManifest",
             "IntegrationProvider",
             "OAuthProfile",
             "ScopeCondition",

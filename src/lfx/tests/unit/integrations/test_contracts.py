@@ -20,7 +20,7 @@ from lfx.integrations import (
     ScopeCondition,
     ScopeSet,
 )
-from lfx.integrations.capabilities import OAuthKind
+from lfx.integrations.capabilities import CapabilityMaturity, DeploymentContext, ExecutionSubstrate, OAuthKind
 from lfx.io.schema import create_input_schema, create_input_schema_from_dict
 from lfx.schema.dotdict import dotdict
 from pydantic import SecretStr, ValidationError
@@ -89,6 +89,10 @@ def _provider(provider_id: str = "google") -> IntegrationProvider:
                 condition=ScopeCondition(kind="input_truthy", input="write"),
             ),
         ),
+        policy_keys=("integrations.google.drive.read",),
+        substrate="sdk",
+        maturity="ga",
+        deployment_contexts=("hosted", "self_managed", "desktop", "headless"),
         risk="read",
         component_ref="GoogleDriveComponent",
     )
@@ -116,14 +120,26 @@ def test_oauth_profile_kinds_match_discovery_schema() -> None:
     assert set(get_args(OAuthKind)) == set(schema["$defs"]["auth_mode"]["enum"])
 
 
-def test_extension_manifest_accepts_unique_integration_providers() -> None:
+def test_capability_enums_match_discovery_schema() -> None:
+    schema_path = Path(__file__).parents[5] / "design/dedicated-integrations/schema/capability_matrix.schema.json"
+    if not schema_path.is_file():
+        pytest.skip("The discovery schema is only available in the full repository")
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+
+    assert set(get_args(ExecutionSubstrate)) == set(schema["$defs"]["substrate"]["enum"])
+    assert set(get_args(CapabilityMaturity)) == set(schema["$defs"]["substrate_ga_status"]["enum"])
+    deployment_contexts = schema["$defs"]["action"]["properties"]["deployment_contexts"]["properties"]
+    assert set(get_args(DeploymentContext)) == set(deployment_contexts)
+
+
+def test_extension_manifest_accepts_unique_integration_references() -> None:
     manifest_data = {
         "id": "lfx-google",
         "version": "1.0.0",
         "name": "Google",
         "lfx": {"compat": ["1"]},
         "bundles": [{"name": "google", "path": "google"}],
-        "integrations": [_provider().model_dump(mode="json")],
+        "integrations": [{"provider_id": "google", "bundle": "google", "path": "capabilities.json"}],
     }
 
     manifest = ExtensionManifest.model_validate(manifest_data)
@@ -131,7 +147,7 @@ def test_extension_manifest_accepts_unique_integration_providers() -> None:
 
 
 def test_extension_manifest_rejects_duplicate_integration_provider_ids() -> None:
-    provider = _provider().model_dump(mode="json")
+    reference = {"provider_id": "google", "bundle": "google", "path": "capabilities.json"}
     with pytest.raises(ValidationError, match="must be unique"):
         ExtensionManifest.model_validate(
             {
@@ -140,7 +156,21 @@ def test_extension_manifest_rejects_duplicate_integration_provider_ids() -> None
                 "name": "Google",
                 "lfx": {"compat": ["1"]},
                 "bundles": [{"name": "google", "path": "google"}],
-                "integrations": [provider, provider],
+                "integrations": [reference, reference],
+            }
+        )
+
+
+def test_extension_manifest_rejects_integration_reference_to_unknown_bundle() -> None:
+    with pytest.raises(ValidationError, match="unknown bundles"):
+        ExtensionManifest.model_validate(
+            {
+                "id": "lfx-google",
+                "version": "1.0.0",
+                "name": "Google",
+                "lfx": {"compat": ["1"]},
+                "bundles": [{"name": "google", "path": "google"}],
+                "integrations": [{"provider_id": "google", "bundle": "microsoft", "path": "capabilities.json"}],
             }
         )
 

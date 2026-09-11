@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.langflow.org/design/dedicated-integrations/capability-matrix-v1.json",
   "title": "Dedicated Integrations wave-1 capability matrix",
-  "description": "One provider's wave-1 capability matrix for the INT-1 discovery gate. Hand-written for the gate; INT-3 lifts the enums into Pydantic under src/lfx/src/lfx/extension/ and regenerates this file. The enum values here are asserted equal to VALID_VALUES in scripts/ci/check_capability_matrices.py.",
+  "description": "One provider's wave-1 capability matrix for the discovery gate. This remains the historical planning record; runtime capability manifests use the matching Pydantic enums in src/lfx/src/lfx/integrations/capabilities.py. Tests and scripts/ci/check_capability_matrices.py guard enum parity.",
   "type": "object",
   "additionalProperties": false,
   "required": [

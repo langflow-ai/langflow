@@ -8,7 +8,9 @@ manifest at the distribution root. The manifest tells Langflow:
     - what component-base-class API surface the Bundle was built against
       (``lfx.compat``),
     - what optional capabilities the Bundle declares
-      (``capabilities.requiresCredentials`` is the only v0 slot).
+      (``capabilities.requiresCredentials`` is the only v0 flag),
+    - which bundle-owned integration capability manifests to load
+      (``integrations``).
 
 Manifest source forms (both supported):
 
@@ -49,7 +51,7 @@ from pydantic import (
     model_validator,
 )
 
-from lfx.integrations.capabilities import IntegrationProvider
+from lfx.extension.integration_compat import INTEGRATIONS_MIN_LFX_VERSION, check_integration_runtime
 from lfx.integrations.models import provider_env_segment
 
 # ---------------------------------------------------------------------------
@@ -473,6 +475,57 @@ class ProviderManifestEntry(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Integration capability manifests
+# ---------------------------------------------------------------------------
+
+
+class IntegrationManifestRef(BaseModel):
+    """Reference to a versioned capability manifest owned by one bundle."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    provider_id: StrictStr = Field(
+        ...,
+        pattern=_PROVIDER_ID_RE.pattern,
+        description=(
+            "Stable provider key used by discovery, policy, and connection resolution. "
+            "Owned by one installed bundle; cross-bundle claims are rejected."
+        ),
+    )
+    bundle: StrictStr = Field(
+        ...,
+        pattern=BUNDLE_NAME_RE.pattern,
+        description="Name of the bundle that owns the capability manifest.",
+    )
+    path: StrictStr = Field(
+        ...,
+        min_length=1,
+        description="JSON capability-manifest path, relative to the owning bundle directory.",
+        json_schema_extra={
+            "pattern": r"^(?!.*\u0000)(?![\\/])(?!.*(?:^|[\\/])\.\.(?:[\\/]|$)).+\.json$",
+        },
+    )
+
+    @field_validator("path")
+    @classmethod
+    def _validate_path_shape(cls, value: str) -> str:
+        if "\x00" in value:
+            msg = "Integration capability-manifest path must not contain a null byte"
+            raise ValueError(msg)
+        path = Path(value)
+        if path.is_absolute():
+            msg = f"Integration capability-manifest path {value!r} must be relative to the owning bundle"
+            raise ValueError(msg)
+        if any(part == ".." for part in path.parts):
+            msg = f"Integration capability-manifest path {value!r} must not contain '..'"
+            raise ValueError(msg)
+        if path.suffix != ".json":
+            msg = f"Integration capability-manifest path {value!r} must name a JSON file"
+            raise ValueError(msg)
+        return value
+
+
+# ---------------------------------------------------------------------------
 # ExtensionManifest
 # ---------------------------------------------------------------------------
 
@@ -556,9 +609,12 @@ class ExtensionManifest(BaseModel):
         description="Optional declared capabilities (v0: requiresCredentials only).",
     )
 
-    integrations: tuple[IntegrationProvider, ...] = Field(
+    integrations: tuple[IntegrationManifestRef, ...] = Field(
         default=(),
-        description="Provider authentication profiles and executable integration capabilities.",
+        description=(
+            "Bundle-owned, versioned provider capability-manifest references. "
+            f"Requires an lfx>={INTEGRATIONS_MIN_LFX_VERSION} runtime dependency."
+        ),
     )
 
     # ------------------------------------------------------------------
@@ -624,13 +680,18 @@ class ExtensionManifest(BaseModel):
 
     @model_validator(mode="after")
     def _validate_integration_provider_uniqueness(self) -> ExtensionManifest:
-        provider_ids = [provider.provider_id for provider in self.integrations]
+        provider_ids = [integration.provider_id for integration in self.integrations]
         if len(set(provider_ids)) != len(provider_ids):
             msg = "Integration provider ids must be unique within an extension"
             raise ValueError(msg)
         env_segments = [provider_env_segment(provider_id) for provider_id in provider_ids]
         if len(set(env_segments)) != len(env_segments):
             msg = "Integration provider ids must map to unique environment-key segments"
+            raise ValueError(msg)
+        bundle_names = {bundle.name for bundle in self.bundles}
+        unknown_bundles = sorted({integration.bundle for integration in self.integrations} - bundle_names)
+        if unknown_bundles:
+            msg = f"Integration references unknown bundles: {', '.join(unknown_bundles)}"
             raise ValueError(msg)
         return self
 
@@ -736,12 +797,14 @@ def load_manifest(root: Path | str) -> ManifestSource:
 
     if extension_json.is_file():
         data = _read_extension_json(extension_json)
+        check_integration_runtime(data)
         manifest = ExtensionManifest.model_validate(data)
         return ManifestSource(manifest=manifest, path=extension_json, kind="extension.json")
 
     if pyproject.is_file():
         section = _read_pyproject_extension(pyproject)
         if section is not None:
+            check_integration_runtime(section)
             manifest = ExtensionManifest.model_validate(section)
             return ManifestSource(manifest=manifest, path=pyproject, kind="pyproject.toml")
 

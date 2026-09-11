@@ -28,6 +28,7 @@ from lfx.extension import (
     load_seed_extensions,
 )
 from lfx.extension.bundle_registry import BundleRecord, get_default_registry
+from lfx.extension.integration_conflicts import IntegrationConflictError
 from lfx.extension.reload import register_post_swap_hook
 from lfx.log.logger import logger
 from lfx.utils.component_aliases import ComponentIdentityIndex, build_component_identity_index
@@ -1121,6 +1122,7 @@ def _resolve_bundle_shadowing(
             # Drop components so the registry-population and palette-construction
             # loops naturally skip this result; the typed warning still emits.
             result.components = []
+            result.integrations = []
 
     return extension_results, seed_results, lfx_bundles_results, dev_results, inline_results
 
@@ -1216,16 +1218,6 @@ async def import_extension_components(
         inline_results=inline_results,
     )
 
-    _emit_extension_diagnostics(
-        [
-            *deduped_extension_results,
-            *deduped_seed_results,
-            *deduped_lfx_bundles_results,
-            *deduped_dev_results,
-            *deduped_inline_results,
-        ]
-    )
-
     # Populate the process-default BundleRegistry so the reload endpoint
     # (POST /api/v1/extensions/{id}/bundles/{name}/reload) can find a
     # bundle by name.  Without this, every reload returns
@@ -1253,11 +1245,19 @@ async def import_extension_components(
             extension_version=result.extension_version or "0.0.0",
             slot=result.slot,
             components=tuple(result.components),
+            integrations=tuple(result.integrations),
             distribution=result.distribution,
             source_path=result.source_path,
             manifestless=result.manifestless,
         )
-        registry.install_bundle(record)
+        try:
+            registry.install_bundle(record)
+        except IntegrationConflictError as exc:
+            result.errors.extend(exc.errors)
+            result.components = []
+            result.integrations = []
+
+    _emit_extension_diagnostics(all_results)
 
     components_dict: dict[str, dict[str, Any]] = {}
     for result in all_results:
