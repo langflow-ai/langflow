@@ -3,11 +3,8 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
-from typing import Any
-
-from lfx.base.mcp.util import extract_http_status
-from lfx.utils.url_redaction import redact_urls_in_text
+from collections.abc import Callable, Iterator
+from typing import Any, Literal
 
 _EMAIL_RE = re.compile(r"(?<![\w.+-])[\w.+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}(?![\w.-])")
 HTTP_UNAUTHORIZED = 401
@@ -31,6 +28,8 @@ INTEGRATION_ERROR_CODES = frozenset(
 
 
 def _sanitize(text: str) -> str:
+    from lfx.utils.url_redaction import redact_urls_in_text
+
     return _EMAIL_RE.sub("[redacted-email]", redact_urls_in_text(text))
 
 
@@ -70,27 +69,85 @@ class IntegrationError(Exception):
         super().__init__(self.safe_message)
 
 
+ConnectionUnresolvedReason = Literal[
+    "missing",
+    "env-fallback-disabled",
+    "malformed-json",
+    "long-lived-secret",
+    "unsupported-fields",
+    "invalid-access-token",
+    "invalid-scopes",
+    "invalid-token-type",
+    "invalid-account",
+    "invalid-expiry",
+    "invalid-credential",
+    "credential-undecryptable",
+]
+
+_CONNECTION_UNRESOLVED_HINTS: dict[ConnectionUnresolvedReason, str] = {
+    "missing": "Configure the connection for this execution environment.",
+    "env-fallback-disabled": (
+        "Supply the connection through request-scoped variables or the host's secret provider; "
+        "environment fallback is disabled."
+    ),
+    "malformed-json": "Supply a valid credential JSON object containing access_token.",
+    "long-lived-secret": (
+        "Remove refresh_token, client_secret, and password fields; supply only a short-lived access token "
+        "and supported credential metadata."
+    ),
+    "unsupported-fields": "Use only access_token, token_type, expires_at, scopes, and account in credential JSON.",
+    "invalid-access-token": "Supply a non-empty string in access_token.",
+    "invalid-scopes": "Supply scopes as a list of non-empty strings.",
+    "invalid-token-type": "Supply token_type as a non-empty string.",
+    "invalid-account": "Supply account as an object with id and optional display and tenant_id strings.",
+    "invalid-expiry": "Supply expires_at as a valid ISO-8601 string or Unix timestamp.",
+    "invalid-credential": "Supply a token or a credential JSON object with valid metadata.",
+    "credential-undecryptable": (
+        "The stored credential could not be decrypted. Reconnect the integration; if many connections "
+        "report this, check whether the server's secret key changed."
+    ),
+}
+
+
 class ConnectionUnresolvedError(IntegrationError):
     code = "connection-unresolved"
 
-    def __init__(self, handle: str, *, env_key: str | None = None, provider: str | None = None) -> None:
-        location = f" Set {env_key} to a token or credential JSON object." if env_key else ""
+    def __init__(
+        self,
+        handle: str,
+        *,
+        env_key: str | None = None,
+        provider: str | None = None,
+        reason: ConnectionUnresolvedReason = "missing",
+    ) -> None:
+        if reason not in _CONNECTION_UNRESOLVED_HINTS:
+            msg = "Unknown connection resolution reason"
+            raise ValueError(msg)
+        hint = _CONNECTION_UNRESOLVED_HINTS[reason]
+        if reason == "missing" and env_key:
+            hint = f"Set {env_key} to a token or credential JSON object."
         super().__init__(
-            f"Connection {handle!r} could not be resolved.{location}",
-            hint="Configure the connection for this execution environment.",
+            f"Connection {handle!r} could not be resolved. {hint}",
+            hint=hint,
             provider=provider,
+            details={"reason": reason},
         )
         self.handle = handle
         self.env_key = env_key
+        self.reason = reason
 
 
 class ConnectionNotAuthorizedError(IntegrationError):
     code = "connection-not-authorized"
 
-    def __init__(self, *, provider: str | None = None) -> None:
+    def __init__(self, *, provider: str | None = None, reason: Literal["principal", "provider"] = "principal") -> None:
         super().__init__(
-            "This execution principal is not authorized to use the requested connection.",
-            hint="Use an owned or explicitly shared connection.",
+            "The provider denied this action."
+            if reason == "provider"
+            else "This execution principal is not authorized to use the requested connection.",
+            hint="Check the provider's access and administrator policy."
+            if reason == "provider"
+            else "Use an owned or explicitly shared connection.",
             provider=provider,
             http_status=403,
         )
@@ -111,13 +168,23 @@ class AuthExpiredError(IntegrationError):
 class ScopeMissingError(IntegrationError):
     code = "scope-missing"
 
-    def __init__(self, missing: frozenset[str] = frozenset(), *, provider: str | None = None) -> None:
+    def __init__(
+        self,
+        missing: frozenset[str] = frozenset(),
+        *,
+        provider: str | None = None,
+        scopes_verified: bool = True,
+    ) -> None:
         super().__init__(
-            "The connection does not grant every scope required by this action.",
-            hint="Grant the missing scopes and reconnect.",
+            "The connection does not grant every scope required by this action."
+            if scopes_verified
+            else "The connection's granted scopes are unverified; this action requires verified scope metadata.",
+            hint="Grant the missing scopes and reconnect."
+            if scopes_verified
+            else "Supply credential JSON with scopes, or use a host resolver that verifies granted scopes.",
             provider=provider,
             http_status=403,
-            details={"missing": sorted(missing)},
+            details={"missing": sorted(missing), "scopes_verified": scopes_verified},
         )
         self.missing = missing
 
@@ -191,24 +258,51 @@ def _retry_after(exc: BaseException) -> float | None:
         return None
 
 
+def _iter_errors(error: BaseException) -> Iterator[BaseException]:
+    """Visit wrappers, group members, causes and contexts once, including cycles."""
+    pending = [error]
+    seen: set[int] = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        yield current
+        if current.__context__ is not None:
+            pending.append(current.__context__)
+        if current.__cause__ is not None:
+            pending.append(current.__cause__)
+        # Supports both built-in ExceptionGroup and its Python 3.10 backport.
+        pending.extend(reversed(getattr(current, "exceptions", ())))
+
+
 def normalize_integration_error(exc: BaseException, *, provider: str) -> IntegrationError:
     """Map provider/transport failures into the stable sanitized error vocabulary."""
-    if isinstance(exc, IntegrationError):
-        return exc
+    from lfx.base.mcp.util import extract_http_status
 
     normalizer = _NORMALIZERS.get(provider)
-    if normalizer is not None:
-        normalized = normalizer(exc)
-        if normalized is not None:
-            return normalized
-
-    status = extract_http_status(exc)
-    if status == HTTP_UNAUTHORIZED:
-        return AuthExpiredError(provider=provider, http_status=status)
-    if status == HTTP_FORBIDDEN:
-        return ScopeMissingError(provider=provider)
-    if status == HTTP_TOO_MANY_REQUESTS:
-        return RateLimitedError(provider=provider, retry_after=_retry_after(exc), http_status=status)
-    if status in {HTTP_NOT_FOUND, HTTP_METHOD_NOT_ALLOWED, HTTP_NOT_IMPLEMENTED}:
-        return ActionUnsupportedError(provider=provider, http_status=status)
-    return ProviderUnavailableError(provider=provider, http_status=status)
+    for error in _iter_errors(exc):
+        if isinstance(error, IntegrationError):
+            return error
+        if normalizer is not None:
+            normalized = normalizer(error)
+            if normalized is not None:
+                return normalized
+        if getattr(error, "exceptions", None):
+            continue  # Inspect each leaf so status and Retry-After come from the same response.
+        status = extract_http_status(error)
+        if status == HTTP_UNAUTHORIZED:
+            return AuthExpiredError(provider=provider, http_status=status)
+        if status == HTTP_FORBIDDEN:
+            headers = getattr(getattr(error, "response", None), "headers", {})
+            challenge = headers.get("www-authenticate", "")
+            if re.search(r'\berror\s*=\s*"?insufficient_scope\b', challenge, re.IGNORECASE):
+                return ScopeMissingError(provider=provider)
+            return ConnectionNotAuthorizedError(provider=provider, reason="provider")
+        if status == HTTP_TOO_MANY_REQUESTS:
+            return RateLimitedError(provider=provider, retry_after=_retry_after(error), http_status=status)
+        if status in {HTTP_NOT_FOUND, HTTP_METHOD_NOT_ALLOWED, HTTP_NOT_IMPLEMENTED}:
+            return ActionUnsupportedError(provider=provider, http_status=status)
+        if status is not None:
+            return ProviderUnavailableError(provider=provider, http_status=status)
+    return ProviderUnavailableError(provider=provider)

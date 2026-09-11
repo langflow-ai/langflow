@@ -1,7 +1,15 @@
 schema_version: 1
 release: 1.12.x
 
-entries: []
+entries:
+
+- id: GH-13869
+  title: Provider bundles are no longer installed by default, so Groq and Mistral components are absent from a clean install
+  status: ship_with_note
+  area: integrations
+  first_bad_version: 1.12.0
+  last_known_good_version: 1.11.6
+  workaround: Install with the bundles extra (pip install "langflow[bundles]") or add the provider package to the image. Ollama was restored to the default install in 1.12.0; Groq and Mistral were not.
 
 # To add an entry, copy the template below and fill in the fields.
 # For more information, see regressions/README.md.

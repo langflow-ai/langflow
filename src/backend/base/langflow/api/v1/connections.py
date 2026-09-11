@@ -11,6 +11,7 @@ from fastapi.routing import APIRoute
 from lfx.integrations.models import PROVIDER_ID_PATTERN
 from lfx.services.authorization.base import ExecutionPrincipal
 from pydantic import BaseModel, ConfigDict, Field
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
 from langflow.services.authorization import ConnectionAction, ensure_connection_permission
@@ -20,11 +21,13 @@ from langflow.services.connection.oauth.config import OAuthError, get_oauth_sett
 from langflow.services.database.models.connection import (
     Connection,
     ConnectionCreate,
+    ConnectionOwnershipMode,
     ConnectionRead,
     ConnectionTestRequest,
+    ConnectionUpdate,
 )
 from langflow.services.database.models.connection.schemas import ConnectionRevokeRead
-from langflow.services.deps import get_connection_resolver_service
+from langflow.services.deps import get_connection_resolver_service, session_scope
 
 
 class _ConnectionRoute(APIRoute):
@@ -44,6 +47,10 @@ class _ConnectionRoute(APIRoute):
 
 router = APIRouter(prefix="/connections", tags=["Connections"], route_class=_ConnectionRoute)
 
+# Every user can see and use instance connections, but only superusers create
+# them, so only superusers may change, re-authorize, or remove them. This floor
+# holds even when authorization is disabled or a plugin would allow the action.
+_INSTANCE_OPERATOR_ACTIONS = frozenset({ConnectionAction.WRITE, ConnectionAction.DELETE})
 
 _OAUTH_NONCE_LENGTH = 43
 _OAUTH_MAX_CODE_LENGTH = 8192
@@ -92,6 +99,35 @@ def _interactive_principal(user: CurrentActiveUser) -> ExecutionPrincipal:
     )
 
 
+async def _visible_row(
+    *,
+    service: DatabaseConnectionResolverService,
+    session: AsyncSession,
+    user: CurrentActiveUser,
+    connection_id: UUID,
+    action: ConnectionAction,
+) -> Connection:
+    row = await service.get_for_user(session, user=user, connection_id=connection_id)
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
+    if (
+        row.ownership_mode == ConnectionOwnershipMode.INSTANCE.value
+        and action in _INSTANCE_OPERATOR_ACTIONS
+        and not user.is_superuser
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only a superuser may change or remove an instance connection.",
+        )
+    await ensure_connection_permission(
+        user,
+        action,
+        connection_id=row.id,
+        connection_owner_id=row.owner_id,
+    )
+    return row
+
+
 async def _authorized_row(
     *,
     service: DatabaseConnectionResolverService,
@@ -101,16 +137,31 @@ async def _authorized_row(
     action: ConnectionAction,
     for_update: bool = False,
 ) -> Connection:
-    row = await service.get_for_user(session, user=user, connection_id=connection_id, for_update=for_update)
-    if row is None:
+    if not for_update:
+        return await _visible_row(
+            service=service, session=session, user=user, connection_id=connection_id, action=action
+        )
+    # Taking the lock writes the row, so authorize in a separate read
+    # transaction first: a caller who may not act on this connection must
+    # never hold its lock, even briefly on the way to a 404 or 403.
+    async with session_scope() as read_session:
+        authorized = await _visible_row(
+            service=service, session=read_session, user=user, connection_id=connection_id, action=action
+        )
+        authorized_owner = (authorized.ownership_mode, authorized.owner_id)
+    # get_for_user repeats the scoped lookup under the lock. Fail closed if the
+    # row disappeared or changed owner after the permission check.
+    row = await service.get_for_user(session, user=user, connection_id=connection_id, for_update=True)
+    if row is None or (row.ownership_mode, row.owner_id) != authorized_owner:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
-    await ensure_connection_permission(
-        user,
-        action,
-        connection_id=row.id,
-        connection_owner_id=row.owner_id,
-    )
     return row
+
+
+def _may_enable_non_interactive(user: CurrentActiveUser, row: Connection) -> bool:
+    """Only a credential's owner may widen it to unattended executions."""
+    if row.ownership_mode == ConnectionOwnershipMode.INSTANCE.value:
+        return bool(user.is_superuser)
+    return str(row.owner_id) == str(user.id)
 
 
 @router.get("", response_model=list[ConnectionRead])
@@ -194,6 +245,40 @@ async def refresh_connection_health(
         row=row,
         principal=_interactive_principal(current_user),
     )
+
+
+@router.patch("/{connection_id}", response_model=ConnectionRead)
+async def update_connection(
+    connection_id: UUID,
+    payload: ConnectionUpdate,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    service: ConnectionService,
+) -> ConnectionRead:
+    """Rename a connection or change its non-interactive opt-in without re-authorizing.
+
+    Anyone who may write the connection may withdraw the opt-in. Granting it
+    widens which executions reach the owner's account, so only the owner (a
+    superuser, for an instance connection) may turn it on.
+    """
+    row = await _authorized_row(
+        service=service,
+        session=session,
+        user=current_user,
+        connection_id=connection_id,
+        action=ConnectionAction.WRITE,
+        for_update=True,
+    )
+    if (
+        payload.allow_non_interactive
+        and not row.allow_non_interactive
+        and not _may_enable_non_interactive(current_user, row)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the connection owner may allow non-interactive use.",
+        )
+    return await service.update(session, row, payload)
 
 
 @router.post("/{connection_id}/revoke", response_model=ConnectionRevokeRead)

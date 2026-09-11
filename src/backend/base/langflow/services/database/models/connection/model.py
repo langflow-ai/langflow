@@ -23,6 +23,8 @@ class ConnectionBase(SQLModel):
     display_name: str = Field(max_length=255)
     ownership_mode: str = Field(default=ConnectionOwnershipMode.USER.value, max_length=16)
     status: str = Field(default=PersistedConnectionStatus.PENDING.value, max_length=16)
+    # A ConnectionStatusReason value while status is "error"; null otherwise.
+    status_reason: str | None = Field(default=None, max_length=32)
     health: str = Field(default=ConnectionHealth.UNKNOWN.value, max_length=16)
     granted_scopes: list[str] = Field(default_factory=list, sa_column=Column(JSON, nullable=False))
     executing_identity: dict = Field(default_factory=dict, sa_column=Column(JSON, nullable=False))

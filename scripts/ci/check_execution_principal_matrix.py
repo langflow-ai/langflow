@@ -12,6 +12,12 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MATRIX = REPO_ROOT / "scripts" / "ci" / "execution_principal_matrix.json"
 AUTHZ_MATRIX = REPO_ROOT / "scripts" / "ci" / "authz_endpoint_matrix.json"
+# The database connection resolver keeps its own copy of the share-permitting
+# families, because scripts/ci is not shipped with langflow-base. Drift is
+# asymmetric: a family the matrix tightens but the resolver keeps fails open.
+SHARE_RESOLVER_SOURCE = REPO_ROOT / "src" / "backend" / "base" / "langflow" / "services" / "connection" / "service.py"
+SHARE_FAMILIES_CONSTANT = "_SHARE_PERMITTING_FAMILIES"
+SHARE_DEPENDENCY_PRINCIPAL = "actor_or_explicit_share"
 
 REQUIRED_DIMENSIONS = frozenset(
     {
@@ -146,7 +152,60 @@ def _authz_families() -> set[str]:
     return {contract["family"] for contract in matrix.get("contracts", []) if "family" in contract}
 
 
-def validate_matrix(matrix_path: Path = DEFAULT_MATRIX) -> list[str]:
+def _display_path(path: Path) -> str:
+    return path.relative_to(REPO_ROOT).as_posix() if path.is_relative_to(REPO_ROOT) else str(path)
+
+
+def resolver_share_families(source: Path = SHARE_RESOLVER_SOURCE) -> frozenset[str]:
+    """Read the resolver's literal share-family set without importing langflow."""
+    tree = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
+    value = next(
+        (
+            node.value
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == SHARE_FAMILIES_CONSTANT for target in node.targets)
+        ),
+        None,
+    )
+    # frozenset({...}) is the only call accepted; anything computed cannot be checked.
+    if isinstance(value, ast.Call) and isinstance(value.func, ast.Name) and value.func.id == "frozenset":
+        value = value.args[0] if len(value.args) == 1 and not value.keywords else None
+    try:
+        families = ast.literal_eval(value) if value is not None else None
+    except (TypeError, ValueError):
+        families = None
+    if not isinstance(families, set) or not all(isinstance(item, str) for item in families):
+        msg = f"{SHARE_FAMILIES_CONSTANT} must be a module-level frozenset literal of family names"
+        raise ValueError(msg)
+    return frozenset(families)
+
+
+def _validate_share_families(entrypoints: list[dict], resolver_source: Path) -> list[str]:
+    try:
+        resolver = resolver_share_families(resolver_source)
+    except (OSError, SyntaxError, ValueError) as exc:
+        return [f"could not read {SHARE_FAMILIES_CONSTANT} from {_display_path(resolver_source)}: {exc}"]
+    matrix = {
+        entrypoint["family"]
+        for entrypoint in entrypoints
+        if entrypoint.get("dependency_principal") == SHARE_DEPENDENCY_PRINCIPAL and "family" in entrypoint
+    }
+    errors: list[str] = []
+    if fails_open := sorted(resolver - matrix):
+        errors.append(
+            f"{_display_path(resolver_source)} {SHARE_FAMILIES_CONSTANT} resolves shared connections for "
+            f"{fails_open}, which the matrix does not mark {SHARE_DEPENDENCY_PRINCIPAL}; this fails open"
+        )
+    if fails_closed := sorted(matrix - resolver):
+        errors.append(
+            f"matrix marks {fails_closed} {SHARE_DEPENDENCY_PRINCIPAL}, but {_display_path(resolver_source)} "
+            f"{SHARE_FAMILIES_CONSTANT} omits them, so their shared connections never resolve"
+        )
+    return errors
+
+
+def validate_matrix(matrix_path: Path = DEFAULT_MATRIX, resolver_source: Path = SHARE_RESOLVER_SOURCE) -> list[str]:
     """Return reader-friendly contract errors; an empty list means complete."""
     try:
         matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
@@ -224,6 +283,7 @@ def validate_matrix(matrix_path: Path = DEFAULT_MATRIX) -> list[str]:
         errors.append(f"matrix is missing required families {sorted(missing_families)}")
     if unexpected_families:
         errors.append(f"matrix has unclassified families {sorted(unexpected_families)}")
+    errors.extend(_validate_share_families(matrix.get("entrypoints", []), resolver_source))
     return errors
 
 

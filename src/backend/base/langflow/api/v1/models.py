@@ -343,6 +343,7 @@ async def list_models(
         session=session,
         current_user=current_user,
         provider_policy=configuration_policy,
+        provider_status=provider_configured_status,
     )
     enabled_models_map = enabled_models_result.get("enabled_models", {})
 
@@ -499,12 +500,6 @@ async def _get_enabled_providers_result(
                 status_code=500,
                 detail="Variable service is not an instance of DatabaseVariableService",
             )
-        # Get all variables (VariableRead objects)
-        all_variables = await variable_service.get_all(user_id=current_user.id, session=session)
-
-        # Build a set of all variable names we have
-        all_variable_names = {var.name for var in all_variables}
-
         provider_variable_map = get_model_provider_variable_mapping()
         provider_candidates = [
             *provider_variable_map,
@@ -514,6 +509,24 @@ async def _get_enabled_providers_result(
                 if provider not in provider_variable_map and is_api_key_optional(provider)
             ),
         ]
+
+        required_variable_names: set[str] = set()
+        for provider in provider_candidates:
+            if not provider_policy.allows(provider):
+                continue
+            for variable in get_provider_all_variables(provider):
+                variable_key = variable.get("variable_key")
+                if variable.get("required", False) and isinstance(variable_key, str):
+                    required_variable_names.add(variable_key)
+
+        # Only provider credentials matter here. Avoid materializing every user
+        # variable while still treating credentials encrypted under another
+        # LANGFLOW_SECRET_KEY as unavailable.
+        available_variable_names = await variable_service.get_available_variable_names(
+            user_id=current_user.id,
+            names=required_variable_names,
+            session=session,
+        )
 
         # Check which providers have all required variables saved
         enabled_providers = []
@@ -530,7 +543,7 @@ async def _get_enabled_providers_result(
             all_required_present = (
                 is_api_key_optional(provider)
                 if not provider_vars
-                else all(v.get("variable_key") in all_variable_names for v in required_vars)
+                else all(v.get("variable_key") in available_variable_names for v in required_vars)
             )
 
             provider_status[provider] = all_required_present
@@ -942,6 +955,7 @@ async def _get_enabled_models_result(
     current_user: CurrentActiveUser,
     provider_policy: ModelProviderPolicySnapshot,
     model_names: list[str] | None = None,
+    provider_status: dict[str, bool] | None = None,
 ):
     """Get enabled models for the current user."""
     all_models_by_provider = get_unified_models_detailed(
@@ -949,12 +963,13 @@ async def _get_enabled_models_result(
         include_deprecated=True,
     )
 
-    enabled_providers_result = await _get_enabled_providers_result(
-        session=session,
-        current_user=current_user,
-        provider_policy=provider_policy,
-    )
-    provider_status = enabled_providers_result.get("provider_status", {})
+    if provider_status is None:
+        enabled_providers_result = await _get_enabled_providers_result(
+            session=session,
+            current_user=current_user,
+            provider_policy=provider_policy,
+        )
+        provider_status = enabled_providers_result.get("provider_status", {})
 
     all_models_by_provider = [
         provider_data

@@ -60,14 +60,14 @@
       "url": "https://developers.google.com/workspace/drive/api/guides/api-specific-auth",
       "title": "Google Drive API: Choose Google Drive API scopes",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-09-09",
       "notes": "drive.file, drive.appdata, drive.install are non-sensitive; drive.apps.readonly is sensitive; drive, drive.readonly, drive.metadata, drive.metadata.readonly, drive.activity*, drive.meet.readonly, drive.scripts are restricted. 'If you store restricted scope data on servers (or transmit), then you must go through a security assessment.'"
     },
     "calendar-scopes": {
       "url": "https://developers.google.com/workspace/calendar/api/auth",
       "title": "Google Calendar API: Choose Calendar API scopes",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-09-09",
       "notes": "Lists every Calendar scope with its consent-screen text; the page itself carries no classification column."
     },
     "google-sensitive-scope-verification": {
@@ -123,7 +123,7 @@
       "url": "https://knowledge.workspace.google.com/admin/apps/control-which-apps-access-google-workspace-data",
       "title": "Google Workspace Admin Help: Control which third-party and internal apps access Google Workspace data",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-09-09",
       "notes": "Access levels Trusted, Limited, Specific Google data, Blocked; Limited apps cannot reach services an admin marks Restricted; by default users can sign in with Google to any third-party app; 'Trust internal apps' allows apps from the organization's own Cloud project to access restricted Workspace APIs."
     },
     "google-workspace-mcp": {
@@ -316,7 +316,8 @@
           "provider_classification": "Sensitive",
           "source": "gmail-scopes",
           "role": "required",
-          "notes": "'Send email on your behalf.'"
+          "notes": "'Send email on your behalf.'",
+          "content_read_reach": "none"
         }
       ],
       "consent": "user",
@@ -353,6 +354,14 @@
       "verification_dependencies": [
         "google-brand-verification",
         "google-sensitive-scope-verification"
+      ],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "workspace-admin-app-access"
+      },
+      "open_questions": [
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent."
       ]
     },
     {
@@ -431,7 +440,8 @@
           "provider_classification": "Restricted",
           "source": "gmail-scopes",
           "role": "required",
-          "notes": "'View your email messages and settings.' Needed for messages.list with q and for messages.get bodies."
+          "notes": "'View your email messages and settings.' Needed for messages.list with q and for messages.get bodies.",
+          "content_read_reach": "cross_resource"
         }
       ],
       "consent": "user",
@@ -544,7 +554,8 @@
           "provider_classification": "Non-sensitive (recommended)",
           "source": "drive-scopes",
           "role": "required",
-          "notes": "Wave 1 requests drive.file only; the restricted scope alternative is recorded in decisions/google-restricted-scopes.md."
+          "notes": "Wave 1 requests drive.file only; the restricted scope alternative is recorded in decisions/google-restricted-scopes.md.",
+          "content_read_reach": "selected_resources"
         }
       ],
       "consent": "user",
@@ -580,6 +591,14 @@
       },
       "verification_dependencies": [
         "google-brand-verification"
+      ],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "workspace-admin-app-access"
+      },
+      "open_questions": [
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent."
       ]
     },
     {
@@ -633,7 +652,8 @@
           "provider_classification": "Non-sensitive (recommended)",
           "source": "drive-scopes",
           "role": "required",
-          "notes": "Wave 1 requests drive.file only; the restricted scope alternative is recorded in decisions/google-restricted-scopes.md."
+          "notes": "Wave 1 requests drive.file only; the restricted scope alternative is recorded in decisions/google-restricted-scopes.md.",
+          "content_read_reach": "selected_resources"
         }
       ],
       "consent": "user",
@@ -669,6 +689,14 @@
       },
       "verification_dependencies": [
         "google-brand-verification"
+      ],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "workspace-admin-app-access"
+      },
+      "open_questions": [
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent."
       ]
     },
     {
@@ -760,7 +788,8 @@
           "provider_classification": "Sensitive",
           "source": "google-sensitive-scope-verification",
           "role": "required",
-          "notes": "Scope text 'View events on all your calendars' from the Calendar scopes page; Google's sensitive-scope guide names reading Calendar events as a sensitive scope and Calendar is not on any restricted list."
+          "notes": "Scope text 'View events on all your calendars' from the Calendar scopes page; Google's sensitive-scope guide names reading Calendar events as a sensitive scope and Calendar is not on any restricted list.",
+          "content_read_reach": "cross_resource"
         }
       ],
       "consent": "user",
@@ -797,6 +826,14 @@
       "verification_dependencies": [
         "google-brand-verification",
         "google-sensitive-scope-verification"
+      ],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "workspace-admin-app-access"
+      },
+      "open_questions": [
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent."
       ]
     },
     {
@@ -883,7 +920,8 @@
           "provider_classification": "Sensitive",
           "source": "google-sensitive-scope-verification",
           "role": "required",
-          "notes": "Scope text 'View and edit events on all your calendars' from the Calendar scopes page; classified sensitive per the sensitive-scope guide."
+          "notes": "Scope text 'View and edit events on all your calendars' from the Calendar scopes page; classified sensitive per the sensitive-scope guide.",
+          "content_read_reach": "cross_resource"
         }
       ],
       "consent": "user",
@@ -920,7 +958,29 @@
       "verification_dependencies": [
         "google-brand-verification",
         "google-sensitive-scope-verification"
+      ],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "workspace-admin-app-access"
+      },
+      "open_questions": [
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent."
       ]
+    }
+  ],
+  "scope_risk_decisions": [
+    {
+      "scope": "https://www.googleapis.com/auth/calendar.events.readonly",
+      "decision": "accept_with_controls",
+      "rationale": "Proposed conditional acceptance: disclose the full grant before consent, request only action-required scopes, enforce provider policy and default-off non-interactive use. Requires owner sign-off in the decision record.",
+      "decision_record": "decisions/broad-content-read.md"
+    },
+    {
+      "scope": "https://www.googleapis.com/auth/calendar.events",
+      "decision": "accept_with_controls",
+      "rationale": "Proposed conditional acceptance: disclose the full grant before consent, request only action-required scopes, enforce provider policy and default-off non-interactive use. Requires owner sign-off in the decision record.",
+      "decision_record": "decisions/broad-content-read.md"
     }
   ]
 }

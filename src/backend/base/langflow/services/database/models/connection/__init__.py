@@ -5,7 +5,9 @@ from .schemas import (
     ConnectionHealth,
     ConnectionOwnershipMode,
     ConnectionRead,
+    ConnectionStatusReason,
     ConnectionTestRequest,
+    ConnectionUpdate,
     ExecutingIdentityDescriptor,
     PersistedConnectionStatus,
 )
@@ -19,7 +21,9 @@ __all__ = [
     "ConnectionOwnershipMode",
     "ConnectionRead",
     "ConnectionSecret",
+    "ConnectionStatusReason",
     "ConnectionTestRequest",
+    "ConnectionUpdate",
     "ExecutingIdentityDescriptor",
     "PersistedConnectionStatus",
 ]

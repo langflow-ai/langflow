@@ -13,6 +13,7 @@ import jsonschema
 import pytest
 from lfx.extension.manifest import DEFERRED_FIELDS, EXTENSION_SCHEMA_URL, ExtensionManifest
 from lfx.extension.schema import build_schema, build_schema_json
+from pydantic import ValidationError
 
 _VALID = {
     "$schema": EXTENSION_SCHEMA_URL,
@@ -141,6 +142,14 @@ def test_schema_validates_integrations_reference() -> None:
 )
 def test_schema_rejects_malformed_integrations_reference(integration: dict[str, Any]) -> None:
     assert list(_validator().iter_errors({**_VALID, "integrations": [integration]}))
+
+
+@pytest.mark.parametrize("path", ["capabilities.JSON", "capabilities.Json"])
+def test_schema_and_runtime_reject_non_lowercase_json_suffix(path: str) -> None:
+    manifest = {**_VALID, "integrations": [{"provider_id": "google", "bundle": "openai", "path": path}]}
+    assert list(_validator().iter_errors(manifest))
+    with pytest.raises(ValidationError, match="must name a JSON file"):
+        ExtensionManifest.model_validate(manifest)
 
 
 @pytest.mark.parametrize(

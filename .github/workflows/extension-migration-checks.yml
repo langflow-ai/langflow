@@ -13,11 +13,27 @@ on:
       - "scripts/ci/check_components_frozen.py"
       - "scripts/ci/frozen_component_dirs.txt"
       - "scripts/ci/bundle_release_plan.py"
+      - "scripts/ci/check_integration_bundle_floors.py"
       - "pyproject.toml"
       - "uv.lock"
       - ".github/workflows/extension-migration-checks.yml"
 
 jobs:
+  integration-bundle-floors:
+    name: Integration manifests - lfx dependency floor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - name: Install version parser
+        run: pip install packaging
+      - name: Check integration-declaring bundle floors
+        run: python scripts/ci/check_integration_bundle_floors.py
+
   bundle-release-plan:
     name: Bundle release plan - version and metadata consistency
     permissions:
