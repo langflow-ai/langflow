@@ -5030,6 +5030,96 @@
       "legacy_slot": "ext:plivo:PlivoSendSMSComponent@official-pre-a",
       "target": "ext:plivo:PlivoSendSMSComponent@official",
       "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "ContextSearchWebComponent",
+      "target": "ext:context:ContextSearchWebComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.context.context_search.ContextSearchWebComponent",
+      "target": "ext:context:ContextSearchWebComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.context.ContextSearchWebComponent",
+      "target": "ext:context:ContextSearchWebComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "ContextSearchNewsComponent",
+      "target": "ext:context:ContextSearchNewsComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.context.context_news.ContextSearchNewsComponent",
+      "target": "ext:context:ContextSearchNewsComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.context.ContextSearchNewsComponent",
+      "target": "ext:context:ContextSearchNewsComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "ContextScrapeMarkdownComponent",
+      "target": "ext:context:ContextScrapeMarkdownComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.context.context_scrape.ContextScrapeMarkdownComponent",
+      "target": "ext:context:ContextScrapeMarkdownComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.context.ContextScrapeMarkdownComponent",
+      "target": "ext:context:ContextScrapeMarkdownComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "ContextCrawlWebsiteComponent",
+      "target": "ext:context:ContextCrawlWebsiteComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.context.context_crawl.ContextCrawlWebsiteComponent",
+      "target": "ext:context:ContextCrawlWebsiteComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.context.ContextCrawlWebsiteComponent",
+      "target": "ext:context:ContextCrawlWebsiteComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "ContextExtractStructuredDataComponent",
+      "target": "ext:context:ContextExtractStructuredDataComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.context.context_extract.ContextExtractStructuredDataComponent",
+      "target": "ext:context:ContextExtractStructuredDataComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.context.ContextExtractStructuredDataComponent",
+      "target": "ext:context:ContextExtractStructuredDataComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "ContextRetrieveBrandComponent",
+      "target": "ext:context:ContextRetrieveBrandComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.context.context_retrieve_brand.ContextRetrieveBrandComponent",
+      "target": "ext:context:ContextRetrieveBrandComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "import_path": "lfx_bundles.context.ContextRetrieveBrandComponent",
+      "target": "ext:context:ContextRetrieveBrandComponent@official",
+      "added_in": "1.13.0"
     }
   ],
   "ambiguous_bare_names": [

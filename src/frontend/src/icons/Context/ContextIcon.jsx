@@ -1,0 +1,20 @@
+const ContextIcon = ({ maskId, ...props }) => (
+  <svg
+    viewBox="0 0 35 24"
+    xmlns="http://www.w3.org/2000/svg"
+    preserveAspectRatio="xMidYMid meet"
+    {...props}
+  >
+    <mask id={maskId}>
+      <rect width="35" height="24" fill="white" />
+      <circle cx="18.8" cy="17" r="6.95" fill="black" />
+    </mask>
+    <path
+      d="M11.77 1.22A1.22 1.22 0 0 1 12.99 0h20.68a1.22 1.22 0 0 1 1.22 1.22V21.9a1.22 1.22 0 0 1-1.22 1.22H18.71a6.9 6.9 0 0 1-5.62-2.86A6.94 6.94 0 1 1 11.77 12.1V1.22Z"
+      fill="#2563EB"
+      mask={`url(#${maskId})`}
+    />
+  </svg>
+);
+
+export default ContextIcon;

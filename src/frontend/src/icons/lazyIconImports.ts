@@ -143,6 +143,8 @@ export const lazyIconsMapping = {
     import("@/icons/CometAPI").then((mod) => ({ default: mod.CometAPIIcon })),
   Composio: () =>
     import("@/icons/Composio").then((mod) => ({ default: mod.ComposioIcon })),
+  Context: () =>
+    import("@/icons/Context").then((mod) => ({ default: mod.ContextIcon })),
   Confluent: () =>
     import("@/icons/Confluent").then((mod) => ({
       default: mod.ConfluentIcon,
