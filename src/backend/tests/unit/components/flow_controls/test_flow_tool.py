@@ -30,6 +30,15 @@ class TestFlowToolComponent(ComponentTestBaseWithClient):
         """Return an empty list since this component doesn't have version-specific files."""
         return []
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "api_build_tool": (
+                "loads a saved flow from the database, and FlowTool.model_rebuild() cannot resolve its "
+                "Graph annotation (the build_tool tests patch it out)"
+            ),
+        }
+
     async def test_component_initialization(self, component_class, default_kwargs):
         """Test proper initialization of FlowToolComponent."""
         component = await self.component_setup(component_class, default_kwargs)

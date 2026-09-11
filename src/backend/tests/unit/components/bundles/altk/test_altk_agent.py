@@ -1,5 +1,4 @@
 import os
-from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -13,7 +12,6 @@ except ImportError:
 
 pytest.importorskip("lfx_bundles")
 
-from langflow.custom import Component
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
 from lfx.components.tools.calculator import CalculatorToolComponent
 from lfx_bundles.altk.altk_agent import ALTKAgentComponent
@@ -34,11 +32,11 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         return []
 
-    async def component_setup(self, component_class: type[Any], default_kwargs: dict[str, Any]) -> Component:
-        component_instance = await super().component_setup(component_class, default_kwargs)
-        # Mock _should_process_output method
-        component_instance._should_process_output = lambda output: False  # noqa: ARG005
-        return component_instance
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "response": "runs the agent loop, which needs a chat model that supports tool calling",
+        }
 
     @pytest.fixture
     def default_kwargs(self):
@@ -66,6 +64,12 @@ class TestAgentComponentWithClient(ComponentTestBaseWithClient):
     @pytest.fixture
     def file_names_mapping(self):
         return []
+
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "response": "runs the agent loop, which needs a chat model that supports tool calling",
+        }
 
     @pytest.mark.api_key_required
     @pytest.mark.no_blockbuster

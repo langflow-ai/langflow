@@ -727,6 +727,12 @@ class TestALTKAgentComponentFramework(ComponentTestBaseWithoutClient):
         return []
 
     @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "response": "runs the agent loop, which needs a chat model that supports tool calling",
+        }
+
+    @pytest.fixture
     def default_kwargs(self):
         return {
             "_type": "Agent",

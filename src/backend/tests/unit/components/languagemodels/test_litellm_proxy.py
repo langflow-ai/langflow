@@ -44,6 +44,10 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         return []
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        return dict.fromkeys(["model_output", "text_output"], "connects to a running LiteLLM proxy")
+
     def test_initialization(self, component_class):
         component = component_class()
         assert component.display_name == "LiteLLM Proxy"

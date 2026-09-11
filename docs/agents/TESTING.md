@@ -66,9 +66,19 @@ class TestMyComponent(ComponentTestBaseWithClient):
 
 The base class auto-provides:
 
-- `test_latest_version` — instantiates and asserts `run()` doesn't return `None`.
+- `test_latest_version` — builds the component from source and calls `run()` as an unconnected vertex, so every output method runs. It fails if any output returns `None` or if the component exposes no outputs. It runs offline: a non-loopback socket connect is refused and fails the test, even when the component catches the error and returns a fallback.
 - `test_all_versions_have_a_file_name_defined` — ensures mapping completeness vs `SUPPORTED_VERSIONS`.
 - `test_component_versions` (parameterized) — builds the component from source for each supported version and asserts execution.
+
+If an output cannot run offline with `default_kwargs` (it calls a live provider or service, needs real credentials, or needs state the unit suite does not set up), prefer mocking the external call. If that is impractical, override the optional `skipped_outputs` fixture to name the output and the reason. The harness rejects names the component does not have, and a component whose outputs are all skipped reports as skipped, not passed.
+
+```python
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {"text_output": "sends the prompt to a live LLM"}
+```
+
+For components that build outputs dynamically with `update_outputs`, override `component_setup` and call `await self.map_frontend_outputs(component, field_name, value)`.
 
 If you rename or move a component file, you **must** update `file_names_mapping` for every supported version, or saved flows on those versions will fail to load. See [CONTRACTS.md](./CONTRACTS.md) row 3.
 

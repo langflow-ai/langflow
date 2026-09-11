@@ -40,6 +40,12 @@ class TestSaveToFileComponent(ComponentTestBaseWithoutClient):
         """Return the file names mapping for different versions."""
         return []  # New component
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "message": "uploads the file to the current user's file store, which needs a user in the database",
+        }
+
     def test_basic_setup(self, component_class, default_kwargs):
         """Test basic component initialization."""
         component = component_class()

@@ -35,6 +35,12 @@ class TestWebSearchComponent(ComponentTestBaseWithoutClient):
         """Return the file names mapping for the component."""
         return []
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "results": "queries a live web search engine",
+        }
+
     async def test_invalid_url_handling(self):
         """Test invalid URL handling."""
         component = WebSearchComponent()
