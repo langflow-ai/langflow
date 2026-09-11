@@ -72,7 +72,8 @@ test("conflict dialog footer layout", async ({ page }) => {
   // And the confirmation step, which now lives off the banner.
   await page.keyboard.press("Escape");
   await expect(modal).toBeHidden();
-  await page.getByTestId("flow-conflict-load-latest-button").click();
+  await page.getByTestId("flow-conflict-review-button").click();
+  await page.getByTestId("dialog-load-latest-button").click();
   await page.waitForTimeout(800);
   const confirm = page.getByTestId("load-latest-confirm-button");
   console.log(
@@ -82,6 +83,6 @@ test("conflict dialog footer layout", async ({ page }) => {
     await confirm.evaluate((el) => getComputedStyle(el).textTransform),
   );
   await page
-    .getByTestId("load-latest-dialog")
+    .getByTestId("load-latest-confirm")
     .screenshot({ path: "test-results/conflict-dialog-discard.png" });
 });
