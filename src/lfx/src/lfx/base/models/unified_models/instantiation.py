@@ -43,7 +43,7 @@ def _env_if_allowed(key: str) -> str | None:
 
 
 def _apply_registered_provider_connection(provider: str, user_id: UUID | str | None, kwargs: dict[str, Any]) -> None:
-    """Apply a bundle-registered provider's non-secret connection variables to ``kwargs``.
+    """Apply a bundle-registered provider's declared variables to ``kwargs``.
 
     Core providers keep their explicit per-provider branches in ``get_llm`` /
     ``get_embeddings``; this generic path covers providers contributed via
@@ -52,8 +52,9 @@ def _apply_registered_provider_connection(provider: str, user_id: UUID | str | N
     ``langchain_param`` -- or forwarded as an HTTP header when ``is_header`` is
     set, mirroring the OpenRouter attribution-header handling. ``base_url`` is
     localhost-rewritten so a Dockerised backend can still reach a host-side
-    server (e.g. a local vLLM endpoint). API keys / secrets are intentionally
-    skipped: they are resolved through the dedicated api-key path.
+    server (e.g. a local vLLM endpoint). The primary secret is normally already
+    present through the dedicated API-key path; other declared secrets are added
+    here so providers with compound credentials (such as AWS) receive the whole set.
     """
     from lfx.base.models import unified_models as unified_models_module
     from lfx.utils.util import transform_localhost_url
@@ -62,8 +63,6 @@ def _apply_registered_provider_connection(provider: str, user_id: UUID | str | N
     provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
     default_headers: dict[str, str] = {}
     for var in provider_meta.get("variables", []):
-        if var.get("is_secret"):
-            continue
         variable_key = var.get("variable_key")
         value = provider_vars.get(variable_key) or _env_if_allowed(variable_key)
         if not value:
@@ -284,7 +283,7 @@ def get_llm(
     # OpenAI-compatible servers that opt out of API keys (api_key_required=False)
     # still need a non-empty placeholder so the client library constructs, e.g.
     # a local vLLM endpoint without auth.
-    if not api_key and is_api_key_optional(provider):
+    if not api_key and is_api_key_optional(provider) and provider_param_mapping.get("model_class") == "ChatOpenAI":
         api_key = "EMPTY"  # pragma: allowlist secret
 
     # Get model class from metadata, falling back to the provider-level
@@ -330,11 +329,12 @@ def get_llm(
         temperature = None
 
     # Build kwargs dynamically
-    kwargs = {
-        model_name_param: model_name,
-        "streaming": stream,
-        api_key_param: api_key,
-    }
+    kwargs = {model_name_param: model_name, "streaming": stream}
+    # Preserve the historical Ollama constructor shape (`api_key=None`) while
+    # allowing registered SDK-authenticated providers such as Bedrock to omit
+    # the credential argument and use their SDK's default credential chain.
+    if api_key or provider == "Ollama":
+        kwargs[api_key_param] = api_key
 
     if temperature is not None:
         kwargs["temperature"] = temperature

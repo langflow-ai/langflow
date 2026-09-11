@@ -1,7 +1,7 @@
 {
   "$schema": "https://schemas.langflow.org/extension/v1.json",
   "id": "lfx-amazon",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "name": "Amazon",
   "description": "Amazon component(s) as a standalone Langflow Extension Bundle.",
   "lfx": {
@@ -11,6 +11,112 @@
     {
       "name": "amazon",
       "path": "components/amazon"
+    }
+  ],
+  "providers": [
+    {
+      "name": "Amazon Bedrock",
+      "provider_id": "amazon-bedrock",
+      "metadata": {
+        "icon": "Amazon",
+        "all_models_default": true,
+        "max_tokens_field_name": "max_tokens",
+        "variables": [
+          {
+            "variable_name": "AWS Access Key ID",
+            "variable_key": "AWS_ACCESS_KEY_ID",
+            "description": "Optional explicit access key. Leave empty to use the AWS default credential chain.",
+            "required": false,
+            "is_secret": true,
+            "is_list": false,
+            "options": [],
+            "langchain_param": "aws_access_key_id",
+            "component_metadata": {
+              "mapping_field": "aws_access_key_id",
+              "required": false,
+              "advanced": true,
+              "info": "Optional; falls back to the AWS default credential chain"
+            }
+          },
+          {
+            "variable_name": "AWS Secret Access Key",
+            "variable_key": "AWS_SECRET_ACCESS_KEY",
+            "description": "Optional explicit secret key. Must be supplied together with an access key.",
+            "required": false,
+            "is_secret": true,
+            "is_list": false,
+            "options": [],
+            "langchain_param": "aws_secret_access_key",
+            "component_metadata": {
+              "mapping_field": "aws_secret_access_key",
+              "required": false,
+              "advanced": true,
+              "info": "Optional; falls back to the AWS default credential chain"
+            }
+          },
+          {
+            "variable_name": "AWS Session Token",
+            "variable_key": "AWS_SESSION_TOKEN",
+            "description": "Optional session token for temporary AWS credentials.",
+            "required": false,
+            "is_secret": true,
+            "is_list": false,
+            "options": [],
+            "langchain_param": "aws_session_token",
+            "component_metadata": {
+              "mapping_field": "aws_session_token",
+              "required": false,
+              "advanced": true,
+              "info": "Only needed for temporary explicit credentials"
+            }
+          },
+          {
+            "variable_name": "AWS Profile",
+            "variable_key": "AWS_PROFILE",
+            "description": "Optional profile from the shared AWS credentials or config files.",
+            "required": false,
+            "is_secret": false,
+            "is_list": false,
+            "options": [],
+            "langchain_param": "credentials_profile_name",
+            "component_metadata": {
+              "mapping_field": "credentials_profile_name",
+              "required": false,
+              "advanced": true,
+              "info": "Optional named AWS profile"
+            }
+          },
+          {
+            "variable_name": "AWS Region",
+            "variable_key": "AWS_REGION",
+            "description": "Optional Bedrock region. Falls back to AWS_REGION, AWS_DEFAULT_REGION, or AWS config.",
+            "required": false,
+            "is_secret": false,
+            "is_list": false,
+            "options": [],
+            "langchain_param": "region_name",
+            "component_metadata": {
+              "mapping_field": "region_name",
+              "required": false,
+              "advanced": true,
+              "info": "Falls back to AWS_REGION, AWS_DEFAULT_REGION, or AWS config"
+            }
+          }
+        ],
+        "api_docs_url": "https://docs.aws.amazon.com/bedrock/latest/userguide/security-iam.html",
+        "mapping": {
+          "model_class": "ChatBedrockConverse",
+          "model_param": "model",
+          "api_key_param": "aws_access_key_id"
+        }
+      },
+      "model_class": {
+        "module": "langchain_aws",
+        "attr": "ChatBedrockConverse",
+        "install_hint": "langchain-aws"
+      },
+      "api_key_required": false,
+      "catalog_loader": "lfx_amazon.model_provider:load_bedrock_models"
     }
   ]
 }
