@@ -184,7 +184,14 @@ def _registry_supports_tool_mode(registry_entry: Mapping[str, Any]) -> bool:
     return any(isinstance(field_data, Mapping) and field_data.get("tool_mode") for field_data in template.values())
 
 
-def _has_breaking_change(registry_entry: dict, node_info: dict) -> bool:
+def has_breaking_change(registry_entry: Mapping[str, Any], node_info: Mapping[str, Any]) -> bool:
+    """Return True when re-stamping this node with the registry's code would break it.
+
+    Public because the restricted-mode build path reports the same condition: there a saved
+    node's code is replaced by this server's copy for the same component type, so a node the
+    checker calls breaking is one whose saved configuration cannot drive the component that
+    actually runs. See ``describe_restricted_component_mismatch``.
+    """
     registry_outputs = registry_entry.get("outputs") or []
     flow_outputs = node_info.get("outputs") or []
     if _node_is_in_tool_mode(flow_outputs):
@@ -231,7 +238,7 @@ def _classify_node(node: dict, registry: dict[str, dict]) -> NodeStatus | None:
     if registry_code is None or node_code == registry_code:
         return NodeStatus(node_id=node_id, component_type=component_type, display_name=display_name, status="ok")
 
-    if _has_breaking_change(registry_entry, node_info):
+    if has_breaking_change(registry_entry, node_info):
         return NodeStatus(
             node_id=node_id, component_type=component_type, display_name=display_name, status="outdated_breaking"
         )

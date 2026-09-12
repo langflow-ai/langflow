@@ -1,5 +1,6 @@
 import io
 import json
+import threading
 import uuid
 from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
@@ -9,6 +10,7 @@ from httpx import AsyncClient
 from langchain_core.documents import Document
 from langflow.api.utils import knowledge_base_service
 from langflow.api.utils.kb_helpers import (
+    KB_DELETED_SENTINEL,
     KBAnalysisHelper,
     KBIngestionHelper,
     KBStorageHelper,
@@ -373,6 +375,90 @@ class TestKnowledgeBaseAPI:
         # A remote-backed KB touches no local storage at all: no directory, and
         # certainly no metadata sidecar.
         assert not (tmp_path / active_user.username / kb_name).exists()
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.delete_storage")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_create_knowledge_base_retries_cleanup_of_deleted_directory(
+        self,
+        mock_root,
+        mock_fresh_client,
+        mock_delete_storage,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        tmp_path,
+    ):
+        mock_root.return_value = tmp_path
+        mock_fresh_client.return_value = MagicMock()
+        kb_name = "Recreated_KB"
+        kb_path = tmp_path / active_user.username / kb_name
+        kb_path.mkdir(parents=True)
+        (kb_path / "chroma.sqlite3").touch()
+        (kb_path / KB_DELETED_SENTINEL).touch()
+        event_loop_thread_id = threading.get_ident()
+
+        def remove_released_storage(path, name):
+            assert path == kb_path
+            assert name == kb_name
+            assert threading.get_ident() != event_loop_thread_id
+            for child in path.iterdir():
+                child.unlink()
+            path.rmdir()
+            return True
+
+        mock_delete_storage.side_effect = remove_released_storage
+
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": kb_name,
+                "embedding_provider": "OpenAI",
+                "embedding_model": "text-embedding-3-small",
+            },
+        )
+
+        assert response.status_code == 201, response.json()
+        mock_delete_storage.assert_called_once_with(kb_path, kb_name)
+        assert kb_path.is_dir()
+        assert not (kb_path / KB_DELETED_SENTINEL).exists()
+        assert await knowledge_base_service.get_by_user_and_name(active_user.id, kb_name) is not None
+
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.delete_storage", return_value=True)
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_create_knowledge_base_keeps_409_while_deleted_directory_is_locked(
+        self,
+        mock_root,
+        mock_fresh_client,
+        mock_delete_storage,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        tmp_path,
+    ):
+        mock_root.return_value = tmp_path
+        kb_name = "Locked_KB"
+        kb_path = tmp_path / active_user.username / kb_name
+        kb_path.mkdir(parents=True)
+        (kb_path / KB_DELETED_SENTINEL).touch()
+
+        response = await client.post(
+            "api/v1/knowledge_bases",
+            headers=logged_in_headers,
+            json={
+                "name": kb_name,
+                "embedding_provider": "OpenAI",
+                "embedding_model": "text-embedding-3-small",
+            },
+        )
+
+        assert response.status_code == 409
+        assert "still locked" in response.json()["detail"]
+        mock_delete_storage.assert_called_once_with(kb_path, kb_name)
+        mock_fresh_client.assert_not_called()
+        assert await knowledge_base_service.get_by_user_and_name(active_user.id, kb_name) is None
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_fresh_chroma_client")
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
