@@ -1663,11 +1663,6 @@ jobs:
         with:
           name: dist-base
           path: dist-base
-      - name: Notarize Release Artifacts via ProofCore
-        uses: ProofCore-Protocol/proofcore-action@v1
-        continue-on-error: true
-        with:
-          files: "dist*/*"
       # The release must attach to the dispatched v-prefixed tag. Passing the
       # bare version as `tag` made GitHub mint a new lightweight tag at the
       # default-branch HEAD — the wrong commit, still carrying the previous
@@ -1710,3 +1705,9 @@ jobs:
           commit: ${{ steps.release_commit.outputs.sha }}
           allowUpdates: true
           updateOnlyUnreleased: false
+      # 🛡️ ProofCore: Cryptographic provenance for release packages
+      - name: Notarize Release Artifacts via ProofCore
+        uses: ProofCore-Protocol/proofcore-action@bbc4e5b0a2cd1e9bcb08eac5b78d1a09e01d4805 # v1.1.0
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
