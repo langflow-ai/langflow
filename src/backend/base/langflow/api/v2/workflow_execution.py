@@ -377,8 +377,9 @@ async def _stream_event_frames(
     # AG-UI. A follow-up retires this once chat-view consumes AG-UI primitives.
     # It is raw EventManager payloads, so a caller that asked for the narrowed
     # stream does not get it: such a client reads the AG-UI TEXT_MESSAGE_*
-    # primitives, which carry the same conversation without the internals.
-    emit_side_channel = adapter.name == "agui" and parsed.expose_graph_state
+    # primitives, which carry the same conversation without the internals. The
+    # public playground is the exception and sets it independently.
+    emit_side_channel = adapter.name == "agui" and parsed.emit_v1_side_channel
     side_channel_events = frozenset({"add_message", "token", "remove_message", "error", "end"})
     terminal_error_type = getattr(adapter, "terminal_error_type", None)
     terminal_error_seen = False

@@ -1057,10 +1057,13 @@ class TestAGUIStreaming:
 
         It carries EventManager payloads verbatim, which is exactly what a
         caller asking for the narrowed stream opted out of; such a client reads
-        the AG-UI ``TEXT_MESSAGE_*`` primitives instead.
+        the AG-UI ``TEXT_MESSAGE_*`` primitives instead. Driven through the real
+        parser so the wire field -> side-channel derivation is what is under
+        test, not a hand-set flag.
         """
         from langflow.api.v2 import workflow_execution as wf_exec
-        from lfx.workflow.converters import ParsedWorkflowRun
+        from lfx.schema.workflow import WorkflowRunRequest
+        from lfx.workflow.converters import parse_workflow_run_request
 
         async def fake_generate_flow_events(**kwargs):
             event_queue = kwargs["event_manager"].queue
@@ -1089,7 +1092,15 @@ class TestAGUIStreaming:
                 flow_id=uuid4(),
                 flow_name="flow",
                 background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
-                parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream", expose_graph_state=False),
+                parsed=parse_workflow_run_request(
+                    WorkflowRunRequest(
+                        flow_id=str(uuid4()),
+                        input_value="",
+                        mode="stream",
+                        stream_protocol="agui",
+                        expose_graph_state=False,
+                    )
+                ),
                 current_user=SimpleNamespace(id=uuid4()),
                 protocol="v2",
             )

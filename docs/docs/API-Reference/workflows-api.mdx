@@ -70,7 +70,7 @@ POST /api/v2/workflows
 | `files` | `array` | No | - | Pre-uploaded file paths to attach to the run (stream and background modes only). |
 | `start_component_id` | `string` | No | - | Partial-run start component id (stream and background modes only). |
 | `stop_component_id` | `string` | No | - | Partial-run stop component id (stream and background modes only). |
-| `expose_graph_state` | `boolean` | No | `true` | AG-UI only. When `false`, the stream carries only the conversation and omits the flow's graph state. See [Stream only the conversation](#stream-only-the-conversation). |
+| `expose_graph_state` | `boolean` | No | `true` | AG-UI only. When `false`, the stream carries only the conversation and omits the flow's graph state. Not accepted by `POST /api/v2/workflows/public`. See [Stream only the conversation](#stream-only-the-conversation). |
 
 ### Execute flow in `sync` mode
 
@@ -199,7 +199,9 @@ Set `"expose_graph_state": false` when the consumer is another client, such as C
 }
 ```
 
-The field is accepted on `POST /api/v2/workflows` and `POST /api/v2/workflows/public`, and is ignored when `stream_protocol` is not `agui`.
+The field is ignored when `stream_protocol` is not `agui`.
+
+`POST /api/v2/workflows/public` does not accept the field and always behaves as if it were `false`. An anonymous visitor to a shared flow has no reason to receive its topology, and a request that sends `expose_graph_state` is rejected with `422` rather than silently ignored.
 
 For the full AG-UI event catalog, see the [AG-UI specification](https://docs.ag-ui.com/concepts/architecture).
 

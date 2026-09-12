@@ -785,3 +785,62 @@ def test_public_endpoint_throttles_per_ip(monkeypatch):
     # the third exhausts the 2/min window and is rejected at the throttle.
     assert statuses[2] == codes.TOO_MANY_REQUESTS, statuses
     assert codes.TOO_MANY_REQUESTS not in statuses[:2], statuses
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_public_endpoint_rejects_expose_graph_state_field(client: AsyncClient, public_flow_id):
+    """A visitor cannot ask for the graph state: the field is not on the public schema.
+
+    Rejecting is deliberate rather than accepting-and-ignoring, so a caller that
+    tries to turn it on learns it is unavailable instead of silently getting a
+    stream they think carries node state.
+    """
+    _send_unauthenticated(client, "graph-state-rejection-client")
+    response = await client.post(
+        "api/v2/workflows/public",
+        json={
+            "flow_id": str(public_flow_id),
+            "input_value": "Hi",
+            "stream_protocol": "agui",
+            "expose_graph_state": True,
+        },
+        headers={"Content-Type": "application/json"},
+    )
+    assert response.status_code == codes.UNPROCESSABLE_ENTITY
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_public_agui_stream_carries_no_graph_state(client: AsyncClient, public_flow_id):
+    """An anonymous AG-UI stream never carries the flow's topology or component outputs.
+
+    The visitor still gets the conversation, including the ``langflow.event``
+    mirror the shareable playground's chat-view renders from.
+    """
+    _send_unauthenticated(client, "graph-state-forced-client")
+    async with client.stream(
+        "POST",
+        "api/v2/workflows/public",
+        json={
+            "flow_id": str(public_flow_id),
+            "input_value": "Hi",
+            "stream_protocol": "agui",
+        },
+        headers={"Content-Type": "application/json"},
+    ) as response:
+        assert response.status_code == codes.OK
+        body = "".join([chunk async for chunk in response.aiter_text()])
+
+    assert "RUN_STARTED" in body
+    assert "RUN_FINISHED" in body
+
+    assert "STATE_SNAPSHOT" not in body
+    assert "STATE_DELTA" not in body
+    assert "STEP_STARTED" not in body
+    assert "STEP_FINISHED" not in body
+    assert "langflow.log" not in body
+
+    # The playground's chat channel survives; without it a shared link renders
+    # no messages at all (its chat-view has no TEXT_MESSAGE_* handling).
+    assert "langflow.event" in body

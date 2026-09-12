@@ -232,7 +232,14 @@ async def execute_public_workflow(
         StreamAdapterContext(
             run_id=run_id,
             thread_id=scoped_session or str(virtual_flow_id),
-            expose_graph_state=request.expose_graph_state,
+            # Forced, not a caller choice: an anonymous visitor has no reason to
+            # receive the flow's topology or its components' outputs, and this
+            # endpoint already defaults to the restrictive choice elsewhere (it
+            # strips secrets, forbids data/tweaks, namespaces sessions). The
+            # field is absent from ``PublicWorkflowRunRequest``, so a body that
+            # asks for it is rejected by ``extra="forbid"`` rather than silently
+            # ignored.
+            expose_graph_state=False,
         ),
     )
 
@@ -251,7 +258,12 @@ async def execute_public_workflow(
         # opt-in preserves approved code without restoring owner credentials.
         data=sanitized_public_data,
         files=request.files,
-        expose_graph_state=request.expose_graph_state,
+        expose_graph_state=False,
+        # The shareable playground runs on this endpoint and its chat-view still
+        # renders from the v1 side-channel, so the mirror stays on. It carries
+        # the conversation (add_message/token/remove_message/error/end), not the
+        # graph state suppressed above.
+        emit_v1_side_channel=True,
     )
 
     async def _frames_only() -> AsyncIterator[bytes]:

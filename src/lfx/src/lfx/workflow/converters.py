@@ -94,6 +94,13 @@ class ParsedWorkflowRun:
     # behavior, which the canvas depends on; False narrows the stream to the
     # conversation for third-party AG-UI clients.
     expose_graph_state: bool = True
+    # Whether to mirror message-shaped EventManager events as ``langflow.event``
+    # CUSTOM frames. Separate from ``expose_graph_state`` because it is the
+    # conversation in its v1 shape, not graph state: the public playground needs
+    # it (its chat-view has no TEXT_MESSAGE_* handling yet) on a stream that must
+    # still carry no graph state. A third-party client reads the AG-UI
+    # primitives, so opting out of graph state opts out of the mirror too.
+    emit_v1_side_channel: bool = True
 
 
 def parse_workflow_run_request(request: WorkflowRunRequest) -> ParsedWorkflowRun:
@@ -123,6 +130,7 @@ def parse_workflow_run_request(request: WorkflowRunRequest) -> ParsedWorkflowRun
         files=request.files,
         globals=dict(request.globals or {}),
         expose_graph_state=request.expose_graph_state,
+        emit_v1_side_channel=request.expose_graph_state,
         idempotency_key=getattr(request, "idempotency_key", None),
     )
 
