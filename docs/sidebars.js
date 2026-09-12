@@ -500,6 +500,7 @@ module.exports = {
           label: "Bundles",
           items: [
             "Components/components-bundles",
+            "Components/bundles-agentguild",
             "Components/bundles-agentics",
             "Components/bundles-aiml",
             "Components/bundles-altk",

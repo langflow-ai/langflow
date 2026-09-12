@@ -28,6 +28,7 @@ dependencies = [
 # hand-edit them. ``all`` pulls every provider; ``all-no-torch`` is ``all``
 # minus the torch-pulling providers (see TORCH_EXTRAS), giving a torch-free
 # superset for slim/CPU images. Managed by scripts/migrate/consolidate_bundles.py.
+agentguild = []
 agentql = []
 aiml = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
 altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
@@ -104,6 +105,7 @@ yahoosearch = ["yfinance==0.2.50"]
 youtube = ["pytube==15.0.0", "youtube-transcript-api>=1.0.0,<2.0.0", "google-api-python-client~=2.161"]
 zep = ["zep-python==2.0.2"]
 all = [
+    "lfx-bundles[agentguild]",
     "lfx-bundles[agentql]",
     "lfx-bundles[aiml]",
     "lfx-bundles[altk]",
@@ -177,6 +179,7 @@ all = [
     "lfx-bundles[zep]",
 ]
 all-no-torch = [
+    "lfx-bundles[agentguild]",
     "lfx-bundles[agentql]",
     "lfx-bundles[aiml]",
     "lfx-bundles[altk]",
