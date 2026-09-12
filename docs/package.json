@@ -54,6 +54,8 @@
     "node": "22.22.0"
   },
   "overrides": {
+    "shell-quote": "^1.8.4",
+    "websocket-driver": "^0.7.5",
     "brace-expansion": "^5.0.9",
     "ip-address": "^10.3.1",
     "undici": "^7.29.0",
