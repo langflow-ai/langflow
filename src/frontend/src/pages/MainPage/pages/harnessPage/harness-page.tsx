@@ -156,9 +156,17 @@ const HarnessPage = ({
       // overwrite either of them with a stale value.
       { folderId: projectId, data: { project_config: values } },
       {
-        onSuccess: () => {
+        onSuccess: (result) => {
           setEdits({});
-          setSuccessData({ title: t("harness.saved") });
+          // Say what the save did, not just that it happened: these values are copied onto the
+          // components of the project's flows, and that is the part worth seeing.
+          const flowsUpdated = (result as { flows_updated?: number })
+            ?.flows_updated;
+          setSuccessData({
+            title: flowsUpdated
+              ? t("harness.savedToFlows", { count: flowsUpdated })
+              : t("harness.saved"),
+          });
         },
         onError: () => {
           setErrorData({ title: t("harness.saveFailed") });

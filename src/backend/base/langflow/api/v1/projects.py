@@ -23,6 +23,7 @@ from langflow.api.utils import (
 )
 from langflow.api.v1.auth_helpers import handle_auth_settings_update
 from langflow.api.v1.flows import _handle_unique_constraint_error
+from langflow.api.v1.flows_helpers import _save_flow_to_fs
 from langflow.api.v1.mappers.deployments.sync import (
     retry_flow_operation_on_deployment_guard,
     retry_project_operation_on_deployment_guard,
@@ -76,12 +77,13 @@ from langflow.services.database.models.folder.model import (
     FolderListRead,
     FolderRead,
     FolderReadWithFlows,
+    FolderSaveRead,
     FolderUpdate,
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
-from langflow.services.database.models.folder.utils import validate_project_type
+from langflow.services.database.models.folder.utils import validate_project_type, write_project_config_to_flows
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_service, get_settings_service
+from langflow.services.deps import get_service, get_settings_service, get_storage_service
 from langflow.services.schema import ServiceType
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
@@ -98,6 +100,20 @@ PROJECT_DELETE_DENIED_DETAIL = "You don't have permission to delete this project
 # Backwards-compatible local alias; the implementation now lives in lfx.utils.util_strings so the
 # same LIKE-escaping is shared across the API endpoints + the tracing repository.
 _escape_like = escape_like_pattern
+
+
+async def _write_config_through(session: DbSession, project: Folder) -> int:
+    """Apply the project's form to its flows, and keep any file-backed copy in step.
+
+    A flow with an ``fs_path`` is also a file on disk, and that file is what lfx loads. Leaving
+    it behind would defeat the point of writing through at all.
+    """
+    changed = await write_project_config_to_flows(session, project)
+    if changed:
+        storage_service = get_storage_service()
+        for flow in changed:
+            await _save_flow_to_fs(flow, project.user_id, storage_service)
+    return len(changed)
 
 
 async def _new_project(
@@ -261,11 +277,15 @@ async def _new_project(
     else:
         await _move_flows_into_project()
 
+    flows_updated = await _write_config_through(session, new_project)
+
     # Convert to FolderRead while session is still active to avoid detached instance errors
-    return FolderRead.model_validate(new_project, from_attributes=True)
+    saved = FolderSaveRead.model_validate(new_project, from_attributes=True)
+    saved.flows_updated = flows_updated
+    return saved
 
 
-@router.post("/", response_model=FolderRead, status_code=201)
+@router.post("/", response_model=FolderSaveRead, status_code=201)
 async def create_project(
     *,
     session: DbSession,
@@ -833,8 +853,14 @@ async def _apply_project_update(
     else:
         await _move_flows_for_project_update()
 
+    # Last, after the flow moves, so whatever set of flows the project ends this request with
+    # is the set the form is written into.
+    flows_updated = await _write_config_through(session, existing_project)
+
     # Convert to FolderRead while session is still active to avoid detached instance errors
-    return FolderRead.model_validate(existing_project, from_attributes=True)
+    saved = FolderSaveRead.model_validate(existing_project, from_attributes=True)
+    saved.flows_updated = flows_updated
+    return saved
 
 
 def _folder_create_to_update(project: FolderCreate) -> FolderUpdate:
@@ -853,7 +879,7 @@ def _folder_create_to_update(project: FolderCreate) -> FolderUpdate:
     return FolderUpdate(**data)
 
 
-@router.patch("/{project_id}", response_model=FolderRead, status_code=200)
+@router.patch("/{project_id}", response_model=FolderSaveRead, status_code=200)
 async def update_project(
     *,
     session: DbSession,

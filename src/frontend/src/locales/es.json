@@ -1309,6 +1309,8 @@
   "mainPage.tabHarness": "Harness",
   "harness.save": "Guardar",
   "harness.saved": "Proyecto guardado",
+  "harness.savedToFlows_one": "Guardado y aplicado a 1 flujo",
+  "harness.savedToFlows_other": "Guardado y aplicado a {{count}} flujos",
   "harness.saveFailed": "No se pudo guardar el proyecto",
   "harness.loading": "Cargando el formulario...",
   "harness.noFields": "Este tipo de proyecto no tiene nada que configurar.",

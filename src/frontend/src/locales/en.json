@@ -771,6 +771,8 @@
   "mainPage.tabHarness": "Harness",
   "harness.save": "Save",
   "harness.saved": "Project saved",
+  "harness.savedToFlows_one": "Saved, and applied to 1 flow",
+  "harness.savedToFlows_other": "Saved, and applied to {{count}} flows",
   "harness.saveFailed": "Could not save the project",
   "harness.loading": "Loading the form...",
   "harness.noFields": "This project type has nothing to configure.",

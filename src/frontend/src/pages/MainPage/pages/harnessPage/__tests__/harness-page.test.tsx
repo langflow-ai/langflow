@@ -4,6 +4,7 @@ import type { FlowType } from "@/types/flow";
 import HarnessPage from "../harness-page";
 
 const mockPatch = jest.fn();
+const mockSuccess = jest.fn();
 let projectTypes: ProjectTypeType[] | undefined;
 let isLoading = false;
 let projectFlows: FlowType[] | undefined;
@@ -27,6 +28,12 @@ jest.mock("@/controllers/API/queries/folders/use-patch-folders", () => ({
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
   default: ({ name }: { name: string }) => <div data-testid={`icon-${name}`} />,
+}));
+
+jest.mock("@/stores/alertStore", () => ({
+  __esModule: true,
+  default: (selector: (state: unknown) => unknown) =>
+    selector({ setSuccessData: mockSuccess, setErrorData: jest.fn() }),
 }));
 
 jest.mock("@/customization/components/custom-parameter", () => ({
@@ -138,6 +145,9 @@ const renderPage = (props: Partial<typeof defaultProps> & object = {}) =>
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // clearAllMocks keeps implementations, and two tests below give this one; reset so they
+  // cannot leak into the tests that only read what it was called with.
+  mockPatch.mockReset();
   projectTypes = [FLOWS, HARNESS];
   isLoading = false;
   projectFlows = [
@@ -261,6 +271,36 @@ describe("HarnessPage", () => {
       tools: [],
       n_messages: 100,
     });
+  });
+
+  it("says how many flows the save reached, not just that it saved", () => {
+    mockPatch.mockImplementation((_payload, handlers) =>
+      handlers.onSuccess({ flows_updated: 2 }),
+    );
+    renderPage();
+
+    fireEvent.change(screen.getByTestId("input-system_prompt"), {
+      target: { value: "Be terse" },
+    });
+    fireEvent.click(screen.getByTestId("harness-save-btn"));
+
+    expect(mockSuccess).toHaveBeenCalledWith({
+      title: "Saved, and applied to 2 flows",
+    });
+  });
+
+  it("just says saved when the form reached no flow", () => {
+    mockPatch.mockImplementation((_payload, handlers) =>
+      handlers.onSuccess({ flows_updated: 0 }),
+    );
+    renderPage();
+
+    fireEvent.change(screen.getByTestId("input-system_prompt"), {
+      target: { value: "Be terse" },
+    });
+    fireEvent.click(screen.getByTestId("harness-save-btn"));
+
+    expect(mockSuccess).toHaveBeenCalledWith({ title: "Project saved" });
   });
 
   it("saves the picked flows as the tools field", () => {

@@ -1,4 +1,7 @@
-import type { AddFolderType } from "@/pages/MainPage/entities";
+import type {
+  AddFolderType,
+  ProjectSaveResult,
+} from "@/pages/MainPage/entities";
 import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -15,13 +18,14 @@ interface IPatchPatchFolders {
 
 export const usePatchFolders: useMutationFunctionType<
   undefined,
-  IPatchPatchFolders
+  IPatchPatchFolders,
+  ProjectSaveResult
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
   const patchFoldersFn = async (
     newFolder: IPatchPatchFolders,
-  ): Promise<void> => {
+  ): Promise<ProjectSaveResult> => {
     // A key left out of the payload leaves the stored value alone. An explicit null
     // project_config is a real value (it clears the config), which is why that one checks for
     // the key rather than for a truthy value.

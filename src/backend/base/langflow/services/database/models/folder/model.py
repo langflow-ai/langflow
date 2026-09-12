@@ -65,6 +65,16 @@ class FolderRead(FolderBase):
     parent_id: UUID | None = Field()
 
 
+class FolderSaveRead(FolderRead):
+    """What a save returns: the project, plus what the save did beyond the project row.
+
+    ``flows_updated`` counts the flows whose components the project's form was written into, so
+    the UI can say what actually happened rather than only that the row was stored.
+    """
+
+    flows_updated: int = 0
+
+
 class FolderListRead(FolderRead):
     owner_username: str | None = None
     is_owner: bool
