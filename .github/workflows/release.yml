@@ -1626,6 +1626,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
     needs:
       [
         determine-base-version,
@@ -1662,6 +1663,11 @@ jobs:
         with:
           name: dist-base
           path: dist-base
+      - name: Notarize Release Artifacts via ProofCore
+        uses: ProofCore-Protocol/proofcore-action@v1
+        continue-on-error: true
+        with:
+          files: "dist*/*"
       # The release must attach to the dispatched v-prefixed tag. Passing the
       # bare version as `tag` made GitHub mint a new lightweight tag at the
       # default-branch HEAD — the wrong commit, still carrying the previous
