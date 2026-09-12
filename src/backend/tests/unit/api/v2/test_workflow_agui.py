@@ -1052,6 +1052,62 @@ class TestAGUIStreaming:
             }
         ]
 
+    async def test_side_channel_is_dropped_when_graph_state_is_not_exposed(self, monkeypatch: pytest.MonkeyPatch):
+        """``expose_graph_state=False`` also silences the raw v1 side-channel.
+
+        It carries EventManager payloads verbatim, which is exactly what a
+        caller asking for the narrowed stream opted out of; such a client reads
+        the AG-UI ``TEXT_MESSAGE_*`` primitives instead. Driven through the real
+        parser so the wire field -> side-channel derivation is what is under
+        test, not a hand-set flag.
+        """
+        from langflow.api.v2 import workflow_execution as wf_exec
+        from lfx.schema.workflow import WorkflowRunRequest
+        from lfx.workflow.converters import parse_workflow_run_request
+
+        async def fake_generate_flow_events(**kwargs):
+            event_queue = kwargs["event_manager"].queue
+            payload = json.dumps({"event": "end", "data": {"build_duration": 1.25}}).encode()
+            event_queue.put_nowait(("end-1", payload, time.time()))
+            await event_queue.put((None, None, time.time()))
+
+        class FakeAdapter:
+            name = "agui"
+
+            def initial_events(self):
+                return []
+
+            def final_events(self):
+                return []
+
+            def translate(self, _event_type, _event_data):
+                return []
+
+        monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
+
+        frames = [
+            frame
+            async for frame, _event_type in wf_exec._stream_event_frames(
+                adapter=FakeAdapter(),
+                flow_id=uuid4(),
+                flow_name="flow",
+                background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
+                parsed=parse_workflow_run_request(
+                    WorkflowRunRequest(
+                        flow_id=str(uuid4()),
+                        input_value="",
+                        mode="stream",
+                        stream_protocol="agui",
+                        expose_graph_state=False,
+                    )
+                ),
+                current_user=SimpleNamespace(id=uuid4()),
+                protocol="v2",
+            )
+        ]
+
+        assert "langflow.event" not in json.dumps(_sse_payloads(frames))
+
     async def test_stream_emits_run_lifecycle_events(
         self,
         client: AsyncClient,
@@ -1126,6 +1182,68 @@ class TestAGUIStreaming:
             # loop emits end_vertex per node) so the canvas can color nodes.
             assert "STEP_FINISHED" in body
             assert "STATE_DELTA" in body
+        finally:
+            async with session_scope() as session:
+                flow = await session.get(Flow, flow_id)
+                if flow:
+                    await session.delete(flow)
+
+    async def test_stream_real_flow_without_graph_state(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        json_memory_chatbot_no_llm,
+    ):
+        """``expose_graph_state: false`` yields the conversation and nothing else.
+
+        The mirror of ``test_stream_real_flow_runs_without_error``: same flow,
+        same pipeline, but the caller opted out. Proves the request field reaches
+        the translator through the whole stack, not just at the unit seam.
+        """
+        raw = json.loads(json_memory_chatbot_no_llm)
+        flow_data = raw.get("data", raw)
+        flow_id = uuid4()
+        async with session_scope() as session:
+            flow = Flow(
+                id=flow_id,
+                name="AG-UI Memory Chatbot Flow (no graph state)",
+                data=flow_data,
+                user_id=created_api_key.user_id,
+            )
+            session.add(flow)
+            await session.flush()
+
+        try:
+            body_json = _agui_body(flow_id, message="hello from agui", mode="stream")
+            body_json["expose_graph_state"] = False
+            response = await client.post(
+                "api/v2/workflows",
+                json=body_json,
+                headers={"x-api-key": created_api_key.api_key},
+            )
+
+            assert response.status_code == 200
+            body = response.text
+
+            # The conversation is untouched.
+            assert "RUN_STARTED" in body
+            assert "RUN_FINISHED" in body
+            assert "RUN_ERROR" not in body
+            assert "TEXT_MESSAGE_START" in body
+            assert "TEXT_MESSAGE_CONTENT" in body
+
+            # The flow's internals are not.
+            assert "STATE_SNAPSHOT" not in body
+            assert "STATE_DELTA" not in body
+            assert "STEP_STARTED" not in body
+            assert "STEP_FINISHED" not in body
+            assert "langflow.event" not in body
+            assert "langflow.log" not in body
+            # No component id anywhere on the wire.
+            node_ids = [node["id"] for node in flow_data["nodes"]]
+            assert node_ids, "fixture flow must have nodes for this assertion to mean anything"
+            for node_id in node_ids:
+                assert node_id not in body
         finally:
             async with session_scope() as session:
                 flow = await session.get(Flow, flow_id)
@@ -1960,6 +2078,54 @@ class TestAGUIBackgroundJobStatus:
         body = status_resp.json()
         # _agui_body runs under session "thread-1"; before the fix this was null.
         assert body["session_id"] == "thread-1"
+
+    async def test_background_job_replays_without_graph_state(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+    ):
+        """A background job submitted with the narrowed stream replays narrowed.
+
+        The re-attach adapter is rebuilt from the persisted request, so the flag
+        has to survive the submit round-trip. If it did not, a client that opted
+        out would still receive the node graph on ``GET .../events``.
+        """
+        headers = {"x-api-key": created_api_key.api_key}
+        body_json = _agui_body(chatbot_flow, message="hi", mode="background")
+        body_json["expose_graph_state"] = False
+
+        start = await client.post("api/v2/workflows", json=body_json, headers=headers)
+        assert start.status_code == 200
+        job_id = start.json()["job_id"]
+
+        events = await client.get(f"api/v2/workflows/{job_id}/events", headers=headers)
+        assert events.status_code == 200
+        replayed = events.text
+
+        assert "RUN_FINISHED" in replayed
+        assert "STATE_SNAPSHOT" not in replayed
+        assert "STATE_DELTA" not in replayed
+        assert "STEP_STARTED" not in replayed
+        assert "STEP_FINISHED" not in replayed
+        assert "langflow.event" not in replayed
+
+    async def test_persisted_request_round_trip_keeps_graph_state_flag(self):
+        """The worker re-parse must not reset the flag to its ``True`` default."""
+        from langflow.api.v2.workflow import _parse_persisted_workflow_request
+
+        request = {
+            "flow_id": str(uuid4()),
+            "mode": "background",
+            "stream_protocol": "agui",
+            "input_value": "hi",
+            "expose_graph_state": False,
+        }
+        assert _parse_persisted_workflow_request(request).expose_graph_state is False
+
+        # Legacy rows written before the field existed keep today's behavior.
+        del request["expose_graph_state"]
+        assert _parse_persisted_workflow_request(request).expose_graph_state is True
 
     async def test_message_with_json_shaped_run_error_payload_does_not_fail_job(
         self,

@@ -69,9 +69,17 @@ class AGUITranslator:
     :meth:`translate` for each ``EventManager`` event.
     """
 
-    def __init__(self, run_id: str, thread_id: str) -> None:
+    def __init__(self, run_id: str, thread_id: str, *, expose_graph_state: bool = True) -> None:
         self.run_id = run_id
         self.thread_id = thread_id
+        # When False, the graph-state vocabulary is never emitted: the node
+        # STATE_SNAPSHOT/STATE_DELTA (which carry every node id and each
+        # vertex's own output), the per-node STEP_STARTED/STEP_FINISHED, and
+        # ``langflow.log``. What remains is the conversation: RUN_*,
+        # TEXT_MESSAGE_*, TOOL_CALL_* and the message-lifecycle CUSTOMs.
+        # Defaults True so the canvas, which renders from those deltas, is
+        # unchanged.
+        self.expose_graph_state = expose_graph_state
         # Id of the text message currently open on the wire, or ``None``.
         self._open_message_id: str | None = None
         # Message ids whose TEXT_MESSAGE_END has been emitted; the protocol
@@ -107,10 +115,10 @@ class AGUITranslator:
         snapshot establishes ``/nodes`` so every later node ``STATE_DELTA`` has a
         parent to patch, regardless of which execution path drives the run.
         """
-        return [
-            RunStartedEvent(run_id=self.run_id, thread_id=self.thread_id),
-            StateSnapshotEvent(snapshot={"nodes": {}}),
-        ]
+        started: list[BaseEvent] = [RunStartedEvent(run_id=self.run_id, thread_id=self.thread_id)]
+        if self.expose_graph_state:
+            started.append(StateSnapshotEvent(snapshot={"nodes": {}}))
+        return started
 
     def translate(self, event_type: str, data: dict) -> list[BaseEvent]:
         """Map one ``EventManager`` event to zero or more AG-UI events."""
@@ -125,7 +133,9 @@ class AGUITranslator:
         if event_type == "add_message":
             return self._translate_add_message(data)
         if event_type == "log":
-            return [CustomEvent(name="langflow.log", value=data)]
+            # Component log output is the flow's own internals, not the
+            # conversation, so it rides with the rest of the graph state.
+            return [CustomEvent(name="langflow.log", value=data)] if self.expose_graph_state else []
         if event_type == "remove_message":
             removed_id = str(data.get("id") or "")
             # A retracted message (e.g. the agent error path removing its
@@ -212,6 +222,8 @@ class AGUITranslator:
         render the graph before execution begins. ``to_run`` is the full run set;
         ``ids`` (the first layer only) is the fallback.
         """
+        if not self.expose_graph_state:
+            return []
         node_ids = data.get("to_run") or data.get("ids") or []
         snapshot = {"nodes": {node_id: {"status": "pending", "output": None} for node_id in node_ids}}
         return [StateSnapshotEvent(snapshot=snapshot)]
@@ -222,6 +234,8 @@ class AGUITranslator:
         The graph-level ``build_start`` (the ``/build`` path) carries no ``id`` and
         is a no-op here: ``RUN_STARTED`` already signals the run beginning.
         """
+        if not self.expose_graph_state:
+            return []
         node_id = data.get("id")
         if not node_id:
             return []
@@ -234,6 +248,8 @@ class AGUITranslator:
 
     def _translate_end_vertex(self, data: dict) -> list[BaseEvent]:
         """Map ``end_vertex`` to a ``STEP_FINISHED`` + a ``STATE_DELTA`` for status and output."""
+        if not self.expose_graph_state:
+            return []
         build_data = data.get("build_data") or {}
         node_id = build_data.get("id")
         if not node_id:
