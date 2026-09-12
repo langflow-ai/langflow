@@ -1323,3 +1323,72 @@ def test_grouped_leaves_survive_text_consolidation():
 
     assert len([e for e in first + second if isinstance(e, ToolCallStartEvent)]) == 1
     assert len([e for e in first + second if isinstance(e, CustomEvent)]) == 1
+
+
+# --------------------------------------------------------------------------
+# expose_graph_state=False: the conversation-only stream
+# --------------------------------------------------------------------------
+
+_GRAPH_STATE_TYPES = (StateSnapshotEvent, StateDeltaEvent, StepStartedEvent, StepFinishedEvent)
+
+_INTERNAL_OUTPUT = "INTERNAL: margin floor is 22%, never quote below 18%"
+
+
+def _drive_a_run(translator: AGUITranslator) -> list:
+    """Feed one run's worth of graph-shaped events plus a streamed reply."""
+    events = translator.start()
+    events += translator.translate(
+        "vertices_sorted",
+        {"to_run": ["ChatInput-a1b2c", "Agent-d3e4f", "AstraDBVectorStore-g5h6i", "ChatOutput-j7k8l"]},
+    )
+    events += translator.translate("build_start", {"id": "Agent-d3e4f"})
+    events += translator.translate(
+        "end_vertex",
+        {
+            "build_data": {
+                "id": "AstraDBVectorStore-g5h6i",
+                "valid": True,
+                "data": {"outputs": {"documents": _INTERNAL_OUTPUT}},
+            }
+        },
+    )
+    events += translator.translate("log", {"name": "retriever", "message": _INTERNAL_OUTPUT})
+    events += translator.translate("token", {"id": "msg-1", "chunk": "Hello"})
+    events += translator.translate("end", {})
+    return events
+
+
+def test_graph_state_exposed_by_default():
+    """The default is today's behavior: the canvas still gets its node graph."""
+    events = _drive_a_run(AGUITranslator(run_id="run-1", thread_id="session-1"))
+
+    assert any(isinstance(e, _GRAPH_STATE_TYPES) for e in events)
+    assert any(isinstance(e, CustomEvent) and e.name == "langflow.log" for e in events)
+
+
+def test_graph_state_suppressed_when_opted_out():
+    """No node ids, no per-node output, no logs: only the conversation."""
+    events = _drive_a_run(AGUITranslator(run_id="run-1", thread_id="session-1", expose_graph_state=False))
+
+    assert not [e for e in events if isinstance(e, _GRAPH_STATE_TYPES)]
+    assert not [e for e in events if isinstance(e, CustomEvent) and e.name == "langflow.log"]
+
+    # The conversation itself is untouched.
+    assert isinstance(events[0], RunStartedEvent)
+    assert isinstance(events[-1], RunFinishedEvent)
+    assert any(isinstance(e, TextMessageStartEvent) for e in events)
+    assert any(isinstance(e, TextMessageContentEvent) for e in events)
+
+    # Nothing on the wire names a component or carries a component's output.
+    wire = "\n".join(e.model_dump_json(by_alias=True, exclude_none=True) for e in events)
+    assert "AstraDBVectorStore-g5h6i" not in wire
+    assert "Agent-d3e4f" not in wire
+    assert _INTERNAL_OUTPUT not in wire
+
+
+def test_human_input_survives_opt_out():
+    """HITL is conversation flow, not graph state, so it must still reach the client."""
+    translator = AGUITranslator(run_id="run-1", thread_id="session-1", expose_graph_state=False)
+    events = translator.translate("human_input_required", {"message": "approve?"})
+
+    assert [e.name for e in events] == ["langflow.human_input_required"]

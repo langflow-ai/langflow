@@ -98,6 +98,7 @@ class TestRoundTripsWithRichBody:
             "output_ids": ["ChatOutput-xyz"],
             "globals": {"API_TOKEN": "secret-123"},
             "idempotency_key": "idem-123",
+            "expose_graph_state": False,
         }
         req = WorkflowRunRequest.model_validate(body)
         dumped = req.model_dump(mode="json")

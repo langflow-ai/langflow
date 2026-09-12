@@ -203,3 +203,48 @@ def test_unknown_event_types_yield_no_events(unknown_event_type):
     adapter = get_stream_adapter("agui", _ctx())
     events = list(adapter.translate(unknown_event_type, {}))
     assert events == []
+
+
+class TestExposeGraphState:
+    """``expose_graph_state=False`` narrows the stream to the conversation."""
+
+    @staticmethod
+    def _narrowed() -> StreamAdapterContext:
+        return StreamAdapterContext(run_id="run-7", thread_id="thread-7", expose_graph_state=False)
+
+    def test_context_defaults_to_exposing_graph_state(self):
+        """Every call site that does not thread the flag keeps today's behavior."""
+        assert StreamAdapterContext(run_id="r", thread_id="t").expose_graph_state is True
+
+    def test_initial_events_drop_the_seed_snapshot(self):
+        adapter = get_stream_adapter("agui", self._narrowed())
+        assert [e.type for e in adapter.initial_events()] == ["RUN_STARTED"]
+
+    def test_node_events_never_reach_the_wire(self):
+        adapter = get_stream_adapter("agui", self._narrowed())
+        frames = list(adapter.translate("vertices_sorted", {"to_run": ["ChatInput-a1b2c"]}))
+        frames += list(adapter.translate("build_start", {"id": "Agent-d3e4f"}))
+        frames += list(
+            adapter.translate(
+                "end_vertex",
+                {"build_data": {"id": "Store-g5h6i", "valid": True, "data": {"outputs": {"documents": "secret"}}}},
+            )
+        )
+        assert frames == []
+
+    def test_conversation_events_still_frame(self):
+        adapter = get_stream_adapter("agui", self._narrowed())
+        frames = list(adapter.translate("token", {"id": "msg-1", "chunk": "Hi"}))
+        assert [f.type for f in frames] == ["TEXT_MESSAGE_START", "TEXT_MESSAGE_CONTENT"]
+        assert json.loads(frames[1].data_json)["delta"] == "Hi"
+
+    def test_suppressed_events_are_never_persisted(self):
+        """Nothing durable to filter: the translator emits no graph-state frame at all.
+
+        The durable set is protocol-wide, so the guarantee that a re-attaching
+        client cannot recover the node graph rests on suppression happening
+        upstream of ``is_durable``, not on trimming the durable set.
+        """
+        adapter = get_stream_adapter("agui", self._narrowed())
+        adapter.translate("vertices_sorted", {"to_run": ["ChatInput-a1b2c"]})
+        assert list(adapter.translate("build_start", {"id": "Agent-d3e4f"})) == []
