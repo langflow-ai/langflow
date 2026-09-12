@@ -129,7 +129,10 @@ Saved provider settings can take precedence over the environment. If a change
 does not take effect, check the executing user's settings, restart the backend
 when changing its environment, and refresh models. Keep tokens out of exported
 flows, source control, screenshots, and logs. The example contains no Endpoint
-URL or token and disables chat-history storage on its input/output nodes.
+URL or token. Its input/output nodes keep Langflow's default chat-history
+storage enabled so Playground receives message events. Prompts and responses
+are saved in Langflow; delete test sessions after validation. Disabling Chat
+Output's **Store Messages** can prevent replies from appearing in Playground.
 
 ### Capabilities and troubleshooting
 

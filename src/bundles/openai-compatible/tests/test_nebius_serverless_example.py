@@ -130,6 +130,11 @@ def endpoint(monkeypatch):
 
 def test_example_contains_no_credentials_and_preserves_connections():
     payload = json.loads(_EXAMPLE.read_text())
+    edges = payload["data"]["edges"]
+    assert len({edge["id"] for edge in edges}) == len(edges)
+    for edge in edges:
+        for handle in ("sourceHandle", "targetHandle"):
+            assert json.loads(edge[handle].replace("œ", '"')) == edge["data"][handle]
     graph = Graph.from_payload(payload)
     assert len(graph.vertices) == 3
     assert {(edge.source_id, edge.target_id) for edge in graph.edges} == {
@@ -144,7 +149,7 @@ def test_example_contains_no_credentials_and_preserves_connections():
             if isinstance(field, dict) and field.get("password"):
                 assert not field.get("value")
         if "should_store_message" in template:
-            assert template["should_store_message"]["value"] is False
+            assert template["should_store_message"]["value"] is True
 
 
 @pytest.mark.parametrize("stream", [False, True])

@@ -217,7 +217,7 @@
                 "placeholder": "",
                 "show": true,
                 "name": "should_store_message",
-                "value": false,
+                "value": true,
                 "display_name": "Store Messages",
                 "advanced": true,
                 "api_editable": false,
@@ -271,7 +271,7 @@
         "id": "ChatInput-nebius",
         "position": {
           "x": 0,
-          "y": 300
+          "y": 430
         },
         "type": "genericNode"
       },
@@ -489,7 +489,7 @@
                 "placeholder": "",
                 "show": true,
                 "name": "should_store_message",
-                "value": false,
+                "value": true,
                 "display_name": "Store Messages",
                 "advanced": true,
                 "api_editable": false,
@@ -543,7 +543,7 @@
         "id": "ChatOutput-nebius",
         "position": {
           "x": 900,
-          "y": 300
+          "y": 430
         },
         "type": "genericNode"
       },
@@ -1010,7 +1010,7 @@
         "id": "LanguageModelComponent-nebius",
         "position": {
           "x": 450,
-          "y": 300
+          "y": 430
         },
         "type": "genericNode"
       },
@@ -1022,17 +1022,17 @@
           "y": 0
         },
         "width": 1000,
-        "height": 240,
+        "height": 360,
         "style": {
           "width": 1000,
-          "height": 240
+          "height": 360
         },
         "data": {
           "id": "note-nebius",
           "node": {
             "display_name": "",
             "documentation": "",
-            "description": "# Nebius Endpoint Chat\nUse an existing token-authenticated Nebius Serverless Endpoint serving an OpenAI-compatible model. This flow does not provision or stop cloud resources.\n\n1. Wait for authenticated `/v1/models` to list your model.\n2. In **Settings \u2192 Model Providers \u2192 OpenAI Compatible**, set the managed HTTPS Base URL and Endpoint token, then enable your model.\n3. Select that model below. Open **Playground** and send a message. The example selection is `Qwen/Qwen3-0.6B`.\n\nKeep tokens out of exported flows. Stop/delete the Endpoint separately when finished. Chat-history storage is disabled in this example. See the [bundle README](https://github.com/langflow-ai/langflow/tree/main/src/bundles/openai-compatible#nebius-serverless-endpoint) for setup and capability limitations.",
+            "description": "### Nebius Endpoint Chat\nUse an existing token-authenticated Nebius Endpoint serving an OpenAI-compatible model.\n\n1. Wait for authenticated `/v1/models` to list your model.\n2. In **Settings → Model Providers → OpenAI Compatible**, set the managed HTTPS Base URL and Endpoint token, then enable your model.\n3. Select the model below. Open **Playground** and send a message. This example uses `Qwen/Qwen3-0.6B`.\n\nKeep tokens out of exported flows. Stop/delete the Endpoint separately when finished. Playground messages are saved in Langflow. See the [bundle README](https://github.com/langflow-ai/langflow/tree/main/src/bundles/openai-compatible#nebius-serverless-endpoint).",
             "template": {
               "backgroundColor": "neutral"
             }
@@ -1061,7 +1061,10 @@
             ],
             "type": "str"
           }
-        }
+        },
+        "id": "nebius-edge-1",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-nebiusœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œLanguageModelComponent-nebiusœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
       {
         "source": "LanguageModelComponent-nebius",
@@ -1087,7 +1090,10 @@
             ],
             "type": "other"
           }
-        }
+        },
+        "id": "nebius-edge-2",
+        "sourceHandle": "{œdataTypeœ: œLanguageModelComponentœ, œidœ: œLanguageModelComponent-nebiusœ, œnameœ: œtext_outputœ, œoutput_typesœ: [œMessageœ]}",
+        "targetHandle": "{œfieldNameœ: œinput_valueœ, œidœ: œChatOutput-nebiusœ, œinputTypesœ: [œDataœ, œJSONœ, œDataFrameœ, œTableœ, œMessageœ], œtypeœ: œotherœ}"
       }
     ],
     "viewport": {
