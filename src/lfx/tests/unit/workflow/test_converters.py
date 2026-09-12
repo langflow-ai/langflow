@@ -34,6 +34,7 @@ from lfx.schema.workflow import (
     OutputReason,
     WorkflowExecutionResponse,
     WorkflowJobResponse,
+    WorkflowRunRequest,
 )
 from lfx.workflow.converters import (
     _build_metadata_for_non_output,
@@ -48,6 +49,7 @@ from lfx.workflow.converters import (
     build_component_output,
     create_error_response,
     create_job_response,
+    parse_workflow_run_request,
     run_response_to_workflow_response,
     workflow_response_from_output_events,
 )
@@ -1713,3 +1715,22 @@ class TestGlobalsSyncOnlyDocumented:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+def test_parse_derives_side_channel_from_expose_graph_state():
+    """Opting out of graph state also opts out of the v1 ``langflow.event`` mirror.
+
+    A client that reads AG-UI primitives has no use for the raw EventManager
+    payloads, and they name the component that produced each message.
+    """
+    request = WorkflowRunRequest(flow_id=str(uuid4()), stream_protocol="agui", expose_graph_state=False)
+    parsed = parse_workflow_run_request(request)
+    assert parsed.expose_graph_state is False
+    assert parsed.emit_v1_side_channel is False
+
+
+def test_parse_keeps_side_channel_by_default():
+    """The canvas and the playground both need the mirror, so it is on by default."""
+    parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=str(uuid4())))
+    assert parsed.expose_graph_state is True
+    assert parsed.emit_v1_side_channel is True
