@@ -24,7 +24,7 @@ import {
   processFlows,
   removeApiKeys,
 } from "@/utils/reactflowUtils";
-import { CURRENT_DRAFT_ID } from "./constants";
+import { COMPARE_DRAFT_TARGET, CURRENT_DRAFT_ID } from "./constants";
 
 export function useFlowVersionSidebar(flowId: string) {
   const { t } = useTranslation();
@@ -51,6 +51,11 @@ export function useFlowVersionSidebar(flowId: string) {
 
   const [deleteDialogEntry, setDeleteDialogEntry] =
     useState<FlowVersionEntry | null>(null);
+
+  // Compare mode is deliberately separate from selectedId: picking a comparison
+  // target must not disturb the canvas preview.
+  const [compareBaseId, setCompareBaseId] = useState<string | null>(null);
+  const [compareTargetId, setCompareTargetId] = useState<string | null>(null);
 
   // Capture original draft state on first render so we can restore it when
   // switching back to "Current" or on unmount. Initialized during render (not
@@ -263,9 +268,48 @@ export function useFlowVersionSidebar(flowId: string) {
     };
   }, [clearPreview]);
 
-  const handleSelectEntry = useCallback((entryId: string) => {
-    setSelectedId(entryId);
+  // While picking a comparison target, a row click must NOT run the preview
+  // path: setSelectedId cascades into useFlowStore.setState + fitView, which
+  // would swap the canvas out from under the user mid-pick.
+  const handleSelectEntry = useCallback(
+    (entryId: string) => {
+      if (compareBaseId !== null) {
+        if (entryId !== compareBaseId) {
+          setCompareTargetId(
+            entryId === CURRENT_DRAFT_ID ? COMPARE_DRAFT_TARGET : entryId,
+          );
+        }
+        return;
+      }
+      setSelectedId(entryId);
+    },
+    [compareBaseId],
+  );
+
+  const handleCompareClick = useCallback((entry: FlowVersionEntry) => {
+    setCompareBaseId(entry.id);
+    setCompareTargetId(null);
   }, []);
+
+  const handleCancelCompare = useCallback(() => {
+    setCompareBaseId(null);
+    setCompareTargetId(null);
+  }, []);
+
+  // Swapping sides means the current target becomes the base. The draft has no
+  // version id, so it can only ever be a target — swapping into it is a no-op.
+  const handleSwapCompare = useCallback(() => {
+    setCompareBaseId((currentBase) => {
+      if (
+        compareTargetId === null ||
+        compareTargetId === COMPARE_DRAFT_TARGET
+      ) {
+        return currentBase;
+      }
+      setCompareTargetId(currentBase);
+      return compareTargetId;
+    });
+  }, [compareTargetId]);
 
   const handleExport = useCallback(
     async (entry: FlowVersionEntry) => {
@@ -355,7 +399,13 @@ export function useFlowVersionSidebar(flowId: string) {
     processedPreview,
     isDeleting,
     isViewingDraft,
+    compareBaseId,
+    compareTargetId,
+    isComparePickMode: compareBaseId !== null && compareTargetId === null,
     handleSelectEntry,
+    handleCompareClick,
+    handleCancelCompare,
+    handleSwapCompare,
     handleExport,
     handleDelete,
   };

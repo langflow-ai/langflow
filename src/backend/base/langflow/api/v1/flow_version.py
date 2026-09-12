@@ -15,6 +15,7 @@ from langflow.api.utils.core import strip_secret_field_values
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.mappers.deployments.helpers import get_owned_provider_account_or_404
 from langflow.api.v1.mappers.deployments.sync import sync_flow_version_attachments
+from langflow.api.v1.schemas.flow_version_diff import DiffSideRef, FlowVersionDiffResponse
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow_version.crud import (
@@ -39,8 +40,13 @@ from langflow.services.database.models.flow_version.model import (
     FlowVersionReadWithData,
 )
 from langflow.services.deps import get_catalog_policy_service, get_settings_service
+from langflow.utils.flow_diff import FlowDiffSide, FlowDiffStripError, compute_flow_diff
 
 router = APIRouter(prefix="/flows/{flow_id}/versions", tags=["Flow Versions"], include_in_schema=False)
+
+# Sentinel for the ``against`` query parameter, meaning the live flow draft rather
+# than a stored version.
+DRAFT_COMPARISON_TARGET = "draft"
 
 
 def strip_version_data(data: dict | None) -> dict | None:
@@ -194,6 +200,94 @@ async def get_single_flow_version(
         raise HTTPException(status_code=404, detail="Version entry not found") from exc
 
     return _version_to_read_full(entry, strip_keys=True)
+
+
+def _draft_side_ref(flow: Flow) -> DiffSideRef:
+    """Describe the live draft as one side of a comparison."""
+    return DiffSideRef(kind="draft", created_at=flow.updated_at)
+
+
+def _version_side_ref(entry: FlowVersion) -> DiffSideRef:
+    """Describe a stored version as one side of a comparison."""
+    return DiffSideRef(
+        kind="version",
+        version_id=entry.id,
+        version_number=entry.version_number,
+        version_tag=f"v{entry.version_number}",
+        description=entry.description,
+        created_at=entry.created_at,
+    )
+
+
+def _diff_side(data: dict | None) -> FlowDiffSide:
+    """Pair a raw payload with its scrubbed counterpart for the diff engine.
+
+    This is the only place either side of a diff is scrubbed, and it is
+    unconditional. ``compute_flow_diff`` refuses to run if scrubbing failed
+    closed, so a scrubber failure can never degrade into publishing raw data.
+    """
+    return FlowDiffSide(raw=data, stripped=strip_version_data(data))
+
+
+# Two path segments, so this cannot be shadowed by the GET /{version_id} route
+# above. A flat GET /diff?base=..&target=.. would be, and would 422 on UUID parsing.
+@router.get("/{version_id}/diff", response_model_exclude_unset=True)
+async def get_flow_version_diff(
+    flow_id: UUID,
+    version_id: UUID,
+    current_user: CurrentActiveUser,
+    session: DbSession,
+    against: Annotated[
+        str,
+        Query(description="A version id to compare against, or 'draft' for the live flow."),
+    ] = DRAFT_COMPARISON_TARGET,
+) -> FlowVersionDiffResponse:
+    flow = await _get_user_flow(session, flow_id, current_user.id)
+    await ensure_flow_permission(
+        current_user,
+        FlowAction.READ,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
+
+    try:
+        base_entry = await get_flow_version_entry_or_raise(session, version_id, current_user.id, flow_id=flow_id)
+    except FlowVersionNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Version entry not found") from exc
+
+    if against == DRAFT_COMPARISON_TARGET:
+        target_ref = _draft_side_ref(flow)
+        target_data = flow.data
+    else:
+        try:
+            target_version_id = UUID(against)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=422,
+                detail="Invalid 'against' value — expected a version id or 'draft'.",
+            ) from exc
+        try:
+            # Passing flow_id here is what makes a version from another flow a 404
+            # rather than a cross-flow comparison.
+            target_entry = await get_flow_version_entry_or_raise(
+                session, target_version_id, current_user.id, flow_id=flow_id
+            )
+        except FlowVersionNotFoundError as exc:
+            raise HTTPException(status_code=404, detail="Version entry not found") from exc
+        target_ref = _version_side_ref(target_entry)
+        target_data = target_entry.data
+
+    try:
+        diff = compute_flow_diff(_diff_side(base_entry.data), _diff_side(target_data))
+    except FlowDiffStripError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail="Version data could not be prepared for comparison.",
+        ) from exc
+
+    return FlowVersionDiffResponse.model_validate({"base": _version_side_ref(base_entry), "target": target_ref, **diff})
 
 
 # shares FlowVersionRead model with list endpoint (inside FlowVersionListResponse),
