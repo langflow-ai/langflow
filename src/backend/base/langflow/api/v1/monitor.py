@@ -46,6 +46,14 @@ router = APIRouter(prefix="/monitor", tags=["Monitor"])
 
 MESSAGE_UPDATE_FAILED = "Could not update the message."
 
+# Message-history reads must never return an entire table: the editor polls
+# this endpoint every few seconds, so an unbounded default serializes the full
+# history on every request and freezes the UI on flows with large histories
+# (issue #15023). Values match the list-endpoint defaults used by the authz
+# routers (_LIST_DEFAULT_LIMIT / _LIST_MAX_LIMIT).
+_MESSAGES_DEFAULT_LIMIT = 100
+_MESSAGES_MAX_LIMIT = 200
+
 
 async def _log_message_update_failure(error: Exception) -> None:
     from lfx.log.logger import logger
@@ -282,18 +290,29 @@ async def get_messages(
         normalized_order = order.upper()
         if normalized_order not in {"ASC", "DESC"}:
             raise HTTPException(status_code=400, detail=f"Invalid order direction: {order}")
-        if order_by:
-            if order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
-                raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
-            order_col = getattr(MessageTable, order_by)
-            order_col = order_col.desc() if normalized_order == "DESC" else order_col.asc()
-            stmt = stmt.order_by(order_col)
-        if limit:
-            stmt = stmt.limit(limit)
+        if order_by and order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
+            raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
+        # Always select the newest window by timestamp DESC (anchored at the most
+        # recent row): the editor polls with flow_id only, and an unbounded default
+        # serializes the whole history on every poll (issue #15023). Selecting by
+        # timestamp keeps offset paging aligned with history age even when the
+        # caller sorts by a non-timestamp field. A falsy limit (None/0) falls back
+        # to the default, matching the previous `if limit:` behavior where 0 meant
+        # "no limit".
+        effective_limit = _MESSAGES_DEFAULT_LIMIT if not limit else min(limit, _MESSAGES_MAX_LIMIT)
+        stmt = stmt.order_by(col(MessageTable.timestamp).desc())
         if offset:
             stmt = stmt.offset(offset)
-        messages = await session.exec(stmt)
-        return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
+        stmt = stmt.limit(effective_limit)
+        window = list(await session.exec(stmt))
+        if order_by:
+            # Re-sort the already-selected window into the caller's display order.
+            if order_by == "timestamp":
+                if normalized_order == "ASC":
+                    window.reverse()
+            else:
+                window.sort(key=lambda message: getattr(message, order_by), reverse=normalized_order == "DESC")
+        return [MessageResponse.model_validate(d, from_attributes=True) for d in window]
     except HTTPException:
         raise
     except Exception as e:
@@ -605,19 +624,23 @@ async def get_shared_messages(
         normalized_order = order.upper()
         if normalized_order not in {"ASC", "DESC"}:
             raise HTTPException(status_code=400, detail=f"Invalid order direction: {order}")
-        if order_by:
-            if order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
-                raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
-            order_col = getattr(MessageTable, order_by)
-            order_col = order_col.desc() if normalized_order == "DESC" else order_col.asc()
-            stmt = stmt.order_by(order_col)
-        if limit:
-            stmt = stmt.limit(limit)
+        if order_by and order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
+            raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
+        # Select the newest window by timestamp DESC, mirroring get_messages (issue #15023).
+        effective_limit = _MESSAGES_DEFAULT_LIMIT if not limit else min(limit, _MESSAGES_MAX_LIMIT)
+        stmt = stmt.order_by(col(MessageTable.timestamp).desc())
         if offset:
             stmt = stmt.offset(offset)
-
-        messages = await session.exec(stmt)
-        return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
+        stmt = stmt.limit(effective_limit)
+        window = list(await session.exec(stmt))
+        if order_by:
+            # Re-sort the already-selected window into the caller's display order.
+            if order_by == "timestamp":
+                if normalized_order == "ASC":
+                    window.reverse()
+            else:
+                window.sort(key=lambda message: getattr(message, order_by), reverse=normalized_order == "DESC")
+        return [MessageResponse.model_validate(d, from_attributes=True) for d in window]
     except HTTPException:
         raise
     except Exception as e:
