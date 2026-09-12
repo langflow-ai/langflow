@@ -1626,6 +1626,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      id-token: write
     needs:
       [
         determine-base-version,
@@ -1704,3 +1705,9 @@ jobs:
           commit: ${{ steps.release_commit.outputs.sha }}
           allowUpdates: true
           updateOnlyUnreleased: false
+      # 🛡️ ProofCore: Cryptographic provenance for release packages
+      - name: Notarize Release Artifacts via ProofCore
+        uses: ProofCore-Protocol/proofcore-action@bbc4e5b0a2cd1e9bcb08eac5b78d1a09e01d4805 # v1.1.0
+        continue-on-error: true
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
