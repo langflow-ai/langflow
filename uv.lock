@@ -43,6 +43,7 @@ members = [
     "lfx-empiriolabs",
     "lfx-exa",
     "lfx-firecrawl",
+    "lfx-fxmacrodata",
     "lfx-google",
     "lfx-ibm",
     "lfx-nextplaid",
@@ -7911,6 +7912,7 @@ bundles = [
     { name = "lfx-empiriolabs" },
     { name = "lfx-exa" },
     { name = "lfx-firecrawl" },
+    { name = "lfx-fxmacrodata" },
     { name = "lfx-nextplaid" },
     { name = "lfx-paddle" },
     { name = "lfx-serply" },
@@ -8026,6 +8028,7 @@ requires-dist = [
     { name = "lfx-empiriolabs", marker = "extra == 'bundles'", editable = "src/bundles/empiriolabs" },
     { name = "lfx-exa", marker = "extra == 'bundles'", editable = "src/bundles/exa" },
     { name = "lfx-firecrawl", marker = "extra == 'bundles'", editable = "src/bundles/firecrawl" },
+    { name = "lfx-fxmacrodata", marker = "extra == 'bundles'", editable = "src/bundles/fxmacrodata" },
     { name = "lfx-google", editable = "src/bundles/google" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
     { name = "lfx-nextplaid", marker = "extra == 'bundles'", editable = "src/bundles/nextplaid" },
@@ -10241,6 +10244,34 @@ requires-dist = [
     { name = "firecrawl-py", specifier = ">=4.0.0,<5.0.0" },
     { name = "lfx", editable = "src/lfx" },
 ]
+
+[[package]]
+name = "lfx-fxmacrodata"
+version = "0.1.0"
+source = { editable = "src/bundles/fxmacrodata" }
+dependencies = [
+    { name = "jsonschema" },
+    { name = "langchain-core" },
+    { name = "lfx" },
+    { name = "requests" },
+]
+
+[package.optional-dependencies]
+test = [
+    { name = "pytest" },
+    { name = "pytest-xdist" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "jsonschema", specifier = ">=4.23,<5" },
+    { name = "langchain-core", specifier = ">=1.2.28,<2" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "pytest", marker = "extra == 'test'", specifier = ">=8" },
+    { name = "pytest-xdist", marker = "extra == 'test'", specifier = ">=3" },
+    { name = "requests", specifier = ">=2.32,<3" },
+]
+provides-extras = ["test"]
 
 [[package]]
 name = "lfx-google"
