@@ -70,6 +70,7 @@ POST /api/v2/workflows
 | `files` | `array` | No | - | Pre-uploaded file paths to attach to the run (stream and background modes only). |
 | `start_component_id` | `string` | No | - | Partial-run start component id (stream and background modes only). |
 | `stop_component_id` | `string` | No | - | Partial-run stop component id (stream and background modes only). |
+| `expose_graph_state` | `boolean` | No | `true` | AG-UI only. When `false`, the stream carries only the conversation and omits the flow's graph state. See [Stream only the conversation](#stream-only-the-conversation). |
 
 ### Execute flow in `sync` mode
 
@@ -182,6 +183,23 @@ Send `POST /api/v2/workflows` with `"mode": "stream"` and `"stream_protocol": "a
 | `CUSTOM` | Langflow-specific extensions (see below). |
 
 Langflow also emits `CUSTOM` events that generic AG-UI clients can ignore, such as `langflow.log`, `langflow.content.*`, `langflow.message.removed`, and `langflow.run.cancelled`.
+
+##### Stream only the conversation {#stream-only-the-conversation}
+
+The `STEP_*` and `STATE_*` events describe the flow itself: every component id that will run, and each component's own output, including intermediate results that are not the flow's answer. The Langflow canvas renders node status from them, so they are on by default.
+
+Set `"expose_graph_state": false` when the consumer is another client, such as CopilotKit, a custom chat UI, or an embedded widget. The stream then carries only `RUN_*`, `TEXT_MESSAGE_*`, `TOOL_CALL_*`, and the message-lifecycle `CUSTOM` events. `STATE_SNAPSHOT`, `STATE_DELTA`, `STEP_STARTED`, `STEP_FINISHED`, and `langflow.log` are never emitted, so they are never persisted for a background run either, and a re-attached client receives the same narrowed stream.
+
+```json
+{
+  "flow_id": "your-flow-id",
+  "mode": "stream",
+  "stream_protocol": "agui",
+  "expose_graph_state": false
+}
+```
+
+The field is accepted on `POST /api/v2/workflows` and `POST /api/v2/workflows/public`, and is ignored when `stream_protocol` is not `agui`.
 
 For the full AG-UI event catalog, see the [AG-UI specification](https://docs.ag-ui.com/concepts/architecture).
 

@@ -89,6 +89,11 @@ class ParsedWorkflowRun:
     # per-user state to the end user. ``None`` for anonymous / feature-off / editor
     # runs, so those are byte-for-byte unchanged.
     end_user_id: str | None = None
+    # AG-UI only: whether the stream may carry the flow's graph state (node ids,
+    # per-node status and output) alongside the conversation. True keeps today's
+    # behavior, which the canvas depends on; False narrows the stream to the
+    # conversation for third-party AG-UI clients.
+    expose_graph_state: bool = True
 
 
 def parse_workflow_run_request(request: WorkflowRunRequest) -> ParsedWorkflowRun:
@@ -117,6 +122,7 @@ def parse_workflow_run_request(request: WorkflowRunRequest) -> ParsedWorkflowRun
         data=request.data,
         files=request.files,
         globals=dict(request.globals or {}),
+        expose_graph_state=request.expose_graph_state,
         idempotency_key=getattr(request, "idempotency_key", None),
     )
 

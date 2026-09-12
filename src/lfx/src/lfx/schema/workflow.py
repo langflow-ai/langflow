@@ -226,6 +226,18 @@ class WorkflowRunRequest(BaseModel):
             "values return 422 with the available list. Ignored when mode=sync."
         ),
     )
+    expose_graph_state: bool = Field(
+        default=True,
+        description=(
+            "AG-UI only. When ``True`` (the default) the stream also carries the "
+            "flow's graph state: ``STATE_SNAPSHOT``/``STATE_DELTA`` with every "
+            "node id and each component's output, ``STEP_STARTED``/"
+            "``STEP_FINISHED``, and the ``langflow.*`` side-channel. The canvas "
+            "renders from those. Set ``False`` for a third-party AG-UI client "
+            "that should receive only the conversation (``RUN_*``, "
+            "``TEXT_MESSAGE_*``, ``TOOL_CALL_*``)."
+        ),
+    )
     data: dict[str, Any] | None = Field(
         None,
         description=(
@@ -348,6 +360,18 @@ class PublicWorkflowRunRequest(BaseModel):
             "Wire protocol for streaming events. Defaults to ``langflow`` "
             "(raw EventManager payloads). ``agui`` emits AG-UI events. Unknown "
             "values return 422 with the available list."
+        ),
+    )
+    expose_graph_state: bool = Field(
+        default=True,
+        description=(
+            "AG-UI only. When ``True`` (the default) the stream also carries the "
+            "flow's graph state: ``STATE_SNAPSHOT``/``STATE_DELTA`` with every "
+            "node id and each component's output, ``STEP_STARTED``/"
+            "``STEP_FINISHED``, and the ``langflow.*`` side-channel. The canvas "
+            "renders from those. Set ``False`` for a third-party AG-UI client "
+            "that should receive only the conversation (``RUN_*``, "
+            "``TEXT_MESSAGE_*``, ``TOOL_CALL_*``)."
         ),
     )
     files: list[str] | None = Field(
