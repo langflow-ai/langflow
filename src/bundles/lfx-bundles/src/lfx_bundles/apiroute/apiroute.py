@@ -75,7 +75,7 @@ class APIRouteComponent(LCModelComponent):
                 "claude-3-7-sonnet-20250219",
                 "gpt-4o",
                 "gemini-2.5-pro",
-                "deepseek-r1"
+                "deepseek-r1",
             ]
             build_config["model_name"]["value"] = "claude-3-7-sonnet-20250219"
         return build_config
