@@ -48,4 +48,16 @@ describe("SIDEBAR_BUNDLES", () => {
       ]),
     );
   });
+
+  it("classifies Figranium as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Figranium",
+          icon: "Figranium",
+          name: "figranium",
+        }),
+      ]),
+    );
+  });
 });
