@@ -171,7 +171,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.1.23,<2.0",
+    "lfx-bundles[all-no-torch]>=1.1.24,<2.0",
     "lfx-arxiv>=0.1.5,<1.0.0",
     "lfx-confluent>=0.1.0,<1.0.0",
     "lfx-duckduckgo>=0.1.5,<1.0.0",
@@ -539,7 +539,7 @@ external = ["RUF027"]
     "TC003",  # pytest fixture type hints are evaluated at runtime
 ]
 "src/lfx/src/lfx/schema/table.py" = [
-    "S105",  # False positive: PASSWORD is a formatter type
+    "S105",  # False positive: PASSWORD is a formatter type constant
 ]
 "src/lfx/src/lfx/services/mcp_composer/service.py" = [
     "S104",  # Intentional binding to all interfaces for server
