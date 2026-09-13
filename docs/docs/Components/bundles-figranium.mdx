@@ -23,7 +23,10 @@ For more information, see the [Figranium documentation](https://docs.figranium.d
 
 :::tip
 Self-hosted Figranium instances often run on a private network.
-Langflow's SSRF protection allows literal loopback addresses such as `http://localhost:11345` by default; to reach other internal hosts, add them to `LANGFLOW_SSRF_ALLOWED_HOSTS`.
+Langflow's [SSRF protection](./api-keys-and-authentication#ssrf-protection) allows literal loopback addresses such as `http://localhost:11345` by default; to reach other internal hosts, add them to `LANGFLOW_SSRF_ALLOWED_HOSTS`.
+
+On a shared server where users you don't fully trust can build flows, keep `LANGFLOW_SSRF_PROTECTION_ENABLED` and `LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED` enabled, set `LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK=false`, and allowlist only your Figranium host.
+Use an `https://` URL for any Figranium instance outside that private network, because the API key travels in the request headers.
 :::
 
 ## Execute Figranium Task

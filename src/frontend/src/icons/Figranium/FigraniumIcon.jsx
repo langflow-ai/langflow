@@ -1,7 +1,7 @@
 const SvgFigranium = ({ isDark: _isDark, ...props }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 968 1080"
+    viewBox="0 0 969 1081"
     fill="currentColor"
     {...props}
   >

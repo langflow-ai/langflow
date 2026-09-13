@@ -44,6 +44,13 @@ MIGRATION_TABLE = REPO_ROOT / "src" / "lfx" / "src" / "lfx" / "extension" / "mig
 # Release this consolidation ships in -- stamped on every migration entry.
 MIGRATION_RELEASE = "1.11.0"
 
+# Providers that were born in lfx-bundles: there is no ``lfx.components`` source
+# to move or shim, and their migration rows were written by hand at the release
+# that introduced them (one ``bare_class_name`` row per component).  They stay in
+# ``PROVIDER_DEPS`` so re-running the script keeps their extras managed, but the
+# move + migration-discovery steps are skipped for them.
+PRE_CONSOLIDATED_PROVIDERS: frozenset[str] = frozenset({"figranium", "mrscraper"})
+
 # Shared spec for providers whose components go through langchain_community
 # wrappers (the wrapper itself; whatever SDK the wrapper lazy-imports at
 # runtime is listed per provider alongside it).
@@ -447,7 +454,11 @@ def main() -> int:
     new_extras: dict[str, list[str]] = {}
     print("== move providers + shims ==")
     for provider in selected:
-        plan[provider] = move_provider(provider, apply=args.apply)
+        if provider in PRE_CONSOLIDATED_PROVIDERS:
+            print(f"  {provider}: born in lfx-bundles; skipping move and migration discovery")
+            plan[provider] = []
+        else:
+            plan[provider] = move_provider(provider, apply=args.apply)
         new_extras[normalize_extra(provider)] = PROVIDER_DEPS[provider]
 
     print("== merge per-provider extras ==")
