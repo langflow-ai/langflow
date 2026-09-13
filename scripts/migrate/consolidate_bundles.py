@@ -135,6 +135,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "homeassistant": ["requests>=2.32.0"],  # REST via requests; no vendor SDK
     "olivya": [],  # httpx REST only (lfx core)
     "agentql": [],  # httpx REST only (lfx core)
+    "figranium": [],  # httpx REST only (lfx core); new in 1.13.0, never lived under lfx.components
     # --- tranche 7: google family + agent SDKs (markers preserved from base) ---
     # "google" graduated to the standalone lfx-google bundle so Gemini is
     # available in every default Langflow install.
