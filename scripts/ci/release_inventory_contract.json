@@ -259,6 +259,7 @@
         "deepseek",
         "elastic",
         "faiss",
+        "figranium",
         "funasr",
         "git",
         "glean",
