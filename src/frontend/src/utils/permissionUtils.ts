@@ -2,10 +2,10 @@
  * Pure helpers for the RBAC permission gate. Kept free of React so the gating
  * decision can be unit-tested in isolation.
  *
- * Gating is **fail-open**: when permission data is absent (still loading,
- * request errored, or no provider mounted) every action is allowed. This is a
- * UI affordance gate, not a security boundary — the backend still enforces —
- * so the graceful default for non-RBAC installs is "everything enabled".
+ * Gating is fail-closed unless the server explicitly reports disabled enforcement.
+ * Missing, loading, errored, or unevaluated permission data denies protected
+ * actions. The only unresolved allow path requires an explicit server response
+ * confirming that authorization enforcement is disabled.
  */
 
 import type { EffectivePermissionsResponse } from "@/types/permissions";
@@ -17,7 +17,7 @@ export type PermissionMap = Record<string, string[]>;
  * Build a case-normalized permission map from an endpoint response.
  *
  * Returns `undefined` when there is no response yet so callers can distinguish
- * "not loaded" (fail-open) from "loaded, empty" (a real, restrictive answer).
+ * "not loaded" from "loaded, empty" (a real, restrictive answer).
  */
 export function buildPermissionMap(
   response?: Pick<EffectivePermissionsResponse, "permissions"> | null,
@@ -35,21 +35,18 @@ export function buildPermissionMap(
 /**
  * Decide whether `action` is allowed on `resourceId` given a permission map.
  *
- * Fail-open rules (return `true`):
- *  - `map` is `undefined` (loading / errored / no provider)
- *  - `resourceId` is missing/empty
- *  - the resource id is not present in the map (it was not evaluated)
- *
- * Strict rule: when the resource id **is** present, only the actions listed
- * for it are allowed — an empty list therefore denies every action.
+ * Missing state denies unless `allowWhenUnresolved` is true because the server
+ * explicitly confirmed disabled enforcement. A present entry allows only its
+ * listed actions; an empty list denies every action.
  */
 export function canPerformAction(
   map: PermissionMap | undefined,
   resourceId: string | undefined | null,
   action: string,
+  allowWhenUnresolved = false,
 ): boolean {
-  if (!map || !resourceId) return true;
+  if (!map || !resourceId) return allowWhenUnresolved;
   const allowed = map[resourceId.toLowerCase()];
-  if (!allowed) return true;
+  if (!allowed) return allowWhenUnresolved;
   return allowed.includes(action.toLowerCase());
 }

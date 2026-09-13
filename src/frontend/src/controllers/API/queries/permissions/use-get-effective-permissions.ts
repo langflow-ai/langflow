@@ -1,3 +1,4 @@
+import useAuthStore from "@/stores/authStore";
 import type { useQueryFunctionType } from "@/types/api";
 import type {
   EffectivePermissionsRequest,
@@ -32,6 +33,7 @@ export const useGetEffectivePermissions: useQueryFunctionType<
   EffectivePermissionsResponse
 > = (params, options) => {
   const { query } = UseRequestProcessor();
+  const userId = useAuthStore((state) => state.userData?.id);
   const { resourceType, resourceIds, actions, domain } = params;
 
   // Defensive cap: lists are paginated well under 500, but never let a caller
@@ -57,6 +59,7 @@ export const useGetEffectivePermissions: useQueryFunctionType<
   const queryResult = query(
     [
       "useGetEffectivePermissions",
+      userId ?? "anonymous",
       resourceType,
       [...cappedIds].sort(),
       actions && actions.length > 0 ? [...actions].sort() : "default",

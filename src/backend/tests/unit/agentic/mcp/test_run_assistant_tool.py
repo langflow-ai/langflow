@@ -82,8 +82,9 @@ def _context_stub() -> SimpleNamespace:
 
 def _session_mock() -> AsyncMock:
     session = AsyncMock()
-    # SQLAlchemy's add() API is synchronous even on AsyncSession.
+    # These SQLAlchemy APIs are synchronous even on AsyncSession.
     session.add = MagicMock()
+    session.get_bind = MagicMock(return_value=SimpleNamespace(dialect=SimpleNamespace(name="postgresql")))
     return session
 
 

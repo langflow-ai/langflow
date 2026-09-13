@@ -6,32 +6,44 @@ import { UseRequestProcessor } from "../../services/request-processor";
 
 interface IDeleteFlows {
   flow_ids: string[];
+  expected_edit_revision: Record<string, number>;
+}
+
+interface DeleteFlowsResponse {
+  deleted: number;
 }
 
 export const useDeleteDeleteFlows: useMutationFunctionType<
   undefined,
-  IDeleteFlows
+  IDeleteFlows,
+  DeleteFlowsResponse,
+  unknown
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
-  const deleteFlowsFn = async (payload: IDeleteFlows): Promise<any> => {
-    const response = await api.delete<any>(`${getURL("FLOWS")}/`, {
-      data: payload.flow_ids,
-    });
+  const deleteFlowsFn = async (
+    payload: IDeleteFlows,
+  ): Promise<DeleteFlowsResponse> => {
+    const response = await api.delete<DeleteFlowsResponse>(
+      `${getURL("FLOWS")}/`,
+      {
+        data: payload,
+      },
+    );
 
     return response.data;
   };
 
-  const mutation: UseMutationResult<IDeleteFlows, any, IDeleteFlows> = mutate(
-    ["useLoginUser"],
-    deleteFlowsFn,
-    {
-      ...options,
-      onSettled: () => {
-        queryClient.refetchQueries({ queryKey: ["useGetFolder"] });
-      },
+  const mutation: UseMutationResult<
+    DeleteFlowsResponse,
+    unknown,
+    IDeleteFlows
+  > = mutate(["useLoginUser"], deleteFlowsFn, {
+    ...options,
+    onSettled: () => {
+      queryClient.refetchQueries({ queryKey: ["useGetFolder"] });
     },
-  );
+  });
 
   return mutation;
 };

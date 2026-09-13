@@ -150,6 +150,7 @@ jest.mock("@/utils/reactflowUtils", () => ({
 
 const FLOW_STUB: FlowType = {
   id: "flow-1",
+  edit_revision: 1,
   name: "My Flow",
   description: "",
   data: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },

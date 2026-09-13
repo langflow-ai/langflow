@@ -410,14 +410,37 @@ async def teardown_superuser(settings_service: SettingsService, session: AsyncSe
         await logger.adebug("AUTO_LOGIN is set to False. Removing default superuser if unused.")
         try:
             username = DEFAULT_SUPERUSER
+            from lfx.services.authorization.base import (
+                AuthorizationMutation,
+                AuthorizationMutationKind,
+                UserAuthorizationSnapshot,
+            )
+
             from langflow.services.database.models.user.model import User
+            from langflow.services.deps import get_authorization_service
+
+            authorization = get_authorization_service()
+            await authorization.acquire_identity_mutation_lock(
+                session=session, kind=AuthorizationMutationKind.USER_DELETED
+            )
 
             stmt = select(User).where(User.username == username)
             result = await session.exec(stmt)
             user = result.first()
 
             if user and user.is_superuser is True and not user.last_login_at:
+                mutation = AuthorizationMutation(
+                    kind=AuthorizationMutationKind.USER_DELETED,
+                    entity_id=user.id,
+                    affected_user_ids=(user.id,),
+                    policy_relevant_fields=("is_active", "is_superuser"),
+                    user_before=UserAuthorizationSnapshot(is_active=user.is_active, is_superuser=user.is_superuser),
+                    user_after=None,
+                )
+                await authorization.validate_identity_mutation(session=session, mutation=mutation)
                 await session.delete(user)
+                await session.flush()
+                await authorization.stage_identity_mutation(session=session, event=mutation)
                 await logger.adebug("Default superuser removed successfully.")
         except Exception as exc:
             await logger.aexception("Could not remove default superuser.")
@@ -574,7 +597,7 @@ def register_all_service_factories() -> None:
     from langflow.services.auth import factory as auth_factory
     from langflow.services.auth.service import AuthService
     from langflow.services.authorization import factory as authorization_factory
-    from langflow.services.authorization.service import LangflowAuthorizationService
+    from langflow.services.authorization.casbin.service import CasbinAuthorizationService
     from langflow.services.cache import factory as cache_factory
     from langflow.services.catalog_policy import factory as catalog_policy_factory
     from langflow.services.catalog_policy.service import LangflowCatalogPolicyService
@@ -615,16 +638,17 @@ def register_all_service_factories() -> None:
     # Override LFX's no-op auth service with Langflow's full JWT implementation
     service_manager.register_service_class(ServiceType.AUTH_SERVICE, AuthService, override=True)
     service_manager.register_factory(auth_factory.AuthServiceFactory())
-    # Same pattern as ``auth_service``: register the OSS pass-through here with
-    # ``override=True`` so Langflow always has a default. A registered
-    # authorization plugin replaces it by listing its class in
-    # ``LANGFLOW_CONFIG_DIR/lfx.toml`` (config files use ``override=True`` via
-    # ``_discover_from_config``). Plain entry-point discovery uses
-    # ``override=False`` and would lose to this default — the supported
-    # override path is the ``lfx.toml`` config, matching SSO.
-    service_manager.register_service_class(
-        ServiceType.AUTHORIZATION_SERVICE, LangflowAuthorizationService, override=True
-    )
+    # Settings/database access may discover the explicit configuration before
+    # lifespan initialization. Preserve that selection when registering the
+    # application default; a second startup registration must not replace it.
+    registered_authorization = service_manager.service_classes.get(ServiceType.AUTHORIZATION_SERVICE)
+    if registered_authorization is None or (
+        registered_authorization.__module__ == "lfx.services.authorization.service"
+        and registered_authorization.__name__ == "AuthorizationService"
+    ):
+        service_manager.register_service_class(
+            ServiceType.AUTHORIZATION_SERVICE, CasbinAuthorizationService, override=True
+        )
     service_manager.register_factory(authorization_factory.AuthorizationServiceFactory())
     service_manager.register_service_class(
         ServiceType.POLICY_BUNDLE_SERVICE,
@@ -696,7 +720,12 @@ async def hydrate_catalog_policy() -> None:
         await logger.awarning("Catalog policy hydration failed; continuing with allow-all policy: %s", exc)
 
 
-async def initialize_services(*, fix_migration: bool = False, skip_superuser_setup: bool = False) -> None:
+async def initialize_services(
+    *,
+    fix_migration: bool = False,
+    skip_superuser_setup: bool = False,
+    skip_authorization_readiness: bool = False,
+) -> None:
     """Initialize all the services needed."""
     from langflow.helpers.windows_postgres_helper import configure_windows_postgres_event_loop
 
@@ -750,6 +779,37 @@ async def initialize_services(*, fix_migration: bool = False, skip_superuser_set
             await get_db_service().assign_orphaned_flows_to_superuser()
         except sqlalchemy_exc.IntegrityError as exc:
             await logger.awarning(f"Error assigning orphaned flows to the superuser: {exc!s}")
+
+    if not skip_authorization_readiness:
+        from langflow.services.authorization.repository import invalid_team_ids
+        from langflow.services.deps import get_authorization_service
+
+        authorization_service = get_authorization_service()
+        await authorization_service.initialize_authorization()
+        authz_enabled = bool(await authorization_service.is_enabled())
+        team_roles = bool(await authorization_service.supports_team_roles())
+        sharing = bool(await authorization_service.supports_user_team_sharing())
+        readiness_probe = getattr(authorization_service, "collaboration_ready", None)
+        authorization_ready = (
+            bool(await readiness_probe()) if readiness_probe is not None else bool(authorization_service.ready)
+        )
+        async with session_scope() as session:
+            invalid_teams = await invalid_team_ids(session)
+        await logger.ainfo(
+            "Authorization service=%s enabled=%s ready=%s team_roles=%s sharing=%s invalid_teams=%d",
+            type(authorization_service).__name__,
+            authz_enabled,
+            authorization_ready,
+            team_roles,
+            sharing,
+            len(invalid_teams),
+        )
+        if authz_enabled and (not authorization_ready or ((team_roles or sharing) and not (team_roles and sharing))):
+            msg = (
+                "Authorization is enabled but the selected collaboration service is not ready. "
+                "Run `langflow authz teams-check` and repair invalid teams before startup."
+            )
+            raise RuntimeError(msg)
 
     async with session_scope() as session:
         await clean_transactions(settings_service, session)

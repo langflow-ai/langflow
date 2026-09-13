@@ -63,7 +63,8 @@
       "error_policy": "owner_debug_delegated_sanitized",
       "exception": "webhook authentication resolves the published flow owner; the request body is mapped server-side to that owner's Webhook component input",
       "test_references": [
-        "src/backend/tests/unit/api/v1/test_execution_principal_contract.py::test_webhook_server_generated_tweaks_remain_trusted"
+        "src/backend/tests/unit/api/v1/test_execution_principal_contract.py::test_webhook_server_generated_tweaks_remain_trusted",
+        "src/backend/tests/unit/api/v1/test_execution_principal_contract.py::test_webhook_and_event_dependencies_remain_owner_scoped"
       ]
     },
     {

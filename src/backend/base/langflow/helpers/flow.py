@@ -36,6 +36,7 @@ SORT_DISPATCHER = {
     "asc": asc,
     "desc": desc,
 }
+MAX_SHARED_ENDPOINT_CANDIDATES = 1000
 
 
 def _safe_function_argument_names(inputs: list[Vertex]) -> list[str]:
@@ -642,9 +643,50 @@ async def get_flow_by_id_or_endpoint_name(
         except ValueError:
             endpoint_name = flow_id_or_name
             stmt = select(Flow).where(Flow.endpoint_name == endpoint_name)
-            if uuid_user_id is not None and not share_aware:
-                stmt = stmt.where(Flow.user_id == uuid_user_id)
-            flow = (await session.exec(stmt)).first()
+            if uuid_user_id is not None and share_aware:
+                # Endpoint names are unique only inside an owner's namespace.
+                # Resolve lightweight candidate IDs first, authorize each
+                # canonical row, and never choose another owner's row through
+                # unrestricted ``first()`` ordering.
+                candidate_ids = list(
+                    (
+                        await session.exec(
+                            select(Flow.id)
+                            .where(Flow.endpoint_name == endpoint_name)
+                            .order_by(Flow.id)
+                            .limit(MAX_SHARED_ENDPOINT_CANDIDATES + 1)
+                        )
+                    ).all()
+                )
+                if len(candidate_ids) > MAX_SHARED_ENDPOINT_CANDIDATES:
+                    raise HTTPException(
+                        status_code=409,
+                        detail={
+                            "code": "FLOW_IDENTIFIER_AMBIGUOUS",
+                            "message": "More than one accessible workflow may use this endpoint name; use its UUID.",
+                        },
+                    ) from None
+                decisions = await authz.batch_enforce(
+                    user_id=uuid_user_id,
+                    domain="*",
+                    requests=[(f"flow:{candidate_id}", "read") for candidate_id in candidate_ids],
+                )
+                authorized_ids = [
+                    candidate_id for candidate_id, allowed in zip(candidate_ids, decisions, strict=True) if allowed
+                ]
+                if len(authorized_ids) > 1:
+                    raise HTTPException(
+                        status_code=409,
+                        detail={
+                            "code": "FLOW_IDENTIFIER_AMBIGUOUS",
+                            "message": "More than one accessible workflow uses this endpoint name; use its UUID.",
+                        },
+                    ) from None
+                flow = await session.get(Flow, authorized_ids[0]) if authorized_ids else None
+            else:
+                if uuid_user_id is not None:
+                    stmt = stmt.where(Flow.user_id == uuid_user_id)
+                flow = (await session.exec(stmt)).first()
         if flow is None:
             raise HTTPException(status_code=404, detail=f"Flow identifier {flow_id_or_name} not found")
         return FlowRead.model_validate(flow, from_attributes=True)

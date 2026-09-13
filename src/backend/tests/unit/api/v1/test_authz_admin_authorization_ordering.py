@@ -23,8 +23,6 @@ MALFORMED_BODY_ROUTES = [
     (authz_roles, "post", "/authz/roles", {"bogus": 1}),
     (authz_roles, "patch", f"/authz/roles/{_UUID}", {"permissions": "not-a-list"}),
     (authz_teams, "post", "/authz/teams", {"bogus": 1}),
-    (authz_teams, "patch", f"/authz/teams/{_UUID}", {"is_active": "not-a-bool"}),
-    (authz_teams, "post", f"/authz/teams/{_UUID}/members", {"bogus": 1}),
     (authz_role_assignments, "post", "/authz/role-assignments", {"bogus": 1}),
 ]
 
@@ -37,7 +35,7 @@ def _client(module, *, is_superuser: bool) -> TestClient:
     app.include_router(module.router)
 
     def _user() -> User:
-        return User(username="probe", password="x", is_superuser=is_superuser)  # noqa: S106
+        return User(username="probe", password="x", is_active=True, is_superuser=is_superuser)  # noqa: S106
 
     app.dependency_overrides[get_current_active_user] = _user
     return TestClient(app, raise_server_exceptions=False)

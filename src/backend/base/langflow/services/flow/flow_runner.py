@@ -167,13 +167,30 @@ class LangflowRunnerExperimental:
         return flow_dict
 
     async def generate_user(self) -> User:
+        from lfx.services.authorization.base import AuthorizationMutation, AuthorizationMutationKind
+
+        from langflow.services.deps import get_authorization_service
+
         async with session_scope() as session:
+            authorization = get_authorization_service()
+            await authorization.acquire_identity_mutation_lock(
+                session=session, kind=AuthorizationMutationKind.USER_CREATED
+            )
             user_id = str(uuid4())
             hashed = get_auth_service().get_password_hash(str(uuid4()))
             user = User(id=user_id, username=user_id, password=hashed, is_active=True)
             session.add(user)
             await session.flush()
             await session.refresh(user)
+            await authorization.stage_identity_mutation(
+                session=session,
+                event=AuthorizationMutation(
+                    kind=AuthorizationMutationKind.USER_CREATED,
+                    entity_id=user.id,
+                    affected_user_ids=(user.id,),
+                    policy_relevant_fields=("is_active",),
+                ),
+            )
             return user
 
     @staticmethod
@@ -229,13 +246,30 @@ class LangflowRunnerExperimental:
 
     @staticmethod
     async def clear_user_state(user_id: str):
+        from lfx.services.authorization.base import AuthorizationMutation, AuthorizationMutationKind
+
+        from langflow.services.deps import get_authorization_service
+
         async with session_scope() as session:
+            authorization = get_authorization_service()
+            await authorization.acquire_identity_mutation_lock(
+                session=session,
+                kind=AuthorizationMutationKind.USER_DELETED,
+            )
             flows = await session.exec(select(Flow.id).where(Flow.user_id == user_id))
             flow_ids: list[UUID] = [fid for fid in flows.scalars().all() if fid is not None]
             for flow_id in flow_ids:
                 await cascade_delete_flow(session, flow_id)
             await session.exec(delete(Variable).where(Variable.user_id == user_id))
             await session.exec(delete(User).where(User.id == user_id))
+            await authorization.stage_identity_mutation(
+                session=session,
+                event=AuthorizationMutation(
+                    kind=AuthorizationMutationKind.USER_DELETED,
+                    entity_id=UUID(user_id),
+                    affected_user_ids=(UUID(user_id),),
+                ),
+            )
 
     async def init_db_if_needed(self):
         if not await self.database_exists_check() and self.should_initialize_db:

@@ -2,6 +2,10 @@
 
 import fs from "fs";
 import path from "path";
+import {
+  getE2EDatabaseDirectory,
+  isAuthzE2EMode,
+} from "./utils/authz-e2e-mode.mjs";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -46,35 +50,30 @@ function removeChildrenBestEffort(target: string): string[] {
 }
 
 export default async () => {
-  console.warn("Removing the temp database");
-  // this file is in src/frontend/tests/globalTeardown.ts
-  // temp is in src/frontend/temp
-  const tempDbPath = path.join(__dirname, "..", "temp");
-  console.warn("tempDbPath", tempDbPath);
+  const targets = [
+    path.join(__dirname, "..", getE2EDatabaseDirectory()),
+    path.join(
+      __dirname,
+      "..",
+      isAuthzE2EMode() ? "temp-authz-config" : "temp-config",
+    ),
+  ];
 
-  if (!fs.existsSync(tempDbPath)) {
-    console.warn("Temp database directory does not exist, skipping removal");
-    return;
-  }
+  for (const target of targets) {
+    console.warn("Removing E2E temporary path", target);
+    if (!fs.existsSync(target)) continue;
 
-  try {
-    if (await removeWithRetry(tempDbPath)) {
-      console.warn("Successfully removed the temp database");
-      return;
-    }
+    try {
+      if (await removeWithRetry(target)) continue;
 
-    const stragglers = removeChildrenBestEffort(tempDbPath);
-    if (await removeWithRetry(tempDbPath)) {
+      const stragglers = removeChildrenBestEffort(target);
+      if (await removeWithRetry(target)) continue;
+
       console.warn(
-        "Successfully removed the temp database after per-file fallback",
+        `Temporary path still present after retries; leaving it for runner cleanup. Files that resisted removal: ${stragglers.length}`,
       );
-      return;
+    } catch (error) {
+      console.error("Error while removing E2E temporary path:", error);
     }
-
-    console.warn(
-      `Temp database directory still present after retries; leaving it for the runner workspace cleanup. Files that resisted removal: ${stragglers.length}`,
-    );
-  } catch (error) {
-    console.error("Error while removing the temp database:", error);
   }
 };

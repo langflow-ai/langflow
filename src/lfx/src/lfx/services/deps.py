@@ -294,8 +294,11 @@ async def get_session():
 
 
 async def injectable_session_scope():
+    from lfx.services.authorization.context import authorization_session
+
     async with session_scope() as session:
-        yield session
+        with authorization_session(session):
+            yield session
 
 
 @asynccontextmanager

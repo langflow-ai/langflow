@@ -10,6 +10,8 @@ from .authz import (
     CasbinRule,
     SharePermissionLevel,
     ShareScope,
+    TeamInactivationReason,
+    TeamRole,
 )
 from .sso import SSOConfig, SSOConfigCreate, SSOConfigRead, SSOConfigUpdate, SSOSettings, SSOUserProfile
 from .sso_secret import (
@@ -38,6 +40,8 @@ __all__ = [
     "SSOUserProfile",
     "SharePermissionLevel",
     "ShareScope",
+    "TeamInactivationReason",
+    "TeamRole",
     "decrypt_sso_client_secret",
     "encrypt_sso_client_secret",
     "is_sso_client_secret_envelope",

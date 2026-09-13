@@ -20,6 +20,9 @@ jest.mock("../components/deployment-expanded-row", () =>
 jest.mock("@/components/ui/loading", () =>
   jest.fn(() => <span data-testid="loading-spinner" />),
 );
+jest.mock("@/contexts/permissionsContext", () => ({
+  usePermissions: () => ({ can: () => true }),
+}));
 
 import DeploymentsTable from "../components/deployments-table";
 

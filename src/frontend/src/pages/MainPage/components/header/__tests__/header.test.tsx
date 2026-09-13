@@ -30,6 +30,7 @@ interface InputProps {
   value?: string;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
+  inputClassName?: string;
   [key: string]: unknown;
 }
 
@@ -97,7 +98,13 @@ jest.mock("@/components/ui/button", () => ({
 }));
 
 jest.mock("@/components/ui/input", () => ({
-  Input: ({ value, onChange, placeholder, ...props }: InputProps) => (
+  Input: ({
+    value,
+    onChange,
+    placeholder,
+    inputClassName: _inputClassName,
+    ...props
+  }: InputProps) => (
     <input
       value={value}
       onChange={onChange}
@@ -105,6 +112,10 @@ jest.mock("@/components/ui/input", () => ({
       {...props}
     />
   ),
+}));
+
+jest.mock("@/contexts/permissionsContext", () => ({
+  usePermissions: () => ({ can: () => true }),
 }));
 
 jest.mock("@/components/ui/sidebar", () => ({
@@ -169,6 +180,7 @@ describe("HeaderComponent - TabIndex Behavior with Bulk Actions", () => {
     setSearch: jest.fn(),
     isEmptyFolder: false,
     selectedFlows: [],
+    canCreateFlow: true,
   };
 
   beforeEach(() => {

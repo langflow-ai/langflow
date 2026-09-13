@@ -108,6 +108,115 @@ def strip_secret_field_values(flow_data: dict | None) -> dict | None:
     return strip_secret_field_values_in_place(deepcopy(flow_data))
 
 
+def _restore_matching_scrubbed_values(proposed: object, scrubbed: object, stored: object) -> object:
+    """Restore only server values represented by an unchanged redacted placeholder."""
+    if proposed == scrubbed:
+        return deepcopy(stored)
+    if isinstance(proposed, dict) and isinstance(scrubbed, dict) and isinstance(stored, dict):
+        restored = deepcopy(proposed)
+        for key in proposed.keys() & scrubbed.keys() & stored.keys():
+            restored[key] = _restore_matching_scrubbed_values(proposed[key], scrubbed[key], stored[key])
+        return restored
+    if (
+        isinstance(proposed, list)
+        and isinstance(scrubbed, list)
+        and isinstance(stored, list)
+        and len(proposed) == len(scrubbed) == len(stored)
+    ):
+        return [
+            _restore_matching_scrubbed_values(proposed_item, scrubbed_item, stored_item)
+            for proposed_item, scrubbed_item, stored_item in zip(proposed, scrubbed, stored, strict=True)
+        ]
+    return deepcopy(proposed)
+
+
+def restore_redacted_secret_values(proposed_data: dict | None, stored_data: dict | None) -> dict | None:
+    """Preserve hidden server secrets when a shared editor saves its redacted graph.
+
+    Nodes and template fields are matched only by their existing stable keys.
+    The client controls its proposed graph structure and ordinary metadata; the
+    server restores only values that exactly match the redacted representation
+    previously sent to the client. Removing a node therefore removes the graph
+    binding without deleting any underlying credential record.
+    """
+    if proposed_data is None or stored_data is None:
+        return proposed_data
+    proposed = deepcopy(proposed_data)
+    work: list[tuple[dict, dict]] = [(proposed, stored_data)]
+    while work:
+        proposed_flow, stored_flow = work.pop()
+        proposed_nodes = proposed_flow.get("nodes")
+        stored_nodes = stored_flow.get("nodes")
+        if not isinstance(proposed_nodes, list) or not isinstance(stored_nodes, list):
+            continue
+        stored_by_id = {
+            node.get("id"): node for node in stored_nodes if isinstance(node, dict) and isinstance(node.get("id"), str)
+        }
+        for proposed_node in proposed_nodes:
+            if not isinstance(proposed_node, dict):
+                continue
+            stored_node = stored_by_id.get(proposed_node.get("id"))
+            if not isinstance(stored_node, dict):
+                continue
+            proposed_inner = proposed_node.get("data", {}).get("node")
+            stored_inner = stored_node.get("data", {}).get("node")
+            if not isinstance(proposed_inner, dict) or not isinstance(stored_inner, dict):
+                continue
+            if proposed_inner.get("type") != stored_inner.get("type"):
+                # Reusing a node UUID for a different component must never
+                # carry credentials from the replaced component.
+                continue
+            proposed_template = proposed_inner.get("template")
+            stored_template = stored_inner.get("template")
+            if isinstance(proposed_template, dict) and isinstance(stored_template, dict):
+                for key in proposed_template.keys() & stored_template.keys():
+                    proposed_field = proposed_template[key]
+                    stored_field = stored_template[key]
+                    if not isinstance(proposed_field, dict) or not isinstance(stored_field, dict):
+                        continue
+                    identity_keys = ("name", "type", "_input_type")
+                    if any(
+                        identity_key in proposed_field
+                        and identity_key in stored_field
+                        and proposed_field[identity_key] != stored_field[identity_key]
+                        for identity_key in identity_keys
+                    ):
+                        continue
+                    scrubbed_field = deepcopy(stored_field)
+                    _strip_template_field_value(scrubbed_field)
+                    if scrubbed_field.get("value") != stored_field.get("value"):
+                        restored_value = _restore_matching_scrubbed_values(
+                            proposed_field.get("value"),
+                            scrubbed_field.get("value"),
+                            stored_field.get("value"),
+                        )
+                        if restored_value != proposed_field.get("value"):
+                            # Hidden owner values retain their server-side
+                            # classification and binding. An editor cannot
+                            # remove `password` (or its equivalent) and expose
+                            # the restored value through the next read/export.
+                            for metadata_key in (
+                                "name",
+                                "type",
+                                "_input_type",
+                                "password",
+                                "load_from_db",
+                                "table_schema",
+                            ):
+                                if metadata_key in stored_field:
+                                    proposed_field[metadata_key] = deepcopy(stored_field[metadata_key])
+                                else:
+                                    proposed_field.pop(metadata_key, None)
+                        proposed_field["value"] = restored_value
+            proposed_nested = proposed_inner.get("flow")
+            stored_nested = stored_inner.get("flow")
+            proposed_nested_data = proposed_nested.get("data") if isinstance(proposed_nested, dict) else None
+            stored_nested_data = stored_nested.get("data") if isinstance(stored_nested, dict) else None
+            if isinstance(proposed_nested_data, dict) and isinstance(stored_nested_data, dict):
+                work.append((proposed_nested_data, stored_nested_data))
+    return proposed
+
+
 def strip_flow_secrets(flow: dict) -> dict:
     """Return a copy of a serialized flow *envelope* with persisted secrets removed.
 
@@ -299,7 +408,7 @@ def _strip_template_field_value(field: dict, variable_references: set[str] | Non
         # deployment target can re-resolve the credential it provisions under
         # that name. Anything that fails the reference shape check is nulled.
         value = field.get("value")
-        if _is_variable_reference(value):
+        if isinstance(value, str) and _is_variable_reference(value):
             variable_references.add(value)
         else:
             field["value"] = None
@@ -392,6 +501,7 @@ __all__ = [
     "API_WORDS",
     "has_api_terms",
     "remove_api_keys",
+    "restore_redacted_secret_values",
     "strip_flow_secrets",
     "strip_secret_field_values",
     "strip_secret_field_values_in_place",

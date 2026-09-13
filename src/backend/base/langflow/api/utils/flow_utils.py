@@ -101,6 +101,10 @@ async def build_and_cache_graph_from_data(
 
 
 async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None:
+    from langflow.services.authorization.lifecycle import stage_resource_mutation
+    from langflow.services.deps import get_authorization_service
+
+    await get_authorization_service().acquire_resource_mutation_lock(session=session)
     try:
         await check_flow_has_deployed_versions(session, flow_id=flow_id)
         # TODO: Verify if deleting messages is safe in terms of session id relevance
@@ -130,6 +134,7 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
             delete(AuthzShare).where(AuthzShare.resource_type == "flow").where(AuthzShare.resource_id == flow_id)
         )
         await session.exec(delete(Flow).where(Flow.id == flow_id))
+        await stage_resource_mutation(session, resource_type="flow", resource_id=flow_id, deleted=True)
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(
             e,

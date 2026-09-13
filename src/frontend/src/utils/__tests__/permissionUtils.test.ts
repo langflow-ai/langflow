@@ -1,7 +1,7 @@
 import { buildPermissionMap, canPerformAction } from "../permissionUtils";
 
 describe("buildPermissionMap", () => {
-  it("returns undefined for null/undefined responses (fail-open sentinel)", () => {
+  it("returns undefined for null/undefined responses (unresolved sentinel)", () => {
     expect(buildPermissionMap(undefined)).toBeUndefined();
     expect(buildPermissionMap(null)).toBeUndefined();
   });
@@ -25,18 +25,25 @@ describe("buildPermissionMap", () => {
 });
 
 describe("canPerformAction", () => {
-  it("fail-opens when the map is undefined (loading / errored / no provider)", () => {
-    expect(canPerformAction(undefined, "id", "delete")).toBe(true);
+  it("fails closed when the map is undefined", () => {
+    expect(canPerformAction(undefined, "id", "delete")).toBe(false);
   });
 
-  it("fail-opens when the resource id is missing or empty", () => {
-    expect(canPerformAction({ id: [] }, undefined, "read")).toBe(true);
-    expect(canPerformAction({ id: [] }, null, "read")).toBe(true);
-    expect(canPerformAction({ id: [] }, "", "read")).toBe(true);
+  it("fails closed when the resource id is missing or empty", () => {
+    expect(canPerformAction({ id: [] }, undefined, "read")).toBe(false);
+    expect(canPerformAction({ id: [] }, null, "read")).toBe(false);
+    expect(canPerformAction({ id: [] }, "", "read")).toBe(false);
   });
 
-  it("fail-opens when the resource id was not evaluated (absent from the map)", () => {
-    expect(canPerformAction({ other: ["read"] }, "id", "read")).toBe(true);
+  it("fails closed when the resource id was not evaluated", () => {
+    expect(canPerformAction({ other: ["read"] }, "id", "read")).toBe(false);
+  });
+
+  it("allows unresolved state only for an explicit disabled-enforcement fallback", () => {
+    expect(canPerformAction(undefined, "id", "read", true)).toBe(true);
+    expect(canPerformAction({ other: ["read"] }, "id", "read", true)).toBe(
+      true,
+    );
   });
 
   it("allows an action listed for a present resource", () => {

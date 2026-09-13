@@ -69,7 +69,8 @@ async def _attach_deployment_to_flow(*, user_id: UUID, flow_id: UUID, project_id
 
 
 async def test_create_flow(client: AsyncClient, logged_in_headers):
-    # Use relative path - absolute paths outside allowed directory are rejected
+    # Use the caller's canonical default project; explicit unknown project IDs
+    # are rejected rather than silently retargeted.
     flow_filename = f"{uuid.uuid4()}.json"
     basic_case = {
         "name": "string",
@@ -82,13 +83,12 @@ async def test_create_flow(client: AsyncClient, logged_in_headers):
         "webhook": False,
         "endpoint_name": "string",
         "tags": ["string"],
-        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
         "fs_path": flow_filename,
     }
     response = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
     result = response.json()
 
-    assert response.status_code == status.HTTP_201_CREATED
+    assert response.status_code == status.HTTP_201_CREATED, response.text
     assert isinstance(result, dict), "The result must be a dictionary"
     assert "data" in result, "The result must have a 'data' key"
     assert "description" in result, "The result must have a 'description' key"
@@ -594,7 +594,6 @@ async def test_read_flow(client: AsyncClient, logged_in_headers):
         "webhook": False,
         "endpoint_name": "string",
         "tags": ["string"],
-        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
     }
     response_ = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
     id_ = response_.json()["id"]
@@ -632,7 +631,6 @@ async def test_update_flow(client: AsyncClient, logged_in_headers):
         "webhook": False,
         "endpoint_name": "string",
         "tags": ["string"],
-        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
     }
     basic_case["name"] = name
     response_ = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
@@ -1179,7 +1177,6 @@ async def test_read_flows_user_isolation(client: AsyncClient, logged_in_headers,
         "webhook": False,
         "endpoint_name": "user1_flow_1_endpoint",
         "tags": ["user1"],
-        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
     }
 
     flow_user1_2 = {
@@ -1193,7 +1190,6 @@ async def test_read_flows_user_isolation(client: AsyncClient, logged_in_headers,
         "webhook": False,
         "endpoint_name": "user1_flow_2_endpoint",
         "tags": ["user1"],
-        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
     }
 
     # Create flows for the second user
@@ -1208,7 +1204,6 @@ async def test_read_flows_user_isolation(client: AsyncClient, logged_in_headers,
         "webhook": False,
         "endpoint_name": "user2_flow_1_endpoint",
         "tags": ["user2"],
-        "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
     }
 
     # Create flows using the appropriate user headers
@@ -2126,13 +2121,24 @@ async def test_delete_flow_retry_is_idempotent_when_concurrent_delete_wins(
 
     async def concurrent_delete_then_lock(_session, target_flow_id):
         attempts["count"] += 1
-        async with session_scope() as competing_session:
-            target = await competing_session.get(Flow, target_flow_id)
-            if target is not None:
-                await competing_session.delete(target)
         raise OperationalError(statement, {"id": target_flow_id}, sqlite3.OperationalError("database is locked"))
 
+    original_retry = flows_module.run_with_lock_retry
+
+    async def retry_after_concurrent_delete(operation, *, session, description):
+        async def attempt_after_delete(attempt):
+            if attempt == 1:
+                assert not session.in_transaction()
+                async with session_scope() as competing_session:
+                    target = await competing_session.get(Flow, flow_id)
+                    assert target is not None
+                    await competing_session.delete(target)
+            return await operation(attempt)
+
+        return await original_retry(attempt_after_delete, session=session, description=description)
+
     monkeypatch.setattr(flows_module, "cascade_delete_flow", concurrent_delete_then_lock)
+    monkeypatch.setattr(flows_module, "run_with_lock_retry", retry_after_concurrent_delete)
 
     response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
@@ -2302,16 +2308,27 @@ async def test_bulk_delete_retry_rebuilds_authorized_owner_map(client: AsyncClie
         nonlocal first_delete
         if first_delete:
             first_delete = False
-            async with session_scope() as competing_session:
-                removed = await competing_session.get(Flow, flow_ids[1])
-                assert removed is not None
-                await competing_session.delete(removed)
             raise OperationalError(
                 statement,
                 {"id": target_flow_id},
                 sqlite3.OperationalError("database is locked"),
             )
         return await original_delete(session, target_flow_id)
+
+    original_retry = flows_module.run_with_lock_retry
+
+    async def retry_after_concurrent_removal(operation, *, session, description):
+        async def attempt_after_removal(attempt):
+            if attempt == 1:
+                # Competing SQLite writers can proceed after the real rollback.
+                assert not session.in_transaction()
+                async with session_scope() as competing_session:
+                    removed = await competing_session.get(Flow, flow_ids[1])
+                    assert removed is not None
+                    await competing_session.delete(removed)
+            return await operation(attempt)
+
+        return await original_retry(attempt_after_removal, session=session, description=description)
 
     async def record_guard_map(*, db, flow_owner_ids, operation):  # noqa: ARG001
         try:
@@ -2320,6 +2337,7 @@ async def test_bulk_delete_retry_rebuilds_authorized_owner_map(client: AsyncClie
             guard_maps.append(dict(flow_owner_ids))
 
     monkeypatch.setattr(flows_module, "cascade_delete_flow", delete_after_concurrent_removal)
+    monkeypatch.setattr(flows_module, "run_with_lock_retry", retry_after_concurrent_removal)
     monkeypatch.setattr(flows_module, "retry_flow_operation_on_deployment_guard", record_guard_map)
 
     response = await client.request(

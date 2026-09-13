@@ -38,6 +38,8 @@ if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
     from uuid import UUID
 
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
     from langflow.services.database.models.user.model import User, UserRead
 
 # Action enums coerced to string values.
@@ -112,36 +114,62 @@ def capability_probe() -> Iterator[None]:
         _capability_probe.reset(token)
 
 
-async def _audit_suppressed() -> None:
-    """Awaitable no-op standing in for a suppressed decision row."""
-    return
-
-
-def _audit_guard_decision(
+async def _audit_guard_decision(
     *,
     user_id: UUID | None,
     action: str,
     obj: str,
     result: str,
     details: dict[str, Any] | None = None,
-):
+    session: AsyncSession | None = None,
+) -> None:
     """Record one authorization *decision* made by a guard.
 
     Every row written from this module is a check, not an effect. Tagging it
     keeps it distinguishable from the row a route writes after a mutation is
     durable: both share an action name (a ``share:create`` check and a created
     share both read ``share:create``), so without the tag a reader cannot tell
-    an evaluated permission from a performed action. Returns the coroutine so
-    callers can await it or gather several.
+    an evaluated permission from a performed action.
+
+    An allowed decision made inside a mutation transaction is staged with that
+    transaction when durable auditing is enabled. Persisting it through the
+    separate audit writer after the mutation session has read policy data can
+    invalidate SQLite's read snapshot and make the authorized write fail with
+    ``SQLITE_BUSY_SNAPSHOT``. A denial first rolls back the doomed mutation
+    transaction, then uses the independent writer so the denial survives that
+    rollback without contending with the caller's SQLite write lock.
     """
     if _capability_probe.get():
-        return _audit_suppressed()
-    return _audit.audit_decision(
+        return
+
+    from lfx.services.authorization.context import current_authorization_session
+
+    context = current_authorization_session()
+    if session is None and context is not None and context.mutation:
+        session = context.session
+
+    tagged_details = {**(details or {}), "event": _audit.AUDIT_EVENT_DECISION}
+    if session is not None:
+        if result == _audit.AUDIT_DENY:
+            await session.rollback()
+        else:
+            staged = _audit.stage_audit_decision(
+                session=session,
+                user_id=user_id,
+                action=action,
+                obj=obj,
+                result=result,
+                details=tagged_details,
+            )
+            if staged:
+                return
+
+    await _audit.audit_decision(
         user_id=user_id,
         action=action,
         obj=obj,
         result=result,
-        details={**(details or {}), "event": _audit.AUDIT_EVENT_DECISION},
+        details=tagged_details,
     )
 
 
@@ -160,13 +188,20 @@ async def _api_key_scopes_require_plugin_enforcement() -> bool:
         return False
     try:
         return bool(await supports_api_key_scopes())
-    except Exception:  # noqa: BLE001
-        logger.exception("Authorization plugin failed API-key scope capability check; preserving owner override")
-        return False
+    except Exception as exc:
+        await logger.aexception("Authorization API-key scope capability check failed")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "AUTHORIZATION_NOT_READY", "message": "Authorization is not ready."},
+        ) from exc
 
 
 async def should_apply_owner_override() -> bool:
     """Return True when Langflow should apply the built-in owner override."""
+    if get_settings_service().auth_settings.AUTHZ_ENABLED:
+        service = get_authorization_service()
+        if getattr(service, "HANDLES_CANONICAL_OWNERSHIP", False) is True:
+            return False
     return not await _api_key_scopes_require_plugin_enforcement()
 
 
@@ -209,6 +244,7 @@ async def ensure_permission(
     act: str,
     context: dict[str, Any] | None = None,
     detail: str | None = None,
+    audit_session: AsyncSession | None = None,
 ) -> None:
     """Raise HTTP 403 when the user may not perform the action (audited).
 
@@ -236,6 +272,7 @@ async def ensure_permission(
             obj=obj,
             result=_audit.AUDIT_ALLOW,
             details=audit_details,
+            session=audit_session,
         )
         return
 
@@ -243,13 +280,18 @@ async def ensure_permission(
     # Fail closed when enforce() raises (deny + audit, not HTTP 500).
     deny_detail = detail if detail is not None else _DEFAULT_DENY_DETAIL
     try:
-        allowed = await authz.enforce(
-            user_id=user.id,
-            domain=domain,
-            obj=obj,
-            act=act,
-            context=merged_context,
-        )
+        from contextlib import nullcontext
+
+        from lfx.services.authorization.context import authorization_session
+
+        with authorization_session(audit_session) if audit_session is not None else nullcontext():
+            allowed = await authz.enforce(
+                user_id=user.id,
+                domain=domain,
+                obj=obj,
+                act=act,
+                context=merged_context,
+            )
     except Exception as exc:
         logger.exception("Authorization plugin raised during enforce; failing closed")
         await _audit_guard_decision(
@@ -258,6 +300,7 @@ async def ensure_permission(
             obj=obj,
             result=_audit.AUDIT_DENY,
             details={**audit_details, "error": str(exc)},
+            session=audit_session,
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -270,6 +313,7 @@ async def ensure_permission(
         obj=obj,
         result=_audit.AUDIT_ALLOW if allowed else _audit.AUDIT_DENY,
         details=audit_details,
+        session=audit_session,
     )
 
     if not allowed:
@@ -289,6 +333,7 @@ async def _ensure_resource_permission(
     act_str: str,
     resolved_domain: str,
     extra_context: dict[str, Any],
+    audit_session: AsyncSession | None,
 ) -> None:
     """Build object key, apply owner override, else delegate to ensure_permission."""
     obj = f"{resource_type}:{resource_id}" if resource_id else f"{resource_type}:*"
@@ -305,6 +350,7 @@ async def _ensure_resource_permission(
                 "external_auth_provider": external_context.provider,
                 "external_access_level": external_context.level,
             },
+            session=audit_session,
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -323,6 +369,7 @@ async def _ensure_resource_permission(
             obj=obj,
             result=_audit.AUDIT_OWNER_OVERRIDE,
             details={"domain": resolved_domain, **_auth_audit_details()},
+            session=audit_session,
         )
         return
 
@@ -332,6 +379,7 @@ async def _ensure_resource_permission(
         obj=obj,
         act=act_str,
         context=extra_context,
+        audit_session=audit_session,
     )
 
 
@@ -459,6 +507,7 @@ async def _ensure_typed(
     act_str: str,
     kwargs: dict[str, Any],
     domain_override: str | None,
+    audit_session: AsyncSession | None = None,
 ) -> None:
     """Shared body for ``ensure_*_permission`` helpers.
 
@@ -498,11 +547,14 @@ async def _ensure_typed(
         extra_context[spec.id_kw] = resource_id
     for key in spec.extra_context_kws:
         extra_context[key] = kwargs.get(key)
+    extra_context["resource_type"] = spec.resource_type
+    extra_context["resource_id"] = resource_id
 
     # On CREATE the resource does not exist yet, so ownership can only come
     # from the container it is created in. Everything else authorizes against
     # the resource's own owner.
     is_create = act_str == "create"
+    extra_context["intrinsic_creation"] = is_create and resource_id is None
     container_owner_id = kwargs.get(spec.create_container_owner_kw) if spec.create_container_owner_kw else None
     if is_create and spec.create_container_owner_kw is not None:
         override_owner_id = container_owner_id
@@ -520,6 +572,7 @@ async def _ensure_typed(
         act_str=act_str,
         resolved_domain=resolved_domain,
         extra_context=extra_context,
+        audit_session=audit_session,
     )
 
 
@@ -540,6 +593,7 @@ async def ensure_flow_permission(
     folder_id: UUID | None = None,
     folder_user_id: UUID | None = None,
     domain: str | None = None,
+    audit_session: AsyncSession | None = None,
 ) -> None:
     """Check flow permission (owner override, then plugin enforce).
 
@@ -559,6 +613,7 @@ async def ensure_flow_permission(
             "folder_user_id": folder_user_id,
         },
         domain_override=domain,
+        audit_session=audit_session,
     )
 
 
@@ -606,7 +661,7 @@ async def ensure_flows_permission(
         return
 
     act_str = _coerce_action(act)
-    user_id = getattr(user, "id", None)
+    user_id = user.id
     resolved_domain = _resolve_authz_domain(workspace_id, folder_id)
 
     external_context = get_current_external_access_context()
@@ -789,6 +844,7 @@ async def ensure_project_permission(
     project_user_id: UUID | None = None,
     workspace_id: UUID | None = None,
     domain: str | None = None,
+    audit_session: AsyncSession | None = None,
 ) -> None:
     """Check project (folder) permission (owner override, then plugin enforce)."""
     await _ensure_typed(
@@ -801,6 +857,7 @@ async def ensure_project_permission(
             "workspace_id": workspace_id,
         },
         domain_override=domain,
+        audit_session=audit_session,
     )
 
 
@@ -862,6 +919,7 @@ async def ensure_file_permission(
     file_user_id: UUID | None = None,
     workspace_id: UUID | None = None,
     domain: str | None = None,
+    audit_session: AsyncSession | None = None,
 ) -> None:
     """Check file permission (owner override, then plugin enforce)."""
     await _ensure_typed(
@@ -874,6 +932,7 @@ async def ensure_file_permission(
             "workspace_id": workspace_id,
         },
         domain_override=domain,
+        audit_session=audit_session,
     )
 
 
@@ -895,4 +954,51 @@ async def ensure_share_permission(
             "share_user_id": share_user_id,
         },
         domain_override=domain,
+    )
+
+
+async def ensure_resource_share_administration(
+    user: User | UserRead,
+    act: ShareAction | str,
+    *,
+    resource_type: str,
+    resource_id: UUID,
+    resource_owner_id: UUID | None,
+    project_id: UUID | None = None,
+    workspace_id: UUID | None = None,
+    share_id: UUID | None = None,
+    recipient_scope: str | None = None,
+    recipient_id: UUID | None = None,
+    subject_user_id: UUID | None = None,
+    audit_session: AsyncSession | None = None,
+) -> None:
+    """Authorize share administration against the exact stored resource.
+
+    A global ``share:*`` object is insufficient on its own. The registered service
+    uses these server-resolved identifiers to evaluate ownership and scoped
+    role authority, while the guard retains external-credential and owner
+    override behavior.
+    """
+    act_str = _coerce_action(act)
+    resolved_domain = _resolve_authz_domain(workspace_id, project_id)
+    await _ensure_resource_permission(
+        user,
+        resource_type="share",
+        resource_id=share_id,
+        owner_id=resource_owner_id,
+        owner_override_allowed=True,
+        act_str=act_str,
+        resolved_domain=resolved_domain,
+        extra_context={
+            "resource_type": resource_type,
+            "resource_id": resource_id,
+            "resource_owner_id": resource_owner_id,
+            "resource_project_id": project_id,
+            "resource_workspace_id": workspace_id,
+            "recipient_scope": recipient_scope,
+            "recipient_id": recipient_id,
+            "subject_user_id": subject_user_id,
+            "share_user_id": resource_owner_id,
+        },
+        audit_session=audit_session,
     )

@@ -417,7 +417,11 @@ async def delete_memory_base(
             current_user=current_user,
             action=KnowledgeBaseAction.DELETE,
         )
-    deleted = await get_memory_base_service().delete(memory_base_id, user_id=mb.user_id)
+    deleted = await get_memory_base_service().delete(
+        memory_base_id,
+        user_id=mb.user_id,
+        actor_user_id=current_user.id,
+    )
     if not deleted:
         raise HTTPException(status_code=404, detail="Memory base not found")
 

@@ -11,6 +11,7 @@ const mockQueryClient = {
 
 interface PatchPayload {
   id: string;
+  edit_revision: number;
   folder_id?: string | null;
   name?: string;
   providerScopeChanged?: boolean;
@@ -27,7 +28,7 @@ interface MutationCallbacks {
     error: unknown,
     payload: PatchPayload,
     context: unknown,
-  ) => void;
+  ) => void | Promise<void>;
 }
 
 jest.mock("@/controllers/API/api", () => ({
@@ -49,10 +50,15 @@ jest.mock("@/controllers/API/services/request-processor", () => ({
         options: MutationCallbacks,
       ) => ({
         mutate: async (payload: PatchPayload) => {
-          const result = await fn(payload);
-          await options?.onSuccess?.(result, payload, undefined);
-          options?.onSettled?.(result, null, payload, undefined);
-          return result;
+          try {
+            const result = await fn(payload);
+            await options?.onSuccess?.(result, payload, undefined);
+            await options?.onSettled?.(result, null, payload, undefined);
+            return result;
+          } catch (error) {
+            await options?.onSettled?.(undefined, error, payload, undefined);
+            throw error;
+          }
         },
       }),
     ),
@@ -71,6 +77,67 @@ describe("usePatchUpdateFlow", () => {
     jest.clearAllMocks();
   });
 
+  it.each([403, 404])(
+    "clears the rejected flow's cached permissions after %s, including when the permission refresh fails",
+    async (status) => {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      const permissionKey = [
+        "useGetEffectivePermissions",
+        "recipient",
+        "flow",
+        ["flow-1"],
+        "default",
+        "*",
+      ];
+      const otherFlowKey = [...permissionKey];
+      otherFlowKey[3] = ["flow-2"];
+      const granted = { permissions: { "flow-1": ["read", "write"] } };
+      queryClient.setQueryData(permissionKey, granted);
+      queryClient.setQueryData(otherFlowKey, granted);
+      const observer = new QueryObserver(queryClient, {
+        queryKey: permissionKey,
+        queryFn: async () => {
+          throw new Error("permission service unavailable");
+        },
+        staleTime: Infinity,
+        retry: false,
+      });
+      const unsubscribe = observer.subscribe(() => undefined);
+      mockQueryClient.resetQueries.mockImplementationOnce((filters) =>
+        queryClient.resetQueries(filters),
+      );
+      const rejection = { response: { status } };
+      mockApiPatch.mockRejectedValueOnce(rejection);
+      const onSettled = jest.fn();
+
+      try {
+        await expect(
+          usePatchUpdateFlow({ onSettled }).mutate({
+            id: "flow-1",
+            edit_revision: 7,
+            name: "Unsaved local draft",
+          }),
+        ).rejects.toBe(rejection);
+
+        expect(observer.getCurrentResult().data).toBeUndefined();
+        expect(observer.getCurrentResult().isError).toBe(true);
+        expect(queryClient.getQueryData(otherFlowKey)).toEqual(granted);
+        expect(mockApiPatch).toHaveBeenCalledTimes(1);
+        expect(onSettled).toHaveBeenCalledWith(
+          undefined,
+          rejection,
+          expect.objectContaining({ edit_revision: 7 }),
+          undefined,
+        );
+      } finally {
+        unsubscribe();
+        queryClient.clear();
+      }
+    },
+  );
+
   it("should_refresh_global_flows_cache_when_flow_is_moved_to_new_folder", async () => {
     // Arrange — backend responds with the updated flow (FlowRead)
     // carrying the new folder_id.
@@ -83,8 +150,15 @@ describe("usePatchUpdateFlow", () => {
     // Act — simulate the drag-drop PATCH request.
     await mutation.mutate({
       id: "flow-1",
+      edit_revision: 7,
       folder_id: "folder-B",
     });
+
+    expect(mockApiPatch).toHaveBeenCalledWith(
+      "/api/v1/flows/flow-1",
+      { folder_id: "folder-B" },
+      { headers: { "If-Match": '"flow:flow-1:7"' } },
+    );
 
     // Assert — the global flows cache (useGetRefreshFlowsQuery) that
     // HomePage's `isEmptyFolder` check depends on must be invalidated
@@ -114,6 +188,7 @@ describe("usePatchUpdateFlow", () => {
     // Act
     await mutation.mutate({
       id: "flow-1",
+      edit_revision: 7,
       folder_id: "folder-B",
     });
 
@@ -144,6 +219,7 @@ describe("usePatchUpdateFlow", () => {
 
     await mutation.mutate({
       id: "flow-1",
+      edit_revision: 7,
       folder_id: "folder-B",
     });
 
@@ -171,6 +247,7 @@ describe("usePatchUpdateFlow", () => {
     // project A data while project B refetches or if that refetch fails.
     await mutation.mutate({
       id: "flow-1",
+      edit_revision: 7,
       folder_id: "folder-B",
       providerScopeChanged: true,
     });
@@ -256,7 +333,11 @@ describe("usePatchUpdateFlow", () => {
     mockApiPatch.mockResolvedValue({ data: { id: "flow-1", name: "Renamed" } });
 
     const mutation = usePatchUpdateFlow();
-    await mutation.mutate({ id: "flow-1", name: "Renamed" });
+    await mutation.mutate({
+      id: "flow-1",
+      edit_revision: 7,
+      name: "Renamed",
+    });
 
     expect(
       mockQueryClient.resetQueries.mock.calls.some(
@@ -278,6 +359,7 @@ describe("usePatchUpdateFlow", () => {
     const mutation = usePatchUpdateFlow();
     await mutation.mutate({
       id: "flow-1",
+      edit_revision: 7,
       folder_id: "folder-A",
       name: "Saved",
     });

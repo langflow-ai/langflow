@@ -518,6 +518,9 @@ class ServiceManager:
             object_key=service_key,
         )
         if service_class is None:
+            if service_type == ServiceType.AUTHORIZATION_SERVICE:
+                msg = "Configured authorization service could not be loaded; refusing a pass-through fallback"
+                raise RuntimeError(msg)
             if service_type == ServiceType.MODEL_PROVIDER_POLICY_SERVICE:
                 msg = (
                     "Configured model provider policy service could not be loaded; "
@@ -532,6 +535,12 @@ class ServiceManager:
                 raise RuntimeError(msg)
             return
 
+        if service_type == ServiceType.AUTHORIZATION_SERVICE:
+            from lfx.services.authorization.base import BaseAuthorizationService
+
+            if not isinstance(service_class, type) or not issubclass(service_class, BaseAuthorizationService):
+                msg = "Configured authorization service must subclass BaseAuthorizationService"
+                raise RuntimeError(msg)
         if service_type == ServiceType.MODEL_PROVIDER_POLICY_SERVICE:
             from lfx.services.model_provider_policy.base import BaseModelProviderPolicyService
 

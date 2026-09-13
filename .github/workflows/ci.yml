@@ -7,6 +7,10 @@ on:
         description: "(Optional) Ref to checkout"
         required: false
         type: string
+      base-ref:
+        description: "Base ref or SHA for changed-path validation when run-all-tests is false"
+        required: false
+        type: string
       python-versions:
         description: "Python Versions"
         required: false
@@ -32,10 +36,19 @@ on:
         required: false
         type: string
         default: "ubuntu-latest"
+      docker-runs-on:
+        description: "Fork-authorized ARM64 runner for candidate Docker validation"
+        required: false
+        type: string
+        default: '["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]'
   workflow_dispatch:
     inputs:
       ref:
         description: "(Optional) Ref to checkout"
+        required: false
+        type: string
+      base-ref:
+        description: "Base ref or SHA when run-all-tests is false"
         required: false
         type: string
       python-versions:
@@ -43,6 +56,21 @@ on:
         required: false
         type: string
         default: "['3.10', '3.14']"
+      frontend-tests-folder:
+        description: "Frontend Tests Folder"
+        required: false
+        type: string
+        default: "tests/core"
+      release:
+        description: "Release"
+        required: false
+        type: boolean
+        default: false
+      run-all-tests:
+        description: "Run all tests regardless of file changes (skips path filtering)"
+        required: false
+        type: boolean
+        default: false
       runs-on:
         description: "Runner to use for the tests"
         required: false
@@ -52,6 +80,11 @@ on:
           - self-hosted
           - '["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]'
         default: ubuntu-latest
+      docker-runs-on:
+        description: "Fork-authorized ARM64 runner for candidate Docker validation"
+        required: false
+        type: string
+        default: '["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]'
   pull_request:
     # ready_for_review matters: every job below is gated on the PR not being a draft, so a PR
     # opened as a draft and later marked ready has no run where that gate was ever true.
@@ -73,11 +106,13 @@ jobs:
         run: |
           echo "Inputs:"
           echo "  ref: ${{ inputs.ref }}"
+          echo "  base-ref: ${{ inputs.base-ref }}"
           echo "  python-versions: ${{ inputs.python-versions }}"
           echo "  frontend-tests-folder: ${{ inputs.frontend-tests-folder }}"
           echo "  release: ${{ inputs.release }}"
           echo "  run-all-tests: ${{ inputs.run-all-tests }}"
           echo "  runs-on: ${{ inputs.runs-on }}"
+          echo "  docker-runs-on: ${{ inputs.docker-runs-on }}"
 
   validate-pr-title:
     name: Validate PR Title
@@ -197,6 +232,7 @@ jobs:
       database: ${{ steps.filter.outputs.database }}
       docker: ${{ steps.filter.outputs.docker }}
       design-md: ${{ steps.filter.outputs.design-md }}
+      authz-sharing: ${{ steps.filter.outputs.authz-sharing }}
       docs-only: ${{
         steps.filter.outputs.docs == 'true' &&
         steps.filter.outputs.python != 'true' &&
@@ -209,7 +245,8 @@ jobs:
         steps.filter.outputs.workspace != 'true' &&
         steps.filter.outputs.api != 'true' &&
         steps.filter.outputs.database != 'true' &&
-        steps.filter.outputs.docker != 'true'
+        steps.filter.outputs.docker != 'true' &&
+        steps.filter.outputs['authz-sharing'] != 'true'
         }}
 
     steps:
@@ -217,11 +254,24 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+      - name: Require an explicit base for manual or reusable filtered runs
+        if: ${{ (github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call') && !inputs.run-all-tests }}
+        shell: bash
+        env:
+          BASE_REF: ${{ inputs.base-ref }}
+        run: |
+          if [[ -z "$BASE_REF" ]]; then
+            echo "base-ref is required when a manual/reusable run does not set run-all-tests=true." >&2
+            exit 1
+          fi
       - name: Filter Paths
         id: filter
         uses: dorny/paths-filter@v4
         with:
           filters: ./.github/changes-filter.yaml
+          base: ${{ inputs.base-ref || github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+          ref: ${{ inputs.ref || github.sha }}
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
@@ -231,15 +281,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install --disable-pip-version-check --no-cache-dir pyyaml
       - name: Validate Filter Coverage
-        continue-on-error: true
         shell: bash
+        env:
+          BASE_INPUT: ${{ inputs.base-ref || github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
         run: |
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          BASE_REF="${{ github.event.pull_request.base.ref || 'main' }}"
-          # Ensure base commit is present locally
-          git fetch --no-tags --depth=1 origin "$BASE_REF" || true
-          git fetch --no-tags --depth=1 origin "$BASE_SHA" || true
-          git diff --name-only "${BASE_SHA:-origin/$BASE_REF}"...HEAD | python scripts/check_changes_filter.py
+          set -euo pipefail
+          if [[ -z "$BASE_INPUT" ]]; then
+            echo "No trustworthy comparison base was supplied by the event or caller." >&2
+            exit 1
+          fi
+          if BASE_COMMIT=$(git rev-parse --verify "$BASE_INPUT^{commit}" 2>/dev/null); then
+            :
+          elif BASE_COMMIT=$(git rev-parse --verify "origin/$BASE_INPUT^{commit}" 2>/dev/null); then
+            :
+          else
+            git fetch --no-tags origin "$BASE_INPUT"
+            BASE_COMMIT=$(git rev-parse FETCH_HEAD)
+          fi
+          MERGE_BASE=$(git merge-base HEAD "$BASE_COMMIT")
+          git diff --name-only "$MERGE_BASE"...HEAD | python scripts/check_changes_filter.py
 
   test-backend:
     needs: [path-filter, set-ci-condition]
@@ -264,6 +324,83 @@ jobs:
       ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
 
+  test-authz-backend:
+    needs: [path-filter, set-ci-condition]
+    name: Run Team Sharing Backend Tests
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result == 'success' &&
+        needs.path-filter.outputs.authz-sharing == 'true')
+      )
+    runs-on: ${{ inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.14"]
+        database: [sqlite, postgresql]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: langflow
+          POSTGRES_PASSWORD: langflow-test-password
+          POSTGRES_DB: langflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U langflow"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      LANGFLOW_AUTHZ_ENABLED: "true"
+      LANGFLOW_AUTO_LOGIN: "false"
+      LANGFLOW_AUTHZ_AUDIT_ENABLED: "true"
+      LANGFLOW_AUTHZ_AUDIT_DURABLE: "true"
+      LANGFLOW_AUTHZ_EXPECTED_DIALECT: ${{ matrix.database == 'postgresql' && 'postgresql' || 'sqlite' }}
+      LANGFLOW_AUTHZ_TEST_DATABASE_URI: ${{ matrix.database == 'postgresql' && 'postgresql+psycopg://langflow:langflow-test-password@localhost:5432/langflow' || 'sqlite+aiosqlite:///./authz-ci.db' }}
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          fetch-depth: 0
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          version: latest-known
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+          python-version: ${{ matrix.python-version }}
+          prune-cache: false
+
+      - name: Install credential-free backend test dependencies
+        run: |
+          uv sync --locked --group dev --package langflow --package langflow-base --extra postgresql --extra authorization
+          uv run --no-sync python -c "import sqlite3; import sys; from importlib.metadata import version; print('Authorization runtime: casbin==' + version('casbin') + ' Python=' + sys.version.split()[0] + ' SQLite=' + sqlite3.sqlite_version)"
+
+      - name: Run registered authorization migration, transaction, lifecycle, and API tests
+        env:
+          MIGRATION_VALIDATION_CI: "true"
+        run: >-
+          uv run --no-sync pytest
+          src/backend/tests/unit/services/authorization/casbin_spec
+          src/backend/tests/unit/alembic/test_authz_team_sharing_migration.py
+          src/backend/tests/unit/services/authorization/test_collaboration_management.py
+          src/backend/tests/unit/api/v1/test_authz_lifecycle_contract.py
+          src/backend/tests/unit/services/authorization/test_capability_flag.py
+          src/backend/tests/unit/services/authorization/test_rbac_enforcement_integration.py
+          src/backend/tests/unit/utils/test_flow_secrets.py
+          src/backend/tests/unit/api/v1/test_authz_admin_routes.py
+          src/backend/tests/unit/api/v1/test_authz_share_routes.py
+          -x -v
+
   lint-frontend:
     needs: [path-filter, set-ci-condition]
     name: Lint Frontend
@@ -278,6 +415,7 @@ jobs:
       )
     uses: ./.github/workflows/lint-js.yml
     with:
+      branch: ${{ inputs.ref || github.ref }}
       allow-failure: ${{ inputs.release == true }}
 
   test-frontend-unit:
@@ -323,6 +461,28 @@ jobs:
       release: ${{ inputs.release || false }}
       runs-on: ${{ inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
       ref: ${{ inputs.ref || github.ref }}
+
+  test-authz-e2e:
+    needs: [path-filter, set-ci-condition]
+    name: Run Team Sharing E2E
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result == 'success' &&
+        needs.path-filter.outputs.authz-sharing == 'true')
+      )
+    uses: ./.github/workflows/typescript_test.yml
+    with:
+      authz-mode: true
+      suites: '["api", "database", "workspace"]'
+      tests_folder: tests/core/features/authz
+      release: false
+      runs-on: ${{ inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+      ref: ${{ inputs.ref || github.ref }}
+
   test-docs-build:
     needs: path-filter
     if: |
@@ -331,6 +491,8 @@ jobs:
       (inputs.run-all-tests || needs.path-filter.outputs.docs == 'true')
     name: Test Docs Build
     uses: ./.github/workflows/docs_test.yml
+    with:
+      branch: ${{ inputs.ref || github.ref }}
 
   test-templates:
     needs: [path-filter, set-ci-condition]
@@ -368,8 +530,16 @@ jobs:
   test-docker:
     needs: [path-filter, set-ci-condition]
     name: Test Docker Images
-    if: ${{ needs.path-filter.outputs.docker == 'true' && needs.set-ci-condition.outputs.should-run-tests == 'true' }}
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-tests == 'true' &&
+      (inputs.run-all-tests ||
+      (needs.path-filter.result == 'success' && needs.path-filter.outputs.docker == 'true'))
     uses: ./.github/workflows/docker_test.yml
+    with:
+      ref: ${{ inputs.ref || github.ref }}
+      runs-on: ${{ inputs['docker-runs-on'] || '["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]' }}
 
   lint-design-md:
     needs: path-filter
@@ -408,6 +578,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Download Jest Coverage
         uses: actions/download-artifact@v8
@@ -420,7 +592,7 @@ jobs:
         uses: actions/download-artifact@v8
         continue-on-error: true
         with:
-          pattern: playwright-coverage-*
+          pattern: playwright-coverage-core-*
           path: coverage/playwright
           merge-multiple: true
 
@@ -460,8 +632,10 @@ jobs:
       [
         validate-pr-title,
         test-backend,
+        test-authz-backend,
         test-frontend-unit,
         test-frontend,
+        test-authz-e2e,
         test-docs-build,
         test-templates,
         test-docker,
@@ -479,6 +653,7 @@ jobs:
       RESULTS_JSON: ${{ toJSON(needs.*.result) }}
       # Skip nightly build check if only docs files changed
       DOCS_ONLY: ${{ needs.path-filter.outputs.docs-only }}
+      AUTHZ_REQUIRED: ${{ (inputs.run-all-tests || needs.path-filter.outputs.authz-sharing == 'true') && 'true' || 'false' }}
       # A skipped need is not counted as a failure, which is correct when path-filter ran and
       # decided nothing relevant changed. It is not correct when path-filter itself never
       # produced a decision: every dependent job is then skipped for want of its outputs, and
@@ -486,6 +661,8 @@ jobs:
       EXIT_CODE: ${{ (contains(needs.*.result, 'failure') ||
         contains(needs.*.result, 'cancelled') ||
         (needs.set-ci-condition.outputs.should-run-ci == 'true' && !inputs.run-all-tests && needs.path-filter.result != 'success') ||
+        ((inputs.run-all-tests || needs.path-filter.outputs.authz-sharing == 'true') &&
+        (needs.test-authz-backend.result != 'success' || needs.test-authz-e2e.result != 'success')) ||
         (needs.check-nightly-status.outputs.should-proceed != 'true' && github.event_name != 'workflow_dispatch' && github.event_name != 'merge_group' && needs.path-filter.outputs.docs-only != 'true' && !contains(github.event.pull_request.labels.*.name, 'skip-nightly-check')))
         && '1' || '0' }}
     steps:
@@ -497,6 +674,7 @@ jobs:
           echo "Nightly build status: ${{ needs.check-nightly-status.outputs.should-proceed }}"
           echo "Event type: ${{ github.event_name }}"
           echo "Docs only changes: $DOCS_ONLY"
+          echo "Team sharing checks required: $AUTHZ_REQUIRED"
           echo "Path filter decision: ${{ needs.path-filter.result }}"
           echo "Python changes: ${{ needs.path-filter.outputs.python }}"
           echo "Frontend changes: ${{ needs.path-filter.outputs.frontend }}"
@@ -518,10 +696,14 @@ jobs:
                   "  - PR Title Validation: Title ends with ellipsis (...). Use a complete, descriptive title."
                 elif $job == "test-backend" then
                   "  - Backend Tests: Check Python code, tests, and dependencies"
+                elif $job == "test-authz-backend" then
+                  "  - Team Sharing Backend Tests: Check the registered enforcer, migrations, lifecycle, and database transactions"
                 elif $job == "test-frontend-unit" then
                   "  - Frontend Unit Tests: Check React components and unit test logic"
                 elif $job == "test-frontend" then
                   "  - Frontend E2E Tests: Check integration tests and UI functionality"
+                elif $job == "test-authz-e2e" then
+                  "  - Team Sharing E2E: Check all eight distinct-user authorization journeys"
                 elif $job == "test-docs-build" then
                   "  - Documentation Build: Check documentation syntax and build process"
                 elif $job == "test-templates" then
@@ -553,6 +735,11 @@ jobs:
             echo "🔧 Next steps:"
             echo "  1. Check if the cancellation was intentional"
             echo "  2. Re-run the workflow if needed"
+
+          elif [[ "$AUTHZ_REQUIRED" == "true" && ("${{ needs.test-authz-backend.result }}" != "success" || "${{ needs.test-authz-e2e.result }}" != "success") ]]; then
+            echo "CI FAILED: Required Team Sharing checks did not both complete successfully."
+            echo "  Backend: ${{ needs.test-authz-backend.result }}"
+            echo "  E2E:     ${{ needs.test-authz-e2e.result }}"
 
           elif [[ "${{ needs.check-nightly-status.outputs.should-proceed }}" != "true" && "${{ github.event_name }}" != "workflow_dispatch" && "$DOCS_ONLY" != "true" ]]; then
             echo "🚫 CI BLOCKED: Nightly build is broken"

@@ -2,9 +2,11 @@
  * Tests for useGetEffectivePermissions.
  *
  * Mocks the request-processor and axios layers (mirroring the established
- * query-hook test pattern) so the hook can be invoked as a plain function and
- * its request shape asserted directly.
+ * query-hook test pattern), renders the hook through React Testing Library,
+ * and asserts its request shape directly.
  */
+
+import { renderHook } from "@testing-library/react";
 
 const mockApiPost = jest.fn();
 jest.mock("@/controllers/API/api", () => ({
@@ -47,12 +49,14 @@ describe("useGetEffectivePermissions", () => {
   });
 
   it("POSTs the resource_type, resource_ids, actions and domain", async () => {
-    useGetEffectivePermissions({
-      resourceType: "flow",
-      resourceIds: ["a", "b"],
-      actions: ["read", "delete"],
-      domain: "project:folder-1",
-    });
+    renderHook(() =>
+      useGetEffectivePermissions({
+        resourceType: "flow",
+        resourceIds: ["a", "b"],
+        actions: ["read", "delete"],
+        domain: "project:folder-1",
+      }),
+    );
 
     await flushAsync();
 
@@ -66,10 +70,12 @@ describe("useGetEffectivePermissions", () => {
   });
 
   it("omits actions and domain from the body when not provided", async () => {
-    useGetEffectivePermissions({
-      resourceType: "deployment",
-      resourceIds: ["d1"],
-    });
+    renderHook(() =>
+      useGetEffectivePermissions({
+        resourceType: "deployment",
+        resourceIds: ["d1"],
+      }),
+    );
 
     await flushAsync();
 
@@ -80,7 +86,9 @@ describe("useGetEffectivePermissions", () => {
   });
 
   it("does not fire a request when there are no resource ids", async () => {
-    useGetEffectivePermissions({ resourceType: "flow", resourceIds: [] });
+    renderHook(() =>
+      useGetEffectivePermissions({ resourceType: "flow", resourceIds: [] }),
+    );
 
     await flushAsync();
 
@@ -89,7 +97,9 @@ describe("useGetEffectivePermissions", () => {
 
   it("caps resource_ids at 500 to match the backend limit", async () => {
     const ids = Array.from({ length: 600 }, (_, index) => `id-${index}`);
-    useGetEffectivePermissions({ resourceType: "flow", resourceIds: ids });
+    renderHook(() =>
+      useGetEffectivePermissions({ resourceType: "flow", resourceIds: ids }),
+    );
 
     await flushAsync();
 

@@ -845,16 +845,12 @@ async def get_flow_for_sse_user(
     flow_id_or_name: str,
     user: Annotated[User | UserRead, Depends(get_current_user_for_sse)],
 ) -> SseAuth:
-    """Auth-aware dependency for SSE routes.
+    """Resolve an owner-scoped flow for the webhook event stream.
 
-    Returns both the SSE user and the flow so the route can call
-    ``ensure_flow_permission`` *before* subscribing to the event stream.
-    Widening to share-aware lookup is safe here only because the route
-    immediately enforces ``flow:read``; without that enforcement, a non-owner
-    with cross-user fetch enabled could subscribe to another user's webhook
-    event stream and exfiltrate flow id/name plus event payloads.
+    A flow share grants saved-resource use/edit access, not access to another
+    user's operational webhook event payloads.
     """
-    flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=user.id, widen_for_shares=True)
+    flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=user.id)
     return SseAuth(user=user, flow=flow)
 
 
@@ -875,9 +871,9 @@ async def get_webhook_auth(
     Centralizes the security logic for webhook run endpoints.
     """
     webhook_user = await get_auth_service().get_webhook_user(flow_id_or_name, request)
-    # Webhook route also calls ``ensure_flow_permission`` after, so widening
-    # for shared resources is acceptable here.
-    flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=webhook_user.id, widen_for_shares=True)
+    # Webhook publication remains owner-scoped. Targeted user/team shares do
+    # not authorize this transport.
+    flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=webhook_user.id)
     return WebhookAuth(user=webhook_user, flow=flow)
 
 
@@ -1245,13 +1241,12 @@ async def webhook_events_stream(
     of webhook execution progress, similar to clicking "Play" in the UI.
 
     Authentication: Requires user to be logged in (via cookie) or provide API key.
-    The user must own the flow OR have an authorization-plugin-granted
-    ``flow:read`` permission to subscribe to its events.
+    The user must own the flow. A targeted flow share does not expose another
+    user's operational webhook event payloads.
     """
     flow = auth.flow
-    # Enforce flow:read before subscribing — the SSE fetcher uses share-aware
-    # lookup, so without this check a non-owner with cross-user fetch enabled
-    # would receive another user's webhook event payloads.
+    # Retain the guard after the owner-scoped fetch so external credential
+    # ceilings still apply.
     await ensure_flow_permission(
         auth.user,
         FlowAction.READ,

@@ -27,11 +27,17 @@ from langflow.api.v1.models import (
 )
 from langflow.api.v1.schemas.deployments import DetectVarsRequest, DetectVarsResponse
 from langflow.services.authorization import VariableAction, ensure_variable_permission
-from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
+from langflow.services.authorization.fetch import (
+    authorization_admission,
+    authorized_or_owner_scoped,
+    deny_to_404,
+    load_mutation_actor,
+)
 from langflow.services.authorization.listing import visible_scope_prefilter
+from langflow.services.database.lock_retry import run_with_lock_retry
 from langflow.services.database.models.flow_version.crud import get_flow_version_entries_by_ids
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
-from langflow.services.deps import get_variable_service
+from langflow.services.deps import get_authorization_service, get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService, has_variable_value
 
@@ -391,7 +397,11 @@ async def delete_variable(
     all disabled models for that provider are automatically cleared.
     """
     variable_service = get_variable_service()
-    try:
+    actor_id = current_user.id
+
+    async def delete_attempt(_attempt: int) -> None:
+        await get_authorization_service().acquire_resource_mutation_lock(session=session)
+        actor = await load_mutation_actor(session, actor_id)
         # Share-aware fetch (see update_variable): load by id when a plugin
         # enables cross-user fetch, else owner-scoped (OSS default).
         variable_to_delete = await authorized_or_owner_scoped(
@@ -400,18 +410,19 @@ async def delete_variable(
             id_column=Variable.id,
             resource_id=variable_id,
             owner_column=Variable.user_id,
-            owner_id=current_user.id,
+            owner_id=actor.id,
         )
         if variable_to_delete is None:
             raise HTTPException(status_code=404, detail="Variable not found")
         owner_id = variable_to_delete.user_id
         try:
-            await ensure_variable_permission(
-                current_user,
-                VariableAction.DELETE,
-                variable_id=variable_id,
-                variable_user_id=owner_id,
-            )
+            async with authorization_admission(session):
+                await ensure_variable_permission(
+                    actor,
+                    VariableAction.DELETE,
+                    variable_id=variable_id,
+                    variable_user_id=owner_id,
+                )
         except HTTPException as exc:
             raise deny_to_404(exc, detail="Variable not found") from exc
 
@@ -427,6 +438,8 @@ async def delete_variable(
         if provider and isinstance(variable_service, DatabaseVariableService):
             await _cleanup_provider_models(variable_service, owner_id, provider, session)
 
+    try:
+        await run_with_lock_retry(delete_attempt, session=session, description="delete variable and model references")
     except Exception as e:
         # Preserve 404 / deny_to_404 (and any other HTTPException) instead of
         # masking it as a 500.

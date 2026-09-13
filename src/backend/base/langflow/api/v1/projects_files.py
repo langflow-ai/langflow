@@ -50,15 +50,14 @@ async def download_project_flows(
 ) -> StreamingResponse:
     """Download all flows from project as a zip file."""
     try:
-        owner_id = project_owner_id or current_user.id
-        query = select(Folder).where(Folder.id == project_id, Folder.user_id == owner_id)
+        query = select(Folder).where(Folder.id == project_id)
         result = await session.exec(query)
         project = result.first()
 
-        if not project:
+        if not project or (project_owner_id is not None and project.user_id != project_owner_id):
             raise HTTPException(status_code=404, detail="Project not found")
 
-        flows_query = select(Flow).where(Flow.folder_id == project_id, Flow.user_id == owner_id)
+        flows_query = select(Flow).where(Flow.folder_id == project_id)
         flows_result = await session.exec(flows_query)
         visible_flows = await filter_visible_resources(
             current_user,

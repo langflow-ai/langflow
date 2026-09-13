@@ -6,11 +6,10 @@ from typing import TYPE_CHECKING, Any, TypeVar
 
 from lfx.services.authorization.base import ResourceVisibilityScope
 from sqlalchemy import Select, and_, false
-from sqlmodel import col, or_
+from sqlmodel import col, or_, select
 
 from langflow.services.authorization.actions import FlowAction
 from langflow.services.authorization.guards import (
-    _api_key_scopes_require_plugin_enforcement,
     _auth_context,
     _coerce_action,
     should_apply_owner_override,
@@ -60,7 +59,7 @@ async def filter_visible_resources(
     authz = get_authorization_service()
     act_str = _coerce_action(act)
     user_id = getattr(user, "id", None)
-    owner_override_enabled = not await _api_key_scopes_require_plugin_enforcement()
+    owner_override_enabled = await should_apply_owner_override()
 
     # Owned rows skip batch_enforce (matches direct-read owner override).
     owned_indices: set[int] = set()
@@ -258,6 +257,27 @@ def restrict_to_owned_or_visible_scope(
     project_column: InstrumentedAttribute | None = None,
 ) -> StatementT:
     """Apply owner, concrete-ID, workspace, and project visibility before pagination."""
+    # These predicates project canonical ORM facts, not another permission
+    # evaluator. The selected service supplies ownership only after admitting
+    # the active identity and credential ceiling.
+    model = id_column.class_
+    if visibility.require_canonical_context:
+        owner_clause = false()
+    if visibility.owner_id is not None:
+        owner_clause = or_(owner_clause, model.user_id == visibility.owner_id)
+    if visibility.require_canonical_context or visibility.project_owner_id is not None:
+        from langflow.services.database.models.deployment.model import Deployment
+        from langflow.services.database.models.flow.model import Flow
+        from langflow.services.database.models.folder.model import Folder
+
+        if model in (Flow, Deployment):
+            parent_column = Flow.folder_id if model is Flow else Deployment.project_id
+            parent = select(Folder.id).where(Folder.id == parent_column).correlate(model)
+            if visibility.require_canonical_context:
+                valid_parent = parent.where(Folder.workspace_id.is_not_distinct_from(model.workspace_id)).exists()
+                stmt = stmt.where(or_(col(parent_column).is_(None), valid_parent))
+            if visibility.project_owner_id is not None:
+                owner_clause = or_(owner_clause, parent.where(Folder.user_id == visibility.project_owner_id).exists())
     if visibility.all_resources:
         if project_column is None or not visibility.excluded_global_project_ids:
             return stmt
@@ -343,8 +363,13 @@ def resource_visible_in_scope(
     visibility: ResourceVisibilityScope,
     workspace_id: UUID | None = None,
     project_id: UUID | None = None,
+    owner_id: UUID | None = None,
+    project_owner_id: UUID | None = None,
+    canonical_context_valid: bool = False,
 ) -> bool:
     """Evaluate a compact visibility scope for an already-loaded resource."""
+    if visibility.require_canonical_context and not canonical_context_valid:
+        return False
     globally_visible = visibility.all_resources and (
         project_id is None or project_id not in visibility.excluded_global_project_ids
     )
@@ -352,6 +377,8 @@ def resource_visible_in_scope(
     unassigned_project_allowed = project_id is not None and project_id not in visibility.excluded_workspace_project_ids
     return bool(
         globally_visible
+        or (visibility.owner_id is not None and owner_id == visibility.owner_id)
+        or (visibility.project_owner_id is not None and project_owner_id == visibility.project_owner_id)
         or resource_id in visibility.resource_ids
         or (workspace_project_allowed and workspace_id is not None and workspace_id in visibility.workspace_ids)
         or (unassigned_project_allowed and workspace_id is None and visibility.include_unassigned_workspace)

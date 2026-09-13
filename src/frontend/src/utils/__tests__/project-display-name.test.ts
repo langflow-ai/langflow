@@ -16,6 +16,7 @@ const project = (
   owner_username: "current-user",
   is_owner: true,
   ...overrides,
+  edit_revision: overrides.edit_revision ?? 1,
 });
 
 const t = (key: string, options?: Record<string, unknown>) => {

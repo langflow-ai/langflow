@@ -85,7 +85,7 @@ def test_checker_reports_missing_matrix_file(tmp_path: Path) -> None:
     missing = tmp_path / "missing.json"
 
     assert validate_matrix(missing) == [
-        f"could not read execution-principal matrix {missing}: [Errno 2] No such file or directory: '{missing}'"
+        f"could not read execution-principal matrix {missing}: No such file or directory"
     ]
 
 

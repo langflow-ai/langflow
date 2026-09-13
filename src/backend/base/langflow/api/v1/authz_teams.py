@@ -1,522 +1,503 @@
-"""CRUD API for authz_team and authz_team_member rows.
-
-Teams group users for bulk role assignment and share targeting. The
-authorization plugin compiles team memberships into its own representation
-during policy sync.
-"""
+"""Team administration API backed by one invariant-preserving mutation path."""
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Annotated
+from typing import Annotated, Literal, cast
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from lfx.log.logger import logger
-from lfx.services.authorization import AuthorizationMutation, AuthorizationMutationKind
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from lfx.utils.util_strings import escape_like_pattern
-from sqlalchemy.exc import IntegrityError
-from sqlmodel import select
+from sqlmodel import col, select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas.authz_teams import (
+    TeamCapabilities,
     TeamCreate,
     TeamMemberCreate,
     TeamMemberRead,
+    TeamMemberRoleUpdate,
     TeamRead,
+    TeamRoleLiteral,
     TeamUpdate,
 )
-from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS, AUDIT_EVENT_MUTATION
-from langflow.services.authorization.lifecycle import (
-    acquire_identity_mutation_lock,
-    safe_identity_mutation_committed,
-    stage_identity_mutation,
+from langflow.services.authorization.access_ceiling import external_access_allows
+from langflow.services.authorization.collaboration import (
+    CollaborationCapabilityError,
+    discover_collaboration_capabilities,
+)
+from langflow.services.authorization.fetch import authorization_admission
+from langflow.services.authorization.lifecycle import safe_identity_mutation_committed
+from langflow.services.authorization.team_management import (
+    MemberUpsert,
+    TeamManagementError,
+    TeamPatch,
+    actor_can_administer_platform,
+    team_actor_capabilities_many,
+)
+from langflow.services.authorization.team_management import (
+    add_member as add_member_transaction,
+)
+from langflow.services.authorization.team_management import (
+    change_member_role as change_member_role_transaction,
+)
+from langflow.services.authorization.team_management import (
+    create_team as create_team_transaction,
+)
+from langflow.services.authorization.team_management import (
+    delete_team as delete_team_transaction,
+)
+from langflow.services.authorization.team_management import (
+    patch_team as patch_team_transaction,
+)
+from langflow.services.authorization.team_management import (
+    remove_member as remove_member_transaction,
 )
 from langflow.services.authorization.utils import audit_decision
+from langflow.services.database.lock_retry import run_with_lock_retry
 from langflow.services.database.models.auth import AuthzTeam, AuthzTeamMember
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_authorization_service
 
-router = APIRouter(prefix="/authz/teams", tags=["Authorization"], include_in_schema=False)
+router = APIRouter(prefix="/authz/teams", tags=["Authorization"])
 
-# See ``authz_roles._LIST_MAX_LIMIT`` — same bound, applied to teams + members.
 _LIST_MAX_LIMIT = 200
 _LIST_DEFAULT_LIMIT = 100
+TeamView = Literal["directory", "member", "managed", "all"]
 
 
-async def _audit_deny(*, user_id: UUID, action: str, obj: str, status_code: int, reason: str) -> None:
-    await audit_decision(
-        user_id=user_id,
-        action=action,
-        obj=obj,
-        result="deny",
-        details={"event": AUDIT_EVENT_ACCESS, "status_code": status_code, "reason": reason},
-    )
+async def _require_superuser_dependency(current_user: CurrentActiveUser) -> None:
+    """Reject non-platform administrators before validating create payloads.
+
+    The historical helper name is retained because structural security tests
+    inspect this dependency. The actual decision also applies the current
+    external-credential ceiling through ``actor_can_administer_platform``.
+    """
+    if not actor_can_administer_platform(current_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform Admin required")
 
 
-async def _require_superuser(user, *, action: str, obj: str) -> None:
-    if not getattr(user, "is_superuser", False):
-        await _audit_deny(
-            user_id=user.id,
-            action=action,
-            obj=obj,
-            status_code=status.HTTP_403_FORBIDDEN,
-            reason="superuser_required",
-        )
+def _require_credential_action(action: str) -> None:
+    if not external_access_allows(action):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Superuser required to administer teams.",
+            detail="External credentials do not allow this action",
         )
 
 
-async def _require_superuser_dependency(request: Request, current_user: CurrentActiveUser) -> None:
-    """Run the superuser gate as a route dependency, i.e. before body validation.
+def _raise_domain_error(exc: TeamManagementError) -> None:
+    raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
 
-    FastAPI solves a route's ``dependencies`` before validating that route's own
-    body, so an unauthorised caller is refused whatever they post. Gated only in
-    the endpoint body, they first receive the same 422 field names and enum
-    values a superuser would, which lets them map the request contract of a
-    route they cannot invoke.
 
-    The in-body call is kept as well: it is the gate for anything that reaches
-    the endpoint function without FastAPI resolving dependencies.
-    """
-    team_id = request.path_params.get("team_id", "*")
-    is_member_route = "/members" in request.url.path
-    action = (
-        "team_member:create"
-        if is_member_route and request.method == "POST"
-        else "team_member:delete"
-        if is_member_route and request.method == "DELETE"
-        else {"POST": "team:create", "PATCH": "team:update", "DELETE": "team:delete"}.get(
-            request.method,
-            "team:access",
+async def _require_collaboration_ready() -> None:
+    try:
+        capabilities = await discover_collaboration_capabilities()
+    except CollaborationCapabilityError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "AUTHORIZATION_NOT_READY", "message": "Authorization is not ready."},
+        ) from exc
+    if not capabilities.collaboration_ready:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={"code": "AUTHORIZATION_NOT_READY", "message": "Authorization is not ready."},
         )
+
+
+async def _current_actor(session: DbSession, user_id: UUID) -> User:
+    actor = await session.get(User, user_id, populate_existing=True)
+    if actor is None or actor.is_active is not True:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
+    return actor
+
+
+async def _team_visible(session: DbSession, *, team_id: UUID, user: User) -> bool:
+    async with authorization_admission(session):
+        return await get_authorization_service().enforce(user_id=user.id, domain="*", obj=f"team:{team_id}", act="read")
+
+
+async def _serialize_team(session: DbSession, team: AuthzTeam, actor: User) -> TeamRead:
+    return (await _serialize_teams(session, [team], actor))[0]
+
+
+async def _serialize_teams(session: DbSession, teams: list[AuthzTeam], actor: User) -> list[TeamRead]:
+    """Serialize a page with two batched roster reads instead of per-team queries."""
+    if not teams:
+        return []
+    team_ids = [team.id for team in teams]
+    members = list(
+        (
+            await session.exec(
+                select(AuthzTeamMember)
+                .where(col(AuthzTeamMember.team_id).in_(team_ids))
+                .order_by(col(AuthzTeamMember.team_id), col(AuthzTeamMember.user_id))
+            )
+        ).all()
     )
-    await _require_superuser(current_user, action=action, obj=f"team:{team_id}")
+    user_ids = tuple({member.user_id for member in members})
+    active_ids: set[UUID] = set()
+    if user_ids:
+        active_ids = set(
+            (
+                await session.exec(
+                    select(User.id).where(col(User.id).in_(user_ids), User.is_active == True)  # noqa: E712
+                )
+            ).all()
+        )
+    by_team: dict[UUID, list[AuthzTeamMember]] = {}
+    for member in members:
+        by_team.setdefault(member.team_id, []).append(member)
+
+    capability_by_team = await team_actor_capabilities_many(session, actor=actor, team_ids=team_ids)
+    serialized: list[TeamRead] = []
+    for team in teams:
+        roster = by_team.get(team.id, [])
+        capabilities = capability_by_team[team.id]
+        serialized.append(
+            TeamRead(
+                **team.model_dump(),
+                member_count=len(roster),
+                active_member_count=sum(member.user_id in active_ids for member in roster),
+                active_admin_count=sum(member.user_id in active_ids and member.role == "admin" for member in roster),
+                current_user_role=cast(TeamRoleLiteral | None, capabilities.current_user_role),
+                capabilities=TeamCapabilities(
+                    can_update=capabilities.can_update,
+                    can_set_active=capabilities.can_set_active,
+                    can_delete=capabilities.can_delete,
+                    can_add_user_member=capabilities.can_add_user_member,
+                    can_add_privileged_member=capabilities.can_add_privileged_member,
+                    can_change_roles=capabilities.can_change_roles,
+                    can_remove_user_member=capabilities.can_remove_user_member,
+                ),
+            )
+        )
+    return serialized
 
 
-SUPERUSER_ONLY = [Depends(_require_superuser_dependency)]
+async def _serialize_member(session: DbSession, member: AuthzTeamMember) -> TeamMemberRead:
+    user = await session.get(User, member.user_id)
+    return TeamMemberRead(
+        **member.model_dump(),
+        display_name=user.username if user is not None else None,
+        avatar=user.profile_image if user is not None else None,
+    )
 
 
-# --- teams ---------------------------------------------------------------- #
+async def _serialize_members(session: DbSession, members: list[AuthzTeamMember]) -> list[TeamMemberRead]:
+    if not members:
+        return []
+    users = (await session.exec(select(User).where(col(User.id).in_([member.user_id for member in members])))).all()
+    by_id = {user.id: user for user in users}
+    return [
+        TeamMemberRead(
+            **member.model_dump(),
+            display_name=by_id[member.user_id].username if member.user_id in by_id else None,
+            avatar=by_id[member.user_id].profile_image if member.user_id in by_id else None,
+        )
+        for member in members
+    ]
 
 
 @router.get("", response_model=list[TeamRead])
 @router.get("/", response_model=list[TeamRead])
 async def list_teams(
     session: DbSession,
-    current_user: CurrentActiveUser,  # noqa: ARG001 — any authenticated user can list
-    search: Annotated[str | None, Query(description="Substring match on team_name or adom_name")] = None,
+    current_user: CurrentActiveUser,
+    view: Annotated[TeamView, Query()] = "member",
+    search: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
     is_active: Annotated[bool | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=_LIST_MAX_LIMIT)] = _LIST_DEFAULT_LIMIT,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[TeamRead]:
-    """List teams. Open to any authenticated user (for the share dialog's team picker).
+    """List a bounded caller-authorized team view."""
+    async with authorization_admission(session) as admission:
+        actor = await _current_actor(admission, current_user.id)
+        statement = select(AuthzTeam)
+        if view == "all":
+            if not actor_can_administer_platform(actor):
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform Admin required")
+        elif view in {"member", "managed"}:
+            statement = statement.join(
+                AuthzTeamMember,
+                col(AuthzTeamMember.team_id) == col(AuthzTeam.id),
+            ).where(AuthzTeamMember.user_id == actor.id)
+            if view == "managed":
+                statement = statement.where(col(AuthzTeamMember.role).in_(("admin", "maintainer")))
+        elif view == "directory":
+            statement = statement.where(AuthzTeam.is_active == True)  # noqa: E712
 
-    Paginated via ``limit`` / ``offset`` so a single call cannot enumerate every
-    team. Stable order is ``(team_name, id)`` so ``offset`` is deterministic.
-    """
-    stmt = select(AuthzTeam)
-    if search:
-        like = f"%{escape_like_pattern(search)}%"
-        stmt = stmt.where(
-            (AuthzTeam.team_name.ilike(like, escape="\\")) | (AuthzTeam.adom_name.ilike(like, escape="\\"))
-        )
-    if is_active is not None:
-        stmt = stmt.where(AuthzTeam.is_active == is_active)
-    stmt = stmt.order_by(AuthzTeam.team_name, AuthzTeam.id).offset(offset).limit(limit)
-    rows = (await session.exec(stmt)).all()
-    return [TeamRead.model_validate(row) for row in rows]
+        if search:
+            normalized = search.strip()
+            if normalized:
+                like = f"%{escape_like_pattern(normalized)}%"
+                statement = statement.where(
+                    col(AuthzTeam.team_name).ilike(like, escape="\\")
+                    | col(AuthzTeam.adom_name).ilike(like, escape="\\")
+                )
+        if is_active is not None:
+            statement = statement.where(AuthzTeam.is_active == is_active)
+        statement = statement.order_by(col(AuthzTeam.team_name), col(AuthzTeam.id))
+        if view in {"member", "managed"}:
+            # Membership narrows the requested view; the engine still decides
+            # visibility before the caller's offset and limit are applied.
+            teams: list[AuthzTeam] = []
+            scanned = visible = 0
+            while len(teams) < limit:
+                candidates = list((await admission.exec(statement.offset(scanned).limit(_LIST_MAX_LIMIT))).all())
+                if not candidates:
+                    break
+                decisions = await get_authorization_service().batch_enforce(
+                    user_id=actor.id, domain="*", requests=tuple((f"team:{team.id}", "read") for team in candidates)
+                )
+                for team, allowed in zip(candidates, decisions, strict=True):
+                    if allowed:
+                        if visible >= offset:
+                            teams.append(team)
+                        visible += 1
+                        if len(teams) == limit:
+                            break
+                scanned += len(candidates)
+        else:
+            teams = list((await admission.exec(statement.offset(offset).limit(limit))).all())
+        return await _serialize_teams(admission, teams, actor)
 
 
 @router.get("/{team_id}", response_model=TeamRead)
 async def read_team(
     team_id: UUID,
     session: DbSession,
-    current_user: CurrentActiveUser,  # noqa: ARG001
+    current_user: CurrentActiveUser,
 ) -> TeamRead:
-    team = await session.get(AuthzTeam, team_id)
-    if team is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
-    return TeamRead.model_validate(team)
+    async with authorization_admission(session) as admission:
+        actor = await _current_actor(admission, current_user.id)
+        team = await admission.get(AuthzTeam, team_id)
+        if team is None or not await _team_visible(admission, team_id=team_id, user=actor):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+        return await _serialize_team(admission, team, actor)
 
 
-@router.post("", response_model=TeamRead, status_code=status.HTTP_201_CREATED, dependencies=SUPERUSER_ONLY)
-@router.post("/", response_model=TeamRead, status_code=status.HTTP_201_CREATED, dependencies=SUPERUSER_ONLY)
+@router.post(
+    "",
+    response_model=TeamRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(_require_superuser_dependency)],
+)
+@router.post(
+    "/",
+    response_model=TeamRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(_require_superuser_dependency)],
+)
 async def create_team(
     payload: TeamCreate,
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> TeamRead:
-    await _require_superuser(current_user, action="team:create", obj="team:*")
-    authorization_service = get_authorization_service()
-    await acquire_identity_mutation_lock(
-        authorization_service,
-        session,
-        kind=AuthorizationMutationKind.TEAM_CREATED,
-    )
-    team = AuthzTeam(
-        team_name=payload.team_name,
-        adom_name=payload.adom_name,
-        description=payload.description,
-        is_active=payload.is_active,
-    )
-    session.add(team)
-    mutation = AuthorizationMutation(
-        kind=AuthorizationMutationKind.TEAM_CREATED,
-        entity_id=team.id,
-        actor_user_id=current_user.id,
-        team_id=team.id,
-        policy_relevant_fields=("adom_name", "is_active"),
-    )
-    try:
-        await session.flush()
-        await stage_identity_mutation(authorization_service, session, mutation)
-        await session.commit()
-    except IntegrityError as exc:
-        await session.rollback()
-        await _audit_deny(
-            user_id=current_user.id,
-            action="team:create",
-            obj="team:*",
-            status_code=status.HTTP_409_CONFLICT,
-            reason="team_slug_conflict",
+    actor_id = current_user.id
+    actor = await _current_actor(session, actor_id)
+    if not actor_can_administer_platform(actor):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform Admin required")
+    _require_credential_action("create")
+    await _require_collaboration_ready()
+
+    async def operation(_attempt: int):
+        return await create_team_transaction(
+            session,
+            actor=actor,
+            team_name=payload.team_name,
+            adom_name=payload.adom_name,
+            description=payload.description,
+            is_active=payload.is_active,
+            members=tuple(MemberUpsert(member.user_id, member.role) for member in payload.members),
         )
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"Team with adom_name {payload.adom_name!r} already exists",
-        ) from exc
-    await safe_identity_mutation_committed(authorization_service, mutation)
-    await session.refresh(team)
-    await audit_decision(
-        user_id=current_user.id,
-        action="team:create",
-        obj=f"team:{team.id}",
-        result="allow",
-        details={
-            "event": AUDIT_EVENT_MUTATION,
-            "team_name": team.team_name,
-            "adom_name": team.adom_name,
-        },
-    )
-    logger.info("Created team %s (id=%s)", team.team_name, team.id)
-    return TeamRead.model_validate(team)
+
+    try:
+        result = await run_with_lock_retry(operation, session=session, description="create team")
+        await session.commit()
+    except TeamManagementError as exc:
+        await session.rollback()
+        _raise_domain_error(exc)
+    for event in result.events:
+        await safe_identity_mutation_committed(get_authorization_service(), event)
+    await session.refresh(result.team)
+    actor = await _current_actor(session, actor_id)
+    return await _serialize_team(session, result.team, actor)
 
 
-@router.patch("/{team_id}", response_model=TeamRead, dependencies=SUPERUSER_ONLY)
+@router.patch("/{team_id}", response_model=TeamRead)
 async def update_team(
     team_id: UUID,
     payload: TeamUpdate,
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> TeamRead:
-    await _require_superuser(current_user, action="team:update", obj=f"team:{team_id}")
-    authorization_service = get_authorization_service()
-    await acquire_identity_mutation_lock(
-        authorization_service,
-        session,
-        kind=AuthorizationMutationKind.TEAM_UPDATED,
-        entity_id=team_id,
+    _require_credential_action("write")
+    await _require_collaboration_ready()
+    actor_id = current_user.id
+    patch = TeamPatch(
+        team_name=payload.team_name,
+        adom_name=payload.adom_name,
+        description=payload.description,
+        description_supplied="description" in payload.model_fields_set,
+        is_active=payload.is_active,
+        member_upserts=tuple(MemberUpsert(member.user_id, member.role) for member in payload.member_upserts),
+        remove_member_ids=tuple(payload.remove_member_ids),
     )
-    team = await session.get(AuthzTeam, team_id)
-    if team is None:
-        await _audit_deny(
-            user_id=current_user.id,
-            action="team:update",
-            obj=f"team:{team_id}",
-            status_code=status.HTTP_404_NOT_FOUND,
-            reason="team_not_found",
-        )
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
 
-    changed_fields: list[str] = []
-    previous_adom_name = team.adom_name
-    if payload.team_name is not None and team.team_name != payload.team_name:
-        team.team_name = payload.team_name
-        changed_fields.append("team_name")
-    if payload.adom_name is not None and team.adom_name != payload.adom_name:
-        team.adom_name = payload.adom_name
-        changed_fields.append("adom_name")
-    # description is nullable on the DB side, so use a presence check
-    # (model_fields_set) instead of ``is not None`` — an explicit "description":
-    # null in the body clears the field, while omitting it leaves the row alone.
-    if "description" in payload.model_fields_set and team.description != payload.description:
-        team.description = payload.description
-        changed_fields.append("description")
-    if payload.is_active is not None and team.is_active != payload.is_active:
-        team.is_active = payload.is_active
-        changed_fields.append("is_active")
-    team.updated_at = datetime.now(timezone.utc)
-    mutation = AuthorizationMutation(
-        kind=AuthorizationMutationKind.TEAM_UPDATED,
-        entity_id=team.id,
-        actor_user_id=current_user.id,
-        team_id=team.id,
-        policy_relevant_fields=tuple(sorted(set(changed_fields) & {"adom_name", "is_active"})),
-        previous_identifier=previous_adom_name if team.adom_name != previous_adom_name else None,
-    )
+    async def operation(_attempt: int):
+        actor = await _current_actor(session, actor_id)
+        return await patch_team_transaction(session, actor=actor, team_id=team_id, patch=patch)
+
     try:
-        await session.flush()
-        await stage_identity_mutation(authorization_service, session, mutation)
+        result = await run_with_lock_retry(operation, session=session, description=f"update team {team_id}")
         await session.commit()
-    except IntegrityError as exc:
+    except TeamManagementError as exc:
         await session.rollback()
-        await _audit_deny(
-            user_id=current_user.id,
-            action="team:update",
-            obj=f"team:{team_id}",
-            status_code=status.HTTP_409_CONFLICT,
-            reason="team_slug_conflict",
-        )
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="adom_name conflict — another team already uses this slug",
-        ) from exc
-    await safe_identity_mutation_committed(authorization_service, mutation)
-    await session.refresh(team)
-    await audit_decision(
-        user_id=current_user.id,
-        action="team:update",
-        obj=f"team:{team.id}",
-        result="allow",
-        details={
-            "event": AUDIT_EVENT_MUTATION,
-            "team_name": team.team_name,
-            "fields_changed": sorted(changed_fields),
-        },
-    )
-    logger.info("Updated team %s (id=%s)", team.team_name, team.id)
-    return TeamRead.model_validate(team)
+        _raise_domain_error(exc)
+    for event in result.events:
+        await safe_identity_mutation_committed(get_authorization_service(), event)
+    await session.refresh(result.team)
+    actor = await _current_actor(session, actor_id)
+    return await _serialize_team(session, result.team, actor)
 
 
-@router.delete("/{team_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=SUPERUSER_ONLY)
+@router.delete("/{team_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_team(
     team_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> None:
-    await _require_superuser(current_user, action="team:delete", obj=f"team:{team_id}")
-    authorization_service = get_authorization_service()
-    await acquire_identity_mutation_lock(
-        authorization_service,
-        session,
-        kind=AuthorizationMutationKind.TEAM_DELETED,
-        entity_id=team_id,
-    )
-    team = await session.get(AuthzTeam, team_id)
-    if team is None:
-        await _audit_deny(
-            user_id=current_user.id,
-            action="team:delete",
-            obj=f"team:{team_id}",
-            status_code=status.HTTP_404_NOT_FOUND,
-            reason="team_not_found",
-        )
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
-    team_name = team.team_name
-    mutation = AuthorizationMutation(
-        kind=AuthorizationMutationKind.TEAM_DELETED,
-        entity_id=team_id,
-        actor_user_id=current_user.id,
-        team_id=team_id,
-        policy_relevant_fields=("adom_name", "is_active"),
-        previous_identifier=team.adom_name,
-    )
-    # Cascade on team_members handles cleanup; share rows targeting this team
-    # are left in place (caller may want to migrate them before deleting).
-    await session.delete(team)
-    await session.flush()
-    await stage_identity_mutation(authorization_service, session, mutation)
-    await session.commit()
-    await safe_identity_mutation_committed(authorization_service, mutation)
-    await audit_decision(
-        user_id=current_user.id,
-        action="team:delete",
-        obj=f"team:{team_id}",
-        result="allow",
-        details={"event": AUDIT_EVENT_MUTATION, "team_name": team_name},
-    )
-    logger.info("Deleted team id=%s", team_id)
+    actor_id = current_user.id
+    actor = await _current_actor(session, actor_id)
+    if not actor_can_administer_platform(actor):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform Admin required")
+    _require_credential_action("delete")
+    await _require_collaboration_ready()
 
+    async def operation(_attempt: int):
+        return await delete_team_transaction(session, actor=actor, team_id=team_id)
 
-# --- team members --------------------------------------------------------- #
+    try:
+        event = await run_with_lock_retry(operation, session=session, description=f"delete team {team_id}")
+        await session.commit()
+    except TeamManagementError as exc:
+        await session.rollback()
+        _raise_domain_error(exc)
+    await safe_identity_mutation_committed(get_authorization_service(), event)
 
 
 @router.get("/{team_id}/members", response_model=list[TeamMemberRead])
 async def list_members(
     team_id: UUID,
     session: DbSession,
-    current_user: CurrentActiveUser,  # noqa: ARG001
+    current_user: CurrentActiveUser,
     limit: Annotated[int, Query(ge=1, le=_LIST_MAX_LIMIT)] = _LIST_DEFAULT_LIMIT,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[TeamMemberRead]:
-    """List members of a team. Any authenticated user (so the UI can render team rosters).
-
-    Paginated via ``limit`` / ``offset`` so a single call cannot enumerate a
-    large team's full roster. Stable order is ``(created_at, user_id)``.
-    """
-    team = await session.get(AuthzTeam, team_id)
-    if team is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
-    stmt = (
-        select(AuthzTeamMember)
-        .where(AuthzTeamMember.team_id == team_id)
-        .order_by(AuthzTeamMember.created_at, AuthzTeamMember.user_id)
-        .offset(offset)
-        .limit(limit)
-    )
-    rows = (await session.exec(stmt)).all()
-    return [TeamMemberRead.model_validate(row) for row in rows]
+    async with authorization_admission(session) as admission:
+        actor = await _current_actor(admission, current_user.id)
+        team = await admission.get(AuthzTeam, team_id)
+        if team is None or not await _team_visible(admission, team_id=team_id, user=actor):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+        statement = (
+            select(AuthzTeamMember)
+            .where(AuthzTeamMember.team_id == team_id)
+            .order_by(col(AuthzTeamMember.created_at), col(AuthzTeamMember.user_id))
+            .offset(offset)
+            .limit(limit)
+        )
+        members = list((await admission.exec(statement)).all())
+        return await _serialize_members(admission, members)
 
 
-@router.post(
-    "/{team_id}/members",
-    response_model=TeamMemberRead,
-    status_code=status.HTTP_201_CREATED,
-    dependencies=SUPERUSER_ONLY,
-)
+@router.post("/{team_id}/members", response_model=TeamMemberRead, status_code=status.HTTP_201_CREATED)
 async def add_member(
     team_id: UUID,
     payload: TeamMemberCreate,
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> TeamMemberRead:
-    await _require_superuser(current_user, action="team_member:create", obj=f"team:{team_id}")
-    authorization_service = get_authorization_service()
-    await acquire_identity_mutation_lock(
-        authorization_service,
-        session,
-        kind=AuthorizationMutationKind.TEAM_MEMBER_ADDED,
-        affected_user_ids=(payload.user_id,),
-    )
-    team = await session.get(AuthzTeam, team_id)
-    if team is None:
-        await _audit_deny(
-            user_id=current_user.id,
-            action="team_member:create",
-            obj=f"team:{team_id}",
-            status_code=status.HTTP_404_NOT_FOUND,
-            reason="team_not_found",
-        )
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
-    user = await session.get(User, payload.user_id)
-    if user is None:
-        await _audit_deny(
-            user_id=current_user.id,
-            action="team_member:create",
-            obj=f"team:{team_id}",
-            status_code=status.HTTP_404_NOT_FOUND,
-            reason="user_not_found",
-        )
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="user_id not found")
+    _require_credential_action("create")
+    await _require_collaboration_ready()
+    actor_id = current_user.id
 
-    member = AuthzTeamMember(
-        team_id=team_id,
-        user_id=payload.user_id,
-        source=payload.source,
-    )
-    session.add(member)
-    mutation = AuthorizationMutation(
-        kind=AuthorizationMutationKind.TEAM_MEMBER_ADDED,
-        entity_id=member.id,
-        actor_user_id=current_user.id,
-        affected_user_ids=(payload.user_id,),
-        team_id=team_id,
-        policy_relevant_fields=("team_id", "user_id", "source"),
-    )
+    async def operation(_attempt: int):
+        actor = await _current_actor(session, actor_id)
+        return await add_member_transaction(
+            session,
+            actor=actor,
+            team_id=team_id,
+            member=MemberUpsert(payload.user_id, payload.role),
+        )
+
     try:
-        await session.flush()
-        await stage_identity_mutation(authorization_service, session, mutation)
+        result = await run_with_lock_retry(operation, session=session, description=f"add member to {team_id}")
         await session.commit()
-    except IntegrityError as exc:
+    except TeamManagementError as exc:
         await session.rollback()
-        await _audit_deny(
-            user_id=current_user.id,
-            action="team_member:create",
-            obj=f"team:{team_id}",
-            status_code=status.HTTP_409_CONFLICT,
-            reason="membership_already_exists",
+        _raise_domain_error(exc)
+    for event in result.events:
+        await safe_identity_mutation_committed(get_authorization_service(), event)
+    await session.refresh(result.member)
+    return await _serialize_member(session, result.member)
+
+
+@router.patch("/{team_id}/members/{user_id}", response_model=TeamMemberRead)
+async def change_member_role(
+    team_id: UUID,
+    user_id: UUID,
+    payload: TeamMemberRoleUpdate,
+    current_user: CurrentActiveUser,
+    session: DbSession,
+) -> TeamMemberRead:
+    _require_credential_action("write")
+    await _require_collaboration_ready()
+    actor_id = current_user.id
+
+    async def operation(_attempt: int):
+        actor = await _current_actor(session, actor_id)
+        return await change_member_role_transaction(
+            session,
+            actor=actor,
+            team_id=team_id,
+            user_id=user_id,
+            role=payload.role,
         )
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="User is already a member of this team",
-        ) from exc
-    await safe_identity_mutation_committed(authorization_service, mutation)
-    await session.refresh(member)
-    await audit_decision(
-        user_id=current_user.id,
-        action="team_member:create",
-        obj=f"team:{team_id}",
-        result="allow",
-        details={
-            "event": AUDIT_EVENT_MUTATION,
-            "team_name": team.team_name,
-            "user_id": str(payload.user_id),
-            "source": payload.source,
-        },
-    )
-    logger.info("Added user=%s to team=%s", payload.user_id, team_id)
-    return TeamMemberRead.model_validate(member)
+
+    try:
+        result = await run_with_lock_retry(operation, session=session, description=f"change member role in {team_id}")
+        await session.commit()
+    except TeamManagementError as exc:
+        await session.rollback()
+        _raise_domain_error(exc)
+    for event in result.events:
+        await safe_identity_mutation_committed(get_authorization_service(), event)
+    await session.refresh(result.member)
+    return await _serialize_member(session, result.member)
 
 
-@router.delete(
-    "/{team_id}/members/{user_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    dependencies=SUPERUSER_ONLY,
-)
+@router.delete("/{team_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_member(
     team_id: UUID,
     user_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> None:
-    await _require_superuser(current_user, action="team_member:delete", obj=f"team:{team_id}")
-    authorization_service = get_authorization_service()
-    await acquire_identity_mutation_lock(
-        authorization_service,
-        session,
-        kind=AuthorizationMutationKind.TEAM_MEMBER_REMOVED,
-        affected_user_ids=(user_id,),
-    )
-    member = (
-        await session.exec(
-            select(AuthzTeamMember).where(
-                AuthzTeamMember.team_id == team_id,
-                AuthzTeamMember.user_id == user_id,
-            )
-        )
-    ).first()
-    if member is None:
-        await _audit_deny(
-            user_id=current_user.id,
-            action="team_member:delete",
-            obj=f"team:{team_id}",
-            status_code=status.HTTP_404_NOT_FOUND,
-            reason="membership_not_found",
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Membership not found",
-        )
-    mutation = AuthorizationMutation(
-        kind=AuthorizationMutationKind.TEAM_MEMBER_REMOVED,
-        entity_id=member.id,
-        actor_user_id=current_user.id,
-        affected_user_ids=(user_id,),
-        team_id=team_id,
-        policy_relevant_fields=("team_id", "user_id", "source"),
-    )
-    await session.delete(member)
-    await session.flush()
-    await stage_identity_mutation(authorization_service, session, mutation)
-    await session.commit()
-    await safe_identity_mutation_committed(authorization_service, mutation)
-    await audit_decision(
-        user_id=current_user.id,
-        action="team_member:delete",
-        obj=f"team:{team_id}",
-        result="allow",
-        details={"event": AUDIT_EVENT_MUTATION, "user_id": str(user_id)},
-    )
-    logger.info("Removed user=%s from team=%s", user_id, team_id)
+    _require_credential_action("delete")
+    await _require_collaboration_ready()
+    actor_id = current_user.id
+
+    async def operation(_attempt: int):
+        actor = await _current_actor(session, actor_id)
+        return await remove_member_transaction(session, actor=actor, team_id=team_id, user_id=user_id)
+
+    try:
+        events = await run_with_lock_retry(operation, session=session, description=f"remove member from {team_id}")
+        await session.commit()
+    except TeamManagementError as exc:
+        await session.rollback()
+        _raise_domain_error(exc)
+    for event in events:
+        await safe_identity_mutation_committed(get_authorization_service(), event)
+
+
+__all__ = ["audit_decision", "router"]

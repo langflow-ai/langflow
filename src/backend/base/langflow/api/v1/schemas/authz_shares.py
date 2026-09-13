@@ -60,7 +60,45 @@ class ShareRead(BaseModel):
     target_id: UUID | None
     target_name: str | None = None
     permission_level: SharePermissionLiteral
+    display_mode: Literal["read", "use", "edit", "admin"] | None = None
+    revision: int = Field(ge=1)
     created_by: UUID | None
     created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ShareAccessSourceRead(BaseModel):
+    """Bounded, non-secret explanation for effective resource access."""
+
+    kind: str
+    actions: list[str]
+    source_id: UUID | None = None
+    label: str | None = None
+
+
+class ShareEffectiveAccessRead(BaseModel):
+    """Effective actions and their canonical source explanations."""
+
+    actions: list[str]
+    sources: list[ShareAccessSourceRead]
+
+
+class ShareSummaryRead(BaseModel):
+    """Management/read-safe summary for one flow or project."""
+
+    resource_type: Literal["flow", "project"]
+    resource_id: UUID
+    display_name: str | None
+    subject_user_id: UUID
+    caller_is_owner: bool
+    can_manage_shares: bool
+    direct_grants: list[ShareRead]
+    effective_access: ShareEffectiveAccessRead
+    inherited_from_project: bool
+    additional_access_warning: str | None = None
+    legacy_public_access: bool = False
+    administrative_grant_present: bool = False
+    has_more: bool = False
+    next_offset: int | None = None

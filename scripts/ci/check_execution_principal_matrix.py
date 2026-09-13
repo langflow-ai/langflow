@@ -109,7 +109,8 @@ def validate_matrix(matrix_path: Path = DEFAULT_MATRIX) -> list[str]:
     try:
         matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
     except OSError as exc:
-        return [f"could not read execution-principal matrix {matrix_path}: {exc}"]
+        detail = exc.strerror or type(exc).__name__
+        return [f"could not read execution-principal matrix {matrix_path}: {detail}"]
     except json.JSONDecodeError as exc:
         return [f"execution-principal matrix {matrix_path} is not valid JSON: {exc}"]
     errors: list[str] = []

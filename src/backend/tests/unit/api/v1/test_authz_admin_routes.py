@@ -17,6 +17,9 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi import HTTPException
+from langflow.services.authorization.access_ceiling import ExternalAccessContext, set_current_external_access_context
+from langflow.services.database.models.user.model import User
+from lfx.services.authorization import BaseAuthorizationService
 from sqlalchemy.exc import IntegrityError
 
 # --- shared fakes ----------------------------------------------------- #
@@ -43,6 +46,8 @@ class _FakeAsyncSession:
         self.events: list[str] = []
 
     async def get(self, model: type, key: UUID, **_kwargs: Any) -> Any:
+        if model is User and (model, key) not in self._get_by_type:
+            return _TEST_USERS.get(key)
         return self._get_by_type.get((model, key))
 
     def add(self, obj: Any) -> None:
@@ -90,7 +95,10 @@ class _ExecResult:
         return iter(self._rows)
 
 
-class _StubAuthz:
+_TEST_USERS: dict[UUID, User] = {}
+
+
+class _StubAuthz(BaseAuthorizationService):
     def __init__(self, *, allow: bool = True) -> None:
         self._allow = allow
         self.invalidate_user_calls: list[UUID] = []
@@ -149,8 +157,140 @@ class _StubAuthz:
         self.committed_mutations.append(event)
 
 
-def _make_user(*, is_superuser: bool = False) -> SimpleNamespace:
-    return SimpleNamespace(id=uuid4(), is_superuser=is_superuser, username="u")
+def _make_user(*, is_superuser: bool = False) -> User:
+    user = User(
+        id=uuid4(),
+        is_superuser=is_superuser,
+        is_active=True,
+        username="u",
+        password=str(uuid4()),
+        profile_image=None,
+    )
+    _TEST_USERS[user.id] = user
+    return user
+
+
+@pytest.fixture(autouse=True)
+def native_team_route_unit_seams(monkeypatch):
+    """Keep legacy route-unit fakes focused on HTTP orchestration.
+
+    Canonical roster and share invariants are exercised against a real database
+    in the native authorization service tests. These older route tests use
+    deliberately tiny session doubles, so replace only the new transactional
+    service boundary and capability probe here.
+    """
+    from langflow.api.v1 import authz_me, authz_role_assignments, authz_roles, authz_teams
+    from langflow.services.authorization import guards
+    from langflow.services.authorization.team_management import TeamManagementError
+    from lfx.services.authorization import AuthorizationMutation, AuthorizationMutationKind
+
+    _TEST_USERS.clear()
+
+    async def current_actor(_session, user_id):
+        actor = _TEST_USERS.get(user_id)
+        if actor is None:
+            raise HTTPException(status_code=401, detail="Inactive user")
+        return actor
+
+    async def ready():
+        return None
+
+    async def load_active_user(_session, user_id):
+        return _TEST_USERS.get(user_id)
+
+    async def empty_capabilities(**kwargs):
+        from langflow.api.v1.authz_me import ResourceCapabilities
+
+        return {resource_id: ResourceCapabilities() for resource_id in kwargs["resource_ids"]}
+
+    async def serialize_team(_session, team, _actor):
+        return team
+
+    async def serialize_member(_session, member):
+        return member
+
+    async def skip_guard_audit(**_kwargs):
+        return None
+
+    async def patch_team(session, *, actor, team_id, patch):
+        team = await session.get(authz_teams.AuthzTeam, team_id)
+        if team is None:
+            raise TeamManagementError(status_code=404, code="TEAM_NOT_FOUND", message="Team not found")
+        changed_fields: list[str] = []
+        for field in ("team_name", "adom_name", "is_active"):
+            value = getattr(patch, field)
+            if value is not None and value != getattr(team, field):
+                setattr(team, field, value)
+                changed_fields.append(field)
+        if patch.description_supplied and patch.description != team.description:
+            team.description = patch.description
+            changed_fields.append("description")
+        event = AuthorizationMutation(
+            kind=AuthorizationMutationKind.TEAM_UPDATED,
+            entity_id=team.id,
+            actor_user_id=actor.id,
+            affected_user_ids=(),
+            team_id=team.id,
+            policy_relevant_fields=tuple(
+                sorted(set(changed_fields) & {"adom_name", "is_active", "inactivation_reason"})
+            ),
+        )
+        await authz_teams.get_authorization_service().stage_identity_mutation(session=session, event=event)
+        return SimpleNamespace(team=team, events=(event,))
+
+    async def add_member(session, *, actor, team_id, member):
+        if session._commit_raises is not None:
+            raise TeamManagementError(
+                status_code=409,
+                code="TEAM_MEMBERSHIP_EXISTS",
+                message="User is already a member of this team.",
+            )
+        created = SimpleNamespace(
+            id=uuid4(),
+            team_id=team_id,
+            user_id=member.user_id,
+            role=member.role,
+            source="manual",
+        )
+        session.add(created)
+        event = AuthorizationMutation(
+            kind=AuthorizationMutationKind.TEAM_MEMBER_ADDED,
+            entity_id=created.id,
+            actor_user_id=actor.id,
+            affected_user_ids=(member.user_id,),
+            team_id=team_id,
+            policy_relevant_fields=("team_id", "user_id", "source", "role"),
+        )
+        await authz_teams.get_authorization_service().stage_identity_mutation(session=session, event=event)
+        return SimpleNamespace(member=created, events=(event,))
+
+    async def remove_member(session, *, actor, team_id, user_id):
+        member = session._exec_results[0][0] if session._exec_results and session._exec_results[0] else None
+        if member is not None:
+            await session.delete(member)
+        event = AuthorizationMutation(
+            kind=AuthorizationMutationKind.TEAM_MEMBER_REMOVED,
+            entity_id=getattr(member, "id", uuid4()),
+            actor_user_id=actor.id,
+            affected_user_ids=(user_id,),
+            team_id=team_id,
+            policy_relevant_fields=("team_id", "user_id", "source", "role"),
+        )
+        await authz_teams.get_authorization_service().stage_identity_mutation(session=session, event=event)
+        return (event,)
+
+    monkeypatch.setattr(authz_teams, "_current_actor", current_actor)
+    monkeypatch.setattr(authz_teams, "_require_collaboration_ready", ready)
+    monkeypatch.setattr(authz_teams, "_serialize_team", serialize_team)
+    monkeypatch.setattr(authz_teams, "_serialize_member", serialize_member)
+    monkeypatch.setattr(authz_teams, "patch_team_transaction", patch_team)
+    monkeypatch.setattr(authz_teams, "add_member_transaction", add_member)
+    monkeypatch.setattr(authz_teams, "remove_member_transaction", remove_member)
+    monkeypatch.setattr(authz_me, "load_active_user", load_active_user)
+    monkeypatch.setattr(authz_me, "_derive_resource_capabilities", empty_capabilities)
+    monkeypatch.setattr(guards, "_audit_guard_decision", skip_guard_audit)
+    for module in (authz_roles, authz_role_assignments, authz_teams):
+        monkeypatch.setattr(module, "audit_decision", skip_guard_audit)
 
 
 def _make_role_row(
@@ -183,10 +323,11 @@ def _make_role_row(
 @pytest.fixture
 def stub_authz(monkeypatch):
     from langflow.api.v1 import authz_me, authz_role_assignments, authz_roles, authz_teams
+    from langflow.services.authorization import fetch, guards
 
     def _apply(*, allow: bool = True) -> _StubAuthz:
         stub = _StubAuthz(allow=allow)
-        for module in (authz_roles, authz_role_assignments, authz_teams, authz_me):
+        for module in (authz_roles, authz_role_assignments, authz_teams, authz_me, fetch, guards):
             monkeypatch.setattr(module, "get_authorization_service", lambda s=stub: s)
         return stub
 
@@ -362,6 +503,35 @@ async def test_create_role_requires_superuser(stub_authz):
     assert excinfo.value.status_code == 403
     assert session.added == []
     assert session.committed == 0
+
+
+@pytest.mark.asyncio
+async def test_platform_admin_routes_honor_external_credential_ceiling(stub_authz):
+    from langflow.api.v1 import authz_audit, authz_role_assignments, authz_roles
+
+    stub_authz()
+    user = _make_user(is_superuser=True)
+    set_current_external_access_context(
+        ExternalAccessContext(provider="test-idp", subject="platform-user", level="editor")
+    )
+    try:
+        for gate, action, obj in (
+            (authz_roles._require_superuser, "role:create", "role:*"),
+            (
+                authz_role_assignments._require_superuser,
+                "role_assignment:create",
+                "role_assignment:*",
+            ),
+        ):
+            with pytest.raises(HTTPException) as excinfo:
+                await gate(user, action=action, obj=obj)
+            assert excinfo.value.status_code == 403
+
+        with pytest.raises(HTTPException) as excinfo:
+            await authz_audit._get_current_platform_admin(user)
+        assert excinfo.value.status_code == 403
+    finally:
+        set_current_external_access_context(None)
 
 
 @pytest.mark.asyncio
@@ -1412,10 +1582,9 @@ async def test_create_team_requires_superuser(stub_authz):
 
 
 @pytest.mark.asyncio
-async def test_add_member_emits_lifecycle_for_target_user(stub_authz, audit_calls):
+async def test_add_member_emits_lifecycle_for_target_user(stub_authz):
     from langflow.api.v1 import authz_teams
     from langflow.api.v1.schemas.authz_teams import TeamMemberCreate
-    from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION
     from langflow.services.database.models.auth import AuthzTeam
     from langflow.services.database.models.user.model import User
 
@@ -1437,9 +1606,6 @@ async def test_add_member_emits_lifecycle_for_target_user(stub_authz, audit_call
     assert len(session.added) == 1
     assert authz.staged_mutations == authz.committed_mutations
     assert authz.staged_mutations[0].affected_user_ids == (target_user.id,)
-    assert audit_calls[0]["action"] == "team_member:create"
-    assert audit_calls[0]["obj"] == f"team:{team.id}"
-    assert audit_calls[0]["details"]["event"] == AUDIT_EVENT_MUTATION
 
 
 @pytest.mark.asyncio
@@ -1467,7 +1633,7 @@ async def test_add_member_duplicate_returns_409(stub_authz):
             session=session,
         )
     assert excinfo.value.status_code == 409
-    assert "already a member" in excinfo.value.detail
+    assert excinfo.value.detail["code"] == "TEAM_MEMBERSHIP_EXISTS"
 
 
 # =====================================================================
@@ -1907,7 +2073,7 @@ async def test_list_roles_passes_limit_offset_to_query(stub_authz):
 
 
 @pytest.mark.asyncio
-async def test_list_teams_passes_limit_offset_to_query(stub_authz):
+async def test_list_directory_teams_passes_limit_offset_to_query(stub_authz):
     from langflow.api.v1 import authz_teams
 
     stub_authz()
@@ -1924,6 +2090,7 @@ async def test_list_teams_passes_limit_offset_to_query(stub_authz):
     await authz_teams.list_teams(
         session=session,
         current_user=user,
+        view="directory",
         limit=10,
         offset=200,
     )
@@ -1948,7 +2115,7 @@ async def test_list_members_passes_limit_offset_to_query(stub_authz):
             return _ExecResult([])
 
     session = _RecordingSession({(AuthzTeam, team_id): team})
-    user = _make_user()
+    user = _make_user(is_superuser=True)
 
     await authz_teams.list_members(
         team_id=team_id,

@@ -49,4 +49,15 @@ export interface EffectivePermissionsRequest {
 export interface EffectivePermissionsResponse {
   resource_type: PermissionResourceType;
   permissions: Record<string, string[]>;
+  capabilities: Record<string, ResourceCapabilities>;
+}
+
+export interface ResourceCapabilities {
+  can_use: boolean;
+  can_edit: boolean;
+  can_create_flow: boolean;
+  can_delete: boolean;
+  can_move: boolean;
+  can_manage_shares: boolean;
+  can_manage_publication: boolean;
 }

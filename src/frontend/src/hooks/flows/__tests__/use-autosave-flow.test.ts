@@ -409,6 +409,55 @@ describe("useAutoSaveFlow", () => {
     expect(mockSaveFlow).not.toHaveBeenCalled();
   });
 
+  it.each([403, 404, 412])(
+    "does not replay a save rejected with %s when only the list revision changes",
+    async (status) => {
+      let listedRevision = 3;
+      (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
+        (selector) =>
+          selector({
+            autoSaving: true,
+            autoSavingInterval: 3000,
+            currentFlowId: "flow-1",
+            currentFlow: { edit_revision: listedRevision },
+          }),
+      );
+      const staleError = {
+        response: {
+          status,
+          data: {
+            detail:
+              status === 412
+                ? { code: "RESOURCE_CHANGED" }
+                : "Permission denied",
+          },
+        },
+      };
+      mockSaveFlow.mockRejectedValueOnce(staleError);
+      const flow = { ...makeMockFlow(), edit_revision: 3 };
+      (useFlowStore.getState as jest.Mock).mockReturnValue({
+        currentFlow: flow,
+        componentsToUpdate: [],
+      });
+      const { result, rerender } = renderHook(() => useAutoSaveFlow());
+
+      await expect(result.current(flow)).rejects.toBe(staleError);
+      expect(result.current(flow)).toBeUndefined();
+      expect(mockSaveFlow).toHaveBeenCalledTimes(1);
+
+      // Invalidating the list can reveal another editor's newer revision;
+      // it does not mean this local draft has been reloaded or reconciled.
+      listedRevision = 4;
+      rerender();
+      expect(result.current(flow)).toBeUndefined();
+      expect(result.current()).toBeUndefined();
+      expect(mockSaveFlow).toHaveBeenCalledTimes(1);
+
+      await result.current({ ...flow, edit_revision: 4 });
+      expect(mockSaveFlow).toHaveBeenCalledTimes(2);
+    },
+  );
+
   it("does not autosave a flow holding a component the server will reject", async () => {
     // A missing template cannot be persisted, so retrying the save only
     // produces failed requests before the user has touched anything.

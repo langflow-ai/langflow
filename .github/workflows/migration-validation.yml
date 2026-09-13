@@ -132,9 +132,15 @@ jobs:
 
       - name: Get changed migration files
         id: changed-files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
-          CHANGED_FILES=$(git diff --name-only origin/main...HEAD | grep -E 'src/backend/base/langflow/alembic/versions/.*\.py$' | grep -v 'test_migrations/' || echo "")
+          if [[ -z "$BASE_SHA" ]]; then
+            echo "The pull-request base SHA is required for migration validation." >&2
+            exit 1
+          fi
+          CHANGED_FILES=$(git diff --name-only "$BASE_SHA"...HEAD | grep -E 'src/backend/base/langflow/alembic/versions/.*\.py$' | grep -v 'test_migrations/' || echo "")
 
           if [ -z "$CHANGED_FILES" ]; then
             echo "No migration files changed"

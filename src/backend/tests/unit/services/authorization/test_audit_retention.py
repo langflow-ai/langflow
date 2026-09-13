@@ -108,9 +108,10 @@ class _RecordingLogger:
 
 
 @pytest.mark.anyio
-async def test_passthrough_warning_emitted_when_authz_enabled(monkeypatch):
-    """LangflowAuthorizationService warns when AUTHZ_ENABLED=True but plugin is missing."""
+async def test_casbin_service_does_not_report_pass_through_when_authz_enabled(monkeypatch):
+    """The selected enforcer stays unready until its canonical projection is loaded."""
     from langflow.services.authorization import service as authz_service_module
+    from langflow.services.authorization.casbin.service import CasbinAuthorizationService
 
     recorder = _RecordingLogger()
     monkeypatch.setattr(authz_service_module, "logger", recorder)
@@ -121,12 +122,12 @@ async def test_passthrough_warning_emitted_when_authz_enabled(monkeypatch):
             AUTHZ_SUPERUSER_BYPASS=True,
         )
     )
-    LangflowAuthorizationService(settings)
+    service = CasbinAuthorizationService(settings)
 
     warning_messages = [msg for level, msg in recorder.calls if level == "warning"]
-    assert any("OSS pass-through" in msg for msg in warning_messages), (
-        f"Expected a WARNING about the OSS pass-through service; got {warning_messages}"
-    )
+    assert not any("pass-through" in msg.lower() for msg in warning_messages)
+    assert await service.is_enabled() is True
+    assert service.ready is False
 
 
 @pytest.mark.anyio

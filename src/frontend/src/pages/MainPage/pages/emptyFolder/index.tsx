@@ -10,9 +10,14 @@ type EmptyFolderProps = {
    *  flow with the welcome overlay primed. Falls back to ``setOpenModal``
    *  when omitted to keep legacy callers working. */
   onNewFlow?: () => void;
+  canCreateFlow?: boolean;
 };
 
-export const EmptyFolder = ({ setOpenModal, onNewFlow }: EmptyFolderProps) => {
+export const EmptyFolder = ({
+  setOpenModal,
+  onNewFlow,
+  canCreateFlow = true,
+}: EmptyFolderProps) => {
   const { t } = useTranslation();
   const folders = useFolderStore((state) => state.folders);
   const hideNewFlowButton = useUtilityStore((state) => state.hideNewFlowButton);
@@ -34,6 +39,7 @@ export const EmptyFolder = ({ setOpenModal, onNewFlow }: EmptyFolderProps) => {
         {!hideNewFlowButton && (
           <Button
             variant="default"
+            disabled={!canCreateFlow}
             onClick={() => (onNewFlow ? onNewFlow() : setOpenModal(true))}
             id="new-project-btn"
             data-testid="new_project_btn_empty_page"

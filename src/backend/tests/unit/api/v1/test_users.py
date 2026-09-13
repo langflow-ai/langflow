@@ -2,6 +2,9 @@ from uuid import uuid4
 
 from fastapi import status
 from httpx import AsyncClient
+from langflow.services.database.models.user.model import User
+from langflow.services.database.utils import session_getter
+from langflow.services.deps import get_db_service
 
 CURRENT_CREDENTIAL = "test" + "password"
 REPLACEMENT_CREDENTIAL = "new_" + "password"
@@ -277,16 +280,35 @@ async def test_reset_password_cannot_target_another_user(client: AsyncClient, lo
     assert response.json() == {"detail": "You can't change another user's password"}
 
 
-async def test_delete_user(client: AsyncClient, logged_in_headers_super_user):
+async def test_delete_user_rejects_owned_default_project(client: AsyncClient, logged_in_headers_super_user):
     basic_case = {"username": "string", "password": "string"}
     response_ = await client.post("api/v1/users/", json=basic_case, headers=logged_in_headers_super_user)
     id_ = response_.json()["id"]
     response = await client.delete(f"api/v1/users/{id_}", headers=logged_in_headers_super_user)
-    result = response.json()
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    detail = response.json()["detail"]
+    assert detail["code"] == "RESOURCE_OWNERSHIP_REQUIRES_DISPOSITION"
+    assert detail["owned_resources"]["project"] >= 1
+
+
+async def test_delete_user_without_owned_resources(client: AsyncClient, logged_in_headers_super_user):
+    target = User(
+        username=f"deletable-{uuid4()}",
+        password="not-a-real-password-hash",  # noqa: S106  # pragma: allowlist secret
+        is_active=True,
+        is_superuser=False,
+    )
+    async with session_getter(get_db_service()) as session:
+        session.add(target)
+        await session.flush()
+        target_id = target.id
+        await session.commit()
+
+    response = await client.delete(f"api/v1/users/{target_id}", headers=logged_in_headers_super_user)
 
     assert response.status_code == status.HTTP_200_OK
-    assert isinstance(result, dict), "The result must be a dictionary"
-    assert "detail" in result, "The result must have an 'detail' key"
+    assert response.json() == {"detail": "User deleted"}
 
 
 async def test_patch_user_self_deactivation_forbidden(client: AsyncClient, logged_in_headers, active_user):

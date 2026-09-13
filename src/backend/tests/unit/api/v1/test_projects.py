@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from fastapi import BackgroundTasks, HTTPException, status
+from fastapi import BackgroundTasks, HTTPException, Response, status
 from httpx import AsyncClient
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.database.models.deployment.model import Deployment
@@ -38,7 +38,7 @@ def basic_case():
 
 
 @pytest.mark.asyncio
-async def test_project_download_uses_resolved_owner_namespace():
+async def test_project_download_uses_canonical_project_scope():
     from langflow.api.v1.projects_files import download_project_flows
 
     actor_id = uuid4()
@@ -64,9 +64,35 @@ async def test_project_download_uses_resolved_owner_namespace():
     assert response.status_code == 200
     project_sql = str(session.exec.await_args_list[0].args[0].compile(compile_kwargs={"literal_binds": True}))
     flows_sql = str(session.exec.await_args_list[1].args[0].compile(compile_kwargs={"literal_binds": True}))
-    assert owner_id.hex in project_sql
-    assert owner_id.hex in flows_sql
+    assert project_id.hex in project_sql
+    assert project_id.hex in flows_sql
     assert actor_id.hex not in project_sql
+
+
+async def test_project_download_rejects_resolved_owner_mismatch():
+    from langflow.api.v1.projects_files import download_project_flows
+
+    actual_owner_id = uuid4()
+    resolved_owner_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Shared Project", user_id=actual_owner_id)
+
+    project_result = MagicMock()
+    project_result.first.return_value = project
+    session = AsyncMock()
+    session.exec.return_value = project_result
+
+    with pytest.raises(HTTPException) as exc_info:
+        await download_project_flows(
+            session=session,
+            project_id=project_id,
+            current_user=SimpleNamespace(id=uuid4()),
+            project_owner_id=resolved_owner_id,
+        )
+
+    assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
+    assert exc_info.value.detail == "Project not found"
+    session.exec.assert_awaited_once()
 
 
 async def test_shared_project_download_filters_flows_by_read_permission():
@@ -294,11 +320,13 @@ async def test_update_project_rename_onto_taken_name_returns_409(client: AsyncCl
     assert "parameters" not in detail
 
 
-async def test_update_project_cannot_rename_system_starter(monkeypatch):
+async def test_update_project_cannot_rename_system_starter(monkeypatch, client: AsyncClient):  # noqa: ARG001
     from langflow.api.v1 import projects as projects_module
     from langflow.services.database.models.folder.model import FolderUpdate
+    from langflow.services.database.models.user.model import User
 
     project_id = uuid4()
+    actor = User(username=str(uuid4()), password=str(uuid4()), is_active=True, is_superuser=False)
     system_starter = Folder(id=project_id, name=STARTER_FOLDER_NAME, user_id=None)
     monkeypatch.setattr(
         projects_module,
@@ -306,18 +334,26 @@ async def test_update_project_cannot_rename_system_starter(monkeypatch):
         AsyncMock(return_value=system_starter),
     )
     monkeypatch.setattr(projects_module, "ensure_project_permission", AsyncMock())
+    locked_result = MagicMock()
+    locked_result.first.return_value = system_starter
+    session = AsyncMock()
+    session.get.return_value = actor
+    session.get_bind = MagicMock(return_value=SimpleNamespace(dialect=SimpleNamespace(name="postgresql")))
+    session.exec.return_value = locked_result
 
     with pytest.raises(HTTPException) as exc_info:
         await projects_module.update_project(
-            session=AsyncMock(),
+            session=session,
             project_id=project_id,
             project=FolderUpdate(name="Renamed starter"),
-            current_user=SimpleNamespace(id=uuid4()),
+            current_user=actor,
             background_tasks=BackgroundTasks(),
+            response=Response(),
         )
 
     assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
     assert "cannot be renamed" in exc_info.value.detail
+    session.get.assert_awaited_once_with(User, actor.id, populate_existing=True)
 
 
 async def test_update_project_rejects_unowned_parent_id(
@@ -381,6 +417,7 @@ async def test_delete_project_cannot_delete_system_starter(monkeypatch):
             session=AsyncMock(),
             project_id=project_id,
             current_user=SimpleNamespace(id=uuid4()),
+            background_tasks=BackgroundTasks(),
         )
 
     assert exc_info.value.status_code == status.HTTP_403_FORBIDDEN
@@ -472,6 +509,31 @@ async def test_read_projects_pagination(client: AsyncClient, logged_in_headers):
     else:
         assert "items" in result
         assert result.get("limit") == 1
+
+
+async def test_read_projects_standard_page_is_bounded(client: AsyncClient, logged_in_headers):
+    for index in range(2):
+        response = await client.post(
+            "api/v1/projects/",
+            json={"name": f"paged-project-{index}-{uuid4()}"},
+            headers=logged_in_headers,
+        )
+        assert response.status_code == status.HTTP_201_CREATED
+
+    all_response = await client.get("api/v1/projects/", headers=logged_in_headers)
+    response = await client.get(
+        "api/v1/projects/",
+        params={"get_all": False, "page": 1, "size": 1},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    result = response.json()
+    assert len(result["items"]) == 1
+    assert result["page"] == 1
+    assert result["size"] == 1
+    assert result["total"] >= 2
+    assert result["total"] == len(all_response.json())
 
 
 async def test_read_projects_empty(client: AsyncClient, logged_in_headers):
@@ -2179,11 +2241,11 @@ async def _attach_deployment_to_flow(*, user_id: UUID, flow_id: UUID, project_id
         await session.commit()
 
 
-async def test_create_project_does_not_reassign_other_users_flows(
+async def test_create_project_rejects_other_users_flows_atomically(
     client: AsyncClient,
     logged_in_headers: dict,
 ):
-    """Test that flows_list in create_project only moves flows owned by the requesting user."""
+    """A project create cannot silently skip a foreign flow from its requested roster."""
     _, other_user_headers = await _create_other_user(client)
 
     flow_resp = await client.post(
@@ -2200,16 +2262,16 @@ async def test_create_project_does_not_reassign_other_users_flows(
         json={"name": "other-project", "flows_list": [flow_id]},
         headers=other_user_headers,
     )
-    assert proj_resp.status_code == status.HTTP_201_CREATED
-    other_project_id = proj_resp.json()["id"]
+    assert proj_resp.status_code == status.HTTP_403_FORBIDDEN, proj_resp.text
+    assert proj_resp.json()["detail"] == "Only a workflow owner may move it into a project."
 
     flow_after = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
     assert flow_after.status_code == status.HTTP_200_OK
     assert flow_after.json()["folder_id"] == original_folder_id
 
-    proj_detail = await client.get(f"api/v1/projects/{other_project_id}", headers=other_user_headers)
-    assert proj_detail.status_code == status.HTTP_200_OK
-    assert len(proj_detail.json().get("flows", [])) == 0
+    projects = await client.get("api/v1/projects/", headers=other_user_headers)
+    assert projects.status_code == status.HTTP_200_OK
+    assert all(project["name"] != "other-project" for project in projects.json())
 
 
 async def test_read_project_paginated_only_returns_current_users_flows(
@@ -2226,15 +2288,25 @@ async def test_read_project_paginated_only_returns_current_users_flows(
     )
     assert flow_resp.status_code == status.HTTP_201_CREATED
     flow_id = flow_resp.json()["id"]
-    original_folder_id = flow_resp.json()["folder_id"]
-
     proj_resp = await client.post(
         "api/v1/projects/",
-        json={"name": "other-project-paginated", "flows_list": [flow_id]},
+        json={"name": "other-project-paginated", "flows_list": []},
         headers=other_user_headers,
     )
-    assert proj_resp.status_code == status.HTTP_201_CREATED
+    assert proj_resp.status_code == status.HTTP_201_CREATED, proj_resp.text
     other_project_id = proj_resp.json()["id"]
+
+    # Simulate a legacy/inconsistent cross-owner association that the current
+    # mutation APIs reject. Reads must still filter the foreign workflow.
+    async with session_scope() as session:
+        flow = await session.get(Flow, UUID(flow_id))
+        project = await session.get(Folder, UUID(other_project_id))
+        assert flow is not None
+        assert project is not None
+        flow.folder_id = project.id
+        flow.workspace_id = project.workspace_id
+        session.add(flow)
+        await session.commit()
 
     paginated = await client.get(
         f"api/v1/projects/{other_project_id}",
@@ -2246,7 +2318,8 @@ async def test_read_project_paginated_only_returns_current_users_flows(
     assert all(item["id"] != flow_id for item in items)
 
     flow_after = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
-    assert flow_after.json()["folder_id"] == original_folder_id
+    assert flow_after.status_code == status.HTTP_200_OK
+    assert flow_after.json()["folder_id"] == other_project_id
 
 
 async def test_create_project_with_own_flows_assigns_them_correctly(
@@ -2348,7 +2421,9 @@ async def test_update_project_with_deployed_component_returns_409_guard(
 
     update_resp = await client.patch(
         f"api/v1/projects/{project_id}",
-        json={"name": "component-project-renamed"},
+        # Explicitly removing the deployed component is an effective membership
+        # change and must retain the deployment guard. A metadata-only rename is allowed.
+        json={"name": "component-project-renamed", "components": []},
         headers=logged_in_headers,
     )
     assert update_resp.status_code == status.HTTP_409_CONFLICT

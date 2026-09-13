@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail when an authorization-sensitive API route is missing from the OSS matrix."""
+"""Fail when a route in the declared authorization module scope is unclassified."""
 
 from __future__ import annotations
 
@@ -125,7 +125,7 @@ def _validate_test_reference(raw: str) -> str | None:
 
 
 def validate_matrix(matrix_path: Path = DEFAULT_MATRIX) -> list[str]:
-    """Return reader-friendly contract errors; an empty list means complete."""
+    """Return contract errors for the matrix's explicitly declared module scope."""
     matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
     errors: list[str] = []
     if matrix.get("schema_version") != 1:
@@ -139,6 +139,18 @@ def validate_matrix(matrix_path: Path = DEFAULT_MATRIX) -> list[str]:
 
     expected: set[Route] = set()
     discovered: set[Route] = set()
+    scope = matrix.get("scope", {})
+    sources = scope.get("sources")
+    if not isinstance(sources, list) or not sources or any(not isinstance(source, str) for source in sources):
+        errors.append("scope.sources must declare a non-empty list of API modules")
+        return errors
+    if len(sources) != len(set(sources)):
+        errors.append("scope.sources must not contain duplicate modules")
+    for source in sources:
+        try:
+            discovered.update(discover_routes(source))
+        except (FileNotFoundError, SyntaxError, ValueError) as exc:
+            errors.append(str(exc))
     for contract in matrix.get("contracts", []):
         missing_fields = {
             "family",
@@ -156,6 +168,8 @@ def validate_matrix(matrix_path: Path = DEFAULT_MATRIX) -> list[str]:
             errors.append(f"contract {contract.get('family', '<unnamed>')!r} is missing {sorted(missing_fields)}")
             continue
         source = contract["source"]
+        if source not in sources:
+            errors.append(f"{source}: contract is outside declared scope.sources")
         preset_name = contract["personas"]
         if preset_name not in presets:
             errors.append(f"{source}: unknown persona preset {preset_name!r}")
@@ -166,11 +180,6 @@ def validate_matrix(matrix_path: Path = DEFAULT_MATRIX) -> list[str]:
             for reference in contract["test_references"]
             if (error := _validate_test_reference(reference))
         )
-        try:
-            discovered.update(discover_routes(source))
-        except (FileNotFoundError, SyntaxError, ValueError) as exc:
-            errors.append(str(exc))
-            continue
         for raw in contract["routes"]:
             try:
                 route, _action, _access = _parse_matrix_route(source, raw)
@@ -198,7 +207,7 @@ def main() -> int:
         for error in errors:
             print(f"- {error}")
         return 1
-    print("Authorization endpoint matrix is complete.")
+    print("Authorization endpoint matrix is complete for its declared module scope.")
     return 0
 
 

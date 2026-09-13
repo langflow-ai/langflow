@@ -18,6 +18,7 @@ maintainers = [
 
 dependencies = [
     "lfx~=1.12.1",
+    "casbin>=1.43.0,<1.44.0",
     "fastapi>=0.139.0,<1.0.0",
     "slowapi>=0.1.9,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
@@ -197,6 +198,9 @@ Repository = "https://github.com/langflow-ai/langflow"
 Documentation = "https://docs.langflow.org"
 # Optional dependencies
 [project.optional-dependencies]
+# Compatibility extra: authorization is included in the fork's default install.
+authorization = []
+
 audio = [
     "openai>=1.68.2,<3.0.0",
     "webrtcvad>=2.0.10",

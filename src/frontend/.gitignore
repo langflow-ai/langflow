@@ -28,6 +28,12 @@ yarn-error.log*
 /test-results/
 /playwright-report/*/
 /playwright/.cache/
+/temp-authz
+/temp-authz-config/
+/temp-config/
+/test-results-authz/
+/playwright-report-authz/
+/blob-report-authz/
 /test-results/
 /playwright-report/
 /blob-report/

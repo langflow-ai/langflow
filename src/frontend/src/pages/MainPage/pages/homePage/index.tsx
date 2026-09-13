@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation, useParams } from "react-router-dom";
+import { useHref, useLocation, useParams } from "react-router-dom";
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import { useStartNewFlow } from "@/components/core/flowBuilderWelcome/hooks/use-start-new-flow";
 import { IS_MAC } from "@/constants/constants";
-import { PermissionsProvider } from "@/contexts/permissionsContext";
+import {
+  PermissionsProvider,
+  useResourceCapability,
+} from "@/contexts/permissionsContext";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { CustomBanner } from "@/customization/components/custom-banner";
 import { CustomMcpServerTab } from "@/customization/components/custom-McpServerTab";
@@ -46,6 +49,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const [newProjectModal, setNewProjectModal] = useState(false);
   const { folderId } = useParams();
   const location = useLocation();
+  const renderedPathname = useHref(location.pathname);
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [search, setSearch] = useState("");
@@ -75,6 +79,9 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const startNewFlow = useStartNewFlow();
 
   useEffect(() => {
+    // A lazy destination can leave this page mounted after browser navigation.
+    // A late folder refresh must not redirect away from the user's new route.
+    if (window.location.pathname !== renderedPathname) return;
     // Only check if we have a folderId and folders have loaded
     if (folderId && folders && folders.length > 0) {
       const folderExists = folders.find((folder) => folder.id === folderId);
@@ -84,11 +91,21 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
         navigate("/all");
       }
     }
-  }, [folderId, folders, navigate]);
+  }, [folderId, folders, navigate, renderedPathname]);
 
   // The page loads from `folderId ?? myCollectionId` (the default-collection
   // route omits the id), so permission checks must scope to the same project.
   const permissionsFolderId = folderId ?? myCollectionId;
+  const projectCreation = useResourceCapability(
+    "project",
+    permissionsFolderId,
+    "can_create_flow",
+  );
+  // With no project yet, the ordinary personal-project creation path remains
+  // available; once a target exists its server-derived capability is final.
+  const canCreateFlow = permissionsFolderId
+    ? projectCreation.allowed && !projectCreation.isUnavailable
+    : true;
 
   const { data: folderData, isLoading } = useGetFolderQuery({
     id: folderId ?? myCollectionId,
@@ -298,7 +315,9 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
 
   return (
     <CardsWrapComponent
-      onFileDrop={flowType === "mcp" ? undefined : handleFileDrop}
+      onFileDrop={
+        flowType === "mcp" || !canCreateFlow ? undefined : handleFileDrop
+      }
       dragMessage={
         isEmptyFolder
           ? t("home.dragFlowsOrComponents")
@@ -333,11 +352,13 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                   setSearch={onSearch}
                   isEmptyFolder={isEmptyFolder === true}
                   selectedFlows={selectedFlows}
+                  canCreateFlow={canCreateFlow}
                 />
                 {isEmptyFolder === true ? (
                   <EmptyFolder
                     setOpenModal={setNewProjectModal}
                     onNewFlow={startNewFlow}
+                    canCreateFlow={canCreateFlow}
                   />
                 ) : (
                   <div className="flex h-full flex-col">

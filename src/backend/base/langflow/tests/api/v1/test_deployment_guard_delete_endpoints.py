@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from fastapi import FastAPI
+from fastapi import BackgroundTasks, FastAPI
 from fastapi.responses import JSONResponse
 from httpx import ASGITransport, AsyncClient
 from langflow.api.utils import cascade_delete_flow
@@ -72,6 +72,7 @@ async def test_delete_project_raises_guard_error_from_app_level_check(monkeypatc
             session=session,
             project_id=project_id,
             current_user=SimpleNamespace(id=user_id),
+            background_tasks=BackgroundTasks(),
         )
 
     session.flush.assert_not_awaited()
@@ -130,6 +131,7 @@ async def test_delete_project_remaps_flow_guard_to_project_guard(monkeypatch):
             session=session,
             project_id=project_id,
             current_user=SimpleNamespace(id=user_id),
+            background_tasks=BackgroundTasks(),
         )
 
     assert exc_info.value.code == "PROJECT_HAS_DEPLOYMENTS"

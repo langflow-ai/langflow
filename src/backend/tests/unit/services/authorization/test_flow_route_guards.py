@@ -197,10 +197,11 @@ def _has_destination_check(
     *,
     target_workspace_kw: str,
     target_folder_kw: str,
+    action: str = "FlowAction.CREATE",
 ) -> bool:
-    """Return True if *func* has a WRITE ensure_flow_permission call with the destination kwargs."""
+    """Return True when *func* authorizes the requested destination scope."""
     for call in _ensure_flow_permission_calls(func):
-        if _action_arg(call) != "FlowAction.WRITE":
+        if _action_arg(call) != action:
             continue
         ws = _kwarg_source(call, "workspace_id")
         fld = _kwarg_source(call, "folder_id")
@@ -221,7 +222,7 @@ def test_update_flow_authorizes_destination_on_move(routes):
         func,
         target_workspace_kw="target_workspace_id",
         target_folder_kw="target_folder_id",
-    ), "update_flow must authorize WRITE at target_workspace_id/target_folder_id when moving"
+    ), "update_flow must authorize CREATE at target_workspace_id/target_folder_id when moving"
 
 
 def test_upsert_flow_update_branch_authorizes_destination_on_move(routes):
@@ -231,7 +232,7 @@ def test_upsert_flow_update_branch_authorizes_destination_on_move(routes):
         func,
         target_workspace_kw="target_workspace_id",
         target_folder_kw="target_folder_id",
-    ), "upsert_flow must authorize WRITE at target_workspace_id/target_folder_id when moving"
+    ), "upsert_flow must authorize CREATE at target_workspace_id/target_folder_id when moving"
 
 
 def test_upsert_flow_reauthorizes_fresh_source_and_destination(routes):

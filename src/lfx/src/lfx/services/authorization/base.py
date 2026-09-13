@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import abc
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, ClassVar, TypedDict
@@ -13,7 +14,7 @@ from lfx.services.base import Service
 from lfx.services.schema import ServiceType
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import AsyncIterator, Sequence
     from datetime import datetime
     from uuid import UUID
 
@@ -37,6 +38,19 @@ class AuthzContext(TypedDict, total=False):
     api_key_id: _UUID | None
     api_key_source: str | None
     external_provider: str | None
+    # These values are resolved by Langflow from canonical rows. Keep this
+    # interface identifier-only: graph data, credentials, and identity claims
+    # must never cross the authorization-service boundary.
+    resource_type: str
+    resource_id: _UUID | None
+    resource_owner_id: _UUID | None
+    resource_project_id: _UUID | None
+    resource_workspace_id: _UUID | None
+    recipient_scope: str | None
+    recipient_id: _UUID | None
+    subject_user_id: _UUID | None
+    intrinsic_creation: bool
+    destination_owner_id: _UUID | None
 
 
 PUBLIC_ANONYMOUS_ACTOR_ID = uuid5(NAMESPACE_URL, "urn:langflow:principal:anonymous-public")
@@ -110,7 +124,9 @@ class AuthorizationMutationKind(str, Enum):
     """Canonical policy-relevant lifecycle mutations emitted by Langflow."""
 
     USER_CREATED = "user.created"
+    USER_ENABLED = "user.enabled"
     USER_DISABLED = "user.disabled"
+    USER_SUPERUSER_PROMOTED = "user.superuser_promoted"
     USER_SUPERUSER_DEMOTED = "user.superuser_demoted"
     USER_DELETED = "user.deleted"
     ROLE_CREATED = "role.created"
@@ -123,8 +139,23 @@ class AuthorizationMutationKind(str, Enum):
     TEAM_DELETED = "team.deleted"
     TEAM_MEMBER_ADDED = "team_member.added"
     TEAM_MEMBER_REMOVED = "team_member.removed"
+    TEAM_MEMBER_ROLE_CHANGED = "team_member.role_changed"
     API_KEY_CREATED = "api_key.created"  # pragma: allowlist secret
     API_KEY_DELETED = "api_key.deleted"  # pragma: allowlist secret
+
+
+@dataclass(frozen=True, slots=True)
+class ResourcePolicyMutation:
+    """Immutable canonical resource changes relevant to policy projection.
+
+    Content-only saves do not emit this event. Identifiers describe resources
+    already changed in the caller's transaction; they are never policy input.
+    """
+
+    resource_type: str
+    resource_id: UUID
+    changed_fields: tuple[str, ...] = ()
+    deleted: bool = False
 
 
 class DirectoryMembershipClaimState(str, Enum):
@@ -249,6 +280,12 @@ class ResourceVisibilityScope:
     resources in an explicit workspace.
     ``excluded_global_project_ids`` removes reserved projects from a global
     wildcard while preserving owner and concrete resource grants.
+    ``owner_id`` and ``project_owner_id`` express canonical ownership without
+    enumerating resources or projects. The latter includes direct project
+    children only. ``require_canonical_context`` requires existing parents and
+    matching stored workspace identifiers before applying any grant. Such a
+    scope also replaces the legacy owner override with its explicit ownership
+    fields, so an empty canonical scope denies owned resources too.
     """
 
     all_resources: bool = False
@@ -258,6 +295,9 @@ class ResourceVisibilityScope:
     include_unassigned_workspace: bool = False
     excluded_workspace_project_ids: tuple[UUID, ...] = ()
     excluded_global_project_ids: tuple[UUID, ...] = ()
+    owner_id: UUID | None = None
+    project_owner_id: UUID | None = None
+    require_canonical_context: bool = False
 
     @property
     def has_cross_user_access(self) -> bool:
@@ -268,7 +308,18 @@ class ResourceVisibilityScope:
             or self.workspace_ids
             or self.project_ids
             or self.include_unassigned_workspace
+            or self.project_owner_id is not None
         )
+
+
+@dataclass(frozen=True, slots=True)
+class AuthorizationAccessSource:
+    """Non-secret provenance explaining actions already allowed by the service."""
+
+    kind: str
+    actions: tuple[str, ...]
+    source_id: UUID | None = None
+    label: str | None = None
 
 
 class BaseAuthorizationService(Service, abc.ABC):
@@ -278,6 +329,9 @@ class BaseAuthorizationService(Service, abc.ABC):
 
     # True when the service can authorize non-owner access (share-aware fetch).
     SUPPORTS_CROSS_USER_FETCH: ClassVar[bool] = False
+    # Selected services may resolve active identity and ownership themselves
+    # from the same canonical snapshot as policy. Other plugins retain floors.
+    HANDLES_CANONICAL_OWNERSHIP: ClassVar[bool] = False
     # True when the service honors API-key credential context as a possible
     # restriction on top of the resolved user. When enabled, Langflow lets the
     # plugin evaluate owner-owned resources for API-key requests instead of
@@ -306,6 +360,22 @@ class BaseAuthorizationService(Service, abc.ABC):
     async def supports_public_principals(self) -> bool:
         """Return whether this service can safely authorize anonymous principals."""
         return self.SUPPORTS_PUBLIC_PRINCIPALS
+
+    async def supports_team_roles(self) -> bool:
+        """Return whether team-scoped admin/maintainer/user roles are enforced.
+
+        This probe is deliberately non-abstract so existing plugins remain
+        source compatible. Schema presence alone is not sufficient support.
+        """
+        return False
+
+    async def supports_user_team_sharing(self) -> bool:
+        """Return whether canonical user/team resource shares are enforced."""
+        return False
+
+    async def supports_conditional_writes(self) -> bool:
+        """Return whether native optimistic-write preconditions are supported."""
+        return False
 
     async def resolve_public_tenant(self, request: PublicAuthorizationRequest) -> str | None:
         """Resolve the trusted tenant for an anonymous request, or deny by returning ``None``.
@@ -475,6 +545,42 @@ class BaseAuthorizationService(Service, abc.ABC):
     async def invalidate_user(self, user_id: UUID) -> None:
         """Drop cached policy for a single user. Plugin override; OSS no-op."""
 
+    @asynccontextmanager
+    async def admission_context(self, *, session: Any = None) -> AsyncIterator[Any]:
+        """Scope related permission and response reads without owning a caller's transaction.
+
+        Implementations may yield a short coherent read session, or reuse an
+        already ordered caller transaction. Defaults preserve existing plugins.
+        Callers must end this context before external execution or decision-audit I/O.
+        """
+        yield session
+
+    async def initialize_authorization(self) -> None:
+        """Initialize selected policy after canonical schema setup; default no-op."""
+
+    async def get_access_sources(
+        self,
+        *,
+        user_id: UUID,
+        resource_type: str,
+        resource_id: UUID,
+    ) -> tuple[AuthorizationAccessSource, ...]:
+        """Explain selected-service decisions; plugins without provenance return none."""
+        _ = (user_id, resource_type, resource_id)
+        return ()
+
+    async def acquire_share_mutation_lock(self, *, session: Any) -> None:
+        """Lock-only preflight before share, recipient and resource reads; no commit."""
+
+    async def stage_share_mutation(self, *, session: Any, snapshot: ShareRuleSnapshot) -> None:
+        """Stage derived policy after a canonical share write in the caller's transaction."""
+
+    async def acquire_resource_mutation_lock(self, *, session: Any) -> None:
+        """Lock-only preflight before policy-relevant resource reads; no commit."""
+
+    async def stage_resource_mutation(self, *, session: Any, event: ResourcePolicyMutation) -> None:
+        """Stage a move/scope/deletion projection in the caller's canonical transaction."""
+
     async def invalidate_role(self, role_id: UUID) -> None:
         """Drop cached policy for a single role. Plugin override; OSS no-op."""
 
@@ -574,13 +680,16 @@ class BaseAuthorizationService(Service, abc.ABC):
         }
         user_kinds = {
             AuthorizationMutationKind.USER_CREATED,
+            AuthorizationMutationKind.USER_ENABLED,
             AuthorizationMutationKind.USER_DISABLED,
+            AuthorizationMutationKind.USER_SUPERUSER_PROMOTED,
             AuthorizationMutationKind.USER_SUPERUSER_DEMOTED,
             AuthorizationMutationKind.USER_DELETED,
             AuthorizationMutationKind.ROLE_ASSIGNMENT_CREATED,
             AuthorizationMutationKind.ROLE_ASSIGNMENT_DELETED,
             AuthorizationMutationKind.TEAM_MEMBER_ADDED,
             AuthorizationMutationKind.TEAM_MEMBER_REMOVED,
+            AuthorizationMutationKind.TEAM_MEMBER_ROLE_CHANGED,
             AuthorizationMutationKind.API_KEY_CREATED,
             AuthorizationMutationKind.API_KEY_DELETED,
         }

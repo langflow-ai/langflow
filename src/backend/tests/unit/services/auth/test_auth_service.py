@@ -1252,6 +1252,8 @@ class _DirectoryAuthorizationStub:
         self.external_groups_claim_path = AsyncMock(
             return_value=claim_path if claim_path is not None else ((claim_name,) if claim_name else None)
         )
+        self.acquire_identity_mutation_lock = AsyncMock()
+        self.stage_identity_mutation = AsyncMock()
         self.ingest_directory_membership_snapshot = AsyncMock(return_value=result)
         self.directory_membership_committed = AsyncMock()
         self.supports_incomplete_directory_membership_snapshots = AsyncMock(return_value=supports_incomplete)

@@ -1,4 +1,4 @@
-"""OSS authorization service package (pass-through default; plugins enforce)."""
+"""Langflow authorization package with a replaceable service interface."""
 
 from langflow.services.authorization.actions import (
     DeploymentAction,
@@ -29,6 +29,7 @@ from langflow.services.authorization.guards import (
     ensure_permission,
     ensure_project_permission,
     ensure_provider_account_permission,
+    ensure_resource_share_administration,
     ensure_share_permission,
     ensure_variable_permission,
     ensure_voice_permission,
@@ -73,6 +74,7 @@ __all__ = [
     "ensure_permission",
     "ensure_project_permission",
     "ensure_provider_account_permission",
+    "ensure_resource_share_administration",
     "ensure_share_permission",
     "ensure_variable_permission",
     "ensure_voice_permission",

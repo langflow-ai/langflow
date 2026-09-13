@@ -31,6 +31,7 @@ from lfx.services.deps import get_deployment_adapter
 from lfx.services.interfaces import DeploymentServiceProtocol
 
 from langflow.services.adapters.deployment.context import deployment_provider_scope
+from langflow.services.database.lock_retry import TransactionRepairError
 from langflow.services.database.models.deployment.crud import (
     UNCONFIRMED_DELETE_ROWCOUNT,
     delete_deployments_by_ids,
@@ -55,6 +56,7 @@ from langflow.services.database.utils import require_non_empty
 
 if TYPE_CHECKING:
     from langflow.api.utils import DbSession
+    from langflow.api.v1.mappers.deployments.contracts import ProviderSnapshotBinding
     from langflow.services.database.models.deployment.model import Deployment
 
 TGuardOperationResult = TypeVar("TGuardOperationResult")
@@ -216,6 +218,7 @@ async def _sync_deployments_and_attachments_by_provider(
         deployments_with_provider,
         key=lambda item: (item[0].deployment_provider_account_id, item[1], item[0].id),
     )
+    pending: list[tuple[UUID, list[UUID], list[UUID], list[ProviderSnapshotBinding] | None]] = []
 
     for (provider_account_id, provider_key), grouped_items in groupby(
         grouped_source,
@@ -253,40 +256,11 @@ async def _sync_deployments_and_attachments_by_provider(
                     stale_scope_label,
                 )
                 stale_deployment_ids.append(deployment.id)
-            # TODO: Accumulate stale deployment IDs and orphaned attachment rows across all
-            # provider groups and perform a single cross-provider batched delete instead of
-            # one batched delete per group, to further reduce round-trips when many provider
-            # accounts are involved in a single sync pass. Not done today because buffering
-            # every stale resource across the full sync pass can grow unboundedly in memory;
-            # any implementation should bound that cost (for example, by flushing in chunks
-            # once a size threshold is reached) rather than accumulating without limit.
-            if stale_deployment_ids:
-                deleted = await delete_deployments_by_ids(
-                    db,
-                    user_id=user_id,
-                    deployment_ids=stale_deployment_ids,
-                )
-                if deleted is UNCONFIRMED_DELETE_ROWCOUNT:
-                    await logger.awarning(
-                        "Stale deployment batch delete rowcount could not be confirmed during %s sync: "
-                        "provider=%s deployments=%s",
-                        stale_scope_label,
-                        provider_account_id,
-                        stale_deployment_ids,
-                    )
-
+            bindings = None
             if surviving:
                 try:
                     deployment_mapper = get_deployment_mapper(provider_key)
                     bindings = deployment_mapper.extract_snapshot_bindings(provider_view)
-                    async with db.begin_nested():
-                        await delete_unbound_attachments(
-                            db=db,
-                            user_id=user_id,
-                            provider_account_id=provider_account_id,
-                            deployment_ids=[deployment.id for deployment in surviving],
-                            bindings=bindings,
-                        )
                 except Exception:  # noqa: BLE001
                     await logger.awarning(
                         "Attachment binding sync failed for provider %s (%s); continuing",
@@ -294,6 +268,7 @@ async def _sync_deployments_and_attachments_by_provider(
                         stale_scope_label,
                         exc_info=True,
                     )
+            pending.append((provider_account_id, stale_deployment_ids, [row.id for row in surviving], bindings))
         except Exception:  # noqa: BLE001
             await logger.awarning(
                 failure_log_message,
@@ -301,6 +276,47 @@ async def _sync_deployments_and_attachments_by_provider(
                 failure_scope_value,
                 exc_info=True,
             )
+
+    if not pending:
+        return
+    from langflow.services.database.lock_retry import run_with_lock_retry
+    from langflow.services.deps import get_authorization_service
+
+    async def reconcile(_attempt: int) -> None:
+        # Provider calls complete before this lock. A failed projection rolls
+        # back every local deletion even when the caller treats sync as best effort.
+        await get_authorization_service().acquire_resource_mutation_lock(session=db)
+        async with db.begin_nested():
+            for provider_account_id, stale_ids, surviving_ids, bindings in pending:
+                if stale_ids:
+                    deleted = await delete_deployments_by_ids(db, user_id=user_id, deployment_ids=stale_ids)
+                    if deleted is UNCONFIRMED_DELETE_ROWCOUNT:
+                        await logger.awarning(
+                            "Stale deployment batch delete rowcount could not be confirmed during %s sync: "
+                            "provider=%s deployments=%s",
+                            stale_scope_label,
+                            provider_account_id,
+                            stale_ids,
+                        )
+                if bindings is not None:
+                    try:
+                        async with db.begin_nested():
+                            await delete_unbound_attachments(
+                                db=db,
+                                user_id=user_id,
+                                provider_account_id=provider_account_id,
+                                deployment_ids=surviving_ids,
+                                bindings=bindings,
+                            )
+                    except Exception:  # noqa: BLE001
+                        await logger.awarning(
+                            "Attachment binding sync failed for provider %s (%s); continuing",
+                            provider_account_id,
+                            stale_scope_label,
+                            exc_info=True,
+                        )
+
+    await run_with_lock_retry(reconcile, session=db, description="reconcile deployment policy")
 
 
 async def sync_flow_deployment_state(
@@ -319,9 +335,23 @@ async def sync_flow_deployment_state(
         return
 
     deduplicated_flow_ids = list(dict.fromkeys(flow_ids))
+    deployments_with_provider = await list_deployments_for_flows_with_provider_info(
+        db,
+        user_id=user_id,
+        flow_ids=deduplicated_flow_ids,
+        provider_account_id=deployment_provider_account_id,
+    )
+    if deployments_with_provider:
+        await _sync_deployments_and_attachments_by_provider(
+            db=db,
+            user_id=user_id,
+            deployments_with_provider=deployments_with_provider,
+            stale_scope_label="flow",
+            failure_log_message="Deployment-level flow sync failed for provider %s (flows=%s); continuing without sync",
+            failure_scope_value=deduplicated_flow_ids,
+        )
+
     try:
-        # Pre-clean known stale local rows (missing deployment parent) so
-        # downstream guard retries operate on current, reconcilable state.
         await delete_orphan_attachments_for_flow_ids(
             db=db,
             user_id=user_id,
@@ -329,28 +359,10 @@ async def sync_flow_deployment_state(
         )
     except Exception:  # noqa: BLE001
         await logger.awarning(
-            "Failed to delete orphan deployment attachments before flow sync (flows=%s)",
+            "Failed to delete orphan deployment attachments after flow sync (flows=%s)",
             deduplicated_flow_ids,
             exc_info=True,
         )
-
-    deployments_with_provider = await list_deployments_for_flows_with_provider_info(
-        db,
-        user_id=user_id,
-        flow_ids=deduplicated_flow_ids,
-        provider_account_id=deployment_provider_account_id,
-    )
-    if not deployments_with_provider:
-        return
-
-    await _sync_deployments_and_attachments_by_provider(
-        db=db,
-        user_id=user_id,
-        deployments_with_provider=deployments_with_provider,
-        stale_scope_label="flow",
-        failure_log_message="Deployment-level flow sync failed for provider %s (flows=%s); continuing without sync",
-        failure_scope_value=deduplicated_flow_ids,
-    )
 
 
 async def sync_flow_version_attachments(
@@ -364,6 +376,22 @@ async def sync_flow_version_attachments(
 
     Intended for targeted status refreshes only; avoid invoking in hot paths.
     """
+    deployments_with_provider = await list_deployments_for_flows_with_provider_info(
+        db,
+        user_id=user_id,
+        flow_ids=[flow_id],
+        provider_account_id=deployment_provider_account_id,
+    )
+    if deployments_with_provider:
+        await _sync_deployments_and_attachments_by_provider(
+            db=db,
+            user_id=user_id,
+            deployments_with_provider=deployments_with_provider,
+            stale_scope_label="flow_version",
+            failure_log_message="Flow version sync failed for provider %s (flow=%s); skipping",
+            failure_scope_value=flow_id,
+        )
+
     try:
         # Keep one-flow status sync resilient to stale legacy attachment rows.
         await delete_orphan_attachments_for_flow_ids(
@@ -373,28 +401,10 @@ async def sync_flow_version_attachments(
         )
     except Exception:  # noqa: BLE001
         await logger.awarning(
-            "Failed to delete orphan deployment attachments before flow-version sync (flow=%s)",
+            "Failed to delete orphan deployment attachments after flow-version sync (flow=%s)",
             flow_id,
             exc_info=True,
         )
-
-    deployments_with_provider = await list_deployments_for_flows_with_provider_info(
-        db,
-        user_id=user_id,
-        flow_ids=[flow_id],
-        provider_account_id=deployment_provider_account_id,
-    )
-    if not deployments_with_provider:
-        return
-
-    await _sync_deployments_and_attachments_by_provider(
-        db=db,
-        user_id=user_id,
-        deployments_with_provider=deployments_with_provider,
-        stale_scope_label="flow_version",
-        failure_log_message="Flow version sync failed for provider %s (flow=%s); skipping",
-        failure_scope_value=flow_id,
-    )
 
 
 async def sync_project_deployments(
@@ -408,9 +418,23 @@ async def sync_project_deployments(
 
     Intended for guard-triggered repair or explicit refresh, not hot paths.
     """
+    rows = await list_project_deployments_with_provider_info(
+        db,
+        user_id=user_id,
+        project_id=project_id,
+        provider_account_id=deployment_provider_account_id,
+    )
+    if rows:
+        await _sync_deployments_and_attachments_by_provider(
+            db=db,
+            user_id=user_id,
+            deployments_with_provider=rows,
+            stale_scope_label="project",
+            failure_log_message="Project deployment sync failed for provider %s (project=%s); continuing without sync",
+            failure_scope_value=project_id,
+        )
+
     try:
-        # Project-level guard retries can fail repeatedly on stale attachments;
-        # prune them before provider reconciliation.
         await delete_orphan_attachments_for_project(
             db=db,
             user_id=user_id,
@@ -418,28 +442,10 @@ async def sync_project_deployments(
         )
     except Exception:  # noqa: BLE001
         await logger.awarning(
-            "Failed to delete orphan deployment attachments before project sync (project=%s)",
+            "Failed to delete orphan deployment attachments after project sync (project=%s)",
             project_id,
             exc_info=True,
         )
-
-    rows = await list_project_deployments_with_provider_info(
-        db,
-        user_id=user_id,
-        project_id=project_id,
-        provider_account_id=deployment_provider_account_id,
-    )
-    if not rows:
-        return
-
-    await _sync_deployments_and_attachments_by_provider(
-        db=db,
-        user_id=user_id,
-        deployments_with_provider=rows,
-        stale_scope_label="project",
-        failure_log_message="Project deployment sync failed for provider %s (project=%s); continuing without sync",
-        failure_scope_value=project_id,
-    )
 
 
 async def sync_flow_deployment_state_by_owner(
@@ -484,12 +490,15 @@ async def retry_flow_operation_on_deployment_guard(
     1) detects ``DeploymentGuardError`` failures from the operation,
     2) performs best-effort deployment sync for the authorized flow-owner
        mapping in each owner's namespace, and
-    3) retries the same operation once.
+    3) requests a whole-transaction retry after repair outside the failed write.
 
     The operation may populate a mutable ``flow_owner_ids`` mapping while
-    loading and authorizing rows. That state survives a nested-transaction
-    rollback and is then used for the repair pass.
+    loading and authorizing rows. The enclosing ``run_with_lock_retry`` releases
+    the failed transaction before repair and then reruns all canonical checks.
     """
+    from langflow.services.deps import get_authorization_service
+
+    await get_authorization_service().acquire_resource_mutation_lock(session=db)
     try:
         async with db.begin_nested():
             return await operation()
@@ -498,11 +507,19 @@ async def retry_flow_operation_on_deployment_guard(
         if not guard_error:
             raise
 
-    if flow_owner_ids:
-        await sync_flow_deployment_state_by_owner(db=db, flow_owner_ids=flow_owner_ids)
+    async def repair() -> None:
+        from lfx.services.deps import session_scope
 
-    async with db.begin_nested():
-        return await operation()
+        if flow_owner_ids:
+            # Each owner repair commits before another owner's provider call.
+            for owner_id in dict.fromkeys(flow_owner_ids.values()):
+                owned_flows = {flow_id: owner for flow_id, owner in flow_owner_ids.items() if owner == owner_id}
+                async with session_scope() as repair_session:
+                    await sync_flow_deployment_state_by_owner(db=repair_session, flow_owner_ids=owned_flows)
+
+    # The enclosing route replays its complete mutation, including authorization
+    # and original edit preconditions. No provider call runs under its writer lock.
+    raise TransactionRepairError(key="flow deployment guard", repair=repair, cause=guard_error)
 
 
 async def retry_project_operation_on_deployment_guard(
@@ -520,8 +537,11 @@ async def retry_project_operation_on_deployment_guard(
     mutating state. This helper does not add project guards; it only:
     1) detects ``DeploymentGuardError`` failures from the operation,
     2) performs best-effort project deployment sync, and
-    3) retries the same operation once.
+    3) requests a whole-transaction retry after repair outside the failed write.
     """
+    from langflow.services.deps import get_authorization_service
+
+    await get_authorization_service().acquire_resource_mutation_lock(session=db)
     try:
         async with db.begin_nested():
             return await operation()
@@ -530,7 +550,10 @@ async def retry_project_operation_on_deployment_guard(
         if not guard_error:
             raise
 
-    await sync_project_deployments(db=db, project_id=project_id, user_id=user_id)
+    async def repair() -> None:
+        from lfx.services.deps import session_scope
 
-    async with db.begin_nested():
-        return await operation()
+        async with session_scope() as repair_session:
+            await sync_project_deployments(db=repair_session, project_id=project_id, user_id=user_id)
+
+    raise TransactionRepairError(key="project deployment guard", repair=repair, cause=guard_error)

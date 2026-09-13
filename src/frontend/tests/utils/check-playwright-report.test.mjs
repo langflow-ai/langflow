@@ -3,6 +3,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { AUTHZ_JOURNEY_IDS } from "./authz-e2e-mode.mjs";
 import {
   checkPlaywrightReportFile,
   inspectPlaywrightReport,
@@ -151,6 +152,47 @@ test("accepts a legitimately skipped record without attempts", () => {
   assert.deepEqual(
     inspectPlaywrightReport(reportWith({ status: "skipped", results: [] })),
     { testCount: 1, flaky: [] },
+  );
+});
+
+test("requires every authorization journey to execute once without retry", () => {
+  const report = {
+    suites: [
+      {
+        title: "authorization",
+        specs: AUTHZ_JOURNEY_IDS.map((id, index) => ({
+          title: `[${id}] scenario`,
+          file: "tests/core/features/authz/authz-team-sharing.spec.ts",
+          line: index + 1,
+          tests: [{ status: "expected", results: [{ status: "passed" }] }],
+        })),
+      },
+    ],
+    errors: [],
+  };
+
+  assert.equal(
+    inspectPlaywrightReport(report, { requireAuthzJourneys: true }).testCount,
+    8,
+  );
+  report.suites[0].specs[0].tests[0] = { status: "skipped", results: [] };
+  assert.throws(
+    () => inspectPlaywrightReport(report, { requireAuthzJourneys: true }),
+    /journey was skipped/,
+  );
+});
+
+test("rejects a partial authorization journey report", () => {
+  assert.throws(
+    () =>
+      inspectPlaywrightReport(
+        reportWith({
+          status: "expected",
+          results: [{ status: "passed" }],
+        }),
+        { requireAuthzJourneys: true },
+      ),
+    /journey inventory is incomplete/,
   );
 });
 

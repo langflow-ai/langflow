@@ -149,6 +149,132 @@
         "title": "AuthSettings",
         "type": "object"
       },
+      "AuthorizationCapabilitiesRead": {
+        "properties": {
+          "can_administer_platform": {
+            "title": "Can Administer Platform",
+            "type": "boolean"
+          },
+          "can_create_team": {
+            "title": "Can Create Team",
+            "type": "boolean"
+          },
+          "conditional_writes_required": {
+            "title": "Conditional Writes Required",
+            "type": "boolean"
+          },
+          "enforcement_active": {
+            "title": "Enforcement Active",
+            "type": "boolean"
+          },
+          "service_ready": {
+            "title": "Service Ready",
+            "type": "boolean"
+          },
+          "share_modes": {
+            "items": {
+              "enum": [
+                "execute",
+                "write"
+              ],
+              "type": "string"
+            },
+            "title": "Share Modes",
+            "type": "array"
+          },
+          "team_roles_supported": {
+            "title": "Team Roles Supported",
+            "type": "boolean"
+          },
+          "user_team_sharing_supported": {
+            "title": "User Team Sharing Supported",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enforcement_active",
+          "service_ready",
+          "team_roles_supported",
+          "user_team_sharing_supported",
+          "share_modes",
+          "conditional_writes_required",
+          "can_administer_platform",
+          "can_create_team"
+        ],
+        "title": "AuthorizationCapabilitiesRead",
+        "type": "object"
+      },
+      "AuthorizationRecipientPage": {
+        "properties": {
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuthorizationRecipientRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          }
+        },
+        "required": [
+          "items",
+          "has_more"
+        ],
+        "title": "AuthorizationRecipientPage",
+        "type": "object"
+      },
+      "AuthorizationRecipientRead": {
+        "properties": {
+          "avatar": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "user",
+              "team"
+            ],
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "display_name"
+        ],
+        "title": "AuthorizationRecipientRead",
+        "type": "object"
+      },
       "Body_build_flow_api_v1_build__flow_id__flow_post": {
         "properties": {
           "data": {
@@ -917,6 +1043,108 @@
         "title": "ConfigResponse",
         "type": "object"
       },
+      "EffectivePermissionsRequest": {
+        "description": "Body for :func:`get_effective_permissions`.",
+        "properties": {
+          "actions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Actions to check. Each entry is lowercased and de-duplicated; the list is capped at 10. Defaults to read/write/execute/delete/create.",
+            "title": "Actions"
+          },
+          "domain": {
+            "default": "*",
+            "description": "Authorization domain — typically ``project:{folder_id}`` or ``*``.",
+            "title": "Domain",
+            "type": "string"
+          },
+          "resource_ids": {
+            "description": "Resource IDs to evaluate. Capped at 500 per request to keep batch_enforce bounded.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Resource Ids",
+            "type": "array"
+          },
+          "resource_type": {
+            "enum": [
+              "flow",
+              "deployment",
+              "project",
+              "knowledge_base",
+              "variable",
+              "file",
+              "component"
+            ],
+            "title": "Resource Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resource_type",
+          "resource_ids"
+        ],
+        "title": "EffectivePermissionsRequest",
+        "type": "object"
+      },
+      "EffectivePermissionsResponse": {
+        "description": "Response: ``{resource_id: [allowed_actions]}``.",
+        "properties": {
+          "capabilities": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ResourceCapabilities"
+            },
+            "propertyNames": {
+              "format": "uuid"
+            },
+            "title": "Capabilities",
+            "type": "object"
+          },
+          "permissions": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "propertyNames": {
+              "format": "uuid"
+            },
+            "title": "Permissions",
+            "type": "object"
+          },
+          "resource_type": {
+            "enum": [
+              "flow",
+              "deployment",
+              "project",
+              "knowledge_base",
+              "variable",
+              "file",
+              "component"
+            ],
+            "title": "Resource Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resource_type",
+          "permissions",
+          "capabilities"
+        ],
+        "title": "EffectivePermissionsResponse",
+        "type": "object"
+      },
       "ErrorDetail": {
         "description": "Error detail schema.",
         "properties": {
@@ -1023,6 +1251,37 @@
           }
         },
         "title": "FeatureFlags",
+        "type": "object"
+      },
+      "FlowBulkDelete": {
+        "properties": {
+          "expected_edit_revision": {
+            "additionalProperties": {
+              "minimum": 1.0,
+              "type": "integer"
+            },
+            "description": "Input-only optimistic revision map for every existing flow deleted by this request.",
+            "maxProperties": 1000,
+            "propertyNames": {
+              "format": "uuid"
+            },
+            "title": "Expected Edit Revision",
+            "type": "object"
+          },
+          "flow_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 1000,
+            "title": "Flow Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "flow_ids"
+        ],
+        "title": "FlowBulkDelete",
         "type": "object"
       },
       "FlowCreate": {
@@ -1425,6 +1684,13 @@
             "description": "A description of the flow",
             "title": "Description"
           },
+          "edit_revision": {
+            "default": 1,
+            "description": "Optimistic editing revision",
+            "minimum": 1.0,
+            "title": "Edit Revision",
+            "type": "integer"
+          },
           "endpoint_name": {
             "anyOf": [
               {
@@ -1479,6 +1745,12 @@
             "description": "Flag indicating whether the flow is a component",
             "title": "Is Component"
           },
+          "is_owner": {
+            "default": false,
+            "description": "Whether the caller owns this flow",
+            "title": "Is Owner",
+            "type": "boolean"
+          },
           "mcp_enabled": {
             "anyOf": [
               {
@@ -1496,6 +1768,18 @@
             "title": "Name",
             "type": "string"
           },
+          "owner_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The owner display name",
+            "title": "Owner Username"
+          },
           "tags": {
             "anyOf": [
               {
@@ -1510,6 +1794,19 @@
             ],
             "description": "The tags of the flow",
             "title": "Tags"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The owner identifier",
+            "title": "User Id"
           }
         },
         "required": [
@@ -1521,6 +1818,19 @@
       },
       "FlowListCreate": {
         "properties": {
+          "expected_edit_revision": {
+            "additionalProperties": {
+              "minimum": 1.0,
+              "type": "integer"
+            },
+            "description": "Input-only optimistic revision map for stable IDs that update existing flows. Keys must identify flows in this request.",
+            "maxProperties": 1000,
+            "propertyNames": {
+              "format": "uuid"
+            },
+            "title": "Expected Edit Revision",
+            "type": "object"
+          },
           "flows": {
             "items": {
               "$ref": "#/components/schemas/FlowCreate"
@@ -1614,6 +1924,12 @@
             ],
             "title": "Description"
           },
+          "edit_revision": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "Edit Revision",
+            "type": "integer"
+          },
           "endpoint_name": {
             "anyOf": [
               {
@@ -1692,6 +2008,11 @@
             "default": false,
             "title": "Is Component"
           },
+          "is_owner": {
+            "default": false,
+            "title": "Is Owner",
+            "type": "boolean"
+          },
           "locked": {
             "anyOf": [
               {
@@ -1732,6 +2053,17 @@
             ],
             "description": "Stable i18n key derived from the original English name",
             "title": "Name Key"
+          },
+          "owner_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Username"
           },
           "tags": {
             "anyOf": [
@@ -1939,6 +2271,39 @@
             ],
             "title": "Fs Path"
           },
+          "gradient": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gradient"
+          },
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          },
+          "icon_bg_color": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon Bg Color"
+          },
           "locked": {
             "anyOf": [
               {
@@ -1971,6 +2336,20 @@
               }
             ],
             "title": "Name"
+          },
+          "tags": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tags"
           },
           "workspace_id": {
             "anyOf": [
@@ -2029,6 +2408,18 @@
             ],
             "title": "Description"
           },
+          "expected_edit_revision": {
+            "additionalProperties": {
+              "minimum": 1.0,
+              "type": "integer"
+            },
+            "maxProperties": 1000,
+            "propertyNames": {
+              "format": "uuid"
+            },
+            "title": "Expected Edit Revision",
+            "type": "object"
+          },
           "flows_list": {
             "anyOf": [
               {
@@ -2080,6 +2471,12 @@
               }
             ],
             "title": "Description"
+          },
+          "edit_revision": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "Edit Revision",
+            "type": "integer"
           },
           "id": {
             "format": "uuid",
@@ -2153,6 +2550,12 @@
             ],
             "title": "Description"
           },
+          "edit_revision": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "Edit Revision",
+            "type": "integer"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -2208,6 +2611,12 @@
               }
             ],
             "title": "Description"
+          },
+          "edit_revision": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "Edit Revision",
+            "type": "integer"
           },
           "flows": {
             "default": [],
@@ -2279,6 +2688,18 @@
               }
             ],
             "title": "Description"
+          },
+          "expected_edit_revision": {
+            "additionalProperties": {
+              "minimum": 1.0,
+              "type": "integer"
+            },
+            "maxProperties": 1000,
+            "propertyNames": {
+              "format": "uuid"
+            },
+            "title": "Expected Edit Revision",
+            "type": "object"
           },
           "flows": {
             "items": {
@@ -3367,6 +3788,46 @@
         "title": "Page[FlowRead]",
         "type": "object"
       },
+      "Page_FolderListRead_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FolderListRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "minimum": 1.0,
+            "title": "Page",
+            "type": "integer"
+          },
+          "pages": {
+            "minimum": 0.0,
+            "title": "Pages",
+            "type": "integer"
+          },
+          "size": {
+            "minimum": 1.0,
+            "title": "Size",
+            "type": "integer"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "size",
+          "pages"
+        ],
+        "title": "Page[FolderListRead]",
+        "type": "object"
+      },
       "Page_TransactionLogsResponse_": {
         "properties": {
           "items": {
@@ -3938,6 +4399,12 @@
             ],
             "title": "Description"
           },
+          "edit_revision": {
+            "default": 1,
+            "minimum": 1.0,
+            "title": "Edit Revision",
+            "type": "integer"
+          },
           "endpoint_name": {
             "anyOf": [
               {
@@ -4016,6 +4483,11 @@
             "default": false,
             "title": "Is Component"
           },
+          "is_owner": {
+            "default": false,
+            "title": "Is Owner",
+            "type": "boolean"
+          },
           "locked": {
             "anyOf": [
               {
@@ -4056,6 +4528,17 @@
             ],
             "description": "Stable i18n key derived from the original English name",
             "title": "Name Key"
+          },
+          "owner_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Username"
           },
           "public_access": {
             "$ref": "#/components/schemas/PublicFlowCapabilities",
@@ -4158,6 +4641,48 @@
           "provider"
         ],
         "title": "RegisteredModelProviderRead",
+        "type": "object"
+      },
+      "ResourceCapabilities": {
+        "description": "Route-aligned operations for one resolved resource.",
+        "properties": {
+          "can_create_flow": {
+            "default": false,
+            "title": "Can Create Flow",
+            "type": "boolean"
+          },
+          "can_delete": {
+            "default": false,
+            "title": "Can Delete",
+            "type": "boolean"
+          },
+          "can_edit": {
+            "default": false,
+            "title": "Can Edit",
+            "type": "boolean"
+          },
+          "can_manage_publication": {
+            "default": false,
+            "title": "Can Manage Publication",
+            "type": "boolean"
+          },
+          "can_manage_shares": {
+            "default": false,
+            "title": "Can Manage Shares",
+            "type": "boolean"
+          },
+          "can_move": {
+            "default": false,
+            "title": "Can Move",
+            "type": "boolean"
+          },
+          "can_use": {
+            "default": false,
+            "title": "Can Use",
+            "type": "boolean"
+          }
+        },
+        "title": "ResourceCapabilities",
         "type": "object"
       },
       "ResultData": {
@@ -4344,6 +4869,392 @@
           }
         },
         "title": "RunResponse",
+        "type": "object"
+      },
+      "ShareAccessSourceRead": {
+        "description": "Bounded, non-secret explanation for effective resource access.",
+        "properties": {
+          "actions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Actions",
+            "type": "array"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          }
+        },
+        "required": [
+          "kind",
+          "actions"
+        ],
+        "title": "ShareAccessSourceRead",
+        "type": "object"
+      },
+      "ShareCreate": {
+        "description": "Payload for creating an authz_share row.",
+        "properties": {
+          "permission_level": {
+            "default": "read",
+            "enum": [
+              "read",
+              "write",
+              "execute",
+              "admin"
+            ],
+            "title": "Permission Level",
+            "type": "string"
+          },
+          "resource_id": {
+            "format": "uuid",
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_type": {
+            "enum": [
+              "flow",
+              "deployment",
+              "project",
+              "knowledge_base",
+              "variable",
+              "file"
+            ],
+            "title": "Resource Type",
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "private",
+              "team",
+              "user",
+              "public"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          }
+        },
+        "required": [
+          "resource_type",
+          "resource_id",
+          "scope"
+        ],
+        "title": "ShareCreate",
+        "type": "object"
+      },
+      "ShareEffectiveAccessRead": {
+        "description": "Effective actions and their canonical source explanations.",
+        "properties": {
+          "actions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Actions",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/ShareAccessSourceRead"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "actions",
+          "sources"
+        ],
+        "title": "ShareEffectiveAccessRead",
+        "type": "object"
+      },
+      "ShareRead": {
+        "description": "Serialized authz_share row returned by the API.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "display_mode": {
+            "anyOf": [
+              {
+                "enum": [
+                  "read",
+                  "use",
+                  "edit",
+                  "admin"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Mode"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "permission_level": {
+            "enum": [
+              "read",
+              "write",
+              "execute",
+              "admin"
+            ],
+            "title": "Permission Level",
+            "type": "string"
+          },
+          "resource_id": {
+            "format": "uuid",
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_type": {
+            "enum": [
+              "flow",
+              "deployment",
+              "project",
+              "knowledge_base",
+              "variable",
+              "file"
+            ],
+            "title": "Resource Type",
+            "type": "string"
+          },
+          "revision": {
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          },
+          "scope": {
+            "enum": [
+              "private",
+              "team",
+              "user",
+              "public"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          },
+          "target_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Name"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "resource_type",
+          "resource_id",
+          "scope",
+          "target_id",
+          "permission_level",
+          "revision",
+          "created_by",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ShareRead",
+        "type": "object"
+      },
+      "ShareSummaryRead": {
+        "description": "Management/read-safe summary for one flow or project.",
+        "properties": {
+          "additional_access_warning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Additional Access Warning"
+          },
+          "administrative_grant_present": {
+            "default": false,
+            "title": "Administrative Grant Present",
+            "type": "boolean"
+          },
+          "caller_is_owner": {
+            "title": "Caller Is Owner",
+            "type": "boolean"
+          },
+          "can_manage_shares": {
+            "title": "Can Manage Shares",
+            "type": "boolean"
+          },
+          "direct_grants": {
+            "items": {
+              "$ref": "#/components/schemas/ShareRead"
+            },
+            "title": "Direct Grants",
+            "type": "array"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "effective_access": {
+            "$ref": "#/components/schemas/ShareEffectiveAccessRead"
+          },
+          "has_more": {
+            "default": false,
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "inherited_from_project": {
+            "title": "Inherited From Project",
+            "type": "boolean"
+          },
+          "legacy_public_access": {
+            "default": false,
+            "title": "Legacy Public Access",
+            "type": "boolean"
+          },
+          "next_offset": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Offset"
+          },
+          "resource_id": {
+            "format": "uuid",
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_type": {
+            "enum": [
+              "flow",
+              "project"
+            ],
+            "title": "Resource Type",
+            "type": "string"
+          },
+          "subject_user_id": {
+            "format": "uuid",
+            "title": "Subject User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resource_type",
+          "resource_id",
+          "display_name",
+          "subject_user_id",
+          "caller_is_owner",
+          "can_manage_shares",
+          "direct_grants",
+          "effective_access",
+          "inherited_from_project"
+        ],
+        "title": "ShareSummaryRead",
+        "type": "object"
+      },
+      "ShareUpdate": {
+        "description": "Payload for updating an authz_share permission level.",
+        "properties": {
+          "permission_level": {
+            "enum": [
+              "read",
+              "write",
+              "execute",
+              "admin"
+            ],
+            "title": "Permission Level",
+            "type": "string"
+          }
+        },
+        "required": [
+          "permission_level"
+        ],
+        "title": "ShareUpdate",
         "type": "object"
       },
       "SimplifiedAPIRequest": {
@@ -4643,6 +5554,416 @@
         ],
         "title": "SpanType",
         "type": "string"
+      },
+      "TeamCapabilities": {
+        "properties": {
+          "can_add_privileged_member": {
+            "default": false,
+            "title": "Can Add Privileged Member",
+            "type": "boolean"
+          },
+          "can_add_user_member": {
+            "default": false,
+            "title": "Can Add User Member",
+            "type": "boolean"
+          },
+          "can_change_roles": {
+            "default": false,
+            "title": "Can Change Roles",
+            "type": "boolean"
+          },
+          "can_delete": {
+            "default": false,
+            "title": "Can Delete",
+            "type": "boolean"
+          },
+          "can_remove_user_member": {
+            "default": false,
+            "title": "Can Remove User Member",
+            "type": "boolean"
+          },
+          "can_set_active": {
+            "default": false,
+            "title": "Can Set Active",
+            "type": "boolean"
+          },
+          "can_update": {
+            "default": false,
+            "title": "Can Update",
+            "type": "boolean"
+          }
+        },
+        "title": "TeamCapabilities",
+        "type": "object"
+      },
+      "TeamCreate": {
+        "description": "Atomic team creation with its required initial roster.",
+        "properties": {
+          "adom_name": {
+            "description": "Administrative-domain slug, unique across all teams.",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Adom Name",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "is_active": {
+            "default": true,
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/TeamMemberInput"
+            },
+            "maxItems": 200,
+            "title": "Members",
+            "type": "array"
+          },
+          "team_name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Team Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "team_name",
+          "adom_name"
+        ],
+        "title": "TeamCreate",
+        "type": "object"
+      },
+      "TeamMemberCreate": {
+        "description": "Manual membership creation; provenance cannot be forged by clients.",
+        "properties": {
+          "role": {
+            "default": "user",
+            "enum": [
+              "admin",
+              "maintainer",
+              "user"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "TeamMemberCreate",
+        "type": "object"
+      },
+      "TeamMemberInput": {
+        "description": "One explicit member/role requested in a roster mutation.",
+        "properties": {
+          "role": {
+            "default": "user",
+            "enum": [
+              "admin",
+              "maintainer",
+              "user"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "TeamMemberInput",
+        "type": "object"
+      },
+      "TeamMemberRead": {
+        "description": "Minimal roster item safe for members of the same team.",
+        "properties": {
+          "avatar": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "admin",
+              "maintainer",
+              "user"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "team_id": {
+            "format": "uuid",
+            "title": "Team Id",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "team_id",
+          "user_id",
+          "source",
+          "role",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TeamMemberRead",
+        "type": "object"
+      },
+      "TeamMemberRoleUpdate": {
+        "properties": {
+          "role": {
+            "enum": [
+              "admin",
+              "maintainer",
+              "user"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "title": "TeamMemberRoleUpdate",
+        "type": "object"
+      },
+      "TeamRead": {
+        "description": "Team metadata plus derived, non-persisted roster/caller state.",
+        "properties": {
+          "active_admin_count": {
+            "default": 0,
+            "title": "Active Admin Count",
+            "type": "integer"
+          },
+          "active_member_count": {
+            "default": 0,
+            "title": "Active Member Count",
+            "type": "integer"
+          },
+          "adom_name": {
+            "title": "Adom Name",
+            "type": "string"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/TeamCapabilities"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_user_role": {
+            "anyOf": [
+              {
+                "enum": [
+                  "admin",
+                  "maintainer",
+                  "user"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current User Role"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "inactivation_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "manual",
+                  "no_active_admin"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inactivation Reason"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "member_count": {
+            "default": 0,
+            "title": "Member Count",
+            "type": "integer"
+          },
+          "team_name": {
+            "title": "Team Name",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "team_name",
+          "adom_name",
+          "description",
+          "is_active",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TeamRead",
+        "type": "object"
+      },
+      "TeamUpdate": {
+        "description": "Atomic metadata and roster patch.",
+        "properties": {
+          "adom_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adom Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "member_upserts": {
+            "items": {
+              "$ref": "#/components/schemas/TeamMemberInput"
+            },
+            "maxItems": 200,
+            "title": "Member Upserts",
+            "type": "array"
+          },
+          "remove_member_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Remove Member Ids",
+            "type": "array"
+          },
+          "team_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Name"
+          }
+        },
+        "title": "TeamUpdate",
+        "type": "object"
       },
       "TraceListResponse": {
         "description": "Paginated list response for traces.",
@@ -6017,6 +7338,40 @@
               "title": "Include Blocked",
               "type": "boolean"
             }
+          },
+          {
+            "in": "query",
+            "name": "flow_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Flow Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "project_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Id"
+            }
           }
         ],
         "responses": {
@@ -6053,6 +7408,1703 @@
         "summary": "Get All",
         "tags": [
           "Base"
+        ]
+      }
+    },
+    "/api/v1/authz/capabilities": {
+      "get": {
+        "description": "Report only behavior implemented by the registered, ready service.",
+        "operationId": "get_authorization_capabilities_api_v1_authz_capabilities_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorizationCapabilitiesRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Get Authorization Capabilities",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/me/permissions": {
+      "post": {
+        "description": "Return per-resource allowed actions for the current user.\n\nUse this to render the UI permission gate (greyed-out buttons etc.) without\nflooding the audit log with denied probes. Empty list for a resource_id\nmeans the user cannot perform any of the requested actions on that resource.",
+        "operationId": "get_effective_permissions_api_v1_authz_me_permissions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EffectivePermissionsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EffectivePermissionsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Get Effective Permissions",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/recipients": {
+      "get": {
+        "description": "Search active users or valid teams without exposing full profiles.",
+        "operationId": "search_authorization_recipients_api_v1_authz_recipients_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "purpose",
+            "required": true,
+            "schema": {
+              "enum": [
+                "share",
+                "team_membership"
+              ],
+              "title": "Purpose",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "user",
+                "team"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 2,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resource_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Resource Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resource_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Resource Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "team_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Team Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorizationRecipientPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Search Authorization Recipients",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/shares": {
+      "get": {
+        "description": "List only rows visible to the caller, filtered before pagination.",
+        "operationId": "list_shares_api_v1_authz_shares_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "resource_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Resource Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resource_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Resource Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ShareRead"
+                  },
+                  "title": "Response List Shares Api V1 Authz Shares Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "List Shares",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "post": {
+        "description": "Create one canonical grant after resource and recipient authorization.",
+        "operationId": "create_share_api_v1_authz_shares_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Create Share",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/shares/": {
+      "get": {
+        "description": "List only rows visible to the caller, filtered before pagination.",
+        "operationId": "list_shares_api_v1_authz_shares__get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "resource_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Resource Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resource_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Resource Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ShareRead"
+                  },
+                  "title": "Response List Shares Api V1 Authz Shares  Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "List Shares",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "post": {
+        "description": "Create one canonical grant after resource and recipient authorization.",
+        "operationId": "create_share_api_v1_authz_shares__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Create Share",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/shares/summary": {
+      "get": {
+        "description": "Return bounded direct grants and effective access for one subject.",
+        "operationId": "get_share_summary_api_v1_authz_shares_summary_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "resource_type",
+            "required": true,
+            "schema": {
+              "enum": [
+                "flow",
+                "project"
+              ],
+              "title": "Resource Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resource_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Resource Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "subject_user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Subject User Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareSummaryRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Get Share Summary",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/shares/{share_id}": {
+      "delete": {
+        "operationId": "delete_share_api_v1_authz_shares__share_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Share Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Delete Share",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "get": {
+        "operationId": "get_share_api_v1_authz_shares__share_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Share Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Get Share",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "patch": {
+        "operationId": "update_share_api_v1_authz_shares__share_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Share Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Update Share",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/teams": {
+      "get": {
+        "description": "List a bounded caller-authorized team view.",
+        "operationId": "list_teams_api_v1_authz_teams_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "member",
+              "enum": [
+                "directory",
+                "member",
+                "managed",
+                "all"
+              ],
+              "title": "View",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_active",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Active"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TeamRead"
+                  },
+                  "title": "Response List Teams Api V1 Authz Teams Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "List Teams",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "post": {
+        "operationId": "create_team_api_v1_authz_teams_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Create Team",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/teams/": {
+      "get": {
+        "description": "List a bounded caller-authorized team view.",
+        "operationId": "list_teams_api_v1_authz_teams__get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "member",
+              "enum": [
+                "directory",
+                "member",
+                "managed",
+                "all"
+              ],
+              "title": "View",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Search"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_active",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Active"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TeamRead"
+                  },
+                  "title": "Response List Teams Api V1 Authz Teams  Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "List Teams",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "post": {
+        "operationId": "create_team_api_v1_authz_teams__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Create Team",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/teams/{team_id}": {
+      "delete": {
+        "operationId": "delete_team_api_v1_authz_teams__team_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Delete Team",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "get": {
+        "operationId": "read_team_api_v1_authz_teams__team_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Read Team",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "patch": {
+        "operationId": "update_team_api_v1_authz_teams__team_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Update Team",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/teams/{team_id}/members": {
+      "get": {
+        "operationId": "list_members_api_v1_authz_teams__team_id__members_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TeamMemberRead"
+                  },
+                  "title": "Response List Members Api V1 Authz Teams  Team Id  Members Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "List Members",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "post": {
+        "operationId": "add_member_api_v1_authz_teams__team_id__members_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamMemberCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamMemberRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Add Member",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/teams/{team_id}/members/{user_id}": {
+      "delete": {
+        "operationId": "remove_member_api_v1_authz_teams__team_id__members__user_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Remove Member",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "patch": {
+        "operationId": "change_member_role_api_v1_authz_teams__team_id__members__user_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamMemberRoleUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamMemberRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Change Member Role",
+        "tags": [
+          "Authorization"
         ]
       }
     },
@@ -7330,12 +10382,19 @@
           "content": {
             "application/json": {
               "schema": {
-                "items": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "title": "Flow Ids",
-                "type": "array"
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/FlowBulkDelete"
+                  },
+                  {
+                    "items": {
+                      "format": "uuid",
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                ],
+                "title": "Payload"
               }
             }
           },
@@ -7451,6 +10510,16 @@
             "schema": {
               "default": false,
               "title": "Header Flows",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "shared_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Shared Only",
               "type": "boolean"
             }
           },
@@ -7889,6 +10958,22 @@
               "title": "Flow Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
           }
         ],
         "responses": {
@@ -7993,6 +11078,22 @@
               "title": "Flow Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
           }
         ],
         "requestBody": {
@@ -8055,6 +11156,38 @@
               "format": "uuid",
               "title": "Flow Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-None-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-None-Match"
             }
           }
         ],
@@ -10302,20 +13435,91 @@
     "/api/v1/projects/": {
       "get": {
         "operationId": "read_projects_api_v1_projects__get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "shared_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Shared Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "get_all",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Get All",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Size"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/FolderListRead"
-                  },
-                  "title": "Response Read Projects Api V1 Projects  Get",
-                  "type": "array"
+                  "anyOf": [
+                    {
+                      "items": {
+                        "$ref": "#/components/schemas/FolderListRead"
+                      },
+                      "type": "array"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Page_FolderListRead_"
+                    }
+                  ],
+                  "title": "Response Read Projects Api V1 Projects  Get"
                 }
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "security": [
@@ -10507,6 +13711,22 @@
               "title": "Project Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
           }
         ],
         "responses": {
@@ -10674,6 +13894,22 @@
               "title": "Project Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
           }
         ],
         "requestBody": {
@@ -10736,6 +13972,38 @@
               "format": "uuid",
               "title": "Project Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "If-None-Match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-None-Match"
             }
           }
         ],
@@ -11114,7 +14382,7 @@
         ]
       },
       "post": {
-        "description": "Add a new user to the database.\n\nThis endpoint backs two flows that share the same route:\n\n* Public sign up (unauthenticated). Allowed only when public registration is\n  enabled for the deployment, i.e. AUTO_LOGIN is off (multi-user mode) and\n  ENABLE_SIGNUP is True.\n* Admin \"add user\" (authenticated active superuser). Always allowed,\n  regardless of the sign up settings, so disabling public sign up does not\n  break superuser-driven user creation.\n\nUser activation is controlled by the NEW_USER_IS_ACTIVE setting.",
+        "description": "Add a new user to the database.\n\nThis endpoint backs two flows that share the same route:\n\n* Public sign up (unauthenticated). Allowed only when public registration is\n  enabled for the deployment, i.e. AUTO_LOGIN is off (multi-user mode) and\n  ENABLE_SIGNUP is True.\n* Admin \"add user\" (authenticated Platform Admin). Always allowed,\n  regardless of the sign up settings, so disabling public sign up does not\n  break administrator-driven user creation.\n\nUser activation is controlled by the NEW_USER_IS_ACTIVE setting.",
         "operationId": "add_user_api_v1_users__post",
         "requestBody": {
           "content": {
@@ -12799,7 +16067,7 @@
     },
     "/api/v2/workflows/stop": {
       "post": {
-        "description": "Stop a running workflow execution",
+        "description": "Stop a running background workflow execution",
         "operationId": "stop_workflow_api_v2_workflows_stop_post",
         "requestBody": {
           "content": {

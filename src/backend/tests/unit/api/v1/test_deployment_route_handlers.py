@@ -28,6 +28,7 @@ from langflow.api.v1.schemas.deployments import (
     DeploymentUpdateRequest,
     SnapshotUpdateRequest,
 )
+from langflow.services.authorization import DeploymentAction
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
 from lfx.services.adapters.deployment.exceptions import (
@@ -1129,8 +1130,10 @@ class TestConfigAndSnapshotListRoutes:
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.ensure_deployment_permission", new_callable=AsyncMock)
     async def test_list_configs_global_scope_uses_provider_id(
         self,
+        mock_ensure_permission,
         mock_get_pa,
         mock_get_mapper,
         mock_resolve_adapter,
@@ -1155,16 +1158,22 @@ class TestConfigAndSnapshotListRoutes:
         mapper.shape_config_list_result.return_value = expected_response
         mock_get_mapper.return_value = mapper
 
+        actor = _fake_user()
         result = await list_deployment_configs(
             provider_id=pa.id,
             deployment_id=None,
             page=1,
             size=10,
             session=AsyncMock(),
-            current_user=_fake_user(),
+            current_user=actor,
         )
 
         assert result is expected_response
+        mock_ensure_permission.assert_awaited_once_with(
+            actor,
+            DeploymentAction.READ,
+            deployment_user_id=pa.user_id,
+        )
         mapper.resolve_config_list_adapter_params.assert_awaited_once_with(
             deployment_resource_key=None,
             provider_params=None,
@@ -3251,6 +3260,17 @@ class TestGetDeploymentSync:
 
 
 class TestDeleteDeployment:
+    @pytest.fixture(autouse=True)
+    def canonical_actor(self, monkeypatch):
+        # These handler tests use an in-memory session double; real canonical
+        # actor/revocation checks are exercised by the Casbin database suite.
+        async def load_actor(_session, user_id):
+            actor = _fake_user()
+            actor.id = user_id
+            return actor
+
+        monkeypatch.setattr("langflow.services.authorization.fetch.load_mutation_actor", load_actor)
+
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.delete_deployment_by_id", new_callable=AsyncMock)
     @patch(f"{ROUTES_MODULE}.resolve_adapter_from_deployment", new_callable=AsyncMock)

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from typing import Any, ClassVar
 from unittest.mock import patch
 from uuid import uuid4
@@ -68,6 +69,9 @@ class _FakeSession:
         self.statements.append(stmt)
         self.calls.append(str(stmt))
         return _FakeResult(self.returns)
+
+    def get_bind(self) -> SimpleNamespace:
+        return SimpleNamespace(dialect=SimpleNamespace(name="postgresql"))
 
 
 @pytest.mark.anyio

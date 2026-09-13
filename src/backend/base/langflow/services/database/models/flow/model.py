@@ -220,6 +220,7 @@ class FlowBase(SQLModel):
 
 class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
+    edit_revision: int = Field(default=1, nullable=False)
     data: dict | None = Field(default=None, sa_column=Column(JSON))
     user_id: UUID | None = Field(index=True, foreign_key="user.id", nullable=True)
     user: "User" = Relationship(back_populates="flows")
@@ -263,7 +264,10 @@ class FlowCreate(FlowBase):
 
 class FlowRead(FlowBase):
     id: UUID
+    edit_revision: int = Field(default=1, ge=1)
     user_id: UUID | None = Field()
+    owner_username: str | None = None
+    is_owner: bool = False
     folder_id: UUID | None = Field()
     workspace_id: UUID | None = Field(default=None)
     tags: list[str] | None = Field(None, description="The tags of the flow")
@@ -274,6 +278,10 @@ class FlowHeader(BaseModel):
     """Model representing a header for a flow - Without the data."""
 
     id: UUID = Field(description="Unique identifier for the flow")
+    edit_revision: int = Field(default=1, ge=1, description="Optimistic editing revision")
+    user_id: UUID | None = Field(default=None, description="The owner identifier")
+    owner_username: str | None = Field(default=None, description="The owner display name")
+    is_owner: bool = Field(default=False, description="Whether the caller owns this flow")
     name: str = Field(description="The name of the flow")
     folder_id: UUID | None = Field(
         None,
@@ -304,6 +312,10 @@ class FlowUpdate(SQLModel):
     name: str | None = None
     description: str | None = None
     data: dict | None = None
+    tags: list[str] | None = None
+    icon: str | None = None
+    icon_bg_color: str | None = None
+    gradient: str | None = None
     folder_id: UUID | None = None
     workspace_id: UUID | None = None
     endpoint_name: str | None = None

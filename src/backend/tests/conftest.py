@@ -38,6 +38,8 @@ from langflow.services.deps import (
 from lfx.components.input_output import ChatInput
 from lfx.graph import Graph
 from lfx.log.logger import logger
+from sqlalchemy import text
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.orm import selectinload
 from sqlmodel import Session, SQLModel, create_engine, select
@@ -48,6 +50,22 @@ from typer.testing import CliRunner
 from tests.api_keys import get_openai_api_key
 
 load_dotenv()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def authorization_test_mode():
+    """Select legacy compatibility unless this run explicitly enables enforcement.
+
+    Normal browser tests use the same mode. The required authorization matrix
+    supplies its own environment, and Casbin fixtures explicitly enable their
+    service. Fresh-install default tests remove this setting themselves.
+    """
+    with pytest.MonkeyPatch.context() as patch:
+        if "LANGFLOW_AUTHZ_ENABLED" not in os.environ:
+            patch.setenv("LANGFLOW_AUTHZ_ENABLED", "false")
+            if is_settings_service_initialized():
+                patch.setattr(get_settings_service().auth_settings, "AUTHZ_ENABLED", False)
+        yield
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -544,12 +562,38 @@ def use_noop_session(monkeypatch):
     monkeypatch.undo()
 
 
+@pytest.fixture
+async def authorization_test_database_url():
+    """Give each HTTP client its own database on the selected PostgreSQL test server."""
+    configured = os.getenv("LANGFLOW_AUTHZ_TEST_DATABASE_URI")
+    if not configured or make_url(configured).get_backend_name() not in {"postgres", "postgresql"}:
+        yield None
+        return
+
+    server_url = make_url(configured).set(drivername="postgresql+psycopg")
+    # Identifiers are generated here, never taken from request or configuration
+    # input. Only this fixture's private database is created and removed.
+    database_name = f"langflow_authz_test_{uuid4().hex}"
+    administration = create_async_engine(server_url, isolation_level="AUTOCOMMIT")
+    try:
+        async with administration.connect() as connection:
+            await connection.execute(text(f'CREATE DATABASE "{database_name}"'))
+        try:
+            yield server_url.set(database=database_name).render_as_string(hide_password=False)
+        finally:
+            async with administration.connect() as connection:
+                await connection.execute(text(f'DROP DATABASE "{database_name}" WITH (FORCE)'))
+    finally:
+        await administration.dispose()
+
+
 @pytest.fixture(name="client")
 async def client_fixture(
     session: Session,  # noqa: ARG001
     monkeypatch,
     request,
     load_flows_dir,
+    authorization_test_database_url,
 ):
     # Set the database url to a test database
     if "noclient" in request.keywords:
@@ -559,11 +603,22 @@ async def client_fixture(
         def init_app():
             db_dir = tempfile.mkdtemp()
             db_path = Path(db_dir) / "test.db"
-            monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
+            database_url = authorization_test_database_url or f"sqlite:///{db_path}"
+            monkeypatch.setenv("LANGFLOW_DATABASE_URL", database_url)
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
             monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
             monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
             monkeypatch.setenv("DO_NOT_TRACK", "true")
+            if "casbin_authorization" in request.fixturenames:
+                config_dir = Path(db_dir) / "authorization-config"
+                config_dir.mkdir()
+                (config_dir / "lfx.toml").write_text(
+                    "[services]\nauthorization_service = "
+                    '"langflow.services.authorization.casbin.service:CasbinAuthorizationService"\n',
+                    encoding="utf-8",
+                )
+                monkeypatch.setenv("LANGFLOW_CONFIG_DIR", str(config_dir))
+                monkeypatch.setenv("LANGFLOW_AUTHZ_ENABLED", "true")
             if "load_flows" in request.keywords:
                 shutil.copyfile(
                     pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
@@ -572,13 +627,19 @@ async def client_fixture(
                 monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
             # Clear the services cache
             from lfx.services.manager import get_service_manager
+            from lfx.services.schema import ServiceType
 
+            get_service_manager().service_classes.pop(ServiceType.AUTHORIZATION_SERVICE, None)
             get_service_manager().factories.clear()
             get_service_manager().services.clear()  # Clear the services cache
+            get_service_manager()._plugins_discovered = False  # Re-read this test's explicit registration.
             app = create_app()
             db_service = get_db_service()
-            db_service.database_url = f"sqlite:///{db_path}"
+            db_service.database_url = database_url
             db_service.reload_engine()
+            expected_dialect = os.getenv("LANGFLOW_AUTHZ_EXPECTED_DIALECT")
+            if expected_dialect is not None:
+                assert db_service.engine.dialect.name == expected_dialect
             return app, db_path
 
         app, db_path = await asyncio.to_thread(init_app)

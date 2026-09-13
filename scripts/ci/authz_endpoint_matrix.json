@@ -1,6 +1,34 @@
 {
   "schema_version": 1,
-  "description": "Canonical OSS route-to-authorization contract. Every decorated route in the listed modules must be classified here.",
+  "description": "Langflow route-to-authorization contract for the explicitly declared module scope. Every decorated route in that scope must be classified, even if its last contract is removed.",
+  "scope": {
+    "description": "Existing authorization, team-sharing and associated runtime route families from the revision 003 acceptance matrix. This is a structural route/persona inventory, not proof of every route's behavior or an inventory of the entire API.",
+    "sources": [
+      "api/v1/authz_teams.py",
+      "api/v1/authz_shares.py",
+      "api/v1/authz_me.py",
+      "api/v1/authz_capabilities.py",
+      "api/v1/authz_recipients.py",
+      "api/v1/flows.py",
+      "api/v1/endpoints.py",
+      "api/v1/openai_responses.py",
+      "api/v1/mcp.py",
+      "api/v1/mcp_projects.py",
+      "api/v1/a2a.py",
+      "api/v1/chat.py",
+      "api/v1/voice_mode.py",
+      "api/v1/projects.py",
+      "api/v1/deployments.py",
+      "api/v1/files.py",
+      "api/v1/variable.py",
+      "api/v1/knowledge_bases.py",
+      "api/v2/files.py",
+      "api/v2/mcp.py",
+      "api/v2/workflow.py",
+      "api/v2/workflow_public.py"
+    ],
+    "excluded_review": "Other API modules are outside this declared inventory. Structural completeness does not certify secrets, private dependencies, historical build content or every endpoint's behavior."
+  },
   "persona_presets": {
     "canonical_v1": {
       "viewer": "allow read and flow execute only when the role domain and object grant match",
@@ -21,9 +49,153 @@
       "team_share": "no grant beyond the route's public or conditional contract",
       "scoped_role": "no grant beyond the route's public or conditional contract",
       "revoked": "deny authenticated/private access; public behavior remains public"
+    },
+    "team_administration": {
+      "viewer": "a canonical viewer role grants no team-management authority",
+      "developer": "a canonical developer role grants no team-management authority",
+      "admin": "a canonical admin role is not Platform Admin or Team Admin authority",
+      "owner": "teams are administratively managed and do not own shared resources",
+      "direct_share": "resource shares grant no team-management authority",
+      "team_share": "resource shares grant no team-management authority; an active Team Admin or Maintainer role controls roster operations",
+      "scoped_role": "team roles are scoped to one team and never elevate is_superuser",
+      "revoked": "committed membership removal, role downgrade, suspension, or deletion applies to new requests"
+    },
+    "resource_share_administration": {
+      "viewer": "a canonical viewer may consume matching grants but cannot administer them",
+      "developer": "write access alone never implies share administration",
+      "admin": "only separately authorized platform administration may override resource ownership",
+      "owner": "the canonical resource owner may create, inspect, change, and remove its grants subject to credential ceilings",
+      "direct_share": "a direct recipient may inspect a visible grant but cannot reshare without explicit administration authority",
+      "team_share": "an active team recipient may inspect a visible team grant but team role does not grant resource-share administration",
+      "scoped_role": "an explicit matching share-management grant is evaluated in the resource domain",
+      "revoked": "a committed grant removal or downgrade affects new admission immediately; alternate grants may survive"
+    },
+    "capability_discovery": {
+      "viewer": "may read only non-secret capabilities for the authenticated active user",
+      "developer": "may read only non-secret capabilities for the authenticated active user",
+      "admin": "may read capabilities; platform controls are advertised only for a true permitted superuser",
+      "owner": "ownership does not change service readiness",
+      "direct_share": "share grants do not change service readiness",
+      "team_share": "team grants do not change service readiness",
+      "scoped_role": "scoped grants do not change service readiness",
+      "revoked": "inactive users receive no capability document and readiness failures return unavailable"
+    },
+    "authorized_directory": {
+      "viewer": "cannot enumerate recipients without authorization for the intended share or team operation",
+      "developer": "cannot enumerate recipients from generic write access alone",
+      "admin": "a permitted Platform Admin may search active users for initial or existing team membership",
+      "owner": "a resource owner may search bounded active user and eligible team recipients for that resource",
+      "direct_share": "a recipient grant does not by itself authorize directory search or resharing",
+      "team_share": "a Team Admin or Maintainer may search eligible users only for permitted roster operations",
+      "scoped_role": "directory authority is evaluated against the exact intended resource or team",
+      "revoked": "revoked authority denies before directory rows are queried or returned"
     }
   },
   "contracts": [
+    {
+      "family": "authorization_teams",
+      "source": "api/v1/authz_teams.py",
+      "resource": "team",
+      "domain": "one team for roster management; platform-global for create/delete",
+      "privacy": "non-members cannot discover private team identifiers; directory views expose only permitted non-secret roster metadata",
+      "side_effects": "verify active identity, service readiness, external ceiling, actor role, and final-roster invariants before one audited transaction",
+      "frontend": "Platform Admins can create/delete teams; Team Admins and Maintainers see only their permitted controls; Team Users receive a read-only roster",
+      "personas": "team_administration",
+      "test_references": [
+        "src/backend/tests/unit/services/authorization/test_collaboration_management.py::test_team_mutations_enforce_real_roster_and_role_invariants",
+        "src/backend/tests/unit/services/authorization/test_collaboration_management.py::test_concurrent_final_admin_demotions_commit_only_one_valid_result",
+        "src/backend/tests/unit/api/v1/test_authz_admin_routes.py::test_create_team_requires_superuser"
+      ],
+      "routes": [
+        "GET||list_teams|read|authenticated",
+        "GET|/|list_teams|read|authenticated",
+        "POST||create_team|create|authenticated",
+        "POST|/|create_team|create|authenticated",
+        "GET|/{team_id}|read_team|read|authenticated",
+        "PATCH|/{team_id}|update_team|write|authenticated",
+        "DELETE|/{team_id}|delete_team|delete|authenticated",
+        "GET|/{team_id}/members|list_members|read|authenticated",
+        "POST|/{team_id}/members|add_member|create|authenticated",
+        "PATCH|/{team_id}/members/{user_id}|change_member_role|write|authenticated",
+        "DELETE|/{team_id}/members/{user_id}|remove_member|delete|authenticated"
+      ]
+    },
+    {
+      "family": "authorization_shares",
+      "source": "api/v1/authz_shares.py",
+      "resource": "share over canonical resource",
+      "domain": "the target flow/project domain; existing compatibility resources retain their canonical domain",
+      "privacy": "owners see their resource grants; recipients see only grants that currently apply to them; denials do not reveal foreign resource identifiers",
+      "side_effects": "resolve and authorize the canonical resource and recipient before audited revision-checked writes; refresh policy only after commit",
+      "frontend": "the dialog sends execute or write only; the API preserves authorized read, execute, write, and admin values and explains overlapping grants",
+      "personas": "resource_share_administration",
+      "test_references": [
+        "src/backend/tests/unit/services/authorization/test_collaboration_management.py::test_share_mutation_revision_recipient_and_audit_contract",
+        "src/backend/tests/unit/services/authorization/test_collaboration_management.py::test_native_service_enforces_direct_team_and_project_inherited_shares",
+        "src/backend/tests/unit/api/v1/test_authz_share_routes.py::test_list_shares_filters_by_visibility_for_non_superuser"
+      ],
+      "routes": [
+        "GET||list_shares|read|authenticated",
+        "GET|/|list_shares|read|authenticated",
+        "GET|/summary|get_share_summary|read|authenticated",
+        "GET|/{share_id}|get_share|read|authenticated",
+        "POST||create_share|create|authenticated",
+        "POST|/|create_share|create|authenticated",
+        "PATCH|/{share_id}|update_share|write|authenticated",
+        "DELETE|/{share_id}|delete_share|delete|authenticated"
+      ]
+    },
+    {
+      "family": "authorization_effective_permissions",
+      "source": "api/v1/authz_me.py",
+      "resource": "requested canonical resources",
+      "domain": "caller-supplied domain constrained by each canonical resource and external credential ceiling",
+      "privacy": "returns only decisions for requested identifiers and never exposes hidden resource metadata",
+      "side_effects": "read-only batched enforcement; readiness failures deny capability derivation instead of enabling controls",
+      "frontend": "all resource controls consume fail-closed effective permissions and route-aligned capabilities",
+      "personas": "canonical_v1",
+      "test_references": [
+        "src/backend/tests/unit/api/v1/test_authz_admin_routes.py::test_me_permissions_returns_per_resource_actions",
+        "src/backend/tests/unit/api/v1/test_authz_admin_routes.py::test_me_permissions_adds_owner_override_actions"
+      ],
+      "routes": [
+        "POST|/permissions|get_effective_permissions|read|authenticated"
+      ]
+    },
+    {
+      "family": "authorization_capabilities",
+      "source": "api/v1/authz_capabilities.py",
+      "resource": "authorization service",
+      "domain": "authenticated caller-global readiness",
+      "privacy": "reports non-secret service and caller capabilities only; inactive users receive no document",
+      "side_effects": "read-only probe of the registered service; probe failures return 503 and never imply disabled or permissive mode",
+      "frontend": "feature routes and controls render only when native collaboration is both supported and ready",
+      "personas": "capability_discovery",
+      "test_references": [
+        "src/backend/tests/unit/services/authorization/test_collaboration_management.py::test_capabilities_endpoint_reports_only_ready_native_service_contract",
+        "src/backend/tests/unit/services/authorization/test_capability_flag.py::test_base_class_default_is_false"
+      ],
+      "routes": [
+        "GET||get_authorization_capabilities|read|authenticated",
+        "GET|/|get_authorization_capabilities|read|authenticated"
+      ]
+    },
+    {
+      "family": "authorization_recipients",
+      "source": "api/v1/authz_recipients.py",
+      "resource": "bounded user/team directory",
+      "domain": "the exact flow, project, or team operation named by the request",
+      "privacy": "authorization precedes search; only active users and active admin-bearing teams return bounded display metadata",
+      "side_effects": "read-only search after active-identity, readiness, and operation-specific authorization checks",
+      "frontend": "share and roster dialogs search on demand and never download the complete identity directory",
+      "personas": "authorized_directory",
+      "test_references": [
+        "src/backend/tests/unit/services/authorization/test_collaboration_management.py::test_recipient_lookup_is_authorized_and_filters_inactive_users"
+      ],
+      "routes": [
+        "GET||search_authorization_recipients|read|authenticated"
+      ]
+    },
     {
       "family": "flow_crud",
       "source": "api/v1/flows.py",
@@ -275,7 +447,8 @@
       "frontend": "deployment create, run, edit, rollback, and delete controls use effective deployment permissions",
       "personas": "canonical_v1",
       "test_references": [
-        "src/backend/tests/unit/api/v1/test_deployment_route_handlers.py::test_concrete_prefilter_relaxes_provider_gate_and_threads_visibility_scope"
+        "src/backend/tests/unit/api/v1/test_deployment_route_handlers.py::test_concrete_prefilter_relaxes_provider_gate_and_threads_visibility_scope",
+        "src/backend/tests/unit/api/v1/test_deployment_route_handlers.py::test_list_configs_global_scope_uses_provider_id"
       ],
       "routes": [
         "POST||create_deployment|create|authenticated",

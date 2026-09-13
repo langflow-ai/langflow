@@ -29,6 +29,21 @@ class SharePermissionLevel(str, Enum):
     ADMIN = "admin"
 
 
+class TeamRole(str, Enum):
+    """Role held by one user within one team."""
+
+    ADMIN = "admin"
+    MAINTAINER = "maintainer"
+    USER = "user"
+
+
+class TeamInactivationReason(str, Enum):
+    """Reason an inactive team cannot currently grant access."""
+
+    MANUAL = "manual"
+    NO_ACTIVE_ADMIN = "no_active_admin"
+
+
 def _tz_aware_now() -> datetime:
     """Return a TZ-aware UTC datetime — used by every authz default_factory."""
     return datetime.now(timezone.utc)
@@ -219,12 +234,20 @@ class AuthzTeam(SQLModel, table=True):  # type: ignore[call-arg]
     """Logical grouping of users for share scopes and bulk role assignments."""
 
     __tablename__ = "authz_team"
+    __table_args__ = (
+        CheckConstraint(
+            "(is_active AND inactivation_reason IS NULL) OR "
+            "(NOT is_active AND inactivation_reason IN ('manual', 'no_active_admin'))",
+            name="ck_authz_team_inactivation_reason",
+        ),
+    )
 
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
     team_name: str = Field(index=True)
     adom_name: str = Field(unique=True, index=True)
     description: str | None = Field(default=None)
     is_active: bool = Field(default=True)
+    inactivation_reason: str | None = Field(default=None)
     created_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
     updated_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
 
@@ -233,7 +256,14 @@ class AuthzTeamMember(SQLModel, table=True):  # type: ignore[call-arg]
     """Membership row linking a user to an AuthzTeam."""
 
     __tablename__ = "authz_team_member"
-    __table_args__ = (UniqueConstraint("team_id", "user_id", name="uq_authz_team_member"),)
+    __table_args__ = (
+        UniqueConstraint("team_id", "user_id", name="uq_authz_team_member"),
+        CheckConstraint(
+            "role IN ('admin', 'maintainer', 'user')",
+            name="ck_authz_team_member_role",
+        ),
+        Index("ix_authz_team_member_team_role", "team_id", "role"),
+    )
 
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
     team_id: UUIDstr = Field(
@@ -243,7 +273,9 @@ class AuthzTeamMember(SQLModel, table=True):  # type: ignore[call-arg]
         sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True),
     )
     source: str = Field(default="manual", description="sso or manual")
+    role: str = Field(default=TeamRole.USER.value)
     created_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
+    updated_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
 
 
 class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
@@ -275,6 +307,7 @@ class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
             "permission_level IN ('read', 'write', 'execute', 'admin')",
             name="ck_authz_share_permission_enum",
         ),
+        CheckConstraint("revision >= 1", name="ck_authz_share_revision_positive"),
         # Targeted (TEAM/USER) shares require a target_id; untargeted
         # (PRIVATE/PUBLIC) shares forbid one. Matches the partial-unique-index
         # split so callers can't accidentally construct rows that one index
@@ -311,11 +344,13 @@ class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
     scope: str = Field(index=True)
     target_id: UUIDstr | None = Field(default=None, index=True)
     permission_level: str = Field(default=SharePermissionLevel.READ.value)
+    revision: int = Field(default=1, nullable=False)
     created_by: UUIDstr | None = Field(
         default=None,
         sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="SET NULL"), nullable=True),
     )
     created_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
+    updated_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
 
 
 class AuthzEditLock(SQLModel, table=True):  # type: ignore[call-arg]

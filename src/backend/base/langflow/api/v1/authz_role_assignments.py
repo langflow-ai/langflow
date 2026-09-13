@@ -29,12 +29,14 @@ from langflow.api.v1.schemas.authz_role_assignments import (
     RoleAssignmentRead,
 )
 from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS, AUDIT_EVENT_MUTATION
+from langflow.services.authorization.fetch import load_mutation_actor
 from langflow.services.authorization.lifecycle import (
     acquire_identity_mutation_lock,
     safe_identity_mutation_committed,
     stage_identity_mutation,
     validate_identity_mutation,
 )
+from langflow.services.authorization.team_management import actor_can_administer_platform
 from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment, AuthzRoleAssignmentGrant
 from langflow.services.database.models.user.model import User
@@ -57,8 +59,13 @@ async def _audit_deny(*, user_id: UUID, action: str, obj: str, status_code: int,
     )
 
 
-async def _require_superuser(user, *, action: str, obj: str) -> None:
-    if not getattr(user, "is_superuser", False):
+async def _require_superuser(user, *, action: str, obj: str, session: DbSession | None = None) -> None:
+    if session is not None:
+        user = await load_mutation_actor(session, user.id)
+    if not actor_can_administer_platform(user):
+        if session is not None:
+            # Release the policy writer before the independent durable denial audit.
+            await session.rollback()
         await _audit_deny(
             user_id=user.id,
             action=action,
@@ -197,6 +204,7 @@ async def create_assignment(
         kind=AuthorizationMutationKind.ROLE_ASSIGNMENT_CREATED,
         affected_user_ids=(payload.user_id,),
     )
+    await _require_superuser(current_user, action="role_assignment:create", obj="role_assignment:*", session=session)
 
     user = await session.get(User, payload.user_id)
     if user is None:
@@ -344,6 +352,9 @@ async def delete_assignment(
         session,
         kind=AuthorizationMutationKind.ROLE_ASSIGNMENT_DELETED,
         entity_id=assignment_id,
+    )
+    await _require_superuser(
+        current_user, action="role_assignment:delete", obj=f"role_assignment:{assignment_id}", session=session
     )
 
     # Re-read the assignment and all provenance under row locks on dialects
