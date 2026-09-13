@@ -68,7 +68,7 @@ class FigraniumExecuteTaskComponent(Component):
             raise ValueError(msg) from exc
         if not isinstance(parsed, dict):
             msg = "Variables must be a JSON object."
-            raise ValueError(msg)
+            raise TypeError(msg)
         return parsed
 
     @staticmethod
