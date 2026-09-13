@@ -461,6 +461,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "EmpirioLabs", name: "empiriolabs", icon: "EmpirioLabs" },
   { display_name: "Exa", name: "exa", icon: "Exa" },
   { display_name: "FAISS", name: "faiss", icon: "FAISS" },
+  { display_name: "Figranium", name: "figranium", icon: "Figranium" },
   { display_name: "Firecrawl", name: "firecrawl", icon: "FirecrawlCrawlApi" },
   { display_name: "Git", name: "git", icon: "GitLoader" },
   { display_name: "Glean", name: "glean", icon: "Glean" },
