@@ -15,8 +15,9 @@ let mockFolders: Array<{
   flows: never[];
   components: never[];
   owner_username: string;
-  is_owner: boolean;
+  is_owner?: boolean;
 }> = [];
+let mockPermissionsResourceIds: string[] = [];
 
 jest.mock("@tanstack/react-query", () => ({
   ...jest.requireActual("@tanstack/react-query"),
@@ -75,9 +76,16 @@ jest.mock("@/components/ui/sidebar", () => {
 });
 
 jest.mock("@/contexts/permissionsContext", () => ({
-  PermissionsProvider: ({ children }: { children: React.ReactNode }) => (
-    <>{children}</>
-  ),
+  PermissionsProvider: ({
+    children,
+    resourceIds,
+  }: {
+    children: React.ReactNode;
+    resourceIds: string[];
+  }) => {
+    mockPermissionsResourceIds = resourceIds;
+    return <>{children}</>;
+  },
   usePermissions: () => ({ can: mockCan }),
 }));
 
@@ -236,6 +244,19 @@ const OTHER_FOLDER = {
   is_owner: false,
 };
 
+// A caller that doesn't populate is_owner at all — the filter's `!== false`
+// check must treat this as owned (matching getProjectDisplayName's own
+// existing fallback), not silently drop it from the sidebar.
+const UNDEFINED_OWNER_FOLDER = {
+  id: "undefined-owner-id",
+  name: "Legacy Project",
+  description: "",
+  parent_id: "",
+  flows: [] as never[],
+  components: [] as never[],
+  owner_username: "current-user",
+};
+
 const nameCellFor = (folderId: string) =>
   screen.getByTestId(`sidebar-nav-${folderId}`).querySelector("span");
 
@@ -253,6 +274,26 @@ describe("project name tooltip", () => {
     expect(
       screen.queryByTestId(`sidebar-nav-${OTHER_FOLDER.id}`),
     ).not.toBeInTheDocument();
+  });
+
+  it("treats a folder with no is_owner field at all as owned", () => {
+    mockFolders = [UNDEFINED_OWNER_FOLDER, OTHER_FOLDER];
+
+    render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
+
+    expect(
+      screen.getByTestId(`sidebar-nav-${UNDEFINED_OWNER_FOLDER.id}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId(`sidebar-nav-${OTHER_FOLDER.id}`),
+    ).not.toBeInTheDocument();
+  });
+
+  it("only requests permissions for the projects it actually renders", () => {
+    render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
+
+    expect(mockPermissionsResourceIds).toEqual([OWN_FOLDER.id]);
+    expect(mockPermissionsResourceIds).not.toContain(OTHER_FOLDER.id);
   });
 
   it("exposes the plain project name as a title, with no ownership suffix", () => {
