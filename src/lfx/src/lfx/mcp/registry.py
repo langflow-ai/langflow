@@ -171,6 +171,7 @@ def describe_component(registry: dict[str, dict], component_type: str) -> dict[s
         )
     fields = []
     advanced_fields: list[str] = []
+    constrained_advanced_fields = []
     inputs = []
     for fname, fdata in tmpl.get("template", {}).items():
         if not isinstance(fdata, dict):
@@ -193,8 +194,9 @@ def describe_component(registry: dict[str, dict], component_type: str) -> dict[s
                 advanced_fields.append(fname)
                 # configure_component enforces options/range_spec on advanced
                 # fields too, so the Assistant must be able to discover them.
+                # Kept out of `fields`, which lists non-advanced fields only.
                 if fdata.get("options") or fdata.get("range_spec"):
-                    fields.append({**_field_description(fname, fdata), "advanced": True})
+                    constrained_advanced_fields.append(_field_description(fname, fdata))
             else:
                 fields.append(_field_description(fname, fdata))
 
@@ -215,6 +217,8 @@ def describe_component(registry: dict[str, dict], component_type: str) -> dict[s
         result["fields"] = fields
     if advanced_fields:
         result["advanced_fields"] = sorted(advanced_fields)
+    if constrained_advanced_fields:
+        result["constrained_advanced_fields"] = constrained_advanced_fields
     # search_registry hides legacy/beta, but describe-by-exact-name still
     # reaches them — flag so the agent knows what it picked.
     if tmpl.get("legacy"):

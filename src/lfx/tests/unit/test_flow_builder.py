@@ -240,6 +240,20 @@ class TestConfigureValidation:
             configure_component(flow, component_id, {"choice": ["a", "invalid"]})
         assert flow == before
 
+    def test_open_list_field_requires_a_list(self, configured_flow):
+        """Action-picker and multiselect fields ship options=[] but still take lists."""
+        flow, component_id = configured_flow
+        fields = flow["data"]["nodes"][0]["data"]["node"]["template"]
+        fields["decisions"] = {"type": "actionPicker", "options": [], "value": ["Approve"], "list": True}
+        configure_component(flow, component_id, {"decisions": ["Approve", "Reject"]})
+        assert fields["decisions"]["value"] == ["Approve", "Reject"]
+        with pytest.raises(ValueError, match="Expected a list"):
+            configure_component(flow, component_id, {"decisions": "Approve"})
+        # An already malformed scalar is not re-affirmed by the re-set shortcut.
+        fields["decisions"]["value"] = "Approve"
+        with pytest.raises(ValueError, match="Expected a list"):
+            configure_component(flow, component_id, {"decisions": "Approve"})
+
     @pytest.mark.parametrize("combobox", [False, True])
     def test_rejects_scalar_for_list_options(self, configured_flow, combobox):
         flow, component_id = configured_flow

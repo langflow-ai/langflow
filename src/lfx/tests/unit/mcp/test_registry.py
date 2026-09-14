@@ -48,21 +48,23 @@ class TestDescribeConfigurationMetadata:
                     },
                     "sender": {"type": "str", "advanced": True, "options": ["Machine", "User"], "value": "User"},
                     "verbose": {"type": "bool", "advanced": True, "value": False},
+                    "input_value": {"type": "str", "value": ""},
                 }
             }
         }
         described = describe_component(registry, "Example")
+        # `fields` keeps listing non-advanced fields only; advanced names stay a name list.
+        assert [field["name"] for field in described["fields"]] == ["input_value"]
         assert described["advanced_fields"] == ["sender", "temperature", "verbose"]
-        fields = {field["name"]: field for field in described["fields"]}
-        assert set(fields) == {"temperature", "sender"}
-        assert fields["temperature"] == {
+        constrained = {field["name"]: field for field in described["constrained_advanced_fields"]}
+        assert set(constrained) == {"temperature", "sender"}
+        assert constrained["temperature"] == {
             "name": "temperature",
             "type": "slider",
             "default": 0.1,
             "range_spec": {"min": 0, "max": 1},
-            "advanced": True,
         }
-        assert fields["sender"]["options"] == ["Machine", "User"]
+        assert constrained["sender"]["options"] == ["Machine", "User"]
 
     @pytest.mark.parametrize(
         ("name", "metadata"),

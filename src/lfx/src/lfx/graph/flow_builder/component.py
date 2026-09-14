@@ -291,23 +291,30 @@ _STRUCTURED_VALUE_TYPES = frozenset({"duration"})
 
 def _validate_configured_value(field_name: str, field: dict[str, Any], value: Any) -> None:
     """Validate closed options and numeric bounds before mutating a flow."""
-    if value is None or value == field.get("value"):
-        # Re-setting what the field already holds is always acceptable, including
-        # shipped defaults that sit outside their own range_spec (max_tokens=0).
+    if value is None:
         return
 
     options = field.get("options")
     # Model selectors and sortable lists carry dict options and keep their
     # existing structured semantics; duration keeps its structured value.
-    has_direct_options = (
+    has_scalar_options = (
         isinstance(options, list)
-        and options
         and all(_is_scalar_option_value(option) for option in options)
         and field.get("type") not in _STRUCTURED_VALUE_TYPES
     )
-    if has_direct_options and field.get("list") and not isinstance(value, list):
+    # A list field with an options list (even an empty, open one such as an
+    # action picker) always takes a list. Checked before the re-set shortcut so
+    # an already malformed scalar cannot be re-affirmed.
+    if has_scalar_options and field.get("list") and not isinstance(value, list):
         msg = f"Invalid value for parameter '{field_name}': {value!r}. Expected a list"
         raise ValueError(msg)
+
+    if value == field.get("value"):
+        # Re-setting what the field already holds is always acceptable, including
+        # shipped defaults that sit outside their own range_spec (max_tokens=0).
+        return
+
+    has_direct_options = has_scalar_options and bool(options)
     if has_direct_options and not field.get("combobox"):
         values = value if field.get("list") and isinstance(value, list) else [value]
         accepted_values = list(options)
