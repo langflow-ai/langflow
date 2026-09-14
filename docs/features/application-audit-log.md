@@ -109,18 +109,26 @@ The name is the *attempt*, never its outcome — `flow.update`, not `flow.update
 so one name covers the attempt that worked, the one that failed, and the one that
 was refused. `family` and `result` say how it ended.
 
+The table below lists the results a producer actually writes today, not the ones
+the vocabulary could express. A result named here with nothing writing it would
+tell an investigator to expect rows that never arrive.
+
 | Event | Family | Result | Payload |
 |---|---|---|---|
-| `langflow.audit.flow.create` | action | `succeeded` · `failed` | — |
-| `langflow.audit.flow.update` | action | `succeeded` · `failed` | `changes`, `changes_total`, optional `reason` |
-| `langflow.audit.flow.delete` | action | `succeeded` · `failed` | — |
-| `langflow.audit.flow.restore` | action | `succeeded` · `failed` | `version_id` |
+| `langflow.audit.flow.create` | action | `succeeded` | — |
+| `langflow.audit.flow.update` | action | `succeeded` | `changes`, `changes_total`, optional `reason` |
+| `langflow.audit.flow.delete` | action | `succeeded` | — |
+| `langflow.audit.flow.restore` | action | `succeeded` | `version_id` |
 | `langflow.audit.flow.run` | action | `succeeded` · `failed` | `duration_ms`, and `error_class` on a failure |
 | `langflow.audit.project.create` | action | `succeeded` · `failed` | `flows_total` when created with contents |
 | `langflow.audit.project.update` | action | `succeeded` · `failed` | — |
 | `langflow.audit.project.delete` | action | `succeeded` · `failed` | — |
 | `langflow.audit.project.replace` | action | `succeeded` · `failed` | `flows_total`, `flows_removed` |
-| any of the above | authz | `allow` · `deny` | `reason=permission_denied` |
+| any `project.*` event | authz | `deny` | `reason=permission_denied` |
+
+Only the project routes run inside `audited_action`, which is what writes a
+`failed` or a `deny` row. A flow write that is refused therefore records nothing
+today — the known gap, and the reason the flow routes are the next ones to wrap.
 
 `reason` exists for the rows whose event name cannot carry the whole meaning.
 Only two values are defined, because a reason lands with the producer that writes
