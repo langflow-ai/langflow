@@ -29,6 +29,10 @@ async def adapt_graph_events_to_executor_shape(
     """Re-shape outermost graph events; pass everything else through unchanged."""
     outer_run_id: str | None = None
     async for event in stream:
+        # Compaction model output is internal context, not the user's final answer.
+        # Usage callbacks still see the model call; only presentation events are filtered.
+        if "harness:compaction" in event.get("tags", []):
+            continue
         if outer_run_id is None and event.get("event") == "on_chain_start":
             outer_run_id = event.get("run_id")
         if event.get("run_id") == outer_run_id:

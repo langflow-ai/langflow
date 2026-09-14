@@ -41,6 +41,7 @@ from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 from lfx.base.agents.events import AgentPausedError, ExceptionWithMessageError, process_agent_events
+from lfx.base.agents.harness import HarnessRuntimeConfig, harness_runtime_inputs
 from lfx.base.agents.token_callback import TokenUsageCallbackHandler
 from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.base.constants import STREAM_INFO_TEXT
@@ -222,6 +223,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             advanced=True,
             show=True,
         ),
+        *[set_advanced_true(inp) for inp in harness_runtime_inputs() if inp.name != "max_iterations"],
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -596,24 +598,23 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
 
         middleware = self._build_middleware(llm, allow_interrupts=allow_interrupts)
         checkpointer = self._build_agent_checkpointer() if allow_interrupts else None
-        return create_agent(
+        runnable = create_agent(
             model=llm,
             tools=tools,
             system_prompt=self.system_prompt or "",
             middleware=middleware or None,
             checkpointer=checkpointer,
         )
+        # Middleware contributes graph nodes too. Keep the scheduler guard above the
+        # actual call limiter, including future before/after hooks.
+        self._agent_steps_per_call = max(4, len(runnable.get_graph().nodes)) if hasattr(runnable, "get_graph") else 6
+        return runnable
 
     def _compute_recursion_limit(self) -> int:
-        """Derive the LangGraph recursion_limit from the user-set max_iterations.
-
-        Mirrors the clamp in `_build_middleware` (max(1, max_iterations)) so a
-        saved 0 or negative value cannot under-cap the graph below one full
-        iteration. The +5 buffer covers start/end/router overhead.
-        """
+        """Budget graph steps from the compiled graph; the model-call middleware owns the cap."""
         raw = getattr(self, "max_iterations", None)
         run_limit = max(1, int(raw)) if raw is not None else 15
-        return run_limit * 2 + 5
+        return run_limit * getattr(self, "_agent_steps_per_call", 6) + 5
 
     def _build_middleware(self, llm: Any, *, allow_interrupts: bool = True) -> list:
         # `llm` is passed in (rather than re-fetched via `self._get_llm()`)
@@ -655,6 +656,26 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         if is_watsonx_model(llm):
             middleware.append(SingleToolCallMiddleware())
             middleware.append(WatsonXPlaceholderMiddleware())
+        policy = HarnessRuntimeConfig.model_validate(
+            {
+                name: getattr(self, name, field.default)
+                for name, field in HarnessRuntimeConfig.model_fields.items()
+                if name != "max_iterations"
+            }
+        )
+        # Preserve legacy clamping for old Agent flows while validating new controls strictly.
+        policy = policy.model_copy(
+            update={"max_iterations": max(1, int(max_iterations if max_iterations is not None else 15))}
+        )
+        if policy.context_strategy != "all" or policy.compaction != "off":
+            from lfx.components.models_and_agents.agent_helpers.harness_middleware import (
+                HarnessCompactionMiddleware,
+                HarnessContextMiddleware,
+            )
+
+            if policy.compaction == "summarize":
+                middleware.append(HarnessCompactionMiddleware(llm, policy))
+            middleware.append(HarnessContextMiddleware(policy))
         # Human-in-the-loop: attach only when a tool is gated AND interrupts are allowed
         # (the structured-output path disables them), keeping ungated flows unchanged.
         interrupt_on = self._gated_interrupt_on() if allow_interrupts else {}
@@ -690,8 +711,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         # middleware cap (ModelCallLimitMiddleware) is what bounds the loop —
         # not LangGraph's default 25-step guard, which fires at ~12 model+tool
         # iterations and raises a raw GraphRecursionError (QA UI-009/UI-010).
-        # Each iteration is ~2 graph steps (model node + tools node); add 5
-        # for start/end overhead.
+        # The compiled graph includes middleware before/after nodes as well.
         recursion_limit = self._compute_recursion_limit()
 
         agent_config: dict[str, Any] = {

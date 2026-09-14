@@ -87,7 +87,18 @@ class TestAgentHarness:
         return get_project_type("agent-harness")
 
     def test_the_form_is_the_harness_builder(self, harness):
-        assert harness.field_names() == ("system_prompt", "model", "tools", "n_messages", "compaction")
+        assert harness.field_names() == (
+            "system_prompt",
+            "model",
+            "tools",
+            "n_messages",
+            "context_strategy",
+            "context_turns",
+            "compaction",
+            "compaction_trigger_tokens",
+            "compaction_keep_messages",
+            "max_iterations",
+        )
 
     def test_the_form_reads_as_sections(self, harness):
         """The type decides how its own form is grouped, so the UI does not hardcode the order."""
@@ -140,8 +151,8 @@ class TestAgentHarness:
             )
 
     def test_compaction_offers_only_what_the_runtime_honours(self, harness):
-        """Nothing consumes compaction yet, so offering a value that does nothing would lie."""
-        assert harness.to_template()["compaction"]["options"] == ["off"]
+        """Every offered mode has a tested middleware implementation."""
+        assert harness.to_template()["compaction"]["options"] == ["off", "summarize"]
 
 
 class TestSections:
