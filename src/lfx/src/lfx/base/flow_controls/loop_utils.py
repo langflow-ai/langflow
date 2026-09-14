@@ -235,24 +235,27 @@ async def execute_loop_body(
         # while sharing context between iterations (intentional for loop state).
         # Using async context manager ensures proper cleanup of trace tasks on exit.
         async with graph.create_subgraph(loop_body_vertex_ids) as iteration_subgraph:
+            # Loop.item can fan out to several branches, so inject into every edge that
+            # shares start_edge's source output, not only the one passed in.
+            injections: list[tuple[str, str]] = []
+            if start_vertex_id and start_edge:
+                loop_vertex = graph.get_vertex(start_edge.source_id)
+                for edge in loop_vertex.outgoing_edges:
+                    if edge.source_handle.name != start_edge.source_handle.name:
+                        continue
+                    if not hasattr(edge.target_handle, "field_name"):
+                        msg = f"Edge target_handle missing field_name attribute for loop item injection: {edge}"
+                        raise ValueError(msg)
+                    injections.append((edge.target_id, edge.target_handle.field_name))
+
             # Inject current item into vertex data BEFORE preparing the subgraph.
             # This ensures components have data during build/validation.
-            if start_vertex_id and start_edge:
-                # Get the target parameter name from the edge
-                if not hasattr(start_edge.target_handle, "field_name"):
-                    msg = f"Edge target_handle missing field_name attribute for loop item injection: {start_edge}"
-                    raise ValueError(msg)
-                target_param = start_edge.target_handle.field_name
-
-                # Find and update the start vertex's frontend data before components are built
-                for vertex_data in iteration_subgraph._vertices:  # noqa: SLF001
-                    if vertex_data.get("id") == start_vertex_id:
-                        # Inject the loop item into the vertex's template data
-                        if "data" in vertex_data and "node" in vertex_data["data"]:
-                            template = vertex_data["data"]["node"].get("template", {})
-                            if target_param in template:
-                                template[target_param]["value"] = item
-                        break
+            for vertex_data in iteration_subgraph._vertices:  # noqa: SLF001
+                for target_id, target_param in injections:
+                    if vertex_data.get("id") == target_id and "data" in vertex_data and "node" in vertex_data["data"]:
+                        template = vertex_data["data"]["node"].get("template", {})
+                        if target_param in template:
+                            template[target_param]["value"] = item
 
             # Prepare the subgraph - components will be built with the injected data
             iteration_subgraph.prepare()
@@ -261,9 +264,8 @@ async def execute_loop_body(
             # Fields with type="other" (like HandleInput) are skipped during field param processing
             # They normally get values from edges, but we filtered out the Loop->Parser edge
             # So we must inject the value directly into raw_params
-            if start_vertex_id and start_edge:
-                start_vertex = iteration_subgraph.get_vertex(start_vertex_id)
-                start_vertex.update_raw_params({target_param: item}, overwrite=True)
+            for target_id, target_param in injections:
+                iteration_subgraph.get_vertex(target_id).update_raw_params({target_param: item}, overwrite=True)
 
             # Execute subgraph and collect results
             # Pass event_manager so UI receives events from subgraph execution
