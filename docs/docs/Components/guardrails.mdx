@@ -3,7 +3,26 @@ title: Guardrails
 slug: /guardrails
 ---
 
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
+
 **Guardrails** checks text for unsafe or sensitive content.
+
+The following guardrails can be validated against:
+
+- **PII**: Detects personal identifiable information such as names, addresses, phone numbers, email addresses, social security numbers, credit card numbers, or other personal data.
+- **Tokens/Passwords**: Detects API tokens, passwords, API keys, access keys, secret keys, authentication credentials, or other sensitive credentials.
+- **Jailbreak**: Detects attempts to bypass AI safety guidelines, manipulate the model's behavior, or make it ignore its instructions.
+- **Offensive Content**: Detects offensive, hateful, discriminatory, violent, or inappropriate content.
+- **Malicious Code**: Detects potentially malicious code, scripts, exploits, or harmful commands.
+- **Prompt Injection**: Detects attempts to inject malicious prompts, override system instructions, or manipulate the AI's behavior through embedded instructions.
+
+When validation passes, the input continues through the **Pass** output.
+When validation fails, the input is blocked and sent through the **Fail** output with a justification explaining why it failed.
+
+The default selection remains **PII**, **Tokens/Passwords**, and **Jailbreak**.
+Model checks can produce false positives or miss some violations.
+Use this component **in addition to** other data-sanitization best practices, rather than as a sole safeguard.
 
 ## Set up a check
 
@@ -18,13 +37,30 @@ slug: /guardrails
 | **Rules + AI** | Checks known patterns, then evaluates enabled semantic categories together in one model call unless rules already require blocking. |
 | **Rules only** | Checks known patterns without calling a model, even if one is connected. Semantic categories without an AI verdict are reported as unverified. |
 
-Either AI method requires a model. To run without one, explicitly choose **Rules only**. Model checks can produce false positives or miss violations; combining categories does not guarantee identical detection decisions to individual checks.
+Either AI method requires a model. To run without one, explicitly choose **Rules only**. Combining categories does not guarantee identical detection decisions to individual checks.
 
-The default selection remains **PII**, **Tokens/Passwords**, and **Jailbreak**. Advanced settings appear only for the chosen method and categories. **Enable Custom Guardrail** reveals a field for your own AI checking criteria; it requires an AI method.
+Advanced settings appear only for the chosen method and categories.
+
+## Create custom guardrails
+
+**Enable Custom Guardrail** reveals a field for your own AI checking criteria.
+It requires an AI method.
+
+In **Custom Guardrail Description**, enter a natural language description of disallowed data that you want to detect.
+Custom guardrails can run at the same time as the built-in guardrails.
+
+For example, to block inputs that mention competitor names or products, enter:
+
+```
+competitor company names, competitor product names, or references to competing services
+```
 
 ## Existing flows
 
-The original component remains available as [Guardrails (Legacy)](./guardrails-legacy.mdx), with its original identifiers and evaluator. Existing saved flows are not automatically migrated. The new component is displayed as **Guardrails**; **AI checks** preserves the original prompts, heuristics, Pass/Fail routing, and Result Data payload.
+Saved flows are not automatically migrated.
+The original component remains available as [**Guardrails (Legacy)**](#guardrails-legacy).
+The current component is displayed as **Guardrails**.
+Its default **AI checks** method preserves the original prompts, heuristics, Pass/Fail routing, and Result Data payload.
 
 Adopt **Rules + AI** explicitly to use the combined evaluation. In that method, a model can raise a rule's risk score but cannot override a rule block. All outputs share one cached verdict, so connecting Pass, Fail, and Result Data does not add model calls.
 
@@ -59,3 +95,37 @@ Environment settings override corresponding fields in rule methods:
 Rule evaluation accepts up to 64,000 input characters. Combined model evaluation accepts up to 12,000; longer input produces an evaluation error instead of silently checking only a prefix. These limits apply to the new rule methods; AI checks retains the legacy behavior.
 
 Result Data can contain original text, including sensitive content. Route it only to appropriate destinations.
+
+## Guardrails (Legacy) {#guardrails-legacy}
+
+<PartialLegacy />
+
+**Guardrails (Legacy)** is the original evaluator from before Langflow 1.12.2.
+It issues prompts to a language model for each enabled category, and it always requires a model.
+**Jailbreak** and **Prompt Injection** run heuristic detection first, and then fall back to LLM validation if needed.
+
+Saved flows that used Guardrails before 1.12.2 keep the `legacy` component.
+To get `legacy` behavior on the current **Guardrails** component, use **AI checks**.
+
+### Use Guardrails (Legacy) in a flow
+
+1. Connect a **Chat Input** or other text source to **Input Text**.
+2. Select a **Language Model** for validation.
+3. From the **Guardrails** dropdown, select one or more guardrails to enable.
+   For example, select **Tokens/Passwords** to block API keys and credentials.
+4. Connect **Pass** to components that should receive validated input.
+5. Optionally, connect **Fail** to handle blocked inputs, such as a [**Chat Output** component](/chat-input-and-output) or [**Write File** component](/write-file).
+
+### Guardrails (Legacy) parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Language Model (`model`) | `LanguageModel` | Input parameter. Connect a **Language Model** component to use as the driver for this component. The model reviews the data, compares it against the guardrails, and determines if any data is in violation of the guardrails. |
+| API Key (`api_key`) | Secret String | Input parameter. Model provider API key. Required if the model provider needs authentication. |
+| Guardrails (`enabled_guardrails`) | Multiselect | Input parameter. Select one or more security guardrails to validate the input against. Options: `PII`, `Tokens/Passwords`, `Jailbreak`, `Offensive Content`, `Malicious Code`, `Prompt Injection`. Default: `["PII", "Tokens/Passwords", "Jailbreak"]`. |
+| Input Text (`input_text`) | Multiline String | Input parameter. The text to validate against guardrails. Accepts `Message` input types. |
+| Enable Custom Guardrail (`enable_custom_guardrail`) | Boolean | Input parameter. Enable a custom guardrail with your own validation criteria. Default: `false`. |
+| Custom Guardrail Description (`custom_guardrail_explanation`) | Multiline String | Input parameter. Describe what the custom guardrail should check for. This description is used by the LLM to validate the input. Be specific and clear about what you want to detect. Only used when `enable_custom_guardrail` is `true`. |
+| Heuristic Detection Threshold (`heuristic_threshold`) | Slider | Input parameter. Score threshold (0.0-1.0) for heuristic jailbreak/prompt injection detection. Strong patterns such as "ignore instructions" and "jailbreak" have high weights, while weak patterns such as "bypass" and "act as" have low weights. If the cumulative score meets or exceeds this threshold, the input fails immediately. Lower values are more strict. Higher values defer more cases to LLM validation. Default: `0.7`. |
