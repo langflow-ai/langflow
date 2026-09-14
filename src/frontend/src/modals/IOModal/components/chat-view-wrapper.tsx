@@ -6,6 +6,7 @@ import { cn } from "@/utils/utils";
 import IconComponent from "../../../components/common/genericIconComponent";
 import type { ChatViewWrapperProps } from "../types/chat-view-wrapper";
 import ChatView from "./chatView/components/chat-view";
+import { MessageHistoryLoader } from "./message-history-loader";
 
 export const ChatViewWrapper = ({
   selectedViewField,
@@ -17,6 +18,7 @@ export const ChatViewWrapper = ({
   setvisibleSession,
   setSelectedViewField,
   messagesFetched,
+  messageHistory,
   sessionId,
   sendMessage,
   canvasOpen,
@@ -100,6 +102,7 @@ export const ChatViewWrapper = ({
         </div>
       </div>
 
+      <MessageHistoryLoader history={messageHistory} />
       {messagesFetched && (
         <ChatView
           focusChat={sessionId}
