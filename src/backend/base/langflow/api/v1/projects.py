@@ -8,12 +8,13 @@ from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
 from lfx.projects import all_project_types
+from lfx.projects.bindings import flow_revision, instruction_outputs
 from lfx.services.mcp_composer.service import MCPComposerService
 from lfx.utils.util_strings import escape_like_pattern
 from pydantic import BaseModel
 from sqlalchemy import literal, null, or_, update
 from sqlalchemy.orm import selectinload
-from sqlmodel import select
+from sqlmodel import col, select
 
 from langflow.api.utils import (
     CurrentActiveUser,
@@ -352,6 +353,59 @@ async def read_project_types(
         )
         for project_type in all_project_types()
     ]
+
+
+@router.get("/{project_id}/flow-outputs")
+async def read_project_flow_outputs(
+    *,
+    session: DbSession,
+    project_id: UUID,
+    current_user: CurrentActiveUser,
+    field_name: str = "system_prompt",
+):
+    """List compatible local outputs without executing any saved component code."""
+    project = (
+        await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
+    ).first()
+    if project is None:
+        raise HTTPException(404, "Project not found")
+    await ensure_project_permission(
+        current_user,
+        ProjectAction.READ,
+        project_id=project.id,
+        project_user_id=project.user_id,
+        workspace_id=project.workspace_id,
+    )
+    if project.project_type != "agent-harness" or field_name != "system_prompt":
+        raise HTTPException(422, "Only harness Instructions currently supports a flow binding.")
+    flows = (
+        await session.exec(
+            select(Flow).where(
+                Flow.folder_id == project_id, Flow.user_id == current_user.id, col(Flow.is_component).is_(False)
+            )
+        )
+    ).all()
+    flows = await filter_visible_resources(
+        current_user,
+        resource_type="flow",
+        candidates=list(flows),
+        domain_extractor=lambda flow: _resolve_authz_domain(project.workspace_id, flow.folder_id),
+        owner_extractor=lambda flow: flow.user_id,
+        act=FlowAction.READ,
+    )
+    candidates = []
+    for flow in flows:
+        try:
+            outputs = instruction_outputs(flow.data or {})
+            revision = flow_revision(flow.data or {})
+        except (ValueError, TypeError, KeyError):
+            continue
+        candidates.extend(
+            {"flow_id": str(flow.id), "flow_name": flow.name, "revision": revision, **output} for output in outputs
+        )
+    return sorted(
+        candidates, key=lambda candidate: (candidate["flow_name"], candidate["node_id"], candidate["output_name"])
+    )
 
 
 @router.get("/", response_model=list[FolderListRead], status_code=200)

@@ -18,7 +18,7 @@ HOOK = register_slot(
     SlotDefinition("Hook", "HookDecision", FireTiming.ON_EVENT, Cardinality.MULTI),
 )
 SYSTEM_PROMPT_BUILDER = register_slot(
-    SlotDefinition("SystemPromptBuilder", "str", FireTiming.ONCE_AT_SESSION_START),
+    SlotDefinition("SystemPromptBuilder", "str", FireTiming.ONCE_PER_RUN),
 )
 CONTEXT_MANAGER = register_slot(
     SlotDefinition("ContextManager", "DataFrame", FireTiming.PER_LLM_CALL),

@@ -39,6 +39,7 @@ AGENT_HARNESS = register_project_type(
                 name="system_prompt",
                 section="Instructions",
                 slot_definition=SYSTEM_PROMPT_BUILDER,
+                supports_flow_binding=True,
                 # The canvas renders a multiline field as one line plus a modal, which suits a
                 # node. Instructions are the main thing written here, so the page gives them a
                 # real editor instead.

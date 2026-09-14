@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from lfx.components.models_and_agents.memory import MemoryComponent
     from lfx.components.models_and_agents.policies_component import PoliciesComponent
     from lfx.components.models_and_agents.prompt import PromptComponent
+    from lfx.components.models_and_agents.system_prompt_builder import SystemPromptBuilderComponent
 
 _dynamic_imports = {
     "A2AAgentComponent": "a2a_agent",
@@ -24,6 +25,7 @@ _dynamic_imports = {
     "MemoryComponent": "memory",
     "PoliciesComponent": "policies_component",
     "PromptComponent": "prompt",
+    "SystemPromptBuilderComponent": "system_prompt_builder",
 }
 
 __all__ = [
@@ -34,6 +36,7 @@ __all__ = [
     "MCPToolsComponent",
     "MemoryComponent",
     "PromptComponent",
+    "SystemPromptBuilderComponent",
 ]
 
 # ``lfx.components.models`` re-exports this module with ``import *``. Keep the

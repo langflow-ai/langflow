@@ -85,7 +85,7 @@ async def test_the_form_exposes_shared_contracts_without_changing_config_keys(
     assert template["system_prompt"]["flow_contract"] == {
         "name": "SystemPromptBuilder",
         "terminal_output_type": "str",
-        "fire_timing": "once_at_session_start",
+        "fire_timing": "once_per_run",
         "cardinality": "single",
         "default_flow_ref": None,
     }

@@ -28,6 +28,7 @@ class Cardinality(str, Enum):
 
 class FireTiming(str, Enum):
     ONCE_AT_SESSION_START = "once_at_session_start"
+    ONCE_PER_RUN = "once_per_run"
     PER_LLM_CALL = "per_llm_call"
     ON_THRESHOLD = "on_threshold"
     PER_TOOL_CALL = "per_tool_call"
@@ -98,6 +99,7 @@ class ProjectTypeField:
     section: str = ""
     renders: str = ""
     slot_definition: SlotDefinition | None = None
+    supports_flow_binding: bool = False
 
     def to_template(self) -> dict:
         """Serialise for the API, in the shape the frontend field renderer expects."""
@@ -111,6 +113,8 @@ class ProjectTypeField:
             rendered["renders"] = self.renders
         if self.slot_definition is not None:
             rendered["flow_contract"] = self.slot_definition.to_dict()
+        if self.supports_flow_binding:
+            rendered["supports_flow_binding"] = True
         return rendered
 
 
