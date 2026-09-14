@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
 from lfx.log.logger import logger
 from sqlalchemy.exc import IntegrityError
@@ -131,15 +132,14 @@ async def replay_event(
     Replay never rewinds the original row: the ledger is an audit trail. The new
     row links back through ``replay_of_event_id`` and takes a fresh dedupe key,
     so it flows through the same claim/dispatch path as a first delivery. A
-    second replay of the same event is itself deduplicated, by generation.
+    distinct request gets its own key, including concurrent replays of one event.
     """
     original = await get_event(session, trigger_id=trigger_id, event_id=event_id)
     created_at = _as_aware(original.created_at)
     if created_at is not None and created_at < _now() - timedelta(days=replay_window_days):
         raise ReplayWindowExpiredError(replay_window_days)
 
-    generation = await _replay_generation(session, trigger_id=trigger_id, event_id=event_id)
-    dedupe_key = f"{REPLAY_DEDUPE_PREFIX}:{event_id}:{generation}"
+    dedupe_key = f"{REPLAY_DEDUPE_PREFIX}:{event_id}:{uuid4()}"
     replay, _created = await append_event(
         session,
         trigger_id=trigger_id,
@@ -148,15 +148,6 @@ async def replay_event(
         replay_of_event_id=original.id,
     )
     return replay
-
-
-async def _replay_generation(session: AsyncSession, *, trigger_id: UUID, event_id: UUID) -> int:
-    """Number of replays already made of this event, so each gets a fresh key."""
-    statement = select(TriggerEvent).where(
-        TriggerEvent.trigger_id == trigger_id,
-        TriggerEvent.replay_of_event_id == event_id,
-    )
-    return len((await session.exec(statement)).all())
 
 
 async def purge_events(

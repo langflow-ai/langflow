@@ -161,6 +161,9 @@ class TriggerService(Service):
         return await self.set_state(session, row=row, state=TriggerState.ACTIVE)
 
     async def disable(self, session: AsyncSession, *, row: Trigger) -> Trigger:
+        if row.state == TriggerState.DEAD.value:
+            msg = "A dead trigger cannot be disabled."
+            raise ValueError(msg)
         return await self.set_state(session, row=row, state=TriggerState.PAUSED)
 
     async def pin(self, session: AsyncSession, *, row: Trigger, flow_version_id: UUID | None) -> Trigger:

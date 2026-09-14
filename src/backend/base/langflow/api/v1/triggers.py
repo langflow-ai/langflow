@@ -241,7 +241,10 @@ async def disable_trigger(
     row = await _authorized_trigger(
         service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.WRITE
     )
-    updated = await service.disable(session, row=row)
+    try:
+        updated = await service.disable(session, row=row)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     return TriggerRead.model_validate(updated)
 
 
@@ -345,6 +348,6 @@ async def test_trigger(
         session,
         trigger_id=trigger_id,
         dedupe_key=f"{TEST_DEDUPE_PREFIX}:{uuid4()}",
-        payload={"test": True, **payload.payload},
+        payload={**payload.payload, "test": True},
     )
     return TriggerEventRead.model_validate(event)
