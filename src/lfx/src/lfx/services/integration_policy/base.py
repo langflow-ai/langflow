@@ -3,8 +3,9 @@
 Two decisions travel together on the shared policy bundle:
 
 * ``approved_integration_provider_ids`` -- an operator ceiling over providers.
-  Empty means unrestricted in OSS; an Enterprise plugin may read the same empty
-  set as deny-all.
+  Empty means unrestricted in persisted OSS policy. Plugins must preserve this
+  meaning on installation; deny-all requires an explicitly configured external
+  ceiling and an operator-visible migration or configuration step.
 * ``blocked_integration_action_keys`` -- a deny-list of capability policy keys
   sourced verbatim from bundle capability manifests
   (:class:`lfx.integrations.capabilities.IntegrationCapability.policy_keys`).
@@ -25,6 +26,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
+from lfx.integrations.errors import IntegrationError
 from lfx.services.base import Service
 from lfx.services.model_provider_policy.base import (
     ModelProviderPolicyContext,
@@ -67,8 +69,9 @@ def normalize_integration_policy_key(key: str) -> str:
     lowercase identifier syntax. The grammar is validated rather than coerced:
     an operator who blocks ``integrations.Google.Drive.Search`` means the same
     action as the manifest's ``integrations.google.drive.search``, so the key is
-    case-folded, but a key that names no provider is a typo the API must reject
-    before it silently blocks nothing.
+    case-folded. Missing provider/action segments are rejected. Registry
+    membership is deliberately not checked: operators can preconfigure policy
+    before installing a provider's bundle.
     """
     normalized = key.strip().casefold()
     if not normalized:
@@ -100,7 +103,7 @@ def integration_policy_key_prefix(provider_id: str) -> str:
     return f"{INTEGRATION_POLICY_KEY_PREFIX}{provider_id}."
 
 
-class IntegrationPolicyError(PermissionError):
+class IntegrationPolicyError(IntegrationError, PermissionError):
     """A provider or capability is not usable under the resolved snapshot."""
 
     code = "policy-blocked"
@@ -125,7 +128,13 @@ class IntegrationPolicyError(PermissionError):
                 f"The {provider_id!r} integration is not available: it is outside the approved "
                 "integration set. Ask an administrator to approve it."
             )
-        super().__init__(message)
+        super().__init__(
+            message,
+            provider=provider_id,
+            hint="Ask an administrator to approve the integration or unblock the action.",
+            http_status=403,
+            details={"policy_key": policy_key} if policy_key else None,
+        )
 
 
 @dataclass(frozen=True)

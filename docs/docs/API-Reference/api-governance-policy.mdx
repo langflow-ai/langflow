@@ -306,8 +306,12 @@ Integration providers use their manifest `provider_id`, in lowercase.
 ```
 
 Integration actions use the `policy_keys` a bundle declares for each capability.
-A key is always `integrations.<provider_id>.<action>`; a key that names no provider is
-rejected with `422` before anything is written.
+A key is always `integrations.<provider_id>.<action>`; missing provider or action
+segments and other malformed syntax are rejected with `422` before anything is written.
+Keys are trimmed and case-folded. A syntactically valid key for a provider that
+is not installed is accepted, so operators can configure policy before installing
+a bundle. This does not verify that the provider or action exists; use the loaded
+catalog to check the keys when the bundle is installed.
 `GET /api/v1/integrations?include_blocked=true` lists every loaded provider with the
 `policy_keys` of each of its actions, so you can copy the exact key to block.
 
@@ -317,6 +321,13 @@ rejected with `422` before anything is written.
 
 Blocking one key of an action blocks the whole action.
 A component stays visible while at least one of its actions is still allowed.
+At execution, an action-picker bundle declares the selected capabilities through
+`Component.select_integration_capabilities`. Blocking `delete` therefore does not
+block an invocation selecting `search`. Bundles that do not implement selection
+must be allowed to use every capability they declare.
+Blocked executions return HTTP `403` with `error_code: "policy-blocked"` and an
+administrator-action hint. Session-backed graph builds record the denial as an error
+message in flow history.
 
 ## Change one list at a time {#catalog-policy}
 
@@ -381,6 +392,18 @@ If you are changing more than one list, use one `PUT` to `/api/v1/policy-bundle`
     an externally managed empty ceiling can deny every provider.
     Set `approved_integration_provider_ids` and `blocked_integration_action_keys` with
     `PUT /api/v1/policy-bundle`.
+
+:::warning Installing an integration policy plugin
+
+An empty persisted `approved_integration_provider_ids` list means unrestricted.
+Installing a plugin must preserve that meaning. Denying all providers requires
+an explicit external policy configuration; a plugin changing existing policy
+semantics must provide an operator-visible migration or configuration step before
+enforcement changes. This API does not perform that migration automatically.
+Before enabling external enforcement, verify the intended provider set and check
+`managed_externally` and `unrestricted` on the effective-policy endpoint.
+
+:::
 
 ## See also
 

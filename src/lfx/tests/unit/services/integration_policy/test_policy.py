@@ -158,6 +158,22 @@ def test_bundle_content_hash_is_stable_when_integration_sets_are_empty() -> None
         blocked_integration_action_keys=(),
     )
     assert legacy == with_defaults
+    # Captured from the canonical payload before integration fields existed.
+    # Comparing two calls to today's function alone cannot detect hash drift.
+    expected = "2579606fce91a3b6337addd363cc06935d87aa5b60449b65701f138f5e4406d1"  # pragma: allowlist secret
+    assert legacy == expected
+
+
+def test_empty_bundle_keeps_its_pre_integration_hash() -> None:
+    expected = "ef74cccb21593ac02fc514e669c911768e740b1135d7a91d3fb15f72837ab762"  # pragma: allowlist secret
+    assert (
+        policy_bundle_content_hash(
+            approved_provider_ids=(),
+            blocked_component_keys=(),
+            blocked_template_keys=(),
+        )
+        == expected
+    )
 
 
 @pytest.mark.parametrize(

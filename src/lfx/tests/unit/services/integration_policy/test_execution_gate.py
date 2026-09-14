@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 from lfx.custom.custom_component.component import Component
@@ -74,12 +75,13 @@ def _component(monkeypatch, resolver: _Resolver) -> DriveComponent:
     component = DriveComponent(connection="google/work", _user_id="user-1")
     component.set_vertex(
         SimpleNamespace(
+            outgoing_edges=[],
             graph=SimpleNamespace(
                 execution_principal=ExecutionPrincipal(kind="actor", user_id="user-1", interactive=True),
                 flow_id="flow-1",
                 run_id="run-1",
                 session_id="session-1",
-            )
+            ),
         )
     )
     return component
@@ -136,10 +138,16 @@ async def test_build_results_fails_closed_before_the_component_body_runs(monkeyp
     _install_policy(monkeypatch, _blocked_bundle(actions=frozenset({SEARCH_KEY})))
     _install_capability_manifest(monkeypatch)
     component = _component(monkeypatch, _Resolver())
+    send_message = AsyncMock()
+    monkeypatch.setattr(component, "send_message", send_message)
 
     with pytest.raises(IntegrationPolicyError):
         await component.build_results()
     assert component.adapter_calls == 0
+    error_message = send_message.call_args.args[0]
+    assert error_message.category == "error"
+    assert "policy-blocked" in error_message.model_dump_json()
+    assert error_message.session_id == "session-1"
 
 
 @pytest.mark.parametrize("registry_fails", [False, True])

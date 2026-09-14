@@ -25,8 +25,8 @@ class IntegrationPolicyService(BaseIntegrationPolicyService):
 
     This preserves pass-through behavior for every installation that never
     configures integration governance. An Enterprise plugin replaces the
-    service through ``lfx.toml`` and may read the same empty ceiling as
-    deny-all.
+    service through ``lfx.toml``. Installing it must preserve persisted empty
+    ceilings; deny-all requires an explicitly configured external ceiling.
     """
 
     def __init__(self, policy_bundle_service: BasePolicyBundleService | None = None) -> None:

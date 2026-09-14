@@ -127,6 +127,28 @@ def _require_capabilities(snapshot: IntegrationPolicySnapshot, provider_id: str,
     snapshot.require_actions(keys)
 
 
+def integration_capabilities_for_component_class(class_name: str) -> dict[str, tuple[str, ...]]:
+    """Find a component's declared capability IDs, grouped by provider.
+
+    Keep individual capability identities until runtime action selection rather
+    than flattening their policy keys into a component-wide requirement.
+    Registry errors propagate so failed discovery cannot bypass enforcement.
+    """
+    from lfx.extension.bundle_registry import get_default_registry
+
+    return {
+        integration.provider_id: ids
+        for integration in get_default_registry().list_integrations()
+        if (
+            ids := tuple(
+                capability.id
+                for capability in integration.capability_manifest.capabilities
+                if capability.component_ref == class_name
+            )
+        )
+    }
+
+
 def integration_policy_identity_for_component_class(class_name: str) -> tuple[str, tuple[str, ...]] | None:
     """Return ``(provider_id, policy_keys)`` for the class a capability names.
 

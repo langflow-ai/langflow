@@ -157,7 +157,8 @@ def test_get_returns_the_complete_active_bundle_with_stable_sorted_lists(monkeyp
     apply_state.assert_not_called()
 
 
-def test_put_forwards_one_complete_cas_replacement_and_publishes_committed_snapshot(monkeypatch):
+@pytest.mark.parametrize("provider", ["Google", "NotInstalled"])
+def test_put_forwards_one_complete_cas_replacement_and_publishes_committed_snapshot(monkeypatch, provider):
     client, admin, read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
     committed = _snapshot(revision=8, actor_id=admin.id, reason="quarterly policy refresh")
     replace_state.return_value = committed
@@ -168,7 +169,7 @@ def test_put_forwards_one_complete_cas_replacement_and_publishes_committed_snaps
         "blocked_template_keys": ["template-a", "template-z"],
         "blocked_model_keys": ["OpenAI::gpt-blocked", "openai::gpt-blocked", "claude-blocked"],
         "approved_integration_provider_ids": ["Slack", "google"],
-        "blocked_integration_action_keys": ["Integrations.Google.Drive.Delete"],
+        "blocked_integration_action_keys": [f"  Integrations.{provider}.Drive.Delete  "],
         "reason": "quarterly policy refresh",
     }
 
@@ -185,7 +186,7 @@ def test_put_forwards_one_complete_cas_replacement_and_publishes_committed_snaps
         blocked_template_keys=["template-a", "template-z"],
         blocked_model_keys=["claude-blocked", "openai::gpt-blocked"],
         approved_integration_provider_ids=["google", "slack"],
-        blocked_integration_action_keys=["integrations.google.drive.delete"],
+        blocked_integration_action_keys=[f"integrations.{provider.casefold()}.drive.delete"],
         actor_user_id=admin.id,
         reason="quarterly policy refresh",
     )

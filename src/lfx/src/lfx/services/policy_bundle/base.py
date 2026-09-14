@@ -62,8 +62,8 @@ class PolicyBundleSnapshot:
     blocked_model_keys: frozenset[str] = frozenset()
     # Integration governance (INT-7). Both default to empty so every caller
     # written before integrations existed keeps producing an identical bundle.
-    # An empty ceiling means "unrestricted" in OSS; Enterprise policy plugins
-    # may read the same empty set as deny-all.
+    # An empty persisted ceiling means "unrestricted". Plugins must not silently
+    # reinterpret existing rows on installation; external deny-all is explicit.
     approved_integration_provider_ids: frozenset[str] = frozenset()
     blocked_integration_action_keys: frozenset[str] = frozenset()
     content_hash: str = ""

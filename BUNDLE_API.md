@@ -57,6 +57,7 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | `IntegrationProvider` / `OAuthProfile` / `IntegrationCapability` / `ScopeSet` | `lfx.integrations` |
 | `integration_action()` | `lfx.integrations` |
 | `Component.resolve_connection(field_name)` | `lfx.custom.custom_component.component.Component` |
+| `Component.select_integration_capabilities(capability_ids)` | `lfx.custom.custom_component.component.Component` |
 | `BaseConnectionResolverService`, `ConnectionAccessPolicy` | `lfx.services.connection` |
 
 ### Outputs
@@ -204,6 +205,40 @@ the deserialize half is covered by
 ---
 
 ## Changelog
+
+### 2026-09-14 — Integration action selection and execution denials
+
+- Add the pure `Component.select_integration_capabilities(capability_ids)` hook.
+  Its argument is the tuple of declared capability IDs from a connection input
+  or the loaded manifest's `component_ref`. An action-picker bundle returns a
+  non-empty subset based on the invocation's current inputs. Empty or undeclared
+  selections fail closed. The default requires all declared capabilities, so
+  existing single-action components need no change. The hook runs before the
+  output body in graph and sync/async tool execution, after tool arguments are
+  applied, and before creating a credential lease. The resolver receives only
+  the selected IDs. Graph construction of a toolkit checks its providers;
+  selected-action checks wait until the agent supplies invocation arguments.
+  Picker option filtering remains bundle-owned; changing the
+  picker alone never authorizes an action. For example:
+
+  ```python
+  def select_integration_capabilities(self, capability_ids: tuple[str, ...]) -> tuple[str, ...]:
+      return ({"search": "google.drive.search", "delete": "google.drive.delete"}[self.action],)
+  ```
+
+  Use the same action-to-capability mapping to dispatch the output's adapter.
+  Implementations must inspect input values without I/O or side effects; the
+  hook may run more than once. For a component requiring several actions in one
+  invocation, return every capability it will use. This is additive;
+  `BUNDLE_API_VERSION` remains `1`.
+- `IntegrationPolicyError` also implements `IntegrationError`, retaining
+  `PermissionError` compatibility while carrying `policy-blocked`, HTTP 403,
+  an administrator-action hint and owner-only key details. Component policy
+  denials now pass through the normal error-message persistence handler.
+- Empty persisted integration ceilings retain unrestricted semantics when a
+  plugin is installed. External deny-all must be explicitly configured; plugins
+  changing semantics must provide an operator-visible migration/configuration
+  step. No automatic Enterprise migration is included here.
 
 ### 2026-09-14 — Integration policy review follow-up
 

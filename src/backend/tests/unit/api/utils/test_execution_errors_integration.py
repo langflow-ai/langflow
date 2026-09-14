@@ -7,6 +7,7 @@ call to action, so a rename is a breaking change for the frontend.
 from __future__ import annotations
 
 import traceback
+from contextlib import asynccontextmanager
 from uuid import uuid4
 
 import pytest
@@ -18,6 +19,7 @@ from langflow.api.utils.execution_errors import (
     error_for_client,
     integration_http_error,
 )
+from langflow.services.database.models.message.model import MessageTable
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.custom import Component
 from lfx.exceptions.component import ComponentBuildError
@@ -32,6 +34,10 @@ from lfx.integrations.errors import (
 from lfx.io import ConnectionRefInput, MessageTextInput, Output
 from lfx.schema.message import Message
 from lfx.services.authorization.base import ExecutionPrincipal
+from lfx.services.integration_policy import IntegrationPolicyError, IntegrationPolicyPurpose, IntegrationPolicyService
+from lfx.services.policy_bundle import PolicyBundleService, PolicyBundleSnapshot
+from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 HTTP_FORBIDDEN = 403
 HTTP_UNAUTHORIZED = 401
@@ -46,6 +52,7 @@ HTTP_TOO_MANY_REQUESTS = 429
         (AuthExpiredError(provider="google"), "auth-expired"),
         (ScopeMissingError(frozenset({"calendar.write"}), provider="google"), "scope-missing"),
         (RateLimitedError(provider="google", retry_after=12.0), "rate-limited"),
+        (IntegrationPolicyError("google", IntegrationPolicyPurpose.USE), "policy-blocked"),
     ],
 )
 def test_typed_fields_cross_every_error_policy(error, code) -> None:
@@ -134,6 +141,7 @@ def test_error_for_client_returns_the_provider_status_not_a_generic_500() -> Non
         (ConnectionNotAuthorizedError(provider="google"), HTTP_FORBIDDEN),
         (AuthExpiredError(provider="google"), HTTP_UNAUTHORIZED),
         (RateLimitedError(provider="google", retry_after=1.0), HTTP_TOO_MANY_REQUESTS),
+        (IntegrationPolicyError("google", IntegrationPolicyPurpose.USE), HTTP_FORBIDDEN),
     ):
         client_error = error_for_client(error, expose_details=False)
 
@@ -186,8 +194,44 @@ class ConnectionErrorProbe(Component):
 
 
 @pytest.mark.no_blockbuster
-async def test_real_graph_connection_failure_keeps_typed_client_errors() -> None:
+async def test_component_policy_denial_persists_in_session_history(monkeypatch, async_session) -> None:
+    """Read a committed error record back through a separate database session."""
+
+    @asynccontextmanager
+    async def database_session():
+        yield async_session
+
+    monkeypatch.setattr("langflow.memory.session_scope", database_session)
+    monkeypatch.setattr("lfx.memory.has_langflow_db_backend", lambda: True)
+    bundle = PolicyBundleService()
+    bundle.publish(PolicyBundleSnapshot(revision=1, approved_integration_provider_ids={"slack"}))
+    service = IntegrationPolicyService(policy_bundle_service=bundle)
+    monkeypatch.setattr("lfx.services.deps.get_integration_policy_service", lambda: service)
+    probe = ConnectionErrorProbe(connection="google/work")
+    probe._session_id = "policy-denial-history"
+
+    with pytest.raises(IntegrationPolicyError):
+        await probe.build_results()
+
+    async with AsyncSession(async_session.bind) as reader:
+        rows = (await reader.exec(select(MessageTable).where(MessageTable.session_id == probe._session_id))).all()
+        assert len(rows) == 1
+        assert rows[0].category == "error"
+        assert "policy-blocked" in rows[0].model_dump_json()
+        assert "administrator" in rows[0].text
+
+
+@pytest.mark.no_blockbuster
+@pytest.mark.parametrize("policy_blocked", [False, True])
+async def test_real_graph_connection_failure_keeps_typed_client_errors(monkeypatch, *, policy_blocked: bool) -> None:
     """Exercise the vertex and graph wrappers that real run/build handlers receive."""
+    if policy_blocked:
+        bundle = PolicyBundleService()
+        bundle.publish(PolicyBundleSnapshot(revision=1, approved_integration_provider_ids={"slack"}))
+        service = IntegrationPolicyService(policy_bundle_service=bundle)
+        monkeypatch.setattr("lfx.services.deps.get_integration_policy_service", lambda: service)
+    error_type = IntegrationPolicyError if policy_blocked else ConnectionNotAuthorizedError
+    error_code = "policy-blocked" if policy_blocked else "connection-not-authorized"
     chat = ChatInput(_id="chat").set(input_value="hello", should_store_message=False)
     probe = ConnectionErrorProbe(_id="probe", connection="google/work").set(input_value=chat.message_response)
     output = ChatOutput(_id="output").set(input_value=probe.resolve, should_store_message=False)
@@ -200,14 +244,14 @@ async def test_real_graph_connection_failure_keeps_typed_client_errors() -> None
     graph_error = caught.value
     vertex_error = graph_error.__cause__
     assert isinstance(vertex_error, ComponentBuildError)
-    assert isinstance(vertex_error.__cause__, ConnectionNotAuthorizedError)
+    assert isinstance(vertex_error.__cause__, error_type)
     trace = "".join(traceback.format_exception(type(graph_error), graph_error, graph_error.__traceback__))
 
     for expose_details in (True, False):
         # /build receives the vertex wrapper; /run receives the additional graph wrapper.
         for error in (vertex_error, graph_error):
             details = error_details_for_client(error, expose_details=expose_details, stack_trace=trace)
-            assert details.code == "connection-not-authorized"
+            assert details.code == error_code
             assert details.stack_trace == (trace if expose_details else "")
             assert details.message == (
                 vertex_error.__cause__.safe_message if expose_details else SAFE_INTEGRATION_ERROR_MESSAGE
@@ -229,6 +273,7 @@ async def test_real_graph_connection_failure_keeps_typed_client_errors() -> None
         RateLimitedError(provider="google", retry_after=12.0),
         ScopeMissingError(frozenset({"calendar.write"}), provider="google"),
         ConnectionUnresolvedError("google/work", provider="google"),
+        IntegrationPolicyError("google", IntegrationPolicyPurpose.USE, policy_key="integrations.google.drive.delete"),
     ],
 )
 def test_wrapped_integration_errors_preserve_metadata_and_redaction(error, chain_attribute) -> None:

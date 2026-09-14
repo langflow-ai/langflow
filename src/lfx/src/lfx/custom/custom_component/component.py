@@ -50,7 +50,7 @@ from lfx.utils.util import find_closest_match
 from .custom_component import CustomComponent
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable
 
     from lfx.base.tools.component_tool import ComponentToolkit
     from lfx.events.event_manager import EventManager
@@ -60,6 +60,7 @@ if TYPE_CHECKING:
     from lfx.integrations.models import CredentialLease
     from lfx.schema.dataframe import DataFrame
     from lfx.schema.log import LoggableType
+    from lfx.services.integration_policy import IntegrationPolicyPurpose
     from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 
 
@@ -628,7 +629,7 @@ class Component(CustomComponent):
         principal = getattr(graph, "execution_principal", ExecutionPrincipal.unknown())
         # Refuse before a lease exists: no credential is minted, decrypted, or
         # refreshed for a provider or action the deployment policy denies.
-        self._require_integration_policy_for_input(input_model)
+        capability_ids = self._require_integration_policy_for_input(input_model)
         required_scopes = set(input_model.required_scopes)
         inputs = {name: getattr(self, name, model.value) for name, model in self._inputs.items()}
         required_scopes.update(
@@ -641,7 +642,7 @@ class Component(CustomComponent):
             ref=ref,
             principal=principal,
             required_scopes=frozenset(required_scopes),
-            capability_ids=frozenset(input_model.capabilities),
+            capability_ids=frozenset(capability_ids),
             component_id=self.get_id(),
             flow_id=str(graph.flow_id) if graph is not None and graph.flow_id is not None else None,
             run_id=str(run_id) if run_id else None,
@@ -1483,23 +1484,53 @@ class Component(CustomComponent):
 
         return [input_model for input_model in self._inputs.values() if isinstance(input_model, ConnectionRefInput)]
 
-    def _require_integration_policy_for_input(self, input_model, purpose=None) -> None:
-        """Gate one connection-reference input's provider and declared actions."""
+    def select_integration_capabilities(self, capability_ids: tuple[str, ...]) -> tuple[str, ...]:
+        """Select the declared capabilities this invocation will execute.
+
+        Action-picker bundles override this pure hook using their current input
+        values. Return a non-empty subset of the supplied capability IDs, never
+        policy keys. The default requires every declared capability. This hook
+        runs before the output method, and again before credential resolution;
+        it must not perform I/O or mutate the component's inputs.
+        """
+        return capability_ids
+
+    def _selected_integration_capabilities(
+        self, provider_id: str, capability_ids: Iterable[str], purpose: IntegrationPolicyPurpose
+    ) -> tuple[str, ...]:
+        """Validate bundle selection before it can narrow an execution gate."""
+        from lfx.services.integration_policy import IntegrationPolicyError
+
+        declared = tuple(capability_ids)
+        if not declared:
+            return ()
+        selected = tuple(self.select_integration_capabilities(declared))
+        if not selected or not set(selected).issubset(declared):
+            raise IntegrationPolicyError(provider_id, purpose)
+        return selected
+
+    def _require_integration_policy_for_input(self, input_model, purpose=None) -> tuple[str, ...]:
+        """Gate a connection's selected actions and return their capability IDs."""
         from lfx.services.integration_policy import (
             IntegrationPolicyPurpose,
             require_integration_actions,
         )
 
+        effective_purpose = purpose or IntegrationPolicyPurpose.USE
+        capability_ids = self._selected_integration_capabilities(
+            input_model.provider, input_model.capabilities, effective_purpose
+        )
         require_integration_actions(
             user_id=self.user_id,
             provider_id=input_model.provider,
             policy_keys=(),
-            capability_ids=input_model.capabilities,
-            purpose=purpose or IntegrationPolicyPurpose.USE,
+            capability_ids=capability_ids,
+            purpose=effective_purpose,
         )
+        return capability_ids
 
     def require_integration_policy(self, purpose=None) -> None:
-        """Gate every declared integration action before any adapter can run.
+        """Gate the selected integration actions before any adapter can run.
 
         A blocked action must fail before the component body executes, not only
         when a credential is resolved. Two declarations are checked, for the
@@ -1510,24 +1541,33 @@ class Component(CustomComponent):
         """
         from lfx.services.integration_policy import (
             IntegrationPolicyPurpose,
-            integration_policy_identity_for_component_class,
             require_integration_actions,
         )
+        from lfx.services.integration_policy.utils import integration_capabilities_for_component_class
 
         effective_purpose = purpose or IntegrationPolicyPurpose.USE
         for input_model in self._integration_policy_inputs():
             self._require_integration_policy_for_input(input_model, effective_purpose)
 
-        identity = integration_policy_identity_for_component_class(type(self).__name__)
-        if identity is None:
-            return
-        provider_id, policy_keys = identity
-        require_integration_actions(
-            user_id=self.user_id,
-            provider_id=provider_id,
-            policy_keys=policy_keys,
-            purpose=effective_purpose,
-        )
+        for provider_id, capabilities in integration_capabilities_for_component_class(type(self).__name__).items():
+            selected = self._selected_integration_capabilities(provider_id, capabilities, effective_purpose)
+            require_integration_actions(
+                user_id=self.user_id,
+                provider_id=provider_id,
+                policy_keys=(),
+                capability_ids=selected,
+                purpose=effective_purpose,
+            )
+
+    def _require_integration_providers_for_toolkit(self) -> None:
+        """Gate tool construction before invocation arguments are available."""
+        from lfx.services.integration_policy import require_integration_provider
+        from lfx.services.integration_policy.utils import integration_capabilities_for_component_class
+
+        providers = {input_model.provider for input_model in self._integration_policy_inputs()}
+        providers.update(integration_capabilities_for_component_class(type(self).__name__))
+        for provider_id in providers:
+            require_integration_provider(user_id=self.user_id, provider_id=provider_id)
 
     async def build_results(self):
         """Build the results of the component."""
@@ -1535,7 +1575,6 @@ class Component(CustomComponent):
         from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 
         self.require_model_provider_policy(ModelProviderPolicyPurpose.USE)
-        self.require_integration_policy(IntegrationPolicyPurpose.USE)
 
         if hasattr(self, "graph"):
             session_id = self.graph.session_id
@@ -1544,6 +1583,13 @@ class Component(CustomComponent):
         else:
             session_id = None
         try:
+            outputs = self._get_outputs_to_process()
+            if outputs and all(output.method == "to_toolkit" for output in outputs):
+                # A tool's action can be an argument supplied later by the
+                # agent. Its invocation wrapper gates that selection after set().
+                self._require_integration_providers_for_toolkit()
+            else:
+                self.require_integration_policy(IntegrationPolicyPurpose.USE)
             if self.tracing_service:
                 return await self._build_with_tracing()
             return await self._build_without_tracing()
