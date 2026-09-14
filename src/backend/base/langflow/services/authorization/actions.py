@@ -33,6 +33,7 @@ class ProjectAction(str, Enum):
     WRITE = "write"
     CREATE = "create"
     DELETE = "delete"
+    AUDIT_READ = "audit_read"
 
 
 class KnowledgeBaseAction(str, Enum):
