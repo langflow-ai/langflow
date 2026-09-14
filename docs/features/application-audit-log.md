@@ -104,6 +104,48 @@ Error codes: `PERMISSION_DENIED`, `PROJECT_NOT_FOUND`, `PROJECT_NAME_CONFLICT`,
 `AuditRequestContextMiddleware` gives every HTTP request its own
 `request_id`, so the authorization and action events of one request share it.
 
+## Producers (existing write routes)
+
+Each route below carries one `@audited_route` decorator. Succeeded events are
+written where the mutation happens, right after its own write; failures and
+denials are written by the decorator and the permission guards.
+
+| Route | resource / action / operation | Succeeded `details` |
+|---|---|---|
+| `POST /flows/` | flow / `flow:create` / `create` | `written_fields`, `project.after_id` |
+| `PATCH /flows/{id}` | flow / `flow:write` / `patch` | `written_fields`; `project` when moved |
+| `PUT /flows/{id}` existing | flow / `flow:write` / `replace` | `written_fields`; `project` when moved |
+| `PUT /flows/{id}` new id | flow / `flow:create` / `create` | as create |
+| `DELETE /flows/{id}` | flow / `flow:delete` / `delete` | `project.before_id` |
+| `POST /flows/batch/`, `POST /flows/upload/` | one flow event per Flow created or replaced | |
+| `DELETE /flows/` | one `flow:delete` per Flow | |
+| `POST /flows/{id}/versions/{v}/activate` | flow / `flow:write` / `patch` | `written_fields: ["data"]` |
+| `POST /projects/` | project / `project:create` / `create` | `description` when supplied; `flows` (added) |
+| `PATCH /projects/{id}` | project / `project:write` / `patch` | `description` only when written |
+| `PUT /projects/{id}` existing | project / `project:write` / `patch` | same as PATCH (the route has PATCH semantics) |
+| `PUT /projects/{id}` new id | project / `project:create` / `create` | as create |
+| `DELETE /projects/{id}` | project / `project:delete` / `delete` | `flows` (removed); plus one `flow:delete` per Flow removed |
+| `POST /projects/upload/` | project / `project:create` / `create` | `description`, `flows` (added); plus one `flow:create` per Flow |
+
+`replace` for Projects (atomic complete-content replacement) arrives with the
+atomic Project APIs; no existing route replaces a Project's contents.
+
+**Outcome rules**
+
+- A request refused before authorization (unknown id, owner-scoped 404, malformed body) records nothing.
+- A guard that refuses records one `authz`/`deny` with `PERMISSION_DENIED` and no action event. For Flow PATCH, DELETE and create the guard is the route dependency.
+- Anything raised after authorization records one `action`/`failed` after the transaction rolled back, with a code derived from the error: a uniqueness message maps to `*_NAME_CONFLICT`, a duplicate id to `FLOW_ID_CONFLICT`, 400/422 to `INVALID_CONTENT`, a domain 403 or 423 to `CONSTRAINT_VIOLATION`, a generic 500 by its database cause (`OperationalError` to `SERVICE_UNAVAILABLE`, `IntegrityError` to `CONSTRAINT_VIOLATION`), else `INTERNAL_ERROR`.
+- A failure after an explicit commit (the Memory Base teardown after a delete) is never recorded as failed.
+- A failed attempt with no identity yet (a denied or failed create without an id) uses `resource_id = 00000000-0000-0000-0000-000000000000`.
+- The failed or denied `resource_name` is the known name of an existing resource, otherwise the attempted name.
+
+**Transaction ownership.** Project create, rename and auth reconciliation used to
+commit the request transaction midway through MCP server registration, so a
+create that failed afterwards left the Project behind. Those calls now join the
+request transaction (`owns_transaction=False`). Project delete still commits MCP
+cleanup first; that does not affect the audit, because the Project removal and
+its event share the later transaction.
+
 ## Invariants
 
 1. A succeeded event and its mutation commit or roll back together.
@@ -112,6 +154,7 @@ Error codes: `PERMISSION_DENIED`, `PROJECT_NOT_FOUND`, `PROJECT_NAME_CONFLICT`,
 4. Deleting a resource, user, or API key never deletes its events.
 5. A traversal returns each event at most once, newest first; later inserts do not appear midway.
 6. With `lfx serve` (no database), nothing is written and nothing raises.
+7. A request that is not audited (auditing off, or a helper called outside an audited route such as startup or the assistant) writes nothing.
 
 ## Settings
 
