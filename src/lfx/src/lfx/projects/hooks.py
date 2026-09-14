@@ -3,8 +3,6 @@
 import json
 from copy import deepcopy
 
-from pydantic import TypeAdapter
-
 from lfx.base.agents.hooks import HookBinding, HookDecision, HookSourceChangedError
 from lfx.projects.bindings import contract_outputs, flow_revision
 from lfx.projects.invocation import ReviewedFlowRunner
@@ -44,65 +42,6 @@ def compose_hooks(data: dict, *, project_id: str, agent_id: str, bindings: list[
     else:
         node_data.pop(HOOK_ORIGIN, None)
     return updated
-
-
-def flow_hook_bindings(data: dict) -> list[HookBinding]:
-    """Read runtime bindings without importing any saved Agent code."""
-    return [
-        binding
-        for node in data.get("nodes", [])
-        if node.get("data", {}).get("type") == "Agent"
-        for binding in TypeAdapter(list[HookBinding]).validate_json(
-            node["data"]["node"]["template"].get("hook_bindings", {}).get("value") or "[]"
-        )
-    ]
-
-
-def remap_flow_hooks(flows: dict[str, dict], id_map: dict[str, str], project_id: str) -> None:
-    """Remap imported runtime references after ordinary Run Flow links, children first.
-
-    Callers validate reviewed definitions before mutating any imported flow. This updates
-    references in every Agent, including nested ones, without copying old version IDs.
-    """
-    visited = set()
-
-    def visit(flow_id, active):
-        if flow_id in active:
-            msg = "The imported Hook flows contain a recursive reference."
-            raise ValueError(msg)
-        if flow_id in visited:
-            return
-        data = flows[flow_id]
-
-        def remap(binding):
-            target = binding.flow_id
-            if target not in id_map:
-                msg = "An imported Hook binding must reference a flow in the archive."
-                raise ValueError(msg)
-            visit(target, active | {flow_id})
-            return binding.model_copy(
-                update={"flow_id": id_map[target], "revision": flow_revision(flows[target]), "version_id": None}
-            ).model_dump()
-
-        for node in data.get("nodes", []):
-            node_data = node.get("data", {})
-            if node_data.get("type") != "Agent":
-                continue
-            entry = node_data["node"]["template"].get("hook_bindings")
-            if entry:
-                bindings = TypeAdapter(list[HookBinding]).validate_json(entry.get("value") or "[]")
-                if bindings:
-                    entry["value"] = json.dumps([remap(binding) for binding in bindings])
-            origin = node_data.get(HOOK_ORIGIN)
-            if isinstance(origin, dict):
-                origin["project_id"] = project_id
-                origin["bindings"] = [
-                    remap(binding) for binding in TypeAdapter(list[HookBinding]).validate_python(origin["bindings"])
-                ]
-        visited.add(flow_id)
-
-    for flow_id in flows:
-        visit(flow_id, set())
 
 
 def hook_outputs(data: dict) -> list[dict]:

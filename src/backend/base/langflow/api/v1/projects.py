@@ -9,7 +9,7 @@ from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
 from lfx.projects.baselines import build_slot_baseline
 from lfx.projects.bindings import flow_revision
-from lfx.projects.flow_slots import binding_outputs
+from lfx.projects.flow_slots import BINDING_LABELS, binding_outputs
 from lfx.services.mcp_composer.service import MCPComposerService
 from lfx.utils.util_strings import escape_like_pattern
 from pydantic import BaseModel, ConfigDict
@@ -371,8 +371,8 @@ async def _binding_project(session: DbSession, current_user: User, project_id: U
         project_user_id=project.user_id,
         workspace_id=project.workspace_id,
     )
-    if project.project_type != "agent-harness" or field_name not in {"system_prompt", "hooks"}:
-        raise HTTPException(422, "Only harness Instructions and Hooks currently support flow bindings.")
+    if project.project_type != "agent-harness" or field_name not in BINDING_LABELS:
+        raise HTTPException(422, "Only harness Instructions, Hooks, and Context currently support flow bindings.")
     return project
 
 
@@ -418,7 +418,11 @@ async def validate_project_flow_outputs(
 ):
     """Inspect an unsaved graph's contract, without running or persisting its code."""
     await _binding_project(session, current_user, project_id, field_name)
-    hook_hint = "Connect one Hook Event to a terminal Hook decision and configure required inputs."
+    hint = {
+        "hooks": "Connect one Hook Event to a terminal Hook decision and configure required inputs.",
+        "context_strategy": "Connect one Agent Context to a terminal message Table and configure required inputs.",
+        "system_prompt": "Configure required inputs and connect a terminal text output.",
+    }[field_name]
     try:
         outputs = binding_outputs(field_name, request.data)
     except (ValueError, TypeError, KeyError, AttributeError):
@@ -426,9 +430,7 @@ async def validate_project_flow_outputs(
         return {
             "outputs": [],
             "valid": False,
-            "reason": hook_hint
-            if field_name == "hooks"
-            else "Configure required inputs and connect a terminal text output.",
+            "reason": hint,
         }
     return {
         "outputs": outputs,
@@ -436,9 +438,9 @@ async def validate_project_flow_outputs(
         "reason": None
         if outputs
         else (
-            hook_hint
-            if field_name == "hooks"
-            else "Add a System Prompt Builder with an unconnected Instructions output."
+            "Add a System Prompt Builder with an unconnected Instructions output."
+            if field_name == "system_prompt"
+            else hint
         ),
     }
 
