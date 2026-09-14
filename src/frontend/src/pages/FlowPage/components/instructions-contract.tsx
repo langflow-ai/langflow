@@ -20,14 +20,24 @@ export function HarnessFlowContract() {
   )?.harness_contract;
   const requestedField = params.get("harnessField");
   const fieldName =
-    requestedField === "system_prompt" || requestedField === "hooks"
+    requestedField === "system_prompt" ||
+    requestedField === "hooks" ||
+    requestedField === "context_strategy"
       ? requestedField
       : marker?.slot === "SystemPromptBuilder"
         ? "system_prompt"
         : marker?.slot === "Hook"
           ? "hooks"
-          : undefined;
-  const isHook = fieldName === "hooks";
+          : marker?.slot === "ContextManager"
+            ? "context_strategy"
+            : undefined;
+  const kind =
+    fieldName === "hooks"
+      ? "hook"
+      : fieldName === "context_strategy"
+        ? "context"
+        : "instructions";
+  const capitalized = kind[0].toUpperCase() + kind.slice(1);
   const projectId = fieldName ? flow?.folder_id : undefined;
   // Selection and layout do not affect the output contract or trigger validation requests.
   const definition = useMemo(
@@ -72,34 +82,18 @@ export function HarnessFlowContract() {
   if (!projectId) return null;
   const current = result?.key === validationKey ? result : undefined;
   const status = !current
-    ? isHook
-      ? "checkingHookContract"
-      : "checkingInstructionsContract"
-    : current.error
-      ? isHook
-        ? "hookContractUnavailable"
-        : "instructionsContractUnavailable"
-      : current.validation?.valid
-        ? isHook
-          ? "hookContractReady"
-          : "instructionsContractReady"
-        : isHook
-          ? "hookContractInvalid"
-          : "instructionsContractInvalid";
+    ? `checking${capitalized}Contract`
+    : `${kind}Contract${current.error ? "Unavailable" : current.validation?.valid ? "Ready" : "Invalid"}`;
   return (
     <aside
-      aria-label={t(
-        isHook ? "harness.hookContract" : "harness.instructionsContract",
-      )}
+      aria-label={t(`harness.${kind}Contract`)}
       className="max-h-[45%] shrink-0 overflow-y-auto border-b border-border bg-background px-4 py-3"
-      data-testid={isHook ? "hook-contract" : "instructions-contract"}
+      data-testid={`${kind}-contract`}
     >
       <div className="flex flex-col items-start justify-between gap-x-4 gap-y-2 sm:flex-row">
         <details className="w-full min-w-0 flex-1 sm:w-auto">
           <summary className="cursor-pointer text-sm font-medium">
-            {t(
-              isHook ? "harness.hookContract" : "harness.instructionsContract",
-            )}
+            {t(`harness.${kind}Contract`)}
             <span
               role="status"
               className={`ml-2 font-normal ${current?.error || current?.validation?.valid === false ? "text-destructive" : "text-muted-foreground"}`}
@@ -108,13 +102,7 @@ export function HarnessFlowContract() {
             </span>
           </summary>
           <div className="mt-2 max-w-2xl space-y-1 text-sm text-muted-foreground">
-            <p>
-              {t(
-                isHook
-                  ? "harness.hookContractHelp"
-                  : "harness.instructionsContractHelp",
-              )}
-            </p>
+            <p>{t(`harness.${kind}ContractHelp`)}</p>
             {current?.error && (
               <Button
                 size="sm"
@@ -125,28 +113,16 @@ export function HarnessFlowContract() {
               </Button>
             )}
             {current?.validation?.valid === false && (
-              <p>
-                {t(
-                  isHook
-                    ? "harness.hookContractFix"
-                    : "harness.instructionsContractFix",
-                )}
-              </p>
+              <p>{t(`harness.${kind}ContractFix`)}</p>
             )}
-            <p>
-              {t(
-                isHook
-                  ? "harness.hookContractReview"
-                  : "harness.instructionsContractReview",
-              )}
-            </p>
+            <p>{t(`harness.${kind}ContractReview`)}</p>
           </div>
         </details>
         <Link
           to={`/all/folder/${projectId}?tab=harness&field=${fieldName}`}
           className="shrink-0 text-sm text-primary underline underline-offset-4"
         >
-          {t(isHook ? "harness.returnToHooks" : "harness.returnToInstructions")}
+          {t(`harness.returnTo${kind === "hook" ? "Hooks" : capitalized}`)}
         </Link>
       </div>
     </aside>

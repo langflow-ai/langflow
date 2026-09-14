@@ -40,5 +40,5 @@ export function moveHook(
   return sorted.map((hook) => ({ ...hook, priority: 0 }));
 }
 
-export const validHookTimeout = (value: number) =>
+export const validFlowTimeout = (value: number) =>
   Number.isFinite(value) && value > 0 && value <= 300;

@@ -13,6 +13,7 @@ import { getCustomParameterTitle } from "@/customization/components/custom-param
 import useAlertStore from "@/stores/alertStore";
 import type { APIClassType, InputFieldType } from "@/types/api";
 import type {
+  ContextBinding,
   ProjectConfig,
   ProjectFlowBindings,
   ProjectSaveResult,
@@ -25,14 +26,14 @@ import {
 } from "./components/agent-flow-picker";
 import { HarnessSummary } from "./components/harness-summary";
 import { HookFlowPicker } from "./components/hook-flow-picker";
-import { InstructionsFlowPicker } from "./components/instructions-flow-picker";
+import { HarnessFlowPicker } from "./components/instructions-flow-picker";
 import { LongTextField } from "./components/long-text-field";
 import { ProjectChoiceField } from "./components/project-choice-field";
 import { ProjectFlowPicker } from "./components/project-flow-picker";
 
 import { editorDraft } from "./editor-draft";
 import { isProjectFieldVisible } from "./field-visibility";
-import { validHookTimeout } from "./flow-binding";
+import { validFlowTimeout } from "./flow-binding";
 
 interface HarnessPageProps {
   projectId: string;
@@ -118,10 +119,12 @@ const HarnessPage = ({
   const [lastSave, setLastSave] = useState<ProjectSaveResult | null>(null);
   const values = { ...savedValues, ...edits };
   const bindings = (values.flow_bindings ?? {}) as ProjectFlowBindings;
-  const hooksValid = Object.values(bindings).every(
-    (binding) =>
-      !Array.isArray(binding) ||
-      binding.every((hook) => validHookTimeout(hook.timeout_seconds ?? 10)),
+  const bindingsValid = Object.entries(bindings).every(([field, binding]) =>
+    Array.isArray(binding)
+      ? binding.every((hook) => validFlowTimeout(hook.timeout_seconds ?? 10))
+      : field !== "context_strategy" ||
+        !binding ||
+        validFlowTimeout((binding as ContextBinding).timeout_seconds ?? 30),
   );
   const updateBinding = (
     fieldName: string,
@@ -218,26 +221,35 @@ const HarnessPage = ({
             // A long free-text field says nothing useful at a glance.
             !field?.multiline,
         )
-        .map(([fieldName, field]) => ({
-          name: fieldName,
-          label: field?.display_name ?? fieldName,
-          value:
-            (field as { renders?: string }).renders === "hook_flows"
-              ? t("harness.hookCount", {
-                  count: Array.isArray(bindings[fieldName])
-                    ? bindings[fieldName].length
-                    : 0,
-                })
-              : values[fieldName] === undefined || values[fieldName] === ""
-                ? "—"
-                : (field.option_labels?.[String(values[fieldName])] ??
-                  String(values[fieldName])),
-        })),
-    [type, toolsFieldName, modelFieldName, values, bindings, t],
+        .map(([fieldName, field]) => {
+          const binding = bindings[fieldName];
+          return {
+            name: fieldName,
+            label: field?.display_name ?? fieldName,
+            value:
+              (field as { renders?: string }).renders === "hook_flows"
+                ? t("harness.hookCount", {
+                    count: Array.isArray(bindings[fieldName])
+                      ? bindings[fieldName].length
+                      : 0,
+                  })
+                : binding && !Array.isArray(binding)
+                  ? t("harness.flowImplementation", {
+                      name:
+                        flows.find((flow) => flow.id === binding.flow_id)
+                          ?.name ?? t("harness.boundFlowUnavailable"),
+                    })
+                  : values[fieldName] === undefined || values[fieldName] === ""
+                    ? "—"
+                    : (field.option_labels?.[String(values[fieldName])] ??
+                      String(values[fieldName])),
+          };
+        }),
+    [type, toolsFieldName, modelFieldName, values, bindings, flows, t],
   );
 
   const handleSave = () => {
-    if (!hooksValid) return;
+    if (!bindingsValid) return;
     patchProject(
       // Only the config. Sending the name or the description here would let a half-loaded page
       // overwrite either of them with a stale value.
@@ -363,7 +375,7 @@ const HarnessPage = ({
               isPending ||
               isLoadingFlows ||
               agentSelectionRequired ||
-              !hooksValid
+              !bindingsValid
             }
             loading={isPending}
           >
@@ -450,7 +462,8 @@ const HarnessPage = ({
                       )}
                       {(field as { supports_flow_binding?: boolean })
                         .supports_flow_binding && (
-                        <InstructionsFlowPicker
+                        <HarnessFlowPicker
+                          key={`${projectId}:${selectedAgentId}:${fieldName}`}
                           projectId={projectId}
                           fieldName={fieldName}
                           agentId={selectedAgentId}
@@ -504,19 +517,45 @@ const HarnessPage = ({
                       }
                     />
                   ) : field.option_labels ? (
-                    <ProjectChoiceField
-                      name={fieldName}
-                      label={field.display_name ?? fieldName}
-                      options={field.option_labels}
-                      value={String(values[fieldName] ?? "")}
-                      disabled={isPending}
-                      onChange={(value) =>
-                        setEdits((current) => ({
-                          ...current,
-                          [fieldName]: value,
-                        }))
-                      }
-                    />
+                    <>
+                      {!bindings[fieldName] && (
+                        <ProjectChoiceField
+                          name={fieldName}
+                          label={field.display_name ?? fieldName}
+                          options={field.option_labels}
+                          value={String(values[fieldName] ?? "")}
+                          disabled={isPending}
+                          onChange={(value) =>
+                            setEdits((current) => ({
+                              ...current,
+                              [fieldName]: value,
+                            }))
+                          }
+                        />
+                      )}
+                      {field.supports_flow_binding && (
+                        <HarnessFlowPicker
+                          key={`${projectId}:${selectedAgentId}:${fieldName}`}
+                          projectId={projectId}
+                          fieldName={fieldName}
+                          agentId={selectedAgentId}
+                          value={
+                            Array.isArray(bindings[fieldName])
+                              ? undefined
+                              : bindings[fieldName]
+                          }
+                          initialConfig={{
+                            context_strategy: values.context_strategy,
+                            context_turns: values.context_turns,
+                          }}
+                          disabled={isPending}
+                          onChange={(binding) =>
+                            updateBinding(fieldName, binding)
+                          }
+                          onOpen={() => editorDraft.keep(projectId, edits)}
+                        />
+                      )}
+                    </>
                   ) : (
                     <ParameterRenderComponent
                       handleOnNewValue={(changes) =>
@@ -545,11 +584,13 @@ const HarnessPage = ({
                       providerScope={{ projectId }}
                     />
                   )}
-                  {field.info && !(field as { renders?: string }).renders && (
-                    <p className="text-xs leading-relaxed text-muted-foreground">
-                      {field.info}
-                    </p>
-                  )}
+                  {field.info &&
+                    !bindings[fieldName] &&
+                    !(field as { renders?: string }).renders && (
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        {field.info}
+                      </p>
+                    )}
                 </div>
               ))}
             </section>

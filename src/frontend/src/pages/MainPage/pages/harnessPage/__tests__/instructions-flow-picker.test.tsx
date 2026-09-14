@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { FlowBinding, FlowOutputChoice } from "@/pages/MainPage/entities";
 import { InstructionsFlowPicker } from "../components/instructions-flow-picker";
 
@@ -257,4 +263,143 @@ it("keeps a successful creation accessible when output refresh fails", async () 
   );
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   expect(onChange).not.toHaveBeenCalled();
+});
+
+it("requires an explicit choice when the created flow has several outputs", async () => {
+  createFlow.mockResolvedValue({ id: "created" });
+  refetch.mockResolvedValue({
+    data: [
+      { ...choices[0], flow_id: "created" },
+      { ...choices[0], flow_id: "created", node_id: "another" },
+    ],
+  });
+  const onChange = setup({ value: binding });
+  fireEvent.click(
+    screen.getByRole("button", { name: /Create Instructions Flow/i }),
+  );
+  expect(await screen.findByText(/Flow created/i)).toBeVisible();
+  expect(onChange).not.toHaveBeenCalled();
+});
+
+it("cannot change the draft after leaving a pending creation", async () => {
+  let finish: (value: { id: string }) => void;
+  createFlow.mockReturnValue(
+    new Promise((resolve) => {
+      finish = resolve;
+    }),
+  );
+  refetch.mockResolvedValue({ data: [{ ...choices[0], flow_id: "created" }] });
+  const onChange = jest.fn();
+  const { unmount } = render(
+    <InstructionsFlowPicker
+      projectId="project"
+      fieldName="system_prompt"
+      agentId="agent"
+      disabled={false}
+      value={binding}
+      onChange={onChange}
+    />,
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: /Create Instructions Flow/i }),
+  );
+  unmount();
+  await act(async () => {
+    finish!({ id: "created" });
+  });
+  expect(onChange).not.toHaveBeenCalled();
+  expect(refetch).not.toHaveBeenCalled();
+});
+
+describe("Context flow selection", () => {
+  const context = { ...binding, output_name: "context", timeout_seconds: 5 };
+  beforeEach(() => {
+    choices = [
+      {
+        ...context,
+        flow_name: "Evidence context",
+        display_name: "Prepare Context · Messages",
+      },
+    ];
+  });
+
+  it("uses the context route, keeps timeout on revision updates, and drops the old snapshot", () => {
+    choices[0].revision = "changed";
+    const onChange = setup({ fieldName: "context_strategy", value: context });
+    expect(screen.getByText("Context from a flow")).toBeVisible();
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      "/flow/source?harnessField=context_strategy",
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Update binding/i }));
+    expect(onChange).toHaveBeenCalledWith({
+      ...context,
+      revision: "changed",
+      version_id: undefined,
+    });
+    expect(onChange.mock.calls[0][0]).not.toHaveProperty("version_id");
+  });
+
+  it("creates from the current scalar settings and selects the unambiguous output", async () => {
+    createFlow.mockResolvedValue({ id: "created" });
+    refetch.mockResolvedValue({
+      data: [{ ...choices[0], flow_id: "created" }],
+    });
+    const initialConfig = {
+      context_strategy: "recent_turns",
+      context_turns: 3,
+    };
+    const onChange = setup({ fieldName: "context_strategy", initialConfig });
+    fireEvent.click(
+      screen.getByRole("button", { name: /Use a flow instead/i }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /Create Context Flow/i }),
+    );
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    expect(createFlow).toHaveBeenCalledWith(
+      "project",
+      "context_strategy",
+      "",
+      initialConfig,
+    );
+    expect(onChange.mock.calls[0][0]).toMatchObject({
+      flow_id: "created",
+      timeout_seconds: 30,
+    });
+  });
+
+  it("keeps an invalid timeout visible until it is corrected", () => {
+    const onChange = setup({
+      fieldName: "context_strategy",
+      value: { ...context, timeout_seconds: NaN },
+    });
+    const input = screen.getByRole("spinbutton", { name: "Timeout (seconds)" });
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("alert")).toHaveTextContent("greater than 0");
+    fireEvent.change(input, { target: { value: "2.5" } });
+    expect(onChange).toHaveBeenCalledWith({ ...context, timeout_seconds: 2.5 });
+  });
+
+  it("preserves a removed output and explains how to replace it", () => {
+    choices = [];
+    const onChange = setup({ fieldName: "context_strategy", value: context });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      /no longer compatible/,
+    );
+    expect(onChange).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole("button", { name: /Use the form value/i }),
+    );
+    expect(onChange).toHaveBeenCalledWith(undefined);
+  });
+
+  it("disables context changes during a save", () => {
+    setup({ fieldName: "context_strategy", value: context, disabled: true });
+    expect(screen.getByRole("spinbutton")).toBeDisabled();
+    expect(screen.getByRole("combobox")).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /Use the form value/i }),
+    ).toBeDisabled();
+  });
 });
