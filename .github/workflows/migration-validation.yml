@@ -6,7 +6,11 @@ on:
       - 'src/backend/base/langflow/alembic/**'
       - 'src/backend/base/langflow/services/database/models/**'
       - 'src/backend/base/langflow/services/database/service.py'
+      - 'src/backend/base/langflow/services/connection/**'
+      - 'src/backend/base/langflow/api/v1/connections.py'
       - 'src/backend/tests/unit/alembic/**'
+      - 'src/backend/tests/unit/services/connection/**'
+      - 'src/backend/tests/unit/api/v1/test_connection_oauth.py'
       - '.github/workflows/migration-validation.yml'
       - 'src/backend/base/langflow/services/background_execution/**'
       - 'src/backend/base/langflow/services/jobs/**'
@@ -68,6 +72,14 @@ jobs:
           LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
         run: |
           uv run pytest src/backend/tests/unit/alembic/test_connection_migration.py -x -v
+
+      - name: Run OAuth migration and multi-worker refresh tests on PostgreSQL
+        env:
+          LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
+        run: |
+          uv run pytest \
+            src/backend/tests/unit/alembic/test_connection_oauth_migration.py \
+            src/backend/tests/unit/alembic/test_connection_oauth_workers.py -x -v
 
   background-real-service:
     name: Background Execution Real-Service Tests (real Postgres + Redis)

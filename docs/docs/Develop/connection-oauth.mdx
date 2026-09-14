@@ -133,6 +133,14 @@ API creates metadata first; use `executing_identity.identity: "user_delegated"` 
 Google, Microsoft, and Slack user connections, or `"bot"` for Slack bot connections.
 Instance-owned connections require a superuser. Tokens are not part of these requests.
 
+Bot identity and connection ownership are independent. A regular user can create a
+user-owned Slack bot connection and authorize an operator-configured `profile: "bot"`
+registration, subject to connection permissions and Slack's installation/consent policy.
+The identity match prevents a user-token registration from populating a bot connection
+and vice versa; it is not an operator-only gate. Creating and changing an instance-owned
+connection remains superuser-only. Configuring registrations and their scope ceilings
+requires access to instance configuration.
+
 From an authenticated browser API client, start consent:
 
 ```http
@@ -152,6 +160,13 @@ Verify the connection's metadata and scopes using `GET /api/v1/connections`, the
 `POST /api/v1/connections/CONNECTION_ID/test` with the required scopes. Verify non-owner
 access is denied under your authorization policy. Set `allow_non_interactive` explicitly
 when this connection may be used by background or serving workers.
+
+`allow_non_interactive` is a connection-level permission and survives reauthorization,
+including reconnecting after an expired or revoked grant. Reconnecting preserves both
+enabled and disabled settings; it does not grant unattended access. To withdraw that
+permission, use `PATCH /api/v1/connections/CONNECTION_ID` with
+`{"allow_non_interactive":false}`. Revocation still blocks all credential use until a
+new authorization succeeds.
 
 Refresh happens within the executing worker. Database transaction locks serialize refresh,
 consent completion, health checks, revoke, and delete. No token is placed in a job payload.

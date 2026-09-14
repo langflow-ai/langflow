@@ -144,6 +144,8 @@ async def store_tokens(session: AsyncSession, row: Connection, payload: dict, sc
     if secret is None:
         secret = ConnectionSecret(connection_id=row.id, encrypted_payload="")
     secret.encrypted_payload = _encrypt_credential_payload(json.dumps(payload))
+    # Reauthorization and refresh replace credentials, preserving the owner's
+    # separate allow_non_interactive setting, including a withdrawn opt-in.
     row.granted_scopes = scopes
     row.status = "ready"
     # Fresh tokens resolve whatever put the connection in error.
