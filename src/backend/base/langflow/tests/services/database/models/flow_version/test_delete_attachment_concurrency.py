@@ -120,6 +120,84 @@ async def _wait_for_lock(engine, task, *, blocked_pid, blocker_pid):
 
 @pytest.mark.real_services
 @pytest.mark.parametrize("db_engine", ["postgres"], indirect=True)
+@pytest.mark.parametrize("reverse_order", [False, True], ids=["same-order", "opposite-order"])
+async def test_concurrent_attachments_do_not_block_each_other(db_engine, version_and_deployment, reverse_order):
+    """Different deployments can attach overlapping versions before either commits."""
+    user_id, version_id, deployment_id = version_and_deployment
+    async with AsyncSession(db_engine, expire_on_commit=False) as db, db.begin():
+        version = await db.get(FlowVersion, version_id)
+        deployment = await db.get(Deployment, deployment_id)
+        other_version = FlowVersion(flow_id=version.flow_id, user_id=user_id, version_number=2, data={})
+        other_deployment = Deployment(
+            user_id=user_id,
+            project_id=deployment.project_id,
+            deployment_provider_account_id=deployment.deployment_provider_account_id,
+            resource_key="other-deployment",
+            deployment_type=DeploymentType.AGENT,
+        )
+        db.add_all([other_version, other_deployment])
+        await db.flush()
+
+    version_ids = [version_id, other_version.id]
+    deployment_ids = [deployment_id, other_deployment.id]
+    first_attached = [asyncio.Event(), asyncio.Event()]
+    all_attached = [asyncio.Event(), asyncio.Event()]
+    release_second = asyncio.Event()
+    release_commit = asyncio.Event()
+
+    async def attach_versions(index):
+        ordered_ids = list(reversed(version_ids)) if index == 1 and reverse_order else version_ids
+        async with AsyncSession(db_engine) as db, db.begin():
+            for position, target_version_id in enumerate(ordered_ids):
+                await create_deployment_attachment(
+                    db,
+                    user_id=user_id,
+                    flow_version_id=target_version_id,
+                    deployment_id=deployment_ids[index],
+                    provider_snapshot_id=f"snapshot-{target_version_id}",
+                )
+                if position == 0:
+                    first_attached[index].set()
+                    await asyncio.wait_for(release_second.wait(), timeout=10)
+            all_attached[index].set()
+            await asyncio.wait_for(release_commit.wait(), timeout=10)
+
+    async def release_when_attached():
+        await asyncio.wait_for(asyncio.gather(*(ready.wait() for ready in first_attached)), timeout=10)
+        release_second.set()
+        await asyncio.wait_for(asyncio.gather(*(ready.wait() for ready in all_attached)), timeout=10)
+        release_commit.set()
+
+    tasks = [asyncio.create_task(attach_versions(index)) for index in range(2)]
+    tasks.append(asyncio.create_task(release_when_attached()))
+    try:
+        await asyncio.wait_for(asyncio.gather(*tasks), timeout=15)
+    finally:
+        release_second.set()
+        release_commit.set()
+        for task in tasks:
+            task.cancel()
+            with suppress(asyncio.CancelledError, Exception):
+                await task
+
+    async with AsyncSession(db_engine) as db:
+        attachments = (
+            await db.exec(
+                select(
+                    FlowVersionDeploymentAttachment.flow_version_id,
+                    FlowVersionDeploymentAttachment.deployment_id,
+                )
+            )
+        ).all()
+        assert set(attachments) == {
+            (target_version_id, target_deployment_id)
+            for target_version_id in version_ids
+            for target_deployment_id in deployment_ids
+        }
+
+
+@pytest.mark.real_services
+@pytest.mark.parametrize("db_engine", ["postgres"], indirect=True)
 @pytest.mark.parametrize("first_operation", ["attachment", "delete"])
 async def test_delete_and_attachment_are_serialized(db_engine, version_and_deployment, monkeypatch, first_operation):
     user_id, version_id, deployment_id = version_and_deployment
