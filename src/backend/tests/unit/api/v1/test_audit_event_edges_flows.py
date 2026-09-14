@@ -389,7 +389,8 @@ async def test_a_move_that_rides_along_with_a_graph_edit_records_both(
     audit_on,  # noqa: ARG001
 ):
     """One PATCH can both edit and move. The row has to say so twice over:
-    the summary names what changed, the reason says it also changed hands."""
+    the summary names what changed, the reason says it also changed hands.
+    """
     flow = await _create(client, logged_in_headers)
     project = await client.post(
         "api/v1/projects/",
