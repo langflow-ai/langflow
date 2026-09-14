@@ -461,6 +461,7 @@ module.exports = {
               items: [
                 "Components/batch-run",
                 "Components/guardrails",
+                "Components/guardrails-legacy",
                 "Components/policies",
                 "Components/llm-selector",
                 "Components/smart-router",

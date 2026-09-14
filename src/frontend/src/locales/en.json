@@ -2401,5 +2401,7 @@
   "sharing.file.level.execute.desc": "View this file. Files do not use the Can run level.",
   "sharing.file.level.write.desc": "View and edit this file.",
   "sharing.file.level.admin.desc": "View, edit, and delete this file.",
-  "sharing.permission.for": "Permission for {{target}}"
+  "sharing.permission.for": "Permission for {{target}}",
+  "slider.strict": "Strict",
+  "slider.permissive": "Permissive"
 }
