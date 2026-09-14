@@ -45,6 +45,7 @@ from lfx.base.models.unified_models import (
     handle_model_input_update,
 )
 from lfx.components.llm_operations.guardrails import GuardrailsComponent, guardrail_descriptions
+from lfx.field_typing.conditional_options import resolve_conditional_options
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import (
     BoolInput,
@@ -1140,6 +1141,11 @@ def redact_spans(text: str, spans: list[tuple[str, str]], mode: str = "mask") ->
 
 
 _AI_CATEGORIES = tuple(name for name in guardrail_descriptions if name != "Custom Guardrail")
+_GUARDRAIL_OPTION_RULES = [
+    {"when": {"checking_method": "AI checks"}, "options": list(_AI_CATEGORIES)},
+    {"when": {"direction": "output"}, "options": list(OUTPUT_CATEGORIES)},
+    {"when": {}, "options": list(INPUT_CATEGORIES)},
+]
 
 
 class GuardrailsV2Component(GuardrailsComponent):
@@ -1185,6 +1191,7 @@ class GuardrailsV2Component(GuardrailsComponent):
             display_name="Guardrails",
             info="Checks to run. Connect a model for semantic coverage beyond known rule patterns.",
             options=list(_AI_CATEGORIES),
+            conditional_options=_GUARDRAIL_OPTION_RULES,
             required=True,
             value=["PII", "Tokens/Passwords", "Jailbreak"],
             real_time_refresh=True,
@@ -1435,10 +1442,9 @@ class GuardrailsV2Component(GuardrailsComponent):
         enabled = value("enabled_guardrails", []) or []
         direction = value("direction", "input")
         if "enabled_guardrails" in build_config:
-            build_config["enabled_guardrails"]["options"] = (
-                list(_AI_CATEGORIES)
-                if classic
-                else list(OUTPUT_CATEGORIES if direction == "output" else INPUT_CATEGORIES)
+            build_config["enabled_guardrails"]["options"] = resolve_conditional_options(
+                {"conditional_options": _GUARDRAIL_OPTION_RULES},
+                {"checking_method": method, "direction": direction},
             )
         show("model", ai)
         show("api_key", ai)

@@ -19,6 +19,7 @@ from typing import Any
 
 import yaml
 
+from lfx.field_typing.conditional_options import resolve_conditional_options
 from lfx.graph.edge.base import TYPE_MIGRATIONS
 from lfx.graph.flow_builder._utils import node_id as _node_id
 
@@ -289,7 +290,7 @@ def _is_scalar_option_value(value: Any) -> bool:
 _STRUCTURED_VALUE_TYPES = frozenset({"duration"})
 
 
-def _validate_configured_value(field_name: str, field: dict[str, Any], value: Any) -> None:
+def _validate_configured_value(field_name: str, field: dict[str, Any], value: Any, *, allow_zero: bool = False) -> None:
     """Validate closed options and numeric bounds before mutating a flow."""
     if value is None:
         return
@@ -309,12 +310,12 @@ def _validate_configured_value(field_name: str, field: dict[str, Any], value: An
         msg = f"Invalid value for parameter '{field_name}': {value!r}. Expected a list"
         raise ValueError(msg)
 
-    if value == field.get("value"):
+    if not field.get("conditional_options") and value == field.get("value"):
         # Re-setting what the field already holds is always acceptable, including
         # shipped defaults that sit outside their own range_spec (max_tokens=0).
         return
 
-    has_direct_options = has_scalar_options and bool(options)
+    has_direct_options = has_scalar_options and (bool(options) or bool(field.get("conditional_options")))
     if has_direct_options and not field.get("combobox"):
         values = value if field.get("list") and isinstance(value, list) else [value]
         accepted_values = list(options)
@@ -343,6 +344,11 @@ def _validate_configured_value(field_name: str, field: dict[str, Any], value: An
     if not isinstance(value, int) and not math.isfinite(value):
         msg = f"Invalid value for parameter '{field_name}': {value!r}. Expected a finite number"
         raise ValueError(msg)
+
+    if allow_zero and value == 0:
+        # Older saved Agent/LanguageModel templates have min=1, although their
+        # runtime has always used zero to mean no explicit token limit.
+        return
 
     minimum = range_spec.get("min")
     maximum = range_spec.get("max")
@@ -403,11 +409,32 @@ def configure_component(
         value = raw_value
         if template[key].get("type") == "model":
             value = _coerce_model_value(value)
-        _validate_configured_value(key, template[key], value)
         normalized_params[key] = value
+
+    candidate_values = {key: field.get("value") for key, field in template.items() if isinstance(field, dict)}
+    candidate_values.update(normalized_params)
+    resolved_options = {
+        key: resolve_conditional_options(field, candidate_values)
+        for key, field in template.items()
+        if isinstance(field, dict) and field.get("conditional_options")
+    }
+    # Use the whole proposed configuration regardless of parameter order, but
+    # preserve the existing contract of validating only explicitly supplied values.
+    for key in normalized_params:
+        field = template[key]
+        if key in resolved_options:
+            field = {**field, "options": resolved_options[key]}
+        _validate_configured_value(
+            key,
+            field,
+            candidate_values[key],
+            allow_zero=key == "max_tokens" and node["data"].get("type") in {"Agent", "LanguageModelComponent"},
+        )
 
     # Validate every parameter before changing either the flow or caller's params.
     params.update(normalized_params)
+    for key, options in resolved_options.items():
+        template[key]["options"] = options
     for key, value in normalized_params.items():
         template[key]["value"] = value
         # Values supplied through the configure API are explicit literals, just

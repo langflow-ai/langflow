@@ -1505,6 +1505,8 @@
   "messages.column.timestamp": "Zeitmarke",
   "messages.description": "Nachrichten anzeigen, bearbeiten und löschen, um das Modellverhalten zu untersuchen und zu verfeinern.",
   "messages.title": "Nachrichten",
+  "messages.loadOlder": "Ältere Nachrichten laden",
+  "messages.loadError": "Nachrichten konnten nicht geladen werden.",
   "misc.activateToShare": "Aktivieren, um eine öffentliche Version dieses Playgrounds zu teilen",
   "misc.addChatInputOutput": "Füge eine Chat-Eingabe oder eine Chat-Ausgabe hinzu, um auf deinen Ablauf zuzugreifen",
   "misc.addChatInputOutputPlayground": "Füge einen Chat-Eingabe- oder Chat-Ausgabefeld hinzu, um den Playground zu nutzen",
