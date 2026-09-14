@@ -244,6 +244,17 @@ def test_checker_requires_a_connection_test_reference_for_the_webhook_family(tmp
     assert any("'webhook'" in error and "behavior-specific" in error and "connection" in error for error in errors)
 
 
+def test_checker_rejects_a_job_owner_rule_without_the_non_interactive_opt_in(tmp_path: Path) -> None:
+    source = json.loads(DEFAULT_MATRIX.read_text(encoding="utf-8"))
+    for entrypoint in source["entrypoints"]:
+        if entrypoint["family"] == "workflow_hitl_v2":
+            entrypoint["connection_resolution"] = "job_owner_reresolved"
+    mismatched = tmp_path / "execution-principal-matrix.json"
+    mismatched.write_text(json.dumps(source), encoding="utf-8")
+
+    assert any("job_owner_reresolved_non_interactive_opt_in" in error for error in validate_matrix(mismatched))
+
+
 def test_checker_requires_prose_for_every_connection_rule(tmp_path: Path) -> None:
     source = json.loads(DEFAULT_MATRIX.read_text(encoding="utf-8"))
     source["entrypoints"][0]["connection_resolution_note"] = "   "

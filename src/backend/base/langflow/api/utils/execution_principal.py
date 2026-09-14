@@ -58,7 +58,7 @@ EXECUTION_FAMILIES = frozenset(
 RESOLUTION_OWNER_OR_EXPLICIT_SHARE = "owner_or_explicit_share"
 RESOLUTION_OWNER_ONLY = "owner_only"
 RESOLUTION_OWNER_NON_INTERACTIVE_OPT_IN = "owner_non_interactive_opt_in"
-RESOLUTION_JOB_OWNER_RERESOLVED = "job_owner_reresolved"
+RESOLUTION_JOB_OWNER_RERESOLVED_NON_INTERACTIVE_OPT_IN = "job_owner_reresolved_non_interactive_opt_in"
 RESOLUTION_NEVER = "never"
 
 
@@ -148,7 +148,7 @@ _FAMILY_RULES: dict[str, _FamilyRule] = {
         kind="job_owner",
         interactive=False,
         allow_explicit_shares=False,
-        connection_resolution=RESOLUTION_JOB_OWNER_RERESOLVED,
+        connection_resolution=RESOLUTION_JOB_OWNER_RERESOLVED_NON_INTERACTIVE_OPT_IN,
     ),
     FAMILY_WORKFLOW_PUBLIC_V2: _FamilyRule(
         kind="anonymous_public",

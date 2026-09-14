@@ -224,8 +224,8 @@
       "tweaks": "forbidden",
       "revoke": "resume_rechecks_actor",
       "error_policy": "owner_debug_delegated_sanitized",
-      "connection_resolution": "job_owner_reresolved",
-      "connection_resolution_note": "a resume recomputes the job owner's principal (checkpoints never persist one) and runs non-interactively",
+      "connection_resolution": "job_owner_reresolved_non_interactive_opt_in",
+      "connection_resolution_note": "a resume recomputes the job owner's principal (checkpoints never persist one) and requires allow_non_interactive on that owner's connection, even when the caller owns the job",
       "exception": "a continuation retains the starting job principal and rechecks that actor's execute grant before resume",
       "test_references": [
         "src/backend/tests/unit/api/v2/test_resume_route.py::test_resume_reenforces_flow_execute_permission",

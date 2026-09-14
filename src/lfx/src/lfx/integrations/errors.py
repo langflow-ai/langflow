@@ -137,20 +137,38 @@ class ConnectionUnresolvedError(IntegrationError):
         self.reason = reason
 
 
+ConnectionNotAuthorizedReason = Literal[
+    "principal", "provider", "anonymous-principal", "unknown-principal", "non-interactive-opt-in-required"
+]
+
+_CONNECTION_NOT_AUTHORIZED_HINTS: dict[ConnectionNotAuthorizedReason, str] = {
+    "principal": "Use an owned or explicitly shared connection.",
+    "provider": "Check the provider's access and administrator policy.",
+    "anonymous-principal": "Use an authenticated run route; public and A2A executions cannot resolve connections.",
+    "unknown-principal": "Configure the host to supply an execution identity before resolving connections.",
+    "non-interactive-opt-in-required": (
+        "Ask the connection owner to enable allow_non_interactive on this connection, then retry."
+    ),
+}
+
+
 class ConnectionNotAuthorizedError(IntegrationError):
     code = "connection-not-authorized"
 
-    def __init__(self, *, provider: str | None = None, reason: Literal["principal", "provider"] = "principal") -> None:
+    def __init__(self, *, provider: str | None = None, reason: ConnectionNotAuthorizedReason = "principal") -> None:
+        if reason not in _CONNECTION_NOT_AUTHORIZED_HINTS:
+            msg = "Unknown connection authorization reason"
+            raise ValueError(msg)
         super().__init__(
             "The provider denied this action."
             if reason == "provider"
             else "This execution principal is not authorized to use the requested connection.",
-            hint="Check the provider's access and administrator policy."
-            if reason == "provider"
-            else "Use an owned or explicitly shared connection.",
+            hint=_CONNECTION_NOT_AUTHORIZED_HINTS[reason],
             provider=provider,
             http_status=403,
+            details={"reason": reason},
         )
+        self.reason = reason
 
 
 class AuthExpiredError(IntegrationError):

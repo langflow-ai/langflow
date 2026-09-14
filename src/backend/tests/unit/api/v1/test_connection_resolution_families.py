@@ -23,9 +23,11 @@ import pytest
 from langflow.api.utils.execution_errors import (
     SAFE_INTEGRATION_ERROR_MESSAGE,
     error_details_for_client,
+    error_for_client,
 )
 from langflow.api.utils.execution_principal import (
     FAMILY_A2A,
+    FAMILY_DEPLOYMENTS,
     FAMILY_INTERACTIVE_CHAT,
     FAMILY_LEGACY_MCP,
     FAMILY_LEGACY_PUBLIC_CHAT,
@@ -62,7 +64,7 @@ _RESOLVES_OPTED_IN_ROW = {
     "owner_or_explicit_share",
     "owner_only",
     "owner_non_interactive_opt_in",
-    "job_owner_reresolved",
+    "job_owner_reresolved_non_interactive_opt_in",
 }
 
 
@@ -191,8 +193,38 @@ async def test_webhook_connection_without_non_interactive_opt_in_fails_closed(
     assert principal.interactive is False
     assert principal.user_id == row["owner_id"]
 
-    with pytest.raises(ConnectionNotAuthorizedError):
+    with pytest.raises(ConnectionNotAuthorizedError) as caught:
         await _resolve(row["name"], principal)
+
+    assert caught.value.reason == "non-interactive-opt-in-required"
+
+
+@pytest.mark.usefixtures("active_user")
+@pytest.mark.parametrize("family", [FAMILY_WEBHOOK, FAMILY_DEPLOYMENTS, FAMILY_WORKFLOW_HITL_V2])
+async def test_owner_non_interactive_denial_explains_opt_in_and_stays_sanitized(
+    client: AsyncClient, logged_in_headers: dict[str, str], family: str
+) -> None:
+    row = await _create_connection(client, logged_in_headers, name=f"optin_{uuid4().hex[:8]}")
+    principal = execution_principal_for(
+        family, user=SimpleNamespace(id=UUID(row["owner_id"])), flow_owner_id=row["owner_id"]
+    )
+
+    with pytest.raises(ConnectionNotAuthorizedError) as caught:
+        await _resolve(row["name"], principal)
+
+    for expose_details in (True, False):
+        response = error_for_client(caught.value, expose_details=expose_details)
+        assert response.status_code == 403
+        assert response.detail["error_code"] == "connection-not-authorized"
+        assert "allow_non_interactive" in response.detail["hint"]
+        if expose_details:
+            assert response.detail["details"]["reason"] == "non-interactive-opt-in-required"
+        else:
+            assert response.detail["message"] == SAFE_INTEGRATION_ERROR_MESSAGE
+            assert "details" not in response.detail
+        body = json.dumps(response.detail)
+        for sensitive in (ACCESS_TOKEN, row["owner_id"], row["name"]):
+            assert sensitive not in body
 
 
 @pytest.mark.usefixtures("active_user")
@@ -219,20 +251,22 @@ async def test_webhook_connection_with_opt_in_resolves_the_flow_owner(
 
 
 @pytest.mark.usefixtures("active_user")
+@pytest.mark.parametrize("allow_non_interactive", [False, True])
 async def test_a_hitl_resume_runs_as_the_job_owner_not_the_flow_owner(
     client: AsyncClient,
     logged_in_headers: dict[str, str],
+    allow_non_interactive: bool,  # noqa: FBT001 - connection opt-in contract
 ) -> None:
     """A share holder's resumed run must not borrow the flow owner's credential.
 
     A v2 background run can be submitted against a flow the caller only holds an
     execute share on, so ``flow.user_id`` and ``job.user_id`` genuinely differ.
     The resume keeps the STARTING JOB's owner, which is what the matrix row
-    ``job_owner_reresolved`` means; reading the flow owner instead would resolve
-    somebody else's opted-in connection on a worker with nobody present.
+    ``job_owner_reresolved_non_interactive_opt_in`` means; reading the flow owner
+    instead would resolve somebody else's opted-in connection on a worker with nobody present.
     """
     row = await _create_connection(
-        client, logged_in_headers, name=f"hitl_{uuid4().hex[:8]}", allow_non_interactive=True
+        client, logged_in_headers, name=f"hitl_{uuid4().hex[:8]}", allow_non_interactive=allow_non_interactive
     )
     flow_owner_id = row["owner_id"]
     job_owner = SimpleNamespace(id=uuid4())
@@ -246,13 +280,17 @@ async def test_a_hitl_resume_runs_as_the_job_owner_not_the_flow_owner(
     with pytest.raises(IntegrationError):
         await _resolve(row["name"], borrowed)
 
-    # The owner resuming their OWN job still resolves the opted-in row.
+    # Even the owner resuming their OWN job must opt in to non-interactive use.
     own = execution_principal_for(
         FAMILY_WORKFLOW_HITL_V2, user=SimpleNamespace(id=UUID(flow_owner_id)), flow_owner_id=flow_owner_id
     )
-    resolved = await _resolve(row["name"], own)
-
-    assert resolved.access_token.get_secret_value() == ACCESS_TOKEN
+    if allow_non_interactive:
+        resolved = await _resolve(row["name"], own)
+        assert resolved.access_token.get_secret_value() == ACCESS_TOKEN
+    else:
+        with pytest.raises(ConnectionNotAuthorizedError) as caught:
+            await _resolve(row["name"], own)
+        assert caught.value.reason == "non-interactive-opt-in-required"
 
 
 @pytest.mark.usefixtures("active_user")

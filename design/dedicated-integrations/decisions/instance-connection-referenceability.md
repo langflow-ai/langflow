@@ -1,6 +1,6 @@
 # Instance-connection referenceability in 1.13
 
-Status: accepted
+Status: proposed
 Decision ID: instance-connection-referenceability
 Applies to: `scripts/ci/execution_principal_matrix.json` (`connection_resolution` for every family); `Connection.ownership_mode = instance`; INT-6, INT-7
 Owners (sign-off roles): langflow-base owner, Enterprise owner
@@ -49,8 +49,9 @@ existing instance connection stop working) that has to be chosen without a polic
 
 ## Decision
 
-Ship Option A. In 1.13, an instance-owned connection resolves for any execution principal that is not
-`anonymous_public` or `unknown`; anonymous and public execution is a hard deny with no override, matching
+Propose Option A, as implemented in this PR, pending recorded owner approval. In 1.13, an instance-owned
+connection resolves for any execution principal that is not `anonymous_public` or `unknown`; anonymous and
+public execution is a hard deny with no override, matching
 the LE-2464 ticket text ("public, A2A, and anonymous executions never resolve user connections") and the
 `never` rule those families carry in the execution-principal matrix. Referenceability narrowing is
 expressed through `authorize_instance_connection`, not through a stored flag; a `referenceable` column is
@@ -74,6 +75,9 @@ provisions an instance connection whose provider account must not be reachable b
 deployment; INT-7's policy bundle grows a principal dimension. Re-verify by 2026-12-01.
 
 ## Sign-off
+
+Approval is pending. The implementation and this proposal do not establish release acceptance or
+langflow-base/Enterprise sign-off; record those reviews here before marking the decision accepted.
 
 | Role | Name | Date | PR |
 |------|------|------|----|

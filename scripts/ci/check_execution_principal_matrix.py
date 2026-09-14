@@ -81,13 +81,15 @@ VALID_DIMENSION_VALUES = {
     #   owner_only                    the actor's own row; shares are not admitted
     #   owner_non_interactive_opt_in  the resource owner's row, and only with
     #                                 Connection.allow_non_interactive set
-    #   job_owner_reresolved          the job owner's row, recomputed on the worker
+    #   job_owner_reresolved_non_interactive_opt_in
+    #                                 the job owner's row, recomputed on the worker,
+    #                                 and only with Connection.allow_non_interactive set
     #   never                         no user connection, and no instance connection
     "connection_resolution": {
         "owner_or_explicit_share",
         "owner_only",
         "owner_non_interactive_opt_in",
-        "job_owner_reresolved",
+        "job_owner_reresolved_non_interactive_opt_in",
         "never",
     },
 }
@@ -102,7 +104,7 @@ CONNECTION_RESOLUTION_BY_DEPENDENCY_PRINCIPAL = {
     "anonymous_public": {"never"},
     "flow_owner": {"owner_non_interactive_opt_in"},
     "deployment_owner": {"owner_non_interactive_opt_in"},
-    "job_owner": {"job_owner_reresolved"},
+    "job_owner": {"job_owner_reresolved_non_interactive_opt_in"},
 }
 
 # Each family maps to a list of term-groups; every group must be satisfied by SOME

@@ -26,7 +26,7 @@ these files are the historical record the checker keeps guarding.
 | + | KB OAuth connector adoption decision (added by the release owner) | `decisions/kb-oauth-connector-adoption.md` | none | accepted: adopt in 1.13 (release owner overrode the gate's defer recommendation); +1.5 engineer-weeks |
 | + | Palette naming next to Composio components (added by the release owner) | `decisions/palette-naming.md` | none | accepted: 'Product: Verb Object' names, new Microsoft 365 and Slack groups, Composio unchanged |
 | + | Desktop OAuth registration ownership (added by the release owner, 2026-09-02) | `decisions/desktop-oauth-ownership.md` | none | accepted: Langflow-owned public clients on Desktop, customer-owned registrations remain the override; +0.25 engineer-weeks |
-| + | Instance-connection referenceability (added during INT-6, 2026-09-05) | `decisions/instance-connection-referenceability.md` | none | accepted: any non-anonymous principal may resolve an instance row in 1.13; narrowing goes through a policy hook, no `referenceable` column; no estimate delta |
+| + | Instance-connection referenceability (added during INT-6, 2026-09-05) | `decisions/instance-connection-referenceability.md` | none | proposed, pending recorded owner approval: any non-anonymous principal may resolve an instance row in 1.13; narrowing goes through a policy hook, no `referenceable` column; no estimate delta |
 
 Gate close means: every row above is done, every record under `decisions/` is `Status: accepted` (the checker walks
 them all, not only the ones a matrix references), every declared owner has completed both sign-off tables, and

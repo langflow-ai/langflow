@@ -53,7 +53,10 @@ class BaseConnectionResolverService(Service, abc.ABC):
     async def resolve(self, request: ConnectionResolutionRequest) -> ResolvedCredential:
         """Enforce the portable floor before invoking the host's credential hook."""
         if request.principal.kind in {"anonymous_public", "unknown"}:
-            raise ConnectionNotAuthorizedError(provider=request.ref.provider)
+            raise ConnectionNotAuthorizedError(
+                provider=request.ref.provider,
+                reason="anonymous-principal" if request.principal.kind == "anonymous_public" else "unknown-principal",
+            )
         policy = await self._get_access_policy(request)
         if not isinstance(policy, ConnectionAccessPolicy):
             raise ConnectionNotAuthorizedError(provider=request.ref.provider)
@@ -123,23 +126,29 @@ class BaseConnectionResolverService(Service, abc.ABC):
         resolve them, and a host policy hook may narrow that further.
         """
         principal = request.principal
+        if principal.kind in {"anonymous_public", "unknown"}:
+            return ConnectionNotAuthorizedError(
+                provider=request.ref.provider,
+                reason="anonymous-principal" if principal.kind == "anonymous_public" else "unknown-principal",
+            )
         if owner_kind == "env":
             return (
                 None
                 if principal.kind == "headless_operator"
                 else ConnectionNotAuthorizedError(provider=request.ref.provider)
             )
-        if principal.kind in {"anonymous_public", "unknown"}:
-            return ConnectionNotAuthorizedError(provider=request.ref.provider)
         if owner_kind == "user":
             if connection_owner_id is None or principal.user_id is None:
-                return ConnectionNotAuthorizedError(provider=request.ref.provider)
-            if not principal.interactive and not allow_non_interactive:
                 return ConnectionNotAuthorizedError(provider=request.ref.provider)
             if str(principal.user_id) != str(connection_owner_id) and not (
                 principal.kind == "actor" and explicit_share_authorized
             ):
                 return ConnectionNotAuthorizedError(provider=request.ref.provider)
+            # Only an owner or an authorized share holder may learn the opt-in remedy.
+            if not principal.interactive and not allow_non_interactive:
+                return ConnectionNotAuthorizedError(
+                    provider=request.ref.provider, reason="non-interactive-opt-in-required"
+                )
         return None
 
     async def teardown(self) -> None:
