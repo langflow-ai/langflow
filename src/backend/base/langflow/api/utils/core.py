@@ -37,8 +37,18 @@ MIN_PAGE_SIZE = 1
 
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
 CurrentActiveMCPUser = Annotated[User, Depends(get_current_active_user_mcp)]
-# DbSession with auto-commit for write operations
-DbSession = Annotated[AsyncSession, Depends(injectable_session_scope)]
+# DbSession with auto-commit for write operations.
+# ``scope="function"`` is load-bearing: a dependency with yield defaults to
+# request scope, whose exit stack FastAPI unwinds *after* the response has been
+# sent to the client. The auto-commit lives in that teardown, so at request
+# scope a handler answers 201 with a row id that is not committed yet and a
+# client that immediately reads it back can get a 404. Function scope runs the
+# teardown right after the endpoint returns and before the response is sent, so
+# the write is durable by the time the caller holds the id.
+# Every Depends(injectable_session_scope) site must carry the same scope: the
+# scope is part of FastAPI's dependency cache key, so a mixed set would resolve
+# two distinct sessions per request instead of one shared session.
+DbSession = Annotated[AsyncSession, Depends(injectable_session_scope, scope="function")]
 # DbSessionReadOnly for read-only operations (no auto-commit, reduces lock contention)
 DbSessionReadOnly = Annotated[AsyncSession, Depends(injectable_session_scope_readonly)]
 
