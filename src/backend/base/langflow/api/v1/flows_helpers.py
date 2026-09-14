@@ -763,7 +763,8 @@ async def _patch_flow(
     if settings_service.settings.remove_api_keys:
         update_data = remove_api_keys(update_data)
 
-    # Renames and no-op saves must not take someone's turn to write.
+    # Only a graph change takes the writer's turn. A rename or a no-op save leaves
+    # the token alone on purpose — see the scope note in ``flow_conflict``.
     graph_changed = "data" in update_data and update_data["data"] != db_flow.data
 
     _apply_update_data(db_flow, update_data)

@@ -8,6 +8,7 @@ import useVersionPreviewStore from "@/stores/versionPreviewStore";
 import type { AllNodeType } from "@/types/flow";
 import { axe } from "@/utils/a11y-test";
 import { readConflictDraft } from "@/utils/conflict-draft";
+import { RawDiff } from "../ChangeRow";
 import { ConflictBanner, ConflictCanvasFrame } from "../ConflictBanner";
 import DuplicateFlowModal from "../DuplicateFlowModal";
 import RestoreDraftBanner from "../RestoreDraftBanner";
@@ -504,6 +505,27 @@ describe("duplicate dialog accessibility", () => {
     expect(header.indexOf("Prompt Template")).toBeLessThan(
       header.indexOf("Action required"),
     );
+  });
+
+  it("should_not_pour_a_whole_source_file_into_the_dialog", () => {
+    // The real case is a component's `code` field: its whole Python source,
+    // rendered twice in a box capped at 55vh, with the decision the dialog
+    // exists for somewhere below it.
+    const source = Array.from(
+      { length: 400 },
+      (_, line) =>
+        `    self.value_${line} = "a fairly long line of component source"`,
+    ).join("\n");
+
+    render(<RawDiff before={source} after={`${source}\n    self.extra = 1`} />);
+
+    for (const shown of document.querySelectorAll("span.whitespace-pre-wrap")) {
+      const text = shown.textContent ?? "";
+      expect(text.length).toBeLessThanOrEqual(800);
+      expect(text.split("\n").length).toBeLessThanOrEqual(12);
+    }
+    // And it says it was cut, on both sides, rather than ending mid-line.
+    expect(screen.getAllByText(/shown in part/i)).toHaveLength(2);
   });
 
   it("should_never_render_a_secret_value_in_any_state", async () => {

@@ -11,25 +11,78 @@ const BADGE_VARIANT = {
   modified: "conflictModified",
 } as const;
 
+// A component's `code` field is its whole Python source, and it went into the
+// dialog twice over, inside a box capped at 55vh. The decision the dialog exists
+// for was then somewhere below the fold of a file listing.
+const DIFF_LINE_LIMIT = 12;
+const DIFF_CHAR_LIMIT = 800;
+
+/** The head of a value, and whether anything was left off. */
+function clampValue(value: string): { text: string; truncated: boolean } {
+  const withinChars = value.slice(0, DIFF_CHAR_LIMIT);
+  const lines = withinChars.split(/\r\n|\r|\n/);
+  const text = lines.slice(0, DIFF_LINE_LIMIT).join("\n");
+  return { text, truncated: text.length < value.length };
+}
+
+/** One side of the raw comparison, cut down to what can be read at a glance. */
+function DiffSide({
+  value,
+  sign,
+  placeholder,
+  tone,
+}: {
+  value: string;
+  sign: string;
+  placeholder: string;
+  tone: "before" | "after";
+}) {
+  const { t } = useTranslation();
+  const { text, truncated } = clampValue(value);
+  const colour =
+    tone === "before"
+      ? "text-error-foreground"
+      : "text-accent-emerald-foreground";
+
+  return (
+    <div
+      className={cn(
+        "px-3 py-2",
+        tone === "before"
+          ? "border-b border-muted bg-error-background/40"
+          : "bg-accent-emerald/30",
+      )}
+    >
+      <span className={cn("mr-2 select-none", colour)}>{sign}</span>
+      <span className={cn("whitespace-pre-wrap break-words", colour)}>
+        {text || placeholder}
+      </span>
+      {truncated && (
+        <p className="pt-1 text-[11px] leading-[16.5px] text-muted-foreground">
+          {t("multiEdit.dialog.diffTruncated")}
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** Raw before/after, for values a sentence cannot honestly summarise. */
 export function RawDiff({ before, after }: { before: string; after: string }) {
   const { t } = useTranslation();
   return (
     <div className="mt-2 overflow-x-auto rounded-md border border-muted font-mono text-[12px] leading-[19.5px]">
-      <div className="border-b border-muted bg-error-background/40 px-3 py-2">
-        <span className="mr-2 select-none text-error-foreground">-</span>
-        <span className="whitespace-pre-wrap break-words text-error-foreground">
-          {before || t("multiEdit.dialog.before")}
-        </span>
-      </div>
-      <div className="bg-accent-emerald/30 px-3 py-2">
-        <span className="mr-2 select-none text-accent-emerald-foreground">
-          +
-        </span>
-        <span className="whitespace-pre-wrap break-words text-accent-emerald-foreground">
-          {after || t("multiEdit.dialog.after")}
-        </span>
-      </div>
+      <DiffSide
+        value={before}
+        sign="-"
+        placeholder={t("multiEdit.dialog.before")}
+        tone="before"
+      />
+      <DiffSide
+        value={after}
+        sign="+"
+        placeholder={t("multiEdit.dialog.after")}
+        tone="after"
+      />
     </div>
   );
 }

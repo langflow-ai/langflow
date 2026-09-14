@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import type { APITemplateType, InputFieldType } from "@/types/api";
 import type { AllNodeType, EdgeType } from "@/types/flow";
 
@@ -67,9 +68,24 @@ type NodeInner = {
 const nodeInner = (node: AllNodeType | undefined): NodeInner =>
   (node?.data?.node as NodeInner | undefined) ?? {};
 
+/** The component class behind a node, when the graph still records it. */
+const nodeType = (node: AllNodeType | undefined): string | undefined => {
+  const type = (node?.data as { type?: unknown } | undefined)?.type;
+  return typeof type === "string" && type ? type : undefined;
+};
+
 export const changeOwnerName = (node: AllNodeType | undefined): string => {
   const inner = nodeInner(node);
-  return inner.display_name || inner.name || node?.id || "Component";
+  // An id is never a name. It is generated as `${type}-${suffix}`, so a node
+  // whose type never resolved was labelled "undefined-iK8Uq" — an identifier the
+  // reader was then asked to make a keep-or-discard decision about. The type is
+  // the last thing here that actually names the component; past it, say so.
+  return (
+    inner.display_name ||
+    inner.name ||
+    nodeType(node) ||
+    i18n.t("multiEdit.change.unnamedComponent")
+  );
 };
 
 const nodeTemplate = (node: AllNodeType | undefined): APITemplateType =>

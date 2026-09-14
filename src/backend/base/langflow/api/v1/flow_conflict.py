@@ -8,6 +8,17 @@ in between.
 The header is optional by design. Without it a request behaves exactly as it did
 before preconditions existed, which is what keeps every existing API client and
 every pre-upgrade row working unchanged.
+
+The precondition covers the graph, and only the graph. A rename, a move between
+projects or a tag edit leaves the token alone, deliberately: rotating it on every
+field would refuse an editor's graph save because somebody else renamed the flow,
+and the conflict dialog that opened would have no graph change to resolve. That
+trades a silent loss for a routine false alarm on the one path people use most.
+
+What it costs is that two simultaneous renames still resolve last-write-wins. The
+asymmetry is the point. A name is one visible field that its owner can see is
+wrong and retype; a graph edit is an afternoon of work with nothing on screen to
+say it was replaced.
 """
 
 from __future__ import annotations

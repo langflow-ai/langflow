@@ -2470,5 +2470,7 @@
   "multiEdit.dialog.chooseVersionFor": "保留 {{component}} 的哪个版本",
   "multiEdit.dialog.resolvedLabel": "{{component}} 已解决并包含在内",
   "multiEdit.dialog.resolveFirst": "更新此流程前请先解决 {{count}} 个冲突。",
-  "multiEdit.dialog.resolveFirst_other": "更新此流程前请先解决 {{count}} 个冲突。"
+  "multiEdit.dialog.resolveFirst_other": "更新此流程前请先解决 {{count}} 个冲突。",
+  "multiEdit.change.unnamedComponent": "未命名组件",
+  "multiEdit.dialog.diffTruncated": "仅显示部分内容。打开组件查看完整值。"
 }

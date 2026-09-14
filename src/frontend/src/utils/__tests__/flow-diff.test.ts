@@ -680,3 +680,47 @@ describe("agreeing is not disagreeing", () => {
     expect([...contested]).toEqual(["node:p1"]);
   });
 });
+
+describe("a component is never labelled by its id", () => {
+  const bare = (id: string, data: Record<string, unknown>) => ({
+    id,
+    type: "genericNode",
+    position: { x: 0, y: 0 },
+    data,
+  });
+
+  // The group label is what the dialog renders as the component's name.
+  const labelOf = (before: unknown, after: unknown) =>
+    groupChangesByTarget(
+      diffGraphs(
+        { nodes: [before], edges: [] } as never,
+        { nodes: [after], edges: [] } as never,
+      ),
+    )[0]?.label;
+
+  it("falls back to the component type when the node has no name", () => {
+    const template = (value: string) => ({
+      node: { template: { tone: { type: "str", show: true, value } } },
+      type: "ChatInput",
+    });
+
+    expect(labelOf(bare("n1", template("a")), bare("n1", template("b")))).toBe(
+      "ChatInput",
+    );
+  });
+
+  it("says so rather than printing the id when nothing names the node", () => {
+    // The id is generated as `${type}-${suffix}`, so a node whose type never
+    // resolved reads as "undefined-iK8Uq" — which is what shipped.
+    const template = (value: string) => ({
+      node: { template: { tone: { type: "str", show: true, value } } },
+    });
+    const label = labelOf(
+      bare("undefined-iK8Uq", template("a")),
+      bare("undefined-iK8Uq", template("b")),
+    );
+
+    expect(label).not.toContain("undefined-iK8Uq");
+    expect(label).toBeTruthy();
+  });
+});

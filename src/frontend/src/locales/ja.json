@@ -2471,5 +2471,7 @@
   "multiEdit.dialog.chooseVersionFor": "{{component}} のどのバージョンを保持するか",
   "multiEdit.dialog.resolvedLabel": "{{component}} は解決済みで含まれています",
   "multiEdit.dialog.resolveFirst": "このフローを更新する前に {{count}} 件の競合を解決してください。",
-  "multiEdit.dialog.resolveFirst_other": "このフローを更新する前に {{count}} 件の競合を解決してください。"
+  "multiEdit.dialog.resolveFirst_other": "このフローを更新する前に {{count}} 件の競合を解決してください。",
+  "multiEdit.change.unnamedComponent": "名前のないコンポーネント",
+  "multiEdit.dialog.diffTruncated": "一部のみ表示しています。全体はコンポーネントを開いて確認してください。"
 }

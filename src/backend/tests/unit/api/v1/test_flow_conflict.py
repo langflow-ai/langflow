@@ -446,3 +446,53 @@ async def test_a_stale_editor_cannot_overwrite_an_import(client: AsyncClient, lo
     )
 
     assert response.status_code == status.HTTP_409_CONFLICT, response.text
+
+
+async def test_someone_elses_rename_does_not_refuse_my_graph_save(client: AsyncClient, logged_in_headers):
+    """The reason the precondition covers the graph alone, stated as behaviour.
+
+    Rotating the token on every field would turn a rename into a refusal for
+    everyone with the flow open, and the conflict dialog it raised would have no
+    graph change in it to resolve. That is a routine false alarm on the path
+    people use most, traded against a silent loss on a path they rarely hit.
+    """
+    flow = await _create_flow(client, logged_in_headers)
+
+    renamed = await client.patch(
+        f"api/v1/flows/{flow['id']}",
+        json={"name": f"renamed-{uuid.uuid4()}"},
+        headers=logged_in_headers,
+    )
+    assert renamed.status_code == status.HTTP_200_OK
+
+    # My editor still holds the token it loaded, and my graph save must land.
+    mine = await client.patch(
+        f"api/v1/flows/{flow['id']}",
+        json={"data": _graph("mine")},
+        headers={**logged_in_headers, "If-Match": flow["version_token"]},
+    )
+
+    assert mine.status_code == status.HTTP_200_OK, mine.text
+    assert mine.json()["version_token"] != flow["version_token"]
+
+
+async def test_two_renames_resolve_last_write_wins(client: AsyncClient, logged_in_headers):
+    """The cost of that scope, written down so it cannot be lost by accident.
+
+    A name is one visible field its owner can see is wrong and retype. A graph
+    edit is an afternoon of work with nothing on screen to say it was replaced,
+    which is the case the precondition exists for.
+    """
+    flow = await _create_flow(client, logged_in_headers)
+    first, second = f"first-{uuid.uuid4()}", f"second-{uuid.uuid4()}"
+
+    for name in (first, second):
+        response = await client.patch(
+            f"api/v1/flows/{flow['id']}",
+            json={"name": name},
+            headers={**logged_in_headers, "If-Match": flow["version_token"]},
+        )
+        assert response.status_code == status.HTTP_200_OK, response.text
+
+    current = await client.get(f"api/v1/flows/{flow['id']}", headers=logged_in_headers)
+    assert current.json()["name"] == second

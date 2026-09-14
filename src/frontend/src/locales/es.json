@@ -2471,5 +2471,7 @@
   "multiEdit.dialog.chooseVersionFor": "Qué versión de {{component}} conservar",
   "multiEdit.dialog.resolvedLabel": "{{component}} está resuelto e incluido",
   "multiEdit.dialog.resolveFirst": "Resuelve {{count}} conflicto antes de actualizar este flujo.",
-  "multiEdit.dialog.resolveFirst_other": "Resuelve {{count}} conflictos antes de actualizar este flujo."
+  "multiEdit.dialog.resolveFirst_other": "Resuelve {{count}} conflictos antes de actualizar este flujo.",
+  "multiEdit.change.unnamedComponent": "Componente sin nombre",
+  "multiEdit.dialog.diffTruncated": "Se muestra en parte. Abre el componente para ver el valor completo."
 }
