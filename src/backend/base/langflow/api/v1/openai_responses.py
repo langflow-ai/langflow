@@ -181,6 +181,12 @@ async def run_flow_for_openai_responses(
                 processed_tools = set()  # Track processed tool calls to avoid duplicates
                 previous_content = ""  # Track content already sent to calculate deltas
                 stream_usage_data = None  # Track usage from completed message
+                # Set once a ``token`` event arrives. Only then has the text of the final
+                # ``state="complete"`` add_message already reached the client, so only then
+                # may that message's text be dropped. Without token events (Stream toggle
+                # off, a Prompt or any other non-streaming producer feeding Chat Output) the
+                # complete message is the sole carrier of the answer.
+                tokens_streamed = False
 
                 async for event_data in consume_and_yield(asyncio_queue, asyncio_queue_client_consumed):
                     if event_data is None:
@@ -209,6 +215,7 @@ async def run_flow_for_openai_responses(
 
                                 # Handle add_message events
                                 if event_type == "token":
+                                    tokens_streamed = True
                                     token_data = data.get("chunk", "")
                                     if isinstance(token_data, str):
                                         previous_content += token_data
@@ -257,12 +264,7 @@ async def run_flow_for_openai_responses(
                                         message_state,
                                     )
 
-                                    # Skip processing text content if state is "complete"
-                                    # All content has already been streamed via token events
                                     if message_state == "complete":
-                                        await logger.adebug(
-                                            "[OpenAIResponses][stream] skipping add_message with state=complete"
-                                        )
                                         # Extract usage from completed message properties
                                         if isinstance(properties, dict) and "usage" in properties:
                                             usage_obj = properties.get("usage")
@@ -276,8 +278,20 @@ async def run_flow_for_openai_responses(
                                                 await logger.adebug(
                                                     "[OpenAIResponses][stream] captured usage: %s", stream_usage_data
                                                 )
-                                        # Still process content_blocks for tool calls, but skip text content
-                                        text = ""
+                                        # The text of a complete message is a repeat of what the client
+                                        # already has only when it went out as token events. Blanking it
+                                        # unconditionally dropped the answer of every run that never
+                                        # streamed tokens. Without tokens the message falls through to
+                                        # the delta logic below, which also keeps a republished identical
+                                        # message (e.g. Chat Output re-sending once usage is attached)
+                                        # from being emitted twice.
+                                        if tokens_streamed:
+                                            await logger.adebug(
+                                                "[OpenAIResponses][stream] skipping text of add_message with "
+                                                "state=complete: already streamed as tokens"
+                                            )
+                                            # Still process content_blocks for tool calls, but skip text content
+                                            text = ""
 
                                     # Look for Agent Steps in content_blocks
                                     for block in content_blocks:
