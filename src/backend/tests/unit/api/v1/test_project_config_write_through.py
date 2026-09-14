@@ -448,7 +448,10 @@ async def test_invalid_tool_does_not_partially_apply_other_fields(client, logged
     assert (await stored_template(agent_id))["system_prompt"]["value"] != "must not apply"
 
 
-async def test_first_save_after_upgrade_preserves_legacy_canvas_edits(client, logged_in_headers, active_user):
+@pytest.mark.parametrize("initially_locked", [False, True])
+async def test_first_save_after_upgrade_preserves_legacy_canvas_edits(
+    client, logged_in_headers, active_user, initially_locked
+):
     project_id = await create_project(client, logged_in_headers, name="legacy-provenance")
     flow_id = await create_flow(active_user, folder_id=project_id, data=agent_flow_data())
     await save_config(client, logged_in_headers, project_id, {"system_prompt": "old", "n_messages": 10})
@@ -456,9 +459,21 @@ async def test_first_save_after_upgrade_preserves_legacy_canvas_edits(client, lo
         project = await session.get(Folder, UUID(project_id))
         project.project_config = {"system_prompt": "old", "n_messages": 10}
         session.add(project)
+        flow = await session.get(Flow, UUID(flow_id))
+        flow.locked = initially_locked
+        session.add(flow)
         await session.commit()
     await edit_prompt(flow_id, "local canvas edit")
     saved = await save_config(client, logged_in_headers, project_id, {"system_prompt": "new", "n_messages": 20})
+    if initially_locked:
+        assert saved["flows_updated"] == 0
+        assert saved["flows_locked"] == 1
+        async with session_scope() as session:
+            flow = await session.get(Flow, UUID(flow_id))
+            flow.locked = False
+            session.add(flow)
+            await session.commit()
+        saved = await save_config(client, logged_in_headers, project_id, {"system_prompt": "new", "n_messages": 20})
     assert saved["fields_skipped"] == 1
     template = await stored_template(flow_id)
     assert template["system_prompt"]["value"] == "local canvas edit"
@@ -488,3 +503,22 @@ async def test_adding_a_tool_preserves_canvas_edits_and_avoids_existing_position
     assert kept == original
     added = next(node for node in nodes if node["data"].get(TOOL_ORIGIN, {}).get("flow_id") == next_id)
     assert added["position"] != kept["position"]
+
+
+async def test_legacy_baselines_survive_choosing_another_agent_later(client, logged_in_headers, active_user):
+    project_id = await create_project(client, logged_in_headers, name="legacy-agent-choice")
+    first = await create_flow(active_user, folder_id=project_id, data=agent_flow_data(), name="first")
+    second = await create_flow(active_user, folder_id=project_id, data=agent_flow_data(), name="second")
+    await edit_prompt(first, "old project prompt")
+    await edit_prompt(second, "old project prompt")
+    async with session_scope() as session:
+        project = await session.get(Folder, UUID(project_id))
+        project.project_config = {"system_prompt": "old project prompt"}
+        session.add(project)
+        await session.commit()
+    await edit_prompt(second, "canvas edit before upgrade")
+    await save_config(client, logged_in_headers, project_id, {"agent_flow_id": first, "system_prompt": "new"})
+    saved = await save_config(client, logged_in_headers, project_id, {"agent_flow_id": second, "system_prompt": "new"})
+    assert saved["fields_skipped"] == 1
+    assert (await stored_template(first))["system_prompt"]["value"] == "new"
+    assert (await stored_template(second))["system_prompt"]["value"] == "canvas edit before upgrade"

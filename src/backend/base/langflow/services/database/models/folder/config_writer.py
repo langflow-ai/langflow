@@ -166,17 +166,20 @@ async def write_project_config_to_flows(
 
     applied = config.get("_applied", {})
     applied = deepcopy(applied) if isinstance(applied, dict) else {}
+    if previous_config and "_applied" not in previous_config:
+        # The legacy writer targeted every flow. Keep all those baselines before
+        # replacing the old config, including locked flows and future agent choices.
+        for flow in flows:
+            applied.setdefault(
+                str(flow.id), apply_project_config(flow.data, project_type, previous_config).applied_values
+            )
     for flow in targets:
+        flow_id = str(flow.id)
         try:
             ensure_flow_unlocked(flow)
         except LockedFlowError:
             result.flows_locked += 1
             continue
-        flow_id = str(flow.id)
-        if previous_config and "_applied" not in previous_config and flow_id not in applied:
-            # Older saves wrote every matching input without recording provenance.
-            # Treat those saved values as the baseline so upgrading preserves edits.
-            applied[flow_id] = apply_project_config(flow.data, project_type, previous_config).applied_values
         write = apply_project_config(flow.data, project_type, config, previous_values=applied.get(flow_id))
         result.fields_skipped += write.inputs_skipped
         applied[flow_id] = write.applied_values
