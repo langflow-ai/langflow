@@ -356,5 +356,9 @@ async def delete_flow_version_entry(
         )
         raise FlowVersionDeployedError(msg)
 
-    await session.delete(entry)
+    # The entry can disappear after the preflight reads under concurrent DELETEs.
+    result = await session.exec(delete(FlowVersion).where(FlowVersion.id == version_id, FlowVersion.user_id == user_id))
+    if result.rowcount == 0:
+        msg = f"Version entry {version_id} not found"
+        raise FlowVersionNotFoundError(msg)
     await session.flush()
