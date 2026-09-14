@@ -1,17 +1,15 @@
-from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
-from lfx.log.logger import logger
-from lfx.projects import DEFAULT_PROJECT_TYPE, apply_project_config, get_project_type, registered_project_types
+from lfx.projects import DEFAULT_PROJECT_TYPE, registered_project_types
 from sqlmodel import and_, select, update
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_moves_allowed
-from langflow.services.database.models.flow.guards import LockedFlowError, ensure_flow_unlocked
 from langflow.services.database.models.flow.model import Flow
 
+from .config_writer import write_project_config_to_flows  # noqa: F401 - compatibility export
 from .constants import DEFAULT_FOLDER_DESCRIPTION, DEFAULT_FOLDER_NAME
 from .model import Folder
 
@@ -30,57 +28,6 @@ def validate_project_type(value: str | None) -> str:
             detail=f"Unknown project_type {value!r}. Valid types: {', '.join(registered_project_types())}.",
         )
     return value
-
-
-async def write_project_config_to_flows(session: AsyncSession, project: Folder) -> list[Flow]:
-    """Write the project's saved form through to its flows. Returns the flows that changed.
-
-    ``project_config`` records what the user picked, and a folder is not something either
-    runtime consults at run time. So the values a run needs are copied onto the components of
-    the project's own flows, which is the artifact both langflow and lfx load.
-
-    Scoped to the project owner, like the other flow work in this module: a non-owner editing a
-    shared project must touch the owner's flows, not their own flows of the same name.
-    """
-    if not project.project_config:
-        return []
-
-    try:
-        project_type = get_project_type(project.project_type or DEFAULT_PROJECT_TYPE)
-    except ValueError:
-        # A project carrying a type this instance does not know is left alone rather than
-        # failing the save; the config is still recorded on the row.
-        await logger.awarning(
-            "Project %s has unknown project_type %r; not writing through.", project.id, project.project_type
-        )
-        return []
-
-    flows = (
-        await session.exec(select(Flow).where(Flow.folder_id == project.id, Flow.user_id == project.user_id))
-    ).all()
-
-    changed: list[Flow] = []
-    for flow in flows:
-        try:
-            # A locked flow is deliberately frozen, and PATCHing one answers 423. Saving the
-            # project's form is not a reason to overrule that, and it is not a reason to fail
-            # the save either, so the flow is left as it is.
-            ensure_flow_unlocked(flow)
-        except LockedFlowError:
-            await logger.ainfo("Flow %s is locked; the project's form was not written into it.", flow.id)
-            continue
-
-        write = apply_project_config(flow.data, project_type, project.project_config)
-        if not write.changed:
-            continue
-        flow.data = write.data
-        # Nothing bumps this for us: the column has a default but no onupdate, so the normal
-        # flow PATCH sets it by hand too.
-        flow.updated_at = datetime.now(timezone.utc)
-        session.add(flow)
-        changed.append(flow)
-
-    return changed
 
 
 async def create_default_folder_if_it_doesnt_exist(session: AsyncSession, user_id: UUID):

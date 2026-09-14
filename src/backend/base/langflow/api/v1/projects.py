@@ -70,6 +70,7 @@ from langflow.services.database.models.deployment.exceptions import (
 from langflow.services.database.models.deployment.guards import check_project_has_deployments
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_moves_allowed
 from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.folder.config_writer import ProjectConfigWrite, config_from_request
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
     Folder,
@@ -102,18 +103,20 @@ PROJECT_DELETE_DENIED_DETAIL = "You don't have permission to delete this project
 _escape_like = escape_like_pattern
 
 
-async def _write_config_through(session: DbSession, project: Folder) -> int:
+async def _write_config_through(
+    session: DbSession, project: Folder, *, previous_config: dict | None = None
+) -> ProjectConfigWrite:
     """Apply the project's form to its flows, and keep any file-backed copy in step.
 
     A flow with an ``fs_path`` is also a file on disk, and that file is what lfx loads. Leaving
     it behind would defeat the point of writing through at all.
     """
-    changed = await write_project_config_to_flows(session, project)
-    if changed:
+    changed = await write_project_config_to_flows(session, project, previous_config=previous_config)
+    if changed.flows:
         storage_service = get_storage_service()
-        for flow in changed:
+        for flow in changed.flows:
             await _save_flow_to_fs(flow, project.user_id, storage_service)
-    return len(changed)
+    return changed
 
 
 async def _new_project(
@@ -157,6 +160,7 @@ async def _new_project(
 
     new_project = Folder.model_validate(project, from_attributes=True)
     new_project.project_type = validate_project_type(new_project.project_type)
+    new_project.project_config = config_from_request(new_project.project_config)
     new_project.user_id = current_user.id
     # Apply the stable id: an explicit ``project_id`` (PUT upsert) overrides the uuid4 default.
     if project_id is not None:
@@ -281,7 +285,10 @@ async def _new_project(
 
     # Convert to FolderRead while session is still active to avoid detached instance errors
     saved = FolderSaveRead.model_validate(new_project, from_attributes=True)
-    saved.flows_updated = flows_updated
+    saved.flows_updated = len(flows_updated.flows)
+    saved.fields_skipped = flows_updated.fields_skipped
+    saved.flows_locked = flows_updated.flows_locked
+    saved.restore_version_ids = flows_updated.restore_version_ids
     return saved
 
 
@@ -707,8 +714,9 @@ async def _apply_project_update(
 
     # project_config uses model_fields_set, not a None check: clearing the config and leaving
     # it untouched are different requests, and a None check cannot tell them apart.
+    previous_config = existing_project.project_config
     if "project_config" in project.model_fields_set:
-        existing_project.project_config = project.project_config
+        existing_project.project_config = config_from_request(project.project_config, existing_project.project_config)
 
     if project.parent_id is not None:
         # Validate the supplied parent references a folder owned by the project owner, so
@@ -855,11 +863,18 @@ async def _apply_project_update(
 
     # Last, after the flow moves, so whatever set of flows the project ends this request with
     # is the set the form is written into.
-    flows_updated = await _write_config_through(session, existing_project)
+    flows_updated = (
+        await _write_config_through(session, existing_project, previous_config=previous_config)
+        if "project_config" in project.model_fields_set
+        else ProjectConfigWrite()
+    )
 
     # Convert to FolderRead while session is still active to avoid detached instance errors
     saved = FolderSaveRead.model_validate(existing_project, from_attributes=True)
-    saved.flows_updated = flows_updated
+    saved.flows_updated = len(flows_updated.flows)
+    saved.fields_skipped = flows_updated.fields_skipped
+    saved.flows_locked = flows_updated.flows_locked
+    saved.restore_version_ids = flows_updated.restore_version_ids
     return saved
 
 

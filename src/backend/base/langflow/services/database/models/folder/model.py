@@ -73,6 +73,9 @@ class FolderSaveRead(FolderRead):
     """
 
     flows_updated: int = 0
+    fields_skipped: int = 0
+    flows_locked: int = 0
+    restore_version_ids: dict[str, str] = Field(default_factory=dict)
 
 
 class FolderListRead(FolderRead):
