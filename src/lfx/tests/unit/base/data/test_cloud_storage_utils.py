@@ -4,6 +4,7 @@ import json
 
 import pytest
 from lfx.base.data.cloud_storage_utils import parse_google_service_account_key
+from pydantic import SecretStr
 
 CREDENTIALS = {"type": "service_account", "project_id": "test-project"}
 
@@ -53,6 +54,17 @@ class TestParseGoogleServiceAccountKey:
 
         assert result["type"] == "service_account"
         assert "\n" in result["private_key"]
+
+    @pytest.mark.parametrize("wrap_key", [str, SecretStr], ids=["plain", "secret"])
+    def test_escaped_formatting_newlines(self, wrap_key):
+        """Single-line secrets can escape both JSON formatting and private-key newlines."""
+        credentials = {
+            **CREDENTIALS,
+            "private_key": "-----BEGIN KEY-----\nFAKE\n-----END KEY-----\n",
+        }
+        key = json.dumps(credentials, indent=2).replace("\n", "\\n")
+
+        assert parse_google_service_account_key(wrap_key(key)) == credentials
 
     @pytest.mark.parametrize(
         ("raw", "type_name"),

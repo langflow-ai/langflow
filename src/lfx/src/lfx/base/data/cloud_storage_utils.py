@@ -61,7 +61,7 @@ def create_s3_client(component: Any):
     return boto3.client("s3", **client_config)
 
 
-# Total json.loads passes, including the first. The extra passes run only while the
+# Successful json.loads passes, including the first. The extra passes run only while the
 # result is still a string, which is what unwraps a double-encoded key.
 _MAX_JSON_DECODE_PASSES = 3
 
@@ -97,9 +97,14 @@ def parse_google_service_account_key(service_account_key: Any) -> dict:
 
     try:
         decoded: Any = json.loads(key_text, strict=False)
-    except json.JSONDecodeError as e:
-        msg = _parse_error_message(str(e))
-        raise ValueError(msg) from e
+    except json.JSONDecodeError:
+        # Some single-line secrets escape formatting newlines outside JSON strings.
+        # Preserve that repair fallback, but leave successfully parsed JSON untouched.
+        try:
+            decoded = json.loads(key_text.replace("\\n", "\n"), strict=False)
+        except json.JSONDecodeError as e:
+            msg = _parse_error_message(str(e))
+            raise ValueError(msg) from e
 
     # Secret and configuration pipelines sometimes JSON-encode the credential object a
     # second time, so a successful decode can still yield the object as text.
