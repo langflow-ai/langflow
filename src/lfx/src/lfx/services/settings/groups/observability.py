@@ -15,6 +15,14 @@ class ObservabilitySettings(BaseModel):
     """The maximum number of vertex builds to keep in the database."""
     max_vertex_builds_per_vertex: int = 50
     """The maximum number of builds to keep per vertex. Older builds will be deleted."""
+    audit_enabled: bool = False
+    """If set to True, record an append-only audit event for each audited Flow and Project operation.
+
+    Off by default: the audit history is durable storage a deployment opts into. When on,
+    a committed operation and its event share one transaction.
+    """
+    audit_retention_days: int = 90
+    """Days an audit event is kept. Cleanup deletes by timestamp only; 0 keeps events forever."""
     max_flow_version_entries_per_flow: int = 50
     """Max version history entries per flow. Oldest entries pruned on next snapshot.
 
