@@ -165,6 +165,16 @@ Feature: Application audit log
     Then one update row exists with payload.reason "moved"
     And payload.changes is empty, because nothing in the graph changed
 
+  Scenario: Deleting a project records the loss of every flow inside it
+    When a project holding three flows is deleted
+    Then each flow has its own delete row
+    And the project has one delete row of its own
+
+  Scenario: A refused replace records that it was refused
+    When a project's contents are replaced with two flows sharing an endpoint name
+    Then the request is refused and the project keeps the contents it had
+    And one project.replace row exists with result "failed"
+
   Scenario: A stranger cannot read someone else's trail
     When a user who does not own a flow reads its audit log
     Then the response is 404, indistinguishable from a flow that does not exist
@@ -227,14 +237,33 @@ JSON-encodable before the row exists.
 is tested as such.
 
 ### ADR-003 — The row is written in a savepoint and flushed immediately
-**Status:** Accepted.
+**Status:** Superseded by ADR-008.
 **Context:** `session.add` only stages a row; the insert happens at the caller's flush. A row the
 database rejects therefore raises *inside the caller's transaction* and fails the write the row
-merely describes. This was a real defect, proven before the fix.
+merely describes.
 **Decision:** Wrap the insert in `session.begin_nested()` and flush inside the seam's own
 try/except.
-**Consequences:** The promise "never costs the write" becomes true rather than intended. The cost
-is one round trip per row on the write path (measured: +1.67 ms p95).
+**Consequences:** It turned out to cause, far more often, the exact failure it was meant to
+prevent. See ADR-008.
+
+### ADR-008 — The row is staged and rides the caller's commit
+**Status:** Accepted. Supersedes ADR-003.
+**Context:** Flushing in the seam made the audit row the *first* write in a transaction that still
+had reads ahead of it. SQLite fails a read-to-write upgrade against a concurrent writer immediately
+rather than waiting, and the savepoint did not contain it: the lock error deactivates the parent
+transaction along with the savepoint, so the next statement on the caller's session raised. Measured
+on four simultaneous moves of one flow, twelve rounds: 36 of 48 requests returned 500 with the audit
+log enabled, and 0 of 48 with it disabled. The feature was costing exactly the writes it exists to
+describe.
+**Decision:** Stage the row with `session.add` and let the insert go out with the caller's own
+commit, where the write lock is already held. Validate what can be validated first — the two checked
+vocabularies, and that the payload is JSON-encodable.
+**Consequences:** Concurrent moves return 200 at the same rate as with the feature off, and every
+row is still recorded. It gives up the containment ADR-003 bought against a row the database would
+reject — a risk this table is deliberately built not to run, having no foreign keys and only the two
+constraints already validated in the seam. It also makes a retried operation self-correcting: a
+staged row is discarded by the rollback that precedes the retry, where a flushed one could be
+recorded twice.
 
 ### ADR-004 — A refusal records itself in its own transaction, with bounded concurrency
 **Status:** Accepted.
@@ -243,7 +272,13 @@ row describing the refusal with it. The row that matters most in an investigatio
 one the rollback would erase.
 **Decision:** Refusals use `record_audit_event_independently()`, which opens its own session; and
 that path is limited to `MAX_CONCURRENT_INDEPENDENT_WRITES` slots with a short acquisition timeout.
-**Consequences:** Refusals are durable. The bound exists because it was measured to matter: 120
+The seam rolls the caller's transaction back before writing: a second connection cannot take the
+write lock while the first still holds it, and the caller's transaction is doomed anyway with an
+exception already on its way out.
+**Consequences:** Refusals are durable — including the ones that had already written. A refused
+project replace has deleted the old contents by the time it fails, and without the rollback above its
+`failed` row was dropped on the acquisition timeout while every refusal that had not yet written
+recorded normally. The bound exists because it was measured to matter: 120
 simultaneous conflicting saves without it exhausted the connection pool and cost unrelated requests
 their authentication. With it, the same burst produced 119 refusal rows, no dropped row, and no pool
 error. The path ships here but has no caller until multi-edit safety supplies one.
@@ -347,6 +382,7 @@ GET /api/v1/audit/{resource_type}/{resource_id}
 | `projects.create_project` | `project.create` · action |
 | `projects.update_project` / `upsert_project` | `project.update` · action |
 | `projects.delete_project` | `project.delete` · action |
+| `projects.delete_project` (contents) | one `flow.delete` row per flow destroyed with the project |
 | `projects.create_project_with_flows` | `project.create` · action, with `flows_total` |
 | `projects.replace_project_flows` | `project.replace` · action, with `flows_total` and `flows_removed` |
 | `audit.scope.audited_action` | the `authz`/`deny` row when a route raises 403 |
@@ -410,7 +446,7 @@ C4Container
   Person(user, "Builder", "Edits a flow")
   Container(fe, "Frontend", "React", "Saves with a version precondition")
   Container(api, "Langflow API", "FastAPI", "Flow write paths and the reader")
-  Container(seam, "Audit seam", "services/audit", "Allowlist, savepoint, bounded independent writes")
+  Container(seam, "Audit seam", "services/audit", "Allowlist, staged writes, bounded independent writes")
   ContainerDb(db, "Database", "SQLite / PostgreSQL", "audit_events, flow, folder, flow_version")
   Container(lfx, "lfx serve", "Stateless", "No database — records nothing")
 
@@ -435,7 +471,7 @@ sequenceDiagram
   API->>DB: claim T
   DB-->>API: claimed
   API->>AU: flow.update · action/succeeded (changes: names)
-  AU->>DB: insert in savepoint, flush
+  AU->>DB: stage the row for the caller's commit
   API-->>A: 200 + new token
 
   B->>API: PATCH with stale token T

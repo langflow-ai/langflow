@@ -1,8 +1,8 @@
 """The recorder's two promises: it never costs the write, and it needs no database.
 
-Exercised against a real session rather than a stand-in. The seam opens a
-savepoint and flushes, so a fake that only implements ``add`` would prove
-nothing about the behaviour that matters.
+Exercised against a real session rather than a stand-in: what matters here is
+when the row reaches the database relative to the caller's own write, which a
+fake that only implements ``add`` could not show.
 """
 
 import pytest
@@ -144,7 +144,7 @@ async def test_a_payload_json_cannot_encode_never_reaches_the_database(session, 
 
 
 async def test_a_rejected_row_does_not_take_the_callers_write_with_it(session, audit_on):  # noqa: ARG001
-    """The savepoint is the guarantee: the caller's transaction survives a bad row."""
+    """A bad payload is scrubbed before it is staged, so the caller's write stands."""
     marker = sa.text("create table caller_work (id integer primary key)")
     await session.exec(marker)
 
@@ -179,3 +179,20 @@ async def test_a_result_from_the_wrong_family_fails_where_tests_can_see_it(sessi
         )
 
     assert await rows(session) == []
+
+
+async def test_recording_stages_the_row_and_writes_nothing_of_its_own(session, audit_on):  # noqa: ARG001
+    """The row rides the caller's commit, and must not be written ahead of it.
+
+    Flushing here made the audit row the first write in a transaction that still
+    had reads ahead of it, and on SQLite that upgrade fails immediately against a
+    concurrent writer instead of waiting. It cost the caller the write it was
+    only supposed to describe: four simultaneous moves of one flow returned 500
+    for 36 of 48 requests with the audit log on, and none at all with it off.
+    A savepoint did not contain it, because the lock error deactivates the parent
+    transaction along with the savepoint.
+    """
+    await record_audit_event(session, event=FLOW_UPDATE, family=AuditFamily.ACTION, result=AuditResult.SUCCEEDED)
+
+    staged = [obj for obj in session.new if isinstance(obj, AuditEvent)]
+    assert len(staged) == 1, "the row is still pending, waiting on the caller's own commit"

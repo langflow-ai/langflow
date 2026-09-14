@@ -794,19 +794,10 @@ async def _patch_flow(
 
     # A rename or a no-op save changes no graph, so there is nothing to record.
     graph_changed = "data" in update_data and update_data["data"] != db_flow.data
-    graph_before = db_flow.data if graph_changed else None
-    # A project is a permission boundary: moving a flow across one changes who
-    # can see it, which is an act worth recording even though the graph is
-    # untouched. The graph is passed as its own "before" so the summary is empty
-    # and the reason carries the meaning.
-    moved = "folder_id" in update_data and update_data["folder_id"] != db_flow.folder_id
-    if moved and not graph_changed:
-        graph_before = db_flow.data
+    graph_before = db_flow.data
+    folder_before = db_flow.folder_id
 
     _apply_update_data(db_flow, update_data)
-
-    if graph_changed or moved:
-        await _record_flow_update(session, db_flow, graph_before, user_id, reason=REASON_MOVED if moved else None)
 
     # Validate fs_path if it was changed (will raise HTTPException if invalid).
     # fs_path lives under the owner's storage namespace, so the owner id
@@ -826,6 +817,16 @@ async def _patch_flow(
         owner_user_id,
         authorized_existing_folder_id=existing_folder_id,
     )
+
+    # A project is a permission boundary, so moving a flow across one changes who
+    # can see it — an act worth recording even though the graph is untouched, and
+    # then the empty summary leaves the reason carrying the whole meaning.
+    # Compared after the destination is resolved rather than as requested: the
+    # resolver may decline the project that was asked for, and a row claiming a
+    # move would send an investigation to a project the flow never reached.
+    moved = db_flow.folder_id != folder_before
+    if graph_changed or moved:
+        await _record_flow_update(session, db_flow, graph_before, user_id, reason=REASON_MOVED if moved else None)
 
     session.add(db_flow)
     await session.flush()

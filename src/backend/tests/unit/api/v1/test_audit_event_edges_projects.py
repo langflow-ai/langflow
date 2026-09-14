@@ -263,3 +263,81 @@ async def test_a_trail_for_a_resource_that_never_existed_is_not_found(
     """A 404 rather than an empty page: the endpoint must not confirm UUIDs."""
     response = await client.get(f"api/v1/audit/project/{uuid.uuid4()}", headers=logged_in_headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
+
+
+async def test_deleting_a_project_records_the_loss_of_every_flow_inside_it(
+    client: AsyncClient,
+    logged_in_headers,
+    audit_on,  # noqa: ARG001
+):
+    """A project's own row cannot answer "what happened to this flow".
+
+    Deleting a project destroys the flows in it just as surely as a bulk delete
+    does, and a bulk delete already writes one row per flow. Without these rows
+    each flow's trail ends at its creation, describing a flow that still exists.
+    """
+    project = await client.post(
+        "api/v1/projects/",
+        json={"name": f"doomed-{uuid.uuid4().hex[:8]}", "description": ""},
+        headers=logged_in_headers,
+    )
+    project_id = project.json()["id"]
+    flows = []
+    for i in range(3):
+        created = await client.post(
+            "api/v1/flows/",
+            json={**_flow(f"inside{i}-{uuid.uuid4().hex[:8]}"), "folder_id": project_id},
+            headers=logged_in_headers,
+        )
+        assert created.status_code == status.HTTP_201_CREATED, created.text
+        flows.append(created.json()["id"])
+
+    removed = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+    assert removed.status_code == status.HTTP_204_NO_CONTENT, removed.text
+
+    for flow_id in flows:
+        events = [e["event"] for e in await _trail(client, logged_in_headers, "flow", flow_id)]
+        assert "langflow.audit.flow.delete" in events, f"{flow_id} was destroyed with no record of it"
+
+    project_events = [e["event"] for e in await _trail(client, logged_in_headers, "project", project_id)]
+    assert "langflow.audit.project.delete" in project_events
+
+
+async def test_a_refused_replace_still_records_that_it_was_refused(
+    client: AsyncClient,
+    logged_in_headers,
+    audit_on,  # noqa: ARG001
+):
+    """A failure row goes out on a second connection, which needs the write lock.
+
+    The caller's transaction has to let go of it first. A refused replace has
+    already deleted the old contents by then, so it is holding that lock — and on
+    SQLite a second connection does not wait for it, it fails. The row that went
+    missing was the one an investigation starts from.
+    """
+    project = await client.post(
+        "api/v1/projects/with-flows",
+        json={
+            "name": f"replaced-{uuid.uuid4().hex[:8]}",
+            "description": "",
+            "flows": [_flow(f"keep-{uuid.uuid4().hex[:8]}")],
+        },
+        headers=logged_in_headers,
+    )
+    assert project.status_code == status.HTTP_201_CREATED, project.text
+    project_id = project.json()["id"]
+
+    clash = f"clash{uuid.uuid4().hex[:8]}"
+    refused = await client.put(
+        f"api/v1/projects/{project_id}/flows",
+        json={"flows": [_flow(clash, endpoint=clash), _flow(f"{clash}-2", endpoint=clash)]},
+        headers=logged_in_headers,
+    )
+    assert refused.status_code == status.HTTP_409_CONFLICT, refused.text
+
+    entries = await _trail(client, logged_in_headers, "project", project_id)
+    replaces = [e for e in entries if e["event"] == "langflow.audit.project.replace"]
+
+    assert len(replaces) == 1
+    assert replaces[0]["result"] == "failed"
+    assert replaces[0]["family"] == "action", "a refusal on contents is a failed act, not a denial"

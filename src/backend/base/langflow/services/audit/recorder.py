@@ -212,13 +212,20 @@ async def record_audit_event(
             resource_id=resource_id,
             payload=_allowed(payload),
         )
-        # Written inside a savepoint, and flushed now rather than left staged for
-        # the caller's commit. ``session.add`` only stages: a row the database
-        # rejects would otherwise raise inside the caller's flush and fail the
-        # write this row merely describes. The savepoint confines that to itself.
-        async with session.begin_nested():
-            session.add(row)
-            await session.flush()
+        # Staged, never flushed here. Flushing made this the first write in a
+        # transaction that still had reads ahead of it, and on SQLite a
+        # read-to-write upgrade against a concurrent writer fails immediately
+        # rather than waiting: measured, four simultaneous moves of one flow
+        # turned 36 of 48 requests into 500s with the audit log on and none with
+        # it off. A savepoint did not contain it, because the lock error
+        # deactivates the parent transaction along with the savepoint.
+        #
+        # The insert now rides the caller's own commit, where the write lock is
+        # already held. It costs the containment a savepoint gave against a row
+        # the database would reject — a risk this table is built not to run: no
+        # foreign keys, and the two checked vocabularies are validated above
+        # before anything is staged.
+        session.add(row)
     except Exception as exc:  # noqa: BLE001
         # Named, because a bare warning here would hide a real defect behind a
         # log line that says only that something went wrong.

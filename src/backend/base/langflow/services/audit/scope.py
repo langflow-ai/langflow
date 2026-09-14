@@ -13,6 +13,7 @@ from http import HTTPStatus
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
+from lfx.log.logger import logger
 
 from langflow.services.audit.events import REASON_PERMISSION_DENIED
 from langflow.services.audit.recorder import (
@@ -74,6 +75,7 @@ async def audited_action(
         if exc.status_code == HTTPStatus.NOT_FOUND:
             raise
         if exc.status_code == HTTPStatus.FORBIDDEN:
+            await _release(session)
             await record_audit_event_independently(
                 event=event,
                 family=AuditFamily.AUTHZ,
@@ -83,10 +85,10 @@ async def audited_action(
                 **attribution,
             )
             raise
-        await _record_failure(event, scope, exc, attribution)
+        await _record_failure(session, event, scope, exc, attribution)
         raise
     except Exception as exc:
-        await _record_failure(event, scope, exc, attribution)
+        await _record_failure(session, event, scope, exc, attribution)
         raise
 
     await record_audit_event(
@@ -100,12 +102,33 @@ async def audited_action(
     )
 
 
+async def _release(session: AsyncSession) -> None:
+    """Let go of the caller's transaction so the row describing it can be written.
+
+    A row written in its own transaction needs a second connection, and a second
+    connection cannot take the write lock while the first still holds it — on
+    SQLite that is not contention but an immediate failure. It cost exactly the
+    row that matters most: a project replace refused after it had already deleted
+    the old contents held the lock, and its ``failed`` row was dropped on a
+    two-second timeout while every refusal that had not yet written recorded fine.
+
+    The caller's transaction is already doomed — an exception is on its way out
+    and the request teardown will roll it back — so this only brings that forward.
+    """
+    try:
+        await session.rollback()
+    except Exception as exc:  # noqa: BLE001
+        await logger.awarning("op=audited_action outcome=rollback_failed error=%s", type(exc).__name__)
+
+
 async def _record_failure(
+    session: AsyncSession,
     event: str,
     scope: AuditScope,
     exc: BaseException,
     attribution: dict[str, Any],
 ) -> None:
+    await _release(session)
     await record_audit_event_independently(
         event=event,
         family=AuditFamily.ACTION,

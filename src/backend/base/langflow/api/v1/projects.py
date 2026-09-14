@@ -35,10 +35,12 @@ from langflow.api.v1.projects_mcp_helpers import (
 )
 from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
 from langflow.services.audit.events import (
+    FLOW_DELETE,
     PROJECT_CREATE,
     PROJECT_DELETE,
     PROJECT_UPDATE,
 )
+from langflow.services.audit.recorder import record_audit_event
 from langflow.services.audit.scope import audited_action
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.authorization import (
@@ -61,6 +63,7 @@ from langflow.services.database.lock_retry import (
     run_with_lock_retry,
     sanitize_database_error,
 )
+from langflow.services.database.models.audit_event.model import AuditFamily, AuditResult
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
     remap_flow_guard_for_project_delete,
@@ -1088,6 +1091,19 @@ async def _delete_project(
             if len(flows) > 0:
                 for flow in flows:
                     memory_base_cleanups.extend(await cascade_delete_flow(session, flow.id))
+                    # Deleting a project destroys the flows inside it, and the
+                    # project's own row cannot answer "what happened to this
+                    # flow". One row per flow, as a bulk flow delete already
+                    # writes — the flow is gone either way, and its trail is
+                    # where somebody will look for it.
+                    await record_audit_event(
+                        session,
+                        event=FLOW_DELETE,
+                        family=AuditFamily.ACTION,
+                        result=AuditResult.SUCCEEDED,
+                        user_id=current_user.id,
+                        resource_id=flow.id,
+                    )
 
             await check_project_has_deployments(session, project_id=project_id)
             await session.delete(target)
