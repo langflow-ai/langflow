@@ -88,6 +88,23 @@ export type FlowOutputChoice = FlowBinding & {
   display_name: string;
 };
 
+export type HookEvent =
+  | "before_llm_call"
+  | "after_llm_call"
+  | "before_tool_call"
+  | "after_tool_call";
+export type HookBinding = FlowBinding & {
+  on_event: HookEvent;
+  priority?: number;
+  mode?: "observe" | "control";
+  timeout_seconds?: number;
+  on_failure?: "continue" | "stop";
+};
+export type ProjectFlowBindings = Record<
+  string,
+  FlowBinding | HookBinding[] | undefined
+>;
+
 /** A project type and the form it renders, from `GET /api/v1/projects/types`. */
 export type ProjectTypeType = {
   name: string;

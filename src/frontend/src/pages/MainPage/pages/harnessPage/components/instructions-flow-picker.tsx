@@ -12,21 +12,8 @@ import {
 } from "@/components/ui/select";
 import { useCreateInstructionsFlow } from "@/controllers/API/queries/folders/use-create-instructions-flow";
 import { useGetProjectFlowOutputsQuery } from "@/controllers/API/queries/folders/use-get-project-flow-outputs";
-import type { FlowBinding, FlowOutputChoice } from "@/pages/MainPage/entities";
-
-const outputKey = (value: FlowBinding) =>
-  JSON.stringify([value.flow_id, value.node_id, value.output_name]);
-const bindingOf = ({
-  flow_id,
-  node_id,
-  output_name,
-  revision,
-}: FlowOutputChoice): FlowBinding => ({
-  flow_id,
-  node_id,
-  output_name,
-  revision,
-});
+import type { FlowBinding } from "@/pages/MainPage/entities";
+import { bindingOf, outputKey } from "../flow-binding";
 
 export function InstructionsFlowPicker({
   projectId,
