@@ -161,7 +161,11 @@ def test_custom_contract_can_be_registered_before_a_component_cache_exists():
 
 
 def test_registered_vocabulary_does_not_claim_unbuilt_baseline_flows():
-    assert all(definition.default_flow_ref is None for definition in all_slots())
+    assert {
+        definition.name: definition.default_flow_ref for definition in all_slots() if definition.default_flow_ref
+    } == {
+        "SystemPromptBuilder": "builtin:instructions",
+    }
     # These contracts are ready for runtime adapters; no inert fields are added to the form.
     assert set(get_project_type("agent-harness").field_names()) == {
         "system_prompt",

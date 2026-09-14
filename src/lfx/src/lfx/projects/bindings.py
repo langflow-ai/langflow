@@ -43,7 +43,9 @@ def instruction_outputs(data: dict) -> list[dict]:
         for name, entry in node.get("data", {}).get("node", {}).get("template", {}).items():
             if not isinstance(entry, dict) or name in {"code", "_type"}:
                 continue
-            if entry.get("required") and entry.get("value") in (None, "", []) and (node["id"], name) not in connected:
+            value = entry.get("value")
+            missing = value in (None, "", []) or (isinstance(value, str) and not value.strip())
+            if entry.get("required") and missing and (node["id"], name) not in connected:
                 display_name = node.get("data", {}).get("node", {}).get("display_name", node["id"])
                 msg = f"Configure {display_name}: {entry.get('display_name', name)}."
                 raise ValueError(msg)

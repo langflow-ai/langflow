@@ -9,6 +9,7 @@ from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.model import FlowVersion
+from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import session_scope
 from lfx.components.flow_controls.run_flow import RunFlowComponent
 from lfx.components.models_and_agents.system_prompt_builder import SystemPromptBuilderComponent
@@ -272,3 +273,91 @@ async def test_archive_import_rejects_invalid_saved_bindings(client, logged_in_h
         files={"file": ("instructions.json", json.dumps(payload).encode(), "application/json")},
     )
     assert response.status_code == 422, response.text
+
+
+async def test_instructions_baseline_creates_a_callable_flow_through_normal_api(client, logged_in_headers, active_user):
+    project = await create_project(client, logged_in_headers, name="Baseline harness")
+    response = await client.post(
+        f"api/v1/projects/{project}/flow-baseline",
+        headers=logged_in_headers,
+        json={"initial_value": "Use the form draft. Today is {current_date}."},
+    )
+    assert response.status_code == 200, response.text
+    baseline = response.json()
+    node = baseline["data"]["nodes"][0]
+    assert node["type"] == "genericNode"
+    assert node["position"] == {"x": 300, "y": 150}
+    created = await client.post("api/v1/flows/", headers=logged_in_headers, json=baseline)
+    assert created.status_code == 201, created.text
+    source = created.json()["id"]
+    choices = await client.get(f"api/v1/projects/{project}/flow-outputs", headers=logged_in_headers)
+    output = next(choice for choice in choices.json() if choice["flow_id"] == source)
+    binding = {key: output[key] for key in ("flow_id", "node_id", "output_name", "revision")}
+    agent = await create_flow(active_user, folder_id=project, data=agent_flow_data())
+    await save_config(
+        client,
+        logged_in_headers,
+        project,
+        {
+            "agent_flow_id": agent,
+            "flow_bindings": {"system_prompt": binding},
+        },
+    )
+    assert await invoke_binding(agent, active_user) == "Use the form draft. Today is {current_date}."
+    # Naming and placement still belong to ordinary flow creation.
+    another = await client.post("api/v1/flows/", headers=logged_in_headers, json=baseline)
+    assert another.status_code == 201
+    assert another.json()["name"] != created.json()["name"]
+    assert another.json()["folder_id"] == project
+
+
+@pytest.mark.parametrize("initial_value", [None, "", "   "])
+async def test_instructions_baseline_defaults_are_ready_to_run(client, logged_in_headers, initial_value):
+    project = await create_project(client, logged_in_headers, name="Default baseline")
+    response = await client.post(
+        f"api/v1/projects/{project}/flow-baseline", headers=logged_in_headers, json={"initial_value": initial_value}
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    checked = await client.post(
+        f"api/v1/projects/{project}/flow-outputs/validate", headers=logged_in_headers, json={"data": data}
+    )
+    assert checked.json()["valid"] is True
+    assert checked.json()["outputs"][0]["output_name"] == "instructions"
+
+
+async def test_draft_contract_check_neither_executes_nor_saves_code(client, logged_in_headers, active_user):
+    project, _, source, _ = await setup_binding(client, logged_in_headers, active_user)
+    original = deepcopy((await stored_flow(source)).data)
+    draft = deepcopy(original)
+    draft["nodes"][0]["data"]["node"]["template"]["code"]["value"] = "raise RuntimeError('must never execute')"
+    endpoint = f"api/v1/projects/{project}/flow-outputs/validate"
+    checked = await client.post(endpoint, headers=logged_in_headers, json={"data": draft})
+    assert checked.status_code == 200
+    assert checked.json()["valid"] is True
+    draft["nodes"][0]["data"]["node"]["template"]["input_value"]["value"] = ""
+    assert (await client.post(endpoint, headers=logged_in_headers, json={"data": draft})).json()["valid"] is False
+    assert (await client.post(endpoint, headers=logged_in_headers, json={"data": {"nodes": [], "edges": []}})).json()[
+        "valid"
+    ] is False
+    assert (await stored_flow(source)).data == original
+
+
+async def test_baseline_and_validation_reject_foreign_projects_and_unsupported_fields(
+    client, logged_in_headers, user_two
+):
+    project = await create_project(client, logged_in_headers, name="Scoped baseline")
+    async with session_scope() as session:
+        foreign = Folder(name="Foreign baseline", user_id=user_two.id, project_type="agent-harness")
+        session.add(foreign)
+        await session.flush()
+        foreign_id = foreign.id
+    for suffix, payload in [("flow-baseline", {}), ("flow-outputs/validate", {"data": {}})]:
+        response = await client.post(f"api/v1/projects/{foreign_id}/{suffix}", headers=logged_in_headers, json=payload)
+        assert response.status_code == 404
+        response = await client.post(f"api/v1/projects/{uuid4()}/{suffix}", headers=logged_in_headers, json=payload)
+        assert response.status_code == 404
+        response = await client.post(
+            f"api/v1/projects/{project}/{suffix}?field_name=tools", headers=logged_in_headers, json=payload
+        )
+        assert response.status_code == 422

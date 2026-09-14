@@ -87,7 +87,7 @@ async def test_the_form_exposes_shared_contracts_without_changing_config_keys(
         "terminal_output_type": "str",
         "fire_timing": "once_per_run",
         "cardinality": "single",
-        "default_flow_ref": None,
+        "default_flow_ref": "builtin:instructions",
     }
     assert template["tools"]["flow_contract"]["name"] == "Tool"
     assert template["tools"]["flow_contract"]["cardinality"] == "multi"
