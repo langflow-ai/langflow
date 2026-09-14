@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from lfx.log.logger import logger
 
@@ -222,6 +222,14 @@ class RuntimeSettings(BaseModel):
     `in-process` executor runs graphs in the current process; third-party executors registered
     via the `lfx.executors` entry-point group can be selected by setting this to their kind.
     """
+
+    @model_validator(mode="after")
+    def validate_trigger_event_retention(self) -> "RuntimeSettings":
+        """Retain terminal events for the entire advertised replay window."""
+        if self.trigger_event_retention_days < self.trigger_replay_window_days:
+            msg = "trigger_event_retention_days must be at least trigger_replay_window_days"
+            raise ValueError(msg)
+        return self
 
     @field_validator("event_delivery", mode="before")
     @classmethod

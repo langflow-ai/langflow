@@ -17,6 +17,7 @@ from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
+from sqlmodel import select
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -195,7 +196,9 @@ async def test_test_and_replay_write_linked_ledger_rows(
     created = await _create(client, logged_in_headers, flow.id)
 
     fired = await client.post(
-        f"api/v1/triggers/{created['id']}/test", json={"payload": {"hello": "world"}}, headers=logged_in_headers
+        f"api/v1/triggers/{created['id']}/test",
+        json={"payload": {"hello": "world", "test": False}},
+        headers=logged_in_headers,
     )
     assert fired.status_code == 202, fired.text
     event = fired.json()
@@ -321,3 +324,106 @@ async def test_a_trigger_created_through_the_api_is_owned_by_the_flow_owner(
 
     assert created.user_id == owner_id
     assert created.user_id != active_user.id
+
+
+async def test_dead_trigger_cannot_be_disabled_then_reenabled(client, logged_in_headers, flow):
+    """A management request must not turn the terminal state into a re-armable one."""
+    from uuid import UUID
+
+    created = await _create(client, logged_in_headers, flow.id)
+    async with session_scope() as session:
+        row = await session.get(Trigger, UUID(created["id"]))
+        row.state = "dead"
+        row.last_error = "terminal failure"
+        session.add(row)
+
+    for action in ("disable", "enable"):
+        response = await client.post(f"api/v1/triggers/{created['id']}/{action}", headers=logged_in_headers)
+        assert response.status_code == 409, response.text
+        stored = await client.get(f"api/v1/triggers/{created['id']}", headers=logged_in_headers)
+        assert stored.status_code == 200
+        assert stored.json()["state"] == "dead"
+        assert stored.json()["last_error"] == "terminal failure"
+
+
+@pytest.mark.parametrize(
+    ("permissions", "read_status", "management_status", "execute_status"),
+    [
+        pytest.param({"read"}, 200, 403, 403, id="reader"),
+        pytest.param({"read", "write"}, 200, 200, 403, id="writer"),
+        pytest.param({"read", "execute"}, 200, 403, 202, id="executor"),
+        pytest.param({"execute"}, 404, 404, 202, id="execute-without-read"),
+        pytest.param(set(), 404, 404, 404, id="no-access"),
+    ],
+)
+async def test_trigger_routes_enforce_partial_flow_permissions(
+    client, logged_in_headers, active_user, monkeypatch, permissions, read_status, management_status, execute_status
+):
+    """Exercise real route guards with a plugin granting independent flow actions."""
+    from langflow.services.authorization import fetch, guards
+    from langflow.services.database.models.trigger.model import TriggerEvent
+    from langflow.services.deps import get_settings_service
+
+    async with session_scope() as session:
+        owner = User(username=f"trigger-owner-{uuid4().hex}", password=str(uuid4()), is_active=True)
+        session.add(owner)
+        await session.flush()
+        shared_flow = Flow(name="Shared trigger flow", user_id=owner.id)
+        session.add(shared_flow)
+        await session.flush()
+        trigger = Trigger(flow_id=shared_flow.id, user_id=owner.id, name="Shared trigger", kind="schedule")
+        session.add(trigger)
+        await session.flush()
+        event = TriggerEvent(trigger_id=trigger.id, dedupe_key="source", payload={"source": "original"})
+        session.add(event)
+        await session.flush()
+        flow_id, trigger_id, event_id = shared_flow.id, trigger.id, event.id
+
+    class FlowPermissions:
+        async def supports_cross_user_fetch(self):
+            return True
+
+        async def is_enabled(self):
+            return True
+
+        async def enforce(self, *, user_id, domain, obj, act, context):  # noqa: ARG002
+            assert user_id == active_user.id
+            assert obj == f"flow:{flow_id}"
+            return act in permissions
+
+    authz = FlowPermissions()
+    monkeypatch.setattr(get_settings_service().auth_settings, "AUTHZ_ENABLED", True)
+    monkeypatch.setattr(fetch, "get_authorization_service", lambda: authz)
+    monkeypatch.setattr(guards, "get_authorization_service", lambda: authz)
+    url = f"api/v1/triggers/{trigger_id}"
+
+    for endpoint in (f"api/v1/triggers?flow_id={flow_id}", url, f"{url}/events"):
+        response = await client.get(endpoint, headers=logged_in_headers)
+        assert response.status_code == read_status, response.text
+
+    created = await client.post("api/v1/triggers", json=_payload(flow_id), headers=logged_in_headers)
+    assert created.status_code == (201 if management_status == 200 else management_status), created.text
+    if created.status_code == 201:
+        assert created.json()["user_id"] != str(active_user.id)
+    updated = await client.patch(url, json={"name": "Updated trigger"}, headers=logged_in_headers)
+    assert updated.status_code == management_status, updated.text
+    for action in ("enable", "disable"):
+        response = await client.post(f"{url}/{action}", headers=logged_in_headers)
+        assert response.status_code == management_status, response.text
+    pinned = await client.post(f"{url}/pin", json={"flow_version_id": None}, headers=logged_in_headers)
+    assert pinned.status_code == management_status, pinned.text
+
+    fired = await client.post(f"{url}/test", json={}, headers=logged_in_headers)
+    assert fired.status_code == execute_status, fired.text
+    replayed = await client.post(f"{url}/replay", json={"event_id": str(event_id)}, headers=logged_in_headers)
+    assert replayed.status_code == execute_status, replayed.text
+    deleted = await client.delete(url, headers=logged_in_headers)
+    assert deleted.status_code == (204 if management_status == 200 else management_status), deleted.text
+
+    async with session_scope() as session:
+        rows = await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == trigger_id))
+        # Rejected execute requests must not append work to the ledger.
+        if management_status != 200:
+            assert len(rows.all()) == (3 if execute_status == 202 else 1)
+            stored = await session.get(Trigger, trigger_id)
+            assert (stored.name, stored.state) == ("Shared trigger", "pending")
