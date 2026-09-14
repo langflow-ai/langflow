@@ -1505,6 +1505,8 @@
   "messages.column.timestamp": "registro de data e hora",
   "messages.description": "Inspecione, edite e remova mensagens para explorar e refinar os comportamentos do modelo.",
   "messages.title": "Mensagens",
+  "messages.loadOlder": "Carregar mensagens anteriores",
+  "messages.loadError": "Não foi possível carregar as mensagens.",
   "misc.activateToShare": "Ative para compartilhar uma versão pública deste Playground",
   "misc.addChatInputOutput": "Adicione uma entrada de chat ou uma saída de chat para acessar seu fluxo",
   "misc.addChatInputOutputPlayground": "Adicione uma entrada de chat ou uma saída de chat para usar o playground",
