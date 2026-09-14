@@ -1250,10 +1250,12 @@ async def delete_multiple_flows(
                     folder_id=flow.folder_id,
                 )
             authorized_flow_owner_ids.update((flow.id, flow.user_id) for flow in flows_to_delete)
+            deleted = 0
             for flow in flows_to_delete:
-                await cascade_delete_flow(db, flow.id)
+                if await cascade_delete_flow(db, flow.id):
+                    deleted += 1
             await db.flush()
-            return len(flows_to_delete)
+            return deleted
 
         async def _delete_attempt(_attempt: int) -> int:
             return await retry_flow_operation_on_deployment_guard(
