@@ -53,14 +53,52 @@ describe("useOlderMessages", () => {
     expect(stored[PAGE_SIZE].id).toBe("m0");
   });
 
+  it("should_start_past_the_page_the_view_already_holds", async () => {
+    // The view opens on the newest page. Asking for offset 0 would re-fetch it,
+    // and the API layer aborts a second GET to the same path within 300ms —
+    // which used to cancel the follow-up page and stall the scroll trigger.
+    useMessagesStore.getState().setMessages(page(0, PAGE_SIZE) as never);
+    mockGetMessages.mockResolvedValueOnce({ data: page(100, PAGE_SIZE) });
+
+    const { result } = renderHook(() => useOlderMessages(FLOW_ID, "s1"));
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    expect(mockGetMessages).toHaveBeenCalledTimes(1);
+    expect(mockGetMessages).toHaveBeenCalledWith(FLOW_ID, {
+      session_id: "s1",
+      limit: PAGE_SIZE,
+      order: "DESC",
+      offset: PAGE_SIZE,
+    });
+  });
+
+  it("should_only_count_messages_of_the_visible_session_when_seeding_the_offset", async () => {
+    const mine = page(0, 3).map((m) => ({ ...m, session_id: "s1" }));
+    const other = page(50, 4).map((m) => ({ ...m, session_id: "s2" }));
+    useMessagesStore.getState().setMessages([...mine, ...other] as never);
+    mockGetMessages.mockResolvedValueOnce({ data: page(100, 2) });
+
+    const { result } = renderHook(() => useOlderMessages(FLOW_ID, "s1"));
+    await act(async () => {
+      await result.current.loadMore();
+    });
+
+    expect(mockGetMessages).toHaveBeenCalledWith(
+      FLOW_ID,
+      expect.objectContaining({ offset: 3 }),
+    );
+  });
+
   it("should_keep_paging_when_a_page_is_entirely_already_in_the_store", async () => {
-    // The view opens on the newest page, so offset 0 returns what it already
-    // has; returning 0 here would stall the scroll trigger permanently.
-    const firstPage = page(0, PAGE_SIZE);
-    useMessagesStore.getState().setMessages(firstPage as never);
+    const held = page(0, PAGE_SIZE);
+    useMessagesStore.getState().setMessages(held as never);
+    // A page of rows the store already holds must not end pagination: the
+    // trigger only re-fires on prepended content.
     mockGetMessages
-      .mockResolvedValueOnce({ data: firstPage })
-      .mockResolvedValueOnce({ data: page(100, PAGE_SIZE) });
+      .mockResolvedValueOnce({ data: held })
+      .mockResolvedValueOnce({ data: page(200, PAGE_SIZE) });
 
     const { result } = renderHook(() => useOlderMessages(FLOW_ID, "s1"));
     let prepended = 0;
@@ -70,19 +108,11 @@ describe("useOlderMessages", () => {
 
     expect(prepended).toBe(PAGE_SIZE);
     expect(mockGetMessages).toHaveBeenCalledTimes(2);
-    expect(mockGetMessages).toHaveBeenNthCalledWith(1, FLOW_ID, {
-      session_id: "s1",
-      limit: PAGE_SIZE,
-      order: "DESC",
-      offset: 0,
-    });
     // The cursor advanced by what the server returned, not by what was new.
-    expect(mockGetMessages).toHaveBeenNthCalledWith(2, FLOW_ID, {
-      session_id: "s1",
-      limit: PAGE_SIZE,
-      order: "DESC",
-      offset: PAGE_SIZE,
-    });
+    expect(mockGetMessages).toHaveBeenLastCalledWith(
+      FLOW_ID,
+      expect.objectContaining({ offset: 2 * PAGE_SIZE }),
+    );
   });
 
   it("should_stop_paging_once_a_short_page_arrives", async () => {
@@ -101,8 +131,10 @@ describe("useOlderMessages", () => {
     expect(mockGetMessages).toHaveBeenCalledTimes(1);
   });
 
-  it("should_stop_paging_when_the_request_fails", async () => {
-    mockGetMessages.mockRejectedValueOnce(new Error("network down"));
+  it("should_keep_paging_available_when_a_request_fails", async () => {
+    // A cancelled or failed request is transient; clearing hasMore here would
+    // disable scroll-up for the rest of the session.
+    mockGetMessages.mockRejectedValueOnce(new Error("canceled"));
     const consoleError = jest
       .spyOn(console, "error")
       .mockImplementation(() => {});
@@ -114,7 +146,7 @@ describe("useOlderMessages", () => {
     });
 
     expect(prepended).toBe(0);
-    expect(result.current.hasMore).toBe(false);
+    expect(result.current.hasMore).toBe(true);
     consoleError.mockRestore();
   });
 });
