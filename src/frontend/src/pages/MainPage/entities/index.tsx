@@ -75,6 +75,19 @@ export type FlowContract = {
   default_flow_ref: string | null;
 };
 
+export type FlowBinding = {
+  flow_id: string;
+  node_id: string;
+  output_name: string;
+  revision: string;
+  version_id?: string | null;
+};
+
+export type FlowOutputChoice = FlowBinding & {
+  flow_name: string;
+  display_name: string;
+};
+
 /** A project type and the form it renders, from `GET /api/v1/projects/types`. */
 export type ProjectTypeType = {
   name: string;
@@ -84,7 +97,10 @@ export type ProjectTypeType = {
   /** Keyed by field name, in the same shape as a component's template. */
   template: Record<
     string,
-    Partial<InputFieldType> & { flow_contract?: FlowContract }
+    Partial<InputFieldType> & {
+      flow_contract?: FlowContract;
+      supports_flow_binding?: boolean;
+    }
   >;
 };
 

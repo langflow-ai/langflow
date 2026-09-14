@@ -13,6 +13,30 @@ let projectFlows: FlowType[] | undefined;
 let isLoadingFlows = false;
 let isFlowsError = false;
 const mockRefetchFlows = jest.fn();
+const instructionsBinding = {
+  flow_id: "source",
+  node_id: "terminal",
+  output_name: "instructions",
+  revision: "reviewed",
+};
+
+jest.mock("../components/instructions-flow-picker", () => ({
+  InstructionsFlowPicker: ({
+    value,
+    onChange,
+  }: {
+    value?: unknown;
+    onChange: (value: unknown) => void;
+  }) => (
+    <button
+      type="button"
+      data-testid="bind-instructions"
+      onClick={() => onChange(value ? undefined : instructionsBinding)}
+    >
+      {value ? "Unbind" : "Bind"}
+    </button>
+  ),
+}));
 
 jest.mock("@/controllers/API/queries/folders/use-get-project-types", () => ({
   useGetProjectTypesQuery: () => ({ data: projectTypes, isLoading }),
@@ -495,4 +519,63 @@ it("offers a retry instead of treating a failed flow query as an empty project",
   expect(screen.queryByTestId("harness-save-btn")).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Retry" }));
   expect(mockRefetchFlows).toHaveBeenCalledTimes(1);
+});
+
+it("saves an Instructions binding separately from the preserved form value", () => {
+  projectTypes = [
+    {
+      ...HARNESS,
+      template: {
+        ...HARNESS.template,
+        system_prompt: {
+          ...HARNESS.template.system_prompt,
+          supports_flow_binding: true,
+          renders: "long_text",
+        },
+      },
+    },
+  ];
+  projectFlows = [agentFlow("main")];
+  renderPage({ projectConfig: { system_prompt: "Saved form instructions" } });
+  fireEvent.click(screen.getByTestId("bind-instructions"));
+  expect(
+    screen.queryByTestId("long-text-system_prompt"),
+  ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.calls[0][0].data.project_config).toMatchObject({
+    system_prompt: "Saved form instructions",
+    flow_bindings: { system_prompt: instructionsBinding },
+  });
+});
+
+it("removes a saved binding and re-enables its preserved form value", () => {
+  projectTypes = [
+    {
+      ...HARNESS,
+      template: {
+        ...HARNESS.template,
+        system_prompt: {
+          ...HARNESS.template.system_prompt,
+          supports_flow_binding: true,
+          renders: "long_text",
+        },
+      },
+    },
+  ];
+  projectFlows = [agentFlow("main")];
+  renderPage({
+    projectConfig: {
+      system_prompt: "Saved form instructions",
+      flow_bindings: { system_prompt: instructionsBinding },
+    },
+  });
+  fireEvent.click(screen.getByTestId("bind-instructions"));
+  expect(screen.getByTestId("long-text-system_prompt")).toBeEnabled();
+  expect(screen.getByTestId("long-text-system_prompt")).toHaveValue(
+    "Saved form instructions",
+  );
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.calls[0][0].data.project_config.flow_bindings).toEqual(
+    {},
+  );
 });
