@@ -14,12 +14,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from lfx.base.models.provider_registry import is_api_key_optional
 from lfx.base.models.unified_models import (
     get_all_variables_for_provider,
     get_provider_required_variable_keys,
     get_provider_secret_variable_key,
     get_unified_models_detailed,
+    is_known_model_provider,
 )
 from lfx.log.logger import logger
 from lfx.services.deps import get_settings_service
@@ -100,8 +100,12 @@ async def _resolve_assistant_context(
             detail=f"Provider '{provider}' is not configured. Available providers: {enabled_providers}",
         )
 
+    # A provider configured by connection settings alone (Ollama's base URL, a local
+    # OpenAI-compatible server) declares no secret, so an absent key name is expected
+    # and says nothing about recognition. Only a name the model catalog does not know
+    # is genuinely unknown here.
     api_key_name = get_provider_secret_variable_key(provider)
-    if not api_key_name and not is_api_key_optional(provider):
+    if not api_key_name and not is_known_model_provider(provider):
         raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}")
 
     model_name = request.model_name or get_default_model(provider, user_id=user_id) or ""

@@ -2104,10 +2104,10 @@ async def test_delete_flow_real_competing_sqlite_writer_is_retried(client: Async
     assert read_response.status_code == status.HTTP_404_NOT_FOUND
 
 
-async def test_delete_flow_retry_is_idempotent_when_concurrent_delete_wins(
+async def test_delete_flow_retry_returns_not_found_when_concurrent_delete_wins(
     client: AsyncClient, logged_in_headers, monkeypatch
 ):
-    """A retry treats an already-deleted target as successful."""
+    """A retry must not claim to have deleted a flow removed by another request."""
     import sqlite3
 
     from langflow.api.v1 import flows as flows_module
@@ -2136,7 +2136,8 @@ async def test_delete_flow_retry_is_idempotent_when_concurrent_delete_wins(
 
     response = await client.delete(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
 
-    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
+    assert response.json() == {"detail": "Flow not found"}
     assert attempts["count"] == 1
 
 

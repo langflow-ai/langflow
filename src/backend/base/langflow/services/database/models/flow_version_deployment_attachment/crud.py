@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select, update
 
 from langflow.services.database.models.deployment.orm_guards import ensure_attachment_project_match
+from langflow.services.database.models.flow_version.crud import lock_flow_version_entry
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
 )
@@ -94,6 +95,11 @@ async def create_deployment_attachment(
     deployment_id: UUID,
     provider_snapshot_id: str,
 ) -> FlowVersionDeploymentAttachment:
+    # Keep the parent alive through the attachment insert and transaction commit.
+    # A concurrent version delete uses the same lock before its deployment guard.
+    if not await lock_flow_version_entry(db, flow_version_id):
+        msg = f"Version entry {flow_version_id} no longer exists; attachment cannot be created"
+        raise DeploymentAttachmentConflictError(msg)
     await ensure_attachment_project_match(
         db,
         flow_version_id=flow_version_id,

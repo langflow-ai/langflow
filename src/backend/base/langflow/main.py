@@ -1095,6 +1095,33 @@ def create_app():
             },
         )
 
+    from fastapi.exceptions import ResponseValidationError
+
+    @app.exception_handler(ResponseValidationError)
+    async def response_validation_exception_handler(_request: Request, exc: ResponseValidationError):
+        """A route returned what its response_model rejects: log it in full, answer generically.
+
+        str(exc) lists each pydantic error with its ``input`` -- the server-side value
+        that failed to serialize, or for a missing field the whole object -- then the
+        endpoint's file, line and function. The catch-all below sent all of it to the
+        client and to telemetry.
+        """
+        # exc_info renders the full errors to the console and log file; the message is the
+        # field OTel log export can carry, so it names the failure without the values.
+        await logger.aerror("Response validation failed", exc_info=exc)
+        # Telemetry leaves the server. Send a copy that keeps the type, the traceback and
+        # the route template, and reduces each error to its type and location. A location
+        # is field names, list indexes and dict keys, never the value.
+        located = ResponseValidationError(
+            [{"type": error.get("type"), "loc": error.get("loc")} for error in exc.errors()],
+            endpoint_ctx={"path": exc.endpoint_path} if exc.endpoint_path else None,
+        )
+        await log_exception_to_telemetry(located.with_traceback(exc.__traceback__), "handler")
+        return JSONResponse(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            content={"message": "Internal server error: the response failed validation"},
+        )
+
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
         if isinstance(exc, HTTPException):
