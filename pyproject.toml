@@ -173,7 +173,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.1.23,<2.0",
+    "lfx-bundles[all-no-torch]>=1.1.24,<2.0",
     "lfx-arxiv>=0.1.5,<1.0.0",
     "lfx-confluent>=0.1.0,<1.0.0",
     "lfx-duckduckgo>=0.1.5,<1.0.0",
@@ -556,13 +556,6 @@ external = ["RUF027"]
     "S110",  # Try-except-pass for optional error logging
 ]
 "src/backend/tests/*" = [
-    "D1",
-    "PLR2004",
-    "S101",
-    "SLF001",
-    "BLE001",  # allow broad-exception catching in tests
-]
-"src/backend/base/langflow/tests/*" = [
     "D1",
     "PLR2004",
     "S101",

@@ -101,4 +101,37 @@ describe("extractApiErrorMessages", () => {
     expect(Array.isArray(msgs)).toBe(true);
     expect(msgs.length).toBeGreaterThan(0);
   });
+
+  it("surfaces the message of a structured detail object", () => {
+    const error = {
+      response: {
+        data: {
+          detail: {
+            error_code: "tier_limit_reached",
+            message: "Your plan allows 3 projects.",
+            resource: "projects",
+            limit: 3,
+            current: 3,
+            tier: "trial",
+          },
+        },
+      },
+      message: "Request failed with status code 403",
+    };
+
+    expect(extractApiErrorMessages(error)).toEqual([
+      "Your plan allows 3 projects.",
+    ]);
+  });
+
+  it("falls back to error.message when a detail object has no message", () => {
+    const error = {
+      response: { data: { detail: { error_code: "tier_limit_reached" } } },
+      message: "Request failed with status code 403",
+    };
+
+    expect(extractApiErrorMessages(error)).toEqual([
+      "Request failed with status code 403",
+    ]);
+  });
 });

@@ -44,6 +44,12 @@ class TestFileContentRetrieverComponent(ComponentTestBaseWithoutClient):
         """Return empty list - new component without version history."""
         return []
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "dataframe": "default_kwargs point at a .txt file, which has no DataFrame form",
+        }
+
     # ========== retrieve_content Tests ==========
 
     def test_retrieve_content_basic(self, component_class, default_kwargs):

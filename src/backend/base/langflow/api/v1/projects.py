@@ -50,6 +50,11 @@ from langflow.services.authorization.fetch import (
     deny_to_404_unless_readable,
 )
 from langflow.services.authorization.utils import _resolve_authz_domain
+from langflow.services.creation_hooks import (
+    RESOURCE_PROJECT,
+    PreCreationContext,
+    enforce_pre_creation,
+)
 from langflow.services.database.lock_retry import (
     is_database_lock_error,
     run_with_lock_retry,
@@ -115,7 +120,22 @@ async def _new_project(
 
     ``current_user`` (the full ``User``) is required because the MCP registration and flow-move
     side effects operate on the owning user, not just their id.
+
+    Runs the ``project`` pre-creation hooks first, so an enterprise plugin can refuse the
+    creation before anything is written (403 with the denial contract). Both routes that
+    reach this helper — ``POST /projects/`` and the create branch of ``PUT /projects/{id}``
+    — re-raise ``HTTPException`` untouched, so the denial reaches the client verbatim.
     """
+    await enforce_pre_creation(
+        PreCreationContext(
+            resource=RESOURCE_PROJECT,
+            session=session,
+            actor_user_id=current_user.id,
+            workspace_id=getattr(project, "workspace_id", None),
+            requested_name=project.name,
+        )
+    )
+
     new_project = Folder.model_validate(project, from_attributes=True)
     new_project.user_id = current_user.id
     # Apply the stable id: an explicit ``project_id`` (PUT upsert) overrides the uuid4 default.
