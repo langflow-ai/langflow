@@ -2386,6 +2386,7 @@
   "sharedWithMe.role.empty.variable": "没有通过角色授权对你可见的变量。",
   "sharedWithMe.role.empty.file": "没有通过角色授权对你可见的文件。",
   "sharedWithMe.role.col.resource": "资源",
+  "sharedWithMe.role.col.owner": "所有者",
   "sharedWithMe.role.col.role": "角色与范围",
   "sharedWithMe.role.col.actions": "操作",
   "sharedWithMe.role.table.caption.flow": "通过角色对你可见的流程",

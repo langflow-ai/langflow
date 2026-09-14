@@ -2386,6 +2386,7 @@
   "sharedWithMe.role.empty.variable": "No variables are visible to you through a role grant.",
   "sharedWithMe.role.empty.file": "No files are visible to you through a role grant.",
   "sharedWithMe.role.col.resource": "Resource",
+  "sharedWithMe.role.col.owner": "Owner",
   "sharedWithMe.role.col.role": "Role & scope",
   "sharedWithMe.role.col.actions": "Actions",
   "sharedWithMe.role.table.caption.flow": "Flows visible via your role",
