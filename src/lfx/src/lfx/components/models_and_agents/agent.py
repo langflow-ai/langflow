@@ -969,6 +969,9 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         format_instructions = getattr(self, "format_instructions", "") or ""
         output_schema = getattr(self, "output_schema", None) or []
         has_tools = bool(self.tools)
+        uses_context_middleware = (
+            getattr(self, "context_strategy", "all") != "all" or getattr(self, "compaction", "off") != "off"
+        )
 
         async def _run_agent_for_fallback(augmented_prompt: str) -> str:
             first_attempt = True
@@ -1002,7 +1005,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                 format_instructions=format_instructions,
                 input_value=_extract_text_content(self.input_value),
                 run_prompt_fallback=_run_agent_for_fallback,
-                prefer_native=not has_tools,
+                prefer_native=not (has_tools or uses_context_middleware),
             )
         except (
             ExceptionWithMessageError,

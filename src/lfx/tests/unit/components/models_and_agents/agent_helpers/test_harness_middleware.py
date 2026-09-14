@@ -21,6 +21,7 @@ class HarnessModel(BaseChatModel):
     loop: bool = False
     fail_summary: bool = False
     empty_summary: bool = False
+    answer: str = "Research result [source-1]."
 
     @property
     def _llm_type(self):
@@ -43,7 +44,7 @@ class HarnessModel(BaseChatModel):
                 tool_calls=[{"name": "read_source", "args": {}, "id": f"call-{len(self.seen)}", "type": "tool_call"}],
             )
         else:
-            result = AIMessage(content="Research result [source-1].")
+            result = AIMessage(content=self.answer)
         return ChatResult(generations=[ChatGeneration(message=result)])
 
 
@@ -192,6 +193,50 @@ async def test_context_and_compaction_evidence_survive_final_message_publication
     assert not skip_db
     assert final.properties.state == "complete"
     assert final.content_blocks == result.content_blocks
+
+
+@pytest.mark.parametrize(
+    ("settings", "calls"),
+    [
+        ({"context_strategy": "recent_turns", "context_turns": 1}, 1),
+        ({"compaction": "summarize", "compaction_trigger_tokens": 80, "compaction_keep_messages": 1}, 2),
+    ],
+)
+async def test_structured_output_does_not_bypass_configured_context(monkeypatch, settings, calls):
+    model = HarnessModel(answer='{"answer": "Sourced result"}')
+    component = AgentComponent()
+    component.set(
+        model=model,
+        tools=[],
+        system_prompt="Research with sources.",
+        input_value="Latest question",
+        **settings,
+        output_schema=[{"name": "answer", "type": "str", "description": "Result", "multiple": False}],
+    )
+
+    async def requirements():
+        return (
+            model,
+            [
+                Message(text="Old question " * 100, sender="User"),
+                Message(text="Old answer " * 100, sender="Machine"),
+            ],
+            [],
+        )
+
+    def native_must_not_run(*_args, **_kwargs):
+        msg = "Native structured output must not bypass the configured context middleware"
+        raise AssertionError(msg)
+
+    monkeypatch.setattr(component, "get_agent_requirements", requirements)
+    monkeypatch.setattr(HarnessModel, "with_structured_output", native_must_not_run)
+    result = await component.json_response()
+    assert result.data == {"answer": "Sourced result"}
+    assert len(model.seen) == calls
+    assert model.seen[-1][-1].content == "Latest question"
+    assert all(not message.content.startswith("Old question") for message in model.seen[-1])
+    if calls == 2:
+        assert any(message.additional_kwargs.get(SUMMARY_MARKER) for message in model.seen[-1])
 
 
 @pytest.mark.parametrize(
