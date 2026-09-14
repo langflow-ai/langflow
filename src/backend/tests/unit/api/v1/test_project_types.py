@@ -76,6 +76,25 @@ async def test_the_form_carries_the_sections_it_should_be_grouped_into(client, l
     assert sections == ["Instructions", "Model", "Tools", "Runtime", "Runtime"]
 
 
+async def test_the_form_exposes_shared_contracts_without_changing_config_keys(
+    client, logged_in_headers, harness_from_api
+):
+    harness = await harness_from_api(client, logged_in_headers)
+    template = harness["template"]
+
+    assert template["system_prompt"]["flow_contract"] == {
+        "name": "SystemPromptBuilder",
+        "terminal_output_type": "str",
+        "fire_timing": "once_at_session_start",
+        "cardinality": "single",
+        "default_flow_ref": None,
+    }
+    assert template["tools"]["flow_contract"]["name"] == "Tool"
+    assert template["tools"]["flow_contract"]["cardinality"] == "multi"
+    assert "flow_contract" not in template["model"]
+    assert "flow_contract" not in template
+
+
 async def test_only_two_fields_ask_for_a_widget_from_the_page(client, logged_in_headers, harness_from_api):
     """Every other field has to render with a shipped canvas widget, or the form is bespoke."""
     harness = await harness_from_api(client, logged_in_headers)

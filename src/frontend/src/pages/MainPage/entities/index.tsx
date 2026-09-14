@@ -66,6 +66,15 @@ export type ProjectSaveResult = FolderType & {
   restore_version_ids?: Record<string, string>;
 };
 
+/** A reusable flow contract. Its presence does not imply a custom flow can already run. */
+export type FlowContract = {
+  name: string;
+  terminal_output_type: string;
+  fire_timing: string;
+  cardinality: "single" | "multi";
+  default_flow_ref: string | null;
+};
+
 /** A project type and the form it renders, from `GET /api/v1/projects/types`. */
 export type ProjectTypeType = {
   name: string;
@@ -73,7 +82,10 @@ export type ProjectTypeType = {
   icon: string;
   description: string;
   /** Keyed by field name, in the same shape as a component's template. */
-  template: Record<string, Partial<InputFieldType>>;
+  template: Record<
+    string,
+    Partial<InputFieldType> & { flow_contract?: FlowContract }
+  >;
 };
 
 export type StarterProjectsType = {
