@@ -48,8 +48,19 @@ CurrentActiveMCPUser = Annotated[User, Depends(get_current_active_user_mcp)]
 # Every Depends(injectable_session_scope) site must carry the same scope: the
 # scope is part of FastAPI's dependency cache key, so a mixed set would resolve
 # two distinct sessions per request instead of one shared session.
+#
+# Consequence to respect when writing a streaming route: the session is closed
+# once the handler returns, so anything running later -- a StreamingResponse
+# body, a BackgroundTask -- must open its own ``session_scope()`` rather than
+# capture this one. ORM objects loaded during the request (``current_user``
+# included) are detached by then; reading already-loaded columns is safe because
+# the session maker sets ``expire_on_commit=False``, but touching a relationship
+# raises DetachedInstanceError.
 DbSession = Annotated[AsyncSession, Depends(injectable_session_scope, scope="function")]
-# DbSessionReadOnly for read-only operations (no auto-commit, reduces lock contention)
+# DbSessionReadOnly for read-only operations (no auto-commit, reduces lock contention).
+# Deliberately left at the default request scope: it never commits, so there is no
+# write-visibility window to close, and keeping it request-scoped avoids detaching
+# ORM objects that read-only streaming routes may still be reading from.
 DbSessionReadOnly = Annotated[AsyncSession, Depends(injectable_session_scope_readonly)]
 
 

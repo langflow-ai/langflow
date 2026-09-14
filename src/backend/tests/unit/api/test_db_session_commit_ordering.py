@@ -12,12 +12,15 @@ it, so neither a local edit nor a FastAPI upgrade can reintroduce the window
 silently.
 """
 
+import asyncio
 from typing import Annotated
 
 import pytest
 from fastapi import Depends, FastAPI
+from fastapi.responses import StreamingResponse
 from langflow.api.utils.core import DbSession
 from lfx.services.deps import injectable_session_scope
+from sqlalchemy import text
 from sqlmodel.ext.asyncio.session import AsyncSession as SQLModelAsyncSession
 
 
@@ -42,8 +45,16 @@ async def _drive(app: FastAPI, path: str, on_body: list) -> bytes:
     """Call *app* as a raw ASGI app so response sends are observable."""
     body = b""
 
+    calls = {"n": 0}
+
     async def receive():
-        return {"type": "http.request", "body": b"", "more_body": False}
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return {"type": "http.request", "body": b"", "more_body": False}
+        # StreamingResponse watches for a disconnect; without one its watcher
+        # never finishes and the call hangs.
+        await asyncio.sleep(0.05)
+        return {"type": "http.disconnect"}
 
     async def send(message):
         nonlocal body
@@ -102,3 +113,30 @@ async def test_db_session_is_shared_with_nested_session_dependencies():
     assert b'"same":true' in body.replace(b" ", b""), (
         "the handler and a nested session dependency resolved different sessions"
     )
+
+
+@pytest.mark.usefixtures("client")
+async def test_db_session_is_closed_before_a_streaming_body_runs():
+    """A StreamingResponse body must not reuse the injected session.
+
+    Function scope closes the session when the handler returns, which is before
+    the response body is produced. Anything streaming has to open its own
+    ``session_scope()``; this pins that contract so a route cannot quietly start
+    depending on the session still being live.
+    """
+    app = FastAPI()
+
+    @app.get("/stream")
+    async def stream(session: DbSession):
+        await session.execute(text("SELECT 1"))
+        in_handler = session.in_transaction()
+
+        async def body():
+            yield f"handler={in_handler} stream={session.in_transaction()}".encode()
+
+        return StreamingResponse(body(), media_type="text/plain")
+
+    out = await _drive(app, "/stream", [])
+
+    assert b"handler=True" in out, "precondition: the handler should hold an open transaction"
+    assert b"stream=False" in out, "the request transaction was still open while the response body streamed"
