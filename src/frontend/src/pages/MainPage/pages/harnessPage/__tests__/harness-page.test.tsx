@@ -14,6 +14,8 @@ let projectFlows: FlowType[] | undefined;
 let isLoadingFlows = false;
 let isFlowsError = false;
 const mockRefetchFlows = jest.fn();
+let mockPending = false;
+let mockRealNumericControls = false;
 const instructionsBinding = {
   flow_id: "source",
   node_id: "terminal",
@@ -53,7 +55,7 @@ jest.mock("@/controllers/API/queries/folders/use-get-project-flows", () => ({
 }));
 
 jest.mock("@/controllers/API/queries/folders/use-patch-folders", () => ({
-  usePatchFolders: () => ({ mutate: mockPatch, isPending: false }),
+  usePatchFolders: () => ({ mutate: mockPatch, isPending: mockPending }),
 }));
 
 jest.mock("@/components/common/genericIconComponent", () => ({
@@ -81,21 +83,41 @@ jest.mock("@/components/core/parameterRenderComponent", () => ({
     nodeId,
     templateValue,
     handleOnNewValue,
+    disabled,
   }: {
     name: string;
     nodeId: string;
     templateValue: unknown;
     handleOnNewValue: (changes: { value: unknown }) => void;
-  }) => (
-    <>
-      <input
-        data-testid={`input-${name}`}
-        value={String(templateValue ?? "")}
-        onChange={(event) => handleOnNewValue({ value: event.target.value })}
-      />
-      <span data-testid={`nodeid-${name}`}>{nodeId}</span>
-    </>
-  ),
+    disabled: boolean;
+  }) => {
+    if (mockRealNumericControls && name === "context_turns") {
+      const IntComponent = jest.requireActual(
+        "@/components/core/parameterRenderComponent/components/intComponent",
+      ).default;
+      return (
+        <IntComponent
+          name={name}
+          nodeId={nodeId}
+          id={`input-${name}`}
+          value={templateValue}
+          rangeSpec={{ min: 1, max: 10000, step: 1 }}
+          disabled={disabled}
+          handleOnNewValue={handleOnNewValue}
+        />
+      );
+    }
+    return (
+      <>
+        <input
+          data-testid={`input-${name}`}
+          value={String(templateValue ?? "")}
+          onChange={(event) => handleOnNewValue({ value: event.target.value })}
+        />
+        <span data-testid={`nodeid-${name}`}>{nodeId}</span>
+      </>
+    );
+  },
 }));
 
 jest.mock("../components/project-flow-picker", () => ({
@@ -175,6 +197,8 @@ const renderPage = (props: Partial<ComponentProps<typeof HarnessPage>> = {}) =>
   render(<HarnessPage {...defaultProps} {...props} />);
 
 beforeEach(() => {
+  mockPending = false;
+  mockRealNumericControls = false;
   jest.clearAllMocks();
   // clearAllMocks keeps implementations, and two tests below give this one; reset so they
   // cannot leak into the tests that only read what it was called with.
@@ -602,4 +626,121 @@ it("restores the explicit editor draft and consumes it once", () => {
     "Unsaved research instructions",
   );
   expect(editorDraft.get("project-1")).toEqual({});
+});
+
+it("reveals mode settings and preserves them when a mode is turned off", () => {
+  projectTypes = [
+    {
+      ...HARNESS,
+      template: {
+        ...HARNESS.template,
+        compaction: { name: "compaction", value: "off", section: "Runtime" },
+        compaction_trigger_tokens: {
+          name: "compaction_trigger_tokens",
+          display_name: "Summarize at estimated tokens",
+          value: 8000,
+          section: "Runtime",
+          show_when: { compaction: "summarize" },
+        },
+      },
+    },
+  ];
+  renderPage();
+  expect(
+    screen.queryByTestId("input-compaction_trigger_tokens"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByText("Summarize at estimated tokens"),
+  ).not.toBeInTheDocument();
+  fireEvent.change(screen.getByTestId("input-compaction"), {
+    target: { value: "summarize" },
+  });
+  fireEvent.change(screen.getByTestId("input-compaction_trigger_tokens"), {
+    target: { value: "6000" },
+  });
+  fireEvent.change(screen.getByTestId("input-compaction"), {
+    target: { value: "off" },
+  });
+  expect(
+    screen.queryByTestId("input-compaction_trigger_tokens"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByText("Summarize at estimated tokens"),
+  ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.calls[0][0].data.project_config).toMatchObject({
+    compaction: "off",
+    compaction_trigger_tokens: "6000",
+  });
+  fireEvent.change(screen.getByTestId("input-compaction"), {
+    target: { value: "summarize" },
+  });
+  expect(screen.getByTestId("input-compaction_trigger_tokens")).toHaveValue(
+    "6000",
+  );
+});
+
+it("uses readable choice labels while saving their stable values", () => {
+  projectTypes = [
+    {
+      ...HARNESS,
+      template: {
+        ...HARNESS.template,
+        context_strategy: {
+          name: "context_strategy",
+          display_name: "Context preparation",
+          section: "Runtime",
+          value: "recent_turns",
+          option_labels: {
+            all: "All loaded messages",
+            recent_turns: "Recent complete turns",
+          },
+        },
+      },
+    },
+  ];
+  renderPage();
+  expect(
+    screen.getByRole("combobox", { name: "Context preparation" }),
+  ).toHaveTextContent("Recent complete turns");
+  expect(screen.queryByText("recent_turns")).not.toBeInTheDocument();
+  fireEvent.change(screen.getByTestId("input-system_prompt"), {
+    target: { value: "Changed instructions" },
+  });
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.calls[0][0].data.project_config.context_strategy).toBe(
+    "recent_turns",
+  );
+});
+
+it("keeps positive numeric settings intact throughout a pending save", () => {
+  mockRealNumericControls = true;
+  projectTypes = [
+    {
+      ...HARNESS,
+      template: {
+        ...HARNESS.template,
+        context_turns: {
+          name: "context_turns",
+          display_name: "Recent turns",
+          type: "int",
+          section: "Runtime",
+          value: 6,
+        },
+      },
+    },
+  ];
+  const view = renderPage();
+  fireEvent.change(screen.getByTestId("input-system_prompt"), {
+    target: { value: "Changed instructions" },
+  });
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  mockPending = true;
+  view.rerender(<HarnessPage {...defaultProps} />);
+  expect(screen.getByTestId("input-context_turns")).toHaveValue("6");
+  expect(screen.getByTestId("input-context_turns")).toBeDisabled();
+  mockPending = false;
+  view.rerender(<HarnessPage {...defaultProps} />);
+  expect(screen.getByTestId("input-context_turns")).toHaveValue("6");
+  expect(screen.getByTestId("input-context_turns")).toBeEnabled();
 });

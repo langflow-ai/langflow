@@ -100,6 +100,8 @@ export type ProjectTypeType = {
     Partial<InputFieldType> & {
       flow_contract?: FlowContract;
       supports_flow_binding?: boolean;
+      show_when?: Record<string, string>;
+      option_labels?: Record<string, string>;
     }
   >;
 };
