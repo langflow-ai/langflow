@@ -55,6 +55,27 @@ _MESSAGES_DEFAULT_LIMIT = 100
 _MESSAGES_MAX_LIMIT = 200
 
 
+def _sorted_for_display(messages: list[MessageTable], *, order_by: str | None, descending: bool) -> list[MessageTable]:
+    """Re-order an already-bounded window into the caller's requested display order."""
+    if not order_by:
+        return messages
+    if order_by == "timestamp":
+        return messages if descending else messages[::-1]
+    # Text is nullable in storage; preserve stable ordering within equal values.
+    return sorted(
+        messages,
+        key=lambda message: (getattr(message, order_by) is None, getattr(message, order_by) or ""),
+        reverse=descending,
+    )
+
+
+def _message_history_response(message: MessageTable) -> MessageResponse:
+    """Represent legacy NULL text as empty text in the existing response schema."""
+    if message.text is None:
+        return MessageResponse.model_validate(message.model_dump() | {"text": ""})
+    return MessageResponse.model_validate(message, from_attributes=True)
+
+
 async def _log_message_update_failure(error: Exception) -> None:
     from lfx.log.logger import logger
 
@@ -305,14 +326,8 @@ async def get_messages(
             stmt = stmt.offset(offset)
         stmt = stmt.limit(effective_limit)
         window = list(await session.exec(stmt))
-        if order_by:
-            # Re-sort the already-selected window into the caller's display order.
-            if order_by == "timestamp":
-                if normalized_order == "ASC":
-                    window.reverse()
-            else:
-                window.sort(key=lambda message: getattr(message, order_by), reverse=normalized_order == "DESC")
-        return [MessageResponse.model_validate(d, from_attributes=True) for d in window]
+        window = _sorted_for_display(window, order_by=order_by, descending=normalized_order == "DESC")
+        return [_message_history_response(message) for message in window]
     except HTTPException:
         raise
     except Exception as e:
@@ -633,14 +648,8 @@ async def get_shared_messages(
             stmt = stmt.offset(offset)
         stmt = stmt.limit(effective_limit)
         window = list(await session.exec(stmt))
-        if order_by:
-            # Re-sort the already-selected window into the caller's display order.
-            if order_by == "timestamp":
-                if normalized_order == "ASC":
-                    window.reverse()
-            else:
-                window.sort(key=lambda message: getattr(message, order_by), reverse=normalized_order == "DESC")
-        return [MessageResponse.model_validate(d, from_attributes=True) for d in window]
+        window = _sorted_for_display(window, order_by=order_by, descending=normalized_order == "DESC")
+        return [_message_history_response(message) for message in window]
     except HTTPException:
         raise
     except Exception as e:
