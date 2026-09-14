@@ -65,7 +65,7 @@ from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_dep
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.api.v1.schemas.public_flows import PublicFlowRead
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
-from langflow.services.audit.events import FLOW_DELETED
+from langflow.services.audit.events import FLOW_DELETE
 from langflow.services.audit.recorder import record_audit_event
 from langflow.services.auth.utils import get_current_active_user, get_optional_user
 from langflow.services.authorization import (
@@ -88,6 +88,7 @@ from langflow.services.database.lock_retry import (
     run_with_lock_retry,
     sanitize_database_error,
 )
+from langflow.services.database.models.audit_event.model import AuditFamily, AuditResult
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
 )
@@ -953,7 +954,14 @@ async def delete_flow(
             )
             flow_owner_ids[retry_target.id] = retry_target.user_id
             memory_base_cleanups.extend(await cascade_delete_flow(session, target_flow_id))
-            await record_audit_event(session, event=FLOW_DELETED, user_id=actor.id, resource_id=target_flow_id)
+            await record_audit_event(
+                session,
+                event=FLOW_DELETE,
+                family=AuditFamily.ACTION,
+                result=AuditResult.SUCCEEDED,
+                user_id=actor.id,
+                resource_id=target_flow_id,
+            )
 
         await retry_flow_operation_on_deployment_guard(
             db=session,
@@ -1266,6 +1274,17 @@ async def delete_multiple_flows(
             authorized_flow_owner_ids.update((flow.id, flow.user_id) for flow in flows_to_delete)
             for flow in flows_to_delete:
                 memory_base_cleanups.extend(await cascade_delete_flow(db, flow.id))
+                # One row per flow, not one per request: a bulk delete is still
+                # N deletions to whoever lost them, and a single row naming a
+                # count cannot answer "what happened to this flow".
+                await record_audit_event(
+                    db,
+                    event=FLOW_DELETE,
+                    family=AuditFamily.ACTION,
+                    result=AuditResult.SUCCEEDED,
+                    user_id=actor.id,
+                    resource_id=flow.id,
+                )
             await db.flush()
             return len(flows_to_delete)
 

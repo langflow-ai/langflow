@@ -83,7 +83,7 @@ async def test_an_accepted_edit_names_who_and_what(client: AsyncClient, logged_i
     assert response.status_code == status.HTTP_200_OK, response.text
 
     entries = await _trail(client, logged_in_headers, flow["id"])
-    updates = [e for e in entries if e["event"] == "langflow.audit.flow.updated"]
+    updates = [e for e in entries if e["event"] == "langflow.audit.flow.update"]
 
     assert len(updates) == 1
     assert updates[0]["payload"]["changes"] == ["Agent.model_name"]
@@ -96,7 +96,7 @@ async def test_creation_is_recorded(client: AsyncClient, logged_in_headers, audi
 
     entries = await _trail(client, logged_in_headers, flow["id"])
 
-    assert [e["event"] for e in entries] == ["langflow.audit.flow.created"]
+    assert [e["event"] for e in entries] == ["langflow.audit.flow.create"]
 
 
 async def test_a_row_never_carries_a_secret_or_a_graph(client: AsyncClient, logged_in_headers, audit_on):  # noqa: ARG001
@@ -127,7 +127,7 @@ async def test_a_rename_records_nothing(client: AsyncClient, logged_in_headers, 
 
     entries = await _trail(client, logged_in_headers, flow["id"])
 
-    assert [e["event"] for e in entries] == ["langflow.audit.flow.created"]
+    assert [e["event"] for e in entries] == ["langflow.audit.flow.create"]
 
 
 async def test_the_reader_is_closed_when_the_flag_is_off(client: AsyncClient, logged_in_headers, audit_off):  # noqa: ARG001

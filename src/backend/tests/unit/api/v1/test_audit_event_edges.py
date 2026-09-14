@@ -127,11 +127,12 @@ async def test_anonymizing_keeps_who_what_and_when_but_drops_the_payload(
     )
 
     entries = (await client.get(f"api/v1/audit/flow/{flow['id']}", headers=logged_in_headers)).json()["entries"]
-    updated = [e for e in entries if e["event"] == "langflow.audit.flow.updated"]
+    updated = [e for e in entries if e["event"] == "langflow.audit.flow.update"]
 
     assert len(updated) == 1, "the row is still written"
     assert updated[0]["payload"] is None, "but it carries nothing"
-    assert updated[0]["user_id"] and updated[0]["created_at"], "who and when survive"
+    assert updated[0]["user_id"], "who survives"
+    assert updated[0]["created_at"], "and when"
 
 
 async def test_a_plain_api_client_that_sends_no_precondition_is_still_recorded(
@@ -151,7 +152,7 @@ async def test_a_plain_api_client_that_sends_no_precondition_is_still_recorded(
         assert response.status_code == status.HTTP_200_OK, response.text
 
     entries = (await client.get(f"api/v1/audit/flow/{flow['id']}", headers=logged_in_headers)).json()["entries"]
-    updated = [e for e in entries if e["event"] == "langflow.audit.flow.updated"]
+    updated = [e for e in entries if e["event"] == "langflow.audit.flow.update"]
     denied = [e for e in entries if e["event"] == "langflow.audit.flow.save.denied"]
 
     assert len(updated) == 5, "every unconditional write is recorded"
@@ -160,7 +161,7 @@ async def test_a_plain_api_client_that_sends_no_precondition_is_still_recorded(
 
 async def test_a_deleted_flow_keeps_its_history(client: AsyncClient, logged_in_headers, audit_on):  # noqa: ARG001
     """resource_id has no foreign key precisely so the trail outlives the resource."""
-    from langflow.services.database.models.audit_log.model import AuditLog
+    from langflow.services.database.models.audit_event.model import AuditEvent
     from sqlmodel import col, select
 
     flow = await _create_flow(client, logged_in_headers)
@@ -168,11 +169,13 @@ async def test_a_deleted_flow_keeps_its_history(client: AsyncClient, logged_in_h
     assert response.status_code in (status.HTTP_200_OK, status.HTTP_204_NO_CONTENT), response.text
 
     async with session_scope() as session:
-        rows = (await session.exec(select(AuditLog).where(col(AuditLog.resource_id) == uuid.UUID(flow["id"])))).all()
+        rows = (
+            await session.exec(select(AuditEvent).where(col(AuditEvent.resource_id) == uuid.UUID(flow["id"])))
+        ).all()
 
     events = {row.event for row in rows}
-    assert "langflow.audit.flow.created" in events, "the trail survives the flow"
-    assert "langflow.audit.flow.deleted" in events, "and records the deletion"
+    assert "langflow.audit.flow.create" in events, "the trail survives the flow"
+    assert "langflow.audit.flow.delete" in events, "and records the deletion"
 
 
 async def test_a_large_flow_does_not_produce_a_large_row(client: AsyncClient, logged_in_headers, audit_on):  # noqa: ARG001
@@ -198,7 +201,7 @@ async def test_a_large_flow_does_not_produce_a_large_row(client: AsyncClient, lo
     assert response.status_code == status.HTTP_200_OK, response.text
 
     entries = (await client.get(f"api/v1/audit/flow/{flow['id']}", headers=logged_in_headers)).json()["entries"]
-    updated = next(e for e in entries if e["event"] == "langflow.audit.flow.updated")
+    updated = next(e for e in entries if e["event"] == "langflow.audit.flow.update")
 
     assert len(updated["payload"]["changes"]) == 50, "the list is capped"
     assert updated["payload"]["changes_total"] == 201, "but the true total is reported"

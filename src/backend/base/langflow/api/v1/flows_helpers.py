@@ -29,9 +29,10 @@ from langflow.api.utils import (
     strip_flow_secrets,
 )
 from langflow.services.audit.changes import summarize_flow_changes
-from langflow.services.audit.events import FLOW_CREATED, FLOW_UPDATED
+from langflow.services.audit.events import FLOW_CREATE, FLOW_UPDATE
 from langflow.services.audit.recorder import record_audit_event
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
+from langflow.services.database.models.audit_event.model import AuditFamily, AuditResult
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_move_allowed
 from langflow.services.database.models.flow.guards import (
@@ -421,7 +422,9 @@ async def _record_flow_update(
         payload["reason"] = reason
     await record_audit_event(
         session,
-        event=FLOW_UPDATED,
+        event=FLOW_UPDATE,
+        family=AuditFamily.ACTION,
+        result=AuditResult.SUCCEEDED,
         user_id=actor_user_id,
         resource_id=flow.id,
         payload=payload,
@@ -490,7 +493,14 @@ async def _new_flow(
 
         session.add(db_flow)
         await session.flush()
-        await record_audit_event(session, event=FLOW_CREATED, user_id=user_id, resource_id=db_flow.id)
+        await record_audit_event(
+            session,
+            event=FLOW_CREATE,
+            family=AuditFamily.ACTION,
+            result=AuditResult.SUCCEEDED,
+            user_id=user_id,
+            resource_id=db_flow.id,
+        )
         await session.refresh(db_flow)
         await _save_flow_to_fs(db_flow, user_id, storage_service)
 

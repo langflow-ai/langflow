@@ -29,6 +29,7 @@ from langflow.api.v1.monitor import router as monitor_router
 from langflow.api.v1.openai_responses import router as openai_responses_router
 from langflow.api.v1.policy_bundle import router as policy_bundle_router
 from langflow.api.v1.projects import router as projects_router
+from langflow.api.v1.projects_aggregate import router as projects_aggregate_router
 from langflow.api.v1.starter_projects import router as starter_projects_router
 from langflow.api.v1.store import router as store_router
 from langflow.api.v1.traces import router as traces_router
@@ -68,6 +69,7 @@ __all__ = [
     "monitor_router",
     "openai_responses_router",
     "policy_bundle_router",
+    "projects_aggregate_router",
     "projects_router",
     "starter_projects_router",
     "store_router",

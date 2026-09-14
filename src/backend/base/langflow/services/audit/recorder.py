@@ -10,13 +10,20 @@ from __future__ import annotations
 
 import asyncio
 import json
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import TYPE_CHECKING, Any
 
 from lfx.log import logger
 from lfx.services.session import NoopSession
 
 from langflow.services.audit.events import resource_type_of
-from langflow.services.database.models.audit_log.model import AuditLog
+from langflow.services.database.models.audit_event.model import (
+    RESULTS_BY_FAMILY,
+    AuditEvent,
+    AuditFamily,
+    AuditResult,
+)
 from langflow.services.deps import get_settings_service, session_scope
 
 if TYPE_CHECKING:
@@ -30,6 +37,10 @@ ALLOWED_PAYLOAD_KEYS = frozenset(
     {
         "changes",
         "changes_total",
+        # Counts, never the names of what was created or removed: an aggregate
+        # row says how big the act was without carrying the act's contents.
+        "flows_total",
+        "flows_removed",
         "reason",
         "error_class",
         "duration_ms",
@@ -92,6 +103,27 @@ def _allowed(payload: dict[str, Any] | None) -> dict[str, Any] | None:
     return kept
 
 
+# Resources whose own rows are being absorbed into an aggregate one. A
+# contextvar rather than a parameter because the writes happen deep inside
+# helpers the aggregate operation does not own and must not have to fork.
+_absorbed: ContextVar[frozenset[str]] = ContextVar("absorbed_audit_resources", default=frozenset())
+
+
+@contextmanager
+def absorbed_into_aggregate(resource_type: str):
+    """Silence a resource's own rows while one row describes them all.
+
+    Replacing a project's contents is one act to the person who asked for it.
+    Recording a row per flow underneath answers a question nobody asked and
+    buries the one they did.
+    """
+    token = _absorbed.set(_absorbed.get() | {resource_type})
+    try:
+        yield
+    finally:
+        _absorbed.reset(token)
+
+
 def _has_database(session: AsyncSession) -> bool:
     """False under ``lfx serve``, which is stateless and has no database.
 
@@ -105,6 +137,8 @@ def _has_database(session: AsyncSession) -> bool:
 async def record_audit_event_independently(
     *,
     event: str,
+    family: AuditFamily,
+    result: AuditResult,
     user_id: UUID | None = None,
     resource_id: UUID | None = None,
     payload: dict[str, Any] | None = None,
@@ -124,6 +158,8 @@ async def record_audit_event_independently(
             await record_audit_event(
                 scoped,
                 event=event,
+                family=family,
+                result=result,
                 user_id=user_id,
                 resource_id=resource_id,
                 payload=payload,
@@ -141,6 +177,8 @@ async def record_audit_event(
     session: AsyncSession,
     *,
     event: str,
+    family: AuditFamily,
+    result: AuditResult,
     user_id: UUID | None = None,
     resource_id: UUID | None = None,
     payload: dict[str, Any] | None = None,
@@ -153,9 +191,22 @@ async def record_audit_event(
     if not is_enabled() or not _has_database(session):
         return
 
+    # Checked before the try below, which turns any failure into a dropped row
+    # and a warning. A denial recorded as an action makes every filtered query
+    # wrong in a way nobody notices — but so does losing the row silently, so a
+    # producer that pairs them wrongly has to fail where its tests can see it.
+    # A database constraint can only cover the union of both vocabularies.
+    if result not in RESULTS_BY_FAMILY[family]:
+        msg = f"{result.value!r} is not a result of the {family.value!r} family"
+        raise ValueError(msg)
+
     try:
-        row = AuditLog(
+        if resource_type_of(event) in _absorbed.get():
+            return
+        row = AuditEvent(
             event=event,
+            family=family.value,
+            result=result.value,
             user_id=user_id,
             resource_type=resource_type_of(event),
             resource_id=resource_id,

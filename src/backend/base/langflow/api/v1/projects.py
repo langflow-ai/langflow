@@ -34,6 +34,12 @@ from langflow.api.v1.projects_mcp_helpers import (
     register_mcp_servers_for_project,
 )
 from langflow.initial_setup.constants import ASSISTANT_FOLDER_NAME, STARTER_FOLDER_NAME
+from langflow.services.audit.events import (
+    PROJECT_CREATE,
+    PROJECT_DELETE,
+    PROJECT_UPDATE,
+)
+from langflow.services.audit.scope import audited_action
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
 from langflow.services.authorization import (
     FlowAction,
@@ -248,24 +254,27 @@ async def create_project(
     project: FolderCreate,
     current_user: CurrentActiveUser,
 ):
-    await ensure_project_permission(
-        current_user, ProjectAction.CREATE, workspace_id=getattr(project, "workspace_id", None)
-    )
-    try:
-        return await _new_project(
-            session=session,
-            project=project,
-            current_user=current_user,
+    async with audited_action(session, event=PROJECT_CREATE, user_id=current_user.id) as audit:
+        await ensure_project_permission(
+            current_user, ProjectAction.CREATE, workspace_id=getattr(project, "workspace_id", None)
         )
-    except HTTPException:
-        # Re-raise HTTP exceptions (like 409 conflicts) without modification
-        raise
-    except Exception as e:
-        await araise_if_deployment_guard_error_or_skip(
-            e,
-            log_message="op=create_project",
-        )
-        raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_CREATE_FAILED)) from e
+        try:
+            created = await _new_project(
+                session=session,
+                project=project,
+                current_user=current_user,
+            )
+        except HTTPException:
+            # Re-raise HTTP exceptions (like 409 conflicts) without modification
+            raise
+        except Exception as e:
+            await araise_if_deployment_guard_error_or_skip(
+                e,
+                log_message="op=create_project",
+            )
+            raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_CREATE_FAILED)) from e
+        audit.describe(resource_id=created.id)
+        return created
 
 
 @router.get("/", response_model=list[FolderListRead], status_code=200)
@@ -780,6 +789,25 @@ async def update_project(
     *,
     session: DbSession,
     project_id: UUID,
+    project: FolderUpdate,
+    current_user: CurrentActiveUser,
+    background_tasks: BackgroundTasks,
+):
+    """Update a project, recording how the attempt ended."""
+    async with audited_action(session, event=PROJECT_UPDATE, user_id=current_user.id, resource_id=project_id):
+        return await _update_project(
+            session=session,
+            project_id=project_id,
+            project=project,
+            current_user=current_user,
+            background_tasks=background_tasks,
+        )
+
+
+async def _update_project(
+    *,
+    session: DbSession,
+    project_id: UUID,
     project: FolderUpdate,  # Assuming FolderUpdate is a Pydantic model defining updatable fields
     current_user: CurrentActiveUser,
     background_tasks: BackgroundTasks,
@@ -855,6 +883,30 @@ async def update_project(
     responses={status.HTTP_201_CREATED: {"model": FolderRead, "description": "Project created."}},
 )
 async def upsert_project(
+    *,
+    session: DbSession,
+    project_id: UUID,
+    project: FolderCreate,
+    current_user: CurrentActiveUser,
+    background_tasks: BackgroundTasks,
+):
+    """Create or update a project with a specific ID, recording how it ended.
+
+    The event names the attempt, not which half of the upsert ran: the caller
+    asked to make this project look like *this*, and a reader following the
+    project's history should not have to know which branch answered.
+    """
+    async with audited_action(session, event=PROJECT_UPDATE, user_id=current_user.id, resource_id=project_id):
+        return await _upsert_project(
+            session=session,
+            project_id=project_id,
+            project=project,
+            current_user=current_user,
+            background_tasks=background_tasks,
+        )
+
+
+async def _upsert_project(
     *,
     session: DbSession,
     project_id: UUID,
@@ -951,6 +1003,17 @@ async def upsert_project(
 
 @router.delete("/{project_id}", status_code=204)
 async def delete_project(
+    *,
+    session: DbSession,
+    project_id: UUID,
+    current_user: CurrentActiveUser,
+):
+    """Delete a project, recording how the attempt ended."""
+    async with audited_action(session, event=PROJECT_DELETE, user_id=current_user.id, resource_id=project_id):
+        return await _delete_project(session=session, project_id=project_id, current_user=current_user)
+
+
+async def _delete_project(
     *,
     session: DbSession,
     project_id: UUID,

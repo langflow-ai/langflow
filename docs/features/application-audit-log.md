@@ -5,9 +5,14 @@
 > Owner: Cristhian Zanforlin
 > Related: Epic [LE-2379](https://datastax.jira.com/browse/LE-2379)
 >
-> This branch carries the audit log alone. The refusal record
-> (`langflow.audit.flow.save.denied`) is part of the event vocabulary but has no
-> producer here: nothing refuses a save until multi-edit safety ships alongside it.
+> Two families share one table. An `authz` row records whether an attempt was
+> permitted; an `action` row records what it did. A denial is never an action
+> that failed, and an action never carries `allow` or `deny` — the pairing is
+> enforced when the row is written.
+>
+> Flows and projects are both producers. The refusal of a *save* on a version
+> precondition has no producer here: nothing refuses a save until multi-edit
+> safety ships alongside it.
 
 ---
 
@@ -47,7 +52,8 @@ in Phase 1.
   changed; a snapshot is what the state *was*.
 - **Authorization** (Conformist): decides who may read a resource's trail; in OSS the query stays
   owner-scoped.
-- **Authorization Audit** (`authz_audit_log`, separate): records allow/deny decisions. Permission
+- **Authorization Audit** (`authz_audit_log`, separate today): records allow/deny decisions. The
+  `authz` family here uses the same vocabulary, so the two can converge later. Permission
   denials live there and are deliberately not duplicated here.
 
 ### Explicitly not in this release
@@ -74,7 +80,7 @@ not what it became.
 ## 3. Domain Model
 
 ### Aggregate: Audit Row
-- **Root entity:** `AuditLog` (`services/database/models/audit_log/model.py`)
+- **Root entity:** `AuditEvent` (`services/database/models/audit_event/model.py`)
 - **Value objects:** the event name; the payload allowlist
 - **Invariants:**
   - A row is never updated or deleted by the application. Retention is the only sanctioned deletion.
@@ -83,18 +89,38 @@ not what it became.
   - `created_at` comes from the database, never from a pod's clock.
   - `user_id` has no foreign key: attribution outlives the user row.
   - `resource_id` has no foreign key: the trail outlives the resource.
+  - `result` belongs to its `family`: `allow`/`deny` to `authz`, `succeeded`/`failed`
+    to `action`. A database constraint can only cover the union, so the pairing is
+    enforced where the producer named both — a denial recorded as an action makes
+    every "show me the refusals" query wrong in a way nobody notices.
+  - An aggregate operation writes one row. The resource rows underneath are
+    absorbed into it, so replacing a project's contents is one act in the trail,
+    not one row per flow.
+  - Request and actor attribution are **not** in this schema. The columns existed
+    briefly with no producer, which is worse than their absence: an empty column
+    answers a question wrongly. They land with the code that fills them.
+  - A trail outlives its resource. Once the row is gone there is nothing left to
+    authorize against, so the trail's own attribution decides who may read it —
+    and a stranger gets the same 404 as for a resource that never existed.
 
 ### Domain Events
 
-| Event | Trigger | Payload | Consumers |
+The name is the *attempt*, never its outcome — `flow.update`, not `flow.updated` —
+so one name covers the attempt that worked, the one that failed, and the one that
+was refused. `family` and `result` say how it ended.
+
+| Event | Family | Result | Payload |
 |---|---|---|---|
-| `langflow.audit.flow.created` | A flow is created | — | reader API |
-| `langflow.audit.flow.updated` | An accepted graph change | `changes`, `changes_total`, optional `reason=overwrite` | reader API |
-| `langflow.audit.flow.deleted` | A flow is deleted | — | reader API |
-| `langflow.audit.flow.restored` | A version is restored | `version_id` | reader API |
-| `langflow.audit.flow.save.denied` | Reserved: a save refused on a version precondition. No producer in this branch | `reason=version_conflict` | reader API |
-| `langflow.audit.flow.permission.denied` | Reserved; **not emitted** — `authz_audit_log` already records it | — | — |
-| `langflow.audit.flow.run.succeeded` / `.failed` | Reserved for Phase 2 | — | — |
+| `langflow.audit.flow.create` | action | `succeeded` · `failed` | — |
+| `langflow.audit.flow.update` | action | `succeeded` · `failed` | `changes`, `changes_total`, optional `reason` |
+| `langflow.audit.flow.delete` | action | `succeeded` · `failed` | — |
+| `langflow.audit.flow.restore` | action | `succeeded` · `failed` | `version_id` |
+| `langflow.audit.flow.run` | action | `succeeded` · `failed` | `duration_ms`, and `error_class` on a failure |
+| `langflow.audit.project.create` | action | `succeeded` · `failed` | `flows_total` when created with contents |
+| `langflow.audit.project.update` | action | `succeeded` · `failed` | — |
+| `langflow.audit.project.delete` | action | `succeeded` · `failed` | — |
+| `langflow.audit.project.replace` | action | `succeeded` · `failed` | `flows_total`, `flows_removed` |
+| any of the above | authz | `allow` · `deny` | `reason=permission_denied` |
 
 ---
 
@@ -108,7 +134,7 @@ Feature: Application audit log
 
   Scenario: An accepted edit names who and what
     When a user changes a component field and saves
-    Then one row exists with event "langflow.audit.flow.updated" and resource_type "flow"
+    Then one row exists with event "langflow.audit.flow.update" and resource_type "flow"
     And payload.changes names the component and field that changed
     And the row contains no graph and no field value
 
@@ -158,8 +184,8 @@ Feature: Application audit log
     Then no rows are written and the reader returns 404
 ```
 
-Every scenario maps to a test in `tests/unit/api/v1/test_audit_log.py`,
-`test_audit_log_edges.py`, or `tests/unit/services/audit/`.
+Every scenario maps to a test in `tests/unit/api/v1/test_audit_event.py`,
+`test_audit_event_edges.py`, or `tests/unit/services/audit/`.
 
 ---
 
@@ -208,6 +234,25 @@ simultaneous conflicting saves without it exhausted the connection pool and cost
 their authentication. With it, the same burst produced 119 refusal rows, no dropped row, and no pool
 error. The path ships here but has no caller until multi-edit safety supplies one.
 
+### ADR-007 — Creating a project with contents compensates rather than rolls back
+**Status:** Accepted.
+**Context:** `POST /projects/with-flows` promises that a failure leaves nothing
+behind. It cannot keep that promise with a transaction: creating a project
+registers an MCP server, and that registration commits — so by the time the
+contents fail, the project is already durable and no rollback can reach it.
+Measured, not assumed: the project survived a failed creation with the audit
+feature switched off, and a commit trace named `mcp.py:_persist` as the caller.
+**Decision:** On failure the endpoint deletes the project it created, on the
+caller's own session and only after rolling it back — a second connection cannot
+write while the first holds the transaction, which on SQLite is a hard "database
+is locked" rather than contention. The cleanup commits itself, because the
+caller's transaction is about to be rolled back by the error on its way out.
+**Consequences:** The observable promise holds. The mechanism is compensation,
+not atomicity, so a cleanup that itself fails leaves the project behind — logged,
+and never in place of the error the caller needs to see. The cleanup finalizes
+the Memory Base handles it collects, so a compensated creation does not leak the
+remote collections its flows had already registered.
+
 ### ADR-005 — No `Enum` columns, no sequence, no hash chain
 **Status:** Accepted.
 **Context:** An `Enum` column makes adding an event name a migration on both backends. A gap-free
@@ -255,7 +300,7 @@ GET /api/v1/audit/{resource_type}/{resource_id}
     {
       "id": "…",
       "created_at": "2026-09-09T13:36:49.220132+00:00",
-      "event": "langflow.audit.flow.updated",
+      "event": "langflow.audit.flow.update",
       "user_id": "…",
       "username": "cris",
       "resource_type": "flow",
@@ -278,11 +323,18 @@ GET /api/v1/audit/{resource_type}/{resource_id}
 
 | Path | Event |
 |---|---|
-| `flows_helpers._new_flow` | `flow.created` |
-| `flows_helpers._patch_flow` | `flow.updated` (`reason` carried by the caller) |
-| `flows_helpers._update_existing_flow` | `flow.updated` (PUT and import upsert) |
-| `flows.delete_flow` | `flow.deleted` |
-| `flow_version.restore` | `flow.restored` |
+| `flows_helpers._new_flow` | `flow.create` · action/succeeded |
+| `flows_helpers._patch_flow` | `flow.update` · action/succeeded |
+| `flows.delete_flow` | `flow.delete` · action/succeeded |
+| `flows.delete_multiple_flows` | one `flow.delete` row per flow, not one per request |
+| `endpoints._run_flow_internal` | `flow.run` · action/succeeded or failed, with the duration, on every exit |
+| `flow_version.restore` | `flow.restore` · action/succeeded |
+| `projects.create_project` | `project.create` · action |
+| `projects.update_project` / `upsert_project` | `project.update` · action |
+| `projects.delete_project` | `project.delete` · action |
+| `projects.create_project_with_flows` | `project.create` · action, with `flows_total` |
+| `projects.replace_project_flows` | `project.replace` · action, with `flows_total` and `flows_removed` |
+| `audit.scope.audited_action` | the `authz`/`deny` row when a route raises 403 |
 
 ---
 
@@ -316,7 +368,7 @@ snapshots arrive with their phases.
 | Revision | Phase | Reversible |
 |---|---|---|
 | `690d24733555` | EXPAND | Yes — no DDL; it only rejoins two alembic heads left by a release merge |
-| `8f2a41c07b93` | EXPAND | Yes — creates `audit_log` and three indexes; nothing else reads them |
+| `8f2a41c07b93` | EXPAND | Yes — creates `audit_events` and five indexes; nothing else reads them |
 
 Verified up → down → up on SQLite and up on PostgreSQL 17, with the model/migration consistency
 gate green on both.
@@ -344,7 +396,7 @@ C4Container
   Container(fe, "Frontend", "React", "Saves with a version precondition")
   Container(api, "Langflow API", "FastAPI", "Flow write paths and the reader")
   Container(seam, "Audit seam", "services/audit", "Allowlist, savepoint, bounded independent writes")
-  ContainerDb(db, "Database", "SQLite / PostgreSQL", "audit_log, flow, flow_version")
+  ContainerDb(db, "Database", "SQLite / PostgreSQL", "audit_events, flow, folder, flow_version")
   Container(lfx, "lfx serve", "Stateless", "No database — records nothing")
 
   Rel(user, fe, "Edits")
@@ -367,7 +419,7 @@ sequenceDiagram
   A->>API: PATCH with token T
   API->>DB: claim T
   DB-->>API: claimed
-  API->>AU: flow.updated (changes: names)
+  API->>AU: flow.update · action/succeeded (changes: names)
   AU->>DB: insert in savepoint, flush
   API-->>A: 200 + new token
 

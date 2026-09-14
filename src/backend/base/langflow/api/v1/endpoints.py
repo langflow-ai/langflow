@@ -89,6 +89,8 @@ from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.interface.initialize.loading import update_params_with_load_from_db_fields
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.schema.graph import Tweaks
+from langflow.services.audit.events import FLOW_RUN
+from langflow.services.audit.recorder import record_audit_event_independently
 from langflow.services.auth.utils import (
     api_key_security,
     get_current_user_for_sse,
@@ -100,6 +102,7 @@ from langflow.services.authorization.access_ceiling import (
     get_current_external_access_context,
 )
 from langflow.services.cache.utils import save_uploaded_file
+from langflow.services.database.models.audit_event.model import AuditFamily, AuditResult
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
 from langflow.services.database.models.jobs.model import JobType
@@ -881,6 +884,34 @@ async def get_webhook_auth(
     return WebhookAuth(user=webhook_user, flow=flow)
 
 
+async def _record_run(
+    flow: FlowRead | None,
+    actor: User | UserRead,
+    result: AuditResult,
+    seconds: float,
+    *,
+    error: BaseException | None = None,
+) -> None:
+    """Record that somebody ran a flow, and how it went.
+
+    The error's class, never its message: a run's message quotes whatever the
+    flow was given, which is the one thing this row must not carry.
+    """
+    if flow is None:
+        return
+    payload: dict[str, object] = {"duration_ms": int(seconds * 1000)}
+    if error is not None:
+        payload["error_class"] = type(error).__name__
+    await record_audit_event_independently(
+        event=FLOW_RUN,
+        family=AuditFamily.ACTION,
+        result=result,
+        user_id=getattr(actor, "id", None),
+        resource_id=flow.id,
+        payload=payload,
+    )
+
+
 async def _run_flow_internal(
     *,
     background_tasks: BackgroundTasks,
@@ -1008,8 +1039,15 @@ async def _run_flow_internal(
                 run_id=run_id,
             ),
         )
+        # Telemetry answers "how is the fleet doing"; the trail answers "who ran
+        # this flow, and did it work". A run has no transaction of its own, so
+        # the row is written in one.
+        await _record_run(flow, api_key_user, AuditResult.SUCCEEDED, end_time - start_time)
 
     except ValueError as exc:
+        await _record_run(
+            flow, api_key_user, AuditResult.FAILED, time.perf_counter() - start_time, error=exc
+        )
         background_tasks.add_task(
             telemetry_service.log_package_run,
             RunPayload(
@@ -1037,13 +1075,22 @@ async def _run_flow_internal(
             flow=flow if expose_error_details else None,
         ) from exc
     except InvalidChatInputError as exc:
+        await _record_run(
+            flow, api_key_user, AuditResult.FAILED, time.perf_counter() - start_time, error=exc
+        )
         http_error = HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
         raise error_for_client(http_error, expose_details=expose_error_details) from exc
     except HTTPException as exc:
+        await _record_run(
+            flow, api_key_user, AuditResult.FAILED, time.perf_counter() - start_time, error=exc
+        )
         if expose_error_details:
             raise
         raise error_for_client(exc, expose_details=expose_error_details) from exc
-    except TweakRefusedError:
+    except TweakRefusedError as exc:
+        await _record_run(
+            flow, api_key_user, AuditResult.FAILED, time.perf_counter() - start_time, error=exc
+        )
         # A refused tweak is a caller error, not a server fault. The generic
         # handler below turns it into a 500 and discards the structured body
         # naming the refused keys, so let the app-level handler answer with 422.
@@ -1059,6 +1106,9 @@ async def _run_flow_internal(
         # one is the failure this whole path is here to prevent.
         raise
     except Exception as exc:
+        await _record_run(
+            flow, api_key_user, AuditResult.FAILED, time.perf_counter() - start_time, error=exc
+        )
         background_tasks.add_task(
             telemetry_service.log_package_run,
             RunPayload(
