@@ -9,6 +9,7 @@ import {
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { MESSAGE_HISTORY_PAGE_SIZE } from "./constants";
 
 interface MessagesQueryParams {
   id?: string;
@@ -105,21 +106,25 @@ export const useGetMessagesPollingMutation = (
     try {
       requestInProgressRef.current[requestId] = true;
       const { id, mode, excludedFields, params } = payload;
-      const config = {};
+      // Bounded by default: this runs every POLLING_INTERVAL ms, so an
+      // unbounded read would re-download the flow's whole history each cycle.
+      const config: { params: Record<string, unknown> } = {
+        params: { limit: MESSAGE_HISTORY_PAGE_SIZE },
+      };
 
       if (id) {
-        config["params"] = { flow_id: id };
+        config.params.flow_id = id;
       }
 
       if (params) {
         // Process params to ensure session_id is properly encoded
-        const processedParams = { ...params } as any;
-        if (processedParams.session_id) {
+        const processedParams = { ...params } as Record<string, unknown>;
+        if (typeof processedParams.session_id === "string") {
           processedParams.session_id = prepareSessionIdForAPI(
             processedParams.session_id,
           );
         }
-        config["params"] = { ...config["params"], ...processedParams };
+        config.params = { ...config.params, ...processedParams };
       }
 
       const data = await api.get<any>(`${getURL("MESSAGES")}`, config);

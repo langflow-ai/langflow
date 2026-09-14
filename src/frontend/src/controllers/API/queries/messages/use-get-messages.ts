@@ -49,17 +49,20 @@ const getStoredMessages = (
           (sessionId === id && !message.session_id),
       )
     : storedMessages;
-  const orderedMessages = [...filteredMessages].sort((a, b) => {
+  const chronological = [...filteredMessages].sort((a, b) => {
     const timeA = new Date(a.timestamp).getTime();
     const timeB = new Date(b.timestamp).getTime();
     if (Number.isNaN(timeA) || Number.isNaN(timeB)) return 0;
-    return direction * (timeA - timeB);
+    return timeA - timeB;
   });
 
-  return orderedMessages.slice(
-    offset,
-    limit === undefined ? undefined : offset + limit,
-  );
+  // Mirror the server contract: the page is anchored at the newest message and
+  // `offset` walks backwards into older history, whatever the display order.
+  const end = Math.max(0, chronological.length - offset);
+  const start = limit === undefined ? 0 : Math.max(0, end - limit);
+  const page = chronological.slice(start, end);
+
+  return direction === -1 ? page.reverse() : page;
 };
 
 export const getMessages = async (

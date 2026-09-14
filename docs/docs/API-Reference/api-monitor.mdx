@@ -131,7 +131,7 @@ Typically, these are called implicitly when running flows that produce message h
 
 ### Get messages
 
-Retrieve a list of all messages:
+Retrieve a page of messages:
 
 <Tabs>
 <TabItem value="Python" label="Python" default>
@@ -155,9 +155,12 @@ To filter messages, use the `flow_id`, `session_id`, `sender`, and `sender_name`
 
 To sort the results, use `order_by` to select the field and `order` to select the direction.
 The `order_by` parameter defaults to `timestamp`, and `order` accepts `ASC` or `DESC` and defaults to `ASC`.
-With both defaults, the endpoint returns the oldest messages first.
+`order_by` and `order` set the display order of the returned page; they don't change which page is selected.
 
-To paginate the results, use `limit` to set the maximum number of messages returned and `offset` to skip messages from the beginning of the ordered result set.
+The endpoint always returns a bounded page anchored at the most recent messages, so a flow with a long history never serializes in full.
+Use `limit` to set the page size, which defaults to 100 and is clamped to a server-side maximum of 500.
+Use `offset` to page backwards into older history.
+With the defaults, the endpoint returns the 100 most recent messages, oldest first within that page.
 
 This example retrieves up to 100 messages sent by `Machine` and `AI` in a given chat session (`session_id`), ordered from oldest to newest by timestamp.
 

@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 from urllib.parse import quote
 from uuid import UUID, uuid4
 
@@ -6,6 +7,7 @@ import pytest
 from httpx import AsyncClient
 
 # Assuming you have these imports available
+from langflow.api.utils.flow_utils import compute_virtual_flow_id
 from langflow.api.v1 import monitor as monitor_api
 from langflow.memory import aadd_messagetables
 from langflow.schema.validators import str_to_timestamp, timestamp_to_str
@@ -843,3 +845,194 @@ async def test_delete_messages_sessions_exceeds_limit(client: AsyncClient, logge
     assert "Cannot delete more than 500 sessions" in data["detail"]
     # After a 400 error, no deletions should have occurred
     # The test validates the error response only
+
+
+@pytest.fixture
+async def large_message_history(active_user):
+    """A history larger than the bounded default window, with monotonic timestamps."""
+    async with session_scope() as session:
+        flow = Flow(name="test_flow_for_history_window", user_id=active_user.id, data={"nodes": [], "edges": []})
+        session.add(flow)
+        await session.flush()
+
+        base_timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        messages = [
+            MessageCreate(
+                text=f"History message {index:04d}",
+                sender="User",
+                # Zero-padded so lexicographic sender_name order matches timestamp order.
+                sender_name=f"Sender {index:04d}",
+                session_id="history-session",
+                timestamp=base_timestamp + timedelta(minutes=index),
+            )
+            for index in range(monitor_api.MESSAGES_MAX_LIMIT + 50)
+        ]
+        messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
+        for message in messagetables:
+            message.flow_id = flow.id
+        return await aadd_messagetables(messagetables, session)
+
+
+@pytest.fixture
+async def simultaneous_message_history(active_user):
+    """A history where every row shares one timestamp, so paging needs a tie-breaker."""
+    async with session_scope() as session:
+        flow = Flow(name="test_flow_for_simultaneous_history", user_id=active_user.id, data={"nodes": [], "edges": []})
+        session.add(flow)
+        await session.flush()
+
+        shared_timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        messages = [
+            MessageCreate(
+                text=f"Simultaneous message {index:04d}",
+                sender="User",
+                sender_name="User",
+                session_id="simultaneous-session",
+                timestamp=shared_timestamp,
+            )
+            for index in range(150)
+        ]
+        messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
+        for message in messagetables:
+            message.flow_id = flow.id
+        return await aadd_messagetables(messagetables, session)
+
+
+@pytest.fixture
+async def shared_flow_history(active_user):
+    """A shared-flow history larger than the bounded default window."""
+    async with session_scope() as session:
+        source_flow_id = uuid4()
+        virtual_flow_id = compute_virtual_flow_id(active_user.id, source_flow_id, principal_type="user")
+
+        base_timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        messages = [
+            MessageCreate(
+                text=f"Shared history message {index:04d}",
+                sender="User",
+                sender_name="User",
+                session_id="shared-history-session",
+                timestamp=base_timestamp + timedelta(minutes=index),
+            )
+            for index in range(monitor_api.MESSAGES_DEFAULT_LIMIT + 50)
+        ]
+        messagetables = [MessageTable.model_validate(message, from_attributes=True) for message in messages]
+        for message in messagetables:
+            message.flow_id = virtual_flow_id
+        await aadd_messagetables(messagetables, session)
+        return source_flow_id
+
+
+@pytest.mark.usefixtures("large_message_history")
+async def test_get_messages_without_limit_returns_bounded_newest_window(client: AsyncClient, logged_in_headers):
+    """A caller that sends no limit must get a bounded page, not the whole history."""
+    total = monitor_api.MESSAGES_MAX_LIMIT + 50
+    default_limit = monitor_api.MESSAGES_DEFAULT_LIMIT
+
+    response = await client.get(
+        "api/v1/monitor/messages",
+        headers=logged_in_headers,
+        params={"session_id": "history-session"},
+    )
+
+    assert response.status_code == 200, response.text
+    texts = [message["text"] for message in response.json()]
+    assert len(texts) == default_limit
+    assert texts == [f"History message {index:04d}" for index in range(total - default_limit, total)]
+
+
+@pytest.mark.usefixtures("large_message_history")
+async def test_get_messages_clamps_limit_to_server_maximum(client: AsyncClient, logged_in_headers):
+    """A client-requested limit above the server maximum is clamped, never honored."""
+    response = await client.get(
+        "api/v1/monitor/messages",
+        headers=logged_in_headers,
+        params={"session_id": "history-session", "limit": 1_000_000},
+    )
+
+    assert response.status_code == 200, response.text
+    assert len(response.json()) == monitor_api.MESSAGES_MAX_LIMIT
+
+
+@pytest.mark.usefixtures("large_message_history")
+async def test_get_messages_offset_pages_into_older_history(client: AsyncClient, logged_in_headers):
+    """Offset walks backwards through history so older pages stay reachable."""
+    total = monitor_api.MESSAGES_MAX_LIMIT + 50
+
+    response = await client.get(
+        "api/v1/monitor/messages",
+        headers=logged_in_headers,
+        params={"session_id": "history-session", "limit": 25, "offset": 25},
+    )
+
+    assert response.status_code == 200, response.text
+    texts = [message["text"] for message in response.json()]
+    assert texts == [f"History message {index:04d}" for index in range(total - 50, total - 25)]
+
+
+@pytest.mark.usefixtures("large_message_history")
+async def test_get_messages_non_timestamp_order_by_still_selects_newest_window(client: AsyncClient, logged_in_headers):
+    """order_by must sort the newest window, not select the alphabetically-first rows."""
+    total = monitor_api.MESSAGES_MAX_LIMIT + 50
+
+    response = await client.get(
+        "api/v1/monitor/messages",
+        headers=logged_in_headers,
+        params={"session_id": "history-session", "order_by": "sender_name", "limit": 10},
+    )
+
+    assert response.status_code == 200, response.text
+    texts = [message["text"] for message in response.json()]
+    assert texts == [f"History message {index:04d}" for index in range(total - 10, total)]
+
+
+def test_sorted_for_display_tolerates_a_null_ordering_value():
+    """Display sorting must not raise when an orderable column holds NULL."""
+    rows = [
+        SimpleNamespace(sender_name="b"),
+        SimpleNamespace(sender_name=None),
+        SimpleNamespace(sender_name="a"),
+    ]
+
+    ascending = monitor_api._sorted_for_display(rows, order_by="sender_name", descending=False)
+    descending = monitor_api._sorted_for_display(rows, order_by="sender_name", descending=True)
+
+    assert [row.sender_name for row in ascending] == ["a", "b", None]
+    assert [row.sender_name for row in descending] == [None, "b", "a"]
+
+
+@pytest.mark.usefixtures("simultaneous_message_history")
+async def test_get_messages_paging_is_stable_when_timestamps_are_identical(client: AsyncClient, logged_in_headers):
+    """Paging a history written within one timestamp must not repeat or drop rows."""
+    page_size = 50
+    seen: list[str] = []
+    for offset in range(0, 150, page_size):
+        response = await client.get(
+            "api/v1/monitor/messages",
+            headers=logged_in_headers,
+            params={"session_id": "simultaneous-session", "limit": page_size, "offset": offset},
+        )
+        assert response.status_code == 200, response.text
+        seen.extend(message["id"] for message in response.json())
+
+    assert len(seen) == 150
+    assert len(set(seen)) == 150
+
+
+async def test_get_shared_messages_without_limit_returns_bounded_newest_window(
+    client: AsyncClient, logged_in_headers, shared_flow_history
+):
+    """The shared-flow history endpoint must bound its default window too."""
+    total = monitor_api.MESSAGES_DEFAULT_LIMIT + 50
+    default_limit = monitor_api.MESSAGES_DEFAULT_LIMIT
+
+    response = await client.get(
+        "api/v1/monitor/messages/shared",
+        headers=logged_in_headers,
+        params={"source_flow_id": str(shared_flow_history)},
+    )
+
+    assert response.status_code == 200, response.text
+    texts = [message["text"] for message in response.json()]
+    assert len(texts) == default_limit
+    assert texts == [f"Shared history message {index:04d}" for index in range(total - default_limit, total)]

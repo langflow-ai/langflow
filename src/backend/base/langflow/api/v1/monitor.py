@@ -6,6 +6,7 @@ from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from sqlalchemy.orm.exc import StaleDataError
 from sqlmodel import col, delete, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from langflow.api.utils import DbSession, custom_params
 from langflow.api.utils.flow_utils import compute_virtual_flow_id
@@ -45,6 +46,48 @@ from langflow.services.tracing.langfuse import (
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
 
 MESSAGE_UPDATE_FAILED = "Could not update the message."
+
+# Message history reads are bounded on the server. The playground and the Messages
+# view re-fetch this endpoint while a flow is open, and an unbounded default made
+# every one of those reads serialize the flow's whole history (a 19k-message flow
+# returned ~34 MB), starving the API worker and freezing the editor. Callers page
+# deeper with ``offset``; a requested limit above the maximum is clamped, not rejected,
+# so existing integrations keep working.
+MESSAGES_DEFAULT_LIMIT = 100
+MESSAGES_MAX_LIMIT = 500
+
+
+def _newest_first_window(
+    stmt: SelectOfScalar[MessageTable], *, limit: int | None, offset: int | None
+) -> SelectOfScalar[MessageTable]:
+    """Bound a message query to one page anchored at the most recent rows.
+
+    The window is always selected newest-first so that the default page is the
+    recent history a caller actually wants, and so ``offset`` walks backwards into
+    older history regardless of the display order requested. ``id`` breaks ties on
+    equal timestamps, without which paging a burst of messages written in the same
+    instant could repeat or drop rows.
+    """
+    effective_limit = min(limit or MESSAGES_DEFAULT_LIMIT, MESSAGES_MAX_LIMIT)
+    stmt = stmt.order_by(col(MessageTable.timestamp).desc(), col(MessageTable.id).desc())
+    if offset:
+        stmt = stmt.offset(offset)
+    return stmt.limit(effective_limit)
+
+
+def _sorted_for_display(messages: list[MessageTable], *, order_by: str | None, descending: bool) -> list[MessageTable]:
+    """Re-order an already-bounded window into the caller's requested display order."""
+    if not order_by:
+        return messages
+    if order_by == "timestamp":
+        return messages if descending else messages[::-1]
+    # ``text`` is nullable, so a plain getattr key would raise comparing None to str.
+    # Python's stable sort keeps the newest-first order of the window within ties.
+    return sorted(
+        messages,
+        key=lambda message: (getattr(message, order_by) is None, getattr(message, order_by) or ""),
+        reverse=descending,
+    )
 
 
 async def _log_message_update_failure(error: Exception) -> None:
@@ -246,6 +289,13 @@ async def get_messages(
     limit: Annotated[int | None, Query(ge=0)] = None,
     offset: Annotated[int | None, Query(ge=0)] = None,
 ) -> list[MessageResponse]:
+    """Return one bounded page of message history, newest messages first.
+
+    Without ``limit`` the newest ``MESSAGES_DEFAULT_LIMIT`` messages are returned;
+    a larger ``limit`` is clamped to ``MESSAGES_MAX_LIMIT``. ``offset`` pages
+    backwards into older history. ``order_by``/``order`` set the display order of
+    the returned page, not which page is selected.
+    """
     try:
         # When a flow_id is provided, gate on flow READ permission first; the
         # share-aware path lets a non-owner with a read grant see the flow's
@@ -282,18 +332,13 @@ async def get_messages(
         normalized_order = order.upper()
         if normalized_order not in {"ASC", "DESC"}:
             raise HTTPException(status_code=400, detail=f"Invalid order direction: {order}")
-        if order_by:
-            if order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
-                raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
-            order_col = getattr(MessageTable, order_by)
-            order_col = order_col.desc() if normalized_order == "DESC" else order_col.asc()
-            stmt = stmt.order_by(order_col)
-        if limit:
-            stmt = stmt.limit(limit)
-        if offset:
-            stmt = stmt.offset(offset)
-        messages = await session.exec(stmt)
-        return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
+        if order_by and order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
+            raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
+        stmt = _newest_first_window(stmt, limit=limit, offset=offset)
+        window = _sorted_for_display(
+            list(await session.exec(stmt)), order_by=order_by, descending=normalized_order == "DESC"
+        )
+        return [MessageResponse.model_validate(d, from_attributes=True) for d in window]
     except HTTPException:
         raise
     except Exception as e:
@@ -591,6 +636,9 @@ async def get_shared_messages(
 
     Uses a deterministic virtual flow_id derived from the user's ID and the
     original flow ID. Only messages stored under this virtual flow_id are returned.
+
+    Paging matches ``get_messages``: one bounded page anchored at the newest
+    messages, ``MESSAGES_DEFAULT_LIMIT`` by default and clamped to ``MESSAGES_MAX_LIMIT``.
     """
     try:
         virtual_flow_id = _compute_shared_message_flow_id(current_user.id, source_flow_id)
@@ -605,19 +653,13 @@ async def get_shared_messages(
         normalized_order = order.upper()
         if normalized_order not in {"ASC", "DESC"}:
             raise HTTPException(status_code=400, detail=f"Invalid order direction: {order}")
-        if order_by:
-            if order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
-                raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
-            order_col = getattr(MessageTable, order_by)
-            order_col = order_col.desc() if normalized_order == "DESC" else order_col.asc()
-            stmt = stmt.order_by(order_col)
-        if limit:
-            stmt = stmt.limit(limit)
-        if offset:
-            stmt = stmt.offset(offset)
-
-        messages = await session.exec(stmt)
-        return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
+        if order_by and order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
+            raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
+        stmt = _newest_first_window(stmt, limit=limit, offset=offset)
+        window = _sorted_for_display(
+            list(await session.exec(stmt)), order_by=order_by, descending=normalized_order == "DESC"
+        )
+        return [MessageResponse.model_validate(d, from_attributes=True) for d in window]
     except HTTPException:
         raise
     except Exception as e:

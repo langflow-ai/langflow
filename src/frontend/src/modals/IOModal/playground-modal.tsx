@@ -4,7 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ThemeButtons from "@/components/core/appHeaderComponent/components/ThemeButtons";
-import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
+import {
+  MESSAGE_HISTORY_PAGE_SIZE,
+  useGetMessagesQuery,
+} from "@/controllers/API/queries/messages";
 import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
 import { ENABLE_PUBLISH } from "@/customization/feature-flags";
@@ -195,6 +198,9 @@ export default function IOModal({
         id: currentFlowId,
         params: {
           session_id: visibleSession,
+          // The newest page only: this view renders the whole store at once, so
+          // a long history would otherwise be downloaded and mounted in full.
+          limit: MESSAGE_HISTORY_PAGE_SIZE,
         },
       },
       { enabled: open },

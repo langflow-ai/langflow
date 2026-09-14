@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { removeMessages } from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
 import Loading from "@/components/ui/loading";
 import {
+  MESSAGE_HISTORY_PAGE_SIZE,
   useDeleteMessages,
   useGetMessagesQuery,
   useUpdateMessage,
@@ -48,7 +49,11 @@ export default function SessionView({
 
   // Fetch messages for the specific session
   const messageQueryParams = useMemo(() => {
-    const params: Record<string, string> = {};
+    // The newest page only: a flow with a long history would otherwise load its
+    // entire message table into this grid.
+    const params: Record<string, string | number> = {
+      limit: MESSAGE_HISTORY_PAGE_SIZE,
+    };
     if (session) {
       params.session_id = session;
     }

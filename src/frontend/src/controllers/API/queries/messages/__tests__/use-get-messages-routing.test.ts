@@ -217,6 +217,34 @@ describe("useGetMessagesQuery - Routing Logic", () => {
     expect(mockApiGet).not.toHaveBeenCalled();
   });
 
+  it("should_anchor_anonymous_sessionStorage_page_at_the_newest_messages", async () => {
+    mockFlowStore.getState.mockReturnValue({ playgroundPage: true });
+    mockIsAuth.mockReturnValue(false);
+    window.sessionStorage.setItem(
+      FLOW_ID,
+      JSON.stringify(
+        ["oldest", "middle", "newest"].map((id, index) => ({
+          id,
+          session_id: "session one",
+          timestamp: `2026-01-01T00:0${index}:00Z`,
+        })),
+      ),
+    );
+
+    // Ascending display order must still select the newest window, matching the
+    // server, so a long local history never renders from its oldest end.
+    const response = await getMessages(FLOW_ID, {
+      session_id: "session one",
+      order: "ASC",
+      limit: 2,
+    });
+
+    expect(response.data.map((message) => message.id)).toEqual([
+      "middle",
+      "newest",
+    ]);
+  });
+
   it("uses a distinct query key when request params change", () => {
     const { rerender } = renderHook(
       ({ sessionId }) =>
