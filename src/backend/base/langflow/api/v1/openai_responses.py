@@ -181,9 +181,9 @@ async def run_flow_for_openai_responses(
                 processed_tools = set()  # Track processed tool calls to avoid duplicates
                 previous_content = ""  # Track content already sent to calculate deltas
                 stream_usage_data = None  # Track usage from completed message
-                # Set once a ``token`` event arrives. Only then has the text of the final
+                # Set once a non-empty text token arrives. Only then has the text of the final
                 # ``state="complete"`` add_message already reached the client, so only then
-                # may that message's text be dropped. Without token events (Stream toggle
+                # may that message's text be dropped. Without text tokens (Stream toggle
                 # off, a Prompt or any other non-streaming producer feeding Chat Output) the
                 # complete message is the sole carrier of the answer.
                 tokens_streamed = False
@@ -215,9 +215,9 @@ async def run_flow_for_openai_responses(
 
                                 # Handle add_message events
                                 if event_type == "token":
-                                    tokens_streamed = True
                                     token_data = data.get("chunk", "")
-                                    if isinstance(token_data, str):
+                                    if isinstance(token_data, str) and token_data:
+                                        tokens_streamed = True
                                         previous_content += token_data
                                     await logger.adebug(
                                         "[OpenAIResponses][stream] token: token_data=%s",

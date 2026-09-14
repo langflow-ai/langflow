@@ -181,6 +181,17 @@ async def test_stream_emits_complete_message_text_exactly_once(monkeypatch: pyte
     assert _completed_usage(events) == USAGE
 
 
+async def test_stream_emits_complete_message_text_after_empty_tokens(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Empty token events deliver no text and must not suppress the completed answer."""
+    frames = [Token(""), Token(""), _ai_message(ANSWER, state="complete", usage=USAGE)]
+
+    events = await _stream(monkeypatch, frames)
+
+    assert _content(events) == ANSWER
+    assert _completed_usage(events) == USAGE
+    assert events[-1] == {"event": None, "data": None}  # [DONE]
+
+
 async def test_stream_agent_without_token_stream_emits_text_and_tool_calls(monkeypatch: pytest.MonkeyPatch) -> None:
     """Agent on a non-streaming model: partial frames carry the tool step, the answer lands on complete."""
     tool = _finished_tool()
@@ -206,8 +217,11 @@ async def test_stream_agent_without_token_stream_emits_text_and_tool_calls(monke
 async def test_stream_does_not_repeat_complete_message_after_tokens(monkeypatch: pytest.MonkeyPatch) -> None:
     frames = [
         _agent_message([], state="partial"),
+        Token(""),
         Token("OpenRAG indexes "),
+        Token(""),
         Token("3 documents."),
+        Token(""),
         _agent_message([_finished_tool(), TextContent(text=ANSWER)], state="complete"),
         _ai_message(ANSWER, state="complete", usage=USAGE),
     ]
