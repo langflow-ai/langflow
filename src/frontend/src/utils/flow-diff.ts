@@ -25,12 +25,16 @@ export type FlowChange = {
   /** What `targetId` names. Kept as fields because a Langflow edge id contains ":". */
   targetKind: "node" | "edge";
   targetId: string;
+  /** The template field a field change touched; absent for node, move and edge changes. */
+  fieldName?: string;
   badge: ChangeBadge;
   label: string;
   /** The component the change belongs to, which is what the reader chooses. */
   owner: string;
   sentence: ChangeSentence;
   detail?: { before: string; after: string };
+  /** Opaque digest of a secret's new value: lets two secrets be compared without keeping either. */
+  secretFingerprint?: string;
 };
 
 /** Every change to one component, as the dialog offers it: together or not at all. */
@@ -91,7 +95,7 @@ export const changeOwnerName = (node: AllNodeType | undefined): string => {
 const nodeTemplate = (node: AllNodeType | undefined): APITemplateType =>
   nodeInner(node).template ?? {};
 
-const isSecretEntry = (entry: InputFieldType | undefined): boolean =>
+export const isSecretEntry = (entry: InputFieldType | undefined): boolean =>
   entry?.password === true || entry?.type === "SecretStr";
 
 const fieldLabel = (entry: InputFieldType | undefined, name: string): string =>
@@ -140,6 +144,16 @@ export const renderValue = (value: unknown): string => {
   } catch {
     return String(value);
   }
+};
+
+/** FNV-1a: only ever compared in memory, never shown or stored, so collision resistance is not the goal. */
+const fingerprint = (text: string): string => {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return `${text.length}:${(hash >>> 0).toString(16)}`;
 };
 
 const isShort = (before: string, after: string): boolean =>
@@ -209,6 +223,7 @@ const diffNodeFields = (
       targetKey: `node:${next.id}`,
       targetKind: "node",
       targetId: next.id,
+      fieldName: name,
       badge: "modified",
       label,
       owner,
@@ -227,6 +242,7 @@ const diffNodeFields = (
           },
       // A secret's value must not reach the sentence or the raw view.
       detail: secret ? undefined : { before, after },
+      ...(secret && { secretFingerprint: fingerprint(after) }),
     });
   }
 };
@@ -428,7 +444,7 @@ export const isPositionOnly = (change: FlowChange): boolean =>
 
 /** What a change leaves behind, so two of them can be compared. */
 const outcomeOf = (change: FlowChange): string =>
-  `${change.id}|${change.sentence.key}|${change.detail?.after ?? ""}`;
+  `${change.id}|${change.sentence.key}|${change.detail?.after ?? change.secretFingerprint ?? ""}`;
 
 /** Every substantive outcome each component was left in, by component. */
 const outcomesByTarget = (changes: FlowChange[]): Map<string, Set<string>> => {

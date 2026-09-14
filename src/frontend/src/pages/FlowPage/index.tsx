@@ -146,7 +146,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
       // raise the dialog: navigating is not a request to open one. The banner is
       // there, and clicking it is how the person asks.
       blocker.reset?.();
-      setNoticeData({ title: t("multiEdit.banner.title") });
+      setNoticeData({ title: t("multiEdit.notice.resolveBeforeSaving") });
       return;
     }
     void saveBeforeLeaving({

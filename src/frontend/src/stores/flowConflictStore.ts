@@ -29,7 +29,7 @@ export type ConflictDetail = {
 export type FlowConflict = {
   flowId: string;
   author: ConflictAuthor;
-  /** True when the other writer is the current user — a second tab, not a colleague. */
+  /** True when the other writer is the same account (another tab, device or API key), not a colleague. */
   isSelf: boolean;
   modifiedAt: string | null;
   expectedToken: string | null;

@@ -2,12 +2,14 @@ import useFlowConflictStore from "@/stores/flowConflictStore";
 import { handleBlockedSave } from "../handle-blocked-save";
 import { FlowSaveBlockedError } from "../save-blocked-error";
 
+const mockSetNoticeData = jest.fn();
+
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
   default: {
     getState: () => ({
       setErrorData: jest.fn(),
-      setNoticeData: jest.fn(),
+      setNoticeData: mockSetNoticeData,
       setSuccessData: jest.fn(),
     }),
   },
@@ -48,6 +50,22 @@ describe("the conflict dialog never opens unbidden", () => {
     const handled = handleBlockedSave(new FlowSaveBlockedError(flowId));
 
     expect(handled).toBe(true);
+    expect(useFlowConflictStore.getState().dialogOpen).toBe(false);
+  });
+
+  it("stays silent for a background save and speaks for a clicked one", () => {
+    mockSetNoticeData.mockClear();
+
+    handleBlockedSave(new FlowSaveBlockedError(flowId));
+    expect(mockSetNoticeData).not.toHaveBeenCalled();
+
+    const handled = handleBlockedSave(new FlowSaveBlockedError(flowId), {
+      announce: true,
+    });
+    expect(handled).toBe(true);
+    expect(mockSetNoticeData).toHaveBeenCalledWith({
+      title: "multiEdit.notice.resolveBeforeSaving",
+    });
     expect(useFlowConflictStore.getState().dialogOpen).toBe(false);
   });
 

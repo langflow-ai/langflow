@@ -12,13 +12,22 @@ import { FlowSaveBlockedError } from "./save-blocked-error";
  * reassurance costs someone their work.
  *
  * Returns true when the error was a blocked save and has been handled.
+ * `announce`: a clicked Save that silently does nothing reads as broken.
  */
-export const handleBlockedSave = (error: unknown): boolean => {
+export const handleBlockedSave = (
+  error: unknown,
+  { announce = false }: { announce?: boolean } = {},
+): boolean => {
   if (!(error instanceof FlowSaveBlockedError)) return false;
 
   const { conflict } = useFlowConflictStore.getState();
   if (conflict?.flowId === error.flowId) {
-    // Handled, and deliberately silent. The conflict banner is on screen for as
+    if (announce) {
+      useAlertStore.getState().setNoticeData({
+        title: i18n.t("multiEdit.notice.resolveBeforeSaving"),
+      });
+    }
+    // Handled, and silent unless announced. The conflict banner is on screen for as
     // long as this lasts and already says what happened; a toast per refused
     // autosave would repeat it on every keystroke burst, and opening the dialog
     // would put a modal over the canvas nobody asked for. Returning true is what

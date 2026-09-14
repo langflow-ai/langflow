@@ -679,6 +679,73 @@ describe("agreeing is not disagreeing", () => {
 
     expect([...contested]).toEqual(["node:p1"]);
   });
+
+  it("contests a secret the two people set to different values", () => {
+    const base = graph([
+      node("a", "OpenAI", { api_key: { value: "sk-base", password: true } }),
+    ]);
+    const mine = graph([
+      node("a", "OpenAI", { api_key: { value: "sk-mine", password: true } }),
+    ]);
+    const theirs = graph([
+      node("a", "OpenAI", { api_key: { value: "sk-theirs", password: true } }),
+    ]);
+
+    const contested = contestedTargetKeys(
+      diffGraphs(base, mine),
+      diffGraphs(base, theirs),
+    );
+
+    expect([...contested]).toEqual(["node:a"]);
+  });
+
+  it("contests a SecretStr field set differently even without the password flag", () => {
+    const secretStr = (value: string) =>
+      graph([
+        node("a", "Custom", {
+          token: { value, type: "SecretStr" } as FieldSpec,
+        }),
+      ]);
+
+    const contested = contestedTargetKeys(
+      diffGraphs(secretStr("base"), secretStr("mine")),
+      diffGraphs(secretStr("base"), secretStr("theirs")),
+    );
+
+    expect([...contested]).toEqual(["node:a"]);
+  });
+
+  it("does not contest a secret both people set to the same value", () => {
+    const base = graph([
+      node("a", "OpenAI", { api_key: { value: "sk-base", password: true } }),
+    ]);
+    const same = graph([
+      node("a", "OpenAI", { api_key: { value: "sk-same", password: true } }),
+    ]);
+
+    const contested = contestedTargetKeys(
+      diffGraphs(base, same),
+      diffGraphs(base, same),
+    );
+
+    expect([...contested]).toEqual([]);
+  });
+
+  it("keeps a secret out of the change even while comparing it", () => {
+    const [change] = diffGraphs(
+      graph([
+        node("a", "OpenAI", { api_key: { value: "sk-base", password: true } }),
+      ]),
+      graph([
+        node("a", "OpenAI", {
+          api_key: { value: "sk-live-0123456789", password: true },
+        }),
+      ]),
+    );
+
+    expect(JSON.stringify(change)).not.toContain("sk-live-0123456789");
+    expect(JSON.stringify(change)).not.toContain("sk-base");
+  });
 });
 
 describe("a component is never labelled by its id", () => {

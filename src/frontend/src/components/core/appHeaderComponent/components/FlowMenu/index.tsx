@@ -89,7 +89,7 @@ export const MenuBar = memo((): JSX.Element => {
       .catch((error) => {
         // Announcing success over a save that was never attempted is how someone
         // walks away from a conflict believing their work is on the server.
-        handleBlockedSave(error);
+        handleBlockedSave(error, { announce: true });
       });
   };
 

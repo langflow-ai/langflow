@@ -180,4 +180,37 @@ describe("reporting what the scrubber actually removed", () => {
     expect(draft?.secretsCleared).toBe(true);
     expect(JSON.stringify(localStorage)).not.toContain("sk-live-abc123");
   });
+
+  it("should not store a SecretStr value that lacks the password flag", () => {
+    saveConflictDraft(
+      "user-1",
+      flow("flow-1", {
+        token: { value: "plain-secret-value", type: "SecretStr" } as {
+          value: unknown;
+        },
+      }),
+      "token-a",
+    );
+
+    expect(JSON.stringify(localStorage)).not.toContain("plain-secret-value");
+    expect(readConflictDraft("user-1", "flow-1")?.secretsCleared).toBe(true);
+  });
+
+  it("should keep a SecretStr field that only names a global variable", () => {
+    saveConflictDraft(
+      "user-1",
+      flow("flow-1", {
+        token: {
+          value: "MY_GLOBAL_TOKEN",
+          type: "SecretStr",
+          load_from_db: true,
+        } as { value: unknown },
+      }),
+      "token-a",
+    );
+
+    const draft = readConflictDraft("user-1", "flow-1");
+    expect(JSON.stringify(localStorage)).toContain("MY_GLOBAL_TOKEN");
+    expect(draft?.secretsCleared).toBe(false);
+  });
 });

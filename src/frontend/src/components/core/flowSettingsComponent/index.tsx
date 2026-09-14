@@ -105,10 +105,8 @@ const FlowSettingsComponent = ({
           close();
         } catch (error) {
           setIsSaving(false);
-          // "Changes saved" used to appear here for a save the store had refused
-          // to attempt, and the dialog closed over settings that were never
-          // written. Stay open, and send the person to the conflict instead.
-          if (handleBlockedSave(error)) close();
+          // Never close on a failed save: the form holds the only copy of what was typed.
+          handleBlockedSave(error, { announce: true });
         }
       };
       void persistSettings();

@@ -25,6 +25,7 @@ import { track, trackFlowBuild } from "@/customization/utils/analytics";
 import { checkFlowVersion } from "@/hooks/flows/use-check-flow-version";
 import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
 import type { GlobalVariable } from "@/types/global_variables";
+import { clearLoadRefreshes } from "@/utils/load-refreshes";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import i18n from "../i18n";
@@ -350,6 +351,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     // session — edits made on returning to it were dropped, not just undetected.
     if (flow?.id) {
       useFlowConflictStore.getState().resumeFlow(flow.id);
+      clearLoadRefreshes(flow.id);
     }
     const nodes = flow?.data?.nodes ?? [];
     const edges = flow?.data?.edges ?? [];
@@ -879,8 +881,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     const conflictedFlowId = useFlowsManagerStore.getState().currentFlowId;
     if (isEditor && conflictState.conflict?.flowId === conflictedFlowId) {
       useAlertStore.getState().setNoticeData({
-        title:
-          "This flow moved on while you were editing. Review the changes to run it.",
+        title: i18n.t("multiEdit.notice.runBlocked"),
       });
       return;
     }
@@ -896,8 +897,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         // Same rule as above: the run stops, the banner speaks, the dialog waits
         // to be asked for.
         useAlertStore.getState().setNoticeData({
-          title:
-            "This flow moved on while you were editing. Review the changes to run it.",
+          title: i18n.t("multiEdit.notice.runBlocked"),
         });
         return;
       }
@@ -907,8 +907,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         // while the canvas is being replaced races the two against each other.
         useAlertStore.getState().setNoticeData({
           title: check.author
-            ? `${check.author} updated this flow. The canvas now shows the latest version — run again to execute it.`
-            : "This flow was updated. The canvas now shows the latest version — run again to execute it.",
+            ? i18n.t("multiEdit.notice.runAdopted", { name: check.author })
+            : i18n.t("multiEdit.notice.runAdoptedUnknown"),
         });
         return;
       }

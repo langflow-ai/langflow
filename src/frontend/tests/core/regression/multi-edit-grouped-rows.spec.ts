@@ -91,12 +91,9 @@ test("two changes to one component are one row with one checkbox", async ({
   await boxes.click();
   await expect(boxes, "the row is taken as a whole").toBeChecked();
 
-  // The component name leads and its badge follows, so the list reads down its
-  // left edge rather than starting at a different column on every line.
-  const heading = (await row.locator("label").first().innerText()).replace(
-    /\s+/g,
-    " ",
-  );
+  // The component name leads and its badge follows on the row's right edge, so
+  // every badge ends in the same column.
+  const heading = (await row.innerText()).replace(/\s+/g, " ");
   const badge = heading.match(/Added|Removed|Modified/)?.[0];
   expect(badge, "the row carries one of the three change badges").toBeTruthy();
   expect(

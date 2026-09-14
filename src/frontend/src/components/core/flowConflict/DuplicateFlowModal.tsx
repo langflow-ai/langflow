@@ -31,6 +31,7 @@ import {
   groupChangesByTarget,
   siblingChangeIds,
 } from "@/utils/flow-diff";
+import { withoutLoadRefreshes } from "@/utils/load-refreshes";
 import ChangeRow from "./ChangeRow";
 import ConflictDialogFooter from "./ConflictDialogFooter";
 import type { ConflictChoice } from "./ConflictResolveRow";
@@ -101,37 +102,37 @@ export function DuplicateFlowModal() {
     submittingRef.current = false;
   };
 
-  const {
-    theirChanges,
-    myGroups,
-    theirGroups,
-    contested,
-    myGraph,
-    theirGraph,
-  } = useMemo(() => {
-    const baseFlow = useFlowsManagerStore.getState().currentFlow;
-    const live = useFlowStore.getState();
-    const base = baseFlow?.data ?? null;
-    const mine = { nodes: live.nodes, edges: live.edges };
-    const theirs = conflict?.theirFlow?.data ?? null;
+  // Keyed on dialogOpen too: the modal stays mounted, so edits made after the refusal must re-enter the diff.
+  const { theirChanges, myGroups, theirGroups, contested, theirGraph } =
+    useMemo(() => {
+      const baseFlow = useFlowsManagerStore.getState().currentFlow;
+      const live = useFlowStore.getState();
+      const base = baseFlow?.data ?? null;
+      const mine = { nodes: live.nodes, edges: live.edges };
+      const theirs = conflict?.theirFlow?.data ?? null;
+      const flowId = conflict?.flowId;
 
-    // Without the version we loaded there is no way to tell our edits from
-    // theirs, so the dialog offers nothing to merge and still duplicates.
-    const mineDiff = base ? diffGraphs(base, mine) : [];
-    const theirsDiff = base && theirs ? diffGraphs(base, theirs) : [];
+      // Without the version we loaded there is no way to tell our edits from
+      // theirs, so the dialog offers nothing to merge and still duplicates.
+      const mineDiff = base
+        ? withoutLoadRefreshes(flowId, diffGraphs(base, mine))
+        : [];
+      const theirsDiff =
+        base && theirs
+          ? withoutLoadRefreshes(flowId, diffGraphs(base, theirs))
+          : [];
 
-    return {
-      myChanges: mineDiff,
-      theirChanges: theirsDiff,
-      // One row per component: it is adopted whole or not at all, so a row per
-      // change offered checkboxes that could only ever move together.
-      myGroups: groupChangesByTarget(mineDiff),
-      theirGroups: groupChangesByTarget(theirsDiff),
-      contested: contestedTargetKeys(mineDiff, theirsDiff),
-      myGraph: mine,
-      theirGraph: theirs,
-    };
-  }, [conflict?.theirFlow]);
+      return {
+        myChanges: mineDiff,
+        theirChanges: theirsDiff,
+        // One row per component: it is adopted whole or not at all, so a row per
+        // change offered checkboxes that could only ever move together.
+        myGroups: groupChangesByTarget(mineDiff),
+        theirGroups: groupChangesByTarget(theirsDiff),
+        contested: contestedTargetKeys(mineDiff, theirsDiff),
+        theirGraph: theirs,
+      };
+    }, [conflict?.theirFlow, dialogOpen]);
 
   if (!conflict) return null;
 
@@ -215,8 +216,9 @@ export function DuplicateFlowModal() {
   };
 
   const buildMerged = () => {
+    const live = useFlowStore.getState();
     const merged = applySelectedChanges(
-      myGraph,
+      { nodes: live.nodes, edges: live.edges },
       theirGraph,
       theirChanges,
       selected,

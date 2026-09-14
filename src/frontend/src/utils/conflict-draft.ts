@@ -1,4 +1,6 @@
+import type { InputFieldType } from "@/types/api";
 import type { FlowType } from "@/types/flow";
+import { isSecretEntry } from "@/utils/flow-diff";
 import { removeApiKeys } from "@/utils/reactflowUtils";
 
 /**
@@ -29,7 +31,11 @@ const MAX_DRAFT_BYTES = 2_000_000;
 
 const key = (userId: string, flowId: string) => `lf_draft_${userId}_${flowId}`;
 
-type TemplateField = { value?: unknown };
+type TemplateField = {
+  value?: unknown;
+  load_from_db?: boolean;
+  password?: boolean;
+};
 type GraphNode = {
   id?: string;
   data?: { node?: { template?: Record<string, TemplateField> } };
@@ -65,6 +71,24 @@ const anyValueWasCleared = (
   );
 };
 
+/** `removeApiKeys` only knows `password: true`; the dialog also treats `SecretStr` as secret, and so must storage. */
+const clearRemainingSecrets = (scrubbed: FlowType): FlowType => {
+  for (const template of templatesOf(scrubbed)) {
+    for (const field of Object.values(template)) {
+      const ownedByRemoveApiKeys = field.password === true;
+      if (
+        ownedByRemoveApiKeys ||
+        field.load_from_db ||
+        !isSecretEntry(field as InputFieldType)
+      ) {
+        continue;
+      }
+      field.value = "";
+    }
+  }
+  return scrubbed;
+};
+
 /**
  * Store the draft. Never throws: a browser that refuses to store must not also
  * break the conflict dialog, which is the exit that has to keep working.
@@ -76,7 +100,7 @@ export const saveConflictDraft = (
 ): boolean => {
   if (!userId || !flow?.id) return false;
   try {
-    const scrubbed = removeApiKeys({ ...flow });
+    const scrubbed = clearRemainingSecrets(removeApiKeys({ ...flow }));
     const draft: ConflictDraft = {
       flowId: flow.id,
       userId,
