@@ -343,12 +343,19 @@ async def lock_flow_version_entry(
     session: AsyncSession,
     version_id: UUID,
     user_id: UUID | None = None,
+    *,
+    key_share: bool = False,
 ) -> bool:
-    """Lock a version until transaction end; return whether it still exists."""
+    """Lock a version until transaction end; return whether it still exists.
+
+    PostgreSQL attachments use key-share locks so they can run concurrently
+    while still excluding version deletion, which keeps the exclusive lock.
+    """
     conditions = [FlowVersion.id == version_id]
     if user_id is not None:
         conditions.append(FlowVersion.user_id == user_id)
-    if session.get_bind().dialect.name == "sqlite":
+    dialect = session.get_bind().dialect.name
+    if dialect == "sqlite":
         # SQLite ignores FOR UPDATE. A no-op write takes its transaction-wide
         # writer lock before either caller checks or changes attachments.
         result = await session.exec(
@@ -358,7 +365,10 @@ async def lock_flow_version_entry(
             .execution_options(synchronize_session=False)
         )
         return result.rowcount != 0
-    return (await session.exec(select(FlowVersion.id).where(*conditions).with_for_update())).first() is not None
+    stmt = select(FlowVersion.id).where(*conditions).with_for_update()
+    if dialect == "postgresql" and key_share:
+        stmt = stmt.with_for_update(read=True, key_share=True)
+    return (await session.exec(stmt)).first() is not None
 
 
 async def delete_flow_version_entry(

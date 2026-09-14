@@ -96,8 +96,9 @@ async def create_deployment_attachment(
     provider_snapshot_id: str,
 ) -> FlowVersionDeploymentAttachment:
     # Keep the parent alive through the attachment insert and transaction commit.
-    # A concurrent version delete uses the same lock before its deployment guard.
-    if not await lock_flow_version_entry(db, flow_version_id):
+    # PostgreSQL attachments can share this lock; version deletion takes an
+    # exclusive lock before its deployment guard and waits for attachments.
+    if not await lock_flow_version_entry(db, flow_version_id, key_share=True):
         msg = f"Version entry {flow_version_id} no longer exists; attachment cannot be created"
         raise DeploymentAttachmentConflictError(msg)
     await ensure_attachment_project_match(
