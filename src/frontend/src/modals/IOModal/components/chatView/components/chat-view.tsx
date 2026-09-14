@@ -8,6 +8,7 @@ import CustomChatInput from "@/customization/components/custom-chat-input";
 import useCustomUseFileHandler from "@/customization/hooks/use-custom-use-file-handler";
 import { track } from "@/customization/utils/analytics";
 import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
+import { LoadMoreTrigger } from "@/shared/components/load-more-trigger";
 import { ResponseCompleteStatus } from "@/shared/components/response-complete-status";
 import { useResponseCompleteCue } from "@/shared/hooks/use-response-complete-cue";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -23,6 +24,7 @@ import FlowRunningSqueleton from "../../flow-running-squeleton";
 import useDragAndDrop from "../chatInput/hooks/use-drag-and-drop";
 import ChatMessage from "../chatMessage/chat-message";
 import sortSenderMessages from "../helpers/sort-sender-messages";
+import { useOlderMessages } from "../hooks/use-older-messages";
 
 const MemoizedChatMessage = memo(ChatMessage, (prevProps, nextProps) => {
   return (
@@ -59,6 +61,10 @@ export default function ChatView({
   );
 
   const isBuilding = useFlowStore((state) => state.isBuilding);
+  const { loadMore, hasMore, isLoadingMore } = useOlderMessages(
+    currentFlowId,
+    visibleSession,
+  );
 
   const inputTypes = inputs.map((obj) => obj.type);
   const updateFlowPool = useFlowStore((state) => state.updateFlowPool);
@@ -196,16 +202,23 @@ export default function ChatView({
         >
           {chatHistory &&
             (isBuilding || chatHistory?.length > 0 ? (
-              chatHistory?.map((chat, index) => (
-                <MemoizedChatMessage
-                  chat={chat}
-                  lastMessage={chatHistory.length - 1 === index}
-                  key={chat.id}
-                  updateChat={updateChat}
-                  closeChat={closeChat}
-                  playgroundPage={playgroundPage}
+              <>
+                <LoadMoreTrigger
+                  hasMore={hasMore}
+                  isLoadingMore={isLoadingMore}
+                  onLoadMore={loadMore}
                 />
-              ))
+                {chatHistory?.map((chat, index) => (
+                  <MemoizedChatMessage
+                    chat={chat}
+                    lastMessage={chatHistory.length - 1 === index}
+                    key={chat.id}
+                    updateChat={updateChat}
+                    closeChat={closeChat}
+                    playgroundPage={playgroundPage}
+                  />
+                ))}
+              </>
             ) : (
               <div className="flex flex-grow w-full flex-col items-center justify-center">
                 <div className="flex flex-col items-center justify-center gap-4 p-8">
