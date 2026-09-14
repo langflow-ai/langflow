@@ -101,17 +101,22 @@ def build_audit_event(draft: AuditEventDraft) -> AuditEvent:
     )
 
 
-def stage_audit_event(session: AsyncSession, draft: AuditEventDraft) -> AuditEvent | None:
-    """Add a committed operation's event to the mutation's own transaction.
+async def stage_audit_event(session: AsyncSession, draft: AuditEventDraft) -> AuditEvent | None:
+    """Write a committed operation's event inside the mutation's own transaction.
 
-    Only staged: the insert rides the caller's commit, so if the event cannot be
-    written the mutation rolls back with it. Returns ``None`` when auditing is off
-    or there is no database, as under ``lfx serve``.
+    Call it after the mutation's own write. The event is flushed here so that a
+    row the database refuses fails the request while it can still roll back;
+    left to the commit at teardown, the failure surfaces after the response has
+    started. Flushing after the mutation already holds the write lock, so it never
+    becomes the read-to-write upgrade SQLite refuses under concurrency.
+
+    Returns ``None`` when auditing is off or there is no database, as under ``lfx serve``.
     """
     if not is_audit_enabled() or isinstance(session, NoopSession):
         return None
     event = build_audit_event(draft)
     session.add(event)
+    await session.flush()
     return event
 
 
