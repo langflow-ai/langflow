@@ -46,12 +46,10 @@ PUBLISHED_EVENTS = frozenset(
     }
 )
 
-REASON_VERSION_CONFLICT = "version_conflict"
+# A reason lands with the producer that writes it. Vocabulary with nothing
+# behind it reads as a promise the rows do not keep.
 REASON_PERMISSION_DENIED = "permission_denied"
-REASON_VALIDATION_ERROR = "validation_error"
-REASON_COMPONENT_ERROR = "component_error"
-REASON_TIMEOUT = "timeout"
-REASON_OVERWRITE = "overwrite"
+REASON_MOVED = "moved"
 
 
 def resource_type_of(event: str) -> str:

@@ -315,3 +315,98 @@ async def test_a_run_that_fails_without_a_valueerror_is_still_recorded(
     assert len(runs) == 1, f"run returned {response.status_code} and left {len(runs)} rows"
     assert runs[0]["result"] == "failed"
     assert runs[0]["payload"]["error_class"]
+
+
+async def test_moving_a_flow_between_projects_is_recorded(
+    client: AsyncClient,
+    logged_in_headers,
+    audit_on,  # noqa: ARG001
+):
+    """A project is a permission boundary, so a move changes who can see the flow.
+
+    The graph is untouched, which is why it went unrecorded: the update path
+    only looked at ``data``. An investigation asking "how did this flow get
+    into that project" had nothing to read.
+    """
+    flow = await _create(client, logged_in_headers)
+    project = await client.post(
+        "api/v1/projects/",
+        json={"name": f"dest-{uuid.uuid4().hex[:8]}", "description": ""},
+        headers=logged_in_headers,
+    )
+    assert project.status_code == status.HTTP_201_CREATED, project.text
+
+    response = await client.patch(
+        f"api/v1/flows/{flow['id']}",
+        json={"folder_id": project.json()["id"]},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK, response.text
+
+    entries = await _trail(client, logged_in_headers, flow["id"])
+    moves = [e for e in entries if (e["payload"] or {}).get("reason") == "moved"]
+
+    assert len(moves) == 1
+    assert moves[0]["event"] == "langflow.audit.flow.update"
+    assert moves[0]["result"] == "succeeded"
+    # No graph changed, so the summary is empty and the reason carries the meaning.
+    assert moves[0]["payload"]["changes"] == []
+
+
+async def test_a_rename_beside_a_move_still_records_only_the_move(
+    client: AsyncClient,
+    logged_in_headers,
+    audit_on,  # noqa: ARG001
+):
+    """A rename alone records nothing; a rename riding along with a move must
+    not suppress the move, and must not invent a graph change either.
+    """
+    flow = await _create(client, logged_in_headers)
+    project = await client.post(
+        "api/v1/projects/",
+        json={"name": f"dest-{uuid.uuid4().hex[:8]}", "description": ""},
+        headers=logged_in_headers,
+    )
+
+    response = await client.patch(
+        f"api/v1/flows/{flow['id']}",
+        json={"name": f"renamed-{uuid.uuid4().hex[:8]}", "folder_id": project.json()["id"]},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK, response.text
+
+    entries = await _trail(client, logged_in_headers, flow["id"])
+    updates = [e for e in entries if e["event"] == "langflow.audit.flow.update"]
+
+    assert len(updates) == 1
+    assert updates[0]["payload"]["reason"] == "moved"
+    assert updates[0]["payload"]["changes"] == []
+
+
+async def test_a_move_that_rides_along_with_a_graph_edit_records_both(
+    client: AsyncClient,
+    logged_in_headers,
+    audit_on,  # noqa: ARG001
+):
+    """One PATCH can both edit and move. The row has to say so twice over:
+    the summary names what changed, the reason says it also changed hands."""
+    flow = await _create(client, logged_in_headers)
+    project = await client.post(
+        "api/v1/projects/",
+        json={"name": f"dest-{uuid.uuid4().hex[:8]}", "description": ""},
+        headers=logged_in_headers,
+    )
+
+    response = await client.patch(
+        f"api/v1/flows/{flow['id']}",
+        json={"data": _graph("gpt-5"), "folder_id": project.json()["id"]},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK, response.text
+
+    entries = await _trail(client, logged_in_headers, flow["id"])
+    updates = [e for e in entries if e["event"] == "langflow.audit.flow.update"]
+
+    assert len(updates) == 1, "one request is one row, however many things it touched"
+    assert updates[0]["payload"]["reason"] == "moved"
+    assert updates[0]["payload"]["changes"] == ["Agent.model_name"]

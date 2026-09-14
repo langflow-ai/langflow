@@ -29,7 +29,7 @@ from langflow.api.utils import (
     strip_flow_secrets,
 )
 from langflow.services.audit.changes import summarize_flow_changes
-from langflow.services.audit.events import FLOW_CREATE, FLOW_UPDATE
+from langflow.services.audit.events import FLOW_CREATE, FLOW_UPDATE, REASON_MOVED
 from langflow.services.audit.recorder import record_audit_event
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
 from langflow.services.database.models.audit_event.model import AuditFamily, AuditResult
@@ -718,7 +718,6 @@ async def _patch_flow(
     flow: FlowUpdate,
     user_id: UUID,
     storage_service: StorageService,
-    audit_reason: str | None = None,
 ) -> FlowRead:
     """Apply a partial update (PATCH) to an existing flow and return a FlowRead.
 
@@ -796,11 +795,18 @@ async def _patch_flow(
     # A rename or a no-op save changes no graph, so there is nothing to record.
     graph_changed = "data" in update_data and update_data["data"] != db_flow.data
     graph_before = db_flow.data if graph_changed else None
+    # A project is a permission boundary: moving a flow across one changes who
+    # can see it, which is an act worth recording even though the graph is
+    # untouched. The graph is passed as its own "before" so the summary is empty
+    # and the reason carries the meaning.
+    moved = "folder_id" in update_data and update_data["folder_id"] != db_flow.folder_id
+    if moved and not graph_changed:
+        graph_before = db_flow.data
 
     _apply_update_data(db_flow, update_data)
 
-    if graph_changed:
-        await _record_flow_update(session, db_flow, graph_before, user_id, reason=audit_reason)
+    if graph_changed or moved:
+        await _record_flow_update(session, db_flow, graph_before, user_id, reason=REASON_MOVED if moved else None)
 
     # Validate fs_path if it was changed (will raise HTTPException if invalid).
     # fs_path lives under the owner's storage namespace, so the owner id

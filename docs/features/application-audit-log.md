@@ -122,6 +122,15 @@ was refused. `family` and `result` say how it ended.
 | `langflow.audit.project.replace` | action | `succeeded` · `failed` | `flows_total`, `flows_removed` |
 | any of the above | authz | `allow` · `deny` | `reason=permission_denied` |
 
+`reason` exists for the rows whose event name cannot carry the whole meaning.
+Only two values are defined, because a reason lands with the producer that writes
+it — a vocabulary the rows never use answers questions wrongly.
+
+| `reason` | On | Meaning |
+|---|---|---|
+| `moved` | `flow.update` · succeeded | The flow changed project. A project is a permission boundary, so this changes who can see the flow even when the graph is untouched — and when the graph is untouched `changes` is empty and the reason is the whole event. |
+| `permission_denied` | any event · authz/deny | A guard refused the attempt. |
+
 ---
 
 ## 4. Behavior Specifications
@@ -150,6 +159,11 @@ Feature: Application audit log
   Scenario: A rename or a no-op save records nothing
     When a flow is renamed, or saved with an identical graph
     Then no update row is written
+
+  Scenario: Moving a flow to another project is recorded
+    When a flow is moved into a different project without changing its graph
+    Then one update row exists with payload.reason "moved"
+    And payload.changes is empty, because nothing in the graph changed
 
   Scenario: A stranger cannot read someone else's trail
     When a user who does not own a flow reads its audit log
@@ -325,6 +339,7 @@ GET /api/v1/audit/{resource_type}/{resource_id}
 |---|---|
 | `flows_helpers._new_flow` | `flow.create` · action/succeeded |
 | `flows_helpers._patch_flow` | `flow.update` · action/succeeded |
+| `flows_helpers._patch_flow` (move) | `flow.update` · action/succeeded, `reason=moved`, on a change of project |
 | `flows.delete_flow` | `flow.delete` · action/succeeded |
 | `flows.delete_multiple_flows` | one `flow.delete` row per flow, not one per request |
 | `endpoints._run_flow_internal` | `flow.run` · action/succeeded or failed, with the duration, on every exit |
