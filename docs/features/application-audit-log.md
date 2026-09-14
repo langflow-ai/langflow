@@ -236,6 +236,17 @@ deleted row carried:
 Retaining event-time scope would mean storing it on every event; that is a
 schema change, not part of this delivery.
 
+## Read API: `GET /api/v1/flows/audits`
+
+The same contract as the Project view, over Flow events: `flow_id` replaces
+`project_id`, and items carry `flow_id` and `flow_name`. Flow `details` follow
+the Flow schema (`written_fields`, `project`, `attempted_fields`). A
+`project_id` parameter here is an unknown parameter and answers 400.
+
+**Access.** Requires the `flow:audit_read` permission (`FlowAction.AUDIT_READ`);
+`project:audit_read` does not grant it. Without a plugin, a non-superuser reads
+events on Flows they own and events they made; a superuser reads every Flow event.
+
 ## Invariants
 
 1. A succeeded event and its mutation commit or roll back together.
