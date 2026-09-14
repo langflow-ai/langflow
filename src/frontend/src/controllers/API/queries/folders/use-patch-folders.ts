@@ -64,6 +64,7 @@ export const usePatchFolders: useMutationFunctionType<
       // The open project is read through its own query, so a saved form has to invalidate it
       // too or the page keeps rendering the config it had before the save.
       queryClient.refetchQueries({ queryKey: ["useGetFolder"] });
+      queryClient.invalidateQueries({ queryKey: ["useGetProjectFlows"] });
     },
   });
 

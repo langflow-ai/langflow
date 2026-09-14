@@ -1,3 +1,5 @@
+/* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: DESIGN.md
+ * pre-emit critique: P4 H4 E4 S5 R5 V4 · designed-as-app */
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -10,7 +12,12 @@ import { usePatchFolders } from "@/controllers/API/queries/folders/use-patch-fol
 import { getCustomParameterTitle } from "@/customization/components/custom-parameter";
 import useAlertStore from "@/stores/alertStore";
 import type { APIClassType, InputFieldType } from "@/types/api";
-import type { ProjectConfig } from "../../entities";
+import type { ProjectConfig, ProjectSaveResult } from "../../entities";
+import {
+  AgentFlowPicker,
+  agentCandidates,
+  defaultAgent,
+} from "./components/agent-flow-picker";
 import { HarnessSummary } from "./components/harness-summary";
 import { LongTextField } from "./components/long-text-field";
 import { ProjectFlowPicker } from "./components/project-flow-picker";
@@ -49,8 +56,12 @@ const HarnessPage = ({
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const { data: projectTypes, isLoading } = useGetProjectTypesQuery();
-  const { data: projectFlows, isLoading: isLoadingFlows } =
-    useGetProjectFlowsQuery({ projectId });
+  const {
+    data: projectFlows,
+    isLoading: isLoadingFlows,
+    isError: isFlowsError,
+    refetch: refetchFlows,
+  } = useGetProjectFlowsQuery({ projectId });
   const { mutate: patchProject, isPending } = usePatchFolders();
 
   const type = useMemo(
@@ -62,7 +73,7 @@ const HarnessPage = ({
   // everywhere else. A project saved before a field existed still renders that field.
   const savedValues = useMemo(() => {
     const template = type?.template ?? {};
-    return Object.fromEntries(
+    const defaults = Object.fromEntries(
       Object.entries(template).map(([fieldName, field]) => [
         fieldName,
         projectConfig && fieldName in projectConfig
@@ -70,9 +81,14 @@ const HarnessPage = ({
           : field?.value,
       ]),
     );
-  }, [type, projectConfig]);
+    if (projectType === "agent-harness" && projectConfig?.agent_flow_id) {
+      defaults.agent_flow_id = projectConfig.agent_flow_id;
+    }
+    return defaults;
+  }, [type, projectConfig, projectType]);
 
   const [edits, setEdits] = useState<ProjectConfig>({});
+  const [lastSave, setLastSave] = useState<ProjectSaveResult | null>(null);
   const values = { ...savedValues, ...edits };
   const isDirty = Object.keys(edits).some(
     (fieldName) =>
@@ -122,6 +138,16 @@ const HarnessPage = ({
   );
 
   const flows = projectFlows ?? [];
+  const selectedAgentId =
+    typeof values.agent_flow_id === "string"
+      ? values.agent_flow_id
+      : defaultAgent(flows)?.id;
+  const candidates = agentCandidates(flows);
+  const selectedAgent = candidates.find((flow) => flow.id === selectedAgentId);
+  const agentSelectionRequired =
+    projectType === "agent-harness" &&
+    !selectedAgent &&
+    (!!selectedAgentId || candidates.length > 1);
   const pickedToolIds = toolsFieldName
     ? asStringList(values[toolsFieldName])
     : [];
@@ -154,10 +180,21 @@ const HarnessPage = ({
     patchProject(
       // Only the config. Sending the name or the description here would let a half-loaded page
       // overwrite either of them with a stale value.
-      { folderId: projectId, data: { project_config: values } },
+      {
+        folderId: projectId,
+        data: {
+          project_config: {
+            ...values,
+            ...(projectType === "agent-harness" && selectedAgentId
+              ? { agent_flow_id: selectedAgentId }
+              : {}),
+          },
+        },
+      },
       {
         onSuccess: (result) => {
           setEdits({});
+          setLastSave(result);
           // Say what the save did, not just that it happened: these values are copied onto the
           // components of the project's flows, and that is the part worth seeing.
           const flowsUpdated = (result as { flows_updated?: number })
@@ -168,8 +205,14 @@ const HarnessPage = ({
               : t("harness.saved"),
           });
         },
-        onError: () => {
-          setErrorData({ title: t("harness.saveFailed") });
+        onError: (error) => {
+          const detail = (
+            error as { response?: { data?: { detail?: unknown } } }
+          )?.response?.data?.detail;
+          setErrorData({
+            title: t("harness.saveFailed"),
+            list: typeof detail === "string" ? [detail] : undefined,
+          });
         },
       },
     );
@@ -207,10 +250,24 @@ const HarnessPage = ({
     );
   }
 
+  if (isFlowsError) {
+    return (
+      <div role="alert" className="flex flex-col items-start gap-3 py-6">
+        <p className="text-sm">{t("harness.flowsLoadFailed")}</p>
+        <Button variant="outline" size="sm" onClick={() => void refetchFlows()}>
+          {t("harness.retryFlows")}
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-0 flex-col" data-testid="harness-page">
+    <div
+      className="mx-auto flex min-h-0 w-full min-w-0 max-w-6xl flex-col"
+      data-testid="harness-page"
+    >
       {/* Stays in reach: the form runs past the viewport once a few sections are filled in. */}
-      <div className="sticky top-0 z-10 -mt-4 flex items-start justify-between gap-4 border-b border-border bg-background pb-3 pt-4">
+      <div className="sticky top-0 z-10 -mt-4 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-background py-4">
         <div className="flex min-w-0 items-start gap-2.5">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
             <ForwardedIconComponent
@@ -220,8 +277,10 @@ const HarnessPage = ({
             />
           </div>
           <div className="flex min-w-0 flex-col">
-            <span className="text-sm font-semibold">{type.display_name}</span>
-            <p className="text-xs text-muted-foreground">{type.description}</p>
+            <h1 className="text-lg font-semibold">{type.display_name}</h1>
+            <p className="text-sm text-muted-foreground">
+              {t("harness.configureAgent")}
+            </p>
           </div>
         </div>
 
@@ -238,7 +297,9 @@ const HarnessPage = ({
             size="sm"
             data-testid="harness-save-btn"
             onClick={handleSave}
-            disabled={!isDirty || isPending}
+            disabled={
+              !isDirty || isPending || isLoadingFlows || agentSelectionRequired
+            }
             loading={isPending}
           >
             {t("harness.save")}
@@ -246,18 +307,37 @@ const HarnessPage = ({
         </div>
       </div>
 
-      <div className="grid items-start gap-6 py-6 xl:grid-cols-[minmax(0,1fr)_300px]">
-        <div className="flex min-w-0 flex-col gap-4">
+      <div className="grid min-w-0 items-start gap-8 py-6 xl:grid-cols-[minmax(0,1fr)_280px]">
+        <div className="flex min-w-0 flex-col gap-6">
+          {projectType === "agent-harness" && (
+            <AgentFlowPicker
+              flows={flows}
+              value={selectedAgentId}
+              isLoading={isLoadingFlows}
+              disabled={isPending}
+              onChange={(id) =>
+                setEdits((current) => ({
+                  ...current,
+                  agent_flow_id: id,
+                  ...(toolsFieldName
+                    ? {
+                        [toolsFieldName]: pickedToolIds.filter(
+                          (toolId) => toolId !== id,
+                        ),
+                      }
+                    : {}),
+                }))
+              }
+            />
+          )}
           {sections.map(([section, fields]) => (
             <section
               key={section || "fields"}
               data-testid={`harness-section-${section || "fields"}`}
-              className="flex flex-col gap-4 rounded-xl border border-border bg-background p-4"
+              className="flex min-w-0 flex-col gap-4 border-b border-border pb-6 last:border-0"
             >
               {section && (
-                <h3 className="text-xxs font-semibold uppercase tracking-wider text-muted-foreground/70">
-                  {section}
-                </h3>
+                <h2 className="text-base font-semibold">{section}</h2>
               )}
 
               {fields.map(([fieldName, field]) => (
@@ -283,6 +363,8 @@ const HarnessPage = ({
                   LONG_TEXT_WIDGET ? (
                     <LongTextField
                       name={fieldName}
+                      label={field?.display_name ?? fieldName}
+                      disabled={isPending}
                       value={String(values[fieldName] ?? "")}
                       placeholder={field?.placeholder ?? ""}
                       onChange={(next) =>
@@ -295,8 +377,14 @@ const HarnessPage = ({
                   ) : (field as { renders?: string })?.renders ===
                     PROJECT_FLOWS_WIDGET ? (
                     <ProjectFlowPicker
-                      flows={flows}
+                      flows={flows.filter(
+                        (flow) => flow.id !== selectedAgentId,
+                      )}
                       isLoading={isLoadingFlows}
+                      disabled={
+                        isPending ||
+                        (projectType === "agent-harness" && !selectedAgent)
+                      }
                       value={asStringList(values[fieldName])}
                       onChange={(picked) =>
                         setEdits((current) => ({
@@ -324,7 +412,7 @@ const HarnessPage = ({
                       inspectionPanel={false}
                       handleNodeClass={() => {}}
                       nodeClass={syntheticNodeClass}
-                      disabled={false}
+                      disabled={isPending}
                       placeholder={field?.placeholder ?? ""}
                       isToolMode={false}
                       // No flow is open here, so provider credentials scope to the project.
@@ -337,14 +425,47 @@ const HarnessPage = ({
           ))}
         </div>
 
-        <HarnessSummary
-          className="xl:sticky xl:top-20"
-          displayName={type.display_name}
-          icon={type.icon}
-          model={modelFieldName ? values[modelFieldName] : undefined}
-          toolFlows={toolFlows}
-          details={summaryDetails}
-        />
+        <div className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-24">
+          <HarnessSummary
+            displayName={type.display_name}
+            icon={type.icon}
+            model={modelFieldName ? values[modelFieldName] : undefined}
+            toolFlows={toolFlows}
+            details={summaryDetails}
+            agentFlow={selectedAgent}
+          />
+          <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
+            {t("harness.canvasEditsKept")}
+          </div>
+          {lastSave && (
+            <div
+              role="status"
+              data-testid="harness-save-result"
+              className="flex flex-col gap-2 border-t border-border pt-4 text-sm"
+            >
+              <p className="font-medium">
+                {lastSave.flows_updated
+                  ? t("harness.savedToFlows", { count: lastSave.flows_updated })
+                  : t("harness.saved")}
+              </p>
+              {!!lastSave.fields_skipped && (
+                <p>
+                  {t("harness.fieldsKept", { count: lastSave.fields_skipped })}
+                </p>
+              )}
+              {!!lastSave.flows_locked && (
+                <p>
+                  {t("harness.lockedFlows", { count: lastSave.flows_locked })}
+                </p>
+              )}
+              {!!Object.keys(lastSave.restore_version_ids ?? {}).length && (
+                <p className="text-muted-foreground">
+                  {t("harness.restorePointCreated")}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

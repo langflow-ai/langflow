@@ -1,14 +1,18 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import type { ProjectTypeType } from "@/pages/MainPage/entities";
 import type { FlowType } from "@/types/flow";
 import HarnessPage from "../harness-page";
 
 const mockPatch = jest.fn();
 const mockSuccess = jest.fn();
+const mockError = jest.fn();
 let projectTypes: ProjectTypeType[] | undefined;
 let isLoading = false;
 let projectFlows: FlowType[] | undefined;
 let isLoadingFlows = false;
+let isFlowsError = false;
+const mockRefetchFlows = jest.fn();
 
 jest.mock("@/controllers/API/queries/folders/use-get-project-types", () => ({
   useGetProjectTypesQuery: () => ({ data: projectTypes, isLoading }),
@@ -18,6 +22,8 @@ jest.mock("@/controllers/API/queries/folders/use-get-project-flows", () => ({
   useGetProjectFlowsQuery: () => ({
     data: projectFlows,
     isLoading: isLoadingFlows,
+    isError: isFlowsError,
+    refetch: mockRefetchFlows,
   }),
 }));
 
@@ -33,7 +39,7 @@ jest.mock("@/components/common/genericIconComponent", () => ({
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
   default: (selector: (state: unknown) => unknown) =>
-    selector({ setSuccessData: mockSuccess, setErrorData: jest.fn() }),
+    selector({ setSuccessData: mockSuccess, setErrorData: mockError }),
 }));
 
 jest.mock("@/customization/components/custom-parameter", () => ({
@@ -140,7 +146,7 @@ const defaultProps = {
   projectType: "agent-harness",
 };
 
-const renderPage = (props: Partial<typeof defaultProps> & object = {}) =>
+const renderPage = (props: Partial<ComponentProps<typeof HarnessPage>> = {}) =>
   render(<HarnessPage {...defaultProps} {...props} />);
 
 beforeEach(() => {
@@ -155,6 +161,7 @@ beforeEach(() => {
     { id: "f2", name: "Send email", description: "" } as FlowType,
   ];
   isLoadingFlows = false;
+  isFlowsError = false;
 });
 
 describe("HarnessPage", () => {
@@ -376,4 +383,116 @@ describe("HarnessPage", () => {
     expect(screen.getByTestId("harness-loading")).toBeInTheDocument();
     expect(screen.queryByTestId("harness-save-btn")).not.toBeInTheDocument();
   });
+});
+
+const agentFlow = (id: string, role = "workflow") =>
+  ({
+    id,
+    name: `Agent ${id}`,
+    flow_type: role,
+    data: {
+      nodes: [{ id: `Agent-${id}`, data: { type: "Agent" } }],
+      edges: [],
+    },
+  }) as unknown as FlowType;
+
+it("saves the unique agent and excludes it from the tools picker", () => {
+  projectFlows = [agentFlow("main"), ...projectFlows!];
+  renderPage();
+  expect(screen.getByTestId("harness-agent-picker")).toHaveTextContent(
+    "Agent main",
+  );
+  expect(screen.getByTestId("flow-picker")).toHaveAttribute("data-flows", "2");
+  fireEvent.change(screen.getByTestId("input-system_prompt"), {
+    target: { value: "New instructions" },
+  });
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.calls[0][0].data.project_config.agent_flow_id).toBe(
+    "main",
+  );
+});
+
+it("requires a choice when multiple agent flows are available", () => {
+  projectFlows = [agentFlow("one"), agentFlow("two")];
+  renderPage();
+  fireEvent.change(screen.getByTestId("input-system_prompt"), {
+    target: { value: "New instructions" },
+  });
+  expect(screen.getByTestId("harness-save-btn")).toBeDisabled();
+});
+
+it("uses the A2A marked flow as a default but respects a saved choice", () => {
+  projectFlows = [agentFlow("marked", "agent"), agentFlow("chosen")];
+  const { unmount } = renderPage();
+  expect(screen.getByTestId("harness-agent-picker")).toHaveTextContent(
+    "Agent marked",
+  );
+  unmount();
+  renderPage({ projectConfig: { agent_flow_id: "chosen" } });
+  expect(screen.getByTestId("harness-agent-picker")).toHaveTextContent(
+    "Agent chosen",
+  );
+});
+
+it("requires replacing a saved agent that is no longer available", () => {
+  projectFlows = [agentFlow("available")];
+  renderPage({ projectConfig: { agent_flow_id: "moved" } });
+  fireEvent.change(screen.getByTestId("input-system_prompt"), {
+    target: { value: "New instructions" },
+  });
+  expect(
+    screen.getByText(/selected agent is no longer available/i),
+  ).toBeVisible();
+  expect(screen.getByTestId("harness-save-btn")).toBeDisabled();
+});
+
+it("keeps canvas protection and restore results visible after saving", () => {
+  mockPatch.mockImplementation((_payload, handlers) =>
+    handlers.onSuccess({
+      flows_updated: 1,
+      fields_skipped: 2,
+      flows_locked: 1,
+      restore_version_ids: { main: "version" },
+    }),
+  );
+  renderPage();
+  fireEvent.change(screen.getByTestId("input-system_prompt"), {
+    target: { value: "New instructions" },
+  });
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  const result = screen.getByTestId("harness-save-result");
+  expect(result).toHaveTextContent(/2.*canvas/i);
+  expect(result).toHaveTextContent(/locked/i);
+  expect(result).toHaveTextContent(/restore point/i);
+});
+
+it("shows the server's actionable validation error", () => {
+  mockPatch.mockImplementation((_payload, handlers) =>
+    handlers.onError({
+      response: {
+        data: {
+          detail:
+            "Flow 'Search' needs an exposed input before it can be used as a tool.",
+        },
+      },
+    }),
+  );
+  renderPage();
+  fireEvent.change(screen.getByTestId("input-system_prompt"), {
+    target: { value: "New instructions" },
+  });
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(JSON.stringify(mockError.mock.calls)).toContain(
+    "needs an exposed input",
+  );
+});
+
+it("offers a retry instead of treating a failed flow query as an empty project", () => {
+  projectFlows = undefined;
+  isFlowsError = true;
+  renderPage();
+  expect(screen.getByRole("alert")).toHaveTextContent(/could not load/i);
+  expect(screen.queryByTestId("harness-save-btn")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+  expect(mockRefetchFlows).toHaveBeenCalledTimes(1);
 });

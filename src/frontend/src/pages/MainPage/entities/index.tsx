@@ -61,6 +61,9 @@ export type AddFolderType = {
  */
 export type ProjectSaveResult = FolderType & {
   flows_updated?: number;
+  fields_skipped?: number;
+  flows_locked?: number;
+  restore_version_ids?: Record<string, string>;
 };
 
 /** A project type and the form it renders, from `GET /api/v1/projects/types`. */

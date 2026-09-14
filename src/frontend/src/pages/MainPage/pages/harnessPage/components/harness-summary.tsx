@@ -14,12 +14,11 @@ interface HarnessSummaryProps {
   /** Every other field the form holds, already formatted for reading. */
   details: { name: string; label: string; value: string }[];
   className?: string;
+  agentFlow?: FlowType;
 }
 
 const Eyebrow = ({ children }: { children: React.ReactNode }) => (
-  <span className="text-xxs font-semibold uppercase tracking-wider text-muted-foreground/70">
-    {children}
-  </span>
+  <span className="text-xs font-medium text-muted-foreground">{children}</span>
 );
 
 const modelLabel = (model: unknown): string | null => {
@@ -44,6 +43,7 @@ export const HarnessSummary = ({
   toolFlows,
   details,
   className,
+  agentFlow,
 }: HarnessSummaryProps) => {
   const { t } = useTranslation();
   const pickedModel = modelLabel(model);
@@ -53,7 +53,7 @@ export const HarnessSummary = ({
       data-testid="harness-summary"
       aria-label={t("harness.summaryTitle")}
       className={cn(
-        "flex h-fit flex-col gap-4 rounded-xl border border-border bg-background p-4",
+        "flex h-fit min-w-0 flex-col gap-5 rounded-lg border border-border bg-background p-4",
         className,
       )}
     >
@@ -72,6 +72,23 @@ export const HarnessSummary = ({
           </span>
         </div>
       </div>
+
+      {agentFlow && (
+        <div className="flex min-w-0 flex-col gap-1.5 border-b border-border pb-4">
+          <Eyebrow>{t("harness.appliesTo")}</Eyebrow>
+          <a
+            href={`/flow/${agentFlow.id}`}
+            className="flex min-w-0 items-center gap-2 rounded-sm text-sm font-medium underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <span className="truncate">{agentFlow.name}</span>
+            <ForwardedIconComponent
+              name="ArrowUpRight"
+              aria-hidden="true"
+              className="h-3.5 w-3.5 shrink-0"
+            />
+          </a>
+        </div>
+      )}
 
       <div className="flex flex-col gap-1.5">
         <Eyebrow>{t("harness.summaryModel")}</Eyebrow>
