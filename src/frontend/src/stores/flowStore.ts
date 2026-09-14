@@ -22,7 +22,6 @@ import { getGlobalVariablesQueryKey } from "@/controllers/API/helpers/global-var
 import { getSettledSuccessfulQueryData } from "@/controllers/API/helpers/query-cache";
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import { track, trackFlowBuild } from "@/customization/utils/analytics";
-import { checkFlowVersion } from "@/hooks/flows/use-check-flow-version";
 import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
 import type { GlobalVariable } from "@/types/global_variables";
 import { clearLoadRefreshes } from "@/utils/load-refreshes";
@@ -889,6 +888,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     // A save is not the only way to learn the flow moved on, and running a stale
     // one is worse than failing to save it: the result looks current and is not.
     if (isEditor && conflictedFlowId) {
+      // Imported lazily: that module reaches back into this store, and a static import made a cycle.
+      const { checkFlowVersion } = await import(
+        "@/hooks/flows/use-check-flow-version"
+      );
       const check = await checkFlowVersion(
         conflictedFlowId,
         useAuthStore.getState().userData?.id ?? null,

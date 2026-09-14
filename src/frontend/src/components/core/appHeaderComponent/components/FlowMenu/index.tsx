@@ -173,7 +173,10 @@ export const MenuBar = memo((): JSX.Element => {
                 aria-hidden="true"
                 data-testid="flow_name"
               >
-                {currentFlowName || t("flow.untitledFlow")}
+                {/* Empty while the flow loads: a placeholder name flashed on every flow switch. */}
+                {currentFlowId === undefined
+                  ? ""
+                  : currentFlowName || t("flow.untitledFlow")}
               </span>
               <IconComponent
                 name="pencil"
