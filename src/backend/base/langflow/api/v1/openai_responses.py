@@ -244,6 +244,10 @@ async def run_flow_for_openai_responses(
                 # the token event for it; an agent's interim text is republished *after* its
                 # tokens, so its delta is empty and nothing is recorded for it.
                 partial_text_ahead: dict[str, str] = {}
+                # A completion can repeat a partial answer or attach usage while other
+                # branches emit text in between. Remember each message's latest text
+                # independently of the response-wide delta baseline.
+                previous_message_text: dict[str, str] = {}
 
                 async for event_data in consume_and_yield(asyncio_queue, asyncio_queue_client_consumed):
                     if event_data is None:
@@ -509,11 +513,18 @@ async def run_flow_for_openai_responses(
                                         and text != request.input
                                         and sender_name in ["Agent", "AI"]
                                     ):
+                                        message_key = _streamed_message_key(data)
+                                        is_republished_complete = (
+                                            message_state == "complete"
+                                            and previous_message_text.get(message_key) == text
+                                        )
+                                        if text:
+                                            previous_message_text[message_key] = text
                                         # Calculate delta: only send newly generated content
-                                        if _already_delivered(text, previous_content):
-                                            # Nothing new: the text was blanked above because its id
-                                            # streamed, the frame is a text-less partial, or a message
-                                            # stored under a new id repeats what the tokens delivered.
+                                        if is_republished_complete or _already_delivered(text, previous_content):
+                                            # Nothing new: this completed snapshot was already handled,
+                                            # the text was blanked because its id streamed, the frame is
+                                            # text-less, or a new id repeats what the tokens delivered.
                                             # The baseline must survive here; letting such a frame fall
                                             # into the reset below emptied it, so the next message was
                                             # measured against nothing and re-sent the whole answer.
@@ -525,7 +536,6 @@ async def run_flow_for_openai_responses(
                                             content = text[len(previous_content) :]
                                             previous_content = text
                                             if content:
-                                                message_key = _streamed_message_key(data)
                                                 partial_text_ahead[message_key] = (
                                                     partial_text_ahead.get(message_key, "") + content
                                                 )

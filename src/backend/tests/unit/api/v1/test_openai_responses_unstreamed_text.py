@@ -212,6 +212,86 @@ async def test_stream_emits_complete_message_text_exactly_once(monkeypatch: pyte
     assert _completed_usage(events) == USAGE
 
 
+async def test_stream_deduplicates_interleaved_complete_messages(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Parallel Chat Outputs can publish another answer before the first republishes metadata."""
+    frames = [
+        _ai_message(ANSWER, state="complete"),
+        _ai_message("Other branch.", state="complete", id_=str(uuid4())),
+        _ai_message(ANSWER, state="complete", blocks=[_finished_tool()], usage=USAGE),
+    ]
+
+    events = await _stream(monkeypatch, frames)
+    added, done = _function_calls(events)
+
+    assert _deltas(events) == [ANSWER, "Other branch."]
+    assert _completed_usage(events) == USAGE
+    assert len(added) == len(done) == 1
+    assert done[0]["status"] == "completed"
+
+
+async def test_stream_deduplicates_complete_message_after_another_message_streams(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Tokens from another branch must not make an unstreamed answer eligible for republication."""
+    frames = [
+        _ai_message(ANSWER, state="complete"),
+        Token("Other "),
+        Token("branch."),
+        _ai_message(ANSWER, state="complete", usage=USAGE),
+        _agent_message([TextContent(text="Other branch.")], state="complete"),
+    ]
+
+    events = await _stream(monkeypatch, frames)
+
+    assert _deltas(events) == [ANSWER, "Other ", "branch."]
+    assert _completed_usage(events) == USAGE
+
+
+async def test_stream_deduplicates_completed_partial_after_another_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An unstreamed agent's answer can reach the client in a partial before its completion."""
+    frames = [
+        _agent_message([TextContent(text=ANSWER)], state="partial"),
+        _ai_message("Other branch.", state="complete"),
+        _agent_message([TextContent(text=ANSWER)], state="complete"),
+    ]
+
+    events = await _stream(monkeypatch, frames)
+
+    assert _deltas(events) == [ANSWER, "Other branch."]
+
+
+async def test_stream_remembers_complete_text_already_delivered_by_another_message(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A Chat Output repeating upstream tokens remains delivered after another branch writes."""
+    frames = [
+        Token(ANSWER),
+        _ai_message(ANSWER, state="complete"),
+        _ai_message("Other branch.", state="complete", id_=str(uuid4())),
+        _ai_message(ANSWER, state="complete", usage=USAGE),
+    ]
+
+    events = await _stream(monkeypatch, frames)
+
+    assert _deltas(events) == [ANSWER, "Other branch."]
+    assert _completed_usage(events) == USAGE
+
+
+async def test_stream_emits_changed_complete_text_after_another_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Remembering a completed message must not suppress changed text under the same id."""
+    frames = [
+        _ai_message("Draft answer.", state="complete"),
+        _ai_message("Other branch.", state="complete", id_=str(uuid4())),
+        _ai_message(ANSWER, state="complete"),
+        _ai_message(ANSWER, state="complete", usage=USAGE),
+    ]
+
+    events = await _stream(monkeypatch, frames)
+
+    assert _deltas(events) == ["Draft answer.", "Other branch.", ANSWER]
+    assert _completed_usage(events) == USAGE
+
+
 async def test_stream_emits_complete_message_text_after_empty_tokens(monkeypatch: pytest.MonkeyPatch) -> None:
     """Empty token events deliver no text and must not suppress the completed answer."""
     frames = [Token(""), Token(""), _ai_message(ANSWER, state="complete", usage=USAGE)]
