@@ -1505,6 +1505,8 @@
   "messages.column.timestamp": "horodatage",
   "messages.description": "Examinez, modifiez et supprimez des messages pour explorer et affiner les comportements du modèle.",
   "messages.title": "Messages",
+  "messages.loadOlder": "Charger les messages précédents",
+  "messages.loadError": "Impossible de charger les messages.",
   "misc.activateToShare": "Activez cette option pour partager une version publique de ce Playground",
   "misc.addChatInputOutput": "Ajoutez une entrée ou une sortie de chat pour accéder à votre flux",
   "misc.addChatInputOutputPlayground": "Ajoutez une entrée ou une sortie de chat pour utiliser l'espace de test",

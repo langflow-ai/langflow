@@ -1505,6 +1505,8 @@
   "messages.column.timestamp": "时间戳记",
   "messages.description": "检查、编辑和删除消息，以探索和优化模型行为。",
   "messages.title": "消息",
+  "messages.loadOlder": "加载更早的消息",
+  "messages.loadError": "无法加载消息。",
   "misc.activateToShare": "启用此功能以分享此 Playground 的公开版本",
   "misc.addChatInputOutput": "添加“聊天输入”或“聊天输出”以访问您的流程",
   "misc.addChatInputOutputPlayground": "添加“聊天输入”或“聊天输出”以使用该演示环境",
