@@ -36,6 +36,7 @@ import {
   FlowSearchProvider,
   FlowSidebarComponent,
 } from "./components/flowSidebarComponent";
+import { InstructionsContract } from "./components/instructions-contract";
 import MemoriesMainContent from "./components/MemoriesMainContent";
 import Page from "./components/PageComponent";
 import { FlowInsightsContent } from "./components/TraceComponent/FlowInsightsContent";
@@ -339,11 +340,14 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                           "rounded-xl m-2 mr-0",
                       )}
                     >
-                      <div className="h-full w-full">
-                        <FlowPageMainContent
-                          flowId={id}
-                          setIsLoading={setIsLoading}
-                        />
+                      <div className="flex h-full w-full flex-col">
+                        <InstructionsContract />
+                        <div className="min-h-0 flex-1">
+                          <FlowPageMainContent
+                            flowId={id}
+                            setIsLoading={setIsLoading}
+                          />
+                        </div>
                       </div>
                     </main>
                   </FlowSearchProvider>

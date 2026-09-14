@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import type { ProjectTypeType } from "@/pages/MainPage/entities";
 import type { FlowType } from "@/types/flow";
+import { editorDraft } from "../editor-draft";
 import HarnessPage from "../harness-page";
 
 const mockPatch = jest.fn();
@@ -578,4 +579,27 @@ it("removes a saved binding and re-enables its preserved form value", () => {
   expect(mockPatch.mock.calls[0][0].data.project_config.flow_bindings).toEqual(
     {},
   );
+});
+
+it("restores the explicit editor draft and consumes it once", () => {
+  editorDraft.keep("project-1", {
+    system_prompt: "Unsaved research instructions",
+    n_messages: 25,
+    flow_bindings: { system_prompt: instructionsBinding },
+  });
+  projectFlows = [agentFlow("main")];
+  const first = renderPage();
+  expect(screen.getByTestId("input-n_messages")).toHaveValue("25");
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.calls[0][0].data.project_config).toMatchObject({
+    system_prompt: "Unsaved research instructions",
+    n_messages: 25,
+    flow_bindings: { system_prompt: instructionsBinding },
+  });
+  first.unmount();
+  renderPage({ projectId: "project-2" });
+  expect(screen.getByTestId("input-system_prompt")).not.toHaveValue(
+    "Unsaved research instructions",
+  );
+  expect(editorDraft.get("project-1")).toEqual({});
 });

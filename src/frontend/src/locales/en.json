@@ -2459,5 +2459,20 @@
   "sharing.file.level.execute.desc": "View this file. Files do not use the Can run level.",
   "sharing.file.level.write.desc": "View and edit this file.",
   "sharing.file.level.admin.desc": "View, edit, and delete this file.",
-  "sharing.permission.for": "Permission for {{target}}"
+  "sharing.permission.for": "Permission for {{target}}",
+  "harness.openCreatedInstructionsFlow": "Open the new flow",
+  "harness.createInstructionsFlow": "Create Instructions Flow",
+  "harness.creatingInstructionsFlow": "Creating flow…",
+  "harness.instructionsBaselineHelp": "Starts with your form instructions and a working text output.",
+  "harness.createInstructionsFailed": "Could not create the Instructions flow. Try again.",
+  "harness.instructionsFlowCreated": "Flow created. Edit it on the canvas, then review and save the binding here.",
+  "harness.instructionsContract": "Instructions flow",
+  "harness.checkingInstructionsContract": "Checking output…",
+  "harness.instructionsContractUnavailable": "Could not check output",
+  "harness.instructionsContractReady": "Text output ready",
+  "harness.instructionsContractInvalid": "Output needs attention",
+  "harness.instructionsContractHelp": "Return non-empty text from a terminal output. The harness runs this flow once before each agent run; agent placeholders are resolved afterward.",
+  "harness.instructionsContractFix": "Configure required inputs and leave a System Prompt Builder’s Instructions output available. Connect any upstream work to its Instructions input.",
+  "harness.instructionsContractReview": "This checks the declared output without running the flow. Return to the harness to review changes and update the binding before the agent runs.",
+  "harness.returnToInstructions": "Back to harness instructions"
 }

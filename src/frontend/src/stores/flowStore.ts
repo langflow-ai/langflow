@@ -1187,6 +1187,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       currentFlow: {
         ...get().currentFlow!,
         data: {
+          ...get().currentFlow?.data,
           nodes: nodes ?? get().currentFlow?.data?.nodes ?? [],
           edges: edges ?? get().currentFlow?.data?.edges ?? [],
           viewport: get().currentFlow?.data?.viewport ?? {

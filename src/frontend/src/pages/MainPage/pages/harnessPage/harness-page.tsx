@@ -1,6 +1,6 @@
 /* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: DESIGN.md
  * pre-emit critique: P4 H4 E4 S5 R5 V4 · designed-as-app */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
@@ -26,6 +26,8 @@ import { HarnessSummary } from "./components/harness-summary";
 import { InstructionsFlowPicker } from "./components/instructions-flow-picker";
 import { LongTextField } from "./components/long-text-field";
 import { ProjectFlowPicker } from "./components/project-flow-picker";
+
+import { editorDraft } from "./editor-draft";
 
 interface HarnessPageProps {
   projectId: string;
@@ -94,7 +96,24 @@ const HarnessPage = ({
     return defaults;
   }, [type, projectConfig, projectType]);
 
-  const [edits, setEdits] = useState<ProjectConfig>({});
+  const [edits, setEdits] = useState<ProjectConfig>(() =>
+    editorDraft.get(projectId),
+  );
+  useEffect(() => {
+    editorDraft.clear(projectId);
+  }, [projectId]);
+  useEffect(() => {
+    if (
+      new URLSearchParams(window.location.search).get("field") ===
+        "system_prompt" &&
+      type
+    ) {
+      document
+        .getElementById("harness-field-system_prompt")
+        ?.scrollIntoView?.({ block: "center" });
+      document.getElementById("harness-field-system_prompt")?.focus();
+    }
+  }, [type]);
   const [lastSave, setLastSave] = useState<ProjectSaveResult | null>(null);
   const values = { ...savedValues, ...edits };
   const bindings = (values.flow_bindings ?? {}) as Record<string, FlowBinding>;
@@ -351,6 +370,8 @@ const HarnessPage = ({
               {fields.map(([fieldName, field]) => (
                 <div
                   key={fieldName}
+                  id={`harness-field-${fieldName}`}
+                  tabIndex={-1}
                   className="flex flex-col gap-1.5"
                   data-testid={`harness-field-${fieldName}`}
                 >
@@ -392,6 +413,8 @@ const HarnessPage = ({
                           fieldName={fieldName}
                           agentId={selectedAgentId}
                           value={bindings[fieldName]}
+                          initialValue={String(values[fieldName] ?? "")}
+                          onOpen={() => editorDraft.keep(projectId, edits)}
                           disabled={isPending}
                           onChange={(binding) =>
                             setEdits((current) => {
