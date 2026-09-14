@@ -96,7 +96,7 @@ Error codes: `PERMISSION_DENIED`, `PROJECT_NOT_FOUND`, `PROJECT_NAME_CONFLICT`,
 |---|---|
 | `resolve_audit_actor(user_id)` | Derives account and credential from the request's authentication context. A caller cannot supply them. |
 | `build_audit_event(draft)` | Validates a draft against the contract; raises `AuditContractError`. |
-| `stage_audit_event(session, draft)` | Adds a committed operation's event to the mutation's transaction. If the event cannot be written, the mutation rolls back. No-op when disabled or without a database. |
+| `stage_audit_event(session, draft)` | Writes a committed operation's event in the mutation's transaction, flushed right after the mutation's own write, so a refused event fails the request and rolls the mutation back before any response. No-op when disabled or without a database. |
 | `record_audit_event_after_rollback(draft)` | Writes a failure or denial in its own transaction, at most 4 concurrently, within 5 seconds. A storage failure is logged as an error and never raised into the already failing caller. |
 | `list_audit_events(session, filters, limit, cursor, visibility)` | Filters (OR within a field, AND across), orders by `(timestamp DESC, id DESC)`, keyset pagination, cursor bound to its filters, no total. |
 | `purge_expired_audit_events(session, retention_days)` | Deletes by age only. |
