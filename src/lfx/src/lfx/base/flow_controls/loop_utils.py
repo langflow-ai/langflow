@@ -217,8 +217,10 @@ async def execute_loop_body(
         graph: The graph containing the loop
         data_list: List of Data objects to iterate over
         loop_body_vertex_ids: Set of vertex IDs that form the loop body
-        start_vertex_id: The vertex ID of the first vertex in the loop body
-        start_edge: The edge connecting loop's item output to start vertex (contains target param info)
+        start_vertex_id: The vertex ID of the first vertex in the loop body. Only checked for presence;
+            injection targets come from every edge sharing start_edge's source output
+        start_edge: One edge out of the loop's item output. Its source vertex and output name are used
+            to find every edge from that output, so all fan-out branches receive the item
         end_vertex_id: The vertex ID that feeds back to the loop's item input
         event_manager: Optional event manager to pass to subgraph execution for UI events
 
@@ -228,6 +230,19 @@ async def execute_loop_body(
     if not loop_body_vertex_ids:
         return []
 
+    # Loop.item can fan out to several branches, so inject into every edge that
+    # shares start_edge's source output, not only the one passed in.
+    injections: list[tuple[str, str]] = []
+    if start_vertex_id and start_edge:
+        loop_vertex = graph.get_vertex(start_edge.source_id)
+        for edge in loop_vertex.outgoing_edges:
+            if edge.source_handle.name != start_edge.source_handle.name:
+                continue
+            if not hasattr(edge.target_handle, "field_name"):
+                msg = f"Edge target_handle missing field_name attribute for loop item injection: {edge}"
+                raise ValueError(msg)
+            injections.append((edge.target_id, edge.target_handle.field_name))
+
     aggregated_results = []
 
     for item in data_list:
@@ -235,19 +250,6 @@ async def execute_loop_body(
         # while sharing context between iterations (intentional for loop state).
         # Using async context manager ensures proper cleanup of trace tasks on exit.
         async with graph.create_subgraph(loop_body_vertex_ids) as iteration_subgraph:
-            # Loop.item can fan out to several branches, so inject into every edge that
-            # shares start_edge's source output, not only the one passed in.
-            injections: list[tuple[str, str]] = []
-            if start_vertex_id and start_edge:
-                loop_vertex = graph.get_vertex(start_edge.source_id)
-                for edge in loop_vertex.outgoing_edges:
-                    if edge.source_handle.name != start_edge.source_handle.name:
-                        continue
-                    if not hasattr(edge.target_handle, "field_name"):
-                        msg = f"Edge target_handle missing field_name attribute for loop item injection: {edge}"
-                        raise ValueError(msg)
-                    injections.append((edge.target_id, edge.target_handle.field_name))
-
             # Inject current item into vertex data BEFORE preparing the subgraph.
             # This ensures components have data during build/validation.
             for vertex_data in iteration_subgraph._vertices:  # noqa: SLF001
