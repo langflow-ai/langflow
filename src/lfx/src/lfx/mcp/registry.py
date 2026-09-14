@@ -97,6 +97,8 @@ def _field_description(field_name: str, field_data: dict[str, Any]) -> dict[str,
     options = field_data.get("options")
     if isinstance(options, list) and options:
         field_info["options"] = options
+    if field_data.get("conditional_options"):
+        field_info["conditional_options"] = field_data["conditional_options"]
     for flag in ("combobox", "list"):
         if field_data.get(flag):
             field_info[flag] = True
@@ -105,7 +107,11 @@ def _field_description(field_name: str, field_data: dict[str, Any]) -> dict[str,
     # a credential through discovery metadata. A load_from_db value is a global
     # variable *name*, not a default: advertising it invites the Assistant to
     # send it back as a literal, which would sever the variable binding.
-    is_secret = is_sensitive_field(field_name) or field_data.get("password") is True
+    is_secret = (
+        is_sensitive_field(field_name)
+        or field_data.get("password") is True
+        or "secret" in str(field_data.get("type", "")).lower()
+    )
     if "value" in field_data and not is_secret and not field_data.get("load_from_db"):
         field_info["default"] = field_data["value"]
 
@@ -195,7 +201,7 @@ def describe_component(registry: dict[str, dict], component_type: str) -> dict[s
                 # configure_component enforces options/range_spec on advanced
                 # fields too, so the Assistant must be able to discover them.
                 # Kept out of `fields`, which lists non-advanced fields only.
-                if fdata.get("options") or fdata.get("range_spec"):
+                if fdata.get("options") or fdata.get("conditional_options") or fdata.get("range_spec"):
                     constrained_advanced_fields.append(_field_description(fname, fdata))
             else:
                 fields.append(_field_description(fname, fdata))

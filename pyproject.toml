@@ -171,7 +171,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 bundles = [
-    "lfx-bundles[all-no-torch]>=1.1.25,<2.0",
+    "lfx-bundles[all-no-torch]>=1.1.26,<2.0",
     "lfx-arxiv>=0.1.5,<1.0.0",
     "lfx-confluent>=0.1.0,<1.0.0",
     "lfx-duckduckgo>=0.1.5,<1.0.0",
@@ -248,7 +248,7 @@ override-dependencies = [
     # Security: Force upgraded versions to prevent transitive deps from pulling older vulnerable versions
     "orjson>=3.11.6",
     "gunicorn>=25.3.0",
-    "pypdf>=6.15.0,<7.0.0",  # Force a patched pypdf 6.x release
+    "pypdf>=6.16.1,<7.0.0",  # Force a patched pypdf 6.x release
     "cryptography>=50.0.0",  # GHSA-g6cj-pr64-35w5 is fixed in 50.0.0
     "nltk>=3.10.3",
     "Markdown>=3.8.0",
