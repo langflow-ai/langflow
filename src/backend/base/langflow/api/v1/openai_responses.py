@@ -738,23 +738,26 @@ async def create_response(
         )
         return OpenAIErrorResponse(error=error_response["error"])
 
-    except ValueError as exc:
-        await logger.aerror("OpenAI Responses flow validation failed: %s", exc, exc_info=True)
-        client_error = error_for_client(exc, expose_details=expose_error_details)
-        error_response = create_openai_error(
-            message=str(client_error),
-            type_="invalid_request_error",
-            code="invalid_flow_request",
-        )
-        return OpenAIErrorResponse(error=error_response["error"])
-
     except Exception as exc:  # noqa: BLE001
-        await logger.aexception("Error processing OpenAI Responses request")
         # This route answers in the OpenAI error envelope rather than raising, so an
         # integration failure keeps its typed code and its sanitized sentence there
         # instead of being stringified through an HTTPException the client cannot read.
         integration_details = error_details_for_client(exc, expose_details=expose_error_details)
         client_error = error_for_client(exc, expose_details=expose_error_details)
+
+        # Graph.arun wraps component failures in ValueError. Only an untyped
+        # ValueError is a validation error; a wrapped integration failure must
+        # reach the status-preserving response below.
+        if isinstance(exc, ValueError) and integration_details.code is None:
+            await logger.aerror("OpenAI Responses flow validation failed: %s", exc, exc_info=True)
+            error_response = create_openai_error(
+                message=str(client_error),
+                type_="invalid_request_error",
+                code="invalid_flow_request",
+            )
+            return OpenAIErrorResponse(error=error_response["error"])
+
+        await logger.aexception("Error processing OpenAI Responses request")
 
         # Log telemetry for failed completion
         background_tasks.add_task(

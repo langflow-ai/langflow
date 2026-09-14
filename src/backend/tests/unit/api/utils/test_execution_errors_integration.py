@@ -6,6 +6,9 @@ call to action, so a rename is a breaking change for the frontend.
 
 from __future__ import annotations
 
+import traceback
+from uuid import uuid4
+
 import pytest
 from fastapi import HTTPException
 from langflow.api.utils.execution_errors import (
@@ -15,6 +18,10 @@ from langflow.api.utils.execution_errors import (
     error_for_client,
     integration_http_error,
 )
+from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.custom import Component
+from lfx.exceptions.component import ComponentBuildError
+from lfx.graph import Graph
 from lfx.integrations.errors import (
     AuthExpiredError,
     ConnectionNotAuthorizedError,
@@ -22,6 +29,9 @@ from lfx.integrations.errors import (
     RateLimitedError,
     ScopeMissingError,
 )
+from lfx.io import ConnectionRefInput, MessageTextInput, Output
+from lfx.schema.message import Message
+from lfx.services.authorization.base import ExecutionPrincipal
 
 HTTP_FORBIDDEN = 403
 HTTP_UNAUTHORIZED = 401
@@ -164,3 +174,110 @@ def test_integration_http_error_only_fires_for_integration_failures() -> None:
     assert typed.status_code == HTTP_FORBIDDEN
     assert typed.detail["error_code"] == "connection-not-authorized"
     assert typed.detail["hint"]
+
+
+class ConnectionErrorProbe(Component):
+    inputs = [MessageTextInput(name="input_value"), ConnectionRefInput(name="connection", provider="google")]
+    outputs = [Output(name="result", display_name="Result", method="resolve")]
+
+    async def resolve(self) -> Message:
+        await self.resolve_connection("connection").get_token()
+        return Message(text="resolved")
+
+
+@pytest.mark.no_blockbuster
+async def test_real_graph_connection_failure_keeps_typed_client_errors() -> None:
+    """Exercise the vertex and graph wrappers that real run/build handlers receive."""
+    chat = ChatInput(_id="chat").set(input_value="hello", should_store_message=False)
+    probe = ConnectionErrorProbe(_id="probe", connection="google/work").set(input_value=chat.message_response)
+    output = ChatOutput(_id="output").set(input_value=probe.resolve, should_store_message=False)
+    graph = Graph(start=chat, end=output, user_id=str(uuid4()))
+    graph.execution_principal = ExecutionPrincipal(kind="anonymous_public", family="workflow_public_v2")
+
+    with pytest.raises(ValueError, match="Error running graph") as caught:
+        await graph.arun(inputs=[{"input_value": "hello"}], inputs_components=[[]], types=["chat"], outputs=["output"])
+
+    graph_error = caught.value
+    vertex_error = graph_error.__cause__
+    assert isinstance(vertex_error, ComponentBuildError)
+    assert isinstance(vertex_error.__cause__, ConnectionNotAuthorizedError)
+    trace = "".join(traceback.format_exception(type(graph_error), graph_error, graph_error.__traceback__))
+
+    for expose_details in (True, False):
+        # /build receives the vertex wrapper; /run receives the additional graph wrapper.
+        for error in (vertex_error, graph_error):
+            details = error_details_for_client(error, expose_details=expose_details, stack_trace=trace)
+            assert details.code == "connection-not-authorized"
+            assert details.stack_trace == (trace if expose_details else "")
+            assert details.message == (
+                vertex_error.__cause__.safe_message if expose_details else SAFE_INTEGRATION_ERROR_MESSAGE
+            )
+            for mapped in (
+                error_for_client(error, expose_details=expose_details),
+                integration_http_error(error, expose_details=expose_details),
+            ):
+                assert isinstance(mapped, HTTPException)
+                assert mapped.status_code == HTTP_FORBIDDEN
+                assert mapped.detail == details.as_client_body()
+
+
+@pytest.mark.parametrize("chain_attribute", ["__cause__", "__context__"])
+@pytest.mark.parametrize(
+    "error",
+    [
+        AuthExpiredError(provider="google"),
+        RateLimitedError(provider="google", retry_after=12.0),
+        ScopeMissingError(frozenset({"calendar.write"}), provider="google"),
+        ConnectionUnresolvedError("google/work", provider="google"),
+    ],
+)
+def test_wrapped_integration_errors_preserve_metadata_and_redaction(error, chain_attribute) -> None:
+    wrapped = ValueError("wrapper with private component details")
+    setattr(wrapped, chain_attribute, error)
+
+    for expose_details in (True, False):
+        assert error_details_for_client(wrapped, expose_details=expose_details) == error_details_for_client(
+            error, expose_details=expose_details
+        )
+        expected = integration_http_error(error, expose_details=expose_details)
+        for mapped in (
+            integration_http_error(wrapped, expose_details=expose_details),
+            error_for_client(wrapped, expose_details=expose_details),
+        ):
+            assert isinstance(mapped, HTTPException)
+            assert mapped.status_code == expected.status_code
+            assert mapped.detail == expected.detail
+
+
+@pytest.mark.parametrize("suppression", ["from_none", "explicit_cause", "http_boundary"])
+def test_explicit_error_translation_keeps_its_existing_policy(suppression) -> None:
+    """Do not expose an integration failure a handler deliberately replaced."""
+    original = AuthExpiredError(provider="google")
+    replacement = HTTPException(status_code=404, detail="not found") if suppression == "http_boundary" else ValueError()
+    replacement.__context__ = original
+    if suppression == "from_none":
+        replacement.__suppress_context__ = True
+    elif suppression == "explicit_cause":
+        replacement.__cause__ = RuntimeError("unrelated failure")
+    else:
+        replacement.__cause__ = original
+
+    for expose_details in (True, False):
+        assert error_details_for_client(replacement, expose_details=expose_details).code is None
+        assert integration_http_error(replacement, expose_details=expose_details) is None
+        mapped = error_for_client(replacement, expose_details=expose_details)
+        if expose_details:
+            assert mapped is replacement
+        elif suppression == "http_boundary":
+            assert isinstance(mapped, HTTPException)
+            assert mapped.status_code == 404
+
+
+def test_cyclic_exception_chain_is_not_an_integration_failure() -> None:
+    error = ValueError("ordinary failure")
+    cause = RuntimeError("another failure")
+    error.__cause__ = cause
+    cause.__cause__ = error
+
+    assert error_details_for_client(error, expose_details=False).code is None
+    assert integration_http_error(error, expose_details=False) is None

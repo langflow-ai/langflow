@@ -86,6 +86,24 @@ def _integration_details(
     )
 
 
+def _find_integration_error(error: BaseException) -> IntegrationError | None:
+    """Find a typed failure through graph/vertex wrappers without undoing HTTP policy."""
+    current: BaseException | None = error
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        if isinstance(current, IntegrationError):
+            return current
+        # An HTTP error is an intentional status/body translation, including a
+        # denial masked as 404. Its underlying cause must not replace that policy.
+        if isinstance(current, HTTPException):
+            return None
+        # Follow Python's displayed chain: an explicit cause wins over context,
+        # and ``raise ... from None`` deliberately hides the preceding failure.
+        current = current.__cause__ or (None if current.__suppress_context__ else current.__context__)
+    return None
+
+
 def error_details_for_client(
     error: Exception,
     *,
@@ -94,8 +112,8 @@ def error_details_for_client(
     stack_trace: str | None = None,
 ) -> ExecutionErrorDetails:
     """Keep owner diagnostics while removing delegated/public runtime details."""
-    if isinstance(error, IntegrationError):
-        return _integration_details(error, expose_details=expose_details, stack_trace=stack_trace)
+    if (integration_error := _find_integration_error(error)) is not None:
+        return _integration_details(integration_error, expose_details=expose_details, stack_trace=stack_trace)
     if expose_details:
         return ExecutionErrorDetails(
             message=message if message is not None else str(error),
@@ -106,12 +124,8 @@ def error_details_for_client(
 
 def error_for_client(error: Exception, *, expose_details: bool) -> Exception:
     """Return an exception suitable for serializers that accept an exception object."""
-    if isinstance(error, IntegrationError):
-        # Typed, machine-readable, and safe on every path: the status comes from
-        # the error itself (403 for an unauthorized connection, 401 for expired
-        # credentials, 429 for a rate limit) rather than collapsing into a 500.
-        details = _integration_details(error, expose_details=expose_details)
-        return HTTPException(status_code=error.http_status or 400, detail=details.as_client_body())
+    if (typed := integration_http_error(error, expose_details=expose_details)) is not None:
+        return typed
     if expose_details:
         return error
     if isinstance(error, HTTPException):
@@ -131,10 +145,12 @@ def integration_http_error(error: Exception, *, expose_details: bool) -> HTTPExc
     not allowed to use: the code, the status and the call to action all disappear.
     Call this first and raise the result when it is not ``None``.
     """
-    if not isinstance(error, IntegrationError):
+    integration_error = _find_integration_error(error)
+    if integration_error is None:
         return None
-    client_error = error_for_client(error, expose_details=expose_details)
-    return client_error if isinstance(client_error, HTTPException) else None
+    # Preserve the provider's status even when graph execution wrapped its error.
+    details = _integration_details(integration_error, expose_details=expose_details)
+    return HTTPException(status_code=integration_error.http_status or 400, detail=details.as_client_body())
 
 
 def caller_owns_flow(flow: object, user: object) -> bool:

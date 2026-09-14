@@ -9,6 +9,7 @@ import pytest
 from fastapi import BackgroundTasks, HTTPException, Request
 from langflow.api.v1 import openai_responses
 from langflow.schema import OpenAIResponsesRequest
+from lfx.exceptions.component import ComponentBuildError
 from lfx.integrations.errors import AuthExpiredError, ConnectionNotAuthorizedError, RateLimitedError
 
 
@@ -64,9 +65,11 @@ async def test_openai_execute_denial_matches_missing_flow_response(monkeypatch: 
 
 
 @pytest.mark.parametrize("caller_kind", ["delegate", "owner"])
+@pytest.mark.parametrize("error_type", [RuntimeError, ValueError])
 async def test_openai_sync_error_depends_on_flow_ownership(
     monkeypatch: pytest.MonkeyPatch,
     caller_kind: str,
+    error_type: type[Exception],
 ) -> None:
     sensitive_detail = "owner-openai-provider-secret"
     owner_id = uuid4()
@@ -78,7 +81,7 @@ async def test_openai_sync_error_depends_on_flow_ownership(
     monkeypatch.setattr(
         openai_responses,
         "run_flow_for_openai_responses",
-        AsyncMock(side_effect=RuntimeError(sensitive_detail)),
+        AsyncMock(side_effect=error_type(sensitive_detail)),
     )
 
     response = await openai_responses.create_response(
@@ -94,8 +97,12 @@ async def test_openai_sync_error_depends_on_flow_ownership(
     else:
         assert response.error["message"] == "Workflow execution failed."
         assert sensitive_detail not in response.model_dump_json()
+    if error_type is ValueError:
+        assert response.error["code"] == "invalid_flow_request"
+        assert response.error["type"] == "invalid_request_error"
 
 
+@pytest.mark.parametrize("wrapped", [False, True])
 @pytest.mark.parametrize(
     ("error", "expected_status"),
     [
@@ -108,6 +115,8 @@ async def test_openai_integration_failure_keeps_its_http_status(
     monkeypatch: pytest.MonkeyPatch,
     error: Exception,
     expected_status: int,
+    *,
+    wrapped: bool,
 ) -> None:
     """A typed connection failure keeps the status ``error_for_client`` maps, in the OpenAI envelope.
 
@@ -117,7 +126,13 @@ async def test_openai_integration_failure_keeps_its_http_status(
     flow = _flow(owner_id=uuid4())
     monkeypatch.setattr(openai_responses, "get_flow_by_id_or_endpoint_name", AsyncMock(return_value=flow))
     monkeypatch.setattr(openai_responses, "ensure_flow_permission", AsyncMock())
-    monkeypatch.setattr(openai_responses, "run_flow_for_openai_responses", AsyncMock(side_effect=error))
+    execution_error = error
+    if wrapped:
+        vertex_error = ComponentBuildError("Error building component", "traceback")
+        vertex_error.__cause__ = error
+        execution_error = ValueError("Error running graph")
+        execution_error.__cause__ = vertex_error
+    monkeypatch.setattr(openai_responses, "run_flow_for_openai_responses", AsyncMock(side_effect=execution_error))
 
     response = await openai_responses.create_response(
         request=_request(str(flow.id)),
