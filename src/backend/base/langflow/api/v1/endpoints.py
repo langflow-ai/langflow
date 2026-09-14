@@ -56,7 +56,13 @@ from langflow.api.utils import (
     release_db_transaction,
 )
 from langflow.api.utils.execution_errors import caller_owns_flow as _caller_owns_flow
-from langflow.api.utils.execution_errors import error_for_client
+from langflow.api.utils.execution_errors import error_for_client, integration_http_error
+from langflow.api.utils.execution_principal import (
+    FAMILY_V1_RUN,
+    FAMILY_WEBHOOK,
+    execution_principal_for,
+    stamp_execution_principal,
+)
 from langflow.api.v1.custom_component_policy import (
     CatalogPolicyHTTPException,
     enforce_catalog_policy_for_component_type,
@@ -390,7 +396,18 @@ async def simple_run_flow(
     run_id: str | None = None,
     expose_error_details: bool = False,
     http_request: Request | None = None,
+    execution_family: str = FAMILY_V1_RUN,
+    interactive: bool | None = None,
 ):
+    """Run a flow for every v1 family that funnels through this helper.
+
+    ``execution_family`` names the caller's row in
+    ``scripts/ci/execution_principal_matrix.json`` (v1_run, webhook,
+    openai_responses, legacy_mcp, mcp_projects) and decides the identity the
+    graph resolves connections under. It is a keyword with a v1_run default so
+    an unconverted caller keeps the actor semantics it already had rather than
+    silently gaining owner credentials.
+    """
     validate_input_and_tweaks(input_request)
     policy_context_token = set_current_model_provider_policy_context(
         user_id=getattr(api_key_user, "id", None),
@@ -422,10 +439,27 @@ async def simple_run_flow(
         # flows / HITL / disabled registry / cache-miss. See ``try_warm_run_graph``.
         # Skipped entirely once the policy sanitized the graph: the warm template is built
         # from the unsanitized stored row and would reintroduce the untrusted source.
+        # The webhook family runs unattended as the published flow's owner, not as
+        # the API-key caller that authenticated the request; every other family here
+        # runs as the actor. ``execution_principal_for`` reads that off the family.
+        execution_principal = execution_principal_for(
+            execution_family,
+            user=api_key_user,
+            flow_owner_id=flow.user_id,
+            interactive=interactive,
+            end_user_id=getattr(input_request, "end_user_id", None),
+        )
         graph = (
             None
             if sanitized_flow_data is not None
-            else await try_warm_run_graph(flow, input_request, user_id=user_id, context=context, stream=stream)
+            else await try_warm_run_graph(
+                flow,
+                input_request,
+                user_id=user_id,
+                context=context,
+                stream=stream,
+                execution_principal=execution_principal,
+            )
         )
         if graph is None:
             graph_data = (sanitized_flow_data if sanitized_flow_data is not None else flow.data).copy()
@@ -441,6 +475,7 @@ async def simple_run_flow(
             graph = Graph.from_payload(
                 graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
             )
+        stamp_execution_principal(graph, execution_principal)
         # Forward the caller-supplied identifier to tracing providers without
         # affecting authn/authz. The API-key owner remains the effective user
         # for permissions, global variables, and job ownership.
@@ -597,6 +632,7 @@ async def simple_run_flow_task(
     emit_events: bool = False,
     flow_id: str | None = None,
     http_request: Request | None = None,
+    execution_family: str = FAMILY_V1_RUN,
 ):
     """Run a flow task as a BackgroundTask, therefore it should not throw exceptions.
 
@@ -613,6 +649,11 @@ async def simple_run_flow_task(
         flow_id: Flow ID for event emission (required if emit_events=True)
         http_request: The incoming HTTP request, forwarded so serving-plane end-user
             session scoping can read the trusted identity header (None to skip).
+        execution_family: Matrix family for connection resolution. It defaults to the
+            LEAST privileged option (``v1_run``, which runs as the actor); the one
+            caller that is genuinely unattended -- ``webhook_run_flow`` -- names
+            ``webhook`` explicitly. Defaulting to the owner-privileged family here
+            would silently hand a future caller the flow owner's credentials.
     """
     should_emit = emit_events and flow_id
 
@@ -643,6 +684,10 @@ async def simple_run_flow_task(
                 run_id=run_id,
                 expose_error_details=api_key_user is not None and _caller_owns_flow(flow, api_key_user),
                 http_request=http_request,
+                # Both webhook auth modes (owner row when WEBHOOK_AUTH_ENABLE is off,
+                # API-key user with ownership enforced when it is on) execute the
+                # published flow unattended on its owner's behalf.
+                execution_family=execution_family,
             )
 
         if should_emit and flow_id is not None:
@@ -754,6 +799,7 @@ async def run_flow_generator(
     *,
     expose_error_details: bool = False,
     http_request: Request | None = None,
+    execution_family: str = FAMILY_V1_RUN,
 ) -> None:
     """Executes a flow asynchronously and manages event streaming to the client.
 
@@ -770,6 +816,8 @@ async def run_flow_generator(
         expose_error_details: Whether client events may contain owner debugging details.
         http_request: The incoming HTTP request, forwarded so serving-plane end-user
             session scoping can read the trusted identity header (None to skip).
+        execution_family: Matrix family for connection resolution, forwarded to
+            ``simple_run_flow``.
 
     Events Generated:
         - "add_message": Sent when new messages are added during flow execution
@@ -782,6 +830,10 @@ async def run_flow_generator(
         - On success, sends the final result via event_manager.on_end()
         - On error, logs the error and sends it via event_manager.on_error()
         - Always sends a final None event to signal completion
+
+    Args (INT-6):
+        execution_family: Matrix family for connection resolution, forwarded to
+            ``simple_run_flow``.
     """
     try:
         result = await simple_run_flow(
@@ -793,6 +845,7 @@ async def run_flow_generator(
             context=context,
             expose_error_details=expose_error_details,
             http_request=http_request,
+            execution_family=execution_family,
         )
         event_manager.on_end(data={"result": result.model_dump()})
         await client_consumed_queue.get()
@@ -1030,6 +1083,11 @@ async def _run_flow_internal(
         if "not found" in str(exc):
             http_error = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
             raise error_for_client(http_error, expose_details=expose_error_details) from exc
+        # A connection the caller may not use is not a server fault: keep the
+        # typed body and the provider's status (403/401/429) instead of flattening
+        # it into a 500 whose message a client cannot act on.
+        if (typed := integration_http_error(exc, expose_details=expose_error_details)) is not None:
+            raise typed from exc
         client_error = error_for_client(exc, expose_details=expose_error_details)
         raise APIException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1069,6 +1127,11 @@ async def _run_flow_internal(
                 run_id=run_id,
             ),
         )
+        # A connection the caller may not use is not a server fault: keep the
+        # typed body and the provider's status (403/401/429) instead of flattening
+        # it into a 500 whose message a client cannot act on.
+        if (typed := integration_http_error(exc, expose_details=expose_error_details)) is not None:
+            raise typed from exc
         client_error = error_for_client(exc, expose_details=expose_error_details)
         raise APIException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1405,6 +1468,10 @@ async def webhook_run_flow(
                 emit_events=has_ui_listeners,
                 flow_id=flow_id_str,
                 http_request=request,
+                # The only unattended caller of this task: a published webhook runs
+                # as the flow's owner, so the owner's connection must carry the
+                # per-connection non-interactive opt-in.
+                execution_family=FAMILY_WEBHOOK,
             )
         )
         # Fire-and-forget: log exceptions but don't block
@@ -1584,6 +1651,16 @@ async def experimental_run_flow(
             client_error = error_for_client(exc, expose_details=expose_error_details)
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(client_error)) from exc
 
+    # v1.advanced is grouped under the v1_run family: the actor is the API-key
+    # caller (which may be a share holder, not the owner). Stamp unconditionally,
+    # so a graph revived from the session cache -- whose pickled state deliberately
+    # omits the principal -- carries this request's identity rather than
+    # ``unknown()`` (which would deny every connection) or a stale one.
+    stamp_execution_principal(
+        graph,
+        execution_principal_for(FAMILY_V1_RUN, user=api_key_user, flow_owner_id=flow.user_id),
+    )
+
     # Graph execution below can run for minutes; end any request transaction
     # opened by dependency resolution so it does not pin a pooled connection
     # (Postgres: idle-in-transaction) for the whole run (#14445).
@@ -1615,6 +1692,11 @@ async def experimental_run_flow(
             if expose_error_details:
                 raise
             raise error_for_client(exc, expose_details=expose_error_details) from exc
+        # Same rule as the /run terminal handler: a connection the caller may not
+        # use keeps its typed body and the provider's status. Stringifying it here
+        # would lose the error_code and the 403/401/429 this route shares with /run.
+        if (typed := integration_http_error(exc, expose_details=expose_error_details)) is not None:
+            raise typed from exc
         client_error = error_for_client(exc, expose_details=expose_error_details)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(client_error)) from exc
 

@@ -43,6 +43,21 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | `DictInput` / `NestedDictInput` | `lfx.io` |
 | `FileInput` / `LinkInput` | `lfx.io` |
 | `HandleInput` | `lfx.io` |
+| `ConnectionInput` (legacy Composio connection flow) | `lfx.inputs` |
+| `ConnectionRefInput` (portable host-resolved reference) | `lfx.io` |
+
+### Integrations
+
+| Symbol | Source |
+| --- | --- |
+| `ConnectionRef` / `ResolvedCredential` / `CredentialLease` | `lfx.integrations` |
+| `ConnectionResolutionRequest` / `ConnectionStatus` | `lfx.integrations` |
+| `IntegrationError` and typed subclasses / `INTEGRATION_ERROR_CODES` | `lfx.integrations` |
+| `normalize_integration_error()` / `register_error_normalizer()` | `lfx.integrations` |
+| `IntegrationProvider` / `OAuthProfile` / `IntegrationCapability` / `ScopeSet` | `lfx.integrations` |
+| `integration_action()` | `lfx.integrations` |
+| `Component.resolve_connection(field_name)` | `lfx.custom.custom_component.component.Component` |
+| `BaseConnectionResolverService`, `ConnectionAccessPolicy` | `lfx.services.connection` |
 
 ### Outputs
 
@@ -71,6 +86,8 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | Manifest schema (`extension.json` / `[tool.langflow.extension]`) | `lfx.extension.manifest.ExtensionManifest` |
 | `BundleRef` (one entry in optional `bundles[]`; bundle names must be unique) | `lfx.extension.manifest.BundleRef` |
 | `ProviderManifestEntry` (one entry in the optional `providers[]`) | `lfx.extension.manifest.ProviderManifestEntry` |
+| `IntegrationManifestRef` entries in optional `integrations[]` | `lfx.extension.manifest.IntegrationManifestRef` |
+| `IntegrationCapabilityManifest` (bundle-owned versioned provider catalog) | `lfx.integrations.IntegrationCapabilityManifest` |
 | `LfxCompat` (declared as `manifest.lfx`) | `lfx.extension.manifest.LfxCompat` |
 | `BUNDLE_API_VERSION` (the integer this lfx ships) | `lfx.extension.manifest` |
 | `EXTENSION_SCHEMA_URL` / `SCHEMA_VERSION` | `lfx.extension.manifest` |
@@ -89,6 +106,7 @@ Component IDs at runtime are `ext:<bundle>:<Class>@<slot>`.
 | `discover_inline_bundles()` | `lfx.extension.loader` |
 | `discover_installed_extensions()` / `discover_seed_extensions()` / `discover_all_extensions()` | `lfx.extension.discovery` |
 | `LoadedComponent` | `lfx.extension.loader` (frozen dataclass; what the registry stores) |
+| `LoadedIntegration` | `lfx.extension.loader` (validated capability metadata for discovery and policy) |
 | `LoadResult` | `lfx.extension.loader` |
 | `SLOT_OFFICIAL` / `SLOT_EXTRA` | `lfx.extension.loader` |
 
@@ -97,8 +115,8 @@ Component IDs at runtime are `ext:<bundle>:<Class>@<slot>`.
 | Symbol | Source |
 | --- | --- |
 | `reload_bundle(registry, bundle_name)` | `lfx.extension.reload` |
-| `BundleRegistry` | `lfx.extension.bundle_registry` |
-| `BundleRecord` | `lfx.extension.bundle_registry` |
+| `BundleRegistry` (`list_components()`, `list_integrations()`) | `lfx.extension.bundle_registry` |
+| `BundleRecord` (components plus validated integration metadata) | `lfx.extension.bundle_registry` |
 | `ReloadInProgressError` | `lfx.extension.bundle_registry` |
 | `POST /api/v1/extensions/{id}/bundles/{name}/reload` | `langflow.api.v1.extensions` |
 
@@ -187,9 +205,93 @@ the deserialize half is covered by
 
 ## Changelog
 
+### 2026-09-14 — Actionable connection authorization denials
+
+- `ConnectionNotAuthorizedError.reason` and `details.reason` identify the denial.
+  The optional `reason` argument additionally accepts `anonymous-principal`,
+  `unknown-principal`, and `non-interactive-opt-in-required`, each with a safe,
+  actionable hint. The existing `principal` and `provider` reasons, error code,
+  and HTTP 403 status are preserved. Owner/share authorization is checked before
+  reporting a missing opt-in; credentials are never read for a denied request.
+  This is additive; `BUNDLE_API_VERSION` remains `1`.
+
+### 2026-09-10 — Integration identity ownership and runtime floors
+
+- The bundle registry rejects duplicate integration provider IDs, capability IDs,
+  and policy keys across providers or bundles with `integration-identity-conflict`.
+  Policy keys may group actions within one provider. Startup reports rejected
+  bundles, and reload validates before swapping modules or registry metadata.
+- Integration references require `lfx>=1.13.0.dev0`. The loader and validator
+  report `lfx-version-too-old` before schema parsing on older runtimes. CI checks
+  every declaring bundle's runtime dependency against the same feature floor;
+  `scripts/ci/sync_bundle_lfx_pin.py 1.13.0` remains the floor update mechanism.
+  Manifests without integrations retain their existing behavior.
+
 ### v0 (this release)
 
+- **Owner-only route families on the execution principal (additive).**
+  `ExecutionPrincipal.allow_explicit_shares` is a new field defaulting to `True`,
+  so every family that already honored explicit shares keeps doing so. Route
+  families whose admission never admits a delegated caller (the legacy MCP
+  transports) stamp it `False`, and a host resolver that evaluates share grants
+  must skip its share branch for those principals. The portable deny floor in
+  `BaseConnectionResolverService.authorize_principal` is unchanged in behavior:
+  it admits a share only when the host passes `explicit_share_authorized`, and
+  its docstring now states that a host must never authorize a share for a
+  principal with this flag set to `False`. Additive for bundles and
+  resolvers alike; `BUNDLE_API_VERSION` remains `1`.
+
+- **Optional rejected-token digest for connection refresh.**
+  `ConnectionResolutionRequest.rejected_token_digest` carries a SHA-256 digest only
+  after a provider rejects a cached credential. `CredentialLease` supplies it on
+  its single reactive retry so a host can coordinate replacement across workers
+  without transferring token material. Existing request construction and resolver
+  implementations remain compatible; `BUNDLE_API_VERSION` remains `1`.
+
+- **Bundle-owned integration capability manifests (additive).**
+  `ExtensionManifest.integrations[]` now carries `IntegrationManifestRef`
+  values (`provider_id`, owning `bundle`, relative JSON `path`). The referenced
+  `IntegrationCapabilityManifest` is versioned with `schema_version=1` and
+  declares authentication profiles plus executable actions, required and
+  conditional scopes, policy keys, substrate, maturity, deployment contexts,
+  risk, and execution targets. The loader validates bundle ownership and
+  provider identity and exposes the parsed catalog as `LoadedIntegration` in
+  `LoadResult.integrations` and retains it in `BundleRecord.integrations` for
+  process-wide discovery and policy reads through
+  `BundleRegistry.list_integrations()`. Manifests that omit `integrations`
+  still load with an empty list; `BUNDLE_API_VERSION` remains `1`.
+  Capability paths require a lowercase `.json` suffix in both the runtime
+  validator and exported schema. Multi-bundle loading registers extension-wide
+  model providers only after every bundle validates and loads successfully.
+
+- Enforced the unreleased connection resolver contract through a final `resolve`
+  entry point. Hosts now implement `_get_access_policy` and `_resolve`; ownership
+  and non-interactive/share checks run before credential access. Required scopes
+  reject unverified credentials with a typed diagnostic. Resolution failures carry
+  fixed reason codes and actionable guidance without raw credential values or
+  exception chains. `run_flow` now activates its injected variables and environment
+  policy for credential lookups, restoring the prior scope after execution.
+  No previously released API changes; `BUNDLE_API_VERSION` remains 1.
+- Added the `credential-undecryptable` `ConnectionUnresolvedReason`, raised when
+  a stored credential exists but cannot be decrypted (for example after the server
+  secret key changed). It keeps that case distinct from a missing credential, and
+  its guidance tells the user to reconnect. Code that matches on reason values
+  should handle the new value. Additive to the unreleased connection contract;
+  `BUNDLE_API_VERSION` remains 1.
 - Initial surface enumerated above.  Frozen as `BUNDLE_API_VERSION = 1`.
+- Added the provider-neutral connection-reference, resolver, capability,
+  integration-error, and telemetry contracts used by dedicated integration
+  bundles. This is an additive surface change and does not change
+  `BUNDLE_API_VERSION`.
+- Hardened the new connection contracts before their first release: integration
+  exports load lazily; `ScopeSet.covers` requires an explicit `provider` and shares
+  normalization with resolvers through `ScopeSet.missing`; leases activate
+  conditional scopes and support pre-run construction. Malformed credentials
+  produce sanitized typed errors; wrapped HTTP failures preserve their status,
+  and ambiguous 403s no longer claim missing scopes. The authorization floor
+  accepts an optional host-verified `explicit_share_authorized` decision for
+  actor ownership mismatches without bypassing other denies. No previously
+  released Bundle API signature changes; `BUNDLE_API_VERSION` remains 1.
 - `ExtensionManifest.version` now accepts the canonical PEP 440 stable, dev,
   alpha, beta, and release-candidate forms emitted by the repository's bundle
   release pipeline, in addition to the existing SemVer 2.0.0 forms.  Runtime

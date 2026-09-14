@@ -194,6 +194,8 @@ export const lazyIconsMapping = {
     import("@/icons/FacebookMessenger").then((mod) => ({
       default: mod.FBIcon,
     })),
+  Figranium: () =>
+    import("@/icons/Figranium").then((mod) => ({ default: mod.FigraniumIcon })),
   Firecrawl: () =>
     import("@/icons/Firecrawl").then((mod) => ({ default: mod.FirecrawlIcon })),
   Finage: () =>
