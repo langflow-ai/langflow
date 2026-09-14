@@ -429,7 +429,9 @@ class TestRawParamsInjection:
 
         # Mock edge with field_name
         mock_edge = MagicMock()
+        mock_edge.target_id = "start_vertex"
         mock_edge.target_handle.field_name = "input_data"
+        mock_graph.get_vertex.return_value.outgoing_edges = [mock_edge]
 
         # Execute loop body
         await execute_loop_body(

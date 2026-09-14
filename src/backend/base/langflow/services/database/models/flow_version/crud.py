@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from lfx.log import logger
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlmodel import col, delete, func, select
+from sqlmodel import col, delete, func, select, update
 
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.flow_version.exceptions import (
@@ -339,13 +339,35 @@ async def has_deployment_attachments(
     return False
 
 
+async def lock_flow_version_entry(
+    session: AsyncSession,
+    version_id: UUID,
+    user_id: UUID | None = None,
+) -> bool:
+    """Lock a version until transaction end; return whether it still exists."""
+    conditions = [FlowVersion.id == version_id]
+    if user_id is not None:
+        conditions.append(FlowVersion.user_id == user_id)
+    if session.get_bind().dialect.name == "sqlite":
+        # SQLite ignores FOR UPDATE. A no-op write takes its transaction-wide
+        # writer lock before either caller checks or changes attachments.
+        result = await session.exec(
+            update(FlowVersion)
+            .where(*conditions)
+            .values(id=FlowVersion.id)
+            .execution_options(synchronize_session=False)
+        )
+        return result.rowcount != 0
+    return (await session.exec(select(FlowVersion.id).where(*conditions).with_for_update())).first() is not None
+
+
 async def delete_flow_version_entry(
     session: AsyncSession,
     version_id: UUID,
     user_id: UUID,
 ) -> None:
-    entry = await get_flow_version_entry(session, version_id, user_id)
-    if not entry:
+    # Serialize the deployment guard and delete with attachment creation.
+    if not await lock_flow_version_entry(session, version_id, user_id):
         msg = f"Version entry {version_id} not found"
         raise FlowVersionNotFoundError(msg)
 
@@ -356,5 +378,9 @@ async def delete_flow_version_entry(
         )
         raise FlowVersionDeployedError(msg)
 
-    await session.delete(entry)
+    # The entry can disappear after the preflight reads under concurrent DELETEs.
+    result = await session.exec(delete(FlowVersion).where(FlowVersion.id == version_id, FlowVersion.user_id == user_id))
+    if result.rowcount == 0:
+        msg = f"Version entry {version_id} not found"
+        raise FlowVersionNotFoundError(msg)
     await session.flush()
