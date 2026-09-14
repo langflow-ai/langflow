@@ -9,6 +9,7 @@ real input on a real component.
 import pytest
 from lfx.components.models_and_agents.agent import AgentComponent
 from lfx.inputs.inputs import StrInput
+
 from lfx.projects import (
     CORE_PROJECT_TYPES,
     DEFAULT_PROJECT_TYPE,
@@ -92,6 +93,7 @@ class TestAgentHarness:
             "model",
             "tools",
             "n_messages",
+            "hooks",
             "tool_policy",
             "context_strategy",
             "context_turns",
@@ -116,9 +118,9 @@ class TestAgentHarness:
         """A node-sized one-line input with a modal is the wrong shape for the main field."""
         assert harness.to_template()["system_prompt"]["renders"] == "long_text"
 
-    def test_only_those_two_fields_need_a_widget_from_the_page(self, harness):
+    def test_visible_fields_use_the_available_page_widgets(self, harness):
         """Everything else must render with a shipped canvas widget, or the form is bespoke."""
-        bespoke = {f.name: f.renders for f in harness.fields if f.renders}
+        bespoke = {f.name: f.renders for f in harness.fields if f.renders and f.input.show}
 
         assert bespoke == {"system_prompt": "long_text", "tools": "project_flows"}
 

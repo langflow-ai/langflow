@@ -228,6 +228,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             value="[]",
             advanced=True,
             show=False,
+            override_skip=True,
             info="Ordered Hook flow bindings managed by the harness.",
         ),
         IntInput(

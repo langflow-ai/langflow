@@ -1,7 +1,7 @@
 """The harness contracts shared with future project types.
 
 Registration publishes vocabulary, not runtime support. In particular, the custom loop,
-hooks, permissions, and compaction flows still need runtime adapters.
+permissions, and compaction flows still need runtime adapters.
 Instructions and Hook publish executable baselines.
 """
 

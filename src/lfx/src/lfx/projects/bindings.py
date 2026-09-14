@@ -92,16 +92,24 @@ def reject_recursive_binding(flows: list[dict], target_id: str, agent_id: str) -
 
     def visit(flow_id: str, active: set[str]) -> None:
         if flow_id == agent_id or flow_id in active:
-            msg = "The Instructions flow contains a recursive flow reference."
+            msg = "The bound flow contains a recursive flow reference."
             raise ValueError(msg)
         if flow_id in visited or flow_id not in by_id:
             return
         active = active | {flow_id}
         for node in (by_id[flow_id].get("data") or {}).get("nodes", []):
             data = node.get("data", {})
+            template = data.get("node", {}).get("template", {})
+            if data.get("type") == "Agent":
+                hooks = json.loads(template.get("hook_bindings", {}).get("value") or "[]")
+                if not isinstance(hooks, list):
+                    msg = "Agent hook bindings must be a list."
+                    raise ValueError(msg)
+                for binding in hooks:
+                    reference = {key: binding[key] for key in FlowBinding.model_fields if key in binding}
+                    visit(FlowBinding.model_validate(reference).flow_id, active)
             if data.get("type") not in {"RunFlow", "SubFlow"}:
                 continue
-            template = data.get("node", {}).get("template", {})
             selected_id = template.get("flow_id_selected", {}).get("value")
             selected_name = template.get("flow_name_selected", template.get("flow_name", {})).get("value")
             for target in [selected_id] if selected_id else by_name.get(selected_name, []):

@@ -10,13 +10,12 @@ from typing import TYPE_CHECKING
 from fastapi import HTTPException
 from lfx.base.agents.harness import HarnessRuntimeConfig
 from lfx.log.logger import logger
-from lfx.projects import DEFAULT_PROJECT_TYPE, apply_project_config, get_project_type
 from lfx.projects.bindings import (
-    FlowBinding,
     compose_instructions,
     reject_recursive_binding,
-    validate_instruction_binding,
 )
+from lfx.projects.flow_slots import BINDING_LABELS, ProjectFlowBindings, validate_project_binding
+from lfx.projects.hooks import compose_hooks
 from lfx.projects.tools import agent_node_ids, compose_tools
 from sqlmodel import col, select
 
@@ -24,6 +23,7 @@ from langflow.services.database.models.flow.guards import LockedFlowError, ensur
 from langflow.services.database.models.flow.model import Flow, FlowType
 from langflow.services.database.models.flow_version.crud import create_flow_version_entry
 from langflow.services.database.models.flow_version.model import FlowVersion
+from lfx.projects import DEFAULT_PROJECT_TYPE, apply_project_config, get_project_type
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -137,6 +137,27 @@ async def _restore_point(session: AsyncSession, flow: Flow) -> str | None:
         return None
 
 
+async def _binding_version(session: AsyncSession, source: Flow, field_name: str) -> str:
+    """A required source snapshot; request-supplied version IDs are never trusted."""
+    version = (
+        await session.exec(
+            select(FlowVersion)
+            .where(FlowVersion.flow_id == source.id, FlowVersion.user_id == source.user_id)
+            .order_by(col(FlowVersion.version_number).desc())
+            .limit(1)
+        )
+    ).first()
+    if version is None or version.data != source.data:
+        version = await create_flow_version_entry(
+            session,
+            source.id,
+            source.user_id,
+            data=deepcopy(source.data),
+            description=f"Harness {BINDING_LABELS[field_name]} binding",
+        )
+    return str(version.id)
+
+
 async def write_project_config_to_flows(
     session: AsyncSession, project: Folder, *, previous_config: dict | None = None
 ) -> ProjectConfigWrite:
@@ -169,6 +190,7 @@ async def write_project_config_to_flows(
     tools = []
     instruction_target = None
     instruction_binding = None
+    bindings = ProjectFlowBindings()
     if project_type.name == "agent-harness":
         try:
             runtime = HarnessRuntimeConfig.model_validate(config)
@@ -194,27 +216,34 @@ async def write_project_config_to_flows(
             tools = selected_tools(flows, agent, config["tools"])
         if agent is not None:
             config["agent_flow_id"] = str(agent.id)
-        bindings = config.get("flow_bindings", {})
-        if not isinstance(bindings, dict) or set(bindings) - {"system_prompt"}:
-            raise HTTPException(422, "Only Instructions currently supports a flow binding.")
-        if "system_prompt" in bindings:
+        try:
+            bindings = ProjectFlowBindings.model_validate(config.get("flow_bindings", {}))
+        except ValueError as exc:
+            raise HTTPException(
+                422, "Invalid flow bindings. Choose an Instructions output or a list of Hook bindings."
+            ) from exc
+        sources = {str(flow.id): flow for flow in flows if not flow.is_component}
+        for field_name, binding in bindings.entries():
             try:
-                instruction_binding = FlowBinding.model_validate(bindings["system_prompt"])
-                instruction_target = next(
-                    (flow for flow in flows if str(flow.id) == instruction_binding.flow_id and not flow.is_component),
-                    None,
-                )
-                if instruction_target is None or agent is None:
-                    msg = "Choose an agent and an Instructions flow in this project."
+                source = sources.get(binding.flow_id)
+                if source is None or agent is None:
+                    msg = "Choose an agent and a compatible flow in this project."
                     raise ValueError(msg)
                 reject_recursive_binding(
                     [{"id": str(flow.id), "name": flow.name, "data": flow.data} for flow in flows],
-                    str(instruction_target.id),
+                    str(source.id),
                     str(agent.id),
                 )
-                validate_instruction_binding(instruction_target.data, instruction_binding)
+                validate_project_binding(field_name, source.data, binding)
             except (ValueError, KeyError, TypeError) as exc:
-                raise HTTPException(422, f"Could not bind Instructions: {exc}") from exc
+                raise HTTPException(422, f"Could not bind {BINDING_LABELS[field_name]}: {exc}") from exc
+        # Validate the entire set before creating any required source snapshots.
+        for field_name, binding in bindings.entries():
+            binding.version_id = await _binding_version(session, sources[binding.flow_id], field_name)
+        if "flow_bindings" in config:
+            config["flow_bindings"] = bindings.model_dump(exclude_unset=True, exclude_none=True)
+        instruction_binding = bindings.system_prompt
+        instruction_target = sources.get(instruction_binding.flow_id) if instruction_binding else None
 
     applied = config.get("_applied", {})
     applied = deepcopy(applied) if isinstance(applied, dict) else {}
@@ -238,30 +267,6 @@ async def write_project_config_to_flows(
         applied[flow_id] = write.applied_values
         data = write.data
         if project_type.name == "agent-harness":
-            if instruction_binding is not None:
-                # Preserve the exact source definition. A later source edit must be reviewed
-                # and rebound; execution checks the revision rather than silently drifting.
-                version = (
-                    await session.exec(
-                        select(FlowVersion)
-                        .where(
-                            FlowVersion.flow_id == instruction_target.id,
-                            FlowVersion.user_id == project.user_id,
-                        )
-                        .order_by(col(FlowVersion.version_number).desc())
-                        .limit(1)
-                    )
-                ).first()
-                if version is None or version.data != instruction_target.data:
-                    version = await create_flow_version_entry(
-                        session,
-                        instruction_target.id,
-                        project.user_id,
-                        data=deepcopy(instruction_target.data),
-                        description="Harness Instructions binding",
-                    )
-                instruction_binding = instruction_binding.model_copy(update={"version_id": str(version.id)})
-                config["flow_bindings"] = {"system_prompt": instruction_binding.model_dump()}
             try:
                 data = compose_instructions(
                     data,
@@ -274,6 +279,12 @@ async def write_project_config_to_flows(
                 )
             except (ValueError, KeyError, TypeError) as exc:
                 raise HTTPException(422, f"Could not bind Instructions: {exc}") from exc
+            try:
+                data = compose_hooks(
+                    data, project_id=str(project.id), agent_id=agent_node_ids(data)[0], bindings=bindings.hooks
+                )
+            except (ValueError, KeyError, TypeError) as exc:
+                raise HTTPException(422, f"Could not bind Hooks: {exc}") from exc
         if project_type.name == "agent-harness" and "tools" in config:
             try:
                 data = compose_tools(

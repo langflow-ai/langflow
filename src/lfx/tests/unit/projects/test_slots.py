@@ -176,6 +176,7 @@ def test_registered_vocabulary_does_not_claim_unbuilt_baseline_flows():
         "model",
         "tools",
         "n_messages",
+        "hooks",
         "tool_policy",
         "context_strategy",
         "context_turns",
