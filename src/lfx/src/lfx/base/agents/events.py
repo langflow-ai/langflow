@@ -526,6 +526,8 @@ async def process_agent_events(
                     "context_prepared": "Context prepared",
                     "compacted": "Conversation compacted",
                     "permission_decision": "Tool permission decided",
+                    "hook_completed": "Hook completed",
+                    "hook_failed": "Hook failed",
                 }.get(kind)
                 if title:
                     if agent_message.content_blocks is None:

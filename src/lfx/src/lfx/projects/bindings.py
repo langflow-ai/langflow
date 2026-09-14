@@ -32,6 +32,11 @@ def flow_revision(data: dict) -> str:
 
 def instruction_outputs(data: dict) -> list[dict]:
     """Eligible declared terminals. Graph parsing is deliberately component-free."""
+    return contract_outputs(data, {"str", "Text"})
+
+
+def contract_outputs(data: dict, output_types: set[str]) -> list[dict]:
+    """Inspect declared terminal types and configured inputs without loading component code."""
     from lfx.graph.graph.base import Graph
 
     graph = Graph.from_payload(deepcopy(data), instantiate_components=False, emit_extension_events=False)
@@ -60,7 +65,7 @@ def instruction_outputs(data: dict) -> list[dict]:
                 "display_name": f"{vertex.display_name} · {output.get('display_name', output['name'])}",
             }
             for output in vertex.outputs
-            if output.get("types") and set(output["types"]) <= {"str", "Text"}
+            if output.get("types") and set(output["types"]) <= output_types
         )
     return choices
 

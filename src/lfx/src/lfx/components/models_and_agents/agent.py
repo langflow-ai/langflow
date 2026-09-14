@@ -222,6 +222,14 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             show=True,
         ),
         *[set_advanced_true(inp) for inp in harness_runtime_inputs() if inp.name != "max_iterations"],
+        MultilineInput(
+            name="hook_bindings",
+            display_name="Reviewed hook flows",
+            value="[]",
+            advanced=True,
+            show=False,
+            info="Ordered Hook flow bindings managed by the harness.",
+        ),
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -690,6 +698,15 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                 msg = "Tool approvals are unavailable with structured output. Use Agent message output to review calls."
                 raise ValueError(msg)
             middleware.append(ToolApprovalMiddleware(interrupt_on, policy=policy.tool_policy))
+        from lfx.components.models_and_agents.agent_helpers.hook_middleware import (
+            HarnessHookMiddleware,
+            parse_hook_bindings,
+        )
+
+        if hooks := parse_hook_bindings(getattr(self, "hook_bindings", "[]")):
+            # Hooks surround retries and context middleware. Argument changes happen
+            # before permission review; failed controlling hooks cannot be retried away.
+            middleware.insert(0, HarnessHookMiddleware(self, hooks))
         return middleware
 
     async def run_agent(self, agent) -> Message:
@@ -970,7 +987,9 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         output_schema = getattr(self, "output_schema", None) or []
         has_tools = bool(self.tools)
         uses_context_middleware = (
-            getattr(self, "context_strategy", "all") != "all" or getattr(self, "compaction", "off") != "off"
+            getattr(self, "context_strategy", "all") != "all"
+            or getattr(self, "compaction", "off") != "off"
+            or getattr(self, "hook_bindings", "[]").strip() not in {"", "[]"}
         )
 
         async def _run_agent_for_fallback(augmented_prompt: str) -> str:
