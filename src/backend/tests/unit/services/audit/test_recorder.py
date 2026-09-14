@@ -196,3 +196,27 @@ async def test_recording_stages_the_row_and_writes_nothing_of_its_own(session, a
 
     staged = [obj for obj in session.new if isinstance(obj, AuditEvent)]
     assert len(staged) == 1, "the row is still pending, waiting on the caller's own commit"
+
+
+async def test_an_absent_payload_is_sql_null_not_the_json_string_null(session, audit_on):  # noqa: ARG001
+    """This table is read with SQL by whoever is investigating.
+
+    A JSON column stores ``None`` as the JSON string "null" by default, which is
+    not SQL NULL — so ``where payload is not null`` matches every row and hides
+    the ones that actually carry detail. Reading it through the ORM cannot show
+    this, because both forms come back as ``None``.
+    """
+    await record_audit_event(session, event=FLOW_UPDATE, family=AuditFamily.ACTION, result=AuditResult.SUCCEEDED)
+    await record_audit_event(
+        session,
+        event=FLOW_UPDATE,
+        family=AuditFamily.ACTION,
+        result=AuditResult.SUCCEEDED,
+        payload={"changes": ["Agent.model_name"]},
+    )
+    await session.flush()
+
+    carrying = (
+        await session.exec(sa.text("select count(*) from audit_events where payload is not null"))
+    ).scalar_one()
+    assert carrying == 1, "only the row with a payload is counted as having one"

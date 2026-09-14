@@ -87,7 +87,12 @@ class AuditEvent(SQLModel, table=True):  # type: ignore[call-arg]
     user_id: UUIDstr | None = Field(default=None, sa_column=Column(sa.Uuid(), nullable=True))
     resource_type: str = Field(nullable=False)
     resource_id: UUIDstr | None = Field(default=None, sa_column=Column(sa.Uuid(), nullable=True))
-    payload: dict | None = Field(default=None, sa_column=Column(sa.JSON))
+    # ``none_as_null`` because this table is read with SQL by whoever is
+    # investigating, and the default stores an absent payload as the JSON string
+    # "null" — which is not SQL NULL, so ``where payload is not null`` returns
+    # every row. Other JSON columns here keep the default; none of them is a
+    # table an operator queries by hand.
+    payload: dict | None = Field(default=None, sa_column=Column(sa.JSON(none_as_null=True)))
 
 
 def as_utc(value: datetime) -> datetime:
