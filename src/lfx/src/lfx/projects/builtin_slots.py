@@ -2,7 +2,7 @@
 
 Registration publishes vocabulary, not runtime support. In particular, the custom loop,
 permissions, and compaction flows still need runtime adapters.
-Instructions and Hook publish executable baselines.
+Instructions, Hook, and ContextManager publish executable baselines.
 """
 
 from lfx.projects.registry import register_slot
@@ -21,7 +21,7 @@ SYSTEM_PROMPT_BUILDER = register_slot(
     SlotDefinition("SystemPromptBuilder", "str", FireTiming.ONCE_PER_RUN, default_flow_ref="builtin:instructions"),
 )
 CONTEXT_MANAGER = register_slot(
-    SlotDefinition("ContextManager", "DataFrame", FireTiming.PER_LLM_CALL),
+    SlotDefinition("ContextManager", "DataFrame", FireTiming.PER_LLM_CALL, default_flow_ref="builtin:context"),
 )
 COMPACTOR = register_slot(
     SlotDefinition("Compactor", "CompactionResult", FireTiming.ON_THRESHOLD),

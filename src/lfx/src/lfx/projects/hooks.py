@@ -1,17 +1,16 @@
 """Resolve and invoke reviewed Hook flows through the existing flow executor."""
 
 import json
-from contextvars import ContextVar
 from copy import deepcopy
 
 from pydantic import TypeAdapter
 
 from lfx.base.agents.hooks import HookBinding, HookDecision, HookSourceChangedError
 from lfx.projects.bindings import contract_outputs, flow_revision
+from lfx.projects.invocation import ReviewedFlowRunner
 
 HOOK_EVENT_CONTEXT = "harness_hook_event"
 HOOK_ORIGIN = "_harness_hooks"
-_ACTIVE_HOOKS: ContextVar[tuple[str, ...]] = ContextVar("active_harness_hooks", default=())
 
 
 def compose_hooks(data: dict, *, project_id: str, agent_id: str, bindings: list[HookBinding]) -> dict:
@@ -130,69 +129,25 @@ def validate_hook_binding(data: dict, binding: HookBinding) -> None:
 
 
 class HookFlowRunner:
-    """Resolve through Run Flow's identity/sibling rules and retain one definition per run.
-
-    Each invocation builds a fresh graph from that definition. Event data lives only in
-    graph context. It cannot rewrite component code, credentials, or saved input values.
-    """
+    """Invoke a Hook contract through the shared reviewed-flow resolver."""
 
     def __init__(self, component):
         self.component = component
-        self.definitions = {}
+        self.runner = ReviewedFlowRunner(component, validate=validate_hook_binding, label="Hook")
 
     async def __call__(self, binding: HookBinding, payload: dict) -> HookDecision:
-        active = _ACTIVE_HOOKS.get()
-        if binding.flow_id in active:
-            msg = "A Hook flow cannot recursively invoke itself."
-            raise ValueError(msg)
-        token = _ACTIVE_HOOKS.set((*active, binding.flow_id))
-        try:
-            return await self._invoke(binding, payload)
-        finally:
-            _ACTIVE_HOOKS.reset(token)
-
-    async def _invoke(self, binding: HookBinding, payload: dict) -> HookDecision:
-        from lfx.base.tools.run_flow import _model_provider_policy
-        from lfx.components.flow_controls.run_flow import RunFlowComponent
-        from lfx.graph.graph.base import Graph
-        from lfx.helpers.flow import run_flow
-
-        key = (binding.flow_id, binding.revision)
-        if key not in self.definitions:
-            resolver = RunFlowComponent(_user_id=self.component.user_id)
-            resolver._vertex = self.component._vertex  # noqa: SLF001
-            source = await resolver.get_flow(flow_id_selected=binding.flow_id)
-            data = source.data.get("data", {})
-            validate_hook_binding(data, binding)
-            self.definitions[key] = deepcopy(data)
-        data = self.definitions[key]
-        validate_hook_binding(data, binding)
         parent = self.component.graph
-        context = {
-            HOOK_EVENT_CONTEXT: {
-                "event": binding.on_event,
-                "payload": deepcopy(payload),
-                "run_id": str(parent.run_id) if parent else None,
-                "session_id": getattr(parent, "session_id", None),
+        value = await self.runner(
+            binding,
+            {
+                HOOK_EVENT_CONTEXT: {
+                    "event": binding.on_event,
+                    "payload": payload,
+                    "run_id": str(parent.run_id) if parent else None,
+                    "session_id": getattr(parent, "session_id", None),
+                },
             },
-            "project_dir": (parent.context or {}).get("project_dir") if parent else None,
-        }
-        async with _model_provider_policy(user_id=self.component.user_id, flow_id=binding.flow_id, flow_name=None):
-            graph = Graph.from_payload(
-                deepcopy(data), flow_id=binding.flow_id, user_id=self.component.user_id, context=context
-            )
-            await run_flow(
-                graph=graph,
-                inputs={},
-                user_id=self.component.user_id,
-                output_type="any",
-                session_id=getattr(parent, "session_id", None),
-            )
-        vertex = graph.get_vertex(binding.node_id)
-        if not vertex.built or vertex.custom_component is None:
-            msg = "The Hook flow did not produce its selected output."
-            raise ValueError(msg)
-        value = vertex.custom_component.get_output(binding.output_name).value
+        )
         if not isinstance(value, HookDecision):
             msg = "The Hook flow must return a HookDecision, not a display artifact."
             raise TypeError(msg)

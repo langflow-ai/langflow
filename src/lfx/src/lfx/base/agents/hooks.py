@@ -105,7 +105,7 @@ class HookExecutor:
                 evidence.update(kind="hook_failed", error_type=type(exc).__name__, on_failure=binding.on_failure)
                 if isinstance(exc, HookSourceChangedError):
                     evidence["reason"] = "The Hook flow changed. Review it and update the binding."
-                elif isinstance(exc, TimeoutError):
+                elif isinstance(exc, (TimeoutError, asyncio.TimeoutError)):
                     evidence["reason"] = "The Hook flow exceeded its configured timeout."
                 await self.emit(evidence)
                 if binding.on_failure == "stop":

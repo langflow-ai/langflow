@@ -8,6 +8,8 @@ from lfx.components._importing import import_mod
 if TYPE_CHECKING:
     from lfx.components.models_and_agents.a2a_agent import A2AAgentComponent
     from lfx.components.models_and_agents.agent import AgentComponent
+    from lfx.components.models_and_agents.agent_context import AgentContextComponent
+    from lfx.components.models_and_agents.context_manager import ContextManagerComponent
     from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
     from lfx.components.models_and_agents.hook import HookComponent
     from lfx.components.models_and_agents.hook_event import HookEventComponent
@@ -21,6 +23,8 @@ if TYPE_CHECKING:
 _dynamic_imports = {
     "A2AAgentComponent": "a2a_agent",
     "AgentComponent": "agent",
+    "AgentContextComponent": "agent_context",
+    "ContextManagerComponent": "context_manager",
     "EmbeddingModelComponent": "embedding_model",
     "HookComponent": "hook",
     "HookEventComponent": "hook_event",
@@ -35,6 +39,8 @@ _dynamic_imports = {
 __all__ = [
     "A2AAgentComponent",
     "AgentComponent",
+    "AgentContextComponent",
+    "ContextManagerComponent",
     "EmbeddingModelComponent",
     "HookComponent",
     "HookEventComponent",
