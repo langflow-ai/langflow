@@ -44,7 +44,7 @@ async def _stored(session) -> list[AuditEvent]:
 async def test_a_staged_event_commits_with_the_mutation(audit_session, audit_enabled):  # noqa: ARG001
     before = datetime.now(timezone.utc)
 
-    staged = stage_audit_event(audit_session, project_patch_draft())
+    staged = await stage_audit_event(audit_session, project_patch_draft())
     await audit_session.commit()
 
     [row] = await _stored(audit_session)
@@ -54,22 +54,29 @@ async def test_a_staged_event_commits_with_the_mutation(audit_session, audit_ena
     assert row.timestamp.replace(tzinfo=timezone.utc) >= before.replace(microsecond=0)
 
 
+async def test_a_staged_event_is_written_before_the_commit(audit_session, audit_enabled):  # noqa: ARG001
+    staged = await stage_audit_event(audit_session, project_patch_draft())
+
+    assert staged in audit_session
+    assert staged not in audit_session.new
+
+
 async def test_a_staged_event_disappears_when_the_mutation_rolls_back(audit_session, audit_enabled):  # noqa: ARG001
-    stage_audit_event(audit_session, project_patch_draft())
+    await stage_audit_event(audit_session, project_patch_draft())
     await audit_session.rollback()
 
     assert await _stored(audit_session) == []
 
 
 async def test_nothing_is_staged_when_auditing_is_off(audit_session, audit_disabled):  # noqa: ARG001
-    assert stage_audit_event(audit_session, project_patch_draft()) is None
+    assert await stage_audit_event(audit_session, project_patch_draft()) is None
     await audit_session.commit()
 
     assert await _stored(audit_session) == []
 
 
-def test_a_stateless_runtime_stages_nothing_and_does_not_raise(audit_enabled):  # noqa: ARG001
-    assert stage_audit_event(NoopSession(), project_patch_draft()) is None
+async def test_a_stateless_runtime_stages_nothing_and_does_not_raise(audit_enabled):  # noqa: ARG001
+    assert await stage_audit_event(NoopSession(), project_patch_draft()) is None
 
 
 @pytest.mark.parametrize(
@@ -153,7 +160,7 @@ async def test_a_non_uuid_jwt_subject_is_stored(audit_session, audit_enabled):  
         acting_issuer="https://idp.example/realms/acme",
         acting_subject="auth0|65f2c9e1b7",
     )
-    stage_audit_event(audit_session, project_patch_draft(actor=actor))
+    await stage_audit_event(audit_session, project_patch_draft(actor=actor))
     await audit_session.commit()
 
     [row] = await _stored(audit_session)
