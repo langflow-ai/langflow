@@ -77,6 +77,24 @@ async def _assert_resolution(resolver: PolicyResolver, principal: ExecutionPrinc
         (ExecutionPrincipal(kind="actor", user_id="user-1", interactive=True), "user", "user-2", False, False),
         (ExecutionPrincipal(kind="flow_owner", user_id="user-1"), "user", "user-1", False, False),
         (ExecutionPrincipal(kind="flow_owner", user_id="user-1"), "user", "user-1", True, True),
+        # INT-6: owner-only families still resolve their OWN rows; allow_explicit_shares
+        # only governs the host's share branch, which the portable floor never reaches.
+        (
+            ExecutionPrincipal(kind="actor", user_id="user-1", interactive=True, allow_explicit_shares=False),
+            "user",
+            "user-1",
+            False,
+            True,
+        ),
+        (
+            ExecutionPrincipal(kind="actor", user_id="user-1", interactive=True, allow_explicit_shares=False),
+            "user",
+            "user-2",
+            False,
+            False,
+        ),
+        # INT-6: anonymous/public execution never reaches an instance credential either.
+        (ExecutionPrincipal(kind="anonymous_public", family="workflow_public_v2"), "instance", None, True, False),
     ],
 )
 async def test_portable_principal_authorization_floor(
@@ -92,6 +110,40 @@ async def test_portable_principal_authorization_floor(
         )
     )
     await _assert_resolution(resolver, principal, allowed=allowed)
+
+
+@pytest.mark.parametrize(
+    ("principal", "reason", "hint_term", "policy_reads"),
+    [
+        (ExecutionPrincipal(kind="anonymous_public"), "anonymous-principal", "authenticated run route", 0),
+        (ExecutionPrincipal.unknown(), "unknown-principal", "execution identity", 0),
+        (
+            ExecutionPrincipal(kind="flow_owner", user_id="user-1"),
+            "non-interactive-opt-in-required",
+            "allow_non_interactive",
+            1,
+        ),
+        # A mismatched principal must not learn the foreign connection's opt-in state.
+        (ExecutionPrincipal(kind="flow_owner", user_id="user-2"), "principal", "owned or explicitly shared", 1),
+    ],
+)
+async def test_denial_explains_the_remedy_without_reading_credentials(
+    principal: ExecutionPrincipal, reason: str, hint_term: str, policy_reads: int
+) -> None:
+    resolver = PolicyResolver(ConnectionAccessPolicy(owner_kind="user", connection_owner_id="user-1"))
+
+    with pytest.raises(ConnectionNotAuthorizedError) as caught:
+        await resolver.resolve(_request(principal))
+
+    error = caught.value
+    assert error.code == "connection-not-authorized"
+    assert error.http_status == 403
+    assert error.reason == reason
+    assert hint_term in error.hint
+    assert "user-1" not in str(error)
+    assert "google/work" not in str(error)
+    assert resolver.policy_reads == policy_reads
+    assert resolver.credential_reads == 0
 
 
 def test_configured_resolver_with_wrong_base_fails_closed() -> None:

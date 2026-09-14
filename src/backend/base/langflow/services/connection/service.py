@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -75,6 +76,46 @@ _MAX_SHARE_CANDIDATES = 50
 _CREDENTIAL_FREE_STATUSES = frozenset(
     {PersistedConnectionStatus.PENDING.value, PersistedConnectionStatus.REVOKED.value}
 )
+
+
+async def _audit_resolution_denial(
+    request: ConnectionResolutionRequest,
+    *,
+    row: Connection | None,
+    error: IntegrationError,
+) -> None:
+    """Record a refused connection resolution, best effort.
+
+    Resolution happens deep inside a graph run -- often on a worker with no
+    request -- so this must never turn a denial into a crash. ``audit_decision``
+    is a no-op unless ``AUTHZ_AUDIT_ENABLED``. ``details.resource`` says
+    ``integration_connection`` because ``connection`` already names an
+    SSO/directory connection in the Enterprise audit projection.
+    """
+    if not isinstance(error, ConnectionNotAuthorizedError):
+        return
+    try:
+        from langflow.services.authorization.audit import audit_decision
+
+        user_id = None
+        if request.principal.user_id is not None:
+            with contextlib.suppress(ValueError):
+                user_id = UUID(str(request.principal.user_id))
+        await audit_decision(
+            user_id=user_id,
+            action="execute",
+            obj=f"connection:{row.id}" if row is not None else f"connection:{request.ref.to_handle()}",
+            result="deny",
+            details={
+                "resource": "integration_connection",
+                "provider": request.ref.provider,
+                "execution_family": request.principal.family,
+                "execution_principal_kind": request.principal.kind,
+                "interactive": request.principal.interactive,
+            },
+        )
+    except Exception:  # noqa: BLE001 - audit must never break a resolution decision
+        logger.debug("connection resolution denial audit failed", exc_info=True)
 
 
 class ConnectionConflictError(ValueError):
@@ -391,12 +432,40 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         user_id = _principal_user_id(request.principal)
         async with session_scope() as session:
             row = await self._owned_or_instance_row(session, request.ref, user_id)
-            if row is not None:
-                return _access_policy(row, explicit_share_authorized=False)
-            shared = await self._authorized_share(session, request, user_id)
-        if shared is None:
+            explicit_share = row is None
+            if explicit_share:
+                row = await self._authorized_share(session, request, user_id)
+        if row is None:
             raise ConnectionUnresolvedError(request.ref.to_handle(), provider=request.ref.provider)
-        return _access_policy(shared, explicit_share_authorized=True)
+        policy = _access_policy(row, explicit_share_authorized=explicit_share)
+        await self._refuse_denied_policy(request, row=row, policy=policy)
+        return policy
+
+    async def _refuse_denied_policy(
+        self,
+        request: ConnectionResolutionRequest,
+        *,
+        row: Connection,
+        policy: ConnectionAccessPolicy,
+    ) -> None:
+        """Raise, audited, when the floor or the instance hook refuses this row.
+
+        The base class applies the same floor after this hook returns, but a host
+        cannot observe that denial, so evaluating it here is what records it.
+        """
+        error = BaseConnectionResolverService.authorize_principal(
+            self,
+            request,
+            connection_owner_id=policy.connection_owner_id,
+            owner_kind=policy.owner_kind,
+            allow_non_interactive=policy.allow_non_interactive,
+            explicit_share_authorized=policy.explicit_share_authorized,
+        )
+        if error is None and row.ownership_mode == ConnectionOwnershipMode.INSTANCE.value:
+            error = await self.authorize_instance_connection(request, row=row)
+        if error is not None:
+            await _audit_resolution_denial(request, row=row, error=error)
+            raise error
 
     async def _resolve(
         self, request: ConnectionResolutionRequest, policy: ConnectionAccessPolicy
@@ -411,18 +480,24 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 raise ConnectionUnresolvedError(request.ref.to_handle(), provider=request.ref.provider)
             # Fail closed if ownership or the non-interactive opt-in changed
             # after the base class authorized the policy.
-            if _access_policy(row, explicit_share_authorized=policy.explicit_share_authorized) != policy:
-                raise ConnectionNotAuthorizedError(provider=request.ref.provider)
+            drifted = _access_policy(row, explicit_share_authorized=policy.explicit_share_authorized) != policy
             resolution_error = None
-            try:
-                credential = await self._credential_from_row(
-                    session, row=row, rejected_token_digest=request.rejected_token_digest
-                )
-            except IntegrationError as exc:
-                # A rotating refresh token may already have been exchanged. Keep
-                # that encrypted update; the base class checks scopes only after
-                # this transaction commits, so narrowed scopes keep it as well.
-                resolution_error = exc
+            if not drifted:
+                try:
+                    credential = await self._credential_from_row(
+                        session, row=row, rejected_token_digest=request.rejected_token_digest
+                    )
+                except IntegrationError as exc:
+                    # A rotating refresh token may already have been exchanged. Keep
+                    # that encrypted update; the base class checks scopes only after
+                    # this transaction commits, so narrowed scopes keep it as well.
+                    resolution_error = exc
+        if drifted:
+            # Audited once the row lock is released: a durable audit write would
+            # otherwise wait on this transaction under SQLite.
+            denial = ConnectionNotAuthorizedError(provider=request.ref.provider)
+            await _audit_resolution_denial(request, row=row, error=denial)
+            raise denial
         if resolution_error is not None:
             raise resolution_error
         return credential
@@ -493,7 +568,15 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         principal = request.principal
         # Shares satisfy only an actor's owner mismatch, and only on route
         # families that permit shares; every other principal is owner-only.
-        if principal.kind != "actor" or principal.family not in _SHARE_PERMITTING_FAMILIES or user_id is None:
+        # Owner-only families (the legacy MCP transports) also clear
+        # allow_explicit_shares: they never admit a delegated caller, so a share
+        # must not be a wider grant through them than through its own route.
+        if (
+            principal.kind != "actor"
+            or principal.family not in _SHARE_PERMITTING_FAMILIES
+            or not principal.allow_explicit_shares
+            or user_id is None
+        ):
             return None
         settings = get_settings_service()
         authz = get_authorization_service()
@@ -544,6 +627,27 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         # incidental database order.
         return authorized[0] if len(authorized) == 1 else None
 
+    async def authorize_instance_connection(
+        self,
+        request: ConnectionResolutionRequest,
+        *,
+        row: Connection,
+    ) -> IntegrationError | None:
+        """Decide whether this principal may reference an INSTANCE-owned connection.
+
+        The 1.13 default is the portable floor and nothing more: any principal
+        except ``anonymous_public``/``unknown`` (already refused upstream) may
+        resolve an instance row. Recorded in
+        ``design/dedicated-integrations/decisions/instance-connection-referenceability.md``.
+
+        This is the seam an integration-policy service (INT-7) overrides to
+        narrow referenceability -- an approved-provider ceiling, a per-tenant
+        allowlist, or a ``referenceable`` flag. Returning an ``IntegrationError``
+        denies; returning ``None`` allows.
+        """
+        _ = (request, row)
+        return None
+
     async def _check_row_credential(
         self,
         session: AsyncSession,
@@ -564,8 +668,12 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
             principal=principal,
             required_scopes=required_scopes,
         )
-        is_foreign_user_row = row.ownership_mode == ConnectionOwnershipMode.USER.value and str(row.owner_id) != str(
-            principal.user_id
+        is_foreign_user_row = (
+            row.ownership_mode == ConnectionOwnershipMode.USER.value
+            and str(row.owner_id) != str(principal.user_id)
+            # Owner-only families never widen the floor for a share, even when
+            # the host authorization service would have approved one.
+            and principal.allow_explicit_shares
         )
         policy = _access_policy(row, explicit_share_authorized=is_foreign_user_row)
         denial = BaseConnectionResolverService.authorize_principal(
@@ -577,6 +685,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
             explicit_share_authorized=policy.explicit_share_authorized,
         )
         if denial is not None:
+            await _audit_resolution_denial(request, row=row, error=denial)
             raise denial
         credential = await self._credential_from_row(session, row=row)
         missing = ScopeSet.missing(
