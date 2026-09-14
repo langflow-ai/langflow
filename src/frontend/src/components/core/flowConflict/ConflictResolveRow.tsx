@@ -184,17 +184,12 @@ export function ConflictResolveRow({
             </div>
           )}
           <div className="min-w-0 flex-1">
-            {/* Name, then what it needs, then the sentence — the badge sits
-                with the component it describes rather than on the far edge. */}
+            {/* The name and its sentence share this column; the badge sits on
+                the right edge with the chevron, lined up with every other. */}
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-[13px] font-semibold leading-[19.5px] text-foreground">
                 {theirs.label}
               </span>
-              {!resolved && (
-                <Badge variant="conflictContested" size="change">
-                  {t("multiEdit.badge.actionRequired")}
-                </Badge>
-              )}
               <span className="text-[13px] leading-[19.5px] text-muted-foreground">
                 {t("multiEdit.dialog.conflictDescription")}
               </span>
@@ -216,6 +211,15 @@ export function ConflictResolveRow({
               </p>
             )}
           </div>
+          {!resolved && (
+            <Badge
+              variant="conflictContested"
+              size="change"
+              className="mt-0.5 shrink-0"
+            >
+              {t("multiEdit.badge.actionRequired")}
+            </Badge>
+          )}
           <AccordionPrimitive.Trigger asChild>
             <button
               type="button"

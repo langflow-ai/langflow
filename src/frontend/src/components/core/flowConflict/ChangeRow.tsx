@@ -147,12 +147,6 @@ export function ChangeRow({
             className="flex flex-wrap items-center gap-2 text-[13px] font-medium leading-[19.5px] text-secondary-foreground"
           >
             <span className="truncate">{group.label}</span>
-            {/* Beside the name, not out on the right edge: the design pairs the
-                badge with the component it describes. Both sides carry it —
-                what changed is as worth stating for my own rows as for theirs. */}
-            <Badge variant={BADGE_VARIANT[group.badge]} size="change">
-              {t(`multiEdit.badge.${group.badge}`)}
-            </Badge>
           </label>
           <ul className="pt-0.5">
             {group.changes.map((change) => (
@@ -160,6 +154,17 @@ export function ChangeRow({
             ))}
           </ul>
         </div>
+        {/* On the right edge rather than trailing the name, so every badge ends
+            in the same column and the list can be scanned down one side. Both
+            sides carry it: what changed is as worth stating for my own rows as
+            for theirs. */}
+        <Badge
+          variant={BADGE_VARIANT[group.badge]}
+          size="change"
+          className="mt-0.5 shrink-0"
+        >
+          {t(`multiEdit.badge.${group.badge}`)}
+        </Badge>
       </div>
     </div>
   );
