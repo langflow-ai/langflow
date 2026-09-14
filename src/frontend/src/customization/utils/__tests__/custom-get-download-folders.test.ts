@@ -60,9 +60,6 @@ describe("customGetDownloadFolderBlob", () => {
 
     customGetDownloadFolderBlob(response, "folder-id", "My Folder");
 
-    expect(setAttributeMock).toHaveBeenCalledWith(
-      "download",
-      "My Folder.zip",
-    );
+    expect(setAttributeMock).toHaveBeenCalledWith("download", "My Folder.zip");
   });
 });
