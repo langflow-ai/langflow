@@ -76,7 +76,7 @@ def _create_trigger() -> None:
         sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["connection_id"], ["connection.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["deployment_id"], ["deployment.id"], ondelete="SET NULL"),
-        sa.ForeignKeyConstraint(["flow_version_id"], ["flow_version.id"], ondelete="SET NULL"),
+        sa.ForeignKeyConstraint(["flow_version_id"], ["flow_version.id"], ondelete="NO ACTION"),
         sa.PrimaryKeyConstraint("id"),
         sa.CheckConstraint(f"state IN ({_TRIGGER_STATES})", name="ck_trigger_state"),
         sa.CheckConstraint("binding_target IN ('flow', 'deployment')", name="ck_trigger_binding_target"),
@@ -87,6 +87,7 @@ def _create_trigger() -> None:
     op.create_index("ix_trigger_flow_id", "trigger", ["flow_id"])
     op.create_index("ix_trigger_user_id", "trigger", ["user_id"])
     op.create_index("ix_trigger_connection_id", "trigger", ["connection_id"])
+    op.create_index("ix_trigger_flow_version_id", "trigger", ["flow_version_id"])
     op.create_index("ix_trigger_kind", "trigger", ["kind"])
     op.create_index("ix_trigger_state", "trigger", ["state"])
     op.create_index("ix_trigger_state_next_fire_at", "trigger", ["state", "next_fire_at"])

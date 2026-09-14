@@ -87,3 +87,45 @@ async def test_concurrent_replays_append_distinct_linked_rows(migrated_ledger_ur
             assert original.replay_of_event_id is None
     finally:
         await engine.dispose()
+
+
+@pytest.mark.no_blockbuster
+async def test_append_and_dedupe_remain_in_the_callers_transaction(migrated_ledger_url):
+    engine = create_async_engine(migrated_ledger_url)
+    try:
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            owner = User(username=f"rollback-owner-{uuid4().hex}", password=str(uuid4()), is_active=True)
+            session.add(owner)
+            await session.flush()
+            flow = Flow(name="Rollback flow", user_id=owner.id)
+            session.add(flow)
+            await session.flush()
+            trigger = Trigger(flow_id=flow.id, user_id=owner.id, name="Original", kind="schedule")
+            session.add(trigger)
+            await session.flush()
+            original, _ = await ledger.append_event(session, trigger_id=trigger.id, dedupe_key="original")
+            await session.commit()
+            trigger_id, original_id = trigger.id, original.id
+
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            # A SELECT does not begin a DBAPI transaction in SQLite's legacy mode.
+            trigger = await session.get(Trigger, trigger_id)
+            first, created = await ledger.append_event(session, trigger_id=trigger_id, dedupe_key="first")
+            assert created
+            duplicate, created = await ledger.append_event(session, trigger_id=trigger_id, dedupe_key="original")
+            assert not created
+            assert duplicate.id == original_id
+            second, created = await ledger.append_event(session, trigger_id=trigger_id, dedupe_key="second")
+            assert created
+            trigger.name = "Must roll back"
+            await session.flush()
+            first_id, second_id = first.id, second.id
+            await session.rollback()
+
+        async with AsyncSession(engine) as session:
+            assert await session.get(TriggerEvent, first_id) is None
+            assert await session.get(TriggerEvent, second_id) is None
+            assert await session.get(TriggerEvent, original_id) is not None
+            assert (await session.get(Trigger, trigger_id)).name == "Original"
+    finally:
+        await engine.dispose()
