@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 import pytest
@@ -10,7 +11,6 @@ from lfx.integrations.errors import IntegrationPolicyBlockedError
 from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
 from lfx.services.authorization.base import ExecutionPrincipal
 from lfx.services.deps import get_policy_bundle_service
-from lfx.services.policy_bundle import PolicyBundleSnapshot
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -43,16 +43,12 @@ def integration_policy():
         from lfx.services.deps import get_integration_policy_service
 
         bundle.publish(
-            PolicyBundleSnapshot(
+            replace(
+                original,
                 revision=original.revision + 1,
                 initialized=True,
-                approved_provider_ids=original.approved_provider_ids,
-                blocked_component_keys=original.blocked_component_keys,
-                blocked_template_keys=original.blocked_template_keys,
-                blocked_model_keys=original.blocked_model_keys,
                 approved_integration_provider_ids=providers,
                 blocked_integration_action_keys=actions,
-                content_hash=original.content_hash,
             )
         )
         get_integration_policy_service().invalidate()
@@ -61,23 +57,33 @@ def integration_policy():
 
     from lfx.services.deps import get_integration_policy_service
 
-    bundle.publish(
-        PolicyBundleSnapshot(
-            revision=original.revision + 2,
-            initialized=original.initialized,
-            source=original.source,
-            approved_provider_ids=original.approved_provider_ids,
-            blocked_component_keys=original.blocked_component_keys,
-            blocked_template_keys=original.blocked_template_keys,
-            blocked_model_keys=original.blocked_model_keys,
-            content_hash=original.content_hash,
-        )
-    )
+    bundle.publish(replace(original, revision=bundle.snapshot.revision + 1))
     get_integration_policy_service().invalidate()
 
 
 def _principal(owner_id: str) -> ExecutionPrincipal:
     return ExecutionPrincipal(kind="actor", user_id=owner_id, actor_id=owner_id, interactive=True)
+
+
+@pytest.mark.usefixtures("active_user")
+@pytest.mark.parametrize("endpoint", ["test", "health"])
+async def test_blocked_provider_cannot_test_or_refresh_credentials(
+    client: AsyncClient, logged_in_headers: dict[str, str], integration_policy, monkeypatch, endpoint: str
+) -> None:
+    from unittest.mock import AsyncMock
+
+    created = await client.post("api/v1/connections", json=_payload(), headers=logged_in_headers)
+    assert created.status_code == 201, created.text
+    integration_policy(providers=frozenset({"slack"}))
+    health_check = AsyncMock(side_effect=AssertionError("blocked providers must not inspect credentials"))
+    monkeypatch.setattr(get_connection_resolver_service(), "check_health", health_check)
+
+    response = await client.post(
+        f"api/v1/connections/{created.json()['id']}/{endpoint}", json={}, headers=logged_in_headers
+    )
+    assert response.status_code == 403, response.text
+    assert response.json()["detail"]["error_code"] == "policy-blocked"
+    health_check.assert_not_awaited()
 
 
 @pytest.mark.usefixtures("active_user")

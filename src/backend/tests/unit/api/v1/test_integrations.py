@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -10,7 +11,6 @@ from lfx.extension.bundle_registry import BundleRecord, get_default_registry
 from lfx.extension.loader._types import LoadedIntegration
 from lfx.integrations.capabilities import IntegrationCapabilityManifest
 from lfx.services.deps import get_integration_policy_service, get_policy_bundle_service
-from lfx.services.policy_bundle import PolicyBundleSnapshot
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -102,7 +102,8 @@ def integration_policy():
 
     def _publish(*, providers: frozenset[str] = frozenset(), actions: frozenset[str] = frozenset()) -> None:
         bundle.publish(
-            PolicyBundleSnapshot(
+            replace(
+                original,
                 revision=original.revision + 1,
                 initialized=True,
                 approved_integration_provider_ids=providers,
@@ -113,7 +114,7 @@ def integration_policy():
 
     yield _publish
 
-    bundle.publish(PolicyBundleSnapshot(revision=original.revision + 2, initialized=original.initialized))
+    bundle.publish(replace(original, revision=bundle.snapshot.revision + 1))
     get_integration_policy_service().invalidate()
 
 
@@ -241,6 +242,66 @@ async def test_provider_is_enabled_once_the_caller_has_a_connection(
     entry = next(item for item in response.json()["providers"] if item["provider_id"] == PROVIDER)
     assert entry["enabled"] is True
     assert entry["connection_count"] == 1
+
+
+@pytest.mark.usefixtures("active_user", "loaded_integration")
+@pytest.mark.parametrize("visibility_mode", ["prefilter", "fallback", "revoked", "oss"])
+async def test_shared_connection_counts_match_the_authorized_picker(
+    client: AsyncClient, logged_in_headers: dict[str, str], monkeypatch, visibility_mode: str
+) -> None:
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    from uuid import uuid4
+
+    from langflow.services.authorization import listing
+    from langflow.services.connection import service as connection_service
+    from langflow.services.database.models.connection import Connection
+    from langflow.services.database.models.user.model import User
+    from langflow.services.deps import get_settings_service, session_scope
+    from lfx.services.authorization.base import ResourceVisibilityScope
+
+    async with session_scope() as session:
+        owner = User(username=f"shared-owner-{uuid4().hex}", password="unused-hash", is_active=True)  # noqa: S106
+        session.add(owner)
+        await session.flush()
+        rows = [
+            Connection(
+                owner_id=owner.id,
+                provider_key=PROVIDER,
+                name=name,
+                display_name=name,
+                executing_identity={"identity": "user_delegated"},
+            )
+            for name in ("shared", "unshared")
+        ]
+        session.add_all(rows)
+        await session.flush()
+        shared_id = rows[0].id
+        scope = ResourceVisibilityScope(resource_ids=tuple(row.id for row in rows))
+
+    allowed = visibility_mode in {"prefilter", "fallback"}
+    authz = SimpleNamespace(
+        is_enabled=AsyncMock(return_value=visibility_mode != "oss"),
+        supports_cross_user_fetch=AsyncMock(return_value=True),
+        get_resource_visibility=AsyncMock(return_value=None if visibility_mode == "fallback" else scope),
+        batch_enforce=AsyncMock(
+            side_effect=lambda **kwargs: [
+                allowed and obj == f"connection:{shared_id}" for obj, _action in kwargs["requests"]
+            ]
+        ),
+    )
+    monkeypatch.setattr(get_settings_service().auth_settings, "AUTHZ_ENABLED", visibility_mode != "oss")
+    monkeypatch.setattr(connection_service, "get_authorization_service", lambda: authz)
+    monkeypatch.setattr(listing, "get_authorization_service", lambda: authz)
+
+    picker = await client.get(f"api/v1/connections?provider_key={PROVIDER}", headers=logged_in_headers)
+    response = await client.get(f"api/v1/integrations?provider={PROVIDER}", headers=logged_in_headers)
+
+    assert picker.status_code == response.status_code == 200
+    assert [row["id"] for row in picker.json()] == ([str(shared_id)] if allowed else [])
+    entry = response.json()["providers"][0]
+    assert entry["connection_count"] == len(picker.json()) == int(allowed)
+    assert entry["enabled"] is allowed
 
 
 @pytest.mark.usefixtures("active_user", "loaded_integration")

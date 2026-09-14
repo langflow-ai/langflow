@@ -139,7 +139,8 @@ class ModelProviderPolicyRefreshWorker:
                 from lfx.services.deps import get_integration_policy_service
 
                 changed = bundle_service.mark_source_unavailable() or changed
-                get_integration_policy_service().invalidate()
+                with contextlib.suppress(TypeError, ImportError):
+                    get_integration_policy_service().invalidate()
             with contextlib.suppress(Exception):
                 await logger.aerror(f"Model-provider policy refresh failed: {exc}")
             return changed

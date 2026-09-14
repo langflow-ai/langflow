@@ -16,7 +16,7 @@ from langflow.services.integration_policy_discovery import (
     integration_requirements,
     reset_integration_capability_index,
 )
-from lfx.extension.bundle_registry import BundleRecord, BundleRegistry, get_default_registry
+from lfx.extension.bundle_registry import BundleRecord, BundleRegistry
 from lfx.extension.loader._types import LoadedIntegration
 from lfx.integrations.capabilities import IntegrationCapabilityManifest
 from lfx.services.integration_policy import (
@@ -223,6 +223,34 @@ def test_unrelated_components_are_never_filtered(index) -> None:
     assert component_is_allowed(_unrelated_component(), policy=policy, index=index)
 
 
+@pytest.mark.parametrize("denial", ["provider", "action", "metadata"])
+async def test_component_denial_reports_the_later_requirement(monkeypatch, index, denial):
+    from unittest.mock import AsyncMock
+
+    from langflow.services import integration_policy_discovery as discovery
+    from lfx.services.integration_policy import IntegrationPolicyError
+
+    component = _connection_component(provider="google", capabilities=[SEARCH_CAPABILITY])
+    second_provider = "slack" if denial != "action" else "google"
+    component["template"]["second_connection"] = {
+        "type": "connection_ref",
+        "provider": second_provider,
+        "capabilities": [DELETE_CAPABILITY] if denial == "action" else ["slack.unknown"],
+    }
+    policy = _snapshot(
+        allowed={"google"} if denial == "provider" else {"google", "slack"},
+        candidates={"google", "slack"},
+        blocked={DELETE_KEY},
+    )
+    monkeypatch.setattr(discovery, "aresolve_integration_policy", AsyncMock(return_value=policy))
+    monkeypatch.setattr(discovery, "build_integration_capability_index", lambda: index)
+
+    with pytest.raises(IntegrationPolicyError) as caught:
+        await discovery.aenforce_integration_policy_for_component(component, user_id="user-1")
+    assert caught.value.provider_id == second_provider
+    assert caught.value.policy_key == (DELETE_KEY if denial == "action" else None)
+
+
 # --------------------------------------------------------------------------- palette filter
 
 
@@ -341,14 +369,15 @@ def test_default_index_is_cached_per_registry_snapshot() -> None:
     assert build_integration_capability_index() is not first
 
 
-def test_default_index_is_rebuilt_after_an_uninstall_and_reinstall() -> None:
+def test_default_index_is_rebuilt_after_an_uninstall_and_reinstall(monkeypatch) -> None:
     """A reinstalled bundle must not be served from the previous index.
 
     The cache holds the snapshot it was built from, so the record it names
     stays alive and a new record can never be a false match for it -- the
     property an ``id()``-keyed fingerprint would not have.
     """
-    registry = get_default_registry()
+    registry = BundleRegistry()
+    monkeypatch.setattr("langflow.services.integration_policy_discovery.get_default_registry", lambda: registry)
     record = BundleRecord(
         bundle="google_cache_probe",
         extension_id="lfx-google-probe",

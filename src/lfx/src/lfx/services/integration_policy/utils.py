@@ -134,15 +134,14 @@ def integration_policy_identity_for_component_class(class_name: str) -> tuple[st
     the bundle registry's ``component_ref`` is the only declaration that ties it
     to a governed action. Returns ``None`` for every component no loaded
     capability points at, which is every non-integration component.
+    Registry failures propagate: a failed lookup must never classify a governed
+    component as unrelated and allow its adapter to run.
     """
     if not class_name:
         return None
-    try:
-        from lfx.extension.bundle_registry import get_default_registry
+    from lfx.extension.bundle_registry import get_default_registry
 
-        integrations = get_default_registry().list_integrations()
-    except Exception:  # noqa: BLE001
-        return None
+    integrations = get_default_registry().list_integrations()
     provider_id: str | None = None
     keys: list[str] = []
     for integration in integrations:

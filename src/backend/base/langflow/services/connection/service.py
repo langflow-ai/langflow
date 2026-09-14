@@ -273,14 +273,54 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         user: User | UserRead,
         provider_key: str | None = None,
     ) -> list[ConnectionRead]:
+        rows = await self._list_visible_rows(
+            session, user=user, provider_ids=frozenset({provider_key}) if provider_key is not None else None
+        )
+        secret_ids = (
+            set(
+                (
+                    await session.exec(
+                        select(ConnectionSecret.connection_id).where(
+                            col(ConnectionSecret.connection_id).in_([row.id for row in rows])
+                        )
+                    )
+                ).all()
+            )
+            if rows
+            else set()
+        )
+        return [self.to_read(row, has_credentials=row.id in secret_ids) for row in rows]
+
+    async def count_for_user(
+        self,
+        session: AsyncSession,
+        *,
+        user: User | UserRead,
+        provider_ids: frozenset[str],
+    ) -> dict[str, int]:
+        """Count visible connections using the same share decisions as listing."""
+        if not provider_ids:
+            return {}
+        counts: dict[str, int] = {}
+        for row in await self._list_visible_rows(session, user=user, provider_ids=provider_ids):
+            counts[row.provider_key] = counts.get(row.provider_key, 0) + 1
+        return counts
+
+    async def _list_visible_rows(
+        self,
+        session: AsyncSession,
+        *,
+        user: User | UserRead,
+        provider_ids: frozenset[str] | None,
+    ) -> list[Connection]:
         is_superuser = bool(getattr(user, "is_superuser", False))
         owner_clause = or_(
             Connection.owner_id == user.id,
             Connection.ownership_mode == ConnectionOwnershipMode.INSTANCE.value,
         )
         stmt = select(Connection)
-        if provider_key is not None:
-            stmt = stmt.where(Connection.provider_key == provider_key)
+        if provider_ids is not None:
+            stmt = stmt.where(col(Connection.provider_key).in_(provider_ids))
         authz = get_authorization_service()
         cross_user = await authz.is_enabled() and await authz.supports_cross_user_fetch()
         if not is_superuser:
@@ -307,20 +347,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 else item.owner_id,
                 act="read",
             )
-        secret_ids = (
-            set(
-                (
-                    await session.exec(
-                        select(ConnectionSecret.connection_id).where(
-                            col(ConnectionSecret.connection_id).in_([row.id for row in rows])
-                        )
-                    )
-                ).all()
-            )
-            if rows
-            else set()
-        )
-        return [self.to_read(row, has_credentials=row.id in secret_ids) for row in rows]
+        return rows
 
     async def get_for_user(
         self,

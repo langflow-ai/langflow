@@ -254,6 +254,20 @@ def test_api_key_mode_component_passes_when_its_action_is_allowed(monkeypatch) -
     DriveApiKeyComponent(_user_id="user-1").require_integration_policy(IntegrationPolicyPurpose.USE)
 
 
+async def test_api_key_mode_registry_failure_stops_execution(monkeypatch) -> None:
+    _install_policy(monkeypatch, _blocked_bundle(actions=frozenset({SEARCH_KEY})))
+
+    def unavailable_registry():
+        msg = "capability registry unavailable"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr("lfx.extension.bundle_registry.get_default_registry", unavailable_registry)
+    component = DriveApiKeyComponent(_user_id="user-1")
+    with pytest.raises(RuntimeError, match="capability registry unavailable"):
+        await component.build_results()
+    assert component.adapter_calls == 0
+
+
 def test_components_no_capability_points_at_are_never_gated(monkeypatch) -> None:
     from lfx.services.integration_policy import IntegrationPolicyPurpose
 

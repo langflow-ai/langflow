@@ -39,6 +39,10 @@ class PolicyBundleService(BasePolicyBundleService):
     def source_available(self) -> bool:
         return self._source_available
 
+    def read_state(self) -> tuple[PolicyBundleSnapshot, bool]:
+        with self._lock:
+            return self._snapshot, self._source_available
+
     def publish(self, snapshot: PolicyBundleSnapshot) -> bool:
         with self._lock:
             current = self._snapshot

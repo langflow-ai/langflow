@@ -193,26 +193,33 @@ def component_is_allowed(
     filtering inside an action picker is the bundle's own responsibility, using
     ``resolve_integration_policy``.
     """
-    requirements = integration_requirements(component)
-    if not requirements:
-        return True
+    return _first_denied_requirement(integration_requirements(component), policy=policy, index=index) is None
+
+
+def _first_denied_requirement(
+    requirements: list[tuple[str, tuple[str, ...]]],
+    *,
+    policy: IntegrationPolicySnapshot,
+    index: IntegrationCapabilityIndex,
+) -> tuple[str, tuple[str, ...]] | None:
+    """Use the same provider and action decision for filtering and diagnostics."""
     for provider_id, capability_ids in requirements:
         if not policy.allows_provider(provider_id):
-            return False
+            return provider_id, capability_ids
         declared = [
             capability
             for capability_id in capability_ids
             if (capability := index.capability(capability_id)) is not None
         ]
         if policy.blocked_action_keys and len(declared) != len(capability_ids):
-            return False
+            return provider_id, capability_ids
         if not declared:
             # The node names no known capability (or the bundle is not loaded in
             # this process); the provider ceiling is the only available decision.
             continue
         if not any(policy.allows_capability(capability) for capability in declared):
-            return False
-    return True
+            return provider_id, capability_ids
+    return None
 
 
 def candidate_provider_ids(all_types: dict[str, dict[str, dict]]) -> frozenset[str]:
@@ -370,9 +377,10 @@ async def aenforce_integration_policy_for_component(
         attributes=attributes,
     )
     index = build_integration_capability_index()
-    if component_is_allowed(component, policy=policy, index=index):
+    denied = _first_denied_requirement(requirements, policy=policy, index=index)
+    if denied is None:
         return
-    provider_id, capability_ids = requirements[0]
+    provider_id, capability_ids = denied
     policy.require_provider(provider_id)
     policy.require_actions(index.policy_keys(capability_ids))
     # Every declared key resolved as allowed but the component is still blocked:

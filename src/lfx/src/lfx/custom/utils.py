@@ -513,6 +513,8 @@ def _stamp_integration_policy_identity(frontend_node, custom_component) -> None:
     components in mixed bundles are unaffected, and a stale stamp from a reused
     template is always cleared.
     """
+    frontend_node.metadata.pop("integration_provider_id", None)
+    frontend_node.metadata.pop("integration_capability_ids", None)
     provider_id: str | None = None
     capability_ids: list[str] = []
     try:
@@ -532,8 +534,6 @@ def _stamp_integration_policy_identity(frontend_node, custom_component) -> None:
         return
 
     if provider_id is None:
-        frontend_node.metadata.pop("integration_provider_id", None)
-        frontend_node.metadata.pop("integration_capability_ids", None)
         return
     frontend_node.metadata["integration_provider_id"] = provider_id
     frontend_node.metadata["integration_capability_ids"] = sorted(set(capability_ids))

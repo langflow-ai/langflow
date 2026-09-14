@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
 
 import pytest
@@ -51,6 +52,85 @@ def _snapshot(
 
 
 # --------------------------------------------------------------------------- hash
+
+
+@pytest.mark.parametrize("async_resolution", [False, True])
+@pytest.mark.parametrize("source_available", [False, True])
+async def test_resolution_never_combines_policy_revisions(*, async_resolution: bool, source_available: bool) -> None:
+    blocked_key = "integrations.google.drive.delete"
+    bundle = PolicyBundleService()
+    bundle.publish(
+        PolicyBundleSnapshot(
+            revision=1,
+            approved_integration_provider_ids={"google"},
+            blocked_integration_action_keys={blocked_key},
+        )
+    )
+    if not source_available:
+        bundle.mark_source_unavailable()
+
+    class PublishingPolicy(IntegrationPolicyService):
+        @property
+        def approved_provider_ids(self):
+            providers = super().approved_provider_ids
+            # Deterministically interleave a writer between ceiling and action
+            # reads: neither complete revision permits Google's delete action.
+            bundle.publish(PolicyBundleSnapshot(revision=2, approved_integration_provider_ids={"slack"}))
+            self.invalidate()
+            return providers
+
+    service = PublishingPolicy(policy_bundle_service=bundle)
+    kwargs = {
+        "context": IntegrationPolicyContext(user_id="user-1"),
+        "candidate_provider_ids": frozenset({"google", "slack"}),
+        "purpose": IntegrationPolicyPurpose.USE,
+    }
+    snapshot = await service.aresolve(**kwargs) if async_resolution else service.resolve(**kwargs)
+
+    assert bundle.snapshot.revision == 2
+    assert not snapshot.allows_action(blocked_key)
+    assert snapshot.blocked_action_keys == frozenset({blocked_key})
+    assert snapshot.allowed_provider_ids == (frozenset({"google"}) if source_available else frozenset())
+
+
+async def test_concurrent_resolutions_keep_their_captured_revisions() -> None:
+    blocked_key = "integrations.google.drive.delete"
+    bundle = PolicyBundleService()
+    bundle.publish(
+        PolicyBundleSnapshot(
+            revision=1, approved_integration_provider_ids={"google"}, blocked_integration_action_keys={blocked_key}
+        )
+    )
+    entered, resume = asyncio.Event(), asyncio.Event()
+
+    class PausingPolicy(IntegrationPolicyService):
+        async def aget_allowed_provider_ids(self, *, context, candidate_provider_ids, purpose):
+            allowed = self.get_allowed_provider_ids(
+                context=context, candidate_provider_ids=candidate_provider_ids, purpose=purpose
+            )
+            if context.user_id == "old-reader":
+                entered.set()
+                await resume.wait()
+            return allowed
+
+    service = PausingPolicy(policy_bundle_service=bundle)
+    kwargs = {"candidate_provider_ids": frozenset({"google", "slack"}), "purpose": IntegrationPolicyPurpose.USE}
+    task = asyncio.create_task(service.aresolve(context=IntegrationPolicyContext(user_id="old-reader"), **kwargs))
+    try:
+        await asyncio.wait_for(entered.wait(), timeout=2)
+        bundle.publish(PolicyBundleSnapshot(revision=2, approved_integration_provider_ids={"slack"}))
+        service.invalidate()
+        current = await service.aresolve(context=IntegrationPolicyContext(user_id="new-reader"), **kwargs)
+    finally:
+        resume.set()
+        previous = await asyncio.wait_for(task, timeout=2)
+
+    assert previous.allowed_provider_ids == frozenset({"google"})
+    assert previous.blocked_action_keys == frozenset({blocked_key})
+    assert current.allowed_provider_ids == frozenset({"slack"})
+    assert current.blocked_action_keys == frozenset()
+    assert not previous.allows_action(blocked_key)
+    assert not current.allows_action(blocked_key)
 
 
 def test_action_policy_supports_dotted_provider_ids_without_widening_a_parent_namespace() -> None:

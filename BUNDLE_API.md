@@ -205,6 +205,18 @@ the deserialize half is covered by
 
 ## Changelog
 
+### 2026-09-14 — Integration policy review follow-up
+
+- Policy bundle coordinators expose `read_state()` to atomically return the
+  immutable revision and source availability. Custom `BasePolicyBundleService`
+  implementations must supply this method. Integration policy resolution pins
+  both provider and action decisions to that state, including across async
+  plugin hooks, so concurrent publication cannot combine different revisions.
+- Failure to look up a component's integration identity now stops execution;
+  `None` is reserved for a successful lookup with no matching capability.
+  Template building clears previous integration identity stamps before lookup,
+  including when registry access fails.
+
 ### 2026-09-14 — Integration policy review
 
 - Component and host resolver gates require metadata for every declared

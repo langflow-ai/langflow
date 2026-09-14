@@ -15,11 +15,10 @@ from lfx.integrations.models import PROVIDER_ID_PATTERN
 from lfx.services.deps import get_integration_policy_service
 from lfx.services.integration_policy import IntegrationPolicyPurpose, aresolve_integration_policy
 from pydantic import BaseModel, Field
-from sqlmodel import col, select
 
 from langflow.api.utils import CurrentActiveUser, DbSessionReadOnly
+from langflow.api.v1.connections import ConnectionService
 from langflow.api.v1.model_provider_policy_scope import ProviderPolicyAttributesDependency
-from langflow.services.database.models.connection import Connection, ConnectionOwnershipMode
 
 router = APIRouter(prefix="/integrations", tags=["Integrations"])
 
@@ -82,40 +81,13 @@ class EffectiveIntegrationPolicyRead(BaseModel):
     policy_revision: int | None = None
 
 
-async def _connection_counts(
-    session: DbSessionReadOnly,
-    *,
-    user: CurrentActiveUser,
-    provider_ids: frozenset[str],
-) -> dict[str, int]:
-    """Count the connections the caller can see, per provider.
-
-    Enablement is connection existence, mirroring model-provider enablement by
-    stored credential variables: INT-7 adds no per-user state of its own.
-    Explicit shares are intentionally not counted here -- this is a hint for the
-    picker, and the resolver remains the authority on which row is usable.
-    """
-    if not provider_ids:
-        return {}
-    statement = select(Connection.provider_key).where(
-        col(Connection.provider_key).in_(provider_ids),
-    )
-    if not bool(getattr(user, "is_superuser", False)):
-        statement = statement.where(
-            (Connection.owner_id == user.id) | (Connection.ownership_mode == ConnectionOwnershipMode.INSTANCE.value)
-        )
-    counts: dict[str, int] = {}
-    for provider_key in (await session.exec(statement)).all():
-        counts[provider_key] = counts.get(provider_key, 0) + 1
-    return counts
-
-
 @router.get("", response_model=IntegrationListRead)
 @router.get("/", response_model=IntegrationListRead, include_in_schema=False)
 async def list_integrations(
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
+    service: ConnectionService,
     provider: Annotated[str | None, Query(pattern=PROVIDER_ID_PATTERN, max_length=120)] = None,
     *,
     include_blocked: bool = False,
@@ -149,7 +121,7 @@ async def list_integrations(
         purpose=IntegrationPolicyPurpose.DISCOVER,
         attributes=provider_policy_attributes,
     )
-    counts = await _connection_counts(session, user=current_user, provider_ids=frozenset(manifests))
+    counts = await service.count_for_user(session, user=current_user, provider_ids=frozenset(manifests))
 
     providers: list[IntegrationProviderRead] = []
     for provider_id in sorted(manifests):

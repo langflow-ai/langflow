@@ -20,6 +20,7 @@ import abc
 import threading
 import time
 from collections import OrderedDict
+from contextlib import nullcontext
 from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any
@@ -33,6 +34,7 @@ from lfx.services.schema import ServiceType
 
 if TYPE_CHECKING:
     from collections.abc import Collection, Iterable
+    from contextlib import AbstractContextManager
 
     from lfx.integrations.capabilities import IntegrationCapability
 
@@ -362,6 +364,10 @@ class BaseIntegrationPolicyService(Service, abc.ABC):
             blocked_action_keys=frozenset(self.get_blocked_action_keys(context=context, purpose=purpose)),
         )
 
+    def _resolution_scope(self) -> AbstractContextManager:
+        """Let implementations pin all decision hooks to one source state."""
+        return nullcontext()
+
     def resolve(
         self,
         *,
@@ -375,16 +381,17 @@ class BaseIntegrationPolicyService(Service, abc.ABC):
         cached, generation = self._cache_lookup(cache_key)
         if cached is not None:
             return cached
-        snapshot = self._snapshot(
-            context=context,
-            candidate_provider_ids=candidates,
-            purpose=purpose,
-            allowed_provider_ids=self.get_allowed_provider_ids(
+        with self._resolution_scope():
+            snapshot = self._snapshot(
                 context=context,
                 candidate_provider_ids=candidates,
                 purpose=purpose,
-            ),
-        )
+                allowed_provider_ids=self.get_allowed_provider_ids(
+                    context=context,
+                    candidate_provider_ids=candidates,
+                    purpose=purpose,
+                ),
+            )
         self._cache_store(cache_key, generation=generation, snapshot=snapshot)
         return snapshot
 
@@ -401,16 +408,17 @@ class BaseIntegrationPolicyService(Service, abc.ABC):
         cached, generation = self._cache_lookup(cache_key)
         if cached is not None:
             return cached
-        snapshot = self._snapshot(
-            context=context,
-            candidate_provider_ids=candidates,
-            purpose=purpose,
-            allowed_provider_ids=await self.aget_allowed_provider_ids(
+        with self._resolution_scope():
+            snapshot = self._snapshot(
                 context=context,
                 candidate_provider_ids=candidates,
                 purpose=purpose,
-            ),
-        )
+                allowed_provider_ids=await self.aget_allowed_provider_ids(
+                    context=context,
+                    candidate_provider_ids=candidates,
+                    purpose=purpose,
+                ),
+            )
         self._cache_store(cache_key, generation=generation, snapshot=snapshot)
         return snapshot
 

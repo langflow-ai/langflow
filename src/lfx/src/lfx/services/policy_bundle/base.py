@@ -113,6 +113,10 @@ class BasePolicyBundleService(Service, abc.ABC):
         """Return whether the last durable refresh succeeded."""
 
     @abc.abstractmethod
+    def read_state(self) -> tuple[PolicyBundleSnapshot, bool]:
+        """Atomically capture the complete revision and source availability."""
+
+    @abc.abstractmethod
     def publish(self, snapshot: PolicyBundleSnapshot) -> bool:
         """Atomically publish a non-stale complete revision."""
 

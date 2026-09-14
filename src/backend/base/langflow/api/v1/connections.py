@@ -233,6 +233,10 @@ async def test_connection(
         action=ConnectionAction.EXECUTE,
         for_update=True,
     )
+    try:
+        await enforce_integration_policy_for_provider(row.provider_key, user_id=current_user.id)
+    except IntegrationPolicyBlockedError as exc:
+        raise _policy_blocked(exc) from exc
     return await service.check_health(
         session,
         row=row,
@@ -257,6 +261,10 @@ async def refresh_connection_health(
         action=ConnectionAction.EXECUTE,
         for_update=True,
     )
+    try:
+        await enforce_integration_policy_for_provider(row.provider_key, user_id=current_user.id)
+    except IntegrationPolicyBlockedError as exc:
+        raise _policy_blocked(exc) from exc
     return await service.check_health(
         session,
         row=row,

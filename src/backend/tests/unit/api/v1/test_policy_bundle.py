@@ -196,7 +196,11 @@ def test_put_forwards_one_complete_cas_replacement_and_publishes_committed_snaps
 def test_put_without_integration_fields_governs_no_integration_for_legacy_writers(monkeypatch):
     """QA: OSS pass-through remains unchanged when no integration policy is set (INT-7)."""
     client, admin, _read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
-    committed = _snapshot(revision=8, actor_id=admin.id)
+    committed = replace(
+        _snapshot(revision=8, actor_id=admin.id),
+        approved_integration_provider_ids=frozenset(),
+        blocked_integration_action_keys=frozenset(),
+    )
     replace_state.return_value = committed
 
     response = client.put(
@@ -213,7 +217,12 @@ def test_put_without_integration_fields_governs_no_integration_for_legacy_writer
     assert response.status_code == status.HTTP_200_OK
     assert replace_state.await_args.kwargs["approved_integration_provider_ids"] == []
     assert replace_state.await_args.kwargs["blocked_integration_action_keys"] == []
+    assert response.json()["approved_integration_provider_ids"] == []
+    assert response.json()["blocked_integration_action_keys"] == []
     apply_state.assert_called_once_with(committed)
+    published = apply_state.call_args.args[0]
+    assert published.approved_integration_provider_ids == frozenset()
+    assert published.blocked_integration_action_keys == frozenset()
 
 
 @pytest.mark.parametrize(

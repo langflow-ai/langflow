@@ -56,6 +56,28 @@ async def test_refresh_failure_invalidates_integration_allows(monkeypatch, model
     assert not integration_service.resolve(**kwargs).allows_action("integrations.google.drive.search")
 
 
+@pytest.mark.parametrize("service_error", [TypeError, ImportError])
+async def test_refresh_failure_tolerates_unavailable_integration_service(monkeypatch, service_error):
+    bundle = PolicyBundleService()
+    bundle.publish(PolicyBundleSnapshot(revision=1, blocked_integration_action_keys={"integrations.google.delete"}))
+    model_service = ModelProviderPolicyService(policy_bundle_service=bundle)
+
+    @asynccontextmanager
+    async def failing_session_scope():
+        msg = "policy store unavailable"
+        raise ConnectionError(msg)
+        yield
+
+    monkeypatch.setattr(refresh_module, "session_scope", failing_session_scope)
+    monkeypatch.setattr(refresh_module, "get_model_provider_policy_service", lambda: model_service)
+    monkeypatch.setattr(refresh_module, "get_policy_bundle_service", lambda: bundle)
+    monkeypatch.setattr("lfx.services.deps.get_integration_policy_service", Mock(side_effect=service_error))
+    monkeypatch.setattr(refresh_module.logger, "aerror", AsyncMock())
+
+    assert await refresh_module.ModelProviderPolicyRefreshWorker()._run_once() is True
+    assert bundle.source_available is False
+
+
 class _DatabaseOwnedPluginPolicyService(BaseModelProviderPolicyService):
     def __init__(self, policy_bundle_service: PolicyBundleService) -> None:
         super().__init__()
