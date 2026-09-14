@@ -109,9 +109,10 @@ class Trigger(SQLModel, table=True):  # type: ignore[call-arg]
     )
     # Pin. When set, dispatch builds from this version's data instead of the
     # saved flow, so canvas edits do not change what runs until the pin moves.
+    # Block deletion rather than silently clearing a pin and running the latest flow.
     flow_version_id: UUID | None = Field(
         default=None,
-        sa_column=Column(sa.Uuid(), ForeignKey("flow_version.id", ondelete="SET NULL"), nullable=True),
+        sa_column=Column(sa.Uuid(), ForeignKey("flow_version.id", ondelete="NO ACTION"), nullable=True, index=True),
     )
     session_policy: str = Field(
         default=TriggerSessionPolicy.PER_EVENT.value,

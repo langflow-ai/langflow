@@ -20,12 +20,15 @@ from sqlmodel import col, select
 
 from langflow.services.base import Service
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow_version.exceptions import FlowVersionNotFoundError
+from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import (
     TriggerCreate,
     TriggerState,
     TriggerUpdate,
 )
+from langflow.services.triggers.cleanup import delete_triggers
 from langflow.services.triggers.errors import TriggerNotFoundError
 
 if TYPE_CHECKING:
@@ -102,6 +105,7 @@ class TriggerService(Service):
         return (await session.exec(statement)).first()
 
     async def create(self, session: AsyncSession, *, payload: TriggerCreate, owner_id: UUID) -> Trigger:
+        await self._validate_flow_version(session, flow_id=payload.flow_id, flow_version_id=payload.flow_version_id)
         row = Trigger(
             flow_id=payload.flow_id,
             user_id=owner_id,
@@ -133,6 +137,8 @@ class TriggerService(Service):
         an explicit null, without every other omitted field being nulled too.
         """
         changes = payload.model_dump(exclude_unset=True)
+        if "flow_version_id" in changes:
+            await self._validate_flow_version(session, flow_id=row.flow_id, flow_version_id=payload.flow_version_id)
         for field, value in changes.items():
             setattr(row, field, value.value if hasattr(value, "value") else value)
         row.updated_at = datetime.now(timezone.utc)
@@ -168,6 +174,7 @@ class TriggerService(Service):
 
     async def pin(self, session: AsyncSession, *, row: Trigger, flow_version_id: UUID | None) -> Trigger:
         """Pin the trigger to a flow version, or unpin with ``None``."""
+        await self._validate_flow_version(session, flow_id=row.flow_id, flow_version_id=flow_version_id)
         row.flow_version_id = flow_version_id
         row.updated_at = datetime.now(timezone.utc)
         session.add(row)
@@ -176,8 +183,17 @@ class TriggerService(Service):
         return row
 
     async def delete(self, session: AsyncSession, *, row: Trigger) -> None:
-        await session.delete(row)
+        await delete_triggers(session, trigger_ids=[row.id])
         await session.flush()
+
+    @staticmethod
+    async def _validate_flow_version(session: AsyncSession, *, flow_id: UUID, flow_version_id: UUID | None) -> None:
+        if flow_version_id is None:
+            return
+        version = (await session.exec(select(FlowVersion).where(FlowVersion.id == flow_version_id))).first()
+        if version is None or version.flow_id != flow_id:
+            msg = "Flow version not found for this trigger's flow."
+            raise FlowVersionNotFoundError(msg)
 
     async def record_error(self, session: AsyncSession, *, row: Trigger, message: str) -> Trigger:
         row.last_error = message

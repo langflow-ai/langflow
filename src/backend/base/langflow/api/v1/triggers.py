@@ -22,6 +22,7 @@ from langflow.api.v1.flows_helpers import _read_flow
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow_version.exceptions import FlowVersionNotFoundError
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import (
     TriggerBindingTarget,
@@ -153,7 +154,10 @@ async def create_trigger(
     """
     flow = await _authorized_flow(session, current_user, payload.flow_id, FlowAction.WRITE)
     _reject_unsupported_binding(payload.binding_target, payload.deployment_id)
-    row = await service.create(session, payload=payload, owner_id=flow.user_id)
+    try:
+        row = await service.create(session, payload=payload, owner_id=flow.user_id)
+    except FlowVersionNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return TriggerRead.model_validate(row)
 
 
@@ -195,7 +199,10 @@ async def update_trigger(
     row = await _authorized_trigger(
         service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.WRITE
     )
-    updated = await service.update(session, row=row, payload=payload)
+    try:
+        updated = await service.update(session, row=row, payload=payload)
+    except FlowVersionNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     _reject_unsupported_binding(TriggerBindingTarget(updated.binding_target), updated.deployment_id)
     return TriggerRead.model_validate(updated)
 
@@ -264,16 +271,10 @@ async def pin_trigger(
     row = await _authorized_trigger(
         service=service, session=session, user=current_user, trigger_id=trigger_id, action=FlowAction.WRITE
     )
-    if payload.flow_version_id is not None:
-        from langflow.services.database.models.flow_version.model import FlowVersion
-
-        version = await session.get(FlowVersion, payload.flow_version_id)
-        if version is None or version.flow_id != row.flow_id:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Flow version not found for this trigger's flow.",
-            )
-    updated = await service.pin(session, row=row, flow_version_id=payload.flow_version_id)
+    try:
+        updated = await service.pin(session, row=row, flow_version_id=payload.flow_version_id)
+    except FlowVersionNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return TriggerRead.model_validate(updated)
 
 

@@ -1,10 +1,9 @@
 """Append-and-read half of the trigger event ledger.
 
 The ledger is at-least-once. Producers append freely and rely on
-``uq_trigger_event_trigger_dedupe`` to collapse duplicates: a second row with
-the same ``(trigger_id, dedupe_key)`` raises ``IntegrityError`` inside a
-SAVEPOINT, which :func:`append_event` translates into "the row already exists"
-without poisoning the caller's transaction.
+``uq_trigger_event_trigger_dedupe`` to collapse duplicates without poisoning
+the caller's transaction. SQLite uses a conflict-aware INSERT so the write
+starts a real transaction even when its driver uses legacy transaction control.
 
 The claim/lease half lives in ``dispatcher.py`` so a producer (an ingress route,
 a tick) never imports the dispatch machinery.
@@ -17,6 +16,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
 from lfx.log.logger import logger
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, select
 
@@ -71,6 +71,34 @@ async def append_event(
         payload=payload or {},
         replay_of_event_id=replay_of_event_id,
     )
+    if session.get_bind().dialect.name == "sqlite":
+        # In sqlite3 legacy mode SAVEPOINT does not begin an outer transaction;
+        # releasing it would commit the event even if the caller later rolls
+        # back. DML starts that transaction, and ON CONFLICT handles only our
+        # dedupe constraint without needing a savepoint.
+        statement = (
+            sqlite_insert(TriggerEvent)
+            .values(
+                id=event.id,
+                trigger_id=trigger_id,
+                dedupe_key=dedupe_key,
+                state=event.state,
+                attempt=event.attempt,
+                available_at=event.available_at,
+                payload=event.payload,
+                replay_of_event_id=replay_of_event_id,
+            )
+            .on_conflict_do_nothing(index_elements=["trigger_id", "dedupe_key"])
+            .returning(TriggerEvent)
+        )
+        inserted = (await session.execute(statement)).scalar_one_or_none()
+        if inserted is not None:
+            return inserted, True
+        existing = await get_event_by_dedupe_key(session, trigger_id=trigger_id, dedupe_key=dedupe_key)
+        if existing is None:  # pragma: no cover - insert and lookup share the write transaction
+            msg = "Deduplicated trigger event disappeared during insertion."
+            raise RuntimeError(msg)
+        return existing, False
     try:
         async with session.begin_nested():
             session.add(event)

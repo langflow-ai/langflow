@@ -141,6 +141,15 @@ class TriggerUpdate(BaseModel):
     concurrency_limit: int | None = Field(default=None, ge=1, le=100)
     max_attempts: int | None = Field(default=None, ge=1, le=20)
 
+    @field_validator("name", "config", "binding_target", "session_policy", "concurrency_limit", "max_attempts")
+    @classmethod
+    def _reject_null_required_fields(cls, value: Any) -> Any:
+        """Omission leaves a field unchanged; only nullable references may be cleared."""
+        if value is None:
+            msg = "This field cannot be null."
+            raise ValueError(msg)
+        return value
+
 
 class TriggerPinRequest(BaseModel):
     """Pin or unpin the flow version a trigger fires.

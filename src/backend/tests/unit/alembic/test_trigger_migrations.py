@@ -118,3 +118,39 @@ def test_duplicate_dedupe_key_is_rejected_by_the_database(db_url):  # noqa: F811
         assert total == 2
     finally:
         engine.dispose()
+
+
+def test_pinned_version_cannot_be_deleted_but_flow_can(db_url):  # noqa: F811
+    """The FK blocks concurrent pin loss while preserving parent-flow cascades."""
+    command.upgrade(_make_alembic_cfg(db_url), _REVISION)
+    engine = create_engine(_engine_url(db_url))
+    trigger_id, version_id = uuid4(), uuid4()
+    try:
+        with engine.connect() as connection:
+            if connection.dialect.name == "sqlite":
+                connection.exec_driver_sql("PRAGMA foreign_keys=ON")
+                connection.commit()
+            with connection.begin():
+                _seed_flow_owner_and_trigger(connection, trigger_id)
+                connection.execute(
+                    text(
+                        "INSERT INTO flow_version (id, flow_id, user_id, version_number, data) "
+                        "SELECT :version_id, flow_id, user_id, 1, '{}' FROM trigger WHERE id = :trigger_id"
+                    ),
+                    {"version_id": str(version_id), "trigger_id": str(trigger_id)},
+                )
+                connection.execute(
+                    text("UPDATE trigger SET flow_version_id = :version_id WHERE id = :trigger_id"),
+                    {"version_id": str(version_id), "trigger_id": str(trigger_id)},
+                )
+            with pytest.raises(IntegrityError), connection.begin():
+                connection.execute(text("DELETE FROM flow_version WHERE id = :id"), {"id": str(version_id)})
+            with connection.begin():
+                connection.execute(
+                    text("DELETE FROM flow WHERE id IN (SELECT flow_id FROM trigger WHERE id = :id)"),
+                    {"id": str(trigger_id)},
+                )
+                assert connection.execute(text("SELECT COUNT(*) FROM trigger")).scalar() == 0
+                assert connection.execute(text("SELECT COUNT(*) FROM flow_version")).scalar() == 0
+    finally:
+        engine.dispose()
