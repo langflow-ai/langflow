@@ -173,6 +173,57 @@ request transaction (`owns_transaction=False`). Project delete still commits MCP
 cleanup first; that does not affect the audit, because the Project removal and
 its event share the later transaction.
 
+## Read API: `GET /api/v1/projects/audits`
+
+A read-only, Project-specific view over `audit_events`. It never returns
+Project or Flow content, and reading records no event.
+
+**Query parameters** — `project_id`, `operation`*, `event_type`*, `result`*,
+`user_id`, `actor_type`*, `actor_id`, `acting_subject`, `acting_issuer`
+(requires `acting_subject`), `request_id`, `since` (inclusive RFC 3339),
+`until` (exclusive, later than `since`), `cursor`, `limit` (1–200, default 50).
+Parameters marked * are repeatable and ORed; different parameters are ANDed.
+
+**400** for an unknown parameter, an empty value, a malformed UUID or timestamp
+(an offset is required), an unsupported value, a repeated non-repeatable
+parameter, an out-of-range limit, or a cursor used with different filters.
+
+**Response**
+
+```json
+{
+  "items": [
+    {
+      "id": "…", "timestamp": "2026-09-11T16:42:18.284123Z",
+      "project_id": "…", "project_name": "support-automation",
+      "action": "project:write", "operation": "patch",
+      "event_type": "action", "result": "succeeded", "error_code": null,
+      "request_id": "…",
+      "actor": {"type": "user", "id": "…", "user_id": "…", "acting_issuer": null, "acting_subject": null},
+      "details": {"schema_version": 1, "description": "…"}
+    }
+  ],
+  "next_cursor": null
+}
+```
+
+Nullable and always present: `project_name`, `error_code`, `actor.id`,
+`actor.user_id`, `actor.acting_issuer`, `actor.acting_subject`, `next_cursor`.
+No total and no page number. Ordered by `(timestamp DESC, id DESC)`; the
+timestamp keeps microseconds so a client re-sorting a page agrees with the server.
+
+**Access.** Requires the `project:audit_read` permission (`ProjectAction.AUDIT_READ`),
+which a role can grant like any other `project:*` action.
+
+| Caller | Without `project_id` | With `project_id` |
+|---|---|---|
+| Plugin with cross-user fetch | global `project:audit_read` | `project:audit_read` on that Project |
+| No plugin, superuser | every Project event | that Project's events |
+| No plugin, other users | events on Projects they own, and events they made | the same, narrowed to that Project |
+
+A deleted Project's events stay readable by whoever acted on it, because
+there is no longer an owner to derive visibility from.
+
 ## Invariants
 
 1. A succeeded event and its mutation commit or roll back together.
