@@ -73,18 +73,31 @@ def _client_tool_error(error: Any, *, expose_details: bool) -> str:
     return _tool_error_text(error) if expose_details else SAFE_TOOL_ERROR_MESSAGE
 
 
-def _event_message_id(data: dict) -> str | None:
-    """The id of the message an ``add_message`` / ``token`` event belongs to.
+def _streamed_message_key(data: Any) -> str:
+    """Key a ``token`` or ``add_message`` event by the message it belongs to.
 
-    ``_send_message_event`` lifts the id to the top level of the payload; a raw
-    ``Message.model_dump()`` keeps it under ``data``. ``token`` events carry it top-level.
+    ``Component._send_message_event`` and both token emitters (``Component._process_chunk``,
+    ``lfx.base.agents.events``) put the stored message id at ``data["id"]``; a raw
+    ``Message.model_dump()`` keeps it at ``data["data"]["id"]``. Events carrying neither share
+    the anonymous key, so the tokens and the complete message of a producer that streams
+    outside ``send_message`` still pair up.
     """
-    top_level = data.get("id")
-    if top_level:
-        return str(top_level)
-    inner = data.get("data")
-    inner_id = inner.get("id") if isinstance(inner, dict) else None
-    return str(inner_id) if inner_id else None
+    if not isinstance(data, dict):
+        return ""
+    nested = data.get("data")
+    message_id = data.get("id") or (nested.get("id") if isinstance(nested, dict) else None)
+    return str(message_id) if message_id else ""
+
+
+def _already_delivered(text: str, delivered: str) -> bool:
+    """Whether ``text`` carries nothing the client has not already received.
+
+    True when what the client has already ends with ``text``. Whitespace is ignored: token
+    concatenation and the stored text of one answer can differ by it alone. A suffix rather
+    than equality covers an agent whose final text is the last model round while its tokens
+    spanned every round. Empty text is trivially delivered.
+    """
+    return "".join(delivered.split()).endswith("".join(text.split()))
 
 
 def _split_already_sent(chunk: str, already_sent: str) -> tuple[str, str]:
@@ -217,18 +230,20 @@ async def run_flow_for_openai_responses(
                 processed_tools = set()  # Track processed tool calls to avoid duplicates
                 previous_content = ""  # Track content already sent to calculate deltas
                 stream_usage_data = None  # Track usage from completed message
-                # Set once a non-empty text token arrives. Only then has the text of the final
-                # ``state="complete"`` add_message already reached the client, so only then
-                # may that message's text be dropped. Without text tokens (Stream toggle
-                # off, a Prompt or any other non-streaming producer feeding Chat Output) the
-                # complete message is the sole carrier of the answer.
-                tokens_streamed = False
+                # Keys (see _streamed_message_key) of the messages whose text went out as
+                # non-empty ``token`` events. A ``state="complete"`` add_message repeats
+                # text the client already has only when its own id streamed. Every other
+                # complete message is the sole carrier of its text: a producer that never
+                # streamed (Stream toggle off, a Prompt feeding Chat Output), or a Chat
+                # Output re-publishing a streamed agent answer through a Prompt under the
+                # new id it stores it with.
+                streamed_message_ids: set[str] = set()
                 # Text already forwarded from an add_message that the token stream of the
-                # same message is expected to repeat, keyed by message id. Chat Output
-                # publishes the first streamed chunk as a partial add_message *before* the
-                # token event for it; an agent's interim text is republished *after* its
+                # same message is expected to repeat, keyed like streamed_message_ids. Chat
+                # Output publishes the first streamed chunk as a partial add_message *before*
+                # the token event for it; an agent's interim text is republished *after* its
                 # tokens, so its delta is empty and nothing is recorded for it.
-                partial_text_ahead: dict[str | None, str] = {}
+                partial_text_ahead: dict[str, str] = {}
 
                 async for event_data in consume_and_yield(asyncio_queue, asyncio_queue_client_consumed):
                     if event_data is None:
@@ -259,15 +274,15 @@ async def run_flow_for_openai_responses(
                                 if event_type == "token":
                                     token_data = data.get("chunk", "")
                                     if isinstance(token_data, str) and token_data:
-                                        tokens_streamed = True
-                                        message_id = _event_message_id(data)
+                                        message_key = _streamed_message_key(data)
+                                        streamed_message_ids.add(message_key)
                                         token_data, still_ahead = _split_already_sent(
-                                            token_data, partial_text_ahead.get(message_id, "")
+                                            token_data, partial_text_ahead.get(message_key, "")
                                         )
                                         if still_ahead:
-                                            partial_text_ahead[message_id] = still_ahead
+                                            partial_text_ahead[message_key] = still_ahead
                                         else:
-                                            partial_text_ahead.pop(message_id, None)
+                                            partial_text_ahead.pop(message_key, None)
                                         previous_content += token_data
                                     await logger.adebug(
                                         "[OpenAIResponses][stream] token: token_data=%s",
@@ -329,16 +344,21 @@ async def run_flow_for_openai_responses(
                                                     "[OpenAIResponses][stream] captured usage: %s", stream_usage_data
                                                 )
                                         # The text of a complete message is a repeat of what the client
-                                        # already has only when it went out as token events. Blanking it
-                                        # unconditionally dropped the answer of every run that never
-                                        # streamed tokens. Without tokens the message falls through to
-                                        # the delta logic below, which also keeps a republished identical
-                                        # message (e.g. Chat Output re-sending once usage is attached)
-                                        # from being emitted twice.
-                                        if tokens_streamed:
+                                        # already has only when this very message went out as token
+                                        # events. Blanking every complete message dropped the answer of
+                                        # runs that never streamed; blanking on any earlier token dropped
+                                        # the Chat Output that re-publishes a streamed agent answer
+                                        # through a Prompt under its own id. A complete message that did
+                                        # not stream falls through to the delta logic below, which also
+                                        # keeps a republished identical message (Chat Output re-sending
+                                        # once usage is attached, or storing an unchanged upstream answer
+                                        # under a new id) from being emitted twice.
+                                        message_key = _streamed_message_key(data)
+                                        if message_key in streamed_message_ids:
                                             await logger.adebug(
                                                 "[OpenAIResponses][stream] skipping text of add_message with "
-                                                "state=complete: already streamed as tokens"
+                                                "state=complete: message %r already streamed as tokens",
+                                                message_key,
                                             )
                                             # Still process content_blocks for tool calls, but skip text content
                                             text = ""
@@ -490,13 +510,24 @@ async def run_flow_for_openai_responses(
                                         and sender_name in ["Agent", "AI"]
                                     ):
                                         # Calculate delta: only send newly generated content
-                                        if text.startswith(previous_content):
+                                        if _already_delivered(text, previous_content):
+                                            # Nothing new: the text was blanked above because its id
+                                            # streamed, the frame is a text-less partial, or a message
+                                            # stored under a new id repeats what the tokens delivered.
+                                            # The baseline must survive here; letting such a frame fall
+                                            # into the reset below emptied it, so the next message was
+                                            # measured against nothing and re-sent the whole answer.
+                                            await logger.adebug(
+                                                "[OpenAIResponses][stream] text already delivered; skipping len=%d",
+                                                len(text),
+                                            )
+                                        elif text.startswith(previous_content):
                                             content = text[len(previous_content) :]
                                             previous_content = text
                                             if content:
-                                                message_id = _event_message_id(data)
-                                                partial_text_ahead[message_id] = (
-                                                    partial_text_ahead.get(message_id, "") + content
+                                                message_key = _streamed_message_key(data)
+                                                partial_text_ahead[message_key] = (
+                                                    partial_text_ahead.get(message_key, "") + content
                                                 )
                                             await logger.adebug(
                                                 "[OpenAIResponses][stream] delta computed len=%d total_len=%d",

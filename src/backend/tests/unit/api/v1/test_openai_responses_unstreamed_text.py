@@ -1,16 +1,21 @@
 """Text that was never token-streamed must still reach OpenAI Responses stream consumers.
 
-The stream converter blanks the ``text`` of every ``add_message`` whose ``state`` is
-``complete``, assuming token events already delivered it. That only holds when
-something actually streamed tokens. When nothing did — a Chat Output fed by a Prompt
-or any other non-streaming component, or an agent driven by a model whose Stream
-toggle is off — the complete message is the only carrier of the answer, and the
-client got an empty response. These tests drive the real event pipeline (event
-manager -> v1 projection -> converter) and pin the contract:
+The stream converter blanks the ``text`` of an ``add_message`` whose ``state`` is
+``complete`` on the assumption that token events already delivered it. That holds only
+for the message that actually streamed: the token events and the complete message of
+one producer share a message id. Blanking every complete message dropped the answer of
+runs that never streamed (a Chat Output fed by a Prompt or any other non-streaming
+component, an agent driven by a model whose Stream toggle is off); blanking on any
+earlier token dropped the Chat Output that re-publishes a streamed agent answer through
+a Prompt under its own id. These tests drive the real event pipeline (event manager ->
+v1 projection -> converter) and pin the contract:
 
 - no tokens streamed: the complete message's text is emitted, once;
-- tokens streamed: the complete message is never repeated, even when its text differs
-  from the concatenated tokens (the duplication the skip was written for);
+- tokens streamed: the complete message carrying the same id is never repeated, even
+  when its text differs from the concatenated tokens (the duplication the skip was
+  written for); a Chat Output wired straight to the agent re-publishes under that id;
+- a complete message under another id is new content, unless its text is what the
+  client already has (exactly, or modulo whitespace);
 - tool steps and usage carried by a complete message are handled either way;
 - a Language Model streaming into Chat Output: the first chunk, which Chat Output
   publishes both as a partial add_message and as the first token event, goes out once.
@@ -37,16 +42,21 @@ if TYPE_CHECKING:
 FLOW_INPUT = "what is in openrag?"
 ANSWER = "OpenRAG indexes 3 documents."
 USAGE = {"input_tokens": 12, "output_tokens": 7, "total_tokens": 19}
-# The id of the message whose text is token-streamed: the agent message, or Chat Output's
-# own message when a Language Model streams into it. ``Token`` frames are stamped with it.
-STREAMED_MESSAGE_ID = str(uuid4())
+AGENT_MESSAGE_ID = str(uuid4())
 CHAT_OUTPUT_MESSAGE_ID = str(uuid4())
 
 
-class Token(str):
-    """A ``token`` event frame. Plain ``Message`` frames are ``add_message`` events."""
+class Token:
+    """A ``token`` event frame. Plain ``Message`` frames are ``add_message`` events.
 
-    __slots__ = ()
+    Token events carry the id of the stored message they belong to (``Component._process_chunk``
+    for a streaming model feeding Chat Output, ``lfx.base.agents.events`` for an agent);
+    ``id_=None`` models a producer that streams without one.
+    """
+
+    def __init__(self, chunk: str, *, id_: str | None = AGENT_MESSAGE_ID) -> None:
+        self.chunk = chunk
+        self.message_id = id_
 
 
 def _flow(owner_id):
@@ -70,7 +80,7 @@ def _ai_message(
     sender_name: str = "AI",
     blocks: list | None = None,
     usage: dict | None = None,
-    id_: str = CHAT_OUTPUT_MESSAGE_ID,
+    id_: str | None = CHAT_OUTPUT_MESSAGE_ID,
 ) -> Message:
     properties: dict = {"icon": "Bot", "state": state}
     if usage is not None:
@@ -82,13 +92,13 @@ def _ai_message(
         content_blocks=list(blocks or []),
         properties=properties,
         session_id="session-1",
-        id=id_,
+        **({"id": id_} if id_ is not None else {}),
     )
 
 
 def _agent_message(blocks: list, *, state: str) -> Message:
     """The agent's live shape: ``text=""`` and the answer carried as a ``TextContent`` block."""
-    return _ai_message("", state=state, sender_name="Agent", blocks=blocks, id_=STREAMED_MESSAGE_ID)
+    return _ai_message("", state=state, sender_name="Agent", blocks=blocks, id_=AGENT_MESSAGE_ID)
 
 
 def _finished_tool() -> ToolContent:
@@ -107,9 +117,16 @@ def _fake_run_flow_generator(frames: list[Message | Token]):
         event_manager = kwargs["event_manager"]
         for frame in frames:
             if isinstance(frame, Token):
-                event_manager.on_token(data={"chunk": str(frame), "id": STREAMED_MESSAGE_ID})
+                token_data: dict = {"chunk": frame.chunk}
+                if frame.message_id is not None:
+                    token_data["id"] = frame.message_id
+                event_manager.on_token(data=token_data)
             else:
-                event_manager.on_message(data=frame.model_dump())
+                # Mirror Component._send_message_event: the stored id is lifted to the top level.
+                message_data = frame.model_dump()
+                if frame.get_id() and not message_data.get("id"):
+                    message_data["id"] = str(frame.get_id())
+                event_manager.on_message(data=message_data)
         await event_manager.queue.put((None, None, time.time()))
 
     return run
@@ -251,13 +268,120 @@ async def test_stream_does_not_repeat_complete_message_after_tokens(monkeypatch:
 async def test_stream_skips_complete_message_whose_text_differs_from_tokens(monkeypatch: pytest.MonkeyPatch) -> None:
     """The case the skip was written for: a final text that is not a prefix-extension of the tokens.
 
-    Re-emitting it would append the whole answer to the end of the stream a second time.
+    The agent's complete message and the Chat Output wired straight to it both carry the
+    agent's message id: Chat Output stores the very ``Message`` it received, so
+    ``astore_message`` updates the existing row instead of minting one. Re-emitting either
+    would append the whole answer to the end of the stream a second time.
     """
     frames = [
         Token("OpenRAG indexes "),
         Token("3 documents."),
         _agent_message([TextContent(text=ANSWER.strip("."))], state="complete"),
-        _ai_message(ANSWER.strip("."), state="complete"),
+        _ai_message(ANSWER.strip("."), state="complete", id_=AGENT_MESSAGE_ID),
+    ]
+
+    events = await _stream(monkeypatch, frames)
+
+    assert _content(events) == ANSWER
+
+
+# --- tokens were streamed by one message; a complete message under another id is its own carrier ---
+
+REFORMATTED = f"Final answer: {ANSWER}"
+
+
+async def test_stream_emits_chat_output_text_reformatted_downstream_of_streamed_agent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Agent (streaming) -> Prompt -> Chat Output: the Chat Output stores a new row under its own id.
+
+    Its text is the answer the flow declares and is new to the client, so it follows the
+    agent tokens. Those tokens are already on the wire when the Chat Output message arrives;
+    holding them back would mean buffering the whole response, so the stream carries both.
+    """
+    frames = [
+        _agent_message([], state="partial"),
+        Token("OpenRAG indexes "),
+        Token("3 documents."),
+        _agent_message([TextContent(text=ANSWER)], state="complete"),
+        _ai_message(REFORMATTED, state="complete"),
+        _ai_message(REFORMATTED, state="complete", usage=USAGE),  # re-sent once usage is attached
+    ]
+
+    events = await _stream(monkeypatch, frames)
+
+    assert _content(events) == ANSWER + REFORMATTED
+    assert _completed_usage(events) == USAGE
+
+
+async def test_stream_does_not_repeat_streamed_text_stored_under_new_id_modulo_whitespace(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A Chat Output that mints its own row for an unchanged upstream answer is not new content.
+
+    Token concatenation and the stored text can differ by whitespace alone; that must not
+    trip the full-text reset and append the answer a second time.
+    """
+    frames = [
+        Token("OpenRAG indexes "),
+        Token("3 documents."),
+        _agent_message([TextContent(text=ANSWER)], state="complete"),
+        _ai_message(f"  {ANSWER}\n", state="complete", usage=USAGE),
+    ]
+
+    events = await _stream(monkeypatch, frames)
+
+    assert _content(events) == ANSWER
+    assert _completed_usage(events) == USAGE
+
+
+async def test_stream_does_not_repeat_last_round_text_stored_under_new_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    """An agent's tokens span every model round; its final text is the last round only.
+
+    A Chat Output storing that final text under a new id has nothing the client lacks. The
+    text-less partial frame between the rounds (a tool step) must not reset the delta
+    baseline, or the last round would be re-sent in full.
+    """
+    frames = [
+        _agent_message([], state="partial"),
+        Token("Let me check. "),
+        _agent_message([_finished_tool()], state="partial"),
+        Token("OpenRAG indexes "),
+        Token("3 documents."),
+        _agent_message([_finished_tool(), TextContent(text=ANSWER)], state="complete"),
+        _ai_message(ANSWER, state="complete", usage=USAGE),
+    ]
+
+    events = await _stream(monkeypatch, frames)
+
+    assert _content(events) == "Let me check. " + ANSWER
+    assert _completed_usage(events) == USAGE
+
+
+async def test_stream_blanks_only_the_message_that_streamed(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Language Model (streaming) -> Chat Output: tokens and the complete message share the Chat Output's id.
+
+    A further complete message in the same run keeps its text.
+    """
+    frames = [
+        Token("OpenRAG indexes ", id_=CHAT_OUTPUT_MESSAGE_ID),
+        Token("3 documents.", id_=CHAT_OUTPUT_MESSAGE_ID),
+        _ai_message(ANSWER, state="complete", usage=USAGE),
+        _ai_message("Sources: 3.", state="complete", id_=str(uuid4())),
+    ]
+
+    events = await _stream(monkeypatch, frames)
+
+    assert _content(events) == ANSWER + "Sources: 3."
+    assert _completed_usage(events) == USAGE
+
+
+async def test_stream_pairs_id_less_tokens_with_id_less_complete_message(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A producer streaming outside ``send_message`` carries no id on either event; they still pair up."""
+    frames = [
+        Token("OpenRAG indexes ", id_=None),
+        Token("3 documents.", id_=None),
+        _ai_message(ANSWER.strip("."), state="complete", id_=None),
     ]
 
     events = await _stream(monkeypatch, frames)
@@ -276,10 +400,10 @@ async def test_stream_emits_first_streamed_chunk_once(monkeypatch: pytest.Monkey
     the client never waits; the token repeating it is dropped.
     """
     frames = [
-        _ai_message("Hel", state="partial", id_=STREAMED_MESSAGE_ID),
-        Token("Hel"),
-        Token("lo"),
-        _ai_message("Hello", state="complete", usage=USAGE, id_=STREAMED_MESSAGE_ID),
+        _ai_message("Hel", state="partial"),
+        Token("Hel", id_=CHAT_OUTPUT_MESSAGE_ID),
+        Token("lo", id_=CHAT_OUTPUT_MESSAGE_ID),
+        _ai_message("Hello", state="complete", usage=USAGE),
     ]
 
     events = await _stream(monkeypatch, frames)
@@ -291,10 +415,10 @@ async def test_stream_emits_first_streamed_chunk_once(monkeypatch: pytest.Monkey
 async def test_stream_forwards_tokens_that_diverge_from_partial_text(monkeypatch: pytest.MonkeyPatch) -> None:
     """A token stream that does not repeat the partial text is forwarded whole: never drop text."""
     frames = [
-        _ai_message("Hel", state="partial", id_=STREAMED_MESSAGE_ID),
-        Token("Xy"),
-        Token("z"),
-        _ai_message("HelXyz", state="complete", id_=STREAMED_MESSAGE_ID),
+        _ai_message("Hel", state="partial"),
+        Token("Xy", id_=CHAT_OUTPUT_MESSAGE_ID),
+        Token("z", id_=CHAT_OUTPUT_MESSAGE_ID),
+        _ai_message("HelXyz", state="complete"),
     ]
 
     events = await _stream(monkeypatch, frames)
