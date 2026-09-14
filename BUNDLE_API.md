@@ -231,6 +231,16 @@ the deserialize half is covered by
   `require_loaded` validation. These additions do not change previously released
   Bundle API signatures; `BUNDLE_API_VERSION` remains `1`.
 
+### 2026-09-14 — Actionable connection authorization denials
+
+- `ConnectionNotAuthorizedError.reason` and `details.reason` identify the denial.
+  The optional `reason` argument additionally accepts `anonymous-principal`,
+  `unknown-principal`, and `non-interactive-opt-in-required`, each with a safe,
+  actionable hint. The existing `principal` and `provider` reasons, error code,
+  and HTTP 403 status are preserved. Owner/share authorization is checked before
+  reporting a missing opt-in; credentials are never read for a denied request.
+  This is additive; `BUNDLE_API_VERSION` remains `1`.
+
 ### 2026-09-10 — Integration identity ownership and runtime floors
 
 - The bundle registry rejects duplicate integration provider IDs, capability IDs,
@@ -259,6 +269,18 @@ the deserialize half is covered by
   provider or action fails before the component body runs and before any
   credential is minted, decrypted, or refreshed.  Bundles that declare no
   integrations are unaffected; `BUNDLE_API_VERSION` remains `1`.
+
+- **Owner-only route families on the execution principal (additive).**
+  `ExecutionPrincipal.allow_explicit_shares` is a new field defaulting to `True`,
+  so every family that already honored explicit shares keeps doing so. Route
+  families whose admission never admits a delegated caller (the legacy MCP
+  transports) stamp it `False`, and a host resolver that evaluates share grants
+  must skip its share branch for those principals. The portable deny floor in
+  `BaseConnectionResolverService.authorize_principal` is unchanged in behavior:
+  it admits a share only when the host passes `explicit_share_authorized`, and
+  its docstring now states that a host must never authorize a share for a
+  principal with this flag set to `False`. Additive for bundles and
+  resolvers alike; `BUNDLE_API_VERSION` remains `1`.
 
 - **Optional rejected-token digest for connection refresh.**
   `ConnectionResolutionRequest.rejected_token_digest` carries a SHA-256 digest only

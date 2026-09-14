@@ -53,7 +53,10 @@ class BaseConnectionResolverService(Service, abc.ABC):
     async def resolve(self, request: ConnectionResolutionRequest) -> ResolvedCredential:
         """Enforce the portable floor before invoking the host's credential hook."""
         if request.principal.kind in {"anonymous_public", "unknown"}:
-            raise ConnectionNotAuthorizedError(provider=request.ref.provider)
+            raise ConnectionNotAuthorizedError(
+                provider=request.ref.provider,
+                reason="anonymous-principal" if request.principal.kind == "anonymous_public" else "unknown-principal",
+            )
         policy = await self._get_access_policy(request)
         if not isinstance(policy, ConnectionAccessPolicy):
             raise ConnectionNotAuthorizedError(provider=request.ref.provider)
@@ -115,25 +118,37 @@ class BaseConnectionResolverService(Service, abc.ABC):
         actor's connection:execute grant and the route family's share policy.
         It must never come from flow JSON or component input. A share can satisfy
         an actor's owner mismatch; it cannot override any other deny below.
+
+        The family's share policy includes ``request.principal.allow_explicit_shares``:
+        owner-only route families (the legacy MCP transports) set it to ``False``,
+        and a host must then never authorize a share. Instance-owned rows keep the
+        floor's rule: any principal except ``anonymous_public``/``unknown`` may
+        resolve them, and a host policy hook may narrow that further.
         """
         principal = request.principal
+        if principal.kind in {"anonymous_public", "unknown"}:
+            return ConnectionNotAuthorizedError(
+                provider=request.ref.provider,
+                reason="anonymous-principal" if principal.kind == "anonymous_public" else "unknown-principal",
+            )
         if owner_kind == "env":
             return (
                 None
                 if principal.kind == "headless_operator"
                 else ConnectionNotAuthorizedError(provider=request.ref.provider)
             )
-        if principal.kind in {"anonymous_public", "unknown"}:
-            return ConnectionNotAuthorizedError(provider=request.ref.provider)
         if owner_kind == "user":
             if connection_owner_id is None or principal.user_id is None:
-                return ConnectionNotAuthorizedError(provider=request.ref.provider)
-            if not principal.interactive and not allow_non_interactive:
                 return ConnectionNotAuthorizedError(provider=request.ref.provider)
             if str(principal.user_id) != str(connection_owner_id) and not (
                 principal.kind == "actor" and explicit_share_authorized
             ):
                 return ConnectionNotAuthorizedError(provider=request.ref.provider)
+            # Only an owner or an authorized share holder may learn the opt-in remedy.
+            if not principal.interactive and not allow_non_interactive:
+                return ConnectionNotAuthorizedError(
+                    provider=request.ref.provider, reason="non-interactive-opt-in-required"
+                )
         return None
 
     async def teardown(self) -> None:
