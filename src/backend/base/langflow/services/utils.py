@@ -766,3 +766,6 @@ async def initialize_services(*, fix_migration: bool = False, skip_superuser_set
         await clean_transactions(settings_service, session)
         await clean_vertex_builds(settings_service, session)
         await clean_authz_audit_log(settings_service, session)
+        from langflow.services.audit.retention import clean_audit_events
+
+        await clean_audit_events(settings_service, session)
