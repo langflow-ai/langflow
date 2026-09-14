@@ -33,6 +33,9 @@ from langflow.services.authorization.listing import (
     apply_owned_or_visible_scope_prefilter,
     restrict_to_owned_or_visible_scope,
 )
+from langflow.services.connection.oauth import broker
+from langflow.services.connection.oauth.config import OAuthError
+from langflow.services.connection.oauth.locking import lock_connection
 from langflow.services.database.models.connection import (
     Connection,
     ConnectionCreate,
@@ -45,6 +48,7 @@ from langflow.services.database.models.connection import (
     ExecutingIdentityDescriptor,
     PersistedConnectionStatus,
 )
+from langflow.services.database.models.connection.schemas import ConnectionRevokeRead
 from langflow.services.deps import get_authorization_service, get_settings_service, session_scope
 
 if TYPE_CHECKING:
@@ -290,6 +294,11 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         connection_id: UUID,
         for_update: bool = False,
     ) -> Connection | None:
+        if for_update:
+            # The lock is taken before the owner filter below, so callers must
+            # authorize the row in a separate read first (see the connections
+            # API's _authorized_row); this lookup then repeats under the lock.
+            await lock_connection(session, connection_id)
         authz = get_authorization_service()
         may_fetch_cross_user = bool(getattr(user, "is_superuser", False)) or (
             await authz.is_enabled() and await authz.supports_cross_user_fetch()
@@ -309,7 +318,8 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
     async def has_credentials(self, session: AsyncSession, connection_id: UUID) -> bool:
         return await session.get(ConnectionSecret, connection_id) is not None
 
-    async def revoke(self, session: AsyncSession, row: Connection) -> ConnectionRead:
+    async def revoke(self, session: AsyncSession, row: Connection) -> ConnectionRevokeRead:
+        provider_revocation = await broker.revoke(session, row)
         secret = await session.get(ConnectionSecret, row.id)
         if secret is not None:
             await session.delete(secret)
@@ -320,7 +330,9 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         session.add(row)
         await session.flush()
         await session.refresh(row)
-        return self.to_read(row, has_credentials=False)
+        return ConnectionRevokeRead(
+            **self.to_read(row, has_credentials=False).model_dump(), provider_revocation=provider_revocation
+        )
 
     async def update(self, session: AsyncSession, row: Connection, payload: ConnectionUpdate) -> ConnectionRead:
         """Apply owner-editable metadata; the stored credential is untouched."""
@@ -335,6 +347,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         return self.to_read(row, has_credentials=await self.has_credentials(session, row.id))
 
     async def delete(self, session: AsyncSession, row: Connection) -> None:
+        await self.revoke(session, row)
         await session.delete(row)
         await session.flush()
 
@@ -390,15 +403,29 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
     ) -> ResolvedCredential:
         if policy.connection_id is None:
             raise ConnectionUnresolvedError(request.ref.to_handle(), provider=request.ref.provider)
+        # _get_access_policy's read transaction has already ended, so the write
+        # lock is the first statement of a fresh transaction.
         async with session_scope() as session:
-            row = await session.get(Connection, UUID(policy.connection_id))
+            row = await lock_connection(session, UUID(policy.connection_id))
             if row is None or (row.provider_key, row.name) != (request.ref.provider, request.ref.name):
                 raise ConnectionUnresolvedError(request.ref.to_handle(), provider=request.ref.provider)
             # Fail closed if ownership or the non-interactive opt-in changed
             # after the base class authorized the policy.
             if _access_policy(row, explicit_share_authorized=policy.explicit_share_authorized) != policy:
                 raise ConnectionNotAuthorizedError(provider=request.ref.provider)
-            return await self._credential_from_row(session, row=row)
+            resolution_error = None
+            try:
+                credential = await self._credential_from_row(
+                    session, row=row, rejected_token_digest=request.rejected_token_digest
+                )
+            except IntegrationError as exc:
+                # A rotating refresh token may already have been exchanged. Keep
+                # that encrypted update; the base class checks scopes only after
+                # this transaction commits, so narrowed scopes keep it as well.
+                resolution_error = exc
+        if resolution_error is not None:
+            raise resolution_error
+        return credential
 
     async def describe(self, ref: ConnectionRef, principal: ExecutionPrincipal) -> ConnectionStatus | None:
         request = ConnectionResolutionRequest(ref=ref, principal=principal)
@@ -559,7 +586,9 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
             raise ScopeMissingError(frozenset(missing), provider=row.provider_key)
         return credential
 
-    async def _credential_from_row(self, session: AsyncSession, *, row: Connection) -> ResolvedCredential:
+    async def _credential_from_row(
+        self, session: AsyncSession, *, row: Connection, rejected_token_digest: str | None = None
+    ) -> ResolvedCredential:
         handle = ConnectionRef(provider=row.provider_key, name=row.name).to_handle()
         if row.status == PersistedConnectionStatus.REVOKED.value:
             raise ConnectionUnresolvedError(handle, provider=row.provider_key)
@@ -579,6 +608,10 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 row.id,
             )
             raise ConnectionUnresolvedError(handle, provider=row.provider_key, reason="credential-undecryptable")
+        try:
+            payload = await broker.refresh_if_needed(session, row, payload, rejected_token_digest=rejected_token_digest)
+        except OAuthError:
+            raise AuthExpiredError(provider=row.provider_key) from None
         expires_at = _parse_expiry(payload.get("expires_at"))
         if expires_at is not None and expires_at <= _utc_now():
             raise AuthExpiredError(provider=row.provider_key)

@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import contextlib
 import json
+import re
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
@@ -11,13 +13,19 @@ from cryptography.fernet import Fernet
 from langflow.services.auth.utils import encrypt_api_key, get_auth_service
 from langflow.services.database.models.connection import ConnectionSecret
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import get_connection_resolver_service, session_scope
+from langflow.services.deps import get_connection_resolver_service, get_db_service, session_scope
 from lfx.integrations.errors import ConnectionNotAuthorizedError, ConnectionUnresolvedError, ScopeMissingError
 from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
 from lfx.services.authorization.base import ExecutionPrincipal
+from lfx.services.deps import get_settings_service
+from sqlalchemy import event
 from sqlmodel import select
 
+from tests.unit.services.authorization._policy_double import install_policy_authz
+
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Iterator
+
     from httpx import AsyncClient
 
 pytestmark = pytest.mark.no_blockbuster
@@ -59,6 +67,50 @@ def _assert_no_credentials(value: object) -> None:
             _assert_no_credentials(item)
     elif isinstance(value, str):
         assert value not in {"access-token-do-not-return", "refresh-token-do-not-return"}
+
+
+@contextlib.contextmanager
+def _connection_row_updates() -> Iterator[list[str]]:
+    """Record UPDATEs against the connection table, which is how its row lock is taken."""
+    engine = get_db_service().engine
+    sync_engine = getattr(engine, "sync_engine", engine)
+    statements: list[str] = []
+
+    def record(_conn, _cursor, statement, _parameters, _context, _executemany) -> None:
+        if re.match(r"\s*UPDATE\s+connection\b", statement, re.IGNORECASE):
+            statements.append(statement)
+
+    event.listen(sync_engine, "before_cursor_execute", record)
+    try:
+        yield statements
+    finally:
+        event.remove(sync_engine, "before_cursor_execute", record)
+
+
+@contextlib.asynccontextmanager
+async def _other_user_headers(client: AsyncClient) -> AsyncIterator[dict[str, str]]:
+    username = f"other-{uuid4().hex}"
+    password = "test-non-owner-password"  # noqa: S105  # pragma: allowlist secret
+    async with session_scope() as session:
+        other = User(
+            username=username,
+            password=get_auth_service().get_password_hash(password),
+            is_active=True,
+        )
+        session.add(other)
+        await session.flush()
+        await session.refresh(other)
+        other_id = other.id
+
+    login = await client.post("api/v1/login", data={"username": username, "password": password})
+    assert login.status_code == 200, login.text
+    try:
+        yield {"Authorization": f"Bearer {login.json()['access_token']}"}
+    finally:
+        async with session_scope() as session:
+            other = await session.get(User, other_id)
+            if other is not None:
+                await session.delete(other)
 
 
 async def _login_new_user(client: AsyncClient, *, is_superuser: bool = False) -> dict[str, str]:
@@ -197,35 +249,56 @@ async def test_non_owner_cannot_test_or_delete_connection(
     assert created.status_code == 201, created.text
     connection_id = created.json()["id"]
 
-    username = f"other-{uuid4().hex}"
-    password = "test-non-owner-password"  # noqa: S105  # pragma: allowlist secret
-    async with session_scope() as session:
-        other = User(
-            username=username,
-            password=get_auth_service().get_password_hash(password),
-            is_active=True,
-        )
-        session.add(other)
-        await session.flush()
-        await session.refresh(other)
-        other_id = other.id
-
-    login = await client.post("api/v1/login", data={"username": username, "password": password})
-    assert login.status_code == 200, login.text
-    headers = {"Authorization": f"Bearer {login.json()['access_token']}"}
-    tested = await client.post(
-        f"api/v1/connections/{connection_id}/test",
-        json={"required_scopes": []},
-        headers=headers,
-    )
-    deleted = await client.delete(f"api/v1/connections/{connection_id}", headers=headers)
+    async with _other_user_headers(client) as headers:
+        # A caller who cannot see the connection must not take its row lock:
+        # otherwise a known UUID lets them stall the owner's refresh or revoke.
+        with _connection_row_updates() as updates:
+            tested = await client.post(
+                f"api/v1/connections/{connection_id}/test",
+                json={"required_scopes": []},
+                headers=headers,
+            )
+            revoked = await client.post(f"api/v1/connections/{connection_id}/revoke", headers=headers)
+            deleted = await client.delete(f"api/v1/connections/{connection_id}", headers=headers)
+            started = await client.post(
+                f"api/v1/connections/{connection_id}/oauth/start",
+                json={"registration_id": "unknown", "scopes": ["read"]},
+                headers=headers,
+            )
+    assert started.status_code == 404
     assert tested.status_code == 404
+    assert revoked.status_code == 404
     assert deleted.status_code == 404
+    assert updates == []
+
+    # The owner still locks the row, which also shows the listener sees the lock.
+    with _connection_row_updates() as updates:
+        health = await client.post(f"api/v1/connections/{connection_id}/health", headers=logged_in_headers)
+    assert health.status_code == 200, health.text
+    assert updates
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_denied_cross_user_fetch_does_not_lock_connection(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+) -> None:
+    """A plugin loads rows across users, so its deny must also come before the lock."""
+    created = await client.post("api/v1/connections", json=_payload(), headers=logged_in_headers)
+    assert created.status_code == 201, created.text
+    connection_id = created.json()["id"]
+
+    async with _other_user_headers(client) as headers:
+        with install_policy_authz(get_settings_service()), _connection_row_updates() as updates:
+            revoked = await client.post(f"api/v1/connections/{connection_id}/revoke", headers=headers)
+            health = await client.post(f"api/v1/connections/{connection_id}/health", headers=headers)
+    assert revoked.status_code == 403, revoked.text
+    assert health.status_code == 403, health.text
+    assert updates == []
 
     async with session_scope() as session:
-        other = await session.get(User, other_id)
-        if other is not None:
-            await session.delete(other)
+        secret = await session.get(ConnectionSecret, UUID(connection_id))
+        assert secret is not None
 
 
 @pytest.mark.usefixtures("active_super_user")
@@ -404,14 +477,22 @@ async def test_instance_connections_are_changed_only_by_superusers(
     checked = await client.post(f"{connection_url}/health", headers=member_headers)
     assert checked.status_code == 200, checked.text
 
-    # ...but cannot change or remove it, even with authorization disabled.
-    denied = [
-        await client.patch(connection_url, json={"display_name": "Mine now"}, headers=member_headers),
-        await client.patch(connection_url, json={"allow_non_interactive": True}, headers=member_headers),
-        await client.post(f"{connection_url}/revoke", headers=member_headers),
-        await client.delete(connection_url, headers=member_headers),
-    ]
-    assert [response.status_code for response in denied] == [403, 403, 403, 403]
+    # ...but cannot change, re-authorize, or remove it, even with authorization
+    # disabled, and is refused before the row lock is taken.
+    with _connection_row_updates() as locks:
+        denied = [
+            await client.patch(connection_url, json={"display_name": "Mine now"}, headers=member_headers),
+            await client.patch(connection_url, json={"allow_non_interactive": True}, headers=member_headers),
+            await client.post(
+                f"{connection_url}/oauth/start",
+                json={"registration_id": "google", "scopes": ["calendar.readonly"]},
+                headers=member_headers,
+            ),
+            await client.post(f"{connection_url}/revoke", headers=member_headers),
+            await client.delete(connection_url, headers=member_headers),
+        ]
+    assert [response.status_code for response in denied] == [403, 403, 403, 403, 403]
+    assert locks == []
     unchanged = (await client.get("api/v1/connections", headers=member_headers)).json()[0]
     assert (unchanged["display_name"], unchanged["allow_non_interactive"], unchanged["status"]) == (
         "Work Google",
