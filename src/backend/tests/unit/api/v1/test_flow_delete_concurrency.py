@@ -66,14 +66,14 @@ async def test_concurrent_version_deletes_report_one_success(client: AsyncClient
     assert response.status_code == status.HTTP_201_CREATED
     version_id = response.json()["id"]
     wait_for_requests = _request_barrier(4)
-    original_check = version_crud.has_deployment_attachments
+    original_lock = version_crud.lock_flow_version_entry
 
-    async def check_before_competing_deletes(*args, **kwargs):
-        attached = await original_check(*args, **kwargs)
+    async def lock_after_competing_requests_arrive(*args, **kwargs):
+        # All requests must reach deletion before one acquires the database lock.
         await wait_for_requests()
-        return attached
+        return await original_lock(*args, **kwargs)
 
-    monkeypatch.setattr(version_crud, "has_deployment_attachments", check_before_competing_deletes)
+    monkeypatch.setattr(version_crud, "lock_flow_version_entry", lock_after_competing_requests_arrive)
     responses = await asyncio.gather(
         *(client.delete(f"api/v1/flows/{flow_id}/versions/{version_id}", headers=logged_in_headers) for _ in range(4))
     )
