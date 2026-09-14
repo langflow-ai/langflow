@@ -71,7 +71,7 @@ overrides = [
     { name = "orjson", specifier = ">=3.11.6" },
     { name = "pillow", specifier = ">=12.3.0" },
     { name = "playwright", specifier = ">=1.59.0" },
-    { name = "pypdf", specifier = ">=6.15.0,<7.0.0" },
+    { name = "pypdf", specifier = ">=6.16.1,<7.0.0" },
     { name = "python-liquid", specifier = ">=2.2.0,<3.0.0" },
     { name = "python-pptx", specifier = ">=1.0.2" },
     { name = "urllib3", specifier = ">=2.7.0,<3.0.0" },
@@ -8375,8 +8375,8 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.2.0,<3.0.0" },
     { name = "pyjwt", specifier = ">=2.12.1" },
     { name = "pymongo", marker = "extra == 'mongodb'", specifier = ">=4.10.1" },
-    { name = "pypdf", specifier = ">=6.15.0,<7.0.0" },
-    { name = "pypdf", marker = "extra == 'pypdf'", specifier = ">=6.15.0,<7.0.0" },
+    { name = "pypdf", specifier = ">=6.16.1,<7.0.0" },
+    { name = "pypdf", marker = "extra == 'pypdf'", specifier = ">=6.16.1,<7.0.0" },
     { name = "pyperclip", specifier = ">=1.8.2,<2.0.0" },
     { name = "python-docx", specifier = ">=1.1.0,<2.0.0" },
     { name = "python-docx", marker = "extra == 'docx'", specifier = ">=1.1.0" },
@@ -8891,7 +8891,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.0.0,<2.14" },
     { name = "pydantic-settings", specifier = ">=2.10.1,<3.0.0" },
     { name = "pyjwt", specifier = ">=2.10.0,<3.0.0" },
-    { name = "pypdf", specifier = ">=6.15.0,<7.0.0" },
+    { name = "pypdf", specifier = ">=6.16.1,<7.0.0" },
     { name = "python-dotenv", specifier = ">=1.0.0,<2.0.0" },
     { name = "pyyaml", specifier = ">=6.0.0,<7.0.0" },
     { name = "rich", specifier = ">=13.0.0,<14.0.0" },
@@ -8999,7 +8999,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.1.25"
+version = "1.1.26"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -15411,14 +15411,14 @@ wheels = [
 
 [[package]]
 name = "pypdf"
-version = "6.15.0"
+version = "6.18.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/17/17/ee75a92718ec7212de831e71454d702225aa5e474a805cce169806044453/pypdf-6.15.0.tar.gz", hash = "sha256:d39c4d955a76409284a905e2d65b40076d77ab76129e0faaeeb6612403ecfc79", size = 6993794, upload-time = "2026-08-06T13:06:49.929Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4f/c2/e537e78a8282b51ed47031566be118debbc34c04782a9afd8739672eb07d/pypdf-6.18.1.tar.gz", hash = "sha256:2441fc839053745638d9b9ddb38ed66beed8d611f47a3036c9838fc4e3074dea", size = 7027577, upload-time = "2026-09-11T10:10:07.616Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/af/72/ce3067ac31e214a66388159f8462ddb8c13dd00170f24d555a1f1ae8ee91/pypdf-6.15.0-py3-none-any.whl", hash = "sha256:14e001d6504822cb1ca9c7ed9a69bccb320f59b320730f55af804361abe4d5ee", size = 378123, upload-time = "2026-08-06T13:06:47.709Z" },
+    { url = "https://files.pythonhosted.org/packages/58/13/645df3995075112cb3cce15e8797c205f0f88fb50acc11012b84b071bc22/pypdf-6.18.1-py3-none-any.whl", hash = "sha256:ee93a2665670ecf57ee81d197a4ca548f3dc15f9cefc56e59b8140866aaa3de5", size = 394327, upload-time = "2026-09-11T10:10:06.103Z" },
 ]
 
 [[package]]

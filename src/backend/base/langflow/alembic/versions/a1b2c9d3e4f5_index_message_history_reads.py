@@ -43,7 +43,7 @@ def _invalid_postgres_indexes(conn, names: set[str]) -> set[str]:
         sa.text(
             "SELECT c.relname FROM pg_class c "
             "JOIN pg_index i ON i.indexrelid = c.oid "
-            "WHERE NOT i.indisvalid AND c.relname = ANY(:names)"
+            "WHERE i.indrelid = 'message'::regclass AND NOT i.indisvalid AND c.relname = ANY(:names)"
         ),
         {"names": sorted(names)},
     )

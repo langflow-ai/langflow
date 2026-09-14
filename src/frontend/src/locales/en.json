@@ -516,6 +516,8 @@
   "settings.recordingKeyboard": "Recording your keyboard",
   "settings.nav.messages": "Messages",
   "messages.title": "Messages",
+  "messages.loadOlder": "Load older messages",
+  "messages.loadError": "Could not load messages.",
   "messages.description": "Inspect, edit and remove messages to explore and refine model behaviors.",
   "messages.column.timestamp": "timestamp",
   "messages.column.text": "text",

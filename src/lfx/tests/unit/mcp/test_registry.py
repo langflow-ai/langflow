@@ -68,7 +68,12 @@ class TestDescribeConfigurationMetadata:
 
     @pytest.mark.parametrize(
         ("name", "metadata"),
-        [("api_key", {}), ("credential", {"password": True}), ("endpoint", {"load_from_db": True})],
+        [
+            ("api_key", {}),
+            ("credential", {"password": True}),
+            ("credential", {"type": "SecretStr"}),
+            ("endpoint", {"load_from_db": True}),
+        ],
     )
     def test_omits_secret_defaults(self, name, metadata):
         registry = {"Example": {"template": {name: {"type": "str", "value": "test-only-placeholder", **metadata}}}}

@@ -4,11 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ThemeButtons from "@/components/core/appHeaderComponent/components/ThemeButtons";
-import {
-  MESSAGE_HISTORY_PAGE_SIZE,
-  useGetMessagesQuery,
-} from "@/controllers/API/queries/messages";
 import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
+import { useGetMessageHistory } from "@/controllers/API/queries/messages/use-get-message-history";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
 import { ENABLE_PUBLISH } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
@@ -191,20 +188,13 @@ export default function IOModal({
     (state) => state.setCurrentSessionId,
   );
 
+  const messageHistory = useGetMessageHistory({
+    id: currentFlowId,
+    sessionId: visibleSession,
+    enabled: open,
+  });
   const { isFetched: messagesFetched, refetch: refetchMessages } =
-    useGetMessagesQuery(
-      {
-        mode: "union",
-        id: currentFlowId,
-        params: {
-          session_id: visibleSession,
-          // The newest page only: this view renders the whole store at once, so
-          // a long history would otherwise be downloaded and mounted in full.
-          limit: MESSAGE_HISTORY_PAGE_SIZE,
-        },
-      },
-      { enabled: open },
-    );
+    messageHistory;
 
   const chatValue = useUtilityStore((state) => state.chatValueStore);
   const setChatValue = useUtilityStore((state) => state.setChatValueStore);
@@ -505,6 +495,7 @@ export default function IOModal({
                 setSelectedViewField={setSelectedViewField}
                 haveChat={haveChat}
                 messagesFetched={messagesFetched}
+                messageHistory={messageHistory}
                 sessionId={sessionId}
                 sendMessage={sendMessage}
                 canvasOpen={canvasOpen}

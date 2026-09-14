@@ -158,7 +158,7 @@ The `order_by` parameter defaults to `timestamp`, and `order` accepts `ASC` or `
 `order_by` and `order` set the display order of the returned page; they don't change which page is selected.
 
 The endpoint always returns a bounded page anchored at the most recent messages, so a flow with a long history never serializes in full.
-Use `limit` to set the page size, which defaults to 100 and is clamped to a server-side maximum of 500.
+Use `limit` to set the page size, which defaults to 100 and is clamped to a server-side maximum of 200.
 Use `offset` to page backwards into older history.
 With the defaults, the endpoint returns the 100 most recent messages, oldest first within that page.
 

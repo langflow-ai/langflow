@@ -47,7 +47,7 @@ def test_workspace_security_overrides_enforce_patched_versions() -> None:
     _assert_floor(gitpython, "3.1.58")
 
     pypdf = _requirement(overrides, "pypdf")
-    _assert_floor(pypdf, "6.15.0")
+    _assert_floor(pypdf, "6.16.1")
     _assert_specifier(pypdf, "<", "7.0.0")
 
     h2 = _requirement(overrides, "h2")
@@ -80,12 +80,12 @@ def test_published_packages_enforce_patched_pypdf_floor() -> None:
     for relative_path in ("src/backend/base/pyproject.toml", "src/lfx/pyproject.toml"):
         dependencies = _load_pyproject(relative_path)["project"]["dependencies"]
         pypdf = _requirement(dependencies, "pypdf")
-        _assert_floor(pypdf, "6.15.0")
+        _assert_floor(pypdf, "6.16.1")
         _assert_specifier(pypdf, "<", "7.0.0")
 
     base_extras = _load_pyproject("src/backend/base/pyproject.toml")["project"]["optional-dependencies"]
     pypdf_extra = _requirement(base_extras["pypdf"], "pypdf")
-    _assert_floor(pypdf_extra, "6.15.0")
+    _assert_floor(pypdf_extra, "6.16.1")
     _assert_specifier(pypdf_extra, "<", "7.0.0")
 
 
