@@ -61,15 +61,25 @@ def create_s3_client(component: Any):
     return boto3.client("s3", **client_config)
 
 
-def parse_google_service_account_key(service_account_key: Any) -> dict:
-    """Parse Google service account JSON key with multiple fallback strategies.
+# Total json.loads passes, including the first. The extra passes run only while the
+# result is still a string, which is what unwraps a double-encoded key.
+_MAX_JSON_DECODE_PASSES = 3
 
-    This function handles various common formatting issues when users paste
-    service account keys, including:
-    - Control characters
-    - Extra whitespace
-    - Double-encoded JSON strings
-    - Escaped newlines in private_key field
+
+def _parse_error_message(detail: str) -> str:
+    """Build the user-facing ValueError message for a key that could not be parsed."""
+    return (
+        f"Unable to parse service account key JSON: {detail}. "
+        "Please ensure you've copied the entire JSON content from your service account key file. "
+        "The JSON should start with '{' and contain fields like 'type', 'project_id', 'private_key', etc."
+    )
+
+
+def parse_google_service_account_key(service_account_key: Any) -> dict:
+    """Parse a Google service account JSON key, tolerating common paste damage.
+
+    Handles control characters, surrounding whitespace, and keys that have been
+    JSON-encoded more than once.
 
     Args:
         service_account_key: Service account JSON key as string
@@ -78,54 +88,41 @@ def parse_google_service_account_key(service_account_key: Any) -> dict:
         dict: Parsed service account credentials
 
     Raises:
-        ValueError: If all parsing strategies fail
+        ValueError: If the key is not valid JSON, or does not decode to a JSON object
     """
-    service_account_key = secret_value_to_str(service_account_key) or ""
+    # json.loads already skips JSON whitespace, but a pasted key can carry padding the
+    # scanner rejects, such as a non-breaking space. strict=False allows the control
+    # characters that survive a copied private_key.
+    key_text = (secret_value_to_str(service_account_key) or "").strip()
 
-    credentials_dict = None
-    parse_errors = []
-
-    # Strategy 1: Parse as-is with strict=False to allow control characters
     try:
-        credentials_dict = json.loads(service_account_key, strict=False)
+        decoded: Any = json.loads(key_text, strict=False)
     except json.JSONDecodeError as e:
-        parse_errors.append(f"Standard parse: {e!s}")
+        msg = _parse_error_message(str(e))
+        raise ValueError(msg) from e
 
-    # Strategy 2: Strip whitespace and try again
-    if credentials_dict is None:
+    # Secret and configuration pipelines sometimes JSON-encode the credential object a
+    # second time, so a successful decode can still yield the object as text.
+    inner_error: json.JSONDecodeError | None = None
+    for _ in range(_MAX_JSON_DECODE_PASSES - 1):
+        if not isinstance(decoded, str):
+            break
         try:
-            cleaned_key = service_account_key.strip()
-            credentials_dict = json.loads(cleaned_key, strict=False)
+            decoded = json.loads(decoded, strict=False)
         except json.JSONDecodeError as e:
-            parse_errors.append(f"Stripped parse: {e!s}")
+            # The inner text is not JSON, so this is the final value. Keep the error:
+            # it carries the position of the real syntax problem.
+            inner_error = e
+            break
 
-    # Strategy 3: Check if it's double-encoded (JSON string of a JSON string)
-    if credentials_dict is None:
-        try:
-            decoded_once = json.loads(service_account_key, strict=False)
-            credentials_dict = json.loads(decoded_once, strict=False) if isinstance(decoded_once, str) else decoded_once
-        except json.JSONDecodeError as e:
-            parse_errors.append(f"Double-encoded parse: {e!s}")
+    if isinstance(decoded, dict):
+        return decoded
 
-    # Strategy 4: Try to fix common issues with newlines in the private_key field
-    if credentials_dict is None:
-        try:
-            # Replace literal \n with actual newlines which is common in pasted JSON
-            fixed_key = service_account_key.replace("\\n", "\n")
-            credentials_dict = json.loads(fixed_key, strict=False)
-        except json.JSONDecodeError as e:
-            parse_errors.append(f"Newline-fixed parse: {e!s}")
-
-    if credentials_dict is None:
-        error_details = "; ".join(parse_errors)
-        msg = (
-            f"Unable to parse service account key JSON. Tried multiple strategies: {error_details}. "
-            "Please ensure you've copied the entire JSON content from your service account key file. "
-            "The JSON should start with '{' and contain fields like 'type', 'project_id', 'private_key', etc."
-        )
-        raise ValueError(msg)
-
-    return credentials_dict
+    detail = f"expected a JSON object, got {type(decoded).__name__}"
+    if inner_error is not None:
+        detail = f"{detail}; inner layer: {inner_error!s}"
+    msg = _parse_error_message(detail)
+    raise ValueError(msg)
 
 
 def create_google_drive_service(service_account_key: str, scopes: list[str], *, return_credentials: bool = False):
