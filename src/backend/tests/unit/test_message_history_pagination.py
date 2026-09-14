@@ -7,6 +7,7 @@ from langflow.memory import aadd_messagetables
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import session_scope
+from sqlalchemy import update
 
 
 @pytest.fixture(params=["messages", "messages/shared"])
@@ -102,3 +103,34 @@ async def test_invalid_pagination_parameters(client, logged_in_headers, message_
     url, params, _ = message_history
     response = await client.get(url, headers=logged_in_headers, params={**params, **query})
     assert response.status_code == status, response.text
+
+
+@pytest.mark.parametrize("order", ["ASC", "DESC"])
+@pytest.mark.parametrize("order_by", ["text", "timestamp"])
+async def test_nullable_text_keeps_history_readable(client, logged_in_headers, message_history, order, order_by):
+    """Legacy NULL text must survive both page sorting and response validation."""
+    url, params, newest = message_history
+    null_message_id = UUID(newest[0]["id"])
+    async with session_scope() as session:
+        await session.execute(update(MessageTable).where(MessageTable.id == null_message_id).values(text=None))
+
+    response = await client.get(
+        url,
+        headers=logged_in_headers,
+        params={**params, "limit": 3, "order_by": order_by, "order": order},
+    )
+    assert response.status_code == 200, response.text
+    messages = response.json()
+    assert len(messages) == 3
+    assert next(message for message in messages if message["id"] == str(null_message_id))["text"] == ""
+    if order_by == "text":
+        expected = [newest[2]["id"], newest[1]["id"], newest[0]["id"]]
+    else:
+        expected = [message["id"] for message in reversed(newest[:3])]
+    if order == "DESC":
+        expected.reverse()
+    assert [message["id"] for message in messages] == expected
+
+    async with session_scope() as session:
+        stored = await session.get(MessageTable, null_message_id)
+        assert stored.text is None
