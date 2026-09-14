@@ -1,11 +1,10 @@
-/**
- * Tests for useGetMessagesPollingMutation bounded polling.
- *
- * Verifies that every poll request carries an explicit limit so a large
- * message history is never fetched in full on each 5s cycle (issue #15023).
- */
-
-import { renderHook } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, renderHook } from "@testing-library/react";
+import { createElement, type PropsWithChildren } from "react";
+import {
+  MessagesPollingManager,
+  useGetMessagesPollingMutation,
+} from "../use-get-messages-polling";
 
 const FLOW_ID = "flow-id-15023";
 const MOCK_MESSAGES = [
@@ -17,109 +16,135 @@ const MOCK_MESSAGES = [
     sender: "User",
   },
 ];
-
+const RESPONSE = { rows: MOCK_MESSAGES, columns: [] };
+const mockSetMessages = jest.fn();
 jest.mock("@/stores/messagesStore", () => ({
-  useMessagesStore: {
-    getState: jest.fn(() => ({
-      messages: [],
-      setMessages: jest.fn(),
-    })),
-  },
+  useMessagesStore: { getState: () => ({ setMessages: mockSetMessages }) },
 }));
-
 const mockApiGet = jest.fn();
 jest.mock("@/controllers/API/api", () => ({
   api: { get: (...args: unknown[]) => mockApiGet(...args) },
 }));
-
 jest.mock("@/controllers/API/helpers/constants", () => ({
   getURL: (key: string) => `api/v1/${key.toLowerCase()}`,
 }));
-
 jest.mock("@/utils/utils", () => ({
   extractColumnsFromRows: jest.fn(() => []),
   prepareSessionIdForAPI: (id: string) => encodeURIComponent(id),
 }));
 
-jest.mock("@/controllers/API/services/request-processor", () => ({
-  UseRequestProcessor: jest.fn(() => ({
-    mutate: jest.fn((_key: unknown, fn: (payload: unknown) => unknown) => fn),
-  })),
-}));
+function wrapper() {
+  const client = new QueryClient();
+  return ({ children }: PropsWithChildren) =>
+    createElement(QueryClientProvider, { client }, children);
+}
 
-import { useGetMessagesPollingMutation } from "../use-get-messages-polling";
-
-// MessagesPollingManager fires the first poll internally when the poll is
-// enqueued, so the promise returned by the mutate call can reject benignly
-// with "Request already in progress". The data still arrives via the
-// manager-triggered fetch.
-const startPolling = (
-  mutation: unknown,
-  payload: Record<string, unknown>,
-): Promise<unknown> =>
-  Promise.resolve(
-    (mutation as (p: Record<string, unknown>) => Promise<unknown>)(payload),
-  ).catch(() => undefined);
-
-describe("useGetMessagesPollingMutation - bounded polling", () => {
+describe("useGetMessagesPollingMutation", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
     mockApiGet.mockResolvedValue({ data: MOCK_MESSAGES });
   });
-
   afterEach(() => {
+    MessagesPollingManager.stopAll();
     jest.useRealTimers();
   });
 
-  it("should_pass_explicit_limit_on_immediate_poll", async () => {
-    const { result } = renderHook(() => useGetMessagesPollingMutation());
-
-    await startPolling(result.current, { id: FLOW_ID, mode: "union" });
-    await jest.advanceTimersByTimeAsync(0);
-
-    expect(mockApiGet).toHaveBeenCalledWith(
-      "api/v1/messages",
-      expect.objectContaining({
-        params: { flow_id: FLOW_ID, limit: 100 },
-      }),
+  it("resolves the initial bounded request and calls success handlers once", async () => {
+    const onSuccess = jest.fn();
+    const onError = jest.fn();
+    const onPollSuccess = jest.fn();
+    const { result } = renderHook(
+      () => useGetMessagesPollingMutation({ onSuccess, onError }),
+      { wrapper: wrapper() },
     );
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          id: FLOW_ID,
+          mode: "union",
+          onSuccess: onPollSuccess,
+        }),
+      ).resolves.toEqual(RESPONSE);
+    });
+    expect(mockApiGet).toHaveBeenCalledTimes(1);
+    expect(mockApiGet).toHaveBeenCalledWith("api/v1/messages", {
+      params: { flow_id: FLOW_ID, limit: 100 },
+    });
+    expect(mockSetMessages).toHaveBeenCalledWith(MOCK_MESSAGES);
+    expect(onSuccess).toHaveBeenCalledTimes(1);
+    expect(onPollSuccess).toHaveBeenCalledTimes(1);
+    expect(onPollSuccess).toHaveBeenCalledWith(RESPONSE);
+    expect(onError).not.toHaveBeenCalled();
   });
 
-  it("should_pass_explicit_limit_on_every_poll_cycle", async () => {
-    const { result } = renderHook(() => useGetMessagesPollingMutation());
-
-    await startPolling(result.current, { id: FLOW_ID, mode: "union" });
-    await jest.advanceTimersByTimeAsync(0);
-    expect(mockApiGet).toHaveBeenCalledTimes(1);
-
-    await jest.advanceTimersByTimeAsync(5000);
-    expect(mockApiGet).toHaveBeenCalledTimes(2);
-
-    await jest.advanceTimersByTimeAsync(5000);
+  it("passes an explicit limit on every polling cycle", async () => {
+    const { result } = renderHook(() => useGetMessagesPollingMutation(), {
+      wrapper: wrapper(),
+    });
+    await act(async () => {
+      await result.current.mutateAsync({ id: FLOW_ID, mode: "union" });
+      await jest.advanceTimersByTimeAsync(10000);
+    });
     expect(mockApiGet).toHaveBeenCalledTimes(3);
-
-    // Every poll request must include the limit param.
     for (const call of mockApiGet.mock.calls) {
-      expect(call[1]).toEqual(
-        expect.objectContaining({
-          params: expect.objectContaining({ limit: 100 }),
-        }),
-      );
+      expect(call[1].params).toEqual({ flow_id: FLOW_ID, limit: 100 });
     }
   });
 
-  it("should_still_apply_limit_when_no_flow_id_is_given", async () => {
-    const { result } = renderHook(() => useGetMessagesPollingMutation());
+  it.each([
+    [{}, { limit: 100 }],
+    [
+      { params: { limit: 25, session_id: "session / one" } },
+      { limit: 25, session_id: "session%20%2F%20one" },
+    ],
+  ])(
+    "supports polling without a flow and explicit parameter overrides (%j)",
+    async (payload, params) => {
+      const { result } = renderHook(() => useGetMessagesPollingMutation(), {
+        wrapper: wrapper(),
+      });
+      await act(async () => {
+        await result.current.mutateAsync({ mode: "union", ...payload });
+      });
+      expect(mockApiGet).toHaveBeenCalledWith("api/v1/messages", { params });
+    },
+  );
 
-    await startPolling(result.current, { mode: "union" });
-    await jest.advanceTimersByTimeAsync(0);
-
-    expect(mockApiGet).toHaveBeenCalledWith(
-      "api/v1/messages",
-      expect.objectContaining({
-        params: { limit: 100 },
-      }),
+  it("reports an API failure and stops the failed initial poll", async () => {
+    const error = new Error("Network failure");
+    mockApiGet.mockRejectedValue(error);
+    const onSuccess = jest.fn();
+    const onError = jest.fn();
+    const { result } = renderHook(
+      () => useGetMessagesPollingMutation({ onSuccess, onError }),
+      { wrapper: wrapper() },
     );
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({ id: FLOW_ID, mode: "union" }),
+      ).rejects.toBe(error);
+    });
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0][0]).toBe(error);
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(mockSetMessages).not.toHaveBeenCalled();
+    expect(MessagesPollingManager.activePolls.size).toBe(0);
+  });
+
+  it("honors the stop predicate on the initial response", async () => {
+    const { result } = renderHook(() => useGetMessagesPollingMutation(), {
+      wrapper: wrapper(),
+    });
+    await act(async () => {
+      await result.current.mutateAsync({
+        id: FLOW_ID,
+        mode: "union",
+        stopPollingOn: () => true,
+      });
+      await jest.advanceTimersByTimeAsync(10000);
+    });
+    expect(mockApiGet).toHaveBeenCalledTimes(1);
+    expect(MessagesPollingManager.activePolls.size).toBe(0);
   });
 });

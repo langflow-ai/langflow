@@ -187,25 +187,33 @@ it("resets pagination for a different session without mixing histories", async (
   });
 });
 
-it("paginates anonymous playground session storage without an API request", async () => {
+it("preserves every anonymous session when the playground saves its message store", async () => {
   mockPlayground = true;
   sessionStorage.setItem(
     "flow",
-    JSON.stringify(Array.from({ length: 150 }, (_, i) => message(i))),
+    JSON.stringify([
+      ...Array.from({ length: 150 }, (_, i) => message(i)),
+      ...Array.from({ length: 50 }, (_, i) => message(i, "session-b")),
+    ]),
   );
   const { result } = renderHook(
     () => useGetMessageHistory({ id: "flow", sessionId: "session-a" }),
     { wrapper: wrapper() },
   );
   await waitFor(() =>
-    expect(useMessagesStore.getState().messages).toHaveLength(100),
+    expect(useMessagesStore.getState().messages).toHaveLength(200),
   );
-  await act(async () => {
-    await result.current.fetchNextPage();
-  });
-  await waitFor(() =>
-    expect(useMessagesStore.getState().messages).toHaveLength(150),
+  // The playground writes its full store back after a query or a live message.
+  sessionStorage.setItem(
+    "flow",
+    JSON.stringify(useMessagesStore.getState().messages),
   );
+  expect(JSON.parse(sessionStorage.getItem("flow")!)).toHaveLength(200);
+  expect(
+    useMessagesStore
+      .getState()
+      .messages.filter((m) => m.session_id === "session-b"),
+  ).toHaveLength(50);
   expect(result.current.hasNextPage).toBe(false);
   expect(mockGet).not.toHaveBeenCalled();
 });

@@ -33,7 +33,7 @@ interface PollingItem {
   interval: NodeJS.Timeout;
   timestamp: number;
   id: string;
-  callback: () => Promise<void>;
+  callback: () => Promise<MessagesResponse>;
 }
 
 const MessagesPollingManager = {
@@ -46,7 +46,7 @@ const MessagesPollingManager = {
     this.pollingQueue.clear();
     this.pollingQueue.set(id, [pollingItem]);
 
-    this.startNextPolling(id);
+    return this.startNextPolling(id);
   },
 
   startNextPolling(id: string) {
@@ -58,7 +58,7 @@ const MessagesPollingManager = {
 
     const nextPoll = queue[0];
     this.activePolls.set(id, nextPoll);
-    nextPoll.callback();
+    return nextPoll.callback();
   },
 
   stopPoll(id: string) {
@@ -174,6 +174,7 @@ export const useGetMessagesPollingMutation = (
       if (payload.stopPollingOn?.(data)) {
         MessagesPollingManager.stopPoll(requestId);
       }
+      return data;
     };
 
     const intervalId = setInterval(pollCallback, POLLING_INTERVAL);
@@ -185,15 +186,14 @@ export const useGetMessagesPollingMutation = (
       callback: pollCallback,
     };
 
-    MessagesPollingManager.enqueuePolling(requestId, pollingItem);
-
-    return getMessagesFn(payload).then((data) => {
-      payload.onSuccess?.(data);
-      if (payload.stopPollingOn?.(data)) {
+    // The manager starts the initial request; expose that same promise to
+    // React Query so its success/error callbacks describe the actual fetch.
+    return MessagesPollingManager.enqueuePolling(requestId, pollingItem)?.catch(
+      (error: unknown) => {
         MessagesPollingManager.stopPoll(requestId);
-      }
-      return data;
-    });
+        throw error;
+      },
+    );
   };
 
   useEffect(() => {

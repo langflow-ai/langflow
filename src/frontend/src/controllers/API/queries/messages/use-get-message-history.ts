@@ -38,6 +38,12 @@ export function useGetMessageHistory({
     ],
     initialPageParam: 0,
     queryFn: async ({ pageParam }) => {
+      if (playground && !shared) {
+        // The anonymous playground persists this store as its complete local
+        // history. Keep all sessions so saving it cannot discard unloaded rows.
+        const { data } = await getMessages(id, { order: "DESC" });
+        return { messages: data };
+      }
       const { data } = await getMessages(id, {
         ...(sessionId ? { session_id: sessionId } : {}),
         // One lookahead row detects the last page without a count or an empty-page click.

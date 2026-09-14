@@ -300,7 +300,7 @@ async def get_messages(
         # to the default, matching the previous `if limit:` behavior where 0 meant
         # "no limit".
         effective_limit = _MESSAGES_DEFAULT_LIMIT if not limit else min(limit, _MESSAGES_MAX_LIMIT)
-        stmt = stmt.order_by(col(MessageTable.timestamp).desc())
+        stmt = stmt.order_by(col(MessageTable.timestamp).desc(), col(MessageTable.id).desc())
         if offset:
             stmt = stmt.offset(offset)
         stmt = stmt.limit(effective_limit)
@@ -628,7 +628,7 @@ async def get_shared_messages(
             raise HTTPException(status_code=400, detail=f"Invalid order_by field: {order_by}")
         # Select the newest window by timestamp DESC, mirroring get_messages (issue #15023).
         effective_limit = _MESSAGES_DEFAULT_LIMIT if not limit else min(limit, _MESSAGES_MAX_LIMIT)
-        stmt = stmt.order_by(col(MessageTable.timestamp).desc())
+        stmt = stmt.order_by(col(MessageTable.timestamp).desc(), col(MessageTable.id).desc())
         if offset:
             stmt = stmt.offset(offset)
         stmt = stmt.limit(effective_limit)
