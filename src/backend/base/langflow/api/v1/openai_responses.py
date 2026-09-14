@@ -73,6 +73,42 @@ def _client_tool_error(error: Any, *, expose_details: bool) -> str:
     return _tool_error_text(error) if expose_details else SAFE_TOOL_ERROR_MESSAGE
 
 
+def _event_message_id(data: dict) -> str | None:
+    """The id of the message an ``add_message`` / ``token`` event belongs to.
+
+    ``_send_message_event`` lifts the id to the top level of the payload; a raw
+    ``Message.model_dump()`` keeps it under ``data``. ``token`` events carry it top-level.
+    """
+    top_level = data.get("id")
+    if top_level:
+        return str(top_level)
+    inner = data.get("data")
+    inner_id = inner.get("id") if isinstance(inner, dict) else None
+    return str(inner_id) if inner_id else None
+
+
+def _split_already_sent(chunk: str, already_sent: str) -> tuple[str, str]:
+    """Split a token ``chunk`` into what the client still needs and what it already has.
+
+    Chat Output publishes the first streamed chunk twice: as the text of a
+    ``state="partial"`` add_message and, right after, as the first ``token`` event
+    of the same message. The partial text is forwarded the moment it arrives, so
+    the token repeating it must not be forwarded again.
+
+    Returns ``(text_to_send, still_ahead)``: ``still_ahead`` is the part of
+    ``already_sent`` that later tokens are still expected to repeat. A chunk that
+    matches neither way means the token stream diverged from the partial text; it
+    is then sent whole rather than risk dropping text.
+    """
+    if not already_sent:
+        return chunk, ""
+    if already_sent.startswith(chunk):
+        return "", already_sent[len(chunk) :]
+    if chunk.startswith(already_sent):
+        return chunk[len(already_sent) :], ""
+    return chunk, ""
+
+
 def has_chat_input(flow_data: dict | None) -> bool:
     """Check if the flow has a chat input component."""
     if not flow_data or "nodes" not in flow_data:
@@ -187,6 +223,12 @@ async def run_flow_for_openai_responses(
                 # off, a Prompt or any other non-streaming producer feeding Chat Output) the
                 # complete message is the sole carrier of the answer.
                 tokens_streamed = False
+                # Text already forwarded from an add_message that the token stream of the
+                # same message is expected to repeat, keyed by message id. Chat Output
+                # publishes the first streamed chunk as a partial add_message *before* the
+                # token event for it; an agent's interim text is republished *after* its
+                # tokens, so its delta is empty and nothing is recorded for it.
+                partial_text_ahead: dict[str | None, str] = {}
 
                 async for event_data in consume_and_yield(asyncio_queue, asyncio_queue_client_consumed):
                     if event_data is None:
@@ -194,7 +236,7 @@ async def run_flow_for_openai_responses(
                         break
 
                     content = ""
-                    token_data = {}
+                    token_data: str | dict[str, Any] = {}  # {} = no token in this event
 
                     # Parse byte string events as JSON
                     if isinstance(event_data, bytes):
@@ -218,6 +260,14 @@ async def run_flow_for_openai_responses(
                                     token_data = data.get("chunk", "")
                                     if isinstance(token_data, str) and token_data:
                                         tokens_streamed = True
+                                        message_id = _event_message_id(data)
+                                        token_data, still_ahead = _split_already_sent(
+                                            token_data, partial_text_ahead.get(message_id, "")
+                                        )
+                                        if still_ahead:
+                                            partial_text_ahead[message_id] = still_ahead
+                                        else:
+                                            partial_text_ahead.pop(message_id, None)
                                         previous_content += token_data
                                     await logger.adebug(
                                         "[OpenAIResponses][stream] token: token_data=%s",
@@ -443,6 +493,11 @@ async def run_flow_for_openai_responses(
                                         if text.startswith(previous_content):
                                             content = text[len(previous_content) :]
                                             previous_content = text
+                                            if content:
+                                                message_id = _event_message_id(data)
+                                                partial_text_ahead[message_id] = (
+                                                    partial_text_ahead.get(message_id, "") + content
+                                                )
                                             await logger.adebug(
                                                 "[OpenAIResponses][stream] delta computed len=%d total_len=%d",
                                                 len(content),
