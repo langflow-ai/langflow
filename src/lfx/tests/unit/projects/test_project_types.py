@@ -92,6 +92,7 @@ class TestAgentHarness:
             "model",
             "tools",
             "n_messages",
+            "tool_policy",
             "context_strategy",
             "context_turns",
             "compaction",

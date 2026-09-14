@@ -522,7 +522,11 @@ async def process_agent_events(
             if event["event"] == "on_custom_event" and event.get("name") == "harness_runtime":
                 evidence = event.get("data") or {}
                 kind = evidence.get("kind")
-                title = {"context_prepared": "Context prepared", "compacted": "Conversation compacted"}.get(kind)
+                title = {
+                    "context_prepared": "Context prepared",
+                    "compacted": "Conversation compacted",
+                    "permission_decision": "Tool permission decided",
+                }.get(kind)
                 if title:
                     if agent_message.content_blocks is None:
                         agent_message.content_blocks = []

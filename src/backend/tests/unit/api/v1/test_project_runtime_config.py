@@ -26,6 +26,7 @@ async def test_runtime_settings_write_through_and_preserve_canvas_edits(client, 
         compaction_trigger_tokens=4000,
         compaction_keep_messages=6,
         max_iterations=4,
+        tool_policy="ask",
     ).model_dump()
     saved = await save_config(client, logged_in_headers, project, settings)
     assert saved["restore_version_ids"]
@@ -45,7 +46,9 @@ async def test_runtime_settings_write_through_and_preserve_canvas_edits(client, 
     assert template["max_iterations"]["value"] == 2
 
 
-@pytest.mark.parametrize("invalid", [{"context_turns": 0}, {"compaction": "fake"}, {"max_iterations": True}])
+@pytest.mark.parametrize(
+    "invalid", [{"context_turns": 0}, {"compaction": "fake"}, {"max_iterations": True}, {"tool_policy": "allow"}]
+)
 async def test_invalid_runtime_config_does_not_change_the_graph(client, logged_in_headers, active_user, invalid):
     project = await create_project(client, logged_in_headers, name="Invalid runtime")
     data = agent_flow_data()
@@ -58,8 +61,11 @@ async def test_invalid_runtime_config_does_not_change_the_graph(client, logged_i
     assert (await stored_flow(agent)).data == data
 
 
+@pytest.mark.parametrize(
+    "settings", [{"context_strategy": "recent_turns"}, {"tool_policy": "ask"}, {"tool_policy": "deny"}]
+)
 async def test_old_agent_requires_update_only_when_new_runtime_behavior_is_requested(
-    client, logged_in_headers, active_user
+    client, logged_in_headers, active_user, settings
 ):
     project = await create_project(client, logged_in_headers, name="Old runtime")
     data = agent_flow_data()
@@ -72,7 +78,7 @@ async def test_old_agent_requires_update_only_when_new_runtime_behavior_is_reque
     before = deepcopy((await stored_flow(agent)).data)
     response = await client.patch(
         f"api/v1/projects/{project}",
-        json={"project_config": {"context_strategy": "recent_turns"}},
+        json={"project_config": settings},
         headers=logged_in_headers,
     )
     assert response.status_code == 422

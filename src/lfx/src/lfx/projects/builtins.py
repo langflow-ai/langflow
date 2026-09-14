@@ -10,7 +10,7 @@ from __future__ import annotations
 from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 from lfx.base.agents.harness import harness_runtime_inputs
 from lfx.inputs.inputs import IntInput, ModelInput, MultilineInput, StrInput
-from lfx.projects.builtin_slots import COMPACTOR, CONTEXT_MANAGER, SYSTEM_PROMPT_BUILDER, TOOL
+from lfx.projects.builtin_slots import COMPACTOR, CONTEXT_MANAGER, PERMISSION_GATE, SYSTEM_PROMPT_BUILDER, TOOL
 from lfx.projects.registry import register_project_type
 from lfx.projects.schema import FieldTarget, ProjectType, ProjectTypeField
 
@@ -107,13 +107,22 @@ AGENT_HARNESS = register_project_type(
                     option_labels={
                         "context_strategy": {"all": "All loaded messages", "recent_turns": "Recent complete turns"},
                         "compaction": {"off": "Off", "summarize": "Summarize older messages"},
+                        "tool_policy": {
+                            "tool_defaults": "Use tool settings",
+                            "ask": "Ask before each call",
+                            "deny": "Block all tools",
+                        },
                     }.get(inp.name, {}),
                     show_when={
                         "context_turns": {"context_strategy": "recent_turns"},
                         "compaction_trigger_tokens": {"compaction": "summarize"},
                         "compaction_keep_messages": {"compaction": "summarize"},
                     }.get(inp.name, {}),
-                    slot_definition={"context_strategy": CONTEXT_MANAGER, "compaction": COMPACTOR}.get(inp.name),
+                    slot_definition={
+                        "context_strategy": CONTEXT_MANAGER,
+                        "compaction": COMPACTOR,
+                        "tool_policy": PERMISSION_GATE,
+                    }.get(inp.name),
                 )
                 for inp in harness_runtime_inputs()
             ),

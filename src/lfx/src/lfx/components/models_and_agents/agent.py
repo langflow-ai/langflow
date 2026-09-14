@@ -8,11 +8,9 @@ from typing import TYPE_CHECKING, Any, cast
 
 from langchain.agents import create_agent
 from langchain.agents.middleware import (
-    HumanInTheLoopMiddleware,
     ModelCallLimitMiddleware,
     ToolRetryMiddleware,
 )
-from langgraph.types import Command
 
 from lfx.components.models_and_agents.agent_helpers.graph_event_adapter import (
     adapt_graph_events_to_executor_shape,
@@ -598,6 +596,9 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
 
         middleware = self._build_middleware(llm, allow_interrupts=allow_interrupts)
         checkpointer = self._build_agent_checkpointer() if allow_interrupts else None
+        if self._gated_interrupt_on() and checkpointer is None:
+            msg = "Tool approvals require a resumable run. Run the Agent through a flow with Agent message output."
+            raise ValueError(msg)
         runnable = create_agent(
             model=llm,
             tools=tools,
@@ -676,11 +677,19 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             if policy.compaction == "summarize":
                 middleware.append(HarnessCompactionMiddleware(llm, policy))
             middleware.append(HarnessContextMiddleware(policy))
-        # Human-in-the-loop: attach only when a tool is gated AND interrupts are allowed
-        # (the structured-output path disables them), keeping ungated flows unchanged.
-        interrupt_on = self._gated_interrupt_on() if allow_interrupts else {}
+        from lfx.components.models_and_agents.agent_helpers.permission_middleware import (
+            DenyToolsMiddleware,
+            ToolApprovalMiddleware,
+        )
+
+        if policy.tool_policy == "deny" and self.tools:
+            middleware.append(DenyToolsMiddleware())
+        interrupt_on = self._gated_interrupt_on()
         if interrupt_on:
-            middleware.append(HumanInTheLoopMiddleware(interrupt_on=interrupt_on))
+            if not allow_interrupts:
+                msg = "Tool approvals are unavailable with structured output. Use Agent message output to review calls."
+                raise ValueError(msg)
+            middleware.append(ToolApprovalMiddleware(interrupt_on, policy=policy.tool_policy))
         return middleware
 
     async def run_agent(self, agent) -> Message:
@@ -733,16 +742,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         if interrupts_enabled and thread_id and self._gated_interrupt_on():
             agent_config["configurable"] = {"thread_id": thread_id}
             get_pending_interrupt = self._pending_interrupt_getter(agent, agent_config)
-            if self._has_candidate_decision(thread_id):
-                # The injected decision must match the pending interrupt's nonce, so read
-                # the interrupt first; a matched decision resumes the checkpointed thread.
-                value, interrupt_id = await self._read_pending_interrupt(agent, agent_config)
-                decision = self._injected_agent_decision(thread_id, interrupt_id)
-                if decision is not None:
-                    action_requests = (value or {}).get("action_requests") or []
-                    stream_input = Command(
-                        resume={"decisions": self._build_resume_decisions(decision, action_requests)}
-                    )
+            stream_input = await self._agent_stream_input(agent, agent_config, input_dict)
         stream = adapt_graph_events_to_executor_shape(
             agent.astream_events(stream_input, config=agent_config, version="v2")
         )
@@ -989,7 +989,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                     input_value=self.input_value,
                     system_prompt=augmented_prompt,
                 )
-                # Structured output cannot suspend mid-parse: disable tool-approval interrupts.
+                # Structured output cannot suspend mid-parse. Gated tools fail before execution.
                 agent_runnable = self.create_agent_runnable(allow_interrupts=False)
                 return await self.run_agent(agent_runnable)
 

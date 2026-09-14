@@ -16,6 +16,7 @@ class HarnessRuntimeConfig(BaseModel):
     compaction_trigger_tokens: int = Field(default=8000, ge=1, le=10000000)
     compaction_keep_messages: int = Field(default=12, ge=1, le=10000)
     max_iterations: int = Field(default=15, ge=1, le=128000)
+    tool_policy: Literal["tool_defaults", "ask", "deny"] = "tool_defaults"
 
 
 def harness_runtime_inputs():
@@ -23,6 +24,16 @@ def harness_runtime_inputs():
     from lfx.inputs.inputs import DropdownInput, IntInput
 
     return [
+        DropdownInput(
+            name="tool_policy",
+            display_name="Tool permissions",
+            options=["tool_defaults", "ask", "deny"],
+            value="tool_defaults",
+            info=(
+                "Use each tool's approval settings, require approval for every tool call, or block all tools. "
+                "Approvals require Agent message output and a resumable run."
+            ),
+        ),
         DropdownInput(
             name="context_strategy",
             display_name="Context preparation",

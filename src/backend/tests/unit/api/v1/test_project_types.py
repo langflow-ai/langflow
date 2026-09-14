@@ -66,6 +66,7 @@ async def test_the_harness_form_renders_with_canvas_widgets(client, logged_in_he
         "model",
         "tools",
         "n_messages",
+        "tool_policy",
         "context_strategy",
         "context_turns",
         "compaction",
@@ -84,7 +85,7 @@ async def test_the_form_carries_the_sections_it_should_be_grouped_into(client, l
     harness = await harness_from_api(client, logged_in_headers)
 
     sections = [field["section"] for field in harness["template"].values()]
-    assert sections == ["Instructions", "Model", "Tools", *(["Runtime"] * 7)]
+    assert sections == ["Instructions", "Model", "Tools", *(["Runtime"] * 8)]
 
 
 async def test_the_form_exposes_shared_contracts_without_changing_config_keys(

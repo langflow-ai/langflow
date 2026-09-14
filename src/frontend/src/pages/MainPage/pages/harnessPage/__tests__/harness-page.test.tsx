@@ -680,38 +680,47 @@ it("reveals mode settings and preserves them when a mode is turned off", () => {
   );
 });
 
-it("uses readable choice labels while saving their stable values", () => {
-  projectTypes = [
-    {
-      ...HARNESS,
-      template: {
-        ...HARNESS.template,
-        context_strategy: {
-          name: "context_strategy",
-          display_name: "Context preparation",
-          section: "Runtime",
-          value: "recent_turns",
-          option_labels: {
-            all: "All loaded messages",
-            recent_turns: "Recent complete turns",
+it.each([
+  [
+    "context_strategy",
+    "Context preparation",
+    "recent_turns",
+    "Recent complete turns",
+  ],
+  ["tool_policy", "Tool permissions", "ask", "Ask before each call"],
+  ["tool_policy", "Tool permissions", "deny", "Block all tools"],
+])(
+  "saves %s as %s with readable choice labels",
+  (field, label, value, choice) => {
+    projectTypes = [
+      {
+        ...HARNESS,
+        template: {
+          ...HARNESS.template,
+          [field]: {
+            name: field,
+            display_name: label,
+            section: "Runtime",
+            value,
+            option_labels: {
+              [value]: choice,
+            },
           },
         },
       },
-    },
-  ];
-  renderPage();
-  expect(
-    screen.getByRole("combobox", { name: "Context preparation" }),
-  ).toHaveTextContent("Recent complete turns");
-  expect(screen.queryByText("recent_turns")).not.toBeInTheDocument();
-  fireEvent.change(screen.getByTestId("input-system_prompt"), {
-    target: { value: "Changed instructions" },
-  });
-  fireEvent.click(screen.getByTestId("harness-save-btn"));
-  expect(mockPatch.mock.calls[0][0].data.project_config.context_strategy).toBe(
-    "recent_turns",
-  );
-});
+    ];
+    renderPage();
+    expect(screen.getByRole("combobox", { name: label })).toHaveTextContent(
+      choice,
+    );
+    expect(screen.queryByText(value)).not.toBeInTheDocument();
+    fireEvent.change(screen.getByTestId("input-system_prompt"), {
+      target: { value: "Changed instructions" },
+    });
+    fireEvent.click(screen.getByTestId("harness-save-btn"));
+    expect(mockPatch.mock.calls[0][0].data.project_config[field]).toBe(value);
+  },
+);
 
 it("keeps positive numeric settings intact throughout a pending save", () => {
   mockRealNumericControls = true;
