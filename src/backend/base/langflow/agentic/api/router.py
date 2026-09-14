@@ -22,7 +22,7 @@ from lfx.base.models.unified_models import (
     is_known_model_provider,
 )
 from lfx.log.logger import logger
-from lfx.services.deps import get_settings_service
+from lfx.services.deps import get_settings_service, session_scope
 from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -450,16 +450,22 @@ async def assist_headless(
 
         async def _drive() -> dict:
             try:
-                return await run_assistant_and_persist(
-                    session=session,
-                    user_id=current_user.id,
-                    instruction=request.instruction,
-                    flow_id=request.flow_id,
-                    provider=request.provider,
-                    model_name=request.model_name,
-                    session_id=request.session_id,
-                    on_progress=on_progress,
-                )
+                # ``session`` is function-scoped: FastAPI closes it when the
+                # handler returns, which is before this generator runs. Reusing
+                # it here would silently re-acquire a connection outside the
+                # request's transaction, with no teardown commit behind the
+                # writes. Own the scope explicitly instead.
+                async with session_scope() as stream_session:
+                    return await run_assistant_and_persist(
+                        session=stream_session,
+                        user_id=current_user.id,
+                        instruction=request.instruction,
+                        flow_id=request.flow_id,
+                        provider=request.provider,
+                        model_name=request.model_name,
+                        session_id=request.session_id,
+                        on_progress=on_progress,
+                    )
             finally:
                 await queue.put(None)
 
