@@ -8,9 +8,9 @@ from pydantic.v1 import SecretStr
 
 
 class APIRouteComponent(LCModelComponent):
-    """API Route component for language models."""
+    """API-Route component for language models."""
 
-    display_name = "API Route"
+    display_name = "API-Route"
     description = (
         "API Route provides unified, high-performance access to leading AI models through an OpenAI-compatible API."
     )
