@@ -10,6 +10,7 @@ from pydantic import (
     model_serializer,
 )
 
+from lfx.field_typing.conditional_options import ConditionalOptions
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.validators import CoalesceBool
 from lfx.schema.cross_module import CrossModuleModel
@@ -306,6 +307,8 @@ class RangeMixin(BaseModel):
 class DropDownMixin(BaseModel):
     options: list[str] | None = None
     """List of options for the field. Only used when is_list=True. Default is an empty list."""
+    conditional_options: list[ConditionalOptions] | None = None
+    """Ordered option rules evaluated against the other field values before configuration."""
     options_metadata: list[dict[str, Any]] | None = None
     """List of dictionaries with metadata for each option."""
     combobox: CoalesceBool = False

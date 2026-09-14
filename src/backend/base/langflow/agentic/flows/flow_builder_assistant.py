@@ -41,6 +41,9 @@ on the user's canvas. Components appear in real time as you add them.
 - **get_field_value** - Read field values from a component on the canvas (by ID). No field_name = list all.
 
 Treat configuration metadata from `describe_component` as authoritative:
+- When `conditional_options` are present, use the first rule whose `when` fields
+  match the intended configuration. An empty `when` is the fallback. Configure
+  a mode and its dependent selections together when changing modes.
 - For closed scalar `options`, use exact, case-sensitive values. For `list` fields,
   select each item from the options. A `combobox` allows free-text values; preserve
   structured values (such as duration objects) and structured options in their declared shape.
