@@ -1045,9 +1045,7 @@ async def _run_flow_internal(
         await _record_run(flow, api_key_user, AuditResult.SUCCEEDED, end_time - start_time)
 
     except ValueError as exc:
-        await _record_run(
-            flow, api_key_user, AuditResult.FAILED, time.perf_counter() - start_time, error=exc
-        )
+        await _record_run(flow, api_key_user, AuditResult.FAILED, time.perf_counter() - start_time, error=exc)
         background_tasks.add_task(
             telemetry_service.log_package_run,
             RunPayload(
@@ -1075,22 +1073,16 @@ async def _run_flow_internal(
             flow=flow if expose_error_details else None,
         ) from exc
     except InvalidChatInputError as exc:
-        await _record_run(
-            flow, api_key_user, AuditResult.FAILED, time.perf_counter() - start_time, error=exc
-        )
+        await _record_run(flow, api_key_user, AuditResult.FAILED, time.perf_counter() - start_time, error=exc)
         http_error = HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
         raise error_for_client(http_error, expose_details=expose_error_details) from exc
     except HTTPException as exc:
-        await _record_run(
-            flow, api_key_user, AuditResult.FAILED, time.perf_counter() - start_time, error=exc
-        )
+        await _record_run(flow, api_key_user, AuditResult.FAILED, time.perf_counter() - start_time, error=exc)
         if expose_error_details:
             raise
         raise error_for_client(exc, expose_details=expose_error_details) from exc
     except TweakRefusedError as exc:
-        await _record_run(
-            flow, api_key_user, AuditResult.FAILED, time.perf_counter() - start_time, error=exc
-        )
+        await _record_run(flow, api_key_user, AuditResult.FAILED, time.perf_counter() - start_time, error=exc)
         # A refused tweak is a caller error, not a server fault. The generic
         # handler below turns it into a 500 and discards the structured body
         # naming the refused keys, so let the app-level handler answer with 422.
@@ -1106,9 +1098,7 @@ async def _run_flow_internal(
         # one is the failure this whole path is here to prevent.
         raise
     except Exception as exc:
-        await _record_run(
-            flow, api_key_user, AuditResult.FAILED, time.perf_counter() - start_time, error=exc
-        )
+        await _record_run(flow, api_key_user, AuditResult.FAILED, time.perf_counter() - start_time, error=exc)
         background_tasks.add_task(
             telemetry_service.log_package_run,
             RunPayload(
