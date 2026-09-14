@@ -36,9 +36,39 @@ class TestDescribeConfigurationMetadata:
         assert fields["choice"]["list"] is True
         assert fields["timeout"]["default"] == {"unit": "Days", "value": 3}
 
+    def test_constrained_advanced_fields_are_described(self):
+        registry = {
+            "Example": {
+                "template": {
+                    "temperature": {
+                        "type": "slider",
+                        "advanced": True,
+                        "value": 0.1,
+                        "range_spec": {"min": 0, "max": 1},
+                    },
+                    "sender": {"type": "str", "advanced": True, "options": ["Machine", "User"], "value": "User"},
+                    "verbose": {"type": "bool", "advanced": True, "value": False},
+                    "input_value": {"type": "str", "value": ""},
+                }
+            }
+        }
+        described = describe_component(registry, "Example")
+        # `fields` keeps listing non-advanced fields only; advanced names stay a name list.
+        assert [field["name"] for field in described["fields"]] == ["input_value"]
+        assert described["advanced_fields"] == ["sender", "temperature", "verbose"]
+        constrained = {field["name"]: field for field in described["constrained_advanced_fields"]}
+        assert set(constrained) == {"temperature", "sender"}
+        assert constrained["temperature"] == {
+            "name": "temperature",
+            "type": "slider",
+            "default": 0.1,
+            "range_spec": {"min": 0, "max": 1},
+        }
+        assert constrained["sender"]["options"] == ["Machine", "User"]
+
     @pytest.mark.parametrize(
         ("name", "metadata"),
-        [("api_key", {}), ("credential", {"password": True}), ("credential", {"type": "SecretStr"})],
+        [("api_key", {}), ("credential", {"password": True}), ("endpoint", {"load_from_db": True})],
     )
     def test_omits_secret_defaults(self, name, metadata):
         registry = {"Example": {"template": {name: {"type": "str", "value": "test-only-placeholder", **metadata}}}}

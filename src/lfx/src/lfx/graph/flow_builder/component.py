@@ -19,6 +19,7 @@ from typing import Any
 
 import yaml
 
+from lfx.graph.edge.base import TYPE_MIGRATIONS
 from lfx.graph.flow_builder._utils import node_id as _node_id
 
 # Canvas type for user-authored code components. The frontend resolves this in
@@ -282,34 +283,47 @@ def _is_scalar_option_value(value: Any) -> bool:
     return value is None or isinstance(value, (str, int, float, bool))
 
 
+# Field types whose ``options`` are scalar but whose value is structured
+# (DurationInput: unit options, ``{"unit", "value"}`` value). Gated by type, not
+# by the current value, so the decision cannot flip after a write.
+_STRUCTURED_VALUE_TYPES = frozenset({"duration"})
+
+
 def _validate_configured_value(field_name: str, field: dict[str, Any], value: Any) -> None:
     """Validate closed options and numeric bounds before mutating a flow."""
     if value is None:
         return
 
     options = field.get("options")
-    # Duration fields have scalar unit options but a structured value; sortable
-    # lists and model selectors also need their existing structured semantics.
-    default = field.get("value")
-    default_values = default if field.get("list") and isinstance(default, list) else [default]
-    has_direct_options = (
+    # Model selectors and sortable lists carry dict options and keep their
+    # existing structured semantics; duration keeps its structured value.
+    has_scalar_options = (
         isinstance(options, list)
-        and options
         and all(_is_scalar_option_value(option) for option in options)
-        and all(_is_scalar_option_value(default_value) for default_value in default_values)
+        and field.get("type") not in _STRUCTURED_VALUE_TYPES
     )
-    if has_direct_options and field.get("list") and not isinstance(value, list):
+    # A list field with an options list (even an empty, open one such as an
+    # action picker) always takes a list. Checked before the re-set shortcut so
+    # an already malformed scalar cannot be re-affirmed.
+    if has_scalar_options and field.get("list") and not isinstance(value, list):
         msg = f"Invalid value for parameter '{field_name}': {value!r}. Expected a list"
         raise ValueError(msg)
+
+    if value == field.get("value"):
+        # Re-setting what the field already holds is always acceptable, including
+        # shipped defaults that sit outside their own range_spec (max_tokens=0).
+        return
+
+    has_direct_options = has_scalar_options and bool(options)
     if has_direct_options and not field.get("combobox"):
         values = value if field.get("list") and isinstance(value, list) else [value]
         accepted_values = list(options)
         if field.get("type") == "tab":
             # TabInput accepts an empty selection in addition to its options.
             accepted_values.append("")
-            # Keep accepting names used by saved flows while exposing only the
-            # canonical names in the current tab UI.
-            for alias, canonical in {"Data": "JSON", "DataFrame": "Table"}.items():
+            # Saved flows may still carry the pre-migration type names; accept
+            # them the same way edge type checks do.
+            for alias, canonical in TYPE_MIGRATIONS.items():
                 if canonical in options:
                     accepted_values.append(alias)
         invalid_values = [item for item in values if item not in accepted_values]
@@ -344,6 +358,11 @@ def configure_component(
     params: dict[str, Any],
 ) -> None:
     """Set parameters on a component (pure version — no server calls).
+
+    Every parameter is validated first (known field, closed ``options``,
+    ``range_spec`` bounds, numeric type) and only then applied, so a
+    rejected call raises ``ValueError`` and leaves the flow, including
+    ``load_from_db`` flags, exactly as it was.
 
     Model-typed fields (``template[field].type == "model"``) accept the
     canonical ``[{"provider": X, "name": Y}]`` shape. Some flow-builder

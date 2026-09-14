@@ -134,6 +134,8 @@ class TestConfigureValidation:
                     "_type": "CustomComponent",
                     "operator": {"type": "str", "options": ["equals", "contains"], "value": "equals"},
                     "temperature": {"type": "float", "range_spec": {"min": 0.0, "max": 1.0}, "value": 0.1},
+                    # Shipped default below its own range (Agent.max_tokens: 0 = no limit).
+                    "max_tokens": {"type": "int", "range_spec": {"min": 1, "max": 10}, "value": 0},
                     "model": {"type": "model", "value": [], "options": []},
                     "input_value": {"type": "str", "value": "EXISTING_GLOBAL", "load_from_db": True},
                 },
@@ -154,6 +156,7 @@ class TestConfigureValidation:
             ({"temperature": True}, "Expected a number"),
             ({"temperature": float("nan")}, "temperature"),
             ({"temperature": float("inf")}, "temperature"),
+            ({"max_tokens": 11}, "max_tokens"),
             ({"not_a_field": "x"}, "Unknown parameter"),
             ({"_type": "x"}, "reserved template entry"),
         ],
@@ -187,6 +190,15 @@ class TestConfigureValidation:
         assert fields["input_value"]["load_from_db"] is False
         assert fields["model"]["value"] == params["model"] == [{"provider": "OpenAI", "name": "gpt-4o"}]
 
+    def test_accepts_current_value_even_outside_range(self, configured_flow):
+        flow, component_id = configured_flow
+        fields = flow["data"]["nodes"][0]["data"]["node"]["template"]
+        configure_component(flow, component_id, {"max_tokens": 0})
+        assert fields["max_tokens"]["value"] == 0
+        configure_component(flow, component_id, {"max_tokens": 5})
+        with pytest.raises(ValueError, match="max_tokens"):
+            configure_component(flow, component_id, {"max_tokens": 0})
+
     @pytest.mark.parametrize(
         ("field", "value"),
         [
@@ -196,6 +208,11 @@ class TestConfigureValidation:
             ({"type": "str", "options": ["a"], "value": "a"}, None),
             (
                 {"type": "duration", "options": ["Minutes", "Hours", "Days"], "value": {"unit": "Days", "value": 3}},
+                {"unit": "Hours", "value": 2},
+            ),
+            # Gate is by type: a structured value is accepted even after a scalar was written.
+            (
+                {"type": "duration", "options": ["Minutes", "Hours", "Days"], "value": "Hours"},
                 {"unit": "Hours", "value": 2},
             ),
             (
@@ -222,6 +239,20 @@ class TestConfigureValidation:
         with pytest.raises(ValueError, match="Expected one of"):
             configure_component(flow, component_id, {"choice": ["a", "invalid"]})
         assert flow == before
+
+    def test_open_list_field_requires_a_list(self, configured_flow):
+        """Action-picker and multiselect fields ship options=[] but still take lists."""
+        flow, component_id = configured_flow
+        fields = flow["data"]["nodes"][0]["data"]["node"]["template"]
+        fields["decisions"] = {"type": "actionPicker", "options": [], "value": ["Approve"], "list": True}
+        configure_component(flow, component_id, {"decisions": ["Approve", "Reject"]})
+        assert fields["decisions"]["value"] == ["Approve", "Reject"]
+        with pytest.raises(ValueError, match="Expected a list"):
+            configure_component(flow, component_id, {"decisions": "Approve"})
+        # An already malformed scalar is not re-affirmed by the re-set shortcut.
+        fields["decisions"]["value"] = "Approve"
+        with pytest.raises(ValueError, match="Expected a list"):
+            configure_component(flow, component_id, {"decisions": "Approve"})
 
     @pytest.mark.parametrize("combobox", [False, True])
     def test_rejects_scalar_for_list_options(self, configured_flow, combobox):

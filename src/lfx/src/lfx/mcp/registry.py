@@ -102,13 +102,11 @@ def _field_description(field_name: str, field_data: dict[str, Any]) -> dict[str,
             field_info[flag] = True
 
     # Defaults help the Assistant omit optional fields safely, but never expose
-    # a credential or a secret-like component field through discovery metadata.
-    is_secret = (
-        is_sensitive_field(field_name)
-        or field_data.get("password") is True
-        or "secret" in str(field_data.get("type", "")).lower()
-    )
-    if "value" in field_data and not is_secret:
+    # a credential through discovery metadata. A load_from_db value is a global
+    # variable *name*, not a default: advertising it invites the Assistant to
+    # send it back as a literal, which would sever the variable binding.
+    is_secret = is_sensitive_field(field_name) or field_data.get("password") is True
+    if "value" in field_data and not is_secret and not field_data.get("load_from_db"):
         field_info["default"] = field_data["value"]
 
     range_spec = field_data.get("range_spec")
@@ -173,6 +171,7 @@ def describe_component(registry: dict[str, dict], component_type: str) -> dict[s
         )
     fields = []
     advanced_fields: list[str] = []
+    constrained_advanced_fields = []
     inputs = []
     for fname, fdata in tmpl.get("template", {}).items():
         if not isinstance(fdata, dict):
@@ -193,6 +192,11 @@ def describe_component(registry: dict[str, dict], component_type: str) -> dict[s
         elif fdata.get("show", True) and fdata.get("type") and fname != "code":
             if is_advanced:
                 advanced_fields.append(fname)
+                # configure_component enforces options/range_spec on advanced
+                # fields too, so the Assistant must be able to discover them.
+                # Kept out of `fields`, which lists non-advanced fields only.
+                if fdata.get("options") or fdata.get("range_spec"):
+                    constrained_advanced_fields.append(_field_description(fname, fdata))
             else:
                 fields.append(_field_description(fname, fdata))
 
@@ -213,6 +217,8 @@ def describe_component(registry: dict[str, dict], component_type: str) -> dict[s
         result["fields"] = fields
     if advanced_fields:
         result["advanced_fields"] = sorted(advanced_fields)
+    if constrained_advanced_fields:
+        result["constrained_advanced_fields"] = constrained_advanced_fields
     # search_registry hides legacy/beta, but describe-by-exact-name still
     # reaches them — flag so the agent knows what it picked.
     if tmpl.get("legacy"):
