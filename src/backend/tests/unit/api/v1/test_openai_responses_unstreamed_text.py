@@ -16,7 +16,9 @@ v1 projection -> converter) and pin the contract:
   written for); a Chat Output wired straight to the agent re-publishes under that id;
 - a complete message under another id is new content, unless its text is what the
   client already has (exactly, or modulo whitespace);
-- tool steps and usage carried by a complete message are handled either way.
+- tool steps and usage carried by a complete message are handled either way;
+- a Language Model streaming into Chat Output: the first chunk, which Chat Output
+  publishes both as a partial add_message and as the first token event, goes out once.
 """
 
 from __future__ import annotations
@@ -103,6 +105,11 @@ def _finished_tool() -> ToolContent:
     return ToolContent(name="search_docs", tool_input={"query": "openrag"}, output="3 documents", error=None)
 
 
+def _pending_tool() -> ToolContent:
+    """The tool step as on_chat_model_end appends it: decided by the model, not yet run."""
+    return ToolContent(name="search_docs", tool_input={"query": "openrag"}, output=None, error=None)
+
+
 def _fake_run_flow_generator(frames: list[Message | Token]):
     """Stand in for run_flow_generator: publish the frames through the real event manager."""
 
@@ -155,13 +162,18 @@ async def _stream(monkeypatch: pytest.MonkeyPatch, frames: list[Message | Token]
     return _parse_sse(wire)
 
 
-def _content(events: list[dict]) -> str:
-    """The text a Responses client assembles from the ``delta.content`` chunks."""
-    return "".join(
+def _deltas(events: list[dict]) -> list[str]:
+    """The non-empty ``delta.content`` chunks, in wire order."""
+    return [
         e["data"]["delta"]["content"]
         for e in events
         if e["event"] is None and e["data"] and e["data"].get("delta", {}).get("content")
-    )
+    ]
+
+
+def _content(events: list[dict]) -> str:
+    """The text a Responses client assembles from the ``delta.content`` chunks."""
+    return "".join(_deltas(events))
 
 
 def _completed_usage(events: list[dict]):
@@ -375,6 +387,102 @@ async def test_stream_pairs_id_less_tokens_with_id_less_complete_message(monkeyp
     events = await _stream(monkeypatch, frames)
 
     assert _content(events) == ANSWER
+
+
+# --- a Language Model streams into Chat Output: the first chunk is published twice ---
+
+
+async def test_stream_emits_first_streamed_chunk_once(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Language Model -> Chat Output: the first chunk is published twice, the client gets it once.
+
+    Chat Output publishes the first chunk as a partial add_message (text=chunk) and, right after,
+    as the first token event of the same message. The partial goes out as soon as it arrives, so
+    the client never waits; the token repeating it is dropped.
+    """
+    frames = [
+        _ai_message("Hel", state="partial"),
+        Token("Hel", id_=CHAT_OUTPUT_MESSAGE_ID),
+        Token("lo", id_=CHAT_OUTPUT_MESSAGE_ID),
+        _ai_message("Hello", state="complete", usage=USAGE),
+    ]
+
+    events = await _stream(monkeypatch, frames)
+
+    assert _deltas(events) == ["Hel", "lo"]
+    assert _completed_usage(events) == USAGE
+
+
+async def test_stream_forwards_tokens_that_diverge_from_partial_text(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A token stream that does not repeat the partial text is forwarded whole: never drop text."""
+    frames = [
+        _ai_message("Hel", state="partial"),
+        Token("Xy", id_=CHAT_OUTPUT_MESSAGE_ID),
+        Token("z", id_=CHAT_OUTPUT_MESSAGE_ID),
+        _ai_message("HelXyz", state="complete"),
+    ]
+
+    events = await _stream(monkeypatch, frames)
+
+    assert _deltas(events) == ["Hel", "Xy", "z"]
+
+
+# --- agent interim text: published after its tokens (streaming) or as the only carrier (not) ---
+
+
+async def test_stream_agent_interim_text_after_tokens_is_not_repeated(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Agent on a streaming model: each round's text is republished as a partial after its tokens.
+
+    Neither that partial nor the next round's tokens may be repeated or dropped.
+    """
+    frames = [
+        _agent_message([], state="partial"),
+        Token("Let me check."),
+        _agent_message([TextContent(text="Let me check."), _pending_tool()], state="partial"),
+        _agent_message([TextContent(text="Let me check."), _finished_tool()], state="partial"),
+        Token(" 3 documents."),
+        _agent_message(
+            [TextContent(text="Let me check."), _finished_tool(), TextContent(text=" 3 documents.")],
+            state="partial",
+        ),
+        _agent_message(
+            [TextContent(text="Let me check."), _finished_tool(), TextContent(text=" 3 documents.")],
+            state="complete",
+        ),
+        _ai_message("Let me check. 3 documents.", state="complete", usage=USAGE),
+    ]
+
+    events = await _stream(monkeypatch, frames)
+    added, done = _function_calls(events)
+
+    assert _deltas(events) == ["Let me check.", " 3 documents."]
+    assert _completed_usage(events) == USAGE
+    assert len(added) == 1
+    assert done[0]["status"] == "completed"
+
+
+async def test_stream_agent_without_token_stream_emits_interim_text(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Agent on a non-streaming model: the partials are the only carrier of each round's text."""
+    frames = [
+        _agent_message([], state="partial"),
+        _agent_message([TextContent(text="Let me check."), _pending_tool()], state="partial"),
+        _agent_message([TextContent(text="Let me check."), _finished_tool()], state="partial"),
+        _agent_message(
+            [TextContent(text="Let me check."), _finished_tool(), TextContent(text=" 3 documents.")],
+            state="partial",
+        ),
+        _agent_message(
+            [TextContent(text="Let me check."), _finished_tool(), TextContent(text=" 3 documents.")],
+            state="complete",
+        ),
+        _ai_message("Let me check. 3 documents.", state="complete", usage=USAGE),
+    ]
+
+    events = await _stream(monkeypatch, frames)
+    added, _done = _function_calls(events)
+
+    assert _deltas(events) == ["Let me check.", " 3 documents."]
+    assert _completed_usage(events) == USAGE
+    assert len(added) == 1
 
 
 # --- end to end: the real event pipeline on an LLM-free flow ---
