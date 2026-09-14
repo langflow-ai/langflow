@@ -270,7 +270,9 @@ describe("project name tooltip", () => {
   it("renders only the caller's own projects, never a non-owned one", () => {
     render(<SideBarFoldersButtonsComponent handleChangeFolder={jest.fn()} />);
 
-    expect(screen.getByTestId(`sidebar-nav-${OWN_FOLDER.id}`)).toBeInTheDocument();
+    expect(
+      screen.getByTestId(`sidebar-nav-${OWN_FOLDER.id}`),
+    ).toBeInTheDocument();
     expect(
       screen.queryByTestId(`sidebar-nav-${OTHER_FOLDER.id}`),
     ).not.toBeInTheDocument();
