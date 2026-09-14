@@ -216,7 +216,5 @@ async def test_an_absent_payload_is_sql_null_not_the_json_string_null(session, a
     )
     await session.flush()
 
-    carrying = (
-        await session.exec(sa.text("select count(*) from audit_events where payload is not null"))
-    ).scalar_one()
+    carrying = (await session.exec(sa.text("select count(*) from audit_events where payload is not null"))).scalar_one()
     assert carrying == 1, "only the row with a payload is counted as having one"
