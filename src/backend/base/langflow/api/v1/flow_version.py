@@ -17,6 +17,8 @@ from langflow.api.v1.flow_conflict import ensure_version_precondition, parse_if_
 from langflow.api.v1.flows import _validate_catalog_policy_for_write
 from langflow.api.v1.mappers.deployments.helpers import get_owned_provider_account_or_404
 from langflow.api.v1.mappers.deployments.sync import sync_flow_version_attachments
+from langflow.services.audit import vocabulary as audit_vocab
+from langflow.services.audit.operations import audited_permission, audited_route, stage_flow_succeeded
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.lock_retry import is_database_lock_error
 from langflow.services.database.models.flow.model import Flow, FlowRead
@@ -249,6 +251,12 @@ async def create_snapshot(
 
 
 @router.post("/{version_id}/activate")
+@audited_route(
+    audit_vocab.AuditResourceType.FLOW,
+    audit_vocab.FLOW_WRITE,
+    audit_vocab.AuditOperation.PATCH,
+    resource_id_param="flow_id",
+)
 async def activate_version(
     flow_id: UUID,
     version_id: UUID,
@@ -260,13 +268,16 @@ async def activate_version(
 ) -> FlowRead:
     flow = await _get_user_flow(session, flow_id, current_user.id)
     await ensure_version_precondition(session, flow, parse_if_match(if_match))
-    await ensure_flow_permission(
-        current_user,
-        FlowAction.WRITE,
-        flow_id=flow.id,
-        flow_user_id=flow.user_id,
-        workspace_id=flow.workspace_id,
-        folder_id=flow.folder_id,
+    await audited_permission(
+        ensure_flow_permission(
+            current_user,
+            FlowAction.WRITE,
+            flow_id=flow.id,
+            flow_user_id=flow.user_id,
+            workspace_id=flow.workspace_id,
+            folder_id=flow.folder_id,
+        ),
+        resource_name=flow.name,
     )
 
     # Verify version entry belongs to this flow
@@ -320,6 +331,14 @@ async def activate_version(
 
             session.add(flow)
             await session.flush()
+            await stage_flow_succeeded(
+                session,
+                action=audit_vocab.FLOW_WRITE,
+                operation=audit_vocab.AuditOperation.PATCH,
+                flow_id=flow.id,
+                flow_name=flow.name,
+                written_fields=["data"],
+            )
     except FlowVersionError as exc:
         raise _translate_version_error(exc) from exc
     except IntegrityError as exc:
