@@ -1,6 +1,7 @@
 import type { AllNodeType, EdgeType } from "@/types/flow";
 import {
   applySelectedChanges,
+  contestedTargetKeys,
   diffGraphs,
   groupChangesByTarget,
   siblingChangeIds,
@@ -575,5 +576,107 @@ describe("a value that is not there", () => {
 
     expect(change.sentence.params.before).toBe("—");
     expect(change.sentence.params.after).toBe("claude-fable-5-1");
+  });
+});
+
+describe("a move is not a disagreement", () => {
+  const at = (id: string, x: number, value: string) => ({
+    id,
+    type: "genericNode",
+    position: { x, y: 0 },
+    data: {
+      id,
+      type: "Component",
+      node: {
+        display_name: "Prompt",
+        template: { tone: { type: "str", show: true, value } },
+      },
+    },
+  });
+
+  it("does not contest a component both people only dragged", () => {
+    const base = { nodes: [at("p1", 0, "same")], edges: [] };
+    const mine = { nodes: [at("p1", 100, "same")], edges: [] };
+    const theirs = { nodes: [at("p1", 300, "same")], edges: [] };
+
+    const contested = contestedTargetKeys(
+      diffGraphs(base as never, mine as never),
+      diffGraphs(base as never, theirs as never),
+    );
+
+    // Two people dropping the same node in different spots is not a decision
+    // anybody needs to make, and forcing one showed two sides reading alike.
+    expect([...contested]).toEqual([]);
+  });
+
+  it("still contests a component both people edited", () => {
+    const base = { nodes: [at("p1", 0, "base")], edges: [] };
+    const mine = { nodes: [at("p1", 100, "mine")], edges: [] };
+    const theirs = { nodes: [at("p1", 300, "theirs")], edges: [] };
+
+    const contested = contestedTargetKeys(
+      diffGraphs(base as never, mine as never),
+      diffGraphs(base as never, theirs as never),
+    );
+
+    expect([...contested]).toEqual(["node:p1"]);
+  });
+
+  it("does not contest when only one side edited beyond the move", () => {
+    const base = { nodes: [at("p1", 0, "base")], edges: [] };
+    const mine = { nodes: [at("p1", 100, "base")], edges: [] };
+    const theirs = { nodes: [at("p1", 300, "theirs")], edges: [] };
+
+    const contested = contestedTargetKeys(
+      diffGraphs(base as never, mine as never),
+      diffGraphs(base as never, theirs as never),
+    );
+
+    // Their edit is an ordinary change to take or leave, not a clash.
+    expect([...contested]).toEqual([]);
+  });
+});
+
+describe("agreeing is not disagreeing", () => {
+  const at = (id: string, x: number, value: string) => ({
+    id,
+    type: "genericNode",
+    position: { x, y: 0 },
+    data: {
+      id,
+      type: "Component",
+      node: {
+        display_name: "Prompt",
+        template: { tone: { type: "str", show: true, value } },
+      },
+    },
+  });
+
+  it("does not contest a field both people set to the same value", () => {
+    const base = { nodes: [at("p1", 0, "old")], edges: [] };
+    const mine = { nodes: [at("p1", 100, "new")], edges: [] };
+    const theirs = { nodes: [at("p1", 300, "new")], edges: [] };
+
+    const contested = contestedTargetKeys(
+      diffGraphs(base as never, mine as never),
+      diffGraphs(base as never, theirs as never),
+    );
+
+    // The card would have shown two sides reading word for word the same, and
+    // blocked the update until somebody picked between them.
+    expect([...contested]).toEqual([]);
+  });
+
+  it("contests a field the two people set differently", () => {
+    const base = { nodes: [at("p1", 0, "old")], edges: [] };
+    const mine = { nodes: [at("p1", 0, "mine")], edges: [] };
+    const theirs = { nodes: [at("p1", 0, "theirs")], edges: [] };
+
+    const contested = contestedTargetKeys(
+      diffGraphs(base as never, mine as never),
+      diffGraphs(base as never, theirs as never),
+    );
+
+    expect([...contested]).toEqual(["node:p1"]);
   });
 });

@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 
 type FooterProps = {
   isPending: boolean;
+  /** How many contested components still have no answer. */
+  unresolvedConflicts: number;
   isForking: boolean;
   isOverwriting: boolean;
   isLoadingLatest: boolean;
@@ -23,6 +25,7 @@ type FooterProps = {
  */
 export function ConflictDialogFooter({
   isPending,
+  unresolvedConflicts,
   isForking,
   isOverwriting,
   isLoadingLatest,
@@ -33,6 +36,11 @@ export function ConflictDialogFooter({
 }: FooterProps) {
   const { t } = useTranslation();
   const [confirming, setConfirming] = useState(false);
+  // Writing the original is the one exit that overwrites somebody else, so it
+  // stays shut until every contested component has been answered. Duplicating
+  // is left open on purpose: it is the way out for a reader who cannot decide,
+  // and it costs nobody their work.
+  const blocked = unresolvedConflicts > 0;
 
   if (confirming) {
     return (
@@ -80,49 +88,67 @@ export function ConflictDialogFooter({
   }
 
   return (
-    <div className="flex items-center justify-between border-t border-muted px-5 py-4">
-      <Button
-        variant="conflictQuiet"
-        size="dialogAction"
-        onClick={onCancel}
-        disabled={isPending}
-      >
-        {t("multiEdit.dialog.cancel")}
-      </Button>
-      <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-2 border-t border-muted px-5 py-4">
+      {blocked && (
+        <p
+          className="text-xs leading-[18px] text-accent-amber-foreground"
+          data-testid="conflict-blocked-hint"
+        >
+          {t("multiEdit.dialog.resolveFirst", { count: unresolvedConflicts })}
+        </p>
+      )}
+      <div className="flex items-center justify-between">
         <Button
           variant="conflictQuiet"
           size="dialogAction"
-          onClick={() => setConfirming(true)}
+          onClick={onCancel}
           disabled={isPending}
-          data-testid="dialog-load-latest-button"
         >
-          <ForwardedIconComponent name="RefreshCw" aria-hidden="true" />
-          {t("multiEdit.dialog.loadLatest")}
+          {t("multiEdit.dialog.cancel")}
         </Button>
-        <Button
-          variant="conflictSecondary"
-          size="dialogAction"
-          onClick={onDuplicate}
-          disabled={isPending}
-          data-testid="confirm-duplicate-flow"
-        >
-          <ForwardedIconComponent name="GitBranch" aria-hidden="true" />
-          {isForking
-            ? t("multiEdit.dialog.duplicating")
-            : t("multiEdit.dialog.confirm")}
-        </Button>
-        <Button
-          variant="conflictPrimary"
-          size="dialogAction"
-          onClick={onOverwrite}
-          disabled={isPending}
-          data-testid="confirm-overwrite-flow"
-        >
-          {isOverwriting
-            ? t("multiEdit.dialog.overwriting")
-            : t("multiEdit.dialog.overwrite")}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="conflictQuiet"
+            size="dialogAction"
+            onClick={() => setConfirming(true)}
+            disabled={isPending}
+            data-testid="dialog-load-latest-button"
+          >
+            <ForwardedIconComponent name="RefreshCw" aria-hidden="true" />
+            {t("multiEdit.dialog.loadLatest")}
+          </Button>
+          <Button
+            variant="conflictSecondary"
+            size="dialogAction"
+            onClick={onDuplicate}
+            disabled={isPending}
+            data-testid="confirm-duplicate-flow"
+          >
+            <ForwardedIconComponent name="GitBranch" aria-hidden="true" />
+            {isForking
+              ? t("multiEdit.dialog.duplicating")
+              : t("multiEdit.dialog.confirm")}
+          </Button>
+          <Button
+            variant="conflictPrimary"
+            size="dialogAction"
+            onClick={onOverwrite}
+            disabled={isPending || blocked}
+            // Named rather than left to the reader to infer from a dead button.
+            title={
+              blocked
+                ? t("multiEdit.dialog.resolveFirst", {
+                    count: unresolvedConflicts,
+                  })
+                : undefined
+            }
+            data-testid="confirm-overwrite-flow"
+          >
+            {isOverwriting
+              ? t("multiEdit.dialog.overwriting")
+              : t("multiEdit.dialog.overwrite")}
+          </Button>
+        </div>
       </div>
     </div>
   );

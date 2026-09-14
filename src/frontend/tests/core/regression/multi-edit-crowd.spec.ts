@@ -1,6 +1,7 @@
 import type { Browser, BrowserContext, Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { resolveConflicts } from "../../utils/resolve-conflicts";
 
 /** A starter project as the API lists it. */
 type StarterProject = { name?: string; data?: { name?: string } };
@@ -148,6 +149,7 @@ test("three people: two lose the race, each takes a different exit", async ({
 
   // b updates the flow, c gives up and takes the latest.
   await b.page.getByTestId("flow-conflict-review-button").click();
+  await resolveConflicts(b.page);
   await b.page.getByTestId("confirm-overwrite-flow").click();
   await expect(b.page.getByTestId("flow-conflict-banner")).toBeHidden({
     timeout: CONFLICT_WINDOW_MS,

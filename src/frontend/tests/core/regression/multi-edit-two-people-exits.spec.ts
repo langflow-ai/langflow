@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { resolveConflicts } from "../../utils/resolve-conflicts";
 
 /**
  * Two people on one flow, each of the three exits, and what the other one sees.
@@ -117,6 +118,7 @@ test("Bob updates the flow: Alice is told her version is now out of date", async
   const { flowId, alice, bob } = await twoPeopleOnOneFlow(page, context);
 
   await bob.getByTestId("flow-conflict-review-button").click();
+  await resolveConflicts(bob);
   await bob.getByTestId("confirm-overwrite-flow").click();
   await expect(bob.getByTestId("flow-conflict-banner")).toBeHidden({
     timeout: CONFLICT_WINDOW_MS,

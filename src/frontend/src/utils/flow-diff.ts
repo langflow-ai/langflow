@@ -399,12 +399,48 @@ export const applySelectedChanges = (
 };
 
 /** Components both people changed: the only choices that cost something. */
+/**
+ * A change that only slides a component around the canvas.
+ *
+ * Two people dragging the same node to different spots is not a disagreement
+ * about the flow, and treating it as one made every moved component demand a
+ * decision — while showing two sides that read identically, because a position
+ * is the one thing the summary sentence cannot put into words.
+ */
+export const isPositionOnly = (change: FlowChange): boolean =>
+  change.sentence.key === "multiEdit.change.nodeMoved";
+
+/** What a change leaves behind, so two of them can be compared. */
+const outcomeOf = (change: FlowChange): string =>
+  `${change.id}|${change.sentence.key}|${change.detail?.after ?? ""}`;
+
+/** Every substantive outcome each component was left in, by component. */
+const outcomesByTarget = (changes: FlowChange[]): Map<string, Set<string>> => {
+  const byTarget = new Map<string, Set<string>>();
+  for (const change of changes) {
+    if (isPositionOnly(change)) continue;
+    const outcomes = byTarget.get(change.targetKey) ?? new Set<string>();
+    outcomes.add(outcomeOf(change));
+    byTarget.set(change.targetKey, outcomes);
+  }
+  return byTarget;
+};
+
 export const contestedTargetKeys = (
   mine: FlowChange[],
   theirs: FlowChange[],
 ): Set<string> => {
-  const mineKeys = new Set(mine.map((change) => change.targetKey));
-  return new Set(
-    theirs.map((change) => change.targetKey).filter((key) => mineKeys.has(key)),
-  );
+  const mineByTarget = outcomesByTarget(mine);
+  const contested = new Set<string>();
+  for (const [targetKey, theirOutcomes] of outcomesByTarget(theirs)) {
+    const myOutcomes = mineByTarget.get(targetKey);
+    if (!myOutcomes) continue;
+    // Both touched it and both left it in the same state. Asking which version
+    // to keep then offers two sides that read identically, because they are.
+    const identical =
+      myOutcomes.size === theirOutcomes.size &&
+      [...myOutcomes].every((outcome) => theirOutcomes.has(outcome));
+    if (!identical) contested.add(targetKey);
+  }
+  return contested;
 };

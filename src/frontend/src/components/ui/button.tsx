@@ -33,10 +33,14 @@ const buttonVariants = cva(
         conflictPrimary:
           "bg-[linear-gradient(167deg,hsl(var(--accent-indigo-foreground))_0%,var(--medium-indigo)_100%)] text-white hover:opacity-90",
         conflictQuiet: "text-muted-foreground hover:text-foreground",
+        // `note-neutral` is a near-white surface token, not a text one: at 90%
+        // lightness it left "Duplicate Flow" at roughly 1.1:1 on the light
+        // theme's white dialog, which reads as a disabled button rather than
+        // the alternative it is.
         conflictSecondary:
-          "border border-border text-note-neutral hover:bg-muted",
+          "border border-border text-foreground hover:bg-muted",
         conflictConfirm:
-          "border border-muted bg-muted text-note-neutral hover:bg-muted",
+          "border border-muted bg-muted text-foreground hover:bg-muted",
       },
       size: {
         default: "h-10 py-2 px-4",

@@ -87,13 +87,20 @@ test("two changes to one component are one row with one checkbox", async ({
   console.log("changes listed inside the row:", lines);
   expect(lines, "both changes must still be spelled out").toBeGreaterThan(1);
 
-  // One tick takes the whole component, and the counter counts components.
+  // One tick takes the whole component, both of its changes together.
   await boxes.click();
   await expect(boxes, "the row is taken as a whole").toBeChecked();
-  await expect(modal.getByText(/1 of \d+ selected/i)).toBeVisible();
 
-  // My own version of that component is then shown as replaced, not dropped quietly.
-  const mine = page.getByTestId(`conflict-change-mine-node:${touchedId}`);
-  await expect(mine.getByRole("checkbox")).not.toBeChecked();
-  await expect(mine.getByText(/replaced by/i)).toBeVisible();
+  // The component name leads and its badge follows, so the list reads down its
+  // left edge rather than starting at a different column on every line.
+  const heading = (await row.locator("label").first().innerText()).replace(
+    /\s+/g,
+    " ",
+  );
+  const badge = heading.match(/Added|Removed|Modified/)?.[0];
+  expect(badge, "the row carries one of the three change badges").toBeTruthy();
+  expect(
+    heading.indexOf(badge!),
+    "the badge comes after the component name",
+  ).toBeGreaterThan(0);
 });

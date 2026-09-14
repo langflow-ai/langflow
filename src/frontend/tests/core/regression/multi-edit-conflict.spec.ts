@@ -2,6 +2,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { resolveConflicts } from "../../utils/resolve-conflicts";
 
 /**
  * A save that would overwrite somebody else is refused, and the person is offered
@@ -288,6 +289,7 @@ test(
     await page.getByTestId("flow-conflict-review-button").click();
     await expect(page.getByTestId("duplicate-flow-modal")).toBeVisible();
 
+    await resolveConflicts(page);
     await page.getByTestId("confirm-overwrite-flow").click();
 
     // Overwriting stays on the flow, unlike duplicating, which navigates away.
@@ -339,10 +341,18 @@ test(
 
     const modal = page.getByTestId("duplicate-flow-modal");
     await expect(modal).toBeVisible();
-    const theirChange = modal.getByRole("checkbox", { checked: false }).first();
-    await expect(theirChange).toBeVisible();
+    // Their version is fetched after the dialog opens, so until it lands the
+    // list is legitimately empty. Querying straight away raced that fetch and
+    // failed on CI against a dialog that was still loading.
+    const theirRow = modal
+      .locator('[data-testid^="conflict-change-theirs-"]')
+      .first();
+    await expect(theirRow).toBeVisible({ timeout: CONFLICT_WINDOW_MS });
+    const theirChange = theirRow.getByRole("checkbox");
+    await expect(theirChange).not.toBeChecked();
     await theirChange.click();
 
+    await resolveConflicts(page);
     await page.getByTestId("confirm-overwrite-flow").click();
     await expect(page.getByTestId("flow-conflict-banner")).toBeHidden({
       timeout: CONFLICT_WINDOW_MS,
@@ -387,6 +397,7 @@ test(
 
     // A third save lands while the dialog sits open on a now-outdated comparison.
     await editFromAnotherSession(page, flowId);
+    await resolveConflicts(page);
     await page.getByTestId("confirm-overwrite-flow").click();
 
     // Refused, correctly — but the dialog has to come back rebuilt on the version
@@ -403,6 +414,7 @@ test(
     ).toBeVisible({ timeout: CONFLICT_WINDOW_MS });
 
     // And it now succeeds against the version that won.
+    await resolveConflicts(page);
     await page.getByTestId("confirm-overwrite-flow").click();
     await expect(page.getByTestId("flow-conflict-banner")).toBeHidden({
       timeout: CONFLICT_WINDOW_MS,

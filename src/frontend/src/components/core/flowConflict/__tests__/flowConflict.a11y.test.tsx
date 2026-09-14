@@ -134,6 +134,15 @@ const seedStores = () => {
   });
 };
 
+/** Open a contested component's card, the way the chevron does. */
+const openConflict = async (
+  user: ReturnType<typeof userEvent.setup>,
+  targetKey = "node:prompt-1",
+) => {
+  await user.click(screen.getByTestId(`conflict-toggle-${targetKey}`));
+  return screen.getByTestId(`conflict-resolve-${targetKey}`);
+};
+
 describe("conflict banner accessibility", () => {
   beforeEach(() => {
     useFlowConflictStore.setState({
@@ -287,6 +296,7 @@ describe("duplicate dialog accessibility", () => {
     render(<DuplicateFlowModal />);
     await screen.findByTestId("duplicate-flow-modal");
 
+    await openConflict(user);
     await user.click(
       screen.getAllByRole("button", { name: /show changes/i })[0],
     );
@@ -310,20 +320,20 @@ describe("duplicate dialog accessibility", () => {
 
     // Both sides edited prompt-1, so it is raised out of the plain list into a
     // choice between the two versions.
-    const resolve = screen.getByTestId("conflict-resolve-node:prompt-1");
+    const resolve = await openConflict(user);
     await user.click(
       within(resolve).getByRole("radio", { name: /keep carlos's version/i }),
     );
 
+    // Answered, so the card folds back down and its header carries the verdict.
     expect(
-      within(resolve).getByRole("radio", { name: /keep carlos's version/i }),
-    ).toBeChecked();
-    // And my own row says out loud what replaced it.
-    expect(
-      within(
-        screen.getByTestId("conflict-change-mine-node:prompt-1"),
-      ).getByText(/using carlos's version/i),
+      within(screen.getByTestId("conflict-resolve-node:prompt-1")).getByText(
+        /keeping carlos's version/i,
+      ),
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("radio", { name: /keep carlos's version/i }),
+    ).not.toBeInTheDocument();
   });
 
   it("should_have_no_violations_after_taking_their_contested_version", async () => {
@@ -331,11 +341,9 @@ describe("duplicate dialog accessibility", () => {
     render(<DuplicateFlowModal />);
     await screen.findByTestId("duplicate-flow-modal");
 
+    const resolve = await openConflict(user);
     await user.click(
-      within(screen.getByTestId("conflict-resolve-node:prompt-1")).getByRole(
-        "radio",
-        { name: /keep carlos's version/i },
-      ),
+      within(resolve).getByRole("radio", { name: /keep carlos's version/i }),
     );
 
     expect(await axe(document.body)).toHaveNoViolations();
@@ -350,39 +358,61 @@ describe("duplicate dialog accessibility", () => {
     ).toBeInTheDocument();
   });
 
+  it("should_start_a_conflict_with_neither_version_chosen", async () => {
+    const user = userEvent.setup();
+    render(<DuplicateFlowModal />);
+    await screen.findByTestId("duplicate-flow-modal");
+
+    const resolve = await openConflict(user);
+
+    // No standing answer. A preselected side is a decision made for the reader
+    // and then saved under their name, which is what this whole dialog exists
+    // to prevent.
+    for (const radio of within(resolve).getAllByRole("radio")) {
+      expect(radio).not.toBeChecked();
+    }
+  });
+
   it("should_let_me_switch_a_contested_component_back_to_my_version", async () => {
     const user = userEvent.setup();
     render(<DuplicateFlowModal />);
     await screen.findByTestId("duplicate-flow-modal");
 
-    const resolve = () => screen.getByTestId("conflict-resolve-node:prompt-1");
-    const mineRadio = () =>
-      within(resolve()).getByRole("radio", { name: /keep my version/i });
-    const theirsRadio = () =>
-      within(resolve()).getByRole("radio", { name: /keep carlos's version/i });
+    await user.click(
+      within(await openConflict(user)).getByRole("radio", {
+        name: /keep carlos's version/i,
+      }),
+    );
+    expect(
+      within(screen.getByTestId("conflict-resolve-node:prompt-1")).getByText(
+        /keeping carlos's version/i,
+      ),
+    ).toBeInTheDocument();
 
-    // Mine is the standing answer until the reader says otherwise.
-    expect(mineRadio()).toBeChecked();
-
-    await user.click(theirsRadio());
-    expect(theirsRadio()).toBeChecked();
-    expect(mineRadio()).not.toBeChecked();
-
-    await user.click(mineRadio());
-    expect(mineRadio()).toBeChecked();
-    expect(theirsRadio()).not.toBeChecked();
+    await user.click(
+      within(await openConflict(user)).getByRole("radio", {
+        name: /keep my version/i,
+      }),
+    );
+    expect(
+      within(screen.getByTestId("conflict-resolve-node:prompt-1")).getByText(
+        /keeping my version/i,
+      ),
+    ).toBeInTheDocument();
   });
 
   it("should_offer_the_raw_diff_only_where_a_version_is_being_chosen", async () => {
+    const user = userEvent.setup();
     render(<DuplicateFlowModal />);
     await screen.findByTestId("duplicate-flow-modal");
 
-    // prompt-1 is contested, so comparing the two versions is the point.
+    // prompt-1 is contested, so comparing the two versions is the point, and
+    // the comparison lives inside the card that offers the choice.
     expect(
-      within(
-        screen.getByTestId("conflict-change-mine-node:prompt-1"),
-      ).getByRole("button", { name: /show changes/i }),
-    ).toBeInTheDocument();
+      within(await openConflict(user)).getAllByRole("button", {
+        name: /show changes/i,
+      }).length,
+    ).toBe(2);
 
     // kb-1 is theirs alone: an ordinary change to include or not, with no
     // version of mine to weigh it against, so the control would only add noise.
@@ -394,10 +424,11 @@ describe("duplicate dialog accessibility", () => {
   });
 
   it("should_keep_values_out_of_the_two_versions_it_compares", async () => {
+    const user = userEvent.setup();
     render(<DuplicateFlowModal />);
     await screen.findByTestId("duplicate-flow-modal");
 
-    const card = screen.getByTestId("conflict-resolve-node:prompt-1");
+    const card = await openConflict(user);
 
     // Both sides name the field and stop there. Quoting each value inside the
     // card turns a comparison into two paragraphs of prose.
@@ -405,11 +436,84 @@ describe("duplicate dialog accessibility", () => {
     expect(within(card).queryByText(/updated from/i)).not.toBeInTheDocument();
   });
 
+  it("should_keep_a_conflict_closed_until_it_is_asked_for", async () => {
+    render(<DuplicateFlowModal />);
+    await screen.findByTestId("duplicate-flow-modal");
+
+    // A conflict is a decision, not a diff to read. Opening every comparison at
+    // once buries the one thing the reader has to do.
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.getByTestId("conflict-toggle-node:prompt-1")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+    // The header still says an answer is owed.
+    expect(
+      within(screen.getByTestId("conflict-resolve-node:prompt-1")).getByText(
+        /action required/i,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("should_refuse_to_update_the_flow_while_a_conflict_is_unanswered", async () => {
+    const user = userEvent.setup();
+    render(<DuplicateFlowModal />);
+    await screen.findByTestId("duplicate-flow-modal");
+
+    // Writing the original overwrites somebody else, so it stays shut until
+    // every contested component has been answered.
+    expect(screen.getByTestId("confirm-overwrite-flow")).toBeDisabled();
+    expect(screen.getByTestId("conflict-blocked-hint")).toBeInTheDocument();
+
+    await user.click(
+      within(await openConflict(user)).getByRole("radio", {
+        name: /keep my version/i,
+      }),
+    );
+
+    expect(screen.getByTestId("confirm-overwrite-flow")).toBeEnabled();
+    expect(
+      screen.queryByTestId("conflict-blocked-hint"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("should_leave_duplicating_open_while_a_conflict_is_unanswered", async () => {
+    render(<DuplicateFlowModal />);
+    await screen.findByTestId("duplicate-flow-modal");
+
+    // The way out for somebody who cannot decide. It costs nobody their work,
+    // so blocking it would leave them with only Cancel and Load Latest — and
+    // Load Latest throws away the very edits they came here to keep.
+    expect(screen.getByTestId("confirm-duplicate-flow")).toBeEnabled();
+  });
+
+  it("should_put_the_component_name_before_its_badge", async () => {
+    render(<DuplicateFlowModal />);
+    await screen.findByTestId("duplicate-flow-modal");
+
+    // Titles share a starting column and the badges follow them, so the list
+    // can be read down its left edge.
+    const row = screen.getByTestId("conflict-change-theirs-node:kb-1");
+    const text = row.textContent ?? "";
+    expect(text.indexOf("Knowledge Base Search")).toBeLessThan(
+      text.indexOf("Added"),
+    );
+
+    const card = screen.getByTestId("conflict-resolve-node:prompt-1");
+    const header = card.textContent ?? "";
+    expect(header.indexOf("Prompt Template")).toBeLessThan(
+      header.indexOf("Action required"),
+    );
+  });
+
   it("should_never_render_a_secret_value_in_any_state", async () => {
     const user = userEvent.setup();
     render(<DuplicateFlowModal />);
     await screen.findByTestId("duplicate-flow-modal");
 
+    for (const toggle of screen.queryAllByTestId(/^conflict-toggle-/)) {
+      await user.click(toggle);
+    }
     for (const trigger of screen.queryAllByRole("button", {
       name: /show changes/i,
     })) {

@@ -33,6 +33,7 @@ import {
 } from "@/utils/flow-diff";
 import ChangeRow from "./ChangeRow";
 import ConflictDialogFooter from "./ConflictDialogFooter";
+import type { ConflictChoice } from "./ConflictResolveRow";
 import ConflictResolveRow from "./ConflictResolveRow";
 
 /** The shape the server sends back when it refuses a write. */
@@ -73,6 +74,12 @@ export function DuplicateFlowModal() {
   const { mutate: overwriteFlow, isPending: isOverwriting } =
     usePostOverwriteFlow();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // Which contested components have been answered. Separate from `selected`
+  // because "not decided yet" and "decided to keep mine" both leave nothing of
+  // theirs selected, and only one of them may leave the dialog.
+  const [decided, setDecided] = useState<Map<string, "mine" | "theirs">>(
+    new Map(),
+  );
   // Rebuilding after a refusal is asynchronous, and until it lands the dialog is
   // still describing the version that was just refused. Leaving the actions live
   // through it lets a second click resend the same stale token.
@@ -160,6 +167,25 @@ export function DuplicateFlowModal() {
       }
       return next;
     });
+
+  const chooseSide = (targetKey: string, side: "mine" | "theirs") => {
+    setDecided((current) => new Map(current).set(targetKey, side));
+    setSelected((current) => {
+      const next = new Set(current);
+      for (const id of siblingChangeIds(theirChanges, targetKey)) {
+        if (side === "theirs") next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+  };
+
+  // Every contested component has to be answered before the original flow can
+  // be written. Left to a default, the dialog would resolve the conflict on the
+  // reader's behalf and then save it under their name.
+  const unresolved = conflictGroups.filter(
+    (group) => !decided.has(group.targetKey),
+  ).length;
 
   const onDuplicate = () => {
     if (!claimSubmission()) return;
@@ -281,6 +307,7 @@ export function DuplicateFlowModal() {
       setIsRebuilding(false);
     }
     setSelected(new Set());
+    setDecided(new Map());
     openDialog();
     setErrorData({ title: t("multiEdit.dialog.overwriteMovedAgain") });
   };
@@ -336,103 +363,77 @@ export function DuplicateFlowModal() {
             )}
             {myGroups.length > 0 && (
               <div className="space-y-1.5">
-                {myGroups.map((group) => {
-                  const replaced = takenFromThem.has(group.targetKey);
+                {/* Contested components lead the list. They are the only rows
+                    here that ask for anything, and below the settled ones they
+                    were read as part of the same "already included" block. */}
+                {conflictGroups.map((group) => {
+                  const mine = mineByKey.get(group.targetKey);
+                  if (!mine) return null;
                   return (
+                    <ConflictResolveRow
+                      key={group.targetKey}
+                      mine={mine}
+                      theirs={group}
+                      authorName={authorName}
+                      choice={
+                        (decided.get(group.targetKey) ?? null) as ConflictChoice
+                      }
+                      onChoose={chooseSide}
+                    />
+                  );
+                })}
+                {myGroups
+                  .filter((group) => !contested.has(group.targetKey))
+                  .map((group) => (
                     <ChangeRow
                       key={group.targetKey}
                       group={group}
                       side="mine"
-                      // Only a contested component asks the reader to compare
-                      // two versions; elsewhere the sentence is the whole story.
-                      expandable={contested.has(group.targetKey)}
-                      replacedBy={
-                        replaced
-                          ? t("multiEdit.dialog.usingTheirs", {
-                              name: authorName,
-                            })
-                          : undefined
-                      }
-                      // The radios above own this decision now, so the row
-                      // states it rather than offering it a second time.
+                      // The radios above own the contested decisions, so every
+                      // row left here is included and says so rather than
+                      // offering a choice it cannot honour.
                       checked
                       disabled
                     />
-                  );
-                })}
+                  ))}
               </div>
             )}
           </section>
 
-          <section>
-            {theirGroups.length === 0 ? (
-              <p className="text-[13px] leading-[19.5px] text-muted-foreground">
-                {t("multiEdit.dialog.noTheirChanges")}
-              </p>
-            ) : (
-              <>
-                <div className="mb-2.5 flex flex-col gap-0.5">
-                  <h3 className="text-[11px] uppercase leading-[16.5px] tracking-[0.55px] text-muted-foreground">
-                    {t("multiEdit.dialog.changesAvailable")}
-                  </h3>
-                  <span className="text-xs leading-[18px] text-placeholder">
-                    {t("multiEdit.dialog.selectChanges")}
-                  </span>
-                </div>
+          {additionalGroups.length > 0 && (
+            <section>
+              <div className="mb-2.5 flex flex-col gap-0.5">
+                <h3 className="text-[11px] uppercase leading-[16.5px] tracking-[0.55px] text-muted-foreground">
+                  {t("multiEdit.dialog.changesAvailable")}
+                </h3>
+                <span className="text-xs leading-[18px] text-placeholder">
+                  {t("multiEdit.dialog.selectChanges")}
+                </span>
+              </div>
+              <div className="space-y-1.5">
+                {additionalGroups.map((group) => (
+                  <ChangeRow
+                    key={group.targetKey}
+                    group={group}
+                    side="theirs"
+                    checked={takenFromThem.has(group.targetKey)}
+                    onToggle={toggleComponent}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
-                {conflictGroups.length > 0 && (
-                  <div className="mb-4">
-                    <h4 className="mb-2 text-[13px] font-medium leading-[19.5px] text-secondary-foreground">
-                      {t("multiEdit.dialog.resolveConflicts", {
-                        count: conflictGroups.length,
-                      })}
-                    </h4>
-                    <div className="space-y-1.5">
-                      {conflictGroups.map((group) => {
-                        const mine = mineByKey.get(group.targetKey);
-                        if (!mine) return null;
-                        return (
-                          <ConflictResolveRow
-                            key={group.targetKey}
-                            mine={mine}
-                            theirs={group}
-                            authorName={authorName}
-                            takingTheirs={takenFromThem.has(group.targetKey)}
-                            onChoose={toggleComponent}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {additionalGroups.length > 0 && (
-                  <div>
-                    <h4 className="mb-2 text-[13px] font-medium leading-[19.5px] text-secondary-foreground">
-                      {t("multiEdit.dialog.additionalChanges", {
-                        count: additionalGroups.length,
-                      })}
-                    </h4>
-                    <div className="space-y-1.5">
-                      {additionalGroups.map((group) => (
-                        <ChangeRow
-                          key={group.targetKey}
-                          group={group}
-                          side="theirs"
-                          checked={takenFromThem.has(group.targetKey)}
-                          onToggle={toggleComponent}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </section>
+          {theirGroups.length === 0 && (
+            <p className="text-[13px] leading-[19.5px] text-muted-foreground">
+              {t("multiEdit.dialog.noTheirChanges")}
+            </p>
+          )}
         </div>
 
         <ConflictDialogFooter
           isPending={isPending}
+          unresolvedConflicts={unresolved}
           isForking={isForking}
           isOverwriting={isOverwriting}
           isLoadingLatest={isLoadingLatest}
