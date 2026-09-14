@@ -128,6 +128,30 @@ async def test_resolve_succeeds_for_an_approved_provider(
 
 
 @pytest.mark.usefixtures("active_user")
+async def test_resolver_denies_missing_capability_metadata_before_row_lookup(
+    client: AsyncClient, logged_in_headers: dict[str, str], integration_policy, monkeypatch
+) -> None:
+    from unittest.mock import AsyncMock
+
+    created = await client.post("api/v1/connections", json=_payload(), headers=logged_in_headers)
+    assert created.status_code == 201, created.text
+    integration_policy(actions=frozenset({f"integrations.{PROVIDER}.drive.delete"}))
+    resolver = get_connection_resolver_service()
+    row_lookup = AsyncMock(side_effect=AssertionError("denied requests must not read connections"))
+    monkeypatch.setattr(resolver, "_owned_or_instance_row", row_lookup)
+
+    with pytest.raises(IntegrationPolicyBlockedError):
+        await resolver.resolve(
+            ConnectionResolutionRequest(
+                ref=ConnectionRef(provider=PROVIDER, name="work"),
+                principal=_principal(created.json()["owner_id"]),
+                capability_ids=frozenset({f"{PROVIDER}.missing"}),
+            )
+        )
+    row_lookup.assert_not_awaited()
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_resolve_is_unchanged_when_no_integration_policy_is_set(
     client: AsyncClient,
     logged_in_headers: dict[str, str],

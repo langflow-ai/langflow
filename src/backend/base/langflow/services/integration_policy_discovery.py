@@ -204,6 +204,8 @@ def component_is_allowed(
             for capability_id in capability_ids
             if (capability := index.capability(capability_id)) is not None
         ]
+        if policy.blocked_action_keys and len(declared) != len(capability_ids):
+            return False
         if not declared:
             # The node names no known capability (or the bundle is not loaded in
             # this process); the provider ceiling is the only available decision.

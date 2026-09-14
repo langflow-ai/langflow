@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.services.integration_policy.base import (
     IntegrationPolicyContext,
+    IntegrationPolicyError,
     IntegrationPolicyPurpose,
     integration_policy_key_provider,
 )
@@ -85,12 +86,12 @@ async def aresolve_integration_policy(
     )
 
 
-def policy_keys_for_capabilities(capability_ids: Iterable[str]) -> tuple[str, ...]:
+def policy_keys_for_capabilities(capability_ids: Iterable[str], *, require_loaded: bool = False) -> tuple[str, ...]:
     """Return the declared policy keys of loaded capability ids, in order.
 
     The bundle registry is the source of truth for what a capability id means.
-    Ids whose manifest is not loaded in this process contribute no keys, so the
-    provider ceiling remains the only decision available for them.
+    Execution with an action deny-list requires every named capability to be
+    loaded; otherwise missing metadata could silently bypass the deny-list.
     """
     ids = list(capability_ids)
     if not ids:
@@ -99,15 +100,31 @@ def policy_keys_for_capabilities(capability_ids: Iterable[str]) -> tuple[str, ..
         from lfx.extension.bundle_registry import get_default_registry
 
         integrations = get_default_registry().list_integrations()
-    except Exception:  # noqa: BLE001
+    except Exception as exc:
+        if require_loaded:
+            msg = "Integration capability metadata is unavailable"
+            raise ValueError(msg) from exc
         return ()
     wanted = set(ids)
+    found: set[str] = set()
     keys: list[str] = []
     for integration in integrations:
         for capability in integration.capability_manifest.capabilities:
             if capability.id in wanted:
+                found.add(capability.id)
                 keys.extend(capability.policy_keys)
+    if require_loaded and wanted != found:
+        msg = "Integration capability metadata is incomplete"
+        raise ValueError(msg)
     return tuple(dict.fromkeys(keys))
+
+
+def _require_capabilities(snapshot: IntegrationPolicySnapshot, provider_id: str, capability_ids: Iterable[str]) -> None:
+    try:
+        keys = policy_keys_for_capabilities(capability_ids, require_loaded=bool(snapshot.blocked_action_keys))
+    except ValueError as exc:
+        raise IntegrationPolicyError(provider_id, snapshot.purpose) from exc
+    snapshot.require_actions(keys)
 
 
 def integration_policy_identity_for_component_class(class_name: str) -> tuple[str, tuple[str, ...]] | None:
@@ -183,6 +200,7 @@ def require_integration_actions(
     user_id,
     provider_id: str,
     policy_keys: Iterable[str],
+    capability_ids: Iterable[str] = (),
     purpose: IntegrationPolicyPurpose = IntegrationPolicyPurpose.USE,
     attributes: Mapping[str, Any] | None = None,
 ) -> IntegrationPolicySnapshot:
@@ -204,6 +222,7 @@ def require_integration_actions(
     )
     snapshot.require_provider(provider_id)
     snapshot.require_actions(keys)
+    _require_capabilities(snapshot, provider_id, capability_ids)
     return snapshot
 
 
@@ -212,6 +231,7 @@ async def arequire_integration_actions(
     user_id,
     provider_id: str,
     policy_keys: Iterable[str],
+    capability_ids: Iterable[str] = (),
     purpose: IntegrationPolicyPurpose = IntegrationPolicyPurpose.USE,
     attributes: Mapping[str, Any] | None = None,
 ) -> IntegrationPolicySnapshot:
@@ -231,4 +251,5 @@ async def arequire_integration_actions(
     )
     snapshot.require_provider(provider_id)
     snapshot.require_actions(keys)
+    _require_capabilities(snapshot, provider_id, capability_ids)
     return snapshot

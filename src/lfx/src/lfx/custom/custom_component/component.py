@@ -1487,14 +1487,14 @@ class Component(CustomComponent):
         """Gate one connection-reference input's provider and declared actions."""
         from lfx.services.integration_policy import (
             IntegrationPolicyPurpose,
-            policy_keys_for_capabilities,
             require_integration_actions,
         )
 
         require_integration_actions(
             user_id=self.user_id,
             provider_id=input_model.provider,
-            policy_keys=policy_keys_for_capabilities(input_model.capabilities),
+            policy_keys=(),
+            capability_ids=input_model.capabilities,
             purpose=purpose or IntegrationPolicyPurpose.USE,
         )
 

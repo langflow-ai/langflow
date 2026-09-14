@@ -208,10 +208,12 @@ def test_single_capability_component_is_hidden_when_its_action_is_blocked(index)
     assert not component_is_allowed(component, policy=policy, index=index)
 
 
-def test_unknown_capability_ids_fall_back_to_the_provider_ceiling(index) -> None:
+def test_unknown_capability_ids_require_metadata_only_with_action_restrictions(index) -> None:
     component = _connection_component(provider="google", capabilities=["google.unknown.action"])
-    allowed = _snapshot(allowed={"google"}, candidates={"google"}, blocked={SEARCH_KEY, DELETE_KEY})
+    allowed = _snapshot(allowed={"google"}, candidates={"google"})
     assert component_is_allowed(component, policy=allowed, index=index)
+    restricted = _snapshot(allowed={"google"}, candidates={"google"}, blocked={SEARCH_KEY, DELETE_KEY})
+    assert not component_is_allowed(component, policy=restricted, index=index)
     denied = _snapshot(allowed=set(), candidates={"google"})
     assert not component_is_allowed(component, policy=denied, index=index)
 
@@ -222,6 +224,13 @@ def test_unrelated_components_are_never_filtered(index) -> None:
 
 
 # --------------------------------------------------------------------------- palette filter
+
+
+def test_missing_capability_metadata_is_hidden_when_action_policy_is_configured() -> None:
+    index = IntegrationCapabilityIndex([])
+    component = _connection_component(provider="google", capabilities=[SEARCH_CAPABILITY])
+    policy = _snapshot(allowed={"google"}, candidates={"google"}, blocked={DELETE_KEY})
+    assert not component_is_allowed(component, policy=policy, index=index)
 
 
 async def _palette_with(bundle: PolicyBundleService, monkeypatch, index):

@@ -130,6 +130,16 @@ class ModelProviderPolicyRefreshWorker:
                     changed = bundle_service.mark_source_unavailable()
                     if changed:
                         service.invalidate()
+            # A deployment can govern integrations while leaving model providers
+            # unrestricted. Expire integration allows even if the model service
+            # already marked the shared source unavailable above.
+            bundle_service = get_policy_bundle_service()
+            snapshot = bundle_service.snapshot
+            if snapshot.approved_integration_provider_ids or snapshot.blocked_integration_action_keys:
+                from lfx.services.deps import get_integration_policy_service
+
+                changed = bundle_service.mark_source_unavailable() or changed
+                get_integration_policy_service().invalidate()
             with contextlib.suppress(Exception):
                 await logger.aerror(f"Model-provider policy refresh failed: {exc}")
             return changed

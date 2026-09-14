@@ -53,6 +53,14 @@ def _snapshot(
 # --------------------------------------------------------------------------- hash
 
 
+def test_action_policy_supports_dotted_provider_ids_without_widening_a_parent_namespace() -> None:
+    snapshot = _snapshot(allowed=frozenset({"google.workspace"}), candidates=frozenset({"google", "google.workspace"}))
+    assert snapshot.allows_action("integrations.google.workspace.drive.search")
+    assert not snapshot.allows_action("integrations.google.drive.search")
+    parent_only = _snapshot(allowed=frozenset({"google"}), candidates=frozenset({"google", "google.workspace"}))
+    assert not parent_only.allows_action("integrations.google.workspace.drive.search")
+
+
 def test_bundle_content_hash_is_stable_when_integration_sets_are_empty() -> None:
     """QA: hash stability when integration sets are empty."""
     legacy = policy_bundle_content_hash(

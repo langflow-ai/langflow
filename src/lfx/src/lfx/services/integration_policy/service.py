@@ -77,12 +77,12 @@ class IntegrationPolicyService(BaseIntegrationPolicyService):
         purpose: IntegrationPolicyPurpose,  # noqa: ARG002
     ) -> Collection[str]:
         approved_provider_ids = self.approved_provider_ids
+        if not self.policy_source_available and (approved_provider_ids or self.blocked_action_keys):
+            return frozenset()
         if not approved_provider_ids:
             # An unconfigured installation must not become deny-all after a
             # transient refresh failure, matching the model-provider default.
             return candidate_provider_ids
-        if not self.policy_source_available:
-            return frozenset()
         return candidate_provider_ids & approved_provider_ids
 
     def get_blocked_action_keys(

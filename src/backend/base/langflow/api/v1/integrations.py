@@ -71,10 +71,12 @@ class EffectiveIntegrationPolicyRead(BaseModel):
     """The decision set a client must render, and where it came from."""
 
     approved_provider_ids: list[str] = Field(
-        description="The effective ceiling for this caller. Empty means unrestricted."
+        description="The loaded providers allowed for this caller; consult unrestricted to interpret an empty list."
     )
-    blocked_action_keys: list[str]
-    loaded_provider_ids: list[str] = Field(description="Providers with a capability manifest loaded in this process.")
+    blocked_action_keys: list[str] = Field(description="Operator-only deny-list; empty for non-superusers.")
+    loaded_provider_ids: list[str] = Field(
+        description="Loaded providers; restricted to allowed providers for non-superusers."
+    )
     unrestricted: bool = Field(description="True when no ceiling is configured, i.e. every loaded provider is allowed.")
     managed_externally: bool = Field(description="True when a plugin owns the ceiling instead of the policy bundle.")
     policy_revision: int | None = None
@@ -213,11 +215,12 @@ async def read_effective_integration_policy(
     service = get_integration_policy_service()
     external = service.external_approved_integration_provider_ids
     configured_ceiling = external if external is not None else getattr(service, "approved_provider_ids", frozenset())
+    is_operator = current_user.is_superuser
     return EffectiveIntegrationPolicyRead(
         approved_provider_ids=sorted(policy.allowed_provider_ids),
-        blocked_action_keys=sorted(policy.blocked_action_keys),
-        loaded_provider_ids=sorted(loaded_provider_ids),
-        unrestricted=not configured_ceiling,
+        blocked_action_keys=sorted(policy.blocked_action_keys) if is_operator else [],
+        loaded_provider_ids=sorted(loaded_provider_ids if is_operator else policy.allowed_provider_ids),
+        unrestricted=external is None and not configured_ceiling and policy.allowed_provider_ids == loaded_provider_ids,
         managed_externally=external is not None,
         policy_revision=getattr(service, "policy_version", None),
     )

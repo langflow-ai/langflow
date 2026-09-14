@@ -372,8 +372,13 @@ If you are changing more than one list, use one `PUT` to `/api/v1/policy-bundle`
 
 5. To see the integration policy that applies to you, `GET /api/v1/integrations/policy/effective`.
 
-    It returns the effective ceiling, the blocked action keys, and whether a plugin owns
-    the policy instead of the bundle.
+    It returns the caller's allowed providers and whether a plugin owns
+    the policy instead of the bundle. Only superusers receive the operator's
+    blocked action keys and the complete loaded provider list. Other users
+    receive an empty `blocked_action_keys` list and only allowed providers in
+    `loaded_provider_ids`; use `GET /api/v1/integrations` to list usable actions.
+    Check `unrestricted` before interpreting an empty approved provider list:
+    an externally managed empty ceiling can deny every provider.
     Set `approved_integration_provider_ids` and `blocked_integration_action_keys` with
     `PUT /api/v1/policy-bundle`.
 

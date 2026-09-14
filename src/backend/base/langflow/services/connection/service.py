@@ -197,14 +197,14 @@ async def enforce_integration_policy_for_provider(
         IntegrationPolicyError,
         IntegrationPolicyPurpose,
         arequire_integration_actions,
-        policy_keys_for_capabilities,
     )
 
     try:
         await arequire_integration_actions(
             user_id=user_id,
             provider_id=provider_key,
-            policy_keys=policy_keys_for_capabilities(capability_ids),
+            policy_keys=(),
+            capability_ids=capability_ids,
             purpose=IntegrationPolicyPurpose(purpose),
         )
     except IntegrationPolicyError as exc:

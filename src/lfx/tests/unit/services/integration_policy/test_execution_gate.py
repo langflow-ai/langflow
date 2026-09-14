@@ -142,12 +142,39 @@ async def test_build_results_fails_closed_before_the_component_body_runs(monkeyp
     assert component.adapter_calls == 0
 
 
-async def test_execution_gate_passes_through_when_no_integration_policy_is_set(monkeypatch) -> None:
+@pytest.mark.parametrize("registry_fails", [False, True])
+def test_missing_capability_metadata_cannot_bypass_an_action_block(monkeypatch, *, registry_fails: bool) -> None:
+    _install_policy(monkeypatch, _blocked_bundle(actions=frozenset({SEARCH_KEY})))
+
+    def registry():
+        if registry_fails:
+            msg = "registry unavailable"
+            raise RuntimeError(msg)
+        return SimpleNamespace(list_integrations=list)
+
+    monkeypatch.setattr("lfx.extension.bundle_registry.get_default_registry", registry)
+    component = _component(monkeypatch, _Resolver())
+
+    with pytest.raises(IntegrationPolicyError):
+        component.require_integration_policy()
+    assert component.adapter_calls == 0
+
+
+@pytest.mark.parametrize("manifest_loaded", [False, True])
+async def test_execution_gate_passes_through_when_no_integration_policy_is_set(
+    monkeypatch, *, manifest_loaded: bool
+) -> None:
     """QA: OSS pass-through behavior remains unchanged when no integration policy is set."""
     from lfx.services.integration_policy import IntegrationPolicyPurpose
 
     _install_policy(monkeypatch, PolicyBundleService())
-    _install_capability_manifest(monkeypatch)
+    if manifest_loaded:
+        _install_capability_manifest(monkeypatch)
+    else:
+        monkeypatch.setattr(
+            "lfx.extension.bundle_registry.get_default_registry",
+            lambda: SimpleNamespace(list_integrations=list),
+        )
     resolver = _Resolver()
     component = _component(monkeypatch, resolver)
 

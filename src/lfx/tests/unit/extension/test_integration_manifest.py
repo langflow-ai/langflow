@@ -41,13 +41,13 @@ def _capability_manifest(*, provider_id: str = "google") -> dict:
         ],
         "capabilities": [
             {
-                "id": "google.drive.files.search",
+                "id": f"{provider_id}.drive.files.search",
                 "display_name": "Drive: Search Files",
                 "auth_profile_id": "user",
                 "identity": "user_delegated",
                 "required_scopes": ["drive.file"],
                 "conditional_scopes": [],
-                "policy_keys": ["integrations.google.drive.search"],
+                "policy_keys": [f"integrations.{provider_id}.drive.search"],
                 "substrate": "sdk",
                 "maturity": "ga",
                 "deployment_contexts": ["hosted", "self_managed", "desktop", "headless"],
@@ -272,7 +272,9 @@ def test_validate_rejects_capability_manifest_symlink_escape(tmp_path: Path) -> 
 def _integration_record(root: Path, bundle_name: str, provider_id: str, policy_key: str) -> BundleRecord:
     root.mkdir()
     capability_manifest = _capability_manifest(provider_id=provider_id)
-    capability_manifest["capabilities"][0].update(id=f"{provider_id}.drive.files.search", policy_keys=[policy_key])
+    capability_manifest["capabilities"][0].update(
+        id=f"{provider_id}.drive.files.search", policy_keys=[f"integrations.{policy_key}"]
+    )
     _write_extension(root, capability_manifest=capability_manifest, bundle_name=bundle_name, provider_id=provider_id)
     result = load_extension(root)
     assert result.ok, result.errors
@@ -296,13 +298,15 @@ def test_registry_rejects_cross_bundle_identity_collisions(tmp_path: Path, colli
         "policy key": "microsoft",
         "capability id": "google.drive",
     }[collision]
-    second = _integration_record(
-        tmp_path / "second", "second", second_provider, "google.send" if collision == "policy key" else "other.send"
-    )
-    if collision == "capability id":
+    second = _integration_record(tmp_path / "second", "second", second_provider, f"{second_provider}.other.send")
+    if collision in {"capability id", "policy key"}:
+        # Exercise the registry's independent validation with a conflicting
+        # loader result, even though manifest parsing now rejects foreign keys.
         integration = second.integrations[0]
         capability = integration.capability_manifest.capabilities[0].model_copy(
             update={"id": "google.drive.files.search"}
+            if collision == "capability id"
+            else {"policy_keys": ("integrations.google.send",)}
         )
         second = replace(
             second,
@@ -370,7 +374,7 @@ def test_concurrent_integration_claims_cannot_both_install(tmp_path: Path) -> No
     assert len(registry.list_integrations()) == 1
 
 
-def test_conflicting_reload_preserves_live_modules_and_metadata(tmp_path: Path) -> None:
+def test_invalid_policy_namespace_reload_preserves_live_modules_and_metadata(tmp_path: Path) -> None:
     first = _integration_record(tmp_path / "first", "first", "google", "google.send")
     second = _integration_record(tmp_path / "second", "second", "microsoft", "microsoft.send")
     registry = BundleRegistry()
@@ -380,13 +384,14 @@ def test_conflicting_reload_preserves_live_modules_and_metadata(tmp_path: Path) 
     modules = {name: module for name, module in sys.modules.items() if name.startswith("_lfx_ext.official.")}
     catalog_path = tmp_path / "second" / "second" / "capabilities.v1.json"
     catalog = json.loads(catalog_path.read_text())
-    catalog["capabilities"][0]["policy_keys"] = ["google.send"]
+    catalog["capabilities"][0]["policy_keys"] = ["integrations.google.send"]
     catalog_path.write_text(json.dumps(catalog))
 
     result = reload_bundle(registry, "second")
 
     assert not result.ok
-    assert result.errors[0].code == "integration-identity-conflict"
+    assert result.errors[0].code == "manifest-invalid"
+    assert "policy keys outside" in result.errors[0].message
     assert registry.snapshot() == before
     assert all(sys.modules[name] is module for name, module in modules.items())
     assert not any(name.startswith("__reload_staging__.") for name in sys.modules)
@@ -399,7 +404,7 @@ async def test_startup_reports_conflict_and_omits_rejected_bundle(tmp_path: Path
     from lfx.interface import components
 
     first = _integration_record(tmp_path / "first", "first", "google", "google.send")
-    second = _integration_record(tmp_path / "second", "second", "microsoft", "google.send")
+    second = _integration_record(tmp_path / "second", "second", "google", "google.other.send")
     results = [load_extension(record.source_path) for record in (first, second)]
     registry = BundleRegistry()
     monkeypatch.setattr(components, "get_default_registry", lambda: registry)

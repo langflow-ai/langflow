@@ -161,9 +161,22 @@ class IntegrationPolicySnapshot:
             normalized = normalize_integration_policy_key(policy_key)
         except ValueError:
             return False
-        if not self.allows_provider(normalized.split(".")[1]):
+        if not self.allows_provider(self._action_provider(normalized)):
             return False
         return normalized not in self.blocked_action_keys
+
+    def _action_provider(self, normalized_key: str) -> str:
+        # Provider IDs may contain dots. The most specific candidate namespace
+        # wins, so an allowed parent provider cannot widen a denied child.
+        return max(
+            (
+                provider
+                for provider in self.candidate_provider_ids
+                if normalized_key.startswith(integration_policy_key_prefix(provider))
+            ),
+            key=len,
+            default="",
+        )
 
     def blocked_action_key(self, policy_keys: Iterable[str]) -> str | None:
         """Return the first denied key of an action, or ``None`` when usable.
@@ -190,7 +203,7 @@ class IntegrationPolicySnapshot:
         if self.allows_action(policy_key):
             return
         try:
-            provider_id = integration_policy_key_provider(policy_key)
+            provider_id = self._action_provider(normalize_integration_policy_key(policy_key))
         except ValueError:
             provider_id = ""
         if provider_id and not self.allows_provider(provider_id):

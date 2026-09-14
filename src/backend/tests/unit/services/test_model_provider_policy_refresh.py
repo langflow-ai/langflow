@@ -5,7 +5,9 @@ from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
+import pytest
 from langflow.services.task import model_provider_policy_refresh as refresh_module
+from lfx.services.integration_policy import IntegrationPolicyContext, IntegrationPolicyPurpose, IntegrationPolicyService
 from lfx.services.model_provider_policy import (
     BaseModelProviderPolicyService,
     ModelProviderPolicyContext,
@@ -13,6 +15,45 @@ from lfx.services.model_provider_policy import (
     ModelProviderPolicyService,
 )
 from lfx.services.policy_bundle import PolicyBundleService, PolicyBundleSnapshot
+
+
+@pytest.mark.parametrize("model_ceiling", [frozenset(), frozenset({"openai"})])
+@pytest.mark.parametrize("integration_ceiling", [frozenset(), frozenset({"google"})])
+async def test_refresh_failure_invalidates_integration_allows(monkeypatch, model_ceiling, integration_ceiling):
+    bundle = PolicyBundleService()
+    bundle.publish(
+        PolicyBundleSnapshot(
+            revision=1,
+            initialized=True,
+            approved_provider_ids=model_ceiling,
+            approved_integration_provider_ids=integration_ceiling,
+            blocked_integration_action_keys=frozenset({"integrations.google.drive.delete"}),
+        )
+    )
+    model_service = ModelProviderPolicyService(policy_bundle_service=bundle)
+    integration_service = IntegrationPolicyService(policy_bundle_service=bundle)
+    kwargs = {
+        "context": IntegrationPolicyContext(user_id="user-1"),
+        "candidate_provider_ids": frozenset({"google"}),
+        "purpose": IntegrationPolicyPurpose.USE,
+    }
+    assert integration_service.resolve(**kwargs).allows_action("integrations.google.drive.search")
+
+    @asynccontextmanager
+    async def failing_session_scope():
+        msg = "policy store unavailable"
+        raise ConnectionError(msg)
+        yield
+
+    monkeypatch.setattr(refresh_module, "session_scope", failing_session_scope)
+    monkeypatch.setattr(refresh_module, "get_model_provider_policy_service", lambda: model_service)
+    monkeypatch.setattr(refresh_module, "get_policy_bundle_service", lambda: bundle)
+    monkeypatch.setattr("lfx.services.deps.get_integration_policy_service", lambda: integration_service)
+    monkeypatch.setattr(refresh_module.logger, "aerror", AsyncMock())
+
+    assert await refresh_module.ModelProviderPolicyRefreshWorker()._run_once() is True
+    assert bundle.source_available is False
+    assert not integration_service.resolve(**kwargs).allows_action("integrations.google.drive.search")
 
 
 class _DatabaseOwnedPluginPolicyService(BaseModelProviderPolicyService):

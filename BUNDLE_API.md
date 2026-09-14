@@ -205,6 +205,20 @@ the deserialize half is covered by
 
 ## Changelog
 
+### 2026-09-14 — Integration policy review
+
+- Component and host resolver gates require metadata for every declared
+  capability when an action deny-list is configured. Missing or unavailable
+  metadata produces a typed policy denial before credential access; an
+  unconfigured installation retains pass-through behavior.
+- Integration policy snapshots support dotted provider IDs and expire cached
+  allows when refreshing a configured shared policy fails, including policies
+  that restrict integration actions without a provider ceiling.
+- The synchronous and asynchronous `require_integration_actions` helpers accept
+  optional `capability_ids`; `policy_keys_for_capabilities` accepts optional
+  `require_loaded` validation. These additions do not change previously released
+  Bundle API signatures; `BUNDLE_API_VERSION` remains `1`.
+
 ### 2026-09-10 — Integration identity ownership and runtime floors
 
 - The bundle registry rejects duplicate integration provider IDs, capability IDs,

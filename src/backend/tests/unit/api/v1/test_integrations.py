@@ -259,21 +259,63 @@ async def test_effective_policy_reports_an_unrestricted_default(
     assert PROVIDER in body["approved_provider_ids"]
 
 
-@pytest.mark.usefixtures("active_user", "loaded_integration")
+@pytest.mark.usefixtures("loaded_integration")
 async def test_effective_policy_reports_the_ceiling_and_deny_list(
     client: AsyncClient,
-    logged_in_headers: dict[str, str],
+    logged_in_headers_super_user: dict[str, str],
     integration_policy,
 ) -> None:
     integration_policy(providers=frozenset({PROVIDER}), actions=frozenset({DELETE_KEY}))
 
-    response = await client.get("api/v1/integrations/policy/effective", headers=logged_in_headers)
+    response = await client.get("api/v1/integrations/policy/effective", headers=logged_in_headers_super_user)
 
     assert response.status_code == 200, response.text
     body = response.json()
     assert body["unrestricted"] is False
     assert body["approved_provider_ids"] == [PROVIDER]
     assert body["blocked_action_keys"] == [DELETE_KEY]
+
+
+@pytest.mark.usefixtures("active_user", "loaded_integration")
+@pytest.mark.parametrize("approved", [True, False])
+async def test_effective_policy_hides_operator_denials_from_plain_callers(
+    client: AsyncClient, logged_in_headers: dict[str, str], integration_policy, *, approved: bool
+) -> None:
+    integration_policy(providers=frozenset({PROVIDER if approved else "slack"}), actions=frozenset({DELETE_KEY}))
+
+    response = await client.get("api/v1/integrations/policy/effective", headers=logged_in_headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["blocked_action_keys"] == []
+    assert response.json()["loaded_provider_ids"] == ([PROVIDER] if approved else [])
+    assert DELETE_KEY not in response.text
+    if not approved:
+        assert PROVIDER not in response.text
+
+
+@pytest.mark.usefixtures("active_user", "loaded_integration")
+async def test_external_empty_ceiling_is_not_reported_as_unrestricted(
+    client: AsyncClient, logged_in_headers: dict[str, str], monkeypatch
+) -> None:
+    from lfx.services.integration_policy import IntegrationPolicyService
+
+    class DenyAllPolicy(IntegrationPolicyService):
+        @property
+        def external_approved_integration_provider_ids(self):
+            return frozenset()
+
+        def get_allowed_provider_ids(self, **_kwargs):
+            return frozenset()
+
+    monkeypatch.setattr("lfx.services.deps.get_integration_policy_service", lambda: DenyAllPolicy())
+    monkeypatch.setattr("langflow.api.v1.integrations.get_integration_policy_service", lambda: DenyAllPolicy())
+
+    response = await client.get("api/v1/integrations/policy/effective", headers=logged_in_headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["approved_provider_ids"] == []
+    assert response.json()["unrestricted"] is False
+    assert response.json()["managed_externally"] is True
 
 
 async def test_integration_routes_require_authentication(client: AsyncClient) -> None:
