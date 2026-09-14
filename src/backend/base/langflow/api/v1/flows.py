@@ -936,7 +936,7 @@ async def delete_flow(
             flow_owner_ids.clear()
             retry_target = await _read_flow(session, target_flow_id, actor.id)
             if retry_target is None:
-                return
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
             await ensure_flow_permission(
                 actor,
                 FlowAction.DELETE,
@@ -946,7 +946,8 @@ async def delete_flow(
                 folder_id=retry_target.folder_id,
             )
             flow_owner_ids[retry_target.id] = retry_target.user_id
-            await cascade_delete_flow(session, target_flow_id)
+            if not await cascade_delete_flow(session, target_flow_id):
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
 
         await retry_flow_operation_on_deployment_guard(
             db=session,
@@ -1249,10 +1250,12 @@ async def delete_multiple_flows(
                     folder_id=flow.folder_id,
                 )
             authorized_flow_owner_ids.update((flow.id, flow.user_id) for flow in flows_to_delete)
+            deleted = 0
             for flow in flows_to_delete:
-                await cascade_delete_flow(db, flow.id)
+                if await cascade_delete_flow(db, flow.id):
+                    deleted += 1
             await db.flush()
-            return len(flows_to_delete)
+            return deleted
 
         async def _delete_attempt(_attempt: int) -> int:
             return await retry_flow_operation_on_deployment_guard(
