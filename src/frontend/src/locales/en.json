@@ -2681,5 +2681,8 @@
   "runConfig.toolContract": "Tool contract",
   "runConfig.bindings": "Configured flow bindings",
   "runConfig.identity": "Recorded identity",
-  "runConfig.empty": "None"
+  "runConfig.empty": "None",
+  "projectStarters.label": "Starters",
+  "projectStarters.research.title": "Research starter",
+  "projectStarters.research.description": "Agent Harness with a separate Tool Pack for search, source reading, and a sourced report."
 }

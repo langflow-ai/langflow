@@ -2519,5 +2519,8 @@
   "runConfig.toolContract": "Contrato de la herramienta",
   "runConfig.bindings": "Vínculos de flujos configurados",
   "runConfig.identity": "Identidad registrada",
-  "runConfig.empty": "Ninguno"
+  "runConfig.empty": "Ninguno",
+  "projectStarters.label": "Plantillas iniciales",
+  "projectStarters.research.title": "Investigación con fuentes",
+  "projectStarters.research.description": "Agent Harness con un Tool Pack separado para buscar, leer fuentes y producir un informe con citas."
 }

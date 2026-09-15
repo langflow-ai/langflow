@@ -2519,5 +2519,8 @@
   "runConfig.toolContract": "Contrato da ferramenta",
   "runConfig.bindings": "Vínculos de fluxos configurados",
   "runConfig.identity": "Identificação registrada",
-  "runConfig.empty": "Nenhum"
+  "runConfig.empty": "Nenhum",
+  "projectStarters.label": "Modelos iniciais",
+  "projectStarters.research.title": "Pesquisa com fontes",
+  "projectStarters.research.description": "Agent Harness com um Tool Pack separado para busca, leitura de fontes e um relatório com citações."
 }

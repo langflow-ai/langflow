@@ -324,6 +324,12 @@ async def create_project(
         raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_CREATE_FAILED)) from e
 
 
+class ProjectStarterRead(BaseModel):
+    name: str
+    display_name: str
+    description: str
+
+
 class ProjectTypeRead(BaseModel):
     """A project type and the form the UI renders for it."""
 
@@ -334,6 +340,26 @@ class ProjectTypeRead(BaseModel):
     #: The form, keyed by field name, in the same shape as a component's template. The frontend
     #: renders it with the field renderer it already uses on the canvas.
     template: dict[str, dict]
+    starters: tuple[ProjectStarterRead, ...] = ()
+
+
+@router.post("/starters/{starter_name}", response_model=FolderRead, status_code=201)
+async def create_project_starter(*, session: DbSession, current_user: CurrentActiveUser, starter_name: str):
+    """Create an editable starter composition with fresh project/flow/snapshot identities."""
+    from fastapi.concurrency import run_in_threadpool
+    from lfx.projects.starters import build_research_starter
+
+    from langflow.api.v1.project_compositions import composition_error, import_composition
+
+    if starter_name != "research":
+        raise HTTPException(404, "Project starter not found.")
+    await ensure_project_permission(current_user, ProjectAction.CREATE)
+    try:
+        composition = await run_in_threadpool(build_research_starter)
+        flows = await import_composition(session, current_user, composition)
+        return await session.get(Folder, flows[0].folder_id)
+    except (ValueError, KeyError, TypeError) as exc:
+        raise composition_error(exc) from exc
 
 
 # Declared before ``/{project_id}`` so "types" is not parsed as a project id.
@@ -347,6 +373,8 @@ async def read_project_types(
     Read straight out of the lfx registry. There is no database and no component cache behind
     this, so it answers before the component index is built.
     """
+    from lfx.projects.starters import PROJECT_STARTERS
+
     return [
         ProjectTypeRead(
             name=project_type.name,
@@ -354,6 +382,11 @@ async def read_project_types(
             icon=project_type.icon,
             description=project_type.description,
             template=project_type.to_template(),
+            starters=tuple(
+                ProjectStarterRead(**starter)
+                for starter in PROJECT_STARTERS
+                if starter["project_type"] == project_type.name
+            ),
         )
         for project_type in all_project_types()
     ]

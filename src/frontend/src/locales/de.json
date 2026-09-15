@@ -2519,5 +2519,8 @@
   "runConfig.toolContract": "Tool-Vertrag",
   "runConfig.bindings": "Konfigurierte Flow-Bindungen",
   "runConfig.identity": "Aufgezeichnete Identität",
-  "runConfig.empty": "Keine"
+  "runConfig.empty": "Keine",
+  "projectStarters.label": "Vorlagen",
+  "projectStarters.research.title": "Recherche mit Quellen",
+  "projectStarters.research.description": "Agent Harness mit separatem Tool Pack für Suche, Quellenlektüre und einen Bericht mit Quellenangaben."
 }

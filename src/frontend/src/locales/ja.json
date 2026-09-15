@@ -2519,5 +2519,8 @@
   "runConfig.toolContract": "ツール契約",
   "runConfig.bindings": "設定されたフローのバインディング",
   "runConfig.identity": "記録された識別情報",
-  "runConfig.empty": "なし"
+  "runConfig.empty": "なし",
+  "projectStarters.label": "スターター",
+  "projectStarters.research.title": "出典付きリサーチ",
+  "projectStarters.research.description": "検索と情報源の読み取りを行う別の Tool Pack を備え、出典付きレポートを作成する Agent Harness。"
 }

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -6,9 +7,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { ProjectTypeType } from "@/pages/MainPage/entities";
+import { ProjectStarterItem } from "./project-starter-item";
 
 export const AddFolderButton = ({
   onClick,
@@ -23,6 +27,8 @@ export const AddFolderButton = ({
   projectTypes?: ProjectTypeType[];
 }) => {
   const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const starters = projectTypes.flatMap((type) => type.starters ?? []);
 
   const button = (
     <Button
@@ -51,11 +57,11 @@ export const AddFolderButton = ({
   return (
     // The tooltip wraps the menu rather than the trigger: DropdownMenuTrigger asChild needs to
     // hand its ref straight to the button.
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <ShadTooltip content={t("folder.createNewProject")} styleClasses="z-50">
         <DropdownMenuTrigger asChild>{button}</DropdownMenuTrigger>
       </ShadTooltip>
-      <DropdownMenuContent className="w-[240px]" sideOffset={5} side="bottom">
+      <DropdownMenuContent className="w-[300px]" sideOffset={5} side="bottom">
         {projectTypes.map((projectType) => (
           <DropdownMenuItem
             key={projectType.name}
@@ -77,6 +83,20 @@ export const AddFolderButton = ({
             </div>
           </DropdownMenuItem>
         ))}
+        {starters.length > 0 && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>{t("projectStarters.label")}</DropdownMenuLabel>
+            {starters.map((starter) => (
+              <ProjectStarterItem
+                key={starter.name}
+                starter={starter}
+                disabled={disabled || loading}
+                onCreated={() => setOpen(false)}
+              />
+            ))}
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
