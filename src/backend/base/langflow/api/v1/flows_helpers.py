@@ -467,6 +467,7 @@ async def _new_flow(
         session.add(db_flow)
         await session.flush()
         await session.refresh(db_flow)
+        await _reconcile_flow_triggers(session, flow_id=db_flow.id, owner_id=db_flow.user_id, flow_data=db_flow.data)
         await _save_flow_to_fs(db_flow, user_id, storage_service)
 
         return FlowRead.model_validate(db_flow, from_attributes=True)
@@ -479,6 +480,25 @@ async def _new_flow(
             raise
         await logger.aerror("Error creating flow", error_type=type(exc).__name__)
         raise HTTPException(status_code=500, detail="An internal error occurred while creating the flow.") from exc
+
+
+async def _reconcile_flow_triggers(
+    session: AsyncSession,
+    *,
+    flow_id: UUID,
+    owner_id: UUID | None,
+    flow_data: dict | None,
+) -> None:
+    """Sync the flow's trigger rows to its trigger nodes, on every save path.
+
+    Kept as a thin wrapper so all three save paths (create, PUT update, PATCH)
+    call the same thing — the asymmetry the ``webhook`` flag recompute has, where
+    ``_new_flow`` skips it, is exactly the bug this avoids. Reconciliation never
+    raises: a flow save is the user's document, not trigger bookkeeping.
+    """
+    from langflow.services.triggers.reconciliation import reconcile_flow_triggers_safely
+
+    await reconcile_flow_triggers_safely(session, flow_id=flow_id, owner_id=owner_id, flow_data=flow_data)
 
 
 async def _read_flow(
@@ -663,6 +683,9 @@ async def _update_existing_flow(
     session.add(existing_flow)
     await session.flush()
     await session.refresh(existing_flow)
+    await _reconcile_flow_triggers(
+        session, flow_id=existing_flow.id, owner_id=existing_flow.user_id, flow_data=existing_flow.data
+    )
     # Writes happen under the owner's storage namespace, not the actor's.
     await _save_flow_to_fs(existing_flow, owner_user_id, storage_service)
 
@@ -774,6 +797,7 @@ async def _patch_flow(
     session.add(db_flow)
     await session.flush()
     await session.refresh(db_flow)
+    await _reconcile_flow_triggers(session, flow_id=db_flow.id, owner_id=db_flow.user_id, flow_data=db_flow.data)
     # Writes happen under the owner's storage namespace, not the actor's.
     await _save_flow_to_fs(db_flow, owner_user_id, storage_service)
 

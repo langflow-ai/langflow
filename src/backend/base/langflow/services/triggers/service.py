@@ -30,6 +30,7 @@ from langflow.services.database.models.trigger.schemas import (
 )
 from langflow.services.triggers.cleanup import delete_triggers
 from langflow.services.triggers.errors import TriggerNotFoundError
+from langflow.services.triggers.schedule_config import schedule_timing_changed, validate_schedule_config
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -106,6 +107,9 @@ class TriggerService(Service):
 
     async def create(self, session: AsyncSession, *, payload: TriggerCreate, owner_id: UUID) -> Trigger:
         await self._validate_flow_version(session, flow_id=payload.flow_id, flow_version_id=payload.flow_version_id)
+        config = payload.config
+        if payload.kind == "schedule" and (config or payload.state is TriggerState.ACTIVE):
+            config = validate_schedule_config(config)
         row = Trigger(
             flow_id=payload.flow_id,
             user_id=owner_id,
@@ -114,7 +118,7 @@ class TriggerService(Service):
             provider=payload.provider,
             node_id=payload.node_id,
             connection_id=payload.connection_id,
-            config=payload.config,
+            config=config,
             provider_state={},
             state=payload.state.value,
             binding_target=payload.binding_target.value,
@@ -139,6 +143,10 @@ class TriggerService(Service):
         changes = payload.model_dump(exclude_unset=True)
         if "flow_version_id" in changes:
             await self._validate_flow_version(session, flow_id=row.flow_id, flow_version_id=payload.flow_version_id)
+        if "config" in changes and row.kind == "schedule":
+            changes["config"] = validate_schedule_config(changes["config"])
+            if schedule_timing_changed(row.config or {}, changes["config"]):
+                row.next_fire_at = None
         for field, value in changes.items():
             setattr(row, field, value.value if hasattr(value, "value") else value)
         row.updated_at = datetime.now(timezone.utc)
@@ -161,9 +169,12 @@ class TriggerService(Service):
         if row.state not in _ENABLEABLE_STATES:
             msg = f"Trigger in state {row.state!r} cannot be enabled."
             raise ValueError(msg)
-        # Clear the schedule cursor so the tick producer recomputes the next fire
-        # from now rather than replaying every tick missed while paused.
-        row.next_fire_at = None
+        if row.kind == "schedule":
+            validate_schedule_config(row.config or {})
+        # Re-arming starts from now rather than replaying paused ticks. An
+        # idempotent enable on an active trigger must preserve its due tick.
+        if row.state != TriggerState.ACTIVE.value:
+            row.next_fire_at = None
         return await self.set_state(session, row=row, state=TriggerState.ACTIVE)
 
     async def disable(self, session: AsyncSession, *, row: Trigger) -> Trigger:
