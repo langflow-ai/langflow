@@ -404,6 +404,85 @@ describe("Context flow selection", () => {
   });
 });
 
+describe("Permission flow selection", () => {
+  const permission = {
+    ...binding,
+    output_name: "permission",
+    timeout_seconds: 2.5,
+  };
+  beforeEach(() => {
+    choices = [
+      {
+        ...permission,
+        flow_name: "Review research tools",
+        display_name: "Permission Gate · Permission",
+      },
+    ];
+  });
+
+  it("reviews a new revision while preserving timeout and dropping the old snapshot", () => {
+    choices[0].revision = "changed";
+    const onChange = setup({ fieldName: "tool_policy", value: permission });
+    expect(screen.getByText("Permissions from a flow")).toBeVisible();
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      "/flow/source?harnessField=tool_policy",
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Update binding/i }));
+    expect(onChange.mock.calls[0][0]).toEqual({
+      flow_id: "source",
+      node_id: "output",
+      output_name: "permission",
+      revision: "changed",
+      timeout_seconds: 2.5,
+    });
+  });
+
+  it("creates from the current tool policy with the runtime timeout default", async () => {
+    createFlow.mockResolvedValue({ id: "created" });
+    refetch.mockResolvedValue({
+      data: [{ ...choices[0], flow_id: "created" }],
+    });
+    const initialConfig = { tool_policy: "deny" };
+    const onChange = setup({ fieldName: "tool_policy", initialConfig });
+    fireEvent.click(
+      screen.getByRole("button", { name: /Use a flow instead/i }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /Create Permission Flow/i }),
+    );
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    expect(createFlow).toHaveBeenCalledWith(
+      "project",
+      "tool_policy",
+      "",
+      initialConfig,
+    );
+    expect(onChange.mock.calls[0][0]).toMatchObject({
+      flow_id: "created",
+      timeout_seconds: 10,
+    });
+  });
+
+  it.each([0, -1, 301, NaN, Infinity])(
+    "keeps invalid timeout %s visible until corrected",
+    (timeout) => {
+      const onChange = setup({
+        fieldName: "tool_policy",
+        value: { ...permission, timeout_seconds: timeout },
+      });
+      const input = screen.getByRole("spinbutton");
+      expect(input).toHaveAttribute("aria-invalid", "true");
+      expect(screen.getByRole("alert")).toBeVisible();
+      fireEvent.change(input, { target: { value: "1.5" } });
+      expect(onChange).toHaveBeenLastCalledWith({
+        ...permission,
+        timeout_seconds: 1.5,
+      });
+    },
+  );
+});
+
 describe("Compaction flow selection", () => {
   const compaction = {
     ...binding,

@@ -49,16 +49,32 @@ export function HarnessFlowPicker({
   const { t } = useTranslation();
   const isContext = fieldName === "context_strategy";
   const isCompaction = fieldName === "compaction";
+  const isPermission = fieldName === "tool_policy";
   const kind = isCompaction
     ? "compaction"
-    : isContext
-      ? "context"
-      : "instructions";
-  const timeout = value?.timeout_seconds ?? (isCompaction ? 60 : 30);
+    : isPermission
+      ? "permission"
+      : isContext
+        ? "context"
+        : "instructions";
+  const timed = isContext || isCompaction || isPermission;
+  const timeout =
+    value?.timeout_seconds ?? (isCompaction ? 60 : isPermission ? 10 : 30);
   const threshold = value
     ? ((value as CompactionBinding).trigger_tokens ?? 8000)
     : Number(initialConfig?.compaction_trigger_tokens ?? 8000);
   const copy = {
+    permission: {
+      title: "permissionFromFlow",
+      choose: "choosePermissionFlow",
+      create: "createPermissionFlow",
+      creating: "creatingPermissionFlow",
+      failed: "createPermissionFailed",
+      baseline: "permissionBaselineHelp",
+      empty: "noPermissionOutputs",
+      open: "openPermissionFlow",
+      version: "permissionBindingVersionHelp",
+    },
     context: {
       title: "contextFromFlow",
       choose: "chooseContextFlow",
@@ -117,7 +133,7 @@ export function HarnessFlowPicker({
   const bind = (choice: FlowOutputChoice) =>
     onChange({
       ...bindingOf(choice),
-      ...(isContext || isCompaction ? { timeout_seconds: timeout } : {}),
+      ...(timed ? { timeout_seconds: timeout } : {}),
       ...(isCompaction ? { trigger_tokens: threshold } : {}),
     });
   if (!expanded)
@@ -330,7 +346,7 @@ export function HarnessFlowPicker({
           )}
         </div>
       )}
-      {(isContext || isCompaction) && value && (
+      {timed && value && (
         <div className="flex flex-col gap-1.5">
           <label
             htmlFor={`${kind}-timeout-${projectId}`}

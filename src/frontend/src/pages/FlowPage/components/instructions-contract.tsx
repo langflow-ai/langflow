@@ -8,6 +8,14 @@ import useFlowStore from "@/stores/flowStore";
 
 type Validation = { valid: boolean; outputs: unknown[] };
 
+const contracts = [
+  { slot: "SystemPromptBuilder", field: "system_prompt", kind: "instructions" },
+  { slot: "Hook", field: "hooks", kind: "hook" },
+  { slot: "ContextManager", field: "context_strategy", kind: "context" },
+  { slot: "Compactor", field: "compaction", kind: "compaction" },
+  { slot: "PermissionGate", field: "tool_policy", kind: "permission" },
+] as const;
+
 /** Inspect the live graph using the same static contract resolver as the harness picker. */
 export function HarnessFlowContract() {
   const { t } = useTranslation();
@@ -19,29 +27,11 @@ export function HarnessFlowContract() {
     flow?.data as { harness_contract?: { slot?: string } } | undefined
   )?.harness_contract;
   const requestedField = params.get("harnessField");
-  const fieldName =
-    requestedField === "system_prompt" ||
-    requestedField === "hooks" ||
-    requestedField === "context_strategy" ||
-    requestedField === "compaction"
-      ? requestedField
-      : marker?.slot === "SystemPromptBuilder"
-        ? "system_prompt"
-        : marker?.slot === "Hook"
-          ? "hooks"
-          : marker?.slot === "ContextManager"
-            ? "context_strategy"
-            : marker?.slot === "Compactor"
-              ? "compaction"
-              : undefined;
-  const kind =
-    fieldName === "hooks"
-      ? "hook"
-      : fieldName === "context_strategy"
-        ? "context"
-        : fieldName === "compaction"
-          ? "compaction"
-          : "instructions";
+  const contract =
+    contracts.find(({ field }) => field === requestedField) ??
+    contracts.find(({ slot }) => slot === marker?.slot);
+  const fieldName = contract?.field;
+  const kind = contract?.kind ?? "instructions";
   const capitalized = kind[0].toUpperCase() + kind.slice(1);
   const projectId = fieldName ? flow?.folder_id : undefined;
   // Selection and layout do not affect the output contract or trigger validation requests.

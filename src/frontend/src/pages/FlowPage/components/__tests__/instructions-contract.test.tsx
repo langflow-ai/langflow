@@ -170,6 +170,45 @@ it.each([true, false])(
 );
 
 it.each([true, false])(
+  "validates Permissions from its marker or return URL (marker=%s)",
+  async (marked) => {
+    state.currentFlow = {
+      id: "permission",
+      folder_id: "project",
+      data: marked ? { harness_contract: { slot: "PermissionGate" } } : {},
+    };
+    searchParams = new URLSearchParams(
+      marked ? "" : "harnessField=tool_policy",
+    );
+    post.mockResolvedValue({ data: { valid: true, outputs: [{}] } });
+    const { rerender } = render(<HarnessFlowContract />);
+    await tick();
+    expect(post).toHaveBeenLastCalledWith(
+      expect.any(String),
+      expect.any(Object),
+      expect.objectContaining({ params: { field_name: "tool_policy" } }),
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Permission output ready",
+    );
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      "/all/folder/project?tab=harness&field=tool_policy",
+    );
+    expect(
+      screen.getByText(/Human approval happens when the harness runs/),
+    ).toBeInTheDocument();
+    state.edges = [{ invalid: true }];
+    post.mockResolvedValue({ data: { valid: false, outputs: [] } });
+    rerender(<HarnessFlowContract />);
+    await tick();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Permission output needs attention",
+    );
+  },
+);
+
+it.each([true, false])(
   "validates Compaction from its marker or return URL (marker=%s)",
   async (marked) => {
     state.currentFlow = {
