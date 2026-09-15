@@ -86,6 +86,101 @@ async def permits(service, state):
     return await service.enforce(user_id=state.recipient, domain="*", obj=f"flow:{state.flow}", act="read")
 
 
+async def test_access_sources_follow_enabled_grants_and_disabled_compatibility(scenario):
+    from langflow.services.authorization.repository import effective_access, load_resource
+
+    state = scenario
+    service = state.services[0]
+    sources = await service.get_access_sources(user_id=state.recipient, resource_type="flow", resource_id=state.flow)
+    assert [(source.kind, source.source_id) for source in sources] == [("team_share", state.share)]
+    assert set(sources[0].actions) == {"read", "execute", "write"}
+    service.settings_service.auth_settings.AUTHZ_ENABLED = False
+    async with state.readonly() as session:
+        resource = await load_resource(session, resource_type="flow", resource_id=state.flow)
+        access = await effective_access(session, user_id=state.owner, resource=resource)
+    assert access.sources == ()
+    assert "read" in access.actions
+
+
+@pytest.mark.parametrize(
+    ("authority", "level", "denied_action"),
+    [(authority, "viewer", "write") for authority in ("owner", "project_owner", "superuser", "share", "role")]
+    + [(authority, "editor", "deploy") for authority in ("owner", "superuser", "role")],
+)
+async def test_external_ceiling_precedes_every_resource_authority(scenario, level, denied_action, authority):
+    from langflow.services.authorization.access_ceiling import (
+        ExternalAccessContext,
+        set_current_external_access_context,
+    )
+    from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
+
+    state = scenario
+    service = state.services[0]
+    actor_id = state.owner if authority in {"owner", "project_owner"} else state.recipient
+    async with state.writable() as session:
+        await store.acquire_writer_lock(session)
+        if authority == "project_owner":
+            (await session.get(Flow, state.flow)).user_id = state.recipient
+        elif authority == "superuser":
+            (await session.get(User, actor_id)).is_superuser = True
+        elif authority == "role":
+            role = AuthzRole(name=str(uuid4()), permissions=["flow:read", "flow:write", "flow:deploy"])
+            session.add(role)
+            session.add(AuthzRoleAssignment(user_id=actor_id, role_id=role.id, domain_type="global"))
+        await store.reconcile_policy(session)
+    request = {"user_id": actor_id, "domain": "*", "obj": f"flow:{state.flow}"}
+    assert await service.enforce(**request, act="write")
+    assert await service.enforce(**request, act=denied_action)
+    set_current_external_access_context(ExternalAccessContext(provider="test", subject=str(actor_id), level=level))
+    try:
+        assert await service.enforce(**request, act="read")
+        assert not await service.enforce(**request, act=denied_action)
+        sources = await service.get_access_sources(user_id=actor_id, resource_type="flow", resource_id=state.flow)
+        assert sources
+        assert all(denied_action not in source.actions for source in sources)
+    finally:
+        set_current_external_access_context(None)
+
+
+async def test_invalid_roster_cannot_publish_partial_projection_and_repair_restores_writes(scenario):
+    from langflow.cli.authz_team_preflight import TeamRepairInstruction, inspect_team_consistency, repair_teams
+    from langflow.services.authorization.policy import TeamRosterError
+
+    state = scenario
+    invalid = AuthzTeam(team_name=str(uuid4()), adom_name=str(uuid4()))
+    async with state.readonly() as session:
+        before = {(row.id, store.semantic_rule(row)) for row in (await session.exec(select(CasbinRule))).all()}
+    # Model an out-of-band legacy writer; no constraints are disabled.
+    async with state.writable() as session:
+        session.add(invalid)
+    service = CasbinAuthorizationService(state.services[0].settings_service)
+    with pytest.raises((ValueError, TeamRosterError)):
+        await service.initialize_authorization()
+    assert not service.ready
+    assert await permits(state.services[0], state)
+    async with state.readonly() as session:
+        report = await inspect_team_consistency(session)
+        assert not report.valid
+        await store.acquire_writer_lock(session)
+        await session.delete(await session.get(AuthzShare, state.share))
+        with pytest.raises(TeamRosterError) as error:
+            await store.reconcile_policy(session)
+        assert error.value.code == "TEAM_MEMBERS_REQUIRED"
+        await session.rollback()
+    async with state.readonly() as session:
+        assert {(row.id, store.semantic_rule(row)) for row in (await session.exec(select(CasbinRule))).all()} == before
+        assert await session.get(AuthzShare, state.share) is not None
+    async with state.writable() as session:
+        repaired, _ = await repair_teams(session, (TeamRepairInstruction(invalid.id, retire=True),))
+        assert repaired == 1
+    async with state.readonly() as session:
+        assert (await inspect_team_consistency(session)).valid
+        assert (await store.verify_projection(session))["valid"]
+    await service.initialize_authorization()
+    assert service.ready
+    assert await permits(service, state)
+
+
 @pytest.mark.parametrize("group_claim", ["matching", "empty"])
 async def test_default_service_keeps_membership_locally_managed(scenario, group_claim):
     """Verified group claims neither add nor remove members without a directory integration."""

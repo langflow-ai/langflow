@@ -228,6 +228,11 @@ class CasbinAuthorizationService(BaseAuthorizationService):
         act: str,
         obj: str,
     ) -> bool:
+        """Apply the deny-only external ceiling before every source of authority.
+
+        The request ceiling binds canonical resource owners, project owners,
+        platform-superuser bypass, and Casbin permissions; it never grants access.
+        """
         domains = canonical_domains(resource, projects)
         if not external_access_allows(act) or act not in supported_actions(resource.resource_type):
             return False
@@ -381,6 +386,13 @@ class CasbinAuthorizationService(BaseAuthorizationService):
         act: str,
         context: dict[str, Any],
     ) -> bool:
+        """Allow the caller's own effective-access explanation through resource read.
+
+        This fallback does not grant unrestricted share-graph enumeration: list
+        and summary routes still restrict recipient, team-member, owner, subject,
+        and share-management visibility. Cross-subject inspection requires
+        share-management authority, so it cannot use the resource-read fallback.
+        """
         domains = canonical_domains(resource, projects)
         if not external_access_allows(act):
             return False
@@ -524,7 +536,10 @@ class CasbinAuthorizationService(BaseAuthorizationService):
 
         The compiler supplies source tuples; only tuples present in the loaded
         projection and allowed by its enforcer contribute an explanation.
+        Disabled authorization has no policy provenance and needs no snapshot.
         """
+        if not await self.is_enabled():
+            return ()
         async with self.admission_context() as session:
             user = await load_active_user(session, user_id)
             resource = await load_resource(session, resource_type=resource_type, resource_id=resource_id)

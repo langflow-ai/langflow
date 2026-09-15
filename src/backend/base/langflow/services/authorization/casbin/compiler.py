@@ -179,6 +179,9 @@ def _team_rules(snapshot: PolicySnapshot) -> tuple[set[Rule], set[UUID]]:
         try:
             validate_team_roster(team.members, team_is_active=team.is_active)
         except TeamRosterError as exc:
+            # An adminless team remains inspectable but cannot supply shares.
+            # Other corruption rejects the whole compile; never publish a partial
+            # projection. Startup may reject the roster before compilation.
             if exc.code != "TEAM_ACTIVE_ADMIN_REQUIRED":
                 raise
         else:

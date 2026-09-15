@@ -667,6 +667,108 @@ async def test_casbin_collaborator_save_response_keeps_owner_credentials_private
             assert owner_read.json()["auth_settings"] is not None
 
 
+@pytest.mark.parametrize("permission", ["read", "execute"])
+@pytest.mark.parametrize("scope", ["user", "team"])
+async def test_casbin_share_explanation_does_not_enumerate_other_recipients(
+    client, casbin_authorization, permission, scope
+):
+    from langflow.services.authorization.casbin import store
+    from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment, AuthzTeamMember
+
+    assert await casbin_authorization.is_enabled()
+    owner_name, reader_name, other_name, manager_name = (f"sharing_{uuid4().hex}" for _ in range(4))
+    owner, reader, other, manager = [
+        await _make_user(name) for name in (owner_name, reader_name, other_name, manager_name)
+    ]
+    owner_headers = await _login(client, owner_name)
+    reader_headers = await _login(client, reader_name)
+    manager_headers = await _login(client, manager_name)
+    flow_id = await _make_flow(owner, "Share visibility")
+    target_id = reader
+    async with session_scope() as session:
+        await store.acquire_writer_lock(session)
+        role = AuthzRole(name=f"share-manager-{uuid4()}", permissions=["share:read", "share:create"])
+        session.add(role)
+        session.add(AuthzRoleAssignment(user_id=manager, role_id=role.id, domain_type="global"))
+        if scope == "team":
+            team = AuthzTeam(team_name=str(uuid4()), adom_name=str(uuid4()))
+            session.add(team)
+            await session.flush()
+            session.add_all(
+                [
+                    AuthzTeamMember(team_id=team.id, user_id=owner, role="admin"),
+                    AuthzTeamMember(team_id=team.id, user_id=reader, role="user"),
+                ]
+            )
+            target_id = team.id
+        await store.reconcile_policy(session)
+    grants = {}
+    for recipient in (reader, other):
+        response = await client.post(
+            "api/v1/authz/shares",
+            headers=owner_headers,
+            json={
+                "resource_type": "flow",
+                "resource_id": str(flow_id),
+                "scope": scope if recipient == reader else "user",
+                "target_id": str(target_id if recipient == reader else recipient),
+                "permission_level": permission,
+            },
+        )
+        assert response.status_code == 201, response.text
+        grants[recipient] = response.json()["id"]
+    params = {"resource_type": "flow", "resource_id": str(flow_id)}
+    listed = await client.get("api/v1/authz/shares", headers=reader_headers, params=params)
+    assert listed.status_code == 200, listed.text
+    assert [grant["id"] for grant in listed.json()] == [grants[reader]]
+    summary = await client.get("api/v1/authz/shares/summary", headers=reader_headers, params=params)
+    assert summary.status_code == 200, summary.text
+    assert [grant["id"] for grant in summary.json()["direct_grants"]] == [grants[reader]]
+    assert not summary.json()["can_manage_shares"]
+    assert "read" in summary.json()["effective_access"]["actions"]
+    denied = await client.get(
+        "api/v1/authz/shares/summary",
+        headers=reader_headers,
+        params={**params, "subject_user_id": str(other)},
+    )
+    assert denied.status_code in {403, 404}, denied.text
+    for headers in (owner_headers, manager_headers):
+        for path, key in (("api/v1/authz/shares", None), ("api/v1/authz/shares/summary", "direct_grants")):
+            response = await client.get(path, headers=headers, params=params)
+            assert response.status_code == 200, response.text
+            rows = response.json()[key] if key else response.json()
+            assert {grant["id"] for grant in rows} == set(grants.values())
+        inspected = await client.get(
+            "api/v1/authz/shares/summary",
+            headers=headers,
+            params={**params, "subject_user_id": str(other)},
+        )
+        assert inspected.status_code == 200, inspected.text
+
+
+async def test_disabled_casbin_effective_permissions_and_share_requests(client, monkeypatch):
+    assert type(get_authorization_service()) is CasbinAuthorizationService
+    monkeypatch.setattr(get_settings_service().auth_settings, "AUTHZ_ENABLED", False)
+    name = f"disabled_sharing_{uuid4().hex}"
+    owner = await _make_user(name)
+    headers = await _login(client, name)
+    flow_id = await _make_flow(owner, "Disabled sharing")
+    permissions = await client.post(
+        "api/v1/authz/me/permissions",
+        headers=headers,
+        json={"resource_type": "flow", "resource_ids": [str(flow_id)], "actions": ["read"]},
+    )
+    assert permissions.status_code == 200, permissions.text
+    assert permissions.json()["permissions"][str(flow_id)] == ["read"]
+    params = {"resource_type": "flow", "resource_id": str(flow_id)}
+    listed = await client.get("api/v1/authz/shares", headers=headers, params=params)
+    assert listed.status_code == 200, listed.text
+    assert listed.json() == []
+    summary = await client.get("api/v1/authz/shares/summary", headers=headers, params=params)
+    assert summary.status_code == 503, summary.text
+    assert summary.json()["detail"]["code"] == "AUTHORIZATION_NOT_READY"
+
+
 @pytest.mark.parametrize("resource_type", ["flow", "project"])
 async def test_casbin_unready_service_rejects_owner_writes_and_permission_discovery(
     client, casbin_authorization, resource_type

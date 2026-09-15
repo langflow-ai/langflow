@@ -15,6 +15,41 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("ambient", [False, True])
+async def test_disabled_access_sources_need_no_database_or_projection(ambient):
+    """Compatibility mode explains no policy, even with an unbound ambient session."""
+    service = CasbinAuthorizationService(SimpleNamespace(auth_settings=SimpleNamespace(AUTHZ_ENABLED=False)))
+    request = {"user_id": uuid4(), "resource_type": "flow", "resource_id": uuid4()}
+    assert not service.ready
+    if ambient:
+        async with AsyncSession() as session:
+            with authorization_session(session):
+                assert await service.get_access_sources(**request) == ()
+    else:
+        assert await service.get_access_sources(**request) == ()
+
+
+@pytest.mark.asyncio
+async def test_disabled_access_sources_do_not_enter_admission(monkeypatch):
+    """Disabled provenance must not touch admission or its projection state."""
+    service = CasbinAuthorizationService(SimpleNamespace(auth_settings=SimpleNamespace(AUTHZ_ENABLED=False)))
+
+    def unexpected_admission():
+        pytest.fail("Disabled access explanation opened authorization admission")
+
+    monkeypatch.setattr(service, "admission_context", unexpected_admission)
+    assert await service.get_access_sources(user_id=uuid4(), resource_type="flow", resource_id=uuid4()) == ()
+
+
+@pytest.mark.asyncio
+async def test_enabled_access_sources_require_initialized_projection():
+    """The compatibility guard must not weaken enabled readiness checks."""
+    service = CasbinAuthorizationService(SimpleNamespace(auth_settings=SimpleNamespace(AUTHZ_ENABLED=True)))
+    with pytest.raises(RuntimeError, match="Authorization projection has not completed initialization"):
+        await service.get_access_sources(user_id=uuid4(), resource_type="flow", resource_id=uuid4())
+
+
+@pytest.mark.asyncio
 async def test_staged_grant_and_revocation_use_the_caller_transaction(policy_db):
     """A caller sees its staged policy; the next transaction sees committed revocation."""
     service = CasbinAuthorizationService(
