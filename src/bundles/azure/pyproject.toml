@@ -15,7 +15,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "azure", "azure-ai-foundry
 # component. Keeping them here makes the default Langflow install complete
 # without restoring the opt-in lfx-bundles metapackage.
 dependencies = [
-    "lfx>=1.12.0.dev0,<2.0.0",
+    "lfx>=1.13.0.dev0,<2.0.0",
     "langchain-openai>=1.1.6",
     "langchain-azure-ai>=1.1.0,<2.0.0",
 ]

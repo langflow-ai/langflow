@@ -48,7 +48,7 @@ def merge_database_url(authz_database_url, tmp_path):
         yield f"sqlite+aiosqlite:///{tmp_path / 'merge.db'}"
 
 
-@pytest.mark.parametrize("starting_revision", [_REVISION, "d7e9f1a3b5c8"])
+@pytest.mark.parametrize("starting_revision", [_REVISION, "d7e9f1a3b5c8", "e8a9b0c1d2f3", "b4c7d2e8f1a3"])
 def test_upstream_merge_upgrades_both_existing_heads(merge_database_url, starting_revision):
     """Both released branches converge without losing existing canonical team rows."""
     config = _make_alembic_cfg(merge_database_url)
@@ -70,12 +70,13 @@ def test_upstream_merge_upgrades_both_existing_heads(merge_database_url, startin
         inspector = inspect(engine)
         assert "is_environment_managed" in {c["name"] for c in inspector.get_columns("variable")}
         assert "role" in {c["name"] for c in inspector.get_columns("authz_team_member")}
+        assert {"connection", "authz_team_member_grant"} <= set(inspector.get_table_names())
         assert "revision" in {c["name"] for c in inspector.get_columns("authz_share")}
         for table in ("flow", "folder"):
             assert "edit_revision" in {c["name"] for c in inspector.get_columns(table)}
         with engine.connect() as connection:
             assert connection.execute(text("SELECT version_num FROM alembic_version")).scalars().all() == [
-                "e8a9b0c1d2f3"
+                "f2a4c6e8b0d1"
             ]
             assert (
                 connection.execute(

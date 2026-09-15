@@ -38,6 +38,7 @@ import type {
 } from "../types/flow";
 import type {
   ComponentsToUpdateType,
+  FlowMutationOptions,
   FlowStoreType,
   VertexLayerElementType,
 } from "../types/zustand/flow";
@@ -429,7 +430,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       edges: applyEdgeChanges(changes, get().edges),
     });
   },
-  setNodes: (change) => {
+  setNodes: (change, options) => {
     const newChange =
       typeof change === "function" ? change(get().nodes) : change;
     const { edges: newEdges } = cleanEdges(newChange, get().edges);
@@ -444,11 +445,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       hasIO: inputs.length > 0 || outputs.length > 0,
     });
     get().updateCurrentFlow({ nodes: newChange, edges: newEdges });
-    if (get().autoSaveFlow) {
+    if (options?.autoSave !== false && get().autoSaveFlow) {
       get().autoSaveFlow!();
     }
   },
-  setEdges: (change) => {
+  setEdges: (change, options) => {
     const newChange =
       typeof change === "function" ? change(get().edges) : change;
     set({
@@ -456,11 +457,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       flowState: undefined,
     });
     get().updateCurrentFlow({ edges: newChange });
-    if (get().autoSaveFlow) {
+    if (options?.autoSave !== false && get().autoSaveFlow) {
       get().autoSaveFlow!();
     }
   },
-  setNodesAndEdges: (nodes, edges) => {
+  setNodesAndEdges: (nodes, edges, options) => {
     // Atomic single-render replace mirroring resetFlow (the F5 load path); a
     // split setNodes+setEdges draws loop/dynamic-handle edges only after refresh.
     const { edges: newEdges } = cleanEdges(nodes, edges);
@@ -475,7 +476,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       hasIO: inputs.length > 0 || outputs.length > 0,
     });
     get().updateCurrentFlow({ nodes, edges: newEdges });
-    if (get().autoSaveFlow) {
+    if (options?.autoSave !== false && get().autoSaveFlow) {
       get().autoSaveFlow!();
     }
   },
@@ -484,6 +485,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     change: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
     isUserChange: boolean = true,
     callback?: () => void,
+    options?: FlowMutationOptions,
   ) => {
     if (!get().nodes.find((node) => node.id === id)) {
       throw new Error("Node not found");
@@ -529,7 +531,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       };
     });
     get().updateCurrentFlow({ nodes: newNodes, edges: newEdges });
-    if (get().autoSaveFlow) {
+    if (options?.autoSave !== false && get().autoSaveFlow) {
       get().autoSaveFlow!();
     }
   },

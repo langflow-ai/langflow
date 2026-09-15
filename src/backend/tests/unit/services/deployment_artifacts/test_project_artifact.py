@@ -152,8 +152,10 @@ async def test_build_project_artifact_is_deterministic_and_manifest_binds_exact_
         assert manifest["schema_version"] == 1
         assert manifest["project"] == {"id": str(project_id), "name": project.name}
         assert manifest["required_variables"] == []
+        assert "required_connections" not in manifest
         assert [entry["id"] for entry in manifest["flows"]] == [str(first_id), str(second_id)]
         for entry in manifest["flows"]:
+            assert "required_connections" not in entry
             payload = archive.read(entry["path"])
             assert entry["sha256"] == hashlib.sha256(payload).hexdigest()
             assert entry["size"] == len(payload)
@@ -498,6 +500,98 @@ async def test_build_project_artifact_preserves_variable_references_and_lists_re
 
 
 @pytest.mark.asyncio
+async def test_build_project_artifact_lists_required_connections_and_scopes() -> None:
+    actor_id = uuid4()
+    project_id = uuid4()
+    project = Folder(id=project_id, name="Connection references", user_id=actor_id)
+    flow = _flow(owner_id=actor_id, project_id=project_id)
+    flow.data = {
+        "nodes": [
+            {
+                "data": {
+                    "node": {
+                        "template": {
+                            "calendar": {
+                                "name": "calendar",
+                                "type": "connection_ref",
+                                "provider": "google_workspace",
+                                "value": "google_workspace/work",
+                                "required_scopes": ["calendar.readonly", "userinfo.email"],
+                            },
+                            "drive": {
+                                "name": "drive",
+                                "type": "connection_ref",
+                                "provider": "google_workspace",
+                                "value": "google_workspace/work",
+                                "required_scopes": ["drive.readonly"],
+                            },
+                        }
+                    }
+                }
+            }
+        ],
+        "edges": [],
+    }
+    session = _session_with_flows([flow])
+    user = SimpleNamespace(id=actor_id, is_superuser=False)
+
+    artifact, *_ = await _build_authorized(session=session, user=user, project=project)
+
+    assert artifact.flows[0].required_connections[0].provider == "google_workspace"
+    assert artifact.flows[0].required_connections[0].name == "work"
+    assert artifact.flows[0].required_connections[0].scopes == (
+        "calendar.readonly",
+        "drive.readonly",
+        "userinfo.email",
+    )
+    with zipfile.ZipFile(io.BytesIO(artifact.content)) as archive:
+        exported = json.loads(archive.read(f"flows/{flow.id}.json"))
+        manifest = json.loads(archive.read("manifest.json"))
+    assert manifest["schema_version"] == 4
+    assert manifest["required_connections"] == [
+        {
+            "provider": "google_workspace",
+            "name": "work",
+            "scopes": ["calendar.readonly", "drive.readonly", "userinfo.email"],
+        }
+    ]
+    assert manifest["flows"][0]["required_connections"] == manifest["required_connections"]
+    calendar = exported["data"]["nodes"][0]["data"]["node"]["template"]["calendar"]
+    assert calendar["value"] == "google_workspace/work"
+
+
+def test_normalized_flow_rejects_connection_provider_mismatch() -> None:
+    from langflow.services.deployment_artifacts import builder
+
+    snapshot = builder._FlowSnapshot(
+        flow_id=uuid4(),
+        name="Provider mismatch",
+        payload={
+            "data": {
+                "nodes": [
+                    {
+                        "data": {
+                            "node": {
+                                "template": {
+                                    "connection": {
+                                        "type": "connection_ref",
+                                        "provider": "slack",
+                                        "value": "google_workspace/work",
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            }
+        },
+    )
+
+    with pytest.raises(ProjectArtifactError, match="does not match its declared provider"):
+        builder._normalized_flow_bytes(snapshot)
+
+
+@pytest.mark.asyncio
 async def test_build_project_artifact_keeps_newline_heavy_code_as_bounded_string() -> None:
     actor_id = uuid4()
     project_id = uuid4()
@@ -611,7 +705,7 @@ def test_secret_scrub_uses_bounded_memory_for_wide_deep_structured_value() -> No
 
     tracemalloc.start()
     try:
-        content, _ = builder._normalized_flow_bytes(snapshot)
+        content, _, _ = builder._normalized_flow_bytes(snapshot)
         _, peak = tracemalloc.get_traced_memory()
     finally:
         tracemalloc.stop()
@@ -670,9 +764,10 @@ def test_normalized_flow_bytes_accepts_model_valid_sparse_data(data: object, exp
     )
     original_payload = deepcopy(snapshot.payload)
 
-    content, required_variables = builder._normalized_flow_bytes(snapshot)
+    content, required_variables, required_connections = builder._normalized_flow_bytes(snapshot)
     assert json.loads(content) == {"data": expected_data}
     assert required_variables == ()
+    assert required_connections == ()
     assert snapshot.payload == original_payload
 
 
@@ -702,7 +797,7 @@ def test_normalized_flow_bytes_does_not_mutate_shared_flow_data() -> None:
         payload={"data": flow.data},
     )
 
-    content, _ = builder._normalized_flow_bytes(snapshot)
+    content, _, _ = builder._normalized_flow_bytes(snapshot)
     exported = json.loads(content)
 
     assert exported["data"]["nodes"][0]["data"]["node"]["template"]["password"]["value"] is None

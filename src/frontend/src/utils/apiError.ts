@@ -6,18 +6,26 @@ type ApiDetailEntry =
   | { msg?: string; message?: string; code?: string }
   | string;
 
+/** Structured single-object detail, e.g. the pre-creation denial contract. */
+type ApiDetailObject = { message?: unknown; [key: string]: unknown };
+
 type ApiErrorShape = {
-  response?: { data?: { detail?: ApiDetailEntry[] | ApiDetailEntry } };
+  response?: {
+    data?: { detail?: ApiDetailEntry[] | string | ApiDetailObject };
+  };
   message?: string;
 };
 
 /**
  * Extracts one or more human-readable messages from an unknown API error.
  *
- * Handles three FastAPI / axios error shapes in priority order:
+ * Handles four FastAPI / axios error shapes in priority order:
  *   1. `response.data.detail` — array of `{ msg }` objects (validation errors)
  *   2. `response.data.detail` — plain string
- *   3. `error.message`        — axios / native Error message
+ *   3. `response.data.detail` — object carrying a `message` (structured errors
+ *      such as the pre-creation denial contract, which also carries
+ *      `error_code` and limit fields the UI may read separately)
+ *   4. `error.message`        — axios / native Error message
  *
  * Always returns at least one element so callers can spread directly into
  * `setErrorData({ list: extractApiErrorMessages(error) })`.

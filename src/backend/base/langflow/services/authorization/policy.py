@@ -13,6 +13,7 @@ from types import MappingProxyType
 from typing import TYPE_CHECKING
 
 from langflow.services.authorization.actions import (
+    ConnectionAction,
     DeploymentAction,
     FileAction,
     FlowAction,
@@ -45,6 +46,7 @@ _RESOURCE_ACTIONS = MappingProxyType(
         "knowledge_base": frozenset(action.value for action in KnowledgeBaseAction),
         "variable": frozenset(action.value for action in VariableAction),
         "file": frozenset(action.value for action in FileAction),
+        "connection": frozenset(action.value for action in ConnectionAction),
     }
 )
 

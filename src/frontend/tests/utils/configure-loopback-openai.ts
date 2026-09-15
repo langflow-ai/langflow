@@ -4,7 +4,7 @@ import { adjustScreenView } from "./adjust-screen-view";
 import { waitForFlowEditorReady } from "./flow/wait-for-flow-editor-ready";
 import {
   flushPendingFlowAutosave,
-  reloadAndWaitForFlowPersistence,
+  reloadAndWaitForFlowRefresh,
 } from "./flow-editor-persistence";
 import { modelRefreshNodeCount } from "./flow-editor-persistence-policy.mjs";
 import {
@@ -104,18 +104,7 @@ export async function configureLoopbackOpenAI(
     });
     expect(updateResponse.ok(), `PATCH flow ${flowId}`).toBeTruthy();
 
-    await reloadAndWaitForFlowPersistence(
-      page,
-      flowId,
-      configuredData,
-      (persistedData) => {
-        const persistedNodes = nodesById(persistedData);
-        return targetNodeIds.every((id) => {
-          const node = persistedNodes.get(id);
-          return node !== undefined && isNodeLoopbackConfigured(node);
-        });
-      },
-    );
+    await reloadAndWaitForFlowRefresh(page, flowId, configuredData);
   }
 
   await waitForFlowEditorReady(page);

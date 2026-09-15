@@ -771,6 +771,7 @@ class CasbinAuthorizationService(BaseAuthorizationService):
             "variable",
             "file",
             "provider_account",
+            "connection",
         }:
             return ResourceRecord(resource_type, UUID(int=0), user_id)
         return None

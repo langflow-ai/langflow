@@ -54,6 +54,7 @@ from langflow.services.authorization.team_management import actor_can_administer
 from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.lock_retry import run_with_lock_retry
 from langflow.services.database.models.auth import AuthzShare, AuthzTeam, AuthzTeamMember, ShareScope, TeamRole
+from langflow.services.database.models.connection import Connection
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
@@ -80,6 +81,8 @@ def _raise_share_error(exc: ShareManagementError) -> NoReturn:
         detail: str | dict[str, str] = "Share not found"
     elif exc.code == "SHARE_RESOURCE_NOT_FOUND":
         detail = "Resource not found"
+    elif exc.code == "SHARE_PUBLIC_CONNECTION_FORBIDDEN":
+        detail = exc.message
     else:
         detail = exc.detail
     raise HTTPException(status_code=exc.status_code, detail=detail) from exc
@@ -347,6 +350,10 @@ def _same_resource(left: ResourceRecord, right: ResourceRecord) -> bool:
 def _resource_exists_predicate() -> ColumnElement[bool]:
     return or_(
         and_(
+            col(AuthzShare.resource_type) == "connection",
+            exists(select(Connection.id).where(col(Connection.id) == col(AuthzShare.resource_id))),
+        ),
+        and_(
             col(AuthzShare.resource_type) == "flow",
             exists(select(Flow.id).where(col(Flow.id) == col(AuthzShare.resource_id))),
         ),
@@ -380,6 +387,14 @@ def _resource_exists_predicate() -> ColumnElement[bool]:
 
 def _owner_predicate(user_id: UUID) -> ColumnElement[bool]:
     return or_(
+        and_(
+            col(AuthzShare.resource_type) == "connection",
+            exists(
+                select(Connection.id).where(
+                    col(Connection.id) == col(AuthzShare.resource_id), Connection.owner_id == user_id
+                )
+            ),
+        ),
         and_(
             col(AuthzShare.resource_type) == "flow",
             exists(select(Flow.id).where(col(Flow.id) == col(AuthzShare.resource_id), Flow.user_id == user_id)),

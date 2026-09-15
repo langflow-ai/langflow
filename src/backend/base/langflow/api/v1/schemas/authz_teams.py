@@ -115,6 +115,7 @@ class TeamMemberCreate(BaseModel):
 
     user_id: UUID
     role: TeamRoleLiteral = "user"
+    source: Literal["manual"] = "manual"
 
 
 class TeamMemberRoleUpdate(BaseModel):

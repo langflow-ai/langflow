@@ -1,6 +1,7 @@
 """Langflow authorization package with a replaceable service interface."""
 
 from langflow.services.authorization.actions import (
+    ConnectionAction,
     DeploymentAction,
     FileAction,
     FlowAction,
@@ -21,6 +22,7 @@ from langflow.services.authorization.decorators import requires_flow_permission,
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
 from langflow.services.authorization.guards import (
     capability_probe,
+    ensure_connection_permission,
     ensure_deployment_permission,
     ensure_file_permission,
     ensure_flow_permission,
@@ -49,6 +51,7 @@ from langflow.services.authorization.service import LangflowAuthorizationService
 
 __all__ = [
     "AuditPersistenceError",
+    "ConnectionAction",
     "DeploymentAction",
     "FileAction",
     "FlowAction",
@@ -66,6 +69,7 @@ __all__ = [
     "capability_probe",
     "deny_to_404",
     "drain_pending_audit_writes",
+    "ensure_connection_permission",
     "ensure_deployment_permission",
     "ensure_file_permission",
     "ensure_flow_permission",

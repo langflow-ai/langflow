@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import Annotated, Literal, cast
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
+from lfx.services.authorization import AuthorizationMutationRejected
 from lfx.utils.util_strings import escape_like_pattern
 from sqlmodel import col, select
 
@@ -21,6 +22,12 @@ from langflow.api.v1.schemas.authz_teams import (
     TeamUpdate,
 )
 from langflow.services.authorization.access_ceiling import external_access_allows
+from langflow.services.authorization.admin import (
+    administration_audit_details,
+    ensure_administration_permission,
+    is_administrator,
+)
+from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS
 from langflow.services.authorization.collaboration import (
     CollaborationCapabilityError,
     discover_collaboration_capabilities,
@@ -31,7 +38,6 @@ from langflow.services.authorization.team_management import (
     MemberUpsert,
     TeamManagementError,
     TeamPatch,
-    actor_can_administer_platform,
     team_actor_capabilities_many,
 )
 from langflow.services.authorization.team_management import (
@@ -62,18 +68,23 @@ router = APIRouter(prefix="/authz/teams", tags=["Authorization"])
 
 _LIST_MAX_LIMIT = 200
 _LIST_DEFAULT_LIMIT = 100
+OperationId = Annotated[str | None, Header(alias="X-Langflow-Operation-ID", max_length=128)]
 TeamView = Literal["directory", "member", "managed", "all"]
 
 
-async def _require_superuser_dependency(current_user: CurrentActiveUser) -> None:
-    """Reject non-platform administrators before validating create payloads.
-
-    The historical helper name is retained because structural security tests
-    inspect this dependency. The actual decision also applies the current
-    external-credential ceiling through ``actor_can_administer_platform``.
-    """
-    if not actor_can_administer_platform(current_user):
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform Admin required")
+async def _require_team_administrator_dependency(
+    current_user: CurrentActiveUser, operation_id: OperationId = None
+) -> None:
+    """Reject unauthorized team creation before validating its payload."""
+    await ensure_administration_permission(
+        current_user,
+        resource="team",
+        authorization_service=get_authorization_service(),
+        action="team:create",
+        obj="team:*",
+        operation_id=operation_id,
+        denial_detail="Superuser required to administer teams.",
+    )
 
 
 def _require_credential_action(action: str) -> None:
@@ -85,7 +96,23 @@ def _require_credential_action(action: str) -> None:
 
 
 def _raise_domain_error(exc: TeamManagementError) -> None:
-    raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
+    headers = {"X-Langflow-Error-Code": "externally_managed"} if exc.code == "TEAM_MEMBERSHIP_SOURCE_MANAGED" else None
+    raise HTTPException(status_code=exc.status_code, detail=exc.detail, headers=headers) from exc
+
+
+async def _audit_mutation_denial(
+    *, actor_id: UUID, action: str, obj: str, status_code: int, reason: str, operation_id: str | None
+) -> None:
+    await audit_decision(
+        user_id=actor_id,
+        action=action,
+        obj=obj,
+        result="deny",
+        details=administration_audit_details(
+            {"event": AUDIT_EVENT_ACCESS, "status_code": status_code, "reason": reason},
+            operation_id=operation_id,
+        ),
+    )
 
 
 async def _require_collaboration_ready() -> None:
@@ -112,6 +139,8 @@ async def _current_actor(session: DbSession, user_id: UUID) -> User:
 
 async def _team_visible(session: DbSession, *, team_id: UUID, user: User) -> bool:
     async with authorization_admission(session):
+        if await is_administrator(user, resource="team", authorization_service=get_authorization_service()):
+            return True
         return await get_authorization_service().enforce(user_id=user.id, domain="*", obj=f"team:{team_id}", act="read")
 
 
@@ -198,12 +227,13 @@ async def _serialize_members(session: DbSession, members: list[AuthzTeamMember])
 
 
 @router.get("", response_model=list[TeamRead])
-@router.get("/", response_model=list[TeamRead])
+@router.get("/", response_model=list[TeamRead], include_in_schema=False)
 async def list_teams(
     session: DbSession,
     current_user: CurrentActiveUser,
     view: Annotated[TeamView, Query()] = "member",
     search: Annotated[str | None, Query(min_length=1, max_length=100)] = None,
+    adom_name: Annotated[str | None, Query(description="Exact match on adom_name")] = None,
     is_active: Annotated[bool | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=_LIST_MAX_LIMIT)] = _LIST_DEFAULT_LIMIT,
     offset: Annotated[int, Query(ge=0)] = 0,
@@ -213,7 +243,7 @@ async def list_teams(
         actor = await _current_actor(admission, current_user.id)
         statement = select(AuthzTeam)
         if view == "all":
-            if not actor_can_administer_platform(actor):
+            if not await is_administrator(actor, resource="team", authorization_service=get_authorization_service()):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform Admin required")
         elif view in {"member", "managed"}:
             statement = statement.join(
@@ -233,6 +263,8 @@ async def list_teams(
                     col(AuthzTeam.team_name).ilike(like, escape="\\")
                     | col(AuthzTeam.adom_name).ilike(like, escape="\\")
                 )
+        if adom_name is not None:
+            statement = statement.where(AuthzTeam.adom_name == adom_name)
         if is_active is not None:
             statement = statement.where(AuthzTeam.is_active == is_active)
         statement = statement.order_by(col(AuthzTeam.team_name), col(AuthzTeam.id))
@@ -279,22 +311,25 @@ async def read_team(
     "",
     response_model=TeamRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(_require_superuser_dependency)],
+    dependencies=[Depends(_require_team_administrator_dependency)],
 )
 @router.post(
     "/",
+    include_in_schema=False,
     response_model=TeamRead,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(_require_superuser_dependency)],
+    dependencies=[Depends(_require_team_administrator_dependency)],
 )
 async def create_team(
     payload: TeamCreate,
     current_user: CurrentActiveUser,
     session: DbSession,
+    response: Response,
+    operation_id: OperationId = None,
 ) -> TeamRead:
     actor_id = current_user.id
     actor = await _current_actor(session, actor_id)
-    if not actor_can_administer_platform(actor):
+    if not await is_administrator(actor, resource="team", authorization_service=get_authorization_service()):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform Admin required")
     _require_credential_action("create")
     await _require_collaboration_ready()
@@ -308,18 +343,43 @@ async def create_team(
             description=payload.description,
             is_active=payload.is_active,
             members=tuple(MemberUpsert(member.user_id, member.role) for member in payload.members),
+            operation_id=operation_id,
         )
 
     try:
         result = await run_with_lock_retry(operation, session=session, description="create team")
         await session.commit()
+    except AuthorizationMutationRejected as exc:
+        await session.rollback()
+        await _audit_mutation_denial(
+            actor_id=actor_id,
+            action="team:create",
+            obj="team:*",
+            status_code=409,
+            reason="access_ceiling",
+            operation_id=operation_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=exc.public_detail,
+            headers={"X-Langflow-Error-Code": "access_ceiling"},
+        ) from exc
     except TeamManagementError as exc:
         await session.rollback()
+        await _audit_mutation_denial(
+            actor_id=actor_id,
+            action="team:create",
+            obj="team:*",
+            status_code=exc.status_code,
+            reason=exc.code,
+            operation_id=operation_id,
+        )
         _raise_domain_error(exc)
     for event in result.events:
         await safe_identity_mutation_committed(get_authorization_service(), event)
     await session.refresh(result.team)
     actor = await _current_actor(session, actor_id)
+    response.headers["Location"] = f"/api/v1/authz/teams/{result.team.id}"
     return await _serialize_team(session, result.team, actor)
 
 
@@ -329,6 +389,7 @@ async def update_team(
     payload: TeamUpdate,
     current_user: CurrentActiveUser,
     session: DbSession,
+    operation_id: OperationId = None,
 ) -> TeamRead:
     _require_credential_action("write")
     await _require_collaboration_ready()
@@ -345,13 +406,38 @@ async def update_team(
 
     async def operation(_attempt: int):
         actor = await _current_actor(session, actor_id)
-        return await patch_team_transaction(session, actor=actor, team_id=team_id, patch=patch)
+        return await patch_team_transaction(
+            session, actor=actor, team_id=team_id, patch=patch, operation_id=operation_id
+        )
 
     try:
         result = await run_with_lock_retry(operation, session=session, description=f"update team {team_id}")
         await session.commit()
+    except AuthorizationMutationRejected as exc:
+        await session.rollback()
+        await _audit_mutation_denial(
+            actor_id=actor_id,
+            action="team:update",
+            obj=f"team:{team_id}",
+            status_code=409,
+            reason="access_ceiling",
+            operation_id=operation_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=exc.public_detail,
+            headers={"X-Langflow-Error-Code": "access_ceiling"},
+        ) from exc
     except TeamManagementError as exc:
         await session.rollback()
+        await _audit_mutation_denial(
+            actor_id=actor_id,
+            action="team:update",
+            obj=f"team:{team_id}",
+            status_code=exc.status_code,
+            reason=exc.code,
+            operation_id=operation_id,
+        )
         _raise_domain_error(exc)
     for event in result.events:
         await safe_identity_mutation_committed(get_authorization_service(), event)
@@ -365,22 +451,46 @@ async def delete_team(
     team_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
+    operation_id: OperationId = None,
 ) -> None:
     actor_id = current_user.id
     actor = await _current_actor(session, actor_id)
-    if not actor_can_administer_platform(actor):
+    if not await is_administrator(actor, resource="team", authorization_service=get_authorization_service()):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform Admin required")
     _require_credential_action("delete")
     await _require_collaboration_ready()
 
     async def operation(_attempt: int):
-        return await delete_team_transaction(session, actor=actor, team_id=team_id)
+        return await delete_team_transaction(session, actor=actor, team_id=team_id, operation_id=operation_id)
 
     try:
         event = await run_with_lock_retry(operation, session=session, description=f"delete team {team_id}")
         await session.commit()
+    except AuthorizationMutationRejected as exc:
+        await session.rollback()
+        await _audit_mutation_denial(
+            actor_id=actor_id,
+            action="team:delete",
+            obj=f"team:{team_id}",
+            status_code=409,
+            reason="access_ceiling",
+            operation_id=operation_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=exc.public_detail,
+            headers={"X-Langflow-Error-Code": "access_ceiling"},
+        ) from exc
     except TeamManagementError as exc:
         await session.rollback()
+        await _audit_mutation_denial(
+            actor_id=actor_id,
+            action="team:delete",
+            obj=f"team:{team_id}",
+            status_code=exc.status_code,
+            reason=exc.code,
+            operation_id=operation_id,
+        )
         _raise_domain_error(exc)
     await safe_identity_mutation_committed(get_authorization_service(), event)
 
@@ -415,6 +525,8 @@ async def add_member(
     payload: TeamMemberCreate,
     current_user: CurrentActiveUser,
     session: DbSession,
+    response: Response,
+    operation_id: OperationId = None,
 ) -> TeamMemberRead:
     _require_credential_action("create")
     await _require_collaboration_ready()
@@ -427,17 +539,42 @@ async def add_member(
             actor=actor,
             team_id=team_id,
             member=MemberUpsert(payload.user_id, payload.role),
+            operation_id=operation_id,
         )
 
     try:
         result = await run_with_lock_retry(operation, session=session, description=f"add member to {team_id}")
         await session.commit()
+    except AuthorizationMutationRejected as exc:
+        await session.rollback()
+        await _audit_mutation_denial(
+            actor_id=actor_id,
+            action="team_member:create",
+            obj=f"team:{team_id}",
+            status_code=409,
+            reason="access_ceiling",
+            operation_id=operation_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=exc.public_detail,
+            headers={"X-Langflow-Error-Code": "access_ceiling"},
+        ) from exc
     except TeamManagementError as exc:
         await session.rollback()
+        await _audit_mutation_denial(
+            actor_id=actor_id,
+            action="team_member:create",
+            obj=f"team:{team_id}",
+            status_code=exc.status_code,
+            reason=exc.code,
+            operation_id=operation_id,
+        )
         _raise_domain_error(exc)
     for event in result.events:
         await safe_identity_mutation_committed(get_authorization_service(), event)
     await session.refresh(result.member)
+    response.headers["Location"] = f"/api/v1/authz/teams/{team_id}/members/{payload.user_id}"
     return await _serialize_member(session, result.member)
 
 
@@ -448,6 +585,7 @@ async def change_member_role(
     payload: TeamMemberRoleUpdate,
     current_user: CurrentActiveUser,
     session: DbSession,
+    operation_id: OperationId = None,
 ) -> TeamMemberRead:
     _require_credential_action("write")
     await _require_collaboration_ready()
@@ -461,11 +599,19 @@ async def change_member_role(
             team_id=team_id,
             user_id=user_id,
             role=payload.role,
+            operation_id=operation_id,
         )
 
     try:
         result = await run_with_lock_retry(operation, session=session, description=f"change member role in {team_id}")
         await session.commit()
+    except AuthorizationMutationRejected as exc:
+        await session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=exc.public_detail,
+            headers={"X-Langflow-Error-Code": "access_ceiling"},
+        ) from exc
     except TeamManagementError as exc:
         await session.rollback()
         _raise_domain_error(exc)
@@ -481,6 +627,7 @@ async def remove_member(
     user_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
+    operation_id: OperationId = None,
 ) -> None:
     _require_credential_action("delete")
     await _require_collaboration_ready()
@@ -488,13 +635,38 @@ async def remove_member(
 
     async def operation(_attempt: int):
         actor = await _current_actor(session, actor_id)
-        return await remove_member_transaction(session, actor=actor, team_id=team_id, user_id=user_id)
+        return await remove_member_transaction(
+            session, actor=actor, team_id=team_id, user_id=user_id, operation_id=operation_id
+        )
 
     try:
         events = await run_with_lock_retry(operation, session=session, description=f"remove member from {team_id}")
         await session.commit()
+    except AuthorizationMutationRejected as exc:
+        await session.rollback()
+        await _audit_mutation_denial(
+            actor_id=actor_id,
+            action="team_member:delete",
+            obj=f"team:{team_id}",
+            status_code=409,
+            reason="access_ceiling",
+            operation_id=operation_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=exc.public_detail,
+            headers={"X-Langflow-Error-Code": "access_ceiling"},
+        ) from exc
     except TeamManagementError as exc:
         await session.rollback()
+        await _audit_mutation_denial(
+            actor_id=actor_id,
+            action="team_member:delete",
+            obj=f"team:{team_id}",
+            status_code=exc.status_code,
+            reason=exc.code,
+            operation_id=operation_id,
+        )
         _raise_domain_error(exc)
     for event in events:
         await safe_identity_mutation_committed(get_authorization_service(), event)

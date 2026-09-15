@@ -8,8 +8,15 @@ class UiSettings(BaseModel):
 
     auto_saving: bool = True
     """If set to True, Langflow will auto save flows."""
-    auto_saving_interval: int = 1000
-    """The interval in ms at which Langflow will auto save flows."""
+    auto_saving_interval: int = 2000
+    """The interval in ms at which Langflow will auto save flows.
+
+    Every save rewrites the whole graph, so this is the window in which two
+    people editing one flow can diverge without either being told. Raised from
+    1000ms; n8n settled on the same 2s after tracing their false-conflict
+    problem to a more eager autosave. The frontend's AUTOSAVE_DEBOUNCE_TIME
+    only covers the moments before /api/v1/config lands, so the two must match.
+    """
 
     max_text_length: int = MAX_TEXT_LENGTH
     """Maximum number of characters to store and display in the UI. Responses longer than this

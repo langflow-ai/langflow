@@ -83,6 +83,8 @@ async def collaboration_db(
 
     connect_args = {"check_same_thread": False, "timeout": 30} if database_url.startswith("sqlite") else {}
     engine = create_async_engine(database_url, connect_args=connect_args)
+    from langflow.services.database.models.auth import AuthzTeamMemberGrant
+
     tables = [
         User.__table__,
         Folder.__table__,
@@ -92,6 +94,7 @@ async def collaboration_db(
         AuthzRoleAssignmentGrant.__table__,
         AuthzTeam.__table__,
         AuthzTeamMember.__table__,
+        AuthzTeamMemberGrant.__table__,
         AuthzShare.__table__,
         AuthzAuditLog.__table__,
         CasbinRule.__table__,
@@ -319,6 +322,7 @@ async def test_team_mutations_enforce_real_roster_and_role_invariants(collaborat
 @pytest.mark.parametrize("payload", [{}, {"team_name": None, "is_active": None, "member_upserts": []}])
 async def test_empty_team_patch_requires_metadata_authority(
     collaboration_db: CollaborationDatabase,
+    monkeypatch: pytest.MonkeyPatch,
     actor_role: str,
     payload: dict,
 ):
@@ -327,6 +331,9 @@ async def test_empty_team_patch_requires_metadata_authority(
     from httpx import ASGITransport, AsyncClient
     from langflow.services.auth.utils import get_current_active_user
 
+    audit_settings = langflow_deps.get_settings_service().auth_settings
+    monkeypatch.setattr(audit_settings, "AUTHZ_AUDIT_ENABLED", True)
+    monkeypatch.setattr(audit_settings, "AUTHZ_AUDIT_DURABLE", True)
     admin = _user("team-admin")
     caller = _user("patch-caller", is_superuser=actor_role == "platform")
     await _seed_users(collaboration_db, admin, caller)
@@ -349,8 +356,11 @@ async def test_empty_team_patch_requires_metadata_authority(
     app = FastAPI()
     app.include_router(authz_teams.router)
     app.dependency_overrides[get_current_active_user] = actor
+    operation_id = str(uuid4())
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-        response = await client.patch(f"/authz/teams/{team.id}", json=payload)
+        response = await client.patch(
+            f"/authz/teams/{team.id}", json=payload, headers={"X-Langflow-Operation-ID": operation_id}
+        )
 
     permitted = actor_role in {"admin", "platform"}
     assert response.status_code == (200 if permitted else 403), response.text
@@ -361,7 +371,17 @@ async def test_empty_team_patch_requires_metadata_authority(
         assert team.team_name not in response.text
         async with collaboration_db.session() as reader:
             assert (await reader.get(AuthzTeam, team.id)).updated_at == before
-            assert set((await reader.exec(select(AuthzAuditLog.id))).all()) == audits_before
+            audits_after = (await reader.exec(select(AuthzAuditLog))).all()
+            assert audits_before <= {audit.id for audit in audits_after}
+            added = [audit for audit in audits_after if audit.id not in audits_before]
+            assert len(added) == 1
+            denial = added[0]
+            assert (denial.user_id, denial.action, denial.result) == (caller.id, "team:update", "deny")
+            assert (denial.resource_type, denial.resource_id) == ("team", team.id)
+            assert denial.details["event"] == "access"
+            assert denial.details["reason"] == "TEAM_OPERATION_FORBIDDEN"
+            assert denial.details["status_code"] == 403
+            assert denial.details["operation_id"] == operation_id
 
 
 @pytest.mark.asyncio

@@ -25,6 +25,18 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 
+  it("classifies Serply as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Serply",
+          icon: "Search",
+          name: "serply",
+        }),
+      ]),
+    );
+  });
+
   it("classifies ToolGuard as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([
@@ -32,6 +44,18 @@ describe("SIDEBAR_BUNDLES", () => {
           display_name: "ToolGuard",
           icon: "ShieldCheck",
           name: "toolguard",
+        }),
+      ]),
+    );
+  });
+
+  it("classifies Figranium as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Figranium",
+          icon: "Figranium",
+          name: "figranium",
         }),
       ]),
     );

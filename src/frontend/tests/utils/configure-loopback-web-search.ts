@@ -3,7 +3,7 @@ import { expect } from "../fixtures";
 import { waitForFlowEditorReady } from "./flow/wait-for-flow-editor-ready";
 import {
   flushPendingFlowAutosave,
-  reloadAndWaitForFlowPersistence,
+  reloadAndWaitForFlowRefresh,
 } from "./flow-editor-persistence";
 
 const LOOPBACK_WEB_SEARCH_CODE = `
@@ -77,35 +77,7 @@ export async function configureLoopbackWebSearch(page: Page): Promise<void> {
     data: { data: flow.data },
   });
   expect(update.ok(), `PATCH flow ${flowId}`).toBeTruthy();
-  await reloadAndWaitForFlowPersistence(
-    page,
-    flowId,
-    flow.data,
-    (persistedData) => {
-      const persistedNodes = new Map(
-        (persistedData.nodes ?? []).map((node) => [
-          (node as { id?: string }).id,
-          node,
-        ]),
-      );
-      return searchNodeIds.every((nodeId) => {
-        const node = persistedNodes.get(nodeId) as
-          | {
-              data?: {
-                type?: string;
-                node?: { template?: { code?: { value?: string } } };
-              };
-            }
-          | undefined;
-        return (
-          node?.data?.type === "UnifiedWebSearch" &&
-          node.data.node?.template?.code?.value?.includes(
-            "LOOPBACK_WEB_SEARCH_USED",
-          ) === true
-        );
-      });
-    },
-  );
+  await reloadAndWaitForFlowRefresh(page, flowId, flow.data);
   await waitForFlowEditorReady(page);
 
   const verifyResponse = await page.request.get(`/api/v1/flows/${flowId}`);

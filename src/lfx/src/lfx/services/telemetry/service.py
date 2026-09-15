@@ -130,6 +130,10 @@ class TelemetryService(BaseTelemetryService):
     async def log_package_run(self, payload: BaseModel) -> None:
         await self._enqueue(payload, "run")
 
+    async def log_integration_action(self, payload: BaseModel) -> None:
+        """Queue an integration event without waiting for the telemetry transport."""
+        await self._enqueue(payload, "integration_action")
+
     async def log_package_shutdown(self) -> None:
         elapsed = int((datetime.now(timezone.utc) - self._start_time).total_seconds())
         await self._enqueue(ShutdownPayload(time_running=elapsed), "shutdown")

@@ -12,3 +12,13 @@ entries:
   resolved_in_version: 1.11.2
   fix_pr: https://github.com/langflow-ai/langflow/pull/14354
   workaround: Set LANGFLOW_CONFIG_DIR to a writable path such as /app/langflow, or upgrade to 1.11.2.
+
+- id: GH-14523
+  title: The flow editor discards Add Component clicks while the permission check is loading
+  status: resolved
+  area: flow_editor
+  first_bad_version: 1.11.0
+  last_known_good_version: 1.10.3
+  resolved_in_version: 1.12.0
+  fix_pr: https://github.com/langflow-ai/langflow/pull/14523
+  workaround: Wait a few seconds after the page loads, then click again.

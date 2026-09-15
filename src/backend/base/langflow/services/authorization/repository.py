@@ -15,6 +15,7 @@ from langflow.services.database.models.auth import (
     AuthzTeam,
     AuthzTeamMember,
 )
+from langflow.services.database.models.connection import Connection
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
 from langflow.services.database.models.file.model import File
@@ -69,6 +70,7 @@ _MODEL_BY_RESOURCE: dict[str, type[Any]] = {
     "variable": Variable,
     "file": File,
     "provider_account": DeploymentProviderAccount,
+    "connection": Connection,
 }
 
 _RESOURCE_ACTIONS: dict[str, frozenset[str]] = {
@@ -79,6 +81,7 @@ _RESOURCE_ACTIONS: dict[str, frozenset[str]] = {
     "variable": frozenset({"read", "write", "create", "delete"}),
     "file": frozenset({"read", "write", "create", "delete"}),
     "provider_account": frozenset({"read", "write", "create", "delete"}),
+    "connection": frozenset({"read", "write", "create", "delete", "execute"}),
     "voice": frozenset({"read"}),
 }
 
@@ -140,6 +143,8 @@ def _resource_columns(resource_type: str, model: type[Any]) -> tuple[Any, ...]:
         return model.id, model.user_id, model.workspace_id, model.name
     if resource_type == "deployment":
         return model.id, model.user_id, model.project_id, model.workspace_id, model.display_name
+    if resource_type == "connection":
+        return model.id, model.owner_id, model.display_name
     return model.id, model.user_id, model.name
 
 
@@ -180,6 +185,8 @@ def _resource_record_from_row(resource_type: str, row: Any) -> ResourceRecord | 
         return ResourceRecord(resource_type, row.id, row.user_id, display_name=row.name)
     if resource_type == "provider_account":
         return ResourceRecord(resource_type, row.id, row.user_id, display_name=row.name)
+    if resource_type == "connection":
+        return ResourceRecord(resource_type, row.id, row.owner_id, display_name=row.display_name)
     return None
 
 

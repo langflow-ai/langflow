@@ -589,6 +589,7 @@ def register_all_service_factories() -> None:
 
     service_manager = get_service_manager()
     from lfx.services.executor import factory as executor_factory
+    from lfx.services.integration_policy.service import IntegrationPolicyService
     from lfx.services.mcp_composer import factory as mcp_composer_factory
     from lfx.services.model_provider_policy.service import ModelProviderPolicyService
     from lfx.services.policy_bundle.service import PolicyBundleService
@@ -603,6 +604,8 @@ def register_all_service_factories() -> None:
     from langflow.services.catalog_policy.service import LangflowCatalogPolicyService
     from langflow.services.chat import factory as chat_factory
     from langflow.services.checkpoint import factory as checkpoint_factory
+    from langflow.services.connection import factory as connection_factory
+    from langflow.services.connection.service import DatabaseConnectionResolverService
     from langflow.services.database import factory as database_factory
     from langflow.services.job_queue import factory as job_queue_factory
     from langflow.services.session import factory as session_factory
@@ -635,6 +638,15 @@ def register_all_service_factories() -> None:
     service_manager.register_factory(task_factory.TaskServiceFactory())
     service_manager.register_factory(store_factory.StoreServiceFactory())
     service_manager.register_factory(shared_component_cache_factory.SharedComponentCacheServiceFactory())
+    # Standalone LFX keeps its environment resolver. Full Langflow resolves
+    # handles from encrypted connection rows unless a host plugin overrides
+    # this service through lfx.toml.
+    service_manager.register_service_class(
+        ServiceType.CONNECTION_RESOLVER_SERVICE,
+        DatabaseConnectionResolverService,
+        override=True,
+    )
+    service_manager.register_factory(connection_factory.ConnectionResolverServiceFactory())
     # Override LFX's no-op auth service with Langflow's full JWT implementation
     service_manager.register_service_class(ServiceType.AUTH_SERVICE, AuthService, override=True)
     service_manager.register_factory(auth_factory.AuthServiceFactory())
@@ -664,6 +676,13 @@ def register_all_service_factories() -> None:
     service_manager.register_service_class(
         ServiceType.MODEL_PROVIDER_POLICY_SERVICE,
         ModelProviderPolicyService,
+        override=True,
+    )
+    # Integration governance shares the bundle coordinator with the provider and
+    # catalog services, so one published revision decides all three.
+    service_manager.register_service_class(
+        ServiceType.INTEGRATION_POLICY_SERVICE,
+        IntegrationPolicyService,
         override=True,
     )
     service_manager.register_factory(mcp_composer_factory.MCPComposerServiceFactory())

@@ -34,8 +34,10 @@ async def policy_db(tmp_path):
         AuthzShare,
         AuthzTeam,
         AuthzTeamMember,
+        AuthzTeamMemberGrant,
         CasbinRule,
     )
+    from langflow.services.database.models.connection.model import Connection
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
     from langflow.services.database.models.file.model import File
@@ -59,6 +61,7 @@ async def policy_db(tmp_path):
         model.__table__
         for model in (
             User,
+            Connection,
             ApiKey,
             Variable,
             Folder,
@@ -76,6 +79,7 @@ async def policy_db(tmp_path):
             AuthzRoleAssignmentGrant,
             AuthzTeam,
             AuthzTeamMember,
+            AuthzTeamMemberGrant,
             AuthzShare,
             AuthzAuditLog,
             CasbinRule,

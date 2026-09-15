@@ -80,6 +80,8 @@ def _validate_value_contract(*, resource_type: str, scope: str, permission_level
         resolved_permission = SharePermissionLevel(permission_level)
     except ValueError as exc:
         raise _error(422, "SHARE_VALUE_INVALID", "The share scope or permission is invalid.") from exc
+    if resource_type == "connection" and resolved_scope is ShareScope.PUBLIC:
+        raise _error(422, "SHARE_PUBLIC_CONNECTION_FORBIDDEN", "Connections cannot be shared publicly.")
     if (
         resource_type == "flow"
         and resolved_scope is ShareScope.PUBLIC

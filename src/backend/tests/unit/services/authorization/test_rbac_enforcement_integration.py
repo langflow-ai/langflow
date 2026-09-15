@@ -977,3 +977,91 @@ async def test_casbin_delete_cannot_remove_a_concurrently_updated_revision(
         assert saved.status_code == 404, saved.text
         assert deleted.status_code in {200, 204}, deleted.text
         assert (await client.get(path, headers=headers)).status_code == 404
+
+
+async def test_registered_connection_sharing_and_deletion_reconcile_atomically(
+    client, logged_in_headers_super_user, active_super_user, casbin_authorization, monkeypatch
+):
+    from langflow.services.authorization.lifecycle import owned_resource_impact
+    from langflow.services.database.models.auth import AuthzShare, CasbinRule
+    from sqlmodel import select
+
+    recipient_name = f"connection-recipient-{uuid4().hex}"
+    recipient_id = await _make_user(recipient_name)
+    recipient_headers = await _login(client, recipient_name)
+    response = await client.post(
+        "api/v1/connections",
+        headers=logged_in_headers_super_user,
+        json={
+            "provider_key": "google_workspace",
+            "name": f"connection_{uuid4().hex}",
+            "executing_identity": {"identity": "user_delegated", "account": {"id": "test-account"}},
+            "display_name": "Shared connection",
+            "ownership_mode": "user",
+        },
+    )
+    assert response.status_code == 201, response.text
+    connection_id = response.json()["id"]
+    path = f"api/v1/connections/{connection_id}"
+
+    async def visible_ids():
+        listed = await client.get("api/v1/connections", headers=recipient_headers)
+        assert listed.status_code == 200, listed.text
+        return {item["id"] for item in listed.json()}
+
+    assert connection_id not in await visible_ids()
+    shared = await client.post(
+        "api/v1/authz/shares",
+        headers=logged_in_headers_super_user,
+        json={
+            "resource_type": "connection",
+            "resource_id": connection_id,
+            "scope": "user",
+            "target_id": str(recipient_id),
+            "permission_level": "execute",
+        },
+    )
+    assert shared.status_code == 201, shared.text
+    assert connection_id in await visible_ids()
+    assert await casbin_authorization.enforce(
+        user_id=recipient_id, domain="*", obj=f"connection:{connection_id}", act="execute"
+    )
+    assert (await client.delete(path, headers=recipient_headers)).status_code in (403, 404)
+    public = await client.post(
+        "api/v1/authz/shares",
+        headers=logged_in_headers_super_user,
+        json={
+            "resource_type": "connection",
+            "resource_id": connection_id,
+            "scope": "public",
+            "permission_level": "read",
+        },
+    )
+    assert public.status_code == 422, public.text
+    assert public.json()["detail"] == "Connections cannot be shared publicly."
+    with monkeypatch.context() as disabled:
+        disabled.setattr(get_settings_service().auth_settings, "AUTHZ_ENABLED", False)
+        public_disabled = await client.post(
+            "api/v1/authz/shares",
+            headers=logged_in_headers_super_user,
+            json={
+                "resource_type": "connection",
+                "resource_id": connection_id,
+                "scope": "public",
+                "permission_level": "execute",
+            },
+        )
+        assert public_disabled.status_code == 422, public_disabled.text
+        assert public_disabled.json()["detail"] == public.json()["detail"]
+    async with session_scope() as session:
+        impact = await owned_resource_impact(session, user_id=active_super_user.id)
+        assert impact.counts["connection"] == 1
+    deleted = await client.delete(path, headers=logged_in_headers_super_user)
+    assert deleted.status_code == 204, deleted.text
+    async with session_scope() as session:
+        assert not (await session.exec(select(AuthzShare).where(AuthzShare.resource_id == UUID(connection_id)))).all()
+        assert not (await session.exec(select(CasbinRule).where(CasbinRule.v2 == f"connection:{connection_id}"))).all()
+    assert not await casbin_authorization.enforce(
+        user_id=recipient_id, domain="*", obj=f"connection:{connection_id}", act="execute"
+    )
+    assert connection_id not in await visible_ids()

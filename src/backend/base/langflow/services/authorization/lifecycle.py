@@ -51,6 +51,7 @@ async def owned_resource_impact(
     sample_limit: int = 3,
 ) -> OwnedResourceImpact:
     """Find every canonical resource that would be orphaned or cascaded."""
+    from langflow.services.database.models.connection.model import Connection
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
     from langflow.services.database.models.file.model import File
@@ -61,6 +62,7 @@ async def owned_resource_impact(
     from langflow.services.database.models.variable.model import Variable
 
     families = (
+        ("connection", Connection),
         ("project", Folder),
         ("flow", Flow),
         ("deployment", Deployment),
@@ -73,7 +75,7 @@ async def owned_resource_impact(
     counts: dict[str, int] = {}
     samples: dict[str, tuple[str, ...]] = {}
     for resource_type, model in families:
-        owner_column = model.user_id
+        owner_column = Connection.owner_id if model is Connection else model.user_id
         count = int((await session.exec(select(func.count()).select_from(model).where(owner_column == user_id))).one())
         if count == 0:
             continue

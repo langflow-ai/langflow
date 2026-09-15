@@ -17,8 +17,13 @@ from langflow.services.authorization.access_ceiling import (
     external_access_allows,
     get_current_external_access_context,
 )
+from langflow.services.authorization.admin import administration_audit_details, is_administrator
 from langflow.services.authorization.audit import stage_mutation_audit
-from langflow.services.authorization.lifecycle import acquire_identity_mutation_lock, stage_identity_mutation
+from langflow.services.authorization.lifecycle import (
+    acquire_identity_mutation_lock,
+    stage_identity_mutation,
+    validate_identity_mutation,
+)
 from langflow.services.authorization.policy import (
     TeamMemberState,
     TeamOperation,
@@ -27,11 +32,17 @@ from langflow.services.authorization.policy import (
     team_operation_action,
     validate_team_roster,
 )
+from langflow.services.authorization.team_member_grants import (
+    ensure_team_member_grant,
+    get_team_member_grant,
+    remove_team_member_grant,
+)
 from langflow.services.database.lock_retry import RetryableTransactionError
 from langflow.services.database.models.auth import (
     AuthzShare,
     AuthzTeam,
     AuthzTeamMember,
+    AuthzTeamMemberGrant,
     TeamInactivationReason,
     TeamRole,
 )
@@ -355,6 +366,7 @@ async def team_actor_capabilities_many(
             ).all()
         )
         with authorization_session(snapshot, admission=True):
+            administrator = await is_administrator(actor, resource="team", authorization_service=service)
             decisions = await service.batch_enforce(
                 user_id=actor.id,
                 domain="*",
@@ -367,7 +379,7 @@ async def team_actor_capabilities_many(
         team_id: TeamActorCapabilities(
             roles.get(team_id),
             *(
-                allowed and external_access_allows("write")
+                (administrator or allowed) and external_access_allows("write")
                 for allowed in decisions[index * len(actions) : (index + 1) * len(actions)]
             ),
         )
@@ -385,7 +397,11 @@ async def require_team_operation(
     new_role: str | None = None,
 ) -> None:
     action = team_operation_action(operation, target_role=target_role, new_role=new_role)
+    if actor.is_active is not True:
+        raise _error(403, "TEAM_OPERATION_FORBIDDEN", "An active caller is required.")
     if action is not None:
+        if await is_administrator(actor, resource="team", authorization_service=get_authorization_service()):
+            return
         with authorization_session(session):
             if await get_authorization_service().enforce(
                 user_id=actor.id, domain="*", obj=f"team:{team_id}", act=action
@@ -422,12 +438,13 @@ async def create_team(
     description: str | None,
     is_active: bool,
     members: Sequence[MemberUpsert],
+    operation_id: str | None = None,
 ) -> TeamMutationResult:
     await acquire_identity_mutation_lock(
         get_authorization_service(), session, kind=AuthorizationMutationKind.TEAM_CREATED
     )
     actor = (await _users_by_id(session, (actor.id,)))[actor.id]
-    if not actor_can_administer_platform(actor):
+    if not await is_administrator(actor, resource="team", authorization_service=get_authorization_service()):
         raise _error(403, "TEAM_OPERATION_FORBIDDEN", "Platform Admin authority is required.")
     if not members:
         raise _error(422, "TEAM_MEMBERS_REQUIRED", "Initial team members are required.")
@@ -456,7 +473,10 @@ async def create_team(
         updated_at=now,
     )
     session.add(team)
-    await session.flush()
+    try:
+        await session.flush()
+    except IntegrityError as exc:
+        raise _error(409, "TEAM_CONFLICT", "The team already exists.") from exc
 
     events: list[AuthorizationMutation] = [
         AuthorizationMutation(
@@ -477,23 +497,34 @@ async def create_team(
             created_at=now,
             updated_at=now,
         )
-        session.add(member)
-        events.append(
-            AuthorizationMutation(
-                kind=AuthorizationMutationKind.TEAM_MEMBER_ADDED,
-                entity_id=member.id,
-                actor_user_id=actor.id,
-                affected_user_ids=(requested.user_id,),
-                team_id=team.id,
-                policy_relevant_fields=("team_id", "user_id", "source", "role"),
-            )
+        event = AuthorizationMutation(
+            kind=AuthorizationMutationKind.TEAM_MEMBER_ADDED,
+            entity_id=member.id,
+            actor_user_id=actor.id,
+            affected_user_ids=(requested.user_id,),
+            team_id=team.id,
+            policy_relevant_fields=("team_id", "user_id", "source", "role"),
         )
+        await validate_identity_mutation(get_authorization_service(), session, event)
+        await ensure_team_member_grant(
+            session,
+            team_id=team.id,
+            user_id=member.user_id,
+            source_kind="manual",
+            administrative_actor=actor.id,
+            membership=member,
+            membership_is_new=True,
+        )
+        events.append(event)
         stage_mutation_audit(
             session=session,
             user_id=actor.id,
             action="team_member:add",
             obj=f"team:{team.id}",
-            details={"user_id": str(requested.user_id), "role": requested.role, "source": "manual"},
+            details=administration_audit_details(
+                {"user_id": str(requested.user_id), "role": requested.role, "source": "manual"},
+                operation_id=operation_id,
+            ),
         )
 
     try:
@@ -509,11 +540,14 @@ async def create_team(
         user_id=actor.id,
         action="team:create",
         obj=f"team:{team.id}",
-        details={
-            "team_name": team.team_name,
-            "member_count": counts.member_count,
-            "active_admin_count": counts.active_admin_count,
-        },
+        details=administration_audit_details(
+            {
+                "team_name": team.team_name,
+                "member_count": counts.member_count,
+                "active_admin_count": counts.active_admin_count,
+            },
+            operation_id=operation_id,
+        ),
     )
     return TeamMutationResult(team, tuple(events), counts)
 
@@ -526,6 +560,7 @@ async def patch_team(
     patch: TeamPatch,
     require_absent_member_ids: Sequence[UUID] = (),
     require_present_member_ids: Sequence[UUID] = (),
+    operation_id: str | None = None,
 ) -> TeamMutationResult:
     upsert_ids = [item.user_id for item in patch.member_upserts]
     remove_ids = list(patch.remove_member_ids)
@@ -543,8 +578,13 @@ async def patch_team(
     if actor is None:
         raise _error(403, "TEAM_OPERATION_FORBIDDEN", "An active caller is required.")
     current_by_user = {member.user_id: member for member in current}
-    if set(require_absent_member_ids) & set(current_by_user):
-        raise _error(409, "TEAM_MEMBERSHIP_EXISTS", "User is already a member of this team.")
+    for user_id in set(require_absent_member_ids) & set(current_by_user):
+        existing = current_by_user[user_id]
+        if (
+            existing.source == "manual"
+            or await get_team_member_grant(session, membership_id=existing.id, source_kind="manual") is not None
+        ):
+            raise _error(409, "TEAM_MEMBERSHIP_EXISTS", "User is already a manual member of this team.")
     if set(require_present_member_ids) - set(current_by_user):
         raise _error(404, "TEAM_MEMBERSHIP_NOT_FOUND", "Membership not found")
 
@@ -555,14 +595,18 @@ async def patch_team(
             patch.description_supplied,
         )
     )
-    if patch.adom_name is not None and not actor_can_administer_platform(actor):
+    if patch.adom_name is not None and not await is_administrator(
+        actor, resource="team", authorization_service=get_authorization_service()
+    ):
         raise _error(403, "TEAM_OPERATION_FORBIDDEN", "Only a Platform Admin may change the directory mapping.")
     # An empty (or null-only) patch still touches metadata and returns the team.
     # It must not bypass the role checks used by actual metadata updates.
     metadata_only_patch = patch.is_active is None and not (patch.member_upserts or remove_ids)
     if metadata_change or metadata_only_patch:
         await require_team_operation(session, actor=actor, team_id=team_id, operation=TeamOperation.UPDATE)
-    if patch.is_active is not None and not actor_can_administer_platform(actor):
+    if patch.is_active is not None and not await is_administrator(
+        actor, resource="team", authorization_service=get_authorization_service()
+    ):
         raise _error(403, "TEAM_OPERATION_FORBIDDEN", "Only a Platform Admin may change team status.")
 
     prospective: dict[UUID, tuple[str, bool]] = {}
@@ -601,7 +645,19 @@ async def patch_team(
             operation=TeamOperation.REMOVE_MEMBER,
             target_role=existing.role,
         )
-        prospective.pop(user_id, None)
+        grants = list(
+            (
+                await session.exec(
+                    select(AuthzTeamMemberGrant).where(AuthzTeamMemberGrant.membership_id == existing.id)
+                )
+            ).all()
+        )
+        if not any(grant.source_kind == "manual" for grant in grants):
+            raise _error(
+                409, "TEAM_MEMBERSHIP_SOURCE_MANAGED", "This membership is managed by an authoritative directory."
+            )
+        if all(grant.source_kind == "manual" for grant in grants):
+            prospective.pop(user_id, None)
 
     proposed_active = patch.is_active if patch.is_active is not None else team.is_active
     states = tuple(TeamMemberState(user_id, role, active) for user_id, (role, active) in prospective.items())
@@ -636,7 +692,27 @@ async def patch_team(
                 created_at=now,
                 updated_at=now,
             )
-            session.add(member)
+            await validate_identity_mutation(
+                get_authorization_service(),
+                session,
+                AuthorizationMutation(
+                    kind=AuthorizationMutationKind.TEAM_MEMBER_ADDED,
+                    entity_id=member.id,
+                    actor_user_id=actor.id,
+                    affected_user_ids=(item.user_id,),
+                    team_id=team.id,
+                    policy_relevant_fields=("team_id", "user_id", "source", "role"),
+                ),
+            )
+            await ensure_team_member_grant(
+                session,
+                team_id=team.id,
+                user_id=member.user_id,
+                source_kind="manual",
+                administrative_actor=actor.id,
+                membership=member,
+                membership_is_new=True,
+            )
             events.append(
                 AuthorizationMutation(
                     kind=AuthorizationMutationKind.TEAM_MEMBER_ADDED,
@@ -652,9 +728,30 @@ async def patch_team(
                 user_id=actor.id,
                 action="team_member:add",
                 obj=f"team:{team.id}",
-                details={"user_id": str(item.user_id), "role": item.role, "source": "manual"},
+                details=administration_audit_details(
+                    {"user_id": str(item.user_id), "role": item.role, "source": "manual"}, operation_id=operation_id
+                ),
             )
             continue
+        if item.user_id in require_absent_member_ids:
+            await ensure_team_member_grant(
+                session,
+                team_id=team_id,
+                user_id=item.user_id,
+                source_kind="manual",
+                administrative_actor=actor.id,
+                membership=existing,
+            )
+            stage_mutation_audit(
+                session=session,
+                user_id=actor.id,
+                action="team_member:add",
+                obj=f"team:{team.id}",
+                details=administration_audit_details(
+                    {"user_id": str(item.user_id), "role": item.role, "source": "manual"},
+                    operation_id=operation_id,
+                ),
+            )
         if existing.role != item.role:
             previous_role = existing.role
             existing.role = item.role
@@ -675,7 +772,10 @@ async def patch_team(
                 user_id=actor.id,
                 action="team_member:role_changed",
                 obj=f"team:{team.id}",
-                details={"user_id": str(item.user_id), "previous_role": previous_role, "new_role": item.role},
+                details=administration_audit_details(
+                    {"user_id": str(item.user_id), "previous_role": previous_role, "new_role": item.role},
+                    operation_id=operation_id,
+                ),
             )
 
     for user_id in remove_ids:
@@ -690,13 +790,19 @@ async def patch_team(
                 policy_relevant_fields=("team_id", "user_id", "source", "role"),
             )
         )
-        await session.delete(member)
+        await validate_identity_mutation(get_authorization_service(), session, events[-1])
+        await remove_team_member_grant(
+            session, team_id=team_id, user_id=user_id, source_kind="manual", membership=member
+        )
         stage_mutation_audit(
             session=session,
             user_id=actor.id,
             action="team_member:remove",
             obj=f"team:{team.id}",
-            details={"user_id": str(user_id), "previous_role": member.role, "source": member.source},
+            details=administration_audit_details(
+                {"user_id": str(user_id), "previous_role": member.role, "source": member.source},
+                operation_id=operation_id,
+            ),
         )
 
     if changed_fields:
@@ -729,11 +835,14 @@ async def patch_team(
         user_id=actor.id,
         action="team:update",
         obj=f"team:{team.id}",
-        details={
-            "fields_changed": sorted(changed_fields),
-            "member_upserts": [str(item.user_id) for item in patch.member_upserts],
-            "member_removals": [str(user_id) for user_id in remove_ids],
-        },
+        details=administration_audit_details(
+            {
+                "fields_changed": sorted(changed_fields),
+                "member_upserts": [str(item.user_id) for item in patch.member_upserts],
+                "member_removals": [str(user_id) for user_id in remove_ids],
+            },
+            operation_id=operation_id,
+        ),
     )
     return TeamMutationResult(team, tuple(events), counts)
 
@@ -744,6 +853,7 @@ async def add_member(
     actor: User,
     team_id: UUID,
     member: MemberUpsert,
+    operation_id: str | None = None,
 ) -> MembershipMutationResult:
     result = await patch_team(
         session,
@@ -751,6 +861,7 @@ async def add_member(
         team_id=team_id,
         patch=TeamPatch(member_upserts=(member,)),
         require_absent_member_ids=(member.user_id,),
+        operation_id=operation_id,
     )
     created = (
         await session.exec(
@@ -770,6 +881,7 @@ async def change_member_role(
     team_id: UUID,
     user_id: UUID,
     role: str,
+    operation_id: str | None = None,
 ) -> MembershipMutationResult:
     result = await patch_team(
         session,
@@ -777,6 +889,7 @@ async def change_member_role(
         team_id=team_id,
         patch=TeamPatch(member_upserts=(MemberUpsert(user_id, role),)),
         require_present_member_ids=(user_id,),
+        operation_id=operation_id,
     )
     member = (
         await session.exec(
@@ -795,12 +908,14 @@ async def remove_member(
     actor: User,
     team_id: UUID,
     user_id: UUID,
+    operation_id: str | None = None,
 ) -> tuple[AuthorizationMutation, ...]:
     result = await patch_team(
         session,
         actor=actor,
         team_id=team_id,
         patch=TeamPatch(remove_member_ids=(user_id,)),
+        operation_id=operation_id,
     )
     return result.events
 
@@ -811,12 +926,13 @@ async def delete_team(
     actor: User,
     team_id: UUID,
     reason: str = "manual",
+    operation_id: str | None = None,
 ) -> AuthorizationMutation:
     team, members, users = await _lock_team_state(session, team_id, additional_user_ids=(actor.id,))
     actor = users.get(actor.id)
     if actor is None:
         raise _error(403, "TEAM_OPERATION_FORBIDDEN", "An active caller is required.")
-    if not actor_can_administer_platform(actor):
+    if not await is_administrator(actor, resource="team", authorization_service=get_authorization_service()):
         raise _error(403, "TEAM_OPERATION_FORBIDDEN", "Only a Platform Admin may delete a team.")
     affected = tuple(member.user_id for member in members)
     share_rows = list(
@@ -839,17 +955,25 @@ async def delete_team(
             user_id=actor.id,
             action="share:delete",
             obj=f"{share.resource_type}:{share.resource_id}",
-            details={
-                "share_id": str(share.id),
-                "scope": share.scope,
-                "target_id": str(team_id),
-                "permission_level": share.permission_level,
-                "revision": share.revision,
-                "reason": "team_deleted",
-            },
+            details=administration_audit_details(
+                {
+                    "share_id": str(share.id),
+                    "scope": share.scope,
+                    "target_id": str(team_id),
+                    "permission_level": share.permission_level,
+                    "revision": share.revision,
+                    "reason": "team_deleted",
+                },
+                operation_id=operation_id,
+            ),
         )
     if share_rows:
         await session.exec(delete(AuthzShare).where(col(AuthzShare.id).in_([row.id for row in share_rows])))
+    await session.exec(
+        delete(AuthzTeamMemberGrant).where(
+            col(AuthzTeamMemberGrant.membership_id).in_([member.id for member in members])
+        )
+    )
     await session.exec(delete(AuthzTeamMember).where(col(AuthzTeamMember.team_id) == team_id))
     await session.delete(team)
     mutation = AuthorizationMutation(
@@ -868,12 +992,15 @@ async def delete_team(
         user_id=actor.id,
         action="team:delete",
         obj=f"team:{team_id}",
-        details={
-            "team_name": team.team_name,
-            "member_count": len(members),
-            "reason": reason,
-            "team_shares_removed": len(share_rows),
-        },
+        details=administration_audit_details(
+            {
+                "team_name": team.team_name,
+                "member_count": len(members),
+                "reason": reason,
+                "team_shares_removed": len(share_rows),
+            },
+            operation_id=operation_id,
+        ),
     )
     return mutation
 
@@ -984,6 +1111,7 @@ async def apply_user_team_lifecycle(
 
         if remove_memberships:
             for member in target_members:
+                await session.exec(delete(AuthzTeamMemberGrant).where(AuthzTeamMemberGrant.membership_id == member.id))
                 await session.delete(member)
                 event = AuthorizationMutation(
                     kind=AuthorizationMutationKind.TEAM_MEMBER_REMOVED,
@@ -1045,6 +1173,11 @@ async def apply_user_team_lifecycle(
                 )
             if share_rows:
                 await session.exec(delete(AuthzShare).where(col(AuthzShare.id).in_([row.id for row in share_rows])))
+            await session.exec(
+                delete(AuthzTeamMemberGrant).where(
+                    col(AuthzTeamMemberGrant.membership_id).in_([member.id for member in members])
+                )
+            )
             await session.exec(delete(AuthzTeamMember).where(col(AuthzTeamMember.team_id) == team_id))
             await session.delete(team)
             event = AuthorizationMutation(

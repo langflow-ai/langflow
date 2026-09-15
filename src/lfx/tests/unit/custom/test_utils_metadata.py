@@ -1,9 +1,31 @@
 """Test metadata functionality in custom utils."""
 
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 import pytest
 from lfx.custom.utils import _generate_code_hash, build_component_metadata, build_custom_component_template_from_inputs
+
+
+def test_registry_error_clears_integration_stamps_on_reused_templates(monkeypatch):
+    from lfx.custom.utils import _stamp_integration_policy_identity
+
+    node = SimpleNamespace(
+        metadata={
+            "integration_provider_id": "old-provider",
+            "integration_capability_ids": ["old-provider.action"],
+            "module": "keep.this.module",
+        }
+    )
+
+    def unavailable_registry():
+        msg = "capability registry unavailable"
+        raise RuntimeError(msg)
+
+    monkeypatch.setattr("lfx.extension.bundle_registry.get_default_registry", unavailable_registry)
+    _stamp_integration_policy_identity(node, object())
+
+    assert node.metadata == {"module": "keep.this.module"}
 
 
 class TestCodeHashGeneration:

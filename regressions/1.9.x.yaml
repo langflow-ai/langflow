@@ -32,3 +32,23 @@ entries:
   resolved_in_version: 1.8.2
   fix_pr: https://github.com/langflow-ai/langflow/pull/12242
   workaround: Duplicate of an issue originally fixed in 1.8.2.
+
+- id: GH-13059
+  title: Agent chat history leaks across flows when two flows use the same session name
+  status: resolved
+  area: components
+  first_bad_version: 1.9.2
+  last_known_good_version: unknown
+  resolved_in_version: 1.10.0
+  fix_pr: https://github.com/langflow-ai/langflow/pull/13087
+  workaround: Give each flow a distinct session name instead of keeping the default "New Session 0".
+
+- id: GH-14253
+  title: Reading an MCP resource fails although the server advertises it
+  status: resolved
+  area: mcp
+  first_bad_version: 1.9.1
+  last_known_good_version: 1.9.0
+  resolved_in_version: 1.12.0
+  fix_pr: https://github.com/langflow-ai/langflow/pull/14253
+  workaround: none

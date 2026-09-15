@@ -80,6 +80,11 @@ from langflow.services.authorization.repository import load_resource
 from langflow.services.authorization.share_management import delete_resource_shares
 from langflow.services.authorization.team_management import actor_can_administer_platform
 from langflow.services.authorization.utils import _resolve_authz_domain
+from langflow.services.creation_hooks import (
+    RESOURCE_PROJECT,
+    PreCreationContext,
+    enforce_pre_creation,
+)
 from langflow.services.database.lock_retry import (
     is_database_lock_error,
     run_with_lock_retry,
@@ -220,8 +225,23 @@ async def _new_project(
 
     ``current_user`` (the full ``User``) is required because the MCP registration and flow-move
     side effects operate on the owning user, not just their id.
+
+    Runs the ``project`` pre-creation hooks first, so an enterprise plugin can refuse the
+    creation before anything is written (403 with the denial contract). Both routes that
+    reach this helper — ``POST /projects/`` and the create branch of ``PUT /projects/{id}``
+    — re-raise ``HTTPException`` untouched, so the denial reaches the client verbatim.
     """
     await get_authorization_service().acquire_resource_mutation_lock(session=session)
+    await enforce_pre_creation(
+        PreCreationContext(
+            resource=RESOURCE_PROJECT,
+            session=session,
+            actor_user_id=current_user.id,
+            workspace_id=getattr(project, "workspace_id", None),
+            requested_name=project.name,
+        )
+    )
+
     new_project = Folder.model_validate(project, from_attributes=True)
     new_project.user_id = current_user.id
     # Apply the stable id: an explicit ``project_id`` (PUT upsert) overrides the uuid4 default.
@@ -1390,6 +1410,10 @@ async def delete_project(
     if project_owner_id is None:
         raise HTTPException(status_code=409, detail="A project without a canonical owner cannot be deleted here.")
 
+    from langflow.services.memory_base.flow_cleanup import FlowMemoryBaseCleanup, finalize_flow_memory_base_cleanup
+
+    memory_base_cleanups: list[FlowMemoryBaseCleanup] = []
+
     async def _validate_complete_delete_set(target: Folder) -> list[Flow]:
         await ensure_project_permission(
             current_user,
@@ -1434,6 +1458,7 @@ async def delete_project(
     def _make_delete_operation(target: Folder, children: list[Flow]):
         async def _delete_project_operation() -> None:
             nonlocal removed_share_rules
+            memory_base_cleanups.clear()
             removed_share_rules = await delete_resource_shares(
                 session,
                 actor_id=current_user.id,
@@ -1443,7 +1468,7 @@ async def delete_project(
                 ),
             )
             for child in children:
-                await cascade_delete_flow(session, child.id)
+                memory_base_cleanups.extend(await cascade_delete_flow(session, child.id))
             await session.delete(target)
             # Flush eagerly so guard/constraint errors surface in-request rather than at teardown commit.
             await session.flush()
@@ -1457,6 +1482,7 @@ async def delete_project(
     # would lazy-load outside the greenlet context and raise MissingGreenlet.
     async def _delete_attempt(_attempt: int) -> None:
         nonlocal current_user
+        memory_base_cleanups.clear()
         await get_authorization_service().acquire_resource_mutation_lock(session=session)
         current_user = await load_mutation_actor(session, actor_id)
         target = await _load_project(for_update=True)
@@ -1473,7 +1499,10 @@ async def delete_project(
 
     try:
         await run_with_lock_retry(_delete_attempt, session=session, description=f"delete_project {project_id}")
+        # Commit the deletions before the best-effort external teardown so a
+        # Memory Base's remote collection is dropped only for flows that are gone.
         await session.commit()
+        await finalize_flow_memory_base_cleanup(memory_base_cleanups)
         await safe_share_rules_removed(get_authorization_service(), removed_share_rules)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except HTTPException:

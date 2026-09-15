@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from lfx.services.authorization import (
     AuthorizationMutation,
     AuthorizationMutationKind,
@@ -17,7 +17,13 @@ from sqlmodel.sql.expression import SelectOfScalar
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import PasswordResetRequest, UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
-from langflow.services.auth.utils import get_current_user_optional
+from langflow.services.auth.utils import get_current_user, get_current_user_optional
+from langflow.services.authorization.admin import (
+    ADMINISTRATION_REQUIRED_REASON,
+    administration_audit_details,
+    administration_denied,
+    is_administrator,
+)
 from langflow.services.authorization.audit import (
     AUDIT_EVENT_ACCESS,
     AUDIT_EVENT_MUTATION,
@@ -42,19 +48,27 @@ from langflow.services.authorization.team_management import (
     apply_user_team_lifecycle,
     prepare_user_team_lifecycle_lock_hint,
 )
+from langflow.services.creation_hooks import (
+    DENIED_STATUS_CODE,
+    RESOURCE_USER,
+    PreCreationContext,
+    PreCreationDenied,
+    http_denial_error_code,
+    pre_creation_denied_to_http,
+    run_pre_creation_hooks,
+)
 from langflow.services.database.lock_retry import run_with_lock_retry
-from langflow.services.database.models.user.crud import update_user
+from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
+from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
 from langflow.services.deps import get_auth_service, get_authorization_service, get_settings_service
 
 router = APIRouter(tags=["Users"], prefix="/users")
-
-
-async def _get_current_platform_admin(current_user: CurrentActiveUser) -> User:
-    """Require effective platform authority for user-directory operations."""
-    if not actor_can_administer_platform(current_user):
-        raise HTTPException(status_code=403, detail="Platform administrator access required")
-    return current_user
+OperationId = Annotated[str | None, Header(alias="X-Langflow-Operation-ID", max_length=128)]
+_LEGACY_SUPERUSER_DENIAL = "The user doesn't have enough privileges"
+_PERMISSION_DENIED = "Permission denied"
+_SUPERUSER_REQUIRED_HEADERS = {"X-Langflow-Error-Code": "superuser_required"}
+_ACCESS_CEILING_HEADERS = {"X-Langflow-Error-Code": "access_ceiling"}
 
 
 async def _audit_deny(
@@ -65,17 +79,91 @@ async def _audit_deny(
     status_code: int,
     reason: str,
     session: DbSession | None = None,
+    operation_id: str | None = None,
+    fields_changed: list[str] | None = None,
 ) -> None:
+    details: dict = {"event": AUDIT_EVENT_ACCESS, "status_code": status_code, "reason": reason}
+    if fields_changed is not None:
+        details["fields_changed"] = fields_changed
     if session is not None:
-        # A denied mutation must release its writer lock before the independent
-        # durable audit writer persists the denial.
         await session.rollback()
     await audit_decision(
         user_id=user_id,
         action=action,
         obj=obj,
         result="deny",
-        details={"event": AUDIT_EVENT_ACCESS, "status_code": status_code, "reason": reason},
+        details=administration_audit_details(details, operation_id=operation_id),
+    )
+
+
+async def _require_user_administrator(
+    user: User,
+    *,
+    action: str,
+    obj: str,
+    operation_id: str | None = None,
+    denial_detail: str | None = None,
+) -> None:
+    """Allow superusers or a plugin-delegated ``user:manage`` administrator."""
+    if await is_administrator(user, resource="user", authorization_service=get_authorization_service()):
+        return
+    await _audit_deny(
+        user_id=user.id,
+        action=action,
+        obj=obj,
+        status_code=403,
+        reason=ADMINISTRATION_REQUIRED_REASON,
+        operation_id=operation_id,
+    )
+    raise administration_denied(denial_detail, resource="user")
+
+
+async def _ensure_local_credentials_allowed(
+    *,
+    authorization_service,
+    session,
+    target_user_id: UUID,
+    actor_user_id: UUID,
+    operation_id: str | None = None,
+) -> None:
+    if not await authorization_service.is_user_credentials_managed_externally(
+        session=session,
+        user_id=target_user_id,
+    ):
+        return
+    await audit_decision(
+        user_id=actor_user_id,
+        action="user:credentials:update",
+        obj=f"user:{target_user_id}",
+        result="deny",
+        details=administration_audit_details(
+            {"reason": "external_credentials_managed"},
+            operation_id=operation_id,
+        ),
+    )
+    raise HTTPException(
+        status_code=409,
+        detail="This user's credentials are managed by an external identity provider.",
+        headers={"X-Langflow-Error-Code": "external_credentials_managed"},
+    )
+
+
+async def _require_user_administrator_dependency(
+    current_user: Annotated[User, Depends(get_current_user)],
+    operation_id: OperationId = None,
+) -> None:
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail=_LEGACY_SUPERUSER_DENIAL,
+            headers={"X-Langflow-Error-Code": "administration_denied"},
+        )
+    await _require_user_administrator(
+        current_user,
+        action="user:read",
+        obj="user:*",
+        operation_id=operation_id,
+        denial_detail=_LEGACY_SUPERUSER_DENIAL,
     )
 
 
@@ -84,6 +172,8 @@ async def add_user(
     user: UserCreate,
     session: DbSession,
     current_user: Annotated[User | None, Depends(get_current_user_optional)],
+    response: Response,
+    operation_id: OperationId = None,
 ) -> User:
     """Add a new user to the database.
 
@@ -92,32 +182,41 @@ async def add_user(
     * Public sign up (unauthenticated). Allowed only when public registration is
       enabled for the deployment, i.e. AUTO_LOGIN is off (multi-user mode) and
       ENABLE_SIGNUP is True.
-    * Admin "add user" (authenticated Platform Admin). Always allowed,
+    * Admin "add user" (authenticated active administrator). Always allowed,
       regardless of the sign up settings, so disabling public sign up does not
       break administrator-driven user creation.
 
     User activation is controlled by the NEW_USER_IS_ACTIVE setting.
     """
+    # Rollback expires session-bound ORM instances. Snapshot the actor before
+    # any write so conflict auditing never tries to refresh the authenticated
+    # user from the rolled-back request transaction.
+    actor_user_id = current_user.id if current_user is not None else None
     settings_service = get_settings_service()
     auth_settings = settings_service.auth_settings
-    # An authenticated Platform Admin (the admin "add user" flow) may always
+    # An authenticated active administrator (the admin "add user" flow) may always
     # create users. For every other caller this endpoint is effectively
     # unauthenticated, so refuse it unless public sign up is intended for this
     # deployment. get_current_user_optional returns None for credential-less
     # requests, so the anonymous path can never be promoted to superuser.
-    is_platform_admin_caller = current_user is not None and actor_can_administer_platform(current_user)
-    if not is_platform_admin_caller and (auth_settings.AUTO_LOGIN or not auth_settings.ENABLE_SIGNUP):
+    authorization_service = get_authorization_service()
+    is_admin_caller = bool(
+        current_user is not None
+        and current_user.is_active
+        and await is_administrator(current_user, resource="user", authorization_service=authorization_service)
+    )
+    if not is_admin_caller and (auth_settings.AUTO_LOGIN or not auth_settings.ENABLE_SIGNUP):
         await _audit_deny(
-            user_id=current_user.id if current_user is not None else None,
+            user_id=actor_user_id,
             action="user:create",
             obj="user:*",
             status_code=403,
             reason="public_registration_disabled",
+            operation_id=operation_id,
         )
         raise HTTPException(status_code=403, detail="Public user registration is disabled.")
 
     new_user = User.model_validate(user, from_attributes=True)
-    authorization_service = get_authorization_service()
     try:
         new_user.password = get_auth_service().get_password_hash(user.password)
         new_user.is_active = settings_service.auth_settings.NEW_USER_IS_ACTIVE
@@ -132,8 +231,10 @@ async def add_user(
             # Authentication can precede a committed demotion while this writer
             # waits. Only current canonical authority can bypass signup settings.
             actor = await load_mutation_actor(session, current_user.id)
-            is_platform_admin_caller = actor_can_administer_platform(actor)
-            if not is_platform_admin_caller and (auth_settings.AUTO_LOGIN or not auth_settings.ENABLE_SIGNUP):
+            is_admin_caller = await is_administrator(
+                actor, resource="user", authorization_service=authorization_service
+            )
+            if not is_admin_caller and (auth_settings.AUTO_LOGIN or not auth_settings.ENABLE_SIGNUP):
                 await _audit_deny(
                     user_id=actor.id,
                     action="user:create",
@@ -143,6 +244,45 @@ async def add_user(
                     session=session,
                 )
                 raise HTTPException(status_code=403, detail="Public user registration is disabled.")
+        # Pre-creation hooks run inside the lock the authorization plugin just took (a no-op
+        # on non-PostgreSQL backends), so a plugin that counts users sees a serialized
+        # count-then-insert. Public signup and the admin "add user" flow share this route;
+        # ``is_public_signup`` lets a plugin word its refusal differently.
+        try:
+            await run_pre_creation_hooks(
+                PreCreationContext(
+                    resource=RESOURCE_USER,
+                    session=session,
+                    actor_user_id=actor_user_id,
+                    requested_name=new_user.username,
+                    is_public_signup=not is_admin_caller,
+                )
+            )
+        except PreCreationDenied as denied:
+            await session.rollback()
+            await _audit_deny(
+                user_id=actor_user_id,
+                action="user:create",
+                obj="user:*",
+                status_code=DENIED_STATUS_CODE,
+                reason=denied.error_code,
+                operation_id=operation_id,
+            )
+            raise pre_creation_denied_to_http(denied) from denied
+        except HTTPException as denied:
+            # A hook that answers with its own response still gets the same treatment: the
+            # response is passed through untouched, but the transaction is rolled back and the
+            # refusal is audited exactly like a PreCreationDenied.
+            await session.rollback()
+            await _audit_deny(
+                user_id=actor_user_id,
+                action="user:create",
+                obj="user:*",
+                status_code=denied.status_code,
+                reason=http_denial_error_code(denied),
+                operation_id=operation_id,
+            )
+            raise
         session.add(new_user)
         await session.flush()
         await session.refresh(new_user)
@@ -150,28 +290,30 @@ async def add_user(
         if not folder:
             await session.rollback()
             await _audit_deny(
-                user_id=current_user.id if current_user is not None else None,
+                user_id=actor_user_id,
                 action="user:create",
                 obj=f"user:{new_user.id}",
                 status_code=500,
                 reason="default_project_creation_failed",
+                operation_id=operation_id,
             )
             raise HTTPException(status_code=500, detail="Error creating default project")
     except IntegrityError as e:
         await session.rollback()
         await _audit_deny(
-            user_id=current_user.id if current_user is not None else None,
+            user_id=actor_user_id,
             action="user:create",
             obj="user:*",
             status_code=400,
             reason="username_unavailable",
+            operation_id=operation_id,
         )
         raise HTTPException(status_code=400, detail="This username is unavailable.") from e
 
     lifecycle_mutation = AuthorizationMutation(
         kind=AuthorizationMutationKind.USER_CREATED,
         entity_id=new_user.id,
-        actor_user_id=current_user.id if current_user is not None else None,
+        actor_user_id=actor_user_id,
         affected_user_ids=(new_user.id,),
         policy_relevant_fields=("is_active", "is_superuser"),
         user_before=None,
@@ -180,15 +322,19 @@ async def add_user(
             is_superuser=new_user.is_superuser,
         ),
     )
-    audit_details = {
-        "event": AUDIT_EVENT_MUTATION,
-        "created_by": "admin" if is_platform_admin_caller else "signup",
-    }
+    audit_details = administration_audit_details(
+        {
+            "event": AUDIT_EVENT_MUTATION,
+            "created_by": "admin" if is_admin_caller else "signup",
+        },
+        operation_id=operation_id,
+        source="manual" if is_admin_caller else "signup",
+    )
     try:
         await stage_identity_mutation(authorization_service, session, lifecycle_mutation)
         audit_staged = stage_audit_decision(
             session=session,
-            user_id=current_user.id if current_user is not None else new_user.id,
+            user_id=actor_user_id if actor_user_id is not None else new_user.id,
             action="user:create",
             obj=f"user:{new_user.id}",
             result="allow",
@@ -208,6 +354,7 @@ async def add_user(
             result="allow",
             details=audit_details,
         )
+    response.headers["Location"] = f"/api/v1/users/{new_user.id}"
     return new_user
 
 
@@ -219,12 +366,14 @@ async def read_current_user(
     return current_user
 
 
-@router.get("/", dependencies=[Depends(_get_current_platform_admin)])
+@router.get("/", dependencies=[Depends(_require_user_administrator_dependency)])
 async def read_all_users(
     *,
-    skip: int = 0,
-    limit: int = 10,
+    skip: Annotated[int, Query(ge=0)] = 0,
+    limit: Annotated[int, Query(ge=1, le=200)] = 10,
     search: str | None = None,
+    username: Annotated[str | None, Query(description="Exact username match")] = None,
+    role_name: Annotated[str | None, Query(description="Exact assigned role-name match")] = None,
     session: DbSession,
 ) -> UsersResponse:
     """Retrieve a list of users from the database with pagination."""
@@ -236,7 +385,20 @@ async def read_all_users(
         query = query.where(search_filter)
         count_query = count_query.where(search_filter)
 
-    query = query.offset(skip).limit(limit)
+    if username is not None:
+        query = query.where(User.username == username)
+        count_query = count_query.where(User.username == username)
+
+    if role_name is not None:
+        assigned_user_ids = (
+            select(AuthzRoleAssignment.user_id)
+            .join(AuthzRole, AuthzRole.id == AuthzRoleAssignment.role_id)
+            .where(AuthzRole.name == role_name)
+        )
+        query = query.where(User.id.in_(assigned_user_ids))
+        count_query = count_query.where(User.id.in_(assigned_user_ids))
+
+    query = query.order_by(User.username, User.id).offset(skip).limit(limit)
     users = (await session.exec(query)).fetchall()
     total_count = (await session.exec(count_query)).first()
 
@@ -246,12 +408,34 @@ async def read_all_users(
     )
 
 
+@router.get("/{user_id}", response_model=UserRead)
+async def read_user(
+    user_id: UUID,
+    current_user: CurrentActiveUser,
+    session: DbSession,
+    operation_id: OperationId = None,
+) -> User:
+    """Read the current user or a specific user with ``user:manage``."""
+    if current_user.id != user_id:
+        await _require_user_administrator(
+            current_user,
+            action="user:read",
+            obj=f"user:{user_id}",
+            operation_id=operation_id,
+        )
+    user = await get_user_by_id(session, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
 @router.patch("/{user_id}", response_model=UserRead)
 async def patch_user(
     user_id: UUID,
     user_update: UserUpdate,
     user: CurrentActiveUser,
     session: DbSession,
+    operation_id: OperationId = None,
 ) -> User:
     """Update an existing user's data."""
     update_password = bool(user_update.password)
@@ -265,9 +449,29 @@ async def patch_user(
             obj=f"user:{user_id}",
             status_code=403,
             reason="self_deactivation_forbidden",
+            operation_id=operation_id,
+            fields_changed=["is_active"],
         )
         raise HTTPException(status_code=403, detail="You can't deactivate your own user account")
 
+    authorization_service = get_authorization_service()
+    is_user_administrator = await is_administrator(
+        user,
+        resource="user",
+        authorization_service=authorization_service,
+    )
+    if user.id != user_id and not is_user_administrator:
+        await _audit_deny(
+            user_id=user.id,
+            action="user:update",
+            obj=f"user:{user_id}",
+            status_code=403,
+            reason="cross_user_update_forbidden",
+            operation_id=operation_id,
+        )
+        raise administration_denied(_PERMISSION_DENIED, resource="user")
+    # Promotion to platform superuser stays superuser-only, whatever the
+    # caller's delegated administration permissions are.
     if not is_platform_admin and user_update.is_superuser:
         await _audit_deny(
             user_id=user.id,
@@ -275,31 +479,35 @@ async def patch_user(
             obj=f"user:{user_id}",
             status_code=403,
             reason="superuser_required",
+            operation_id=operation_id,
+            fields_changed=["is_superuser"],
         )
-        raise HTTPException(status_code=403, detail="Permission denied")
-
-    if not is_platform_admin and user.id != user_id:
-        await _audit_deny(
-            user_id=user.id,
-            action="user:update",
-            obj=f"user:{user_id}",
+        raise HTTPException(
             status_code=403,
-            reason="cross_user_update_forbidden",
+            detail="Only a superuser may promote or demote platform superusers",
+            headers=_SUPERUSER_REQUIRED_HEADERS,
         )
-        raise HTTPException(status_code=403, detail="Permission denied")
     if update_password:
-        if not is_platform_admin:
+        if not is_user_administrator:
             await _audit_deny(
                 user_id=user.id,
                 action="user:update",
                 obj=f"user:{user_id}",
                 status_code=400,
                 reason="password_update_forbidden",
+                operation_id=operation_id,
+                fields_changed=["password"],
             )
             raise HTTPException(status_code=400, detail="You can't change your password here")
+        await _ensure_local_credentials_allowed(
+            authorization_service=authorization_service,
+            session=session,
+            target_user_id=user_id,
+            actor_user_id=user.id,
+            operation_id=operation_id,
+        )
         user_update.password = get_auth_service().get_password_hash(user_update.password)
 
-    authorization_service = get_authorization_service()
     # Pre-read lock hint; canonical user state may produce a different staged kind.
     possible_lifecycle_kind: AuthorizationMutationKind | None = None
     if user_update.is_active is not None:
@@ -344,7 +552,10 @@ async def patch_user(
     # Authentication precedes the writer lock. A concurrent demotion or disable
     # must take effect before this request can update another identity.
     actor = await load_mutation_actor(session, user.id)
-    if not actor_can_administer_platform(actor) and (user.id != user_id or user_update.is_superuser or update_password):
+    is_user_administrator = await is_administrator(actor, resource="user", authorization_service=authorization_service)
+    if (not is_user_administrator and (user.id != user_id or update_password)) or (
+        user_update.is_superuser and not actor_can_administer_platform(actor)
+    ):
         await _audit_deny(
             user_id=user.id,
             action="user:update",
@@ -352,6 +563,7 @@ async def patch_user(
             status_code=403,
             reason="platform_authority_revoked",
             session=session,
+            operation_id=operation_id,
         )
         raise HTTPException(status_code=403, detail="Permission denied")
 
@@ -361,6 +573,22 @@ async def patch_user(
         else (await session.exec(select(User).where(User.id == user_id))).first()
     )
     if user_db is not None:
+        if user_db.is_superuser and not actor_can_administer_platform(actor) and user.id != user_id:
+            await _audit_deny(
+                user_id=user.id,
+                action="user:update",
+                obj=f"user:{user_id}",
+                status_code=403,
+                reason="superuser_required",
+                operation_id=operation_id,
+                fields_changed=sorted(user_update.model_fields_set),
+                session=session,
+            )
+            raise HTTPException(
+                status_code=403,
+                detail="Only a superuser may modify another platform superuser",
+                headers=_SUPERUSER_REQUIRED_HEADERS,
+            )
         lifecycle_mutation: AuthorizationMutation | None = None
         team_lifecycle = UserTeamLifecycleResult((), (), (), ())
         fields_changed = sorted(
@@ -410,7 +638,21 @@ async def patch_user(
             try:
                 await validate_identity_mutation(authorization_service, session, lifecycle_mutation)
             except AuthorizationMutationRejected as exc:
-                raise HTTPException(status_code=409, detail=exc.public_detail) from exc
+                await _audit_deny(
+                    user_id=user.id,
+                    action="user:update",
+                    obj=f"user:{user_db.id}",
+                    status_code=409,
+                    reason="access_ceiling",
+                    operation_id=operation_id,
+                    fields_changed=list(lifecycle_mutation.policy_relevant_fields),
+                    session=session,
+                )
+                raise HTTPException(
+                    status_code=409,
+                    detail=exc.public_detail,
+                    headers=_ACCESS_CEILING_HEADERS,
+                ) from exc
 
         if not update_password:
             user_update.password = user_db.password
@@ -424,6 +666,7 @@ async def patch_user(
                 status_code=exc.status_code,
                 reason="update_rejected",
                 session=session,
+                operation_id=operation_id,
             )
             raise
         if lifecycle_mutation is not None and lifecycle_mutation.kind is AuthorizationMutationKind.USER_DISABLED:
@@ -439,12 +682,15 @@ async def patch_user(
             )
         if lifecycle_mutation is not None:
             await stage_identity_mutation(authorization_service, session, lifecycle_mutation)
-        audit_details = {
-            "event": AUDIT_EVENT_MUTATION,
-            "fields_changed": fields_changed,
-            "lifecycle_kind": lifecycle_mutation.kind.value if lifecycle_mutation is not None else None,
-            "teams_deactivated": [str(team_id) for team_id in team_lifecycle.deactivated_team_ids],
-        }
+        audit_details = administration_audit_details(
+            {
+                "event": AUDIT_EVENT_MUTATION,
+                "teams_deactivated": [str(team_id) for team_id in team_lifecycle.deactivated_team_ids],
+                "fields_changed": fields_changed,
+                "lifecycle_kind": lifecycle_mutation.kind.value if lifecycle_mutation is not None else None,
+            },
+            operation_id=operation_id,
+        )
         try:
             audit_staged = stage_audit_decision(
                 session=session,
@@ -478,6 +724,7 @@ async def patch_user(
         status_code=404,
         reason="user_not_found",
         session=session,
+        operation_id=operation_id,
     )
     raise HTTPException(status_code=404, detail="User not found")
 
@@ -496,6 +743,12 @@ async def reset_password(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    await _ensure_local_credentials_allowed(
+        authorization_service=get_authorization_service(),
+        session=session,
+        target_user_id=user_id,
+        actor_user_id=user.id,
+    )
     auth = get_auth_service()
     if not auth.verify_password(password_reset.current_password, user.password):
         raise HTTPException(status_code=400, detail="Current password is incorrect")
@@ -517,6 +770,7 @@ async def delete_user(
     user_id: UUID,
     current_user: CurrentActiveUser,
     session: DbSession,
+    operation_id: OperationId = None,
 ) -> dict:
     """Delete a user from the database."""
     actor_user_id = current_user.id
@@ -527,17 +781,16 @@ async def delete_user(
             obj=f"user:{user_id}",
             status_code=400,
             reason="self_deletion_forbidden",
+            operation_id=operation_id,
         )
         raise HTTPException(status_code=400, detail="You can't delete your own user account")
-    if not actor_can_administer_platform(current_user):
-        await _audit_deny(
-            user_id=actor_user_id,
-            action="user:delete",
-            obj=f"user:{user_id}",
-            status_code=403,
-            reason="superuser_required",
-        )
-        raise HTTPException(status_code=403, detail="Permission denied")
+    await _require_user_administrator(
+        current_user,
+        action="user:delete",
+        obj=f"user:{user_id}",
+        operation_id=operation_id,
+        denial_detail=_PERMISSION_DENIED,
+    )
 
     authorization_service = get_authorization_service()
 
@@ -561,7 +814,7 @@ async def delete_user(
     except TeamManagementError as exc:
         raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
     actor = await load_mutation_actor(session, actor_user_id)
-    if not actor_can_administer_platform(actor):
+    if not await is_administrator(actor, resource="user", authorization_service=authorization_service):
         await _audit_deny(
             user_id=actor_user_id,
             action="user:delete",
@@ -569,6 +822,7 @@ async def delete_user(
             status_code=403,
             reason="platform_authority_revoked",
             session=session,
+            operation_id=operation_id,
         )
         raise HTTPException(status_code=403, detail="Permission denied")
     user_db = lifecycle_lock_context.users.get(user_id)
@@ -580,8 +834,24 @@ async def delete_user(
             status_code=404,
             reason="user_not_found",
             session=session,
+            operation_id=operation_id,
         )
         raise HTTPException(status_code=404, detail="User not found")
+    if user_db.is_superuser and not actor_can_administer_platform(actor):
+        await _audit_deny(
+            user_id=current_user.id,
+            action="user:delete",
+            obj=f"user:{user_id}",
+            status_code=403,
+            reason="superuser_required",
+            operation_id=operation_id,
+            session=session,
+        )
+        raise HTTPException(
+            status_code=403,
+            detail="Only a superuser may delete another platform superuser",
+            headers=_SUPERUSER_REQUIRED_HEADERS,
+        )
 
     impact = await owned_resource_impact(session, user_id=user_id)
     if impact.exists:
@@ -592,6 +862,8 @@ async def delete_user(
             obj=f"user:{user_id}",
             status_code=409,
             reason="resource_ownership_requires_disposition",
+            session=session,
+            operation_id=operation_id,
         )
         raise HTTPException(status_code=409, detail=impact.public_detail())
 
@@ -610,7 +882,20 @@ async def delete_user(
     try:
         await validate_identity_mutation(authorization_service, session, lifecycle_mutation)
     except AuthorizationMutationRejected as exc:
-        raise HTTPException(status_code=409, detail=exc.public_detail) from exc
+        await _audit_deny(
+            user_id=current_user.id,
+            action="user:delete",
+            obj=f"user:{user_id}",
+            status_code=409,
+            reason="access_ceiling",
+            operation_id=operation_id,
+            session=session,
+        )
+        raise HTTPException(
+            status_code=409,
+            detail=exc.public_detail,
+            headers=_ACCESS_CEILING_HEADERS,
+        ) from exc
 
     try:
         team_lifecycle = await apply_user_team_lifecycle(
@@ -633,6 +918,7 @@ async def delete_user(
             "teams_retired": [str(team_id) for team_id in team_lifecycle.retired_team_ids],
             "recipient_shares_removed": len(team_lifecycle.removed_share_snapshots),
         }
+        audit_details = administration_audit_details(audit_details, operation_id=operation_id)
         audit_staged = stage_audit_decision(
             session=session,
             user_id=actor_user_id,

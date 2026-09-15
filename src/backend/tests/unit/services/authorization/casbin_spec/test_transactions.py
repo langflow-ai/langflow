@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import pytest
+from fastapi import Response
 from langflow.services.authorization.casbin import store
 from langflow.services.authorization.casbin.service import CasbinAuthorizationService
 from langflow.services.database.models.auth import AuthzShare, AuthzTeam, AuthzTeamMember, CasbinRule
@@ -1334,6 +1335,7 @@ async def test_user_lifecycle_reloads_revoked_platform_authority(
                 user=UserCreate(username=new_username, password=str(uuid4())),
                 current_user=request_actor,
                 session=writer,
+                response=Response(),
             )
         elif operation == "patch":
             mutation = patch_user(
@@ -1391,6 +1393,7 @@ async def test_role_writers_reload_revoked_platform_authority(scenario, operatio
                 payload=RoleCreate(name=new_name, permissions=["flow:write"]),
                 current_user=request_actor,
                 session=writer,
+                response=Response(),
             )
         elif operation == "update_role":
             mutation = authz_roles.update_role(
@@ -1406,6 +1409,7 @@ async def test_role_writers_reload_revoked_platform_authority(scenario, operatio
                 payload=RoleAssignmentCreate(user_id=state.recipient, role_id=role.id),
                 current_user=request_actor,
                 session=writer,
+                response=Response(),
             )
         else:
             mutation = authz_role_assignments.delete_assignment(

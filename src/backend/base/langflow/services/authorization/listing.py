@@ -264,7 +264,10 @@ def restrict_to_owned_or_visible_scope(
     if visibility.require_canonical_context:
         owner_clause = false()
     if visibility.owner_id is not None:
-        owner_clause = or_(owner_clause, model.user_id == visibility.owner_id)
+        from langflow.services.database.models.connection import Connection
+
+        owner_column = Connection.owner_id if model is Connection else model.user_id
+        owner_clause = or_(owner_clause, owner_column == visibility.owner_id)
     if visibility.require_canonical_context or visibility.project_owner_id is not None:
         from langflow.services.database.models.deployment.model import Deployment
         from langflow.services.database.models.flow.model import Flow
