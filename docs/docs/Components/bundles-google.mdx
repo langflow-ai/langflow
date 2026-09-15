@@ -220,10 +220,25 @@ built-in file components apply; a path outside it is refused before the file is 
 On a single-tenant deployment, where the restriction is off by default, any readable
 path is attached.
 
-**Calendar: Create Event** exposes **Conference Data Version** because the capability
-matrix lists it. It only tells Calendar whether to honour a `conferenceData` block in the
-request; this component never sends one, so setting it to `1` does not by itself add a
-Meet link to the event.
+### Replying to an email
+
+Set **Thread ID** to the Gmail conversation ID and **In Reply To** to the original
+email's `Message-ID` header, including angle brackets. Keep **Subject** the same as
+the original message. If available, provide the conversation's space-separated
+message IDs in **References**; otherwise it defaults to **In Reply To**.
+These fields satisfy [Gmail's threading requirements](https://developers.google.com/workspace/gmail/api/guides/threads).
+The component uses the send-only scope, so it cannot fetch these headers for you.
+
+### Creating recurring events
+
+For recurring events, set **Time Zone** to an IANA time zone such as
+`America/Los_Angeles`. Google requires this zone to expand the recurrence. Enter each
+recurrence rule on its own line; comma-separated values within a rule are preserved,
+for example `RRULE:FREQ=WEEKLY;BYDAY=MO,WE`.
+
+See the [Google Calendar event API](https://developers.google.com/workspace/calendar/api/v3/reference/events/insert)
+for supported recurrence fields. **Conference Data Version** controls conference-data
+processing; setting it to `1` does not create a Google Meet link.
 
 ### Error behavior
 

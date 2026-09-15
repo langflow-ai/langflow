@@ -1,4 +1,4 @@
-"""Calendar: List Events — wave-1 action (INT-10, google.calendar.list)."""
+"""Calendar: List Events — wave-1 action (google.calendar.list)."""
 
 from __future__ import annotations
 
@@ -77,6 +77,9 @@ class GoogleCalendarListComponent(Component):
         Output(display_name="Events", name="events", method="list_events"),
         Output(display_name="Listing", name="listing", method="list_page"),
     ]
+
+    def _pre_run_setup(self) -> None:
+        self._events_response = None
 
     def _request_params(self) -> dict[str, Any]:
         max_results = int(self.max_results) if self.max_results else DEFAULT_MAX_RESULTS

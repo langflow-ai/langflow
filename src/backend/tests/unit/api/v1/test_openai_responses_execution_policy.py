@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import uuid4
@@ -8,6 +9,8 @@ import pytest
 from fastapi import BackgroundTasks, HTTPException, Request
 from langflow.api.v1 import openai_responses
 from langflow.schema import OpenAIResponsesRequest
+from lfx.exceptions.component import ComponentBuildError
+from lfx.integrations.errors import AuthExpiredError, ConnectionNotAuthorizedError, RateLimitedError
 
 
 def _flow(*, owner_id):
@@ -62,9 +65,11 @@ async def test_openai_execute_denial_matches_missing_flow_response(monkeypatch: 
 
 
 @pytest.mark.parametrize("caller_kind", ["delegate", "owner"])
+@pytest.mark.parametrize("error_type", [RuntimeError, ValueError])
 async def test_openai_sync_error_depends_on_flow_ownership(
     monkeypatch: pytest.MonkeyPatch,
     caller_kind: str,
+    error_type: type[Exception],
 ) -> None:
     sensitive_detail = "owner-openai-provider-secret"
     owner_id = uuid4()
@@ -76,7 +81,7 @@ async def test_openai_sync_error_depends_on_flow_ownership(
     monkeypatch.setattr(
         openai_responses,
         "run_flow_for_openai_responses",
-        AsyncMock(side_effect=RuntimeError(sensitive_detail)),
+        AsyncMock(side_effect=error_type(sensitive_detail)),
     )
 
     response = await openai_responses.create_response(
@@ -92,6 +97,55 @@ async def test_openai_sync_error_depends_on_flow_ownership(
     else:
         assert response.error["message"] == "Workflow execution failed."
         assert sensitive_detail not in response.model_dump_json()
+    if error_type is ValueError:
+        assert response.error["code"] == "invalid_flow_request"
+        assert response.error["type"] == "invalid_request_error"
+
+
+@pytest.mark.parametrize("wrapped", [False, True])
+@pytest.mark.parametrize(
+    ("error", "expected_status"),
+    [
+        (ConnectionNotAuthorizedError(provider="google"), 403),
+        (AuthExpiredError(provider="google"), 401),
+        (RateLimitedError(provider="google", retry_after=30.0), 429),
+    ],
+)
+async def test_openai_integration_failure_keeps_its_http_status(
+    monkeypatch: pytest.MonkeyPatch,
+    error: Exception,
+    expected_status: int,
+    *,
+    wrapped: bool,
+) -> None:
+    """A typed connection failure keeps the status ``error_for_client`` maps, in the OpenAI envelope.
+
+    OpenAI SDKs branch on the status: 401 and 403 raise typed errors and 429 is
+    retried. A 200 would read as a successful response.
+    """
+    flow = _flow(owner_id=uuid4())
+    monkeypatch.setattr(openai_responses, "get_flow_by_id_or_endpoint_name", AsyncMock(return_value=flow))
+    monkeypatch.setattr(openai_responses, "ensure_flow_permission", AsyncMock())
+    execution_error = error
+    if wrapped:
+        vertex_error = ComponentBuildError("Error building component", "traceback")
+        vertex_error.__cause__ = error
+        execution_error = ValueError("Error running graph")
+        execution_error.__cause__ = vertex_error
+    monkeypatch.setattr(openai_responses, "run_flow_for_openai_responses", AsyncMock(side_effect=execution_error))
+
+    response = await openai_responses.create_response(
+        request=_request(str(flow.id)),
+        background_tasks=BackgroundTasks(),
+        api_key_user=SimpleNamespace(id=uuid4()),
+        telemetry_service=SimpleNamespace(log_package_run=AsyncMock()),
+        http_request=Request({"type": "http", "headers": []}),
+    )
+
+    assert response.status_code == expected_status
+    body = json.loads(response.body)
+    assert body["error"]["code"] == error.code
+    assert body["error"]["type"] == "processing_error"
 
 
 @pytest.mark.parametrize("caller_kind", ["delegate", "owner"])

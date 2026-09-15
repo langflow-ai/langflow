@@ -1,6 +1,6 @@
 """Shared Google Workspace SDK adapter for connection-backed components.
 
-Every wave-1 Google action (INT-10) goes through this module so the five
+Every wave-1 Google action goes through this module so the five
 components share one behaviour for four things the SDK does not give us:
 
 * **Lazy credentials.** ``google-api-python-client`` wants a
@@ -113,7 +113,8 @@ def _error_reasons(exc: HttpError) -> set[str]:
 
 
 def _retry_after_seconds(exc: HttpError) -> float | None:
-    headers = getattr(exc.resp, "headers", None) or {}
+    # httplib2.Response is itself the header mapping; it has no .headers attribute.
+    headers = exc.resp
     try:
         raw = headers.get("retry-after")
     except AttributeError:
@@ -189,12 +190,25 @@ class WorkspaceService:
         self._version = version
         self._http = http
         self._service: Any | None = None
+        self._token: str | None = None
 
     async def _ensure_service(self) -> Any:
-        if self._service is None:
-            token = await self._lease.get_token()
-            self._service = await asyncio.to_thread(_build_service, self._api, self._version, token, self._http)
+        token = await self._lease.get_token()
+        if self._service is None or token != self._token:
+            await self._replace_service(token)
         return self._service
+
+    async def _replace_service(self, token: str) -> None:
+        await self.aclose()
+        self._service = await asyncio.to_thread(_build_service, self._api, self._version, token, self._http)
+        self._token = token
+
+    async def aclose(self) -> None:
+        """Release the SDK's persistent HTTP connections."""
+        service, self._service = self._service, None
+        self._token = None
+        if service is not None:
+            await asyncio.to_thread(service.close)
 
     async def execute(self, request_factory: Callable[[Any], Any]) -> Any:
         """Run one Google request, retrying exactly once after an auth rejection."""
@@ -207,7 +221,7 @@ class WorkspaceService:
                 raise normalized from exc
             # One reactive refresh; the lease itself refuses a second one.
             token = await self._lease.get_token_after_auth_error(normalized)
-            self._service = await asyncio.to_thread(_build_service, self._api, self._version, token, self._http)
+            await self._replace_service(token)
             retry_service = self._service
             try:
                 return await asyncio.to_thread(lambda: request_factory(retry_service).execute())
@@ -237,4 +251,8 @@ async def workspace_action(
         capability=capability,
         owner_kind=credential.owner_kind,
     ):
-        yield WorkspaceService(lease, api, version, http=getattr(component, "_workspace_http", None))
+        service = WorkspaceService(lease, api, version, http=getattr(component, "_workspace_http", None))
+        try:
+            yield service
+        finally:
+            await service.aclose()

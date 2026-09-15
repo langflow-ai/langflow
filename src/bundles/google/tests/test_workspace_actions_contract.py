@@ -13,7 +13,9 @@ from __future__ import annotations
 import base64
 import email
 import json
+import threading
 from contextlib import contextmanager
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 from urllib.parse import parse_qs, urlparse
 
@@ -178,6 +180,7 @@ async def test_gmail_send_posts_a_base64url_rfc2822_message() -> None:
         subject="Quarterly report",
         body="Numbers attached.",
         thread_id="thread-0001",
+        in_reply_to="<original@example.com>",
     )
     http = wire(component, [json_response("gmail_send_response")])
 
@@ -192,7 +195,38 @@ async def test_gmail_send_posts_a_base64url_rfc2822_message() -> None:
     assert message["To"] == "one@example.com, two@example.com"
     assert message["Cc"] == "cc@example.com"
     assert message["Subject"] == "Quarterly report"
+    assert message["In-Reply-To"] == "<original@example.com>"
+    assert message["References"] == "<original@example.com>"
     assert result.data == load_fixture("gmail_send_response")
+
+
+@pytest.mark.usefixtures("resolver")
+async def test_gmail_thread_requires_the_original_message_id_before_sending() -> None:
+    component = gmail_send_component(thread_id="thread-0001")
+    http = wire(component, [])
+    with pytest.raises(ValueError, match="In Reply To"):
+        await component.send_message()
+    assert http.request_sequence == []
+
+
+@pytest.mark.usefixtures("resolver")
+async def test_gmail_attachment_reply_preserves_reference_headers(tmp_path) -> None:
+    attachment = tmp_path / "report.txt"
+    attachment.write_text("Report", encoding="utf-8")
+    component = gmail_send_component(
+        thread_id="thread-0001",
+        in_reply_to="<parent@example.com>",
+        references="<original@example.com> <parent@example.com>",
+        attachments=[str(attachment)],
+    )
+    http = wire(component, [json_response("gmail_send_response")])
+    await component.send_message()
+    payload = http.request_sequence[0][2]
+    if isinstance(payload, str):
+        payload = payload.encode()
+    assert b'"threadId": "thread-0001"' in payload
+    assert b"In-Reply-To: <parent@example.com>" in payload
+    assert b"References: <original@example.com> <parent@example.com>" in payload
 
 
 async def test_gmail_send_requests_only_the_send_scope(resolver) -> None:
@@ -513,6 +547,7 @@ async def test_calendar_create_posts_the_event_body() -> None:
         attendees=["teammate@example.com"],
         send_updates="all",
         recurrence=["RRULE:FREQ=WEEKLY;COUNT=4"],
+        time_zone="Etc/UTC",
         conference_data_version=1,
     )
     http = wire(component, [json_response("calendar_create_response")])
@@ -530,8 +565,8 @@ async def test_calendar_create_posts_the_event_body() -> None:
     # unless the value the user supplied is read back off the wire.
     assert payload == {
         "summary": "Langflow sync",
-        "start": {"dateTime": "2026-09-10T14:00:00Z"},
-        "end": {"dateTime": "2026-09-10T15:00:00Z"},
+        "start": {"dateTime": "2026-09-10T14:00:00Z", "timeZone": "Etc/UTC"},
+        "end": {"dateTime": "2026-09-10T15:00:00Z", "timeZone": "Etc/UTC"},
         "description": "Weekly",
         "location": "Remote",
         "attendees": [{"email": "teammate@example.com"}],
@@ -679,3 +714,95 @@ async def test_no_access_token_reaches_component_output_or_status() -> None:
     assert FAKE_ACCESS_TOKEN not in json.dumps(component.status.data)
     logged = json.dumps(getattr(component, "_logs", []), default=str)
     assert FAKE_ACCESS_TOKEN not in logged
+
+
+@pytest.mark.parametrize(
+    ("factory", "fixture", "query_name"),
+    [(drive_list_component, "drive_list_response", "q"), (calendar_list_component, "calendar_list_response", "q")],
+)
+async def test_listing_cache_is_reset_for_each_run(factory, fixture, query_name, resolver) -> None:
+    component = factory()
+    http = wire(component, [json_response(fixture), json_response(fixture)])
+    component._pre_run_setup()
+    await component.list_page()
+    await component.list_page()
+    assert len(http.request_sequence) == 1
+
+    component.query = "next run"
+    component.connection = "google/other"
+    component._pre_run_setup()
+    await component.list_page()
+    assert len(http.request_sequence) == 2
+    assert query_of(http.request_sequence[-1][0])[query_name] == ["next run"]
+    assert resolver.requests[-1].ref.to_handle() == "google/other"
+
+
+@pytest.mark.usefixtures("resolver")
+@pytest.mark.parametrize("status", ["403", "429"])
+async def test_rate_limit_keeps_the_provider_retry_after(status) -> None:
+    component = drive_list_component()
+    headers, content = json_response("error_rate_limited", status=status)
+    wire(component, [({**headers, "retry-after": "17"}, content)])
+    with pytest.raises(RateLimitedError) as excinfo:
+        await component.list_page()
+    assert excinfo.value.retry_after == 17
+
+
+@pytest.mark.usefixtures("resolver")
+async def test_calendar_recurrence_preserves_commas_and_sends_the_time_zone() -> None:
+    component = calendar_create_component(recurrence="RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=4")
+    component.time_zone = "America/Los_Angeles"
+    http = wire(component, [json_response("calendar_create_response")])
+    await component.create_event()
+    payload = json.loads(http.request_sequence[0][2])
+    assert payload["recurrence"] == ["RRULE:FREQ=WEEKLY;BYDAY=MO,WE;COUNT=4"]
+    assert payload["start"]["timeZone"] == payload["end"]["timeZone"] == "America/Los_Angeles"
+
+
+@pytest.mark.usefixtures("resolver")
+async def test_calendar_recurrence_without_a_time_zone_is_rejected_before_sending() -> None:
+    component = calendar_create_component(recurrence=["RRULE:FREQ=WEEKLY;COUNT=4"])
+    http = wire(component, [])
+    with pytest.raises(ValueError, match=r"[Tt]ime [Zz]one|time_zone"):
+        await component.create_event()
+    assert http.request_sequence == []
+
+
+@pytest.mark.usefixtures("resolver")
+async def test_gmail_mime_and_attachment_work_runs_off_the_event_loop(monkeypatch) -> None:
+    component = gmail_send_component()
+    wire(component, [json_response("gmail_send_response")])
+    build = component._build_mime_message
+    loop_thread = threading.get_ident()
+    worker_threads = []
+
+    def record_thread():
+        worker_threads.append(threading.get_ident())
+        return build()
+
+    monkeypatch.setattr(component, "_build_mime_message", record_thread)
+    await component.send_message()
+    assert worker_threads
+    assert loop_thread not in worker_threads
+
+
+@pytest.mark.parametrize("sizes", [(129,), (80, 80)])
+async def test_oversized_attachments_are_rejected_before_reading_past_the_limit(tmp_path, monkeypatch, sizes) -> None:
+    from lfx_google.components.google import gmail_send
+
+    monkeypatch.setattr(gmail_send, "UPLOAD_SEND_LIMIT_BYTES", 128)
+    paths = [tmp_path / f"attachment-{index}.bin" for index in range(len(sizes))]
+    for path, size in zip(paths, sizes, strict=True):
+        path.write_bytes(b"x" * size)
+    original_open = Path.open
+
+    def refuse_oversized_read(path, *args, **kwargs):
+        if path == paths[-1]:
+            pytest.fail("The attachment that exceeds the remaining budget must not be read")
+        return original_open(path, *args, **kwargs)
+
+    component = gmail_send_component(attachments=[str(path) for path in paths])
+    wire(component, [])
+    monkeypatch.setattr(Path, "open", refuse_oversized_read)
+    with pytest.raises(ValueError, match="upload size limit"):
+        await component.send_message()

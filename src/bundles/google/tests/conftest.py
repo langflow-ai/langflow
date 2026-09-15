@@ -92,6 +92,15 @@ def resolver(monkeypatch: pytest.MonkeyPatch) -> FakeResolver:
     return fake
 
 
+class RecordedHttp(HttpMockSequence):
+    """Record connection cleanup as well as requests, like a real httplib2 client."""
+
+    close_count = 0
+
+    def close(self) -> None:
+        self.close_count += 1
+
+
 def wire(component, responses: list[tuple[dict[str, str], bytes]], *, connection: str = "google/work"):
     """Attach a graph principal, a connection handle and a canned HTTP sequence."""
     component.connection = connection
@@ -104,6 +113,6 @@ def wire(component, responses: list[tuple[dict[str, str], bytes]], *, connection
             )
         )
     )
-    http = HttpMockSequence(list(responses))
+    http = RecordedHttp(list(responses))
     component._workspace_http = http  # documented test seam, see _workspace_client._build_service
     return http

@@ -9,11 +9,9 @@ How it runs
 The suite drives the components through the *headless* path:
 ``EnvConnectionResolver`` reads ``LF_CONNECTION__GOOGLE__LIVE`` and the graph
 principal is ``headless_operator``, which is the only principal the env resolver
-accepts for an env-owned credential. That is deliberate: on this branch nothing
-in langflow-base stamps an execution principal yet (INT-6 owns that), so an
-in-server run would fail closed with ``connection-not-authorized`` regardless of
-the credential. INT-6 landing is what makes the same components runnable from the
-canvas, ``/api/v1/run`` and deployments; INT-14 re-runs this list in-server.
+accepts for an env-owned credential. This suite validates standalone execution;
+server routes use their authenticated execution principal and managed connection
+resolver and need separate end-to-end coverage.
 
 Setup
 -----
@@ -31,7 +29,7 @@ refresh token:
 
     export LF_CONNECTION__GOOGLE__LIVE='{"access_token":"ya29...."}'
 
-The Google project needs the five wave-1 scopes on its consent screen. A project
+The Google project needs the scopes for these five actions on its consent screen. A project
 in *Testing* publishing status issues refresh tokens that expire after 7 days, so
 a maintained project in *In production* status is what keeps this suite runnable.
 """

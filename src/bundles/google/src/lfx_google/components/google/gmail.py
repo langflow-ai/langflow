@@ -23,7 +23,7 @@ from lfx_google.components.google._workspace_inputs import GMAIL_READONLY_SCOPE,
 
 
 class GmailLoaderComponent(Component):
-    """Legacy Gmail loader, optionally backed by a managed connection (INT-10).
+    """Legacy Gmail loader, optionally backed by a managed connection.
 
     ``gmail.readonly`` is a *restricted* Google scope, and per
     ``decisions/google-restricted-scopes.md`` the Langflow-owned hosted and

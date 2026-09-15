@@ -16,7 +16,7 @@ from lfx_google.components.google._workspace_inputs import DRIVE_FILE_SCOPE, goo
 
 
 class GoogleDriveComponent(Component):
-    """Legacy single-document Drive loader, optionally backed by a connection (INT-10).
+    """Legacy single-document Drive loader, optionally backed by a connection.
 
     The connection field resolves on ``drive.file``, so a managed connection can
     only load a document this app created or the user opened with it. Pasted

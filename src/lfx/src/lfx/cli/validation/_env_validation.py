@@ -79,12 +79,21 @@ def validate_connection_refs_for_env(graph: Graph) -> list[ConnectionUnresolvedE
     """Return typed failures for connection refs absent from headless injection channels."""
     from lfx.integrations.errors import ConnectionUnresolvedError
     from lfx.integrations.models import ConnectionRef
-    from lfx.services.variable.request_scope import normalize_parsed_variables
+    from lfx.services.connection.env_resolver import EnvConnectionResolver
+    from lfx.services.deps import get_connection_resolver
+    from lfx.services.variable.request_scope import (
+        get_active_request_variables,
+        is_env_fallback_disabled,
+        normalize_parsed_variables,
+    )
     from lfx.utils.env_var_security import safe_getenv
 
     errors: list[ConnectionUnresolvedError] = []
-    request_variables = normalize_parsed_variables(graph.context.get("request_variables") or {})
-    no_env_fallback = bool(graph.context.get("no_env_fallback"))
+    request_variables = normalize_parsed_variables(
+        graph.context.get("request_variables") or get_active_request_variables() or {}
+    )
+    no_env_fallback = bool(graph.context.get("no_env_fallback")) or is_env_fallback_disabled()
+    uses_environment: bool | None = None
 
     for vertex in graph.vertices:
         template = vertex.data.get("node", {}).get("template", {})
@@ -97,7 +106,13 @@ def validate_connection_refs_for_env(graph: Graph) -> list[ConnectionUnresolvedE
             try:
                 ref = ConnectionRef.parse(value)
             except ValueError:
-                errors.append(ConnectionUnresolvedError(str(value)))
+                errors.append(ConnectionUnresolvedError("<malformed connection reference>"))
+                continue
+            if uses_environment is None:
+                # A configured subclass may use other credential stores, so only
+                # the built-in implementation has this environment requirement.
+                uses_environment = type(get_connection_resolver()) is EnvConnectionResolver
+            if not uses_environment:
                 continue
             env_key = ref.env_key()
             alias = f"x-langflow-global-var-{env_key.lower().replace('_', '-')}"
@@ -105,5 +120,12 @@ def validate_connection_refs_for_env(graph: Graph) -> list[ConnectionUnresolvedE
             if not injected and not no_env_fallback:
                 injected = safe_getenv(env_key) or safe_getenv(alias)
             if not injected:
-                errors.append(ConnectionUnresolvedError(ref.to_handle(), env_key=env_key, provider=ref.provider))
+                errors.append(
+                    ConnectionUnresolvedError(
+                        ref.to_handle(),
+                        env_key=env_key,
+                        provider=ref.provider,
+                        reason="env-fallback-disabled" if no_env_fallback else "missing",
+                    )
+                )
     return errors

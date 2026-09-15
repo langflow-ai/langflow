@@ -90,14 +90,21 @@ def apply_run_defaults(
     else:
         # Caller-supplied None plus an existing graph.user_id: preserve the existing.
         user_id = graph.user_id
-    graph.execution_principal = ExecutionPrincipal(
-        kind="headless_operator",
-        user_id=str(user_id),
-        actor_id=str(user_id),
-        family="lfx_headless",
-        interactive=True,
-        actor_label=str(user_id),
-    )
+    # A host that already stamped a route-family principal owns this graph's
+    # identity: overwriting it here would silently promote an interactive_chat,
+    # webhook or public run to the headless operator, which is the only kind the
+    # portable floor lets resolve environment-backed connections. Only an
+    # unstamped graph (bare ``lfx run``/``serve``, or a checkpoint-restored one)
+    # gets the headless stamp.
+    if getattr(graph, "execution_principal", None) is None or graph.execution_principal.kind == "unknown":
+        graph.execution_principal = ExecutionPrincipal(
+            kind="headless_operator",
+            user_id=str(user_id),
+            actor_id=str(user_id),
+            family="lfx_headless",
+            interactive=True,
+            actor_label=str(user_id),
+        )
 
     if not session_id:
         session_id = uuid.uuid4().hex

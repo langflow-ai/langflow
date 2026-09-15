@@ -75,6 +75,7 @@ from lfx.extension.bundle_registry import (
     ReloadInProgressError,
 )
 from lfx.extension.errors import ExtensionError
+from lfx.extension.integration_conflicts import IntegrationConflictError
 from lfx.extension.loader import (
     DEFAULT_MODULE_NAMESPACE,
     SLOT_EXTRA,
@@ -516,6 +517,18 @@ def _run_pipeline_body(
     # an RLock, so install_bundle()'s own internal acquire is a no-op
     # reentry while this context is active.
     with registry.write_locked():
+        try:
+            registry.validate_bundle(new_record)
+        except IntegrationConflictError as exc:
+            result = _failure(
+                bundle=bundle,
+                reload_id=reload_id,
+                errors=exc.errors,
+                warnings=tuple(staging.warnings),
+                previous=previous,
+            )
+            _emit_bundle_reload_event(result, user_id=user_id)
+            return result
         swap_warnings = _swap_sys_modules(
             previous=previous,
             new_components=new_components,

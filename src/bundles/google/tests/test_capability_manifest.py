@@ -5,11 +5,10 @@ alone:
 
 1. The manifest agrees with ``design/dedicated-integrations/matrices/google.json``
    exactly — the same five actions, the same scopes, the same class names. This is
-   the ticket's "requested scopes match the approved matrix" requirement.
+   the approved scope contract.
 2. Every ``ConnectionRefInput`` on a shipped component declares the same scope its
-   capability declares. Nothing enforces the manifest at runtime yet (INT-7 is the
-   future consumer), so scope enforcement today comes entirely from the component
-   field; a drift between the two would silently request the wrong grant.
+   capability declares. The connection resolver and runtime integration policy
+   must agree on the action's grant requirements.
 3. The JSON is inside the built wheel. It is data the loader reads from the
    installed package, and the hatch include list defaults to ``*.py``.
 """

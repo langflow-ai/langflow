@@ -1,7 +1,8 @@
-"""Gmail: Send Email — wave-1 connection-backed action (INT-10, google.gmail.send)."""
+"""Gmail: Send Email — wave-1 connection-backed action (google.gmail.send)."""
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import io
 import mimetypes
@@ -87,7 +88,19 @@ class GmailSendComponent(Component):
         MessageTextInput(
             name="thread_id",
             display_name="Thread ID",
-            info="Reply into an existing Gmail thread.",
+            info="Reply into an existing Gmail thread. Also set In Reply To and match the original subject.",
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="in_reply_to",
+            display_name="In Reply To",
+            info="The original email's Message-ID header, including angle brackets. Required with Thread ID.",
+            advanced=True,
+        ),
+        MessageTextInput(
+            name="references",
+            display_name="References",
+            info="Space-separated Message-ID headers from the conversation. Defaults to In Reply To.",
             advanced=True,
         ),
     ]
@@ -108,6 +121,16 @@ class GmailSendComponent(Component):
         if bcc:
             message["Bcc"] = ", ".join(bcc)
         message["Subject"] = self.subject or ""
+        in_reply_to = (self.in_reply_to or "").strip()
+        references = (self.references or "").strip()
+        if (self.thread_id or "").strip() and not in_reply_to:
+            msg = "In Reply To must contain the original email's Message-ID when Thread ID is set."
+            raise ValueError(msg)
+        if in_reply_to:
+            message["In-Reply-To"] = in_reply_to
+            message["References"] = references or in_reply_to
+        elif references:
+            message["References"] = references
         body = self.body or ""
         if self.body_is_html:
             message.set_content("This message requires an HTML-capable mail client.")
@@ -115,6 +138,7 @@ class GmailSendComponent(Component):
         else:
             message.set_content(body)
 
+        remaining_bytes = UPLOAD_SEND_LIMIT_BYTES
         for path_str in _attachment_paths(self.attachments):
             # An attachment path is a tenant-controlled input and the bytes leave the
             # deployment by email, so containment matters more here than for a component
@@ -126,7 +150,17 @@ class GmailSendComponent(Component):
                 Path(self.resolve_path(path_str)),
                 scope_ids=component_file_access_scopes(self),
             )
-            payload = path.read_bytes()
+            if path.stat().st_size > remaining_bytes:
+                msg = "Attachments exceed Gmail's upload size limit. Send fewer or smaller attachments."
+                raise ValueError(msg)
+            # Bound the read too: a file can grow after stat(), and special files may
+            # report a zero size. The final MIME-size check also accounts for encoding.
+            with path.open("rb") as attachment:
+                payload = attachment.read(remaining_bytes + 1)
+            if len(payload) > remaining_bytes:
+                msg = "Attachments exceed Gmail's upload size limit. Send fewer or smaller attachments."
+                raise ValueError(msg)
+            remaining_bytes -= len(payload)
             guessed, _ = mimetypes.guess_type(path.name)
             maintype, _, subtype = (guessed or "application/octet-stream").partition("/")
             message.add_attachment(payload, maintype=maintype, subtype=subtype or "octet-stream", filename=path.name)
@@ -134,8 +168,7 @@ class GmailSendComponent(Component):
 
     async def send_message(self) -> Data:
         """Send one message and return the ``users.messages.send`` response."""
-        message = self._build_mime_message()
-        raw_bytes = message.as_bytes()
+        raw_bytes = await asyncio.to_thread(lambda: self._build_mime_message().as_bytes())
         has_attachments = bool(_attachment_paths(self.attachments))
         limit = UPLOAD_SEND_LIMIT_BYTES if has_attachments else SIMPLE_SEND_LIMIT_BYTES
         if len(raw_bytes) > limit:

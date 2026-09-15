@@ -1,4 +1,4 @@
-"""Drive: Fetch File (app files) — wave-1 action (INT-10, google.drive.fetch).
+"""Drive: Fetch File (app files) — wave-1 action (google.drive.fetch).
 
 Like the listing action this runs on ``drive.file`` only, so it can fetch a file
 the app created or the user opened with it and nothing else.

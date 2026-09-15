@@ -36,7 +36,7 @@ TEST_API_KEY = "google-key"  # pragma: allowlist secret
 
 
 async def test_gmail_loader_rejects_non_numeric_max_results() -> None:
-    # load_emails became a coroutine in INT-10 so it can await a connection lease.
+    # load_emails became a coroutine with managed connection support so it can await a connection lease.
     component = GmailLoaderComponent()
     component.connection = ""
     component.json_string = "{}"
@@ -224,7 +224,7 @@ def test_oauth_reports_invalid_client_credentials() -> None:
         component.build_output()
 
 
-# --- INT-10: deprecation and replacement pointers ------------------------------
+# --- Deprecation and replacement pointers ------------------------------
 
 
 def test_oauth_token_warns_on_use() -> None:

@@ -36,7 +36,7 @@ _REPLACEMENTS = [
 
 
 class GoogleOAuthToken(Component):
-    """Deprecated local-server OAuth helper, superseded by managed connections (INT-10)."""
+    """Deprecated local-server OAuth helper, superseded by managed connections."""
 
     display_name = "Google OAuth Token"
     description = (

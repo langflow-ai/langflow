@@ -1,22 +1,9 @@
 """A 1.12 flow using the legacy Google loaders must still open cleanly.
 
-``fixtures/flows/gmail_loader_1.12.json`` was recorded from the component
-definitions as they stood *before* this change (generated against the PR's base
-ref), so it carries the real pre-INT-10 template and code string rather than a
-hand-written approximation.
-
-What is pinned here is the classification the release owner accepted for INT-10:
-the saved nodes are ``outdated_safe`` — never ``blocked`` and never
-``outdated_breaking``. The optional connection field is additive by every
-structural rule in ``lfx.upgrade.checker``; what makes the nodes outdated at all
-is only that the components' code string changed, which is true of any component
-edit. An earlier revision of this branch suppressed even that by adding both
-classes to ``COMPONENTS_TO_IGNORE_UPDATE``; that was reverted, because the
-exemption is checked *before* the registry lookup in ``_classify_node`` and would
-therefore also mask ``blocked`` (component missing from the registry) and any
-future genuinely breaking change to these two classes, permanently. The banner is
-the cheaper of the two, and ``outdated_safe`` is the accepted answer for INT-10
-(DECISIONS.md, release-owner decision 2026-09-04).
+The fixture contains the original templates and source before managed connections
+were added. Adding the optional connection input should classify saved nodes as
+``outdated_safe``, while a missing component or incompatible input must still
+produce a blocked or breaking verdict.
 """
 
 from __future__ import annotations
@@ -56,7 +43,7 @@ def test_fixture_predates_the_connection_field() -> None:
 
 
 def test_saved_1_12_flow_opens_without_a_blocking_or_breaking_verdict() -> None:
-    """The accepted INT-10 outcome: outdated_safe, nothing blocked, nothing breaking."""
+    """Optional connections are a safe update for saved loader nodes."""
     report = check_flow_compatibility(_flow(), {}, registry=_current_registry())
 
     assert len(report.nodes) == len(LEGACY_CLASSES)
@@ -71,7 +58,7 @@ def test_the_legacy_loaders_are_not_exempted_from_the_upgrade_checker() -> None:
     ``_classify_node`` returns ``ok`` for an exempt type before it checks whether the
     component is in the registry at all, so listing these classes would also hide a
     ``blocked`` verdict (bundle uninstalled) and every future breaking change to them.
-    INT-10 accepts the update banner instead.
+    A safe-update banner preserves these compatibility checks.
     """
     assert not (LEGACY_CLASSES.keys() & COMPONENTS_TO_IGNORE_UPDATE)
 

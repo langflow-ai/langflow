@@ -1,4 +1,4 @@
-"""Calendar: Create Event — wave-1 action (INT-10, google.calendar.create)."""
+"""Calendar: Create Event — wave-1 action (google.calendar.create)."""
 
 from __future__ import annotations
 
@@ -72,6 +72,12 @@ class GoogleCalendarCreateComponent(Component):
             required=True,
         ),
         MessageTextInput(name="event_description", display_name="Description", advanced=True),
+        MessageTextInput(
+            name="time_zone",
+            display_name="Time Zone",
+            info="IANA time zone, for example America/Los_Angeles. Required for recurring events.",
+            advanced=True,
+        ),
         MessageTextInput(name="location", display_name="Location", advanced=True),
         MessageTextInput(
             name="attendees",
@@ -98,11 +104,7 @@ class GoogleCalendarCreateComponent(Component):
         IntInput(
             name="conference_data_version",
             display_name="Conference Data Version",
-            info=(
-                "Request parameter only, kept because the capability matrix lists it. It tells "
-                "Calendar to honour a conferenceData block in the request body; this component "
-                "never sends one, so setting it to 1 does not create a Meet link on its own."
-            ),
+            info=("Controls conference-data processing. Setting this to 1 does not create a Google Meet link."),
             value=0,
             advanced=True,
         ),
@@ -129,7 +131,16 @@ class GoogleCalendarCreateComponent(Component):
         attendees = _string_list(self.attendees)
         if attendees:
             body["attendees"] = [{"email": address} for address in attendees]
-        recurrence = _string_list(self.recurrence)
+        raw_recurrence = self.recurrence or []
+        recurrence = raw_recurrence if isinstance(raw_recurrence, list) else str(raw_recurrence).splitlines()
+        recurrence = [str(rule).strip() for rule in recurrence if str(rule).strip()]
+        time_zone = (self.time_zone or "").strip()
+        if recurrence and not time_zone:
+            msg = "A time_zone is required for recurring events, for example America/Los_Angeles."
+            raise ValueError(msg)
+        if time_zone:
+            body["start"]["timeZone"] = time_zone
+            body["end"]["timeZone"] = time_zone
         if recurrence:
             body["recurrence"] = recurrence
         return body

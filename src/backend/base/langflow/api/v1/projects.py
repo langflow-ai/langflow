@@ -50,6 +50,11 @@ from langflow.services.authorization.fetch import (
     deny_to_404_unless_readable,
 )
 from langflow.services.authorization.utils import _resolve_authz_domain
+from langflow.services.creation_hooks import (
+    RESOURCE_PROJECT,
+    PreCreationContext,
+    enforce_pre_creation,
+)
 from langflow.services.database.lock_retry import (
     is_database_lock_error,
     run_with_lock_retry,
@@ -115,7 +120,22 @@ async def _new_project(
 
     ``current_user`` (the full ``User``) is required because the MCP registration and flow-move
     side effects operate on the owning user, not just their id.
+
+    Runs the ``project`` pre-creation hooks first, so an enterprise plugin can refuse the
+    creation before anything is written (403 with the denial contract). Both routes that
+    reach this helper — ``POST /projects/`` and the create branch of ``PUT /projects/{id}``
+    — re-raise ``HTTPException`` untouched, so the denial reaches the client verbatim.
     """
+    await enforce_pre_creation(
+        PreCreationContext(
+            resource=RESOURCE_PROJECT,
+            session=session,
+            actor_user_id=current_user.id,
+            workspace_id=getattr(project, "workspace_id", None),
+            requested_name=project.name,
+        )
+    )
+
     new_project = Folder.model_validate(project, from_attributes=True)
     new_project.user_id = current_user.id
     # Apply the stable id: an explicit ``project_id`` (PUT upsert) overrides the uuid4 default.
@@ -1012,14 +1032,19 @@ async def delete_project(
     # only their own (which is the empty set for a non-owner).
     project_owner_id = project.user_id
 
+    from langflow.services.memory_base.flow_cleanup import FlowMemoryBaseCleanup, finalize_flow_memory_base_cleanup
+
+    memory_base_cleanups: list[FlowMemoryBaseCleanup] = []
+
     def _make_delete_operation(target: Folder):
         async def _delete_project_operation() -> None:
+            memory_base_cleanups.clear()
             flows = (
                 await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == project_owner_id))
             ).all()
             if len(flows) > 0:
                 for flow in flows:
-                    await cascade_delete_flow(session, flow.id)
+                    memory_base_cleanups.extend(await cascade_delete_flow(session, flow.id))
 
             await check_project_has_deployments(session, project_id=project_id)
             await session.delete(target)
@@ -1033,6 +1058,13 @@ async def delete_project(
     # therefore re-read with awaits — a plain attribute read on expired state
     # would lazy-load outside the greenlet context and raise MissingGreenlet.
     async def _delete_attempt(attempt: int) -> None:
+        # LE-2020 follow-up: a prior attempt may have populated memory_base_cleanups
+        # before hitting a lock error. If this attempt short-circuits below (target
+        # is None — the project was already deleted by a concurrent request), the
+        # clear() inside _delete_project_operation never runs, and the stale handles
+        # from the earlier attempt would flow into finalize_flow_memory_base_cleanup
+        # for a flow that only moved, not deleted. Clear unconditionally, first.
+        memory_base_cleanups.clear()
         if attempt == 0:
             target = project
         else:
@@ -1050,6 +1082,10 @@ async def delete_project(
 
     try:
         await run_with_lock_retry(_delete_attempt, session=session, description=f"delete_project {project_id}")
+        # Commit the deletions before the best-effort external teardown so a
+        # Memory Base's remote collection is dropped only for flows that are gone.
+        await session.commit()
+        await finalize_flow_memory_base_cleanup(memory_base_cleanups)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(

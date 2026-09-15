@@ -36,6 +36,15 @@ from langflow.services.authorization.lifecycle import (
     stage_identity_mutation,
     validate_identity_mutation,
 )
+from langflow.services.creation_hooks import (
+    DENIED_STATUS_CODE,
+    RESOURCE_USER,
+    PreCreationContext,
+    PreCreationDenied,
+    http_denial_error_code,
+    pre_creation_denied_to_http,
+    run_pre_creation_hooks,
+)
 from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
@@ -163,6 +172,10 @@ async def add_user(
 
     User activation is controlled by the NEW_USER_IS_ACTIVE setting.
     """
+    # Rollback expires session-bound ORM instances. Snapshot the actor before
+    # any write so conflict auditing never tries to refresh the authenticated
+    # user from the rolled-back request transaction.
+    actor_user_id = current_user.id if current_user is not None else None
     settings_service = get_settings_service()
     auth_settings = settings_service.auth_settings
     # An authenticated active administrator (the admin "add user" flow) may always
@@ -178,7 +191,7 @@ async def add_user(
     )
     if not is_admin_caller and (auth_settings.AUTO_LOGIN or not auth_settings.ENABLE_SIGNUP):
         await _audit_deny(
-            user_id=current_user.id if current_user is not None else None,
+            user_id=actor_user_id,
             action="user:create",
             obj="user:*",
             status_code=403,
@@ -198,6 +211,45 @@ async def add_user(
             entity_id=new_user.id,
             affected_user_ids=(new_user.id,),
         )
+        # Pre-creation hooks run inside the lock the authorization plugin just took (a no-op
+        # on non-PostgreSQL backends), so a plugin that counts users sees a serialized
+        # count-then-insert. Public signup and the admin "add user" flow share this route;
+        # ``is_public_signup`` lets a plugin word its refusal differently.
+        try:
+            await run_pre_creation_hooks(
+                PreCreationContext(
+                    resource=RESOURCE_USER,
+                    session=session,
+                    actor_user_id=actor_user_id,
+                    requested_name=new_user.username,
+                    is_public_signup=not is_admin_caller,
+                )
+            )
+        except PreCreationDenied as denied:
+            await session.rollback()
+            await _audit_deny(
+                user_id=actor_user_id,
+                action="user:create",
+                obj="user:*",
+                status_code=DENIED_STATUS_CODE,
+                reason=denied.error_code,
+                operation_id=operation_id,
+            )
+            raise pre_creation_denied_to_http(denied) from denied
+        except HTTPException as denied:
+            # A hook that answers with its own response still gets the same treatment: the
+            # response is passed through untouched, but the transaction is rolled back and the
+            # refusal is audited exactly like a PreCreationDenied.
+            await session.rollback()
+            await _audit_deny(
+                user_id=actor_user_id,
+                action="user:create",
+                obj="user:*",
+                status_code=denied.status_code,
+                reason=http_denial_error_code(denied),
+                operation_id=operation_id,
+            )
+            raise
         session.add(new_user)
         await session.flush()
         await session.refresh(new_user)
@@ -205,7 +257,7 @@ async def add_user(
         if not folder:
             await session.rollback()
             await _audit_deny(
-                user_id=current_user.id if current_user is not None else None,
+                user_id=actor_user_id,
                 action="user:create",
                 obj=f"user:{new_user.id}",
                 status_code=500,
@@ -216,7 +268,7 @@ async def add_user(
     except IntegrityError as e:
         await session.rollback()
         await _audit_deny(
-            user_id=current_user.id if current_user is not None else None,
+            user_id=actor_user_id,
             action="user:create",
             obj="user:*",
             status_code=400,
@@ -228,7 +280,7 @@ async def add_user(
     lifecycle_mutation = AuthorizationMutation(
         kind=AuthorizationMutationKind.USER_CREATED,
         entity_id=new_user.id,
-        actor_user_id=current_user.id if current_user is not None else None,
+        actor_user_id=actor_user_id,
         affected_user_ids=(new_user.id,),
         policy_relevant_fields=("is_active", "is_superuser"),
         user_before=None,
@@ -249,7 +301,7 @@ async def add_user(
         await stage_identity_mutation(authorization_service, session, lifecycle_mutation)
         audit_staged = stage_audit_decision(
             session=session,
-            user_id=current_user.id if current_user is not None else new_user.id,
+            user_id=actor_user_id if actor_user_id is not None else new_user.id,
             action="user:create",
             obj=f"user:{new_user.id}",
             result="allow",

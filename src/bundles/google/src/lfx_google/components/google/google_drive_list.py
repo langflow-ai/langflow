@@ -1,4 +1,4 @@
-"""Drive: List Files (app files) — wave-1 action (INT-10, google.drive.list).
+"""Drive: List Files (app files) — wave-1 action (google.drive.list).
 
 Wave 1 ships on ``drive.file`` only, which is non-sensitive and therefore needs
 no Google security assessment. The trade is reach: ``files.list`` under
@@ -81,6 +81,9 @@ class GoogleDriveListComponent(Component):
         Output(display_name="Files", name="files", method="list_files"),
         Output(display_name="Listing", name="listing", method="list_page"),
     ]
+
+    def _pre_run_setup(self) -> None:
+        self._listing_response = None
 
     def _request_params(self) -> dict[str, object]:
         page_size = int(self.page_size) if self.page_size else DEFAULT_PAGE_SIZE
