@@ -370,6 +370,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Lfx/lfx-connections",
+          label: "Resolve connections in headless LFX"
+        },
+        {
+          type: "doc",
           id: "Lfx/lfx-prewarm",
           label: "Pre-warm LFX"
         },
