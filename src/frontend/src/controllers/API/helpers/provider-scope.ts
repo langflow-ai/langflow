@@ -3,6 +3,14 @@ export interface ProviderScopeParams {
   projectId?: string;
 }
 
+/**
+ * How long a provider-policy snapshot (catalog, provider-variable mapping,
+ * scoped credentials) is treated as current. Every provider-scoped query
+ * shares this window so consumers can reason about a single freshness
+ * boundary instead of a per-query one.
+ */
+export const PROVIDER_POLICY_STALE_TIME_MS = 30_000;
+
 export const appendProviderScope = (
   queryParams: URLSearchParams,
   scope?: ProviderScopeParams,

@@ -377,7 +377,7 @@ store replaces it with a subclass of `BaseConnectionResolverService`:
 ```python
 from __future__ import annotations
 
-from lfx.services.connection.base import BaseConnectionResolverService
+from lfx.services.connection.base import BaseConnectionResolverService, ConnectionAccessPolicy
 
 
 class AcmeConnectionResolver(BaseConnectionResolverService):
@@ -389,20 +389,19 @@ class AcmeConnectionResolver(BaseConnectionResolverService):
         # the environment resolver.
         self.set_ready()
 
-    async def resolve(self, request):
-        denial = self.authorize_principal(
-            request,
-            connection_owner_id=None,
-            owner_kind="env",
-            allow_non_interactive=True,
-        )
-        if denial is not None:
-            raise denial
+    async def _get_access_policy(self, request):
+        # Return ownership metadata without fetching the secret.
+        return ConnectionAccessPolicy(owner_kind="env", allow_non_interactive=True)
+
+    async def _resolve(self, request, policy):
+        # Fetch and parse the credential only after the base class authorizes it.
+        # Return a ResolvedCredential; the runnable sample below implements this.
         ...
 ```
 
-`authorize_principal()` is the portable deny floor every implementation applies
-before adding its own share or policy checks: an `owner_kind="env"` credential is
+The final `resolve()` method cannot be overridden. It applies the portable deny
+floor to `_get_access_policy()` before calling `_resolve()`, then checks verified
+scope metadata and provider-specific scope aliases. An `owner_kind="env"` credential is
 usable only by a `headless_operator` principal, and anonymous or unknown
 principals are denied outright.
 

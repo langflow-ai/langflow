@@ -4,8 +4,6 @@ slug: /lfx-connections
 ---
 
 import CodeBlock from '@theme/CodeBlock';
-import Tabs from '@theme/Tabs';
-import TabItem from '@theme/TabItem';
 import sampleConnectionAction from '!!raw-loader!@site/docs/Lfx/samples/connections/connection_action_component.py';
 import sampleEnvResolverHost from '!!raw-loader!@site/docs/Lfx/samples/connections/env_resolver_host.py';
 import sampleSecretManagerResolver from '!!raw-loader!@site/docs/Lfx/samples/connections/secret_manager_resolver.py';
@@ -29,7 +27,7 @@ Every host implements the same contract, `BaseConnectionResolverService`:
 | The component calls `self.resolve_connection("field")` | It receives a lazy `CredentialLease`. Nothing has been resolved yet. |
 | The lease is awaited | The host's resolver runs, subject to the deny floor below, and returns a `ResolvedCredential`. |
 | The credential is used | `ResolvedCredential.access_token` is a `SecretStr`, and the object refuses pickling, so a token cannot enter a graph snapshot, a job payload, or a process cache. |
-| The token nears expiry | The lease re-resolves once, under a single lock, so concurrent components never stampede the resolver. |
+| The token nears expiry | The lease re-resolves under its own lock, so concurrent callers sharing that lease coalesce their refresh. Separate leases can resolve independently. |
 
 Which resolver runs depends on the host:
 
@@ -43,7 +41,8 @@ The rest of this page is about the last two rows.
 
 ### The portable deny floor
 
-`BaseConnectionResolverService.authorize_principal()` is the minimum every resolver enforces before it adds its own policy.
+`BaseConnectionResolverService.resolve()` enforces the deny floor and scope checks for every resolver; subclasses cannot override it.
+Implement `_get_access_policy()` to return ownership metadata without reading credentials, and `_resolve()` to fetch credentials after authorization succeeds.
 A credential owned by the environment or a secret store — `owner_kind="env"` — is usable **only** by a `headless_operator` principal.
 `lfx run` and `lfx serve` stamp that principal on the graph; an interactive actor, an anonymous public run, or an unknown principal is denied.
 That is what keeps a multi-tenant Langflow backend from serving a machine credential to whoever opens a flow.
@@ -65,7 +64,6 @@ The value is either a bare access token or a JSON object:
 {
   "access_token": "ya29.a0-example",
   "token_type": "Bearer",
-  "expires_at": "2026-09-05T18:30:00+00:00",
   "scopes": ["https://www.googleapis.com/auth/drive.readonly"],
   "account": {"id": "person@example.com", "display": "Work"}
 }
@@ -77,7 +75,9 @@ A headless runtime is given a short-lived token and nothing it could use to mint
 
 Prefer the JSON form when the injector knows the expiry and the granted scopes.
 LFX then fails with `auth-expired` or `scope-missing` before the outbound call instead of after the provider returns 401 or 403.
-A bare token asserts nothing, so `scopes_verified` is `false` and no scope check runs.
+A bare token asserts nothing, so `scopes_verified` is `false`; it is accepted only when the action requires no scopes.
+An action with `required_scopes`, including the sample below, rejects missing scope metadata with `scope-missing`.
+When known, supply the token's actual `expires_at` as an ISO-8601 string or Unix timestamp. The JSON builder below accepts a `datetime`; never copy a fixed expiry from documentation.
 
 ## Run a connection-backed flow with `lfx run`
 
@@ -89,7 +89,7 @@ Use it as the shape for your own actions: a component never reads a token out of
 Supply the credential in the environment and run it:
 
 ```bash
-export LF_CONNECTION__GOOGLE__WORK="ya29.a0-example"
+export LF_CONNECTION__GOOGLE__WORK='{"access_token":"ya29.a0-example","scopes":["https://www.googleapis.com/auth/drive.readonly"]}'
 uv run lfx run connection_action_component.py "describe my connection"
 ```
 
@@ -97,7 +97,8 @@ Resolution reads the exact key, then the `x-langflow-global-var-*` alias of that
 
 ### Missing connections
 
-`lfx run` validates connection references before it executes anything.
+With the built-in `EnvConnectionResolver`, `lfx run` validates connection references before execution by checking for injected values.
+It also rejects malformed handles. A custom resolver is responsible for its own credential lookup; pre-flight does not require environment keys for it.
 `--check-variables` is on by default; with `--no-check-variables` the flow starts and fails at the moment the component awaits its lease instead.
 
 ```
@@ -135,19 +136,19 @@ uv run lfx serve connection_action_component.py --no-env-fallback
 The v2 workflow router mounted at `/api/v2` and durable runs use the same request scope; they name the field `globals` rather than `global_vars`.
 
 :::important
-`lfx serve` has no connection pre-flight. A missing connection surfaces when the component awaits its lease, as HTTP 500 whose `result` is the sanitized `Connection ... could not be resolved` message. The run route does not return a machine-readable error code today, so branch on the message or resolve the connection before you call.
+`lfx serve` has no connection pre-flight. A missing connection surfaces when the component awaits its lease, as HTTP 500 whose `result` includes the sanitized `Connection ... could not be resolved` message. With `--no-env-fallback`, the remedy asks for request-scoped variables or the host's secret provider instead of an environment variable. The run route does not return a machine-readable integration error code today; embedding hosts can resolve the connection directly and catch typed errors before calling the route.
 :::
 
 ### watsonx Orchestrate and other tool runtimes
 
-The watsonx Orchestrate tool runtime (TRM) calls `POST /flows/{id}/run` with `global_vars`, and it can also send a `LANGFLOW_REQUEST_VARIABLES` key whose value is a *JSON-encoded string* holding an object of merged variables. A nested object sent in its place is not a string, so it is logged and dropped rather than resolved.
+The watsonx Orchestrate tool runtime (TRM) calls `POST /flows/{id}/run` with `global_vars`, and it can also send a `LANGFLOW_REQUEST_VARIABLES` key whose value is a *JSON-encoded string* holding an object of merged variables. A nested object sent in place of that string fails request validation. A string that decodes to a non-object is logged and ignored.
 Both channels feed the same request scope, and explicit keys beat keys carried inside the JSON blob.
 
 To satisfy a connection reference from watsonx Orchestrate, the connection variable must be named exactly `LF_CONNECTION__<PROVIDER>__<NAME>` — the same key `ConnectionRef.env_key()` derives — either as a `global_vars` key or as a key inside the object encoded in `LANGFLOW_REQUEST_VARIABLES`.
 See [Deploy flows on watsonx Orchestrate](/deployment-wxo) for the deploy-time half, where those variables are bound to the deployed tool.
 
 :::note
-`LANGFLOW_REQUEST_VARIABLES` is honored at resolution time but is **not** read by `lfx run`'s `--check-variables` pre-flight, which sees only exact and aliased environment keys. A credential carried only in that blob passes at runtime and fails the pre-flight, so use it as a serve/TRM channel.
+A process-environment `LANGFLOW_REQUEST_VARIABLES` blob is honored at resolution time but is **not** unpacked by `lfx run`'s `--check-variables` pre-flight. Use exact or aliased environment keys for the CLI. An embedding host can supply normalized `graph.context['request_variables']` or an active request scope, both of which pre-flight reads; serve/TRM flattens its blob into that scope.
 :::
 
 ## Implement a resolver without Langflow's database
@@ -157,7 +158,8 @@ Two samples follow. The first uses the built-in environment resolver, which is w
 <CodeBlock language="python" title="env_resolver_host.py">{sampleEnvResolverHost}</CodeBlock>
 
 The second replaces it with a secret store.
-Subclass `BaseConnectionResolverService`, apply the deny floor, reuse the wire format, and call `set_ready()` once your client is usable.
+Subclass `BaseConnectionResolverService`, implement `_get_access_policy()` and `_resolve()`, reuse the wire format, and call `set_ready()` once your client is usable.
+The base class authorizes the policy before `_resolve()` can fetch a secret and verifies required scopes after it returns, including provider-specific scope aliases.
 
 <CodeBlock language="python" title="secret_manager_resolver.py">{sampleSecretManagerResolver}</CodeBlock>
 
@@ -179,10 +181,11 @@ Resolution failures are sanitized `IntegrationError` subclasses. Their string fo
 | `connection-unresolved` | No credential was supplied for the handle. | Provision the key or the secret, then retry. |
 | `connection-not-authorized` | The execution principal may not use this connection. | Run the flow under a headless operator principal, or use an owned connection. |
 | `auth-expired` | The credential declares a past `expires_at`, or the provider rejected it. | Refresh the credential in the injecting system. |
-| `scope-missing` | The credential's declared `scopes` do not cover the action's `required_scopes`. | Re-grant with the missing scopes. |
+| `scope-missing` | Required scopes are unverified or the declared `scopes` do not cover them. | Supply verified scope metadata or re-grant with the missing scopes. |
 | `rate-limited` | The provider returned 429. | Retry after the provider's backoff. |
 | `provider-unavailable` | The provider failed or was unreachable. | Retry later. |
 | `action-unsupported` | The provider does not support the action. | Use a different action. |
+| `policy-blocked` | The deployment's integration policy blocks the provider or action. | Ask an administrator to approve the integration or action. |
 
 ## Declare connections in deployment artifacts
 
@@ -218,7 +221,8 @@ The version rises so an older reader refuses the artifact instead of deploying i
 This `schema_version` belongs to the project artifact manifest and is unrelated to the bundle capability manifest's `schema_version` described in [Extension manifests](./extensions-manifest).
 
 :::note
-`required_connections` is informational for deployment tooling today. Langflow Enterprise's `langflow-ctl` accepts `schema_version` 1 through 3 and reads only `required_variables`, and the control plane's variable-availability check knows nothing about connections. Provision `LF_CONNECTION__*` on the serving environment as part of your deploy, and treat the manifest as the list to provision from.
+Check that your deployment tooling explicitly supports schema version 4 before using an artifact with connections. Readers limited to versions 1 through 3 reject it; setting environment variables does not make that artifact compatible.
+For headless LFX, provision the listed `LF_CONNECTION__*` credentials through the request scope or the configured resolver. For Langflow Enterprise serving mode, provision database connections for the deployment owner and enable `allow_non_interactive`; its database resolver does not use these environment keys. See [Executing identity per entry point](../Develop/connection-oauth.mdx#executing-identity-per-entry-point-int-6).
 :::
 
 ## See also

@@ -50,7 +50,7 @@ def credential_json(
     access_token: str,
     *,
     expires_at: datetime | None = None,
-    scopes: Iterable[str] = (),
+    scopes: Iterable[str] | None = None,
     account_id: str | None = None,
 ) -> str:
     """Build the JSON wire value for one connection.
@@ -59,14 +59,15 @@ def credential_json(
     the account: LFX then fails with ``auth-expired`` before the call instead of
     after the provider rejects it, and with ``scope-missing`` when the action needs
     a scope the credential was not granted. A bare token string is the short form
-    of ``{"access_token": "..."}`` with nothing else asserted.
+    of ``{"access_token": "..."}`` with nothing else asserted, and cannot satisfy
+    an action that requires scopes. Pass ``scopes=[]`` only when the granted set
+    is known to be empty; ``None`` leaves it unverified.
     """
     payload: dict[str, Any] = {"access_token": access_token}
     if expires_at is not None:
         payload["expires_at"] = expires_at.astimezone(timezone.utc).isoformat()
-    scope_list = sorted(scopes)
-    if scope_list:
-        payload["scopes"] = scope_list
+    if scopes is not None:
+        payload["scopes"] = sorted(scopes)
     if account_id is not None:
         payload["account"] = {"id": account_id}
     # Deliberately absent: refresh_token, client_secret, password. Refresh is the
@@ -95,7 +96,7 @@ async def resolve_from_process_environment(
 
     Raises ``ConnectionUnresolvedError`` when the key is absent, ``AuthExpiredError``
     when the JSON form declares a past ``expires_at``, and ``ScopeMissingError`` when
-    it declares ``scopes`` that do not cover *required_scopes*.
+    scope metadata is absent or does not cover *required_scopes*.
     """
     return await EnvConnectionResolver().resolve(_request(handle, required_scopes))
 

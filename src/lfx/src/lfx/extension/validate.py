@@ -43,6 +43,7 @@ from lfx.extension.errors import (
     ExtensionError,
     ExtensionErrorCollection,
 )
+from lfx.extension.integration_compat import IntegrationVersionError, check_integration_runtime
 from lfx.extension.integration_manifest import resolve_integration_manifest
 from lfx.extension.manifest import (
     DEFERRED_FIELDS,
@@ -280,7 +281,18 @@ def _validate_manifest_phase(root: Path, report: ValidateReport) -> ManifestSour
         return None
 
     try:
+        check_integration_runtime(raw_data)
         manifest = ExtensionManifest.model_validate(raw_data)
+    except IntegrationVersionError as exc:
+        report.errors.add_error(
+            ExtensionError(
+                code="lfx-version-too-old",
+                message=str(exc),
+                location=str(source_path),
+                hint="Upgrade lfx; the integration reference does not need to be rewritten.",
+            )
+        )
+        return None
     except ValidationError as exc:
         summary, _ = _format_pydantic_error(exc)
         report.errors.add_error(

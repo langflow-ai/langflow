@@ -21,6 +21,7 @@ from lfx.integrations import (
     ConnectionRef,
     ConnectionResolutionRequest,
     ConnectionUnresolvedError,
+    ProviderUnavailableError,
     ScopeMissingError,
 )
 from lfx.services.authorization.base import ExecutionPrincipal
@@ -125,6 +126,19 @@ def test_env_sample_credential_json_never_carries_long_lived_secrets(env_sample)
     assert "refresh_token" not in payload
 
 
+@pytest.mark.parametrize("scopes", [None, []])
+async def test_env_sample_distinguishes_unknown_and_empty_scopes(env_sample, variable_service, scopes) -> None:
+    _ = variable_service
+    raw = env_sample.credential_json("token", scopes=scopes)
+    credential = await env_sample.resolve_with_request_scope(HANDLE, {env_sample.env_key_for(HANDLE): raw})
+
+    assert credential.scopes_verified is (scopes is not None)
+    with pytest.raises(ScopeMissingError):
+        await env_sample.resolve_with_request_scope(
+            HANDLE, {env_sample.env_key_for(HANDLE): raw}, required_scopes=[DRIVE_SCOPE]
+        )
+
+
 async def test_env_sample_missing_connection_fails_before_the_provider_call(
     env_sample,
     variable_service: VariableService,
@@ -216,8 +230,11 @@ async def test_secret_manager_sample_rejects_a_refresh_token_payload(secret_samp
     payload = json.dumps({"access_token": "token", "refresh_token": "must-not-enter-runtime"})
     resolver = _mounted_resolver(secret_sample, tmp_path, payload=payload)
 
-    with pytest.raises(ValueError, match="refresh_token"):
+    with pytest.raises(ConnectionUnresolvedError) as excinfo:
         await resolver.resolve(_request())
+    assert excinfo.value.reason == "long-lived-secret"
+    assert "must-not-enter-runtime" not in str(excinfo.value)
+    assert excinfo.value.__context__ is None
 
 
 async def test_secret_manager_sample_expired_and_scope_missing_are_typed(secret_sample, tmp_path) -> None:
@@ -240,8 +257,14 @@ async def test_secret_manager_sample_expired_and_scope_missing_are_typed(secret_
     assert excinfo.value.missing == frozenset({DRIVE_SCOPE})
 
 
-async def test_secret_manager_sample_denies_non_headless_principals(secret_sample, tmp_path) -> None:
-    resolver = _mounted_resolver(secret_sample, tmp_path)
+async def test_secret_manager_sample_denies_non_headless_principals_before_fetch(secret_sample) -> None:
+    calls = []
+
+    def fetch_secret(name):
+        calls.append(name)
+        return "must-not-read"
+
+    resolver = secret_sample.SecretManagerConnectionResolver(fetch_secret=fetch_secret)
 
     for principal in (
         ExecutionPrincipal(kind="actor", user_id="user-1", interactive=True),
@@ -250,6 +273,39 @@ async def test_secret_manager_sample_denies_non_headless_principals(secret_sampl
     ):
         with pytest.raises(ConnectionNotAuthorizedError):
             await resolver.resolve(_request(principal=principal))
+    assert calls == []
+
+
+async def test_secret_manager_sample_rejects_unverified_required_scopes(secret_sample, tmp_path) -> None:
+    resolver = _mounted_resolver(secret_sample, tmp_path)
+
+    with pytest.raises(ScopeMissingError) as excinfo:
+        await resolver.resolve(_request(scopes=frozenset({DRIVE_SCOPE})))
+    assert excinfo.value.details["scopes_verified"] is False
+
+
+async def test_secret_manager_sample_accepts_provider_scope_aliases(secret_sample, tmp_path) -> None:
+    payload = json.dumps({"access_token": "token", "scopes": ["drive.readonly"]})
+    resolver = _mounted_resolver(secret_sample, tmp_path, payload=payload)
+
+    credential = await resolver.resolve(_request(scopes=frozenset({DRIVE_SCOPE})))
+
+    assert credential.scopes_verified is True
+
+
+async def test_secret_manager_sample_sanitizes_store_failures(secret_sample) -> None:
+    import traceback
+
+    def failing_client(_name):
+        msg = "store rejected credential must-not-leak"
+        raise OSError(msg)
+
+    resolver = secret_sample.SecretManagerConnectionResolver(fetch_secret=failing_client)
+    with pytest.raises(ProviderUnavailableError) as excinfo:
+        await resolver.resolve(_request())
+
+    assert excinfo.value.__context__ is None
+    assert "must-not-leak" not in "".join(traceback.format_exception(excinfo.value))
 
 
 def test_secret_manager_sample_refuses_a_path_that_escapes_the_secrets_directory(secret_sample, tmp_path) -> None:
@@ -338,6 +394,7 @@ def _serve_request_bodies(tmp_path) -> list[dict]:
             "FLOW_ID": "00000000-0000-0000-0000-0000000013a1",
             "LANGFLOW_API_KEY": "int13-test-api-key",  # pragma: allowlist secret
             "GOOGLE_ACCESS_TOKEN": served_credential,
+            "GOOGLE_TOKEN_TTL_SECONDS": "3600",
         }
     )
     result = subprocess.run(  # noqa: S603
@@ -352,22 +409,26 @@ def _serve_request_bodies(tmp_path) -> list[dict]:
 @requires_shell_tools
 async def test_serve_request_sample_sends_credentials_that_actually_resolve(env_sample, tmp_path) -> None:
     """The documented curl bodies resolve; the sample is executed, not just displayed."""
-    bare, structured = _serve_request_bodies(tmp_path)
+    from lfx.cli.runtime_variables import build_request_variables_from_global_vars
 
-    assert bare["global_vars"] == {"LF_CONNECTION__GOOGLE__WORK": "served-token"}
-    credential = await env_sample.resolve_with_request_scope(HANDLE, bare["global_vars"])
+    direct, structured = _serve_request_bodies(tmp_path)
+
+    credential = await env_sample.resolve_with_request_scope(
+        HANDLE, direct["global_vars"], required_scopes=[DRIVE_SCOPE]
+    )
     assert credential.access_token.get_secret_value() == "served-token"
 
     # The JSON body is a JSON-encoded string, not a nested object: runtime_variables
     # json.loads() the value and drops anything that is not a string.
-    raw = structured["global_vars"]["LF_CONNECTION__GOOGLE__WORK"]
+    request_variables = build_request_variables_from_global_vars(structured["global_vars"])
+    raw = request_variables["LF_CONNECTION__GOOGLE__WORK"]
     assert isinstance(raw, str)
     payload = json.loads(raw)
     assert set(payload) <= {"access_token", "token_type", "expires_at", "scopes", "account"}
 
     credential = await env_sample.resolve_with_request_scope(
         HANDLE,
-        structured["global_vars"],
+        request_variables,
         required_scopes=[DRIVE_SCOPE],
     )
     assert credential.scopes_verified is True

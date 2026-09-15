@@ -133,6 +133,14 @@ API creates metadata first; use `executing_identity.identity: "user_delegated"` 
 Google, Microsoft, and Slack user connections, or `"bot"` for Slack bot connections.
 Instance-owned connections require a superuser. Tokens are not part of these requests.
 
+Bot identity and connection ownership are independent. A regular user can create a
+user-owned Slack bot connection and authorize an operator-configured `profile: "bot"`
+registration, subject to connection permissions and Slack's installation/consent policy.
+The identity match prevents a user-token registration from populating a bot connection
+and vice versa; it is not an operator-only gate. Creating and changing an instance-owned
+connection remains superuser-only. Configuring registrations and their scope ceilings
+requires access to instance configuration.
+
 From an authenticated browser API client, start consent:
 
 ```http
@@ -153,6 +161,13 @@ Verify the connection's metadata and scopes using `GET /api/v1/connections`, the
 access is denied under your authorization policy. Set `allow_non_interactive` explicitly
 when this connection may be used by background or serving workers.
 
+`allow_non_interactive` is a connection-level permission and survives reauthorization,
+including reconnecting after an expired or revoked grant. Reconnecting preserves both
+enabled and disabled settings; it does not grant unattended access. To withdraw that
+permission, use `PATCH /api/v1/connections/CONNECTION_ID` with
+`{"allow_non_interactive":false}`. Revocation still blocks all credential use until a
+new authorization succeeds.
+
 Refresh happens within the executing worker. Database transaction locks serialize refresh,
 consent completion, health checks, revoke, and delete. No token is placed in a job payload.
 When a provider rejects a cached token, the worker supplies only its digest to coordinate
@@ -170,6 +185,58 @@ The backend removes callback query strings from its access-log request scope. Co
 reverse proxies and external request tracing to omit callback query strings as well, because
 those systems observe requests before Langflow does. Avoid capturing browser callback URLs
 in screenshots or support logs.
+
+## Executing identity per entry point (INT-6)
+
+A connection resolves under the identity of the run that needs it, not under whoever happens to be
+authenticated. Every Langflow entry point stamps that identity on the graph before it executes, and the
+resolver enforces the rule below. A graph that reaches a component without one resolves nothing, so a
+misconfigured or unrecognized path fails closed rather than borrowing someone else's credential.
+
+| Entry point | Runs as | Which connection it may use |
+|---|---|---|
+| Playground and canvas builds, `POST /api/v1/run`, the OpenAI-compatible Responses API, voice, `POST /api/v2/workflows` | the authenticated caller | that caller's own connection, or one explicitly shared with them |
+| `POST /api/v1/webhook/FLOW_ID` | the published flow's owner | the owner's connection, and only when `allow_non_interactive` is set on it |
+| Deployments on the serving plane | the deployment owner | the owner's connection, and only when `allow_non_interactive` is set on it |
+| A resumed background or human-in-the-loop run | the owner of the job that started it | that owner's connection with `allow_non_interactive` set; the identity is recomputed on the worker and is never read back from the checkpoint |
+| MCP (legacy transport and MCP projects) | the transport's authenticated user | that user's own connection only — a shared connection is not used, because a shared flow is not admitted through MCP either |
+| Shareable-playground links, the public workflow endpoint, and A2A | an isolated anonymous principal | none: no user connection and no instance connection, whatever the flow references |
+
+Two rules are worth stating plainly, because they change what a working flow does when it is published:
+
+- **Owner-based non-interactive execution needs an explicit opt-in.** Webhooks, deployments, and resumed
+  background or human-in-the-loop jobs require the connection's owner to set `allow_non_interactive`.
+  This applies even when the caller and owner are the same person. It describes the execution identity,
+  not whether someone is at a keyboard: an API-key call to `POST /api/v1/run` uses the authenticated
+  caller's own or explicitly shared connection and does not require this opt-in, even when invoked by cron.
+- **Publishing a flow does not publish its credentials.** Making a flow public, or exposing it over A2A,
+  means the run resolves no connection at all. For a public link or an unauthenticated A2A agent
+  (`auth_type=none`) that is the anonymous principal doing what it must. An A2A agent protected with an API
+  key or OAuth is held to the same floor in 1.13: A2A admission is not a route through which one account's
+  credential is used on another's behalf, so an agent that needs a connection should be reached through a
+  flow run instead. Use an authenticated run route with an owned, explicitly shared, or policy-authorized
+  instance connection; an instance connection does not bypass the public or A2A restriction.
+
+An instance-owned connection resolves for any authenticated principal in the deployment. Provisioning one
+is therefore a deployment-wide grant of that provider account; see
+`design/dedicated-integrations/decisions/instance-connection-referenceability.md`.
+
+### Errors a caller sees
+
+When resolution fails, the response carries a machine-readable `error_code` (`connection-unresolved`,
+`connection-not-authorized`, `auth-expired`, `scope-missing`, `rate-limited`, `provider-unavailable`,
+`action-unsupported`) together with `hint`, `provider`, `retryable`, and `retry_after` where it applies, and
+the HTTP status the provider situation warrants (403 for an unauthorized connection, 401 for expired
+credentials, 429 for a rate limit). The error's own sentence, which names the connection handle, is returned
+only to the flow's owner; delegated and anonymous callers get a generic message alongside the same code, so
+a client can still show the right call to action without learning which account the owner connected.
+
+For `connection-not-authorized`, the hint distinguishes a missing `allow_non_interactive` opt-in from a
+public/A2A execution or an execution whose identity was not supplied by the host. Owner diagnostics also
+include `details.reason` (`non-interactive-opt-in-required`, `anonymous-principal`, or `unknown-principal`).
+The opt-in hint asks the connection owner to enable the setting and retry; it contains no connection name,
+owner ID, or credential, so delegated callers can pass the remedy along safely. A caller without ownership
+or an explicit share receives no information about another user's connection or its opt-in setting.
 
 ## Headless connection resolution
 

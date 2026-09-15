@@ -339,10 +339,67 @@ describe("useCreateMemoryModal", () => {
         name: "My Memory",
         flow_id: "flow-1",
         embedding_model: "text-embedding-3-small",
+        // Sent explicitly so the server never has to guess the provider from
+        // the model name (that guess mislabels live-discovered models).
+        embedding_provider: "OpenAI",
         preproc_model: "gpt-4o-mini",
         preproc_instructions: "summarize",
         preprocessing: true,
         threshold: 5,
+      }),
+    );
+  });
+
+  it("forwards a non-OpenAI embedding provider verbatim", () => {
+    // Regression: an OpenAI-Compatible model is discovered per-user, so the
+    // server's name-based inference defaults it to OpenAI and then demands an
+    // OpenAI API key. The selected provider must travel with the model name.
+    mockModelProvidersResult = {
+      ...mockModelProvidersResult,
+      data: [
+        {
+          provider: "OpenAI Compatible",
+          is_enabled: true,
+          icon: "Bot",
+          models: [
+            {
+              model_name: "mock-embed-1",
+              metadata: { model_type: "embeddings" },
+            },
+          ],
+        },
+      ],
+    };
+    mockEnabledModelsResult = {
+      ...mockEnabledModelsResult,
+      data: {
+        enabled_models: { "OpenAI Compatible": { "mock-embed-1": true } },
+      },
+    };
+
+    const { result } = renderHook(() =>
+      useCreateMemoryModal({ flowId: "flow-1", onClose: jest.fn() }),
+    );
+
+    act(() => {
+      result.current.setName("My Memory");
+      result.current.setSelectedEmbeddingModel([
+        {
+          id: "mock-embed-1",
+          name: "mock-embed-1",
+          provider: "OpenAI Compatible",
+        } as ModelOption,
+      ]);
+    });
+
+    act(() => {
+      result.current.handleSubmit();
+    });
+
+    expect(mockMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        embedding_model: "mock-embed-1",
+        embedding_provider: "OpenAI Compatible",
       }),
     );
   });

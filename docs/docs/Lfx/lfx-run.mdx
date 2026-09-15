@@ -132,16 +132,17 @@ For more examples, see the [Complete Agent Example on PyPI](https://pypi.org/pro
 ## Run a flow that uses a connection
 
 A flow can store a connection reference, such as `google/work`, instead of a credential.
-`lfx run` resolves it from the environment, under the key `LF_CONNECTION__<PROVIDER>__<NAME>`:
+With the default resolver, `lfx run` resolves it from the environment under the key `LF_CONNECTION__<PROVIDER>__<NAME>`.
+For actions that require scopes, include the scopes actually granted to the token:
 
 ```bash
-export LF_CONNECTION__GOOGLE__WORK="ya29.a0-example"
+export LF_CONNECTION__GOOGLE__WORK='{"access_token":"ya29.a0-example","scopes":["https://www.googleapis.com/auth/drive.readonly"]}'
 uv run lfx run connection_flow.json "describe my connection"
 ```
 
 ### Missing connections
 
-With the default `--check-variables`, `lfx run` validates every connection reference before it executes anything, and aborts when one cannot be resolved:
+With the default `--check-variables`, `lfx run` rejects malformed references and checks for injected values when using the built-in environment resolver. A missing value aborts execution:
 
 ```
 Connection 'google/work' could not be resolved. Set LF_CONNECTION__GOOGLE__WORK to a token or credential JSON object.
@@ -149,6 +150,7 @@ Connection 'google/work' could not be resolved. Set LF_CONNECTION__GOOGLE__WORK 
 
 The message names the key and the expected wire format, never a value.
 With `--no-check-variables` the flow starts and fails at the point the component asks for the credential instead.
+Custom resolvers perform their own lookup and do not require environment keys during pre-flight. Credential expiry and scope checks occur when the lease is resolved.
 
 For the credential wire format, the JSON form that carries expiry and scopes, and how to implement a resolver backed by a secret manager, see [Resolve connections in headless LFX](./lfx-connections).
 

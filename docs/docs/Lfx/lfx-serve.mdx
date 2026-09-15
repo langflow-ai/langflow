@@ -158,7 +158,7 @@ curl -X POST http://localhost:8000/flows/$FLOW_ID/run \
   -H "x-api-key: $LANGFLOW_API_KEY" \
   -d '{
         "input_value": "Hello, world!",
-        "global_vars": {"LF_CONNECTION__GOOGLE__WORK": "ya29.a0-example"}
+        "global_vars": {"LF_CONNECTION__GOOGLE__WORK": "{\"access_token\":\"ya29.a0-example\",\"scopes\":[\"https://www.googleapis.com/auth/drive.readonly\"]}"}
       }'
 ```
 

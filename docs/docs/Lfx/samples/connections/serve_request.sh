@@ -10,17 +10,24 @@ set -euo pipefail
 : "${FLOW_ID:?set FLOW_ID to the id printed by lfx serve}"
 : "${LANGFLOW_API_KEY:?set LANGFLOW_API_KEY}"
 : "${GOOGLE_ACCESS_TOKEN:?set GOOGLE_ACCESS_TOKEN to a short-lived access token}"
+: "${GOOGLE_TOKEN_TTL_SECONDS:?set GOOGLE_TOKEN_TTL_SECONDS to the actual remaining token lifetime}"
 
-# Bare token: nothing is asserted about expiry or scopes.
+# The sample action requires Drive read-only scope. Assert only scopes actually
+# granted by the issuer; a bare token fails this action with scope-missing.
 curl -sS -X POST "http://localhost:8000/flows/${FLOW_ID}/run" \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${LANGFLOW_API_KEY}" \
   -d "$(jq -n --arg token "${GOOGLE_ACCESS_TOKEN}" '{
         input_value: "describe my connection",
-        global_vars: {"LF_CONNECTION__GOOGLE__WORK": $token}
+        global_vars: {
+          "LF_CONNECTION__GOOGLE__WORK": ({
+            access_token: $token,
+            scopes: ["https://www.googleapis.com/auth/drive.readonly"]
+          } | tostring)
+        }
       }')"
 
-# JSON credential: expiry and granted scopes are checked before the provider call,
+# The TRM blob channel: expiry and scopes are checked before the provider call,
 # so the run fails with auth-expired or scope-missing instead of a provider 401/403.
 #
 # expires_at is the expiry the injecting system holds for this token, so it is
@@ -30,15 +37,15 @@ curl -sS -X POST "http://localhost:8000/flows/${FLOW_ID}/run" \
   -H "Content-Type: application/json" \
   -H "x-api-key: ${LANGFLOW_API_KEY}" \
   -d "$(jq -n --arg token "${GOOGLE_ACCESS_TOKEN}" \
-          --argjson ttl "${GOOGLE_TOKEN_TTL_SECONDS:-3600}" '{
+          --argjson ttl "${GOOGLE_TOKEN_TTL_SECONDS}" '{
         input_value: "describe my connection",
         global_vars: {
-          "LF_CONNECTION__GOOGLE__WORK": ({
+          "LANGFLOW_REQUEST_VARIABLES": ({"LF_CONNECTION__GOOGLE__WORK": ({
             access_token: $token,
             token_type: "Bearer",
             expires_at: (now + $ttl | todate),
             scopes: ["https://www.googleapis.com/auth/drive.readonly"],
             account: {id: "person@example.com"}
-          } | tostring)
+          } | tostring)} | tostring)
         }
       }')"

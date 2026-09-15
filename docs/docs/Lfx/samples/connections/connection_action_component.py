@@ -7,7 +7,7 @@ token out of a flow field, never logs one, and never returns one.
 
 Run it with the flow built by :func:`build_graph`:
 
-    export LF_CONNECTION__GOOGLE__WORK='ya29.a0-example-access-token'
+    export LF_CONNECTION__GOOGLE__WORK='{"access_token":"example","scopes":["https://www.googleapis.com/auth/drive.readonly"]}'
     uv run lfx run connection_action_component.py "describe my connection"
 
 Serve it and inject the credential per request instead:

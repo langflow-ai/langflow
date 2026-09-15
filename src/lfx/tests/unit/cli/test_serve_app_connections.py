@@ -18,7 +18,9 @@ import pytest
 from fastapi.testclient import TestClient
 from lfx.cli.serve_app import FlowMeta, FlowRegistry, create_multi_serve_app
 
-from tests.unit.services.connection.sample_loader import load_connection_sample
+from tests.unit.services.connection.sample_loader import load_connection_sample, requires_samples
+
+pytestmark = requires_samples
 
 if TYPE_CHECKING:
     from lfx.graph.graph.base import Graph
@@ -91,7 +93,9 @@ def test_run_without_connection_reports_the_sanitized_unresolved_error(serve_cli
     assert status == 500
     assert payload["success"] is False
     assert "google/work" in payload["result"]
-    assert ENV_KEY in payload["result"]
+    assert "request-scoped variables" in payload["result"]
+    assert "environment fallback is disabled" in payload["result"]
+    assert "error_code" not in payload
 
 
 def test_environment_credential_is_ignored_under_no_env_fallback(
@@ -103,15 +107,43 @@ def test_environment_credential_is_ignored_under_no_env_fallback(
     status, payload = _run(serve_client)
 
     assert status == 500
-    assert ENV_KEY in payload["result"]
+    assert "environment fallback is disabled" in payload["result"]
     assert "ambient-token-must-not-win" not in json.dumps(payload)
 
 
 def test_request_scope_does_not_leak_into_the_next_request(serve_client: TestClient) -> None:
-    first_status, _ = _run(serve_client, global_vars={ENV_KEY: "first-request-token"})
-    assert first_status == 200
+    credential = json.dumps(
+        {"access_token": "first-request-token", "scopes": ["https://www.googleapis.com/auth/drive.readonly"]}
+    )
+    first_status, payload = _run(serve_client, global_vars={ENV_KEY: credential})
+    assert first_status == 200, payload
 
     second_status, payload = _run(serve_client)
 
     assert second_status == 500
     assert "first-request-token" not in json.dumps(payload)
+
+
+def test_bare_token_cannot_satisfy_the_sample_actions_required_scope(serve_client: TestClient) -> None:
+    status, payload = _run(serve_client, global_vars={ENV_KEY: "unverified-token"})
+
+    assert status == 500
+    assert "requires verified scope metadata" in payload["result"]
+    assert "unverified-token" not in json.dumps(payload)
+
+
+def test_trm_blob_resolves_the_sample_connection(serve_client: TestClient) -> None:
+    credential = json.dumps(
+        {"access_token": "blob-token", "scopes": ["https://www.googleapis.com/auth/drive.readonly"]}
+    )
+    status, payload = _run(serve_client, global_vars={"LANGFLOW_REQUEST_VARIABLES": json.dumps({ENV_KEY: credential})})
+
+    assert status == 200, payload
+    assert "scopes_verified=True" in payload["result"]
+    assert "blob-token" not in json.dumps(payload)
+
+
+def test_trm_blob_must_be_a_json_encoded_string(serve_client: TestClient) -> None:
+    status, _ = _run(serve_client, global_vars={"LANGFLOW_REQUEST_VARIABLES": {ENV_KEY: "nested-token"}})
+
+    assert status == 422

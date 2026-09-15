@@ -26,9 +26,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from lfx.integrations import ConnectionUnresolvedError, ScopeMissingError
+from lfx.integrations import ConnectionUnresolvedError, ProviderUnavailableError
 from lfx.integrations.errors import AuthExpiredError
-from lfx.services.connection.base import BaseConnectionResolverService
+from lfx.services.connection.base import BaseConnectionResolverService, ConnectionAccessPolicy
 
 # _parse_wire_value is internal to LFX today. Reusing it keeps this sample on the
 # one wire format LFX validates — bare token or a JSON object whose only allowed
@@ -54,7 +54,7 @@ class SecretManagerConnectionResolver(BaseConnectionResolverService):
 
     #: Secret name built from the connection handle. Handles are validated by
     #: ``ConnectionRef`` (``provider`` is ``[a-z0-9][a-z0-9._-]*``, ``name`` is
-    #: ``[a-z0-9_]+``), so no separator in this template can be smuggled through.
+    #: ``[a-z0-9]+(?:_[a-z0-9]+)*``), so no path separator can be smuggled through.
     secret_name_template = "langflow/connections/{provider}/{name}"  # noqa: S105 - a store key, not a secret
 
     def __init__(self, fetch_secret: SecretFetcher | None = None) -> None:
@@ -76,22 +76,26 @@ class SecretManagerConnectionResolver(BaseConnectionResolverService):
             raise NotImplementedError(msg)
         return self._fetch_secret(secret_name)
 
-    async def resolve(self, request: ConnectionResolutionRequest) -> ResolvedCredential:
-        """Resolve a handle into a short-lived credential."""
-        # The portable deny floor first: an environment/secret-store-owned
-        # credential is usable only by a headless operator principal, never by an
-        # interactive actor, an anonymous public run, or an unknown principal.
-        denial = self.authorize_principal(
-            request,
-            connection_owner_id=None,
-            owner_kind="env",
-            allow_non_interactive=True,
-        )
-        if denial is not None:
-            raise denial
+    async def _get_access_policy(self, request: ConnectionResolutionRequest) -> ConnectionAccessPolicy:
+        """Describe ownership without reading a secret; the base class authorizes it."""
+        _ = request
+        return ConnectionAccessPolicy(owner_kind="env", allow_non_interactive=True)
 
+    async def _resolve(
+        self, request: ConnectionResolutionRequest, policy: ConnectionAccessPolicy
+    ) -> ResolvedCredential:
+        """Read the credential only after the base class authorizes the request."""
+        _ = policy
         secret_name = self.secret_name(request.ref)
-        raw = await asyncio.to_thread(self.fetch_secret, secret_name)
+        try:
+            raw = await asyncio.to_thread(self.fetch_secret, secret_name)
+        except Exception:  # noqa: BLE001 - vendor exceptions can contain credentials
+            failed = True
+        else:
+            failed = False
+        if failed:
+            # Outside the handler: even __context__ must not retain store errors.
+            raise ProviderUnavailableError(provider=request.ref.provider)
         if not raw:
             # No secret name and no store detail in the error: the message reaches
             # clients and telemetry. env_key is None because this host does not
@@ -101,10 +105,8 @@ class SecretManagerConnectionResolver(BaseConnectionResolverService):
         credential = _parse_wire_value(raw, request)
         if credential.expires_at is not None and credential.expires_at <= datetime.now(timezone.utc):
             raise AuthExpiredError(provider=request.ref.provider)
-        if credential.scopes_verified:
-            missing = request.required_scopes - credential.granted_scopes
-            if missing:
-                raise ScopeMissingError(frozenset(missing), provider=request.ref.provider)
+        # The base class checks verified scope metadata and provider-specific
+        # scope aliases after this hook returns.
         return credential
 
 
