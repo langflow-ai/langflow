@@ -517,14 +517,29 @@ async def read_project_flow_outputs(
         act=FlowAction.READ,
     )
     candidates = []
+    from lfx.projects.dependencies import binding_dependencies
+
+    from langflow.services.database.models.folder.flow_bindings import flow_definitions, resolve_binding_flows
+
     for flow in flows:
         try:
             outputs = binding_outputs(field_name, flow.data or {})
+            if not outputs:
+                continue
             revision = flow_revision(flow.data or {})
-        except (ValueError, TypeError, KeyError):
+            sources = await resolve_binding_flows(session, current_user, flow)
+            dependencies = binding_dependencies(str(flow.id), flow_definitions(sources.values()))
+        except (ValueError, TypeError, KeyError, HTTPException):
             continue
         candidates.extend(
-            {"flow_id": str(flow.id), "flow_name": flow.name, "revision": revision, **output} for output in outputs
+            {
+                "flow_id": str(flow.id),
+                "flow_name": flow.name,
+                "revision": revision,
+                **({"dependencies": [item.model_dump() for item in dependencies]} if dependencies else {}),
+                **output,
+            }
+            for output in outputs
         )
     return sorted(
         candidates, key=lambda candidate: (candidate["flow_name"], candidate["node_id"], candidate["output_name"])

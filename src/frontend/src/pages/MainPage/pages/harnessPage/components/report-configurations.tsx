@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import type { AgentConfiguration } from "@/controllers/API/queries/folders/use-project-reports";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { FlowBindingDependencies } from "./flow-binding-dependencies";
 
 const bindingLabels: Record<string, string> = {
   system_prompt: "harness.instructionsContract",
@@ -133,6 +134,10 @@ export function ReportConfigurations({
                           <JsonRecord
                             title={t(bindingLabels[field] ?? field)}
                             value={binding}
+                          />
+                          <FlowBindingDependencies
+                            dependencies={binding.dependencies}
+                            onOpen={onOpen}
                           />
                           <Button
                             size="sm"

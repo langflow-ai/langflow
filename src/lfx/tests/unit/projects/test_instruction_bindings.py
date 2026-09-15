@@ -7,12 +7,32 @@ from lfx.components.models_and_agents.system_prompt_builder import SystemPromptB
 from lfx.graph.flow_builder import add_connection
 from lfx.projects.bindings import (
     BINDING_ORIGIN,
+    BoundFlowDependency,
     FlowBinding,
     compose_instructions,
     flow_revision,
     instruction_outputs,
     reject_recursive_binding,
 )
+
+
+@pytest.mark.parametrize("mode", ["python", "json"])
+def test_flat_bindings_keep_their_archived_shape_while_nested_versions_round_trip(mode):
+    original = {
+        "flow_id": "source",
+        "node_id": "instructions",
+        "output_name": "instructions",
+        "revision": "reviewed",
+        "version_id": "source-version",
+    }
+    binding = FlowBinding.model_validate(original)
+    assert binding.model_dump(mode=mode) == original
+    binding.dependencies = [
+        BoundFlowDependency(flow_id="child", name="Rules", revision="child-revision", version_id="child-version")
+    ]
+    restored = FlowBinding.model_validate_json(binding.model_dump_json())
+    assert restored == binding
+    assert restored.model_dump(mode=mode)["dependencies"][0]["version_id"] == "child-version"
 
 
 def source_data():
