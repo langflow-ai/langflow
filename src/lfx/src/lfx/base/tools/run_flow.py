@@ -758,9 +758,19 @@ class RunFlowBaseComponent(Component):
         return self._extract_ioputs_from_keyed_values(combined_values)
 
     def _get_selected_flow_updated_at(self) -> str | None:
+        # `_vertex` is always set, to None, by CustomComponent.__init__, so the
+        # `{}` default that used to stand here could never apply -- and a dict
+        # has no `.data` either, so it would have raised the same
+        # AttributeError if it somehow had. A component that is not attached to
+        # a vertex therefore died on this line, which is the first thing
+        # `_pre_run_setup` does and `_build_results` does before anything else,
+        # and the stored-timestamp fallback below was unreachable for exactly
+        # the case it exists for. Every other `_vertex` read in this codebase
+        # goes through `getattr(self, "_vertex", None)`.
+        vertex = getattr(self, "_vertex", None)
+        vertex_data = vertex.data if vertex is not None else {}
         updated_at = (
-            getattr(self, "_vertex", {})
-            .data.get("node", {})
+            vertex_data.get("node", {})
             .get("template", {})
             .get("flow_name_selected", {})
             .get("selected_metadata", {})
