@@ -296,7 +296,7 @@ class OpenSearchVectorStoreComponent(LCVectorStoreComponent):
                         "type": "knn_vector",
                         "dimension": dim,
                         "method": {
-                            "name": "disk_ann",
+                            "name": "disk_ann" if engine == "jvector" else "hnsw",
                             "space_type": space_type,
                             "engine": engine,
                             "parameters": {"ef_construction": ef_construction, "m": m},

@@ -1,6 +1,7 @@
 """JWT authentication regressions shared by both OpenSearch components."""
 
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -72,3 +73,39 @@ def test_jwt_auth_header(
 
     expected = f"Bearer {_TEST_JWT}" if bearer_prefix else _TEST_JWT
     assert component._build_auth_kwargs() == {"headers": {"Authorization": expected}}
+
+
+@pytest.mark.parametrize("engine", ["jvector", "nmslib", "faiss", "lucene"])
+@pytest.mark.parametrize("component_class", _COMPONENT_CLASSES)
+def test_opensearch_mapping_uses_method_supported_by_engine(component_class, engine):
+    component = component_class()
+    mapping = component._default_text_mapping(dim=3, engine=engine)
+    method = mapping["mappings"]["properties"]["vector_field"]["method"]
+
+    assert method["engine"] == engine
+    assert method["name"] == ("disk_ann" if engine == "jvector" else "hnsw")
+
+
+@pytest.mark.parametrize("engine", ["jvector", "nmslib", "faiss", "lucene"])
+def test_multimodal_dynamic_mapping_uses_method_supported_by_engine(engine):
+    component = OpenSearchVectorStoreComponentMultimodalMultiEmbedding()
+    client = MagicMock()
+    client.indices.get_mapping.side_effect = [
+        {component.index_name: {"mappings": {"properties": {}}}},
+        {component.index_name: {"mappings": {"properties": {"embedding": {"type": "knn_vector", "dimension": 3}}}}},
+    ]
+
+    component._ensure_embedding_field_mapping(
+        client=client,
+        index_name=component.index_name,
+        field_name="embedding",
+        dim=3,
+        engine=engine,
+        space_type="l2",
+        ef_construction=100,
+        m=16,
+    )
+
+    method = client.indices.put_mapping.call_args.kwargs["body"]["properties"]["embedding"]["method"]
+    assert method["engine"] == engine
+    assert method["name"] == ("disk_ann" if engine == "jvector" else "hnsw")
