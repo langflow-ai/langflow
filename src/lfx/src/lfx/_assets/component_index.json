@@ -4196,6 +4196,197 @@
           },
           "tool_mode": false
         },
+        "RecordSource": {
+          "base_classes": [
+            "JSON"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Keep retrieved text with a stable citation ID. Connect the original source content before summarizing.",
+          "display_name": "Record Source",
+          "documentation": "",
+          "edited": false,
+          "field_order": [
+            "uri",
+            "title",
+            "content",
+            "available",
+            "unavailable_reason"
+          ],
+          "frozen": false,
+          "icon": "BookOpenCheck",
+          "is_output": true,
+          "legacy": false,
+          "metadata": {
+            "code_hash": "9e9eaf607c9f",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 1
+            },
+            "module": "lfx.components.data_source.record_source.RecordSourceComponent"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Source Evidence",
+              "group_outputs": false,
+              "method": "record_source",
+              "name": "source",
+              "selected": "JSON",
+              "tool_mode": true,
+              "types": [
+                "JSON"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "available": {
+              "_input_type": "BoolInput",
+              "advanced": true,
+              "api_editable": false,
+              "display_name": "Evidence Available",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "available",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "bool",
+              "value": true
+            },
+            "code": {
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "from lfx.custom import Component\nfrom lfx.io import BoolInput, MessageTextInput, Output, StrInput\nfrom lfx.projects.artifacts import SourceRecord\nfrom lfx.schema.data import Data\n\n\nclass RecordSourceComponent(Component):\n    display_name = \"Record Source\"\n    description = (\n        \"Keep retrieved text with a stable citation ID. Connect the original source content before summarizing.\"\n    )\n    icon = \"BookOpenCheck\"\n    name = \"RecordSource\"\n\n    inputs = [\n        StrInput(name=\"uri\", display_name=\"Source Location\", required=True),\n        StrInput(name=\"title\", display_name=\"Source Title\", required=True),\n        MessageTextInput(name=\"content\", display_name=\"Retrieved Text\", value=\"\"),\n        BoolInput(name=\"available\", display_name=\"Evidence Available\", value=True, advanced=True),\n        StrInput(name=\"unavailable_reason\", display_name=\"Unavailable Reason\", value=\"\", advanced=True),\n    ]\n    outputs = [Output(name=\"source\", display_name=\"Source Evidence\", method=\"record_source\")]\n\n    def __init__(self, **kwargs):\n        super().__init__(**kwargs)\n        self.is_output = True\n\n    def record_source(self) -> Data:\n        source = SourceRecord(\n            uri=self.uri,\n            title=self.title,\n            content=self.content,\n            availability=\"available\" if self.available else \"unavailable\",\n            unavailable_reason=self.unavailable_reason,\n        )\n        result = Data(\n            data={\n                \"source\": source.model_dump(mode=\"json\"),\n                \"text\": (\n                    f\"Citation: [@{source.id}]\\nTitle: {source.title}\\nSource: {source.uri}\\n\\n\"\n                    + (source.content if self.available else f\"Evidence unavailable: {source.unavailable_reason}\")\n                ),\n            }\n        )\n        self.status = result.data\n        return result\n"
+            },
+            "content": {
+              "_input_type": "MessageTextInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Retrieved Text",
+              "dynamic": false,
+              "info": "",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "content",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "title": {
+              "_input_type": "StrInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Source Title",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "title",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "unavailable_reason": {
+              "_input_type": "StrInput",
+              "advanced": true,
+              "api_editable": false,
+              "display_name": "Unavailable Reason",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "unavailable_reason",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "uri": {
+              "_input_type": "StrInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Source Location",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "uri",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            }
+          },
+          "tool_mode": false
+        },
         "SQLComponent": {
           "base_classes": [
             "Table"
@@ -8858,6 +9049,178 @@
                   "name": "Local"
                 }
               ]
+            }
+          },
+          "tool_mode": false
+        },
+        "SourcedReport": {
+          "base_classes": [
+            "JSON"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Save a report and its captured evidence. Citation checks do not assess whether sources support claims.",
+          "display_name": "Sourced Report",
+          "documentation": "",
+          "edited": false,
+          "field_order": [
+            "title",
+            "report",
+            "sources",
+            "require_resolved"
+          ],
+          "frozen": false,
+          "icon": "FileCheck2",
+          "is_output": true,
+          "legacy": false,
+          "metadata": {
+            "code_hash": "c94e8002db2d",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 1
+            },
+            "module": "lfx.components.files_and_knowledge.sourced_report.SourcedReportComponent"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Report Artifact",
+              "group_outputs": false,
+              "method": "build_report",
+              "name": "artifact",
+              "selected": "JSON",
+              "tool_mode": true,
+              "types": [
+                "JSON"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "code": {
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "from lfx.custom import Component\nfrom lfx.io import BoolInput, DataInput, MessageTextInput, Output, StrInput\nfrom lfx.projects.artifacts import ArtifactExecution, SourcedReport, SourceRecord, store_report\nfrom lfx.schema.data import Data\nfrom lfx.services.deps import get_storage_service\n\n\nclass SourcedReportComponent(Component):\n    display_name = \"Sourced Report\"\n    description = (\n        \"Save a report and its captured evidence. Citation checks do not assess whether sources support claims.\"\n    )\n    icon = \"FileCheck2\"\n    name = \"SourcedReport\"\n\n    inputs = [\n        StrInput(name=\"title\", display_name=\"Report Title\", value=\"Research report\", required=True),\n        MessageTextInput(\n            name=\"report\",\n            display_name=\"Report\",\n            info=\"Generated Markdown using the [@source-id] citations returned by Record Source.\",\n            required=True,\n        ),\n        DataInput(\n            name=\"sources\",\n            display_name=\"Source Evidence\",\n            info=\"Original Record Source outputs, kept separately from generated report text.\",\n            is_list=True,\n            required=True,\n        ),\n        BoolInput(\n            name=\"require_resolved\",\n            display_name=\"Require Available Citations\",\n            info=\"Stop before saving if citations are absent, missing, or unavailable. Disable to save a review draft.\",\n            value=True,\n            advanced=True,\n        ),\n    ]\n    outputs = [Output(name=\"artifact\", display_name=\"Report Artifact\", method=\"build_report\")]\n\n    def __init__(self, **kwargs):\n        super().__init__(**kwargs)\n        self.is_output = True\n\n    async def build_report(self) -> Data:\n        if self.graph is None or not self.graph.flow_id:\n            msg = \"Run Sourced Report inside a saved flow so its files belong to that flow.\"\n            raise ValueError(msg)\n        evidence = self.sources if isinstance(self.sources, list) else [self.sources]\n        report = SourcedReport(\n            title=self.title,\n            markdown=self.report,\n            execution=ArtifactExecution(\n                flow_id=self.graph.source_flow_id or self.graph.flow_id,\n                run_id=self.graph.run_id,\n                node_id=self._id,\n            ),\n            sources=tuple(SourceRecord.model_validate(item.data.get(\"source\")) for item in evidence),\n        )\n        if self.require_resolved:\n            report.require_resolved_citations()\n        stored = await store_report(report, get_storage_service())\n        result = Data(\n            data={\n                \"artifact\": stored.report.model_dump(mode=\"json\"),\n                \"citations\": [item.model_dump() for item in stored.report.citations],\n                \"files\": [\n                    f\"{stored.report.execution.flow_id}/{stored.markdown_name}\",\n                    f\"{stored.report.execution.flow_id}/{stored.record_name}\",\n                ],\n                \"text\": stored.report.render_markdown(),\n            }\n        )\n        self.status = result.data\n        return result\n"
+            },
+            "report": {
+              "_input_type": "MessageTextInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Report",
+              "dynamic": false,
+              "info": "Generated Markdown using the [@source-id] citations returned by Record Source.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "report",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "require_resolved": {
+              "_input_type": "BoolInput",
+              "advanced": true,
+              "api_editable": false,
+              "display_name": "Require Available Citations",
+              "dynamic": false,
+              "info": "Stop before saving if citations are absent, missing, or unavailable. Disable to save a review draft.",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "require_resolved",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "bool",
+              "value": true
+            },
+            "sources": {
+              "_input_type": "JSONInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Source Evidence",
+              "dynamic": false,
+              "info": "Original Record Source outputs, kept separately from generated report text.",
+              "input_types": [
+                "Data",
+                "JSON"
+              ],
+              "list": true,
+              "list_add_label": "Add More",
+              "name": "sources",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            },
+            "title": {
+              "_input_type": "StrInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Report Title",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "title",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": "Research report"
             }
           },
           "tool_mode": false
@@ -32633,9 +32996,9 @@
     ]
   ],
   "metadata": {
-    "num_components": 136,
+    "num_components": 138,
     "num_modules": 16
   },
-  "sha256": "6f4f53f9c8961b00da301cee622090ece95b3438128f92954366722f5490ea55",
-  "version": "1.13.0"
+  "version": "1.13.0",
+  "sha256": "8833db36e2588a4556ce421d6f815bde8c411189550a92fd5f501b2f06a6a98f"
 }
