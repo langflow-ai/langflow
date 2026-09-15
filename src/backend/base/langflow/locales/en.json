@@ -2667,7 +2667,7 @@
   "components.slackcanvas.description.8307d0fc": "Create a Slack canvas owned by the connected user from markdown.",
   "components.slackcanvas.display_name.07eca268": "Slack: Create Canvas (as user)",
   "components.slackcanvas.inputs.channel_id.display_name.8edd65cc": "Channel ID",
-  "components.slackcanvas.inputs.channel_id.info.38c34572": "Creates a channel canvas instead of a standalone one. Required on free Slack plans.",
+  "components.slackcanvas.inputs.channel_id.info.548622e7": "Adds the canvas as a channel tab. Required on free Slack plans.",
   "components.slackcanvas.inputs.connection.display_name.335f10dc": "Slack Connection",
   "components.slackcanvas.inputs.connection.info.a6f78594": "A Slack connection authorized with user token scopes. The action runs as that Slack user.",
   "components.slackcanvas.inputs.markdown.display_name.0e52f6b9": "Markdown",
