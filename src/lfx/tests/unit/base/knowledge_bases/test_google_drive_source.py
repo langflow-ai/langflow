@@ -29,9 +29,9 @@ from lfx.base.knowledge_bases.ingestion_sources import (
 )
 from lfx.base.knowledge_bases.ingestion_sources.base import IngestionItem, SourceType
 from lfx.base.knowledge_bases.ingestion_sources.google_drive import DRIVE_FILE_SCOPE
-from lfx.integrations.errors import ConnectionNotAuthorizedError, ScopeMissingError
+from lfx.integrations.errors import ConnectionNotAuthorizedError
 from lfx.integrations.models import ResolvedCredential
-from lfx.services.connection.base import BaseConnectionResolverService
+from lfx.services.connection.base import BaseConnectionResolverService, ConnectionAccessPolicy
 from pydantic import SecretStr
 
 USER_ID = uuid4()
@@ -68,19 +68,15 @@ class RecordingResolver(BaseConnectionResolverService):
         self.owner_id = owner_id if owner_id is not None else str(USER_ID)
         self.set_ready()
 
-    async def resolve(self, request):
+    async def _get_access_policy(self, request):
         self.requests.append(request)
-        denial = self.authorize_principal(
-            request,
+        return ConnectionAccessPolicy(
             connection_owner_id=self.owner_id,
             owner_kind="user",
             allow_non_interactive=self.allow_non_interactive,
         )
-        if denial is not None:
-            raise denial
-        missing = request.required_scopes - {DRIVE_FILE_SCOPE}
-        if missing:
-            raise ScopeMissingError(frozenset(missing), provider="google")
+
+    async def _resolve(self, _request, _policy):
         return ResolvedCredential(
             access_token=SecretStr(FAKE_TOKEN),
             granted_scopes=frozenset({DRIVE_FILE_SCOPE}),
@@ -333,7 +329,7 @@ async def test_a_provider_error_surfaces_as_a_typed_integration_error(mock_http)
     mock_http([httpx.Response(403, json={"error": {"code": 403, "message": "Insufficient Permission"}})])
     source = _source()
 
-    with pytest.raises(ScopeMissingError):
+    with pytest.raises(ConnectionNotAuthorizedError):
         _ = [item async for item in source.list_items()]
 
 

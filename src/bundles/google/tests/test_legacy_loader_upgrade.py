@@ -133,7 +133,7 @@ async def test_gmail_loader_builds_credentials_from_a_connection(resolver, monke
     )
     monkeypatch.setattr("langchain_google_community.gmail.loader.GMailLoader.load", lambda _self: [])
 
-    component = GmailLoaderComponent(json_string="", label_ids="INBOX", max_results="5")
+    component = GmailLoaderComponent(connection="google/work")
     wire(component, [])  # no Google call is made; this supplies the graph principal
 
     await component.load_emails()
@@ -164,3 +164,47 @@ async def test_a_padded_connection_handle_still_resolves(resolver, monkeypatch) 
     await component.load_emails()
 
     assert resolver.requests[0].ref.to_handle() == "google/work"
+
+
+@pytest.mark.usefixtures("resolver")
+@pytest.mark.parametrize("auth_failure", [False, True])
+@pytest.mark.parametrize(
+    ("component_class", "operation", "loader_path", "kwargs"),
+    [
+        (GmailLoaderComponent, "load_emails", "langchain_google_community.gmail.loader.GMailLoader.load", {}),
+        (
+            GoogleDriveComponent,
+            "load_documents",
+            "langchain_google_community.GoogleDriveLoader.load",
+            {"document_id": "doc-1"},
+        ),
+    ],
+)
+async def test_loader_failures_log_context_without_provider_payload(
+    monkeypatch, component_class, operation, loader_path, kwargs, auth_failure
+):
+    from unittest.mock import MagicMock
+
+    from conftest import wire
+    from google.auth.exceptions import RefreshError
+
+    payload = "private-provider-payload"
+    failure = RefreshError(payload) if auth_failure else RuntimeError(payload)
+
+    def fail(_self):
+        raise failure
+
+    monkeypatch.setattr(loader_path, fail)
+    log = MagicMock()
+    monkeypatch.setattr(f"{component_class.__module__}.logger", log)
+    component = component_class(connection="google/work", **kwargs)
+    wire(component, [])
+
+    with pytest.raises(ValueError, match=r"Authentication error|Error loading documents") as caught:
+        await getattr(component, operation)()
+
+    assert payload not in str(caught.value)
+    log.warning.assert_called_once()
+    assert component.display_name in str(log.warning.call_args)
+    assert "load failed" in str(log.warning.call_args)
+    assert payload not in str(log.warning.call_args)

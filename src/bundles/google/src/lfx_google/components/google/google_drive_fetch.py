@@ -14,13 +14,15 @@ import base64
 from typing import Any
 
 from lfx.custom.custom_component.component import Component
+from lfx.integrations import InvalidRequestError
 from lfx.io import BoolInput, MessageTextInput, Output
 from lfx.schema.data import Data
 
-from lfx_google.components.google._workspace_client import workspace_action
+from lfx_google.components.google._workspace_client import _download_limit_error, workspace_action
 from lfx_google.components.google._workspace_inputs import DRIVE_FILE_SCOPE, google_connection_input
 
 CAPABILITY = "google.drive.fetch"
+MAX_CONTENT_BYTES = 25 * 1024 * 1024
 
 METADATA_FIELDS = "id, name, mimeType, size, modifiedTime, webViewLink"
 # Text-ish content is decoded for the flow; everything else is handed over
@@ -100,12 +102,25 @@ class GoogleDriveFetchComponent(Component):
 
         async with workspace_action(self, capability=CAPABILITY, api="drive", version="v3") as service:
             metadata = await service.execute(lambda client: client.files().get(**metadata_params))
+            if not export_mime_type:
+                if metadata.get("mimeType", "").startswith("application/vnd.google-apps."):
+                    msg = "Google Workspace files require an export format."
+                    raise InvalidRequestError(
+                        msg,
+                        hint="Set Export MIME Type to a supported format for this document.",
+                        provider="google",
+                    )
+                if int(metadata.get("size") or 0) > MAX_CONTENT_BYTES:
+                    raise _download_limit_error()
             if export_mime_type:
-                content_bytes = await service.execute(
-                    lambda client: client.files().export_media(fileId=file_id, mimeType=export_mime_type)
+                content_bytes = await service.download(
+                    lambda client: client.files().export_media(fileId=file_id, mimeType=export_mime_type),
+                    max_bytes=MAX_CONTENT_BYTES,
                 )
             else:
-                content_bytes = await service.execute(lambda client: client.files().get_media(**media_params))
+                content_bytes = await service.download(
+                    lambda client: client.files().get_media(**media_params), max_bytes=MAX_CONTENT_BYTES
+                )
 
         content_mime = export_mime_type or metadata.get("mimeType")
         record: dict[str, Any] = dict(metadata)

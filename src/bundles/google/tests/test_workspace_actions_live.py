@@ -237,11 +237,12 @@ async def test_live_calendar_create_then_delete(headless) -> None:
 
     result = await component.create_event()
     event_id = result.data["id"]
-    assert result.data["status"] == "confirmed"
+    try:
+        assert result.data["status"] == "confirmed"
+    finally:
+        from lfx_google.components.google._workspace_client import workspace_action
 
-    from lfx_google.components.google._workspace_client import workspace_action
-
-    async with workspace_action(
-        component, capability="google.calendar.create", api="calendar", version="v3"
-    ) as service:
-        await service.execute(lambda client: client.events().delete(calendarId=_calendar_id(), eventId=event_id))
+        async with workspace_action(
+            component, capability="google.calendar.create", api="calendar", version="v3"
+        ) as service:
+            await service.execute(lambda client: client.events().delete(calendarId=_calendar_id(), eventId=event_id))

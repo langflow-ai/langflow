@@ -18,7 +18,6 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
-import sys
 import zipfile
 from pathlib import Path
 
@@ -162,7 +161,7 @@ def test_manifest_is_readable_from_an_installed_wheel(tmp_path: Path) -> None:
         "print(len(d['capabilities']))"
     )
     completed = subprocess.run(  # noqa: S603 - fixed argv, no shell
-        [sys.executable, "-c", script, str(unpacked)],
+        [shutil.which("uv"), "run", "--no-project", "python", "-c", script, str(unpacked)],
         check=True,
         capture_output=True,
         text=True,

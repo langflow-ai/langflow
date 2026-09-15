@@ -38,3 +38,38 @@ async def test_action_closes_the_sdk_transport_on_success_and_failure(fails):
     else:
         await component.list_page()
     assert http.close_count == 1
+
+
+@pytest.mark.parametrize(
+    ("status", "reason", "code"),
+    [
+        (403, "insufficientPermissions", "scope-missing"),
+        (403, "ACCESS_TOKEN_SCOPE_INSUFFICIENT", "scope-missing"),
+        (403, "insufficientFilePermissions", "connection-not-authorized"),
+        (403, "appNotAuthorizedToFile", "connection-not-authorized"),
+        (403, "forbidden", "connection-not-authorized"),
+        (403, "accessNotConfigured", "connection-not-authorized"),
+        (403, "", "connection-not-authorized"),
+        (403, "fileNotDownloadable", "invalid-request"),
+        (403, "exportSizeLimitExceeded", "invalid-request"),
+        (400, "badRequest", "invalid-request"),
+        (404, "notFound", "resource-not-found"),
+        (405, "", "action-unsupported"),
+        (501, "", "action-unsupported"),
+    ],
+)
+def test_google_errors_preserve_the_recovery_action(status, reason, code):
+    import json
+
+    from googleapiclient.errors import HttpError
+    from httplib2 import Response
+    from lfx_google.components.google._workspace_client import normalize_google_error
+
+    payload = {"error": {"message": "private-provider-payload", "errors": [{"reason": reason}]}}
+    error = normalize_google_error(HttpError(Response({"status": str(status)}), json.dumps(payload).encode()))
+    assert error.code == code
+    assert error.http_status == status
+    assert error.retryable is False
+    assert "private-provider-payload" not in str(error)
+    if code != "scope-missing":
+        assert "reconnect" not in (error.hint or "").lower()

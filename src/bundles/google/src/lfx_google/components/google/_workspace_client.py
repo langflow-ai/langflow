@@ -31,18 +31,23 @@ from __future__ import annotations
 import asyncio
 import json
 from contextlib import asynccontextmanager
+from io import BytesIO
 from typing import TYPE_CHECKING, Any
 
 from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaIoBaseDownload
 from lfx.integrations import (
     ActionUnsupportedError,
     AuthExpiredError,
+    ConnectionNotAuthorizedError,
     IntegrationError,
+    InvalidRequestError,
     ProviderUnavailableError,
     RateLimitedError,
+    ResourceNotFoundError,
     ScopeMissingError,
     integration_action,
     normalize_integration_error,
@@ -57,7 +62,9 @@ if TYPE_CHECKING:
 
 PROVIDER_ID = "google"
 
+_HTTP_BAD_REQUEST = 400
 _HTTP_UNAUTHORIZED = 401
+_HTTP_REQUEST_TIMEOUT = 408
 _HTTP_FORBIDDEN = 403
 _HTTP_NOT_FOUND = 404
 _HTTP_METHOD_NOT_ALLOWED = 405
@@ -80,10 +87,7 @@ _RATE_LIMIT_REASONS = frozenset(
 _SCOPE_REASONS = frozenset(
     {
         "insufficientpermissions",
-        "insufficientfilepermissions",
-        "forbidden",
         "access_token_scope_insufficient",
-        "accessnotconfigured",
     }
 )
 
@@ -143,16 +147,33 @@ def normalize_google_error(exc: BaseException) -> IntegrationError | None:
     if status == _HTTP_FORBIDDEN:
         if reasons & _RATE_LIMIT_REASONS:
             return RateLimitedError(provider=PROVIDER_ID, retry_after=_retry_after_seconds(exc), http_status=status)
-        # Everything else Google forbids on these five actions is a scope or
-        # sharing problem the user fixes by reconnecting with the right grant;
-        # _SCOPE_REASONS is kept as documentation of the reasons we have seen.
-        return ScopeMissingError(provider=PROVIDER_ID)
+        if reasons & _SCOPE_REASONS:
+            return ScopeMissingError(provider=PROVIDER_ID)
+        if "filenotdownloadable" in reasons:
+            return InvalidRequestError(
+                "This Google Workspace file cannot be downloaded as binary content.",
+                hint="Set Export MIME Type to a supported format for this document.",
+                provider=PROVIDER_ID,
+                http_status=status,
+            )
+        if "exportsizelimitexceeded" in reasons:
+            return InvalidRequestError(
+                "The document exceeds Google's export size limit.",
+                hint="Export a smaller document or choose another export format.",
+                provider=PROVIDER_ID,
+                http_status=status,
+            )
+        return ConnectionNotAuthorizedError(provider=PROVIDER_ID, reason="provider")
     if status == _HTTP_TOO_MANY_REQUESTS:
         return RateLimitedError(provider=PROVIDER_ID, retry_after=_retry_after_seconds(exc), http_status=status)
-    if status in {_HTTP_NOT_FOUND, _HTTP_METHOD_NOT_ALLOWED, _HTTP_NOT_IMPLEMENTED}:
+    if status == _HTTP_NOT_FOUND:
+        return ResourceNotFoundError(provider=PROVIDER_ID)
+    if status in {_HTTP_METHOD_NOT_ALLOWED, _HTTP_NOT_IMPLEMENTED}:
         return ActionUnsupportedError(provider=PROVIDER_ID, http_status=status)
-    if status is not None and status >= _HTTP_SERVER_ERROR_FLOOR:
+    if status == _HTTP_REQUEST_TIMEOUT or (status is not None and status >= _HTTP_SERVER_ERROR_FLOOR):
         return ProviderUnavailableError(provider=PROVIDER_ID, http_status=status)
+    if status is not None and _HTTP_BAD_REQUEST <= status < _HTTP_SERVER_ERROR_FLOOR:
+        return InvalidRequestError(provider=PROVIDER_ID, http_status=status)
     return ProviderUnavailableError(provider=PROVIDER_ID, http_status=status)
 
 
@@ -174,6 +195,46 @@ def _build_service(api: str, version: str, token: str, http: Any | None) -> Any:
         authorized = AuthorizedHttp(credentials, http=http)
         return build(api, version, http=authorized, static_discovery=True, cache_discovery=False)
     return build(api, version, credentials=credentials, static_discovery=True, cache_discovery=False)
+
+
+def _download_limit_error() -> InvalidRequestError:
+    return InvalidRequestError(
+        "The file exceeds the Drive Fetch File content limit.",
+        hint="Fetch a smaller file (at most 25 MiB) or use a file ingestion source.",
+        provider=PROVIDER_ID,
+    )
+
+
+class _BoundedBuffer(BytesIO):
+    def __init__(self, max_bytes: int) -> None:
+        super().__init__()
+        self.max_bytes = max_bytes
+
+    def write(self, content: bytes) -> int:
+        if self.tell() + len(content) > self.max_bytes:
+            raise _download_limit_error()
+        return super().write(content)
+
+
+class _MediaDownload:
+    """Expose a chunked SDK download through the same execute/refresh boundary."""
+
+    def __init__(self, request: Any, max_bytes: int) -> None:
+        self.request = request
+        self.max_bytes = max_bytes
+
+    def execute(self) -> bytes:
+        with _BoundedBuffer(self.max_bytes) as buffer:
+            download = MediaIoBaseDownload(buffer, self.request, chunksize=min(1024 * 1024, self.max_bytes + 1))
+            done = False
+            while not done:
+                previous_size = buffer.tell()
+                progress, done = download.next_chunk(num_retries=0)
+                if progress.total_size is not None and progress.total_size > self.max_bytes:
+                    raise _download_limit_error()
+                if not done and buffer.tell() == previous_size:
+                    raise ProviderUnavailableError(provider=PROVIDER_ID)
+            return buffer.getvalue()
 
 
 class WorkspaceService:
@@ -209,6 +270,10 @@ class WorkspaceService:
         self._token = None
         if service is not None:
             await asyncio.to_thread(service.close)
+
+    async def download(self, request_factory: Callable[[Any], Any], *, max_bytes: int) -> bytes:
+        """Bound accumulated content and keep chunk I/O off the event loop."""
+        return await self.execute(lambda client: _MediaDownload(request_factory(client), max_bytes))
 
     async def execute(self, request_factory: Callable[[Any], Any]) -> Any:
         """Run one Google request, retrying exactly once after an auth rejection."""

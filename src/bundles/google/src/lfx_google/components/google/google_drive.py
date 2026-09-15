@@ -9,6 +9,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.helpers.data import docs_to_data
 from lfx.inputs.inputs import MessageTextInput
 from lfx.io import SecretStrInput
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.template.field.base import Output
 
@@ -39,9 +40,9 @@ class GoogleDriveComponent(Component):
         ),
         SecretStrInput(
             name="json_string",
-            display_name="JSON String of the Service Account Token",
+            display_name="OAuth Token JSON",
             info=(
-                "JSON string containing OAuth 2.0 access token information. Leave empty when a "
+                "Authorized-user OAuth token JSON (not a service-account key). Leave empty when a "
                 "managed connection is selected."
             ),
             required=False,
@@ -88,10 +89,12 @@ class GoogleDriveComponent(Component):
             docs = await asyncio.to_thread(loader.load)
         # catch google.auth.exceptions.RefreshError
         except RefreshError as e:
+            logger.warning("Google Drive Loader: load failed (authentication rejected)")
             msg = "Authentication error: Unable to refresh authentication token. Please try to reauthenticate."
             raise ValueError(msg) from e
         except Exception as e:
-            msg = f"Error loading documents: {e}"
+            logger.warning("Google Drive Loader: load failed ({})", type(e).__name__)
+            msg = "Error loading documents. Check the loader inputs and connected account access."
             raise ValueError(msg) from e
 
         if len(docs) != 1:

@@ -217,8 +217,12 @@ missing a scope fails the action with a `scope-missing` error rather than a part
 `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`, an attachment path must resolve inside the
 authenticated user's or executing flow's storage directory, the same containment the
 built-in file components apply; a path outside it is refused before the file is read.
-On a single-tenant deployment, where the restriction is off by default, any readable
-path is attached.
+
+:::warning
+On a single-tenant deployment, where `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS` is off by
+default, any readable path can be attached.
+:::
+
 
 ### Replying to an email
 
@@ -244,9 +248,20 @@ processing; setting it to `1` does not create a Google Meet link.
 
 Every action maps provider failures onto a stable, sanitized vocabulary: `auth-expired`
 when the credential is rejected (retried once against a freshly minted token before
-surfacing), `scope-missing` on a Google `403` that is not a rate limit, `rate-limited` on
-`429` and on `403` quota reasons, and `provider-unavailable` on `5xx`. Google response
+surfacing), `scope-missing` for explicit missing-scope reasons, `connection-not-authorized`
+for other permission failures, `resource-not-found` for missing or inaccessible resources,
+`invalid-request` for bad inputs and export limits, `rate-limited` on `429` and `403` quota
+reasons, and `provider-unavailable` on server failures. Unsupported methods use
+`action-unsupported`. Invalid requests are not retryable; correct the inputs first. Google response
 bodies are never passed through verbatim.
+
+### Fetching Drive content
+
+**Drive: Fetch File (app files)** returns at most 25 MiB of content before text decoding
+or base64 encoding. Larger files fail without producing partial flow data. The component
+checks available file-size metadata before downloading and bounds accumulated content
+while downloading in chunks. Google-native documents require **Export MIME Type**;
+Google also imposes a [10 MB export limit](https://developers.google.com/workspace/drive/api/guides/manage-downloads#export-content).
 
 ### Knowledge-base ingestion from Drive
 
@@ -329,8 +344,8 @@ the [Google Workspace action components](#google-workspace-actions), or
 
 This component loads emails from Gmail using label ID filters and either a
 [managed connection](../Develop/connection-oauth.mdx) or
-[Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account)
-credentials. Set exactly one of the two.
+authorized-user OAuth token JSON in **OAuth Token JSON**. Service-account keys are
+not supported. Set exactly one of the two.
 
 Adding the connection field changed these components' code, so a flow saved before
 Langflow 1.13 shows the ordinary "update available" prompt on the loader node. The update
@@ -352,8 +367,8 @@ As an alternative, you can use [Composio components](/bundles-composio) to conne
 
 This component loads a single document from Google Drive using a document ID and either a
 [managed connection](../Develop/connection-oauth.mdx) or
-[Service Account JSON](https://developers.google.com/identity/protocols/oauth2/service-account)
-credentials. Set exactly one of the two. A managed connection resolves on `drive.file`, so it
+authorized-user OAuth token JSON in **OAuth Token JSON**. Service-account keys are
+not supported. Set exactly one of the two. A managed connection resolves on `drive.file`, so it
 reaches only files this application created or the user opened with it.
 
 For new flows, use [**Drive: Fetch File (app files)**](#google-workspace-actions).

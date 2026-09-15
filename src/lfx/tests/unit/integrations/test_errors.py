@@ -9,8 +9,10 @@ from lfx.integrations import (
     AuthExpiredError,
     ConnectionNotAuthorizedError,
     IntegrationError,
+    InvalidRequestError,
     ProviderUnavailableError,
     RateLimitedError,
+    ResourceNotFoundError,
     ScopeMissingError,
     normalize_integration_error,
     register_error_normalizer,
@@ -40,6 +42,8 @@ def test_integration_error_codes_are_stable() -> None:
         "provider-unavailable",
         "action-unsupported",
         "policy-blocked",
+        "invalid-request",
+        "resource-not-found",
     } == INTEGRATION_ERROR_CODES
 
 
@@ -122,3 +126,12 @@ def test_explicit_insufficient_scope_challenge_is_actionable() -> None:
     error = _http_error(403)
     error.response.headers["www-authenticate"] = 'Bearer error="insufficient_scope"'
     assert isinstance(normalize_integration_error(error, provider="google"), ScopeMissingError)
+
+
+@pytest.mark.parametrize("error_type", [InvalidRequestError, ResourceNotFoundError])
+def test_permanent_request_errors_survive_normalization(error_type):
+    error = error_type(provider="google")
+    assert error.retryable is False
+    assert error.code in INTEGRATION_ERROR_CODES
+    assert normalize_integration_error(error, provider="google") is error
+    assert "Retry the action later" not in error.hint

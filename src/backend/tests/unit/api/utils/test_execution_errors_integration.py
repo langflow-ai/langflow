@@ -31,7 +31,9 @@ from lfx.integrations.errors import (
     AuthExpiredError,
     ConnectionNotAuthorizedError,
     ConnectionUnresolvedError,
+    InvalidRequestError,
     RateLimitedError,
+    ResourceNotFoundError,
     ScopeMissingError,
 )
 from lfx.io import ConnectionRefInput, MessageTextInput, Output
@@ -53,6 +55,8 @@ HTTP_TOO_MANY_REQUESTS = 429
         (ConnectionNotAuthorizedError(provider="google"), "connection-not-authorized"),
         (ConnectionUnresolvedError("google/work", provider="google"), "connection-unresolved"),
         (AuthExpiredError(provider="google"), "auth-expired"),
+        (InvalidRequestError(provider="google"), "invalid-request"),
+        (ResourceNotFoundError(provider="google"), "resource-not-found"),
         (ScopeMissingError(frozenset({"calendar.write"}), provider="google"), "scope-missing"),
         (RateLimitedError(provider="google", retry_after=12.0), "rate-limited"),
         (IntegrationPolicyError("google", IntegrationPolicyPurpose.USE), "policy-blocked"),
@@ -143,6 +147,8 @@ def test_error_for_client_returns_the_provider_status_not_a_generic_500() -> Non
     for error, status in (
         (ConnectionNotAuthorizedError(provider="google"), HTTP_FORBIDDEN),
         (AuthExpiredError(provider="google"), HTTP_UNAUTHORIZED),
+        (InvalidRequestError(provider="google"), 400),
+        (ResourceNotFoundError(provider="google"), 404),
         (RateLimitedError(provider="google", retry_after=1.0), HTTP_TOO_MANY_REQUESTS),
         (IntegrationPolicyError("google", IntegrationPolicyPurpose.USE), HTTP_FORBIDDEN),
     ):

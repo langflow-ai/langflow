@@ -225,7 +225,7 @@ is therefore a deployment-wide grant of that provider account; see
 
 When resolution fails, the response carries a machine-readable `error_code` (`connection-unresolved`,
 `connection-not-authorized`, `auth-expired`, `scope-missing`, `rate-limited`, `provider-unavailable`,
-`action-unsupported`) together with `hint`, `provider`, `retryable`, and `retry_after` where it applies, and
+`action-unsupported`, `invalid-request`, `resource-not-found`) together with `hint`, `provider`, `retryable`, and `retry_after` where it applies, and
 the HTTP status the provider situation warrants (403 for an unauthorized connection, 401 for expired
 credentials, 429 for a rate limit). The error's own sentence, which names the connection handle, is returned
 only to the flow's owner; delegated and anonymous callers get a generic message alongside the same code, so

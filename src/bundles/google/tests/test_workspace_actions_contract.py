@@ -31,7 +31,13 @@ from conftest import (
     wire,
 )
 from lfx.custom.custom_component.component import Component
-from lfx.integrations import AuthExpiredError, ProviderUnavailableError, RateLimitedError, ScopeMissingError
+from lfx.integrations import (
+    AuthExpiredError,
+    InvalidRequestError,
+    ProviderUnavailableError,
+    RateLimitedError,
+    ScopeMissingError,
+)
 from lfx.utils.file_path_security import LocalFileAccessError
 from lfx_google.components.google import (
     GmailSendComponent,
@@ -806,3 +812,59 @@ async def test_oversized_attachments_are_rejected_before_reading_past_the_limit(
     monkeypatch.setattr(Path, "open", refuse_oversized_read)
     with pytest.raises(ValueError, match="upload size limit"):
         await component.send_message()
+
+
+@pytest.mark.usefixtures("resolver")
+async def test_native_drive_file_requires_export_before_downloading():
+    component = drive_fetch_component()
+    http = wire(component, [json_response("drive_fetch_doc_metadata")])
+    with pytest.raises(InvalidRequestError, match="export format") as caught:
+        await component.fetch_file()
+    assert "Export MIME Type" in caught.value.hint
+    assert len(http.request_sequence) == 1
+
+
+@pytest.mark.usefixtures("resolver")
+async def test_drive_fetch_rejects_oversized_metadata_before_downloading():
+    from lfx_google.components.google.google_drive_fetch import MAX_CONTENT_BYTES
+
+    metadata = dict(load_fixture("drive_fetch_metadata"), size=str(MAX_CONTENT_BYTES + 1))
+    component = drive_fetch_component()
+    http = wire(component, [({"status": "200"}, json.dumps(metadata).encode())])
+    with pytest.raises(InvalidRequestError, match="content limit"):
+        await component.fetch_file()
+    assert len(http.request_sequence) == 1
+
+
+@pytest.mark.usefixtures("resolver")
+@pytest.mark.parametrize("export", [False, True])
+async def test_drive_fetch_bounds_bytes_when_metadata_has_no_size(monkeypatch, export):
+    monkeypatch.setattr("lfx_google.components.google.google_drive_fetch.MAX_CONTENT_BYTES", 8)
+    metadata = load_fixture("drive_fetch_doc_metadata" if export else "drive_fetch_metadata")
+    metadata.pop("size", None)
+    component = drive_fetch_component(export_mime_type="text/plain" if export else "")
+    http = wire(component, [({"status": "200"}, json.dumps(metadata).encode()), media_response(b"123456789")])
+    with pytest.raises(InvalidRequestError, match="content limit"):
+        await component.fetch_file()
+    assert http.close_count == 1
+
+
+@pytest.mark.usefixtures("resolver")
+@pytest.mark.parametrize("auth_failure", [False, True])
+async def test_drive_fetch_chunking_accepts_exact_limit_and_discards_partial_retry(monkeypatch, resolver, auth_failure):
+    monkeypatch.setattr("lfx_google.components.google.google_drive_fetch.MAX_CONTENT_BYTES", 8)
+    metadata = dict(load_fixture("drive_fetch_metadata"), size="8")
+    responses = [
+        ({"status": "200"}, json.dumps(metadata).encode()),
+        ({"status": "206", "content-range": "bytes 0-3/8"}, b"1234"),
+    ]
+    if auth_failure:
+        responses.extend([json_response("error_auth_expired", status="401"), media_response(b"abcdefgh")])
+    else:
+        responses.append(({"status": "206", "content-range": "bytes 4-7/8"}, b"5678"))
+    component = drive_fetch_component()
+    http = wire(component, responses)
+    result = await component.fetch_file()
+    assert result.data["content"] == ("abcdefgh" if auth_failure else "12345678")
+    assert http.request_sequence[2][3]["range"].startswith("bytes=4-")
+    assert len(resolver.requests) == (2 if auth_failure else 1)

@@ -51,25 +51,13 @@ class GmailLoaderComponent(Component):
         ),
         SecretStrInput(
             name="json_string",
-            display_name="JSON String of the Service Account Token",
+            display_name="OAuth Token JSON",
             info=(
-                "JSON string containing OAuth 2.0 access token information. Leave empty when a "
+                "Authorized-user OAuth token JSON (not a service-account key). Leave empty when a "
                 "managed connection is selected."
             ),
             required=False,
-            value="""{
-                "account": "",
-                "client_id": "",
-                "client_secret": "",
-                "expiry": "",
-                "refresh_token": "",
-                "scopes": [
-                    "https://www.googleapis.com/auth/gmail.readonly",
-                ],
-                "token": "",
-                "token_uri": "https://oauth2.googleapis.com/token",
-                "universe_domain": "googleapis.com"
-            }""",
+            value="",
         ),
         MessageTextInput(
             name="label_ids",
@@ -203,10 +191,12 @@ class GmailLoaderComponent(Component):
             # GMailLoader.load() is blocking network I/O; keep it off the event loop.
             docs = await asyncio.to_thread(loader.load)
         except RefreshError as e:
+            logger.warning("Gmail Loader: load failed (authentication rejected)")
             msg = "Authentication error: Unable to refresh authentication token. Please try to reauthenticate."
             raise ValueError(msg) from e
         except Exception as e:
-            msg = f"Error loading documents: {e}"
+            logger.warning("Gmail Loader: load failed ({})", type(e).__name__)
+            msg = "Error loading documents. Check the loader inputs and connected account access."
             raise ValueError(msg) from e
 
         # Return the loaded documents
