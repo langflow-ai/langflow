@@ -111,6 +111,16 @@ export function ReportConfigurations({
                       title={t("runConfig.toolContract")}
                       value={tool}
                     />
+                    {tool.local_flow && (
+                      <FlowBindingDependencies
+                        title={tool.local_flow.name}
+                        dependencies={[
+                          tool.local_flow,
+                          ...(tool.local_flow.dependencies ?? []),
+                        ]}
+                        onOpen={onOpen}
+                      />
+                    )}
                   </details>
                 ))}
               </div>

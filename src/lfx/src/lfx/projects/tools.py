@@ -106,23 +106,45 @@ def compose_tools(data: dict, *, project_id: str, agent_id: str, targets: list[d
     position = agent.get("position", {"x": 0, "y": 0})
     occupied = [node.get("position", {}) for node in flow["data"]["nodes"]]
     for target in targets:
-        binding = target.get("tool_pack")
+        binding_key = "tool_pack" if target.get("tool_pack") else "local_tool"
+        binding = target.get(binding_key)
         if target["id"] in existing:
             node = existing[target["id"]]
             origin = node["data"][TOOL_ORIGIN]
-            if origin.get("tool_pack") != binding:
-                if origin.get("applied_revision") != tool_node_revision(node):
+            previous_binding = origin.get(binding_key)
+            if binding_key == "local_tool" and previous_binding is not None and binding is not None:
+                from lfx.projects.local_tools import LocalToolBinding
+
+                if (
+                    LocalToolBinding.model_validate(previous_binding).definition()
+                    == LocalToolBinding.model_validate(binding).definition()
+                ):
+                    origin[binding_key] = binding
+                    continue
+            if previous_binding != binding or (binding_key == "local_tool" and origin.get("tool_pack")):
+                reviewed_before = origin.get("tool_pack") or origin.get("local_tool")
+                if reviewed_before is not None and origin.get("applied_revision") != tool_node_revision(node):
                     msg = (
                         "This tool was edited on the canvas. "
-                        "Restore it or remove its selection before updating the pack."
+                        "Restore it or remove its selection before updating the reviewed tool."
                     )
                     raise ValueError(msg)
+                # Attach review metadata to a legacy adapter without replacing canvas edits.
+                # Subsequent definition updates use the same protection as Tool Pack tools.
+                legacy_local = binding_key == "local_tool" and not origin.get("tool_pack") and previous_binding is None
+                if legacy_local:
+                    origin[binding_key] = binding
+                    # A legacy adapter has no trustworthy last-applied template.
+                    # Keep its edits now and require an explicit reset for later updates.
+                    continue
                 registry = {"RunFlow": prepare_tool_template(target)}
                 replacement = {"data": {"nodes": [deepcopy(agent)], "edges": []}}
                 add_component(replacement, "RunFlow", registry, component_id=node["id"])
                 add_connection(replacement, node["id"], "component_as_tool", agent_id, "tools", registry=registry)
                 node["data"]["node"] = replacement["data"]["nodes"][-1]["data"]["node"]
-                origin["tool_pack"] = binding
+                origin.pop("tool_pack", None)
+                origin.pop("local_tool", None)
+                origin[binding_key] = binding
                 origin["applied_revision"] = tool_node_revision(node)
             # A manually edited tool stays edited when its reviewed definition is unchanged.
             continue
@@ -131,7 +153,7 @@ def compose_tools(data: dict, *, project_id: str, agent_id: str, targets: list[d
         node = flow["data"]["nodes"][-1]
         node["data"][TOOL_ORIGIN] = {"project_id": project_id, "flow_id": target["id"]}
         if binding is not None:
-            node["data"][TOOL_ORIGIN]["tool_pack"] = binding
+            node["data"][TOOL_ORIGIN][binding_key] = binding
         x, y = position.get("x", 0) - TOOL_COLUMN_OFFSET, position.get("y", 0)
         while any(
             abs(x - other.get("x", 0)) < TOOL_WIDTH and abs(y - other.get("y", 0)) < TOOL_ROW_HEIGHT

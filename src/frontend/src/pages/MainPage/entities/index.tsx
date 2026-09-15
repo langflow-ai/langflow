@@ -92,6 +92,10 @@ export type BoundFlowDependency = {
   version_id?: string | null;
 };
 
+export type LocalToolBinding = BoundFlowDependency & {
+  dependencies?: BoundFlowDependency[];
+};
+
 export type FlowOutputChoice = FlowBinding & {
   flow_name: string;
   display_name: string;

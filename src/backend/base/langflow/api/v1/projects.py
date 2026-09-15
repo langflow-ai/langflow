@@ -392,8 +392,7 @@ async def read_project_types(
     ]
 
 
-async def _binding_project(session: DbSession, current_user: User, project_id: UUID, field_name: str) -> Folder:
-    """Keep baseline and draft validation scoped like the field's output picker."""
+async def _harness_project(session: DbSession, current_user: User, project_id: UUID) -> Folder:
     project = (
         await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
     ).first()
@@ -406,9 +405,39 @@ async def _binding_project(session: DbSession, current_user: User, project_id: U
         project_user_id=project.user_id,
         workspace_id=project.workspace_id,
     )
-    if project.project_type != "agent-harness" or field_name not in BINDING_LABELS:
+    if project.project_type != "agent-harness":
+        raise HTTPException(422, "Choose an Agent Harness project.")
+    return project
+
+
+async def _binding_project(session: DbSession, current_user: User, project_id: UUID, field_name: str) -> Folder:
+    """Keep baseline and draft validation scoped like the field's output picker."""
+    project = await _harness_project(session, current_user, project_id)
+    if field_name not in BINDING_LABELS:
         raise HTTPException(422, "Choose a supported harness field for this flow binding.")
     return project
+
+
+@router.get("/{project_id}/tool-definitions")
+async def read_local_tool_definitions(*, session: DbSession, project_id: UUID, current_user: CurrentActiveUser):
+    """Return authorized, statically validated local tool definitions for explicit review."""
+    from lfx.projects.local_tools import local_tool_definition
+
+    from langflow.services.database.models.folder.flow_bindings import flow_definitions, resolve_binding_flows
+
+    await _harness_project(session, current_user, project_id)
+    flows = (
+        await session.exec(select(Flow).where(Flow.folder_id == project_id, col(Flow.is_component).is_(False)))
+    ).all()
+    definitions = []
+    for flow in flows:
+        try:
+            sources = await resolve_binding_flows(session, current_user, flow)
+            definition = local_tool_definition(flow_definitions([flow])[0], flow_definitions(sources.values()))
+        except (ValueError, KeyError, TypeError, AttributeError, HTTPException):
+            continue
+        definitions.append(definition.model_dump(mode="json"))
+    return sorted(definitions, key=lambda item: (item["name"], item["flow_id"]))
 
 
 class FlowBaselineRequest(BaseModel):

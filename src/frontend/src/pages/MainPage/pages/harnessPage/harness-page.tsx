@@ -15,6 +15,7 @@ import type { APIClassType, InputFieldType } from "@/types/api";
 import type {
   CompactionBinding,
   ContextBinding,
+  LocalToolBinding,
   ProjectConfig,
   ProjectFlowBindings,
   ProjectSaveResult,
@@ -29,6 +30,7 @@ import { HarnessReports } from "./components/harness-reports";
 import { HarnessSummary } from "./components/harness-summary";
 import { HookFlowPicker } from "./components/hook-flow-picker";
 import { HarnessFlowPicker } from "./components/instructions-flow-picker";
+import { LocalToolReview } from "./components/local-tool-review";
 import { LongTextField } from "./components/long-text-field";
 import { ProjectChoiceField } from "./components/project-choice-field";
 import { ProjectFlowPicker } from "./components/project-flow-picker";
@@ -103,6 +105,8 @@ const HarnessPage = ({
     }
     if (projectConfig?.flow_bindings)
       defaults.flow_bindings = projectConfig.flow_bindings;
+    if (projectType === "agent-harness" && projectConfig?.tool_bindings)
+      defaults.tool_bindings = projectConfig.tool_bindings;
     return defaults;
   }, [type, projectConfig, projectType]);
 
@@ -545,26 +549,52 @@ const HarnessPage = ({
                     />
                   ) : (field as { renders?: string })?.renders ===
                     PROJECT_FLOWS_WIDGET ? (
-                    <ProjectFlowPicker
-                      helpText={
-                        projectType === "tool-pack" ? field.info : undefined
-                      }
-                      flows={flows.filter(
-                        (flow) => flow.id !== selectedAgentId,
+                    <>
+                      <ProjectFlowPicker
+                        helpText={
+                          projectType === "tool-pack" ? field.info : undefined
+                        }
+                        flows={flows.filter(
+                          (flow) => flow.id !== selectedAgentId,
+                        )}
+                        isLoading={isLoadingFlows}
+                        disabled={
+                          isPending ||
+                          (projectType === "agent-harness" && !selectedAgent)
+                        }
+                        value={asStringList(values[fieldName])}
+                        onChange={(picked) =>
+                          setEdits((current) => ({
+                            ...current,
+                            [fieldName]: picked,
+                          }))
+                        }
+                      />
+                      {projectType === "agent-harness" && (
+                        <LocalToolReview
+                          projectId={projectId}
+                          selected={asStringList(values[fieldName])}
+                          value={
+                            values.tool_bindings as
+                              | Record<string, LocalToolBinding>
+                              | undefined
+                          }
+                          saved={
+                            savedValues.tool_bindings as
+                              | Record<string, LocalToolBinding>
+                              | undefined
+                          }
+                          disabled={isPending}
+                          onOpen={() => editorDraft.keep(projectId, edits)}
+                          onChange={(next) =>
+                            setEdits((current) => ({
+                              ...current,
+                              tool_bindings: next,
+                            }))
+                          }
+                        />
                       )}
-                      isLoading={isLoadingFlows}
-                      disabled={
-                        isPending ||
-                        (projectType === "agent-harness" && !selectedAgent)
-                      }
-                      value={asStringList(values[fieldName])}
-                      onChange={(picked) =>
-                        setEdits((current) => ({
-                          ...current,
-                          [fieldName]: picked,
-                        }))
-                      }
-                    />
+                    </>
                   ) : field.option_labels ? (
                     <>
                       {!bindings[fieldName] && (

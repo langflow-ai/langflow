@@ -19,6 +19,7 @@ from lfx.projects.compaction import compose_compaction
 from lfx.projects.context import compose_context
 from lfx.projects.flow_slots import BINDING_LABELS, ProjectFlowBindings, validate_project_binding
 from lfx.projects.hooks import compose_hooks
+from lfx.projects.local_tools import local_tool_bindings, local_tool_definition
 from lfx.projects.permissions import compose_permission
 from lfx.projects.tool_packs import FlowDependencyVersion, ToolPackToolBinding, tool_pack_references
 from lfx.projects.tools import agent_node_ids, compose_tools
@@ -212,6 +213,7 @@ async def write_project_config_to_flows(
     targets = flows
     tools = []
     pack_targets = []
+    local_targets = []
     instruction_target = None
     instruction_binding = None
     bindings = ProjectFlowBindings()
@@ -236,8 +238,43 @@ async def write_project_config_to_flows(
                 raise HTTPException(
                     422, "Update the Agent component on its canvas before configuring context or compaction."
                 )
+        if "tools" not in config and not clearing_config and (previous_config or {}).get("tools"):
+            config["tools"] = deepcopy(previous_config["tools"])
         if "tools" in config:
             tools = selected_tools(flows, agent, config["tools"])
+        from langflow.services.database.models.folder.flow_bindings import flow_definitions, resolve_binding_flows
+
+        try:
+            requested = local_tool_bindings(config.get("tool_bindings", {}))
+            previous = local_tool_bindings((previous_config or {}).get("tool_bindings", {}))
+            local_sources = {}
+            local_bindings = {}
+            for tool in tools:
+                tool_id = str(tool.id)
+                resolved_sources = await resolve_binding_flows(session, current_user, tool, action=FlowAction.EXECUTE)
+                if str(agent.id) in resolved_sources:
+                    msg = "A selected tool calls back into the agent flow."
+                    raise ValueError(msg)
+                definitions = flow_definitions(resolved_sources.values())
+                current = local_tool_definition(flow_definitions([tool])[0], definitions)
+                reviewed = requested.get(tool_id) or previous.get(tool_id)
+                if reviewed is not None and reviewed.definition() != current.definition():
+                    msg = "The local tool changed. Review its definition before saving the harness."
+                    raise ValueError(msg)
+                local_sources[tool_id] = resolved_sources
+                local_bindings[tool_id] = current
+            for tool in tools:
+                binding = local_bindings[str(tool.id)]
+                binding.version_id = await _binding_version(session, tool, "Local tool")
+                for dependency in binding.dependencies:
+                    dependency.version_id = await _binding_version(
+                        session, local_sources[str(tool.id)][dependency.flow_id], "Local tool dependency"
+                    )
+                local_targets.append({**flow_definitions([tool])[0], "local_tool": binding.model_dump(mode="json")})
+            if tools or "tool_bindings" in config or previous:
+                config["tool_bindings"] = {key: value.model_dump(mode="json") for key, value in local_bindings.items()}
+        except (ValueError, KeyError, TypeError) as exc:
+            raise HTTPException(422, f"Could not configure the selected tools: {exc}") from exc
         try:
             references = tool_pack_references(config.get("tool_packs", []))
         except (ValueError, TypeError) as exc:
@@ -305,8 +342,6 @@ async def write_project_config_to_flows(
             ) from exc
         sources = {str(flow.id): flow for flow in flows if not flow.is_component}
         from lfx.projects.dependencies import validate_binding_dependencies
-
-        from langflow.services.database.models.folder.flow_bindings import flow_definitions, resolve_binding_flows
 
         binding_sources = {}
         for field_name, binding in bindings.entries():
@@ -413,16 +448,7 @@ async def write_project_config_to_flows(
                     data,
                     project_id=str(project.id),
                     agent_id=agent_node_ids(data)[0],
-                    targets=[
-                        {
-                            "id": str(tool.id),
-                            "name": tool.name,
-                            "data": tool.data,
-                            "updated_at": tool.updated_at.isoformat() if tool.updated_at else None,
-                        }
-                        for tool in tools
-                    ]
-                    + pack_targets,
+                    targets=local_targets + pack_targets,
                 )
             except (ValueError, KeyError, TypeError) as exc:
                 raise HTTPException(422, f"Could not configure the selected tools: {exc}") from exc
