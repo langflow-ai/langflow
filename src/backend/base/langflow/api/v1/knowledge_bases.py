@@ -785,18 +785,21 @@ async def create_knowledge_base(
         if kb_path is not None and kb_path.exists():
             # No DB row but a directory survives. If it carries the
             # ``.kb_deleted`` sentinel, a previous delete could not remove the
-            # bytes (typically a held Chroma SQLite lock) — reusing the name now
-            # would silently adopt the old collection's vectors.
+            # bytes (typically because of a held Chroma SQLite lock). Retry the
+            # cleanup now: after a restart the lock should be gone, but clearing
+            # only the sentinel would risk adopting the old collection's vectors.
             if KBStorageHelper.is_kb_dir_deleted(kb_path):
-                raise HTTPException(
-                    status_code=409,
-                    detail=(
-                        f"Knowledge base '{kb_name}' was recently deleted but its on-disk files "
-                        "are still being released by another process. Restart the server (or wait "
-                        "for the lock to clear) before recreating it with the same name."
-                    ),
-                )
-            raise HTTPException(status_code=409, detail=f"Knowledge base '{kb_name}' already exists")
+                await asyncio.to_thread(KBStorageHelper.delete_storage, kb_path, kb_name)
+                if kb_path.exists():
+                    raise HTTPException(
+                        status_code=409,
+                        detail=(
+                            f"Knowledge base '{kb_name}' was deleted, but its on-disk files are still locked "
+                            "by another process. Close that process, restart Langflow if needed, and try again."
+                        ),
+                    )
+            else:
+                raise HTTPException(status_code=409, detail=f"Knowledge base '{kb_name}' already exists")
 
         await _validate_create_backend(
             backend_type=backend_type_value,
@@ -1434,6 +1437,8 @@ async def list_connectors(_current_user: CurrentActiveUser) -> list[ConnectorCat
                 description=getattr(source_cls, "description", "") or "",
                 icon=getattr(source_cls, "icon", None),
                 requires_credentials=bool(getattr(source_cls, "requires_credentials", False)),
+                provider_key=getattr(source_cls, "connection_provider", "") or None,
+                required_scopes=list(getattr(source_cls, "connection_required_scopes", ()) or ()),
             )
         )
     return entries

@@ -553,6 +553,8 @@ def apply_state(
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Confirm a pruning apply.")] = False,
 ) -> None:
     state = _load_manifest_or_fail(file)
+    if prune and not yes and not sys.stdin.isatty():
+        _fail(ValueError("--prune requires --yes in non-interactive use"), usage=True)
     reconciler = _api_call(lambda: _reconciler_from_context(ctx))
     if prune:
         try:
@@ -562,11 +564,8 @@ def apply_state(
         except (AdminAPIError, httpx.HTTPError, ConnectionConfigurationError) as exc:
             _fail(exc, usage=isinstance(exc, ConnectionConfigurationError))
         _emit(ctx, drift, stderr=True)
-        if not yes:
-            if not sys.stdin.isatty():
-                _fail(ValueError("--prune requires --yes in non-interactive use"), usage=True)
-            if not typer.confirm("Apply this pruning plan?"):
-                raise typer.Abort
+        if not yes and not typer.confirm("Apply this pruning plan?"):
+            raise typer.Abort
     try:
         report = reconciler.apply(state, prune=prune)
     except ManifestResolutionError as exc:

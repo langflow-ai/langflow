@@ -50,7 +50,12 @@ class SharePointListComponent(MicrosoftGraphComponent):
             info="Folder path relative to the drive root, used when no item id is given.",
             advanced=True,
         ),
-        IntInput(name="top", display_name="Max Results", value=DEFAULT_TOP),
+        IntInput(
+            name="top",
+            display_name="Result Budget",
+            value=DEFAULT_TOP,
+            info="Stop after a complete page reaches this count; results can exceed it by part of a page.",
+        ),
         MessageTextInput(name="select", display_name="Select Fields", is_list=True, advanced=True),
         MessageTextInput(
             name="order_by",
@@ -71,8 +76,14 @@ class SharePointListComponent(MicrosoftGraphComponent):
     # outputs -- costs one request, not two.
     _rows: list[Data] | None = None
 
+    def _pre_run_setup(self) -> None:
+        self._rows = None
+        self._next_link = None
+
     def _scope_inputs(self) -> dict[str, str]:
         """Inputs the conditional-scope pre-flight predicates read."""
+        self.drive_id = (self.drive_id or "").strip()
+        self.site_id = (self.site_id or "").strip()
         scope: dict[str, str] = {}
         if drive_id := (self.drive_id or "").strip():
             scope["drive_id"] = drive_id
@@ -85,11 +96,15 @@ class SharePointListComponent(MicrosoftGraphComponent):
         if self._rows is not None:
             self.status = f"{len(self._rows)} item(s)"
             return self._rows
+        limit = int(self.top or DEFAULT_TOP)
+        if limit <= 0:
+            msg = "Result Budget must be positive."
+            raise ValueError(msg)
         scope = self._scope_inputs()
         root = drive_root(scope.get("drive_id", ""), scope.get("site_id", ""))
         target = drive_children_path(root, (self.item_id or "").strip(), (self.path or "").strip())
         params = odata_params(
-            top=self.top or DEFAULT_TOP,
+            top=limit,
             select=as_list(self.select) or None,
             order_by=(self.order_by or "").strip() or None,
         )
@@ -98,7 +113,7 @@ class SharePointListComponent(MicrosoftGraphComponent):
             items, next_link = await client.paginate(
                 target,
                 params=params,
-                limit=self.top or DEFAULT_TOP,
+                limit=limit,
             )
         self._next_link = next_link
         rows = [Data(data=item) for item in items]

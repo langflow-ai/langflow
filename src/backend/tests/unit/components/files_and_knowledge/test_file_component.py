@@ -423,8 +423,10 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
         return FileComponent
 
     @pytest.fixture
-    def default_kwargs(self):
-        return {}
+    def default_kwargs(self, tmp_path):
+        notes = tmp_path / "notes.txt"
+        notes.write_text("Meeting notes")
+        return {"path": [str(notes)]}
 
     @pytest.fixture
     def file_names_mapping(self):

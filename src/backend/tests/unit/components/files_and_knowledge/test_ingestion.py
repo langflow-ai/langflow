@@ -87,6 +87,12 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         # This is a new component, so it doesn't exist in older versions
         return []
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "dataframe_output": "embeds the rows with a live embedding provider",
+        }
+
     def test_validate_column_config_valid(self, component_class, default_kwargs):
         """Test column configuration validation with valid config."""
         component = component_class(**default_kwargs)

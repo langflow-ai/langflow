@@ -8,7 +8,7 @@ import re
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, model_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -35,7 +35,11 @@ class OAuthRegistration(BaseModel):
 
     @model_validator(mode="after")
     def validate_registration(self) -> OAuthRegistration:
-        uri = urlsplit(self.redirect_uri)
+        redirect_error = "OAuth redirect must be HTTPS (or loopback HTTP) at the provider callback"
+        try:
+            uri = urlsplit(self.redirect_uri)
+        except ValueError:
+            raise OAuthError(redirect_error) from None
         loopback = uri.hostname in {"localhost", "127.0.0.1", "::1"}
         expected_path = f"/api/v1/connections/oauth/{self.provider}/callback"
         if (
@@ -47,39 +51,38 @@ class OAuthRegistration(BaseModel):
             or uri.path != expected_path
             or (uri.scheme != "https" and not (uri.scheme == "http" and loopback))
         ):
-            msg = "OAuth redirect must be HTTPS (or loopback HTTP) at the provider callback"
-            raise ValueError(msg)
+            raise OAuthError(redirect_error)
         if self.context == "desktop" and (not loopback or self.client_type != "public"):
             msg = "Desktop OAuth requires a public client and a loopback callback"
-            raise ValueError(msg)
+            raise OAuthError(msg)
         if self.context == "self_managed" and self.owner != "customer":
             msg = "Self-managed OAuth uses customer-owned registrations"
-            raise ValueError(msg)
+            raise OAuthError(msg)
         if self.client_type == "public" and (self.client_secret or self.private_key):
             msg = "Public clients cannot contain registration secrets"
-            raise ValueError(msg)
+            raise OAuthError(msg)
         if self.client_type == "confidential" and bool(self.client_secret) == bool(self.private_key):
             msg = "Confidential clients require exactly one secret or private key"
-            raise ValueError(msg)
+            raise OAuthError(msg)
         if self.private_key and (self.provider != "microsoft" or not self.certificate_thumbprint):
             msg = "Certificate authentication requires Microsoft and a certificate thumbprint"
-            raise ValueError(msg)
+            raise OAuthError(msg)
         if self.private_key and not re.fullmatch(r"[0-9a-fA-F]{64}", self.certificate_thumbprint or ""):
             msg = "Certificate thumbprint must be a SHA-256 digest in hexadecimal"
-            raise ValueError(msg)
+            raise OAuthError(msg)
         if self.profile == "bot" and (self.provider != "slack" or self.client_type == "public"):
             msg = "Only confidential Slack clients support the bot profile"
-            raise ValueError(msg)
+            raise OAuthError(msg)
         if not self.scopes or any(not s or any(c.isspace() or c == "," for c in s) for s in self.scopes):
             msg = "OAuth scopes must be nonempty individual scope names"
-            raise ValueError(msg)
+            raise OAuthError(msg)
         if self.provider == "google" and self.allowed_tenants and not {"openid", "email"} <= set(self.scopes):
             msg = "Google tenant restrictions require openid and email scopes"
-            raise ValueError(msg)
+            raise OAuthError(msg)
         if self.provider == "microsoft":
             if self.allowed_tenants and self.tenant not in self.allowed_tenants:
                 msg = "Microsoft authority must belong to the configured tenant restriction"
-                raise ValueError(msg)
+                raise OAuthError(msg)
             # A fixed authority is the tenant restriction, not a browser-supplied hint.
             from uuid import UUID
 
@@ -87,7 +90,7 @@ class OAuthRegistration(BaseModel):
                 UUID(self.tenant or "")
             except ValueError:
                 msg = "Microsoft OAuth requires a fixed tenant UUID"
-                raise ValueError(msg) from None
+                raise OAuthError(msg) from None
         return self
 
     def fingerprint(self) -> str:
@@ -95,6 +98,24 @@ class OAuthRegistration(BaseModel):
         # provider, client, tenant, profile, redirect and configured scope ceiling.
         value = self.model_dump(exclude={"client_secret", "private_key", "certificate_thumbprint"})
         return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
+
+
+def _registration_validation_message(error: ValidationError) -> str:
+    # Only our explicitly credential-free validator errors can supply text.
+    # Pydantic messages, inputs, contexts and unknown field names may hold secrets.
+    detail = error.errors(include_input=False, include_url=False)[0]
+    cause = detail.get("ctx", {}).get("error")
+    if isinstance(cause, OAuthError):
+        return str(cause)
+    if detail["type"] == "extra_forbidden":
+        return "OAuth registration contains unsupported fields."
+    location = detail["loc"]
+    if location and location[0] in OAuthRegistration.model_fields:
+        field = location[0]
+        if detail["type"] == "missing":
+            return f"OAuth registration field '{field}' is required."
+        return f"OAuth registration field '{field}' is invalid."
+    return "OAuth registration must be a JSON object."
 
 
 class OAuthSettings(BaseSettings):
@@ -108,8 +129,20 @@ class OAuthSettings(BaseSettings):
     def registration(self, registration_id: str) -> OAuthRegistration:
         try:
             configs = json.loads(self.registrations.get_secret_value())
+        except ValueError:
+            msg = "OAuth registrations must contain valid JSON."
+            raise OAuthError(msg) from None
+        if not isinstance(configs, dict):
+            msg = "OAuth registrations must be a JSON object keyed by registration ID."
+            raise OAuthError(msg)
+        if registration_id not in configs:
+            msg = "OAuth registration ID is not configured."
+            raise OAuthError(msg)
+        try:
             registration = OAuthRegistration.model_validate(configs[registration_id])
-        except (ValueError, KeyError, TypeError):
+        except ValidationError as exc:
+            raise OAuthError(_registration_validation_message(exc)) from None
+        except (ValueError, TypeError):
             msg = "OAuth registration is not configured correctly."
             raise OAuthError(msg) from None
         if registration.context != self.context:

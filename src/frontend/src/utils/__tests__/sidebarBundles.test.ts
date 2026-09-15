@@ -25,6 +25,18 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 
+  it("classifies Serply as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Serply",
+          icon: "Search",
+          name: "serply",
+        }),
+      ]),
+    );
+  });
+
   it("classifies Microsoft 365 as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([
@@ -62,6 +74,18 @@ describe("SIDEBAR_BUNDLES", () => {
           display_name: "Slack",
           icon: "Slack",
           name: "slack",
+        }),
+      ]),
+    );
+  });
+
+  it("classifies Figranium as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Figranium",
+          icon: "Figranium",
+          name: "figranium",
         }),
       ]),
     );

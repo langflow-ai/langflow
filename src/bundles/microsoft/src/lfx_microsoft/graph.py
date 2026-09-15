@@ -1,6 +1,6 @@
 """Shared Microsoft Graph v1.0 REST client for the lfx-microsoft bundle.
 
-This module is public on purpose. The Graph triggers (TRG-6) fetch Outlook,
+This module is public on purpose. The Graph triggers fetch Outlook,
 Calendar and OneDrive/SharePoint resources through the same delegated
 connection, so ``request``/``paginate``/``download`` are a supported surface
 rather than a private helper the trigger bundle would have to fork.
@@ -21,19 +21,24 @@ Design notes
 
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import TYPE_CHECKING, Any, Literal
+from urllib.parse import quote, urljoin
 
 import httpx
 from lfx.integrations.errors import (
     ActionUnsupportedError,
     AuthExpiredError,
+    ConnectionNotAuthorizedError,
     IntegrationError,
     ProviderUnavailableError,
     RateLimitedError,
     ScopeMissingError,
     register_error_normalizer,
 )
+from lfx.utils.ssrf_httpx import ssrf_protected_strict_httpx_client_kwargs_for_url
+from lfx.utils.url_redaction import suppress_sensitive_http_logs
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
@@ -57,6 +62,11 @@ HTTP_FOUND = 302
 HTTP_SEE_OTHER = 303
 HTTP_TEMPORARY_REDIRECT = 307
 HTTP_PERMANENT_REDIRECT = 308
+HTTP_SUCCESS = 200
+HTTP_PARTIAL_CONTENT = 206
+HTTP_REDIRECT = 300
+MAX_DOWNLOAD_REDIRECTS = 5
+MAX_ERROR_BYTES = 64 * 1024
 HTTP_BAD_REQUEST = 400
 HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
@@ -91,16 +101,7 @@ _AUTH_ERROR_PREFIXES = ("compacttoken", "invalidauthenticationtoken")
 
 # Graph error codes that mean the caller is missing a permission rather than
 # hitting a transient provider condition.
-_SCOPE_ERROR_CODES = frozenset(
-    {
-        "accessdenied",
-        "erroraccessdenied",
-        "authorization_requestdenied",
-        "authenticationerror",
-        "forbidden",
-        "notallowed",
-    }
-)
+_SCOPE_ERROR_CODES = frozenset({"insufficient_scope", "invalid_scope"})
 
 MAX_PAGE_SIZE = 999
 
@@ -139,8 +140,10 @@ def integration_error_for_response(response: httpx.Response) -> IntegrationError
     code = graph_error_code(_decode(response))
     if status == HTTP_UNAUTHORIZED or code in _AUTH_ERROR_CODES or code.startswith(_AUTH_ERROR_PREFIXES):
         return AuthExpiredError(provider=PROVIDER_ID, http_status=status)
-    if status == HTTP_FORBIDDEN or code in _SCOPE_ERROR_CODES:
+    if code in _SCOPE_ERROR_CODES:
         return ScopeMissingError(provider=PROVIDER_ID)
+    if status == HTTP_FORBIDDEN:
+        return ConnectionNotAuthorizedError(provider=PROVIDER_ID, reason="provider")
     if status in {HTTP_TOO_MANY_REQUESTS, HTTP_SERVICE_UNAVAILABLE}:
         return RateLimitedError(
             provider=PROVIDER_ID,
@@ -185,13 +188,8 @@ class GraphClient:
             follow_redirects=False,
             headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
         )
-        # A separate, credential-free client for preauthenticated download URLs.
-        self._anonymous = httpx.AsyncClient(
-            timeout=timeout,
-            transport=transport,
-            follow_redirects=True,
-            headers={"User-Agent": USER_AGENT},
-        )
+        self._transport = transport
+        self._timeout = timeout
 
     async def __aenter__(self) -> Self:
         return self
@@ -205,14 +203,24 @@ class GraphClient:
         await self.aclose()
 
     async def aclose(self) -> None:
-        """Close both underlying transports."""
+        """Close the authorized Graph transport."""
         await self._client.aclose()
-        await self._anonymous.aclose()
 
     def _url(self, path_or_url: str) -> str:
-        if path_or_url.startswith(("http://", "https://")):
-            return path_or_url
-        return f"{self._base_url}/{path_or_url.lstrip('/')}"
+        base = httpx.URL(self._base_url)
+        try:
+            target = httpx.URL(path_or_url)
+            if not target.is_absolute_url:
+                target = httpx.URL(f"{self._base_url}/{path_or_url.lstrip('/')}")
+            if (
+                (target.scheme, target.host, target.port) != (base.scheme, base.host, base.port)
+                or target.userinfo
+                or target.fragment
+            ):
+                raise ProviderUnavailableError(provider=PROVIDER_ID)
+        except httpx.InvalidURL:
+            raise ProviderUnavailableError(provider=PROVIDER_ID) from None
+        return str(target)
 
     async def _send(
         self,
@@ -224,9 +232,8 @@ class GraphClient:
         json_body: Any,
         headers: Mapping[str, str] | None,
     ) -> httpx.Response:
-        request_headers = {"Authorization": f"Bearer {token}"}
-        if headers:
-            request_headers.update(headers)
+        request_headers = httpx.Headers(headers)
+        request_headers["Authorization"] = f"Bearer {token}"
         return await self._client.request(
             method,
             url,
@@ -259,7 +266,7 @@ class GraphClient:
 
         if response.status_code in _REDIRECT_STATUSES and allow_redirect:
             return response
-        if response.status_code < HTTP_BAD_REQUEST:
+        if HTTP_SUCCESS <= response.status_code < HTTP_REDIRECT:
             return response
 
         error = integration_error_for_response(response)
@@ -267,14 +274,14 @@ class GraphClient:
             raise error
 
         # Exactly one reactive re-resolve; the lease refuses a second.
-        token = await self._lease.get_token_after_auth_error(error)
+        token = await self._lease.get_token_after_auth_error(error, rejected_token=token)
         try:
             response = await self._send(method, url, token=token, params=params, json_body=json_body, headers=headers)
         except httpx.TransportError as exc:
             raise ProviderUnavailableError(provider=PROVIDER_ID) from exc
         if response.status_code in _REDIRECT_STATUSES and allow_redirect:
             return response
-        if response.status_code >= HTTP_BAD_REQUEST:
+        if not HTTP_SUCCESS <= response.status_code < HTTP_REDIRECT:
             raise integration_error_for_response(response)
         return response
 
@@ -298,16 +305,23 @@ class GraphClient:
         headers: Mapping[str, str] | None = None,
         limit: int | None = None,
     ) -> tuple[list[dict[str, Any]], str | None]:
-        """Follow ``@odata.nextLink`` until ``limit`` items are collected.
+        """Follow complete pages until at least ``limit`` items are collected.
 
-        Returns the collected items and the next link that was *not* followed,
-        so a caller can resume where the page budget ended.
+        The final page is retained in full, so the returned continuation does
+        not skip its remaining rows. The result can exceed the requested budget.
         """
+        if limit is not None and limit <= 0:
+            msg = "The result budget must be positive."
+            raise ValueError(msg)
         items: list[dict[str, Any]] = []
         next_link: str | None = None
         page_params: Mapping[str, Any] | None = params
         target = self._url(path)
+        visited: set[str] = set()
         while True:
+            if target in visited:
+                raise ProviderUnavailableError(provider=PROVIDER_ID)
+            visited.add(target)
             payload = await self.get_json(target, params=page_params, headers=headers)
             page = payload.get("value")
             if isinstance(page, list):
@@ -316,15 +330,15 @@ class GraphClient:
             if not isinstance(next_link, str) or not next_link:
                 next_link = None
                 break
+            next_link = self._url(next_link)
             if limit is not None and len(items) >= limit:
                 break
             target = next_link
             # The next link already carries every query parameter.
             page_params = None
-        if limit is not None and len(items) > limit:
-            items = items[:limit]
         return items, next_link
 
+    @suppress_sensitive_http_logs()
     async def download(
         self,
         path: str,
@@ -343,21 +357,48 @@ class GraphClient:
         streamed and the connection is dropped as soon as the cap is
         reached, so a 2 GB driveItem never lands in the process.
         """
-        response = await self.request("GET", path, headers=headers, allow_redirect=True)
-        if response.status_code not in _REDIRECT_STATUSES:
-            content = response.content
-            if max_bytes is not None and len(content) > max_bytes:
-                return content[:max_bytes]
-            return content
-        location = response.headers.get("location")
-        # The redirect target is chosen by Graph, but it is still an
-        # attacker-influenceable header on a response we then fetch, so it
-        # must at least be an absolute TLS URL: no http:// downgrade, no
-        # file:// or other scheme, no relative path resolved against a base
-        # we did not choose.
-        if not location or not location.startswith("https://"):
-            raise ProviderUnavailableError(provider=PROVIDER_ID, http_status=response.status_code)
-        return await self._stream_download(location, headers=headers, max_bytes=max_bytes)
+        if max_bytes is not None and max_bytes <= 0:
+            msg = "max_bytes must be positive."
+            raise ValueError(msg)
+        url = self._url(path)
+        request_headers = httpx.Headers(headers)
+        token = await self._lease.get_token()
+        try:
+            for attempt in range(2):
+                request_headers["Authorization"] = f"Bearer {token}"
+                async with self._client.stream("GET", url, headers=request_headers) as response:
+                    if response.status_code in _REDIRECT_STATUSES:
+                        location = response.headers.get("location", "")
+                        break
+                    if response.status_code in {HTTP_SUCCESS, HTTP_PARTIAL_CONTENT}:
+                        return await self._read_capped(response, max_bytes)
+                    error = await self._download_error(response)
+                if attempt or not isinstance(error, AuthExpiredError):
+                    raise error
+                token = await self._lease.get_token_after_auth_error(error, rejected_token=token)
+            return await self._stream_download(location, headers=headers, max_bytes=max_bytes)
+        except httpx.TransportError:
+            raise ProviderUnavailableError(provider=PROVIDER_ID) from None
+
+    @staticmethod
+    async def _read_capped(response: httpx.Response, max_bytes: int | None) -> bytes:
+        chunks: list[bytes] = []
+        remaining = max_bytes
+        async for chunk in response.aiter_bytes():
+            if remaining is None:
+                chunks.append(chunk)
+            else:
+                chunks.append(chunk[:remaining])
+                remaining -= len(chunk)
+                if remaining <= 0:
+                    break
+        return b"".join(chunks)
+
+    async def _download_error(self, response: httpx.Response) -> IntegrationError:
+        content = await self._read_capped(response, MAX_ERROR_BYTES)
+        return integration_error_for_response(
+            httpx.Response(response.status_code, headers=response.headers, content=content)
+        )
 
     async def _stream_download(
         self,
@@ -366,29 +407,37 @@ class GraphClient:
         headers: Mapping[str, str] | None,
         max_bytes: int | None,
     ) -> bytes:
-        """Read a preauthenticated download URL, stopping at ``max_bytes``."""
-        chunks: list[bytes] = []
-        remaining = max_bytes
-        try:
-            async with self._anonymous.stream(
-                "GET",
-                url,
-                headers=dict(headers) if headers else None,
-            ) as download:
-                if download.status_code >= HTTP_BAD_REQUEST:
-                    await download.aread()
-                    raise integration_error_for_response(download)
-                async for chunk in download.aiter_bytes():
-                    if remaining is None:
-                        chunks.append(chunk)
-                        continue
-                    if remaining <= 0:
-                        break
-                    chunks.append(chunk[:remaining])
-                    remaining -= len(chunk)
-        except httpx.TransportError as exc:
-            raise ProviderUnavailableError(provider=PROVIDER_ID) from exc
-        return b"".join(chunks)
+        """Follow bounded, credential-free HTTPS downloads with SSRF protection."""
+        download_headers = httpx.Headers(headers)
+        for name in ("Authorization", "Proxy-Authorization", "Cookie"):
+            download_headers.pop(name, None)
+        for _ in range(MAX_DOWNLOAD_REDIRECTS + 1):
+            try:
+                target = httpx.URL(url)
+                if target.scheme != "https" or not target.host or target.userinfo:
+                    raise ValueError
+                _, kwargs = await asyncio.to_thread(ssrf_protected_strict_httpx_client_kwargs_for_url, url)
+            except (ValueError, httpx.InvalidURL):
+                raise ProviderUnavailableError(provider=PROVIDER_ID) from None
+            if self._transport is not None:
+                kwargs["transport"] = self._transport
+            # A fresh client per hop carries no Graph cookies or bearer token.
+            async with (
+                httpx.AsyncClient(
+                    **{**kwargs, "follow_redirects": False}, timeout=self._timeout, headers={"User-Agent": USER_AGENT}
+                ) as client,
+                client.stream("GET", url, headers=download_headers) as response,
+            ):
+                if response.status_code in _REDIRECT_STATUSES:
+                    location = response.headers.get("location")
+                    if not location:
+                        raise ProviderUnavailableError(provider=PROVIDER_ID)
+                    url = urljoin(url, location)
+                    continue
+                if response.status_code not in {HTTP_SUCCESS, HTTP_PARTIAL_CONTENT}:
+                    raise await self._download_error(response)
+                return await self._read_capped(response, max_bytes)
+        raise ProviderUnavailableError(provider=PROVIDER_ID)
 
 
 def odata_params(
@@ -426,18 +475,18 @@ def drive_root(drive_id: str = "", site_id: str = "") -> str:
     Graph offers no combined form.
     """
     if drive_id:
-        return f"/drives/{drive_id}"
+        return f"/drives/{quote(drive_id, safe='!,')}"
     if site_id:
-        return f"/sites/{site_id}/drive"
+        return f"/sites/{quote(site_id, safe='!,')}/drive"
     return "/me/drive"
 
 
 def drive_children_path(root: str, item_id: str = "", path: str = "") -> str:
     """Return the ``children`` collection for an item id, a path, or the root."""
     if item_id:
-        return f"{root}/items/{item_id}/children"
+        return f"{root}/items/{quote(item_id, safe='!,')}/children"
     if path:
-        return f"{root}/root:/{path.strip('/')}:/children"
+        return f"{root}/root:/{quote(path.strip('/'), safe='/')}:/children"
     return f"{root}/root/children"
 
 
@@ -448,9 +497,9 @@ def drive_item_path(root: str, item_id: str = "", path: str = "", *, suffix: str
     follows the closing colon.
     """
     if item_id:
-        return f"{root}/items/{item_id}{suffix}"
+        return f"{root}/items/{quote(item_id, safe='!,')}{suffix}"
     if path:
-        return f"{root}/root:/{path.strip('/')}:{suffix}"
+        return f"{root}/root:/{quote(path.strip('/'), safe='/')}:{suffix}"
     return f"{root}/root{suffix}"
 
 

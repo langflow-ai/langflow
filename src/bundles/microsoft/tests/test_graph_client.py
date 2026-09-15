@@ -7,9 +7,9 @@ import pytest
 from lfx.integrations.errors import (
     ActionUnsupportedError,
     AuthExpiredError,
+    ConnectionNotAuthorizedError,
     ProviderUnavailableError,
     RateLimitedError,
-    ScopeMissingError,
     normalize_integration_error,
 )
 from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest, CredentialLease
@@ -76,11 +76,11 @@ async def test_persistent_401_raises_auth_expired_after_one_retry() -> None:
     assert resolver.calls == 2
 
 
-async def test_403_access_denied_maps_to_scope_missing() -> None:
+async def test_403_access_denied_maps_to_provider_denial() -> None:
     resolver = RecordingResolver([credential()])
     recorder = TransportRecorder(lambda _request: graph_error("ErrorAccessDenied", 403))
     async with GraphClient(lease_for(resolver), transport=recorder.transport) as client:
-        with pytest.raises(ScopeMissingError):
+        with pytest.raises(ConnectionNotAuthorizedError):
             await client.get_json("/me/messages")
     assert len(recorder.requests) == 1
 
@@ -217,8 +217,8 @@ def test_registered_normalizer_is_used_by_the_shared_vocabulary() -> None:
         httpx.HTTPStatusError("denied", request=request, response=response),
         provider="microsoft",
     )
-    assert isinstance(error, ScopeMissingError)
-    assert error.code == "scope-missing"
+    assert isinstance(error, ConnectionNotAuthorizedError)
+    assert error.code == "connection-not-authorized"
 
 
 def test_odata_params_clamps_top_and_quotes_search() -> None:

@@ -184,7 +184,7 @@
           "scope": "Files.Read.All",
           "role": "optional",
           "condition": {
-            "kind": "input_present",
+            "kind": "input_truthy",
             "input": "drive_id"
           }
         },
@@ -192,7 +192,7 @@
           "scope": "Sites.Read.All",
           "role": "optional",
           "condition": {
-            "kind": "input_present",
+            "kind": "input_truthy",
             "input": "site_id"
           }
         }
@@ -224,7 +224,7 @@
           "scope": "Files.Read.All",
           "role": "optional",
           "condition": {
-            "kind": "input_present",
+            "kind": "input_truthy",
             "input": "drive_id"
           }
         },
@@ -232,7 +232,7 @@
           "scope": "Sites.Read.All",
           "role": "optional",
           "condition": {
-            "kind": "input_present",
+            "kind": "input_truthy",
             "input": "site_id"
           }
         }

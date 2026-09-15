@@ -86,6 +86,7 @@
         "lfx-firecrawl",
         "lfx-nextplaid",
         "lfx-paddle",
+        "lfx-serply",
         "lfx-valkey"
       ],
       "forbidden_distributions_remove": [
@@ -204,6 +205,7 @@
         "lfx-firecrawl",
         "lfx-nextplaid",
         "lfx-paddle",
+        "lfx-serply",
         "lfx-valkey"
       ],
       "forbidden_distributions_remove": [
@@ -216,6 +218,7 @@
         "lfx-firecrawl",
         "lfx-nextplaid",
         "lfx-paddle",
+        "lfx-serply",
         "lfx-valkey"
       ],
       "entry_points": {
@@ -241,6 +244,7 @@
           "lfx-openai-compatible",
           "lfx-oracle",
           "lfx-paddle",
+          "lfx-serply",
           "lfx-slack",
           "lfx-toolguard",
           "lfx-valkey",
@@ -271,6 +275,8 @@
         "deepseek",
         "elastic",
         "faiss",
+        "figranium",
+        "funasr",
         "git",
         "glean",
         "groq",
@@ -298,6 +304,7 @@
         "perplexity",
         "pgvector",
         "pinecone",
+        "plivo",
         "qdrant",
         "redis",
         "sambanova",

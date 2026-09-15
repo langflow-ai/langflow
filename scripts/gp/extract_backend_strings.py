@@ -159,21 +159,12 @@ def iter_installed_bundle_classes() -> Iterator[tuple[str, type]]:
     Yield order is the loader's: lexicographic by canonical distribution name,
     then the bundle's sorted file walk.  Deterministic for a given install set.
 
-    A missing or broken extension system is reported and skipped rather than
-    raised: en.json regeneration must not become impossible because one
-    distribution is in a bad state.
+    Loader-wide failures abort generation so an incomplete discovery cannot
+    overwrite the committed catalog without its bundle-only keys.
     """
-    try:
-        from lfx.extension import load_installed_extensions
-    except ImportError as exc:
-        print(f"  SKIP installed extension bundles (extension system unavailable): {exc}")
-        return
+    from lfx.extension import load_installed_extensions
 
-    try:
-        results = load_installed_extensions()
-    except Exception as exc:  # noqa: BLE001 - one bad distribution must not abort the extraction
-        print(f"  SKIP installed extension bundles (load failed): {exc}")
-        return
+    results = load_installed_extensions()
 
     for result in results:
         for error in getattr(result, "errors", []) or []:

@@ -42,6 +42,11 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
         """Return the file names mapping for version-specific files."""
         return []
 
+    async def test_latest_version(self, component_class, default_kwargs, skipped_outputs, mock_llm):
+        # Answer the guardrail checks offline; the component's handling of the verdict runs for real.
+        with patch("lfx.components.llm_operations.guardrails.get_llm", return_value=mock_llm):
+            await super().test_latest_version(component_class, default_kwargs, skipped_outputs)
+
     @pytest.fixture
     def mock_llm(self):
         """Create a mock LLM that returns NO (pass) by default."""

@@ -196,6 +196,10 @@ class LangflowCatalogPolicyService(BaseCatalogPolicyService):
                             blocked_component_keys=components,
                             blocked_template_keys=templates,
                             blocked_model_keys=current.blocked_model_keys,
+                            # Catalog-only facet write: carry integration
+                            # governance forward untouched.
+                            approved_integration_provider_ids=current.approved_integration_provider_ids,
+                            blocked_integration_action_keys=current.blocked_integration_action_keys,
                             actor_user_id=actor_user_id,
                             reason=f"Replace blocked {resource_kind.value} catalog keys",
                         )

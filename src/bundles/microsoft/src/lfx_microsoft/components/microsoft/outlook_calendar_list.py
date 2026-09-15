@@ -48,7 +48,12 @@ class OutlookCalendarListComponent(MicrosoftGraphComponent):
             info="Defaults to the user's default calendar.",
             advanced=True,
         ),
-        IntInput(name="top", display_name="Max Results", value=DEFAULT_TOP),
+        IntInput(
+            name="top",
+            display_name="Result Budget",
+            value=DEFAULT_TOP,
+            info="Stop after a complete page reaches this count; results can exceed it by part of a page.",
+        ),
         MessageTextInput(
             name="select",
             display_name="Select Fields",
@@ -74,6 +79,10 @@ class OutlookCalendarListComponent(MicrosoftGraphComponent):
     # outputs -- costs one request, not two.
     _rows: list[Data] | None = None
 
+    def _pre_run_setup(self) -> None:
+        self._rows = None
+        self._next_link = None
+
     def _path(self) -> str:
         calendar = (self.calendar_id or "").strip()
         if calendar:
@@ -85,8 +94,12 @@ class OutlookCalendarListComponent(MicrosoftGraphComponent):
         if self._rows is not None:
             self.status = f"{len(self._rows)} event(s)"
             return self._rows
+        limit = int(self.top or DEFAULT_TOP)
+        if limit <= 0:
+            msg = "Result Budget must be positive."
+            raise ValueError(msg)
         params = odata_params(
-            top=self.top or DEFAULT_TOP,
+            top=limit,
             select=as_list(self.select) or None,
             extra={"startDateTime": self.start_time, "endDateTime": self.end_time},
         )
@@ -97,7 +110,7 @@ class OutlookCalendarListComponent(MicrosoftGraphComponent):
                 self._path(),
                 params=params,
                 headers=headers or None,
-                limit=self.top or DEFAULT_TOP,
+                limit=limit,
             )
         self._next_link = next_link
         rows = [Data(data=item) for item in items]

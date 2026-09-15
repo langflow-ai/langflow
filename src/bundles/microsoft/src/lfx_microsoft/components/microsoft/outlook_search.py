@@ -47,8 +47,8 @@ class OutlookSearchComponent(MicrosoftGraphComponent):
         ),
         IntInput(
             name="top",
-            display_name="Max Results",
-            info="1 to 1000. Graph defaults to 10.",
+            display_name="Result Budget",
+            info="Stop after a complete page reaches this count; results can exceed it by part of a page.",
             value=DEFAULT_TOP,
         ),
         MessageTextInput(
@@ -77,6 +77,10 @@ class OutlookSearchComponent(MicrosoftGraphComponent):
     # outputs -- costs one request, not two.
     _rows: list[Data] | None = None
 
+    def _pre_run_setup(self) -> None:
+        self._rows = None
+        self._next_link = None
+
     def _path(self) -> str:
         folder = (self.folder_id or "").strip()
         if folder:
@@ -88,10 +92,17 @@ class OutlookSearchComponent(MicrosoftGraphComponent):
         if self._rows is not None:
             self.status = f"{len(self._rows)} message(s)"
             return self._rows
+        limit = int(self.top or DEFAULT_TOP)
+        if limit <= 0:
+            msg = "Result Budget must be positive."
+            raise ValueError(msg)
         search = (self.search or "").strip()
         filter_expression = (self.filter or "").strip()
+        if search and filter_expression:
+            msg = "Use either Search or Filter; Microsoft Graph cannot combine them."
+            raise ValueError(msg)
         params = odata_params(
-            top=self.top or DEFAULT_TOP,
+            top=limit,
             select=as_list(self.select) or None,
             filter_expression=filter_expression or None,
             search=search or None,
@@ -103,7 +114,7 @@ class OutlookSearchComponent(MicrosoftGraphComponent):
                 self._path(),
                 params=params,
                 headers=headers or None,
-                limit=self.top or DEFAULT_TOP,
+                limit=limit,
             )
         self._next_link = next_link
         rows = [Data(data=item) for item in items]

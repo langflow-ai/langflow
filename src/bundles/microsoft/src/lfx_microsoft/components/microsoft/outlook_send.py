@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
+import json
 from pathlib import Path
 from typing import Any
+
+from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 
 from lfx_microsoft.base import (
     BoolInput,
@@ -28,6 +32,7 @@ HTTP_ACCEPTED = 202
 # deliberately does not create. Refuse before reading the file so a 2 GB path
 # never lands in memory on its way to a Graph 413.
 MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024
+MAX_MESSAGE_BYTES = 4 * 1024 * 1024
 
 
 class OutlookSendComponent(MicrosoftGraphComponent):
@@ -77,22 +82,32 @@ class OutlookSendComponent(MicrosoftGraphComponent):
 
     def _attachments(self) -> list[dict[str, Any]]:
         entries: list[dict[str, Any]] = []
-        total = 0
-        for raw_path in as_list(getattr(self, "attachments", None)):
-            resolved = Path(self.resolve_path(raw_path))
-            total += resolved.stat().st_size
-            if total > MAX_ATTACHMENT_BYTES:
+        remaining = MAX_ATTACHMENT_BYTES
+        paths = getattr(self, "attachments", None) or []
+        if isinstance(paths, str):
+            paths = [paths]
+        for raw_path in paths:
+            resolved = enforce_local_file_access(
+                Path(self.resolve_path(raw_path)), scope_ids=component_file_access_scopes(self)
+            )
+            if resolved.stat().st_size > remaining:
                 msg = (
                     f"Attachments exceed the {MAX_ATTACHMENT_BYTES // (1024 * 1024)} MB that Microsoft Graph "
                     f"accepts inline on sendMail (reached at {resolved.name!r}). Send fewer or smaller files, "
                     f"or share a link instead."
                 )
                 raise ValueError(msg)
+            with resolved.open("rb") as attachment:
+                payload = attachment.read(remaining + 1)
+            if len(payload) > remaining:
+                msg = "Attachments exceed Microsoft Graph's inline size limit. Send fewer or smaller files."
+                raise ValueError(msg)
+            remaining -= len(payload)
             entries.append(
                 {
                     "@odata.type": "#microsoft.graph.fileAttachment",
                     "name": resolved.name,
-                    "contentBytes": base64.b64encode(resolved.read_bytes()).decode("ascii"),
+                    "contentBytes": base64.b64encode(payload).decode("ascii"),
                 }
             )
         return entries
@@ -112,11 +127,20 @@ class OutlookSendComponent(MicrosoftGraphComponent):
             message["bccRecipients"] = bcc
         if attachments := self._attachments():
             message["attachments"] = attachments
+        # Include the body, recipients, JSON envelope and base64 expansion in
+        # the request limit; a raw attachment budget alone is insufficient.
+        payload = {"message": message, "saveToSentItems": bool(self.save_to_sent_items)}
+        encoded = json.dumps(payload, ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode("utf-8")
+        if len(encoded) > MAX_MESSAGE_BYTES:
+            msg = (
+                "The message exceeds Microsoft Graph's 4 MiB inline request limit. Send a smaller body or attachments."
+            )
+            raise ValueError(msg)
         return message
 
     async def send_mail(self) -> Data:
         """Send the message and return the request echo plus the Graph status."""
-        message = self._message()
+        message = await asyncio.to_thread(self._message)
         lease = self.lease()
         async with self.action(lease) as client:
             response = await client.request(

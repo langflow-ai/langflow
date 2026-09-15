@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 
 import pytest
-from lfx.integrations.errors import ScopeMissingError
+from lfx.integrations.errors import ConnectionNotAuthorizedError, ScopeMissingError
 from lfx.schema.data import Data
 from lfx_microsoft import TeamsChannelPostComponent, TeamsChatPostComponent
 from microsoft_testkit import TransportRecorder, build_component, credential, graph_error, graph_fixture, json_response
@@ -91,8 +91,8 @@ async def test_channel_post_targets_the_channel_messages_collection(resolver_fac
     assert result.data["webUrl"].startswith("https://teams.microsoft.com/")
 
 
-async def test_channel_post_surfaces_a_graph_denial_as_scope_missing(resolver_factory) -> None:
-    resolver_factory(credential(scopes=set(), scopes_verified=False))
+async def test_channel_post_surfaces_a_graph_resource_denial(resolver_factory) -> None:
+    resolver_factory(credential(scopes={"ChannelMessage.Send"}))
     recorder = TransportRecorder(lambda _request: graph_error("Authorization_RequestDenied", 403))
     component = build_component(
         TeamsChannelPostComponent,
@@ -103,7 +103,7 @@ async def test_channel_post_surfaces_a_graph_denial_as_scope_missing(resolver_fa
         content="hello",
     )
 
-    with pytest.raises(ScopeMissingError):
+    with pytest.raises(ConnectionNotAuthorizedError):
         await component.post_message()
-    # Unverified scopes skip the pre-flight, so the denial comes from Graph.
+    # The credential passes pre-flight; the resource denial comes from Graph.
     assert len(recorder.requests) == 1
