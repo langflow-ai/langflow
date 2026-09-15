@@ -29763,7 +29763,7 @@
                 },
                 {
                   "name": "langchain_google_community",
-                  "version": "3.0.5"
+                  "version": "5.0.0"
                 }
               ],
               "total_dependencies": 3
@@ -31988,6 +31988,6 @@
     "num_components": 128,
     "num_modules": 16
   },
-  "sha256": "7be2d8bb7d592510db04727aacce0c018c487a656f162cfc01b32ee2a24f4b41",
-  "version": "1.13.0"
+  "sha256": "cafb8508c6d02921c73e170d6aae1812ea437bb1a28c3c136ce48e0658151356",
+  "version": "1.12.2"
 }
