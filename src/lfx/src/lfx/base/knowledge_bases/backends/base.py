@@ -23,7 +23,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from lfx.log.logger import logger
 from lfx.utils.env_var_security import safe_getenv
@@ -89,6 +89,9 @@ class IngestedDocument:
     content: str
     metadata: dict[str, Any] = field(default_factory=dict)
     embedding: list[float] | None = None
+    # The store's own id for the chunk. Carrying it lets a copy between stores
+    # write each chunk under the same id, so re-running the copy upserts.
+    id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -276,6 +279,39 @@ class BaseVectorStoreBackend(ABC):
             return
         await self.ensure_ready()
         await self.vector_store.aadd_documents(docs)
+
+    async def add_embedded_documents(self, docs: list[IngestedDocument]) -> None:
+        """Write chunks whose vectors are already computed, without re-embedding.
+
+        This is how a knowledge base moves between stores: what one backend
+        returns from ``iter_documents(include_embeddings=True)`` is written here
+        as-is, so no embedding model or provider credentials are involved.
+
+        Every document needs an ``embedding`` of the same width. A document with
+        an ``id`` is written under that id, so writing the same batch twice
+        upserts instead of duplicating; one without gets a fresh id.
+        """
+        if not docs:
+            return
+        missing = [i for i, doc in enumerate(docs) if not doc.embedding]
+        if missing:
+            msg = f"add_embedded_documents needs an embedding on every document; missing at positions {missing[:5]}"
+            raise ValueError(msg)
+        widths = {len(doc.embedding) for doc in docs}  # type: ignore[arg-type]
+        if len(widths) > 1:
+            msg = f"add_embedded_documents needs one embedding width per batch; got {sorted(widths)}"
+            raise ValueError(msg)
+        await self.ensure_ready()
+        await self._write_embedded([doc.id or str(uuid4()) for doc in docs], docs)
+
+    async def _write_embedded(self, ids: list[str], docs: list[IngestedDocument]) -> None:
+        """Store ``docs`` under ``ids`` with their existing vectors. Backends override this.
+
+        There is deliberately no fallback: a silent no-op here would read as a
+        successful copy that lost every chunk.
+        """
+        msg = f"{type(self).__name__} does not support writing precomputed embeddings"
+        raise NotImplementedError(msg)
 
     async def similarity_search(
         self,

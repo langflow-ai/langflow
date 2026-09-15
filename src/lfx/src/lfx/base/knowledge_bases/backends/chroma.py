@@ -53,6 +53,21 @@ if TYPE_CHECKING:
 # ---------------------------------------------------------------------------
 
 
+def _upsert_embedded(collection: Any, ids: list[str], docs: list[IngestedDocument]) -> None:
+    """Upsert chunks with their existing vectors straight into a Chroma collection.
+
+    The LangChain wrapper only exposes a write that embeds, so this goes to the
+    native collection, which the readers above already use.
+    """
+    collection.upsert(
+        ids=ids,
+        embeddings=[doc.embedding for doc in docs],
+        documents=[doc.content for doc in docs],
+        # Chroma rejects an empty metadata dict, but accepts None for "no metadata".
+        metadatas=[doc.metadata or None for doc in docs],
+    )
+
+
 class ChromaLocalBackend(BaseVectorStoreBackend):
     """Chroma collection backed by a local ``PersistentClient``.
 
@@ -161,6 +176,8 @@ class ChromaLocalBackend(BaseVectorStoreBackend):
             metadatas = result.get("metadatas") or [{} for _ in documents]
             embeddings = result.get("embeddings") if include_embeddings else None
 
+            ids = result.get("ids") or []
+
             batch: list[IngestedDocument] = []
             for idx, content in enumerate(documents):
                 batch.append(
@@ -168,10 +185,14 @@ class ChromaLocalBackend(BaseVectorStoreBackend):
                         content=content or "",
                         metadata=dict(metadatas[idx]) if idx < len(metadatas) else {},
                         embedding=(list(embeddings[idx]) if embeddings is not None and idx < len(embeddings) else None),
+                        id=ids[idx] if idx < len(ids) else None,
                     )
                 )
             if batch:
                 yield batch
+
+    async def _write_embedded(self, ids: list[str], docs: list[IngestedDocument]) -> None:
+        _upsert_embedded(self.vector_store._collection, ids, docs)  # type: ignore[attr-defined]  # noqa: SLF001
 
     async def storage_size_bytes(self) -> int:
         if not self.kb_path.exists():
@@ -358,6 +379,8 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
             metadatas = result.get("metadatas") or [{} for _ in documents]
             embeddings = result.get("embeddings") if include_embeddings else None
 
+            ids = result.get("ids") or []
+
             batch: list[IngestedDocument] = []
             for idx, content in enumerate(documents):
                 batch.append(
@@ -365,10 +388,14 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
                         content=content or "",
                         metadata=dict(metadatas[idx]) if idx < len(metadatas) else {},
                         embedding=(list(embeddings[idx]) if embeddings is not None and idx < len(embeddings) else None),
+                        id=ids[idx] if idx < len(ids) else None,
                     )
                 )
             if batch:
                 yield batch
+
+    async def _write_embedded(self, ids: list[str], docs: list[IngestedDocument]) -> None:
+        _upsert_embedded(self.vector_store._collection, ids, docs)  # type: ignore[attr-defined]  # noqa: SLF001
 
     async def storage_size_bytes(self) -> int:
         return 0
