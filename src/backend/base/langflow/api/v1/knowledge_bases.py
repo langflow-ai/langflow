@@ -1434,6 +1434,8 @@ async def list_connectors(_current_user: CurrentActiveUser) -> list[ConnectorCat
                 description=getattr(source_cls, "description", "") or "",
                 icon=getattr(source_cls, "icon", None),
                 requires_credentials=bool(getattr(source_cls, "requires_credentials", False)),
+                provider_key=getattr(source_cls, "connection_provider", "") or None,
+                required_scopes=list(getattr(source_cls, "connection_required_scopes", ()) or ()),
             )
         )
     return entries

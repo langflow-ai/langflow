@@ -16,19 +16,28 @@ differ from ``FileUploadSource`` / ``FolderSource`` in two ways:
    on — connectors don't need to reinvent that.
 
 This base class gives connectors a single ``resolve_secret`` helper so
-every provider talks to the variable service the same way. No shared
-OAuth plumbing here: Phase 3B+ adds a dedicated ``OAuthConnectorBase``
-subclass with token-refresh logic once the first OAuth provider lands.
+every provider talks to the variable service the same way, and a single
+``connection_lease`` helper for connectors backed by a dedicated
+integration connection (INT-2/INT-4/INT-5) rather than by hand-managed
+refresh-token variables.
+
+``OAuthConnectorBase`` keeps the original bring-your-own-refresh-token
+flow for connectors that still need it, but prefers the connection
+resolver whenever ``source_config["connection"]`` names a connection
+handle.
 """
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any, ClassVar
 from uuid import UUID
 
 from lfx.base.knowledge_bases.ingestion_sources.base import KBIngestionSource
 from lfx.log.logger import logger
 from lfx.utils.env_var_security import safe_getenv
+
+if TYPE_CHECKING:
+    from lfx.integrations.models import CredentialLease
 
 # HTTP-status threshold cloud-connector helpers treat as "request failed".
 # Shared so every connector checks the same boundary.
@@ -43,6 +52,73 @@ class KBConnectorSource(KBIngestionSource):
     """Base class for third-party / cloud ingestion sources."""
 
     requires_credentials = True
+
+    #: Integration provider whose connections this source accepts, e.g.
+    #: ``"microsoft"``. Empty when the source predates dedicated
+    #: connections and only reads credential variables.
+    connection_provider: ClassVar[str] = ""
+    #: Provider scopes the source needs on that connection.
+    connection_required_scopes: ClassVar[tuple[str, ...]] = ()
+
+    #: ``ExecutionPrincipal.family`` stamped on connection resolutions made
+    #: by an ingestion job. Ingestion always runs detached from the request
+    #: that started it, so the principal is a non-interactive job owner and
+    #: the connection must opt in with ``allow_non_interactive``.
+    connection_family: ClassVar[str] = "knowledge_base_ingestion"
+
+    def required_connection_scopes(self) -> tuple[str, ...]:
+        """Return the scopes this configuration needs.
+
+        Defaults to the class-level list. A source whose requirements depend
+        on its configuration -- a drive id widens OneDrive from ``Files.Read``
+        to ``Files.Read.All`` -- overrides this.
+        """
+        return self.connection_required_scopes
+
+    def connection_handle(self) -> str | None:
+        """Return the configured connection handle, if the source has one."""
+        handle = self.source_config.get("connection")
+        return handle if isinstance(handle, str) and handle else None
+
+    def connection_lease(self) -> CredentialLease:
+        """Return a credential lease for the configured connection handle.
+
+        The lease resolves lazily, so building one is cheap and safe to do
+        during ``validate_config``. Resolution itself is what enforces
+        ownership: the ingestion job is a ``job_owner`` principal, which the
+        portable deny floor refuses unless the connection allows
+        non-interactive use.
+        """
+        from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest, CredentialLease
+        from lfx.services.authorization.base import ExecutionPrincipal
+        from lfx.services.deps import get_connection_resolver
+
+        handle = self.connection_handle()
+        if not handle:
+            msg = (
+                f"{type(self).__name__} requires a connection. Set "
+                f"source_config['connection'] to a {self.connection_provider or 'provider'} connection handle."
+            )
+            raise ValueError(msg)
+        ref = ConnectionRef.parse(handle)
+        if self.connection_provider and ref.provider != self.connection_provider:
+            msg = (
+                f"Connection {handle!r} belongs to provider {ref.provider!r}, but "
+                f"{type(self).__name__} requires {self.connection_provider!r}."
+            )
+            raise ValueError(msg)
+        principal = ExecutionPrincipal(
+            kind="job_owner",
+            user_id=str(self.user_id) if self.user_id is not None else None,
+            family=self.connection_family,
+            interactive=False,
+        )
+        request = ConnectionResolutionRequest(
+            ref=ref,
+            principal=principal,
+            required_scopes=frozenset(self.required_connection_scopes()),
+        )
+        return CredentialLease(get_connection_resolver(), request)
 
     async def resolve_secret(self, variable_name: str) -> str | None:
         """Return the value of a Langflow variable, or ``None`` if absent.
@@ -180,16 +256,29 @@ class OAuthConnectorBase(KBConnectorSource):
         self._cached_access_token: str | None = None
         self._cached_token_expires_at: float = 0.0
         self.token_ttl_seconds: int = self.default_token_ttl_seconds
+        # One lease per run: it single-flights refreshes and permits exactly
+        # one reactive re-resolve after the provider rejects a token.
+        self._lease: CredentialLease | None = None
 
     async def get_access_token(self) -> str:
         """Return a currently-valid access token, refreshing if needed.
 
         Shared entry point for subclasses — don't hit the refresh
-        endpoint yourself. Caches the token until it's within a 5-
-        minute window of expiry so a run that performs N list+fetch
+        endpoint yourself. When ``source_config["connection"]`` names a
+        connection handle, the token comes from the host's connection
+        resolver and this class is a thin adapter over it: no refresh
+        token is stored in a Langflow variable and no token exchange
+        happens here. Otherwise the legacy bring-your-own-refresh-token
+        flow below applies, caching the token until it is within a
+        five-minute window of expiry so a run that performs N list+fetch
         calls makes only one refresh round-trip.
         """
         import time
+
+        if self.connection_handle():
+            if self._lease is None:
+                self._lease = self.connection_lease()
+            return await self._lease.get_token()
 
         now = time.monotonic()
         if self._cached_access_token and now < self._cached_token_expires_at:
@@ -281,6 +370,10 @@ class OAuthConnectorBase(KBConnectorSource):
         """
         base = super().describe()
         base.setdefault("config", {})
+        if self.connection_handle():
+            # A connection-backed source reads no credential variables, so
+            # advertising the legacy variable names would be misleading.
+            return base
         base["config"].setdefault("client_id_variable", self._client_id_variable())
         base["config"].setdefault("client_secret_variable", self._client_secret_variable())
         base["config"].setdefault("refresh_token_variable", self._refresh_token_variable())

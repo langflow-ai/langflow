@@ -16,13 +16,18 @@ Public surface:
 * ``register_source`` / ``create_source`` / ``registered_sources`` —
   the registry entry points.
 
-In this phase only **file_upload** and **folder** are registered. The
-S3 / Google Drive / OneDrive / SharePoint classes are preserved as
-stubs so the framework wiring (enum values, type imports, DB-stored
-``source_type`` strings on existing ``ingestion_run`` rows) keeps
-round-tripping, but they are not instantiable through ``create_source``
-and the picker UI hides them. Reinstate by restoring the full source
-class and re-adding ``register_source(...)`` for that source below.
+**file_upload**, **folder**, **onedrive** and **sharepoint** are
+registered. OneDrive and SharePoint resolve their credentials through a
+Microsoft connection handle (INT-11); an ingestion job is a
+non-interactive ``job_owner`` principal, so the connection must allow
+non-interactive use or resolution is refused.
+
+The S3 and Google Drive classes are still preserved as stubs so the
+framework wiring (enum values, type imports, DB-stored ``source_type``
+strings on existing ``ingestion_run`` rows) keeps round-tripping, but
+they are not instantiable through ``create_source`` and the picker UI
+hides them. Reinstate by restoring the full source class and re-adding
+``register_source(...)`` for that source below.
 """
 
 from lfx.base.knowledge_bases.ingestion_sources.base import (
@@ -55,11 +60,13 @@ from lfx.base.knowledge_bases.ingestion_sources.registry import (
 from lfx.base.knowledge_bases.ingestion_sources.s3 import S3Source
 from lfx.base.knowledge_bases.ingestion_sources.sharepoint import SharePointSource
 
-# Register the supported built-in sources on import. S3Source /
-# GoogleDriveSource / OneDriveSource / SharePointSource are intentionally
-# NOT registered while they're stubbed out — see each module's docstring.
+# Register the supported built-in sources on import. S3Source and
+# GoogleDriveSource are intentionally NOT registered while they're stubbed
+# out — see each module's docstring.
 register_source(SourceType.FILE_UPLOAD, FileUploadSource)
 register_source(SourceType.FOLDER, FolderSource)
+register_source(SourceType.ONEDRIVE, OneDriveSource)
+register_source(SourceType.SHAREPOINT, SharePointSource)
 
 __all__ = [
     "FileUploadSource",
