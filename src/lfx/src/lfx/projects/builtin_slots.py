@@ -1,8 +1,8 @@
 """The harness contracts shared with future project types.
 
 Registration publishes vocabulary, not runtime support. In particular, the custom loop,
-permissions, and compaction flows still need runtime adapters.
-Instructions, Hook, and ContextManager publish executable baselines.
+and permissions still need runtime adapters.
+Instructions, Hook, ContextManager, and Compactor publish executable baselines.
 """
 
 from lfx.projects.registry import register_slot
@@ -24,7 +24,7 @@ CONTEXT_MANAGER = register_slot(
     SlotDefinition("ContextManager", "DataFrame", FireTiming.PER_LLM_CALL, default_flow_ref="builtin:context"),
 )
 COMPACTOR = register_slot(
-    SlotDefinition("Compactor", "CompactionResult", FireTiming.ON_THRESHOLD),
+    SlotDefinition("Compactor", "CompactionResult", FireTiming.ON_THRESHOLD, default_flow_ref="builtin:compaction"),
 )
 PERMISSION_GATE = register_slot(
     SlotDefinition("PermissionGate", "Permission", FireTiming.PER_TOOL_CALL),

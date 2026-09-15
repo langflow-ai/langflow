@@ -526,6 +526,8 @@ async def process_agent_events(
                     "context_prepared": "Context prepared",
                     "context_failed": "Context preparation failed",
                     "compacted": "Conversation compacted",
+                    "compaction_failed": "Compaction failed",
+                    "compaction_skipped": "Compaction kept the conversation",
                     "permission_decision": "Tool permission decided",
                     "hook_completed": "Hook completed",
                     "hook_failed": "Hook failed",
