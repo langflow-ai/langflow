@@ -51,6 +51,9 @@ class CeleryBackend(TaskBackend):
         from celery.result import AsyncResult
 
         try:
-            return AsyncResult(task_id, app=self.celery_app).revoke(terminate=True)
+            AsyncResult(task_id, app=self.celery_app).revoke(terminate=True)
         except TaskRevokedError:
             return True
+        # AsyncResult.revoke returns None after broadcasting. Success means the
+        # command was sent, not that a worker has acknowledged termination.
+        return True
