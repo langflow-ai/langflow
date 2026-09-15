@@ -30,8 +30,8 @@ def agent_node_ids(data: dict | None) -> list[str]:
     ]
 
 
-def prepare_tool_template(target: dict) -> dict:
-    """Use Run Flow's own component-update implementation to expose the target's inputs.
+def validate_tool_flow(target: dict) -> Graph:
+    """Validate the Tool adapter contract without running saved component code.
 
     The caller supplies an authorized flow row. Parsing templates here does not run target
     component constructors, execute the flow, or make an HTTP call back into Langflow.
@@ -51,6 +51,13 @@ def prepare_tool_template(target: dict) -> dict:
     if not any(vertex.is_output for vertex in graph.vertices):
         msg = f"Flow {target['name']!r} needs an output before it can be used as a tool."
         raise ValueError(msg)
+    return graph
+
+
+def prepare_tool_template(target: dict) -> dict:
+    """Use Run Flow's component update to expose a statically validated target's inputs."""
+    graph = validate_tool_flow(target)
+    component = RunFlowComponent()
 
     frontend = component.to_frontend_node()
     node = frontend.get("data", frontend)["node"]

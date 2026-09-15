@@ -26,6 +26,7 @@ from langflow.services.database.models.flow.guards import LockedFlowError, ensur
 from langflow.services.database.models.flow.model import Flow, FlowType
 from langflow.services.database.models.flow_version.crud import create_flow_version_entry
 from langflow.services.database.models.flow_version.model import FlowVersion
+from langflow.services.database.models.folder.tool_packs import describe_tool_pack
 from lfx.projects import DEFAULT_PROJECT_TYPE, apply_project_config, get_project_type
 
 if TYPE_CHECKING:
@@ -186,6 +187,15 @@ async def write_project_config_to_flows(
         ).all()
     )
     config = deepcopy(project.project_config or {})
+    if project_type.name == "tool-pack":
+        try:
+            manifest = describe_tool_pack(project, flows)
+        except (ValueError, KeyError, TypeError) as exc:
+            raise HTTPException(422, f"Could not export the selected tools: {exc}") from exc
+        config["tools"] = [str(tool.flow_id) for tool in manifest.tools]
+        project.project_config = None if clearing_config else config
+        session.add(project)
+        return result
     if not project.project_config and previous_config:
         # Clearing configuration still removes its generated Instructions connection.
         config["agent_flow_id"] = previous_config.get("agent_flow_id")
