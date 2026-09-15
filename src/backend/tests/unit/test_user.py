@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from uuid import uuid4
 
 import pytest
 from httpx import AsyncClient
@@ -14,6 +15,7 @@ from sqlmodel import select
 
 CURRENT_CREDENTIAL = "test" + "password"
 REPLACEMENT_CREDENTIAL = "new" + "password"
+SUPERUSER_CREDENTIAL = "test-superuser-password"  # Provisioned by the shared client fixture.
 
 
 @pytest.fixture
@@ -24,32 +26,26 @@ async def super_user(client):  # noqa: ARG001
         return await create_super_user(
             db=db,
             username=auth_settings.SUPERUSER,
-            password=(
-                auth_settings.SUPERUSER_PASSWORD.get_secret_value()
-                if hasattr(auth_settings.SUPERUSER_PASSWORD, "get_secret_value")
-                else auth_settings.SUPERUSER_PASSWORD
-            ),
+            # Startup deliberately scrubs SUPERUSER_PASSWORD from the in-memory settings object.
+            password=SUPERUSER_CREDENTIAL,
         )
 
 
 @pytest.fixture
 async def super_user_headers(
     client: AsyncClient,
-    super_user,  # noqa: ARG001
+    super_user,
 ):
     settings_service = get_settings_service()
     auth_settings = settings_service.auth_settings
     login_data = {
         # SUPERUSER may be reset to default depending on AUTO_LOGIN; use constant for stability in tests
-        "username": DEFAULT_SUPERUSER if auth_settings.AUTO_LOGIN else auth_settings.SUPERUSER,
-        "password": (
-            auth_settings.SUPERUSER_PASSWORD.get_secret_value()
-            if hasattr(auth_settings.SUPERUSER_PASSWORD, "get_secret_value")
-            else auth_settings.SUPERUSER_PASSWORD
-        ),
+        "username": DEFAULT_SUPERUSER if auth_settings.AUTO_LOGIN else super_user.username,
+        # The client fixture provisions this value before startup; settings intentionally no longer retain it.
+        "password": SUPERUSER_CREDENTIAL,
     }
     response = await client.post("api/v1/login", data=login_data)
-    assert response.status_code == 200
+    assert response.status_code == 200, response.text
     tokens = response.json()
     a_token = tokens["access_token"]
     return {"Authorization": f"Bearer {a_token}"}
@@ -118,12 +114,10 @@ async def test_deactivated_user_cannot_login(client: AsyncClient, deactivated_us
     assert response.json()["detail"] == "Inactive user", response.text
 
 
-@pytest.mark.usefixtures("deactivated_user")
-async def test_deactivated_user_cannot_access(client: AsyncClient, logged_in_headers):
-    # Assuming the headers for deactivated_user
+async def test_normal_user_cannot_access_user_directory(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/users/", headers=logged_in_headers)
     assert response.status_code == 403, response.status_code
-    assert response.json()["detail"] == "The user doesn't have enough privileges", response.text
+    assert response.json()["detail"] == "Platform administrator access required", response.text
 
 
 @pytest.mark.api_key_required
@@ -137,12 +131,26 @@ async def test_data_consistency_after_update(client: AsyncClient, active_user, l
     # Fetch the updated user from the database
     response = await client.get("api/v1/users/whoami", headers=logged_in_headers)
     assert response.status_code == 401, response.json()
-    assert response.json()["detail"] == "User not found or is inactive."
+    assert response.json()["detail"] == "User account is inactive"
 
 
 @pytest.mark.api_key_required
-async def test_data_consistency_after_delete(client: AsyncClient, test_user, super_user_headers):
-    user_id = test_user.get("id")
+async def test_data_consistency_after_delete(client: AsyncClient, super_user_headers):
+    # API-created users own a default project and intentionally require explicit
+    # resource disposition. Create a resource-free user to exercise the allowed
+    # hard-delete path and its list consistency.
+    user = User(
+        username=f"deletable-consistency-{uuid4()}",
+        password=get_password_hash(CURRENT_CREDENTIAL),
+        is_active=True,
+        is_superuser=False,
+    )
+    async with session_getter(get_db_service()) as session:
+        session.add(user)
+        await session.flush()
+        user_id = user.id
+        await session.commit()
+
     response = await client.delete(f"/api/v1/users/{user_id}", headers=super_user_headers)
     assert response.status_code == 200, response.json()
 
@@ -187,7 +195,7 @@ async def test_read_all_users(client: AsyncClient, super_user_headers):
 async def test_normal_user_cant_read_all_users(client: AsyncClient, logged_in_headers):
     response = await client.get("api/v1/users/", headers=logged_in_headers)
     assert response.status_code == 403, response.json()
-    assert response.json() == {"detail": "The user doesn't have enough privileges"}
+    assert response.json() == {"detail": "Platform administrator access required"}
 
 
 @pytest.mark.api_key_required
@@ -245,11 +253,13 @@ async def test_patch_user_wrong_id(client: AsyncClient, logged_in_headers):
 
 
 @pytest.mark.api_key_required
-async def test_delete_user(client: AsyncClient, test_user, super_user_headers):
+async def test_delete_user_rejects_owned_resources(client: AsyncClient, test_user, super_user_headers):
     user_id = test_user["id"]
     response = await client.delete(f"/api/v1/users/{user_id}", headers=super_user_headers)
-    assert response.status_code == 200
-    assert response.json() == {"detail": "User deleted"}
+    assert response.status_code == 409
+    detail = response.json()["detail"]
+    assert detail["code"] == "RESOURCE_OWNERSHIP_REQUIRES_DISPOSITION"
+    assert detail["owned_resources"]["project"] >= 1
 
 
 @pytest.mark.api_key_required
@@ -266,14 +276,21 @@ async def test_delete_user_wrong_id(client: AsyncClient, super_user_headers):
 
 
 @pytest.mark.api_key_required
-async def test_delete_user_cascades_to_files(client: AsyncClient, test_user, super_user_headers):  # noqa: ARG001
+async def test_delete_user_cascades_to_files(client: AsyncClient):  # noqa: ARG001
     """Deleting a user should cascade-delete associated file records (e.g. _mcp_servers)."""
-    user_id = test_user["id"]
-
-    # Create a file record owned by the user
     import tempfile
 
+    # Use a resource-free database user: API-created users intentionally own a
+    # default project, and the account-deletion contract forbids cascading it.
     async with session_getter(get_db_service()) as session:
+        user = User(
+            username=f"file-cascade-{uuid4()}",
+            password=get_password_hash(CURRENT_CREDENTIAL),
+            is_active=True,
+        )
+        session.add(user)
+        await session.flush()
+        user_id = user.id
         with tempfile.TemporaryDirectory() as tmpdirname:
             file_path = f"{tmpdirname}/{user_id}"
             file = File(user_id=user_id, name=f"_mcp_servers_{user_id}.json", path=file_path, size=42)
@@ -289,6 +306,7 @@ async def test_delete_user_cascades_to_files(client: AsyncClient, test_user, sup
     async with session_getter(get_db_service()) as session:
         from sqlalchemy import delete
 
+        await session.exec(text("PRAGMA foreign_keys = ON"))
         await session.exec(delete(User).where(User.id == user_id))
         await session.commit()
 

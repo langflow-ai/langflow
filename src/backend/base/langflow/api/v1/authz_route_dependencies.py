@@ -10,9 +10,10 @@ from fastapi import Depends, HTTPException, status
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.flows_helpers import _canonicalize_flow_destination, _read_flow
 from langflow.services.authorization import FlowAction, ensure_flow_permission
-from langflow.services.authorization.fetch import deny_to_404
+from langflow.services.authorization.fetch import authorization_admission, deny_to_404
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.user.model import UserRead
 
 _FLOW_WRITE_DENIED_DETAIL = "You don't have permission to edit this flow."
 _FLOW_DELETE_DENIED_DETAIL = "You don't have permission to delete this flow."
@@ -26,35 +27,41 @@ async def _get_authorized_flow(
     session: DbSession,
 ) -> Flow:
     """Load a flow (share-aware when the plugin supports it) and enforce *act*."""
-    flow = await _read_flow(session, flow_id, current_user.id)
-    if flow is None:
-        raise HTTPException(status_code=404, detail="Flow not found")
-    try:
-        await ensure_flow_permission(
-            current_user,
-            act,
-            flow_id=flow_id,
-            flow_user_id=flow.user_id,
-            workspace_id=flow.workspace_id,
-            folder_id=flow.folder_id,
-        )
-    except HTTPException as exc:
-        if act in (FlowAction.WRITE, FlowAction.DELETE) and exc.status_code == status.HTTP_403_FORBIDDEN:
-            try:
-                await ensure_flow_permission(
-                    current_user,
-                    FlowAction.READ,
-                    flow_id=flow_id,
-                    flow_user_id=flow.user_id,
-                    workspace_id=flow.workspace_id,
-                    folder_id=flow.folder_id,
-                )
-            except HTTPException as read_exc:
-                raise deny_to_404(read_exc, detail="Flow not found") from read_exc
-            denied_detail = _FLOW_WRITE_DENIED_DETAIL if act == FlowAction.WRITE else _FLOW_DELETE_DENIED_DETAIL
-            raise HTTPException(status_code=403, detail=denied_detail) from exc
-        raise deny_to_404(exc, detail="Flow not found") from exc
-    return flow
+    async with authorization_admission(session) as admission:
+        flow = await _read_flow(admission, flow_id, current_user.id)
+        if flow is None:
+            raise HTTPException(status_code=404, detail="Flow not found")
+        flow_user_id = flow.user_id
+        workspace_id = flow.workspace_id
+        folder_id = flow.folder_id
+        authorization_user = UserRead.model_validate(current_user, from_attributes=True)
+        try:
+            await ensure_flow_permission(
+                authorization_user,
+                act,
+                flow_id=flow_id,
+                flow_user_id=flow_user_id,
+                workspace_id=workspace_id,
+                folder_id=folder_id,
+                audit_session=None,
+            )
+        except HTTPException as exc:
+            if act in (FlowAction.WRITE, FlowAction.DELETE) and exc.status_code == status.HTTP_403_FORBIDDEN:
+                try:
+                    await ensure_flow_permission(
+                        authorization_user,
+                        FlowAction.READ,
+                        flow_id=flow_id,
+                        flow_user_id=flow_user_id,
+                        workspace_id=workspace_id,
+                        folder_id=folder_id,
+                    )
+                except HTTPException as read_exc:
+                    raise deny_to_404(read_exc, detail="Flow not found") from read_exc
+                denied_detail = _FLOW_WRITE_DENIED_DETAIL if act == FlowAction.WRITE else _FLOW_DELETE_DENIED_DETAIL
+                raise HTTPException(status_code=403, detail=denied_detail) from exc
+            raise deny_to_404(exc, detail="Flow not found") from exc
+        return flow
 
 
 async def get_authorized_flow_for_read(
@@ -94,12 +101,13 @@ async def require_flow_create_permission(
         session,
         flow,
         current_user.id,
+        reject_invalid=flow.folder_id is not None,
         widen_for_authz=True,
     )
     _, destination_folder_id = destination
     # Read the owner off the *resolved* destination rather than the payload:
-    # canonicalization may have redirected an unusable folder_id to the
-    # caller's default project, and only the stored row can say who owns the
+    # canonicalization may have filled an omitted folder_id with the caller's
+    # default project, and only the stored row can say who owns the
     # project the flow will actually land in. This is what lets the owner
     # override cover creating a flow in a project you own — the new flow has no
     # owner of its own yet.
@@ -110,6 +118,7 @@ async def require_flow_create_permission(
         workspace_id=flow.workspace_id,
         folder_id=flow.folder_id,
         folder_user_id=getattr(destination_folder, "user_id", None),
+        audit_session=session,
     )
     return destination
 

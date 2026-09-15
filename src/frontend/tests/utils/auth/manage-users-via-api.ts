@@ -20,8 +20,8 @@ async function assertOk(
 /**
  * Create a user and mark them active via the admin user APIs.
  *
- * The OSS Admin Page UI was removed; these endpoints remain available to an
- * authenticated superuser session (cookies from the current page context).
+ * Uses an authenticated superuser session (cookies from the current page
+ * context) for setup without coupling unrelated journeys to the admin UI.
  */
 export async function createActiveUserViaApi(
   page: Page,

@@ -13,6 +13,7 @@ type DropdownComponentProps = {
   setOpenDelete: (open: boolean) => void;
   handleExport: () => void;
   handleEdit: () => void;
+  handleShare: () => void;
 };
 
 const DropdownComponent = ({
@@ -20,6 +21,7 @@ const DropdownComponent = ({
   setOpenDelete,
   handleExport,
   handleEdit,
+  handleShare,
 }: DropdownComponentProps) => {
   const { t } = useTranslation();
   const { can } = usePermissions();
@@ -104,6 +106,7 @@ const DropdownComponent = ({
         resourceId={flowData.id}
         resourceType="flow"
         resourceName={flowData.name}
+        onShare={handleShare}
       />
       <DropdownMenuItem
         disabled={!canDelete}

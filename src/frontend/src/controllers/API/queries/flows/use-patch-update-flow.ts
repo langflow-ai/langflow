@@ -5,12 +5,15 @@ import type {
 } from "@tanstack/react-query";
 import type { ReactFlowJsonObject } from "@xyflow/react";
 import type { useMutationFunctionType } from "@/types/api";
+import type { FlowType } from "@/types/flow";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-interface IPatchUpdateFlow {
+export interface IPatchUpdateFlow {
   id: string;
+  /** Revision observed in the latest authoritative flow response. */
+  edit_revision: number;
   name?: string;
   data?: ReactFlowJsonObject;
   description?: string;
@@ -65,17 +68,22 @@ export const usePatchUpdateFlow: useMutationFunctionType<
 
   const PatchUpdateFlowFn = async ({
     id,
+    edit_revision,
     providerScopeChanged: _providerScopeChanged,
     ...payload
-    // biome-ignore lint/suspicious/noExplicitAny: legacy
-  }: IPatchUpdateFlow): Promise<any> => {
-    const response = await api.patch(`${getURL("FLOWS")}/${id}`, payload);
+  }: IPatchUpdateFlow): Promise<FlowType> => {
+    const response = await api.patch<FlowType>(
+      `${getURL("FLOWS")}/${id}`,
+      payload,
+      {
+        headers: { "If-Match": `"flow:${id}:${edit_revision}"` },
+      },
+    );
 
     return response.data;
   };
 
-  // biome-ignore lint/suspicious/noExplicitAny: legacy
-  const mutation: UseMutationResult<IPatchUpdateFlow, any, IPatchUpdateFlow> =
+  const mutation: UseMutationResult<FlowType, unknown, IPatchUpdateFlow> =
     mutate(["usePatchUpdateFlow"], PatchUpdateFlowFn, {
       ...options,
       onSuccess: async (...args) => {
@@ -85,7 +93,21 @@ export const usePatchUpdateFlow: useMutationFunctionType<
         }
         await options?.onSuccess?.(...args);
       },
-      onSettled: (...args) => {
+      onSettled: async (...args) => {
+        const [, error, variables] = args;
+        const status = (error as { response?: { status?: number } } | null)
+          ?.response?.status;
+        if (status === 403 || status === 404) {
+          // Drop the old allow projection immediately, then ask the existing
+          // permission endpoint again without replacing the unsaved graph.
+          await queryClient.resetQueries({
+            queryKey: ["useGetEffectivePermissions"],
+            predicate: ({ queryKey }) =>
+              queryKey[2] === "flow" &&
+              Array.isArray(queryKey[3]) &&
+              queryKey[3].includes(variables.id),
+          });
+        }
         queryClient.invalidateQueries({
           queryKey: ["useGetRefreshFlowsQuery"],
         });
@@ -95,7 +117,7 @@ export const usePatchUpdateFlow: useMutationFunctionType<
         queryClient.invalidateQueries({
           queryKey: ["useGetFolder"],
         });
-        options?.onSettled?.(...args);
+        await options?.onSettled?.(...args);
       },
     });
 

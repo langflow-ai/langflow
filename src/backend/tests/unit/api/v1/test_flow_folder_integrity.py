@@ -6,7 +6,7 @@ unreachable in the UI.
 
 The fix ensures:
 1. Flows always have a valid folder_id
-2. If a non-existent folder_id is provided, the system falls back to the default folder
+2. An explicitly supplied non-existent folder_id is rejected
 3. If no folders exist, a default folder is auto-created
 """
 
@@ -25,13 +25,8 @@ from langflow.services.deps import session_scope
 from sqlmodel import select
 
 
-async def test_create_flow_with_nonexistent_folder_id_assigns_default_folder(
-    client: AsyncClient, logged_in_headers, active_user
-):
-    """Test that creating a flow with a non-existent folder_id assigns it to the default folder.
-
-    This prevents orphaned flows when a folder is deleted between the UI loading and flow creation.
-    """
+async def test_create_flow_with_nonexistent_folder_id_is_rejected(client: AsyncClient, logged_in_headers, active_user):
+    """An explicit missing destination cannot silently redirect creation to a personal folder."""
     non_existent_folder_id = str(uuid.uuid4())
 
     flow_data = {
@@ -42,18 +37,13 @@ async def test_create_flow_with_nonexistent_folder_id_assigns_default_folder(
 
     response = await client.post("api/v1/flows/", json=flow_data, headers=logged_in_headers)
 
-    assert response.status_code == status.HTTP_201_CREATED
-    result = response.json()
-
-    # The flow should have been assigned to a valid folder (not the non-existent one)
-    assert result["folder_id"] is not None
-    assert result["folder_id"] != non_existent_folder_id
-
-    # Verify the folder actually exists
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"] == "Folder not found"
     async with session_scope() as session:
-        folder = await session.get(Folder, uuid.UUID(result["folder_id"]))
-        assert folder is not None
-        assert folder.user_id == active_user.id
+        created = (
+            await session.exec(select(Flow).where(Flow.user_id == active_user.id, Flow.name == flow_data["name"]))
+        ).first()
+        assert created is None
 
 
 async def test_single_create_authorizes_canonical_default_destination(
@@ -72,7 +62,6 @@ async def test_single_create_authorizes_canonical_default_destination(
         json={
             "name": "Canonical single create",
             "data": {},
-            "folder_id": str(uuid.uuid4()),
             "workspace_id": str(spoofed_workspace_id),
         },
         headers=logged_in_headers,
@@ -100,7 +89,6 @@ async def test_batch_and_upload_authorize_their_canonical_default_destinations(
     guard = AsyncMock()
     monkeypatch.setattr(flows, "ensure_flow_permission", guard)
     spoofed_workspace_id = uuid.uuid4()
-    stale_folder_id = uuid.uuid4()
 
     batch_response = await client.post(
         "api/v1/flows/batch/",
@@ -109,7 +97,6 @@ async def test_batch_and_upload_authorize_their_canonical_default_destinations(
                 {
                     "name": "Canonical batch create",
                     "data": {},
-                    "folder_id": str(stale_folder_id),
                     "workspace_id": str(spoofed_workspace_id),
                 }
             ]
@@ -125,7 +112,6 @@ async def test_batch_and_upload_authorize_their_canonical_default_destinations(
                     {
                         "name": "Canonical upload create",
                         "data": {},
-                        "folder_id": str(stale_folder_id),
                         "workspace_id": str(spoofed_workspace_id),
                     }
                 ),
@@ -243,13 +229,8 @@ async def test_default_folder_creation_adopts_existing_orphaned_flow(active_user
     assert adopted_flow.workspace_id == workspace_id
 
 
-async def test_update_flow_with_nonexistent_folder_id_assigns_default_folder(
-    client: AsyncClient, logged_in_headers, active_user
-):
-    """Test that updating a flow with a non-existent folder_id falls back to default folder.
-
-    This handles the case where a user tries to move a flow to a folder that doesn't exist.
-    """
+async def test_update_flow_with_nonexistent_folder_id_is_rejected(client: AsyncClient, logged_in_headers, active_user):
+    """Reject a missing move destination without persisting any part of the update."""
     # Configure client to follow redirects (folders API uses redirects)
     client.follow_redirects = True
 
@@ -271,18 +252,14 @@ async def test_update_flow_with_nonexistent_folder_id_assigns_default_folder(
 
     update_response = await client.patch(f"api/v1/flows/{flow_id}", json=update_data, headers=logged_in_headers)
 
-    assert update_response.status_code == status.HTTP_200_OK
-    result = update_response.json()
-
-    # The flow should be reassigned to a valid folder (not the non-existent one)
-    assert result["folder_id"] is not None
-    assert result["folder_id"] != non_existent_folder_id
-
-    # Verify the folder exists
+    assert update_response.status_code == status.HTTP_400_BAD_REQUEST
+    assert update_response.json()["detail"] == "Folder not found"
     async with session_scope() as session:
-        folder = await session.get(Folder, uuid.UUID(result["folder_id"]))
-        assert folder is not None
-        assert folder.user_id == active_user.id
+        unchanged = await session.get(Flow, uuid.UUID(flow_id))
+        assert unchanged is not None
+        assert unchanged.user_id == active_user.id
+        assert unchanged.name == flow_data["name"]
+        assert str(unchanged.folder_id) == flow_response.json()["folder_id"]
 
 
 async def test_update_authorizes_workspace_derived_from_destination_folder(
@@ -360,13 +337,8 @@ async def test_update_flow_without_folder_id_keeps_existing_folder(client: Async
     assert result["folder_id"] == original_folder_id
 
 
-async def test_upload_flow_with_nonexistent_folder_id_assigns_default(
-    client: AsyncClient, logged_in_headers, active_user
-):
-    """Test that uploading a flow with a non-existent folder_id assigns it to the default folder.
-
-    The upload endpoint uses _new_flow internally, which includes folder_id validation.
-    """
+async def test_upload_flow_with_nonexistent_folder_id_is_rejected(client: AsyncClient, logged_in_headers, active_user):
+    """An import with an explicit missing destination must not create a redirected flow."""
     import json
 
     non_existent_folder_id = str(uuid.uuid4())
@@ -386,22 +358,13 @@ async def test_upload_flow_with_nonexistent_folder_id_assigns_default(
         headers=logged_in_headers,
     )
 
-    assert response.status_code == status.HTTP_201_CREATED
-    results = response.json()
-
-    # The result is a list (even for single flow upload)
-    assert len(results) == 1
-    result = results[0]
-
-    # The flow should have a valid folder_id (not the non-existent one)
-    assert result["folder_id"] is not None
-    assert result["folder_id"] != non_existent_folder_id
-
-    # Verify the folder exists
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"] == "Folder not found"
     async with session_scope() as session:
-        folder = await session.get(Folder, uuid.UUID(result["folder_id"]))
-        assert folder is not None
-        assert folder.user_id == active_user.id
+        created = (
+            await session.exec(select(Flow).where(Flow.user_id == active_user.id, Flow.name == flow_data["name"]))
+        ).first()
+        assert created is None
 
 
 async def test_flow_created_is_retrievable_in_folder(client: AsyncClient, logged_in_headers):
@@ -445,7 +408,7 @@ async def test_flow_created_is_retrievable_in_folder(client: AsyncClient, logged
 
 
 async def test_upsert_flow_with_nonexistent_folder_id_on_create(client: AsyncClient, logged_in_headers):
-    """Test that PUT (upsert) with non-existent folder_id creates flow with default folder."""
+    """Test that PUT (upsert) rejects an explicitly missing destination."""
     specified_id = str(uuid.uuid4())
     non_existent_folder_id = str(uuid.uuid4())
 

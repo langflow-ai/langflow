@@ -39,6 +39,14 @@ class ManifestTeam(ManifestModel):
     description: str | None = None
     state: Literal["active", "disabled"] = "active"
     members: list[str] = Field(default_factory=list)
+    member_roles: dict[str, Literal["admin", "maintainer", "user"]] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_member_roles(self) -> ManifestTeam:
+        if set(self.member_roles) - set(self.members):
+            msg = "member_roles keys must identify users in members"
+            raise ValueError(msg)
+        return self
 
 
 class ManifestRole(ManifestModel):

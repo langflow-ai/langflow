@@ -3,6 +3,10 @@ import React from "react";
 import type { FlowType } from "@/types/flow";
 import FlowSettingsComponent from "../index";
 
+jest.mock("@/contexts/permissionsContext", () => ({
+  useIsFlowReadOnly: () => false,
+}));
+
 jest.mock("@/components/ui/button", () => ({
   Button: ({ children, loading, ...rest }) => (
     <button {...rest}>{children}</button>
@@ -71,8 +75,17 @@ let mockAutoSaving = false;
 let mockFlows: Array<{ name: string }> = [];
 jest.mock("@/stores/flowsManagerStore", () => ({
   __esModule: true,
-  default: (sel) => sel({ autoSaving: mockAutoSaving, flows: mockFlows }),
+  default: Object.assign(
+    (sel) => sel({ autoSaving: mockAutoSaving, flows: mockFlows }),
+    {
+      getState: () => ({
+        currentFlow: mockPersistedFlow,
+      }),
+    },
+  ),
 }));
+
+let mockPersistedFlow: FlowType | undefined;
 
 // Mock EditFlowSettings to expose simple controls that call the provided setters
 jest.mock("@/components/core/editFlowSettingsComponent", () => ({
@@ -134,6 +147,7 @@ describe("FlowSettingsComponent", () => {
     mockSetSuccessData = jest.fn();
     mockSetCurrentFlow = jest.fn();
     mockAutoSaveFlush.mockResolvedValue(undefined);
+    mockPersistedFlow = baseFlow;
   });
 
   it("renders and disables save when no changes", () => {
@@ -197,6 +211,36 @@ describe("FlowSettingsComponent", () => {
     expect(mockAutoSaveFlush.mock.invocationCallOrder[0]).toBeLessThan(
       mockSave.mock.invocationCallOrder[0],
     );
+  });
+
+  it("uses the revision committed by a pending autosave for the settings save", async () => {
+    mockAutoSaving = true;
+    mockPersistedFlow = { ...baseFlow, edit_revision: 4 };
+    mockAutoSaveFlush.mockImplementationOnce(async () => {
+      mockPersistedFlow = {
+        ...baseFlow,
+        edit_revision: 5,
+        data: { nodes: [{ id: "persisted-node" }], edges: [] },
+      } as unknown as FlowType;
+    });
+    mockSave.mockResolvedValueOnce(undefined);
+
+    render(<FlowSettingsComponent flowData={baseFlow} open close={() => {}} />);
+
+    fireEvent.click(screen.getByTestId("set-desc-new"));
+    fireEvent.click(screen.getByTestId("save-flow-settings"));
+
+    await waitFor(() => {
+      expect(mockSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          edit_revision: 5,
+          description: "New Desc",
+          data: expect.objectContaining({
+            nodes: [{ id: "persisted-node" }],
+          }),
+        }),
+      );
+    });
   });
 
   it("non-autoSaving path sets current flow and closes", () => {

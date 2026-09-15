@@ -269,10 +269,15 @@ async def run_assistant_and_persist(
             )
         except HTTPException:
             if created_new:
+                from langflow.services.authorization.lifecycle import stage_resource_mutation
+                from langflow.services.deps import get_authorization_service
+
                 # The assistant needs a committed flow id while it runs. Do not
                 # leave that provisional row behind when its generated graph is
                 # rejected before the caller ever receives the id or link.
+                await get_authorization_service().acquire_resource_mutation_lock(session=session)
                 await session.delete(flow)
+                await stage_resource_mutation(session, resource_type="flow", resource_id=flow.id, deleted=True)
                 await session.commit()
             raise
         flow.data = flow_data

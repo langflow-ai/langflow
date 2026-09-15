@@ -1,4 +1,10 @@
-import { type Dispatch, ReactNode, type SetStateAction, useState } from "react";
+import {
+  type Dispatch,
+  ReactNode,
+  type SetStateAction,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useHref } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
@@ -15,6 +21,7 @@ import { usePermissions } from "@/contexts/permissionsContext";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import CustomFlowShareAction from "@/customization/components/custom-flow-share-action";
 import { CustomLink } from "@/customization/components/custom-link";
+import ResourceShareDialog from "@/customization/components/resource-share-dialog";
 import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
 import { customMcpOpen } from "@/customization/utils/custom-mcp-open";
 import ApiModal from "@/modals/apiModal";
@@ -40,6 +47,8 @@ export default function PublishDropdown({
   const location = useHref("/");
   const domain = window.location.origin + location;
   const [openEmbedModal, setOpenEmbedModal] = useState(false);
+  const [openShareDialog, setOpenShareDialog] = useState(false);
+  const shareTriggerRef = useRef<HTMLButtonElement>(null);
   const currentFlow = useFlowsManagerStore((state) => state.currentFlow);
   const flowId = currentFlow?.id;
   const flowName = currentFlow?.name;
@@ -53,15 +62,22 @@ export default function PublishDropdown({
   const isPublished = currentFlow?.access_type === "PUBLIC";
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
-  const { can } = usePermissions();
-  // Publishing changes the flow's access settings → gate on write. Only the
-  // publish controls are gated; the rest of the menu (API access, export,
-  // MCP, embed) stays available to read-only users.
-  const canShare = can(flowId, "write");
+  const { capability } = usePermissions();
+  // Publication is a separate owner/admin capability. Ordinary Can edit
+  // collaborators still retain read/run/export access without this switch.
+  const canManagePublication = capability(flowId, "can_manage_publication");
   const [openExportModal, setOpenExportModal] = useState(false);
   const { t } = useTranslation();
 
   const handlePublishedSwitch = async (checked: boolean) => {
+    if (!currentFlow) return;
+    if (typeof currentFlow.edit_revision !== "number") {
+      setErrorData({
+        title: t("errors.failedToSaveFlow"),
+        list: [t("errors.workflowRevisionUnavailable")],
+      });
+      return;
+    }
     try {
       // Publishing reads the persisted graph in a new tab. Drain any pending
       // canvas save before changing access so the access-only response cannot
@@ -69,7 +85,8 @@ export default function PublishDropdown({
       await pendingAutoSave?.flush();
       await mutateAsync(
         {
-          id: flowId ?? "",
+          id: currentFlow.id,
+          edit_revision: currentFlow.edit_revision,
           access_type: checked ? "PRIVATE" : "PUBLIC",
         },
         {
@@ -117,25 +134,26 @@ export default function PublishDropdown({
             size="md"
             className="!px-2.5 font-normal"
             data-testid="publish-button"
+            ref={shareTriggerRef}
           >
             {t("misc.share")}
             <IconComponent name="ChevronDown" className="!h-5 !w-5" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          forceMount
           sideOffset={7}
           alignOffset={-2}
           align="end"
           className="w-full min-w-[275px]"
         >
-          {/* Customization seam: overlays render a user/team share item; the OSS stub renders nothing. */}
+          {/* Capability-gated user/team sharing; unavailable services render no action. */}
           {flowId && (
             <CustomFlowShareAction
               resourceId={flowId}
               resourceType="flow"
               resourceName={flowName}
               menuContext="editor"
+              onShare={() => setOpenShareDialog(true)}
             />
           )}
           <DropdownMenuItem
@@ -184,7 +202,7 @@ export default function PublishDropdown({
           {ENABLE_PUBLISH && (
             <DropdownMenuItem
               className="deploy-dropdown-item group"
-              disabled={!canShare || !hasIO}
+              disabled={!canManagePublication || !hasIO}
               onClick={() => {}}
               data-testid="shareable-playground"
             >
@@ -230,7 +248,7 @@ export default function PublishDropdown({
                   data-testid="publish-switch"
                   className="scale-[85%]"
                   checked={isPublished}
-                  disabled={!canShare || !hasIO}
+                  disabled={!canManagePublication || !hasIO}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
@@ -242,6 +260,16 @@ export default function PublishDropdown({
           )}
         </DropdownMenuContent>
       </DropdownMenu>
+      {flowId && openShareDialog && (
+        <ResourceShareDialog
+          open
+          onOpenChange={setOpenShareDialog}
+          resourceType="flow"
+          resourceId={flowId}
+          resourceName={flowName}
+          returnFocusRef={shareTriggerRef}
+        />
+      )}
       <ApiModal open={openApiModal} setOpen={setOpenApiModal}>
         <>{children}</>
       </ApiModal>

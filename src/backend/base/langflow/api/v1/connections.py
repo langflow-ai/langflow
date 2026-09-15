@@ -16,6 +16,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
 from langflow.services.authorization import ConnectionAction, ensure_connection_permission
+from langflow.services.authorization.fetch import authorization_admission
+from langflow.services.authorization.lifecycle import safe_share_rules_removed, stage_resource_mutation
+from langflow.services.authorization.share_management import delete_resource_shares
 from langflow.services.connection import ConnectionConflictError, DatabaseConnectionResolverService
 from langflow.services.connection.oauth import broker as oauth_broker
 from langflow.services.connection.oauth.config import OAuthError, get_oauth_settings
@@ -29,7 +32,7 @@ from langflow.services.database.models.connection import (
     ConnectionUpdate,
 )
 from langflow.services.database.models.connection.schemas import ConnectionRevokeRead
-from langflow.services.deps import get_connection_resolver_service, session_scope
+from langflow.services.deps import get_authorization_service, get_connection_resolver_service, session_scope
 
 
 class _ConnectionRoute(APIRoute):
@@ -164,6 +167,9 @@ async def _authorized_row(
             service=service, session=read_session, user=user, connection_id=connection_id, action=action
         )
         authorized_owner = (authorized.ownership_mode, authorized.owner_id)
+    await get_authorization_service().acquire_resource_mutation_lock(session=session)
+    async with authorization_admission(session):
+        await _visible_row(service=service, session=session, user=user, connection_id=connection_id, action=action)
     # get_for_user repeats the scoped lookup under the lock. Fail closed if the
     # row disappeared or changed owner after the permission check.
     row = await service.get_for_user(session, user=user, connection_id=connection_id, for_update=True)
@@ -332,6 +338,7 @@ async def delete_connection(
     current_user: CurrentActiveUser,
     service: ConnectionService,
 ) -> Response:
+    actor_id = current_user.id
     row = await _authorized_row(
         service=service,
         session=session,
@@ -340,7 +347,13 @@ async def delete_connection(
         action=ConnectionAction.DELETE,
         for_update=True,
     )
+    removed_shares = await delete_resource_shares(
+        session, actor_id=actor_id, resources=(("connection", connection_id),)
+    )
     await service.delete(session, row)
+    await stage_resource_mutation(session, resource_type="connection", resource_id=connection_id, deleted=True)
+    await session.commit()
+    await safe_share_rules_removed(get_authorization_service(), removed_shares)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

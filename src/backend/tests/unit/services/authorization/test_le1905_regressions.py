@@ -40,6 +40,79 @@ async def test_guard_decisions_are_tagged_as_decisions(monkeypatch):
     assert captured[0]["details"]["domain"] == "*"
 
 
+@pytest.mark.asyncio
+async def test_allowed_mutation_decision_uses_caller_transaction_in_durable_mode(monkeypatch):
+    """A durable allow must not commit through a second SQLite connection."""
+    from langflow.services.authorization import guards
+
+    session = object()
+    staged: list[dict] = []
+    submitted: list[dict] = []
+
+    def _stage(**kwargs):
+        staged.append(kwargs)
+        return True
+
+    async def _submit(**kwargs):
+        submitted.append(kwargs)
+
+    monkeypatch.setattr(audit_module, "stage_audit_decision", _stage)
+    monkeypatch.setattr(audit_module, "audit_decision", _submit)
+
+    await guards._audit_guard_decision(
+        user_id=uuid4(),
+        action="flow:write",
+        obj="flow:abc",
+        result=audit_module.AUDIT_ALLOW,
+        details={"domain": "project:abc"},
+        session=session,
+    )
+
+    assert staged[0]["session"] is session
+    assert staged[0]["details"]["event"] == audit_module.AUDIT_EVENT_DECISION
+    assert submitted == []
+
+
+@pytest.mark.asyncio
+async def test_denied_mutation_decision_uses_independent_durable_writer(monkeypatch):
+    """A denial must survive the caller transaction being rolled back."""
+    from langflow.services.authorization import guards
+
+    staged: list[dict] = []
+    submitted: list[dict] = []
+
+    class _Session:
+        rolled_back = False
+
+        async def rollback(self):
+            self.rolled_back = True
+
+    session = _Session()
+
+    def _stage(**kwargs):
+        staged.append(kwargs)
+        return True
+
+    async def _submit(**kwargs):
+        submitted.append(kwargs)
+
+    monkeypatch.setattr(audit_module, "stage_audit_decision", _stage)
+    monkeypatch.setattr(audit_module, "audit_decision", _submit)
+
+    await guards._audit_guard_decision(
+        user_id=uuid4(),
+        action="flow:delete",
+        obj="flow:abc",
+        result=audit_module.AUDIT_DENY,
+        session=session,
+    )
+
+    assert session.rolled_back is True
+    assert staged == []
+    assert submitted[0]["result"] == audit_module.AUDIT_DENY
+    assert submitted[0]["details"]["event"] == audit_module.AUDIT_EVENT_DECISION
+
+
 def test_decision_and_mutation_markers_are_distinct():
     assert audit_module.AUDIT_EVENT_DECISION != audit_module.AUDIT_EVENT_MUTATION
 

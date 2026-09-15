@@ -71,6 +71,7 @@ def test_authz_endpoint_matrix_rejects_a_new_unclassified_route(tmp_path: Path, 
         json.dumps(
             {
                 "schema_version": 1,
+                "scope": {"sources": ["api/v1/flows.py"]},
                 "persona_presets": {"canonical_v1": dict.fromkeys(REQUIRED_PERSONAS, "defined")},
                 "contracts": [
                     {
@@ -97,3 +98,23 @@ def test_authz_endpoint_matrix_rejects_a_new_unclassified_route(tmp_path: Path, 
     assert any(
         "new_protected_route" in error and "unclassified route" in error for error in validate_matrix(matrix_path)
     )
+
+
+def test_authz_endpoint_matrix_rejects_removing_a_whole_contract(tmp_path: Path) -> None:
+    """Deleting a module's last contract must not silently shrink discovery."""
+    matrix = json.loads(DEFAULT_MATRIX.read_text(encoding="utf-8"))
+    matrix["contracts"] = [
+        contract for contract in matrix["contracts"] if contract["source"] != "api/v1/authz_teams.py"
+    ]
+    matrix_path = tmp_path / "matrix.json"
+    matrix_path.write_text(json.dumps(matrix), encoding="utf-8")
+
+    assert any("unclassified route: api/v1/authz_teams.py:" in error for error in validate_matrix(matrix_path))
+
+
+def test_authz_endpoint_matrix_requires_an_explicit_scope(tmp_path: Path) -> None:
+    """An absent scope cannot turn an empty contract list into successful coverage."""
+    matrix_path = tmp_path / "matrix.json"
+    matrix_path.write_text(json.dumps({"schema_version": 1, "contracts": []}), encoding="utf-8")
+
+    assert "scope.sources must declare a non-empty list of API modules" in validate_matrix(matrix_path)

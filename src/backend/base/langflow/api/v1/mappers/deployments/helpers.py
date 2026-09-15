@@ -1001,6 +1001,7 @@ async def list_deployments_synced(
     provider_bindings: list[ProviderSnapshotBinding] = []
     provider_data_by_resource_key: dict[str, dict[str, Any]] = {}
     provider_metadata_by_resource_key: dict[str, dict[str, Any]] = {}
+    stale_rows: list[tuple[UUID, UUID]] = []
     cursor = page_offset(page, size)
     max_sync_rounds = 2  # Initial pass + one refill pass.
     for _ in range(max_sync_rounds):
@@ -1045,11 +1046,26 @@ async def list_deployments_synced(
                     row.resource_key,
                     provider_id,
                 )
-                await delete_deployment_by_id(db, user_id=row.user_id, deployment_id=row.id)
+                stale_rows.append((row.user_id, row.id))
+                cursor += 1
                 continue
             accepted.append((row, attached_count, matched_flow_versions))
             accepted_deployment_ids.append(row.id)
             cursor += 1
+
+    # Finish both provider rounds before acquiring the policy writer lock.
+    # Rows remain present during pagination, so the cursor also counts stale rows.
+    if stale_rows:
+        from langflow.services.database.lock_retry import run_with_lock_retry
+        from langflow.services.deps import get_authorization_service
+
+        async def delete_stale(_attempt: int) -> None:
+            await get_authorization_service().acquire_resource_mutation_lock(session=db)
+            async with db.begin_nested():
+                for owner_id, deployment_id in stale_rows:
+                    await delete_deployment_by_id(db, user_id=owner_id, deployment_id=deployment_id)
+
+        await run_with_lock_retry(delete_stale, session=db, description="reconcile stale deployments")
 
     # Phase 2: synchronize provider state into Langflow. These updates/deletes
     # skip permission checks — acceptable only as provider→Langflow reconciliation,

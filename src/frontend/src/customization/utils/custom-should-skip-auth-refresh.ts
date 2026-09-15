@@ -1,4 +1,5 @@
 import type { AxiosError } from "axios";
+import { getBaseUrl } from "./urls";
 
 /**
  * Error codes that mean "authenticated, but this plan does not allow it"
@@ -40,6 +41,20 @@ function readErrorCode(error: AxiosError): string | undefined {
  * password change); they should keep these codes.
  */
 export function customShouldSkipAuthRefresh(error: AxiosError): boolean {
+  if (error.response?.status !== 403) return false;
   const code = readErrorCode(error);
-  return code !== undefined && GATED_ERROR_CODES.has(code);
+  if (code !== undefined && GATED_ERROR_CODES.has(code)) return true;
+  if (!error.config?.url) return false;
+  const requestUrl = new URL(error.config.url, window.location.origin);
+  return ["flows", "projects", "authz"].some((resource) => {
+    const endpoint = new URL(
+      `${getBaseUrl()}${resource}`,
+      window.location.origin,
+    );
+    return (
+      requestUrl.origin === endpoint.origin &&
+      (requestUrl.pathname === endpoint.pathname ||
+        requestUrl.pathname.startsWith(`${endpoint.pathname}/`))
+    );
+  });
 }

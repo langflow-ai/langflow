@@ -3,6 +3,7 @@
 import { test } from "@playwright/test";
 import fs from "fs";
 import path from "path";
+import { getE2EArtifactNamespace } from "./utils/authz-e2e-mode.mjs";
 
 test.afterEach(async ({ page }, testInfo) => {
   const coverage = await page.evaluate(() => {
@@ -12,7 +13,11 @@ test.afterEach(async ({ page }, testInfo) => {
 
   if (!coverage) return;
 
-  const dir = "coverage/playwright/individual-test";
+  const namespace = getE2EArtifactNamespace();
+  const dir =
+    namespace === "authz"
+      ? "coverage/playwright-authz/individual-test"
+      : "coverage/playwright/individual-test";
   fs.mkdirSync(dir, { recursive: true });
 
   const safeTitle = testInfo.title.replace(/[^a-zA-Z0-9-_]/g, "_");

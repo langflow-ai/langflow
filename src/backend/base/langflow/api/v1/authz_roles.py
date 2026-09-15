@@ -22,6 +22,7 @@ from langflow.services.authorization.admin import (
     is_administrator,
 )
 from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS, AUDIT_EVENT_MUTATION
+from langflow.services.authorization.fetch import load_mutation_actor
 from langflow.services.authorization.lifecycle import (
     acquire_identity_mutation_lock,
     safe_identity_mutation_committed,
@@ -95,12 +96,19 @@ def _is_role_name_conflict(exc: IntegrityError) -> bool:
     return is_unique_violation and constraint_name == _ROLE_NAME_UNIQUE_INDEX
 
 
-async def _require_role_administrator(user, *, action: str, obj: str, operation_id: str | None = None) -> None:
+async def _require_role_administrator(
+    user, *, action: str, obj: str, operation_id: str | None = None, session: DbSession | None = None
+) -> None:
     """Allow superusers or a plugin-delegated ``role:manage`` administrator."""
+    if session is not None:
+        user = await load_mutation_actor(session, user.id)
+    actor_id = user.id
     if await is_administrator(user, resource="role", authorization_service=get_authorization_service()):
         return
+    if session is not None:
+        await session.rollback()
     await _audit_deny(
-        user_id=user.id,
+        user_id=actor_id,
         action=action,
         obj=obj,
         status_code=status.HTTP_403_FORBIDDEN,
@@ -228,6 +236,9 @@ async def create_role(
         authorization_service,
         session,
         kind=AuthorizationMutationKind.ROLE_CREATED,
+    )
+    await _require_role_administrator(
+        current_user, action="role:create", obj="role:*", session=session, operation_id=operation_id
     )
     # Pre-creation hooks run inside the lock the authorization plugin just took, so a plugin
     # counting custom roles sees a serialized count-then-insert. Only this route creates
@@ -365,6 +376,9 @@ async def update_role(
         session,
         kind=AuthorizationMutationKind.ROLE_UPDATED,
         entity_id=role_id,
+    )
+    await _require_role_administrator(
+        current_user, action="role:update", obj=f"role:{role_id}", session=session, operation_id=operation_id
     )
 
     role = await session.get(AuthzRole, role_id)
@@ -558,6 +572,9 @@ async def delete_role(
         session,
         kind=AuthorizationMutationKind.ROLE_DELETED,
         entity_id=role_id,
+    )
+    await _require_role_administrator(
+        current_user, action="role:delete", obj=f"role:{role_id}", session=session, operation_id=operation_id
     )
 
     role = await session.get(AuthzRole, role_id)

@@ -8,9 +8,50 @@ from uuid import uuid4
 
 import pytest
 from fastapi import HTTPException, Response
+from langflow.services.database.models.user.model import User
 from lfx.services.authorization import AuthorizationMutationKind, AuthorizationMutationRejected
 
 _RECOVERY_DETAIL = "At least one recovery administrator is required."
+
+
+class _FirstResult:
+    def __init__(self, value):
+        self.value = value
+
+    def first(self):
+        return self.value
+
+
+@pytest.fixture(autouse=True)
+def isolate_user_route_from_team_lifecycle(monkeypatch):
+    """These route-ordering tests isolate the separately tested team repair service."""
+    from langflow.api.v1 import users
+    from langflow.services.authorization.team_management import (
+        UserTeamLifecycleLockContext,
+        UserTeamLifecycleLockHint,
+        UserTeamLifecycleResult,
+    )
+    from langflow.services.database.models.user.model import User
+    from sqlmodel import select
+
+    async def unchanged_team_state(*_args, **_kwargs):
+        return UserTeamLifecycleResult((), (), (), ())
+
+    async def user_only_lock_hint(_session, *, user_id):
+        return UserTeamLifecycleLockHint((), (), (user_id,))
+
+    async def acquire_user_only_lock_context(session, *, user_id, hint):  # noqa: ARG001
+        result = await session.exec(select(User).where(User.id == user_id))
+        target = result.first()
+        return UserTeamLifecycleLockContext(
+            users={user_id: target} if target is not None else {},
+            teams={},
+            members_by_team={},
+        )
+
+    monkeypatch.setattr(users, "apply_user_team_lifecycle", unchanged_team_state)
+    monkeypatch.setattr(users, "prepare_user_team_lifecycle_lock_hint", user_only_lock_hint)
+    monkeypatch.setattr(users, "acquire_user_team_lifecycle_locks", acquire_user_only_lock_context)
 
 
 class _LifecycleService:
@@ -25,6 +66,9 @@ class _LifecycleService:
     async def acquire_identity_mutation_lock(self, *, session, **request) -> None:  # noqa: ARG002
         self.events.append("lock")
         self.lock_requests.append(request)
+
+    async def acquire_resource_mutation_lock(self, *, session) -> None:  # noqa: ARG002
+        self.events.append("lock")
 
     async def is_user_credentials_managed_externally(self, *, session, user_id) -> bool:  # noqa: ARG002
         return False
@@ -170,7 +214,7 @@ async def test_user_disable_validates_and_stages_in_transaction_order(monkeypatc
 
     events: list[str] = []
     service = _LifecycleService(events)
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = User(username=str(uuid4()), password=str(uuid4()), is_active=True, is_superuser=True)
     target = SimpleNamespace(
         id=uuid4(),
         is_active=True,
@@ -178,6 +222,7 @@ async def test_user_disable_validates_and_stages_in_transaction_order(monkeypatc
         password="hashed",  # noqa: S106  # pragma: allowlist secret
     )
     session = AsyncMock()
+    session.get = AsyncMock(return_value=actor)
 
     async def update_user(_target, _update, _session):
         events.append("mutate")
@@ -187,9 +232,9 @@ async def test_user_disable_validates_and_stages_in_transaction_order(monkeypatc
     async def commit():
         events.append("commit")
 
-    async def get_user_by_id(_session, _user_id):
+    async def read_user(_statement):
         events.append("read")
-        return target
+        return _FirstResult(target)
 
     audit_calls = []
 
@@ -199,7 +244,8 @@ async def test_user_disable_validates_and_stages_in_transaction_order(monkeypatc
         return True
 
     session.commit.side_effect = commit
-    monkeypatch.setattr(users, "get_user_by_id", get_user_by_id)
+    session.get_bind = Mock(return_value=SimpleNamespace(dialect=SimpleNamespace(name="postgresql")))
+    session.exec.side_effect = read_user
     monkeypatch.setattr(users, "update_user", update_user)
     monkeypatch.setattr(users, "get_authorization_service", lambda: service)
     monkeypatch.setattr(users, "stage_audit_decision", stage_audit)
@@ -229,6 +275,7 @@ async def test_user_disable_validates_and_stages_in_transaction_order(monkeypatc
                 "event": AUDIT_EVENT_MUTATION,
                 "fields_changed": ["is_active"],
                 "lifecycle_kind": AuthorizationMutationKind.USER_DISABLED.value,
+                "teams_deactivated": [],
                 "source": "manual",
             },
         }
@@ -242,7 +289,7 @@ async def test_ordinary_user_patch_stages_audit_without_password_or_values(monke
     from langflow.services.database.models.user.model import UserUpdate
 
     events: list[str] = []
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = User(username=str(uuid4()), password=str(uuid4()), is_active=True, is_superuser=True)
     target = SimpleNamespace(
         id=uuid4(),
         username="before",
@@ -251,11 +298,12 @@ async def test_ordinary_user_patch_stages_audit_without_password_or_values(monke
         password="old-hash",  # noqa: S106  # pragma: allowlist secret
     )
     session = AsyncMock()
+    session.get = AsyncMock(return_value=actor)
     audit_calls = []
 
-    async def get_user_by_id(_session, _user_id):
+    async def read_user(_statement):
         events.append("read")
-        return target
+        return _FirstResult(target)
 
     async def update_user(_target, update, _session):
         events.append("mutate")
@@ -272,7 +320,7 @@ async def test_ordinary_user_patch_stages_audit_without_password_or_values(monke
         return True
 
     session.commit.side_effect = commit
-    monkeypatch.setattr(users, "get_user_by_id", get_user_by_id)
+    session.exec.side_effect = read_user
     monkeypatch.setattr(users, "update_user", update_user)
     monkeypatch.setattr(
         users,
@@ -289,7 +337,7 @@ async def test_ordinary_user_patch_stages_audit_without_password_or_values(monke
         session=session,
     )
 
-    assert events == ["read", "mutate", "audit", "commit"]
+    assert events == ["lock", "read", "mutate", "audit", "commit"]
     assert audit_calls == [
         {
             "session": session,
@@ -301,6 +349,7 @@ async def test_ordinary_user_patch_stages_audit_without_password_or_values(monke
                 "event": AUDIT_EVENT_MUTATION,
                 "fields_changed": ["username"],
                 "lifecycle_kind": None,
+                "teams_deactivated": [],
                 "source": "manual",
             },
         }
@@ -315,7 +364,7 @@ async def test_user_patch_audit_stage_failure_rolls_back_before_commit(monkeypat
     from langflow.api.v1 import users
     from langflow.services.database.models.user.model import UserUpdate
 
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = User(username=str(uuid4()), password=str(uuid4()), is_active=True, is_superuser=True)
     target = SimpleNamespace(
         id=uuid4(),
         username="before",
@@ -324,6 +373,7 @@ async def test_user_patch_audit_stage_failure_rolls_back_before_commit(monkeypat
         password="hashed",  # noqa: S106  # pragma: allowlist secret
     )
     session = AsyncMock()
+    session.get = AsyncMock(return_value=actor)
 
     async def update_user(_target, _update, _session):
         return target
@@ -332,7 +382,7 @@ async def test_user_patch_audit_stage_failure_rolls_back_before_commit(monkeypat
         msg = "audit staging failed"
         raise RuntimeError(msg)
 
-    monkeypatch.setattr(users, "get_user_by_id", AsyncMock(return_value=target))
+    session.exec.return_value = _FirstResult(target)
     monkeypatch.setattr(users, "update_user", update_user)
     monkeypatch.setattr(users, "get_authorization_service", lambda: _LifecycleService([]))
     monkeypatch.setattr(users, "stage_audit_decision", fail_audit)
@@ -355,7 +405,7 @@ async def test_user_patch_business_denial_emits_access_audit(monkeypatch):
     from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS
     from langflow.services.database.models.user.model import UserUpdate
 
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = SimpleNamespace(id=uuid4(), is_active=True, is_superuser=True)
     session = AsyncMock()
     audit_calls = []
 
@@ -395,7 +445,7 @@ async def test_non_superuser_delete_reaches_audited_gate(monkeypatch):
     from langflow.api.v1 import users
     from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS
 
-    actor = SimpleNamespace(id=uuid4(), is_superuser=False)
+    actor = SimpleNamespace(id=uuid4(), is_active=True, is_superuser=False)
     target_id = uuid4()
     session = AsyncMock()
     audit_calls = []
@@ -427,13 +477,73 @@ async def test_non_superuser_delete_reaches_audited_gate(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_user_directory_platform_actions_honor_external_credential_ceiling(monkeypatch):
+    from langflow.api.v1 import users
+    from langflow.services.authorization.access_ceiling import (
+        ExternalAccessContext,
+        set_current_external_access_context,
+    )
+    from langflow.services.database.models.user.model import UserCreate, UserUpdate
+    from langflow.services.deps import get_settings_service
+
+    actor = SimpleNamespace(id=uuid4(), is_active=True, is_superuser=True)
+    target_id = uuid4()
+    session = AsyncMock()
+    monkeypatch.setattr(users, "audit_decision", AsyncMock())
+
+    auth_settings = get_settings_service().auth_settings
+    original_bypass = auth_settings.AUTHZ_SUPERUSER_BYPASS
+    original_signup = auth_settings.ENABLE_SIGNUP
+    original_auto_login = auth_settings.AUTO_LOGIN
+    auth_settings.AUTHZ_SUPERUSER_BYPASS = True
+    auth_settings.ENABLE_SIGNUP = False
+    auth_settings.AUTO_LOGIN = False
+    set_current_external_access_context(
+        ExternalAccessContext(provider="test-idp", subject="platform-user", level="editor")
+    )
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await users._require_user_administrator_dependency(actor)
+        assert exc_info.value.status_code == 403
+
+        with pytest.raises(HTTPException) as exc_info:
+            await users.add_user(
+                user=UserCreate(username="blocked-admin-create", password="not-a-real-password"),  # noqa: S106
+                session=session,
+                current_user=actor,
+                response=Response(),
+            )
+        assert exc_info.value.status_code == 403
+
+        with pytest.raises(HTTPException) as exc_info:
+            await users.patch_user(
+                user_id=target_id,
+                user_update=UserUpdate(username="blocked-cross-user-update"),
+                user=actor,
+                session=session,
+            )
+        assert exc_info.value.status_code == 403
+
+        with pytest.raises(HTTPException) as exc_info:
+            await users.delete_user(user_id=target_id, current_user=actor, session=session)
+        assert exc_info.value.status_code == 403
+    finally:
+        set_current_external_access_context(None)
+        auth_settings.AUTHZ_SUPERUSER_BYPASS = original_bypass
+        auth_settings.ENABLE_SIGNUP = original_signup
+        auth_settings.AUTO_LOGIN = original_auto_login
+
+    session.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_user_patch_lock_kind_is_advisory_before_state_read(monkeypatch):
     from langflow.api.v1 import users
     from langflow.services.database.models.user.model import UserUpdate
 
     events: list[str] = []
     service = _LifecycleService(events)
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = User(username=str(uuid4()), password=str(uuid4()), is_active=True, is_superuser=True)
     target = SimpleNamespace(
         id=uuid4(),
         is_active=False,
@@ -441,6 +551,8 @@ async def test_user_patch_lock_kind_is_advisory_before_state_read(monkeypatch):
         password="hashed",  # noqa: S106  # pragma: allowlist secret
     )
     session = AsyncMock()
+    session.get = AsyncMock(return_value=actor)
+    session.add = Mock()
 
     async def update_user(_target, _update, _session):
         events.append("mutate")
@@ -450,12 +562,13 @@ async def test_user_patch_lock_kind_is_advisory_before_state_read(monkeypatch):
     async def commit():
         events.append("commit")
 
-    async def get_user_by_id(_session, _user_id):
+    async def read_user(_statement):
         events.append("read")
-        return target
+        return _FirstResult(target)
 
     session.commit.side_effect = commit
-    monkeypatch.setattr(users, "get_user_by_id", get_user_by_id)
+    session.get_bind = Mock(return_value=SimpleNamespace(dialect=SimpleNamespace(name="postgresql")))
+    session.exec.side_effect = read_user
     monkeypatch.setattr(users, "update_user", update_user)
     monkeypatch.setattr(users, "get_authorization_service", lambda: service)
     monkeypatch.setattr(users, "audit_decision", AsyncMock())
@@ -480,7 +593,7 @@ async def test_user_lifecycle_stage_failure_prevents_commit(monkeypatch):
 
     events: list[str] = []
     service = _LifecycleService(events, fail_stage=True)
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = User(username=str(uuid4()), password=str(uuid4()), is_active=True, is_superuser=True)
     target = SimpleNamespace(
         id=uuid4(),
         is_active=True,
@@ -488,12 +601,14 @@ async def test_user_lifecycle_stage_failure_prevents_commit(monkeypatch):
         password="hashed",  # noqa: S106  # pragma: allowlist secret
     )
     session = AsyncMock()
+    session.get = AsyncMock(return_value=actor)
 
     async def update_user(_target, _update, _session):
         events.append("mutate")
         return target
 
-    monkeypatch.setattr(users, "get_user_by_id", AsyncMock(return_value=target))
+    session.get_bind = Mock(return_value=SimpleNamespace(dialect=SimpleNamespace(name="postgresql")))
+    session.exec.return_value = _FirstResult(target)
     monkeypatch.setattr(users, "update_user", update_user)
     monkeypatch.setattr(users, "get_authorization_service", lambda: service)
 
@@ -517,7 +632,7 @@ async def test_user_lifecycle_policy_rejection_is_409_without_mutation(monkeypat
 
     events: list[str] = []
     service = _LifecycleService(events)
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = User(username=str(uuid4()), password=str(uuid4()), is_active=True, is_superuser=True)
     target = SimpleNamespace(
         id=uuid4(),
         is_active=True,
@@ -525,6 +640,7 @@ async def test_user_lifecycle_policy_rejection_is_409_without_mutation(monkeypat
         password="hashed",  # noqa: S106  # pragma: allowlist secret
     )
     session = AsyncMock()
+    session.get = AsyncMock(return_value=actor)
     update = AsyncMock()
     audit = AsyncMock()
 
@@ -533,7 +649,8 @@ async def test_user_lifecycle_policy_rejection_is_409_without_mutation(monkeypat
         raise AuthorizationMutationRejected(_RECOVERY_DETAIL)
 
     service.validate_identity_mutation = reject
-    monkeypatch.setattr(users, "get_user_by_id", AsyncMock(return_value=target))
+    session.get_bind = Mock(return_value=SimpleNamespace(dialect=SimpleNamespace(name="postgresql")))
+    session.exec.return_value = _FirstResult(target)
     monkeypatch.setattr(users, "update_user", update)
     monkeypatch.setattr(users, "get_authorization_service", lambda: service)
     monkeypatch.setattr(users, "audit_decision", audit)
@@ -673,7 +790,7 @@ async def test_assignment_delete_validates_live_row_before_mutation_and_stage(mo
 
     events: list[str] = []
     service = _LifecycleService(events)
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = User(username=str(uuid4()), password=str(uuid4()), is_active=True, is_superuser=True)
     assignment = SimpleNamespace(
         id=uuid4(),
         user_id=uuid4(),
@@ -682,7 +799,7 @@ async def test_assignment_delete_validates_live_row_before_mutation_and_stage(mo
         domain_id=None,
     )
     session = SimpleNamespace()
-    session.get = AsyncMock(return_value=assignment)
+    session.get = AsyncMock(side_effect=[actor, assignment])
     grant_result = SimpleNamespace(all=list)
     session.exec = AsyncMock(return_value=grant_result)
     session.delete = AsyncMock(side_effect=lambda _row: events.append("mutate"))
@@ -719,7 +836,7 @@ async def test_assignment_delete_policy_rejection_is_409_without_mutation(monkey
 
     events: list[str] = []
     service = _LifecycleService(events)
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = User(username=str(uuid4()), password=str(uuid4()), is_active=True, is_superuser=True)
     assignment = SimpleNamespace(
         id=uuid4(),
         user_id=uuid4(),
@@ -728,7 +845,7 @@ async def test_assignment_delete_policy_rejection_is_409_without_mutation(monkey
         domain_id=None,
     )
     session = SimpleNamespace()
-    session.get = AsyncMock(return_value=assignment)
+    session.get = AsyncMock(side_effect=[actor, assignment])
     grant_result = SimpleNamespace(all=list)
     session.exec = AsyncMock(return_value=grant_result)
     session.delete = AsyncMock()

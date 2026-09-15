@@ -839,9 +839,15 @@ async def get_all_flows_similar_to_project(session: AsyncSession, folder_id: UUI
 
 
 async def delete_starter_projects(session, folder_id) -> None:
+    from langflow.services.authorization.lifecycle import stage_resource_mutation
+    from langflow.services.deps import get_authorization_service
+
+    await get_authorization_service().acquire_resource_mutation_lock(session=session)
     flows = await get_all_flows_similar_to_project(session, folder_id)
     for flow in flows:
         await session.delete(flow)
+    for flow in flows:
+        await stage_resource_mutation(session, resource_type="flow", resource_id=flow.id, deleted=True)
 
 
 async def folder_exists(session, folder_name):
@@ -1046,27 +1052,35 @@ async def load_flows_from_directory() -> None:
     if not flows_path:
         return
 
+    from langflow.services.database.lock_retry import run_with_lock_retry
+    from langflow.services.deps import get_authorization_service
+
     async with session_scope() as session:
-        # Find superuser by role instead of username to avoid issues with credential reset
-        from langflow.services.database.models.user.model import User
 
-        stmt = select(User).where(User.is_superuser == True)  # noqa: E712
-        result = await session.exec(stmt)
-        user = result.first()
-        if user is None:
-            msg = "No superuser found in the database"
-            raise NoResultFound(msg)
+        async def load_attempt(_attempt: int) -> None:
+            await get_authorization_service().acquire_resource_mutation_lock(session=session)
+            # Find superuser by role instead of username to avoid issues with credential reset
+            from langflow.services.database.models.user.model import User
 
-        # Ensure that the default folder exists for this user
-        _ = await get_or_create_default_folder(session, user.id)
+            stmt = select(User).where(User.is_superuser == True)  # noqa: E712
+            result = await session.exec(stmt)
+            user = result.first()
+            if user is None:
+                msg = "No superuser found in the database"
+                raise NoResultFound(msg)
 
-        for file_path in await asyncio.to_thread(Path(flows_path).iterdir):
-            if not await anyio.Path(file_path).is_file() or file_path.suffix != ".json":
-                continue
-            await logger.ainfo(f"Loading flow from file: {file_path.name}")
-            async with aiofiles.open(str(file_path), encoding="utf-8") as f:
-                content = await f.read()
-            await upsert_flow_from_file(content, file_path.stem, session, user.id)
+            # Ensure that the default folder exists for this user
+            _ = await get_or_create_default_folder(session, user.id)
+
+            for file_path in await asyncio.to_thread(Path(flows_path).iterdir):
+                if not await anyio.Path(file_path).is_file() or file_path.suffix != ".json":
+                    continue
+                await logger.ainfo(f"Loading flow from file: {file_path.name}")
+                async with aiofiles.open(str(file_path), encoding="utf-8") as f:
+                    content = await f.read()
+                await upsert_flow_from_file(content, file_path.stem, session, user.id)
+
+        await run_with_lock_retry(load_attempt, session=session, description="load configured flows")
 
 
 async def detect_github_url(url: str) -> str:
@@ -1108,40 +1122,51 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
     if not bundle_urls:
         return [], []
 
+    from langflow.services.database.lock_retry import run_with_lock_retry
+    from langflow.services.deps import get_authorization_service
+
+    files: list[tuple[bytes, str]] = []
+    for url in bundle_urls:
+        url_ = await detect_github_url(url)
+
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            response = await client.get(url_)
+            response.raise_for_status()
+
+        with zipfile.ZipFile(io.BytesIO(response.content)) as zfile:
+            dir_names = [f.filename for f in zfile.infolist() if f.is_dir() and "/" not in f.filename[:-1]]
+            temp_dir = None
+            for filename in zfile.namelist():
+                path = Path(filename)
+                for dir_name in dir_names:
+                    if path.is_relative_to(f"{dir_name}flows/") and path.suffix == ".json":
+                        file_content = zfile.read(filename)
+                        files.append((file_content, path.stem))
+                    elif path.is_relative_to(f"{dir_name}components/"):
+                        if temp_dir is None:
+                            temp_dir = await asyncio.to_thread(TemporaryDirectory)
+                            temp_dirs.append(temp_dir)
+                        component_paths.add(str(Path(temp_dir.name) / f"{dir_name}components"))
+                        await asyncio.to_thread(zfile.extract, filename, temp_dir.name)
+
     async with session_scope() as session:
-        # Find superuser by role instead of username to avoid issues with credential reset
-        from langflow.services.database.models.user.model import User
 
-        stmt = select(User).where(User.is_superuser == True)  # noqa: E712
-        result = await session.exec(stmt)
-        user = result.first()
-        if user is None:
-            msg = "No superuser found in the database"
-            raise NoResultFound(msg)
-        user_id = user.id
+        async def load_attempt(_attempt: int) -> None:
+            await get_authorization_service().acquire_resource_mutation_lock(session=session)
+            # Find superuser by role instead of username to avoid issues with credential reset
+            from langflow.services.database.models.user.model import User
 
-        for url in bundle_urls:
-            url_ = await detect_github_url(url)
+            stmt = select(User).where(User.is_superuser == True)  # noqa: E712
+            result = await session.exec(stmt)
+            user = result.first()
+            if user is None:
+                msg = "No superuser found in the database"
+                raise NoResultFound(msg)
 
-            async with httpx.AsyncClient(follow_redirects=True) as client:
-                response = await client.get(url_)
-                response.raise_for_status()
+            for content, filename in files:
+                await upsert_flow_from_file(content, filename, session, user.id)
 
-            with zipfile.ZipFile(io.BytesIO(response.content)) as zfile:
-                dir_names = [f.filename for f in zfile.infolist() if f.is_dir() and "/" not in f.filename[:-1]]
-                temp_dir = None
-                for filename in zfile.namelist():
-                    path = Path(filename)
-                    for dir_name in dir_names:
-                        if path.is_relative_to(f"{dir_name}flows/") and path.suffix == ".json":
-                            file_content = zfile.read(filename)
-                            await upsert_flow_from_file(file_content, path.stem, session, user_id)
-                        elif path.is_relative_to(f"{dir_name}components/"):
-                            if temp_dir is None:
-                                temp_dir = await asyncio.to_thread(TemporaryDirectory)
-                                temp_dirs.append(temp_dir)
-                            component_paths.add(str(Path(temp_dir.name) / f"{dir_name}components"))
-                            await asyncio.to_thread(zfile.extract, filename, temp_dir.name)
+        await run_with_lock_retry(load_attempt, session=session, description="load bundle flows")
 
     return temp_dirs, list(component_paths)
 
@@ -1251,6 +1276,9 @@ def _merge_variable_bindings(existing_data, incoming_data):
 
 
 async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: AsyncSession, user_id: UUID) -> None:
+    from langflow.services.authorization.lifecycle import stage_resource_mutation
+    from langflow.services.deps import get_authorization_service
+
     flow = orjson.loads(file_content)
     flow_endpoint_name = flow.get("endpoint_name")
     if _is_valid_uuid(filename):
@@ -1265,6 +1293,7 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
             return
 
     flow_name = flow.get("name")
+    await get_authorization_service().acquire_resource_mutation_lock(session=session)
     existing = await find_existing_flow(
         session,
         flow_id,
@@ -1316,6 +1345,16 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
         if existing.folder_id is None:
             folder = await get_or_create_default_folder(session, user_id)
             existing.folder_id = folder.id
+            existing.workspace_id = (
+                await session.exec(select(Folder.workspace_id).where(Folder.id == folder.id))
+            ).first()
+            await session.flush()
+            await stage_resource_mutation(
+                session,
+                resource_type="flow",
+                resource_id=existing.id,
+                changed_fields=("folder_id", "workspace_id"),
+            )
 
         session.add(existing)
     else:
@@ -1325,6 +1364,7 @@ async def upsert_flow_from_file(file_content: AnyStr, filename: str, session: As
         folder = await get_or_create_default_folder(session, user_id)
         flow["user_id"] = user_id
         flow["folder_id"] = folder.id
+        flow["workspace_id"] = (await session.exec(select(Folder.workspace_id).where(Folder.id == folder.id))).first()
         flow = Flow.model_validate(flow)
         flow.updated_at = datetime.now(tz=timezone.utc).astimezone()
 
@@ -1343,7 +1383,7 @@ async def find_existing_flow(session, flow_id, flow_endpoint_name, *, user_id=No
     """
     if flow_endpoint_name:
         await logger.adebug(f"flow_endpoint_name: {flow_endpoint_name}")
-        stmt = select(Flow).where(Flow.endpoint_name == flow_endpoint_name)
+        stmt = select(Flow).where(Flow.endpoint_name == flow_endpoint_name).execution_options(populate_existing=True)
         # ``unique_flow_endpoint_name`` is scoped per user; scope the lookup too
         # when a user_id is supplied so we don't return another user's flow.
         if user_id is not None:
@@ -1353,13 +1393,13 @@ async def find_existing_flow(session, flow_id, flow_endpoint_name, *, user_id=No
             return existing
 
     if flow_id is not None:
-        stmt = select(Flow).where(Flow.id == flow_id)
+        stmt = select(Flow).where(Flow.id == flow_id).execution_options(populate_existing=True)
         if existing := (await session.exec(stmt)).first():
             await logger.adebug(f"Found existing flow by id: {flow_id}")
             return existing
 
     if user_id is not None and name:
-        stmt = select(Flow).where(Flow.user_id == user_id, Flow.name == name)
+        stmt = select(Flow).where(Flow.user_id == user_id, Flow.name == name).execution_options(populate_existing=True)
         if existing := (await session.exec(stmt)).first():
             await logger.adebug(f"Found existing flow by (user_id, name): {name}")
             return existing
@@ -1379,80 +1419,48 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
         # this is intended to be used to skip all startup project logic.
         return
 
+    from langflow.services.database.lock_retry import run_with_lock_retry
+    from langflow.services.deps import get_authorization_service
+
     async with session_scope() as session:
-        new_folder = await get_or_create_starter_folder(session)
-        starter_projects = await load_starter_projects()
-        starter_projects = filter_starter_projects_by_available_components(starter_projects, all_types_dict)
 
-        if get_settings_service().settings.update_starter_projects:
-            await logger.adebug("Updating starter projects")
-            # 1. Delete all existing starter projects
-            successfully_updated_projects = 0
-            await delete_starter_projects(session, new_folder.id)
-            # Profile pictures are now served directly from the package installation directory
-            # No need to copy them to config_dir
+        async def update_attempt(_attempt: int) -> None:
+            await get_authorization_service().acquire_resource_mutation_lock(session=session)
+            new_folder = await get_or_create_starter_folder(session)
+            starter_projects = await load_starter_projects()
+            starter_projects = filter_starter_projects_by_available_components(starter_projects, all_types_dict)
 
-            # 2. Update all starter projects with the latest component versions (this modifies the actual file data)
-            for project_path, project in starter_projects:
-                (
-                    project_name,
-                    project_description,
-                    project_is_component,
-                    updated_at_datetime,
-                    project_data,
-                    project_icon,
-                    project_icon_bg_color,
-                    project_gradient,
-                    project_tags,
-                ) = get_project_data(project)
-                updated_project_data = update_projects_components_with_latest_component_versions(
-                    project_data.copy(), all_types_dict
-                )
-                updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
-                if updated_project_data != project_data:
-                    project_data = updated_project_data
-                    await update_project_file(project_path, project, updated_project_data)
+            if get_settings_service().settings.update_starter_projects:
+                await logger.adebug("Updating starter projects")
+                # 1. Delete all existing starter projects
+                successfully_updated_projects = 0
+                await delete_starter_projects(session, new_folder.id)
+                # Profile pictures are now served directly from the package installation directory
+                # No need to copy them to config_dir
 
-                try:
-                    # Create the updated starter project
-                    create_new_project(
-                        session=session,
-                        project_name=project_name,
-                        project_description=project_description,
-                        project_is_component=project_is_component,
-                        updated_at_datetime=updated_at_datetime,
-                        project_data=project_data,
-                        project_icon=project_icon,
-                        project_icon_bg_color=project_icon_bg_color,
-                        project_gradient=project_gradient,
-                        project_tags=project_tags,
-                        new_folder_id=new_folder.id,
+                # 2. Update all starter projects with the latest component versions (this modifies the actual file data)
+                for project_path, project in starter_projects:
+                    (
+                        project_name,
+                        project_description,
+                        project_is_component,
+                        updated_at_datetime,
+                        project_data,
+                        project_icon,
+                        project_icon_bg_color,
+                        project_gradient,
+                        project_tags,
+                    ) = get_project_data(project)
+                    updated_project_data = update_projects_components_with_latest_component_versions(
+                        project_data.copy(), all_types_dict
                     )
-                except Exception:  # noqa: BLE001
-                    await logger.aexception(f"Error while creating starter project {project_name}")
+                    updated_project_data = update_edges_with_latest_component_versions(updated_project_data)
+                    if updated_project_data != project_data:
+                        project_data = updated_project_data
+                        await update_project_file(project_path, project, updated_project_data)
 
-                successfully_updated_projects += 1
-            await logger.adebug(f"Successfully updated {successfully_updated_projects} starter projects")
-        else:
-            # Even if we're not updating starter projects, we still need to create any that don't exist
-            await logger.adebug("Creating new starter projects")
-            successfully_created_projects = 0
-            existing_flows = await get_all_flows_similar_to_project(session, new_folder.id)
-            existing_flow_names = [existing_flow.name for existing_flow in existing_flows]
-            for _, project in starter_projects:
-                (
-                    project_name,
-                    project_description,
-                    project_is_component,
-                    updated_at_datetime,
-                    project_data,
-                    project_icon,
-                    project_icon_bg_color,
-                    project_gradient,
-                    project_tags,
-                ) = get_project_data(project)
-                if project_name not in existing_flow_names:
                     try:
+                        # Create the updated starter project
                         create_new_project(
                             session=session,
                             project_name=project_name,
@@ -1468,8 +1476,49 @@ async def create_or_update_starter_projects(all_types_dict: dict) -> None:
                         )
                     except Exception:  # noqa: BLE001
                         await logger.aexception(f"Error while creating starter project {project_name}")
-                    successfully_created_projects += 1
-                await logger.adebug(f"Successfully created {successfully_created_projects} starter projects")
+
+                    successfully_updated_projects += 1
+                await logger.adebug(f"Successfully updated {successfully_updated_projects} starter projects")
+            else:
+                # Even if we're not updating starter projects, we still need to create any that don't exist
+                await logger.adebug("Creating new starter projects")
+                successfully_created_projects = 0
+                existing_flows = await get_all_flows_similar_to_project(session, new_folder.id)
+                existing_flow_names = [existing_flow.name for existing_flow in existing_flows]
+                for _, project in starter_projects:
+                    (
+                        project_name,
+                        project_description,
+                        project_is_component,
+                        updated_at_datetime,
+                        project_data,
+                        project_icon,
+                        project_icon_bg_color,
+                        project_gradient,
+                        project_tags,
+                    ) = get_project_data(project)
+                    if project_name not in existing_flow_names:
+                        try:
+                            create_new_project(
+                                session=session,
+                                project_name=project_name,
+                                project_description=project_description,
+                                project_is_component=project_is_component,
+                                updated_at_datetime=updated_at_datetime,
+                                project_data=project_data,
+                                project_icon=project_icon,
+                                project_icon_bg_color=project_icon_bg_color,
+                                project_gradient=project_gradient,
+                                project_tags=project_tags,
+                                new_folder_id=new_folder.id,
+                            )
+                        except Exception:  # noqa: BLE001
+                            await logger.aexception(f"Error while creating starter project {project_name}")
+                        successfully_created_projects += 1
+                    await logger.adebug(f"Successfully created {successfully_created_projects} starter projects")
+            await session.commit()
+
+        await run_with_lock_retry(update_attempt, session=session, description="update starter projects")
 
 
 async def initialize_auto_login_default_superuser() -> None:
@@ -1602,57 +1651,92 @@ async def get_or_create_default_folder(session: AsyncSession, user_id: UUID) -> 
 
 
 async def sync_flows_from_fs():
-    flow_mtimes = {}
+    from langflow.services.authorization.lifecycle import stage_resource_mutation
+    from langflow.services.database.lock_retry import run_with_lock_retry
+    from langflow.services.deps import get_authorization_service
+
+    flow_mtimes: dict[UUID, float] = {}
     fs_flows_polling_interval = get_settings_service().settings.fs_flows_polling_interval / 1000
     storage_service = get_storage_service()
     try:
         while True:
             try:
                 async with session_scope() as session:
-                    stmt = select(Flow).where(col(Flow.fs_path).is_not(None))
-                    flows = (await session.exec(stmt)).all()
-                    for flow in flows:
-                        mtime = flow_mtimes.setdefault(flow.id, 0)
-                        # Resolve path: if relative, construct full path using user's flows directory
-                        fs_path_str = flow.fs_path
-                        if not Path(fs_path_str).is_absolute():
-                            # Relative path - construct full path
-                            path = storage_service.data_dir / "flows" / str(flow.user_id) / fs_path_str
-                        else:
-                            # Absolute path - use as-is
-                            path = anyio.Path(fs_path_str)
-                        try:
-                            if await path.exists():
-                                new_mtime = (await path.stat()).st_mtime
-                                if new_mtime > mtime:
-                                    update_data = orjson.loads(await path.read_text(encoding="utf-8"))
-                                    try:
-                                        flow_changed = False
-                                        for field_name in ("name", "description", "data", "locked"):
-                                            if (new_value := update_data.get(field_name)) and getattr(
-                                                flow, field_name
-                                            ) != new_value:
-                                                setattr(flow, field_name, new_value)
-                                                flow_changed = True
-                                        if folder_id := update_data.get("folder_id"):
-                                            new_folder_id = UUID(folder_id)
-                                            if flow.folder_id != new_folder_id:
-                                                flow.folder_id = new_folder_id
-                                                flow_changed = True
-                                        if flow_changed:
-                                            # The warm registry reconciles executable data by
-                                            # updated_at, so filesystem writers must advance it in
-                                            # the same transaction as the Flow fields they replace.
-                                            flow.updated_at = datetime.now(timezone.utc)
-                                        await session.flush()
-                                        await session.refresh(flow)
-                                    except Exception:  # noqa: BLE001
-                                        await logger.aexception(
-                                            f"Couldn't update flow {flow.id} in database from path {path}"
-                                        )
-                                    flow_mtimes[flow.id] = new_mtime
-                        except Exception:  # noqa: BLE001
-                            await logger.aexception(f"Error while handling flow file {path}")
+
+                    async def sync_attempt(
+                        _attempt: int,
+                        previous_mtimes: dict[UUID, float] = flow_mtimes,
+                    ) -> dict[UUID, float]:
+                        await get_authorization_service().acquire_resource_mutation_lock(session=session)
+                        pending_mtimes = dict(previous_mtimes)
+                        scope_changed_ids: set[UUID] = set()
+                        stmt = select(Flow).where(col(Flow.fs_path).is_not(None))
+                        flows = (await session.exec(stmt)).all()
+                        for flow in flows:
+                            mtime = pending_mtimes.setdefault(flow.id, 0)
+                            # Resolve path: if relative, construct full path using user's flows directory
+                            fs_path_str = flow.fs_path
+                            if not Path(fs_path_str).is_absolute():
+                                # Relative path - construct full path
+                                path = storage_service.data_dir / "flows" / str(flow.user_id) / fs_path_str
+                            else:
+                                # Absolute path - use as-is
+                                path = anyio.Path(fs_path_str)
+                            try:
+                                if await path.exists():
+                                    new_mtime = (await path.stat()).st_mtime
+                                    if new_mtime > mtime:
+                                        update_data = orjson.loads(await path.read_text(encoding="utf-8"))
+                                        try:
+                                            flow_changed = False
+                                            for field_name in ("name", "description", "data", "locked"):
+                                                if (new_value := update_data.get(field_name)) and getattr(
+                                                    flow, field_name
+                                                ) != new_value:
+                                                    setattr(flow, field_name, new_value)
+                                                    flow_changed = True
+                                            if folder_id := update_data.get("folder_id"):
+                                                new_folder_id = UUID(folder_id)
+                                                if flow.folder_id != new_folder_id:
+                                                    flow.folder_id = new_folder_id
+                                                    flow.workspace_id = (
+                                                        await session.exec(
+                                                            select(Folder.workspace_id).where(
+                                                                Folder.id == new_folder_id
+                                                            )
+                                                        )
+                                                    ).first()
+                                                    scope_changed_ids.add(flow.id)
+                                                    flow_changed = True
+                                            if flow_changed:
+                                                # The warm registry reconciles executable data by
+                                                # updated_at, so filesystem writers must advance it in
+                                                # the same transaction as the Flow fields they replace.
+                                                flow.updated_at = datetime.now(timezone.utc)
+                                            await session.flush()
+                                            await session.refresh(flow)
+                                        except Exception:  # noqa: BLE001
+                                            await logger.aexception(
+                                                f"Couldn't update flow {flow.id} in database from path {path}"
+                                            )
+                                        pending_mtimes[flow.id] = new_mtime
+                            except Exception:  # noqa: BLE001
+                                await logger.aexception(f"Error while handling flow file {path}")
+                        for scope_changed_id in sorted(scope_changed_ids):
+                            await stage_resource_mutation(
+                                session,
+                                resource_type="flow",
+                                resource_id=scope_changed_id,
+                                changed_fields=("folder_id", "workspace_id"),
+                            )
+                        await session.commit()
+                        return pending_mtimes
+
+                    flow_mtimes = await run_with_lock_retry(
+                        sync_attempt,
+                        session=session,
+                        description="sync filesystem flows",
+                    )
             except asyncio.CancelledError:
                 await logger.adebug("Flow sync cancelled")
                 break

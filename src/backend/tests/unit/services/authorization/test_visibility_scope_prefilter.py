@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 from langflow.services.authorization.listing import (
+    apply_owned_or_visible_scope_prefilter,
     resource_visible_in_scope,
     restrict_to_owned_or_visible_scope,
     visible_scope_prefilter,
@@ -87,6 +88,34 @@ def test_scope_predicate_unions_owner_explicit_workspace_and_project_grants():
     assert "flow.workspace_id IN" in sql
     assert "flow.folder_id IN" in sql
     assert sql.count(" OR ") == 3
+
+
+async def test_scope_prefilter_omits_owner_when_credential_scope_is_authoritative(
+    async_session,
+    monkeypatch,
+):
+    owner_id = uuid4()
+    owned_flow = Flow(name="owned but credential-blocked", user_id=owner_id)
+    explicitly_visible_flow = Flow(name="credential-visible", user_id=uuid4())
+    async_session.add_all([owned_flow, explicitly_visible_flow])
+    await async_session.commit()
+
+    async def owner_override_disabled() -> bool:
+        return False
+
+    monkeypatch.setattr(
+        "langflow.services.authorization.listing.should_apply_owner_override",
+        owner_override_disabled,
+    )
+    constrained = await apply_owned_or_visible_scope_prefilter(
+        select(Flow),
+        id_column=Flow.id,
+        owner_clause=Flow.user_id == owner_id,
+        visibility=ResourceVisibilityScope(resource_ids=(explicitly_visible_flow.id,)),
+    )
+    rows = list((await async_session.exec(constrained)).all())
+
+    assert [row.id for row in rows] == [explicitly_visible_flow.id]
 
 
 def test_global_scope_does_not_emit_an_unbounded_id_list():

@@ -6,6 +6,7 @@ update_component_field_value, and list_component_fields.
 
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID, uuid4
 
@@ -213,6 +214,7 @@ class TestUpdateComponentFieldValue:
 
         mock_session = AsyncMock()
         mock_session.add = MagicMock()
+        mock_session.get_bind = MagicMock(return_value=SimpleNamespace(dialect=SimpleNamespace(name="postgresql")))
         mock_session.get = AsyncMock(return_value=db_flow)
         mock_session.commit = AsyncMock()
         mock_session.refresh = AsyncMock()
@@ -268,6 +270,7 @@ class TestUpdateComponentFieldValue:
         db_flow.user_id = UUID(USER_ID)  # original owner
 
         mock_session = AsyncMock()
+        mock_session.get_bind = MagicMock(return_value=SimpleNamespace(dialect=SimpleNamespace(name="postgresql")))
         mock_session.get = AsyncMock(return_value=db_flow)
 
         @asynccontextmanager
@@ -301,6 +304,7 @@ class TestUpdateComponentFieldValue:
         db_flow.locked = True
 
         mock_session = AsyncMock()
+        mock_session.get_bind = MagicMock(return_value=SimpleNamespace(dialect=SimpleNamespace(name="postgresql")))
         mock_session.get = AsyncMock(return_value=db_flow)
 
         @asynccontextmanager

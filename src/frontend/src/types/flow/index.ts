@@ -13,6 +13,8 @@ export type PaginatedFlowsType = {
 export type FlowType = {
   name: string;
   id: string;
+  /** Server-issued optimistic revision; absent only for unsaved/local flow objects. */
+  edit_revision?: number;
   data: ReactFlowJsonObject<AllNodeType, EdgeType> | null;
   description: string;
   endpoint_name?: string | null;
@@ -24,6 +26,8 @@ export type FlowType = {
   parent?: string;
   folder?: string;
   user_id?: string;
+  owner_username?: string | null;
+  is_owner?: boolean;
   icon?: string;
   gradient?: string;
   tags?: string[];

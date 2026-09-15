@@ -109,6 +109,13 @@ class AdminReconciler:
                     description=team.get("description"),
                     state="active" if team["is_active"] else "disabled",
                     members=member_names,
+                    member_roles={
+                        users_by_id[str(member["user_id"])]["username"]: member["role"]
+                        for member in members
+                        if member.get("source", "manual") == "manual"
+                        and str(member["user_id"]) in users_by_id
+                        and member.get("role") in {"admin", "maintainer"}
+                    },
                 )
             )
 
@@ -331,6 +338,9 @@ class AdminReconciler:
         for desired in sorted(state.teams, key=lambda item: item.adom_name):
             current = teams_by_id.get(str(desired.id)) if desired.id else teams_by_name.get(desired.adom_name)
             if current is None:
+                if "admin" not in desired.member_roles.values():
+                    msg = f"New team {desired.adom_name!r} requires an explicit active admin in member_roles"
+                    raise ManifestResolutionError(msg)
                 operations.append(
                     _Operation(
                         "create",
@@ -341,6 +351,7 @@ class AdminReconciler:
                             "display_name": desired.display_name,
                             "description": desired.description,
                             "active": desired.state == "active",
+                            "members": {name: desired.member_roles.get(name, "user") for name in desired.members},
                         },
                     )
                 )
@@ -366,9 +377,9 @@ class AdminReconciler:
         for desired in sorted(state.teams, key=lambda item: item.adom_name):
             current = teams_by_id.get(str(desired.id)) if desired.id else teams_by_name.get(desired.adom_name)
             if current is None:
-                current_members: list[dict[str, Any]] = []
-            else:
-                current_members = self.client.list_team_members(str(current["id"]))
+                # The create operation submits the full initial roster atomically.
+                continue
+            current_members = self.client.list_team_members(str(current["id"]))
             members_by_user_id = {str(item["user_id"]): item for item in current_members}
             desired_member_ids = {
                 str((desired_users_to_current.get(name) or users_by_name[name])["id"])
@@ -380,6 +391,53 @@ class AdminReconciler:
                 for user_id in members_by_user_id
                 if user_id in users_by_id
             }
+            if desired.member_roles:
+                # Apply explicit role changes and roster removals together so an
+                # administrator handoff never leaves an invalid intermediate team.
+                roles = {
+                    name: desired.member_roles.get(name, "user") for name in set(desired.members) - current_member_names
+                }
+                for name, role in desired.member_roles.items():
+                    user = desired_users_to_current.get(name) or users_by_name.get(name)
+                    member = members_by_user_id.get(str(user["id"])) if user else None
+                    if member is not None and member.get("role", "user") != role:
+                        roles[name] = role
+                removals = []
+                if prune:
+                    for user_id, membership in sorted(members_by_user_id.items()):
+                        if user_id in desired_member_ids:
+                            continue
+                        username = users_by_id.get(user_id, {}).get("username", user_id)
+                        if membership.get("source") != "manual":
+                            skipped.append(
+                                {
+                                    "action": "remove",
+                                    "resource": "membership",
+                                    "key": f"{desired.adom_name}/{username}",
+                                    "reason": "externally_managed",
+                                }
+                            )
+                        else:
+                            removals.append(user_id)
+                if roles or removals:
+                    team_update = next(
+                        (
+                            operation
+                            for operation in operations
+                            if operation.action == "update"
+                            and operation.resource == "team"
+                            and operation.key == desired.adom_name
+                        ),
+                        None,
+                    )
+                    if team_update is None:
+                        team_update = _Operation(
+                            "update", "team", desired.adom_name, payload={"identifier": str(current["id"])}
+                        )
+                        operations.append(team_update)
+                    team_update.changes.append("members")
+                    team_update.payload.update(member_roles=roles, remove_member_ids=removals)
+                continue
             operations.extend(
                 _Operation(
                     "add",

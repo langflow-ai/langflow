@@ -6,6 +6,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
+import { extractApiErrorCode, extractApiErrorMessages } from "@/utils/apiError";
 import { customStringify } from "@/utils/reactflowUtils";
 
 // Opt-out for callers that recover from a save failure themselves.
@@ -91,6 +92,7 @@ const useSaveFlow = () => {
 
           const {
             id,
+            edit_revision,
             name,
             data,
             description,
@@ -107,6 +109,14 @@ const useSaveFlow = () => {
           const providerScopeChanged =
             persistedFlowForScope !== undefined &&
             persistedFlowForScope.folder_id !== folder_id;
+          const observedEditRevision =
+            edit_revision ?? persistedFlowForScope?.edit_revision;
+          if (typeof observedEditRevision !== "number") {
+            reportSaveError(t("errors.workflowRevisionUnavailable"));
+            setSaveLoading(false);
+            reject(new Error(t("errors.workflowRevisionUnavailable")));
+            return;
+          }
           const updatePayload = {
             id,
             name,
@@ -119,62 +129,78 @@ const useSaveFlow = () => {
           };
           // biome-ignore lint/suspicious/noExplicitAny: legacy
           const handleError = (e: any) => {
-            reportSaveError(
-              e.response?.data?.detail || e.message || "Unknown error",
-            );
+            const code = extractApiErrorCode(e);
+            const status = e.response?.status;
+            const detail =
+              status === 412 || code === "RESOURCE_CHANGED"
+                ? t("errors.flowChangedBeforeSave")
+                : status === 403
+                  ? t("errors.flowEditingAccessChanged")
+                  : extractApiErrorMessages(e)[0];
+            reportSaveError(detail);
             setSaveLoading(false);
             reject(e);
           };
-          const persistFlow = () => {
-            mutate(updatePayload, {
-              onSuccess: (updatedFlow) => {
-                const flows = useFlowsManagerStore.getState().flows;
-                setSaveLoading(false);
-                if (flows) {
-                  // updates flow in state
-                  setFlows(
-                    flows.map((flow) => {
-                      if (flow.id === updatedFlow.id) {
-                        return updatedFlow;
-                      }
-                      return flow;
-                    }),
-                  );
-                  // Only update useFlowStore.currentFlow when on the flow page.
-                  // When saving from the list page (e.g., renaming via settings modal),
-                  // setting this would leave stale unprocessed flow data in the store,
-                  // causing a crash when the user later navigates to the flow page.
-                  //
-                  // And only when the canvas still holds the graph this request
-                  // carried. `currentFlow` is the baseline the next autosave
-                  // diffs against, so adopting the response of a save that
-                  // started before an edit makes that edit look persisted and
-                  // the follow-up save is skipped — the edit is lost. The
-                  // store swaps these arrays on every change, so identity is
-                  // an exact "nothing moved while we were away" check.
-                  const liveState = useFlowStore.getState();
-                  const graphUnchanged =
-                    liveState.nodes === nodes && liveState.edges === edges;
-                  if (liveState.onFlowPage && graphUnchanged) {
-                    setCurrentFlow(updatedFlow);
+          const persistFlow = (observedRevision = observedEditRevision) => {
+            mutate(
+              { ...updatePayload, edit_revision: observedRevision },
+              {
+                onSuccess: (updatedFlow) => {
+                  const flows = useFlowsManagerStore.getState().flows;
+                  setSaveLoading(false);
+                  if (flows) {
+                    // updates flow in state
+                    setFlows(
+                      flows.map((flow) => {
+                        if (flow.id === updatedFlow.id) {
+                          return updatedFlow;
+                        }
+                        return flow;
+                      }),
+                    );
+                    // Only update useFlowStore.currentFlow when on the flow page.
+                    // When saving from the list page (e.g., renaming via settings modal),
+                    // setting this would leave stale unprocessed flow data in the store,
+                    // causing a crash when the user later navigates to the flow page.
+                    //
+                    // Preserve edits made while this save was pending, but
+                    // advance their observed revision after our successful write.
+                    // Otherwise the next save conflicts with our own response.
+                    const liveState = useFlowStore.getState();
+                    const graphUnchanged =
+                      liveState.nodes === nodes && liveState.edges === edges;
+                    if (
+                      liveState.onFlowPage &&
+                      liveState.currentFlow?.id === updatedFlow.id
+                    ) {
+                      setCurrentFlow(
+                        graphUnchanged
+                          ? updatedFlow
+                          : {
+                              ...liveState.currentFlow,
+                              edit_revision: updatedFlow.edit_revision,
+                            },
+                      );
+                    }
+                    resolve();
+                  } else {
+                    reportSaveError(t("errors.flowsVariableUndefined"));
+                    reject(new Error("Flows variable undefined"));
                   }
-                  resolve();
-                } else {
-                  reportSaveError(t("errors.flowsVariableUndefined"));
-                  reject(new Error("Flows variable undefined"));
-                }
+                },
+                onError: handleError,
               },
-              onError: handleError,
-            });
+            );
           };
 
           if (isUnlockingPersistedFlow) {
             mutate(
-              { id, locked: false },
+              { id, edit_revision: observedEditRevision, locked: false },
               {
                 // Preserve any settings edits by applying them only after the
                 // backend has committed the unlock-only request.
-                onSuccess: persistFlow,
+                onSuccess: (unlockedFlow) =>
+                  persistFlow(unlockedFlow.edit_revision),
                 onError: handleError,
               },
             );

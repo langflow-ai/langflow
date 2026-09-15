@@ -7,6 +7,7 @@ import {
 } from "@/utils/reactflowUtils";
 
 const useDeleteFlow = () => {
+  const { t } = useTranslation();
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
 
   const { mutate, isPending } = useDeleteDeleteFlows();
@@ -20,8 +21,21 @@ const useDeleteFlow = () => {
       if (!Array.isArray(id)) {
         id = [id];
       }
+      const revisions = Object.fromEntries(
+        (useFlowsManagerStore.getState().flows ?? [])
+          .filter((flow) => id.includes(flow.id))
+          .flatMap((flow) =>
+            typeof flow.edit_revision === "number"
+              ? ([[flow.id, flow.edit_revision]] as const)
+              : [],
+          ),
+      );
+      if (Object.keys(revisions).length !== id.length) {
+        reject(new Error(t("errors.workflowRevisionUnavailable")));
+        return;
+      }
       mutate(
-        { flow_ids: id },
+        { flow_ids: id, expected_edit_revision: revisions },
         {
           onSuccess: () => {
             // Fresh read: a pre-mutation snapshot would drop flows created
@@ -51,3 +65,5 @@ const useDeleteFlow = () => {
 };
 
 export default useDeleteFlow;
+
+import { useTranslation } from "react-i18next";

@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
 from typing import TYPE_CHECKING
-from uuid import UUID, uuid4
 
 from langflow.api.v1 import authz_capabilities
 
+from tests.unit.services.authorization import test_collaboration_management as collaboration_tests
+from tests.unit.services.authorization.test_collaboration_management import (
+    _seed_users,
+    _user,
+)
+
+collaboration_db = collaboration_tests.collaboration_db
+
 if TYPE_CHECKING:
+    from uuid import UUID
+
     import pytest
 
 
@@ -34,16 +42,22 @@ class _CapabilityService:
         }
 
 
-async def test_capabilities_include_plugin_owned_directory_actions(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(authz_capabilities, "get_authorization_service", _CapabilityService)
-    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+async def test_capabilities_include_plugin_owned_directory_actions(
+    monkeypatch: pytest.MonkeyPatch, collaboration_db
+) -> None:
+    service = collaboration_db.service
+    plugin = _CapabilityService()
+    for method in ("can_administer", "supports_team_role_assignments", "get_feature_capabilities"):
+        monkeypatch.setattr(service, method, getattr(plugin, method))
+    user, superuser = _user("delegated"), _user("platform", is_superuser=True)
+    await _seed_users(collaboration_db, user, superuser)
+    async with collaboration_db.session() as session:
+        result = await authz_capabilities.get_authorization_capabilities(user, session)
+        superuser_result = await authz_capabilities.get_authorization_capabilities(superuser, session)
 
-    result = await authz_capabilities.get_authorization_capabilities(user)
-    superuser_result = await authz_capabilities.get_authorization_capabilities(
-        SimpleNamespace(id=uuid4(), is_superuser=True)
-    )
-
-    assert result.model_dump() == {
+    assert result.can_create_team is True
+    assert result.can_administer_platform is False
+    assert result.model_dump(include={"administration", "features"}) == {
         "administration": {"user": False, "team": True, "role": False},
         "features": {
             "team_role_assignments": True,

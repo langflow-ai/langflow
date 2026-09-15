@@ -9,6 +9,7 @@ import pytest
 from fastapi import HTTPException, status
 from httpx import AsyncClient
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
+from lfx.services.authorization.base import BaseAuthorizationService
 
 pytestmark = pytest.mark.no_blockbuster
 
@@ -798,7 +799,7 @@ async def test_detect_env_vars_endpoint__rejects_missing_nodes(client: AsyncClie
 # --------------------------------------------------------------------------- #
 
 
-class _VarStubAuthz:
+class _VarStubAuthz(BaseAuthorizationService):
     """Authz stand-in that lets tests flip cross-user fetch and the enforce verdict."""
 
     def __init__(self, *, cross_user: bool = False, enabled: bool = False, allow: bool = True) -> None:

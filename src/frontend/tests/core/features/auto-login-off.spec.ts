@@ -16,7 +16,7 @@ import { renameFlow } from "../../utils/rename-flow";
 test(
   "when auto_login is false, admin can CRUD user's and should see just your own flows",
   { tag: ["@release", "@api", "@database"] },
-  async ({ page }) => {
+  async ({ page, request }) => {
     await page.route("**/api/v1/auto_login", (route) => {
       route.fulfill({
         status: 403,
@@ -81,6 +81,48 @@ test(
       username: randomName,
       password: randomPassword,
     });
+    const protectedDeletion = await page.request.delete(
+      `/api/v1/users/${created.id}`,
+    );
+    expect(protectedDeletion.status()).toBe(409);
+    const { detail: impact } = await protectedDeletion.json();
+    expect(impact).toMatchObject({
+      code: "RESOURCE_OWNERSHIP_REQUIRES_DISPOSITION",
+      owned_resource_count: 1,
+      owned_resources: { project: 1 },
+      sample_truncated: false,
+    });
+    expect(impact.sample_resource_ids.project).toHaveLength(1);
+
+    // Dispose of this account's project through its own authenticated session.
+    // The independent request fixture leaves the admin page's cookies intact.
+    const ownerLogin = await request.post("/api/v1/login", {
+      form: { username: randomName, password: randomPassword },
+    });
+    expect(ownerLogin.status()).toBe(200);
+    const ownerIdentity = await request.get("/api/v1/users/whoami");
+    expect(ownerIdentity.status()).toBe(200);
+    expect((await ownerIdentity.json()).id).toBe(created.id);
+    const projectId = impact.sample_resource_ids.project[0];
+    const ownedProject = await request.get(`/api/v1/projects/${projectId}`);
+    expect(ownedProject.status()).toBe(200);
+    const revision = ownedProject.headers().etag;
+    const disposedProject = await request.delete(
+      `/api/v1/projects/${projectId}`,
+      { headers: revision ? { "If-Match": revision } : {} },
+    );
+    expect(disposedProject.status()).toBe(204);
+    const variablesResponse = await request.get("/api/v1/variables/");
+    expect(variablesResponse.status()).toBe(200);
+    const variables: Array<{ id: string; is_owner: boolean }> =
+      await variablesResponse.json();
+    for (const variable of variables) {
+      expect(variable.is_owner).toBe(true);
+      const disposedVariable = await request.delete(
+        `/api/v1/variables/${variable.id}`,
+      );
+      expect(disposedVariable.status()).toBe(204);
+    }
     await deleteUserViaApi(page, created.id);
 
     const recreated = await createActiveUserViaApi(page, {

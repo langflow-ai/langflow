@@ -3,6 +3,7 @@ from langflow.api.v1.api_key import router as api_key_router
 from langflow.api.v1.authz_audit import router as authz_audit_router
 from langflow.api.v1.authz_capabilities import router as authz_capabilities_router
 from langflow.api.v1.authz_me import router as authz_me_router
+from langflow.api.v1.authz_recipients import router as authz_recipients_router
 from langflow.api.v1.authz_role_assignments import router as authz_role_assignments_router
 from langflow.api.v1.authz_roles import router as authz_roles_router
 from langflow.api.v1.authz_shares import router as authz_shares_router
@@ -44,6 +45,7 @@ __all__ = [
     "authz_audit_router",
     "authz_capabilities_router",
     "authz_me_router",
+    "authz_recipients_router",
     "authz_role_assignments_router",
     "authz_roles_router",
     "authz_shares_router",

@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from lfx.services.authorization.base import BaseAuthorizationService
     from lfx.services.settings.service import SettingsService
 
-    from langflow.services.authorization.service import LangflowAuthorizationService
+    from langflow.services.authorization.casbin.service import CasbinAuthorizationService
 
 
 class AuthorizationServiceFactory(ServiceFactory):
@@ -19,14 +19,14 @@ class AuthorizationServiceFactory(ServiceFactory):
 
     name = ServiceType.AUTHORIZATION_SERVICE.value
 
-    service_class: type[LangflowAuthorizationService]
+    service_class: type[CasbinAuthorizationService]
 
     def __init__(self) -> None:
-        """Bind the factory to the LangflowAuthorizationService implementation."""
-        from langflow.services.authorization.service import LangflowAuthorizationService
+        """Bind the fork's default factory to the bundled Casbin implementation."""
+        from langflow.services.authorization.casbin.service import CasbinAuthorizationService
 
-        super().__init__(LangflowAuthorizationService)
+        super().__init__(CasbinAuthorizationService)
 
     def create(self, settings_service: SettingsService) -> BaseAuthorizationService:
-        """Build a LangflowAuthorizationService using the injected settings service."""
+        """Build Casbin using the injected settings service."""
         return self.service_class(settings_service)

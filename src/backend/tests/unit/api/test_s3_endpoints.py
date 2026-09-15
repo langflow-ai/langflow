@@ -17,7 +17,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
+from langflow.services.database.models.file.model import File
+from langflow.services.database.models.user.model import User
 from langflow.services.storage.s3 import S3StorageService
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 class TestS3FileEndpoints:
@@ -157,16 +160,16 @@ class TestS3FileEndpoints:
             patch("langflow.services.deps.get_storage_service", return_value=mock_storage_service),
             patch("langflow.services.deps.get_settings_service", return_value=mock_settings),
         ):
-            mock_user = MagicMock()
-            mock_user.id = "user_123"
+            mock_user = User(username="s3-user", password="", is_active=True)
+            mock_file = File(
+                path=f"{mock_user.id}/folder/document.pdf", name="document", user_id=mock_user.id, size=1024
+            )
 
-            mock_file = MagicMock()
-            mock_file.path = "user_123/folder/document.pdf"
-            mock_file.name = "document"
-            mock_file.user_id = "user_123"
-
-            mock_session = MagicMock()
-            mock_session.delete = AsyncMock()
+            mock_session = AsyncMock(spec=AsyncSession)
+            mock_session.get.return_value = mock_user
+            mock_rows = MagicMock()
+            mock_rows.all.return_value = [mock_file]
+            mock_session.exec.return_value = mock_rows
 
             with (
                 patch("langflow.api.v2.files.fetch_file_object", return_value=mock_file),
@@ -175,18 +178,22 @@ class TestS3FileEndpoints:
             ):
                 from langflow.api.v2.files import delete_file
 
-                await delete_file(
-                    file_id="test-id",
+                result = await delete_file(
+                    file_id=mock_file.id,
                     current_user=mock_user,
                     session=mock_session,
                     storage_service=mock_storage_service,
                 )
 
                 # Verify storage service was called with just the filename (last path segment)
-                mock_storage_service.delete_file.assert_called_once_with(flow_id="user_123", file_name="document.pdf")
+                mock_storage_service.delete_file.assert_called_once_with(
+                    flow_id=str(mock_user.id), file_name="document.pdf"
+                )
 
                 # Verify database deletion
+                mock_session.get.assert_awaited_once_with(User, mock_user.id, populate_existing=True)
                 mock_session.delete.assert_called_once_with(mock_file)
+                assert result == {"detail": "File document deleted successfully"}
 
     @pytest.mark.asyncio
     async def test_storage_error_converted_to_http_exception(self, mock_storage_service, mock_settings):

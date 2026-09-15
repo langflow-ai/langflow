@@ -18,7 +18,11 @@ from langflow.api.schemas import UploadFileResponse
 from langflow.api.utils import CurrentActiveUser, DbSession, build_content_disposition
 from langflow.services.authorization import FileAction, ensure_file_permission
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
-from langflow.services.authorization.listing import restrict_to_owned_or_visible_scope, visible_scope_prefilter
+from langflow.services.authorization.listing import (
+    apply_owned_or_visible_scope_prefilter,
+    visible_scope_prefilter,
+)
+from langflow.services.database.models.file.crud import delete_file_records
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.settings.service import SettingsService
@@ -498,7 +502,7 @@ async def list_files(
         else:
             # UserFile has no canonical workspace/project columns. Omitting
             # them intentionally keeps domain-only grants owner-scoped.
-            stmt = restrict_to_owned_or_visible_scope(
+            stmt = await apply_owned_or_visible_scope_prefilter(
                 stmt,
                 id_column=UserFile.id,
                 owner_clause=UserFile.user_id == current_user.id,
@@ -554,8 +558,8 @@ async def delete_files_batch(
 
         # Track storage deletion failures
         storage_failures = []
-        # Track database deletion failures
-        db_failures = []
+        deleted_file_ids: list[uuid.UUID] = []
+        actor_id = current_user.id
 
         # Delete all files from the storage service
         for file in files:
@@ -590,32 +594,19 @@ async def delete_files_batch(
 
             # Only delete from database if storage deletion succeeded OR it was a permanent failure
             if storage_deleted:
-                try:
-                    await session.delete(file)
-                except OSError as db_error:
-                    # Log database deletion failure but continue processing remaining files
-                    db_failures.append(f"{file_name}: {db_error}")
-                    await logger.aerror(
-                        "Failed to delete file %s from database: %s",
-                        file_name,
-                        db_error,
-                    )
+                deleted_file_ids.append(file.id)
 
         # If there were storage failures, include them in the response
+        await delete_file_records(session, file_ids=tuple(deleted_file_ids), actor_id=actor_id)
+
         if storage_failures:
             await logger.awarning(
                 "Batch delete completed with %d storage failures: %s", len(storage_failures), storage_failures
             )
-        # If there were database failures, log them
-        if db_failures:
-            await logger.aerror("Batch delete completed with %d database failures: %s", len(db_failures), db_failures)
-            # If all database deletions failed, raise an error
-            if len(db_failures) == len(files):
-                raise HTTPException(status_code=500, detail=f"Failed to delete any files from database: {db_failures}")
 
         # Calculate how many files were actually deleted from database
-        # Files successfully deleted = total - (kept due to transient storage failures) - (DB deletion failures)
-        files_deleted = len(files) - len(storage_failures) - len(db_failures)
+        # Files successfully deleted = total - (kept due to transient storage failures)
+        files_deleted = len(files) - len(storage_failures)
         files_kept = len(storage_failures)  # Files with transient storage failures kept in DB
 
         # Build response message
@@ -628,6 +619,8 @@ async def delete_files_batch(
         else:
             message = "No files were deleted from database"
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting files: {e}") from e
 
@@ -914,18 +907,21 @@ async def delete_file(
         # Only delete from database if storage deletion succeeded OR it was a permanent failure
         if storage_deleted:
             try:
-                await session.delete(file_to_delete)
+                deleted_file_name = file_to_delete.name
+                await delete_file_records(session, file_ids=(file_to_delete.id,), actor_id=current_user.id)
+            except HTTPException:
+                raise
             except Exception as db_error:
                 await logger.aerror(
                     "Failed to delete file %s from database: %s",
-                    file_to_delete.name,
+                    deleted_file_name,
                     db_error,
                 )
                 raise HTTPException(
                     status_code=500, detail=f"Error deleting file from database: {db_error}"
                 ) from db_error
 
-            return {"detail": f"File {file_to_delete.name} deleted successfully"}
+            return {"detail": f"File {deleted_file_name} deleted successfully"}
     except HTTPException:
         # Re-raise HTTPException to avoid being caught by the generic exception handler
         raise
@@ -955,7 +951,8 @@ async def delete_all_files(
         files = results.all()
 
         storage_failures = []
-        db_failures = []
+        deleted_file_ids: list[uuid.UUID] = []
+        actor_id = current_user.id
 
         # Delete all files from the storage service
         for file in files:
@@ -988,32 +985,19 @@ async def delete_all_files(
 
             # Only delete from database if storage deletion succeeded OR it was a permanent failure
             if storage_deleted:
-                try:
-                    await session.delete(file)
-                except OSError as db_error:
-                    # Log database deletion failure but continue processing remaining files
-                    db_failures.append(f"{file_name}: {db_error}")
-                    await logger.aerror(
-                        "Failed to delete file %s from database: %s",
-                        file_name,
-                        db_error,
-                    )
+                deleted_file_ids.append(file.id)
+
+        await delete_file_records(session, file_ids=tuple(deleted_file_ids), actor_id=actor_id)
 
         if storage_failures:
             await logger.awarning(
                 "Batch delete completed with %d storage failures: %s", len(storage_failures), storage_failures
             )
 
-        if db_failures:
-            await logger.aerror("Batch delete completed with %d database failures: %s", len(db_failures), db_failures)
-            # If all database deletions failed, raise an error
-            if len(db_failures) == len(files):
-                raise HTTPException(status_code=500, detail=f"Failed to delete any files from database: {db_failures}")
-
         # Calculate how many files were actually deleted from database
-        # Files successfully deleted = total - (kept due to transient storage failures) - (DB deletion failures)
-        files_deleted = len(files) - len(storage_failures) - len(db_failures)
-        files_kept = len(storage_failures) + len(db_failures)
+        # Files successfully deleted = total - (kept due to transient storage failures)
+        files_deleted = len(files) - len(storage_failures)
+        files_kept = len(storage_failures)
 
         if files_deleted == len(files):
             message = f"All {files_deleted} files deleted successfully"
@@ -1024,6 +1008,8 @@ async def delete_all_files(
         else:
             message = "Failed to delete files. See logs for details."
 
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error deleting all files: {e}") from e
 

@@ -165,7 +165,7 @@ class AdminClient:
         return self.request("DELETE", f"users/{user['id']}")
 
     def list_teams(self, *, search: str | None = None, adom_name: str | None = None) -> list[dict[str, Any]]:
-        return self._list_collection("authz/teams", params={"search": search, "adom_name": adom_name})
+        return self._list_collection("authz/teams", params={"search": search, "adom_name": adom_name, "view": "all"})
 
     def get_team(self, identifier: str) -> dict[str, Any]:
         if _is_uuid(identifier):
@@ -182,6 +182,7 @@ class AdminClient:
         display_name: str,
         description: str | None = None,
         active: bool = True,
+        members: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         return self.request(
             "POST",
@@ -191,6 +192,10 @@ class AdminClient:
                 "team_name": display_name,
                 "description": description,
                 "is_active": active,
+                "members": [
+                    {"user_id": self.get_user(identifier)["id"], "role": role}
+                    for identifier, role in (members or {}).items()
+                ],
             },
         )
 
@@ -201,6 +206,11 @@ class AdminClient:
             payload["team_name"] = payload.pop("display_name")
         if "active" in payload:
             payload["is_active"] = payload.pop("active")
+        if "member_roles" in payload:
+            payload["member_upserts"] = [
+                {"user_id": self.get_user(name)["id"], "role": role}
+                for name, role in payload.pop("member_roles").items()
+            ]
         return self.request("PATCH", f"authz/teams/{team['id']}", json=payload)
 
     def delete_team(self, identifier: str) -> None:

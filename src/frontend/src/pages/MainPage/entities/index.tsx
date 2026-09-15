@@ -4,6 +4,7 @@ export type FolderType = {
   name: string;
   description: string;
   id?: string | null;
+  edit_revision: number;
   parent_id: string;
   flows: FlowType[];
   components: string[];
@@ -38,6 +39,7 @@ export type AddFolderType = {
   name: string;
   description: string;
   id?: string | null;
+  edit_revision?: number;
   parent_id: string | null;
   flows?: string[];
   components?: string[];

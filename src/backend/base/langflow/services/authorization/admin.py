@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from fastapi import HTTPException, status
 
+from langflow.services.authorization.access_ceiling import external_access_allows
 from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS, audit_decision
 
 if TYPE_CHECKING:
@@ -45,8 +46,12 @@ async def is_administrator(
     authorization_service: BaseAuthorizationService,
 ) -> bool:
     """Return whether ``user`` is a superuser or a plugin-delegated administrator."""
+    from langflow.services.authorization.team_management import actor_can_administer_platform
+
+    if user.is_active is not True or not external_access_allows("manage"):
+        return False
     if getattr(user, "is_superuser", False):
-        return True
+        return actor_can_administer_platform(user)
     return await authorization_service.can_administer(user_id=user.id, resource=resource)
 
 

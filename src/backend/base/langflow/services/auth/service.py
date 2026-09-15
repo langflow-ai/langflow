@@ -88,6 +88,11 @@ def _is_retryable_backend_failure(exc: BaseException) -> bool:
     from sqlalchemy.exc import DBAPIError, InterfaceError, OperationalError
     from sqlalchemy.exc import TimeoutError as SQLTimeoutError
 
+    from langflow.services.database.lock_retry import RetryableTransactionError
+
+    if isinstance(exc, RetryableTransactionError):
+        return True
+
     seen: set[int] = set()
     current: BaseException | None = exc
     while current is not None and id(current) not in seen:
@@ -949,10 +954,15 @@ class AuthService(BaseAuthService):
         import secrets
         from datetime import datetime, timezone
 
+        from lfx.services.authorization.base import AuthorizationMutation, AuthorizationMutationKind
         from sqlalchemy.exc import IntegrityError
         from sqlmodel import select
 
         from langflow.services.database.models.auth import SSOUserProfile
+        from langflow.services.deps import get_authorization_service
+
+        authorization = get_authorization_service()
+        await authorization.acquire_identity_mutation_lock(session=db, kind=AuthorizationMutationKind.USER_CREATED)
 
         profile_stmt = select(SSOUserProfile).where(
             SSOUserProfile.sso_provider == identity.provider,
@@ -1012,8 +1022,18 @@ class AuthService(BaseAuthService):
             await db.flush()
             await db.refresh(user)
             await self._initialize_jit_user_defaults(user, db)
+            await authorization.stage_identity_mutation(
+                session=db,
+                event=AuthorizationMutation(
+                    kind=AuthorizationMutationKind.USER_CREATED,
+                    entity_id=user.id,
+                    affected_user_ids=(user.id,),
+                    policy_relevant_fields=("is_active",),
+                ),
+            )
         except IntegrityError:
             await db.rollback()
+            await authorization.acquire_identity_mutation_lock(session=db, kind=AuthorizationMutationKind.USER_CREATED)
             profile = (await db.exec(profile_stmt)).first()
             if profile is None:
                 raise
@@ -1393,6 +1413,12 @@ class AuthService(BaseAuthService):
         password: str,
         db: AsyncSession,
     ) -> User:
+        from lfx.services.authorization.base import AuthorizationMutation, AuthorizationMutationKind
+
+        from langflow.services.deps import get_authorization_service
+
+        authorization = get_authorization_service()
+        await authorization.acquire_identity_mutation_lock(session=db, kind=AuthorizationMutationKind.USER_CREATED)
         super_user = await get_user_by_username(db, username)
 
         if not super_user:
@@ -1406,6 +1432,16 @@ class AuthService(BaseAuthService):
 
             db.add(super_user)
             try:
+                await db.flush()
+                await authorization.stage_identity_mutation(
+                    session=db,
+                    event=AuthorizationMutation(
+                        kind=AuthorizationMutationKind.USER_CREATED,
+                        entity_id=super_user.id,
+                        affected_user_ids=(super_user.id,),
+                        policy_relevant_fields=("is_active", "is_superuser"),
+                    ),
+                )
                 await db.commit()
                 await db.refresh(super_user)
             except IntegrityError:
@@ -1413,8 +1449,9 @@ class AuthService(BaseAuthService):
                 super_user = await get_user_by_username(db, username)
                 if not super_user:
                     raise
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.debug("Error creating superuser.", exc_info=True)
+                raise
 
         return super_user
 

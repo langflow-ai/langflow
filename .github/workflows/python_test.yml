@@ -4,9 +4,9 @@ on:
   workflow_call:
     secrets:
       OPENAI_API_KEY:
-        required: true
+        required: false
       ANTHROPIC_API_KEY:
-        required: true
+        required: false
       CODECOV_TOKEN:
         required: false
     inputs:
@@ -31,6 +31,10 @@ on:
         default: "ubuntu-latest"
   workflow_dispatch:
     inputs:
+      ref:
+        description: "(Optional) ref to checkout"
+        required: false
+        type: string
       python-versions:
         description: "(Optional) Python versions to test"
         required: true
@@ -84,7 +88,7 @@ jobs:
           prune-cache: false
 
       - name: Install the project
-        run: uv sync
+        run: uv sync --locked --package langflow --package langflow-base --extra authorization
 
       - name: Run unit tests
         uses: nick-fields/retry@v4

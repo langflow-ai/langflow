@@ -504,8 +504,21 @@ class MemoryBaseService(Service):
             await db.refresh(mb)
             return mb
 
-    async def delete(self, memory_base_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+    async def delete(
+        self,
+        memory_base_id: uuid.UUID,
+        user_id: uuid.UUID,
+        *,
+        actor_user_id: uuid.UUID | None = None,
+    ) -> bool:
         """Delete a MemoryBase and its associated KB directory."""
+        from langflow.services.authorization.actions import KnowledgeBaseAction
+        from langflow.services.authorization.fetch import authorization_admission, load_mutation_actor
+        from langflow.services.authorization.guards import ensure_knowledge_base_permission
+        from langflow.services.authorization.lifecycle import stage_resource_mutation
+        from langflow.services.database.lock_retry import run_with_lock_retry
+        from langflow.services.deps import get_authorization_service
+
         async with session_scope() as db:
             stmt = select(MemoryBase).where(MemoryBase.id == memory_base_id).where(MemoryBase.user_id == user_id)
             result = await db.exec(stmt)
@@ -519,8 +532,30 @@ class MemoryBaseService(Service):
             # Cancel active ingestion jobs before removing the DB record
             await cancel_active_jobs(memory_base_id=memory_base_id, db=db)
 
-            await db.delete(mb)
-            await db.commit()
+            async def delete_record(_attempt: int) -> None:
+                await get_authorization_service().acquire_resource_mutation_lock(session=db)
+                current = (await db.exec(stmt.execution_options(populate_existing=True))).first()
+                if current is not None:
+                    if actor_user_id is not None:
+                        actor = await load_mutation_actor(db, actor_user_id)
+                        async with authorization_admission(db):
+                            await ensure_knowledge_base_permission(
+                                actor,
+                                KnowledgeBaseAction.DELETE,
+                                kb_id=memory_base_id,
+                                kb_user_id=current.user_id,
+                            )
+                    await db.delete(current)
+                    await db.flush()
+                    await stage_resource_mutation(
+                        db,
+                        resource_type="knowledge_base",
+                        resource_id=memory_base_id,
+                        deleted=True,
+                    )
+                await db.commit()
+
+            await run_with_lock_retry(delete_record, session=db, description="delete memory base")
 
         # Drop the remote vector-store collection FIRST, while the
         # knowledge_base row (and its backend config) still exists — otherwise

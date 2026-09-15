@@ -2,7 +2,27 @@ name: Test Docker images
 
 on:
   workflow_call:
+    inputs:
+      ref:
+        description: "Candidate ref to check out"
+        required: false
+        type: string
+      runs-on:
+        description: "Disposable ARM64 runner label or JSON label array"
+        required: false
+        type: string
+        default: '["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]'
   workflow_dispatch:
+    inputs:
+      ref:
+        description: "Candidate ref to check out"
+        required: false
+        type: string
+      runs-on:
+        description: "Disposable ARM64 runner label or JSON label array"
+        required: false
+        type: string
+        default: '["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]'
 
 permissions:
   contents: read
@@ -10,13 +30,14 @@ permissions:
 jobs:
   test-docker-first:
     name: Test Docker images (first attempt)
-    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
+    runs-on: ${{ (startsWith(inputs['runs-on'], '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || fromJSON('["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]') }}
     continue-on-error: true
     outputs:
       succeeded: ${{ steps.success.outputs.succeeded }}
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.ref || github.ref }}
           persist-credentials: false
 
       - name: Build and test Docker images
@@ -31,10 +52,11 @@ jobs:
     name: Test Docker images (verify or retry)
     needs: test-docker-first
     if: ${{ always() && !cancelled() && needs.test-docker-first.outputs.succeeded != 'true' }}
-    runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
+    runs-on: ${{ (startsWith(inputs['runs-on'], '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || fromJSON('["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]') }}
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.ref || github.ref }}
           persist-credentials: false
 
       - name: Build and test Docker images

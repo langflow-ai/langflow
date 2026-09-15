@@ -18,7 +18,20 @@ from uuid import UUID, uuid4
 import anyio
 import pytest
 from fastapi import HTTPException, Response
+from langflow.services.authorization.access_ceiling import ExternalAccessContext, set_current_external_access_context
+from langflow.services.database.models.user.model import User
+from lfx.services.authorization import BaseAuthorizationService
 from sqlalchemy.exc import IntegrityError
+
+from tests.unit.services.authorization import test_collaboration_management as collaboration_tests
+from tests.unit.services.authorization import test_rbac_enforcement_integration as rbac_tests
+from tests.unit.services.authorization.test_collaboration_management import (
+    _seed_users,
+    _user,
+)
+
+collaboration_db = collaboration_tests.collaboration_db
+casbin_authorization = rbac_tests.casbin_authorization
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -47,6 +60,8 @@ class _FakeAsyncSession:
         self.events: list[str] = []
 
     async def get(self, model: type, key: UUID, **_kwargs: Any) -> Any:
+        if model is User and (model, key) not in self._get_by_type:
+            return _TEST_USERS.get(key)
         return self._get_by_type.get((model, key))
 
     def add(self, obj: Any) -> None:
@@ -94,7 +109,10 @@ class _ExecResult:
         return iter(self._rows)
 
 
-class _StubAuthz:
+_TEST_USERS: dict[UUID, User] = {}
+
+
+class _StubAuthz(BaseAuthorizationService):
     def __init__(self, *, allow: bool = True, admin_resources: set[str] | None = None) -> None:
         self._allow = allow
         self._admin_resources = admin_resources or set()
@@ -161,8 +179,145 @@ class _StubAuthz:
         self.committed_mutations.append(event)
 
 
-def _make_user(*, is_superuser: bool = False) -> SimpleNamespace:
-    return SimpleNamespace(id=uuid4(), is_superuser=is_superuser, username="u")
+def _make_user(*, is_superuser: bool = False) -> User:
+    user = User(
+        id=uuid4(),
+        is_superuser=is_superuser,
+        is_active=True,
+        username="u",
+        password=str(uuid4()),
+        profile_image=None,
+    )
+    _TEST_USERS[user.id] = user
+    return user
+
+
+@pytest.fixture(autouse=True)
+def native_team_route_unit_seams(monkeypatch, request):
+    """Keep legacy route-unit fakes focused on HTTP orchestration.
+
+    Canonical roster and share invariants are exercised against a real database
+    in the native authorization service tests. These older route tests use
+    deliberately tiny session doubles, so replace only the new transactional
+    service boundary and capability probe here.
+    """
+    from langflow.api.v1 import authz_me, authz_role_assignments, authz_roles, authz_teams
+    from langflow.services.authorization import guards
+    from langflow.services.authorization.team_management import TeamManagementError
+    from lfx.services.authorization import AuthorizationMutation, AuthorizationMutationKind
+
+    _TEST_USERS.clear()
+    if "collaboration_db" in request.fixturenames or "client" in request.fixturenames:
+        return
+
+    async def current_actor(_session, user_id):
+        actor = _TEST_USERS.get(user_id)
+        if actor is None:
+            raise HTTPException(status_code=401, detail="Inactive user")
+        return actor
+
+    async def ready():
+        return None
+
+    async def load_active_user(_session, user_id):
+        return _TEST_USERS.get(user_id)
+
+    async def empty_capabilities(**kwargs):
+        from langflow.api.v1.authz_me import ResourceCapabilities
+
+        return {resource_id: ResourceCapabilities() for resource_id in kwargs["resource_ids"]}
+
+    async def serialize_team(_session, team, _actor):
+        return team
+
+    async def serialize_member(_session, member):
+        return member
+
+    async def skip_guard_audit(**_kwargs):
+        return None
+
+    async def patch_team(session, *, actor, team_id, patch, operation_id=None):
+        del operation_id
+        team = await session.get(authz_teams.AuthzTeam, team_id)
+        if team is None:
+            raise TeamManagementError(status_code=404, code="TEAM_NOT_FOUND", message="Team not found")
+        changed_fields: list[str] = []
+        for field in ("team_name", "adom_name", "is_active"):
+            value = getattr(patch, field)
+            if value is not None and value != getattr(team, field):
+                setattr(team, field, value)
+                changed_fields.append(field)
+        if patch.description_supplied and patch.description != team.description:
+            team.description = patch.description
+            changed_fields.append("description")
+        event = AuthorizationMutation(
+            kind=AuthorizationMutationKind.TEAM_UPDATED,
+            entity_id=team.id,
+            actor_user_id=actor.id,
+            affected_user_ids=(),
+            team_id=team.id,
+            policy_relevant_fields=tuple(
+                sorted(set(changed_fields) & {"adom_name", "is_active", "inactivation_reason"})
+            ),
+        )
+        await authz_teams.get_authorization_service().stage_identity_mutation(session=session, event=event)
+        return SimpleNamespace(team=team, events=(event,))
+
+    async def add_member(session, *, actor, team_id, member, operation_id=None):
+        del operation_id
+        if session._commit_raises is not None:
+            raise TeamManagementError(
+                status_code=409,
+                code="TEAM_MEMBERSHIP_EXISTS",
+                message="User is already a member of this team.",
+            )
+        created = SimpleNamespace(
+            id=uuid4(),
+            team_id=team_id,
+            user_id=member.user_id,
+            role=member.role,
+            source="manual",
+        )
+        session.add(created)
+        event = AuthorizationMutation(
+            kind=AuthorizationMutationKind.TEAM_MEMBER_ADDED,
+            entity_id=created.id,
+            actor_user_id=actor.id,
+            affected_user_ids=(member.user_id,),
+            team_id=team_id,
+            policy_relevant_fields=("team_id", "user_id", "source", "role"),
+        )
+        await authz_teams.get_authorization_service().stage_identity_mutation(session=session, event=event)
+        return SimpleNamespace(member=created, events=(event,))
+
+    async def remove_member(session, *, actor, team_id, user_id, operation_id=None):
+        del operation_id
+        member = session._exec_results[0][0] if session._exec_results and session._exec_results[0] else None
+        if member is not None:
+            await session.delete(member)
+        event = AuthorizationMutation(
+            kind=AuthorizationMutationKind.TEAM_MEMBER_REMOVED,
+            entity_id=getattr(member, "id", uuid4()),
+            actor_user_id=actor.id,
+            affected_user_ids=(user_id,),
+            team_id=team_id,
+            policy_relevant_fields=("team_id", "user_id", "source", "role"),
+        )
+        await authz_teams.get_authorization_service().stage_identity_mutation(session=session, event=event)
+        return (event,)
+
+    monkeypatch.setattr(authz_teams, "_current_actor", current_actor)
+    monkeypatch.setattr(authz_teams, "_require_collaboration_ready", ready)
+    monkeypatch.setattr(authz_teams, "_serialize_team", serialize_team)
+    monkeypatch.setattr(authz_teams, "_serialize_member", serialize_member)
+    monkeypatch.setattr(authz_teams, "patch_team_transaction", patch_team)
+    monkeypatch.setattr(authz_teams, "add_member_transaction", add_member)
+    monkeypatch.setattr(authz_teams, "remove_member_transaction", remove_member)
+    monkeypatch.setattr(authz_me, "load_active_user", load_active_user)
+    monkeypatch.setattr(authz_me, "_derive_resource_capabilities", empty_capabilities)
+    monkeypatch.setattr(guards, "_audit_guard_decision", skip_guard_audit)
+    for module in (authz_roles, authz_role_assignments, authz_teams):
+        monkeypatch.setattr(module, "audit_decision", skip_guard_audit)
 
 
 async def _request_without_hanging(client: AsyncClient, method: str, url: str, **kwargs):
@@ -200,10 +355,11 @@ def _make_role_row(
 @pytest.fixture
 def stub_authz(monkeypatch):
     from langflow.api.v1 import authz_me, authz_role_assignments, authz_roles, authz_teams
+    from langflow.services.authorization import fetch, guards
 
     def _apply(*, allow: bool = True, admin_resources: set[str] | None = None) -> _StubAuthz:
         stub = _StubAuthz(allow=allow, admin_resources=admin_resources)
-        for module in (authz_roles, authz_role_assignments, authz_teams, authz_me):
+        for module in (authz_roles, authz_role_assignments, authz_teams, authz_me, fetch, guards):
             monkeypatch.setattr(module, "get_authorization_service", lambda s=stub: s)
         return stub
 
@@ -389,6 +545,35 @@ async def test_create_role_requires_superuser(stub_authz):
     assert excinfo.value.status_code == 403
     assert session.added == []
     assert session.committed == 0
+
+
+@pytest.mark.asyncio
+async def test_platform_admin_routes_honor_external_credential_ceiling(stub_authz):
+    from langflow.api.v1 import authz_audit, authz_role_assignments, authz_roles
+
+    stub_authz()
+    user = _make_user(is_superuser=True)
+    set_current_external_access_context(
+        ExternalAccessContext(provider="test-idp", subject="platform-user", level="editor")
+    )
+    try:
+        for gate, action, obj in (
+            (authz_roles._require_role_administrator, "role:create", "role:*"),
+            (
+                authz_role_assignments._require_role_administrator,
+                "role_assignment:create",
+                "role_assignment:*",
+            ),
+        ):
+            with pytest.raises(HTTPException) as excinfo:
+                await gate(user, action=action, obj=obj)
+            assert excinfo.value.status_code == 403
+
+        with pytest.raises(HTTPException) as excinfo:
+            await authz_audit._get_current_platform_admin(user)
+        assert excinfo.value.status_code == 403
+    finally:
+        set_current_external_access_context(None)
 
 
 @pytest.mark.asyncio
@@ -1486,22 +1671,31 @@ async def test_create_team_requires_superuser(stub_authz):
     assert excinfo.value.status_code == 403
 
 
-async def test_delegated_team_administrator_can_create_team(stub_authz):
+async def test_delegated_team_administrator_can_create_team(collaboration_db, monkeypatch):
     from langflow.api.v1 import authz_teams
-    from langflow.api.v1.schemas.authz_teams import TeamCreate
+    from langflow.api.v1.schemas.authz_teams import TeamCreate, TeamMemberInput
 
-    stub_authz(admin_resources={"team"})
-    session = _FakeAsyncSession()
-    user = _make_user(is_superuser=False)
+    user = _user("delegated")
+    await _seed_users(collaboration_db, user)
 
-    created = await authz_teams.create_team(
-        payload=TeamCreate(team_name="Engineering", adom_name="engineering"),
-        current_user=user,
-        session=session,
-        response=Response(),
-    )
+    async def delegated(*, user_id, resource):
+        return user_id == user.id and resource == "team"
 
+    monkeypatch.setattr(collaboration_db.service, "can_administer", delegated)
+    async with collaboration_db.session() as session:
+        created = await authz_teams.create_team(
+            payload=TeamCreate(
+                team_name="Engineering",
+                adom_name="engineering",
+                members=[TeamMemberInput(user_id=user.id, role="admin")],
+            ),
+            current_user=user,
+            session=session,
+            response=Response(),
+        )
     assert created.adom_name == "engineering"
+    assert created.active_admin_count == 1
+    assert user.is_superuser is False
 
 
 async def test_delegated_team_administrator_cannot_create_roles(stub_authz):
@@ -1529,64 +1723,62 @@ def test_team_membership_mutations_accept_manual_source_only():
         TeamMemberCreate(user_id=uuid4(), source="sso")
 
 
-async def test_idp_team_membership_cannot_be_removed(stub_authz):
+async def test_idp_team_membership_cannot_be_removed(collaboration_db):
     from langflow.api.v1 import authz_teams
+    from langflow.services.authorization.team_member_grants import ensure_team_member_grant
+    from langflow.services.database.models.auth import AuthzTeamMember
+    from sqlmodel import select
 
-    stub_authz()
-    team_id = uuid4()
-    target_user_id = uuid4()
-    membership = SimpleNamespace(id=uuid4(), team_id=team_id, user_id=target_user_id, source="sso")
-    session = _FakeAsyncSession(exec_results=[[membership]])
-
-    with pytest.raises(HTTPException) as excinfo:
-        await authz_teams.remove_member(
-            team_id=team_id,
-            user_id=target_user_id,
-            current_user=_make_user(is_superuser=True),
-            session=session,
+    actor, target, team = await _release_team(collaboration_db)
+    async with collaboration_db.session() as session:
+        await ensure_team_member_grant(
+            session,
+            team_id=team.id,
+            user_id=target.id,
+            source_kind="directory",
+            provider_id="idp",
+            external_group_id="eng",
         )
-
-    assert excinfo.value.status_code == 409
-    assert excinfo.value.detail == "Externally managed memberships cannot be removed through the manual membership API"
-    assert excinfo.value.headers == {"X-Langflow-Error-Code": "externally_managed"}
-    assert session.deleted == []
+        await session.commit()
+    async with collaboration_db.session() as session:
+        with pytest.raises(HTTPException) as excinfo:
+            await authz_teams.remove_member(team_id=team.id, user_id=target.id, current_user=actor, session=session)
+        assert excinfo.value.status_code == 409
+        assert excinfo.value.headers == {"X-Langflow-Error-Code": "externally_managed"}
+    async with collaboration_db.session() as session:
+        assert (
+            await session.exec(
+                select(AuthzTeamMember).where(AuthzTeamMember.team_id == team.id, AuthzTeamMember.user_id == target.id)
+            )
+        ).one().source == "directory"
 
 
 @pytest.mark.asyncio
-async def test_add_member_emits_lifecycle_for_target_user(stub_authz, audit_calls):
+async def test_add_member_emits_lifecycle_for_target_user(collaboration_db):
     from langflow.api.v1 import authz_teams
     from langflow.api.v1.schemas.authz_teams import TeamMemberCreate
-    from langflow.services.authorization.audit import AUDIT_EVENT_MUTATION
-    from langflow.services.database.models.auth import AuthzTeam
-    from langflow.services.database.models.user.model import User
-
-    authz = stub_authz()
-    team = SimpleNamespace(id=uuid4(), team_name="Eng")
-    target_user = SimpleNamespace(id=uuid4())
-    session = _FakeAsyncSession(
-        {(AuthzTeam, team.id): team, (User, target_user.id): target_user},
-    )
-    actor = _make_user(is_superuser=True)
-    payload = TeamMemberCreate(user_id=target_user.id)
-    response = Response()
-
-    await authz_teams.add_member(
-        team_id=team.id,
-        payload=payload,
-        current_user=actor,
-        session=session,
-        response=response,
-    )
     from langflow.services.database.models.auth import AuthzTeamMember, AuthzTeamMemberGrant
+    from sqlmodel import select
 
-    assert len([item for item in session.added if isinstance(item, AuthzTeamMember)]) == 1
-    assert len([item for item in session.added if isinstance(item, AuthzTeamMemberGrant)]) == 1
-    assert authz.staged_mutations == authz.committed_mutations
-    assert authz.staged_mutations[0].affected_user_ids == (target_user.id,)
-    assert audit_calls[0]["action"] == "team_member:create"
-    assert audit_calls[0]["obj"] == f"team:{team.id}"
-    assert audit_calls[0]["details"]["event"] == AUDIT_EVENT_MUTATION
-    assert response.headers["Location"] == f"/api/v1/authz/teams/{team.id}/members/{target_user.id}"
+    actor, target, team = await _release_team(collaboration_db)
+    response = Response()
+    async with collaboration_db.session() as session:
+        result = await authz_teams.add_member(
+            team_id=team.id,
+            payload=TeamMemberCreate(user_id=target.id),
+            current_user=actor,
+            session=session,
+            response=response,
+        )
+    async with collaboration_db.session() as session:
+        member = await session.get(AuthzTeamMember, result.id)
+        assert member.user_id == target.id
+        grants = (
+            await session.exec(select(AuthzTeamMemberGrant).where(AuthzTeamMemberGrant.membership_id == member.id))
+        ).all()
+        assert [grant.source_kind for grant in grants] == ["manual"]
+        assert await collaboration_db.service.enforce(user_id=target.id, domain="*", obj=f"team:{team.id}", act="read")
+    assert response.headers["Location"] == f"/api/v1/authz/teams/{team.id}/members/{target.id}"
 
 
 @pytest.mark.asyncio
@@ -1615,59 +1807,72 @@ async def test_add_member_duplicate_returns_409(stub_authz):
             response=Response(),
         )
     assert excinfo.value.status_code == 409
-    assert "already a member" in excinfo.value.detail
+    assert excinfo.value.detail["code"] == "TEAM_MEMBERSHIP_EXISTS"
 
 
-async def test_add_member_adds_manual_grant_to_directory_membership(stub_authz):
+async def test_add_member_adds_manual_grant_to_directory_membership(collaboration_db):
     from langflow.api.v1 import authz_teams
     from langflow.api.v1.schemas.authz_teams import TeamMemberCreate
-    from langflow.services.database.models.auth import AuthzTeam, AuthzTeamMember, AuthzTeamMemberGrant
-    from langflow.services.database.models.user.model import User
+    from langflow.services.authorization.team_member_grants import ensure_team_member_grant
+    from langflow.services.database.models.auth import AuthzTeamMemberGrant
+    from sqlmodel import select
 
-    authz = stub_authz()
-    team = SimpleNamespace(id=uuid4(), team_name="Eng")
-    target_user = SimpleNamespace(id=uuid4())
-    member = AuthzTeamMember(team_id=team.id, user_id=target_user.id, source="directory")
-    session = _FakeAsyncSession(
-        {(AuthzTeam, team.id): team, (User, target_user.id): target_user},
-        exec_results=[[member], [], [], ["directory", "manual"]],
-    )
+    actor, target, team = await _release_team(collaboration_db)
+    async with collaboration_db.session() as session:
+        change = await ensure_team_member_grant(
+            session,
+            team_id=team.id,
+            user_id=target.id,
+            source_kind="directory",
+            provider_id="idp",
+            external_group_id="eng",
+        )
+        member_id = change.membership.id
+        await session.commit()
+    async with collaboration_db.session() as session:
+        result = await authz_teams.add_member(
+            team_id=team.id,
+            payload=TeamMemberCreate(user_id=target.id),
+            current_user=actor,
+            session=session,
+            response=Response(),
+        )
+        assert result.id == member_id
+        assert result.source == "manual"
+        grants = (
+            await session.exec(select(AuthzTeamMemberGrant).where(AuthzTeamMemberGrant.membership_id == member_id))
+        ).all()
+        assert {grant.source_kind for grant in grants} == {"manual", "directory"}
 
-    result = await authz_teams.add_member(
-        team_id=team.id,
-        payload=TeamMemberCreate(user_id=target_user.id),
-        current_user=_make_user(is_superuser=True),
-        session=session,
-        response=Response(),
-    )
 
-    assert result.id == member.id
-    assert member.source == "manual"
-    assert len([item for item in session.added if isinstance(item, AuthzTeamMemberGrant)]) == 1
-    assert authz.validated_mutations == []
-    assert authz.staged_mutations == []
-    assert authz.committed_mutations == []
-
-
-async def test_remove_manual_grant_preserves_directory_membership(stub_authz):
+async def test_remove_manual_grant_preserves_directory_membership(collaboration_db):
     from langflow.api.v1 import authz_teams
+    from langflow.services.authorization.team_member_grants import ensure_team_member_grant
+    from langflow.services.database.models.auth import AuthzTeamMember, AuthzTeamMemberGrant
+    from sqlmodel import select
 
-    stub_authz()
-    team_id = uuid4()
-    user_id = uuid4()
-    member = SimpleNamespace(id=uuid4(), team_id=team_id, user_id=user_id, source="manual")
-    manual_grant = SimpleNamespace(membership_id=member.id)
-    session = _FakeAsyncSession(exec_results=[[member], [manual_grant], ["directory"]])
-
-    await authz_teams.remove_member(
-        team_id=team_id,
-        user_id=user_id,
-        current_user=_make_user(is_superuser=True),
-        session=session,
-    )
-
-    assert session.deleted == [manual_grant]
-    assert member.source == "directory"
+    actor, target, team = await _release_team(collaboration_db)
+    async with collaboration_db.session() as session:
+        change = await ensure_team_member_grant(
+            session,
+            team_id=team.id,
+            user_id=target.id,
+            source_kind="directory",
+            provider_id="idp",
+            external_group_id="eng",
+        )
+        member_id = change.membership.id
+        await ensure_team_member_grant(session, team_id=team.id, user_id=target.id, source_kind="manual")
+        await session.commit()
+    async with collaboration_db.session() as session:
+        await authz_teams.remove_member(team_id=team.id, user_id=target.id, current_user=actor, session=session)
+    async with collaboration_db.session() as session:
+        assert (await session.get(AuthzTeamMember, member_id)).source == "directory"
+        grants = (
+            await session.exec(select(AuthzTeamMemberGrant).where(AuthzTeamMemberGrant.membership_id == member_id))
+        ).all()
+        assert [grant.source_kind for grant in grants] == ["directory"]
+        assert await collaboration_db.service.enforce(user_id=target.id, domain="*", obj=f"team:{team.id}", act="read")
 
 
 # =====================================================================
@@ -2004,27 +2209,33 @@ async def test_delete_assignment_committed_hook_failure_does_not_duplicate_publi
 
 
 @pytest.mark.asyncio
-async def test_remove_member_succeeds_when_committed_hook_fails(failing_committed_hook_authz):
-    """Team membership revoke keeps its durable success if publication fails."""
+async def test_remove_member_succeeds_when_committed_hook_fails(collaboration_db, monkeypatch):
     from langflow.api.v1 import authz_teams
+    from langflow.services.authorization.team_member_grants import ensure_team_member_grant
+    from langflow.services.database.models.auth import AuthzTeamMember, AuthzTeamMemberGrant
+    from sqlmodel import select
 
-    authz = failing_committed_hook_authz()
-    team_id = uuid4()
-    user_id = uuid4()
-    member = SimpleNamespace(id=uuid4(), team_id=team_id, user_id=user_id, source="manual")
-    manual_grant = SimpleNamespace(membership_id=member.id)
-    session = _FakeAsyncSession(exec_results=[[member], [manual_grant], []])
-    actor = _make_user(is_superuser=True)
+    actor, target, team = await _release_team(collaboration_db)
+    async with collaboration_db.session() as session:
+        change = await ensure_team_member_grant(session, team_id=team.id, user_id=target.id, source_kind="manual")
+        member_id = change.membership.id
+        await session.commit()
+    attempts = []
 
-    await authz_teams.remove_member(
-        team_id=team_id,
-        user_id=user_id,
-        current_user=actor,
-        session=session,
-    )
-    assert session.deleted == [manual_grant, member]
-    assert session.committed == 1
-    assert authz.staged_mutations == authz.committed_attempts
+    async def failed_notification(event):
+        attempts.append(event)
+        message = "plugin RPC failure"
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(collaboration_db.service, "identity_mutation_committed", failed_notification)
+    async with collaboration_db.session() as session:
+        await authz_teams.remove_member(team_id=team.id, user_id=target.id, current_user=actor, session=session)
+    async with collaboration_db.session() as session:
+        assert await session.get(AuthzTeamMember, member_id) is None
+        assert not (
+            await session.exec(select(AuthzTeamMemberGrant).where(AuthzTeamMemberGrant.membership_id == member_id))
+        ).all()
+    assert len(attempts) == 1
 
 
 # Direct unit tests on the safe-invalidate helpers — keeps the contract
@@ -2109,7 +2320,7 @@ async def test_list_roles_passes_limit_offset_to_query(stub_authz):
 
 
 @pytest.mark.asyncio
-async def test_list_teams_passes_limit_offset_to_query(stub_authz):
+async def test_list_directory_teams_passes_limit_offset_to_query(stub_authz):
     from langflow.api.v1 import authz_teams
 
     stub_authz()
@@ -2126,6 +2337,7 @@ async def test_list_teams_passes_limit_offset_to_query(stub_authz):
     await authz_teams.list_teams(
         session=session,
         current_user=user,
+        view="directory",
         limit=10,
         offset=200,
     )
@@ -2150,7 +2362,7 @@ async def test_list_members_passes_limit_offset_to_query(stub_authz):
             return _ExecResult([])
 
     session = _RecordingSession({(AuthzTeam, team_id): team})
-    user = _make_user()
+    user = _make_user(is_superuser=True)
 
     await authz_teams.list_members(
         team_id=team_id,
@@ -2253,6 +2465,7 @@ async def test_role_list_supports_exact_name_filter(stub_authz):
 
 @pytest.mark.asyncio
 async def test_bearer_authenticated_admin_conflicts_return_without_hanging(
+    casbin_authorization,
     client: AsyncClient,
     logged_in_headers_super_user,
     active_super_user,
@@ -2260,6 +2473,7 @@ async def test_bearer_authenticated_admin_conflicts_return_without_hanging(
     """Every documented uniqueness conflict must answer session-JWT callers."""
     from langflow.services.deps import get_settings_service
 
+    assert casbin_authorization.ready
     headers = logged_in_headers_super_user
     user_payload = {"username": "conflict-user", "password": "password123"}  # pragma: allowlist secret
     role_one = await client.post(
@@ -2274,12 +2488,20 @@ async def test_bearer_authenticated_admin_conflicts_return_without_hanging(
     )
     team_one = await client.post(
         "api/v1/authz/teams",
-        json={"team_name": "Conflict Team", "adom_name": "conflict-team"},
+        json={
+            "team_name": "Conflict Team",
+            "adom_name": "conflict-team",
+            "members": [{"user_id": str(active_super_user.id), "role": "admin"}],
+        },
         headers=headers,
     )
     team_two = await client.post(
         "api/v1/authz/teams",
-        json={"team_name": "Rename Team", "adom_name": "rename-team"},
+        json={
+            "team_name": "Rename Team",
+            "adom_name": "rename-team",
+            "members": [{"user_id": str(active_super_user.id), "role": "admin"}],
+        },
         headers=headers,
     )
     user_one = await client.post("api/v1/users/", json=user_payload, headers=headers)
@@ -2297,9 +2519,16 @@ async def test_bearer_authenticated_admin_conflicts_return_without_hanging(
         201,
     ]
 
+    activation = await client.patch(
+        f"api/v1/users/{user_one.json()['id']}",
+        json={"is_active": True},
+        headers=headers,
+    )
+    assert activation.status_code == 200, activation.text
+
     membership = await client.post(
         f"api/v1/authz/teams/{team_one.json()['id']}/members",
-        json={"user_id": str(active_super_user.id)},
+        json={"user_id": user_one.json()["id"]},
         headers=headers,
     )
     assert membership.status_code == 201
@@ -2327,7 +2556,13 @@ async def test_bearer_authenticated_admin_conflicts_return_without_hanging(
             (
                 "POST",
                 "api/v1/authz/teams",
-                {"json": {"team_name": "Duplicate Team", "adom_name": "conflict-team"}},
+                {
+                    "json": {
+                        "team_name": "Duplicate Team",
+                        "adom_name": "conflict-team",
+                        "members": [{"user_id": str(active_super_user.id), "role": "admin"}],
+                    }
+                },
                 409,
             ),
             (
@@ -2339,7 +2574,7 @@ async def test_bearer_authenticated_admin_conflicts_return_without_hanging(
             (
                 "POST",
                 f"api/v1/authz/teams/{team_one.json()['id']}/members",
-                {"json": {"user_id": str(active_super_user.id)}},
+                {"json": {"user_id": user_one.json()["id"]}},
                 409,
             ),
         ]
@@ -2349,3 +2584,125 @@ async def test_bearer_authenticated_admin_conflicts_return_without_hanging(
     finally:
         auth_settings.AUTHZ_AUDIT_ENABLED = original_audit_enabled
         auth_settings.AUTHZ_AUDIT_DURABLE = original_audit_durable
+
+
+async def _release_team(database):
+    from langflow.services.authorization import team_management
+
+    actor, target = _user("admin", is_superuser=True), _user("target")
+    await _seed_users(database, actor, target)
+    async with database.session() as session:
+        created = await team_management.create_team(
+            session,
+            actor=actor,
+            team_name="Engineering",
+            adom_name=str(uuid4()),
+            description=None,
+            is_active=True,
+            members=(team_management.MemberUpsert(actor.id, "admin"),),
+        )
+        await session.commit()
+    return actor, target, created.team
+
+
+async def test_team_creation_member_preflight_rejection_rolls_back_initial_roster(collaboration_db, monkeypatch):
+    from langflow.api.v1 import authz_teams
+    from langflow.api.v1.schemas.authz_teams import TeamCreate, TeamMemberInput
+    from langflow.services.database.models.auth import AuthzTeam, AuthzTeamMember, AuthzTeamMemberGrant
+    from lfx.services.authorization import AuthorizationMutationKind, AuthorizationMutationRejected
+    from sqlmodel import select
+
+    actor, target = _user("admin", is_superuser=True), _user("target")
+    await _seed_users(collaboration_db, actor, target)
+    models = (AuthzTeam, AuthzTeamMember, AuthzTeamMemberGrant)
+    async with collaboration_db.session() as session:
+        before = {model: set((await session.exec(select(model.id))).all()) for model in models}
+    checked = []
+
+    async def reject_second_member(*, session, mutation):
+        if mutation.kind != AuthorizationMutationKind.TEAM_MEMBER_ADDED:
+            return
+        checked.append(mutation.affected_user_ids)
+        if mutation.affected_user_ids == (target.id,):
+            members = (
+                await session.exec(select(AuthzTeamMember).where(AuthzTeamMember.team_id == mutation.team_id))
+            ).all()
+            assert [member.user_id for member in members] == [actor.id]
+            detail = "membership_limit"
+            raise AuthorizationMutationRejected(detail)
+
+    monkeypatch.setattr(collaboration_db.service, "validate_identity_mutation", reject_second_member)
+    async with collaboration_db.session() as session:
+        with pytest.raises(HTTPException) as rejected:
+            await authz_teams.create_team(
+                payload=TeamCreate(
+                    team_name="Rejected roster",
+                    adom_name=str(uuid4()),
+                    members=[TeamMemberInput(user_id=actor.id, role="admin"), TeamMemberInput(user_id=target.id)],
+                ),
+                current_user=actor,
+                session=session,
+                response=Response(),
+            )
+        assert rejected.value.status_code == 409
+        assert rejected.value.headers == {"X-Langflow-Error-Code": "access_ceiling"}
+    assert checked == [(actor.id,), (target.id,)]
+    async with collaboration_db.session() as session:
+        for model in models:
+            assert set((await session.exec(select(model.id))).all()) == before[model]
+
+
+@pytest.mark.parametrize("action", ["add", "remove"])
+async def test_team_membership_plugin_preflight_rejects_without_canonical_write(collaboration_db, monkeypatch, action):
+    from langflow.api.v1 import authz_teams
+    from langflow.api.v1.schemas.authz_teams import TeamMemberCreate
+    from langflow.services.authorization.team_member_grants import ensure_team_member_grant
+    from langflow.services.database.models.auth import AuthzTeamMember
+    from lfx.services.authorization import AuthorizationMutationRejected
+    from sqlmodel import select
+
+    actor, target, team = await _release_team(collaboration_db)
+    if action == "remove":
+        async with collaboration_db.session() as session:
+            await ensure_team_member_grant(session, team_id=team.id, user_id=target.id, source_kind="manual")
+            await session.commit()
+
+    async def reject(*, session, mutation):
+        assert mutation.affected_user_ids == (target.id,)
+        member = (
+            await session.exec(
+                select(AuthzTeamMember).where(AuthzTeamMember.team_id == team.id, AuthzTeamMember.user_id == target.id)
+            )
+        ).first()
+        assert (member is not None) == (action == "remove")
+        detail = "membership_limit"
+        raise AuthorizationMutationRejected(detail)
+
+    monkeypatch.setattr(collaboration_db.service, "validate_identity_mutation", reject)
+    async with collaboration_db.session() as session:
+        if action == "add":
+            operation = authz_teams.add_member(
+                team_id=team.id,
+                payload=TeamMemberCreate(user_id=target.id),
+                current_user=actor,
+                session=session,
+                response=Response(),
+            )
+        else:
+            operation = authz_teams.remove_member(
+                team_id=team.id,
+                user_id=target.id,
+                current_user=actor,
+                session=session,
+            )
+        with pytest.raises(HTTPException) as rejected:
+            await operation
+        assert rejected.value.status_code == 409
+        assert rejected.value.headers == {"X-Langflow-Error-Code": "access_ceiling"}
+    async with collaboration_db.session() as session:
+        member = (
+            await session.exec(
+                select(AuthzTeamMember).where(AuthzTeamMember.team_id == team.id, AuthzTeamMember.user_id == target.id)
+            )
+        ).first()
+        assert (member is not None) == (action == "remove")

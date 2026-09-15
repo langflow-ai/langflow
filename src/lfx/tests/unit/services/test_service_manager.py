@@ -107,6 +107,24 @@ class TestServiceRegistration:
 class TestPluginDiscovery:
     """Tests for plugin discovery with real service paths."""
 
+    @pytest.mark.parametrize(
+        "service_path",
+        [
+            "missing_authorization_package:AuthorizationService",
+            "lfx.services.authorization.base:MissingAuthorizationService",
+            "lfx.services.storage.local:LocalStorageService",
+            "lfx.services.authorization.base:ShareRuleSnapshot",
+        ],
+    )
+    def test_invalid_selected_authorization_never_falls_back(self, service_manager, temp_config_dir, service_path):
+        """An explicit unavailable or incompatible authorization service stops discovery."""
+        (temp_config_dir / "lfx.toml").write_text(
+            f'[services]\nauthorization_service = "{service_path}"\n', encoding="utf-8"
+        )
+        with pytest.raises(RuntimeError, match="Configured authorization service"):
+            service_manager.discover_plugins(temp_config_dir)
+        assert ServiceType.AUTHORIZATION_SERVICE not in service_manager.services
+
     def test_discover_storage_from_config_file(self, service_manager, temp_config_dir):
         """Test discovering LocalStorageService from lfx.toml."""
         config_file = temp_config_dir / "lfx.toml"

@@ -216,12 +216,12 @@ async def list_owned_or_visible(
     visibility: ResourceVisibilityScope,
 ) -> list[KnowledgeBaseRecord]:
     """Return KB rows owned by ``user_id`` or visible through a supported scope."""
-    from langflow.services.authorization.listing import restrict_to_owned_or_visible_scope
+    from langflow.services.authorization.listing import apply_owned_or_visible_scope_prefilter
 
     async with session_scope() as session:
         # KnowledgeBaseRecord has no canonical workspace/project columns, so
         # domain-only grants intentionally remain owner-scoped.
-        stmt = restrict_to_owned_or_visible_scope(
+        stmt = await apply_owned_or_visible_scope_prefilter(
             select(KnowledgeBaseRecord),
             id_column=KnowledgeBaseRecord.id,
             owner_clause=KnowledgeBaseRecord.user_id == user_id,
@@ -425,11 +425,22 @@ async def update_column_config(
 
 async def delete_record(record_id: UUID) -> None:
     """Remove the KB row. Caller is responsible for filesystem cleanup."""
+    from langflow.services.authorization.lifecycle import stage_resource_mutation
+    from langflow.services.database.lock_retry import run_with_lock_retry
+    from langflow.services.deps import get_authorization_service
+
     async with session_scope() as session:
-        row = await session.get(KnowledgeBaseRecord, record_id)
-        if row is None:
-            return
-        await session.delete(row)
+
+        async def delete_attempt(_attempt: int) -> None:
+            service = get_authorization_service()
+            await service.acquire_resource_mutation_lock(session=session)
+            row = await session.get(KnowledgeBaseRecord, record_id, populate_existing=True)
+            if row is None:
+                return
+            await session.delete(row)
+            await stage_resource_mutation(session, resource_type="knowledge_base", resource_id=record_id, deleted=True)
+
+        await run_with_lock_retry(delete_attempt, session=session, description="delete knowledge base")
         await session.commit()
 
 

@@ -35,6 +35,7 @@ from langflow.services.authorization.admin import (
     is_administrator,
 )
 from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS, AUDIT_EVENT_MUTATION
+from langflow.services.authorization.fetch import load_mutation_actor
 from langflow.services.authorization.lifecycle import (
     acquire_identity_mutation_lock,
     safe_identity_mutation_committed,
@@ -76,12 +77,19 @@ async def _audit_deny(
     )
 
 
-async def _require_role_administrator(user, *, action: str, obj: str, operation_id: str | None = None) -> None:
+async def _require_role_administrator(
+    user, *, action: str, obj: str, operation_id: str | None = None, session: DbSession | None = None
+) -> None:
     """Allow superusers or a plugin-delegated ``role:manage`` administrator."""
+    if session is not None:
+        user = await load_mutation_actor(session, user.id)
+    actor_id = user.id
     if await is_administrator(user, resource="role", authorization_service=get_authorization_service()):
         return
+    if session is not None:
+        await session.rollback()
     await _audit_deny(
-        user_id=user.id,
+        user_id=actor_id,
         action=action,
         obj=obj,
         status_code=status.HTTP_403_FORBIDDEN,
@@ -244,6 +252,13 @@ async def create_assignment(
         session,
         kind=AuthorizationMutationKind.ROLE_ASSIGNMENT_CREATED,
         affected_user_ids=(payload.user_id,),
+    )
+    await _require_role_administrator(
+        current_user,
+        action="role_assignment:create",
+        obj="role_assignment:*",
+        session=session,
+        operation_id=operation_id,
     )
 
     user = await session.get(User, payload.user_id)
@@ -417,6 +432,9 @@ async def delete_assignment(
         session,
         kind=AuthorizationMutationKind.ROLE_ASSIGNMENT_DELETED,
         entity_id=assignment_id,
+    )
+    await _require_role_administrator(
+        current_user, action="role_assignment:delete", obj=f"role_assignment:{assignment_id}", session=session
     )
 
     # Re-read the assignment and all provenance under row locks on dialects

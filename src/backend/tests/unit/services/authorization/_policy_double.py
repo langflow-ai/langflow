@@ -1,14 +1,12 @@
-"""In-test authorization enforcer for OSS RBAC integration tests.
+"""In-test authorization enforcer for route-wiring isolation tests.
 
-The OSS :class:`LangflowAuthorizationService` is a pass-through: ``enforce()``
-always returns ``True`` and ``SUPPORTS_CROSS_USER_FETCH`` is ``False``. That makes
-it impossible to assert allow/deny semantics against the real routes — every
-request is allowed and cross-user fetch never widens. This module supplies a
-minimal, dependency-free stand-in that derives allow/deny from the seeded
+The production :class:`LangflowAuthorizationService` now enforces canonical
+database policy and is covered directly by production-service tests. This
+module remains a deliberately small stand-in that derives allow/deny from seeded
 ``authz_role`` / ``authz_role_assignment`` / ``authz_share`` rows. It is enough
 to validate that the OSS guard wiring, domain resolution, share-aware fetch, and
-``deny_to_404`` masking behave correctly under a *real* allow/deny signal —
-without pulling in the EE Casbin package.
+``deny_to_404`` masking behave correctly in isolation. It must not be treated as
+proof of production-service enforcement.
 
 Install it for the duration of a test with :func:`install_policy_authz`, which
 swaps the service registered on the service manager so every

@@ -624,20 +624,31 @@ class DatabaseVariableService(VariableService, Service):
         name: str,
         session: AsyncSession,
     ) -> None:
+        from langflow.services.authorization.lifecycle import stage_resource_mutation
+        from langflow.services.deps import get_authorization_service
+
+        await get_authorization_service().acquire_resource_mutation_lock(session=session)
         stmt = select(Variable).where(Variable.user_id == user_id).where(Variable.name == name)
         variable = (await session.exec(stmt)).first()
         if not variable:
             msg = f"{name} variable not found."
             raise ValueError(msg)
+        resource_id = variable.id
         await session.delete(variable)
+        await stage_resource_mutation(session, resource_type="variable", resource_id=resource_id, deleted=True)
 
     async def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID, session: AsyncSession) -> None:
+        from langflow.services.authorization.lifecycle import stage_resource_mutation
+        from langflow.services.deps import get_authorization_service
+
+        await get_authorization_service().acquire_resource_mutation_lock(session=session)
         stmt = select(Variable).where(Variable.user_id == user_id, Variable.id == variable_id)
         variable = (await session.exec(stmt)).first()
         if not variable:
             msg = f"{variable_id} variable not found."
             raise ValueError(msg)
         await session.delete(variable)
+        await stage_resource_mutation(session, resource_type="variable", resource_id=variable_id, deleted=True)
 
     async def create_variable(
         self,

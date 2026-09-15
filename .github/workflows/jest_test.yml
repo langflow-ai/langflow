@@ -52,12 +52,17 @@ jobs:
         with:
           report_paths: "src/frontend/test-results/junit.xml"
           check_name: "Frontend Unit Test Results"
+          # Fork PR and Dependabot tokens cannot publish check runs. The same
+          # action still parses and validates the local JUnit report in this mode.
+          annotate_only: ${{ github.actor == 'dependabot[bot]' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) }}
           fail_on_failure: true
+          fail_on_parse_error: true
           require_tests: true
+          require_passed_tests: true
 
       - name: Add Jest Coverage PR Comment
         uses: MishaKav/jest-coverage-comment@v1.0.36
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]'
         with:
           coverage-summary-path: src/frontend/coverage/jest/coverage-summary.json
           title: Frontend Unit Test Coverage Report
@@ -68,6 +73,15 @@ jobs:
           hide-summary: false
           junitxml-title: Unit Test Results
           junitxml-path: src/frontend/test-results/junit.xml
+
+      - name: Upload Jest Test Results
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: jest-test-results
+          path: src/frontend/test-results/junit.xml
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Upload Jest Coverage Artifact
         uses: actions/upload-artifact@v7

@@ -2,7 +2,9 @@
  * Shape produced by FastAPI validation errors and generic axios responses.
  * Kept internal — callers receive plain strings.
  */
-type ApiDetailEntry = { msg?: string } | string;
+type ApiDetailEntry =
+  | { msg?: string; message?: string; code?: string }
+  | string;
 
 /** Structured single-object detail, e.g. the pre-creation denial contract. */
 type ApiDetailObject = { message?: unknown; [key: string]: unknown };
@@ -51,14 +53,25 @@ export function extractApiErrorMessages(error: unknown): string[] {
   }
 
   if (typeof detail === "string" && detail) return [detail];
-
-  // A structured detail object: surface its human sentence rather than falling
-  // through to the generic axios "Request failed with status code 403".
   if (detail && typeof detail === "object") {
-    const message = (detail as ApiDetailObject).message;
-    if (typeof message === "string" && message) return [message];
+    const structured = detail as { message?: string; msg?: string };
+    if (typeof structured.message === "string" && structured.message) {
+      return [structured.message];
+    }
+    if (typeof structured.msg === "string" && structured.msg) {
+      return [structured.msg];
+    }
   }
-
   if (typeof e.message === "string" && e.message) return [e.message];
   return ["An unknown error occurred"];
+}
+
+/** Return the stable backend code without exposing response internals to UI components. */
+export function extractApiErrorCode(error: unknown): string | undefined {
+  if (!error || typeof error !== "object") return undefined;
+  const detail = (error as ApiErrorShape).response?.data?.detail;
+  if (detail && !Array.isArray(detail) && typeof detail === "object") {
+    return typeof detail.code === "string" ? detail.code : undefined;
+  }
+  return undefined;
 }
