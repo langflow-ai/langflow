@@ -934,6 +934,16 @@ def setup_loguru_logger(log_level: str, *, enqueue: bool = False) -> None:
     )
 
 
+def _remove_log_file_handler() -> None:
+    """Remove and close the managed root file handler if present."""
+    global _file_handler  # noqa: PLW0603
+
+    if _file_handler is not None:
+        logging.root.removeHandler(_file_handler)
+        _file_handler.close()
+        _file_handler = None
+
+
 def setup_log_file(log_file: Path, *, max_bytes: int, formatter: logging.Formatter | None = None) -> None:
     """Set up Langflow's rotating file handler.
 
@@ -944,9 +954,7 @@ def setup_log_file(log_file: Path, *, max_bytes: int, formatter: logging.Formatt
     """
     global _file_handler  # noqa: PLW0603
 
-    if _file_handler is not None:
-        logging.root.removeHandler(_file_handler)
-        _file_handler.close()
+    _remove_log_file_handler()
 
     _file_handler = logging.handlers.RotatingFileHandler(
         log_file,
@@ -955,6 +963,11 @@ def setup_log_file(log_file: Path, *, max_bytes: int, formatter: logging.Formatt
     )
     _file_handler.setFormatter(formatter if formatter is not None else logging.Formatter("%(message)s"))
     logging.root.addHandler(_file_handler)
+
+
+def is_file_logging_configured() -> bool:
+    """Return whether the managed file handler is active on the root logger."""
+    return _file_handler is not None and _file_handler in logging.root.handlers
 
 
 class LogConfig(TypedDict):
@@ -1005,6 +1018,17 @@ def configure(
         log_format = os.getenv("LANGFLOW_LOG_FORMAT")
 
     numeric_level = LOG_LEVEL_MAP.get(log_level.upper(), logging.ERROR)
+    json_mode = log_env.lower() in ("container", "container_json") or (
+        not log_env and os.getenv("LANGFLOW_PRETTY_LOGS", "true").lower() != "true"
+    )
+
+    # File mode routes foreign records through the rotating root handler,
+    # so a stale root InterceptHandler from a prior stdout-JSON setup must
+    # not remain installed and re-enter structlog.
+    if not (json_mode and not log_file):
+        _remove_stdlib_intercept()
+    if log_file is None:
+        _remove_log_file_handler()
 
     # Fingerprint of every caller-supplied input that changes the resulting
     # setup. Stored on the wrapper_class (below) so structlog.reset_defaults()
@@ -1355,6 +1379,16 @@ def _install_stdlib_intercept(numeric_level: int) -> None:
         root.addHandler(handler)
     handler.setLevel(numeric_level)
     root.setLevel(numeric_level)
+
+
+def _remove_stdlib_intercept() -> None:
+    """Remove root InterceptHandler when records should not re-enter structlog."""
+    root = logging.root
+    for handler in root.handlers[:]:
+        if isinstance(handler, InterceptHandler):
+            root.removeHandler(handler)
+            with contextlib.suppress(Exception):
+                handler.close()
 
 
 # Initialize logger - will be reconfigured when configure() is called
