@@ -101,8 +101,8 @@ async def test_the_form_exposes_shared_contracts_without_changing_config_keys(
     template = harness["template"]
 
     assert template["system_prompt"]["flow_contract"] == {
-        "name": "SystemPromptBuilder",
-        "terminal_output_type": "str",
+        "name": "Instructions",
+        "terminal_output_type": "Message",
         "fire_timing": "once_per_run",
         "cardinality": "single",
         "default_flow_ref": "builtin:instructions",

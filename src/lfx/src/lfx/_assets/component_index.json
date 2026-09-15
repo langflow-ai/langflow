@@ -23909,111 +23909,6 @@
             }
           },
           "tool_mode": false
-        },
-        "SystemPromptBuilder": {
-          "base_classes": [
-            "Text"
-          ],
-          "beta": false,
-          "conditional_paths": [],
-          "custom_fields": {},
-          "description": "Expose instructions from a flow for an agent harness.",
-          "display_name": "System Prompt Builder",
-          "documentation": "",
-          "edited": false,
-          "field_order": [
-            "input_value"
-          ],
-          "frozen": false,
-          "icon": "Text",
-          "is_output": true,
-          "legacy": false,
-          "metadata": {
-            "code_hash": "e182f97a79e9",
-            "dependencies": {
-              "dependencies": [
-                {
-                  "name": "lfx",
-                  "version": null
-                }
-              ],
-              "total_dependencies": 1
-            },
-            "module": "lfx.components.models_and_agents.system_prompt_builder.SystemPromptBuilderComponent"
-          },
-          "minimized": false,
-          "output_types": [],
-          "outputs": [
-            {
-              "allows_loop": false,
-              "cache": true,
-              "display_name": "Instructions",
-              "group_outputs": false,
-              "method": "build_instructions",
-              "name": "instructions",
-              "selected": "Text",
-              "tool_mode": true,
-              "types": [
-                "Text"
-              ],
-              "value": "__UNDEFINED__"
-            }
-          ],
-          "pinned": false,
-          "template": {
-            "_type": "Component",
-            "code": {
-              "advanced": true,
-              "api_editable": false,
-              "dynamic": true,
-              "fileTypes": [],
-              "file_path": "",
-              "info": "",
-              "list": false,
-              "load_from_db": false,
-              "multiline": true,
-              "name": "code",
-              "password": false,
-              "placeholder": "",
-              "required": true,
-              "show": true,
-              "title_case": false,
-              "type": "code",
-              "value": "from lfx.custom import Component\nfrom lfx.io import MultilineInput, Output\n\n\nclass SystemPromptBuilderComponent(Component):\n    display_name = \"System Prompt Builder\"\n    description = \"Expose instructions from a flow for an agent harness.\"\n    icon = \"Text\"\n    name = \"SystemPromptBuilder\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Instructions\",\n            info=\"Connect a prompt or enter instructions. Agent placeholders are resolved by the agent.\",\n            input_types=[\"Message\", \"Text\"],\n            required=True,\n        ),\n    ]\n    outputs = [Output(name=\"instructions\", display_name=\"Instructions\", method=\"build_instructions\")]\n\n    def __init__(self, **kwargs):\n        super().__init__(**kwargs)\n        self.is_output = True\n\n    def build_instructions(self) -> str:\n        if not isinstance(self.input_value, str) or not self.input_value.strip():\n            msg = \"The instructions flow must produce non-empty text.\"\n            raise ValueError(msg)\n        self.status = self.input_value\n        return self.input_value\n"
-            },
-            "input_value": {
-              "_input_type": "MultilineInput",
-              "advanced": false,
-              "ai_enabled": false,
-              "api_editable": false,
-              "copy_field": false,
-              "display_name": "Instructions",
-              "dynamic": false,
-              "info": "Connect a prompt or enter instructions. Agent placeholders are resolved by the agent.",
-              "input_types": [
-                "Message",
-                "Text"
-              ],
-              "list": false,
-              "list_add_label": "Add More",
-              "load_from_db": false,
-              "multiline": true,
-              "name": "input_value",
-              "override_skip": false,
-              "password": false,
-              "placeholder": "",
-              "required": true,
-              "show": true,
-              "title_case": false,
-              "tool_mode": false,
-              "trace_as_input": true,
-              "trace_as_metadata": true,
-              "track_in_telemetry": false,
-              "type": "str",
-              "value": ""
-            }
-          },
-          "tool_mode": false
         }
       }
     ],
@@ -33004,9 +32899,9 @@
     ]
   ],
   "metadata": {
-    "num_components": 138,
+    "num_components": 137,
     "num_modules": 16
   },
   "version": "1.13.0",
-  "sha256": "b277dd7716d2b45461715d9356bcb99241f3296e33578f7ca705455c5904cdb6"
+  "sha256": "55982dcf7b90e9754559656649e48f234ff7d0fc2f30c1e2037f2d0ec4cc1f31"
 }

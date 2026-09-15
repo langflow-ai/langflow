@@ -10,7 +10,7 @@ from __future__ import annotations
 from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 from lfx.base.agents.harness import harness_runtime_inputs
 from lfx.inputs.inputs import IntInput, ModelInput, MultilineInput, StrInput
-from lfx.projects.builtin_slots import COMPACTOR, CONTEXT_MANAGER, HOOK, PERMISSION_GATE, SYSTEM_PROMPT_BUILDER, TOOL
+from lfx.projects.builtin_slots import COMPACTOR, CONTEXT_MANAGER, HOOK, INSTRUCTIONS, PERMISSION_GATE, TOOL
 from lfx.projects.registry import register_project_type
 from lfx.projects.schema import FieldTarget, ProjectType, ProjectTypeField
 
@@ -39,7 +39,7 @@ AGENT_HARNESS = register_project_type(
             ProjectTypeField(
                 name="system_prompt",
                 section="Instructions",
-                slot_definition=SYSTEM_PROMPT_BUILDER,
+                slot_definition=INSTRUCTIONS,
                 supports_flow_binding=True,
                 # The canvas renders a multiline field as one line plus a modal, which suits a
                 # node. Instructions are the main thing written here, so the page gives them a

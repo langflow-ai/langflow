@@ -94,7 +94,7 @@ def test_registration_is_idempotent_only_for_the_same_definition():
 
 
 def test_unknown_slot_lists_available_contracts():
-    with pytest.raises(ValueError, match=r"Registered slots: .*SystemPromptBuilder.*Tool"):
+    with pytest.raises(ValueError, match=r"Registered slots: .*Instructions.*Tool"):
         get_slot("Unknown")
 
 
@@ -104,8 +104,8 @@ def test_all_contracts_are_available_in_stable_order():
         "Compactor",
         "ContextManager",
         "Hook",
+        "Instructions",
         "PermissionGate",
-        "SystemPromptBuilder",
         "Tool",
     )
     assert tuple(definition.name for definition in all_slots()) == registered_slots()
@@ -168,7 +168,7 @@ def test_registered_vocabulary_does_not_claim_unbuilt_baseline_flows():
     assert {
         definition.name: definition.default_flow_ref for definition in all_slots() if definition.default_flow_ref
     } == {
-        "SystemPromptBuilder": "builtin:instructions",
+        "Instructions": "builtin:instructions",
         "Hook": "builtin:hook",
         "ContextManager": "builtin:context",
         "Compactor": "builtin:compaction",

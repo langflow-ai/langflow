@@ -513,7 +513,7 @@ async def validate_project_flow_outputs(
         "reason": None
         if outputs
         else (
-            "Add a System Prompt Builder with an unconnected Instructions output."
+            "Configure a Prompt Template and leave its Message output available for Instructions."
             if field_name == "system_prompt"
             else hint
         ),

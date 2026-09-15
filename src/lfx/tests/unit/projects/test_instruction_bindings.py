@@ -3,7 +3,8 @@
 from copy import deepcopy
 
 import pytest
-from lfx.components.models_and_agents.system_prompt_builder import SystemPromptBuilderComponent
+from lfx.components.input_output.text_output import TextOutputComponent
+from lfx.components.models_and_agents.prompt import PromptComponent
 from lfx.graph.flow_builder import add_connection
 from lfx.projects.bindings import (
     BINDING_ORIGIN,
@@ -13,7 +14,9 @@ from lfx.projects.bindings import (
     flow_revision,
     instruction_outputs,
     reject_recursive_binding,
+    validate_instruction_result,
 )
+from lfx.schema.message import Message
 
 
 @pytest.mark.parametrize("mode", ["python", "json"])
@@ -21,7 +24,7 @@ def test_flat_bindings_keep_their_archived_shape_while_nested_versions_round_tri
     original = {
         "flow_id": "source",
         "node_id": "instructions",
-        "output_name": "instructions",
+        "output_name": "prompt",
         "revision": "reviewed",
         "version_id": "source-version",
     }
@@ -36,8 +39,9 @@ def test_flat_bindings_keep_their_archived_shape_while_nested_versions_round_tri
 
 
 def source_data():
-    component = SystemPromptBuilderComponent(input_value="Cite primary sources.")
+    component = PromptComponent(template="Cite primary sources.")
     node = component.to_frontend_node()
+    node["data"]["node"]["template"]["template"]["required"] = True
     node["id"] = node["data"]["id"] = "instructions"
     return {"nodes": [node], "edges": []}
 
@@ -71,9 +75,7 @@ def compose(data, source, binding=None):
 
 
 def binding_for(source):
-    return FlowBinding(
-        flow_id="source", node_id="instructions", output_name="instructions", revision=flow_revision(source)
-    )
+    return FlowBinding(flow_id="source", node_id="instructions", output_name="prompt", revision=flow_revision(source))
 
 
 def test_declared_terminal_is_discovered_without_evaluating_stored_code():
@@ -82,10 +84,46 @@ def test_declared_terminal_is_discovered_without_evaluating_stored_code():
     assert instruction_outputs(source) == [
         {
             "node_id": "instructions",
-            "output_name": "instructions",
-            "display_name": "System Prompt Builder · Instructions",
+            "output_name": "prompt",
+            "display_name": "Prompt Template · Prompt",
         }
     ]
+
+
+def test_prompt_template_is_discovered_and_composed_without_an_output_adapter():
+    node = PromptComponent(template="Cite primary sources.").to_frontend_node()
+    source = {"nodes": [node], "edges": []}
+    before = deepcopy(source)
+    choices = instruction_outputs(source)
+    assert len(choices) == 1
+    assert choices[0]["output_name"] == "prompt"
+    binding = FlowBinding(
+        flow_id="source", revision=flow_revision(source), **{key: choices[0][key] for key in ("node_id", "output_name")}
+    )
+    data = compose(agent_data(), source, binding)
+    reference = next(node for node in data["nodes"] if BINDING_ORIGIN in node["data"])
+    assert reference["data"]["node"]["outputs"][0]["types"] == ["Message"]
+    assert reference["data"]["node"]["outputs"][0]["name"] == f"{node['id']}~prompt"
+    assert source == before
+
+
+def test_connected_prompt_is_not_offered_instead_of_its_terminal():
+    source = source_data()
+    node = TextOutputComponent().to_frontend_node()
+    source["nodes"].append(node)
+    add_connection({"data": source}, "instructions", "prompt", node["id"], "input_value")
+    assert [choice["node_id"] for choice in instruction_outputs(source)] == [node["id"]]
+
+
+def test_message_instruction_result_keeps_its_type_and_metadata():
+    message = Message(text="Cite primary sources.", session_id="test-session")
+    assert validate_instruction_result(message) is message
+
+
+@pytest.mark.parametrize("value", [Message(text=""), Message(text="  "), {"text": "looks valid"}, ["text"]])
+def test_instruction_result_rejects_empty_messages_and_display_values(value):
+    with pytest.raises(ValueError, match="non-empty text"):
+        validate_instruction_result(value)
 
 
 def test_normal_component_catalog_exposes_the_terminal():
@@ -94,13 +132,13 @@ def test_normal_component_catalog_exposes_the_terminal():
     index = _read_component_index()
     assert index is not None
     catalog = dict(index["entries"])
-    node = deepcopy(catalog["models_and_agents"]["SystemPromptBuilder"])
-    node["template"]["input_value"]["value"] = "Use primary sources."
+    node = deepcopy(catalog["models_and_agents"]["Prompt Template"])
+    node["template"]["template"]["value"] = "Use primary sources."
     data = {
-        "nodes": [{"id": "builder", "data": {"id": "builder", "type": "SystemPromptBuilder", "node": node}}],
+        "nodes": [{"id": "prompt", "data": {"id": "prompt", "type": "Prompt Template", "node": node}}],
         "edges": [],
     }
-    assert instruction_outputs(data)[0]["output_name"] == "instructions"
+    assert instruction_outputs(data)[0]["output_name"] == "prompt"
 
 
 def test_ambiguous_outputs_remain_explicit_choices():
@@ -113,8 +151,8 @@ def test_ambiguous_outputs_remain_explicit_choices():
 
 def test_required_inputs_must_be_configured():
     source = source_data()
-    source["nodes"][0]["data"]["node"]["template"]["input_value"]["value"] = ""
-    with pytest.raises(ValueError, match="Configure System Prompt Builder: Instructions"):
+    source["nodes"][0]["data"]["node"]["template"]["template"]["value"] = ""
+    with pytest.raises(ValueError, match="Configure Prompt Template: Template"):
         instruction_outputs(source)
 
 
@@ -123,7 +161,7 @@ def test_layout_changes_do_not_invalidate_the_reviewed_definition():
     revision = flow_revision(source)
     source["nodes"][0].update(position={"x": 42, "y": 87}, selected=True)
     assert flow_revision(source) == revision
-    source["nodes"][0]["data"]["node"]["template"]["input_value"]["value"] = "Other instructions"
+    source["nodes"][0]["data"]["node"]["template"]["template"]["value"] = "Other instructions"
     assert flow_revision(source) != revision
 
 
@@ -170,7 +208,7 @@ def test_manual_prompt_connection_is_not_replaced():
     data = agent_data()
     data["nodes"][0]["data"]["node"]["template"]["system_prompt"]["input_types"].append("Text")
     data["nodes"].append(source["nodes"][0])
-    add_connection({"data": data}, "instructions", "instructions", "agent", "system_prompt")
+    add_connection({"data": data}, "instructions", "prompt", "agent", "system_prompt")
     before = deepcopy(data)
     with pytest.raises(ValueError, match="already has a canvas connection"):
         compose(data, source, binding_for(source))
@@ -188,6 +226,5 @@ def test_edited_output_connection_is_not_silently_accepted():
 
 @pytest.mark.parametrize("text", ["", "  "])
 def test_empty_runtime_instructions_fail_explicitly(text):
-    component = SystemPromptBuilderComponent(input_value=text)
     with pytest.raises(ValueError, match="non-empty text"):
-        component.build_instructions()
+        validate_instruction_result(text)

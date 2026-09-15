@@ -116,10 +116,21 @@ def flow_revision(data: dict) -> str:
 
 def instruction_outputs(data: dict) -> list[dict]:
     """Eligible declared terminals. Graph parsing is deliberately component-free."""
-    return contract_outputs(data, {"str", "Text"})
+    return contract_outputs(data, {"Message", "str", "Text"}, require_output_component=False)
 
 
-def contract_outputs(data: dict, output_types: set[str]) -> list[dict]:
+def validate_instruction_result(value):
+    """Validate the actual text carrier while preserving its type on the flow edge."""
+    from lfx.schema.message import Message
+
+    text = value.text if isinstance(value, Message) else value
+    if not isinstance(text, str) or not text.strip():
+        msg = "The bound Instructions flow did not return non-empty text."
+        raise ValueError(msg)
+    return value
+
+
+def contract_outputs(data: dict, output_types: set[str], *, require_output_component: bool = True) -> list[dict]:
     """Inspect declared terminal types and configured inputs without loading component code."""
     from lfx.graph.graph.base import Graph
 
@@ -140,7 +151,7 @@ def contract_outputs(data: dict, output_types: set[str]) -> list[dict]:
                 raise ValueError(msg)
     choices = []
     for vertex in graph.vertices:
-        if not vertex.is_output or graph.successor_map.get(vertex.id):
+        if (require_output_component and not vertex.is_output) or graph.successor_map.get(vertex.id):
             continue
         choices.extend(
             {
@@ -262,7 +273,12 @@ def compose_instructions(
     template["flow_id_selected"]["value"] = binding.flow_id
     template["cache_flow"]["value"] = False
     node["template"] = dict(template)
-    node["outputs"] = [out.model_dump() for out in component._format_flow_outputs(graph)]  # noqa: SLF001
+    node["outputs"] = [
+        out.model_dump()
+        for out in component._format_flow_outputs(  # noqa: SLF001
+            graph, selected_output=(binding.node_id, binding.output_name)
+        )
+    ]
     node["description"] = "Builds the agent's instructions from the selected flow."
     registry = {"RunFlow": json.loads(json.dumps(node))}
     added = add_component(flow, "RunFlow", registry)

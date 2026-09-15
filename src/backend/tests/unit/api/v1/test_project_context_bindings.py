@@ -111,8 +111,8 @@ async def add_other_bindings(user, project, config):
     source = await create_flow(user, folder_id=project, data=instructions, name="Instructions")
     config["flow_bindings"]["system_prompt"] = {
         "flow_id": source,
-        "node_id": "SystemPromptBuilder-test",
-        "output_name": "instructions",
+        "node_id": "Prompt-test",
+        "output_name": "prompt",
         "revision": flow_revision(instructions),
     }
     hook = hook_baseline()["data"]

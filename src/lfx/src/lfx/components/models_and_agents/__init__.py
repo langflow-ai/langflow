@@ -22,7 +22,6 @@ if TYPE_CHECKING:
     from lfx.components.models_and_agents.permission_request import PermissionRequestComponent
     from lfx.components.models_and_agents.policies_component import PoliciesComponent
     from lfx.components.models_and_agents.prompt import PromptComponent
-    from lfx.components.models_and_agents.system_prompt_builder import SystemPromptBuilderComponent
 
 _dynamic_imports = {
     "A2AAgentComponent": "a2a_agent",
@@ -41,7 +40,6 @@ _dynamic_imports = {
     "PermissionRequestComponent": "permission_request",
     "PoliciesComponent": "policies_component",
     "PromptComponent": "prompt",
-    "SystemPromptBuilderComponent": "system_prompt_builder",
 }
 
 __all__ = [
@@ -60,7 +58,6 @@ __all__ = [
     "PermissionGateComponent",
     "PermissionRequestComponent",
     "PromptComponent",
-    "SystemPromptBuilderComponent",
 ]
 
 # ``lfx.components.models`` re-exports this module with ``import *``. Keep the

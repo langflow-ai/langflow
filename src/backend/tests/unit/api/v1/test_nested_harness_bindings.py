@@ -10,7 +10,8 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.deps import session_scope
 from lfx.components.flow_controls.run_flow import RunFlowComponent
-from lfx.components.models_and_agents.system_prompt_builder import SystemPromptBuilderComponent
+from lfx.components.input_output.text_output import TextOutputComponent
+from lfx.components.models_and_agents.prompt import PromptComponent
 from lfx.graph.flow_builder import add_component, add_connection, empty_flow
 from lfx.graph.graph.base import Graph
 from lfx.projects.bindings import BINDING_ORIGIN, FlowBinding
@@ -34,21 +35,28 @@ def flow_reference(child):
 
 
 def nested_instructions(child):
-    output = SystemPromptBuilderComponent().to_frontend_node()["data"]["node"]
-    output["field_order"] = ["input_value"]
-    registry = {"SystemPromptBuilder": output}
+    output = PromptComponent(template="{rules}").to_frontend_node()["data"]["node"]
+    registry = {"Prompt Template": output}
     parent = empty_flow("Composed instructions")
     parent["data"]["nodes"].append(flow_reference(child))
-    add_component(parent, "SystemPromptBuilder", registry, component_id="SystemPromptBuilder-test")
+    add_component(parent, "Prompt Template", registry, component_id="Prompt-test")
     add_connection(
         parent,
         "RunFlow-child",
-        "SystemPromptBuilder-test~instructions",
-        "SystemPromptBuilder-test",
-        "input_value",
+        "TextOutput-rules~text",
+        "Prompt-test",
+        "rules",
         registry=registry,
     )
     return parent["data"]
+
+
+def rule_flow_data(text):
+    flow = {"data": instructions_data(text)}
+    output = TextOutputComponent().to_frontend_node()["data"]["node"]
+    add_component(flow, "TextOutput", {"TextOutput": output}, component_id="TextOutput-rules")
+    add_connection(flow, "Prompt-test", "prompt", "TextOutput-rules", "input_value")
+    return flow["data"]
 
 
 @pytest.fixture(params=[False, True], ids=["local-child", "separate-project-child"])
@@ -62,7 +70,7 @@ async def nested_customization(client, logged_in_headers, active_user, request):
         else project
     )
     child = await create_flow(
-        active_user, folder_id=child_project, name="Instruction rules", data=instructions_data("Original rules")
+        active_user, folder_id=child_project, name="Instruction rules", data=rule_flow_data("Original rules")
     )
     async with session_scope() as session:
         parent = await session.get(Flow, UUID(source))
@@ -87,7 +95,7 @@ async def nested_customization(client, logged_in_headers, active_user, request):
 async def change_rules(child):
     async with session_scope() as session:
         changed = await session.get(Flow, UUID(child))
-        changed.data = instructions_data("Changed rules")
+        changed.data = rule_flow_data("Changed rules")
         session.add(changed)
 
 
@@ -95,7 +103,7 @@ async def test_nested_instruction_edit_requires_review_before_execution(
     client, logged_in_headers, active_user, nested_customization
 ):
     project, agent, source, child, binding, config = nested_customization
-    assert await invoke_binding(agent, active_user) == "Original rules"
+    assert (await invoke_binding(agent, active_user)).text == "Original rules"
     await change_rules(child)
     with pytest.raises(ValueError, match=r"[Dd]ependen|changed"):
         await invoke_binding(agent, active_user)
@@ -114,7 +122,7 @@ async def test_nested_instruction_edit_requires_review_before_execution(
     config["flow_bindings"]["system_prompt"]["dependencies"][0]["version_id"] = forged
     saved = await save_config(client, logged_in_headers, project, config)
     assert saved["project_config"]["flow_bindings"]["system_prompt"]["dependencies"][0]["version_id"] != forged
-    assert await invoke_binding(agent, active_user) == "Changed rules"
+    assert (await invoke_binding(agent, active_user)).text == "Changed rules"
 
 
 async def bound_component(agent, user, checkpoint=None):
@@ -144,16 +152,12 @@ async def test_restored_customization_retains_nested_versions_and_checks_access(
     _project, agent, _source, child, _binding, _config = nested_customization
     graph, component = await bound_component(agent, active_user)
     assert (
-        await component._resolve_flow_output(vertex_id="SystemPromptBuilder-test", output_name="instructions")
-        == "Original rules"
-    )
+        await component._resolve_flow_output(vertex_id="Prompt-test", output_name="prompt")
+    ).text == "Original rules"
     checkpoint = GraphCheckpoint.model_validate_json(build_checkpoint(graph).model_dump_json())
     await change_rules(child)
     _, restored = await bound_component(agent, active_user, checkpoint)
-    assert (
-        await restored._resolve_flow_output(vertex_id="SystemPromptBuilder-test", output_name="instructions")
-        == "Original rules"
-    )
+    assert (await restored._resolve_flow_output(vertex_id="Prompt-test", output_name="prompt")).text == "Original rules"
 
     async def deny_child(_user, action, **scope):
         if str(scope.get("flow_id")) == child and action.value == "execute":
@@ -178,9 +182,8 @@ async def test_customization_archive_remaps_required_nested_versions(
     assert imported_binding.dependencies[0].flow_id != child
     assert imported_binding.dependencies[0].version_id != binding.dependencies[0].version_id
     assert (
-        await component._resolve_flow_output(vertex_id="SystemPromptBuilder-test", output_name="instructions")
-        == "Original rules"
-    )
+        await component._resolve_flow_output(vertex_id="Prompt-test", output_name="prompt")
+    ).text == "Original rules"
 
 
 async def test_nested_customization_json_import_preserves_local_dependencies(
@@ -209,7 +212,7 @@ async def test_nested_customization_json_import_preserves_local_dependencies(
     imported = next(
         flow for flow in response.json() if any(node["data"].get(BINDING_ORIGIN) for node in flow["data"]["nodes"])
     )
-    assert await invoke_binding(imported["id"], active_user) == "Original rules"
+    assert (await invoke_binding(imported["id"], active_user)).text == "Original rules"
 
 
 async def test_customization_rejects_missing_nested_snapshot(active_user, nested_customization):

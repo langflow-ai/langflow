@@ -29,7 +29,7 @@ beforeEach(() => {
     currentFlow: {
       id: "flow",
       folder_id: "project",
-      data: { harness_contract: { slot: "SystemPromptBuilder" } },
+      data: { harness_contract: { slot: "Instructions" } },
     },
     nodes: [{ id: "output", data: {} }],
     edges: [],

@@ -16,8 +16,8 @@ TOOL = register_slot(
 HOOK = register_slot(
     SlotDefinition("Hook", "HookDecision", FireTiming.ON_EVENT, Cardinality.MULTI, default_flow_ref="builtin:hook"),
 )
-SYSTEM_PROMPT_BUILDER = register_slot(
-    SlotDefinition("SystemPromptBuilder", "str", FireTiming.ONCE_PER_RUN, default_flow_ref="builtin:instructions"),
+INSTRUCTIONS = register_slot(
+    SlotDefinition("Instructions", "Message", FireTiming.ONCE_PER_RUN, default_flow_ref="builtin:instructions"),
 )
 CONTEXT_MANAGER = register_slot(
     SlotDefinition("ContextManager", "DataFrame", FireTiming.PER_LLM_CALL, default_flow_ref="builtin:context"),

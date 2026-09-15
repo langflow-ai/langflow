@@ -95,8 +95,8 @@ async def test_instructions_and_ordered_hooks_coexist_and_clear_independently(cl
     source = await create_flow(active_user, folder_id=project, data=instructions, name="Instructions")
     config["flow_bindings"]["system_prompt"] = {
         "flow_id": source,
-        "node_id": "SystemPromptBuilder-test",
-        "output_name": "instructions",
+        "node_id": "Prompt-test",
+        "output_name": "prompt",
         "revision": flow_revision(instructions),
     }
     config["flow_bindings"]["hooks"].append(
