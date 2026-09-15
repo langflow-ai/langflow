@@ -10,6 +10,7 @@ from langflow.schema.serialize import UUIDstr
 
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key.model import ApiKey
+    from langflow.services.database.models.auth.authz import AuthzRoleAssignment
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
     from langflow.services.database.models.file.model import File
@@ -63,6 +64,19 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     folders: list["Folder"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
+    )
+    # No back_populates: AuthzRoleAssignment also has an `assigned_by` FK to
+    # user.id (SET NULL, not covered here — deleting whoever granted a role
+    # must not delete the grant itself), so the join column is disambiguated
+    # explicitly rather than inferred. SQLite never enforces ON DELETE CASCADE
+    # (see AuthzRoleAssignment's own docstring), so without this the row
+    # survives its user's deletion and shows up as an unresolvable "unknown
+    # user" entry in Access Control's assignment list.
+    role_assignments: list["AuthzRoleAssignment"] = Relationship(
+        sa_relationship_kwargs={
+            "cascade": "delete",
+            "foreign_keys": "AuthzRoleAssignment.user_id",
+        },
     )
     optins: dict[str, Any] | None = Field(
         sa_column=Column(JSON, default=lambda: UserOptin().model_dump(), nullable=True)

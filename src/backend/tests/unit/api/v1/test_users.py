@@ -444,6 +444,50 @@ async def test_delete_user(client: AsyncClient, logged_in_headers_super_user):
     assert "detail" in result, "The result must have an 'detail' key"
 
 
+async def test_delete_user_removes_their_role_assignments(client: AsyncClient, logged_in_headers_super_user):
+    """A deleted user's role assignments must not survive as "unknown user" rows.
+
+    ON DELETE CASCADE on authz_role_assignment.user_id is declared but inert
+    on SQLite; the ORM-level cascade on User.role_assignments is what
+    actually cleans these up regardless of backend.
+    """
+    suffix = uuid4().hex
+    user_response = await client.post(
+        "api/v1/users/",
+        json={"username": f"orphan-check-{suffix}", "password": "password123"},
+        headers=logged_in_headers_super_user,
+    )
+    assert user_response.status_code == status.HTTP_201_CREATED
+    user_id = user_response.json()["id"]
+
+    role_response = await client.post(
+        "api/v1/authz/roles/",
+        json={"name": f"orphan-check-role-{suffix}", "permissions": ["flow:read"]},
+        headers=logged_in_headers_super_user,
+    )
+    assert role_response.status_code == status.HTTP_201_CREATED
+    role_id = role_response.json()["id"]
+
+    assignment_response = await client.post(
+        "api/v1/authz/role-assignments/",
+        json={"user_id": user_id, "role_id": role_id},
+        headers=logged_in_headers_super_user,
+    )
+    assert assignment_response.status_code == status.HTTP_201_CREATED
+
+    delete_response = await client.delete(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
+    assert delete_response.status_code == status.HTTP_200_OK
+
+    remaining = await client.get(
+        f"api/v1/authz/role-assignments/?user_id={user_id}",
+        headers=logged_in_headers_super_user,
+    )
+    assert remaining.status_code == status.HTTP_200_OK
+    assert remaining.json() == []
+
+    await client.delete(f"api/v1/authz/roles/{role_id}", headers=logged_in_headers_super_user)
+
+
 async def test_patch_user_self_deactivation_forbidden(client: AsyncClient, logged_in_headers, active_user):
     """Test that a user cannot deactivate their own account."""
     user_id = str(active_user.id)
