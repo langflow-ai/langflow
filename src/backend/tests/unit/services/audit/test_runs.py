@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import HTTPException
@@ -39,12 +39,12 @@ class TweakRefusedError(Exception):
     """Stands in for the run surface's tweak refusal, which is matched by name."""
 
 
-def _target(flow_id) -> FlowRunTarget:
-    return FlowRunTarget(flow_id=flow_id, flow_name="f", user_id=uuid4(), trigger="v1_run")
+def _target(flow_id, flow_name: str | None = "f") -> FlowRunTarget:
+    return FlowRunTarget(flow_id=flow_id, flow_name=flow_name, user_id=uuid4(), trigger="v1_run")
 
 
-def _run(behaviour):
-    @audited_flow_run(lambda arguments: _target(arguments["flow_id"]))
+def _run(behaviour, flow_name: str | None = "f"):
+    @audited_flow_run(lambda arguments: _target(arguments["flow_id"], flow_name))
     async def run(flow_id):  # noqa: ARG001 - read by the decorator, not the body
         return await behaviour()
 
@@ -63,6 +63,25 @@ async def test_a_run_that_returns_records_one_success_with_its_trigger():
     [event] = await _events_for([flow_id])
     assert (event.action, event.operation, event.result, event.error_code) == ("flow:execute", "run", "succeeded", None)
     assert event.details["run"]["trigger"] == "v1_run"
+
+
+@pytest.mark.usefixtures("client", "audit_enabled")
+async def test_a_run_whose_surface_does_not_know_the_name_records_the_stored_flow_name(client, logged_in_headers):
+    long_name = f"named-{uuid4().hex}-" + "x" * 300
+    created = await client.post("api/v1/flows/", json={"name": long_name, "data": {}}, headers=logged_in_headers)
+    flow_id = UUID(created.json()["id"])
+    missing_id = uuid4()
+
+    async def ok():
+        return None
+
+    await _run(ok, flow_name=None)(flow_id)
+    await _run(ok, flow_name=None)(missing_id)
+
+    [event] = [stored for stored in await _events_for([flow_id]) if stored.operation == "run"]
+    assert event.resource_name == created.json()["name"][:255]
+    [unknown] = await _events_for([missing_id])
+    assert unknown.resource_name is None
 
 
 @pytest.mark.usefixtures("client", "audit_enabled")
