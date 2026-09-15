@@ -21,6 +21,55 @@ class FlowBinding(BaseModel):
     version_id: str | None = None
 
 
+def compose_single_binding(
+    data: dict,
+    *,
+    project_id: str,
+    agent_id: str,
+    binding: FlowBinding | None,
+    input_name: str,
+    origin_name: str,
+    label: str,
+) -> dict:
+    """Reconcile a runtime reference only while it matches the project's last write."""
+    updated = deepcopy(data)
+    node_data = next(node for node in updated["nodes"] if node["id"] == agent_id)["data"]
+    origin = node_data.get(origin_name)
+    owned = isinstance(origin, dict) and origin.get("project_id") == project_id
+    if binding is None and not owned:
+        return data
+    entry = node_data["node"]["template"].get(input_name)
+    if not isinstance(entry, dict):
+        msg = f"Update the Agent component on its canvas before configuring a {label.lower()} flow."
+        raise TypeError(msg)
+    value = entry.get("value")
+    if value is None:
+        value = "null"
+    if not isinstance(value, str):
+        msg = f"The canvas {label.lower()} binding must contain JSON text."
+        raise TypeError(msg)
+    current = json.loads(value) if value.strip() not in {"", "null", "{}"} else None
+    baseline = origin.get("binding") if owned else None
+    connected = any(
+        edge.get("target") == agent_id and edge.get("data", {}).get("targetHandle", {}).get("fieldName") == input_name
+        for edge in data.get("edges", [])
+    )
+    if current != baseline or connected or (origin and not owned):
+        msg = (
+            f"{label} has independent canvas edits. "
+            f"Restore the saved {label.lower()} configuration before changing its binding."
+        )
+        raise ValueError(msg)
+    value = binding.model_dump() if binding else None
+    entry["value"] = json.dumps(value) if binding else ""
+    entry["override_skip"] = True
+    if binding:
+        node_data[origin_name] = {"project_id": project_id, "binding": value}
+    else:
+        node_data.pop(origin_name, None)
+    return updated
+
+
 def flow_revision(data: dict) -> str:
     """Identify the saved definition, ignoring canvas selection and positioning."""
     definition = {

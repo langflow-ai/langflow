@@ -310,7 +310,7 @@ async def upload_project_flows(
             parsed_bindings = ProjectFlowBindings.model_validate(bindings)
         except ValueError as exc:
             raise HTTPException(
-                422, "Imported flow bindings must contain Instructions, Context, or Hook selections."
+                422, "Imported flow bindings must contain Instructions, Context, Compaction, or Hook selections."
             ) from exc
     has_bindings = new_project.project_type == "agent-harness" and bool(bindings)
     if has_bindings:
