@@ -793,6 +793,12 @@ def get_lifespan(*, fix_migration=False, version=None):
                     except Exception as e:  # noqa: BLE001
                         await logger.aerror(f"Failed to stop audit event cleanup worker: {e}")
                     try:
+                        from langflow.services.audit.runs import drain_run_audit_writes
+
+                        await drain_run_audit_writes()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to drain pending run audit events: {e}")
+                    try:
                         from langflow.services.task.model_provider_policy_refresh import (
                             model_provider_policy_refresh_worker,
                         )

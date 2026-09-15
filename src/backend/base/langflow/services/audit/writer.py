@@ -98,7 +98,7 @@ def build_audit_event(draft: AuditEventDraft) -> AuditEvent:
         result=draft.result.value,
         error_code=draft.error_code.value if draft.error_code is not None else None,
         request_id=current_request_id(),
-        details=validate_details(draft.resource_type, draft.result, draft.details),
+        details=validate_details(draft.resource_type, draft.result, draft.details, draft.operation),
     )
 
 
@@ -133,6 +133,25 @@ def _slots() -> asyncio.Semaphore:
     return _write_slots
 
 
+async def persist_audit_event_independently(
+    event: AuditEvent, *, timeout: float = INDEPENDENT_WRITE_TIMEOUT_SECONDS
+) -> bool:
+    """Insert an already built event in its own transaction, or raise.
+
+    Returns ``False`` when there is no database, as under ``lfx serve``.
+    """
+
+    async def _write() -> bool:
+        async with _slots(), session_scope() as session:
+            if isinstance(session, NoopSession):
+                return False
+            session.add(event)
+        return True
+
+    # wait_for rather than asyncio.timeout, which does not exist on Python 3.10.
+    return await asyncio.wait_for(_write(), timeout=timeout)
+
+
 async def record_audit_event_after_rollback(draft: AuditEventDraft) -> bool:
     """Write a failure or denial in its own transaction; the caller's is gone.
 
@@ -144,17 +163,8 @@ async def record_audit_event_after_rollback(draft: AuditEventDraft) -> bool:
     if not is_audit_enabled() or not is_action_audited(draft.action):
         return False
     event = build_audit_event(draft)
-
-    async def _write() -> bool:
-        async with _slots(), session_scope() as session:
-            if isinstance(session, NoopSession):
-                return False
-            session.add(event)
-        return True
-
     try:
-        # wait_for rather than asyncio.timeout, which does not exist on Python 3.10.
-        return await asyncio.wait_for(_write(), timeout=INDEPENDENT_WRITE_TIMEOUT_SECONDS)
+        return await persist_audit_event_independently(event)
     except Exception as exc:  # noqa: BLE001
         await logger.aerror(
             "op=record_audit_event_after_rollback outcome=not_persisted request_id=%s "

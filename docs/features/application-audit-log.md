@@ -121,6 +121,7 @@ denials are written by the decorator and the permission guards.
 | `POST /flows/batch/`, `POST /flows/upload/` | one flow event per Flow created or replaced | |
 | `DELETE /flows/` | one `flow:delete` per Flow | |
 | `POST /flows/{id}/versions/{v}/activate` | flow / `flow:write` / `patch` | `written_fields: ["data"]` |
+| Any flow run (`simple_run_flow`, build driver) | flow / `flow:execute` / `run` | `run.trigger`, `run.duration_ms` |
 | `POST /projects/` | project / `project:create` / `create` | `description` when supplied; `flows` (added) |
 | `PATCH /projects/{id}` | project / `project:write` / `patch` | `description` only when written |
 | `PUT /projects/{id}` existing | project / `project:write` / `patch` | same as PATCH (the route has PATCH semantics) |
@@ -130,6 +131,32 @@ denials are written by the decorator and the permission guards.
 
 `replace` for Projects (atomic complete-content replacement) arrives with the
 atomic Project APIs; no existing route replaces a Project's contents.
+
+**Flow runs** — every run records one `flow` / `flow:execute` / `run` event with
+its outcome, whichever surface started it. Both run funnels are decorated, so
+the API (`/run`, streaming), webhooks, the Playground build, MCP, OpenAI
+Responses and the workflow API are all covered without per-route code.
+
+| Field | Value |
+|---|---|
+| actor | who ran it: the user, or `api_key` with the key id |
+| `result` / `error_code` | `succeeded`; or `failed` with `INVALID_CONTENT` (the request was wrong), `FLOW_NOT_FOUND`, `CONSTRAINT_VIOLATION`, `SERVICE_UNAVAILABLE`, or `FLOW_EXECUTION_FAILED` (a component failed, raised or not) |
+| `details` | `{"schema_version": 1, "run": {"trigger": "<execution family>", "duration_ms": <int>}}` only |
+
+Never stored for a run: inputs, outputs, tweaks, the request body, the result,
+or the error text. A paused run (human input) records nothing until the resume
+that completes it; a cancelled run records nothing. A refused `flow:execute`
+records one `authz`/`deny` at the permission guard, so every run surface is
+covered. A run writes nothing to the Flow, so its event has its own transaction.
+
+The run event is written in the background, so it never delays or fails the
+response. Busy databases (SQLite under a burst of runs) can refuse or time out a
+write, so each event is retried with backoff (6 attempts, 30s each). Every
+attempt inserts a fresh row with the same id, so an attempt that committed
+but then timed out is not duplicated: the primary key rejects the retry.
+Pending writes finish on shutdown. An event that never lands is logged with
+`op=persist_run_event outcome=not_persisted`. A run that fails because the
+database is locked records `failed` with `SERVICE_UNAVAILABLE`.
 
 **Outcome rules**
 
@@ -156,8 +183,9 @@ its event share the later transaction.
 5. A traversal returns each event at most once, newest first; later inserts do not appear midway.
 6. With `lfx serve` (no database), nothing is written and nothing raises.
 7. A request that is not audited (auditing off, or a helper called outside an audited route such as startup or the assistant) writes nothing.
-8. An excluded action writes nothing for any outcome, and the operation behaves exactly as with auditing off.
-9. An exclusion entry that matches no audited action excludes nothing and never stops startup.
+8. A run records at most one outcome, even when it starts nested runs, is retried, or streams.
+9. An excluded action writes nothing for any outcome, and the operation behaves exactly as with auditing off.
+10. An exclusion entry that matches no audited action excludes nothing and never stops startup.
 
 ## Settings
 
@@ -205,7 +233,7 @@ LANGFLOW_AUDIT_EXCLUDE_EVENTS=flow:write,project:delete
 - Atomic Project create/replace endpoints, inbound `request_id` propagation, and
   accepting an acting identity from the configured Control Plane service identity.
   The columns exist; nothing sets the acting pair yet.
-- Flow run events, field-level content differences, version storage.
+- Field-level content differences, version storage, run inputs and outputs.
 - Retiring `authz_audit_log`.
 
 ## Platform compatibility
