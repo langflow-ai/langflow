@@ -271,6 +271,29 @@ describe("FlowMenu MenuBar", () => {
       );
     });
 
+    it("shows untitled flow for a loaded flow that has no name", () => {
+      flowStoreMock.default.mockImplementation((sel: (s: object) => unknown) =>
+        sel({
+          onFlowPage: true,
+          isBuilding: false,
+          currentFlow: { id: "1", name: "", folder_id: "f1" },
+        }),
+      );
+      render(<MenuBar />);
+      expect(screen.getByTestId("flow_name")).toHaveTextContent(
+        "Untitled Flow",
+      );
+    });
+
+    it("shows no placeholder name while the flow is still loading", () => {
+      flowStoreMock.default.mockImplementation((sel: (s: object) => unknown) =>
+        sel({ onFlowPage: true, isBuilding: false, currentFlow: undefined }),
+      );
+      render(<MenuBar />);
+      expect(screen.getByTestId("flow_name")).toHaveTextContent("");
+      expect(screen.queryByText("Untitled Flow")).not.toBeInTheDocument();
+    });
+
     it("popover content has an aria-label of 'Flow settings' for screen readers", () => {
       render(<MenuBar />);
       const content = screen.getByTestId("popover-content");

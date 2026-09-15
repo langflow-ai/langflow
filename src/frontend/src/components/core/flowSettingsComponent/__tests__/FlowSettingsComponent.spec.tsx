@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import React from "react";
+import { FlowSaveBlockedError } from "@/hooks/flows/save-blocked-error";
+import useFlowConflictStore from "@/stores/flowConflictStore";
 import type { FlowType } from "@/types/flow";
 import FlowSettingsComponent from "../index";
 
@@ -42,10 +44,18 @@ jest.mock("@/hooks/flows/use-save-flow", () => ({
 }));
 
 let mockSetSuccessData = jest.fn();
-jest.mock("@/stores/alertStore", () => ({
-  __esModule: true,
-  default: (sel) => sel({ setSuccessData: mockSetSuccessData }),
-}));
+const mockSetNoticeData = jest.fn();
+const mockSetErrorData = jest.fn();
+jest.mock("@/stores/alertStore", () => {
+  const alerts = () => ({
+    setSuccessData: mockSetSuccessData,
+    setNoticeData: mockSetNoticeData,
+    setErrorData: mockSetErrorData,
+  });
+  const useAlertStore = (sel) => sel(alerts());
+  useAlertStore.getState = alerts;
+  return { __esModule: true, default: useAlertStore };
+});
 
 let mockSetCurrentFlow = jest.fn();
 const mockAutoSaveFlush = jest.fn();
@@ -223,6 +233,58 @@ describe("FlowSettingsComponent", () => {
 
     fireEvent.click(screen.getByTestId("set-name-taken"));
     expect(screen.getByTestId("save-flow-settings")).toBeDisabled();
+  });
+
+  describe("when the save does not happen", () => {
+    afterEach(() => {
+      useFlowConflictStore.setState({ conflict: null, dialogOpen: false });
+    });
+
+    const submitRename = async (onClose: jest.Mock) => {
+      render(
+        <FlowSettingsComponent flowData={baseFlow} open close={onClose} />,
+      );
+      fireEvent.click(screen.getByTestId("set-name-new"));
+      fireEvent.click(screen.getByTestId("save-flow-settings"));
+      await waitFor(() => expect(mockSave).toHaveBeenCalled());
+    };
+
+    it("stays open and says why when a conflict blocks the save", async () => {
+      mockAutoSaving = true;
+      useFlowConflictStore.setState({
+        conflict: {
+          flowId: "1",
+          author: { id: "user-2", username: "carlos" },
+          isSelf: false,
+          modifiedAt: null,
+          expectedToken: "a",
+          currentToken: "b",
+          theirFlow: null,
+        },
+      });
+      mockSave.mockRejectedValueOnce(new FlowSaveBlockedError("1"));
+      const onClose = jest.fn();
+
+      await submitRename(onClose);
+
+      await waitFor(() => expect(mockSetNoticeData).toHaveBeenCalled());
+      expect(onClose).not.toHaveBeenCalled();
+      expect(mockSetSuccessData).not.toHaveBeenCalled();
+    });
+
+    it("stays open when the save fails for another reason", async () => {
+      mockAutoSaving = true;
+      mockSave.mockRejectedValueOnce(new Error("network down"));
+      const onClose = jest.fn();
+
+      await submitRename(onClose);
+
+      await waitFor(() =>
+        expect(screen.getByTestId("save-flow-settings")).toBeInTheDocument(),
+      );
+      expect(onClose).not.toHaveBeenCalled();
+      expect(mockSetSuccessData).not.toHaveBeenCalled();
+    });
   });
 
   it("clicking cancel calls close", () => {

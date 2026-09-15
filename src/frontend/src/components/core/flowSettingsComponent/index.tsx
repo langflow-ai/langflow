@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
+import { handleBlockedSave } from "@/hooks/flows/handle-blocked-save";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
@@ -102,8 +103,10 @@ const FlowSettingsComponent = ({
           setIsSaving(false);
           setSuccessData({ title: t("success.changesSaved") });
           close();
-        } catch {
+        } catch (error) {
           setIsSaving(false);
+          // Never close on a failed save: the form holds the only copy of what was typed.
+          handleBlockedSave(error, { announce: true });
         }
       };
       void persistSettings();

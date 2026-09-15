@@ -139,9 +139,6 @@ class FlowBase(SQLModel):
     @field_validator("icon")
     @classmethod
     def validate_icon_atr(cls, v):
-        #   const emojiRegex = /\p{Emoji}/u;
-        # const isEmoji = emojiRegex.test(data?.node?.icon!);
-        # emoji pattern in Python
         if v is None:
             return v
         # we are going to use the emoji library to validate the emoji
@@ -230,6 +227,20 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     workspace_id: UUID | None = Field(default=None, nullable=True, index=True)
     fs_path: str | None = Field(default=None, nullable=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
+    version_token: UUID | None = Field(
+        default=None,
+        nullable=True,
+        description="Rotated whenever data changes. NULL means the row predates preconditions.",
+    )
+    last_modified_by: UUID | None = Field(
+        default=None,
+        nullable=True,
+        index=True,
+        description=(
+            "Author of the last data change. Not a foreign key: a second path to user.id would "
+            "make the Flow.user relationship ambiguous to SQLAlchemy."
+        ),
+    )
 
     def to_data(self):
         serialized = self.model_dump()
@@ -250,10 +261,8 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
 
 
 class FlowCreate(FlowBase):
-    # Optional stable ID.  When present on upload, the flow is upserted
-    # (created with that ID, or updated if the ID already belongs to the
-    # current user).  Flows without an id get a generated UUID — backward
-    # compatible with all existing import paths.
+    # Present on upload means upsert (that ID, if it already belongs to the caller); absent
+    # means a generated UUID, so every existing import path keeps working unchanged.
     id: UUID | None = None
     user_id: UUID | None = None
     folder_id: UUID | None = None
@@ -268,6 +277,7 @@ class FlowRead(FlowBase):
     workspace_id: UUID | None = Field(default=None)
     tags: list[str] | None = Field(None, description="The tags of the flow")
     name_key: str | None = Field(None, description="Stable i18n key derived from the original English name")
+    version_token: UUID | None = Field(None, description="Token identifying the version this response carries")
 
 
 class FlowHeader(BaseModel):

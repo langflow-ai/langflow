@@ -7,6 +7,9 @@ import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAlertStore from "@/stores/alertStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
 
+/** One beat, then try again: long enough for the competing write to commit. */
+const RETRY_BUSY_MS = 700;
+
 export default function useRestoreVersion(flowId: string) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -26,11 +29,24 @@ export default function useRestoreVersion(flowId: string) {
       try {
         // --- Phase 1: API call + canvas application ---
         // Errors here are shown to the user and abort the restore.
-        const response = await api.post(
-          `${getURL("FLOWS")}/${flowId}/versions/${versionId}/activate`,
-          null,
-          { params: { save_draft: saveDraft } },
-        );
+        const activate = () =>
+          api.post(
+            `${getURL("FLOWS")}/${flowId}/versions/${versionId}/activate`,
+            null,
+            { params: { save_draft: saveDraft } },
+          );
+        // A restore that lands at the same moment as an autosave finds the row
+        // locked. Nothing is wrong with either write, so the second attempt is
+        // the answer rather than telling the person the restore failed.
+        let response: Awaited<ReturnType<typeof activate>>;
+        try {
+          response = await activate();
+          // biome-ignore lint/suspicious/noExplicitAny: axios error shape
+        } catch (busy: any) {
+          if (busy?.response?.status !== 503) throw busy;
+          await new Promise((resolve) => setTimeout(resolve, RETRY_BUSY_MS));
+          response = await activate();
+        }
         const updatedFlow = response.data;
 
         if (!updatedFlow.data) {

@@ -309,6 +309,10 @@ export default function NodeStatus({
           };
         },
         false,
+        undefined,
+        // Finishing a build is not an edit. Saving here makes merely running a
+        // flow take the writer's turn, so a run with no edits could be refused.
+        { autoSave: false },
       );
     }
   }, [buildStatus, isBuilding, isReadOnly, nodeId, setNode, version]);

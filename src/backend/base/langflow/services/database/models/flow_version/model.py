@@ -45,6 +45,10 @@ class FlowVersionRead(BaseModel):
     version_number: int = PydanticField(ge=1)
     description: str | None
     created_at: datetime
+    username: str | None = PydanticField(
+        default=None,
+        description="Display name of whoever authored this version, resolved from user_id.",
+    )
     is_deployed: bool | None = PydanticField(
         default=None,
         description=(
@@ -73,9 +77,16 @@ class FlowVersionReadWithData(FlowVersionRead):
 
 
 class FlowVersionCreate(BaseModel):
-    """Schema for creating a flow version — user only provides description."""
+    """Schema for creating a flow version.
+
+    ``data`` lets a caller archive a graph the server never had — the state on
+    somebody's canvas as they abandon it. Without it the only snapshot possible
+    is of what is already stored, which is exactly the state that is *not* at
+    risk of being lost.
+    """
 
     description: str | None = Field(default=None, max_length=500)
+    data: dict | None = Field(default=None)
 
 
 class FlowVersionListResponse(BaseModel):

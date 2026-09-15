@@ -120,6 +120,30 @@ A saved _version_ is an explicit snapshot that you create when you want a restor
 
 When previewing a saved version, Langflow temporarily pauses auto-save so the preview doesn't overwrite your current draft.
 
+### When someone else edits the same flow
+
+Each flow carries a version identifier that changes whenever its graph is saved, including when a flow is replaced by importing over it. Your editor sends the version it loaded with every save that carries your own graph changes, so a save built on a version that someone else has already replaced is refused instead of overwriting their work. Renaming a flow, moving it to another project, or changing its settings doesn't carry the graph, so it isn't refused and doesn't take the turn away from anyone else.
+
+When that happens, a banner names the person who saved last, the canvas is outlined, and auto-save stops for that flow. Your work stays on screen, and the original flow keeps the other person's version. The flow can't be run until you resolve the conflict, because running it would execute a version the server has already replaced. Running a flow you haven't edited is unaffected: with no changes of your own there is nothing to resolve, so your canvas simply picks up the newer version.
+
+Your unsaved work is also kept in your browser. If you reload or close the tab before deciding, Langflow offers it back the next time you open the flow, with the option to restore or discard it. Secret fields aren't stored, so you re-enter those after restoring. Restoring brings the conflict back with it: the restored work was built on a version the flow has moved past, so the banner returns and you resolve it the same way.
+
+To continue, click **Review changes**. The dialog lists your own changes, which are always included, alongside the other person's, which you select or leave behind. There is one row per component, listing everything that changed inside it, because a component is taken whole or not at all. Selecting none keeps only your work.
+
+That selection is the merge, and you choose where it lands:
+
+* **Duplicate Flow** puts the merge in a new flow and leaves the original on the other person's version. The copy is created without an endpoint name, MCP exposure, webhook, or lock, so duplicating never brings a second live listener online.
+* **Update flow** puts the merge in the original flow. Before it does, the version being replaced is saved to the flow's version history and attributed to whoever wrote it, so the other person can still open it and recover their work. Updating is still checked against the server: if someone saved again while the dialog was open, it's refused rather than discarding them, and the dialog reopens comparing against the version that arrived, so you choose again with the newer changes in front of you.
+* **Take latest** drops your own changes and reloads the flow at the version on the server. It asks for confirmation first, because nothing brings those changes back — the stored copy of them goes too. Nothing is written to the flow, so the other person's version is untouched and you can carry on editing from theirs.
+
+The version history names the author of every version, so you can tell who last changed the flow. The conflict banner doesn't appear while you're viewing version history, which is a read-only view of the past.
+
+If you and the other person both changed the same component, the copy can carry one version or the other, not a blend of the two. Your version is kept by default; selecting theirs replaces yours for that component, and the dialog marks which one is being dropped. Combining two sets of edits inside a single component could otherwise produce a configuration neither of you wrote.
+
+:::note
+Langflow doesn't warn you before a conflict happens. Two people can edit the same flow without seeing each other until one of them saves.
+:::
+
 ### Lock a flow
 
 To prevent changes to a flow, you can lock it:

@@ -1,6 +1,7 @@
 import { cloneDeep } from "lodash";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { handleBlockedSave } from "@/hooks/flows/handle-blocked-save";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useUtilityStore } from "@/stores/utilityStore";
 import IconComponent from "../../components/common/genericIconComponent";
@@ -107,7 +108,7 @@ export default function ShareModal({
 
     function successShare() {
       if (!is_component) {
-        saveFlow(flow);
+        saveFlow(flow).catch(handleBlockedSave);
       }
       setSuccessData({
         title: t("share.sharedSuccessfully", {

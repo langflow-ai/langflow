@@ -24,6 +24,18 @@ const badgeVariants = cva(
         successStatic:
           "bg-accent-emerald text-accent-emerald-foreground border-0",
         errorStatic: "bg-error-background text-error-foreground border-0",
+        // The three change kinds in the version-conflict dialog. Their palette
+        // comes from the Enterprise design file rather than the app's accent
+        // tokens, which sit on different hues — indigo against purple, and a
+        // tinted fill behind each rather than a solid one.
+        conflictAdded:
+          "border-accent-emerald-foreground/30 bg-accent-emerald-foreground/15 text-accent-emerald-foreground",
+        conflictModified:
+          "border-accent-indigo-foreground/30 bg-accent-indigo-foreground/15 text-accent-indigo-foreground",
+        conflictContested:
+          "border-accent-amber-foreground/40 bg-accent-amber-foreground/15 text-accent-amber-foreground",
+        conflictRemoved:
+          "border-accent-red-foreground/30 bg-accent-red-foreground/15 text-accent-red-foreground",
       },
       size: {
         sm: "h-4 text-xs",
@@ -32,6 +44,9 @@ const badgeVariants = cva(
         sq: "h-6 px-1.5 text-sm font-medium rounded-md",
         xq: "h-6 px-1.5 text-xs font-medium rounded-sm",
         tag: "h-[18px] px-1.5 text-[11px] leading-[14px] font-medium rounded",
+        /** The dialog's change badges: 10px semibold in a 4px-radius chip. */
+        change:
+          "h-[19px] px-1.5 py-0.5 text-[10px] leading-[15px] font-semibold rounded-sm",
       },
     },
     defaultVariants: {
