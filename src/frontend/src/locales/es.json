@@ -2503,5 +2503,21 @@
   "toolPacks.changedSinceRun": "El paquete cambió desde esta ejecución",
   "toolPacks.currentUnavailable": "El paquete actual no está disponible. Las revisiones registradas se conservan abajo.",
   "toolPacks.recordedRevisions": "Revisiones y llamadas registradas",
-  "toolPacks.returnHarness": "Volver al harness"
+  "toolPacks.returnHarness": "Volver al harness",
+  "runConfig.title": "Configuración de la ejecución",
+  "runConfig.help": "Valores capturados del Agente en ejecución. Se omiten las credenciales del modelo y los objetos de conexión.",
+  "runConfig.legacy": "Este informe no tiene una configuración registrada. La configuración actual del proyecto no demuestra qué usó esta ejecución.",
+  "runConfig.select": "Configuración registrada",
+  "runConfig.record": "Configuración {{number}}",
+  "runConfig.inspect": "Inspeccionar configuración",
+  "runConfig.prompt": "Instrucciones resueltas",
+  "runConfig.parameters": "Detalles del modelo",
+  "runConfig.runtime": "Controles de ejecución",
+  "runConfig.history": "Límite de mensajes del historial",
+  "runConfig.loadedHistory": "Mensajes del historial cargados",
+  "runConfig.toolRetries": "Reintentos de herramientas",
+  "runConfig.toolContract": "Contrato de la herramienta",
+  "runConfig.bindings": "Vínculos de flujos configurados",
+  "runConfig.identity": "Identidad registrada",
+  "runConfig.empty": "Ninguno"
 }

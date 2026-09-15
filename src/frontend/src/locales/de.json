@@ -2503,5 +2503,21 @@
   "toolPacks.changedSinceRun": "Paket seit diesem Lauf geändert",
   "toolPacks.currentUnavailable": "Das aktuelle Paket ist nicht verfügbar. Aufgezeichnete Revisionen stehen weiterhin unten.",
   "toolPacks.recordedRevisions": "Aufgezeichnete Revisionen und Aufrufe",
-  "toolPacks.returnHarness": "Zurück zum Harness"
+  "toolPacks.returnHarness": "Zurück zum Harness",
+  "runConfig.title": "Konfiguration des Laufs",
+  "runConfig.help": "Werte des laufenden Agenten. Zugangsdaten des Modells und Verbindungsobjekte werden ausgelassen.",
+  "runConfig.legacy": "Für diesen Bericht wurde keine Konfiguration aufgezeichnet. Aktuelle Projekteinstellungen belegen nicht, was dieser Lauf verwendet hat.",
+  "runConfig.select": "Aufgezeichnete Konfiguration",
+  "runConfig.record": "Konfiguration {{number}}",
+  "runConfig.inspect": "Konfiguration ansehen",
+  "runConfig.prompt": "Aufgelöste Anweisungen",
+  "runConfig.parameters": "Modelldetails",
+  "runConfig.runtime": "Ausführungssteuerung",
+  "runConfig.history": "Limit für Verlaufsnachrichten",
+  "runConfig.loadedHistory": "Geladene Verlaufsnachrichten",
+  "runConfig.toolRetries": "Tool-Wiederholungen",
+  "runConfig.toolContract": "Tool-Vertrag",
+  "runConfig.bindings": "Konfigurierte Flow-Bindungen",
+  "runConfig.identity": "Aufgezeichnete Identität",
+  "runConfig.empty": "Keine"
 }

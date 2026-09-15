@@ -8,6 +8,7 @@ from langchain_core.messages import ToolMessage
 from typing_extensions import NotRequired
 
 from lfx.projects.artifacts import SOURCE_EVIDENCE_KIND, CollectedEvidence, SourceRecord, SourceUse
+from lfx.projects.run_configuration import CONFIGURATIONS_STATE_KEY, AgentConfiguration
 from lfx.projects.tool_packs import ToolDependencyUse, ToolPackToolBinding
 
 EVIDENCE_STATE_KEY = "harness_source_evidence"
@@ -15,6 +16,7 @@ EVIDENCE_STATE_KEY = "harness_source_evidence"
 
 class SourceEvidenceState(AgentState):
     harness_source_evidence: NotRequired[Annotated[dict, OmitFromInput]]
+    harness_run_configurations: NotRequired[Annotated[list[dict], OmitFromInput]]
 
 
 def collect_tool_evidence(messages, previous: CollectedEvidence, *, tool_bindings=None) -> CollectedEvidence:
@@ -53,7 +55,8 @@ def collect_tool_evidence(messages, previous: CollectedEvidence, *, tool_binding
 class SourceEvidenceMiddleware(AgentMiddleware):
     state_schema = SourceEvidenceState
 
-    def __init__(self, tools=()):
+    def __init__(self, tools=(), *, configuration: AgentConfiguration | None = None):
+        self.configuration = configuration
         # Definitions come from the connected adapters, never model prose or tool output.
         self.tool_bindings = {}
         names = set()
@@ -68,7 +71,11 @@ class SourceEvidenceMiddleware(AgentMiddleware):
     def _collect(self, state):
         previous = CollectedEvidence.model_validate(state.get(EVIDENCE_STATE_KEY) or {})
         evidence = collect_tool_evidence(state["messages"], previous, tool_bindings=self.tool_bindings)
-        return {EVIDENCE_STATE_KEY: evidence.model_dump(mode="json")} if evidence != previous else None
+        updates = {EVIDENCE_STATE_KEY: evidence.model_dump(mode="json")} if evidence != previous else {}
+        configurations = state.get(CONFIGURATIONS_STATE_KEY) or []
+        if self.configuration and (not configurations or configurations[-1]["revision"] != self.configuration.revision):
+            updates[CONFIGURATIONS_STATE_KEY] = [*configurations, self.configuration.model_dump(mode="json")]
+        return updates or None
 
     def before_model(self, state, runtime):  # noqa: ARG002
         return self._collect(state)

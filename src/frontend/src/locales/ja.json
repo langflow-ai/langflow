@@ -2503,5 +2503,21 @@
   "toolPacks.changedSinceRun": "この実行後にパックが変更されました",
   "toolPacks.currentUnavailable": "現在のパックは利用できません。記録したリビジョンは以下に保持されています。",
   "toolPacks.recordedRevisions": "記録したリビジョンと呼び出し",
-  "toolPacks.returnHarness": "ハーネスに戻る"
+  "toolPacks.returnHarness": "ハーネスに戻る",
+  "runConfig.title": "実行設定",
+  "runConfig.help": "実行中のエージェントから取得した値です。モデルの認証情報と接続オブジェクトは含まれません。",
+  "runConfig.legacy": "このレポートには設定が記録されていません。現在のプロジェクト設定から、この実行で使用された設定を確認することはできません。",
+  "runConfig.select": "記録された設定",
+  "runConfig.record": "設定 {{number}}",
+  "runConfig.inspect": "設定を確認",
+  "runConfig.prompt": "解決済みの指示",
+  "runConfig.parameters": "モデルの詳細",
+  "runConfig.runtime": "実行制御",
+  "runConfig.history": "履歴メッセージの上限",
+  "runConfig.loadedHistory": "読み込まれた履歴メッセージ",
+  "runConfig.toolRetries": "ツールの再試行回数",
+  "runConfig.toolContract": "ツール契約",
+  "runConfig.bindings": "設定されたフローのバインディング",
+  "runConfig.identity": "記録された識別情報",
+  "runConfig.empty": "なし"
 }

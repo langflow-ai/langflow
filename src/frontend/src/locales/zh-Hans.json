@@ -2502,5 +2502,21 @@
   "toolPacks.changedSinceRun": "此工具包在本次运行后已更改",
   "toolPacks.currentUnavailable": "当前工具包不可用。已记录的版本仍保留在下方。",
   "toolPacks.recordedRevisions": "已记录的版本与调用",
-  "toolPacks.returnHarness": "返回运行框架"
+  "toolPacks.returnHarness": "返回运行框架",
+  "runConfig.title": "运行配置",
+  "runConfig.help": "从运行中的 Agent 捕获的值，不包含模型凭据和连接对象。",
+  "runConfig.legacy": "此报告没有记录配置。当前项目设置无法证明本次运行使用了哪些设置。",
+  "runConfig.select": "已记录的配置",
+  "runConfig.record": "配置 {{number}}",
+  "runConfig.inspect": "检查配置",
+  "runConfig.prompt": "解析后的指令",
+  "runConfig.parameters": "模型详情",
+  "runConfig.runtime": "运行控制",
+  "runConfig.history": "历史消息上限",
+  "runConfig.loadedHistory": "已加载的历史消息",
+  "runConfig.toolRetries": "工具重试次数",
+  "runConfig.toolContract": "工具契约",
+  "runConfig.bindings": "已配置的流程绑定",
+  "runConfig.identity": "已记录的标识",
+  "runConfig.empty": "无"
 }

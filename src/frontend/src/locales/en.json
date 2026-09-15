@@ -2665,5 +2665,21 @@
   "toolPacks.changedSinceRun": "Pack changed since this run",
   "toolPacks.currentUnavailable": "The current pack is unavailable. Recorded revisions remain below.",
   "toolPacks.recordedRevisions": "Recorded revisions and calls",
-  "toolPacks.returnHarness": "Back to harness"
+  "toolPacks.returnHarness": "Back to harness",
+  "runConfig.title": "Run configuration",
+  "runConfig.help": "Values captured from the running Agent. Model credentials and connection objects are omitted.",
+  "runConfig.legacy": "This report has no recorded configuration. Current project settings cannot establish what this run used.",
+  "runConfig.select": "Recorded configuration",
+  "runConfig.record": "Configuration {{number}}",
+  "runConfig.inspect": "Inspect configuration",
+  "runConfig.prompt": "Resolved instructions",
+  "runConfig.parameters": "Model details",
+  "runConfig.runtime": "Runtime controls",
+  "runConfig.history": "History message limit",
+  "runConfig.loadedHistory": "History messages loaded",
+  "runConfig.toolRetries": "Tool retries",
+  "runConfig.toolContract": "Tool contract",
+  "runConfig.bindings": "Configured flow bindings",
+  "runConfig.identity": "Recorded identity",
+  "runConfig.empty": "None"
 }
