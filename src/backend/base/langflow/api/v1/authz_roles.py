@@ -28,10 +28,19 @@ from langflow.services.authorization.lifecycle import (
     stage_identity_mutation,
 )
 from langflow.services.authorization.utils import audit_decision
+from langflow.services.creation_hooks import (
+    DENIED_STATUS_CODE,
+    RESOURCE_ROLE,
+    PreCreationContext,
+    PreCreationDenied,
+    http_denial_error_code,
+    pre_creation_denied_to_http,
+    run_pre_creation_hooks,
+)
 from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
 from langflow.services.deps import get_authorization_service
 
-router = APIRouter(prefix="/authz/roles", tags=["Authorization"], include_in_schema=False)
+router = APIRouter(prefix="/authz/roles", tags=["Authorization"])
 
 # Match ``authz_shares``: cap any single list call so an authenticated client
 # (or a buggy frontend) can't enumerate the entire role/team catalog in one
@@ -153,7 +162,7 @@ async def _detect_parent_cycle(
 
 
 @router.get("", response_model=list[RoleRead])
-@router.get("/", response_model=list[RoleRead])
+@router.get("/", response_model=list[RoleRead], include_in_schema=False)
 async def list_roles(
     session: DbSession,
     current_user: CurrentActiveUser,  # noqa: ARG001 — any authenticated user can list
@@ -194,7 +203,13 @@ async def read_role(
 
 
 @router.post("", response_model=RoleRead, status_code=status.HTTP_201_CREATED, dependencies=ROLE_ADMINISTRATOR_ONLY)
-@router.post("/", response_model=RoleRead, status_code=status.HTTP_201_CREATED, dependencies=ROLE_ADMINISTRATOR_ONLY)
+@router.post(
+    "/",
+    response_model=RoleRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=ROLE_ADMINISTRATOR_ONLY,
+    include_in_schema=False,
+)
 async def create_role(
     payload: RoleCreate,
     current_user: CurrentActiveUser,
@@ -214,6 +229,42 @@ async def create_role(
         session,
         kind=AuthorizationMutationKind.ROLE_CREATED,
     )
+    # Pre-creation hooks run inside the lock the authorization plugin just took, so a plugin
+    # counting custom roles sees a serialized count-then-insert. Only this route creates
+    # ``is_system=False`` roles; system roles are seeded by plugins and never pass here.
+    try:
+        await run_pre_creation_hooks(
+            PreCreationContext(
+                resource=RESOURCE_ROLE,
+                session=session,
+                actor_user_id=actor_user_id,
+                requested_name=payload.name,
+            )
+        )
+    except PreCreationDenied as denied:
+        await session.rollback()
+        await _audit_deny(
+            user_id=actor_user_id,
+            action="role:create",
+            obj="role:*",
+            status_code=DENIED_STATUS_CODE,
+            reason=denied.error_code,
+            operation_id=operation_id,
+        )
+        raise pre_creation_denied_to_http(denied) from denied
+    except HTTPException as denied:
+        # A hook that answers with its own response: pass it through untouched, but roll back
+        # and audit the refusal exactly like a PreCreationDenied.
+        await session.rollback()
+        await _audit_deny(
+            user_id=actor_user_id,
+            action="role:create",
+            obj="role:*",
+            status_code=denied.status_code,
+            reason=http_denial_error_code(denied),
+            operation_id=operation_id,
+        )
+        raise
 
     if payload.parent_role_id is not None:
         parent = await session.get(AuthzRole, payload.parent_role_id)

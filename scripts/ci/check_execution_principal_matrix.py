@@ -12,6 +12,12 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_MATRIX = REPO_ROOT / "scripts" / "ci" / "execution_principal_matrix.json"
 AUTHZ_MATRIX = REPO_ROOT / "scripts" / "ci" / "authz_endpoint_matrix.json"
+# The database connection resolver keeps its own copy of the share-permitting
+# families, because scripts/ci is not shipped with langflow-base. Drift is
+# asymmetric: a family the matrix tightens but the resolver keeps fails open.
+SHARE_RESOLVER_SOURCE = REPO_ROOT / "src" / "backend" / "base" / "langflow" / "services" / "connection" / "service.py"
+SHARE_FAMILIES_CONSTANT = "_SHARE_PERMITTING_FAMILIES"
+SHARE_DEPENDENCY_PRINCIPAL = "actor_or_explicit_share"
 
 REQUIRED_DIMENSIONS = frozenset(
     {
@@ -24,6 +30,8 @@ REQUIRED_DIMENSIONS = frozenset(
         "tweaks",
         "revoke",
         "error_policy",
+        "connection_resolution",
+        "connection_resolution_note",
         "exception",
         "test_references",
     }
@@ -68,11 +76,53 @@ VALID_DIMENSION_VALUES = {
     "tweaks": {"owner_only", "owner_or_writer", "forbidden", "server_generated"},
     "revoke": {"new_and_resume", "new_only", "resume_rechecks_actor", "provider_controlled"},
     "error_policy": {"owner_debug_delegated_sanitized", "sanitized", "provider_sanitized"},
+    # INT-6: which connection a run of this family may resolve.
+    #   owner_or_explicit_share       the actor's own row, or one shared with them
+    #   owner_only                    the actor's own row; shares are not admitted
+    #   owner_non_interactive_opt_in  the resource owner's row, and only with
+    #                                 Connection.allow_non_interactive set
+    #   job_owner_reresolved_non_interactive_opt_in
+    #                                 the job owner's row, recomputed on the worker,
+    #                                 and only with Connection.allow_non_interactive set
+    #   never                         no user connection, and no instance connection
+    "connection_resolution": {
+        "owner_or_explicit_share",
+        "owner_only",
+        "owner_non_interactive_opt_in",
+        "job_owner_reresolved_non_interactive_opt_in",
+        "never",
+    },
 }
 
+# A family's dependency principal fixes which connection rules can be true of it.
+# An anonymous dependency principal that resolved anything but "never" would be a
+# credential leak; a job_owner one that did not re-resolve would trust a persisted
+# identity. Keeping the pair consistent is the point of encoding both.
+CONNECTION_RESOLUTION_BY_DEPENDENCY_PRINCIPAL = {
+    "actor": {"owner_only"},
+    "actor_or_explicit_share": {"owner_or_explicit_share"},
+    "anonymous_public": {"never"},
+    "flow_owner": {"owner_non_interactive_opt_in"},
+    "deployment_owner": {"owner_non_interactive_opt_in"},
+    "job_owner": {"job_owner_reresolved_non_interactive_opt_in"},
+}
+
+# Each family maps to a list of term-groups; every group must be satisfied by SOME
+# test reference whose function name contains all of its terms. A generic smoke
+# test cannot stand in for a rule this specific.
 BEHAVIOR_SPECIFIC_REFERENCE_TERMS = {
-    "v1_run": ("v1_run",),
-    "webhook": ("webhook", "tweak"),
+    "v1_run": (("v1_run",),),
+    "webhook": (("webhook", "tweak"), ("webhook", "connection")),
+    # The two rules a reviewer most needs proof of: an anonymous caller resolving
+    # nothing, and an owner-only family ignoring a share.
+    "legacy_public_chat": (("public", "connection"),),
+    "workflow_public_v2": (("public", "connection"),),
+    "a2a": (("a2a", "connection"),),
+    "legacy_mcp": (("connection", "share"),),
+    "mcp_projects": (("mcp_projects", "non_interactive"),),
+    # A resume keeps the JOB's owner. The flow can belong to somebody who only
+    # shared it, so a test that uses one identity for both roles proves nothing.
+    "workflow_hitl_v2": (("hitl", "job_owner"),),
 }
 
 
@@ -104,7 +154,60 @@ def _authz_families() -> set[str]:
     return {contract["family"] for contract in matrix.get("contracts", []) if "family" in contract}
 
 
-def validate_matrix(matrix_path: Path = DEFAULT_MATRIX) -> list[str]:
+def _display_path(path: Path) -> str:
+    return path.relative_to(REPO_ROOT).as_posix() if path.is_relative_to(REPO_ROOT) else str(path)
+
+
+def resolver_share_families(source: Path = SHARE_RESOLVER_SOURCE) -> frozenset[str]:
+    """Read the resolver's literal share-family set without importing langflow."""
+    tree = ast.parse(source.read_text(encoding="utf-8"), filename=str(source))
+    value = next(
+        (
+            node.value
+            for node in tree.body
+            if isinstance(node, ast.Assign)
+            and any(isinstance(target, ast.Name) and target.id == SHARE_FAMILIES_CONSTANT for target in node.targets)
+        ),
+        None,
+    )
+    # frozenset({...}) is the only call accepted; anything computed cannot be checked.
+    if isinstance(value, ast.Call) and isinstance(value.func, ast.Name) and value.func.id == "frozenset":
+        value = value.args[0] if len(value.args) == 1 and not value.keywords else None
+    try:
+        families = ast.literal_eval(value) if value is not None else None
+    except (TypeError, ValueError):
+        families = None
+    if not isinstance(families, set) or not all(isinstance(item, str) for item in families):
+        msg = f"{SHARE_FAMILIES_CONSTANT} must be a module-level frozenset literal of family names"
+        raise ValueError(msg)
+    return frozenset(families)
+
+
+def _validate_share_families(entrypoints: list[dict], resolver_source: Path) -> list[str]:
+    try:
+        resolver = resolver_share_families(resolver_source)
+    except (OSError, SyntaxError, ValueError) as exc:
+        return [f"could not read {SHARE_FAMILIES_CONSTANT} from {_display_path(resolver_source)}: {exc}"]
+    matrix = {
+        entrypoint["family"]
+        for entrypoint in entrypoints
+        if entrypoint.get("dependency_principal") == SHARE_DEPENDENCY_PRINCIPAL and "family" in entrypoint
+    }
+    errors: list[str] = []
+    if fails_open := sorted(resolver - matrix):
+        errors.append(
+            f"{_display_path(resolver_source)} {SHARE_FAMILIES_CONSTANT} resolves shared connections for "
+            f"{fails_open}, which the matrix does not mark {SHARE_DEPENDENCY_PRINCIPAL}; this fails open"
+        )
+    if fails_closed := sorted(matrix - resolver):
+        errors.append(
+            f"matrix marks {fails_closed} {SHARE_DEPENDENCY_PRINCIPAL}, but {_display_path(resolver_source)} "
+            f"{SHARE_FAMILIES_CONSTANT} omits them, so their shared connections never resolve"
+        )
+    return errors
+
+
+def validate_matrix(matrix_path: Path = DEFAULT_MATRIX, resolver_source: Path = SHARE_RESOLVER_SOURCE) -> list[str]:
     """Return reader-friendly contract errors; an empty list means complete."""
     try:
         matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
@@ -146,6 +249,18 @@ def validate_matrix(matrix_path: Path = DEFAULT_MATRIX) -> list[str]:
             if value not in valid_values:
                 errors.append(f"entrypoint {family!r} has unknown {dimension} {value!r}")
 
+        dependency_principal = entrypoint["dependency_principal"]
+        allowed_resolutions = CONNECTION_RESOLUTION_BY_DEPENDENCY_PRINCIPAL.get(dependency_principal)
+        if allowed_resolutions is not None and entrypoint["connection_resolution"] not in allowed_resolutions:
+            errors.append(
+                f"entrypoint {family!r} pairs dependency_principal {dependency_principal!r} with "
+                f"connection_resolution {entrypoint['connection_resolution']!r}; expected one of "
+                f"{sorted(allowed_resolutions)}"
+            )
+        note = entrypoint["connection_resolution_note"]
+        if not isinstance(note, str) or not note.strip():
+            errors.append(f"entrypoint {family!r} must explain its connection_resolution in prose")
+
         if not isinstance(entrypoint["exception"], str) or not entrypoint["exception"].strip():
             errors.append(f"entrypoint {family!r} must document its exception status")
         if not entrypoint["test_references"]:
@@ -155,14 +270,14 @@ def validate_matrix(matrix_path: Path = DEFAULT_MATRIX) -> list[str]:
             for reference in entrypoint["test_references"]
             if (error := _validate_test_reference(reference))
         )
-        required_terms = BEHAVIOR_SPECIFIC_REFERENCE_TERMS.get(family)
-        if required_terms and not any(
-            all(term in reference.rsplit("::", 1)[-1].lower() for term in required_terms)
-            for reference in entrypoint["test_references"]
-        ):
-            errors.append(
-                f"entrypoint {family!r} needs a behavior-specific test reference containing {required_terms!r}"
+        errors.extend(
+            f"entrypoint {family!r} needs a behavior-specific test reference containing {required_terms!r}"
+            for required_terms in BEHAVIOR_SPECIFIC_REFERENCE_TERMS.get(family, ())
+            if not any(
+                all(term in reference.rsplit("::", 1)[-1].lower() for term in required_terms)
+                for reference in entrypoint["test_references"]
             )
+        )
 
     missing_families = REQUIRED_FAMILIES - seen
     unexpected_families = seen - REQUIRED_FAMILIES
@@ -170,6 +285,7 @@ def validate_matrix(matrix_path: Path = DEFAULT_MATRIX) -> list[str]:
         errors.append(f"matrix is missing required families {sorted(missing_families)}")
     if unexpected_families:
         errors.append(f"matrix has unclassified families {sorted(unexpected_families)}")
+    errors.extend(_validate_share_families(matrix.get("entrypoints", []), resolver_source))
     return errors
 
 

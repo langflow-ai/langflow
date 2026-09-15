@@ -25,6 +25,30 @@ def test_default_scrub_still_nulls_variable_references() -> None:
     assert _template(flow_data)["api_key"]["value"] == "OPENAI_API_KEY"
 
 
+def test_scrub_preserves_only_valid_connection_references() -> None:
+    flow_data = _flow_data(
+        {
+            "valid": {
+                "name": "valid",
+                "type": "connection_ref",
+                "password": True,
+                "value": "google_workspace/work",
+            },
+            "invalid": {
+                "name": "invalid",
+                "type": "connection_ref",
+                "password": True,
+                "value": "not a handle",
+            },
+        }
+    )
+
+    stripped = strip_secret_field_values(flow_data)
+
+    assert _template(stripped)["valid"]["value"] == "google_workspace/work"
+    assert _template(stripped)["invalid"]["value"] is None
+
+
 def test_preserving_scrub_keeps_and_collects_variable_references() -> None:
     flow_data = _flow_data(
         {

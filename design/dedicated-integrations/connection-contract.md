@@ -5,7 +5,7 @@ Decision ID: connection-contract
 Applies to: INT-2 (lfx), with the langflow-base obligations INT-4 and INT-5 must meet and the Enterprise seams
 Owners (sign-off roles): lfx owner, langflow-base owner, Enterprise owner, frontend owner
 Last verified: 2026-09-01
-Last amended: 2026-09-03 (INT-2 implementation review)
+Last amended: 2026-09-11 (resolver authorization and credential diagnostics review; connection persistence implementation review; connection status, opt-in updates and instance ownership)
 
 This document is the INT-2 design that the discovery gate asks the lfx, langflow-base, and Enterprise owners to sign
 off before INT-2 is built. Each section states the recommended decision, why, and what was rejected. Section 12
@@ -78,8 +78,8 @@ authorization.
   account identity is ever stored in flow JSON.
 - `required_connections`: the deployment artifact manifest adds `required_connections: [{provider, name, scopes}]`
   per flow and aggregated, beside `required_variables`
-  (`src/backend/base/langflow/services/deployment_artifacts/builder.py:347`); scopes come from the input's declared
-  `required_scopes`. The manifest `schema_version` bump is an INT-4 decision.
+  (`src/backend/base/langflow/services/deployment_artifacts/builder.py`); scopes come from the input's declared
+  `required_scopes`. Artifacts with connection requirements use manifest `schema_version: 4`.
 
 Rejected: an opaque connection UUID (does not survive export or `lfx run`, and the UI needs a lookup to display it);
 a `SecretStrInput` subclass with a synthetic variable name (password rendering, `load_from_db=True` from
@@ -124,6 +124,20 @@ string is simpler for tweaks, env, and manifest sorting; the dict is the parsed 
   is a frozen dataclass `{ref, principal: ExecutionPrincipal, required_scopes: frozenset[str], component_id,
   flow_id, run_id}`; optional `async def describe(self, ref, principal) -> ConnectionStatus | None` for pickers and
   health (default `None`).
+- `resolve()` is the base-owned, final entry point; subclass creation rejects direct or inherited overrides.
+  Hosts implement two abstract hooks: `_get_access_policy(request) -> ConnectionAccessPolicy` and
+  `_resolve(request, policy) -> ResolvedCredential`. The first loads only non-secret ownership/opt-in metadata
+  and any host-verified share decision. The base rejects unknown/anonymous principals before that lookup and
+  applies the complete portable deny floor before the credential hook can decrypt or refresh anything.
+  Overriding `authorize_principal()` cannot weaken this path. The base also checks required scope coverage
+  before returning a credential. These runtime checks apply to the persistent, OAuth and Enterprise resolvers;
+  they do not depend on each implementation remembering a helper or a route-matrix entry.
+  Existing unreleased host resolvers must move their credential logic from `resolve` into `_resolve` and add
+  the policy hook. `ConnectionAccessPolicy` is immutable, strictly validated host data: `owner_kind`,
+  `connection_owner_id`, optional `connection_id`, `allow_non_interactive=False` and
+  `explicit_share_authorized=False`. Hosts must resolve the same connection that was authorized, and guard
+  against ownership/policy changes between the metadata lookup and secret access. Host Python code remains
+  trusted; this contract prevents omitted checks, not malicious plugins or forged host metadata.
 - The member is added to `src/lfx/src/lfx/services/schema.py` and
   `src/backend/base/langflow/services/schema.py`. `deps.get_connection_resolver()` follows the
   `get_checkpoint_service()` pattern (`src/lfx/src/lfx/services/deps.py:204`): registered service, else the built-in
@@ -141,6 +155,18 @@ string is simpler for tweaks, env, and manifest sorting; the dict is the parsed 
   `supports_cross_user_fetch()` is true, matching `get_flow_by_id_or_endpoint_name(widen_for_shares=True)`
   (`helpers/flow.py:580-611`). A `user` owner kind without an owner id fails closed; host implementations must not
   treat missing ownership metadata as an implicit match.
+
+  `authorize_principal` accepts the optional keyword `explicit_share_authorized=False`.
+  A host may set it only after authorizing `connection:execute` for an actor on a route
+  family that permits shares. It satisfies only an owner-id mismatch; unknown/anonymous
+  principals, missing actor or owner metadata, environment restrictions and non-interactive
+  opt-in still apply. The decision must never be accepted from flow JSON or component inputs.
+
+  Discovery currently runs lazily on the first non-settings service lookup. A broken
+  configured resolver aborts discovery and subsequent lookups continue to fail closed;
+  the environment fallback is never selected. Hosts that require failure before accepting
+  requests must invoke `ServiceManager.discover_plugins()` during startup. A separate
+  fallback cache permits later host registration and is disposed with the service manager.
 
 Rejected: piggybacking on `VARIABLE_SERVICE` (string-only; the DB variant has no share semantics; a variable named
 `LF_CONNECTION__X` could impersonate a connection in DB mode); a callable in `graph.context` (not picklable, copied
@@ -170,32 +196,47 @@ defense in depth and pre-flight in interactive routes for UX.**
 |---|---|---|---|
 | interactive_chat, v1_run, openai_responses, voice, workflow_v2 | actor_or_explicit_share | owner or explicit share | per policy |
 | legacy_mcp | actor | owner only (no shares) | per policy |
-| mcp_projects | actor | owner only; project auth `none` runs as the owner non-interactively, so it requires the per-connection opt-in | per policy |
+| mcp_projects | actor; project auth `none` executes as anonymous_public | owner only (no shares); an auth `none` call runs anonymously and non-interactively, so it resolves no user connection, opt-in or not | per policy; auth `none` is denied like anonymous_public |
 | webhook | flow_owner | only with per-connection `allow_non_interactive` | per policy |
 | deployments | deployment_owner | only with per-connection `allow_non_interactive` | per policy |
 | workflow_hitl_v2 | job_owner | as the job owner who started it; re-resolved on the worker, never persisted | per policy |
-| legacy_public_chat, a2a (anonymous), workflow_public_v2 | anonymous_public | never | deny by default; Enterprise policy may allow flagged instance connections |
+| legacy_public_chat, a2a (anonymous), workflow_public_v2 | anonymous_public | never | hard deny in 1.13, no override (INT-6; `decisions/instance-connection-referenceability.md`) |
 | a2a authenticated sub-path | actor | owner only | per policy |
+| lfx run, embedded, lfx serve | headless_operator | not applicable (no database) | environment- or request-provisioned only (section 5) |
 
-`allow_non_interactive` defaults to false and is connection-owner controlled through the API. INT-8 must expose
+`allow_non_interactive` defaults to false and is connection-owner controlled through the API:
+`PATCH /api/v1/connections/{connection_id}` changes it, and `display_name`, without touching the handle or the
+stored credential. Only the owner may enable it (a superuser, for an instance connection), because enabling widens
+which executions reach the owner's account. Anyone with connection `write` may disable it, so narrowing an exposure
+never costs a re-authorization. INT-8 must expose
 the persisted value, explanation, deliberate opt-in and disable control on the Connections page (B1), including
 values changed via API. Deployment and project MCP publication with auth `none` must show the acting identity
 and block when the table would deny resolution (B10). Enabling this flag cannot override tenant/host policy or
 the anonymous-public prohibition. Disabling it prevents subsequent resolutions; publication is not permanent
 authorization. Deferred webhook setup must adopt the same preflight when implemented.
-| lfx run, embedded, lfx serve | headless_operator | not applicable (no database) | environment- or request-provisioned only (section 5) |
+
+Instance connections are provisioned and changed only by superusers: create, `PATCH`, OAuth start, revoke and
+delete stay superuser-only when authorization is disabled and when a plugin would allow them. Their metadata,
+including `executing_identity.account`, is visible to every user who may resolve them, because that account is the
+acting identity their executions run as (B10). Until the referenceable flag in section 1 (question 12.b.1) exists,
+that is every authenticated user. Making instance metadata operator-only therefore also requires gating
+resolution; hiding the account from users who can still execute as it is not a boundary.
 
 ## 5. Headless implementations
 
 **Decision: one `EnvConnectionResolver` in lfx serves `lfx run`, embedded Python, and `lfx serve`, because the serve
 request scope is already a ContextVar the variable service reads.**
 
-- `lfx/services/connection/env_resolver.py`: `resolve()` computes `ref.env_key()` and calls
+- `lfx/services/connection/env_resolver.py`: `_get_access_policy()` supplies environment ownership;
+  `_resolve()` computes `ref.env_key()` and calls
   `get_variable_service().get_variable(key)`. That one call already implements request scope
   (`activate_request_variables` in `src/lfx/src/lfx/cli/common.py:447-449`, `LANGFLOW_REQUEST_VARIABLES` JSON via
   `runtime_variables.py`, the `x-langflow-global-var-*` alias), then `safe_getenv` with reserved names denied,
   skipped under `no_env_fallback`. No new ContextVar. If the owners want the ticket's two names,
   `RequestScopedConnectionResolver` is a trivial subclass (question 12.a.1).
+- `run_flow` activates its graph's request-variable and no-environment-fallback ContextVars for execution,
+  including human-input runs, then restores both in `finally`, matching serve execution. Supplied request
+  credentials therefore take precedence over ambient process credentials and cannot leak into later runs.
 - Trust boundary: in standalone lfx the request scope is the intended injection channel, not a bypass. There is no
   database, no user, and no connection-provisioning permission to enforce; the only principal is the serve caller,
   who is authenticated by the serve API key and already controls the flow's inputs. A caller can substitute only a
@@ -210,9 +251,21 @@ request scope is already a ContextVar the variable service reads.**
   `{"access_token", "token_type", "expires_at", "scopes", "account": {"id", "display", "tenant_id"}}`;
   `normalize_parsed_variables` (`request_scope.py:28`) already serializes nested JSON, so detection is "starts with
   `{`". Refresh is the injector's job (`refreshable=False`).
+- When an action declares any `required_scopes`, bare tokens and JSON without `scopes` fail with
+  `ScopeMissingError`, `details.scopes_verified=False`, and an instruction to supply scope metadata.
+  Verified but insufficient scopes fail with the same error code and `details.scopes_verified=True`.
+  Bare tokens remain supported for actions with no declared scopes. For headless injection, "verified" means
+  the operator supplied scope metadata; lfx does not introspect the token at the provider.
 - Failure: `ConnectionUnresolvedError` names the handle, the env key, and the JSON form, never a value. `lfx run`
   gains `validate_connection_refs_for_env` beside `validate_global_variables_for_env` so the run fails before
   execution under `--check-variables`. `lfx serve` surfaces the typed error through the normal component-error path.
+- Resolution errors expose a fixed `reason` in both the attribute and `details`, plus source-authored guidance:
+  `missing`, `env-fallback-disabled`, `malformed-json`, `long-lived-secret`, `unsupported-fields`,
+  `invalid-access-token`, `invalid-scopes`, `invalid-token-type`, `invalid-account`, `invalid-expiry`, or
+  `invalid-credential`. Long-lived-secret guidance names only the static forbidden field list; unsupported
+  field names and values are never echoed. Public parsing errors are raised outside the exception handler,
+  retaining neither the raw exception cause nor context. With `no_env_fallback`, runtime and CLI preflight
+  direct the operator to request-scoped injection or the host secret provider instead of setting process env.
 - Identity: the `serve_identity.py` label becomes `ExecutionPrincipal(kind="headless_operator", actor_label=...)`;
   the `run/_defaults.py` throwaway UUID maps to the same kind. The resolver treats both as instance-or-environment
   only.
@@ -277,6 +330,12 @@ construction.**
   nodes and policy changes after selection. Safe hints explain administrator policy or deployment availability
   without revealing hidden configuration. Recognized provider admin-approval/tenant-denial outcomes are normalized
   by INT-5 and rendered by B12; an ambiguous provider denial must not be presented as confirmed admin approval.
+- The database resolver raises `connection-unresolved` with reason `credential-undecryptable` when a stored
+  credential exists but does not decrypt or decode with the server's current key, and reason `missing` only when
+  none is stored; `describe()` reports the former as `unavailable`, never `missing`. Health checks persist the same
+  distinction as `status: error` with `status_reason` `credential-undecryptable` or `credential-missing`
+  (`status_reason` is null for every other status), so a secret-key change reads as one infrastructure cause rather
+  than N unconfigured connections. For `credential-undecryptable` the call to action is reconnect, not connect.
 
 Rejected: plain `ValueError` strings (the current `OAuthConnectorBase` style, not machine-readable); reusing
 `lfx.services.auth.exceptions.TokenExpiredError` (it means the Langflow session JWT); reusing the `ExtensionError`
@@ -284,8 +343,8 @@ dataclass (not an `Exception`; loader-specific code namespace).
 
 ## 8. Capability metadata types shared with INT-3
 
-**Decision: frozen Pydantic models in `lfx/integrations/capabilities.py`; reserve `ExtensionManifest.integrations`
-now.**
+**Decision: frozen Pydantic models in `lfx/integrations/capabilities.py`; `ExtensionManifest.integrations`
+references bundle-owned, versioned capability manifests.**
 
 - `IntegrationProvider{provider_id, display_name, icon, auth_profiles: tuple[OAuthProfile, ...], capabilities,
   docs_url}`. A provider may expose more than one named profile; Slack has `slack-user-oauth` and
@@ -298,15 +357,25 @@ now.**
   `oauth_client_type_by_context`; profiles may omit an unsupported context. This represents both Tauri public-client
   loopback and Microsoft's `{tenant}` authority without pretending one provider-wide auth object fits every action.
 - `IntegrationCapability{id, display_name, auth_profile_id, identity, required_scopes, conditional_scopes,
-  risk: read | write | destructive, component_ref, mcp_tool}`. `ConditionalScopeRequirement{scope, role,
+  policy_keys, substrate: sdk | rest | mcp, maturity: ga | preview | developer_preview | beta | deprecated,
+  deployment_contexts, risk: read | write | destructive, component_ref, mcp_tool}`.
+  `ConditionalScopeRequirement{scope, role,
   condition}` preserves `optional` versus `alternative`; `ScopeCondition{kind: input_present | input_truthy,
   input}` is evaluated against the action's declared input schema. The matrix checker rejects a condition that
-  names a missing input. `ScopeSet.covers(capability, inputs, granted) -> missing` first activates conditional
-  requirements, then performs provider-aware normalization (Google URL scopes, Graph short names, Slack bot versus
-  user scopes). The picker and resolver therefore apply the same executable rule instead of interpreting prose.
+  names a missing input. `ScopeSet.covers(capability, inputs, granted, provider=...) -> missing` first activates
+  conditional requirements, then calls `ScopeSet.missing(provider=..., required=..., granted=...)` for the same
+  normalization used by the resolver. Google URL scopes (provider ids `google` and `google_workspace`) and Graph
+  short names are normalized. Slack bot/user identity remains a separate auth-profile check; their scope names
+  are never treated as interchangeable. The provider is explicit because capability ids need not be qualified.
 - Capability ids are the matrices' `action_id` values. `required` rows become `required_scopes`; `optional` and
   `alternative` rows become `conditional_scopes` without losing their role or predicate. The capability's
   `auth_profile_id` and `identity` must match the selected connection before scope coverage is evaluated.
+- `ExtensionManifest.integrations: tuple[IntegrationManifestRef, ...] = ()`, where each reference declares
+  `{provider_id, bundle, path}` and `path` is relative to the named bundle. The referenced
+  `IntegrationCapabilityManifest` extends `IntegrationProvider` with `schema_version: Literal[1]`. Validation
+  rejects missing, malformed, provider-mismatched, or bundle-escaping files; the loader exposes successful records
+  through `LoadResult.integrations` as `LoadedIntegration` values and retains them in the process-wide
+  `BundleRegistry` for discovery and policy consumers.
 - INT-3 must expose the selected capability's executing identity and bundle-authored consent rationale/reach to
   the builder. INT-8 presents them in action selection, node state and pre-consent review (A4/B2/B5), separately
   from the connected account. Provider classification and content-read reach are independent; scope-risk decisions
@@ -316,8 +385,6 @@ now.**
   fail execution explicitly, and never silently substitute a provider/action or expand scopes. The proposed
   Option C portability requirements and owner sign-offs are in `cross-provider-capabilities.md`; Option C remains
   deferred, not an additional 1.13 action set.
-- `ExtensionManifest.integrations: tuple[IntegrationProvider, ...] = ()` is added as an optional field (additive;
-  `manifest.py` is in the changelog gate); loader wiring is INT-3.
 
 Rejected: reusing `ProviderManifestEntry` (model-provider registry semantics would route integrations into
 model-provider policy); JSON-schema only (the resolver and the picker need the same scope math in Python).
@@ -376,6 +443,20 @@ identifiers.**
   `src/backend/tests/unit/api/v1/test_execution_principal_contract.py`; the `error_details_for_client`
   `IntegrationError` branch under all three policies.
 
+  AMENDED by INT-6 (LE-2464), 2026-09-05. Only the `authz_endpoint_matrix.json` `connections` family arrived with
+  INT-4/INT-5. INT-6 delivered the rest: the matrix `connection_resolution` dimension (plus a
+  `connection_resolution_note` and a `dependency_principal` consistency rule in
+  `check_execution_principal_matrix.py`), the `error_details_for_client` / `error_for_client` `IntegrationError`
+  branch, and per-family allow/deny coverage in
+  `src/backend/tests/unit/api/v1/test_connection_resolution_families.py` rather than by growing
+  `test_execution_principal_contract.py`, which is an admission-contract file.
+
+  Two further items this section did not anticipate, also built in INT-6 because nothing resolves without them:
+  the stamping itself (`src/backend/base/langflow/api/utils/execution_principal.py` and the route wiring — the
+  section-4 bullet above lists only the builders, and `serve_app.py`/`run/base.py` never touched
+  `execution_principal`; lfx stays on the `apply_run_defaults` stamp), and the precedence fix that stops
+  `apply_run_defaults` overwriting a host-stamped principal with the headless operator on the warm-graph path.
+
 ## 12. Open questions by sign-off owner
 
 ### a. lfx owner
@@ -396,12 +477,13 @@ identifiers.**
 
 1. Handle-only versus handle plus owner kind, and the default user-to-instance fallback policy.
 2. Connection as a new share resource type for explicit shares.
-3. Per-connection `allow_non_interactive` semantics, including `mcp_projects` with auth `none`.
+3. Per-connection `allow_non_interactive` semantics. (`mcp_projects` with auth `none` is settled: the call
+   executes anonymously and resolves no user connection, so the opt-in does not apply to it.)
 4. Cross-worker single-flight refresh: a DB lease column versus a Redis lock; the `background_execution`
    lease-claim code is the precedent.
-5. Encryption envelope: extend the `sso_secret.py` HKDF scheme with a new info label, or the Fernet
-   `encrypt_api_key` path used by MCP and variables.
-6. Artifact manifest schema version for `required_connections`.
+5. Encryption envelope decision: use the existing Fernet `encrypt_api_key` path used by MCP and variables, and
+   isolate the encrypted envelope in `connection_secret` so metadata queries never load credential material.
+6. Artifact manifest schema decision: use version 4 when `required_connections` is non-empty.
 7. Desktop: the same `GET /api/v1/connections/{provider}/callback` on `localhost:7860` with a PKCE public client
    that is Langflow-owned by default and customer-owned as the override (`decisions/desktop-oauth-ownership.md`),
    and the redirect allowlist (`127.0.0.1` loopback; Microsoft ignores the port when matching localhost redirects).
@@ -432,3 +514,17 @@ identifiers.**
 | langflow-base owner | | | |
 | Enterprise owner | | | |
 | frontend owner | | | |
+
+
+## OAuth broker implementation
+
+The backend broker and operator runbooks are documented in
+`docs/docs/Develop/connection-oauth.mdx`. Consent uses hashed one-time state, an encrypted
+PKCE verifier, browser binding, and a durable connection generation. The database lock is
+a transaction-scoped no-op update: PostgreSQL takes a row lock and SQLite reserves the
+writer. The worker re-reads encrypted credentials under that lock before deciding whether
+to exchange, and revoke/delete use the same lock.
+
+`ConnectionResolutionRequest.rejected_token_digest` is optional, non-secret, and excluded
+from repr. A lease supplies it only after an authentication error so concurrent workers
+reuse a token already replaced by another worker rather than rotating again.

@@ -17,6 +17,7 @@ from langflow.api.v1 import (
     authz_teams_router,
     catalog_policy_router,
     chat_router,
+    connections_router,
     endpoints_router,
     extensions_router,
     files_router,
@@ -24,6 +25,7 @@ from langflow.api.v1 import (
     flow_version_router,
     flows_router,
     folders_router,
+    integrations_router,
     knowledge_bases_router,
     login_router,
     mcp_projects_router,
@@ -69,6 +71,8 @@ def include_deployment_router(target_router: APIRouter) -> None:
 
 
 router_v1.include_router(chat_router)
+router_v1.include_router(connections_router)
+router_v1.include_router(integrations_router)
 router_v1.include_router(endpoints_router)
 router_v1.include_router(validate_router)
 router_v1.include_router(store_router)

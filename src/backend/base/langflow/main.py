@@ -16,6 +16,7 @@ import anyio
 import httpx
 import sqlalchemy
 from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi_pagination import add_pagination
@@ -32,11 +33,13 @@ from lfx.observability import (
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.middleware.gzip import DEFAULT_EXCLUDED_CONTENT_TYPES, GZipMiddleware
 
 from langflow.api import log_router
 from langflow.api.health_check_router import health_check_router
 from langflow.api.router import router
 from langflow.api.v1.mcp_projects import init_mcp_servers
+from langflow.api.validation_errors import request_validation_exception_handler
 from langflow.api.warm_graph import is_warm_registry_enabled
 from langflow.cli.preflight import PreflightAbortError, ensure_production_preflight
 from langflow.initial_setup.setup import (
@@ -77,6 +80,18 @@ warnings.filterwarnings("ignore", category=ResourceWarning, message=".*MemoryObj
 _tasks: list[asyncio.Task] = []
 
 MAX_PORT = 65535
+GZIP_MINIMUM_SIZE = 1000
+GZIP_COMPRESS_LEVEL = 6
+# application/x-ndjson is deliberately absent: build event streams compress 78-99% and,
+# being streamed, bypass GZIP_MINIMUM_SIZE entirely.
+GZIP_ALREADY_COMPRESSED_CONTENT_TYPES = (
+    "application/octet-stream",
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+)
+GZIP_EXCLUDED_CONTENT_TYPES = (*DEFAULT_EXCLUDED_CONTENT_TYPES, *GZIP_ALREADY_COMPRESSED_CONTENT_TYPES)
 
 # Enterprise lifespan hook registry. Enterprise plugins append async callables
 # at app-construction time (plugin registration runs before the lifespan
@@ -867,6 +882,14 @@ def create_app():
         lifespan=lifespan,
         root_path=settings.root_path,
     )
+    # Registered first so it sits innermost: the BaseHTTPMiddleware layers above turn every
+    # response into a stream, and a streamed response carries no Content-Length to test.
+    app.add_middleware(
+        GZipMiddleware,
+        minimum_size=GZIP_MINIMUM_SIZE,
+        compresslevel=GZIP_COMPRESS_LEVEL,
+        exclude_content_types=GZIP_EXCLUDED_CONTENT_TYPES,
+    )
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
@@ -1036,6 +1059,10 @@ def create_app():
 
     # Discover and register additional routers from plugins (langflow.plugins entry-point)
     load_plugin_routes(app)
+
+    # Replaces FastAPI's default 422 handler, which echoes each submitted value
+    # (credentials included) back in the error body.
+    app.add_exception_handler(RequestValidationError, request_validation_exception_handler)
 
     @app.exception_handler(DeploymentGuardError)
     async def deployment_guard_exception_handler(_request: Request, exc: DeploymentGuardError):
