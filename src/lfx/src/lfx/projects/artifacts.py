@@ -22,6 +22,7 @@ if TYPE_CHECKING:
     from lfx.services.storage.service import StorageService
 
 _CITATION = re.compile(r"\[@([^\]\r\n]*)\]")
+SOURCE_EVIDENCE_KIND = "lfx.source_evidence"
 
 
 class SourceRecord(BaseModel):
@@ -87,6 +88,40 @@ class CitationResolution(BaseModel):
     status: Literal["resolved", "unavailable", "missing"]
 
 
+class SourceUse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    source_id: str
+    tool_call_id: str = Field(min_length=1)
+    tool_name: str | None = None
+
+
+class CollectedEvidence(BaseModel):
+    """Evidence retained in agent state independently of compacted messages."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    sources: tuple[SourceRecord, ...] = ()
+    uses: tuple[SourceUse, ...] = ()
+
+    @model_validator(mode="after")
+    def validate_references(self) -> CollectedEvidence:
+        ids = {source.id for source in self.sources}
+        if any(use.source_id not in ids for use in self.uses):
+            msg = "Source use refers to missing captured evidence."
+            raise ValueError(msg)
+        return self
+
+
+class AgentRunResult(BaseModel):
+    """The final answer and its evidence, separate from the streamed conversation."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    answer: str
+    evidence: CollectedEvidence
+
+
 class SourcedReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -96,6 +131,7 @@ class SourcedReport(BaseModel):
     markdown: str = Field(min_length=1)
     execution: ArtifactExecution
     sources: tuple[SourceRecord, ...] = ()
+    source_uses: tuple[SourceUse, ...] = ()
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     claim_support: Literal["not_evaluated"] = "not_evaluated"
 
@@ -108,6 +144,7 @@ class SourcedReport(BaseModel):
                 seen.add(source.id)
                 sources.append(source)
         object.__setattr__(self, "sources", tuple(sources))
+        CollectedEvidence(sources=self.sources, uses=self.source_uses)
         return self
 
     @property

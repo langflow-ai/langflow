@@ -1,6 +1,6 @@
 from lfx.custom import Component
 from lfx.io import BoolInput, MessageTextInput, Output, StrInput
-from lfx.projects.artifacts import SourceRecord
+from lfx.projects.artifacts import SOURCE_EVIDENCE_KIND, SourceRecord
 from lfx.schema.data import Data
 
 
@@ -35,6 +35,7 @@ class RecordSourceComponent(Component):
         )
         result = Data(
             data={
+                "kind": SOURCE_EVIDENCE_KIND,
                 "source": source.model_dump(mode="json"),
                 "text": (
                     f"Citation: [@{source.id}]\nTitle: {source.title}\nSource: {source.uri}\n\n"
