@@ -158,6 +158,8 @@ async def create_trigger(
         row = await service.create(session, payload=payload, owner_id=flow.user_id)
     except FlowVersionNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
     return TriggerRead.model_validate(row)
 
 
@@ -203,6 +205,8 @@ async def update_trigger(
         updated = await service.update(session, row=row, payload=payload)
     except FlowVersionNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
     _reject_unsupported_binding(TriggerBindingTarget(updated.binding_target), updated.deployment_id)
     return TriggerRead.model_validate(updated)
 
@@ -275,6 +279,8 @@ async def pin_trigger(
         updated = await service.pin(session, row=row, flow_version_id=payload.flow_version_id)
     except FlowVersionNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_CONTENT, detail=str(exc)) from exc
     return TriggerRead.model_validate(updated)
 
 

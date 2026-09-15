@@ -16,7 +16,7 @@ pytestmark = pytest.mark.no_blockbuster
 
 
 @pytest.mark.parametrize("method", ["create", "patch", "pin"])
-@pytest.mark.parametrize("version_kind", ["foreign", "missing"])
+@pytest.mark.parametrize("version_kind", ["foreign", "missing", "empty"])
 async def test_all_pin_writes_require_a_version_of_the_same_flow(client, logged_in_headers, flow, method, version_kind):
     version_id = uuid4()
     if version_kind == "foreign":
@@ -28,6 +28,12 @@ async def test_all_pin_writes_require_a_version_of_the_same_flow(client, logged_
             session.add(other_flow)
             await session.flush()
             version = FlowVersion(flow_id=other_flow.id, user_id=other.id, version_number=1, data={"nodes": []})
+            session.add(version)
+            await session.flush()
+            version_id = version.id
+    elif version_kind == "empty":
+        async with session_scope() as session:
+            version = FlowVersion(flow_id=flow.id, user_id=flow.user_id, version_number=1, data=None)
             session.add(version)
             await session.flush()
             version_id = version.id
@@ -48,7 +54,7 @@ async def test_all_pin_writes_require_a_version_of_the_same_flow(client, logged_
         )
         stored = await client.get(url, headers=logged_in_headers)
         assert stored.json()["flow_version_id"] is None
-    assert response.status_code == 404, response.text
+    assert response.status_code == (422 if version_kind == "empty" else 404), response.text
 
 
 @pytest.mark.parametrize(
