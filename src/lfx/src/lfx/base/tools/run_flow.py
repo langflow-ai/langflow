@@ -376,6 +376,18 @@ class RunFlowBaseComponent(Component):
 
         return None
 
+    def __deepcopy__(self, memo: dict):
+        # The flow output methods are registered on the instance, and
+        # `Component.__deepcopy__` rebuilds the component instead of copying its
+        # `__dict__`, so a copy carries none of them. The tool wrapper copies the
+        # component per call and looks its output method up with a default, so a
+        # copy that has lost them silently falls back to this instance's own bound
+        # method and runs the flow against arguments the copy received and this
+        # instance never did. Rebuild them bound to the copy.
+        new_component = super().__deepcopy__(memo)
+        new_component._ensure_flow_output_methods()  # noqa: SLF001
+        return new_component
+
     def _clear_dynamic_flow_output_methods(self) -> None:
         for method_name in self._flow_output_methods:
             if hasattr(self, method_name):
