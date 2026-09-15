@@ -53,7 +53,7 @@ async def resolve_binding(session: AsyncSession, trigger: Trigger) -> ResolvedBi
         return ResolvedBinding(flow_id=trigger.flow_id, flow_version_id=None, data=None)
 
     version = await session.get(FlowVersion, trigger.flow_version_id)
-    if version is None or version.flow_id != trigger.flow_id:
+    if version is None or version.flow_id != trigger.flow_id or version.data is None:
         # A pin that no longer resolves must not silently degrade into "run the
         # current flow": the whole point of a pin is that the owner chose which
         # version runs.

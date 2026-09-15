@@ -57,7 +57,7 @@ async def test_one_event_becomes_exactly_one_job(make_trigger, fake_background_s
     assert row.lease_expires_at is None
 
     request = fake_background_service.submits[0]["request"]
-    assert request["idempotency_key"] == f"trg:{event_id}:0"
+    assert request["idempotency_key"] == f"trg:{event_id}"
     # The firing event rides tweaks, keyed by the trigger's canvas node, and it
     # is a JSON string because that is what the component's template field
     # holds. The fake service parsed this request through the real
@@ -68,7 +68,7 @@ async def test_one_event_becomes_exactly_one_job(make_trigger, fake_background_s
     assert event["payload"] == {"scheduled_at": "2026-09-07T08:00:00+00:00"}
     # A run request may not carry keys WorkflowRunRequest does not declare.
     assert "trigger_event" not in request
-    assert "execution_family" not in request
+    assert request["execution_family"] == "trigger_listener"
     # Nothing was pinned, so no canvas copy rides the job row.
     assert "data" not in request
 
@@ -179,9 +179,8 @@ async def test_a_dispatcher_killed_mid_claim_releases_the_lease_and_retries(
     await _make_due(event_id)
     assert await dispatcher.run_once(owner="survivor") == 1
     assert len(fake_background_service.submits) == 1
-    # The retry mints a NEW idempotency key, or the background service would
-    # hand back the dead attempt's job id and the event would never re-run.
-    assert fake_background_service.submits[0]["request"]["idempotency_key"] == f"trg:{event_id}:1"
+    # Submit retries retain the event's identity, even after a claim expires.
+    assert fake_background_service.submits[0]["request"]["idempotency_key"] == f"trg:{event_id}"
 
 
 async def test_a_dispatched_row_is_never_swept(make_trigger, fake_background_service) -> None:

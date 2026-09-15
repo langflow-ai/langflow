@@ -267,7 +267,9 @@
       "test_references": [
         "src/backend/tests/unit/services/triggers/test_execution_identity.py::test_trigger_principal_is_the_flow_owner_and_never_anonymous",
         "src/backend/tests/unit/services/triggers/test_execution_identity.py::test_trigger_tweaks_are_server_generated_and_never_caller_supplied"
-      ]
+      ],
+      "connection_resolution": "owner_non_interactive_opt_in",
+      "connection_resolution_note": "The stored flow owner runs non-interactively, including durable worker replay and resume; user connections require allow_non_interactive and explicit shares are not admitted."
     },
     {
       "family": "trigger_listener",
@@ -283,7 +285,9 @@
       "test_references": [
         "src/backend/tests/unit/services/triggers/test_execution_identity.py::test_trigger_on_a_connection_without_the_optin_fails_closed",
         "src/backend/tests/unit/services/triggers/test_execution_identity.py::test_trigger_on_a_connection_with_the_optin_is_authorized"
-      ]
+      ],
+      "connection_resolution": "owner_non_interactive_opt_in",
+      "connection_resolution_note": "The stored flow owner runs non-interactively, including durable worker replay and resume; user connections require allow_non_interactive and explicit shares are not admitted."
     }
   ]
 }

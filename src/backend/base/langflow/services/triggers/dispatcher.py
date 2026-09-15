@@ -11,10 +11,9 @@ Guarantees, and where each one lives:
 * **no event dropped when a dispatcher dies** — a claimed row carries a lease.
   Once the lease expires, :func:`sweep_expired_claims` returns it to ``pending``
   with ``attempt`` incremented, or dead-letters it at the attempt limit.
-* **no event doubled when a dispatcher dies after submitting** — the moment a
-  job exists the row moves to ``dispatched`` and the lease is dropped: liveness
-  for a running job belongs to the background execution service's own orphan
-  sweep, not to this loop.
+* **no event doubled when a dispatcher dies after submitting** — a stable job
+  primary key prevents duplicate inserts, and recovery attaches a committed job
+  before consuming another attempt. The background service owns job liveness.
 * **per-trigger concurrency** — claims are refused while a trigger already has
   ``concurrency_limit`` rows in flight.
 """
@@ -26,6 +25,7 @@ import contextlib
 import json
 from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
+from uuid import NAMESPACE_URL, uuid5
 
 from lfx.log.logger import logger
 from sqlmodel import col, func, select, update
@@ -100,11 +100,20 @@ async def _due_trigger_ids(session: AsyncSession, *, limit: int) -> list[UUID]:
     backlog drains. Choosing the triggers first and then taking each one's
     headroom is what makes the cap a cap rather than a queue head.
     """
+    in_flight = (
+        select(TriggerEvent.trigger_id, func.count().label("count"))
+        .where(col(TriggerEvent.state).in_(sorted(IN_FLIGHT_EVENT_STATES)))
+        .group_by(col(TriggerEvent.trigger_id))
+        .subquery()
+    )
     statement = (
         select(TriggerEvent.trigger_id)
+        .join(Trigger, Trigger.id == TriggerEvent.trigger_id)
+        .outerjoin(in_flight, in_flight.c.trigger_id == Trigger.id)
         .where(
             TriggerEvent.state == TriggerEventState.PENDING.value,
             col(TriggerEvent.available_at) <= _now(),
+            func.coalesce(in_flight.c.count, 0) < Trigger.concurrency_limit,
         )
         .group_by(col(TriggerEvent.trigger_id))
         .order_by(func.min(col(TriggerEvent.available_at)))
@@ -137,13 +146,16 @@ async def _candidate_ids(session: AsyncSession, *, trigger_id: UUID, limit: int)
     return list((await session.exec(statement)).all())
 
 
-async def _in_flight_counts(session: AsyncSession) -> dict[UUID, int]:
-    """How many rows each trigger currently has claimed or dispatched."""
-    statement = select(TriggerEvent.trigger_id).where(col(TriggerEvent.state).in_(sorted(IN_FLIGHT_EVENT_STATES)))
-    counts: dict[UUID, int] = {}
-    for trigger_id in (await session.exec(statement)).all():
-        counts[trigger_id] = counts.get(trigger_id, 0) + 1
-    return counts
+async def _lock_trigger(session: AsyncSession, trigger_id: UUID) -> Trigger | None:
+    """Serialize the capacity check with claims made by other replicas."""
+    statement = select(Trigger).where(Trigger.id == trigger_id)
+    if session.get_bind().dialect.name == "postgresql":
+        statement = statement.with_for_update(skip_locked=True)
+    else:
+        # SQLite has no row locks. Begin a write transaction before counting
+        # slots, otherwise a second claimant can use a stale capacity count.
+        await session.exec(update(Trigger).where(Trigger.id == trigger_id).values(updated_at=Trigger.updated_at))
+    return (await session.exec(statement.execution_options(populate_existing=True))).first()
 
 
 async def _claim_one(session: AsyncSession, *, event_id: UUID, owner: str, lease_ttl_s: float) -> bool:
@@ -172,16 +184,25 @@ async def claim_batch(session: AsyncSession, *, owner: str, limit: int, lease_tt
     trigger_ids = await _due_trigger_ids(session, limit=limit)
     if not trigger_ids:
         return []
-    in_flight = await _in_flight_counts(session)
     claimed: list[TriggerEvent] = []
     for trigger_id in trigger_ids:
         remaining = limit - len(claimed)
         if remaining <= 0:
             break
-        trigger = await session.get(Trigger, trigger_id)
+        trigger = await _lock_trigger(session, trigger_id)
         if trigger is None:  # pragma: no cover - FK cascade makes this unreachable
             continue
-        headroom = min(trigger.concurrency_limit - in_flight.get(trigger_id, 0), remaining)
+        in_flight = (
+            await session.exec(
+                select(func.count())
+                .select_from(TriggerEvent)
+                .where(
+                    TriggerEvent.trigger_id == trigger_id,
+                    col(TriggerEvent.state).in_(sorted(IN_FLIGHT_EVENT_STATES)),
+                )
+            )
+        ).one()
+        headroom = min(trigger.concurrency_limit - in_flight, remaining)
         if headroom <= 0:
             continue
         for event_id in await _candidate_ids(session, trigger_id=trigger_id, limit=headroom):
@@ -190,7 +211,6 @@ async def claim_batch(session: AsyncSession, *, owner: str, limit: int, lease_tt
                 continue
             if not await _claim_one(session, event_id=event_id, owner=owner, lease_ttl_s=lease_ttl_s):
                 continue
-            in_flight[trigger_id] = in_flight.get(trigger_id, 0) + 1
             await session.refresh(event)
             claimed.append(event)
     return claimed
@@ -271,6 +291,9 @@ async def sweep_expired_claims(session: AsyncSession, *, limit: int = 100) -> in
         if result.rowcount != 1:
             continue
         await session.refresh(event)
+        if trigger is not None and await _recover_submitted_job(session, trigger=trigger, event=event):
+            reclaimed += 1
+            continue
         await _schedule_retry(session, event=event, max_attempts=max_attempts, error="lease_expired")
         reclaimed += 1
     return reclaimed
@@ -287,15 +310,14 @@ async def reconcile_dispatched(session: AsyncSession, *, limit: int = 200) -> in
     terminal_success = {JobStatus.COMPLETED}
     terminal_failure = {JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.TIMED_OUT}
     statement = (
-        select(TriggerEvent)
+        select(TriggerEvent, Job)
+        .join(Job, Job.job_id == TriggerEvent.job_id)
         .where(TriggerEvent.state == TriggerEventState.DISPATCHED.value, col(TriggerEvent.job_id).is_not(None))
+        .where(col(Job.status).in_(terminal_success | terminal_failure))
         .limit(limit)
     )
     closed = 0
-    for event in (await session.exec(statement)).all():
-        job = await session.get(Job, event.job_id)
-        if job is None or job.status not in (terminal_success | terminal_failure):
-            continue
+    for event, job in (await session.exec(statement)).all():
         if job.status in terminal_success:
             await _terminalize(session, event=event, state=TriggerEventState.COMPLETED)
         else:
@@ -351,29 +373,23 @@ def build_submit_request(
     trigger: Trigger,
     event: TriggerEvent,
     binding_data: dict[str, Any] | None,
+    family: str = FAMILY_TRIGGER_LISTENER,
 ) -> dict[str, Any]:
     """The background-run request for one ledger row.
 
-    Every key here is a field ``WorkflowRunRequest`` declares. That model is
-    ``extra="forbid"`` and the worker re-parses this dict before it builds
-    anything (``_parse_persisted_workflow_request``), so an invented key is not
-    a harmless annotation — it fails the run after the job row is already
-    committed, and the event retries its way to a dead letter. Two things that
-    look like they belong on the body therefore do not:
+    The execution family is a trusted internal field, stripped before public
+    request validation and retained in durable storage so worker replay and
+    resume keep the unattended connection policy. Public workflow requests
+    cannot supply it.
 
-    * the **execution family** travels as an argument, not a field (see
-      ``EXECUTION_FAMILY_KWARG``);
-    * the **firing event** rides ``tweaks``, keyed by the trigger's canvas node
-      id, exactly as the Webhook component's payload does. ``tweaks`` survives
-      the durable round trip in the authenticated override envelope, so a
-      scaled-mode worker re-parsing the job row sees the same event.
+    The firing event rides ``tweaks``, keyed by the trigger's canvas node id.
+    The authenticated override envelope preserves it across worker restarts.
 
     An API-created trigger with no ``node_id`` names no node to feed, so it
     sends no tweak and a trigger component in that flow reads an empty event.
 
-    ``idempotency_key`` includes the attempt: the background execution service
-    dedupes on that key *including completed jobs*, so a retry that reused the
-    key would silently return the old job id and the event would never re-run.
+    Submit retries keep one idempotency key. A committed job owns execution,
+    including terminal failures; an explicit replay creates a different event.
 
     ``data`` carries a pinned version's canvas. It is the same override the v2
     route accepts from a flow writer; here it is server-generated from a version
@@ -390,11 +406,58 @@ def build_submit_request(
         "input_value": "",
         "session_id": derive_session_id(trigger, event),
         "tweaks": tweaks,
-        "idempotency_key": f"trg:{event.id}:{event.attempt}",
+        "idempotency_key": f"trg:{event.id}",
+        "execution_family": family,
     }
     if binding_data is not None:
         request["data"] = binding_data
     return request
+
+
+async def _record_dispatched(
+    session: AsyncSession, *, trigger: Trigger, event: TriggerEvent, job_id: UUID, session_id: str
+) -> None:
+    event.job_id = job_id
+    event.session_id = session_id
+    event.state = TriggerEventState.DISPATCHED.value
+    event.error = None
+    event.lease_owner = None
+    event.lease_expires_at = None
+    event.updated_at = _now()
+    trigger.last_fired_at = _now()
+    session.add_all([event, trigger])
+    await session.flush()
+
+
+async def _recover_submitted_job(session: AsyncSession, *, trigger: Trigger, event: TriggerEvent) -> bool:
+    """Attach a job committed before submit or ledger accounting was interrupted."""
+    from langflow.services.database.models.jobs.model import Job, JobType
+
+    job = (
+        await session.exec(
+            select(Job)
+            .where(
+                Job.flow_id == trigger.flow_id,
+                Job.user_id == trigger.user_id,
+                Job.type == JobType.WORKFLOW,
+                # Also recover claims made by the pre-fix dispatcher.
+                col(Job.dedupe_key).in_([f"trg:{event.id}", f"trg:{event.id}:{event.attempt}"]),
+            )
+            .order_by(col(Job.created_timestamp))
+            .limit(1)
+        )
+    ).first()
+    if job is None:
+        return False
+    request = (job.job_metadata or {}).get("request", {})
+    await _record_dispatched(
+        session,
+        trigger=trigger,
+        event=event,
+        job_id=job.job_id,
+        session_id=request.get("session_id") or derive_session_id(trigger, event),
+    )
+    return True
 
 
 async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: str = FAMILY_TRIGGER_LISTENER) -> None:
@@ -405,6 +468,9 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
     trigger = await session.get(Trigger, event.trigger_id)
     if trigger is None:  # pragma: no cover - FK cascade makes this unreachable
         await _terminalize(session, event=event, state=TriggerEventState.FAILED, error="trigger_missing")
+        return
+
+    if await _recover_submitted_job(session, trigger=trigger, event=event):
         return
 
     if trigger.state not in _DISPATCHABLE_TRIGGER_STATES:
@@ -436,7 +502,7 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
         )
         return
 
-    request = build_submit_request(trigger=trigger, event=event, binding_data=binding.data)
+    request = build_submit_request(trigger=trigger, event=event, binding_data=binding.data, family=family)
     session_id = request["session_id"]
     try:
         _ensure_frame_source()
@@ -444,27 +510,20 @@ async def dispatch_event(session: AsyncSession, event: TriggerEvent, *, family: 
             flow_id=trigger.flow_id,
             request=request,
             user=UserRead.model_construct(id=trigger.user_id),
+            # A primary-key constraint prevents two expired-lease holders from
+            # inserting separate jobs even when their dedupe lookups race.
+            job_id=uuid5(NAMESPACE_URL, f"langflow:trigger-event:{event.id}"),
         )
     except Exception as exc:  # noqa: BLE001 — every submit failure is retryable work, not a crash
+        if await _recover_submitted_job(session, trigger=trigger, event=event):
+            return
         await logger.awarning("Trigger %s failed to submit event %s: %s", trigger.id, event.id, type(exc).__name__)
         await _schedule_retry(
             session, event=event, max_attempts=trigger.max_attempts, error=f"submit_failed:{type(exc).__name__}"
         )
         return
 
-    event.job_id = job_id
-    event.session_id = session_id
-    event.state = TriggerEventState.DISPATCHED.value
-    event.error = None
-    # The job now owns liveness; keeping a lease here would let the sweep
-    # re-dispatch a run that is already going.
-    event.lease_owner = None
-    event.lease_expires_at = None
-    event.updated_at = _now()
-    session.add(event)
-    trigger.last_fired_at = _now()
-    session.add(trigger)
-    await session.flush()
+    await _record_dispatched(session, trigger=trigger, event=event, job_id=job_id, session_id=session_id)
 
 
 async def run_once(*, owner: str) -> int:
@@ -485,7 +544,7 @@ async def run_once(*, owner: str) -> int:
         # the whole batch's accounting.
         async with session_scope() as session:
             fresh = await session.get(TriggerEvent, event.id)
-            if fresh is None or fresh.state != TriggerEventState.CLAIMED.value:
+            if fresh is None or fresh.state != TriggerEventState.CLAIMED.value or fresh.lease_owner != owner:
                 continue
             await dispatch_event(session, fresh)
             if fresh.state == TriggerEventState.DISPATCHED.value:

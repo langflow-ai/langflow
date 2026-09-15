@@ -93,7 +93,7 @@ class FakeBackgroundExecutionService:
         self.fail_times = fail_times
         self._frame_source_factory = object()  # already installed; do not touch v2 routes
 
-    async def submit(self, *, flow_id, request, user):
+    async def submit(self, *, flow_id, request, user, job_id=None):
         from langflow.api.v2.workflow import _parse_persisted_workflow_request
 
         # Raises for any key WorkflowRunRequest does not declare, exactly as the
@@ -104,7 +104,7 @@ class FakeBackgroundExecutionService:
             msg = "submit exploded"
             raise RuntimeError(msg)
         self.submits.append({"flow_id": flow_id, "request": request, "user_id": user.id})
-        return uuid4()
+        return job_id or uuid4()
 
 
 @pytest.fixture
