@@ -194,6 +194,9 @@ class TriggerService(Service):
         if version is None or version.flow_id != flow_id:
             msg = "Flow version not found for this trigger's flow."
             raise FlowVersionNotFoundError(msg)
+        if version.data is None:
+            msg = "A trigger cannot pin a flow version without flow data."
+            raise ValueError(msg)
 
     async def record_error(self, session: AsyncSession, *, row: Trigger, message: str) -> Trigger:
         row.last_error = message
