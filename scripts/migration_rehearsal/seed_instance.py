@@ -63,12 +63,14 @@ async def main() -> None:
     await initialize_database()
 
     import sqlalchemy as sa
-    from langflow.services.auth.utils import encrypt_api_key
+    from langflow.services.auth.utils import encrypt_api_key, get_password_hash
     from langflow.services.database.models.auth.sso_secret import encrypt_sso_client_secret
     from langflow.services.deps import get_settings_service, session_scope
     from sqlalchemy import bindparam, text
 
     enc = encrypt_api_key
+
+    password_hash = get_password_hash("fixture-password")  # pragma: allowlist secret
 
     async with session_scope() as s:
         already = (
@@ -97,7 +99,9 @@ async def main() -> None:
                 " values (:i,:n,:p,:a,:s,:c,:c)",
                 i=u,
                 n=name,
-                p="x",
+                # A real hash: Langflow's startup verifies the default superuser's
+                # password, and a non-hash value crashes it.
+                p=password_hash,
                 a=True,
                 s=su,
                 c=NOW,
