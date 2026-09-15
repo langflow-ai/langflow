@@ -19,8 +19,8 @@ cannot express:
   mechanism names an ``outbound_only`` ``fallback_mechanism`` that also supports
   that context;
 * **an outbound-only answer per provider** - every provider ships at least one
-  wave-1 mechanism that needs no public ingress, so a self-managed instance
-  behind a firewall has a documented answer (exit criterion 4).
+  wave-1 mechanism that supports self-managed deployments with no public ingress,
+  so an instance behind a firewall has a documented answer (exit criterion 4).
 
 This module is deliberately standalone: ``check_capability_matrices`` imports it
 for the ``--design-root`` gate profile, so it must not import back.
@@ -296,6 +296,11 @@ def _validate_no_ingress_rule(matrix: dict[str, Any], errors: list[str]) -> None
         errors.append(
             "no wave-1 mechanism runs outbound-only; a self-managed instance without public ingress has no answer"
         )
+    elif not any(
+        isinstance(mechanism.get("deployment_contexts"), list) and "self_managed" in mechanism["deployment_contexts"]
+        for mechanism in outbound_wave_1
+    ):
+        errors.append("no wave-1 outbound-only mechanism supports 'self_managed'; a no-ingress instance has no answer")
     for mechanism in by_id.values():
         label = f"{matrix.get('provider')}:{mechanism.get('mechanism_id')}"
         if mechanism.get("ingress_requirement") != "public_https":

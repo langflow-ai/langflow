@@ -121,7 +121,7 @@ readiness (database probe, leases held, no renew failure within the last TTL).
   or
 - Celery becomes a supported OSS execution backend, which would give listeners a supervisor that already exists.
 
-Re-verify by: the 1.14 planning gate.
+Re-verify by: the 1.13 release sign-off.
 
 ## Sign-off
 

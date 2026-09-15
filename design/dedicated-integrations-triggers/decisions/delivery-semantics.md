@@ -1,19 +1,44 @@
 # Delivery semantics for triggered runs
 
-Status: accepted
+Status: proposed
 Decision ID: delivery-semantics
 Applies to: the `trigger_event` ledger and the dispatcher (TRG-2); every `delivery`, `replay` and `dedupe_key` block in `matrices/*-events.json`
 Owners (sign-off roles): platform owner, langflow-base owner, release owner
-Last verified: 2026-09-05
+Last verified: 2026-09-15 (criterion 5 reopened after delivery review)
 
 ## Context
 
-TRG-1 exit criterion 5. Every wave-1 mechanism is at-least-once at the provider (Slack retries three times, Graph
-retries for about four hours and may duplicate and reorder, Pub/Sub is at-least-once and unordered, and every Track B
-recovery path replays a window). A flow run is not idempotent: it posts messages, writes files, and bills tokens. The
-gate therefore has to decide once, for every provider, where duplicates are collapsed, how long an event stays
+TRG-1 exit criterion 5. Provider delivery can duplicate or lose notifications: retries are bounded, and Calendar
+explicitly documents dropped notifications even during normal operation. Pub/Sub's at-least-once transport does
+not make every upstream Gmail change recoverable. A flow run is not idempotent: it posts messages, writes files,
+and bills tokens. The gate therefore has to decide once, for every provider, where duplicates are collapsed, how long an event stays
 replayable, what happens to an event that never succeeds, whether ordering is promised, and what backpressure the run
 path applies - before TRG-2 writes the ledger and before TRG-4 and TRG-5 write their ack paths.
+
+**Reopened 2026-09-15.** The ledger index alone cannot provide the previously claimed one-run guarantee. The
+platform and langflow-base owners must resolve the following before criterion 5 closes; the lfx owner must review
+the resulting dispatch contract under criterion 6. The 2026-09-05 signature records the earlier baseline only.
+
+- **Durable intake before normalization.** Calendar notifications contain no changed-event identity, and a Gmail
+  history watermark can expand into several changes. The current matrices defer the provider read until a job,
+  but require a normalized change key before inserting the row that starts that job. Specify durable storage for
+  the notification before acknowledgement, the worker that expands it into canonical events, and atomic cursor
+  advancement after every page's events are persisted. Decide the storage shape and include it in the migration
+  and estimate. A notification key and a canonical change key serve different purposes.
+- **A recoverable dispatch handoff.** A worker can submit a job and die before saving `trigger_event.job_id`.
+  Lease expiry then permits another submission of the same ledger row. Specify a durable event-to-job identity
+  and recovery protocol, including a job that finishes or is purged before recovery. Exercise crash points around
+  submission and recording the result. The event index and a singleton lease do not make those writes atomic.
+- **Bounded recovery and retention.** Select periodic reconciliation for lossy push sources, including hosted
+  deployments. A full list after cursor expiry is a current snapshot, not an archive of every past change.
+  Purging dedupe rows at 30 days also permits old unchanged items to run again during a full resync. Define
+  re-baselining or longer-lived dedupe state, deletion handling, and the recovery limits the UI reports.
+
+Provider evidence: [Calendar notification payloads and reliability](https://developers.google.com/workspace/calendar/api/guides/push),
+[Gmail history recovery](https://developers.google.com/workspace/gmail/api/guides/sync), and
+[Graph webhook delivery limits](https://learn.microsoft.com/en-us/graph/change-notifications-delivery-webhooks).
+Repository evidence: `BackgroundExecutionService.submit` creates a job independently of any trigger ledger update;
+`JobService.create_job` checks then inserts a dedupe key without a unique constraint.
 
 ## Facts (with citations)
 
@@ -55,23 +80,26 @@ Cost: one migration and one dispatcher, both already in TRG-2.
 
 ## Decision
 
-Option C.
+Option C remains the proposed direction, subject to the reopened requirements above.
 
-**At-least-once, collapsed once.** Ingress and listeners never execute a flow; they write one `trigger_event` row and
-return. `trigger_event` carries a `UNIQUE (trigger_id, dedupe_key)` index, and an insert that violates it is an
+**Canonical-event dedupe.** Ingress and listeners never execute a flow. After normalization, each canonical change
+gets a `trigger_event` row. `trigger_event` carries a `UNIQUE (trigger_id, dedupe_key)` index, and an insert that violates it is an
 idempotent success, not an error - Slack's three retries (fact 1), Graph's duplicates (fact 3), and Pub/Sub's
-redeliveries (fact 4) all collapse to one row and therefore one run. The ledger's index is the *only* database-level
+redeliveries (fact 4) collapse to one canonical event row while its dedupe entry is retained. This does not by itself
+guarantee one job or one external side effect. The ledger's index is the *only* database-level
 dedupe guarantee in the system; the dispatcher does not rely on `Job.dedupe_key` (fact 6).
 
 **Dedupe keys are per mechanism and recorded in the matrices.** Where the provider supplies a stable identity it is
 used verbatim (Slack `event_id`, fact 2). Where it does not, the key is derived from the changed item's identity and
-version - Graph from `subscriptionId`/`resource`/`resourceData.id`/`changeType`/etag, Google Calendar from calendar
-id, event id and `updated`, Drive from `fileId` and `modifiedTime`, Gmail from mailbox and history record id - and
-the derivation must be reachable from both the push payload and the poll item, because every Track A recovery path is
-a Track B read. A `sync` message (fact 5) is dropped before the ledger write and never becomes a row.
+version - Graph from canonical resource identity, item id and provider version (never `subscriptionId`), Calendar
+from calendar id, event id and `updated`, Drive from `fileId` and `modifiedTime`, and Gmail from mailbox, history
+record id and individual change identity (one history record can contain several message changes) - and
+the derivation must agree after push and poll normalization. A thin notification may not contain that identity;
+its durable intake and expansion are open requirements above. A `sync` message (fact 5) does not represent a change.
 
-**Ack ordering.** A listener acknowledges the provider only after the ledger write has committed (fact 4's
-redelivery is the safety net). An ingress route answers within the provider's deadline and, if the write cannot
+**Ack ordering.** A listener acknowledges only after durable intake commits. Full events may be normalized directly
+into the ledger; the storage boundary for thin notifications remains open above. An ingress route answers within
+the provider's deadline and, if the write cannot
 complete in time, answers non-2xx so the provider retries rather than answering 2xx and losing the event.
 
 **Replay window: 7 days, purge at 30 days.** Ledger rows stay replayable for 7 days from receipt; rows older than 30
@@ -106,8 +134,9 @@ its size.
   same change; without that assertion a Graph resync or a Google full list re-runs flows.
 - TRG-7 shows attempts, dedupe key, state, and replay lineage per event, and the operator replay action is explicit
   rather than automatic.
-- TRG-8's soak measures exactly these numbers: zero lost events, zero duplicate runs, dead-letter only after
-  `max_attempts`.
+- TRG-8 must distinguish provider-side loss, accepted notifications, canonical events, submitted jobs, and run
+  attempts. Add the crash and resync cases above before claiming zero lost accepted events or duplicate submissions;
+  run retries cannot promise exactly-once external side effects.
 - Fact 8 means even a single-container SQLite deployment needs the lease rows; "single process" is never assumed.
 
 ## Re-open trigger
@@ -117,7 +146,7 @@ its size.
   or
 - `Job.dedupe_key` gains a database unique index, which would let the dispatcher lean on it for the submit step.
 
-Re-verify by: the 1.14 planning gate.
+Re-verify by: the 1.13 release sign-off, after the reopened delivery requirements are resolved.
 
 ## Sign-off
 

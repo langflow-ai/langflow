@@ -3,7 +3,7 @@
   "provider": "google",
   "display_name": "Google Workspace",
   "wave": 1,
-  "verified_on": "2026-09-05",
+  "verified_on": "2026-09-15",
   "public_ingress_by_context": {
     "hosted": "available",
     "self_managed": "conditional",
@@ -16,12 +16,33 @@
     "decisions/self-managed-ingress.md"
   ],
   "sources": {
+    "drive-quota": {
+      "url": "https://developers.google.com/workspace/drive/api/guides/limits",
+      "title": "Google Drive API: Usage limits",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-15",
+      "notes": "Drive has its own project and user quota budgets. Handle quota errors with exponential backoff. Notification delivery does not consume the API quota, while watch and stop requests do."
+    },
+    "pubsub-message": {
+      "url": "https://cloud.google.com/pubsub/docs/reference/rest/v1/PubsubMessage",
+      "title": "Cloud Pub/Sub: PubsubMessage",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-15",
+      "notes": "messageId is assigned at publication and is unique within its topic; push and pull subscribers receive it. It identifies a transport message, not each Gmail history change."
+    },
+    "pubsub-push-authentication": {
+      "url": "https://cloud.google.com/pubsub/docs/authenticate-push-subscriptions",
+      "title": "Cloud Pub/Sub: Authentication for push subscriptions",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-15",
+      "notes": "Validate the Google-signed token and match both audience and email to the push subscription configuration; email_verified must be true."
+    },
     "calendar-push": {
       "url": "https://developers.google.com/workspace/calendar/api/guides/push",
       "title": "Google Calendar API: Push notifications",
       "kind": "provider_docs",
-      "verified_on": "2026-09-05",
-      "notes": "events.watch opens a notification channel with a caller-chosen id, type 'web_hook', an https address, an optional opaque token and an optional expiration. The receiving domain must be registered and verified, and the address must present a valid SSL certificate. Notifications arrive as POSTs whose headers carry X-Goog-Channel-ID, X-Goog-Channel-Token, X-Goog-Channel-Expiration, X-Goog-Resource-ID, X-Goog-Resource-URI, X-Goog-Resource-State and X-Goog-Message-Number; the body is empty. The first notification after channel creation has X-Goog-Resource-State: sync and must be ignored. Channels expire (the expiration is returned in the watch response and echoed in X-Goog-Channel-Expiration) and channels.stop closes one early. A channel that is not answered with 2xx is retried with an exponential backoff."
+      "verified_on": "2026-09-15",
+      "notes": "events.watch opens a notification channel with a caller-chosen id, type 'web_hook', an https address, an optional opaque token and an optional expiration. The receiving domain must be registered and verified, and the address must present a valid SSL certificate. Notifications arrive as POSTs whose headers carry X-Goog-Channel-ID, X-Goog-Channel-Token, X-Goog-Channel-Expiration, X-Goog-Resource-ID, X-Goog-Resource-URI, X-Goog-Resource-State and X-Goog-Message-Number; the body is empty. The first notification after channel creation has X-Goog-Resource-State: sync and must be ignored. Channels expire (the expiration is returned in the watch response and echoed in X-Goog-Channel-Expiration) and channels.stop closes one early. Notifications can be dropped during normal operation; periodic synchronization must cover missed notifications."
     },
     "calendar-sync": {
       "url": "https://developers.google.com/workspace/calendar/api/guides/sync",
@@ -116,15 +137,15 @@
         "source": "calendar-push"
       },
       "delivery": {
-        "guarantee": "at_least_once",
+        "guarantee": "best_effort",
         "ack_deadline_seconds": null,
-        "retry_policy": "Google retries a notification that is not answered with 2xx using an exponential backoff. The first notification after channel creation carries X-Goog-Resource-State: sync and is dropped before the ledger write.",
+        "retry_policy": "The provider documents dropped notifications even in normal operation; retry behavior is not an at-least-once guarantee. Periodic reconciliation is required even when no notification arrives. Initial sync messages do not represent a change.",
         "source": "calendar-push"
       },
       "replay": {
         "available": true,
         "window": "as far back as the stored syncToken remains valid",
-        "details": "Notifications themselves are not replayable, but the sync token is: re-running events.list with the stored syncToken re-reads the same window. A 410 GONE forces a full list, which the ledger's unique index prevents from re-running past events.",
+        "details": "Reconcile from the stored sync token, including when push notifications are missing. After a 410 the full list is a current snapshot. Dedupe entries purged after 30 days cannot prevent every repeat; the re-baseline and retention policy are open in decisions/delivery-semantics.md.",
         "source": "calendar-sync"
       },
       "rate_limit": {
@@ -134,7 +155,7 @@
       "dedupe_key": {
         "field": "derived from the calendar id, the event id and the event's updated timestamp (or etag)",
         "stability": "derived",
-        "details": "The notification carries no event identity at all, so the key is derived from the hydrated event and must be identical to the key the poll mechanism derives for the same change; TRG-6's contract test pins that. X-Goog-Message-Number is per delivery and is metadata only.",
+        "details": "Derived from normalized changed events, which are absent from the notification. Persisting intake before acknowledgement and expanding it into canonical event rows require the open delivery decision; push and poll must agree after normalization.",
         "source": "calendar-sync"
       },
       "session_key": {
@@ -186,13 +207,13 @@
         "source": "drive-changes"
       },
       "rate_limit": {
-        "details": "Per-project and per-user queries-per-minute quotas with 403 rateLimitExceeded or 429; a busy shared drive can produce a burst of notifications that each cost a changes.list call.",
-        "source": "calendar-quota"
+        "details": "Drive-specific project and user quota budgets apply to change reads and channel management; back off on quota errors. Use the Drive limits, not Calendar quotas. Periodic reconciliation and notification-driven reads share this budget.",
+        "source": "drive-quota"
       },
       "dedupe_key": {
         "field": "derived from the change record's fileId and its modifiedTime (or the change's time)",
         "stability": "derived",
-        "details": "Derived from the hydrated change record so push and poll agree; the notification itself carries no file identity.",
+        "details": "The notification is a change-feed hint; derive canonical keys only after reading changes. Durable intake before acknowledgement, expansion, and cursor commits remain open in decisions/delivery-semantics.md.",
         "source": "drive-changes"
       },
       "session_key": {
@@ -239,7 +260,7 @@
       "replay": {
         "available": true,
         "window": "as far back as the stored sync token remains valid",
-        "details": "Re-running the stored token replays the same window; a full list after a 410 replays everything, which the ledger deduplicates.",
+        "details": "A valid sync token supports incremental reconciliation. A full list after a 410 returns current state; it cannot replay every intermediate change. Re-baselining and dedupe retention remain open in decisions/delivery-semantics.md.",
         "source": "calendar-sync"
       },
       "rate_limit": {
@@ -299,8 +320,8 @@
         "source": "drive-changes"
       },
       "rate_limit": {
-        "details": "Per-project and per-user queries-per-minute quotas with 403 rateLimitExceeded or 429 and exponential backoff.",
-        "source": "calendar-quota"
+        "details": "Drive-specific project and user quota budgets apply to change reads and channel management; back off on quota errors. Use the Drive limits, not Calendar quotas. Periodic reconciliation and notification-driven reads share this budget.",
+        "source": "drive-quota"
       },
       "dedupe_key": {
         "field": "derived from the change record's fileId and its modifiedTime (or the change's time)",
@@ -330,8 +351,8 @@
       "required_scopes": ["https://www.googleapis.com/auth/gmail.readonly"],
       "inbound_auth": {
         "method": "oidc_token",
-        "details": "The Pub/Sub push subscription is configured to attach an OIDC token signed for a service account with a fixed audience; the ingress route validates the token's signature, issuer and audience before any database write, in addition to the opaque per-trigger ingress id. The Pub/Sub message body itself is not signed.",
-        "source": "pubsub-push"
+        "details": "Validate the Google-signed OIDC token, issuer, expiry and configured audience, then require email to equal the expected service-account email stored with this subscription and email_verified to be true before any durable write. An otherwise valid token from another Google identity is rejected. The service-account identity and audience come from trusted subscription configuration, never from request fields; the opaque ingress id is routing, not authentication.",
+        "source": "pubsub-push-authentication"
       },
       "subscription": {
         "required": true,
@@ -361,9 +382,9 @@
         "source": "gmail-push"
       },
       "dedupe_key": {
-        "field": "derived from the mailbox address and the history record id of the change",
+        "field": "derived from mailbox, history record id and individual change identity; exact encoding pending criterion 5",
         "stability": "derived",
-        "details": "The Pub/Sub message id changes per delivery and is metadata only; the historyId in the message is a watermark, not an event identity, so the key is derived per history record after the read. This is the mechanism where an at-least-once transport most visibly needs the ledger's unique index.",
+        "details": "Pub/Sub messageId is stable for the published message and topic-scoped (see sources.pubsub-message); it can identify durable intake, but the Gmail historyId is a watermark that can expand into several changes. The canonical change key requires a later history read. The intake/normalization boundary and per-change identity remain open in decisions/delivery-semantics.md; do not substitute a transport message key for them.",
         "source": "gmail-sync"
       },
       "session_key": {
@@ -418,9 +439,9 @@
         "source": "pubsub-pull"
       },
       "dedupe_key": {
-        "field": "derived from the mailbox address and the history record id of the change",
+        "field": "derived from mailbox, history record id and individual change identity; exact encoding pending criterion 5",
         "stability": "derived",
-        "details": "Identical derivation to the push mechanism, so a customer can move between push and pull without duplicate runs.",
+        "details": "The canonical derivation must agree with the push mechanism after history expansion. Durable intake uses the topic-scoped Pub/Sub message identity; the per-change key and cursor commit boundary remain open in decisions/delivery-semantics.md.",
         "source": "gmail-sync"
       },
       "session_key": {

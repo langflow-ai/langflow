@@ -1,8 +1,8 @@
 # Dedicated Integrations: Triggers (1.13): discovery gate records
 
-Status: records written; every decision record is `Status: accepted`; exit criterion 1 (the platform owner's findings) is a stub and the sign-off tables are outstanding
+Status: gate open; delivery semantics and the trigger contract reopened 2026-09-15; findings and owner sign-offs remain outstanding
 Jira: LE-2398 "Dedicated Integrations" is the parent epic; LE-2477 "Integration Triggers" is the triggers epic; TRG-1 is LE-2480
-Last updated: 2026-09-10
+Last updated: 2026-09-15
 
 This directory is the discovery gate for the triggers initiative: persistent listeners, provider push delivery,
 subscription lifecycle, durable delivery, replay, deployment binding, and conversation correlation. It is the
@@ -97,18 +97,19 @@ mechanism, which is what makes the no-relay rule liveable.
 | 2 | Event-transport matrix per wave-1 provider: every push and pull mechanism with its ingress requirement, inbound authentication, subscription TTL and renewal, payload shape (thin or full), delivery guarantee, replay availability, rate limits, and the deployment contexts it supports | `matrices/<provider>-events.json`, `schema/event_transport.schema.json` | `check_capability_matrices.py --design-root`: schema, sourced claims, and the no-ingress rule per context | done 2026-09-05 |
 | 3 | Process-model decision: subprocess supervisor under the API lifespan, separate service, or both; lease semantics for singleton listeners; behaviour on Desktop, `lfx serve`, single-container Docker, and multi-replica Kubernetes | `decisions/process-model.md` | `Status:` line and `## Decision` heading parsed by the checker | done 2026-09-05 |
 | 4 | Self-managed ingress decision: which Track A sources require public HTTPS, which Track B fallback exists per provider, and the explicit statement that Langflow operates no relay | `decisions/self-managed-ingress.md` | the checker's no-ingress rule enforces the fallback per context | done 2026-09-05 |
-| 5 | Delivery-semantics decision: at-least-once with idempotency keys, replay window, dead-letter, ordering, and backpressure toward the run path | `decisions/delivery-semantics.md` | `Status:` line and `## Decision` heading parsed by the checker | done 2026-09-05 |
-| 6 | Trigger contract: the trigger entity and its binding to a flow version or deployment; correlation of a triggered run to a conversation; executing identity per trigger kind as new `execution_principal_matrix.json` families (`trigger_push`, `trigger_listener`); signed off by the lfx, langflow-base, Enterprise, and platform owners | `trigger-contract.md` | required file, accepted status, sign-offs, dated criterion completion | **open**: record accepted 2026-09-05; four sign-offs outstanding |
+| 5 | Delivery-semantics decision: durable intake, dedupe, dispatch recovery, replay window, dead-letter, ordering, and backpressure | `decisions/delivery-semantics.md` | `Status:` line and `## Decision` heading parsed by the checker | **open**: reopened 2026-09-15; thin-notification normalization, event-to-job crash recovery, and resync after dedupe purge require owner decisions |
+| 6 | Trigger contract: the trigger entity and its binding to a flow version or deployment; correlation of a triggered run to a conversation; executing identity per trigger kind as new `execution_principal_matrix.json` families (`trigger_push`, `trigger_listener`); signed off by the lfx, langflow-base, Enterprise, and platform owners | `trigger-contract.md` | required file, accepted status, sign-offs, dated criterion completion | **open**: delivery contract reopened 2026-09-15; revised storage and dispatch contract plus four owner sign-offs required |
 | 7 | 1.13 conformance: the boundary table above checked against the merged INT-2, INT-5, and INT-6 pull requests | this file, "Boundary with 1.13" | dated criterion completion required; merged-commit and behavioral evidence reviewed by owners | **open**: those pull requests are unmerged; one gap already filed (the `connection_resolution` dimension) |
 | 8 | Frontend surface list: trigger node, subscription status, event log and replay, operator controls | `frontend-surfaces.md` | required file, accepted status, sign-off coverage, dated criterion completion | done 2026-09-05 |
-| 9 | Estimate and ticket breakdown, TRG-2 onward | `estimate.md` | required file and dated criterion completion; ticket breakdown reviewed by release owner | **open**: reopened 2026-09-10 pending frontend consent, withdrawal, and non-owner denial sizing and a re-issued total |
+| 9 | Estimate and ticket breakdown, TRG-2 onward | `estimate.md` | required file and dated criterion completion; ticket breakdown reviewed by release owner | **open**: reopened 2026-09-10 pending frontend consent, delivery recovery, Pub/Sub OIDC verification, and revised total sizing |
 
 Gate close requires substantive owner review plus a passing `--require-accepted` check. The check requires exactly
 one row for each criterion 1 through 9, with the completed Status cell exactly `done YYYY-MM-DD` (a valid, non-future
 date; move explanations into the other cells). Every instantiated decision record under `decisions/` except
-`TEMPLATE.md`, every findings record, `trigger-contract.md`, and `frontend-surfaces.md` must be `Status: accepted`;
+`TEMPLATE.md`, every findings record, `trigger-contract.md`, and `frontend-surfaces.md` must have exactly one
+`Status: accepted` line;
 the estimate must exist; findings must contain no TODO, TBD, or "to be written" markers; and every declared owner
-must complete both sign-off tables. Criteria 1, 6, 7, and 9 remain open. Filling signatures alone cannot close them.
+must complete both sign-off tables. Criteria 1, 5, 6, 7, and 9 remain open. Filling signatures alone cannot close them.
 
 These are necessary machine checks of recorded completion, not proof of the findings' substance or merged-code
 conformance. The platform owner still authors findings sections 3 and 4, and the owners still perform the boundary
@@ -162,9 +163,11 @@ against that schema, every claim block on a wave-1 mechanism must name a source 
 rule is enforced per deployment context - a mechanism that needs public HTTPS may not claim a context where
 `public_ingress_by_context` says ingress is unavailable, and a `conditional` context is allowed only when the
 mechanism names an `outbound_only` fallback covering that same context. Every provider must ship at least one
-outbound-only wave-1 mechanism. Decision-record parsing (`Status:` line, `## Decision` heading) and sign-off coverage
+outbound-only wave-1 mechanism supporting `self_managed`. Decision-record parsing (`Status:` line, `## Decision`
+heading) and sign-off coverage
 run exactly as they do for INT-1. Adding `--require-accepted` also checks the triggers-specific records and all nine
-exit-criterion statuses described above. It fails today on the draft/unfinished findings, open criteria 1, 6, 7, and 9,
+exit-criterion statuses described above. It fails today on the proposed delivery records, draft/unfinished findings,
+open criteria 1, 5, 6, 7, and 9,
 and outstanding signatures. Ordinary structural validation continues to accept work in progress.
 
 The rules live in `scripts/ci/event_transport_matrix.py`; `scripts/ci/test_event_transport_matrices.py` covers them
@@ -196,8 +199,8 @@ estimate.md                            criterion 9, with the TRG ticket breakdow
 | 1 | findings document (platform owner) | stub written; awaiting the author |
 | 2 | event-transport matrices for Google, Microsoft, and Slack, with the schema | done |
 | 3 | process-model and self-managed ingress decisions | done |
-| 4 | delivery-semantics decision and the trigger contract | written; awaiting the lfx, langflow-base, Enterprise, and platform sign-offs |
+| 4 | delivery-semantics decision and the trigger contract | reopened 2026-09-15; delivery/storage decisions and owner sign-offs pending |
 | 5 | frontend surfaces | done |
-| 6 | estimate and TRG ticket breakdown; gate close | estimate revision pending; gate close waits on criteria 1, 6, 7, and 9 |
+| 6 | estimate and TRG ticket breakdown; gate close | estimate revision pending; gate close waits on criteria 1, 5, 6, 7, and 9 |
 
 Re-verify by: the 1.13 release sign-off.

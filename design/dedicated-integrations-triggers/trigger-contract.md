@@ -1,15 +1,21 @@
 # Trigger contract
 
-Status: accepted
+Status: proposed
 Decision ID: trigger-contract
 Applies to: TRG-2 (entity, ledger, dispatcher, families), TRG-3 (listener leases), TRG-4 (ingress and subscriptions), TRG-5 and TRG-6 (source adapters), TRG-7 (frontend)
 Owners (sign-off roles): platform owner, lfx owner, langflow-base owner, Enterprise owner, release owner
-Last verified: 2026-09-10 (API loop ownership clarified)
+Last verified: 2026-09-15 (delivery prerequisites reopened)
 
 TRG-1 exit criterion 6. This is the contract every other triggers ticket builds against: the entity and its tables,
 the ledger's delivery rule, how a trigger binds to what it runs, how a triggered run correlates to a conversation,
 which identity it executes as, and where the boundary with the 1.13 connection contract sits. Names here are
 normative - a ticket that needs a different name changes this record first.
+
+**Delivery review, 2026-09-15:** section 2 and the five-table baseline are provisional until
+[`decisions/delivery-semantics.md`](decisions/delivery-semantics.md) resolves durable thin-notification intake,
+normalization and cursor commits, dispatch crash recovery, and bounded resync. Criterion 5 is reopened and criterion
+6 remains open. The owners must amend this contract and its migration scope before downstream implementation
+relies on the delivery guarantees; the original release-owner signature applies to the earlier baseline.
 
 ## 1. Entities
 
@@ -98,13 +104,18 @@ One row per provider connection a listener holds: `connection_id` primary key, `
 Provider-side subscription objects for Track A, plus their renewal schedule: subscription/channel/watch identifier,
 `client_state` or channel token, `expires_at`, `renew_after`, row-lock lease columns for the renewal job, and the
 owning `trigger_id`. Created by TRG-4 and written by TRG-4 and TRG-6; the table ships in TRG-2's migration.
+For Pub/Sub push, trusted subscription configuration also records the expected OIDC audience and service-account
+email; the verifier matches those values and requires `email_verified=true` before accepting a notification.
 
 ## 2. Delivery
 
 `decisions/delivery-semantics.md` is normative and is summarized here only so this record reads on its own:
-at-least-once at the edge, collapsed once by `UNIQUE (trigger_id, dedupe_key)`; ingress and listeners write the row
-and never execute; listeners ack after the commit; replay window 7 days, purge at 30; retries with backoff to
-`max_attempts` then `dead`; no cross-trigger ordering; per-trigger concurrency is the backpressure knob.
+provider delivery guarantees vary; canonical events dedupe by `UNIQUE (trigger_id, dedupe_key)` while retained.
+Ingress and listeners never execute a flow and acknowledge only after durable intake. Thin-notification storage,
+canonical-event expansion, and the atomic cursor boundary are still to be decided. The proposed replay window is
+7 days and purge age 30 days, with resync dedupe retention still open; retries back off to `max_attempts` then `dead`.
+There is no cross-trigger ordering, and per-trigger concurrency is the backpressure knob. One ledger row does not
+guarantee one job: the event-to-job handoff and crash recovery require the owner decision recorded above.
 
 ## 3. Binding and pinning
 

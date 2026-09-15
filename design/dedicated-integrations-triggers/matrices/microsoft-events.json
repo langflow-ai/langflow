@@ -3,7 +3,7 @@
   "provider": "microsoft",
   "display_name": "Microsoft 365",
   "wave": 1,
-  "verified_on": "2026-09-10",
+  "verified_on": "2026-09-15",
   "public_ingress_by_context": {
     "hosted": "available",
     "self_managed": "conditional",
@@ -16,6 +16,13 @@
     "decisions/self-managed-ingress.md"
   ],
   "sources": {
+    "graph-calendar-delta": {
+      "url": "https://learn.microsoft.com/en-us/graph/api/event-delta?view=graph-rest-1.0",
+      "title": "Microsoft Graph v1.0: event delta in calendarView",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-15",
+      "notes": "The v1.0 endpoint is /me/calendarView/delta with required startDateTime and endDateTime on the initial request. Subsequent pages use the returned nextLink or deltaLink. The date window is part of the synchronization scope."
+    },
     "graph-change-notifications": {
       "url": "https://learn.microsoft.com/en-us/graph/change-notifications-overview",
       "title": "Microsoft Graph: Change notifications overview",
@@ -27,15 +34,15 @@
       "url": "https://learn.microsoft.com/en-us/graph/change-notifications-delivery-webhooks",
       "title": "Microsoft Graph: Change notification delivery through webhooks",
       "kind": "provider_docs",
-      "verified_on": "2026-09-05",
+      "verified_on": "2026-09-15",
       "notes": "Subscription creation triggers a validation request: Graph POSTs to notificationUrl with a validationToken query parameter, and the endpoint must echo the decoded token as text/plain with HTTP 200 within 10 seconds or the subscription is not created. Notifications must be answered with 2xx within three seconds; Graph retries an unanswered or failed notification with a backoff for roughly four hours before dropping it. clientState, supplied at subscription creation, is echoed in every notification and is the value the receiver compares."
     },
     "graph-subscription": {
       "url": "https://learn.microsoft.com/en-us/graph/api/resources/subscription",
       "title": "Microsoft Graph: subscription resource type",
       "kind": "provider_docs",
-      "verified_on": "2026-09-05",
-      "notes": "Maximum subscription lifetimes are per resource; Outlook message, event and contact resources are documented at 4230 minutes (just under three days), and drive resources differ between OneDrive personal and OneDrive for Business or SharePoint. lifecycleNotificationUrl must be supplied at creation to receive lifecycle events. expirationDateTime is required and renewal is a PATCH of that property."
+      "verified_on": "2026-09-15",
+      "notes": "Maximum subscription lifetimes are per resource; Outlook message, event and contact resources are documented at 10,080 minutes (seven days), and drive resources differ between OneDrive personal and OneDrive for Business or SharePoint. lifecycleNotificationUrl must be supplied at creation to receive lifecycle events. expirationDateTime is required and renewal is a PATCH of that property."
     },
     "graph-lifecycle-events": {
       "url": "https://learn.microsoft.com/en-us/graph/change-notifications-lifecycle-events",
@@ -111,8 +118,8 @@
       },
       "subscription": {
         "required": true,
-        "max_ttl_seconds": 253800,
-        "renewal": "Langflow creates the subscription with an expirationDateTime and a lifecycleNotificationUrl, then renews by PATCHing expirationDateTime ahead of the value Graph returned; the renewal job keys off the stored subscriptionExpirationDateTime rather than a constant, because the ceiling differs per resource (4230 minutes for Outlook message, event and contact resources). subscriptionRemoved recreates the subscription, missed forces a delta resync, and reauthorizationRequired moves the trigger to needs_reconnect.",
+        "max_ttl_seconds": null,
+        "renewal": "Langflow creates the subscription with an expirationDateTime and a lifecycleNotificationUrl, then renews by PATCHing expirationDateTime ahead of the value Graph returned; the renewal job keys off the stored subscriptionExpirationDateTime rather than a constant, because the ceiling differs per resource (10,080 minutes for Outlook message, event and contact resources). subscriptionRemoved recreates the subscription, missed forces a delta resync, and reauthorizationRequired moves the trigger to needs_reconnect.",
         "source": "graph-subscription"
       },
       "payload": {
@@ -121,9 +128,9 @@
         "source": "graph-change-notifications"
       },
       "delivery": {
-        "guarantee": "at_least_once",
+        "guarantee": "best_effort",
         "ack_deadline_seconds": 3,
-        "retry_policy": "A notification that is not answered with 2xx within three seconds is retried with a backoff for roughly four hours; after that Graph gives up and reports the gap through a missed lifecycle notification. Notifications may arrive out of order and may be duplicated.",
+        "retry_policy": "Graph retries failed delivery with backoff for up to four hours and can drop notifications when the receiver is slow. Notifications can be duplicated or reordered. Recovery must use resource-appropriate reconciliation; do not assume every gap produces a missed lifecycle notification.",
         "source": "graph-webhook-delivery"
       },
       "replay": {
@@ -137,9 +144,9 @@
         "source": "graph-throttling"
       },
       "dedupe_key": {
-        "field": "derived from subscriptionId, resource, resourceData.id, changeType and the item's etag or lastModifiedDateTime",
+        "field": "derived from canonical resource identity, item id and provider version; no subscription-scoped value",
         "stability": "derived",
-        "details": "Graph notifications carry no provider event id, so the key is derived. The same derivation must be reachable from a delta item, because a subscription gap is recovered by delta; TRG-6's recorded-payload contract test pins that push and poll produce byte-identical keys for the same change. Notification duplication and out-of-order arrival make the (trigger_id, dedupe_key) unique index the only guard.",
+        "details": "Push and delta must produce the same canonical key after normalization. subscriptionId cannot be part of that key, and raw notification changeType is not assumed to exist on delta items. The resource-specific version, deletion identity, and thin-notification intake boundary must be decided under the reopened delivery criterion before implementation.",
         "source": "graph-change-notifications"
       },
       "session_key": {
@@ -161,7 +168,7 @@
       "rationale": "The documented no-ingress answer for Microsoft: an ordinary outbound HTTPS call with the user's delegated token, so it needs neither a public URL nor a provider-created subscription. Runs on the TRG-3 generic poll loop with the deltaLink stored on the trigger row.",
       "events": [
         "me/mailFolders('Inbox')/messages/delta",
-        "me/events/delta",
+        "me/calendarView/delta?startDateTime={start}&endDateTime={end}",
         "me/drive/root/delta"
       ],
       "required_scopes": ["Mail.Read", "Calendars.Read", "Files.Read", "Files.Read.All", "Sites.Read.All"],
@@ -173,7 +180,7 @@
       "subscription": {
         "required": false,
         "max_ttl_seconds": null,
-        "renewal": "No provider object exists. The persisted @odata.deltaLink is the whole state; a 410 Gone with syncStateNotFound restarts the enumeration from scratch, and the ledger's unique index is what stops the resync from re-running flows for items already seen.",
+        "renewal": "Persist the complete returned deltaLink and finish every nextLink page before advancing the cursor. Calendar v1.0 uses calendarView/delta with an explicit start/end window. Invalid cursor recovery must follow the resource-specific re-baseline policy; a full enumeration alone cannot prevent duplicate runs after old dedupe rows are purged.",
         "source": "graph-delta-query"
       },
       "payload": {
@@ -189,8 +196,8 @@
       },
       "replay": {
         "available": true,
-        "window": "as far back as the deltaLink remains valid; unbounded after a full resync",
-        "details": "Re-running a stored deltaLink replays the same window, and a full resync replays everything - which is precisely why the dedupe key must not be delivery-scoped.",
+        "window": "while the delta token is valid for its resource and query scope",
+        "details": "A full resync returns current resource state, not an unbounded event history. The calendar fallback is limited to its configured calendarView window (sources.graph-calendar-delta). Re-baselining, window rollover, deletion handling, and dedupe retention remain open delivery requirements.",
         "source": "graph-delta-query"
       },
       "rate_limit": {
@@ -198,16 +205,16 @@
         "source": "graph-throttling"
       },
       "dedupe_key": {
-        "field": "derived from resource, item id, changeType and the item's etag or lastModifiedDateTime",
+        "field": "derived from canonical resource identity, item id and provider version; no subscription-scoped value",
         "stability": "derived",
-        "details": "Derived to be identical to the push key for the same change, minus the subscriptionId component, which is why the derivation excludes any subscription-scoped value.",
+        "details": "Use the same canonical resource identity, item id and provider version as the normalized push path. Subscription ids and delivery metadata are excluded. Version and deletion handling remain open in decisions/delivery-semantics.md.",
         "source": "graph-delta-query"
       },
       "session_key": {
         "details": "Identical to the push mechanism: microsoft:outlook:{conversationId}, microsoft:calendar:{iCalUId or seriesMasterId}, microsoft:files:{driveItem id}.",
         "source": "graph-change-notifications"
       },
-      "notes": "Latency is the poll interval, not seconds. The self-managed-ingress decision records that as the accepted cost of running without an ingress."
+      "notes": "Latency is the poll interval. TRG-6 must specify the calendarView date window and rollover/re-baseline behavior before claiming calendar push/poll coverage; /me/events/delta is not the v1.0 endpoint documented in sources.graph-calendar-delta."
     },
     {
       "mechanism_id": "microsoft.graph_notifications_with_resource_data",

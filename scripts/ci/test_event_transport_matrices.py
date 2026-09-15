@@ -76,6 +76,10 @@ def _complete_signatures(root: Path) -> None:
 
 def _complete_gate(root: Path) -> None:
     _complete_signatures(root)
+    # Owner decisions are completed only in the synthetic positive fixture.
+    for relative in ("decisions/delivery-semantics.md", "trigger-contract.md"):
+        record = root / relative
+        record.write_text(record.read_text(encoding="utf-8").replace("Status: proposed", "Status: accepted"), "utf-8")
     findings = root / "findings" / "2026-09-listeners.md"
     findings.write_text(
         findings.read_text(encoding="utf-8")
@@ -300,6 +304,34 @@ def test_provider_without_an_outbound_only_mechanism_is_rejected(tmp_path: Path)
     assert any("no wave-1 mechanism runs outbound-only" in error for error in errors), errors
 
 
+def test_outbound_only_mechanism_must_support_self_managed(tmp_path: Path) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "slack")
+    # Removing self-managed from both transports used to pass: a Desktop-only
+    # socket still satisfied the provider-wide outbound check.
+    _mechanism(matrix, "slack.events_api")["deployment_contexts"] = ["hosted"]
+    _mechanism(matrix, "slack.socket_mode")["deployment_contexts"] = ["desktop"]
+    _save(root, "slack", matrix)
+
+    errors = _validate(root)
+
+    assert any("no wave-1 outbound-only mechanism supports 'self_managed'" in error for error in errors), errors
+
+
+@pytest.mark.parametrize("extra_status", ["draft", "accepted"])
+def test_gate_close_rejects_ambiguous_decision_status(tmp_path: Path, extra_status: str, monkeypatch, capsys) -> None:
+    root = _copy_design(tmp_path)
+    _complete_gate(root)
+    record = root / "decisions" / "process-model.md"
+    record.write_text(record.read_text(encoding="utf-8") + f"\nStatus: {extra_status}\n", encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["checker", "--design-root", str(root), "--require-accepted"])
+
+    assert main() == 1
+    output = capsys.readouterr().out
+    assert "decisions/process-model.md" in output
+    assert "exactly one 'Status: accepted' line" in output
+
+
 def test_unknown_source_reference_is_rejected(tmp_path: Path) -> None:
     root = _copy_design(tmp_path)
     matrix = _load(root, "google")
@@ -387,6 +419,7 @@ def test_missing_decision_record_is_rejected(tmp_path: Path) -> None:
 
 def test_require_accepted_rejects_a_draft_decision_record(tmp_path: Path) -> None:
     root = _copy_design(tmp_path)
+    _complete_gate(root)
     record = root / "decisions" / "delivery-semantics.md"
     record.write_text(record.read_text(encoding="utf-8").replace("Status: accepted", "Status: draft", 1), "utf-8")
 

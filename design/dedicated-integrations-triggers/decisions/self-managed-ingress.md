@@ -101,7 +101,7 @@ either transport needs a Cloud project with a Pub/Sub topic that grants the Gmai
   resource; Google withdraws Pub/Sub pull), which would leave that provider with no no-ingress answer, or
 - Google changes the drive.file change-feed visibility rules in a way that makes the Drive fallback useless.
 
-Re-verify by: the 1.14 planning gate.
+Re-verify by: the 1.13 release sign-off.
 
 ## Sign-off
 

@@ -2,7 +2,7 @@
 
 Status: last issued 2026-09-05; criterion 9 reopened 2026-09-10 pending consent sizing and a revised total
 Owners (sign-off roles): release owner
-Last verified: 2026-09-10
+Last verified: 2026-09-15
 
 TRG-1's last exit criterion. The original ticket breakdown summed to 34 engineer-weeks including TRG-1. The numbers
 below are the last issued baseline, applying the gate's findings ticket by ticket; every delta names its record or
@@ -50,8 +50,11 @@ Consent sequencing clarification, 2026-09-10: TRG-7's interim connection field i
 `allow_non_interactive` control and recovery path in `frontend-surfaces.md` B9. Provider-trigger enablement depends
 on INT-4's authenticated connection-update API as well as TRG-2. INT-8 later owns the permanent Connections-page
 control. The frontend owner must include consent, withdrawal, and non-owner denial in the existing TRG-7 review
-and sizing before sign-off. Criterion 9 remains open until that review and the release owner's re-issued frontend
-and total estimates are recorded; the table above remains the last issued baseline.
+and sizing before sign-off. The 2026-09-15 delivery review also requires sizing durable notification intake, normalization,
+dispatch crash recovery, and resync/dedupe retention in TRG-2/TRG-6/TRG-8. TRG-4 needs a fifth verifier for
+Pub/Sub OIDC, including the configured service-account identity check. These costs are absent from the baseline.
+Criterion 9 remains open until those reviews and the release owner's re-issued frontend and total estimates are
+recorded; the table above remains the last issued baseline.
 
 ## External lead times (calendar risk, not engineer-weeks)
 

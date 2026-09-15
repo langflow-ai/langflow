@@ -711,7 +711,8 @@ def validate_trigger_gate_close(design_root: Path) -> list[str]:
     errors: list[str] = []
     records = TRIGGER_GATE_RECORDS | {
         path.relative_to(design_root).as_posix()
-        for path in (design_root / "findings").rglob("*.md")
+        for directory in ("findings", "decisions")
+        for path in (design_root / directory).rglob("*.md")
         if path.name not in SIGN_OFF_EXEMPT_FILES
     }
     for relative in sorted(records):
