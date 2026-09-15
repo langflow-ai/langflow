@@ -69,6 +69,18 @@ async def test_a_missing_pin_is_refused(make_trigger) -> None:
             await resolve_binding(session, trigger)
 
 
+async def test_an_empty_pinned_snapshot_never_falls_back_to_live_data(make_trigger) -> None:
+    trigger_id = await make_trigger()
+    async with session_scope() as session:
+        trigger = await session.get(Trigger, trigger_id)
+        version = FlowVersion(flow_id=trigger.flow_id, user_id=trigger.user_id, data=None, version_number=1)
+        session.add(version)
+        await session.flush()
+        trigger.flow_version_id = version.id
+        with pytest.raises(BindingUnsupportedError):
+            await resolve_binding(session, trigger)
+
+
 async def test_a_deployment_binding_is_typed_not_silently_rewritten(make_trigger) -> None:
     trigger_id = await make_trigger(binding_target=TriggerBindingTarget.DEPLOYMENT.value)
     async with session_scope() as session:

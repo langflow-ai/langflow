@@ -283,12 +283,14 @@ class BackgroundExecutionService(Service):
                 cancelled.append(stale_job_id)
         return cancelled
 
-    async def submit(self, *, flow_id: UUID, request: dict[str, Any], user: UserRead) -> UUID:
+    async def submit(
+        self, *, flow_id: UUID, request: dict[str, Any], user: UserRead, job_id: UUID | None = None
+    ) -> UUID:
         # Lazy-start the executor so the facade works whether or not the app
         # lifespan called start() first. start() is idempotent.
         await self.start()
         job_service = get_job_service()
-        job_id = uuid4()
+        job_id = job_id or uuid4()
         dedupe_key = request.get("idempotency_key")
         # Construct and encrypt the durable payload BEFORE creating the row. The
         # QUEUED insert then commits the marker, plaintext-safe request, and
