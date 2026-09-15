@@ -23,7 +23,7 @@ from pydantic import (
     model_validator,
 )
 
-from langflow.services.audit.vocabulary import AuditResourceType, AuditResult
+from langflow.services.audit.vocabulary import AuditOperation, AuditResourceType, AuditResult
 from langflow.services.database.models.audit_event.model import RESOURCE_NAME_MAX_LENGTH
 
 if TYPE_CHECKING:
@@ -165,11 +165,19 @@ class FlowProjectChange(_Strict):
         return self
 
 
+class FlowRun(_Strict):
+    """Where a run came from and how long it took; never its inputs, outputs or errors."""
+
+    trigger: str | None = Field(default=None, pattern=r"^[a-z][a-z0-9_]{0,63}$")
+    duration_ms: NonNegativeInt | None = None
+
+
 class FlowDetailsV1(_Strict):
     schema_version: Literal[1]
     written_fields: FieldNameList | None = None
     project: FlowProjectChange | None = None
     attempted_fields: FieldNameList | None = None
+    run: FlowRun | None = None
 
 
 _COMMITTED_KEYS: dict[AuditResourceType, frozenset[str]] = {
@@ -186,7 +194,14 @@ _SCHEMAS: dict[tuple[AuditResourceType, int], type[_Strict]] = {
 }
 
 
-def _allowed_keys(resource_type: AuditResourceType, result: AuditResult) -> frozenset[str]:
+_RUN_KEYS = frozenset({"run"})
+
+
+def _allowed_keys(
+    resource_type: AuditResourceType, result: AuditResult, operation: AuditOperation | None
+) -> frozenset[str]:
+    if operation is AuditOperation.RUN:
+        return _RUN_KEYS
     if result in COMMITTED_RESULTS:
         return _COMMITTED_KEYS[resource_type]
     if result in ATTEMPT_RESULTS:
@@ -198,11 +213,13 @@ def validate_details(
     resource_type: AuditResourceType,
     result: AuditResult,
     details: Mapping[str, Any],
+    operation: AuditOperation | None = None,
 ) -> dict[str, Any]:
     """Return the JSON to store, or raise ``AuditContractError``.
 
     Committed changes appear only on a succeeded event and attempted shape only
-    on a failed or denied one, so an attempt can never read as a change.
+    on a failed or denied one, so an attempt can never read as a change. A run
+    writes nothing, so its event carries only the run's origin and duration.
     """
     version = details.get("schema_version")
     schema = _SCHEMAS.get((resource_type, version)) if type(version) is int else None
@@ -215,7 +232,7 @@ def validate_details(
         msg = f"Invalid {resource_type.value} details: {exc.errors()[0]['msg']}"
         raise AuditContractError(msg) from exc
     stored = parsed.model_dump(mode="json", exclude_unset=True)
-    unexpected = set(stored) - {"schema_version"} - _allowed_keys(resource_type, result)
+    unexpected = set(stored) - {"schema_version"} - _allowed_keys(resource_type, result, operation)
     if unexpected:
         msg = f"{sorted(unexpected)} not allowed on a {result.value} {resource_type.value} event"
         raise AuditContractError(msg)

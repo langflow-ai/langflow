@@ -43,6 +43,7 @@ from langflow.events.event_manager import EventManager
 from langflow.exceptions.component import ComponentBuildError
 from langflow.schema.message import ErrorMessage
 from langflow.schema.schema import OutputValue
+from langflow.services.audit.runs import FlowRunTarget, audited_flow_run, mark_run_failed, mark_run_paused
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import User, UserRead
@@ -458,6 +459,17 @@ async def create_flow_response(
     )
 
 
+def _build_run_target(arguments: dict) -> FlowRunTarget:
+    user = arguments.get("current_user")
+    return FlowRunTarget(
+        flow_id=arguments.get("source_flow_id") or arguments.get("flow_id"),
+        flow_name=None if arguments.get("source_flow_id") else arguments.get("flow_name"),
+        user_id=getattr(user, "id", None),
+        trigger=arguments["execution_family"],
+    )
+
+
+@audited_flow_run(_build_run_target)
 async def _generate_flow_events(
     *,
     flow_id: uuid.UUID,
@@ -1063,10 +1075,12 @@ async def _generate_flow_events(
                 await _run_vertex_build()
             if build_error_type is not None:
                 flow_span.record_error(build_error_type)
+                mark_run_failed()
     except GraphPausedException as exc:
         # Non-terminal: persist the card to history, emit the pause event, end without on_end.
         from langflow.api.v2.hitl import persist_human_input_card
 
+        mark_run_paused()
         await persist_human_input_card(exc.data or {}, flow_id, graph.session_id or str(flow_id), job_id)
         # Why: persist spans that ran before the pause so the trace detail isn't empty (merge is idempotent on resume).
         try:
