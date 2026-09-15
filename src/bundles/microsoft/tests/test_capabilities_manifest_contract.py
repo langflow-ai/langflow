@@ -56,9 +56,7 @@ def test_component_refs_resolve_to_exported_classes() -> None:
 def test_offline_access_is_never_a_per_action_scope() -> None:
     """Entra never echoes ``offline_access`` in the token response.
 
-    ``DatabaseConnectionResolverService`` computes ``required - granted`` as a
-    raw set difference, so a literal transcription of the matrix would fail
-    every Microsoft resolution with ``scope-missing``. The scope stays in the
+    An action must require only granted resource permissions. The scope stays in the
     auth profile's default scopes and the registration ceiling instead.
     """
     manifest = load_manifest()

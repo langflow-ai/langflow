@@ -8,6 +8,8 @@ Microsoft Graph. Credentials come from a Microsoft connection handle in
 
 from __future__ import annotations
 
+from urllib.parse import quote
+
 from lfx.base.knowledge_bases.ingestion_sources.base import SourceType
 from lfx.base.knowledge_bases.ingestion_sources.microsoft_graph import MicrosoftGraphSource
 
@@ -24,10 +26,10 @@ class OneDriveSource(MicrosoftGraphSource):
     @property
     def drive_id(self) -> str:
         value = self.source_config.get("drive_id") or ""
-        return str(value) if isinstance(value, str) else ""
+        return value.strip() if isinstance(value, str) else ""
 
     def drive_root(self) -> str:
-        return f"/drives/{self.drive_id}" if self.drive_id else "/me/drive"
+        return f"/drives/{quote(self.drive_id, safe='!,')}" if self.drive_id else "/me/drive"
 
     def required_connection_scopes(self) -> tuple[str, ...]:
         """A drive other than the signed-in user's needs Files.Read.All."""

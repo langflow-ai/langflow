@@ -15,8 +15,9 @@ with ``ConnectionNotAuthorizedError`` before any Graph call is made.
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any, ClassVar
-from urllib.parse import quote
+from urllib.parse import quote, urljoin
 
 import httpx
 
@@ -25,10 +26,10 @@ from lfx.base.knowledge_bases.ingestion_sources.base import (
     IngestionItemContent,
     SourceType,
 )
-from lfx.base.knowledge_bases.ingestion_sources.connector_base import (
-    HTTP_STATUS_CLIENT_ERROR_FLOOR,
-    OAuthConnectorBase,
-)
+from lfx.base.knowledge_bases.ingestion_sources.connector_base import OAuthConnectorBase
+from lfx.integrations.errors import AuthExpiredError
+from lfx.utils.ssrf_httpx import ssrf_protected_strict_httpx_client_kwargs_for_url
+from lfx.utils.url_redaction import suppress_sensitive_http_logs
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -45,7 +46,10 @@ MAX_ITEMS_DEFAULT = 5000
 # ``size``) and the download is capped again on the way in, because the item
 # may have grown between the listing and the fetch.
 DEFAULT_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024
-HTTP_FOUND = 302
+HTTP_UNAUTHORIZED = 401
+HTTP_SUCCESS = 200
+HTTP_REDIRECT = 300
+MAX_DOWNLOAD_REDIRECTS = 5
 _REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
 
 
@@ -116,29 +120,54 @@ class MicrosoftGraphSource(OAuthConnectorBase):
     def _children_path(self, item_id: str, path: str) -> str:
         root = self.drive_root()
         if item_id:
-            return f"{root}/items/{item_id}/children"
+            return f"{root}/items/{quote(item_id, safe='!,')}/children"
         if path:
             return f"{root}/root:/{quote(path)}:/children"
         return f"{root}/root/children"
 
-    def _client(self) -> httpx.AsyncClient:
+    def _client(self, **kwargs: Any) -> httpx.AsyncClient:
         return httpx.AsyncClient(
             timeout=60.0,
-            follow_redirects=False,
+            **{**kwargs, "follow_redirects": False},
             headers={"User-Agent": USER_AGENT, "Accept": "application/json"},
         )
 
     @staticmethod
     def _raise_for_status(response: httpx.Response, context: str) -> None:
-        if response.status_code >= HTTP_STATUS_CLIENT_ERROR_FLOOR:
-            msg = f"Microsoft Graph {context} failed with {response.status_code}: {response.text[:200]}"
+        if not HTTP_SUCCESS <= response.status_code < HTTP_REDIRECT:
+            msg = f"Microsoft Graph {context} failed with {response.status_code}."
             raise OSError(msg)
 
+    @staticmethod
+    def _validate_graph_url(url: str) -> None:
+        try:
+            target = httpx.URL(url)
+            base = httpx.URL(GRAPH_BASE_URL)
+            if (
+                (target.scheme, target.host, target.port) != (base.scheme, base.host, base.port)
+                or target.userinfo
+                or target.fragment
+            ):
+                raise ValueError
+        except (ValueError, httpx.InvalidURL):
+            msg = "Microsoft Graph returned an invalid listing URL."
+            raise OSError(msg) from None
+
     async def _get_json(self, client: httpx.AsyncClient, url: str, token: str) -> dict[str, Any]:
-        response = await client.get(url, headers={"Authorization": f"Bearer {token}"})
-        self._raise_for_status(response, "listing")
-        payload = response.json()
-        return payload if isinstance(payload, dict) else {}
+        self._validate_graph_url(url)
+        try:
+            for attempt in range(2):
+                response = await client.get(url, headers={"Authorization": f"Bearer {token}"})
+                if response.status_code == HTTP_UNAUTHORIZED and not attempt and self._lease is not None:
+                    token = await self._lease.get_token_after_auth_error(AuthExpiredError(provider="microsoft"))
+                    continue
+                self._raise_for_status(response, "listing")
+                payload = response.json()
+                return payload if isinstance(payload, dict) else {}
+        except httpx.TransportError:
+            msg = "Microsoft Graph listing is temporarily unavailable."
+            raise OSError(msg) from None
+        return {}
 
     # --- KBIngestionSource ---------------------------------------------
 
@@ -206,6 +235,7 @@ class MicrosoftGraphSource(OAuthConnectorBase):
             },
         )
 
+    @suppress_sensitive_http_logs()
     async def fetch_content(self, item: IngestionItem) -> IngestionItemContent:
         """Download one driveItem's bytes.
 
@@ -215,45 +245,60 @@ class MicrosoftGraphSource(OAuthConnectorBase):
         logged.
         """
         token = await self.get_access_token()
-        url = f"{GRAPH_BASE_URL}{self.drive_root()}/items/{item.item_id}/content"
-        async with self._client() as client:
-            response = await client.get(url, headers={"Authorization": f"Bearer {token}"})
-            if response.status_code not in _REDIRECT_STATUSES:
-                self._raise_for_status(response, "download")
-                return IngestionItemContent(
-                    raw_bytes=response.content[: self.max_file_size_bytes],
-                    file_name=item.display_name,
-                )
-            location = response.headers.get("location")
-            # Only an absolute TLS target is worth following: the location is
-            # a header on a response, and this leg carries no bearer token to
-            # protect.
-            if not location or not location.startswith("https://"):
-                msg = f"Microsoft Graph returned {response.status_code} without a usable download location."
-                raise OSError(msg)
-            raw_bytes = await self._stream_capped(client, location)
+        url = f"{GRAPH_BASE_URL}{self.drive_root()}/items/{quote(item.item_id, safe='!,')}/content"
+        try:
+            async with self._client() as client:
+                for attempt in range(2):
+                    async with client.stream("GET", url, headers={"Authorization": f"Bearer {token}"}) as response:
+                        if response.status_code in _REDIRECT_STATUSES:
+                            location = response.headers.get("location", "")
+                            break
+                        if response.status_code == HTTP_UNAUTHORIZED and not attempt and self._lease is not None:
+                            token = await self._lease.get_token_after_auth_error(AuthExpiredError(provider="microsoft"))
+                            continue
+                        self._raise_for_status(response, "download")
+                        raw_bytes = await self._read_capped(response)
+                        return IngestionItemContent(raw_bytes=raw_bytes, file_name=item.display_name)
+            raw_bytes = await self._stream_capped(location)
+        except httpx.TransportError:
+            msg = "Microsoft Graph download is temporarily unavailable."
+            raise OSError(msg) from None
         return IngestionItemContent(raw_bytes=raw_bytes, file_name=item.display_name)
 
-    async def _stream_capped(self, client: httpx.AsyncClient, url: str) -> bytes:
-        """Read a preauthenticated download URL, stopping at the size cap.
-
-        The cap is a memory bound, not a trim: the connection is dropped as
-        soon as it is reached, so an item that grew past the size Graph
-        reported during the walk cannot pull an unbounded body into the
-        ingestion worker.
-        """
+    async def _read_capped(self, response: httpx.Response) -> bytes:
         chunks: list[bytes] = []
         remaining = self.max_file_size_bytes
-        async with client.stream("GET", url) as download:
-            if download.status_code >= HTTP_STATUS_CLIENT_ERROR_FLOOR:
-                await download.aread()
-                self._raise_for_status(download, "download")
-            async for chunk in download.aiter_bytes():
-                if remaining <= 0:
-                    break
-                chunks.append(chunk[:remaining])
-                remaining -= len(chunk)
+        async for chunk in response.aiter_bytes():
+            chunks.append(chunk[:remaining])
+            remaining -= len(chunk)
+            if remaining <= 0:
+                break
         return b"".join(chunks)
+
+    async def _stream_capped(self, url: str) -> bytes:
+        """Read credential-free HTTPS redirects with a byte cap and SSRF protection."""
+        for _ in range(MAX_DOWNLOAD_REDIRECTS + 1):
+            try:
+                target = httpx.URL(url)
+                if target.scheme != "https" or not target.host or target.userinfo:
+                    raise ValueError
+                _, kwargs = await asyncio.to_thread(ssrf_protected_strict_httpx_client_kwargs_for_url, url)
+            except (ValueError, httpx.InvalidURL):
+                msg = "Microsoft Graph returned an unusable download location."
+                raise OSError(msg) from None
+            # Separate clients prevent cookies from leaking across redirect hops.
+            async with self._client(**kwargs) as client, client.stream("GET", url) as response:
+                if response.status_code in _REDIRECT_STATUSES:
+                    location = response.headers.get("location")
+                    if not location:
+                        msg = "Microsoft Graph returned an unusable download location."
+                        raise OSError(msg)
+                    url = urljoin(url, location)
+                    continue
+                self._raise_for_status(response, "download")
+                return await self._read_capped(response)
+        msg = "Microsoft Graph exceeded the download redirect limit."
+        raise OSError(msg)
 
     def describe(self) -> dict[str, Any]:
         """Expose the connection handle, which is a reference and not a secret.

@@ -1,9 +1,8 @@
 """Headless resolution through the environment wire format.
 
-Only ``lfx run`` stamps a ``headless_operator`` principal today
-(``lfx/run/_defaults.py``); ``lfx serve`` and full Langflow stamp nothing until
-INT-6 (LE-2464) lands, and the portable deny floor refuses every other kind for
-an env-owned credential. These tests pin both halves of that contract.
+Environment credentials require an explicit ``headless_operator`` principal.
+An actor, a job owner, or an unknown principal cannot inherit the process's
+credentials. These tests cover that portable deny floor.
 """
 
 from __future__ import annotations
@@ -50,7 +49,7 @@ async def test_headless_operator_resolves_the_env_credential(monkeypatch) -> Non
 
 @pytest.mark.usefixtures("unset_resolver")
 async def test_short_form_scopes_satisfy_the_resolver(monkeypatch) -> None:
-    """Entra echoes the short form; the wire value must use it too."""
+    """The component accepts Microsoft permission names in short form."""
     monkeypatch.setenv(ENV_KEY, _wire(["Mail.Read"]))
     recorder = TransportRecorder(lambda _request: json_response({"value": []}))
     component = build_component(
@@ -99,7 +98,7 @@ async def test_an_unset_variable_reports_the_env_key(monkeypatch) -> None:
 
 @pytest.mark.usefixtures("unset_resolver")
 async def test_an_unstamped_principal_is_denied_by_the_deny_floor(monkeypatch) -> None:
-    """This is why canvas execution of these components needs INT-6."""
+    """Missing execution identity must not grant access to process credentials."""
     monkeypatch.setenv(ENV_KEY, _wire(["Mail.Read"]))
     recorder = TransportRecorder(lambda _request: httpx.Response(200, json={"value": []}))
     component = build_component(

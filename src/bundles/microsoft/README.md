@@ -33,3 +33,15 @@ Every component takes a portable connection handle (`microsoft/<name>`) and reso
 through the host's connection resolver. See
 [Configure connection OAuth](https://docs.langflow.org/connection-oauth) and
 [Register a Microsoft Entra application](https://docs.langflow.org/entra-app-registration).
+
+## Listing and download limits
+
+The listing actions use a **Result Budget** and return complete Graph pages. The
+last page can take the row count above the budget; retaining that page ensures
+**Next Link** resumes without losing records. Both outputs share one request
+sequence per run, and a later run fetches fresh results.
+
+File downloads stream up to **Max Bytes**, including direct responses and
+preauthenticated redirects. Redirects use HTTPS without forwarding credentials
+and honor the deployment's connector SSRF settings. Outlook attachments honor
+the deployment's local-file access restrictions and a 3 MiB inline byte budget.

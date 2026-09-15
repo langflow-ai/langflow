@@ -52,3 +52,17 @@ def unset_resolver():
 
 
 __all__ = ["BaseConnectionResolverService", "resolver_factory", "unset_resolver"]
+
+
+@pytest.fixture(autouse=True)
+def recorded_download_dns(monkeypatch):
+    import socket
+
+    original = socket.getaddrinfo
+
+    def resolve(host, port, *args, **kwargs):
+        if host == "contoso-my.sharepoint.com":
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port or 443))]
+        return original(host, port, *args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", resolve)

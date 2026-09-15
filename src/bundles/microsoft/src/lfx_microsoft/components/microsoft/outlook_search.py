@@ -47,8 +47,8 @@ class OutlookSearchComponent(MicrosoftGraphComponent):
         ),
         IntInput(
             name="top",
-            display_name="Max Results",
-            info="1 to 1000. Graph defaults to 10.",
+            display_name="Result Budget",
+            info="Stop after a complete page reaches this count; results can exceed it by part of a page.",
             value=DEFAULT_TOP,
         ),
         MessageTextInput(
@@ -76,6 +76,10 @@ class OutlookSearchComponent(MicrosoftGraphComponent):
     # the instance so that evaluating "Next Link" first -- or evaluating both
     # outputs -- costs one request, not two.
     _rows: list[Data] | None = None
+
+    def _pre_run_setup(self) -> None:
+        self._rows = None
+        self._next_link = None
 
     def _path(self) -> str:
         folder = (self.folder_id or "").strip()

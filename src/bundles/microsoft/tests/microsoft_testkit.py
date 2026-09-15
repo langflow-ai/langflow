@@ -16,7 +16,7 @@ from typing import Any
 import httpx
 from lfx.integrations.models import ResolvedCredential
 from lfx.services.authorization.base import ExecutionPrincipal
-from lfx.services.connection.base import BaseConnectionResolverService
+from lfx.services.connection.base import BaseConnectionResolverService, ConnectionAccessPolicy
 from pydantic import SecretStr
 
 FIXTURES = Path(__file__).parent / "fixtures" / "graph"
@@ -40,7 +40,11 @@ class RecordingResolver(BaseConnectionResolverService):
     def calls(self) -> int:
         return len(self.requests)
 
-    async def resolve(self, request):
+    async def _get_access_policy(self, _request):
+        index = min(len(self.requests), len(self._credentials) - 1)
+        return ConnectionAccessPolicy(owner_kind=self._credentials[index].owner_kind, connection_owner_id="user-1")
+
+    async def _resolve(self, request, _policy):
         self.requests.append(request)
         index = min(len(self.requests) - 1, len(self._credentials) - 1)
         return self._credentials[index]
@@ -102,9 +106,7 @@ def graph_error(code: str, status_code: int, headers: dict[str, str] | None = No
 def stub_graph(principal: ExecutionPrincipal | None = None) -> SimpleNamespace:
     """Build the minimal graph surface ``resolve_connection`` reads.
 
-    No route family stamps ``graph.execution_principal`` on the INT-5 stack
-    tip, so tests stamp it explicitly. Canvas and ``/api/v1/run`` execution of
-    these components needs INT-6 (LE-2464) for the same reason.
+    Supply the authenticated execution principal a server route would stamp.
     """
     return SimpleNamespace(
         execution_principal=principal or ExecutionPrincipal(kind="actor", user_id="user-1", interactive=True),

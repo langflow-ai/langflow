@@ -92,7 +92,7 @@ async def test_channel_post_targets_the_channel_messages_collection(resolver_fac
 
 
 async def test_channel_post_surfaces_a_graph_denial_as_scope_missing(resolver_factory) -> None:
-    resolver_factory(credential(scopes=set(), scopes_verified=False))
+    resolver_factory(credential(scopes={"ChannelMessage.Send"}))
     recorder = TransportRecorder(lambda _request: graph_error("Authorization_RequestDenied", 403))
     component = build_component(
         TeamsChannelPostComponent,
@@ -105,5 +105,5 @@ async def test_channel_post_surfaces_a_graph_denial_as_scope_missing(resolver_fa
 
     with pytest.raises(ScopeMissingError):
         await component.post_message()
-    # Unverified scopes skip the pre-flight, so the denial comes from Graph.
+    # The credential passes pre-flight; the resource denial comes from Graph.
     assert len(recorder.requests) == 1

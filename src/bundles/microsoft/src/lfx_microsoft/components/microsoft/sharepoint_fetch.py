@@ -75,6 +75,8 @@ class SharePointFetchComponent(MicrosoftGraphComponent):
 
     def _scope_inputs(self) -> dict[str, str]:
         """Inputs the conditional-scope pre-flight predicates read."""
+        self.drive_id = (self.drive_id or "").strip()
+        self.site_id = (self.site_id or "").strip()
         scope: dict[str, str] = {}
         if drive_id := (self.drive_id or "").strip():
             scope["drive_id"] = drive_id

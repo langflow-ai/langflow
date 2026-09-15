@@ -60,6 +60,9 @@ is_dangerous_mcp_env_var = mcp_security.is_dangerous_mcp_env_var
 # Minimum cleanup interval to prevent tight-loop CPU spin if settings return 0 or fail.
 _MCP_CLEANUP_INTERVAL_MIN = 30  # seconds
 _SESSION_VALIDATION_TIMEOUT_FLOOR = 10.0
+# Mirrors the McpSettings.mcp_server_timeout default. Only used when the settings object lacks
+# the field or carries a non-positive value, so a misconfiguration cannot resurrect a shorter cap.
+_SESSION_INIT_TIMEOUT_FALLBACK = 60.0
 
 
 def _validate_mcp_stdio_env(env: dict[str, str] | None) -> dict[str, str]:
@@ -102,6 +105,23 @@ def get_session_validation_timeout() -> float:
     if connect_timeout is None:
         return _SESSION_VALIDATION_TIMEOUT_FLOOR
     return max(_SESSION_VALIDATION_TIMEOUT_FLOOR, float(connect_timeout) / 3.0)
+
+
+def get_session_init_timeout() -> float:
+    """Budget for a new transport session to finish ``initialize``.
+
+    Derived from ``mcp_server_timeout`` so the inner readiness wait in the session
+    creators and the outer ``connect_to_server`` budget are the same number. This used
+    to be a hardcoded 30 s, which silently capped ``LANGFLOW_MCP_SERVER_TIMEOUT`` at 30
+    and, on the ``run_tool`` path (no outer connect budget), was the real connect limit.
+
+    Non-positive values are treated as unset, like ``_resolve_mcp_tool_execution_timeout``,
+    because ``asyncio.wait_for`` fails immediately for any timeout <= 0.
+    """
+    connect_timeout = _get_mcp_setting("mcp_server_timeout", None)
+    if connect_timeout is None or float(connect_timeout) <= 0:
+        return _SESSION_INIT_TIMEOUT_FALLBACK
+    return float(connect_timeout)
 
 
 def get_max_sessions_per_server() -> int:
@@ -1503,9 +1523,10 @@ class MCPSessionManager:
         self._background_tasks.add(task)
         task.add_done_callback(self._background_tasks.discard)
 
-        # Wait for session to be ready (use longer timeout for remote connections)
+        # Wait for the session to be ready within the configured connect budget. A cold stdio
+        # server (e.g. a packaged interpreter importing Langflow) can take well over 20 s here.
         try:
-            session = await asyncio.wait_for(session_future, timeout=30.0)
+            session = await asyncio.wait_for(session_future, timeout=get_session_init_timeout())
         except asyncio.CancelledError:
             self._abort_session_task(task)
             raise
@@ -1672,7 +1693,7 @@ class MCPSessionManager:
         task.add_done_callback(self._background_tasks.discard)
 
         try:
-            session = await asyncio.wait_for(session_future, timeout=30.0)
+            session = await asyncio.wait_for(session_future, timeout=get_session_init_timeout())
             if used_transport:
                 transport_used = used_transport[0]
                 await logger.ainfo(f"Session {session_id} successfully established using {transport_used}")

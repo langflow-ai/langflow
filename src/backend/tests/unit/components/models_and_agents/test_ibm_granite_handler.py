@@ -9,6 +9,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 from langchain_core.messages import AIMessage
+from langchain_openai import ChatOpenAI
 from lfx.components.langchain_utilities.ibm_granite_handler import (
     PLACEHOLDER_PATTERN,
     create_granite_agent,
@@ -140,6 +141,15 @@ class TestIsWatsonxModel:
         mock_llm.model_id = "mistralai/mistral-large"
 
         result = is_watsonx_model(mock_llm)
+
+        assert result is True
+
+    @pytest.mark.parametrize("model_name", ["watsonx/granite-3-3-8b-instruct", "WATSONX/granite-3-3-8b-instruct"])
+    def test_detects_watsonx_prefix_on_openai_compatible_client(self, model_name):
+        """Test detection when LiteLLM routes WatsonX through ChatOpenAI."""
+        llm = ChatOpenAI(api_key="test", base_url="https://proxy.example/v1", model=model_name)
+
+        result = is_watsonx_model(llm)
 
         assert result is True
 

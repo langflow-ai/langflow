@@ -1,7 +1,7 @@
 """Shared base for every Microsoft Graph action component.
 
 Each component declares one manifest capability. The base turns that into a
-credential lease, pre-flights the conditional scopes the resolver cannot see,
+credential lease, checks the active capability requirements,
 and wraps the provider call in the integration telemetry boundary.
 
 This module is also the bundle's import facade for the ``lfx`` field types.
@@ -88,10 +88,8 @@ class MicrosoftGraphComponent(Component):
     def _preflight_scopes(self, credential: ResolvedCredential, inputs: dict[str, Any]) -> None:
         """Fail before the network call when a conditional scope is missing.
 
-        ``Component.resolve_connection`` only forwards ``required_scopes``, so
-        conditional requirements such as ``Files.Read.All`` (active only when a
-        drive id is supplied) would otherwise surface as an opaque Graph 403.
-        A credential whose scopes were never verified is left to the provider.
+        The connection resolver enforces static and conditional input scopes.
+        This check also keeps direct action callers aligned with the manifest.
         """
         if not credential.scopes_verified:
             return

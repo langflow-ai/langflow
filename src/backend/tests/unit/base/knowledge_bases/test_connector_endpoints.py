@@ -3,7 +3,7 @@
 The catalog (``GET /knowledge_bases/connectors``) and dispatcher
 (``POST /{kb_name}/ingest/connector``) endpoints publish the registered
 sources: ``folder`` plus the connection-backed ``onedrive`` and
-``sharepoint`` sources added in INT-11 (``file_upload`` is registered but
+``sharepoint`` sources (``file_upload`` is registered but
 hidden because it has its own endpoint). The remaining cloud-connector
 sources (S3 / Google Drive) are stubbed out at the registry layer; the
 catalog must hide them and the dispatcher must reject them as 400 typos

@@ -10,6 +10,7 @@ non-interactive use.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 import httpx
@@ -24,7 +25,7 @@ from lfx.base.knowledge_bases.ingestion_sources import (
 from lfx.base.knowledge_bases.ingestion_sources import microsoft_graph as graph_module
 from lfx.integrations.errors import ConnectionNotAuthorizedError, ScopeMissingError
 from lfx.integrations.models import ResolvedCredential
-from lfx.services.connection.base import BaseConnectionResolverService
+from lfx.services.connection.base import BaseConnectionResolverService, ConnectionAccessPolicy
 from lfx.services.manager import get_service_manager
 from lfx.services.schema import ServiceType
 from pydantic import SecretStr
@@ -36,14 +37,26 @@ DOWNLOAD_URL = "https://contoso-my.sharepoint.com/personal/_layouts/15/download.
 class _Resolver(BaseConnectionResolverService):
     """Records resolution requests and returns a canned credential."""
 
-    def __init__(self, credential: ResolvedCredential | None = None, error: Exception | None = None) -> None:
+    def __init__(
+        self,
+        credential: ResolvedCredential | None = None,
+        error: Exception | None = None,
+        *,
+        allow_non_interactive: bool = True,
+    ) -> None:
         super().__init__()
         self._credential = credential
         self._error = error
+        self.allow_non_interactive = allow_non_interactive
         self.requests: list[Any] = []
         self.set_ready()
 
-    async def resolve(self, request):
+    async def _get_access_policy(self, _request):
+        return ConnectionAccessPolicy(
+            owner_kind="user", connection_owner_id=USER_ID, allow_non_interactive=self.allow_non_interactive
+        )
+
+    async def _resolve(self, request, _policy):
         self.requests.append(request)
         if self._error is not None:
             raise self._error
@@ -91,10 +104,8 @@ def graph_transport(monkeypatch):
         transport = httpx.MockTransport(_record)
         original = graph_module.MicrosoftGraphSource._client
 
-        def _client(self) -> httpx.AsyncClient:
-            client = original(self)
-            client._transport = transport
-            return client
+        def _client(self, **kwargs) -> httpx.AsyncClient:
+            return original(self, **{**kwargs, "transport": transport, "trust_env": False})
 
         monkeypatch.setattr(graph_module.MicrosoftGraphSource, "_client", _client)
         return requests
@@ -214,7 +225,7 @@ class TestPrincipal:
         assert recorder.requests[0].required_scopes == frozenset({"Files.Read"})
 
     async def test_a_connection_without_non_interactive_use_is_refused(self, resolver, graph_transport) -> None:
-        resolver(_Resolver(error=ConnectionNotAuthorizedError(provider="microsoft")))
+        resolver(_Resolver(_credential(), allow_non_interactive=False))
         requests = graph_transport(lambda _request: httpx.Response(200, json=_children([])))
         source = OneDriveSource(user_id=USER_ID, source_config={"connection": "microsoft/work"})
 
@@ -442,3 +453,105 @@ class TestFetch:
 
         with pytest.raises(OSError, match="404"):
             await source.fetch_content(source._to_item(FILE_ENTRY))
+
+
+@pytest.fixture(autouse=True)
+def recorded_download_dns(monkeypatch):
+    import socket
+
+    original = socket.getaddrinfo
+
+    def resolve(host, port, *args, **kwargs):
+        if host == "contoso-my.sharepoint.com":
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port or 443))]
+        return original(host, port, *args, **kwargs)
+
+    monkeypatch.setattr(socket, "getaddrinfo", resolve)
+
+
+@pytest.mark.parametrize("redirected", [False, True])
+async def test_direct_and_redirected_downloads_stop_before_reading_the_next_chunk(
+    resolver, graph_transport, redirected
+):
+    resolver(_Resolver(_credential()))
+    served = []
+
+    async def chunks():
+        for index in range(100):
+            served.append(index)
+            yield b"x" * 1024
+
+    def handler(request):
+        if redirected and request.url.host == "graph.microsoft.com":
+            return httpx.Response(302, headers={"Location": DOWNLOAD_URL})
+        return httpx.Response(200, content=chunks())
+
+    graph_transport(handler)
+    source = OneDriveSource(
+        user_id=USER_ID, source_config={"connection": "microsoft/work", "max_file_size_bytes": 2048}
+    )
+    content = await source.fetch_content(source._to_item(FILE_ENTRY))
+    assert content.raw_bytes == b"x" * 2048
+    assert served == [0, 1]
+
+
+@pytest.mark.parametrize(
+    "target", ["http://example.com/file", "https://127.0.0.1/file", "https://user@example.com/file"]
+)
+async def test_ingestion_validates_every_download_hop(resolver, graph_transport, target, monkeypatch):
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
+    resolver(_Resolver(_credential()))
+    replies = [
+        httpx.Response(302, headers={"Location": DOWNLOAD_URL}),
+        httpx.Response(302, headers={"Location": target}),
+    ]
+    requests = graph_transport(lambda _: replies.pop(0))
+    source = OneDriveSource(user_id=USER_ID, source_config={"connection": "microsoft/work"})
+    with pytest.raises(OSError, match="download location"):
+        await source.fetch_content(source._to_item(FILE_ENTRY))
+    assert len(requests) == 2
+
+
+async def test_ingestion_next_links_cannot_receive_a_bearer_on_another_host(resolver, graph_transport):
+    resolver(_Resolver(_credential()))
+    requests = graph_transport(lambda _: httpx.Response(200, json=_children([], next_link="https://example.com/steal")))
+    source = OneDriveSource(user_id=USER_ID, source_config={"connection": "microsoft/work"})
+    with pytest.raises(OSError, match="listing URL"):
+        _ = [item async for item in source.list_items()]
+    assert len(requests) == 1
+
+
+@pytest.mark.parametrize("download", [False, True])
+async def test_ingestion_reauthorizes_a_connection_once_after_401(resolver, graph_transport, download):
+    instance = resolver(_Resolver(_credential()))
+    fresh = replace(_credential(), access_token=SecretStr("fresh"))
+
+    def handler(request):
+        if request.headers["Authorization"] == "Bearer graph-job-token":
+            instance._credential = fresh
+            return httpx.Response(401)
+        return httpx.Response(200, content=b"file") if download else httpx.Response(200, json=_children([]))
+
+    requests = graph_transport(handler)
+    source = OneDriveSource(user_id=USER_ID, source_config={"connection": "microsoft/work"})
+    if download:
+        assert (await source.fetch_content(source._to_item(FILE_ENTRY))).raw_bytes == b"file"
+    else:
+        assert [item async for item in source.list_items()] == []
+    assert len(requests) == 2
+    assert requests[1].headers["Authorization"] == "Bearer fresh"
+    assert len(instance.requests) == 2
+
+
+async def test_download_errors_do_not_read_or_echo_provider_bodies(resolver, graph_transport):
+    resolver(_Resolver(_credential()))
+
+    async def sensitive_body():
+        pytest.fail("A failed download body must not be read")
+        yield b"preauthenticated URL or provider secret"
+
+    graph_transport(lambda _: httpx.Response(403, content=sensitive_body()))
+    source = OneDriveSource(user_id=USER_ID, source_config={"connection": "microsoft/work"})
+    with pytest.raises(OSError, match=r"^Microsoft Graph download failed with 403\.$"):
+        await source.fetch_content(source._to_item(FILE_ENTRY))

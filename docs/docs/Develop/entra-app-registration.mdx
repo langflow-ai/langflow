@@ -154,9 +154,9 @@ Notes:
 - `scopes` is an operator-controlled **ceiling**. A consent request must select a
   nonempty subset of it and cannot supply endpoints, a redirect URI, a client ID,
   or secrets.
-- Write the permissions in the **short** form (`Mail.Read`). Requesting
-  `https://graph.microsoft.com/Mail.Read` makes Entra echo the long form, and the
-  components declare the short form.
+- Use **short** permission names (`Mail.Read`) consistently in the registration
+  and consent request. Execution checks normalize fully qualified Microsoft
+  Graph scope names to the equivalent short names.
 - A confidential registration carries either `client_secret` or `private_key`
   plus `certificate_thumbprint`, never both.
 - Changing a registration's provider, client ID, scopes, tenant restrictions,
@@ -211,6 +211,6 @@ the process to complain.
 | `OAuth registration is not configured correctly.` on Connect | `tenant` is missing or is not a UUID | Use the directory (tenant) ID; `common` and `organizations` are not accepted |
 | `OAuth registration is unavailable in this deployment context.` on Connect | `context` differs from `LANGFLOW_CONNECTION_OAUTH_CONTEXT` | One instance serves one context |
 | Consent prompt says approval is required | Tenant restricts user consent | Grant admin consent, or enable the admin consent workflow |
-| Connections fail with a missing-permission error | The registration's `scopes` use the long `https://graph.microsoft.com/...` form | Use the short form on both sides |
+| Connections fail with a missing-permission error | The connection lacks a verified permission required by the selected action or drive | Add that permission to the registration and reconnect with the required consent |
 | A connection stops working after an hour | `offline_access` is missing from the registration | Add it to the permissions and to `scopes`, then reconnect |
 | `AADSTS50011` redirect mismatch | The redirect URI or platform does not match | Add the exact callback path on the correct platform |

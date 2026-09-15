@@ -18,7 +18,7 @@ differ from ``FileUploadSource`` / ``FolderSource`` in two ways:
 This base class gives connectors a single ``resolve_secret`` helper so
 every provider talks to the variable service the same way, and a single
 ``connection_lease`` helper for connectors backed by a dedicated
-integration connection (INT-2/INT-4/INT-5) rather than by hand-managed
+integration connection rather than by hand-managed
 refresh-token variables.
 
 ``OAuthConnectorBase`` keeps the original bring-your-own-refresh-token

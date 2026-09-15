@@ -48,7 +48,12 @@ class OutlookCalendarListComponent(MicrosoftGraphComponent):
             info="Defaults to the user's default calendar.",
             advanced=True,
         ),
-        IntInput(name="top", display_name="Max Results", value=DEFAULT_TOP),
+        IntInput(
+            name="top",
+            display_name="Result Budget",
+            value=DEFAULT_TOP,
+            info="Stop after a complete page reaches this count; results can exceed it by part of a page.",
+        ),
         MessageTextInput(
             name="select",
             display_name="Select Fields",
@@ -73,6 +78,10 @@ class OutlookCalendarListComponent(MicrosoftGraphComponent):
     # the instance so that evaluating "Next Link" first -- or evaluating both
     # outputs -- costs one request, not two.
     _rows: list[Data] | None = None
+
+    def _pre_run_setup(self) -> None:
+        self._rows = None
+        self._next_link = None
 
     def _path(self) -> str:
         calendar = (self.calendar_id or "").strip()

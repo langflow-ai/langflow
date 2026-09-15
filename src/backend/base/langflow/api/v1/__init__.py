@@ -17,6 +17,7 @@ from langflow.api.v1.flow_events import router as flow_events_router
 from langflow.api.v1.flow_version import router as flow_version_router
 from langflow.api.v1.flows import router as flows_router
 from langflow.api.v1.folders import router as folders_router
+from langflow.api.v1.integrations import router as integrations_router
 from langflow.api.v1.knowledge_bases import router as knowledge_bases_router
 from langflow.api.v1.login import router as login_router
 from langflow.api.v1.mcp import router as mcp_router
@@ -57,6 +58,7 @@ __all__ = [
     "flow_version_router",
     "flows_router",
     "folders_router",
+    "integrations_router",
     "knowledge_bases_router",
     "login_router",
     "mcp_projects_router",

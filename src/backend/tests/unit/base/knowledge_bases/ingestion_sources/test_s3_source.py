@@ -2,7 +2,7 @@
 
 The S3 and Google Drive sources ship as stubs (see each module's
 docstring under ``lfx.base.knowledge_bases.ingestion_sources``). OneDrive
-and SharePoint left this set in INT-11: they are registered and resolve
+and SharePoint are enabled: they are registered and resolve
 their credentials through a Microsoft connection, and
 ``test_microsoft_graph_source.py`` covers them. These tests pin the
 "intentionally disabled" contract for what remains:

@@ -18,7 +18,7 @@ Public surface:
 
 **file_upload**, **folder**, **onedrive** and **sharepoint** are
 registered. OneDrive and SharePoint resolve their credentials through a
-Microsoft connection handle (INT-11); an ingestion job is a
+Microsoft connection handle; an ingestion job is a
 non-interactive ``job_owner`` principal, so the connection must allow
 non-interactive use or resolution is refused.
 

@@ -89,6 +89,12 @@ class FlowToolComponent(LCToolComponent):
             graph.set_run_id(self.graph.run_id)
         except Exception:  # noqa: BLE001
             logger.warning("Failed to set run_id", exc_info=True)
+        # The tool's target runs inside THIS execution, so it resolves connections
+        # under the calling graph's principal. A freshly loaded graph carries the
+        # fail-closed ``unknown()``, which would deny every connection in the tool.
+        parent_principal = getattr(self.graph, "execution_principal", None)
+        if parent_principal is not None:
+            graph.execution_principal = parent_principal
         inputs = get_flow_inputs(graph)
         tool_description = self.tool_description.strip() or flow_data.description
         tool = FlowTool(

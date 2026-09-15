@@ -33,11 +33,13 @@ For headless runs (`lfx run`), supply the credential in the environment variable
 export LF_CONNECTION__MICROSOFT__WORK='{"access_token":"<delegated access token>","scopes":["Mail.Read"]}'
 ```
 
-Use the **short** permission names, exactly as Microsoft Entra returns them in the token response (`Mail.Read`, not `https://graph.microsoft.com/Mail.Read`). Do not include `offline_access`: Entra never echoes it, and it belongs to the OAuth registration rather than to an action.
+Use **short** permission names such as `Mail.Read`; execution checks also accept the equivalent fully qualified Microsoft Graph names. Do not include `offline_access`: Entra never echoes it, and it belongs to the OAuth registration rather than to an action.
 
-The JSON form accepts only `access_token`, `token_type`, `expires_at`, `scopes`, and `account`. Refresh tokens and client secrets are rejected. A bare token string is also accepted, in which case the permissions are not verified locally and Microsoft rejects the call instead.
+The JSON form accepts only `access_token`, `token_type`, `expires_at`, `scopes`, and `account`. Refresh tokens and client secrets are rejected. A bare token lacks verified scope metadata and cannot run these permission-scoped actions. Use the JSON form with the token's granted permissions.
 
 ## Components
+
+Listing actions return complete pages until they reach **Result Budget**. The final page can take the count above that budget. **Next Link** resumes after the returned rows; both outputs share one listing per run.
 
 ### Outlook: Send Mail
 
@@ -47,14 +49,14 @@ Sends a message as the connected user through `POST /me/sendMail`.
 - **Inputs:** **To**, **Cc**, **Bcc**, **Subject**, **Body**, **Body is HTML**, **Attachments**, **Save to Sent Items**
 - **Output:** **Result** — Graph answers `202 Accepted` with no body, so the output carries the accepted request and the status code.
 
-Attachments are uploaded inline as Graph `fileAttachment` entries. Exchange Online caps message size, by default at 35 MB and at most 150 MB when the tenant raises it.
+Attachments are uploaded inline as Graph `fileAttachment` entries, with a 3 MiB raw attachment budget and a 4 MiB limit on the complete encoded request. Larger files need an upload session or a shared link. File reads honor the deployment's local-file access restrictions.
 
 ### Outlook: Search Mail
 
 Lists or searches the connected user's mailbox through `GET /me/messages`.
 
 - **Delegated permission:** `Mail.Read`
-- **Inputs:** **Search** (`$search`), **Filter** (`$filter`), **Mail Folder ID**, **Max Results** (1-1000), **Select Fields**, **Include Body**
+- **Inputs:** **Search** (`$search`), **Filter** (`$filter`), **Mail Folder ID**, **Result Budget**, **Select Fields**, **Include Body**
 - **Outputs:** **Messages** (one `Data` per message) and **Next Link** (the `@odata.nextLink` that was not followed)
 
 Graph rejects `$search` combined with `$filter`; use one or the other. **Include Body** asks Graph for plain-text bodies through the `Prefer: outlook.body-content-type=text` header.
@@ -64,7 +66,7 @@ Graph rejects `$search` combined with `$filter`; use one or the other. **Include
 Lists events in a time window through `GET /me/calendarView`, with recurring series expanded into instances.
 
 - **Delegated permission:** `Calendars.Read`
-- **Inputs:** **Start**, **End** (ISO 8601, both required), **Calendar ID**, **Max Results**, **Select Fields**, **Time Zone**
+- **Inputs:** **Start**, **End** (ISO 8601, both required), **Calendar ID**, **Result Budget**, **Select Fields**, **Time Zone**
 - **Outputs:** **Events** and **Next Link**
 
 **Time Zone** sets the `Prefer: outlook.timezone` header, so returned times use the zone you name rather than UTC.
@@ -104,7 +106,7 @@ Personal Microsoft accounts are not supported.
 Lists the children of a folder through `GET .../children`.
 
 - **Delegated permission:** `Files.Read`, plus `Files.Read.All` when you supply a **Drive ID** and `Sites.Read.All` when you supply a **Site ID**
-- **Inputs:** **Drive ID**, **Site ID**, **Folder Item ID**, **Folder Path**, **Max Results**, **Select Fields**, **Order By**
+- **Inputs:** **Drive ID**, **Site ID**, **Folder Item ID**, **Folder Path**, **Result Budget**, **Select Fields**, **Order By**
 - **Outputs:** **Items** (one `Data` per `driveItem`) and **Next Link**
 
 With neither a drive nor a site id, the component lists the connected user's own OneDrive. A drive id takes precedence over a site id.

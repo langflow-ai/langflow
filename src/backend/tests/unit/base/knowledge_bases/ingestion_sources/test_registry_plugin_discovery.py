@@ -252,7 +252,7 @@ async def test_reinstall_builtin_sources_matches_production_registrations(monkey
     added to the helper, every test that runs after this module in the
     same process silently loses that source — which is exactly how
     ``test_connector_endpoints.py`` started failing when ``onedrive``
-    and ``sharepoint`` were registered (INT-11).
+    and ``sharepoint`` were registered.
     """
     import importlib
 

@@ -45,6 +45,9 @@ The hosted application registers only non-sensitive and sensitive scopes: `gmail
 `calendar.events`, `calendar.events.readonly`. Consequences per action: Gmail search is excluded from wave 1; Drive
 list and fetch ship on `drive.file` only (files the app created or the user opened with it, with the Picker as a
 later enhancement).
+The Picker is explicitly deferred (frontend B13). Wave 1 must explain a successful empty list on a fresh
+connection and the fetch access boundary (B14): INT-8 owns shared UI/copy, INT-10 supplies the limitation and
+result metadata, and INT-14 tests it, including KB connector use. Entering a file id cannot grant app access.
 Pros: only sensitive-scope verification (3-5 business days, fact 7) stands between the hosted app and production;
 no recurring assessment; Gmail send, Calendar list, Calendar create, and Drive on app-scoped files still ship.
 Cons: Gmail search, the second most requested Google action, is not in wave 1 on any deployment that uses the
@@ -57,6 +60,9 @@ restricted profile on their customer-owned application without CASA; External se
 own verification. Pros: keeps Gmail search reachable for Workspace-organization customers. Cons: two scope sets
 means two component behaviours, two documentation paths, and a policy key to gate the profile; it widens INT-7 and
 INT-10 and is not sized. Proposed as the first 1.14 candidate, not as 1.13 scope.
+Before accepting this option, apply the stable-id, unavailable-node preservation, explicit run/publish failure
+and round-trip requirements in `../cross-provider-capabilities.md`; changing deployment must not silently
+substitute an action, drop nodes or expand scopes.
 
 ## Decision
 
@@ -88,6 +94,8 @@ Decision: avoid
 - Hosted-app external dependencies: brand verification and sensitive-scope verification only; CASA leaves the
   estimate.
 - The auth matrix's hosted Google row records "no restricted scopes" as a constraint of the 1.13 registration.
+- The email/file capability gap versus Microsoft is explicit in `../cross-provider-capabilities.md`. The product
+  owner must sign off on launch/support wording; the original avoidance decision does not imply parity approval.
 
 ## Re-open trigger
 

@@ -8,6 +8,8 @@ Graph. Credentials come from a Microsoft connection handle in
 
 from __future__ import annotations
 
+from urllib.parse import quote
+
 from lfx.base.knowledge_bases.ingestion_sources.base import SourceType
 from lfx.base.knowledge_bases.ingestion_sources.microsoft_graph import MicrosoftGraphSource
 
@@ -24,17 +26,17 @@ class SharePointSource(MicrosoftGraphSource):
     @property
     def site_id(self) -> str:
         value = self.source_config.get("site_id") or ""
-        return str(value) if isinstance(value, str) else ""
+        return value.strip() if isinstance(value, str) else ""
 
     @property
     def drive_id(self) -> str:
         value = self.source_config.get("drive_id") or ""
-        return str(value) if isinstance(value, str) else ""
+        return value.strip() if isinstance(value, str) else ""
 
     def drive_root(self) -> str:
         if self.drive_id:
-            return f"/drives/{self.drive_id}"
-        return f"/sites/{self.site_id}/drive"
+            return f"/drives/{quote(self.drive_id, safe='!,')}"
+        return f"/sites/{quote(self.site_id, safe='!,')}/drive"
 
     def required_connection_scopes(self) -> tuple[str, ...]:
         """A site library is only readable with Sites.Read.All."""

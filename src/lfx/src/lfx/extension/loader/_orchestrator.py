@@ -26,6 +26,7 @@ from typing import TYPE_CHECKING, Literal
 
 from lfx.extension._paths import SKIP_DIR_NAMES, is_within
 from lfx.extension.errors import ExtensionError
+from lfx.extension.integration_compat import IntegrationVersionError
 from lfx.extension.integration_manifest import resolve_integration_manifest
 from lfx.extension.loader._detection import collect_component_classes
 from lfx.extension.loader._discovery import (
@@ -455,6 +456,16 @@ def load_extension(
             )
         )
         return result
+    except IntegrationVersionError as exc:
+        result.errors.append(
+            ExtensionError(
+                code="lfx-version-too-old",
+                message=str(exc),
+                location=str(root_path),
+                hint="Upgrade lfx; the integration reference does not need to be rewritten.",
+            )
+        )
+        return result
     except (ValueError, TypeError) as exc:
         result.errors.append(
             ExtensionError(
@@ -594,17 +605,22 @@ def load_extension_bundles(
             )
         ]
 
-    return [
+    results = [
         load_extension(
             root_path,
             slot=slot,
             distribution=distribution,
             module_namespace=module_namespace,
             bundle_name=name,
-            _register_providers=index == 0,
+            _register_providers=False,
         )
-        for index, name in enumerate(bundle_names)
+        for name in bundle_names
     ]
+    # A later bundle can fail validation or import after an earlier one loads.
+    # Register extension-wide providers only after every bundle succeeds.
+    if all(result.ok for result in results):
+        _register_manifest_providers(source.manifest, source, results[0])
+    return results
 
 
 # ---------------------------------------------------------------------------
