@@ -191,6 +191,8 @@ async def reconcile_mcp_server_for_auth_update(
     new_auth_type: str | None,
     current_user,
     session,
+    *,
+    owns_transaction: bool = True,
 ) -> bool:
     """Sync the MCP server config for a project whose auth settings just changed.
 
@@ -208,6 +210,7 @@ async def reconcile_mcp_server_for_auth_update(
         {"auth_type": new_auth_type},
         current_user,
         session,
+        owns_transaction=owns_transaction,
     )
 
 
@@ -217,6 +220,8 @@ async def handle_mcp_server_rename(
     new_project_name: str,
     current_user,
     session,
+    *,
+    owns_transaction: bool = True,
 ) -> None:
     """Handle MCP server name update when a project is renamed.
 
@@ -263,6 +268,7 @@ async def handle_mcp_server_rename(
                     get_storage_service(),
                     get_settings_service(),
                     delete=True,
+                    owns_transaction=owns_transaction,
                 )
 
                 await update_server(
@@ -272,6 +278,7 @@ async def handle_mcp_server_rename(
                     session,
                     get_storage_service(),
                     get_settings_service(),
+                    owns_transaction=owns_transaction,
                 )
 
                 await logger.adebug(
