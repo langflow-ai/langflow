@@ -8,7 +8,7 @@ Last verified: YYYY-MM-DD
 
 <!--
 Same parse rules as design/dedicated-integrations/decisions/TEMPLATE.md so the INT-1 checker can validate this
-directory once it accepts a --design-root: Status is one of draft | proposed | accepted | superseded; the
+directory with --design-root: Status is one of draft | proposed | accepted | superseded; the
 "## Decision" heading is required; every role on the Owners line needs a row in the "## Sign-off" table below and in
 the README sign-off table, which must list this file. `Status: accepted` records the release owner's decision; the
 other roles sign off in PR review.
