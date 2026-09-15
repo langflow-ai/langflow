@@ -372,9 +372,7 @@ async def _binding_project(session: DbSession, current_user: User, project_id: U
         workspace_id=project.workspace_id,
     )
     if project.project_type != "agent-harness" or field_name not in BINDING_LABELS:
-        raise HTTPException(
-            422, "Only harness Instructions, Hooks, Context, and Compaction currently support flow bindings."
-        )
+        raise HTTPException(422, "Choose a supported harness field for this flow binding.")
     return project
 
 
@@ -410,11 +408,10 @@ async def prepare_project_flow_baseline(
     try:
         baseline = build_slot_baseline(reference, request.initial_value, initial_config=request.initial_config)
     except ValueError as exc:
-        hint = (
-            "Check the compaction threshold and recent-message count before creating its flow."
-            if field_name == "compaction"
-            else "Check the context strategy and recent-turn count before creating its flow."
-        )
+        hint = {
+            "compaction": "Check the compaction threshold and recent-message count before creating its flow.",
+            "tool_policy": "Check the tool permission policy before creating its flow.",
+        }.get(field_name, "Check the context strategy and recent-turn count before creating its flow.")
         raise HTTPException(422, hint) from exc
     return {**baseline, "folder_id": str(project.id)}
 
@@ -434,6 +431,7 @@ async def validate_project_flow_outputs(
         "hooks": "Connect one Hook Event to a terminal Hook decision and configure required inputs.",
         "context_strategy": "Connect one Agent Context to a terminal message Table and configure required inputs.",
         "compaction": "Connect one Compaction Input to a terminal CompactionResult and configure required inputs.",
+        "tool_policy": "Connect one Permission Request to a terminal Permission output and configure required inputs.",
         "system_prompt": "Configure required inputs and connect a terminal text output.",
     }[field_name]
     try:

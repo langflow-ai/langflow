@@ -11,8 +11,9 @@ shape being written into is the shape a flow actually holds.
 import pytest
 from lfx.components.models_and_agents.agent import AgentComponent
 from lfx.inputs.inputs import StrInput
-from lfx.projects import apply_project_config, get_project_type
 from lfx.projects.schema import FieldTarget, ProjectType, ProjectTypeField
+
+from lfx.projects import apply_project_config, get_project_type
 
 
 def agent_node(node_id: str = "Agent-1") -> dict:
@@ -32,6 +33,19 @@ def template_of(data: dict, index: int = 0) -> dict:
 @pytest.fixture
 def harness():
     return get_project_type("agent-harness")
+
+
+def test_new_untargeted_nodes_do_not_change_saved_field_baselines(harness):
+    config = {"tool_policy": "deny"}
+    first = apply_project_config(flow_with(agent_node()), harness, config)
+    # Binding Instructions adds a Run Flow node after scalar values are written.
+    expanded = {
+        **first.data,
+        "nodes": [*first.data["nodes"], {"id": "generated", "data": {"type": "RunFlow", "node": {"template": {}}}}],
+    }
+    repeated = apply_project_config(expanded, harness, config, previous_values=first.applied_values)
+    assert not repeated.changed
+    assert repeated.applied_values == first.applied_values
 
 
 class TestWritingThrough:
