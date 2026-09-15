@@ -5050,6 +5050,31 @@
       "bare_class_name": "SerplySearchComponent",
       "target": "ext:serply:SerplySearchComponent@official",
       "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "GmailSendComponent",
+      "target": "ext:google:GmailSendComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "GoogleCalendarCreateComponent",
+      "target": "ext:google:GoogleCalendarCreateComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "GoogleCalendarListComponent",
+      "target": "ext:google:GoogleCalendarListComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "GoogleDriveFetchComponent",
+      "target": "ext:google:GoogleDriveFetchComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "GoogleDriveListComponent",
+      "target": "ext:google:GoogleDriveListComponent@official",
+      "added_in": "1.13.0"
     }
   ],
   "ambiguous_bare_names": [
