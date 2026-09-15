@@ -5,6 +5,7 @@ on:
     paths:
       - "scripts/ci/**"
       - "design/dedicated-integrations/**"
+      - "design/dedicated-integrations-triggers/**"
       - ".github/workflows/ci-scripts-test.yml"
       - ".github/workflows/ci.yml"
       - ".github/workflows/typescript_test.yml"
