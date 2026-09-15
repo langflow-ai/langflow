@@ -6,6 +6,34 @@ import { editorDraft } from "../editor-draft";
 import HarnessPage from "../harness-page";
 
 const mockPatch = jest.fn();
+const packReference = {
+  project_id: "pack",
+  expected_type: "tool-pack",
+  revision: "reviewed-pack",
+};
+jest.mock("../components/tool-pack-picker", () => ({
+  HarnessReturn: () => null,
+  ToolPackPicker: ({
+    onChange,
+    onOpen,
+  }: {
+    onChange: (refs: unknown[]) => void;
+    onOpen: () => void;
+  }) => (
+    <>
+      <button
+        data-testid="select-pack"
+        onClick={() => onChange([packReference])}
+      >
+        Select pack
+      </button>
+      <button data-testid="open-pack" onClick={onOpen}>
+        Open pack
+      </button>
+    </>
+  ),
+}));
+
 // The report workbench has its own API/reader integration suite.
 jest.mock("../components/harness-reports", () => ({
   HarnessReports: () => null,
@@ -1367,4 +1395,47 @@ it("keeps positive numeric settings intact throughout a pending save", () => {
   view.rerender(<HarnessPage {...defaultProps} />);
   expect(screen.getByTestId("input-context_turns")).toHaveValue("6");
   expect(screen.getByTestId("input-context_turns")).toBeEnabled();
+});
+
+it("keeps local tools, bindings, and a reviewed pack through the project navigation round trip", () => {
+  projectTypes = [
+    {
+      ...HARNESS,
+      template: {
+        ...HARNESS.template,
+        tool_packs: {
+          name: "tool_packs",
+          display_name: "Tool packs",
+          type: "str",
+          list: true,
+          section: "Tools",
+          renders: "project_refs",
+          show: true,
+          value: [],
+        },
+      },
+    },
+  ];
+  projectFlows = [agentFlow("main"), ...projectFlows!];
+  const projectConfig = {
+    agent_flow_id: "main",
+    tools: ["f2"],
+    flow_bindings: { system_prompt: instructionsBinding },
+  };
+  const first = renderPage({ projectConfig });
+  fireEvent.click(screen.getByTestId("select-pack"));
+  fireEvent.change(screen.getByTestId("input-n_messages"), {
+    target: { value: "27" },
+  });
+  fireEvent.click(screen.getByTestId("open-pack"));
+  first.unmount();
+  renderPage({ projectConfig });
+  expect(screen.getByText("1 tool pack")).toBeInTheDocument();
+  expect(screen.queryByText("[object Object]")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.lastCall[0].data.project_config).toMatchObject({
+    ...projectConfig,
+    n_messages: "27",
+    tool_packs: [packReference],
+  });
 });

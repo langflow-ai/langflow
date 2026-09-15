@@ -32,10 +32,12 @@ import { HarnessFlowPicker } from "./components/instructions-flow-picker";
 import { LongTextField } from "./components/long-text-field";
 import { ProjectChoiceField } from "./components/project-choice-field";
 import { ProjectFlowPicker } from "./components/project-flow-picker";
+import { HarnessReturn, ToolPackPicker } from "./components/tool-pack-picker";
 
 import { editorDraft } from "./editor-draft";
 import { isProjectFieldVisible } from "./field-visibility";
 import { validCompactionThreshold, validFlowTimeout } from "./flow-binding";
+import { selectedToolPacks } from "./tool-packs";
 
 interface HarnessPageProps {
   projectId: string;
@@ -231,6 +233,7 @@ const HarnessPage = ({
           ([fieldName, field]) =>
             fieldName !== toolsFieldName &&
             fieldName !== modelFieldName &&
+            field.renders !== "project_refs" &&
             isProjectFieldVisible(field, values) &&
             // A long free-text field says nothing useful at a glance.
             !field?.multiline,
@@ -374,6 +377,12 @@ const HarnessPage = ({
         </div>
 
         <div className="flex shrink-0 items-center gap-3">
+          {projectType === "tool-pack" &&
+            new URLSearchParams(window.location.search).has("fromHarness") && (
+              <HarnessReturn
+                onOpen={() => editorDraft.keep(projectId, edits)}
+              />
+            )}
           {projectType === "agent-harness" && (
             <HarnessReports
               projectId={projectId}
@@ -503,6 +512,21 @@ const HarnessPage = ({
                         />
                       )}
                     </>
+                  ) : field.renders === "project_refs" ? (
+                    <ToolPackPicker
+                      projectId={projectId}
+                      agent={selectedAgent}
+                      value={selectedToolPacks(values[fieldName])}
+                      saved={selectedToolPacks(savedValues[fieldName])}
+                      disabled={isPending}
+                      onOpen={() => editorDraft.keep(projectId, edits)}
+                      onChange={(next) =>
+                        setEdits((current) => ({
+                          ...current,
+                          [fieldName]: next,
+                        }))
+                      }
+                    />
                   ) : (field as { renders?: string })?.renders ===
                     "hook_flows" ? (
                     <HookFlowPicker
@@ -639,6 +663,7 @@ const HarnessPage = ({
             icon={type.icon}
             model={modelFieldName ? values[modelFieldName] : undefined}
             toolFlows={toolFlows}
+            toolPackCount={selectedToolPacks(values.tool_packs).length}
             details={summaryDetails}
             agentFlow={selectedAgent}
             showModel={Boolean(modelFieldName)}
