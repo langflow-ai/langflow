@@ -10,6 +10,7 @@ from lfx_microsoft.graph import drive_item_path, drive_root
 from lfx_microsoft.manifest import connection_input
 
 DEFAULT_MAX_BYTES = 10 * 1024 * 1024
+MAX_DOWNLOAD_BYTES = 25 * 1024 * 1024
 
 # driveItem properties worth keeping; @microsoft.graph.downloadUrl is
 # deliberately absent -- it is a preauthenticated credential with a lifetime of
@@ -65,7 +66,7 @@ class SharePointFetchComponent(MicrosoftGraphComponent):
         IntInput(
             name="max_bytes",
             display_name="Max Bytes",
-            info="Truncate the download at this many bytes.",
+            info="Truncate at this many bytes, up to a maximum of 25 MiB.",
             value=DEFAULT_MAX_BYTES,
             advanced=True,
         ),
@@ -96,16 +97,23 @@ class SharePointFetchComponent(MicrosoftGraphComponent):
         metadata_path = drive_item_path(root, item_id, path)
         content_path = drive_item_path(root, item_id, path, suffix="/content")
         headers = {"Range": self.range.strip()} if (self.range or "").strip() else None
-        max_bytes = int(self.max_bytes or DEFAULT_MAX_BYTES)
+        max_bytes = int(self.max_bytes if self.max_bytes is not None else DEFAULT_MAX_BYTES)
+        if max_bytes <= 0:
+            msg = "Max Bytes must be positive."
+            raise ValueError(msg)
+        max_bytes = min(max_bytes, MAX_DOWNLOAD_BYTES)
 
         lease = self.lease()
         async with self.action(lease, scope) as client:
             metadata = await client.get_json(metadata_path)
-            content = await client.download(content_path, headers=headers, max_bytes=max_bytes)
+            content = await client.download(content_path, headers=headers, max_bytes=max_bytes + 1)
+
+        truncated = len(content) > max_bytes
+        content = content[:max_bytes]
 
         payload: dict[str, Any] = {field: metadata[field] for field in _METADATA_FIELDS if field in metadata}
         payload["content_bytes"] = len(content)
-        payload["truncated"] = len(content) >= max_bytes
+        payload["truncated"] = truncated
         payload["content_base64"] = base64.b64encode(content).decode("ascii")
         try:
             payload["text"] = content.decode("utf-8")

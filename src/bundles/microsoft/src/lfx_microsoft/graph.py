@@ -30,6 +30,7 @@ import httpx
 from lfx.integrations.errors import (
     ActionUnsupportedError,
     AuthExpiredError,
+    ConnectionNotAuthorizedError,
     IntegrationError,
     ProviderUnavailableError,
     RateLimitedError,
@@ -62,6 +63,7 @@ HTTP_SEE_OTHER = 303
 HTTP_TEMPORARY_REDIRECT = 307
 HTTP_PERMANENT_REDIRECT = 308
 HTTP_SUCCESS = 200
+HTTP_PARTIAL_CONTENT = 206
 HTTP_REDIRECT = 300
 MAX_DOWNLOAD_REDIRECTS = 5
 MAX_ERROR_BYTES = 64 * 1024
@@ -99,16 +101,7 @@ _AUTH_ERROR_PREFIXES = ("compacttoken", "invalidauthenticationtoken")
 
 # Graph error codes that mean the caller is missing a permission rather than
 # hitting a transient provider condition.
-_SCOPE_ERROR_CODES = frozenset(
-    {
-        "accessdenied",
-        "erroraccessdenied",
-        "authorization_requestdenied",
-        "authenticationerror",
-        "forbidden",
-        "notallowed",
-    }
-)
+_SCOPE_ERROR_CODES = frozenset({"insufficient_scope", "invalid_scope"})
 
 MAX_PAGE_SIZE = 999
 
@@ -147,8 +140,10 @@ def integration_error_for_response(response: httpx.Response) -> IntegrationError
     code = graph_error_code(_decode(response))
     if status == HTTP_UNAUTHORIZED or code in _AUTH_ERROR_CODES or code.startswith(_AUTH_ERROR_PREFIXES):
         return AuthExpiredError(provider=PROVIDER_ID, http_status=status)
-    if status == HTTP_FORBIDDEN or code in _SCOPE_ERROR_CODES:
+    if code in _SCOPE_ERROR_CODES:
         return ScopeMissingError(provider=PROVIDER_ID)
+    if status == HTTP_FORBIDDEN:
+        return ConnectionNotAuthorizedError(provider=PROVIDER_ID, reason="provider")
     if status in {HTTP_TOO_MANY_REQUESTS, HTTP_SERVICE_UNAVAILABLE}:
         return RateLimitedError(
             provider=PROVIDER_ID,
@@ -279,7 +274,7 @@ class GraphClient:
             raise error
 
         # Exactly one reactive re-resolve; the lease refuses a second.
-        token = await self._lease.get_token_after_auth_error(error)
+        token = await self._lease.get_token_after_auth_error(error, rejected_token=token)
         try:
             response = await self._send(method, url, token=token, params=params, json_body=json_body, headers=headers)
         except httpx.TransportError as exc:
@@ -322,7 +317,11 @@ class GraphClient:
         next_link: str | None = None
         page_params: Mapping[str, Any] | None = params
         target = self._url(path)
+        visited: set[str] = set()
         while True:
+            if target in visited:
+                raise ProviderUnavailableError(provider=PROVIDER_ID)
+            visited.add(target)
             payload = await self.get_json(target, params=page_params, headers=headers)
             page = payload.get("value")
             if isinstance(page, list):
@@ -371,12 +370,12 @@ class GraphClient:
                     if response.status_code in _REDIRECT_STATUSES:
                         location = response.headers.get("location", "")
                         break
-                    if HTTP_SUCCESS <= response.status_code < HTTP_REDIRECT:
+                    if response.status_code in {HTTP_SUCCESS, HTTP_PARTIAL_CONTENT}:
                         return await self._read_capped(response, max_bytes)
                     error = await self._download_error(response)
                 if attempt or not isinstance(error, AuthExpiredError):
                     raise error
-                token = await self._lease.get_token_after_auth_error(error)
+                token = await self._lease.get_token_after_auth_error(error, rejected_token=token)
             return await self._stream_download(location, headers=headers, max_bytes=max_bytes)
         except httpx.TransportError:
             raise ProviderUnavailableError(provider=PROVIDER_ID) from None
@@ -435,7 +434,7 @@ class GraphClient:
                         raise ProviderUnavailableError(provider=PROVIDER_ID)
                     url = urljoin(url, location)
                     continue
-                if not HTTP_SUCCESS <= response.status_code < HTTP_REDIRECT:
+                if response.status_code not in {HTTP_SUCCESS, HTTP_PARTIAL_CONTENT}:
                     raise await self._download_error(response)
                 return await self._read_capped(response, max_bytes)
         raise ProviderUnavailableError(provider=PROVIDER_ID)

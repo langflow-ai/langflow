@@ -161,6 +161,7 @@ class TestExtractBackendStrings:
             ),
             patch("pkgutil.walk_packages", return_value=fake_modules),
             patch("importlib.import_module", return_value=active_module),
+            patch.object(extract_mod, "iter_installed_bundle_classes", return_value=iter(())),
         ):
             strings = extract_mod.collect_strings()
 
@@ -267,7 +268,7 @@ class TestInstalledBundleWalk:
 
         assert list(extract_mod.iter_installed_bundle_classes()) == []
 
-    def test_load_failure_is_reported_not_raised(self, monkeypatch, capsys):
+    def test_load_failure_aborts_discovery(self, monkeypatch):
         import sys
         import types
 
@@ -280,8 +281,8 @@ class TestInstalledBundleWalk:
         monkeypatch.setitem(sys.modules, "lfx", sys.modules.get("lfx") or types.ModuleType("lfx"))
         monkeypatch.setitem(sys.modules, "lfx.extension", fake_extension)
 
-        assert list(extract_mod.iter_installed_bundle_classes()) == []
-        assert "SKIP installed extension bundles" in capsys.readouterr().out
+        with pytest.raises(RuntimeError, match="site-packages is on fire"):
+            list(extract_mod.iter_installed_bundle_classes())
 
     def test_bundle_component_keys_use_the_same_format_as_core_components(self, monkeypatch):
         """A bundle component and a core component are keyed by identical rules.
@@ -443,6 +444,23 @@ class TestCollectStringsWithBundles:
         assert any(k.startswith("components.corething.") for k in strings)
         assert strings["components.fixturewidget.display_name.62b5f139"] == "Fixture Widget"
         assert sorted(strings) == list(strings), "collect_strings() must return sorted keys"
+
+    def test_loader_failure_preserves_the_existing_catalog(self, monkeypatch, tmp_path):
+        import sys
+
+        self._patched(monkeypatch, tmp_path, [])
+        catalog = tmp_path / "en.json"
+        catalog.write_text('{"existing.bundle.key": "Keep me"}\n')
+        monkeypatch.setattr(extract_mod, "OUTPUT_PATH", catalog)
+        monkeypatch.setattr(sys, "argv", ["extract_backend_strings.py"])
+
+        def fail():
+            raise RuntimeError("extension discovery failed")
+
+        monkeypatch.setattr(sys.modules["lfx.extension"], "load_installed_extensions", fail)
+        with pytest.raises(RuntimeError, match="extension discovery failed"):
+            extract_mod.main()
+        assert catalog.read_text() == '{"existing.bundle.key": "Keep me"}\n'
 
     def test_check_is_stable_immediately_after_a_run(self, monkeypatch, tmp_path):
         """Write en.json, then --check must exit 0 without a second write."""

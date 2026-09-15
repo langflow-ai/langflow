@@ -555,3 +555,20 @@ async def test_download_errors_do_not_read_or_echo_provider_bodies(resolver, gra
     source = OneDriveSource(user_id=USER_ID, source_config={"connection": "microsoft/work"})
     with pytest.raises(OSError, match=r"^Microsoft Graph download failed with 403\.$"):
         await source.fetch_content(source._to_item(FILE_ENTRY))
+
+
+async def test_ingestion_stops_repeated_empty_pages(resolver, graph_transport):
+    resolver(_Resolver(_credential()))
+    requests = graph_transport(lambda request: httpx.Response(200, json=_children([], next_link=str(request.url))))
+    source = OneDriveSource(user_id=USER_ID, source_config={"connection": "microsoft/work"})
+    with pytest.raises(OSError, match="repeated a pagination URL"):
+        _ = [item async for item in source.list_items()]
+    assert len(requests) == 1
+
+
+async def test_ingestion_rejects_an_empty_no_content_response(resolver, graph_transport):
+    resolver(_Resolver(_credential()))
+    graph_transport(lambda _: httpx.Response(204))
+    source = OneDriveSource(user_id=USER_ID, source_config={"connection": "microsoft/work"})
+    with pytest.raises(OSError, match="download failed with 204"):
+        await source.fetch_content(source._to_item(FILE_ENTRY))

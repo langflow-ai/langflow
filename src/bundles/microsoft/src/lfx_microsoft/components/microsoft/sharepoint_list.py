@@ -96,11 +96,15 @@ class SharePointListComponent(MicrosoftGraphComponent):
         if self._rows is not None:
             self.status = f"{len(self._rows)} item(s)"
             return self._rows
+        limit = int(self.top or DEFAULT_TOP)
+        if limit <= 0:
+            msg = "Result Budget must be positive."
+            raise ValueError(msg)
         scope = self._scope_inputs()
         root = drive_root(scope.get("drive_id", ""), scope.get("site_id", ""))
         target = drive_children_path(root, (self.item_id or "").strip(), (self.path or "").strip())
         params = odata_params(
-            top=self.top or DEFAULT_TOP,
+            top=limit,
             select=as_list(self.select) or None,
             order_by=(self.order_by or "").strip() or None,
         )
@@ -109,7 +113,7 @@ class SharePointListComponent(MicrosoftGraphComponent):
             items, next_link = await client.paginate(
                 target,
                 params=params,
-                limit=self.top or DEFAULT_TOP,
+                limit=limit,
             )
         self._next_link = next_link
         rows = [Data(data=item) for item in items]

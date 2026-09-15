@@ -48,6 +48,7 @@ MAX_ITEMS_DEFAULT = 5000
 DEFAULT_MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024
 HTTP_UNAUTHORIZED = 401
 HTTP_SUCCESS = 200
+HTTP_PARTIAL_CONTENT = 206
 HTTP_REDIRECT = 300
 MAX_DOWNLOAD_REDIRECTS = 5
 _REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
@@ -134,7 +135,10 @@ class MicrosoftGraphSource(OAuthConnectorBase):
 
     @staticmethod
     def _raise_for_status(response: httpx.Response, context: str) -> None:
-        if not HTTP_SUCCESS <= response.status_code < HTTP_REDIRECT:
+        successful = HTTP_SUCCESS <= response.status_code < HTTP_REDIRECT
+        if context == "download":
+            successful = response.status_code in {HTTP_SUCCESS, HTTP_PARTIAL_CONTENT}
+        if not successful:
             msg = f"Microsoft Graph {context} failed with {response.status_code}."
             raise OSError(msg)
 
@@ -159,7 +163,9 @@ class MicrosoftGraphSource(OAuthConnectorBase):
             for attempt in range(2):
                 response = await client.get(url, headers={"Authorization": f"Bearer {token}"})
                 if response.status_code == HTTP_UNAUTHORIZED and not attempt and self._lease is not None:
-                    token = await self._lease.get_token_after_auth_error(AuthExpiredError(provider="microsoft"))
+                    token = await self._lease.get_token_after_auth_error(
+                        AuthExpiredError(provider="microsoft"), rejected_token=token
+                    )
                     continue
                 self._raise_for_status(response, "listing")
                 payload = response.json()
@@ -186,11 +192,20 @@ class MicrosoftGraphSource(OAuthConnectorBase):
         # (item_id, path) pairs still to enumerate; the first entry is the
         # configured starting point.
         pending: list[tuple[str, str]] = [(self.item_id, self.folder_path)]
+        visited_folders: set[tuple[str, str]] = set()
         async with self._client() as client:
             while pending and emitted < self.max_items:
                 current_id, current_path = pending.pop(0)
+                if (current_id, current_path) in visited_folders:
+                    continue
+                visited_folders.add((current_id, current_path))
                 url = f"{GRAPH_BASE_URL}{self._children_path(current_id, current_path)}?$top={DEFAULT_PAGE_SIZE}"
+                visited_pages: set[str] = set()
                 while url and emitted < self.max_items:
+                    if url in visited_pages:
+                        msg = "Microsoft Graph repeated a pagination URL."
+                        raise OSError(msg)
+                    visited_pages.add(url)
                     payload = await self._get_json(client, url, await self.get_access_token())
                     for entry in payload.get("value") or []:
                         if not isinstance(entry, dict):
@@ -254,7 +269,9 @@ class MicrosoftGraphSource(OAuthConnectorBase):
                             location = response.headers.get("location", "")
                             break
                         if response.status_code == HTTP_UNAUTHORIZED and not attempt and self._lease is not None:
-                            token = await self._lease.get_token_after_auth_error(AuthExpiredError(provider="microsoft"))
+                            token = await self._lease.get_token_after_auth_error(
+                                AuthExpiredError(provider="microsoft"), rejected_token=token
+                            )
                             continue
                         self._raise_for_status(response, "download")
                         raw_bytes = await self._read_capped(response)

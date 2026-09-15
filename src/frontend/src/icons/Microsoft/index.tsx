@@ -2,9 +2,8 @@ import type React from "react";
 import { forwardRef } from "react";
 import SvgMicrosoft from "./Microsoft";
 
-export const MicrosoftIcon = forwardRef<
-  SVGSVGElement,
-  React.PropsWithChildren<{}>
->((props, ref) => {
-  return <SvgMicrosoft ref={ref} {...props} />;
-});
+type MicrosoftIconProps = React.SVGProps<SVGSVGElement> & { isDark?: boolean };
+
+export const MicrosoftIcon = forwardRef<SVGSVGElement, MicrosoftIconProps>(
+  ({ isDark: _isDark, ...props }, ref) => <SvgMicrosoft ref={ref} {...props} />,
+);

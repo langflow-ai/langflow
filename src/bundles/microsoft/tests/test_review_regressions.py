@@ -314,6 +314,99 @@ def test_drive_paths_encode_reserved_characters_without_changing_folder_separato
     assert drive_children_path("/me/drive", path="a#b/c?d") == "/me/drive/root:/a%23b/c%3Fd:/children"
 
 
+@pytest.mark.parametrize(
+    ("component_class", "method", "scope"),
+    [
+        (OutlookSearchComponent, "search_messages", "Mail.Read"),
+        (OutlookCalendarListComponent, "list_events", "Calendars.Read"),
+        (SharePointListComponent, "list_items", "Files.Read"),
+    ],
+)
+async def test_negative_result_budgets_fail_before_graph(resolver_factory, component_class, method, scope):
+    resolver_factory(credential(scopes={scope}))
+    recorder = TransportRecorder(lambda _: json_response({"value": []}))
+    component = build_component(component_class, recorder, connection="microsoft/work", top=-1)
+    with pytest.raises(ValueError, match="Result Budget"):
+        await getattr(component, method)()
+    assert recorder.requests == []
+
+
+async def test_outlook_rejects_combined_search_and_filter(resolver_factory):
+    resolver_factory(credential(scopes={"Mail.Read"}))
+    recorder = TransportRecorder(lambda _: json_response({"value": []}))
+    component = build_component(
+        OutlookSearchComponent, recorder, connection="microsoft/work", search="budget", filter="isRead eq false"
+    )
+    with pytest.raises(ValueError, match="either Search or Filter"):
+        await component.search_messages()
+    assert recorder.requests == []
+
+
+@pytest.mark.parametrize(("content", "truncated"), [(b"123", False), (b"1234", False), (b"12345", True)])
+async def test_truncation_requires_an_actual_discarded_byte(resolver_factory, content, truncated):
+    from lfx_microsoft import SharePointFetchComponent
+
+    resolver_factory(credential(scopes={"Files.Read"}))
+    replies = [json_response({"id": "file"}), httpx.Response(200, content=content)]
+    recorder = TransportRecorder(lambda _: replies.pop(0))
+    component = build_component(
+        SharePointFetchComponent, recorder, connection="microsoft/work", item_id="file", max_bytes=4
+    )
+    result = await component.fetch_item()
+    assert result.data["truncated"] is truncated
+    assert result.data["text"] == content[:4].decode()
+
+
+async def test_component_downloads_have_a_finite_ceiling(resolver_factory, monkeypatch):
+    from lfx_microsoft import SharePointFetchComponent
+    from lfx_microsoft.components.microsoft import sharepoint_fetch
+
+    monkeypatch.setattr(sharepoint_fetch, "MAX_DOWNLOAD_BYTES", 4)
+    resolver_factory(credential(scopes={"Files.Read"}))
+    replies = [json_response({"id": "file"}), httpx.Response(200, content=b"123456789")]
+    recorder = TransportRecorder(lambda _: replies.pop(0))
+    component = build_component(
+        SharePointFetchComponent, recorder, connection="microsoft/work", item_id="file", max_bytes=10**12
+    )
+    result = await component.fetch_item()
+    assert result.data["content_bytes"] == 4
+    assert result.data["truncated"] is True
+
+
+async def test_pagination_rejects_a_cycle_without_files():
+    recorder = TransportRecorder(
+        lambda _: json_response({"value": [], "@odata.nextLink": "https://graph.microsoft.com/v1.0/me/messages"})
+    )
+    async with GraphClient(lease_for(RecordingResolver([credential()])), transport=recorder.transport) as client:
+        with pytest.raises(ProviderUnavailableError):
+            await client.paginate("/me/messages")
+    assert len(recorder.requests) == 1
+
+
+@pytest.mark.parametrize(
+    ("code", "expected"),
+    [
+        ("insufficient_scope", ScopeMissingError),
+        ("accessDenied", "provider"),
+        ("insufficient_claims", "provider"),
+    ],
+)
+async def test_graph_denials_distinguish_explicit_missing_scopes_from_other_permissions(code, expected):
+    from lfx.integrations.errors import ConnectionNotAuthorizedError
+
+    recorder = TransportRecorder(lambda _: httpx.Response(403, json={"error": {"code": code}}))
+    async with GraphClient(lease_for(RecordingResolver([credential()])), transport=recorder.transport) as client:
+        with pytest.raises(ConnectionNotAuthorizedError if expected == "provider" else expected):
+            await client.get_json("/me/messages")
+
+
+async def test_download_does_not_treat_no_content_as_a_file():
+    recorder = TransportRecorder(lambda _: httpx.Response(204))
+    async with GraphClient(lease_for(RecordingResolver([credential()])), transport=recorder.transport) as client:
+        with pytest.raises(ProviderUnavailableError):
+            await client.download("/me/drive/items/id/content")
+
+
 async def test_download_urls_are_hidden_without_suppressing_other_tasks(caplog):
     import asyncio
     import logging

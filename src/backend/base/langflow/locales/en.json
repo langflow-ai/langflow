@@ -2626,7 +2626,7 @@
   "components.sharepointfetchitem.inputs.item_id.display_name.2e5ffe2c": "Item ID",
   "components.sharepointfetchitem.inputs.item_id.info.caebb292": "The driveItem id to fetch.",
   "components.sharepointfetchitem.inputs.max_bytes.display_name.6ac50484": "Max Bytes",
-  "components.sharepointfetchitem.inputs.max_bytes.info.bed12ebb": "Truncate the download at this many bytes.",
+  "components.sharepointfetchitem.inputs.max_bytes.info.499b88e8": "Truncate at this many bytes, up to a maximum of 25 MiB.",
   "components.sharepointfetchitem.inputs.path.display_name.e6f24ef9": "Item Path",
   "components.sharepointfetchitem.inputs.path.info.6f7147bc": "File path relative to the drive root, used when no item id is given.",
   "components.sharepointfetchitem.inputs.range.display_name.1d22ade9": "Byte Range",

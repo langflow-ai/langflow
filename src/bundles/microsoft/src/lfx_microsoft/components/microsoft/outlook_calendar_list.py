@@ -94,8 +94,12 @@ class OutlookCalendarListComponent(MicrosoftGraphComponent):
         if self._rows is not None:
             self.status = f"{len(self._rows)} event(s)"
             return self._rows
+        limit = int(self.top or DEFAULT_TOP)
+        if limit <= 0:
+            msg = "Result Budget must be positive."
+            raise ValueError(msg)
         params = odata_params(
-            top=self.top or DEFAULT_TOP,
+            top=limit,
             select=as_list(self.select) or None,
             extra={"startDateTime": self.start_time, "endDateTime": self.end_time},
         )
@@ -106,7 +110,7 @@ class OutlookCalendarListComponent(MicrosoftGraphComponent):
                 self._path(),
                 params=params,
                 headers=headers or None,
-                limit=self.top or DEFAULT_TOP,
+                limit=limit,
             )
         self._next_link = next_link
         rows = [Data(data=item) for item in items]

@@ -119,6 +119,8 @@ Fetches one file's metadata and content through `GET .../content`.
 - **Inputs:** **Item ID** or **Item Path** (one is required), **Drive ID**, **Site ID**, **Byte Range**, **Max Bytes**
 - **Output:** **File** — `driveItem` metadata plus `content_base64`, `content_bytes`, `truncated`, and `text` when the bytes decode as UTF-8
 
+**Max Bytes** must be positive and is capped at 25 MiB. The component checks one extra byte so **truncated** is true only when bytes were discarded.
+
 Graph answers a content request with a redirect to a short-lived, preauthenticated download URL. Langflow follows that redirect without the access token and never returns, stores, or logs the URL, because the URL is itself a credential for anyone who holds it.
 
 ## Knowledge base ingestion

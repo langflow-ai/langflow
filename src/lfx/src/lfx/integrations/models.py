@@ -159,6 +159,7 @@ class CredentialLease:
         self._lock = asyncio.Lock()
         self._now = now or (lambda: datetime.now(timezone.utc))
         self._reactive_refresh_completed = False
+        self._reactive_refresh_succeeded = False
 
     @property
     def ref(self) -> ConnectionRef:
@@ -195,8 +196,13 @@ class CredentialLease:
         credential = await self.get_credential()
         return credential.access_token.get_secret_value()
 
-    async def get_token_after_auth_error(self, error: AuthExpiredError) -> str:
-        """Re-resolve once after a provider rejects a no-expiry or stale token."""
+    async def get_token_after_auth_error(self, error: AuthExpiredError, *, rejected_token: str | None = None) -> str:
+        """Re-resolve once, sharing a successful refresh with concurrent stale requests.
+
+        Callers can identify the token their request used. A late rejection of
+        that old token can then reuse the refreshed credential, while a rejection
+        of the refreshed token still fails without another resolution.
+        """
         from lfx.integrations.errors import AuthExpiredError
 
         if not isinstance(error, AuthExpiredError):
@@ -204,6 +210,10 @@ class CredentialLease:
             raise TypeError(msg)
         async with self._lock:
             if self._reactive_refresh_completed:
+                if self._reactive_refresh_succeeded and self._credential is not None and rejected_token is not None:
+                    current = self._credential.access_token.get_secret_value()
+                    if current != rejected_token:
+                        return current
                 raise error
             self._reactive_refresh_completed = True
             rejected = (
@@ -212,5 +222,6 @@ class CredentialLease:
                 else None
             )
             self._credential = await self._resolver.resolve(replace(self._request, rejected_token_digest=rejected))
+            self._reactive_refresh_succeeded = True
             credential = self._credential
             return credential.access_token.get_secret_value()
