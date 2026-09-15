@@ -8,6 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.responses import HTMLResponse
 from fastapi.routing import APIRoute
+from lfx.integrations.errors import IntegrationPolicyBlockedError
 from lfx.integrations.models import PROVIDER_ID_PATTERN
 from lfx.services.authorization.base import ExecutionPrincipal
 from pydantic import BaseModel, ConfigDict, Field
@@ -18,6 +19,7 @@ from langflow.services.authorization import ConnectionAction, ensure_connection_
 from langflow.services.connection import ConnectionConflictError, DatabaseConnectionResolverService
 from langflow.services.connection.oauth import broker as oauth_broker
 from langflow.services.connection.oauth.config import OAuthError, get_oauth_settings
+from langflow.services.connection.service import enforce_integration_policy_for_provider
 from langflow.services.database.models.connection import (
     Connection,
     ConnectionCreate,
@@ -86,6 +88,19 @@ def _database_service() -> DatabaseConnectionResolverService:
 
 
 ConnectionService = Annotated[DatabaseConnectionResolverService, Depends(_database_service)]
+
+
+def _policy_blocked(exc: IntegrationPolicyBlockedError) -> HTTPException:
+    """Return the sanitized 403 for an integration the deployment policy denies."""
+    return HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail={
+            "error_code": exc.code,
+            "message": exc.safe_message,
+            "hint": exc.hint,
+            "provider": exc.provider,
+        },
+    )
 
 
 def _interactive_principal(user: CurrentActiveUser) -> ExecutionPrincipal:
@@ -195,6 +210,8 @@ async def create_connection(
     )
     try:
         return await service.create(session, user=current_user, payload=payload)
+    except IntegrationPolicyBlockedError as exc:
+        raise _policy_blocked(exc) from exc
     except ConnectionConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
 
@@ -216,6 +233,10 @@ async def test_connection(
         action=ConnectionAction.EXECUTE,
         for_update=True,
     )
+    try:
+        await enforce_integration_policy_for_provider(row.provider_key, user_id=current_user.id)
+    except IntegrationPolicyBlockedError as exc:
+        raise _policy_blocked(exc) from exc
     return await service.check_health(
         session,
         row=row,
@@ -240,6 +261,10 @@ async def refresh_connection_health(
         action=ConnectionAction.EXECUTE,
         for_update=True,
     )
+    try:
+        await enforce_integration_policy_for_provider(row.provider_key, user_id=current_user.id)
+    except IntegrationPolicyBlockedError as exc:
+        raise _policy_blocked(exc) from exc
     return await service.check_health(
         session,
         row=row,
@@ -337,6 +362,12 @@ async def start_connection_oauth(
         action=ConnectionAction.WRITE,
         for_update=True,
     )
+    # A blocked provider must not reach the authorization screen: refuse before
+    # the broker mints state or sets a browser-binding cookie.
+    try:
+        await enforce_integration_policy_for_provider(row.provider_key, user_id=current_user.id)
+    except IntegrationPolicyBlockedError as exc:
+        raise _policy_blocked(exc) from exc
     try:
         url, state_value, browser = await oauth_broker.start(
             session, row=row, user_id=current_user.id, registration_id=payload.registration_id, scopes=payload.scopes

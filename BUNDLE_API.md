@@ -57,6 +57,7 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | `IntegrationProvider` / `OAuthProfile` / `IntegrationCapability` / `ScopeSet` | `lfx.integrations` |
 | `integration_action()` | `lfx.integrations` |
 | `Component.resolve_connection(field_name)` | `lfx.custom.custom_component.component.Component` |
+| `Component.select_integration_capabilities(capability_ids)` | `lfx.custom.custom_component.component.Component` |
 | `BaseConnectionResolverService`, `ConnectionAccessPolicy` | `lfx.services.connection` |
 
 ### Outputs
@@ -205,6 +206,71 @@ the deserialize half is covered by
 
 ## Changelog
 
+### 2026-09-14 — Integration action selection and execution denials
+
+- Add the pure `Component.select_integration_capabilities(capability_ids)` hook.
+  Its argument is the tuple of declared capability IDs from a connection input
+  or the loaded manifest's `component_ref`. An action-picker bundle returns a
+  non-empty subset based on the invocation's current inputs. Empty or undeclared
+  selections fail with HTTP 422 and `action-unsupported`, independently of
+  governance policy. The default requires all declared capabilities, so
+  existing single-action components need no change. The hook runs before the
+  output body in graph and sync/async tool execution, after tool arguments are
+  applied, and before creating a credential lease. The resolver receives only
+  the selected IDs. Graph construction using the default `ComponentToolkit`
+  checks its providers; selected-action checks wait until the agent supplies
+  invocation arguments. Custom `_get_tools()` or `to_toolkit()` implementations
+  require every declared capability at construction, and their connection leases
+  carry every declared capability. The selection hook cannot narrow an opaque
+  toolset whose returned callables bypass the standard invocation wrappers.
+  Picker option filtering remains bundle-owned; changing the
+  picker alone never authorizes an action. For example:
+
+  ```python
+  def select_integration_capabilities(self, capability_ids: tuple[str, ...]) -> tuple[str, ...]:
+      return ({"search": "google.drive.search", "delete": "google.drive.delete"}[self.action],)
+  ```
+
+  Use the same action-to-capability mapping to dispatch the output's adapter.
+  Implementations must inspect input values without I/O or side effects; the
+  hook may run more than once. For a component requiring several actions in one
+  invocation, return every capability it will use. This is additive;
+  `BUNDLE_API_VERSION` remains `1`.
+- `IntegrationPolicyError` also implements `IntegrationError`, retaining
+  `PermissionError` compatibility while carrying `policy-blocked`, HTTP 403,
+  an administrator-action hint and owner-only key details. Component policy
+  denials now pass through the normal error-message persistence handler.
+- Empty persisted integration ceilings retain unrestricted semantics when a
+  plugin is installed. External deny-all must be explicitly configured; plugins
+  changing semantics must provide an operator-visible migration/configuration
+  step. No automatic Enterprise migration is included here.
+
+### 2026-09-14 — Integration policy review follow-up
+
+- Policy bundle coordinators expose `read_state()` to atomically return the
+  immutable revision and source availability. Custom `BasePolicyBundleService`
+  implementations must supply this method. Integration policy resolution pins
+  both provider and action decisions to that state, including across async
+  plugin hooks, so concurrent publication cannot combine different revisions.
+- Failure to look up a component's integration identity now stops execution;
+  `None` is reserved for a successful lookup with no matching capability.
+  Template building clears previous integration identity stamps before lookup,
+  including when registry access fails.
+
+### 2026-09-14 — Integration policy review
+
+- Component and host resolver gates require metadata for every declared
+  capability when an action deny-list is configured. Missing or unavailable
+  metadata produces a typed policy denial before credential access; an
+  unconfigured installation retains pass-through behavior.
+- Integration policy snapshots support dotted provider IDs and expire cached
+  allows when refreshing a configured shared policy fails, including policies
+  that restrict integration actions without a provider ceiling.
+- The synchronous and asynchronous `require_integration_actions` helpers accept
+  optional `capability_ids`; `policy_keys_for_capabilities` accepts optional
+  `require_loaded` validation. These additions do not change previously released
+  Bundle API signatures; `BUNDLE_API_VERSION` remains `1`.
+
 ### 2026-09-14 — Actionable connection authorization denials
 
 - `ConnectionNotAuthorizedError.reason` and `details.reason` identify the denial.
@@ -228,6 +294,21 @@ the deserialize half is covered by
   Manifests without integrations retain their existing behavior.
 
 ### v0 (this release)
+
+- **Integration policy gating of bundle capabilities (additive).**
+  `IntegrationPolicyBlockedError` (code `policy-blocked`, HTTP 403) is added to
+  the typed integration error envelope and to `INTEGRATION_ERROR_CODES`.
+  `IntegrationCapability.policy_keys` is now validated against the
+  `integrations.<provider_id>.<action>` grammar and `IntegrationProvider`
+  rejects capability policy keys outside its own provider prefix, so every
+  declared action is addressable by an operator deny-list.
+  `ConnectionResolutionRequest.capability_ids` carries the capability ids
+  declared by the requesting input, letting a host resolver enforce the
+  deny-list before it selects a credential row.  `Component` gains
+  `require_integration_policy()`, called from `build_results()`, so a blocked
+  provider or action fails before the component body runs and before any
+  credential is minted, decrypted, or refreshed.  Bundles that declare no
+  integrations are unaffected; `BUNDLE_API_VERSION` remains `1`.
 
 - **Owner-only route families on the execution principal (additive).**
   `ExecutionPrincipal.allow_explicit_shares` is a new field defaulting to `True`,
