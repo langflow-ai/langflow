@@ -248,3 +248,30 @@ def test_trace_redacts_runtime_and_metadata_secrets():
         "runtime_label": "metadata-safe-label",
         "metadata_secret": "**********",
     }
+
+
+def test_input_named_after_a_component_method_is_rejected():
+    """An input whose name matches a method cannot resolve to its configured value.
+
+    ``__getattr__`` only runs when normal attribute lookup fails, so ``self.index`` finds the
+    method instead of the input value and the component silently works on the wrong data.
+    """
+
+    class CollidingInputName(Component):
+        inputs = [StrInput(name="index", display_name="Index")]
+        outputs = [Output(display_name="Output", name="output", method="build")]
+
+    with pytest.raises(ValueError, match="index"):
+        CollidingInputName()
+
+
+def test_input_named_after_a_component_property_is_allowed():
+    """``code`` is a property, and a legitimate input name that custom components rely on."""
+
+    class PropertyNamedInput(Component):
+        inputs = [StrInput(name="code", display_name="Code")]
+        outputs = [Output(display_name="Output", name="output", method="build")]
+
+    component = PropertyNamedInput()
+
+    assert component.list_inputs() == ["code"]
