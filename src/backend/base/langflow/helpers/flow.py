@@ -38,7 +38,7 @@ SORT_DISPATCHER = {
 }
 
 
-async def get_tool_pack_flow(*, user_id: str, binding) -> Data:
+async def get_tool_pack_flow(*, user_id: str, binding, require_current: bool = True) -> Data:
     from lfx.projects.tool_packs import ToolPackToolBinding
 
     from langflow.services.database.models.folder.tool_packs import resolve_tool_pack_snapshot
@@ -48,7 +48,9 @@ async def get_tool_pack_flow(*, user_id: str, binding) -> Data:
         user = await session.get(User, UUID(user_id))
         if user is None:
             raise HTTPException(404, "Tool pack not found")
-        return await resolve_tool_pack_snapshot(session, user, ToolPackToolBinding.model_validate(binding))
+        return await resolve_tool_pack_snapshot(
+            session, user, ToolPackToolBinding.model_validate(binding), require_current=require_current
+        )
 
 
 def _safe_function_argument_names(inputs: list[Vertex]) -> list[str]:

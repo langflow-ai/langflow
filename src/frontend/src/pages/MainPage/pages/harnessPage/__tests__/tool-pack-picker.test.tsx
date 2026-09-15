@@ -70,7 +70,11 @@ const agent = {
 } as unknown as FlowType;
 const request = jest.mocked(api.get);
 
-function mount(initial: ToolPackReference[] = [], enabled = true) {
+function mount(
+  initial: ToolPackReference[] = [],
+  enabled = true,
+  selectedAgent = agent,
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -79,7 +83,7 @@ function mount(initial: ToolPackReference[] = [], enabled = true) {
     return (
       <ToolPackPicker
         projectId="harness"
-        agent={enabled ? agent : undefined}
+        agent={enabled ? selectedAgent : undefined}
         value={value}
         saved={initial}
         onOpen={mockOpen}
@@ -170,6 +174,59 @@ it("shows stale exports and replaces only the reviewed reference after explicit 
   expect(mockChange).toHaveBeenLastCalledWith([
     { ...reference, revision: "c".repeat(64) },
   ]);
+});
+
+it("marks a tool changed when only a nested flow changes and shows both reviewed revisions", async () => {
+  const child = {
+    flow_id: "child",
+    name: "Source reader",
+    revision: "d".repeat(64),
+  };
+  const old = { ...oldTool, dependencies: [child] };
+  const nestedAgent = {
+    id: "agent",
+    data: {
+      nodes: [
+        {
+          id: "RunFlow-tool",
+          data: {
+            _harness_tool: {
+              tool_pack: { reference, tool: old, version_id: "snapshot" },
+            },
+          },
+        },
+      ],
+      edges: [],
+    },
+  } as unknown as FlowType;
+  request.mockResolvedValue({
+    data: {
+      ...manifest,
+      reference: { ...reference, revision: "c".repeat(64) },
+      tools: [
+        { ...old, dependencies: [{ ...child, revision: "e".repeat(64) }] },
+      ],
+    },
+  });
+  mount([reference], true, nestedAgent);
+  await screen.findByText("Changed since review");
+  fireEvent.click(screen.getByRole("button", { name: "Review Exports" }));
+  const dialog = await screen.findByRole("dialog");
+  expect(await within(dialog).findByText("Source reader")).toBeInTheDocument();
+  expect(within(dialog).getAllByText("Changed", { exact: true })).toHaveLength(
+    2,
+  );
+  expect(within(dialog).getByText(child.revision).tagName).toBe("DEL");
+  expect(within(dialog).getByText("e".repeat(64))).toBeInTheDocument();
+  expect(mockChange).not.toHaveBeenCalled();
+  fireEvent.click(within(dialog).getByText("Nested flow dependencies"));
+  fireEvent.click(
+    within(dialog).getByRole("button", {
+      name: "Open current flow: Source reader",
+    }),
+  );
+  expect(mockOpen).toHaveBeenCalled();
+  expect(mockNavigate).toHaveBeenCalledWith("/flow/child");
 });
 
 it("keeps unavailable references removable and retries discovery without accepting anything", async () => {

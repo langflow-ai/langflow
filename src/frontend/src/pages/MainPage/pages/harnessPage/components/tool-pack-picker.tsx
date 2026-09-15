@@ -16,6 +16,7 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import type { FlowType } from "@/types/flow";
 import {
   appliedPackTools,
+  dependencyChanges,
   exportChanges,
   packProjectPath,
 } from "../tool-packs";
@@ -370,6 +371,84 @@ function PackReview({
                   )}
                   <p className="break-all font-mono">{tool.revision}</p>
                 </details>
+                {!!(old?.dependencies?.length || tool.dependencies?.length) && (
+                  <details className="text-xs">
+                    <summary className="cursor-pointer font-medium">
+                      {t("toolPacks.nestedDependencies")}
+                    </summary>
+                    <p className="mt-2 text-muted-foreground">
+                      {t("toolPacks.nestedReviewHelp")}
+                    </p>
+                    <ul className="mt-2 divide-y divide-border border-l border-border pl-3">
+                      {dependencyChanges(
+                        before ? (old?.dependencies ?? []) : undefined,
+                        status === "removed" ? [] : (tool.dependencies ?? []),
+                      ).map(
+                        ({
+                          tool: dependency,
+                          before: prior,
+                          status: change,
+                        }) => (
+                          <li
+                            key={dependency.flow_id}
+                            className="space-y-2 py-2"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="break-words font-medium">
+                                {dependency.name}
+                              </span>
+                              {change && (
+                                <span className="text-muted-foreground">
+                                  {t(`toolPacks.${change}`)}
+                                </span>
+                              )}
+                            </div>
+                            {prior && prior.name !== dependency.name && (
+                              <p>
+                                <del>{prior.name}</del>
+                              </p>
+                            )}
+                            {prior?.description &&
+                              prior.description !== dependency.description && (
+                                <p className="break-words text-muted-foreground">
+                                  <del>{prior.description}</del>
+                                </p>
+                              )}
+                            {dependency.description && (
+                              <p className="break-words text-muted-foreground">
+                                {dependency.description}
+                              </p>
+                            )}
+                            {prior &&
+                              prior.revision !== dependency.revision && (
+                                <p className="break-all font-mono text-muted-foreground">
+                                  <del>{prior.revision}</del>
+                                </p>
+                              )}
+                            <p className="break-all font-mono">
+                              {dependency.revision}
+                            </p>
+                            {change !== "removed" && (
+                              <Button
+                                variant="link"
+                                size="sm"
+                                aria-label={`${t("toolPacks.openFlow")}: ${dependency.name}`}
+                                onClick={() => {
+                                  onOpen();
+                                  navigate(
+                                    `/flow/${encodeURIComponent(dependency.flow_id)}`,
+                                  );
+                                }}
+                              >
+                                {t("toolPacks.openFlow")}
+                              </Button>
+                            )}
+                          </li>
+                        ),
+                      )}
+                    </ul>
+                  </details>
+                )}
                 {status !== "removed" && (
                   <Button
                     variant="link"

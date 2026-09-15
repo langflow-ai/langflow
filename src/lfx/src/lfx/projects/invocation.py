@@ -51,6 +51,7 @@ class ReviewedFlowRunner:
             graph = Graph.from_payload(
                 deepcopy(data), flow_id=binding.flow_id, user_id=self.component.user_id, context=context
             )
+            graph.frozen_tool_flows = getattr(parent, "frozen_tool_flows", None)
             await run_flow(
                 graph=graph,
                 inputs={},

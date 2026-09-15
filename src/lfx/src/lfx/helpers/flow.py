@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from lfx.schema.data import Data
 
 
-async def get_tool_pack_flow(*, user_id: str, binding) -> Data:  # noqa: ARG001
+async def get_tool_pack_flow(*, user_id: str, binding, require_current: bool = True) -> Data:  # noqa: ARG001
     msg = "Tool-pack references require project storage. Import their dependencies before standalone execution."
     raise ValueError(msg)
 
