@@ -29,6 +29,7 @@ from langflow.services.database.models.trigger.schemas import TriggerCatchupPoli
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.triggers import leases, ledger
 from langflow.services.triggers.constants import SCHEDULER_LEASE_NAME, TICK_DEDUPE_PREFIX
+from langflow.services.triggers.schedule_config import DEFAULT_TIMEZONE, InvalidScheduleError, validate_schedule_config
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -36,20 +37,15 @@ if TYPE_CHECKING:
     from langflow.services.database.models.trigger.model import Trigger
 
 SCHEDULE_KIND = "schedule"
-DEFAULT_TIMEZONE = "UTC"
 #: Upper bound on how many missed ticks one catch-up pass reports, so a trigger
 #: that was down for a month cannot build an unbounded payload.
 MAX_REPORTED_MISSED_TICKS = 100
 
 
-class InvalidScheduleError(ValueError):
-    """The trigger's schedule configuration cannot be evaluated."""
-
-
 def _zone(name: str | None) -> ZoneInfo:
     try:
         return ZoneInfo(name or DEFAULT_TIMEZONE)
-    except (ZoneInfoNotFoundError, ValueError) as exc:
+    except (ZoneInfoNotFoundError, ValueError, TypeError) as exc:
         msg = f"Unknown timezone {name!r}"
         raise InvalidScheduleError(msg) from exc
 
@@ -62,23 +58,36 @@ def next_fire_time(cron_expression: str, *, timezone_name: str | None, after: da
     converted back. Doing the walk in local time is what makes DST correct.
     """
     try:
-        from croniter import CroniterBadCronError, croniter
+        from croniter import CroniterError, croniter
     except ImportError as exc:  # pragma: no cover - croniter is a langflow-base dependency
         msg = "croniter is required to evaluate schedule triggers"
         raise InvalidScheduleError(msg) from exc
 
+    validate_schedule_config({"cron": cron_expression, "timezone": timezone_name or DEFAULT_TIMEZONE})
     zone = _zone(timezone_name)
     reference = after if after.tzinfo is not None else after.replace(tzinfo=timezone.utc)
     local_reference = reference.astimezone(zone)
     try:
         cursor = croniter(cron_expression, local_reference)
         local_next = cursor.get_next(datetime)
-    except (CroniterBadCronError, ValueError, KeyError) as exc:
+    except (CroniterError, ValueError, KeyError, OverflowError) as exc:
         msg = f"Invalid cron expression {cron_expression!r}"
         raise InvalidScheduleError(msg) from exc
     if local_next.tzinfo is None:  # pragma: no cover - croniter preserves tzinfo
         local_next = local_next.replace(tzinfo=zone)
     return local_next.astimezone(timezone.utc)
+
+
+def latest_fire_time(cron_expression: str, *, timezone_name: str, at: datetime) -> datetime:
+    """Find the latest due instant without walking or truncating a backlog."""
+    from croniter import CroniterError, croniter
+
+    try:
+        reference = (at + timedelta(microseconds=1)).astimezone(_zone(timezone_name))
+        return croniter(cron_expression, reference).get_prev(datetime).astimezone(timezone.utc)
+    except (CroniterError, ValueError, KeyError, OverflowError) as exc:
+        msg = "Invalid cron expression: no prior fire time could be evaluated."
+        raise InvalidScheduleError(msg) from exc
 
 
 def missed_fire_times(
@@ -110,14 +119,8 @@ def tick_dedupe_key(scheduled_at: datetime) -> str:
 
 
 def _config(trigger: Trigger) -> tuple[str, str, str]:
-    config = trigger.config or {}
-    cron_expression = config.get("cron")
-    if not isinstance(cron_expression, str) or not cron_expression or cron_expression.isspace():
-        msg = "Schedule trigger has no cron expression"
-        raise InvalidScheduleError(msg)
-    timezone_name = config.get("timezone") or DEFAULT_TIMEZONE
-    catchup = config.get("catchup_policy") or TriggerCatchupPolicy.COALESCE.value
-    return cron_expression, timezone_name, catchup
+    config = validate_schedule_config(trigger.config or {})
+    return config["cron"], config["timezone"], config["catchup_policy"]
 
 
 async def produce_ticks_for_trigger(
@@ -133,12 +136,14 @@ async def produce_ticks_for_trigger(
 
     When ticks were missed, the ``coalesce`` policy appends ONE event keyed by
     the most recent missed instant and reports the rest in ``missed_ticks``;
-    ``skip`` appends nothing and simply re-arms. Either way the replay window
+    ``skip`` drops missed ticks, but still emits an ordinary tick due within
+    one polling interval. Either way the replay window
     bounds how far back catch-up looks, so a week of downtime cannot produce a
     week of runs.
     """
     settings = get_settings_service().settings
     now = now or datetime.now(timezone.utc)
+    now = now if now.tzinfo is not None else now.replace(tzinfo=timezone.utc)
     cron_expression, timezone_name, catchup = _config(trigger)
 
     previous = trigger.next_fire_at
@@ -156,30 +161,28 @@ async def produce_ticks_for_trigger(
     # downtime on an hourly cron must not stamp an event with a fire time weeks
     # in the past, so the walk starts at the window, not at the stale cursor.
     window_start = max(previous, now - timedelta(days=settings.trigger_replay_window_days))
-    due = [previous] if previous >= window_start else []
-    due.extend(missed_fire_times(cron_expression, timezone_name=timezone_name, since=window_start, until=now))
-
+    scheduled_at = latest_fire_time(cron_expression, timezone_name=timezone_name, at=now)
     created = 0
-    if due:
-        if catchup == TriggerCatchupPolicy.SKIP.value:
-            # Nothing runs; the schedule simply resumes.
-            pass
-        else:
-            scheduled_at = due[-1]
-            payload: dict[str, Any] = {
-                "scheduled_at": scheduled_at.isoformat(),
-                "cron": cron_expression,
-                "timezone": timezone_name,
-            }
-            if len(due) > 1:
-                payload["missed_ticks"] = [fire.isoformat() for fire in due[:-1]]
-            _event, was_created = await ledger.append_event(
-                session,
-                trigger_id=trigger.id,
-                dedupe_key=tick_dedupe_key(scheduled_at),
-                payload=payload,
+    on_time = now - scheduled_at <= timedelta(seconds=settings.trigger_dispatcher_poll_interval_s)
+    if scheduled_at >= window_start and (catchup != TriggerCatchupPolicy.SKIP.value or on_time):
+        payload: dict[str, Any] = {
+            "scheduled_at": scheduled_at.isoformat(),
+            "cron": cron_expression,
+            "timezone": timezone_name,
+        }
+        if catchup == TriggerCatchupPolicy.COALESCE.value:
+            missed = missed_fire_times(
+                cron_expression,
+                timezone_name=timezone_name,
+                since=window_start - timedelta(microseconds=1),
+                until=scheduled_at - timedelta(microseconds=1),
             )
-            created = 1 if was_created else 0
+            if missed:
+                payload["missed_ticks"] = [fire.isoformat() for fire in missed]
+        _event, was_created = await ledger.append_event(
+            session, trigger_id=trigger.id, dedupe_key=tick_dedupe_key(scheduled_at), payload=payload
+        )
+        created = 1 if was_created else 0
 
     trigger.next_fire_at = next_fire_time(cron_expression, timezone_name=timezone_name, after=now)
     session.add(trigger)

@@ -371,7 +371,13 @@ async def test_trigger_routes_enforce_partial_flow_permissions(
         shared_flow = Flow(name="Shared trigger flow", user_id=owner.id)
         session.add(shared_flow)
         await session.flush()
-        trigger = Trigger(flow_id=shared_flow.id, user_id=owner.id, name="Shared trigger", kind="schedule")
+        trigger = Trigger(
+            flow_id=shared_flow.id,
+            user_id=owner.id,
+            name="Shared trigger",
+            kind="schedule",
+            config={"cron": "0 8 * * 1-5", "timezone": "Europe/Lisbon"},
+        )
         session.add(trigger)
         await session.flush()
         event = TriggerEvent(trigger_id=trigger.id, dedupe_key="source", payload={"source": "original"})

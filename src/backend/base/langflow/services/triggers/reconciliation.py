@@ -24,6 +24,11 @@ from lfx.log.logger import logger
 
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerSessionPolicy, TriggerState
+from langflow.services.triggers.schedule_config import (
+    InvalidScheduleError,
+    schedule_timing_changed,
+    validate_schedule_config,
+)
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -104,22 +109,32 @@ async def reconcile_flow_triggers(
     existing = {row.node_id: row for row in (await session.exec(statement)).all()}
 
     touched = 0
-    for node_id, (kind, config) in nodes.items():
+    for node_id, (kind, raw_config) in nodes.items():
         row = existing.get(node_id)
+        config = raw_config
+        error = None
+        if kind == "schedule":
+            try:
+                config = validate_schedule_config(config)
+            except InvalidScheduleError as exc:
+                error = str(exc)
         session_policy = (
-            TriggerSessionPolicy.SHARED.value if config.get("share_session") else TriggerSessionPolicy.PER_EVENT.value
+            TriggerSessionPolicy.SHARED.value
+            if config.get("share_session") is True
+            else TriggerSessionPolicy.PER_EVENT.value
         )
         if row is None:
             session.add(
                 Trigger(
                     flow_id=flow_id,
                     user_id=owner_id,
-                    name=_display_name(config, kind),
+                    name=_display_name(config if error is None else {}, kind),
                     kind=kind,
                     node_id=node_id,
                     config=config,
                     provider_state={},
-                    state=TriggerState.PENDING.value,
+                    state=TriggerState.PENDING.value if error is None else TriggerState.ERROR.value,
+                    last_error=error,
                     session_policy=session_policy,
                     concurrency_limit=1,
                     max_attempts=5,
@@ -127,17 +142,20 @@ async def reconcile_flow_triggers(
             )
             touched += 1
             continue
-        if row.config != config or row.session_policy != session_policy:
+        if row.config != config or row.session_policy != session_policy or (error and row.last_error != error):
+            if schedule_timing_changed(row.config or {}, config):
+                row.next_fire_at = None
             row.config = config
             row.session_policy = session_policy
-            # The schedule may have changed; drop the cursor so the next pass
-            # recomputes it instead of firing on the old expression's clock.
-            row.next_fire_at = None
+            if error:
+                row.last_error = error
+                if row.state == TriggerState.ACTIVE.value:
+                    row.state = TriggerState.ERROR.value
             session.add(row)
             touched += 1
 
     for node_id, row in existing.items():
-        if node_id in nodes or row.state == TriggerState.PAUSED.value:
+        if node_id in nodes or row.state in {TriggerState.PAUSED.value, TriggerState.DEAD.value}:
             continue
         row.state = TriggerState.PAUSED.value
         row.last_error = "trigger node removed from the flow"

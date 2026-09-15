@@ -222,3 +222,62 @@ async def test_a_racing_save_leaves_the_callers_transaction_usable(trigger_owner
         flow = await session.get(Flow, owned_flow)
     assert flow.name.endswith("-saved-anyway")
     assert len(await _triggers(owned_flow)) == 1
+
+
+@pytest.mark.parametrize("changes", [{"catchup_policy": "skip"}, {"share_session": True}])
+async def test_non_timing_edits_preserve_a_due_tick(trigger_owner, owned_flow, changes):
+    from datetime import datetime, timezone
+
+    due = datetime(2026, 9, 14, 7, tzinfo=timezone.utc)
+    async with session_scope() as session:
+        await reconcile_flow_triggers(
+            session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=_flow_data(_schedule_node())
+        )
+        row = (await session.exec(select(Trigger).where(Trigger.flow_id == owned_flow))).one()
+        row.state = "active"
+        row.next_fire_at = due
+        session.add(row)
+    async with session_scope() as session:
+        await reconcile_flow_triggers(
+            session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=_flow_data(_schedule_node(**changes))
+        )
+        row = (await session.exec(select(Trigger).where(Trigger.flow_id == owned_flow))).one()
+        assert row.next_fire_at.replace(tzinfo=timezone.utc) == due
+        assert row.state == "active"
+
+
+@pytest.mark.parametrize(
+    "invalid", [{"timezone": 42}, {"timezone": ""}, {"cron": "* * * * * *"}, {"catchup_policy": []}]
+)
+async def test_invalid_canvas_schedule_disables_only_its_trigger(trigger_owner, owned_flow, invalid):
+    async with session_scope() as session:
+        await reconcile_flow_triggers(
+            session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=_flow_data(_schedule_node())
+        )
+        row = (await session.exec(select(Trigger).where(Trigger.flow_id == owned_flow))).one()
+        row.state = "active"
+        session.add(row)
+    async with session_scope() as session:
+        await reconcile_flow_triggers(
+            session,
+            flow_id=owned_flow,
+            owner_id=trigger_owner,
+            flow_data=_flow_data(_schedule_node(**invalid), _schedule_node("ScheduleTrigger-valid")),
+        )
+    rows = {row.node_id: row for row in await _triggers(owned_flow)}
+    assert rows["ScheduleTrigger-abc123"].state == "error"
+    assert rows["ScheduleTrigger-abc123"].last_error
+    assert rows["ScheduleTrigger-valid"].state == "pending"
+
+
+async def test_removing_a_dead_trigger_node_preserves_its_terminal_state(trigger_owner, owned_flow):
+    async with session_scope() as session:
+        await reconcile_flow_triggers(
+            session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=_flow_data(_schedule_node())
+        )
+        row = (await session.exec(select(Trigger).where(Trigger.flow_id == owned_flow))).one()
+        row.state = "dead"
+        session.add(row)
+    async with session_scope() as session:
+        await reconcile_flow_triggers(session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=_flow_data())
+    assert (await _triggers(owned_flow))[0].state == "dead"

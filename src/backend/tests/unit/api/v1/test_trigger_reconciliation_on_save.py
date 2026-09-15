@@ -99,3 +99,23 @@ async def test_a_flow_without_trigger_nodes_gets_no_triggers(
     created = await client.post("api/v1/flows/", json=_flow_body("plain flow"), headers=logged_in_headers)
     assert created.status_code == 201, created.text
     assert await _triggers(client, logged_in_headers, created.json()["id"]) == []
+
+
+async def test_put_reconciles_updated_added_and_removed_schedule_nodes(client, logged_in_headers):
+    created = await client.post(
+        "api/v1/flows/", json=_flow_body("put flow", _schedule_node()), headers=logged_in_headers
+    )
+    assert created.status_code == 201, created.text
+    flow_id = created.json()["id"]
+    updated = await client.put(
+        f"api/v1/flows/{flow_id}",
+        json=_flow_body("put flow", _schedule_node(cron="*/15 * * * *"), _schedule_node("ScheduleTrigger-new")),
+        headers=logged_in_headers,
+    )
+    assert updated.status_code == 200, updated.text
+    rows = {row["node_id"]: row for row in await _triggers(client, logged_in_headers, flow_id)}
+    assert rows["ScheduleTrigger-abc123"]["config"]["cron"] == "*/15 * * * *"
+    assert rows["ScheduleTrigger-new"]["state"] == "pending"
+    removed = await client.put(f"api/v1/flows/{flow_id}", json=_flow_body("put flow"), headers=logged_in_headers)
+    assert removed.status_code == 200, removed.text
+    assert {row["state"] for row in await _triggers(client, logged_in_headers, flow_id)} == {"paused"}
