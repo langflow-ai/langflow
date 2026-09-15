@@ -309,6 +309,57 @@ def test_pinned_arguments_allow_extras_only_when_the_pin_allows_them():
     validate_pinned_arguments(tool, {"id": "1", "anything": True})
 
 
+@pytest.mark.parametrize("additional_schema", [{"type": "string"}, {"$ref": "#/$defs/extra"}, {}])
+def test_schema_valued_additional_properties_accept_valid_arguments(additional_schema):
+    """Additional arguments may be declared by a schema, including local references."""
+    tool = PinnedToolSpec(
+        name="open",
+        input_schema={
+            "type": "object",
+            "$defs": {"extra": {"type": "string"}},
+            "properties": {"id": {"type": "integer"}},
+            "additionalProperties": additional_schema,
+        },
+    )
+    validate_pinned_arguments(tool, {"id": 1, "cursor": "next", "label": "orders"})
+
+
+@pytest.mark.parametrize("additional_schema", [{"type": "string"}, {"$ref": "#/$defs/extra"}])
+def test_schema_valued_additional_properties_reject_invalid_values(additional_schema):
+    """Valid extras do not hide another extra that violates the pinned schema."""
+    tool = PinnedToolSpec(
+        name="open",
+        input_schema={
+            "type": "object",
+            "$defs": {"extra": {"type": "string"}},
+            "properties": {"id": {"type": "integer"}},
+            "additionalProperties": additional_schema,
+        },
+    )
+    with pytest.raises(IncompatibleToolError) as excinfo:
+        validate_pinned_arguments(tool, {"id": 1, "cursor": "next", "private_argument": {"secret_value": True}})
+    assert excinfo.value.details["invalid"] == ["private_argument"]
+    assert "secret_value" not in excinfo.value.message
+    assert "secret_value" not in str(excinfo.value.details)
+
+
+def test_additional_properties_references_cannot_fetch_external_schemas(monkeypatch):
+    """A frozen pin must not acquire a mutable schema over the network."""
+    import urllib.request
+
+    def refuse_fetch(*_args, **_kwargs):
+        pytest.fail("Pinned schema validation must not fetch remote references")
+
+    monkeypatch.setattr(urllib.request, "urlopen", refuse_fetch)
+    tool = PinnedToolSpec(
+        name="open",
+        input_schema={"type": "object", "additionalProperties": {"$ref": "https://example.invalid/schema"}},
+    )
+    with pytest.raises(IncompatibleToolError) as excinfo:
+        validate_pinned_arguments(tool, {"cursor": "next"})
+    assert "cannot validate" in excinfo.value.message
+
+
 # ------------------------------------------------------------ manifest bridge
 def _capability(action: str, tool: str, **pin_overrides) -> IntegrationCapability:
     pin = McpToolPin(

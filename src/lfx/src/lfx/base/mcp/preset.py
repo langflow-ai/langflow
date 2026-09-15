@@ -224,12 +224,14 @@ class MCPPresetComponent(ComponentWithCache):
         property_order = list((pinned.input_schema or {}).get("properties") or {})
 
         def check(args: tuple[Any, ...], kwargs: dict[str, Any]) -> None:
-            arguments = dict(kwargs)
+            """Match the engine's keyword-over-positional argument precedence."""
+            arguments: dict[str, Any] = {}
             for index, value in enumerate(args):
                 if index >= len(property_order):
                     msg = f"The pinned tool {pinned.name!r} does not declare {len(args)} positional arguments."
                     raise IncompatibleToolError(msg, provider=provider, details={"tool": pinned.name})
                 arguments[property_order[index]] = value
+            arguments.update(kwargs)
             validate_pinned_arguments(pinned, arguments, provider=provider)
 
         async def guarded(*args: Any, **kwargs: Any) -> Any:
