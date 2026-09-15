@@ -23,9 +23,12 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from lfx.log.logger import logger
+from lfx.services.session import NoopSession
 from sqlalchemy.exc import IntegrityError
+from sqlmodel import select
 
 from langflow.services.audit.attribution import resolve_audit_actor
+from langflow.services.audit.details import bounded_name
 from langflow.services.audit.operations import AuditedOperation, database_cause, record_denial
 from langflow.services.audit.vocabulary import (
     FLOW_EXECUTE,
@@ -42,6 +45,8 @@ from langflow.services.audit.writer import (
     persist_audit_event_independently,
 )
 from langflow.services.database.models.audit_event.model import AuditEvent
+from langflow.services.database.models.flow.model import Flow
+from langflow.services.deps import session_scope
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -134,6 +139,18 @@ async def _record_run(
     task.add_done_callback(_pending_writes.discard)
 
 
+async def _stored_flow_name(flow_id: UUID) -> str | None:
+    """The Playground loads its Flow inside the run, so the name is only known from storage."""
+    try:
+        async with session_scope() as session:
+            if isinstance(session, NoopSession):
+                return None
+            name = (await session.exec(select(Flow.name).where(Flow.id == flow_id))).first()
+    except Exception:  # noqa: BLE001 - a missing name never costs the run its event
+        return None
+    return bounded_name(name)
+
+
 async def _persist_run_event(event: AuditEvent) -> None:
     """Keep trying until the run's event is stored; the run's response does not wait for it.
 
@@ -142,6 +159,8 @@ async def _persist_run_event(event: AuditEvent) -> None:
     60 simultaneous runs lost 19 events that way. The event keeps one id across attempts,
     so an attempt that timed out after its commit landed is recognized, not duplicated.
     """
+    if event.resource_name is None:
+        event.resource_name = await _stored_flow_name(event.resource_id)
     error = "unknown"
     for attempt in range(RUN_WRITE_ATTEMPTS):
         try:
