@@ -598,19 +598,28 @@ async def ensure_flow_permission(
     consulted for CREATE, where there is no flow owner yet. Pass the value read
     from the destination folder row, not one taken from the request body.
     """
-    await _ensure_typed(
-        user,
-        spec_key="flow",
-        act_str=_coerce_action(act),
-        kwargs={
-            "flow_id": flow_id,
-            "flow_user_id": flow_user_id,
-            "workspace_id": workspace_id,
-            "folder_id": folder_id,
-            "folder_user_id": folder_user_id,
-        },
-        domain_override=domain,
-    )
+    act_str = _coerce_action(act)
+    try:
+        await _ensure_typed(
+            user,
+            spec_key="flow",
+            act_str=act_str,
+            kwargs={
+                "flow_id": flow_id,
+                "flow_user_id": flow_user_id,
+                "workspace_id": workspace_id,
+                "folder_id": folder_id,
+                "folder_user_id": folder_user_id,
+            },
+            domain_override=domain,
+        )
+    except HTTPException as exc:
+        # Every run surface checks execute here, so a refused run is recorded once, whichever route asked.
+        if exc.status_code == status.HTTP_403_FORBIDDEN and act_str == FlowAction.EXECUTE.value:
+            from langflow.services.audit.runs import record_run_denial
+
+            await record_run_denial(getattr(user, "id", None), flow_id)
+        raise
 
 
 async def _audit_flow_decision_batch(

@@ -155,7 +155,7 @@ def classify_failure(exc: BaseException, resource_type: AuditResourceType) -> Au
         return AuditErrorCode.FLOW_NAME_CONFLICT if is_flow else AuditErrorCode.PROJECT_NAME_CONFLICT
     if isinstance(exc, HTTPException) and exc.status_code < HTTPStatus.INTERNAL_SERVER_ERROR:
         return _classify_status(exc.status_code, resource_type)
-    cause = _database_cause(exc)
+    cause = database_cause(exc)
     if cause is not None:
         return cause
     if isinstance(exc, HTTPException):
@@ -165,7 +165,7 @@ def classify_failure(exc: BaseException, resource_type: AuditResourceType) -> Au
     return AuditErrorCode.INTERNAL_ERROR
 
 
-def _database_cause(exc: BaseException) -> AuditErrorCode | None:
+def database_cause(exc: BaseException) -> AuditErrorCode | None:
     """Routes wrap database errors in a generic 500; the cause says what happened."""
     seen: set[int] = set()
     current: BaseException | None = exc
