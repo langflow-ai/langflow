@@ -120,6 +120,7 @@ lfx-vllm = { workspace = true }
 lfx-empiriolabs = { workspace = true }
 lfx-openai-compatible = { workspace = true }
 lfx-exa = { workspace = true }
+lfx-fxmacrodata = { workspace = true }
 lfx-valkey = { workspace = true }
 lfx-google = { workspace = true }
 lfx-confluent = { workspace = true }
@@ -157,6 +158,7 @@ members = [
     "src/bundles/empiriolabs",
     "src/bundles/openai-compatible",
     "src/bundles/exa",
+    "src/bundles/fxmacrodata",
     "src/bundles/valkey",
     "src/bundles/google",
     "src/bundles/confluent",
@@ -179,6 +181,7 @@ bundles = [
     "lfx-duckduckgo>=0.1.5,<1.0.0",
     "lfx-empiriolabs>=0.1.3,<1.0.0",
     "lfx-exa>=0.1.3,<1.0.0",
+    "lfx-fxmacrodata>=0.1.0,<1.0.0",
     "lfx-firecrawl>=0.1.3,<1.0.0",
     "lfx-nextplaid>=0.1.6,<1.0.0",
     "lfx-paddle>=0.1.4,<1.0.0",
@@ -354,6 +357,7 @@ exclude = [
     "src/frontend/tests/assets/*",
     "src/lfx/src/lfx/_assets/component_index.json",
     "docs/**/API-Reference/python-examples/**",
+    "src/bundles/fxmacrodata/src/lfx_fxmacrodata/_public_client/**",  # Unmodified upstream public client.
 ]
 line-length = 120
 
