@@ -905,3 +905,67 @@ class TestVerifyMigration:
 
         assert verified == 1
         assert failed == 0
+
+
+class TestMigrateEndToEnd:
+    """Run migrate() itself against a database holding every encrypted column."""
+
+    @pytest.fixture
+    def rotation_db(self, tmp_path, migrate_module, old_key):
+        db_path = tmp_path / "langflow.db"
+        engine = create_engine(f"sqlite:///{db_path}")
+        with engine.begin() as conn:
+            conn.execute(text('CREATE TABLE "user" (id TEXT PRIMARY KEY, store_api_key TEXT)'))
+            conn.execute(text("CREATE TABLE variable (id TEXT PRIMARY KEY, name TEXT, value TEXT, type TEXT)"))
+            conn.execute(text("CREATE TABLE folder (id TEXT PRIMARY KEY, name TEXT, auth_settings TEXT)"))
+            conn.execute(text("CREATE TABLE sso_config (id TEXT PRIMARY KEY, client_secret_encrypted TEXT)"))
+            conn.execute(text("CREATE TABLE apikey (id TEXT PRIMARY KEY, name TEXT, api_key TEXT)"))
+            conn.execute(text("CREATE TABLE mcp_server (id TEXT PRIMARY KEY, name TEXT, config TEXT)"))
+            conn.execute(
+                text("INSERT INTO variable VALUES ('v1', 'OPENAI_API_KEY', :v, :t)"),
+                {"v": migrate_module.encrypt_with_key("variable-secret", old_key), "t": CREDENTIAL_TYPE},
+            )
+            conn.execute(
+                text("INSERT INTO apikey VALUES ('k1', 'ci-key', :k)"),
+                {"k": migrate_module.encrypt_with_key("lf-api-key-value", old_key)},
+            )
+            config = {
+                "command": "uvx",
+                "env": {"API_TOKEN": migrate_module.encrypt_with_key("mcp-token", old_key), "PLAIN": "not-a-secret"},
+                "headers": {"Authorization": migrate_module.encrypt_with_key("Bearer abc", old_key)},
+            }
+            conn.execute(text("INSERT INTO mcp_server VALUES ('m1', 'fixture-mcp', :c)"), {"c": json.dumps(config)})
+        config_dir = tmp_path / "cfg"
+        config_dir.mkdir()
+        return engine, config_dir, f"sqlite:///{db_path}"
+
+    def test_rotates_apikey_and_mcp_server_config(self, migrate_module, rotation_db, old_key, new_key):
+        engine, config_dir, url = rotation_db
+
+        migrate_module.migrate(config_dir, url, old_key=old_key, new_key=new_key)
+
+        with engine.connect() as conn:
+            api_key = conn.execute(text("SELECT api_key FROM apikey")).scalar()
+            config = json.loads(conn.execute(text("SELECT config FROM mcp_server")).scalar())
+        assert migrate_module.decrypt_with_key(api_key, new_key) == "lf-api-key-value"
+        assert migrate_module.decrypt_with_key(config["env"]["API_TOKEN"], new_key) == "mcp-token"
+        assert migrate_module.decrypt_with_key(config["headers"]["Authorization"], new_key) == "Bearer abc"
+        # Plaintext values and structural fields are left alone.
+        assert config["env"]["PLAIN"] == "not-a-secret"
+        assert config["command"] == "uvx"
+
+    def test_mcp_value_under_another_key_rolls_back(self, migrate_module, rotation_db, old_key, new_key):
+        engine, config_dir, url = rotation_db
+        stranger = migrate_module.encrypt_with_key("foreign", secrets.token_urlsafe(32))
+        with engine.begin() as conn:
+            before = conn.execute(text("SELECT config FROM mcp_server")).scalar()
+            bad = json.loads(before)
+            bad["env"]["OTHER"] = stranger
+            conn.execute(text("UPDATE mcp_server SET config = :c"), {"c": json.dumps(bad)})
+            before = json.dumps(bad)
+
+        with pytest.raises(SystemExit):
+            migrate_module.migrate(config_dir, url, old_key=old_key, new_key=new_key)
+
+        with engine.connect() as conn:
+            assert conn.execute(text("SELECT config FROM mcp_server")).scalar() == before
