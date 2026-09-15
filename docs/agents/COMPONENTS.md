@@ -122,7 +122,7 @@ For brand logos you need a frontend SVG component. The Python `icon` string and 
 See [TESTING.md](./TESTING.md) for the full testing contract. Quick reference:
 
 - Inherit from `ComponentTestBaseWithClient` (needs API) or `ComponentTestBaseWithoutClient` (pure logic).
-- Provide three fixtures: `component_class`, `default_kwargs`, `file_names_mapping`.
+- Provide three fixtures: `component_class`, `default_kwargs`, `file_names_mapping`. The inherited `test_latest_version` runs every output offline with `default_kwargs`; list outputs that need the network in the optional `skipped_outputs` fixture, with the reason.
 - Use `MockLanguageModel` for pure-logic LLM paths; use `@pytest.mark.api_key_required` for real-API tests.
 - For graph behavior, use the Graph test pattern: build, `.set()`, `async_start`, validate. Do not poke graph internals.
 

@@ -3166,6 +3166,7 @@ class Graph:
         subgraph._tracing_service_initialized = True
         subgraph._run_id = self._run_id
         subgraph.session_id = self.session_id
+        subgraph.execution_principal = self.execution_principal
         # A subgraph extends the parent's run, so it inherits the ephemeral
         # (no-persist) decision too.
         subgraph.persist_messages = self.persist_messages

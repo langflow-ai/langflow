@@ -4,7 +4,10 @@ import json
 import re
 import shutil
 import sys
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -291,6 +294,148 @@ def test_checker_rejects_future_verified_on(tmp_path: Path) -> None:
     matrix["verified_on"] = "2999-01-01"
 
     assert any("is in the future" in error for error in validate_matrix(_save(root, "google", matrix)))
+
+
+@pytest.mark.parametrize(("age", "message"), [(-1, "in the future"), (0, None), (30, None), (31, "older than 30 days")])
+@pytest.mark.parametrize("target", ["matrix", "source"])
+def test_evidence_freshness_boundary(tmp_path: Path, age: int, message: str | None, target: str) -> None:
+    """Both matrix reviews and individual sources expire; the thirtieth day is still valid."""
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "google")
+    evidence = matrix if target == "matrix" else next(iter(matrix["sources"].values()))
+    evidence["verified_on"] = (datetime.now(tz=UTC).date() - timedelta(days=age)).isoformat()
+
+    errors = validate_matrix(_save(root, "google", matrix))
+
+    if message is None:
+        assert errors == []
+    else:
+        assert any(message in error for error in errors)
+
+
+def test_checker_rejects_old_source_even_with_fresh_matrix_date(tmp_path: Path) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "slack")
+    matrix["verified_on"] = datetime.now(tz=UTC).date().isoformat()
+    matrix["sources"]["slack-scopes"]["verified_on"] = "2019-01-01"
+
+    errors = validate_matrix(_save(root, "slack", matrix))
+
+    assert any("source 'slack-scopes' verified_on" in error and "older than 30 days" in error for error in errors)
+
+
+@pytest.mark.parametrize("provider", ["google", "microsoft", "slack"])
+def test_broad_content_reads_require_decisions_regardless_of_classification(tmp_path: Path, provider: str) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, provider)
+    matrix["scope_risk_decisions"] = []
+
+    errors = validate_matrix(_save(root, provider, matrix))
+
+    assert any("broad content-read scope" in error and "no scope_risk_decisions entry" in error for error in errors)
+
+
+@pytest.mark.parametrize("decision", ["avoid", "defer"])
+def test_included_broad_scope_cannot_be_avoided_or_deferred(tmp_path: Path, decision: str) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "slack")
+    matrix["scope_risk_decisions"] = [
+        {
+            "scope": "search:read",
+            "decision": decision,
+            "rationale": "Test decision",
+            "decision_record": "decisions/broad-content-read.md",
+        }
+    ]
+
+    errors = validate_matrix(_save(root, "slack", matrix))
+
+    assert any("search:read" in error and "contradiction" in error for error in errors)
+
+
+def test_checker_requires_explicit_content_read_reach(tmp_path: Path) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "slack")
+    _included_action(matrix)["scopes"][0].pop("content_read_reach", None)
+
+    errors = validate_matrix(_save(root, "slack", matrix))
+
+    assert any("content_read_reach" in error for error in errors)
+
+
+def test_optional_broad_scope_still_requires_decision(tmp_path: Path) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "microsoft")
+    matrix["scope_risk_decisions"] = [s for s in matrix["scope_risk_decisions"] if s["scope"] != "Sites.Read.All"]
+
+    errors = validate_matrix(_save(root, "microsoft", matrix))
+
+    assert any("Sites.Read.All" in error and "no scope_risk_decisions entry" in error for error in errors)
+
+
+@pytest.mark.parametrize("decision", ["defer", "exclude"])
+def test_scope_risk_rule_distinguishes_deferred_and_excluded_actions(tmp_path: Path, decision: str) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "slack")
+    matrix["actions"] = [next(a for a in matrix["actions"] if a["action_id"] == "slack.user.search")]
+    matrix["actions"][0]["decision"] = decision
+    matrix["scope_risk_decisions"] = []
+
+    errors = validate_matrix(_save(root, "slack", matrix))
+
+    if decision == "defer":
+        assert any("no scope_risk_decisions entry" in error for error in errors)
+    else:
+        assert errors == []
+
+
+@pytest.mark.parametrize("value", ["unbounded", [], None])
+def test_invalid_read_reach_is_reported_without_crashing(tmp_path: Path, value: object) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "slack")
+    _included_action(matrix)["scopes"][0]["content_read_reach"] = value
+
+    assert any("content_read_reach" in error for error in validate_matrix(_save(root, "slack", matrix)))
+
+
+@pytest.mark.parametrize("mutation", ["missing", "unsourced"])
+def test_included_action_requires_sourced_tenant_consent_requirement(tmp_path: Path, mutation: str) -> None:
+    root = _copy_design(tmp_path)
+    matrix = _load(root, "microsoft")
+    action = _included_action(matrix)
+    if mutation == "missing":
+        action.pop("tenant_consent")
+    else:
+        action["tenant_consent"]["source"] = "unknown-tenant-policy"
+
+    assert any("tenant_consent" in error for error in validate_matrix(_save(root, "microsoft", matrix)))
+
+
+def test_scope_risk_record_must_exist_and_be_accepted_at_gate_close(tmp_path: Path) -> None:
+    root = _copy_design(tmp_path)
+    record = root / "decisions" / "broad-content-read.md"
+    record.write_text("Status: proposed\n\n## Decision\nReview required.\n", encoding="utf-8")
+    assert validate_matrix(root / "matrices" / "slack.json") == []
+    assert any(
+        "broad-content-read.md' is proposed, not accepted" in error
+        for error in validate_matrix(root / "matrices" / "slack.json", require_accepted=True)
+    )
+    record.write_text("Status: accepted\n\n## Decision\nReviewed acceptance.\n", encoding="utf-8")
+    assert validate_matrix(root / "matrices" / "slack.json", require_accepted=True) == []
+    record.unlink()
+    assert any(
+        "broad-content-read.md' does not exist" in error for error in validate_matrix(root / "matrices" / "slack.json")
+    )
+
+
+def test_historical_signatures_do_not_expire(tmp_path: Path) -> None:
+    root = _copy_design_tree(tmp_path)
+    for record in root.rglob("*.md"):
+        record.write_text(
+            record.read_text(encoding="utf-8").replace("| | | |", "| Test Owner | 2019-01-01 | #14906 |"),
+            encoding="utf-8",
+        )
+    assert validate_sign_offs(root, require_complete=True) == []
 
 
 def test_checker_rejects_low_confidence_without_open_questions(tmp_path: Path) -> None:

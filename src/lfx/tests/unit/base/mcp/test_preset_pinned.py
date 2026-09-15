@@ -13,6 +13,7 @@ existed.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
@@ -255,6 +256,52 @@ async def test_the_guard_rides_on_the_real_tool_the_engine_builds(pinned):
 
     await tool.coroutine(query="orders")
     assert client.calls == [("search_messages", {"query": "orders"})]
+
+
+@pytest.mark.parametrize("sync", [False, True])
+async def test_guard_validates_the_engine_effective_keyword_arguments(pinned, sync):
+    """The guard and real engine must agree when a keyword overrides a positional value."""
+    from lfx.base.mcp.pinned import validate_pinned_arguments
+
+    client = _EngineClient([_server_tool("search_messages")])
+    pinned._streamable_http_client = client
+    with patch("lfx.base.mcp.util.validate_connector_url_for_ssrf", new=lambda _url: None):
+        tools, _ = await pinned._load_tools()
+    tool = tools[0]
+    with patch("lfx.base.mcp.preset.validate_pinned_arguments", wraps=validate_pinned_arguments) as validate:
+        if sync:
+            await asyncio.to_thread(tool.func, "positional", query="keyword")
+        else:
+            await tool.coroutine("positional", query="keyword")
+    assert client.calls == [("search_messages", {"query": "keyword"})]
+    assert validate.call_args.args[1] == client.calls[0][1]
+
+
+async def test_raw_discovery_is_checked_before_schema_conversion_can_skip_a_tool(pinned):
+    """The unpinned engine skips unconvertible schemas; a pin must see every tool."""
+    from lfx.base.mcp import util
+
+    extra = _server_tool("delete_message")
+    extra.inputSchema = {"type": "object", "properties": {"message_id": {"type": "string"}}}
+    client = _EngineClient([_server_tool("search_messages"), extra])
+    pinned._streamable_http_client = client
+    convert = util.create_input_schema_from_json_schema
+
+    def fail_for_extra(schema):
+        if schema is extra.inputSchema:
+            msg = "Unsupported schema"
+            raise TypeError(msg)
+        return convert(schema)
+
+    with (
+        patch("lfx.base.mcp.util.validate_connector_url_for_ssrf", new=lambda _url: None),
+        patch("lfx.base.mcp.util.create_input_schema_from_json_schema", side_effect=fail_for_extra),
+        pytest.raises(IncompatibleToolError) as excinfo,
+    ):
+        await pinned._load_tools()
+    assert excinfo.value.details["added"] == ["delete_message"]
+    assert excinfo.value.provider == "example"
+    assert client.calls == []
 
 
 async def test_a_missing_required_argument_is_not_reported_as_provider_drift(pinned):

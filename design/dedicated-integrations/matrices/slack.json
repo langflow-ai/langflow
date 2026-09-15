@@ -104,7 +104,7 @@
       "url": "https://docs.slack.dev/reference/methods/conversations.replies",
       "title": "Slack: conversations.replies",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-09-09",
       "notes": "channels:history, groups:history, im:history, mpim:history; bot or user token; channel and ts required; cursor, limit, oldest, latest, inclusive; Tier 3 for Marketplace apps; commercially distributed non-Marketplace apps created after May 29, 2025 get 1 request per minute with limit capped at 15."
     },
     "slack-chat-postmessage": {
@@ -148,6 +148,36 @@
       "kind": "provider_changelog",
       "verified_on": "2026-09-01",
       "notes": "Companion changelog entry; states the server exposes tools 'designed for LLM-driven discovery, configuration, and execution' and points to the server documentation."
+    },
+    "slack-search-read-scope": {
+      "url": "https://docs.slack.dev/reference/scopes/search.read/",
+      "title": "search:read scope",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-09"
+    },
+    "slack-channels-history-scope": {
+      "url": "https://docs.slack.dev/reference/scopes/channels.history/",
+      "title": "channels:history scope",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-09"
+    },
+    "slack-groups-history-scope": {
+      "url": "https://docs.slack.dev/reference/scopes/groups.history/",
+      "title": "groups:history scope",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-09"
+    },
+    "slack-im-history-scope": {
+      "url": "https://docs.slack.dev/reference/scopes/im.history/",
+      "title": "im:history scope",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-09"
+    },
+    "slack-mpim-history-scope": {
+      "url": "https://docs.slack.dev/reference/scopes/mpim.history/",
+      "title": "mpim:history scope",
+      "kind": "provider_docs",
+      "verified_on": "2026-09-09"
     }
   },
   "verification_programs": {
@@ -226,9 +256,10 @@
           "scope": "search:read",
           "classification": "sensitive",
           "provider_classification": "User token scope; content reading",
-          "source": "slack-search-messages",
+          "source": "slack-search-read-scope",
           "role": "required",
-          "notes": "Required by Web API search.messages; user token only."
+          "notes": "Required by Web API search.messages; user token only. Slack documents this as a legacy scope; the broad-read decision records the alternative and acceptance gate.",
+          "content_read_reach": "cross_resource"
         }
       ],
       "consent": "user",
@@ -262,7 +293,16 @@
         "source": "slack-search-messages",
         "confidence": "high"
       },
-      "verification_dependencies": []
+      "verification_dependencies": [],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "slack-app-approval"
+      },
+      "open_questions": [
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent.",
+        "Slack now labels search:read legacy and recommends granular Real-time Search scopes. INT-12 must evaluate the alternative before the broad-read decision is accepted; no API substitution or contract change is assumed here."
+      ]
     },
     {
       "action_id": "slack.user.read_thread",
@@ -271,7 +311,8 @@
       "decision": "include",
       "confidence": "high",
       "open_questions": [
-        "A Langflow-owned hosted app must be Marketplace-approved or conversations.replies gets 1 request per minute with a 15-message limit."
+        "A Langflow-owned hosted app must be Marketplace-approved or conversations.replies gets 1 request per minute with a 15-message limit.",
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent."
       ],
       "rationale": "Web API conversations.replies is GA, scoped to the connected user's visibility, and has a published request and response contract. The hosted Marketplace review remains a calendar dependency. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
@@ -335,30 +376,34 @@
           "scope": "channels:history",
           "classification": "sensitive",
           "provider_classification": "User token scope; content reading",
-          "source": "slack-scopes",
+          "source": "slack-channels-history-scope",
           "role": "required",
-          "notes": "Wave 1 requests all four history scopes so one stable connection profile can read threads across every supported conversation type."
+          "notes": "Wave 1 requests all four history scopes so one stable connection profile can read threads across every supported conversation type.",
+          "content_read_reach": "cross_resource"
         },
         {
           "scope": "groups:history",
           "classification": "sensitive",
           "provider_classification": "User token scope; content reading",
-          "source": "slack-scopes",
-          "role": "required"
+          "source": "slack-groups-history-scope",
+          "role": "required",
+          "content_read_reach": "cross_resource"
         },
         {
           "scope": "im:history",
           "classification": "sensitive",
           "provider_classification": "User token scope; content reading",
-          "source": "slack-scopes",
-          "role": "required"
+          "source": "slack-im-history-scope",
+          "role": "required",
+          "content_read_reach": "cross_resource"
         },
         {
           "scope": "mpim:history",
           "classification": "sensitive",
           "provider_classification": "User token scope; content reading",
-          "source": "slack-scopes",
-          "role": "required"
+          "source": "slack-mpim-history-scope",
+          "role": "required",
+          "content_read_reach": "cross_resource"
         }
       ],
       "consent": "user",
@@ -394,7 +439,12 @@
       },
       "verification_dependencies": [
         "slack-marketplace-rate-tier"
-      ]
+      ],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "slack-app-approval"
+      }
     },
     {
       "action_id": "slack.user.send",
@@ -451,7 +501,8 @@
           "provider_classification": "User token scope",
           "source": "slack-scopes",
           "role": "required",
-          "notes": "Also available as a bot scope; here requested as a user scope."
+          "notes": "Also available as a bot scope; here requested as a user scope.",
+          "content_read_reach": "none"
         }
       ],
       "consent": "user",
@@ -485,7 +536,15 @@
         "source": "slack-chat-postmessage",
         "confidence": "high"
       },
-      "verification_dependencies": []
+      "verification_dependencies": [],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "slack-app-approval"
+      },
+      "open_questions": [
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent."
+      ]
     },
     {
       "action_id": "slack.user.canvas",
@@ -494,7 +553,8 @@
       "decision": "include",
       "confidence": "medium",
       "open_questions": [
-        "Free teams cannot create standalone canvases; decide whether the UI requires channel_id for that plan type."
+        "Free teams cannot create standalone canvases; decide whether the UI requires channel_id for that plan type.",
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent."
       ],
       "rationale": "Web API canvases.create is GA with a published request and response contract. It is the lowest-demand user action and the first to prune if the include set must shrink. Included in wave 1 by the release owner on 2026-09-01.",
       "schema": {
@@ -535,7 +595,8 @@
           "classification": "non_sensitive",
           "provider_classification": "User token scope",
           "source": "slack-scopes",
-          "role": "required"
+          "role": "required",
+          "content_read_reach": "none"
         }
       ],
       "consent": "user",
@@ -569,7 +630,12 @@
         "source": "slack-canvases-create",
         "confidence": "high"
       },
-      "verification_dependencies": []
+      "verification_dependencies": [],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "slack-app-approval"
+      }
     },
     {
       "action_id": "slack.bot.post",
@@ -635,7 +701,8 @@
           "classification": "non_sensitive",
           "provider_classification": "Bot token scope",
           "source": "slack-scopes",
-          "role": "required"
+          "role": "required",
+          "content_read_reach": "none"
         }
       ],
       "consent": "user",
@@ -668,7 +735,15 @@
         "source": "slack-chat-postmessage",
         "confidence": "high"
       },
-      "verification_dependencies": []
+      "verification_dependencies": [],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "slack-app-approval"
+      },
+      "open_questions": [
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent."
+      ]
     },
     {
       "action_id": "slack.bot.add_reaction",
@@ -715,7 +790,8 @@
           "classification": "non_sensitive",
           "provider_classification": "Bot token scope",
           "source": "slack-scopes",
-          "role": "required"
+          "role": "required",
+          "content_read_reach": "none"
         }
       ],
       "consent": "user",
@@ -748,7 +824,15 @@
         "source": "slack-reactions-add",
         "confidence": "high"
       },
-      "verification_dependencies": []
+      "verification_dependencies": [],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "slack-app-approval"
+      },
+      "open_questions": [
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent."
+      ]
     },
     {
       "action_id": "slack.bot.list_channel_members",
@@ -810,7 +894,8 @@
           "classification": "non_sensitive",
           "provider_classification": "Bot token scope",
           "source": "slack-scopes",
-          "role": "required"
+          "role": "required",
+          "content_read_reach": "none"
         },
         {
           "scope": "groups:read",
@@ -821,7 +906,8 @@
           "condition": {
             "kind": "input_truthy",
             "input": "channel_is_private"
-          }
+          },
+          "content_read_reach": "none"
         },
         {
           "scope": "users:read",
@@ -833,7 +919,8 @@
             "kind": "input_truthy",
             "input": "resolve_names"
           },
-          "notes": "Only when resolving display names."
+          "notes": "Only when resolving display names.",
+          "content_read_reach": "none"
         }
       ],
       "consent": "user",
@@ -866,7 +953,47 @@
         "source": "slack-conversations-members",
         "confidence": "high"
       },
-      "verification_dependencies": []
+      "verification_dependencies": [],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "slack-app-approval"
+      },
+      "open_questions": [
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent."
+      ]
+    }
+  ],
+  "scope_risk_decisions": [
+    {
+      "scope": "search:read",
+      "decision": "accept_with_controls",
+      "rationale": "Proposed conditional acceptance: disclose the full grant before consent, request only action-required scopes, enforce provider policy and default-off non-interactive use. Requires owner sign-off in the decision record.",
+      "decision_record": "decisions/broad-content-read.md"
+    },
+    {
+      "scope": "channels:history",
+      "decision": "accept_with_controls",
+      "rationale": "Proposed conditional acceptance: disclose the full grant before consent, request only action-required scopes, enforce provider policy and default-off non-interactive use. Requires owner sign-off in the decision record.",
+      "decision_record": "decisions/broad-content-read.md"
+    },
+    {
+      "scope": "groups:history",
+      "decision": "accept_with_controls",
+      "rationale": "Proposed conditional acceptance: disclose the full grant before consent, request only action-required scopes, enforce provider policy and default-off non-interactive use. Requires owner sign-off in the decision record.",
+      "decision_record": "decisions/broad-content-read.md"
+    },
+    {
+      "scope": "im:history",
+      "decision": "accept_with_controls",
+      "rationale": "Proposed conditional acceptance: disclose the full grant before consent, request only action-required scopes, enforce provider policy and default-off non-interactive use. Requires owner sign-off in the decision record.",
+      "decision_record": "decisions/broad-content-read.md"
+    },
+    {
+      "scope": "mpim:history",
+      "decision": "accept_with_controls",
+      "rationale": "Proposed conditional acceptance: disclose the full grant before consent, request only action-required scopes, enforce provider policy and default-off non-interactive use. Requires owner sign-off in the decision record.",
+      "decision_record": "decisions/broad-content-read.md"
     }
   ]
 }

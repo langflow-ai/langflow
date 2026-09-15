@@ -38,7 +38,11 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Literal
 
+from jsonschema.exceptions import SchemaError
+from jsonschema.validators import validator_for
 from pydantic import BaseModel, ConfigDict, Field, StrictStr, model_validator
+from referencing import Registry
+from referencing.exceptions import Unresolvable
 
 from lfx.integrations.errors import IncompatibleToolError
 
@@ -267,13 +271,21 @@ def diff_pinned_tools(
     server_info: MCPServerInfo | None = None,
 ) -> PinnedToolDiff:
     """Compare a discovered tool set against its pin. Any difference is a drift."""
-    found = {view.name: view for view in (_view(tool) for tool in discovered) if view.name}
+    views = [_view(tool) for tool in discovered]
+    found: dict[str, DiscoveredTool] = {}
+    changed: list[tuple[str, str]] = []
+    for view in views:
+        if not view.name:
+            changed.append(("<unnamed>", "missing tool name"))
+        elif view.name in found:
+            changed.append((view.name, "duplicate tool name"))
+        else:
+            found[view.name] = view
     pinned = {tool.name: tool for tool in spec.tools}
 
     added = tuple(sorted(set(found) - set(pinned)))
     removed = tuple(sorted(set(pinned) - set(found)))
 
-    changed: list[tuple[str, str]] = []
     for name in sorted(set(pinned) & set(found)):
         pin, view = pinned[name], found[name]
         if _canonical(view.input_schema) != _canonical(pin.input_schema):
@@ -283,7 +295,7 @@ def diff_pinned_tools(
 
     server_mismatch: list[str] = []
     if spec.tools_list_hash is not None:
-        actual = tools_list_digest(found.values())
+        actual = tools_list_digest(views)
         if actual != spec.tools_list_hash:
             server_mismatch.append(f"tools/list digest {actual} does not match the pinned {spec.tools_list_hash}")
     expected_version = spec.server_version
@@ -338,7 +350,10 @@ def validate_pinned_arguments(
     forwards keys that are absent from the derived args schema, so a widened
     provider tool would still receive drifted arguments at call time.
 
-    Only *unexpected* arguments are treated as an incompatibility.  A missing
+    A schema-valued ``additionalProperties`` declares extra arguments, whose
+    values must satisfy that schema. References may resolve within the pin only.
+
+    Undeclared arguments and invalid extra values are incompatibilities. A missing
     required argument is a caller-side mistake -- an agent routinely omits a
     field -- not evidence that the provider drifted, and no bundle release can
     fix it, so it is deliberately left to the derived args schema, whose
@@ -349,21 +364,38 @@ def validate_pinned_arguments(
     properties = schema.get("properties")
     properties = properties if isinstance(properties, Mapping) else {}
 
-    if schema.get("additionalProperties") is True:
+    additional = schema.get("additionalProperties")
+    if additional is True:
         return
     unexpected = sorted(str(key) for key in arguments if key not in properties)
     if not unexpected:
         return
 
+    problem = "unexpected"
+    if isinstance(additional, Mapping):
+        try:
+            validator_class = validator_for(schema)
+            validator_class.check_schema(schema)
+            # Retain the root schema for local $refs, but never retrieve remote
+            # schemas: their contents are outside the frozen tool contract.
+            validator = validator_class(schema, registry=Registry()).evolve(schema=additional)
+            unexpected = [key for key in unexpected if not validator.is_valid(arguments[key])]
+        except (SchemaError, Unresolvable):
+            msg = f"The pinned schema for tool {tool.name!r} cannot validate additional arguments."
+            raise IncompatibleToolError(msg, provider=provider, details={"tool": tool.name}) from None
+        if not unexpected:
+            return
+        problem = "invalid"
+
     msg = (
         f"Arguments for the pinned tool {tool.name!r} do not match its pinned schema: "
-        f"unexpected argument(s) {', '.join(unexpected)}."
+        f"{problem} argument(s) {', '.join(unexpected)}."
     )
     raise IncompatibleToolError(
         msg,
         provider=provider,
         hint="Reconnect the flow to a bundle release whose pin matches the server, or correct the arguments.",
-        details={"tool": tool.name, "unexpected": unexpected},
+        details={"tool": tool.name, problem: unexpected},
     )
 
 

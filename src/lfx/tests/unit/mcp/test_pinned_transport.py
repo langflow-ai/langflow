@@ -151,6 +151,32 @@ async def test_sse_fallback_still_runs_for_unpinned_servers(manager):
             await _shutdown(manager, task)
 
 
+async def test_pinned_session_cannot_reuse_an_unpinned_sse_session(manager):
+    """A live legacy session must not bypass a later caller's transport pin."""
+    legacy_session = object()
+    pinned_session = object()
+    legacy_task = asyncio.create_task(asyncio.Event().wait())
+    pinned_task = asyncio.create_task(asyncio.Event().wait())
+    factory = AsyncMock(
+        side_effect=[
+            (legacy_session, legacy_task, "sse", True),
+            (pinned_session, pinned_task, "streamable_http", False),
+        ]
+    )
+    params = dict(CONNECTION_PARAMS)
+    pinned_params = {**params, "allow_sse_fallback": False}
+    try:
+        with patch.object(manager, "_create_streamable_http_session", factory):
+            assert await manager.get_session("discovery", params, "streamable_http") is legacy_session
+            assert await manager.get_session("pinned", pinned_params, "streamable_http") is pinned_session
+            assert await manager.get_session("pinned-again", pinned_params, "streamable_http") is pinned_session
+            assert await manager.get_session("discovery-again", params, "streamable_http") is legacy_session
+        assert factory.await_count == 2
+    finally:
+        await _shutdown(manager, legacy_task)
+        await _shutdown(manager, pinned_task)
+
+
 async def test_update_tools_keeps_the_raw_schemas_and_forwards_the_transport_pin():
     input_schema = {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}
     output_schema = {"type": "object", "properties": {"messages": {"type": "array"}}}

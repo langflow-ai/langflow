@@ -69,6 +69,14 @@ def test_pin_rejects_unknown_fields():
         McpToolPin(server_url=SERVER_URL, input_schema=INPUT_SCHEMA, expected_version="2.1.0")
 
 
+def test_pinned_contracts_are_available_from_the_public_integration_package():
+    from lfx.integrations import IncompatibleToolError, McpToolPin
+    from lfx.integrations.errors import IncompatibleToolError as ErrorImplementation
+
+    assert IncompatibleToolError is ErrorImplementation
+    assert McpToolPin(server_url=SERVER_URL, input_schema=INPUT_SCHEMA).server_url == SERVER_URL
+
+
 def test_pin_rejects_an_unsupported_transport():
     with pytest.raises(ValidationError):
         McpToolPin(server_url=SERVER_URL, input_schema=INPUT_SCHEMA, transport="sse")

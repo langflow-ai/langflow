@@ -34,7 +34,7 @@
       "url": "https://learn.microsoft.com/en-us/graph/permissions-reference",
       "title": "Microsoft Graph permissions reference",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-09-09",
       "notes": "Delegated AdminConsentRequired = No for Mail.Send, Mail.Read, Mail.ReadBasic, Calendars.Read, Calendars.ReadWrite, ChatMessage.Send, ChannelMessage.Send, Files.Read, Files.Read.All, Sites.Read.All, offline_access, User.Read. Application-permission variants of the mail, calendar, files, and sites permissions require admin consent; ChatMessage.Send and ChannelMessage.Send have no application variant."
     },
     "graph-throttling-limits": {
@@ -90,7 +90,7 @@
       "url": "https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/configure-user-consent",
       "title": "Configure how users consent to applications",
       "kind": "provider_docs",
-      "verified_on": "2026-09-01",
+      "verified_on": "2026-09-09",
       "notes": "'By default, all users are allowed to consent to applications for permissions that don't require administrator consent.' Recommended policy: allow user consent only for verified publishers and low-impact permissions; admin consent workflow lets users request approval."
     },
     "entra-publisher-verification": {
@@ -255,7 +255,8 @@
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
           "role": "required",
-          "notes": "'Send mail as a user'; application variant requires admin consent and is excluded."
+          "notes": "'Send mail as a user'; application variant requires admin consent and is excluded.",
+          "content_read_reach": "none"
         },
         {
           "scope": "offline_access",
@@ -263,7 +264,8 @@
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
           "role": "required",
-          "notes": "Required to receive a refresh token."
+          "notes": "Required to receive a refresh token.",
+          "content_read_reach": "none"
         }
       ],
       "consent": "user",
@@ -299,6 +301,14 @@
       },
       "verification_dependencies": [
         "entra-publisher-verification"
+      ],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "entra-user-consent"
+      },
+      "open_questions": [
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent."
       ]
     },
     {
@@ -370,14 +380,16 @@
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
           "role": "required",
-          "notes": "'Read user mail': full message including body. Requested in wave 1: the action returns bodies through include_body, which ReadBasic excludes (resolved 2026-09-01)."
+          "notes": "'Read user mail': full message including body. Requested in wave 1: the action returns bodies through include_body, which ReadBasic excludes (resolved 2026-09-01).",
+          "content_read_reach": "cross_resource"
         },
         {
           "scope": "offline_access",
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
-          "role": "required"
+          "role": "required",
+          "content_read_reach": "none"
         }
       ],
       "consent": "user",
@@ -413,6 +425,14 @@
       },
       "verification_dependencies": [
         "entra-publisher-verification"
+      ],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "entra-user-consent"
+      },
+      "open_questions": [
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent."
       ]
     },
     {
@@ -482,14 +502,16 @@
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
           "role": "required",
-          "notes": "'Read user calendars'; Calendars.ReadBasic is the narrower least-privileged option for calendarView. Wave 1 requests Calendars.Read because the events output carries body and attendee detail, which Calendars.ReadBasic excludes (resolved 2026-09-01)."
+          "notes": "'Read user calendars'; Calendars.ReadBasic is the narrower least-privileged option for calendarView. Wave 1 requests Calendars.Read because the events output carries body and attendee detail, which Calendars.ReadBasic excludes (resolved 2026-09-01).",
+          "content_read_reach": "cross_resource"
         },
         {
           "scope": "offline_access",
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
-          "role": "required"
+          "role": "required",
+          "content_read_reach": "none"
         }
       ],
       "consent": "user",
@@ -525,6 +547,14 @@
       },
       "verification_dependencies": [
         "entra-publisher-verification"
+      ],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "entra-user-consent"
+      },
+      "open_questions": [
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent."
       ]
     },
     {
@@ -614,14 +644,16 @@
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
           "role": "required",
-          "notes": "'Have full access to user calendars'."
+          "notes": "'Have full access to user calendars'.",
+          "content_read_reach": "cross_resource"
         },
         {
           "scope": "offline_access",
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
-          "role": "required"
+          "role": "required",
+          "content_read_reach": "none"
         }
       ],
       "consent": "user",
@@ -657,6 +689,14 @@
       },
       "verification_dependencies": [
         "entra-publisher-verification"
+      ],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "entra-user-consent"
+      },
+      "open_questions": [
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent."
       ]
     },
     {
@@ -715,14 +755,16 @@
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
           "role": "required",
-          "notes": "'Send user chat messages'; no application variant."
+          "notes": "'Send user chat messages'; no application variant.",
+          "content_read_reach": "none"
         },
         {
           "scope": "offline_access",
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
-          "role": "required"
+          "role": "required",
+          "content_read_reach": "none"
         }
       ],
       "consent": "user",
@@ -758,6 +800,14 @@
       },
       "verification_dependencies": [
         "entra-publisher-verification"
+      ],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "entra-user-consent"
+      },
+      "open_questions": [
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent."
       ]
     },
     {
@@ -821,14 +871,16 @@
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
           "role": "required",
-          "notes": "'Send channel messages'; no application variant outside migration."
+          "notes": "'Send channel messages'; no application variant outside migration.",
+          "content_read_reach": "none"
         },
         {
           "scope": "offline_access",
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
-          "role": "required"
+          "role": "required",
+          "content_read_reach": "none"
         }
       ],
       "consent": "user",
@@ -864,6 +916,14 @@
       },
       "verification_dependencies": [
         "entra-publisher-verification"
+      ],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "entra-user-consent"
+      },
+      "open_questions": [
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent."
       ]
     },
     {
@@ -940,7 +1000,8 @@
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
           "role": "required",
-          "notes": "'Read user files': the user's own OneDrive; least privileged for list children. Wave 1 default (resolved 2026-09-01): the wider scopes below are optional and granted when the user enables SharePoint or shared-library access on the connection; a run that sets site_id or a foreign drive_id against a connection without them fails with scope-missing (connection-contract.md section 7)."
+          "notes": "'Read user files': the user's own OneDrive; least privileged for list children. Wave 1 default (resolved 2026-09-01): the wider scopes below are optional and granted when the user enables SharePoint or shared-library access on the connection; a run that sets site_id or a foreign drive_id against a connection without them fails with scope-missing (connection-contract.md section 7).",
+          "content_read_reach": "cross_resource"
         },
         {
           "scope": "Files.Read.All",
@@ -952,7 +1013,8 @@
             "kind": "input_present",
             "input": "drive_id"
           },
-          "notes": "'Read all files that user can access', including SharePoint libraries."
+          "notes": "'Read all files that user can access', including SharePoint libraries.",
+          "content_read_reach": "cross_resource"
         },
         {
           "scope": "Sites.Read.All",
@@ -964,14 +1026,16 @@
             "kind": "input_present",
             "input": "site_id"
           },
-          "notes": "'Read items in all site collections' on behalf of the user; needed for /sites/{site-id}/drive."
+          "notes": "'Read items in all site collections' on behalf of the user; needed for /sites/{site-id}/drive.",
+          "content_read_reach": "cross_resource"
         },
         {
           "scope": "offline_access",
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
-          "role": "required"
+          "role": "required",
+          "content_read_reach": "none"
         }
       ],
       "consent": "user",
@@ -1007,6 +1071,14 @@
       },
       "verification_dependencies": [
         "entra-publisher-verification"
+      ],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "entra-user-consent"
+      },
+      "open_questions": [
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent."
       ]
     },
     {
@@ -1067,7 +1139,8 @@
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
           "role": "required",
-          "notes": "'Read user files': the user's own OneDrive; wave 1 default, same profile as microsoft.files.list (resolved 2026-09-01)."
+          "notes": "'Read user files': the user's own OneDrive; wave 1 default, same profile as microsoft.files.list (resolved 2026-09-01).",
+          "content_read_reach": "cross_resource"
         },
         {
           "scope": "Files.Read.All",
@@ -1078,7 +1151,8 @@
           "condition": {
             "kind": "input_present",
             "input": "drive_id"
-          }
+          },
+          "content_read_reach": "cross_resource"
         },
         {
           "scope": "Sites.Read.All",
@@ -1090,14 +1164,16 @@
             "kind": "input_present",
             "input": "site_id"
           },
-          "notes": "Needed for the /sites/{site-id}/drive download path behind the site_id input; same permission set as microsoft.files.list."
+          "notes": "Needed for the /sites/{site-id}/drive download path behind the site_id input; same permission set as microsoft.files.list.",
+          "content_read_reach": "cross_resource"
         },
         {
           "scope": "offline_access",
           "classification": "non_sensitive",
           "provider_classification": "Delegated; admin consent required: No (work or school and personal accounts)",
           "source": "graph-permissions-reference",
-          "role": "required"
+          "role": "required",
+          "content_read_reach": "none"
         }
       ],
       "consent": "user",
@@ -1133,7 +1209,53 @@
       },
       "verification_dependencies": [
         "entra-publisher-verification"
+      ],
+      "tenant_consent": {
+        "status": "deployment_validation_required",
+        "requirement": "The consent field describes the provider default only. Validate this app, identity and exact requested scopes against the target tenant/workspace policy before rollout; user consent may require administrator approval. INT-5 maps approval/denial, INT-8 presents B12, INT-14 records allowed/approval-required/blocked cases. No live tenant has been validated by this gate.",
+        "source": "entra-user-consent"
+      },
+      "open_questions": [
+        "INT-14 deployment prerequisite: record the target tenant/workspace consent policy and administrator approval for this registration and scope set; documentation review does not establish tenant consent."
       ]
+    }
+  ],
+  "scope_risk_decisions": [
+    {
+      "scope": "Mail.Read",
+      "decision": "accept_with_controls",
+      "rationale": "Proposed conditional acceptance: disclose the full grant before consent, request only action-required scopes, enforce provider policy and default-off non-interactive use. Requires owner sign-off in the decision record.",
+      "decision_record": "decisions/broad-content-read.md"
+    },
+    {
+      "scope": "Calendars.Read",
+      "decision": "accept_with_controls",
+      "rationale": "Proposed conditional acceptance: disclose the full grant before consent, request only action-required scopes, enforce provider policy and default-off non-interactive use. Requires owner sign-off in the decision record.",
+      "decision_record": "decisions/broad-content-read.md"
+    },
+    {
+      "scope": "Calendars.ReadWrite",
+      "decision": "accept_with_controls",
+      "rationale": "Proposed conditional acceptance: disclose the full grant before consent, request only action-required scopes, enforce provider policy and default-off non-interactive use. Requires owner sign-off in the decision record.",
+      "decision_record": "decisions/broad-content-read.md"
+    },
+    {
+      "scope": "Files.Read",
+      "decision": "accept_with_controls",
+      "rationale": "Proposed conditional acceptance: disclose the full grant before consent, request only action-required scopes, enforce provider policy and default-off non-interactive use. Requires owner sign-off in the decision record.",
+      "decision_record": "decisions/broad-content-read.md"
+    },
+    {
+      "scope": "Files.Read.All",
+      "decision": "accept_with_controls",
+      "rationale": "Proposed conditional acceptance: disclose the full grant before consent, request only action-required scopes, enforce provider policy and default-off non-interactive use. Requires owner sign-off in the decision record.",
+      "decision_record": "decisions/broad-content-read.md"
+    },
+    {
+      "scope": "Sites.Read.All",
+      "decision": "accept_with_controls",
+      "rationale": "Proposed conditional acceptance: disclose the full grant before consent, request only action-required scopes, enforce provider policy and default-off non-interactive use. Requires owner sign-off in the decision record.",
+      "decision_record": "decisions/broad-content-read.md"
     }
   ]
 }

@@ -58,7 +58,8 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | `McpToolPin` (pinned MCP action contract on a capability) | `lfx.integrations` |
 | `integration_action()` | `lfx.integrations` |
 | `Component.resolve_connection(field_name)` | `lfx.custom.custom_component.component.Component` |
-| `BaseConnectionResolverService` | `lfx.services.connection` |
+| `Component.select_integration_capabilities(capability_ids)` | `lfx.custom.custom_component.component.Component` |
+| `BaseConnectionResolverService`, `ConnectionAccessPolicy` | `lfx.services.connection` |
 
 ### Preset MCP components
 
@@ -215,7 +216,121 @@ the deserialize half is covered by
 
 ## Changelog
 
+### 2026-09-14 — Integration action selection and execution denials
+
+- Add the pure `Component.select_integration_capabilities(capability_ids)` hook.
+  Its argument is the tuple of declared capability IDs from a connection input
+  or the loaded manifest's `component_ref`. An action-picker bundle returns a
+  non-empty subset based on the invocation's current inputs. Empty or undeclared
+  selections fail with HTTP 422 and `action-unsupported`, independently of
+  governance policy. The default requires all declared capabilities, so
+  existing single-action components need no change. The hook runs before the
+  output body in graph and sync/async tool execution, after tool arguments are
+  applied, and before creating a credential lease. The resolver receives only
+  the selected IDs. Graph construction using the default `ComponentToolkit`
+  checks its providers; selected-action checks wait until the agent supplies
+  invocation arguments. Custom `_get_tools()` or `to_toolkit()` implementations
+  require every declared capability at construction, and their connection leases
+  carry every declared capability. The selection hook cannot narrow an opaque
+  toolset whose returned callables bypass the standard invocation wrappers.
+  Picker option filtering remains bundle-owned; changing the
+  picker alone never authorizes an action. For example:
+
+  ```python
+  def select_integration_capabilities(self, capability_ids: tuple[str, ...]) -> tuple[str, ...]:
+      return ({"search": "google.drive.search", "delete": "google.drive.delete"}[self.action],)
+  ```
+
+  Use the same action-to-capability mapping to dispatch the output's adapter.
+  Implementations must inspect input values without I/O or side effects; the
+  hook may run more than once. For a component requiring several actions in one
+  invocation, return every capability it will use. This is additive;
+  `BUNDLE_API_VERSION` remains `1`.
+- `IntegrationPolicyError` also implements `IntegrationError`, retaining
+  `PermissionError` compatibility while carrying `policy-blocked`, HTTP 403,
+  an administrator-action hint and owner-only key details. Component policy
+  denials now pass through the normal error-message persistence handler.
+- Empty persisted integration ceilings retain unrestricted semantics when a
+  plugin is installed. External deny-all must be explicitly configured; plugins
+  changing semantics must provide an operator-visible migration/configuration
+  step. No automatic Enterprise migration is included here.
+
+### 2026-09-14 — Integration policy review follow-up
+
+- Policy bundle coordinators expose `read_state()` to atomically return the
+  immutable revision and source availability. Custom `BasePolicyBundleService`
+  implementations must supply this method. Integration policy resolution pins
+  both provider and action decisions to that state, including across async
+  plugin hooks, so concurrent publication cannot combine different revisions.
+- Failure to look up a component's integration identity now stops execution;
+  `None` is reserved for a successful lookup with no matching capability.
+  Template building clears previous integration identity stamps before lookup,
+  including when registry access fails.
+
+### 2026-09-14 — Integration policy review
+
+- Component and host resolver gates require metadata for every declared
+  capability when an action deny-list is configured. Missing or unavailable
+  metadata produces a typed policy denial before credential access; an
+  unconfigured installation retains pass-through behavior.
+- Integration policy snapshots support dotted provider IDs and expire cached
+  allows when refreshing a configured shared policy fails, including policies
+  that restrict integration actions without a provider ceiling.
+- The synchronous and asynchronous `require_integration_actions` helpers accept
+  optional `capability_ids`; `policy_keys_for_capabilities` accepts optional
+  `require_loaded` validation. These additions do not change previously released
+  Bundle API signatures; `BUNDLE_API_VERSION` remains `1`.
+
+### 2026-09-14 — Actionable connection authorization denials
+
+- `ConnectionNotAuthorizedError.reason` and `details.reason` identify the denial.
+  The optional `reason` argument additionally accepts `anonymous-principal`,
+  `unknown-principal`, and `non-interactive-opt-in-required`, each with a safe,
+  actionable hint. The existing `principal` and `provider` reasons, error code,
+  and HTTP 403 status are preserved. Owner/share authorization is checked before
+  reporting a missing opt-in; credentials are never read for a denied request.
+  This is additive; `BUNDLE_API_VERSION` remains `1`.
+
+### 2026-09-10 — Integration identity ownership and runtime floors
+
+- The bundle registry rejects duplicate integration provider IDs, capability IDs,
+  and policy keys across providers or bundles with `integration-identity-conflict`.
+  Policy keys may group actions within one provider. Startup reports rejected
+  bundles, and reload validates before swapping modules or registry metadata.
+- Integration references require `lfx>=1.13.0.dev0`. The loader and validator
+  report `lfx-version-too-old` before schema parsing on older runtimes. CI checks
+  every declaring bundle's runtime dependency against the same feature floor;
+  `scripts/ci/sync_bundle_lfx_pin.py 1.13.0` remains the floor update mechanism.
+  Manifests without integrations retain their existing behavior.
+
 ### v0 (this release)
+
+- **Integration policy gating of bundle capabilities (additive).**
+  `IntegrationPolicyBlockedError` (code `policy-blocked`, HTTP 403) is added to
+  the typed integration error envelope and to `INTEGRATION_ERROR_CODES`.
+  `IntegrationCapability.policy_keys` is now validated against the
+  `integrations.<provider_id>.<action>` grammar and `IntegrationProvider`
+  rejects capability policy keys outside its own provider prefix, so every
+  declared action is addressable by an operator deny-list.
+  `ConnectionResolutionRequest.capability_ids` carries the capability ids
+  declared by the requesting input, letting a host resolver enforce the
+  deny-list before it selects a credential row.  `Component` gains
+  `require_integration_policy()`, called from `build_results()`, so a blocked
+  provider or action fails before the component body runs and before any
+  credential is minted, decrypted, or refreshed.  Bundles that declare no
+  integrations are unaffected; `BUNDLE_API_VERSION` remains `1`.
+
+- **Owner-only route families on the execution principal (additive).**
+  `ExecutionPrincipal.allow_explicit_shares` is a new field defaulting to `True`,
+  so every family that already honored explicit shares keeps doing so. Route
+  families whose admission never admits a delegated caller (the legacy MCP
+  transports) stamp it `False`, and a host resolver that evaluates share grants
+  must skip its share branch for those principals. The portable deny floor in
+  `BaseConnectionResolverService.authorize_principal` is unchanged in behavior:
+  it admits a share only when the host passes `explicit_share_authorized`, and
+  its docstring now states that a host must never authorize a share for a
+  principal with this flag set to `False`. Additive for bundles and
+  resolvers alike; `BUNDLE_API_VERSION` remains `1`.
 
 - **Optional rejected-token digest for connection refresh.**
   `ConnectionResolutionRequest.rejected_token_digest` carries a SHA-256 digest only
@@ -236,12 +351,38 @@ the deserialize half is covered by
   process-wide discovery and policy reads through
   `BundleRegistry.list_integrations()`. Manifests that omit `integrations`
   still load with an empty list; `BUNDLE_API_VERSION` remains `1`.
+  Capability paths require a lowercase `.json` suffix in both the runtime
+  validator and exported schema. Multi-bundle loading registers extension-wide
+  model providers only after every bundle validates and loads successfully.
 
+- Enforced the unreleased connection resolver contract through a final `resolve`
+  entry point. Hosts now implement `_get_access_policy` and `_resolve`; ownership
+  and non-interactive/share checks run before credential access. Required scopes
+  reject unverified credentials with a typed diagnostic. Resolution failures carry
+  fixed reason codes and actionable guidance without raw credential values or
+  exception chains. `run_flow` now activates its injected variables and environment
+  policy for credential lookups, restoring the prior scope after execution.
+  No previously released API changes; `BUNDLE_API_VERSION` remains 1.
+- Added the `credential-undecryptable` `ConnectionUnresolvedReason`, raised when
+  a stored credential exists but cannot be decrypted (for example after the server
+  secret key changed). It keeps that case distinct from a missing credential, and
+  its guidance tells the user to reconnect. Code that matches on reason values
+  should handle the new value. Additive to the unreleased connection contract;
+  `BUNDLE_API_VERSION` remains 1.
 - Initial surface enumerated above.  Frozen as `BUNDLE_API_VERSION = 1`.
 - Added the provider-neutral connection-reference, resolver, capability,
   integration-error, and telemetry contracts used by dedicated integration
   bundles. This is an additive surface change and does not change
   `BUNDLE_API_VERSION`.
+- Hardened the new connection contracts before their first release: integration
+  exports load lazily; `ScopeSet.covers` requires an explicit `provider` and shares
+  normalization with resolvers through `ScopeSet.missing`; leases activate
+  conditional scopes and support pre-run construction. Malformed credentials
+  produce sanitized typed errors; wrapped HTTP failures preserve their status,
+  and ambiguous 403s no longer claim missing scopes. The authorization floor
+  accepts an optional host-verified `explicit_share_authorized` decision for
+  actor ownership mismatches without bypassing other denies. No previously
+  released Bundle API signature changes; `BUNDLE_API_VERSION` remains 1.
 - `ExtensionManifest.version` now accepts the canonical PEP 440 stable, dev,
   alpha, beta, and release-candidate forms emitted by the repository's bundle
   release pipeline, in addition to the existing SemVer 2.0.0 forms.  Runtime
@@ -640,6 +781,10 @@ the deserialize half is covered by
   `metadata`, and a server config may set `allow_sse_fallback=False` to pin the
   transport. Components that do not override `_pinned_spec()` are unaffected;
   `BUNDLE_API_VERSION` remains `1`.
+  Pinned discovery validates the raw tool list before schema conversion can skip
+  entries, rejects duplicate or unnamed tools, and includes every entry in the
+  digest. Session reuse separates callers that permit SSE fallback from callers
+  that require Streamable HTTP, so a live legacy session cannot bypass the pin.
 
 - **`discovered_tool()` accepts a recorded `tools/list` entry.**
   `lfx.base.mcp.pinned.discovered_tool()` (and therefore `tools_list_digest()`)

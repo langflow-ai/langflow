@@ -11,11 +11,10 @@ from typing import TYPE_CHECKING, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, StrictStr
 
-from lfx.integrations.errors import AuthExpiredError
-
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    from lfx.integrations.errors import AuthExpiredError
     from lfx.services.authorization.base import ExecutionPrincipal
     from lfx.services.interfaces import ConnectionResolverProtocol
 
@@ -123,6 +122,11 @@ class ConnectionResolutionRequest:
     ref: ConnectionRef
     principal: ExecutionPrincipal
     required_scopes: frozenset[str] = frozenset()
+    # INT-3 capability ids declared by the requesting input (INT-7). The host
+    # resolver enforces the action deny-list on these before it selects any
+    # candidate row, so a saved or crafted flow cannot reach a blocked action
+    # through a connection the caller legitimately owns.
+    capability_ids: frozenset[str] = frozenset()
     component_id: str | None = None
     flow_id: str | None = None
     run_id: str | None = None
@@ -193,6 +197,8 @@ class CredentialLease:
 
     async def get_token_after_auth_error(self, error: AuthExpiredError) -> str:
         """Re-resolve once after a provider rejects a no-expiry or stale token."""
+        from lfx.integrations.errors import AuthExpiredError
+
         if not isinstance(error, AuthExpiredError):
             msg = "error must be an AuthExpiredError"
             raise TypeError(msg)

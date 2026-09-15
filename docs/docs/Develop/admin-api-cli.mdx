@@ -174,4 +174,4 @@ Manual membership and role-assignment mutations cannot remove IdP-only state. Th
 
 Before a membership or effective role assignment changes, the installed authorization plugin can enforce its access ceiling. A rejected privilege escalation returns `409` with `X-Langflow-Error-Code: access_ceiling`.
 
-Every administration mutation supplies its operation ID to the audit path. Audit details include the actor, target, action, source, and changed field names. Passwords, API keys, and secret values are never included.
+Administration auditing is opt-in. Set `LANGFLOW_AUTHZ_AUDIT_ENABLED=true` and restart Langflow to write administration decisions and mutations to `authz_audit_log`; the default is `false`, so a default installation does not retain this audit trail. When auditing is enabled, every administration mutation supplies its operation ID to the audit path. Audit details include the actor, target, action, source, and changed field names. Passwords, API keys, and secret values are never included.

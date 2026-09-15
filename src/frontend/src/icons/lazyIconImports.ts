@@ -194,6 +194,8 @@ export const lazyIconsMapping = {
     import("@/icons/FacebookMessenger").then((mod) => ({
       default: mod.FBIcon,
     })),
+  Figranium: () =>
+    import("@/icons/Figranium").then((mod) => ({ default: mod.FigraniumIcon })),
   Firecrawl: () =>
     import("@/icons/Firecrawl").then((mod) => ({ default: mod.FirecrawlIcon })),
   Finage: () =>
@@ -415,6 +417,8 @@ export const lazyIconsMapping = {
     })),
   Pinecone: () =>
     import("@/icons/Pinecone").then((mod) => ({ default: mod.PineconeIcon })),
+  Plivo: () =>
+    import("@/icons/Plivo").then((mod) => ({ default: mod.PlivoIcon })),
   Postgres: () =>
     import("@/icons/Postgres").then((mod) => ({ default: mod.PostgresIcon })),
   Python: () =>

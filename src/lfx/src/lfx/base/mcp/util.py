@@ -27,6 +27,7 @@ from pydantic import BaseModel, SkipValidation
 
 from lfx.base.agents.utils import maybe_unflatten_dict
 from lfx.base.mcp import security as mcp_security
+from lfx.base.mcp.pinned import PinnedServerSpec, enforce_pinned_tools
 from lfx.base.mcp.security import (
     AGENTIC_MCP_MODULE,
     AGENTIC_USER_ID_ENV_VAR,
@@ -61,6 +62,9 @@ is_dangerous_mcp_env_var = mcp_security.is_dangerous_mcp_env_var
 # Minimum cleanup interval to prevent tight-loop CPU spin if settings return 0 or fail.
 _MCP_CLEANUP_INTERVAL_MIN = 30  # seconds
 _SESSION_VALIDATION_TIMEOUT_FLOOR = 10.0
+# Mirrors the McpSettings.mcp_server_timeout default. Only used when the settings object lacks
+# the field or carries a non-positive value, so a misconfiguration cannot resurrect a shorter cap.
+_SESSION_INIT_TIMEOUT_FALLBACK = 60.0
 
 
 def _validate_mcp_stdio_env(env: dict[str, str] | None) -> dict[str, str]:
@@ -103,6 +107,23 @@ def get_session_validation_timeout() -> float:
     if connect_timeout is None:
         return _SESSION_VALIDATION_TIMEOUT_FLOOR
     return max(_SESSION_VALIDATION_TIMEOUT_FLOOR, float(connect_timeout) / 3.0)
+
+
+def get_session_init_timeout() -> float:
+    """Budget for a new transport session to finish ``initialize``.
+
+    Derived from ``mcp_server_timeout`` so the inner readiness wait in the session
+    creators and the outer ``connect_to_server`` budget are the same number. This used
+    to be a hardcoded 30 s, which silently capped ``LANGFLOW_MCP_SERVER_TIMEOUT`` at 30
+    and, on the ``run_tool`` path (no outer connect budget), was the real connect limit.
+
+    Non-positive values are treated as unset, like ``_resolve_mcp_tool_execution_timeout``,
+    because ``asyncio.wait_for`` fails immediately for any timeout <= 0.
+    """
+    connect_timeout = _get_mcp_setting("mcp_server_timeout", None)
+    if connect_timeout is None or float(connect_timeout) <= 0:
+        return _SESSION_INIT_TIMEOUT_FALLBACK
+    return float(connect_timeout)
 
 
 def get_max_sessions_per_server() -> int:
@@ -1337,11 +1358,10 @@ class MCPSessionManager:
             # Include URL and headers for uniqueness
             url = connection_params["url"]
             headers = str(sorted((connection_params.get("headers", {})).items()))
-            # A caller that pinned the transport must not inherit a session (or a cached
-            # transport preference) that an unpinned caller established over SSE. The
-            # suffix is appended only in that case, so existing keys are unchanged.
-            pinned = "" if connection_params.get("allow_sse_fallback", True) else "|pinned_transport"
-            key_input = f"{url}|{headers}{pinned}"
+            key_input = f"{url}|{headers}"
+            if not connection_params.get("allow_sse_fallback", True):
+                # A pinned caller must never inherit a discovery caller's live SSE session.
+                key_input += "|streamable_http_only"
             return f"streamable_http_{hash(key_input)}"
 
         # Fallback to a generic key
@@ -1542,9 +1562,10 @@ class MCPSessionManager:
         self._background_tasks.add(task)
         task.add_done_callback(self._background_tasks.discard)
 
-        # Wait for session to be ready (use longer timeout for remote connections)
+        # Wait for the session to be ready within the configured connect budget. A cold stdio
+        # server (e.g. a packaged interpreter importing Langflow) can take well over 20 s here.
         try:
-            session = await asyncio.wait_for(session_future, timeout=30.0)
+            session = await asyncio.wait_for(session_future, timeout=get_session_init_timeout())
         except asyncio.CancelledError:
             self._abort_session_task(task)
             raise
@@ -1732,7 +1753,7 @@ class MCPSessionManager:
         task.add_done_callback(self._background_tasks.discard)
 
         try:
-            session = await asyncio.wait_for(session_future, timeout=30.0)
+            session = await asyncio.wait_for(session_future, timeout=get_session_init_timeout())
             if used_transport:
                 transport_used = used_transport[0]
                 await logger.ainfo(f"Session {session_id} successfully established using {transport_used}")
@@ -2290,8 +2311,7 @@ class MCPStreamableHttpClient:
             }
         elif headers:
             self._connection_params["headers"] = validated_headers
-        # Part of the server key (see ``_get_server_key``): a pinned-transport caller
-        # gets its own session rather than inheriting an SSE one.
+        # Session reuse must respect the caller's transport policy.
         self._connection_params["allow_sse_fallback"] = allow_sse_fallback
 
         # If no session context is set, create a default one
@@ -2629,6 +2649,8 @@ async def update_tools(
     current_user_id: str | UUID | None = None,
     end_user_id: str | None = None,
     url_variables: dict[str, str] | None = None,
+    pinned_spec: PinnedServerSpec | None = None,
+    pinned_provider: str | None = None,
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
     """Fetch server config and update available tools.
 
@@ -2653,6 +2675,8 @@ async def update_tools(
         end_user_id: Serving-plane end-user identity of the run. Forwarded as the end-user header
             ONLY to operator-allowlisted internal hosts (fail-closed); external servers never
             receive it. None / feature-off means no header is appended (BC).
+        pinned_spec: Optional contract checked against raw discovery before schema conversion.
+        pinned_provider: Provider identifier attached to pinned-contract errors.
     """
     if server_config is None:
         server_config = {}
@@ -2762,6 +2786,17 @@ async def update_tools(
     else:
         logger.error(f"Invalid MCP server mode for '{server_name}': {mode}")
         return "", [], {}
+
+    if pinned_spec is not None:
+        # Schema conversion may skip malformed tools for unpinned discovery. Compare
+        # the raw list first so an added tool cannot disappear before the pin check.
+        enforce_pinned_tools(
+            pinned_spec,
+            tools,
+            provider=pinned_provider,
+            server_label=server_name,
+            server_info=mcp_streamable_http_client.server_info,
+        )
 
     if not tools or not client or not client._connected:
         logger.warning(f"No tools available from MCP server '{server_name}' or connection failed")

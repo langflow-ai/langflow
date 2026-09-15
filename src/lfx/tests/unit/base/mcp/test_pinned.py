@@ -142,6 +142,22 @@ def test_matching_discovery_is_compatible():
     assert diff.summary() == "no difference"
 
 
+@pytest.mark.parametrize("pin_digest", [False, True])
+def test_duplicate_tool_cannot_hide_schema_drift(pin_digest):
+    widened = {**SEARCH_INPUT, "properties": {**SEARCH_INPUT["properties"], "cursor": {"type": "string"}}}
+    discovered = [_found("search_messages", widened, SEARCH_OUTPUT), *_matching()]
+    spec = _pin(tools_list_hash=tools_list_digest(_matching())) if pin_digest else _pin()
+    with pytest.raises(IncompatibleToolError) as excinfo:
+        enforce_pinned_tools(spec, iter(discovered))
+    assert "search_messages: duplicate tool name" in excinfo.value.details["changed"]
+
+
+def test_unnamed_tool_is_not_silently_dropped():
+    with pytest.raises(IncompatibleToolError) as excinfo:
+        enforce_pinned_tools(_pin(), [*_matching(), _found("", SEARCH_INPUT)])
+    assert "<unnamed>: missing tool name" in excinfo.value.details["changed"]
+
+
 def test_added_tool_fails_closed_and_names_the_addition():
     discovered = [*_matching(), _found("delete_message", {"type": "object", "properties": {}})]
     diff = diff_pinned_tools(_pin(), discovered)
@@ -301,6 +317,57 @@ def test_pinned_arguments_allow_extras_only_when_the_pin_allows_them():
         input_schema={"type": "object", "properties": {"id": {"type": "string"}}, "additionalProperties": True},
     )
     validate_pinned_arguments(tool, {"id": "1", "anything": True})
+
+
+@pytest.mark.parametrize("additional_schema", [{"type": "string"}, {"$ref": "#/$defs/extra"}, {}])
+def test_schema_valued_additional_properties_accept_valid_arguments(additional_schema):
+    """Additional arguments may be declared by a schema, including local references."""
+    tool = PinnedToolSpec(
+        name="open",
+        input_schema={
+            "type": "object",
+            "$defs": {"extra": {"type": "string"}},
+            "properties": {"id": {"type": "integer"}},
+            "additionalProperties": additional_schema,
+        },
+    )
+    validate_pinned_arguments(tool, {"id": 1, "cursor": "next", "label": "orders"})
+
+
+@pytest.mark.parametrize("additional_schema", [{"type": "string"}, {"$ref": "#/$defs/extra"}])
+def test_schema_valued_additional_properties_reject_invalid_values(additional_schema):
+    """Valid extras do not hide another extra that violates the pinned schema."""
+    tool = PinnedToolSpec(
+        name="open",
+        input_schema={
+            "type": "object",
+            "$defs": {"extra": {"type": "string"}},
+            "properties": {"id": {"type": "integer"}},
+            "additionalProperties": additional_schema,
+        },
+    )
+    with pytest.raises(IncompatibleToolError) as excinfo:
+        validate_pinned_arguments(tool, {"id": 1, "cursor": "next", "private_argument": {"secret_value": True}})
+    assert excinfo.value.details["invalid"] == ["private_argument"]
+    assert "secret_value" not in excinfo.value.message
+    assert "secret_value" not in str(excinfo.value.details)
+
+
+def test_additional_properties_references_cannot_fetch_external_schemas(monkeypatch):
+    """A frozen pin must not acquire a mutable schema over the network."""
+    import urllib.request
+
+    def refuse_fetch(*_args, **_kwargs):
+        pytest.fail("Pinned schema validation must not fetch remote references")
+
+    monkeypatch.setattr(urllib.request, "urlopen", refuse_fetch)
+    tool = PinnedToolSpec(
+        name="open",
+        input_schema={"type": "object", "additionalProperties": {"$ref": "https://example.invalid/schema"}},
+    )
+    with pytest.raises(IncompatibleToolError) as excinfo:
+        validate_pinned_arguments(tool, {"cursor": "next"})
+    assert "cannot validate" in excinfo.value.message
 
 
 # ------------------------------------------------------------ manifest bridge

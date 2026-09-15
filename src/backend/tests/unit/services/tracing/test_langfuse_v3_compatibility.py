@@ -229,8 +229,8 @@ class TestLangfuseTracerFunctionality:
 
         update_kwargs = mock_langfuse["root_span"].update_trace.call_args.kwargs
         assert update_kwargs["user_id"] == "auth-user"
-        # No override → no metadata payload was supplied for the override.
-        assert "metadata" not in update_kwargs
+        # No override → only the flow id is stamped; nothing recorded for the override.
+        assert update_kwargs["metadata"] == {"flow_id": "flow-123"}
 
     def test_trace_user_id_stays_auth_user_and_override_goes_to_metadata(self, mock_langfuse):
         """``tracing_user_id`` must not redefine ``trace.userId``; it is stamped in metadata.
@@ -254,7 +254,7 @@ class TestLangfuseTracerFunctionality:
 
         update_kwargs = mock_langfuse["root_span"].update_trace.call_args.kwargs
         assert update_kwargs["user_id"] == "auth-user"
-        assert update_kwargs["metadata"] == {"langflow.tracing_user_id": "end-user-456"}
+        assert update_kwargs["metadata"] == {"flow_id": "flow-123", "langflow.tracing_user_id": "end-user-456"}
 
     def test_tracing_user_id_equal_to_auth_user_is_not_stamped(self, mock_langfuse):
         """When the override matches the auth user there is nothing extra to record."""
@@ -272,7 +272,7 @@ class TestLangfuseTracerFunctionality:
 
         update_kwargs = mock_langfuse["root_span"].update_trace.call_args.kwargs
         assert update_kwargs["user_id"] == "same-user"
-        assert "metadata" not in update_kwargs
+        assert update_kwargs["metadata"] == {"flow_id": "flow-123"}
 
     def test_add_trace_creates_child_span(self, mock_langfuse):
         """Test that add_trace creates a child span using v3 API."""
