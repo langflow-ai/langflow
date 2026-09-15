@@ -11,8 +11,13 @@ from langflow.services.tracing.service import (
     component_context_var,
     trace_context_var,
 )
+from lfx.custom.custom_component.component import Component
 from lfx.services.settings.base import Settings
 from lfx.services.settings.service import SettingsService
+
+
+class TraceNameOverrideComponent(Component):
+    display_name = "X"
 
 
 class MockTracer(BaseTracer):
@@ -309,6 +314,27 @@ async def test_trace_component(tracing_service, mock_component):
         assert tracer.end_trace_list[0]["logs"] == component_context.logs[trace_name]
 
     # Cleanup
+    await tracing_service.end_tracers({})
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_tracers")
+async def test_trace_component_uses_overridden_trace_display_name(tracing_service):
+    """A component's trace_display_name override reaches tracers as the trace name."""
+    run_id = uuid.uuid4()
+    await tracing_service.start_tracers(run_id, "test_run", "test_user", "test_session", "test_project")
+
+    component = TraceNameOverrideComponent(trace_display_name="RAG Query")
+    expected_trace_name = f"RAG Query ({component._id})"
+    async with tracing_service.trace_component(component, component.trace_name, {}, None):
+        await asyncio.sleep(0.1)  # Wait for async queue processing
+        for tracer in trace_context_var.get().tracers.values():
+            assert tracer.add_trace_list[0]["trace_name"] == expected_trace_name
+
+    await asyncio.sleep(0.1)  # Wait for async queue processing
+    for tracer in trace_context_var.get().tracers.values():
+        assert tracer.end_trace_list[0]["trace_name"] == expected_trace_name
+
     await tracing_service.end_tracers({})
 
 
