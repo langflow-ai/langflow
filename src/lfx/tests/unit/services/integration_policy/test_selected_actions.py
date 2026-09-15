@@ -6,11 +6,12 @@ from types import SimpleNamespace
 from typing import ClassVar
 
 import pytest
-from langchain_core.tools import ToolException
+from langchain_core.tools import StructuredTool, ToolException
 from lfx.base.tools.component_tool import ComponentToolkit
 from lfx.custom import Component
 from lfx.graph import Graph
 from lfx.graph.graph.schema import VertexBuildResult
+from lfx.integrations.errors import ActionUnsupportedError
 from lfx.io import ConnectionRefInput, DropdownInput, HandleInput, Output
 from lfx.services.integration_policy import IntegrationPolicyError, IntegrationPolicyService
 from lfx.services.policy_bundle import PolicyBundleService, PolicyBundleSnapshot
@@ -174,8 +175,10 @@ def test_invalid_selection_cannot_remove_the_gate(install_policy, monkeypatch, s
     component = ActionPicker()
     monkeypatch.setattr(component, "select_integration_capabilities", lambda _: selection)
 
-    with pytest.raises(IntegrationPolicyError):
+    with pytest.raises(ActionUnsupportedError) as caught:
         component.require_integration_policy()
+    assert caught.value.http_status == 422
+    assert caught.value.code == "action-unsupported"
     assert ActionPicker.calls == []
 
 
@@ -215,3 +218,79 @@ async def test_graph_can_construct_a_tool_before_its_action_is_selected(install_
         assert len(builds) == 2
         assert all(result.valid for result in builds)
         assert AsyncActionPicker.calls == ["search"]
+
+
+class CustomToolset(ActionPicker):
+    constructions: ClassVar[list[str]] = []
+
+    async def _get_tools(self):
+        self.constructions.append("constructed")
+
+        async def delete() -> str:
+            """Delete a document."""
+            self.calls.append("delete")
+            return "deleted"
+
+        return [StructuredTool.from_function(coroutine=delete)]
+
+
+class ConnectionToolset(CustomToolset):
+    inputs = ConnectionActionPicker.inputs
+    leases: ClassVar[list] = []
+
+    async def _get_tools(self):
+        self.leases.append(self.resolve_connection("connection"))
+        return await super()._get_tools()
+
+
+class CustomToolCaller(ToolCaller):
+    async def execute(self) -> str:
+        return await self.tools[0].ainvoke({})
+
+
+@pytest.mark.parametrize("component_class", [CustomToolset, ConnectionToolset])
+@pytest.mark.parametrize("via_graph", [False, True])
+@pytest.mark.parametrize("blocked", [{DELETE_KEY}, {DELETE_KEY, f"integrations.{SEARCH}"}])
+async def test_custom_toolsets_require_every_action_before_construction(
+    install_policy, component_class, via_graph, blocked
+):
+    install_policy(component_class, actions=frozenset(blocked))
+    CustomToolset.constructions.clear()
+    ConnectionToolset.leases.clear()
+    component = component_class(action="search")
+    if component_class is ConnectionToolset:
+        component.set(connection="qaprobe/work")
+    component._append_tool_to_outputs_map()
+    caller = CustomToolCaller().set(tools=component.to_toolkit)
+    graph = Graph(start=component, end=caller)
+
+    if via_graph:
+        from lfx.exceptions.component import ComponentBuildError
+
+        with pytest.raises(ComponentBuildError):
+            async for _ in graph.async_start():
+                pass
+    else:
+        with pytest.raises(IntegrationPolicyError):
+            await component.to_toolkit()
+    assert CustomToolset.constructions == []
+    assert ConnectionToolset.leases == []
+    assert component_class.calls == []
+
+
+async def test_custom_toolset_lease_covers_all_returned_actions_when_unrestricted(install_policy):
+    install_policy(ConnectionToolset, actions=frozenset())
+    ConnectionToolset.leases.clear()
+    component = ConnectionToolset(action="search", connection="qaprobe/work")
+    tools = await component.to_toolkit()
+    assert ConnectionToolset.leases[-1]._request.capability_ids == frozenset({SEARCH, DELETE})
+    assert await tools[0].ainvoke({}) == "deleted"
+
+
+async def test_invalid_selection_is_not_a_policy_denial_without_policy(install_policy):
+    install_policy(ActionPicker, actions=frozenset())
+    with pytest.raises(ActionUnsupportedError) as caught:
+        await ActionPicker(action="purge").build_results()
+    assert caught.value.http_status == 422
+    assert caught.value.code == "action-unsupported"
+    assert ActionPicker.calls == []

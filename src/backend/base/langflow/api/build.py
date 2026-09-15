@@ -954,6 +954,7 @@ async def _generate_flow_events(
 
     try:
         ids, vertices_to_run, graph = await build_graph_and_get_order()
+        graph.expose_error_details = expose_error_details
         # Serving-plane end-user scoping: an anonymous run is ephemeral, so mark the
         # graph non-persisting (astore_message honors this per component). Defaults
         # True, so the Playground and every other caller are unaffected.

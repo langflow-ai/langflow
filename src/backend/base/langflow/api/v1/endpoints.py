@@ -491,6 +491,7 @@ async def simple_run_flow(
                 graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
             )
         stamp_execution_principal(graph, execution_principal)
+        graph.expose_error_details = expose_error_details
         # Forward the caller-supplied identifier to tracing providers without
         # affecting authn/authz. The API-key owner remains the effective user
         # for permissions, global variables, and job ownership.
@@ -592,6 +593,10 @@ async def simple_run_flow(
                 if expose_error_details:
                     raise
                 raise error_for_client(exc, expose_details=expose_error_details) from exc
+            if integration_http_error(exc, expose_details=expose_error_details) is not None:
+                # The terminal handler applies the caller's error policy. Keep
+                # the typed cause intact instead of burying it in an HTTP 500.
+                raise
             await logger.aerror(
                 "Workflow job execution failed for flow %s: %s",
                 flow.id,
@@ -1675,6 +1680,7 @@ async def experimental_run_flow(
         graph,
         execution_principal_for(FAMILY_V1_RUN, user=api_key_user, flow_owner_id=flow.user_id),
     )
+    graph.expose_error_details = expose_error_details
 
     # Graph execution below can run for minutes; end any request transaction
     # opened by dependency resolution so it does not pin a pooled connection

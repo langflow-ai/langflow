@@ -325,6 +325,12 @@ At execution, an action-picker bundle declares the selected capabilities through
 `Component.select_integration_capabilities`. Blocking `delete` therefore does not
 block an invocation selecting `search`. Bundles that do not implement selection
 must be allowed to use every capability they declare.
+Custom toolsets that override `_get_tools()` or `to_toolkit()` must also be allowed
+to use every declared capability before construction, because their tools do not
+pass through the standard per-invocation action checks. Their connection leases
+cover that full set even if they implement the selection hook.
+An empty or undeclared action selection returns HTTP `422` with
+`error_code: "action-unsupported"`; it is not a governance denial.
 Blocked executions return HTTP `403` with `error_code: "policy-blocked"` and an
 administrator-action hint. Session-backed graph builds record the denial as an error
 message in flow history.

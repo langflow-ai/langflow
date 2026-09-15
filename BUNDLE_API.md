@@ -212,12 +212,17 @@ the deserialize half is covered by
   Its argument is the tuple of declared capability IDs from a connection input
   or the loaded manifest's `component_ref`. An action-picker bundle returns a
   non-empty subset based on the invocation's current inputs. Empty or undeclared
-  selections fail closed. The default requires all declared capabilities, so
+  selections fail with HTTP 422 and `action-unsupported`, independently of
+  governance policy. The default requires all declared capabilities, so
   existing single-action components need no change. The hook runs before the
   output body in graph and sync/async tool execution, after tool arguments are
   applied, and before creating a credential lease. The resolver receives only
-  the selected IDs. Graph construction of a toolkit checks its providers;
-  selected-action checks wait until the agent supplies invocation arguments.
+  the selected IDs. Graph construction using the default `ComponentToolkit`
+  checks its providers; selected-action checks wait until the agent supplies
+  invocation arguments. Custom `_get_tools()` or `to_toolkit()` implementations
+  require every declared capability at construction, and their connection leases
+  carry every declared capability. The selection hook cannot narrow an opaque
+  toolset whose returned callables bypass the standard invocation wrappers.
   Picker option filtering remains bundle-owned; changing the
   picker alone never authorizes an action. For example:
 

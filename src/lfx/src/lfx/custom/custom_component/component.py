@@ -60,7 +60,6 @@ if TYPE_CHECKING:
     from lfx.integrations.models import CredentialLease
     from lfx.schema.dataframe import DataFrame
     from lfx.schema.log import LoggableType
-    from lfx.services.integration_policy import IntegrationPolicyPurpose
     from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
 
 
@@ -1495,18 +1494,21 @@ class Component(CustomComponent):
         """
         return capability_ids
 
-    def _selected_integration_capabilities(
-        self, provider_id: str, capability_ids: Iterable[str], purpose: IntegrationPolicyPurpose
-    ) -> tuple[str, ...]:
+    def _selected_integration_capabilities(self, provider_id: str, capability_ids: Iterable[str]) -> tuple[str, ...]:
         """Validate bundle selection before it can narrow an execution gate."""
-        from lfx.services.integration_policy import IntegrationPolicyError
+        from lfx.integrations.errors import ActionUnsupportedError
 
         declared = tuple(capability_ids)
         if not declared:
             return ()
+        if type(self)._get_tools is not Component._get_tools or type(self).to_toolkit is not Component.to_toolkit:
+            # A custom toolset can return arbitrary callables, independently of
+            # the picker's current value. Its leases and construction must cover
+            # every action until it supplies a per-tool capability contract.
+            return declared
         selected = tuple(self.select_integration_capabilities(declared))
         if not selected or not set(selected).issubset(declared):
-            raise IntegrationPolicyError(provider_id, purpose)
+            raise ActionUnsupportedError(provider=provider_id, http_status=422)
         return selected
 
     def _require_integration_policy_for_input(self, input_model, purpose=None) -> tuple[str, ...]:
@@ -1517,9 +1519,7 @@ class Component(CustomComponent):
         )
 
         effective_purpose = purpose or IntegrationPolicyPurpose.USE
-        capability_ids = self._selected_integration_capabilities(
-            input_model.provider, input_model.capabilities, effective_purpose
-        )
+        capability_ids = self._selected_integration_capabilities(input_model.provider, input_model.capabilities)
         require_integration_actions(
             user_id=self.user_id,
             provider_id=input_model.provider,
@@ -1550,7 +1550,7 @@ class Component(CustomComponent):
             self._require_integration_policy_for_input(input_model, effective_purpose)
 
         for provider_id, capabilities in integration_capabilities_for_component_class(type(self).__name__).items():
-            selected = self._selected_integration_capabilities(provider_id, capabilities, effective_purpose)
+            selected = self._selected_integration_capabilities(provider_id, capabilities)
             require_integration_actions(
                 user_id=self.user_id,
                 provider_id=provider_id,
@@ -1584,7 +1584,12 @@ class Component(CustomComponent):
             session_id = None
         try:
             outputs = self._get_outputs_to_process()
-            if outputs and all(output.method == "to_toolkit" for output in outputs):
+            if (
+                outputs
+                and all(output.method == "to_toolkit" for output in outputs)
+                and type(self)._get_tools is Component._get_tools
+                and type(self).to_toolkit is Component.to_toolkit
+            ):
                 # A tool's action can be an argument supplied later by the
                 # agent. Its invocation wrapper gates that selection after set().
                 self._require_integration_providers_for_toolkit()
@@ -1887,6 +1892,8 @@ class Component(CustomComponent):
         """
         # Get tools from subclass implementation
         # Handle both sync and async _get_tools methods
+        if type(self)._get_tools is not Component._get_tools:
+            self.require_integration_policy()
         if asyncio.iscoroutinefunction(self._get_tools):
             tools = await self._get_tools()
         else:
@@ -2451,6 +2458,8 @@ class Component(CustomComponent):
         source: Source,
     ) -> Message | None:
         """Send an error message to the frontend."""
+        from lfx.integrations.errors import IntegrationError, _iter_errors
+
         flow_id = self.graph.flow_id if hasattr(self, "graph") else None
         if not session_id:
             return None
@@ -2461,6 +2470,40 @@ class Component(CustomComponent):
             trace_name=trace_name,
             source=source,
         )
+        integration_error = next(
+            (error for error in _iter_errors(exception) if isinstance(error, IntegrationError)), None
+        )
+        if (
+            integration_error is not None
+            and self._event_manager is not None
+            and not getattr(getattr(self, "graph", None), "expose_error_details", False)
+        ):
+            # Keep the durable owner diagnostic, but never send its policy keys,
+            # connection handles or traceback to delegated/public consumers.
+            if self._should_skip_message(error_message):
+                return None
+            self._ensure_message_required_fields(error_message)
+            stored_message = await self._store_message(error_message)
+            self._stored_message_id = stored_message.get_id()
+            client_error = IntegrationError(
+                "This flow could not use one of its connections.",
+                hint=integration_error.hint,
+                provider=integration_error.provider,
+                http_status=integration_error.http_status,
+                retryable=integration_error.retryable,
+            )
+            client_error.code = integration_error.code
+            client_message = ErrorMessage(
+                flow_id=flow_id,
+                exception=client_error,
+                session_id=session_id,
+                trace_name=trace_name,
+                source=source,
+                include_traceback=False,
+            )
+            await self._send_message_event(client_message, id_=self._stored_message_id)
+            self.status = stored_message
+            return stored_message
         await self.send_message(error_message)
         return error_message
 

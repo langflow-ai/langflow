@@ -6,6 +6,8 @@ call to action, so a rename is a breaking change for the frontend.
 
 from __future__ import annotations
 
+import asyncio
+import json
 import traceback
 from contextlib import asynccontextmanager
 from uuid import uuid4
@@ -22,6 +24,7 @@ from langflow.api.utils.execution_errors import (
 from langflow.services.database.models.message.model import MessageTable
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.custom import Component
+from lfx.events.event_manager import create_default_event_manager
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph import Graph
 from lfx.integrations.errors import (
@@ -194,7 +197,8 @@ class ConnectionErrorProbe(Component):
 
 
 @pytest.mark.no_blockbuster
-async def test_component_policy_denial_persists_in_session_history(monkeypatch, async_session) -> None:
+@pytest.mark.parametrize("expose_details", [False, True])
+async def test_component_policy_denial_persists_in_session_history(monkeypatch, async_session, expose_details) -> None:
     """Read a committed error record back through a separate database session."""
 
     @asynccontextmanager
@@ -208,17 +212,33 @@ async def test_component_policy_denial_persists_in_session_history(monkeypatch, 
     service = IntegrationPolicyService(policy_bundle_service=bundle)
     monkeypatch.setattr("lfx.services.deps.get_integration_policy_service", lambda: service)
     probe = ConnectionErrorProbe(connection="google/work")
-    probe._session_id = "policy-denial-history"
+    graph = Graph(start=probe, end=probe)
+    graph.set_run_id(str(uuid4()))
+    graph.session_id = "policy-denial-history"
+    graph.expose_error_details = expose_details
+    queue = asyncio.Queue()
+    probe.set_event_manager(create_default_event_manager(queue))
 
     with pytest.raises(IntegrationPolicyError):
         await probe.build_results()
 
     async with AsyncSession(async_session.bind) as reader:
-        rows = (await reader.exec(select(MessageTable).where(MessageTable.session_id == probe._session_id))).all()
+        rows = (await reader.exec(select(MessageTable).where(MessageTable.session_id == graph.session_id))).all()
         assert len(rows) == 1
         assert rows[0].category == "error"
         assert "policy-blocked" in rows[0].model_dump_json()
         assert "administrator" in rows[0].text
+        assert "approved integration set" in rows[0].text
+
+    payloads = []
+    while not queue.empty():
+        payloads.append(json.loads(queue.get_nowait()[1]))
+    errors = [payload for payload in payloads if payload["event"] == "error"]
+    assert errors
+    rendered = json.dumps(errors)
+    assert "policy-blocked" in rendered
+    assert ("approved integration set" in rendered) is expose_details
+    assert ("Traceback" in rendered) is expose_details
 
 
 @pytest.mark.no_blockbuster
