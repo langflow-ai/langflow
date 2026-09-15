@@ -172,6 +172,7 @@ def test_registered_vocabulary_does_not_claim_unbuilt_baseline_flows():
         "Hook": "builtin:hook",
         "ContextManager": "builtin:context",
         "Compactor": "builtin:compaction",
+        "PermissionGate": "builtin:permission",
     }
     # These contracts are ready for runtime adapters; no inert fields are added to the form.
     assert set(get_project_type("agent-harness").field_names()) == {

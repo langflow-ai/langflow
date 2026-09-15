@@ -37,6 +37,8 @@ def build_slot_baseline(
         return context_baseline(initial_config)
     if reference == "builtin:compaction":
         return compaction_baseline(initial_config)
+    if reference == "builtin:permission":
+        return permission_baseline(initial_config)
     msg = "This contract does not yet provide a working baseline."
     raise ValueError(msg)
 
@@ -54,6 +56,25 @@ def hook_baseline() -> dict:
     source["position"], target["position"] = {"x": 150, "y": 150}, {"x": 600, "y": 150}
     add_connection(flow, source["id"], "event", target["id"], "event")
     flow["data"]["harness_contract"] = {"slot": "Hook", "field_name": "hooks"}
+    return flow
+
+
+def permission_baseline(initial_config: dict | None = None) -> dict:
+    from lfx.base.agents.harness import HarnessRuntimeConfig
+    from lfx.components.models_and_agents.permission_gate import PermissionGateComponent
+    from lfx.components.models_and_agents.permission_request import PermissionRequestComponent
+    from lfx.graph.flow_builder import add_component, add_connection, empty_flow
+
+    policy = HarnessRuntimeConfig.model_validate(initial_config or {})
+    gate = PermissionGateComponent()
+    gate.set(action={"tool_defaults": "approve", "ask": "ask", "deny": "reject"}[policy.tool_policy])
+    flow = empty_flow("Permissions", "Decide whether a tool call proceeds or needs human review.")
+    for component in (PermissionRequestComponent(), gate):
+        add_component(flow, component.name, {component.name: component.to_frontend_node()["data"]["node"]})
+    source, target = flow["data"]["nodes"]
+    source["position"], target["position"] = {"x": 150, "y": 150}, {"x": 650, "y": 150}
+    add_connection(flow, source["id"], "request", target["id"], "request")
+    flow["data"]["harness_contract"] = {"slot": "PermissionGate", "field_name": "tool_policy"}
     return flow
 
 

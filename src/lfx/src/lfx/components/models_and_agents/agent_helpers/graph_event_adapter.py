@@ -31,7 +31,9 @@ async def adapt_graph_events_to_executor_shape(
     async for event in stream:
         # Context, compaction, and hook model output do not belong in the user's final answer.
         # Usage callbacks still see the model call; only presentation events are filtered.
-        if {"harness:compaction", "harness:hook", "harness:context"}.intersection(event.get("tags", [])):
+        if {"harness:compaction", "harness:hook", "harness:context", "harness:permission"}.intersection(
+            event.get("tags", [])
+        ):
             continue
         if outer_run_id is None and event.get("event") == "on_chain_start":
             outer_run_id = event.get("run_id")
