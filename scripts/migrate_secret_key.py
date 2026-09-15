@@ -12,6 +12,8 @@ Migrated database fields:
 - variable.value: All encrypted variable values
 - folder.auth_settings: MCP oauth_client_secret and api_key fields
 - sso_config.client_secret_encrypted: SSO/OIDC client secrets
+- apikey.api_key: stored API key values
+- mcp_server.config: secret values in the env and headers maps
 
 Usage:
     uv run python scripts/migrate_secret_key.py --help
@@ -41,6 +43,10 @@ from sqlalchemy import create_engine, inspect, text
 
 MINIMUM_KEY_LENGTH = 32
 SENSITIVE_AUTH_FIELDS = ["oauth_client_secret", "api_key"]
+# Must match langflow.services.auth.mcp_encryption.MCP_SECRET_CONFIG_MAPS
+MCP_SECRET_CONFIG_MAPS = ("env", "headers")
+FERNET_VERSION_BYTE = 0x80
+FERNET_MIN_TOKEN_BYTES = 73  # version + timestamp + IV + one AES block + HMAC
 # Must match langflow.services.variable.constants.CREDENTIAL_TYPE
 CREDENTIAL_TYPE = "Credential"
 SSO_ENVELOPE_HEADER = "lf-sso:v1:hkdf-sha256-v1:aes-256-gcm"
@@ -230,6 +236,43 @@ def migrate_auth_settings(auth_settings: dict, old_key: str, new_key: str) -> tu
     return result, failed_fields
 
 
+def looks_like_fernet_token(value: str) -> bool:
+    """Tell a Fernet token from a plaintext value without knowing the key.
+
+    mcp_server.config can hold plaintext values written before encryption
+    shipped, and those must be left alone rather than counted as failures.
+    """
+    try:
+        raw = base64.urlsafe_b64decode(value.encode() + b"=" * (-len(value) % 4))
+    except (binascii.Error, ValueError):
+        return False
+    return len(raw) >= FERNET_MIN_TOKEN_BYTES and raw[0] == FERNET_VERSION_BYTE
+
+
+def migrate_mcp_config(config: dict, old_key: str, new_key: str) -> tuple[dict, list[str]]:
+    """Re-encrypt the secret values inside an mcp_server.config entry.
+
+    Returns:
+        Tuple of (migrated_config, failed_fields) where failed_fields names
+        values that look encrypted but cannot be decrypted with the old key.
+    """
+    result = json.loads(json.dumps(config))
+    failed_fields = []
+    for map_name in MCP_SECRET_CONFIG_MAPS:
+        values = result.get(map_name)
+        if not isinstance(values, dict):
+            continue
+        for name, value in values.items():
+            if not isinstance(value, str) or not value or not looks_like_fernet_token(value):
+                continue
+            new_value = migrate_value(value, old_key, new_key)
+            if new_value:
+                values[name] = new_value
+            else:
+                failed_fields.append(f"{map_name}.{name}")
+    return result, failed_fields
+
+
 def verify_migration(conn, new_key: str) -> tuple[int, int]:
     """Verify migrated data can be decrypted with the new key.
 
@@ -278,6 +321,33 @@ def verify_migration(conn, new_key: str) -> tuple[int, int]:
                     verified += 1
         except (InvalidToken, json.JSONDecodeError):
             failed += 1
+
+    if inspect(conn).has_table("apikey"):
+        api_keys = conn.execute(text("SELECT id, api_key FROM apikey WHERE api_key IS NOT NULL LIMIT 3")).fetchall()
+        for _, encrypted_key in api_keys:
+            if not looks_like_fernet_token(encrypted_key):
+                continue
+            try:
+                decrypt_with_key(encrypted_key, new_key)
+                verified += 1
+            except InvalidToken:
+                failed += 1
+
+    if inspect(conn).has_table("mcp_server"):
+        servers = conn.execute(text("SELECT id, config FROM mcp_server WHERE config IS NOT NULL LIMIT 3")).fetchall()
+        for _, raw_config in servers:
+            try:
+                config = raw_config if isinstance(raw_config, dict) else json.loads(raw_config)
+                for map_name in MCP_SECRET_CONFIG_MAPS:
+                    values = config.get(map_name)
+                    if not isinstance(values, dict):
+                        continue
+                    for value in values.values():
+                        if isinstance(value, str) and looks_like_fernet_token(value):
+                            decrypt_with_key(value, new_key)
+                            verified += 1
+            except (InvalidToken, json.JSONDecodeError):
+                failed += 1
 
     if inspect(conn).has_table("sso_config"):
         configs = conn.execute(
@@ -469,6 +539,60 @@ def migrate(
         total_migrated += migrated
         total_failed += failed
 
+        # Migrate apikey.api_key. Authentication uses api_key_hash, which does not
+        # depend on the key, but the stored value is lost if it is not rotated.
+        print("\n5. Migrating stored API key values...")
+        migrated, failed = 0, 0
+        if inspect(conn).has_table("apikey"):
+            api_keys = conn.execute(text("SELECT id, api_key FROM apikey WHERE api_key IS NOT NULL")).fetchall()
+            for key_id, encrypted_key in api_keys:
+                if not looks_like_fernet_token(encrypted_key):
+                    continue
+                new_encrypted = migrate_value(encrypted_key, old_key, new_key)
+                if new_encrypted:
+                    if not dry_run:
+                        conn.execute(
+                            text("UPDATE apikey SET api_key = :val WHERE id = :id"),
+                            {"val": new_encrypted, "id": key_id},
+                        )
+                    migrated += 1
+                else:
+                    failed += 1
+                    print(f"   Warning: Could not decrypt API key {key_id}")
+        print(f"   {'Would migrate' if dry_run else 'Migrated'}: {migrated}, Failed: {failed}")
+        total_migrated += migrated
+        total_failed += failed
+
+        # Migrate mcp_server.config secret values
+        print("\n6. Migrating MCP server config secrets...")
+        migrated, failed = 0, 0
+        if inspect(conn).has_table("mcp_server"):
+            servers = conn.execute(text("SELECT id, name, config FROM mcp_server WHERE config IS NOT NULL")).fetchall()
+            for server_id, server_name, raw_config in servers:
+                try:
+                    config = raw_config if isinstance(raw_config, dict) else json.loads(raw_config)
+                    new_config, failed_fields = migrate_mcp_config(config, old_key, new_key)
+                except (json.JSONDecodeError, TypeError) as e:
+                    failed += 1
+                    print(f"   Warning: Could not parse MCP server '{server_name}' config: {e}")
+                    continue
+                if failed_fields:
+                    failed += 1
+                    print(
+                        f"   Warning: Could not migrate MCP server '{server_name}' fields: {', '.join(failed_fields)}"
+                    )
+                    continue
+                if new_config != config:
+                    if not dry_run:
+                        conn.execute(
+                            text("UPDATE mcp_server SET config = :val WHERE id = :id"),
+                            {"val": json.dumps(new_config), "id": server_id},
+                        )
+                    migrated += 1
+        print(f"   {'Would migrate' if dry_run else 'Migrated'}: {migrated}, Failed: {failed}")
+        total_migrated += migrated
+        total_failed += failed
+
         if total_failed > 0 and not dry_run:
             print(f"\nERROR: {total_failed} values could not be migrated.")
             print("Rolling back all database changes; the secret key was not changed.")
@@ -477,7 +601,7 @@ def migrate(
 
         # Verify migrated data can be decrypted with new key
         if total_migrated > 0:
-            print("\n5. Verifying migration...")
+            print("\n7. Verifying migration...")
             verified, verify_failed = verify_migration(conn, new_key)
             if verify_failed > 0:
                 print(f"   ERROR: {verify_failed} records failed verification!")
@@ -497,12 +621,12 @@ def migrate(
     if not dry_run:
         backup_file = config_dir / f"secret_key.backup.{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
         write_secret_key_to_file(config_dir, old_key, backup_file.name)
-        print(f"\n6. Backed up old key to: {backup_file}")
+        print(f"\n8. Backed up old key to: {backup_file}")
         write_secret_key_to_file(config_dir, new_key)
-        print(f"7. Saved new secret key to: {config_dir / 'secret_key'}")
+        print(f"9. Saved new secret key to: {config_dir / 'secret_key'}")
     else:
-        print("\n6. [DRY RUN] Would backup old key")
-        print(f"7. [DRY RUN] Would save new key to: {config_dir / 'secret_key'}")
+        print("\n8. [DRY RUN] Would backup old key")
+        print(f"9. [DRY RUN] Would save new key to: {config_dir / 'secret_key'}")
 
     # Summary
     print("\n" + "=" * 50)
