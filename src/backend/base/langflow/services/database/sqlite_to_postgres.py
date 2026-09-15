@@ -27,11 +27,13 @@ from alembic.script import ScriptDirectory
 from sqlalchemy.dialects.postgresql import insert
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from collections.abc import Iterator, Mapping
 
 # Postgres caps bind parameters per statement at 65535.
 _MAX_PARAMS_PER_STATEMENT = 60_000
 _VERSION_TABLE = "alembic_version"
+# How many offending rows a refusal names, enough to find the pattern.
+_ROWS_NAMED = 10
 
 
 @dataclass
@@ -60,12 +62,23 @@ def convert_sqlite_to_postgres(source_url: str, target_url: str, *, batch_size: 
     refused or failed.
     """
     report = ConversionReport()
+    source_path = sa.engine.make_url(_sync_sqlite_url(source_url)).database
+    if not source_path or not Path(source_path).is_file():
+        # Checked up front because opening a missing SQLite file creates an empty one.
+        report.problems.append(f"source database {source_path!r} does not exist")
+        return report
+
     source = sa.create_engine(_sync_sqlite_url(source_url))
-    target_sync_url = _sync_postgres_url(target_url)
     try:
         head = _script_head()
         source_revision = _revision(source)
         report.revision = source_revision
+        if source_revision is None:
+            report.problems.append(
+                "source database has no Langflow schema. If it is a copy, make it with sqlite3's .backup or "
+                "VACUUM INTO: Langflow runs SQLite in WAL mode, and a plain cp can come out empty"
+            )
+            return report
         if source_revision != head:
             report.problems.append(
                 f"source database is at revision {source_revision}, this Langflow expects {head}; "
@@ -73,10 +86,16 @@ def convert_sqlite_to_postgres(source_url: str, target_url: str, *, batch_size: 
             )
             return report
 
-        upgrade_to_head(target_url)
-        target = sa.create_engine(target_sync_url)
+        models = _model_tables()
+        target = sa.create_engine(_sync_postgres_url(target_url))
         try:
-            _convert(source, target, report, batch_size=batch_size)
+            # Everything that can refuse runs before the target is migrated, so a
+            # refused run leaves the target exactly as it was.
+            report.problems.extend(_preflight(source, target, models))
+            if report.problems:
+                return report
+            upgrade_to_head(target_url)
+            _convert(source, target, models, report, batch_size=batch_size)
         finally:
             target.dispose()
     finally:
@@ -129,7 +148,19 @@ def coerce_value(value: Any, column_type: sa.types.TypeEngine) -> Any:
     return value
 
 
-def _convert(source: sa.Engine, target: sa.Engine, report: ConversionReport, *, batch_size: int) -> None:
+def _preflight(source: sa.Engine, target: sa.Engine, models: Mapping[str, sa.Table]) -> list[str]:
+    with source.connect() as src, target.connect() as tgt:
+        return _invalid_enum_values(src, models) + _foreign_users(src, tgt)
+
+
+def _convert(
+    source: sa.Engine,
+    target: sa.Engine,
+    models: Mapping[str, sa.Table],
+    report: ConversionReport,
+    *,
+    batch_size: int,
+) -> None:
     metadata = sa.MetaData()
     metadata.reflect(bind=target)
     source_tables = set(sa.inspect(source).get_table_names())
@@ -137,18 +168,12 @@ def _convert(source: sa.Engine, target: sa.Engine, report: ConversionReport, *, 
 
     with source.connect() as src:
         source_columns = {table.name: _source_columns(src, table.name) for table in tables}
-        report.problems.extend(_invalid_enum_values(src, tables, source_columns))
-        with target.connect() as tgt:
-            report.problems.extend(_foreign_users(src, tgt))
-        if report.problems:
-            return
-
         try:
             with target.begin() as tgt:
                 _align_system_roles(src, tgt)
                 for table in tables:
                     columns = [column for column in table.columns if column.name in source_columns[table.name]]
-                    source_rows = _copy_table(src, tgt, table, columns, batch_size=batch_size)
+                    source_rows = _copy_table(src, tgt, table, columns, models.get(table.name), batch_size=batch_size)
                     target_rows = tgt.execute(sa.select(sa.func.count()).select_from(table)).scalar_one()
                     report.tables.append(TableCopy(table.name, source_rows, target_rows))
                     if target_rows != source_rows:
@@ -173,30 +198,79 @@ def _source_columns(conn: sa.Connection, table: str) -> set[str]:
     return {column["name"] for column in sa.inspect(conn).get_columns(table)}
 
 
-def _invalid_enum_values(conn: sa.Connection, tables: list[sa.Table], source_columns: dict[str, set[str]]) -> list[str]:
+def _model_tables() -> Mapping[str, sa.Table]:
+    from sqlmodel import SQLModel
+
+    import langflow.services.database.models  # noqa: F401 - importing registers every table on the metadata
+
+    return SQLModel.metadata.tables
+
+
+def _enum_type(column_type: sa.types.TypeEngine | None) -> sa.Enum | None:
+    if isinstance(column_type, sa.types.TypeDecorator):
+        column_type = column_type.impl_instance
+    return column_type if isinstance(column_type, sa.Enum) else None
+
+
+def _enum_label(value: Any, model_type: sa.types.TypeEngine | None) -> Any:
+    """The enum label Langflow reads ``value`` as.
+
+    Trace and span rows written before 1.9.2 hold enum names in any case, and
+    SQLite rows were never rewritten. The model's column type maps those on
+    read, so the copy uses the same mapping instead of refusing them.
+    """
+    if value is None or not isinstance(model_type, sa.types.TypeDecorator) or _enum_type(model_type) is None:
+        return value
+    try:
+        return model_type.process_result_value(value, None).value
+    except LookupError:
+        return value
+
+
+def _invalid_enum_values(conn: sa.Connection, models: Mapping[str, sa.Table]) -> list[str]:
     """Postgres enforces enum membership and SQLite does not, so check before writing anything.
 
     A bad value would otherwise fail only when its row is reached, partway through the copy.
+    The enum labels come from the models, which match the migrated schema, so this
+    runs before the target is touched.
     """
     problems = []
-    for table in tables:
+    source_tables = set(sa.inspect(conn).get_table_names())
+    for table in models.values():
+        if table.name not in source_tables:
+            continue
+        source_columns = _source_columns(conn, table.name)
         for column in table.columns:
-            if not isinstance(column.type, sa.Enum) or column.name not in source_columns[table.name]:
+            enum = _enum_type(column.type)
+            if enum is None or column.name not in source_columns:
                 continue
-            allowed = set(column.type.enums)
+            allowed = set(enum.enums)
             quoted = f'"{column.name}"'
-            found = {row[0] for row in conn.execute(sa.text(f'SELECT DISTINCT {quoted} FROM "{table.name}"'))}  # noqa: S608
-            bad = sorted(str(value) for value in found - allowed if value is not None)
-            if bad:
-                problems.append(
-                    f"{table.name}.{column.name} holds {bad}, which {column.type.name} does not allow "
-                    f"(allowed: {sorted(allowed)})"
-                )
+            found = conn.execute(sa.text(f'SELECT DISTINCT {quoted} FROM "{table.name}"')).scalars()  # noqa: S608
+            bad = sorted(
+                {value for value in found if value is not None and _enum_label(value, column.type) not in allowed}
+            )
+            if not bad:
+                continue
+            primary_key = ", ".join(f'"{key.name}"' for key in table.primary_key.columns)
+            rows = conn.execute(
+                sa.text(
+                    f'SELECT {primary_key} FROM "{table.name}" WHERE {quoted} IN :bad LIMIT {_ROWS_NAMED}'  # noqa: S608
+                ).bindparams(sa.bindparam("bad", expanding=True)),
+                {"bad": bad},
+            ).all()
+            named = [row[0] if len(row) == 1 else tuple(row) for row in rows]
+            problems.append(
+                f"{table.name}.{column.name} holds {bad}, which {enum.name} does not allow "
+                f"(allowed: {sorted(allowed)}); rows include {named}"
+            )
     return problems
 
 
 def _foreign_users(src: sa.Connection, tgt: sa.Connection) -> list[str]:
     """Refuse to merge two instances: the target may only hold users this source also has."""
+    if not sa.inspect(tgt).has_table("user"):
+        return []
     source_ids = {coerce_value(row[0], sa.Uuid()) for row in src.execute(sa.text('SELECT id FROM "user"'))}
     target_ids = {row[0] for row in tgt.execute(sa.text('SELECT id FROM "user"'))}
     extra = target_ids - source_ids
@@ -229,19 +303,27 @@ def _copy_table(
     tgt: sa.Connection,
     table: sa.Table,
     columns: list[sa.Column],
+    model: sa.Table | None,
     *,
     batch_size: int,
 ) -> int:
     names = [column.name for column in columns]
+    model_types = [
+        model.columns[column.name].type if model is not None and column.name in model.columns else None
+        for column in columns
+    ]
     select_sql = sa.text(
         f'SELECT {", ".join(f"{chr(34)}{name}{chr(34)}" for name in names)} FROM "{table.name}"'  # noqa: S608
     )
     rows = (
-        {column.name: coerce_value(value, column.type) for column, value in zip(columns, raw, strict=True)}
+        {
+            column.name: coerce_value(_enum_label(value, model_type), column.type)
+            for column, model_type, value in zip(columns, model_types, raw, strict=True)
+        }
         for raw in src.execute(select_sql)
     )
-    if _self_parent_column(table):
-        rows = iter(_parents_first(list(rows), table))
+    if parent := _self_parent_column(table):
+        rows = iter(_parents_first(list(rows), *parent))
 
     primary_key = [column.name for column in table.primary_key.columns]
     per_batch = max(1, min(batch_size, _MAX_PARAMS_PER_STATEMENT // max(1, len(names))))
@@ -267,9 +349,8 @@ def _self_parent_column(table: sa.Table) -> tuple[str, str] | None:
     return None
 
 
-def _parents_first(rows: list[dict[str, Any]], table: sa.Table) -> list[dict[str, Any]]:
+def _parents_first(rows: list[dict[str, Any]], parent_column: str, key_column: str) -> list[dict[str, Any]]:
     """Order a self-referencing table so each row comes after the row it points at."""
-    parent_column, key_column = _self_parent_column(table)  # type: ignore[misc]
     placed: set[Any] = set()
     ordered: list[dict[str, Any]] = []
     pending = rows
@@ -324,7 +405,7 @@ def _revision(engine: sa.Engine) -> str | None:
         if not sa.inspect(conn).has_table(_VERSION_TABLE):
             return None
         revisions = conn.execute(sa.text(f"SELECT version_num FROM {_VERSION_TABLE}")).scalars().all()  # noqa: S608
-    return revisions[0] if len(revisions) == 1 else None
+    return ",".join(revisions)
 
 
 def _script_location() -> Path:

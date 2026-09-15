@@ -1,15 +1,16 @@
 """Tests for converting a Langflow SQLite database to Postgres.
 
-The coercion and ordering tests need no database. The end-to-end tests build a
-real SQLite instance with alembic, convert it into a fresh Postgres database and
-read the result back. They are opt-in: set
-``LANGFLOW_RUN_POSTGRES_CONVERSION_TESTS=1`` and ``LANGFLOW_TEST_POSTGRES_ADMIN_URL``
-to a server URL the tests can create databases on.
+The coercion, ordering and source checks need no Postgres. The end-to-end tests
+build a real SQLite instance with alembic, convert it into a fresh Postgres
+database and read the result back. They run when ``LANGFLOW_TEST_DATABASE_URI``
+points at a Postgres server the tests can create databases on, as in the
+migration validation workflow.
 """
 
 from __future__ import annotations
 
 import os
+import sqlite3
 import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -71,6 +72,29 @@ def test_copy_order_puts_parents_first_and_sso_config_before_sso_settings():
     assert order.index("sso_config") < order.index("sso_settings")
 
 
+class TestSourceChecks:
+    # The target is never reached, so these need no Postgres server.
+    UNREACHABLE_TARGET = "postgresql://nobody@127.0.0.1:1/none"
+
+    def test_missing_source_file_is_refused_and_not_created(self, tmp_path):
+        missing = tmp_path / "typo.db"
+
+        report = convert_sqlite_to_postgres(f"sqlite:///{missing}", self.UNREACHABLE_TARGET)
+
+        assert not report.ok
+        assert any("does not exist" in p for p in report.problems)
+        assert not missing.exists()
+
+    def test_source_without_langflow_schema_points_at_how_the_copy_was_made(self, tmp_path):
+        empty = tmp_path / "copied.db"
+        sqlite3.connect(empty).close()
+
+        report = convert_sqlite_to_postgres(f"sqlite:///{empty}", self.UNREACHABLE_TARGET)
+
+        assert not report.ok
+        assert any("no Langflow schema" in p and "VACUUM INTO" in p for p in report.problems)
+
+
 # --------------------------------------------------------------------------
 # End to end against a real Postgres server
 # --------------------------------------------------------------------------
@@ -78,14 +102,15 @@ def test_copy_order_puts_parents_first_and_sso_config_before_sso_settings():
 
 @pytest.fixture
 def postgres_database():
-    admin_url = os.getenv("LANGFLOW_TEST_POSTGRES_ADMIN_URL")
-    if os.getenv("LANGFLOW_RUN_POSTGRES_CONVERSION_TESTS") != "1" or not admin_url:
-        pytest.skip("Set LANGFLOW_RUN_POSTGRES_CONVERSION_TESTS=1 and LANGFLOW_TEST_POSTGRES_ADMIN_URL")
+    base_url = os.getenv("LANGFLOW_TEST_DATABASE_URI")
+    if not base_url:
+        pytest.skip("LANGFLOW_TEST_DATABASE_URI not set")
+    admin_url = sa.engine.make_url(base_url).set(drivername="postgresql+psycopg")
     name = f"lf_convert_{uuid.uuid4().hex[:10]}"
     admin = sa.create_engine(admin_url, isolation_level="AUTOCOMMIT")
     with admin.connect() as conn:
         conn.execute(sa.text(f'CREATE DATABASE "{name}"'))
-    url = sa.engine.make_url(admin_url).set(database=name).render_as_string(hide_password=False)
+    url = admin_url.set(database=name).render_as_string(hide_password=False)
     try:
         yield url
     finally:
@@ -137,7 +162,6 @@ def _counts(url: str, tables: list[str]) -> dict[str, int]:
     return counts
 
 
-@pytest.mark.api_key_required
 class TestConversionEndToEnd:
     def test_converts_and_the_orm_reads_the_result(self, sqlite_source, postgres_database):
         _seed(sqlite_source)
@@ -193,8 +217,40 @@ class TestConversionEndToEnd:
         report = convert_sqlite_to_postgres(sqlite_source, postgres_database)
 
         assert not report.ok
-        assert any("flow.flow_type" in p and "FLOW" in p for p in report.problems)
-        assert _counts(postgres_database, ["user"]) == {"user": 0}
+        # The problem names the row, so the operator can go straight to it.
+        assert any("flow.flow_type" in p and "FLOW" in p and FLOW.hex in p for p in report.problems)
+        # A refused run leaves the target exactly as it was: not even migrated.
+        engine = sa.create_engine(postgres_database)
+        with engine.connect() as conn:
+            assert sa.inspect(conn).get_table_names() == []
+        engine.dispose()
+
+    def test_legacy_uppercase_trace_enums_are_carried_as_langflow_reads_them(self, sqlite_source, postgres_database):
+        # Before 1.9.2 trace and span enums were stored by name, and the SQLite
+        # rows were never rewritten. Langflow still reads them case-insensitively.
+        _seed(sqlite_source)
+        trace_id = uuid.uuid4()
+        engine = sa.create_engine(sqlite_source)
+        with engine.begin() as conn:
+            conn.execute(
+                sa.text(
+                    "INSERT INTO trace (id, name, status, start_time, total_latency_ms, total_tokens, flow_id) "
+                    "VALUES (:id, 'run', 'OK', '2025-01-01 00:00:00', 0, 0, :flow_id)"
+                ),
+                {"id": trace_id.hex, "flow_id": FLOW.hex},
+            )
+        engine.dispose()
+
+        report = convert_sqlite_to_postgres(sqlite_source, postgres_database)
+
+        assert report.ok, report.problems
+        engine = sa.create_engine(postgres_database)
+        with engine.connect() as conn:
+            status = conn.execute(
+                sa.text("SELECT status::text FROM trace WHERE id = :id"), {"id": trace_id}
+            ).scalar_one()
+        engine.dispose()
+        assert status == "ok"
 
     def test_target_holding_another_instances_users_is_refused(self, sqlite_source, postgres_database, tmp_path):
         _seed(sqlite_source)
