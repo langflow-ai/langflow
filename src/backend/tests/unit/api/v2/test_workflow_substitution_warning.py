@@ -1,17 +1,19 @@
-"""Restricted component substitutions remain visible through the workflow stream."""
+"""Restricted component substitutions remain visible in workflow results and streams."""
 
 import json
 import time
 from copy import deepcopy
 from importlib.resources import files
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
 from fastapi import BackgroundTasks
 from langflow.api.v2.workflow_validation import _validate_flow_data_for_execution
+from lfx.graph.exceptions import GraphPausedException
 from lfx.interface import components
+from lfx.schema.workflow import JobStatus, WorkflowExecutionResponse
 from lfx.services.deps import get_settings_service
 from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
 from lfx.workflow.converters import ParsedWorkflowRun
@@ -67,6 +69,96 @@ def test_execute_only_warning_omits_component_names(custom_agent_flow):
     )
     assert gated.component_substitution_warning is not None
     assert "Agent" not in gated.component_substitution_warning
+    assert "Ask the flow owner" in gated.component_substitution_warning
+
+
+@pytest.mark.parametrize("outcome", ["completed", "failed", "suspended", "unmodified"])
+async def test_sync_response_preserves_warning_without_changing_status(custom_agent_flow, monkeypatch, outcome):
+    from langflow.api.v2 import workflow_execution
+    from langflow.services import deps
+
+    flow = custom_agent_flow
+    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    if outcome == "unmodified":
+        flow.data["nodes"][0]["data"]["node"] = deepcopy(
+            components.component_cache.all_types_dict["models_and_agents"]["Agent"]
+        )
+    parsed = _validate_flow_data_for_execution(
+        ParsedWorkflowRun(flow_id=str(flow.id), mode="sync"), flow, user, expose_error_details=True
+    )
+    graph = MagicMock()
+    graph.get_terminal_nodes.return_value = []
+    job_service = SimpleNamespace(
+        create_job=AsyncMock(),
+        execute_with_status=AsyncMock(return_value=([], "session-1")),
+        update_job_status=AsyncMock(),
+    )
+    if outcome == "failed":
+        job_service.execute_with_status.side_effect = RuntimeError("Component failed")
+    elif outcome == "suspended":
+        job_service.execute_with_status.side_effect = GraphPausedException(
+            checkpoint_id="checkpoint-1", reason="waiting on a human", data={"request_id": "request-1"}
+        )
+    monkeypatch.setattr(workflow_execution, "warm_deepcopy", AsyncMock(return_value=None))
+    monkeypatch.setattr(workflow_execution.Graph, "from_payload", lambda *_args, **_kwargs: graph)
+    monkeypatch.setattr(workflow_execution, "get_job_service", lambda: job_service)
+    monkeypatch.setattr(deps, "get_telemetry_service", lambda: SimpleNamespace(log_package_run=AsyncMock()))
+
+    response = await workflow_execution.execute_sync_workflow(
+        parsed=parsed,
+        flow=flow,
+        job_id=uuid4(),
+        current_user=user,
+        background_tasks=BackgroundTasks(),
+        http_request=None,
+        expose_error_details=True,
+    )
+    body = response.model_dump(mode="json")
+    assert body["status"] == ("completed" if outcome == "unmodified" else outcome)
+    assert body["has_errors"] == (outcome == "failed")
+    assert body["warnings"] == ([] if outcome == "unmodified" else [parsed.component_substitution_warning])
+    if outcome != "unmodified":
+        metadata = job_service.create_job.await_args.kwargs["initial_metadata"]
+        assert metadata["component_substitution_warning"] == parsed.component_substitution_warning
+
+
+@pytest.mark.parametrize("source", ["sync", "background", "legacy"])
+@pytest.mark.parametrize("stored_outputs", [True, False])
+async def test_completed_status_preserves_warning(custom_agent_flow, monkeypatch, source, stored_outputs):
+    from langflow.api.v2 import workflow
+
+    flow = custom_agent_flow
+    user = SimpleNamespace(id=uuid4(), is_superuser=False)
+    flow.user_id = user.id
+    warning = "Custom components are disabled. This run uses the server's component code."
+    metadata = {
+        "sync": {"component_substitution_warning": warning},
+        "background": {"request": {"component_substitution_warning": warning}},
+        "legacy": {},
+    }[source]
+    output = {"component_id": "output-1", "type": "message", "status": "completed", "content": "Hello"}
+    job = SimpleNamespace(
+        flow_id=flow.id,
+        type=workflow.JobType.WORKFLOW,
+        status=JobStatus.COMPLETED,
+        job_metadata=metadata,
+        result={"outputs": [output]} if stored_outputs else None,
+    )
+    monkeypatch.setattr(
+        workflow, "get_job_service", lambda: SimpleNamespace(get_job_by_job_id=AsyncMock(return_value=job))
+    )
+    monkeypatch.setattr(workflow, "get_flow_by_id_or_endpoint_name", AsyncMock(return_value=flow))
+    monkeypatch.setattr(workflow, "ensure_flow_permission", AsyncMock())
+    monkeypatch.setattr(
+        workflow,
+        "reconstruct_workflow_response_from_job_id",
+        AsyncMock(return_value=WorkflowExecutionResponse(flow_id=str(flow.id), status=JobStatus.COMPLETED)),
+    )
+
+    response = await workflow.get_workflow_status(http_request=None, current_user=user, job_id=uuid4(), session=None)
+
+    assert response.model_dump(mode="json")["warnings"] == ([] if source == "legacy" else [warning])
+    assert response.status == JobStatus.COMPLETED
 
 
 async def test_background_worker_preserves_the_warning_after_serialization(custom_agent_flow, monkeypatch):
@@ -137,3 +229,57 @@ async def test_warning_is_streamed_before_success(custom_agent_flow, monkeypatch
         assert events[0] == {"event": "warning", "data": {"message": parsed.component_substitution_warning}}
         assert events[-1]["event"] == "end"
         assert adapter.is_durable("warning")
+
+
+@pytest.mark.parametrize("cache_result", [False, True])
+async def test_sync_http_run_and_status_warn_for_real_substitution(
+    client, created_api_key, custom_agent_flow, monkeypatch, cache_result
+):
+    """A rejected code-only edit still succeeds with stock code and warns on POST and GET."""
+    from langflow.services.database.models.flow.model import Flow
+    from lfx.services.deps import session_scope
+
+    monkeypatch.setattr(get_settings_service().settings, "sync_result_storage_enabled", cache_result)
+    saved = deepcopy(components.component_cache.all_types_dict["input_output"]["ChatInput"])
+    signature = "async def message_response(self) -> Message:\n"
+    code = saved["template"]["code"]["value"]
+    assert signature in code
+    saved["template"]["code"]["value"] = code.replace(
+        signature, signature + '        raise RuntimeError("CUSTOM_CODE_RAN")\n', 1
+    )
+    saved["template"]["should_store_message"]["value"] = False
+    payload = {
+        "nodes": [{"id": "ChatInput-qa", "data": {"id": "ChatInput-qa", "type": "ChatInput", "node": saved}}],
+        "edges": [],
+    }
+    flow_id = custom_agent_flow.id
+    async with session_scope() as session:
+        session.add(Flow(id=flow_id, name="Sync policy warning", data=payload, user_id=created_api_key.user_id))
+
+    headers = {"x-api-key": created_api_key.api_key}
+    try:
+        response = await client.post(
+            "api/v2/workflows",
+            json={"flow_id": str(flow_id), "mode": "sync", "input_value": "Hello"},
+            headers=headers,
+        )
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["status"] == "completed", body
+        assert not body["has_errors"]
+        assert len(body["warnings"]) == 1
+        assert "LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false" in body["warnings"][0]
+        assert "Chat Input (ChatInput-qa)" in body["warnings"][0]
+
+        status = await client.get("api/v2/workflows", params={"job_id": body["job_id"]}, headers=headers)
+        assert status.status_code == 200, status.text
+        assert status.json()["warnings"] == body["warnings"]
+
+        async with session_scope() as session:
+            stored = await session.get(Flow, flow_id)
+            assert stored.data == payload
+    finally:
+        async with session_scope() as session:
+            stored = await session.get(Flow, flow_id)
+            if stored:
+                await session.delete(stored)

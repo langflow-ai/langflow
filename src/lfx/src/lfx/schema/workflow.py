@@ -411,6 +411,10 @@ class WorkflowExecutionResponse(BaseModel):
         ),
     )
     errors: list[ErrorDetail] = []
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="Non-fatal notices about this run, such as saved component code being replaced by server code.",
+    )
     inputs: dict[str, Any] = {}
     globals: dict[GlobalVarKey, GlobalVarValue] = Field(default_factory=dict)
     outputs: dict[str, ComponentOutput] = {}

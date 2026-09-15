@@ -773,10 +773,17 @@ async def execute_sync_workflow(
 
     # Execute graph - component errors are caught and returned in response body
     job_service = get_job_service()
+    warning = parsed.component_substitution_warning
+    warnings = [warning] if warning else []
     # user_id stays the executing service account (flow fetch / resume rely on it); the end
     # user is recorded in job_metadata so status/stop isolate to it. See F8 / create_job.
     await job_service.create_job(
-        job_id=job_id, flow_id=flow_id_str, user_id=current_user.id, end_user_id=parsed.end_user_id
+        job_id=job_id,
+        flow_id=flow_id_str,
+        user_id=current_user.id,
+        end_user_id=parsed.end_user_id,
+        # Keep the notice available to GET status even when sync result caching is off.
+        initial_metadata={"component_substitution_warning": warning} if warning else None,
     )
     _sync_run_paused = False
     _sync_run_success = False
@@ -832,6 +839,8 @@ async def execute_sync_workflow(
             effective_globals=request_variables,
             selected_ids=parsed.output_ids,
         )
+        if warnings:
+            workflow_response.warnings = warnings
         # Optionally cache the completed run's outputs + request to the job row so a
         # later GET status returns the same response. Off by default: sync callers
         # already hold the full response inline, so this is an opt-in per-request
@@ -865,6 +874,7 @@ async def execute_sync_workflow(
             job_id=str(job_id),
             status=JobStatus.SUSPENDED,
             human_request=exc.data or {},
+            warnings=warnings,
         )
         _sync_run_paused = True
         return suspended_response
@@ -880,13 +890,16 @@ async def execute_sync_workflow(
         # Component execution errors - return in response body with HTTP 200
         # This allows partial results and detailed error information per component
         _sync_run_error = str(exc)
-        return create_error_response(
+        error_response = create_error_response(
             flow_id=parsed.flow_id,
             job_id=job_id,
             inputs=parsed.tweaks,
             error=error_for_client(exc, expose_details=expose_error_details),
             effective_globals=request_variables,
         )
+        if warnings:
+            error_response.warnings = warnings
+        return error_response
     finally:
         # Emit a RunPayload so Enterprise metering (run_event_store) and the
         # Scarf telemetry pipeline both see every v2 sync workflow run.

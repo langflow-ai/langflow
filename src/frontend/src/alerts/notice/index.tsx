@@ -42,10 +42,7 @@ export default function NoticeAlert({
       leaveFrom={"transform translate-x-0"}
       leaveTo={"transform translate-x-[-100%]"}
     >
-      <div
-        onClick={handleClick}
-        className="noflow nowheel nopan nodelete nodrag mt-6 w-96 rounded-md bg-info-background p-4 shadow-xl"
-      >
+      <div className="noflow nowheel nopan nodelete nodrag mt-6 w-96 rounded-md bg-info-background p-4 shadow-xl">
         <div className="flex">
           <div className="flex-shrink-0 cursor-help">
             <IconComponent
@@ -85,10 +82,7 @@ export default function NoticeAlert({
           </div>
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleClick();
-            }}
+            onClick={handleClick}
             aria-label={t("alerts.dismissAlert")}
             className="ml-3 flex-shrink-0 self-start"
           >

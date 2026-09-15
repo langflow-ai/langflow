@@ -866,6 +866,10 @@ async def get_workflow_status(
             # searched structurally — the persisted request is the source of truth.
             persisted_request = (job.job_metadata or {}).get("request") or {}
             effective_session_id = persisted_request.get("session_id") or flow_id_str
+            warning = (job.job_metadata or {}).get("component_substitution_warning") or persisted_request.get(
+                "component_substitution_warning"
+            )
+            warnings = [warning] if isinstance(warning, str) and warning else []
 
             # Default GET-status path: rebuild from the protocol-neutral terminal
             # captures the runner stored in ``Job.result``. This needs no
@@ -882,7 +886,7 @@ async def get_workflow_status(
                         job_id=job_id_str,
                         session_id=effective_session_id,
                         fail_on_rejected=True,
-                    )
+                    ).model_copy(update={"warnings": warnings})
                 except ValueError:
                     # Preserve every decodable capture in case the legacy
                     # vertex-build fallback is also unavailable.
@@ -891,7 +895,7 @@ async def get_workflow_status(
                         flow_id=flow_id_str,
                         job_id=job_id_str,
                         session_id=effective_session_id,
-                    )
+                    ).model_copy(update={"warnings": warnings})
 
             # Fallback: ``Job.result`` carried no outputs, has an invalid shape,
             # contains rejected/version-skewed entries, or predates capture.
@@ -912,11 +916,11 @@ async def get_workflow_status(
                     flow_id=flow_id_str,
                     job_id=job_id_str,
                     session_id=effective_session_id,
-                )
+                ).model_copy(update={"warnings": warnings})
             else:
                 if reconstructed.session_id is None:
                     reconstructed = reconstructed.model_copy(update={"session_id": effective_session_id})
-                return reconstructed
+                return reconstructed.model_copy(update={"warnings": warnings})
 
         if job.status == JobStatus.FAILED:
             # Surface the durable error JSON the runner persisted, additively.

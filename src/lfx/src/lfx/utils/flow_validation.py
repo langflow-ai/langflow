@@ -1337,11 +1337,15 @@ def describe_component_code_substitution(flow_data: dict | None, *, include_comp
     if not swapped:
         return None
     affected = f" for {', '.join(swapped)}" if include_component_names else ""
+    next_step = (
+        "Review and update the affected components in the flow editor to use the server version."
+        if include_component_names
+        else "Ask the flow owner to review and update the affected components to use the server version."
+    )
     return (
         "Custom components are disabled on this server (LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false). "
         f"This run uses the server's component code instead of the code saved in the flow{affected}. "
-        "The saved flow is unchanged. Review and update the affected components in the flow editor "
-        "to use the server version."
+        f"The saved flow is unchanged. {next_step}"
     )
 
 

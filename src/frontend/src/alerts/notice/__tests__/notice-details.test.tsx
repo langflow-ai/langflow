@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import SingleAlert from "@/alerts/alertDropDown/components/singleAlertComponent";
 import NoticeAlert from "@/alerts/notice";
 
@@ -31,5 +31,31 @@ describe("notice details", () => {
       />,
     );
     expect(screen.getByText(message)).toBeVisible();
+  });
+
+  it("keeps the details open when clicked and still supports explicit dismissal", () => {
+    jest.useFakeTimers();
+    try {
+      const removeAlert = jest.fn();
+      render(
+        <NoticeAlert
+          id="warning"
+          title="Workflow warning"
+          list={[message]}
+          removeAlert={removeAlert}
+        />,
+      );
+
+      fireEvent.click(screen.getByText(message));
+      act(() => jest.advanceTimersByTime(500));
+      expect(removeAlert).not.toHaveBeenCalled();
+      expect(screen.getByText(message)).toBeVisible();
+
+      fireEvent.click(screen.getByRole("button"));
+      act(() => jest.advanceTimersByTime(500));
+      expect(removeAlert).toHaveBeenCalledWith("warning");
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

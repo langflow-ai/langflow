@@ -38,6 +38,7 @@ def test_warning_names_the_policy_and_preserves_saved_code(saved_agent, change_i
     assert "Agent (Agent-qa)" in warning
     assert "server" in warning
     assert "saved flow is unchanged" in warning
+    assert "Review and update" in warning
     assert saved_agent == original
 
 
@@ -58,6 +59,8 @@ def test_warning_can_omit_component_identities(saved_agent):
     assert warning is not None
     assert "Agent" not in warning
     assert "LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false" in warning
+    assert "Ask the flow owner" in warning
+    assert "flow editor" not in warning
 
 
 def test_warning_includes_nested_substitutions_once(saved_agent):
