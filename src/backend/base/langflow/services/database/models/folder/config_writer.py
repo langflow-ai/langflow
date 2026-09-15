@@ -21,6 +21,7 @@ from lfx.projects.flow_slots import BINDING_LABELS, ProjectFlowBindings, validat
 from lfx.projects.hooks import compose_hooks
 from lfx.projects.local_tools import local_tool_bindings, local_tool_definition
 from lfx.projects.permissions import compose_permission
+from lfx.projects.skills import HarnessSkills, compose_skills, skill_pack_references
 from lfx.projects.tool_packs import FlowDependencyVersion, ToolPackToolBinding, tool_pack_references
 from lfx.projects.tools import agent_node_ids, compose_tools
 from sqlmodel import col, select
@@ -30,6 +31,7 @@ from langflow.services.database.models.flow.guards import LockedFlowError, ensur
 from langflow.services.database.models.flow.model import Flow, FlowType
 from langflow.services.database.models.flow_version.crud import create_flow_version_entry
 from langflow.services.database.models.flow_version.model import FlowVersion
+from langflow.services.database.models.folder.skill_packs import resolve_skill_pack
 from langflow.services.database.models.folder.tool_packs import resolve_tool_pack
 from lfx.projects import DEFAULT_PROJECT_TYPE, apply_project_config, get_project_type
 
@@ -173,7 +175,7 @@ async def write_project_config_to_flows(
     result = ProjectConfigWrite()
     clearing_config = project.project_config is None
     if not project.project_config and not any(
-        (previous_config or {}).get(key) for key in ("flow_bindings", "tool_packs", "tools")
+        (previous_config or {}).get(key) for key in ("flow_bindings", "tool_packs", "tools", "skill_packs")
     ):
         return result
     try:
@@ -194,6 +196,12 @@ async def write_project_config_to_flows(
         ).all()
     )
     config = deepcopy(project.project_config or {})
+    if project_type.name == "skill-pack":
+        manifest = await resolve_skill_pack(session, current_user, project.id)
+        config["skills"] = [skill.model_dump(mode="json") for skill in manifest.skills]
+        project.project_config = None if clearing_config else config
+        session.add(project)
+        return result
     if project_type.name == "tool-pack":
         try:
             manifest, _ = await resolve_tool_pack(session, current_user, project.id)
@@ -217,6 +225,7 @@ async def write_project_config_to_flows(
     instruction_target = None
     instruction_binding = None
     bindings = ProjectFlowBindings()
+    skills = HarnessSkills()
     if project_type.name == "agent-harness":
         try:
             runtime = HarnessRuntimeConfig.model_validate(config)
@@ -277,12 +286,29 @@ async def write_project_config_to_flows(
             raise HTTPException(422, f"Could not configure the selected tools: {exc}") from exc
         try:
             references = tool_pack_references(config.get("tool_packs", []))
+            skill_references = skill_pack_references(config.get("skill_packs", []))
         except (ValueError, TypeError) as exc:
             raise HTTPException(422, str(exc)) from exc
-        if references and agent is None:
-            raise HTTPException(422, "Choose an agent flow before adding tool packs.")
+        if (references or skill_references) and agent is None:
+            raise HTTPException(422, "Choose an agent flow before adding capability packs.")
+        skill_manifests = []
+        for reference in skill_references:
+            manifest = await resolve_skill_pack(session, current_user, reference.project_id, action=FlowAction.EXECUTE)
+            if manifest.reference != reference:
+                raise HTTPException(422, "The Skill Pack changed. Review it before saving the harness.")
+            skill_manifests.append(manifest)
+        skills = HarnessSkills(
+            packs=tuple(skill_manifests), global_tool_pack_ids=tuple(r.project_id for r in references)
+        )
+        all_references = {ref.project_id: ref for ref in references}
+        for manifest in skill_manifests:
+            for skill in manifest.skills:
+                for ref in skill.tool_packs:
+                    if ref.project_id in all_references and all_references[ref.project_id] != ref:
+                        raise HTTPException(422, "The selected skills require different revisions of one Tool Pack.")
+                    all_references[ref.project_id] = ref
         resolved = []
-        for reference in references:
+        for reference in all_references.values():
             manifest, exports = await resolve_tool_pack(
                 session, current_user, reference.project_id, action=FlowAction.EXECUTE
             )
@@ -331,6 +357,8 @@ async def write_project_config_to_flows(
                 )
         if "tool_packs" in config:
             config["tool_packs"] = [reference.model_dump(mode="json") for reference in references]
+        if "skill_packs" in config:
+            config["skill_packs"] = [reference.model_dump(mode="json") for reference in skill_references]
         if agent is not None:
             config["agent_flow_id"] = str(agent.id)
         try:
@@ -396,6 +424,10 @@ async def write_project_config_to_flows(
         data = write.data
         if project_type.name == "agent-harness":
             try:
+                data = compose_skills(data, project_id=str(project.id), agent_id=agent_node_ids(data)[0], skills=skills)
+            except (ValueError, TypeError) as exc:
+                raise HTTPException(422, f"Could not configure skills: {exc}") from exc
+            try:
                 data = compose_instructions(
                     data,
                     project_id=str(project.id),
@@ -441,7 +473,12 @@ async def write_project_config_to_flows(
             except (ValueError, KeyError, TypeError) as exc:
                 raise HTTPException(422, f"Could not bind Permissions: {exc}") from exc
         if project_type.name == "agent-harness" and (
-            "tools" in config or "tool_packs" in config or (previous_config or {}).get("tool_packs") or clearing_config
+            "tools" in config
+            or "tool_packs" in config
+            or "skill_packs" in config
+            or (previous_config or {}).get("tool_packs")
+            or (previous_config or {}).get("skill_packs")
+            or clearing_config
         ):
             try:
                 data = compose_tools(

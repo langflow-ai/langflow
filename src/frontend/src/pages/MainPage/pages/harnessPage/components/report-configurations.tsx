@@ -177,6 +177,12 @@ export function ReportConfigurations({
                   component_revision: configuration.component_revision,
                 }}
               />
+              {!!configuration.skills?.packs.length && (
+                <JsonRecord
+                  title={t("skills.recorded")}
+                  value={configuration.skills}
+                />
+              )}
             </div>
           </details>
         </>

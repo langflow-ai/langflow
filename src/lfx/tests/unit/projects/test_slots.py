@@ -180,6 +180,7 @@ def test_registered_vocabulary_does_not_claim_unbuilt_baseline_flows():
         "model",
         "tools",
         "tool_packs",
+        "skill_packs",
         "n_messages",
         "hooks",
         "tool_policy",

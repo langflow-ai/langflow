@@ -14,6 +14,7 @@ from lfx.projects.archives import (
 from lfx.projects.bindings import BINDING_ORIGIN, flow_revision
 from lfx.projects.dependencies import flow_references
 from lfx.projects.flow_slots import ProjectFlowBindings, flow_runtime_bindings
+from lfx.projects.skills import parse_harness_skills, skill_definitions, skill_pack_references
 from lfx.projects.tool_packs import FlowDependencyVersion, ToolPackToolBinding, tool_pack_references
 from lfx.projects.tools import TOOL_ORIGIN, tool_node_revision
 from sqlmodel import select
@@ -37,6 +38,7 @@ from langflow.services.creation_hooks import RESOURCE_PROJECT, PreCreationContex
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.folder.model import Folder, FolderCreate
+from langflow.services.database.models.folder.skill_packs import resolve_skill_pack
 from langflow.services.database.models.folder.tool_packs import resolve_tool_pack
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service
@@ -64,8 +66,18 @@ async def export_composition(
         )
         rows.update({str(flow.id): flow for flow in flows})
         references = list(tool_pack_references((project.project_config or {}).get("tool_packs", [])))
+        references.extend(skill_pack_references((project.project_config or {}).get("skill_packs", [])))
+        if project.project_type == "skill-pack":
+            for skill in skill_definitions((project.project_config or {}).get("skills", [])):
+                references.extend(skill.tool_packs)
         for flow in flows:
             for node in (flow.data or {}).get("nodes", []):
+                data = node.get("data", {})
+                if data.get("type") == "Agent":
+                    skills = parse_harness_skills(
+                        data.get("node", {}).get("template", {}).get("skill_bindings", {}).get("value") or ""
+                    )
+                    references.extend(pack.reference for pack in skills.packs)
                 binding = node.get("data", {}).get(TOOL_ORIGIN, {}).get("tool_pack")
                 if binding:
                     references.append(ToolPackToolBinding.model_validate(binding).reference)
@@ -73,7 +85,10 @@ async def export_composition(
             if str(reference.project_id) in projects:
                 continue
             # The resolver owns project/export authorization, including shared-project policy.
-            await resolve_tool_pack(session, user, reference.project_id)
+            if reference.expected_type == "skill-pack":
+                await resolve_skill_pack(session, user, reference.project_id)
+            else:
+                await resolve_tool_pack(session, user, reference.project_id)
             dependency = await session.get(Folder, reference.project_id)
             candidates = list(
                 (
@@ -244,7 +259,10 @@ async def import_composition(session: AsyncSession, user: User, composition: Pro
     """Create every project/flow/version in the request transaction, returning root flows."""
     graph = CompositionGraph(composition)
     graph.validate(allow_missing_secrets=True)
-    if not graph.projects[str(composition.root_project_id)].flows:
+    if (
+        not graph.projects[str(composition.root_project_id)].flows
+        and graph.projects[str(composition.root_project_id)].project_type != "skill-pack"
+    ):
         msg = "The root project must contain at least one flow."
         raise ValueError(msg)
     project_ids = {key: str(uuid4()) for key in graph.projects}
@@ -261,12 +279,28 @@ async def import_composition(session: AsyncSession, user: User, composition: Pro
             suffix += 1
         used_names.add(name)
         names[flow_id] = name
-    relocated = graph.relocate(project_ids=project_ids, flow_ids=flow_ids, version_ids=version_ids, flow_names=names)
+    project_names = {}
+    used_project_names = set()
+    for project in composition.projects:
+        name = await generate_unique_folder_name(project.name, user.id, session)
+        original_name = name
+        suffix = 1
+        while name in used_project_names:
+            name = await generate_unique_folder_name(f"{original_name} ({suffix})", user.id, session)
+            suffix += 1
+        used_project_names.add(name)
+        project_names[str(project.id)] = name
+    relocated = graph.relocate(
+        project_ids=project_ids,
+        flow_ids=flow_ids,
+        version_ids=version_ids,
+        flow_names=names,
+        project_names=project_names,
+    )
     folders = {}
     for project in relocated.projects:
-        name = await generate_unique_folder_name(project.name, user.id, session)
         payload = FolderCreate(
-            name=name,
+            name=project.name,
             description=project.description,
             project_type=project.project_type,
             project_config=project.project_config,
@@ -299,7 +333,11 @@ async def import_composition(session: AsyncSession, user: User, composition: Pro
                 "endpoint_name": None,
             }
             flow_list.append(FlowCreate.model_validate(data))
-    created = await create_flows(session=session, current_user=user, flow_list=FlowListCreate(flows=flow_list))
+    created = (
+        await create_flows(session=session, current_user=user, flow_list=FlowListCreate(flows=flow_list))
+        if flow_list
+        else []
+    )
     created_by_id = {str(flow.id): flow for flow in created}
     for original_id, new_id in flow_ids.items():
         flow = created_by_id[new_id]

@@ -89,10 +89,10 @@ async def download_project_flows(
         )
         flows = [FlowRead.model_validate(flow, from_attributes=True) for flow in visible_flows]
 
-        if not flows:
+        if not flows and project.project_type != "skill-pack":
             raise HTTPException(status_code=404, detail="No flows found in project")
 
-        if project.project_type in {"agent-harness", "tool-pack"}:
+        if project.project_type in {"agent-harness", "tool-pack", "skill-pack"}:
             try:
                 composition = await export_composition(session, current_user, project, visible_flows)
                 zip_stream = composition_zip(composition)

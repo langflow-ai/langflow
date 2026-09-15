@@ -111,6 +111,18 @@ AGENT_HARNESS = register_project_type(
                     value=100,
                 ),
             ),
+            ProjectTypeField(
+                name="skill_packs",
+                section="Skills",
+                renders="skill_pack_refs",
+                input=StrInput(
+                    name="skill_packs",
+                    display_name="Skills",
+                    info="Reviewed skills with instructions and tools activated for a task.",
+                    list=True,
+                    value=[],
+                ),
+            ),
             *(
                 ProjectTypeField(
                     name=inp.name,
@@ -182,4 +194,21 @@ TOOL_PACK = register_project_type(
     )
 )
 
-__all__ = ["AGENT_HARNESS", "DEFAULT_PROJECT_TYPE", "FLOWS", "TOOL_PACK"]
+SKILL_PACK = register_project_type(
+    ProjectType(
+        name="skill-pack",
+        display_name="Skill Pack",
+        icon="BookOpen",
+        description="Reusable task instructions and tools that an Agent Harness can activate when needed.",
+        fields=(
+            ProjectTypeField(
+                name="skills",
+                section="Skills",
+                renders="skill_definitions",
+                input=StrInput(name="skills", display_name="Skills", list=True, value=[]),
+            ),
+        ),
+    )
+)
+
+__all__ = ["AGENT_HARNESS", "DEFAULT_PROJECT_TYPE", "FLOWS", "SKILL_PACK", "TOOL_PACK"]
