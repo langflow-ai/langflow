@@ -11,6 +11,7 @@ from langflow.services.database.models.flow_version.exceptions import (
     FlowVersionConflictError,
     FlowVersionDeployedError,
     FlowVersionNotFoundError,
+    FlowVersionPinnedError,
 )
 from langflow.services.database.models.flow_version.model import (
     FlowVersion,
@@ -18,6 +19,7 @@ from langflow.services.database.models.flow_version.model import (
 from langflow.services.database.models.flow_version_deployment_attachment.model import (
     FlowVersionDeploymentAttachment,
 )
+from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
@@ -88,11 +90,8 @@ async def create_flow_version_entry(
         )
         raise FlowVersionConflictError(msg)
 
-    # Prune oldest non-deployed entries beyond the configured limit.
-    # Versions attached to deployments are excluded from pruning to avoid
-    # orphaning provider-side snapshots. This means the actual count can
-    # exceed max_entries when many versions are deployed — acceptable
-    # because deployed versions are actively in use.
+    # Retain versions used by deployments or trigger pins outside the history
+    # limit. A new snapshot must never change what a pinned trigger executes.
     # NOTE: Concurrent snapshot requests for the same flow could both insert
     # before either prunes, temporarily exceeding the limit by one or more
     # entries. This is acceptable — the excess self-corrects on the next
@@ -114,12 +113,14 @@ async def create_flow_version_entry(
             )
             .distinct()
         )
+        pinned_version_ids = select(Trigger.flow_version_id).where(col(Trigger.flow_version_id).is_not(None))
         version_ids_to_prune = (
             await session.exec(
                 select(FlowVersion.id)
                 .where(
                     FlowVersion.flow_id == flow_id,
                     col(FlowVersion.id).not_in(deployed_version_ids),
+                    col(FlowVersion.id).not_in(pinned_version_ids),
                 )
                 .order_by(col(FlowVersion.version_number).desc())
                 .offset(max_entries)
@@ -355,6 +356,10 @@ async def delete_flow_version_entry(
             f"and cannot be deleted. Remove its deployment attachment rows first."
         )
         raise FlowVersionDeployedError(msg)
+
+    if (await session.exec(select(Trigger.id).where(Trigger.flow_version_id == version_id).limit(1))).first():
+        msg = f"Version entry {version_id} is pinned by a trigger and cannot be deleted. Unpin it first."
+        raise FlowVersionPinnedError(msg)
 
     await session.delete(entry)
     await session.flush()
