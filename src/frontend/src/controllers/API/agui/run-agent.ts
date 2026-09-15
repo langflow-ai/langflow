@@ -48,6 +48,13 @@ export interface WorkflowRunOptions {
   /** Suppress success build UI for chat/playground runs that should not show a build panel. */
   silent?: boolean;
   /**
+   * Omit (server default `true`) to receive the `STEP_*` / `STATE_*` events the
+   * canvas renders node status from. Set `false` for a stream shown to someone
+   * other than the flow's author, so component ids and per-node outputs stay
+   * off the wire. The canvas and playground leave this unset.
+   */
+  exposeGraphState?: boolean;
+  /**
    * When true, route the request to the public-flow endpoint
    * (``/api/v2/workflows/public``) instead of the authenticated one.
    *
@@ -79,6 +86,13 @@ export interface WorkflowRunRequestBody {
   input_value: string;
   mode: WorkflowMode;
   stream_protocol: StreamProtocol;
+  /**
+   * Omit (server default `true`) to receive the `STEP_*` / `STATE_*` events
+   * the canvas renders node status from. External callers that expose the
+   * stream to their own end users send `false` so component ids and per-node
+   * outputs stay off the wire.
+   */
+  expose_graph_state?: boolean;
   tweaks?: Record<string, Record<string, unknown>>;
   session_id?: string;
   data?: { nodes: unknown[]; edges: unknown[] };
@@ -128,6 +142,11 @@ export function buildWorkflowRunRequest(
   if (opts.stopComponentId) body.stop_component_id = opts.stopComponentId;
   if (!isPublic && opts.flowData) body.data = opts.flowData;
   if (opts.files && opts.files.length > 0) body.files = opts.files;
+  // Only forward an explicit opt-out; omitting the field keeps the server
+  // default so existing callers are byte-identical on the wire.
+  if (opts.exposeGraphState !== undefined) {
+    body.expose_graph_state = opts.exposeGraphState;
+  }
   return body;
 }
 

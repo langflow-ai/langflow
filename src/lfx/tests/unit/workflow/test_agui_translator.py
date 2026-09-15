@@ -1323,3 +1323,101 @@ def test_grouped_leaves_survive_text_consolidation():
 
     assert len([e for e in first + second if isinstance(e, ToolCallStartEvent)]) == 1
     assert len([e for e in first + second if isinstance(e, CustomEvent)]) == 1
+
+
+def test_expose_graph_state_off_suppresses_every_graph_event():
+    """With graph state off, nothing on the wire names a component or carries its output.
+
+    A caller embedding a flow in their own product hands this stream to end
+    users. The default AG-UI mapping puts the component id in every
+    ``STEP_*`` step name and the vertex's full output payload in every
+    ``STATE_DELTA``, so opting out must remove all four event types while
+    leaving the conversational events untouched.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1", expose_graph_state=False)
+    sequence = [
+        ("vertices_sorted", {"ids": ["ChatInput-a"], "to_run": ["ChatInput-a", "Agent-b", "ChatOutput-c"]}),
+        ("build_start", {"id": "Agent-b"}),
+        ("token", {"id": "m1", "chunk": "It is "}),
+        ("token", {"id": "m1", "chunk": "sunny."}),
+        ("add_message", {"id": "m1", "text": "It is sunny.", "content_blocks": _AGENT_STEPS}),
+        (
+            "end_vertex",
+            {"build_data": {"id": "Agent-b", "valid": True, "data": {"outputs": {"message": "confidential"}}}},
+        ),
+        ("end", {"build_duration": 1.23}),
+    ]
+
+    out = _run_sequence(t, sequence)
+
+    _assert_well_formed(out)
+    graph_events = [
+        e for e in out if isinstance(e, (StepStartedEvent, StepFinishedEvent, StateSnapshotEvent, StateDeltaEvent))
+    ]
+    assert graph_events == []
+    # No component id survives anywhere in the serialized stream.
+    wire = "".join(e.model_dump_json() for e in out)
+    for node_id in ("ChatInput-a", "Agent-b", "ChatOutput-c"):
+        assert node_id not in wire
+    assert "confidential" not in wire
+    # Messages and tool calls are unaffected.
+    assert len([e for e in out if isinstance(e, TextMessageStartEvent)]) == 1
+    assert len([e for e in out if isinstance(e, ToolCallStartEvent)]) == 1
+    assert len([e for e in out if isinstance(e, ToolCallResultEvent)]) == 1
+
+
+def test_expose_graph_state_defaults_on_for_the_canvas():
+    """The default must keep emitting graph state; the canvas renders node status from it."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    sequence = [
+        ("vertices_sorted", {"ids": ["ChatInput-a"], "to_run": ["ChatInput-a", "Agent-b"]}),
+        ("build_start", {"id": "Agent-b"}),
+        ("end_vertex", {"build_data": {"id": "Agent-b", "valid": True, "data": {"outputs": {}}}}),
+        ("end", {}),
+    ]
+
+    out = _run_sequence(t, sequence)
+
+    assert [e for e in out if isinstance(e, StateSnapshotEvent)]
+    assert [e for e in out if isinstance(e, StepStartedEvent)]
+    assert [e for e in out if isinstance(e, StepFinishedEvent)]
+    assert [e for e in out if isinstance(e, StateDeltaEvent)]
+
+
+def test_expose_graph_state_off_suppresses_component_logs():
+    """The ``langflow.log`` channel must not survive the opt-out.
+
+    ``Component._log_event`` stamps ``component_id`` and the producing
+    ``output`` name onto every log payload before it reaches the translator, so
+    leaving this channel on would republish exactly the component identities the
+    STEP_*/STATE_* suppression removes — the same reasoning that gates the
+    ``langflow.event`` side-channel in ``workflow_execution``. The payload below
+    is the real shape built at ``Component._log_event``.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1", expose_graph_state=False)
+    log_payload = {
+        "name": "retrieved docs",
+        "message": "3 documents",
+        "type": "text",
+        "output": "dataframe",
+        "component_id": "Agent-b3f21",
+    }
+
+    assert t.translate("log", log_payload) == []
+
+    # The default keeps it, so the playground's log view is unchanged.
+    default = AGUITranslator(run_id="r1", thread_id="t1")
+    emitted = default.translate("log", log_payload)
+    assert [e.name for e in emitted] == ["langflow.log"]
+
+
+def test_expose_graph_state_off_still_reports_human_input_pauses():
+    """The HITL pause is the resume handle, so it survives the opt-out.
+
+    Its id embeds the vertex id, but a client that never receives it cannot
+    resume the run — withholding it would hang every opt-out caller's
+    human-in-the-loop flow rather than merely narrowing the wire.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1", expose_graph_state=False)
+    out = t.translate("human_input_required", {"interrupt_id": "Agent-b3f21:run-1:i-0"})
+    assert [e.name for e in out] == ["langflow.human_input_required"]
