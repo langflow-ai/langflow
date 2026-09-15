@@ -9,14 +9,20 @@ from urllib.parse import parse_qs, urlsplit
 from uuid import UUID
 
 import pytest
+from cryptography.fernet import Fernet
 from langflow.services.auth import utils as auth_utils
 from langflow.services.connection.oauth import providers
 from langflow.services.connection.oauth.config import OAuthError
 from langflow.services.connection.service import _decrypt_credential_payload, _encrypt_credential_payload
-from langflow.services.database.models.connection import ConnectionSecret
+from langflow.services.database.models.connection import Connection, ConnectionSecret
 from langflow.services.database.models.connection.oauth import ConnectionOAuth
 from langflow.services.deps import get_connection_resolver_service, session_scope
-from lfx.integrations.errors import AuthExpiredError, ConnectionUnresolvedError, ScopeMissingError
+from lfx.integrations.errors import (
+    AuthExpiredError,
+    ConnectionNotAuthorizedError,
+    ConnectionUnresolvedError,
+    ScopeMissingError,
+)
 from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest, CredentialLease
 from lfx.services.authorization.base import ExecutionPrincipal
 
@@ -41,7 +47,7 @@ def oauth_config(monkeypatch):
     monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS", json.dumps({"google-work": registration()}))
 
 
-async def begin(client, headers):
+async def begin(client, headers, *, allow_non_interactive=True):
     created = await client.post(
         "/api/v1/connections",
         headers=headers,
@@ -50,7 +56,7 @@ async def begin(client, headers):
             "name": "work",
             "display_name": "Google work",
             "executing_identity": {"identity": "user_delegated"},
-            "allow_non_interactive": True,
+            "allow_non_interactive": allow_non_interactive,
         },
     )
     assert created.status_code == 201, created.text
@@ -146,6 +152,129 @@ async def test_callback_pkce_storage_replay_and_revoke(client, logged_in_headers
     assert calls[-1]["token"] == "refresh-must-not-leak"  # noqa: S105 - test fixture
     with pytest.raises(ConnectionUnresolvedError):
         await resolver.resolve(resolution(row))
+
+
+@pytest.mark.usefixtures("active_user", "oauth_config")
+@pytest.mark.parametrize("allow_non_interactive", [False, True])
+async def test_reauthorization_clears_an_undecryptable_error(
+    client, logged_in_headers, monkeypatch, allow_non_interactive
+):
+    row, query = await begin(client, logged_in_headers, allow_non_interactive=allow_non_interactive)
+    provider_double(monkeypatch, query)
+    assert (await callback(client, query)).status_code == 200
+    async with session_scope() as session:
+        secret = await session.get(ConnectionSecret, UUID(row["id"]))
+        # What a restart under a different secret key leaves behind.
+        secret.encrypted_payload = Fernet(Fernet.generate_key()).encrypt(b'{"version":1}').decode()
+        session.add(secret)
+    broken = (await client.post(f"/api/v1/connections/{row['id']}/health", headers=logged_in_headers)).json()
+    assert (broken["status"], broken["status_reason"]) == ("error", "credential-undecryptable")
+
+    restarted = await client.post(
+        f"/api/v1/connections/{row['id']}/oauth/start",
+        headers=logged_in_headers,
+        json={"registration_id": "google-work", "scopes": ["calendar.readonly"]},
+    )
+    assert restarted.status_code == 200, restarted.text
+    requery = parse_qs(urlsplit(restarted.json()["authorization_url"]).query)
+    provider_double(monkeypatch, requery)
+    assert (await callback(client, requery)).status_code == 200
+
+    async with session_scope() as session:
+        stored = await session.get(Connection, UUID(row["id"]))
+        assert (stored.status, stored.status_reason) == ("ready", None)
+        assert stored.allow_non_interactive is allow_non_interactive
+    token = await get_connection_resolver_service().resolve(resolution(row))
+    assert token.access_token.get_secret_value() == "access-must-not-leak"
+
+    unattended = ConnectionResolutionRequest(
+        ref=ConnectionRef(provider="google", name="work"),
+        principal=ExecutionPrincipal(kind="job_owner", user_id=row["owner_id"], interactive=False),
+    )
+    if allow_non_interactive:
+        token = await get_connection_resolver_service().resolve(unattended)
+        assert token.access_token.get_secret_value() == "access-must-not-leak"
+    else:
+        with pytest.raises(ConnectionNotAuthorizedError):
+            await get_connection_resolver_service().resolve(unattended)
+
+
+@pytest.mark.parametrize("identity", ["bot", "user_delegated"])
+async def test_slack_bot_consent_on_a_regular_users_connection(
+    client, active_user, logged_in_headers, monkeypatch, identity
+):
+    assert active_user.is_superuser is False
+    monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_CONTEXT", "self_managed")
+    monkeypatch.setenv(
+        "LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS",
+        json.dumps(
+            {
+                "slack-bot": registration(
+                    provider="slack",
+                    profile="bot",
+                    context="self_managed",
+                    client_type="confidential",
+                    client_secret="test-secret",  # noqa: S106 # pragma: allowlist secret - test fixture
+                    redirect_uri="http://localhost/api/v1/connections/oauth/slack/callback",
+                    scopes=["chat:write"],
+                    allowed_tenants=["workspace-123"],
+                )
+            }
+        ),
+    )
+    created = await client.post(
+        "/api/v1/connections",
+        headers=logged_in_headers,
+        json={
+            "provider_key": "slack",
+            "name": "work",
+            "display_name": "Slack work",
+            "executing_identity": {"identity": identity},
+        },
+    )
+    assert created.status_code == 201, created.text
+    row = created.json()
+    assert row["ownership_mode"] == "user"
+    assert row["owner_id"] == str(active_user.id)
+    started = await client.post(
+        f"/api/v1/connections/{row['id']}/oauth/start",
+        headers=logged_in_headers,
+        json={"registration_id": "slack-bot", "scopes": ["chat:write"]},
+    )
+    if identity != "bot":
+        assert started.status_code == 400
+        assert started.json()["detail"] == "OAuth registration does not match this connection's identity type."
+        async with session_scope() as session:
+            assert await session.get(ConnectionOAuth, UUID(row["id"])) is None
+        return
+
+    assert started.status_code == 200, started.text
+    query = parse_qs(urlsplit(started.json()["authorization_url"]).query)
+    assert query["scope"] == ["chat:write"]
+    assert "user_scope" not in query
+
+    async def exchange(_url, data, **_kwargs):
+        assert data["grant_type"] == "authorization_code"
+        return {
+            "access_token": "bot-token-must-not-leak",
+            "token_type": "bot",
+            "scope": "chat:write",
+            "bot_user_id": "bot-123",
+            "team": {"id": "workspace-123"},
+        }
+
+    monkeypatch.setattr(providers, "_request", exchange)
+    completed = await client.get(
+        "/api/v1/connections/oauth/slack/callback",
+        params={"state": query["state"][0], "code": "temporary-code"},
+    )
+    assert completed.status_code == 200, completed.text
+    async with session_scope() as session:
+        stored = await session.get(Connection, UUID(row["id"]))
+        assert stored.status == "ready"
+        assert stored.executing_identity["identity"] == "bot"
+        assert stored.executing_identity["account"]["id"] == "bot-123"
+        assert stored.granted_scopes == ["chat:write"]
 
 
 @pytest.mark.parametrize(

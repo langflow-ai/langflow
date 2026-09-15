@@ -11,6 +11,7 @@ from uuid import UUID
 import orjson
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
@@ -106,7 +107,6 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_catalog_policy_service, get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
-from langflow.utils.compression import compress_response
 from langflow.utils.i18n import translate_flow_notes, translate_starter_flows
 
 # Re-export helpers so existing ``from langflow.api.v1.flows import ...`` still works.
@@ -447,13 +447,13 @@ async def read_flows(
                     act=FlowAction.READ,
                 )
             if header_flows:
-                # Convert to FlowHeader objects and compress the response
+                # Convert to FlowHeader objects
                 flow_headers = [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
-                return compress_response(flow_headers)
+                return JSONResponse(content=jsonable_encoder(flow_headers))
 
             # Convert to FlowRead while session is still active to avoid detached instance errors
             flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in flows]
-            return compress_response(flow_reads)
+            return JSONResponse(content=jsonable_encoder(flow_reads))
 
         stmt = stmt.where(Flow.folder_id == folder_id)
 
@@ -741,8 +741,6 @@ async def upsert_flow(
 
     Returns 201 for creation, 200 for update.  Returns 404 if owned by another user.
     """
-    from fastapi.responses import JSONResponse
-
     # Read once, outside the retry loop: a rollback between attempts expires the ORM User
     # and a later attribute read would lazy-load outside the greenlet.
     writer_id = current_user.id
@@ -927,13 +925,17 @@ async def delete_flow(
     current_user: CurrentActiveUser,
 ):
     """Delete a flow."""
+    from langflow.services.memory_base.flow_cleanup import FlowMemoryBaseCleanup, finalize_flow_memory_base_cleanup
+
     actor = UserRead.model_validate(current_user, from_attributes=True)
     target_flow_id = flow_id
     flow_owner_ids: dict[UUID, UUID] = {target_flow_id: flow.user_id}
+    memory_base_cleanups: list[FlowMemoryBaseCleanup] = []
 
     async def _delete_attempt(_attempt: int) -> None:
         async def _delete_operation() -> None:
             flow_owner_ids.clear()
+            memory_base_cleanups.clear()
             retry_target = await _read_flow(session, target_flow_id, actor.id)
             if retry_target is None:
                 return
@@ -946,7 +948,7 @@ async def delete_flow(
                 folder_id=retry_target.folder_id,
             )
             flow_owner_ids[retry_target.id] = retry_target.user_id
-            await cascade_delete_flow(session, target_flow_id)
+            memory_base_cleanups.extend(await cascade_delete_flow(session, target_flow_id))
 
         await retry_flow_operation_on_deployment_guard(
             db=session,
@@ -956,6 +958,10 @@ async def delete_flow(
 
     try:
         await run_with_lock_retry(_delete_attempt, session=session, description=f"delete_flow {target_flow_id}")
+        # Commit the deletion before the best-effort external teardown so a
+        # remote collection is dropped only for a flow that is actually gone.
+        await session.commit()
+        await finalize_flow_memory_base_cleanup(memory_base_cleanups)
     except HTTPException:
         raise
     except Exception as exc:
@@ -1220,12 +1226,16 @@ async def delete_multiple_flows(
     db: DbSession,
 ):
     """Delete multiple flows by their IDs."""
+    from langflow.services.memory_base.flow_cleanup import FlowMemoryBaseCleanup, finalize_flow_memory_base_cleanup
+
     actor = UserRead.model_validate(user, from_attributes=True)
     try:
         authorized_flow_owner_ids: dict[UUID, UUID] = {}
+        memory_base_cleanups: list[FlowMemoryBaseCleanup] = []
 
         async def _delete_operation() -> int:
             authorized_flow_owner_ids.clear()
+            memory_base_cleanups.clear()
             if not flow_ids:
                 return 0
             # Widen fetch when cross-user DELETE is supported; else owner-scoped.
@@ -1250,7 +1260,7 @@ async def delete_multiple_flows(
                 )
             authorized_flow_owner_ids.update((flow.id, flow.user_id) for flow in flows_to_delete)
             for flow in flows_to_delete:
-                await cascade_delete_flow(db, flow.id)
+                memory_base_cleanups.extend(await cascade_delete_flow(db, flow.id))
             await db.flush()
             return len(flows_to_delete)
 
@@ -1266,6 +1276,10 @@ async def delete_multiple_flows(
             session=db,
             description=f"delete_multiple_flows count={len(flow_ids)}",
         )
+        # Commit the deletions before the best-effort external teardown so a
+        # remote collection is dropped only for flows that are actually gone.
+        await db.commit()
+        await finalize_flow_memory_base_cleanup(memory_base_cleanups)
     except HTTPException:
         raise
     except Exception as exc:
@@ -1381,7 +1395,7 @@ async def read_basic_examples(
                 blocked_template_keys=catalog_policy_snapshot.blocked_template_keys,
             )
         )
-        return compress_response(visible_flows)
+        return JSONResponse(content=jsonable_encoder(visible_flows))
 
     async with _starter_flows_lock:
         # Double-check inside lock to prevent thundering herd
@@ -1395,7 +1409,7 @@ async def read_basic_examples(
                     blocked_template_keys=catalog_policy_snapshot.blocked_template_keys,
                 )
             )
-            return compress_response(visible_flows)
+            return JSONResponse(content=jsonable_encoder(visible_flows))
 
         # Ensure raw DB data is cached
         cached_flow_reads = _starter_flows_cache.get("starter_flows")
@@ -1408,7 +1422,7 @@ async def read_basic_examples(
                 ).first()
 
                 if not starter_folder:
-                    return compress_response([])
+                    return JSONResponse(content=jsonable_encoder([]))
 
                 all_starter_folder_flows = (
                     await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))
@@ -1449,7 +1463,7 @@ async def read_basic_examples(
             blocked_template_keys=catalog_policy_snapshot.blocked_template_keys,
         )
     )
-    return compress_response(visible_flows)
+    return JSONResponse(content=jsonable_encoder(visible_flows))
 
 
 @router.post("/expand/", status_code=200, dependencies=[Depends(get_current_active_user)], include_in_schema=False)

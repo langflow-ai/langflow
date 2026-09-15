@@ -83,6 +83,18 @@ def get_model_provider_policy_service():
     return service
 
 
+def get_integration_policy_service():
+    """Return the configured integration policy service or fail closed."""
+    from lfx.services.integration_policy.base import BaseIntegrationPolicyService
+    from lfx.services.integration_policy.service import IntegrationPolicyService  # noqa: F401
+
+    service = get_service(ServiceType.INTEGRATION_POLICY_SERVICE)
+    if not isinstance(service, BaseIntegrationPolicyService) or not service.ready:
+        msg = "A valid, ready integration_policy_service is required"
+        raise TypeError(msg)
+    return service
+
+
 def get_policy_bundle_service() -> BasePolicyBundleService:
     """Return the ready process-local shared policy bundle coordinator."""
     from lfx.services.policy_bundle import BasePolicyBundleService, PolicyBundleService  # noqa: F401
@@ -201,6 +213,11 @@ def get_connection_resolver() -> ConnectionResolverProtocol:
     try:
         service = service_manager.get(ServiceType.CONNECTION_RESOLVER_SERVICE)
     except NoFactoryRegisteredError:
+        if (
+            ServiceType.CONNECTION_RESOLVER_SERVICE in service_manager.service_classes
+            or ServiceType.CONNECTION_RESOLVER_SERVICE in service_manager.factories
+        ):
+            raise  # A configured resolver can fail because one of its dependencies is absent.
         service = None
 
     if service is not None:
@@ -216,9 +233,9 @@ def get_connection_resolver() -> ConnectionResolverProtocol:
                 msg = "A configured connection_resolver_service must be valid and ready"
                 raise RuntimeError(msg)
             return cast("ConnectionResolverProtocol", cached)
-        fallback = EnvConnectionResolver()
-        service_manager.services[ServiceType.CONNECTION_RESOLVER_SERVICE] = fallback
-        return fallback
+        if service_manager.connection_resolver_fallback is None:
+            service_manager.connection_resolver_fallback = EnvConnectionResolver()
+        return service_manager.connection_resolver_fallback
 
 
 def get_shared_component_cache_service() -> CacheServiceProtocol | None:

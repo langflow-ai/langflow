@@ -132,6 +132,22 @@ def test_matching_discovery_is_compatible():
     assert diff.summary() == "no difference"
 
 
+@pytest.mark.parametrize("pin_digest", [False, True])
+def test_duplicate_tool_cannot_hide_schema_drift(pin_digest):
+    widened = {**SEARCH_INPUT, "properties": {**SEARCH_INPUT["properties"], "cursor": {"type": "string"}}}
+    discovered = [_found("search_messages", widened, SEARCH_OUTPUT), *_matching()]
+    spec = _pin(tools_list_hash=tools_list_digest(_matching())) if pin_digest else _pin()
+    with pytest.raises(IncompatibleToolError) as excinfo:
+        enforce_pinned_tools(spec, iter(discovered))
+    assert "search_messages: duplicate tool name" in excinfo.value.details["changed"]
+
+
+def test_unnamed_tool_is_not_silently_dropped():
+    with pytest.raises(IncompatibleToolError) as excinfo:
+        enforce_pinned_tools(_pin(), [*_matching(), _found("", SEARCH_INPUT)])
+    assert "<unnamed>: missing tool name" in excinfo.value.details["changed"]
+
+
 def test_added_tool_fails_closed_and_names_the_addition():
     discovered = [*_matching(), _found("delete_message", {"type": "object", "properties": {}})]
     diff = diff_pinned_tools(_pin(), discovered)

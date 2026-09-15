@@ -261,13 +261,16 @@ class MCPPresetComponent(ComponentWithCache):
         if inspect.isawaitable(config):
             config = await config
         server_name, server_config = config
+        pin_options: dict[str, Any] = {}
         if spec is not None:
             server_config = self._pinned_server_config(spec, server_config)
+            pin_options = {"pinned_spec": spec, "pinned_provider": self._pinned_provider()}
         _, tools, tool_cache = await update_tools(
             server_name,
             server_config,
             mcp_streamable_http_client=self._streamable_http_client,
             tool_execution_timeout=self._resolved_timeout(),
+            **pin_options,
         )
         if spec is None:
             if not tools:

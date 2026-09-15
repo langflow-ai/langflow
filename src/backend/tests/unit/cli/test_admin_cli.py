@@ -534,3 +534,26 @@ def test_pruning_preview_maps_api_errors_to_stable_cli_output(monkeypatch, tmp_p
     assert result.exit_code == 1
     assert "Error [directory_unavailable]: Directory catalog is unavailable" in result.output
     assert "Traceback" not in result.output
+
+
+def test_noninteractive_prune_requires_yes_before_api_calls(monkeypatch, tmp_path: Path) -> None:
+    manifest = tmp_path / "admin-state.yaml"
+    manifest.write_text(
+        "apiVersion: langflow.ai/v1\nkind: AdminState\nteams:\n  - adom_name: ops\n    display_name: Operators\n",
+        encoding="utf-8",
+    )
+
+    reconciler_calls = []
+
+    def reconciler_from_context(_ctx):
+        reconciler_calls.append(_ctx)
+        return object()
+
+    monkeypatch.setattr("langflow.cli.admin.commands._reconciler_from_context", reconciler_from_context)
+
+    result = CliRunner().invoke(app, ["admin", "apply", str(manifest), "--prune"])
+
+    assert result.exit_code == 2
+    assert "--prune requires --yes in non-interactive use" in result.output
+    assert "Traceback" not in result.output
+    assert reconciler_calls == []

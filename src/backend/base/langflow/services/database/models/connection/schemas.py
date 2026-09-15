@@ -9,7 +9,7 @@ from uuid import UUID
 
 from lfx.integrations.capabilities import IntegrationIdentity
 from lfx.integrations.models import CONNECTION_NAME_PATTERN, PROVIDER_ID_PATTERN, ConnectionAccount
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, StrictStr, field_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, StrictStr, field_validator, model_validator
 
 
 class ConnectionOwnershipMode(str, Enum):
@@ -23,6 +23,16 @@ class PersistedConnectionStatus(str, Enum):
     EXPIRED = "expired"
     REVOKED = "revoked"
     ERROR = "error"
+
+
+class ConnectionStatusReason(str, Enum):
+    """Why a connection is in the ``error`` status; every other status carries no reason."""
+
+    # The connection had credentials, and its encrypted envelope is gone.
+    CREDENTIAL_MISSING = "credential-missing"
+    # The envelope exists but does not decrypt or decode with the server's
+    # current key. One key change puts every connection in this state.
+    CREDENTIAL_UNDECRYPTABLE = "credential-undecryptable"
 
 
 class ConnectionHealth(str, Enum):
@@ -87,6 +97,40 @@ class ConnectionCreate(BaseModel):
         return normalized
 
 
+class ConnectionUpdate(BaseModel):
+    """Connection metadata that changes without re-authorizing the provider.
+
+    The handle (provider and name), ownership, scopes, executing identity, and
+    credentials are fixed by creation or re-authorization.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    display_name: StrictStr | None = Field(default=None, min_length=1, max_length=255)
+    allow_non_interactive: bool | None = None
+
+    @field_validator("display_name")
+    @classmethod
+    def _display_name_not_blank(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        if not value:
+            msg = "display_name must not be blank"
+            raise ValueError(msg)
+        return value
+
+    @model_validator(mode="after")
+    def _changes_something(self) -> ConnectionUpdate:
+        if not self.model_fields_set:
+            msg = "Provide display_name or allow_non_interactive"
+            raise ValueError(msg)
+        if any(getattr(self, field) is None for field in self.model_fields_set):
+            msg = "display_name and allow_non_interactive must not be null"
+            raise ValueError(msg)
+        return self
+
+
 class ConnectionRead(BaseModel):
     """Credential-free connection metadata returned by every API route."""
 
@@ -99,6 +143,7 @@ class ConnectionRead(BaseModel):
     name: str
     display_name: str
     status: PersistedConnectionStatus
+    status_reason: ConnectionStatusReason | None = None
     health: ConnectionHealth
     granted_scopes: list[str]
     executing_identity: ExecutingIdentityDescriptor

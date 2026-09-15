@@ -259,13 +259,21 @@ def diff_pinned_tools(
     server_info: MCPServerInfo | None = None,
 ) -> PinnedToolDiff:
     """Compare a discovered tool set against its pin. Any difference is a drift."""
-    found = {view.name: view for view in (_view(tool) for tool in discovered) if view.name}
+    views = [_view(tool) for tool in discovered]
+    found: dict[str, DiscoveredTool] = {}
+    changed: list[tuple[str, str]] = []
+    for view in views:
+        if not view.name:
+            changed.append(("<unnamed>", "missing tool name"))
+        elif view.name in found:
+            changed.append((view.name, "duplicate tool name"))
+        else:
+            found[view.name] = view
     pinned = {tool.name: tool for tool in spec.tools}
 
     added = tuple(sorted(set(found) - set(pinned)))
     removed = tuple(sorted(set(pinned) - set(found)))
 
-    changed: list[tuple[str, str]] = []
     for name in sorted(set(pinned) & set(found)):
         pin, view = pinned[name], found[name]
         if _canonical(view.input_schema) != _canonical(pin.input_schema):
@@ -275,7 +283,7 @@ def diff_pinned_tools(
 
     server_mismatch: list[str] = []
     if spec.tools_list_hash is not None:
-        actual = tools_list_digest(found.values())
+        actual = tools_list_digest(views)
         if actual != spec.tools_list_hash:
             server_mismatch.append(f"tools/list digest {actual} does not match the pinned {spec.tools_list_hash}")
     expected_version = spec.server_version
