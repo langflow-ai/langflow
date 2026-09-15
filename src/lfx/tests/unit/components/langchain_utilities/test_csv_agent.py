@@ -128,6 +128,83 @@ class TestCSVAgentComponent:
             # Should not have created temp file path
             assert not hasattr(component, "_temp_file_path")
 
+    def test_get_local_path_normalizes_non_utf8_local_file(self, component_class, model_value):
+        component = component_class()
+        component.set_attributes(
+            {
+                "model": model_value,
+                "path": "/tmp/test.csv",
+                "agent_type": "openai-tools",
+                "input_value": "test",
+            }
+        )
+        source = Path(component.path)
+        source.write_bytes(b"name\nCaf\xe9 \x96 customer\n")
+
+        try:
+            with patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings:
+                mock_settings = MagicMock()
+                mock_settings.settings.storage_type = "local"
+                mock_get_settings.return_value = mock_settings
+
+                local_path = component._get_local_path()
+
+            assert local_path != str(source)
+            assert Path(local_path).read_text(encoding="utf-8") == b"name\nCaf\xe9 \x96 customer\n".decode("cp1252")
+        finally:
+            source.unlink(missing_ok=True)
+            component._cleanup_temp_file()
+
+    def test_get_local_path_normalizes_iso_8859_1_local_file(self, component_class, model_value):
+        component = component_class()
+        component.set_attributes(
+            {
+                "model": model_value,
+                "path": "/tmp/test.csv",
+                "agent_type": "openai-tools",
+                "input_value": "test",
+            }
+        )
+        source = Path(component.path)
+        source.write_bytes("name\nCafé customer\n".encode("iso-8859-1"))
+
+        try:
+            with patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings:
+                mock_settings = MagicMock()
+                mock_settings.settings.storage_type = "local"
+                mock_get_settings.return_value = mock_settings
+
+                local_path = component._get_local_path()
+
+            assert Path(local_path).read_text(encoding="utf-8") == "name\nCafé customer\n"
+        finally:
+            source.unlink(missing_ok=True)
+            component._cleanup_temp_file()
+
+    def test_get_local_path_keeps_utf8_local_file(self, component_class, model_value):
+        component = component_class()
+        component.set_attributes(
+            {
+                "model": model_value,
+                "path": "/tmp/test.csv",
+                "agent_type": "openai-tools",
+                "input_value": "test",
+            }
+        )
+        source = Path(component.path)
+        source.write_text("name\nCafé\n", encoding="utf-8")
+
+        try:
+            with patch("lfx.components.langchain_utilities.csv_agent.get_settings_service") as mock_get_settings:
+                mock_settings = MagicMock()
+                mock_settings.settings.storage_type = "local"
+                mock_get_settings.return_value = mock_settings
+
+                assert component._get_local_path() == str(source)
+                assert not hasattr(component, "_temp_file_path")
+        finally:
+            source.unlink(missing_ok=True)
+
     def test_get_local_path_with_s3_file(self, component_class, model_value):
         """Test _get_local_path downloads S3 files to temp."""
         component = component_class()
