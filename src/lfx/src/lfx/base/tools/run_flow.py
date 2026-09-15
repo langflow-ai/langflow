@@ -1,6 +1,7 @@
 import json
 from collections import Counter
 from contextlib import nullcontext
+from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
 from types import MethodType  # near the imports
@@ -14,7 +15,7 @@ from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
 
 # TODO: switch to lfx
-from lfx.helpers import get_flow_by_id_or_name, get_flow_inputs, run_flow
+from lfx.helpers import get_flow_by_id_or_name, get_flow_inputs, get_tool_pack_flow, run_flow
 from lfx.inputs.inputs import BoolInput, DropdownInput, InputTypes, MessageTextInput, StrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
@@ -222,11 +223,32 @@ class RunFlowBaseComponent(Component):
         if not (flow_name_selected or flow_id_selected):
             msg = "Flow name or id is required"
             raise ValueError(msg)
+        binding = self._tool_pack_binding()
+        if binding is not None and str(binding.tool.flow_id) != str(flow_id_selected):
+            msg = "The Tool Pack adapter points to a different flow. Restore its reviewed reference."
+            raise ValueError(msg)
         async with _model_provider_policy(
             user_id=self.user_id,
             flow_id=flow_id_selected,
             flow_name=flow_name_selected,
         ):
+            if binding is not None:
+                run_id = getattr(getattr(self, "graph", None), "run_id", None)
+                key = (run_id, binding)
+                if getattr(self, "_pack_snapshot_key", None) != key:
+                    snapshot = await get_tool_pack_flow(user_id=self.user_id, binding=binding)
+                    self._pack_snapshot = deepcopy(snapshot.data)
+                    self._pack_snapshot_key = key
+                # A fresh graph per invocation prevents tool arguments and build state
+                # leaking between calls. Its definition is fixed for this compiled run.
+                graph = Graph.from_payload(
+                    payload=deepcopy(self._pack_snapshot["data"]),
+                    flow_id=str(binding.tool.flow_id),
+                    flow_name=binding.tool.name,
+                    user_id=self.user_id,
+                )
+                graph.description = binding.tool.description
+                return graph
             if flow_id_selected and (flow := self._flow_cache_call("get", flow_id=flow_id_selected)):
                 if str(getattr(flow, "flow_id", "")) != str(flow_id_selected):
                     self._flow_cache_call("delete", flow_id=flow_id_selected)
@@ -392,7 +414,7 @@ class RunFlowBaseComponent(Component):
 
         # convert list of dicts to list of dotdicts
         tool_mode_inputs = [dotdict(field) for field in tool_mode_inputs]
-        return component_toolkit(component=self).get_tools(
+        tools = component_toolkit(component=self).get_tools(
             tool_name=f"{self.flow_name_selected}_tool",
             tool_description=(
                 f"Tool designed to execute the flow '{self.flow_name_selected}'. Flow details: {flow_description}."
@@ -400,6 +422,10 @@ class RunFlowBaseComponent(Component):
             callbacks=self.get_langchain_callbacks(),
             flow_mode_inputs=tool_mode_inputs,
         )
+        if (binding := self._tool_pack_binding()) is not None:
+            for tool in tools:
+                tool.metadata = {**(tool.metadata or {}), "harness_tool_pack": binding.model_dump(mode="json")}
+        return tools
 
     ################################################################
     # Flow output resolution
@@ -461,6 +487,15 @@ class RunFlowBaseComponent(Component):
             return result.results or result.artifacts or result.outputs
         return None
 
+    def _tool_pack_binding(self):
+        from lfx.projects.tool_packs import ToolPackToolBinding
+        from lfx.projects.tools import TOOL_ORIGIN
+
+        vertex = getattr(self, "_vertex", None)
+        origin = vertex.data.get(TOOL_ORIGIN) if vertex is not None else None
+        binding = origin.get("tool_pack") if isinstance(origin, dict) else None
+        return ToolPackToolBinding.model_validate(binding) if binding is not None else None
+
     def _instruction_binding(self):
         """Read the typed contract on a generated flow-reference node, if present."""
         from lfx.projects.bindings import BINDING_ORIGIN, FlowBinding
@@ -476,6 +511,9 @@ class RunFlowBaseComponent(Component):
         # The base copy reconstructs declared inputs/outputs, but these methods
         # are registered on the instance after loading the selected flow.
         component._ensure_flow_output_methods()  # noqa: SLF001
+        if hasattr(self, "_pack_snapshot_key"):
+            component._pack_snapshot_key = self._pack_snapshot_key  # noqa: SLF001
+            component._pack_snapshot = deepcopy(self._pack_snapshot)  # noqa: SLF001
         return component
 
     def _clear_dynamic_flow_output_methods(self) -> None:

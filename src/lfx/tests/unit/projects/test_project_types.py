@@ -92,6 +92,7 @@ class TestAgentHarness:
             "system_prompt",
             "model",
             "tools",
+            "tool_packs",
             "n_messages",
             "tool_policy",
             "context_strategy",

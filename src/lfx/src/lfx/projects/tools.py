@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from copy import deepcopy
 
@@ -105,13 +106,32 @@ def compose_tools(data: dict, *, project_id: str, agent_id: str, targets: list[d
     position = agent.get("position", {"x": 0, "y": 0})
     occupied = [node.get("position", {}) for node in flow["data"]["nodes"]]
     for target in targets:
+        binding = target.get("tool_pack")
         if target["id"] in existing:
-            # A manually edited tool stays edited, including its connections.
+            node = existing[target["id"]]
+            origin = node["data"][TOOL_ORIGIN]
+            if origin.get("tool_pack") != binding:
+                if origin.get("applied_revision") != _tool_node_revision(node):
+                    msg = (
+                        "This tool was edited on the canvas. "
+                        "Restore it or remove its selection before updating the pack."
+                    )
+                    raise ValueError(msg)
+                registry = {"RunFlow": prepare_tool_template(target)}
+                replacement = {"data": {"nodes": [deepcopy(agent)], "edges": []}}
+                add_component(replacement, "RunFlow", registry, component_id=node["id"])
+                add_connection(replacement, node["id"], "component_as_tool", agent_id, "tools", registry=registry)
+                node["data"]["node"] = replacement["data"]["nodes"][-1]["data"]["node"]
+                origin["tool_pack"] = binding
+                origin["applied_revision"] = _tool_node_revision(node)
+            # A manually edited tool stays edited when its reviewed definition is unchanged.
             continue
         registry = {"RunFlow": prepare_tool_template(target)}
         added = add_component(flow, "RunFlow", registry)
         node = flow["data"]["nodes"][-1]
         node["data"][TOOL_ORIGIN] = {"project_id": project_id, "flow_id": target["id"]}
+        if binding is not None:
+            node["data"][TOOL_ORIGIN]["tool_pack"] = binding
         x, y = position.get("x", 0) - TOOL_COLUMN_OFFSET, position.get("y", 0)
         while any(
             abs(x - other.get("x", 0)) < TOOL_WIDTH and abs(y - other.get("y", 0)) < TOOL_ROW_HEIGHT
@@ -121,4 +141,14 @@ def compose_tools(data: dict, *, project_id: str, agent_id: str, targets: list[d
         node["position"] = {"x": x, "y": y}
         occupied.append(node["position"])
         add_connection(flow, added["id"], "component_as_tool", agent_id, "tools", registry=registry)
+        if binding is not None:
+            node["data"][TOOL_ORIGIN]["applied_revision"] = _tool_node_revision(node)
     return flow["data"]
+
+
+def _tool_node_revision(node: dict) -> str:
+    """Ignore layout while protecting the generated adapter's canvas configuration."""
+    definition = dict(node["data"]["node"])
+    # The canvas adds this marker when opening an otherwise unchanged node.
+    definition.pop("lf_version", None)
+    return hashlib.sha256(json.dumps(definition, sort_keys=True, separators=(",", ":")).encode()).hexdigest()

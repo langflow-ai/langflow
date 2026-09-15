@@ -39,6 +39,35 @@ class ToolPackManifest(BaseModel):
     tools: tuple[ToolExport, ...]
 
 
+class ToolPackToolBinding(BaseModel):
+    """The reviewed export and its server-created executable snapshot."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    reference: ToolPackReference
+    tool: ToolExport
+    version_id: UUID
+
+
+class ToolDependencyUse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    tool_call_id: str = Field(min_length=1)
+    tool_name: str
+    binding: ToolPackToolBinding
+
+
+def tool_pack_references(value: object) -> tuple[ToolPackReference, ...]:
+    if not isinstance(value, list):
+        msg = "Tool packs must be a list of reviewed project references."
+        raise TypeError(msg)
+    references = tuple(ToolPackReference.model_validate(item) for item in value)
+    if len({item.project_id for item in references}) != len(references):
+        msg = "Select each tool pack only once."
+        raise ValueError(msg)
+    return references
+
+
 def exported_flow_ids(config: dict | None) -> tuple[UUID, ...]:
     value = (config or {}).get("tools", [])
     if not isinstance(value, list) or any(not isinstance(item, str) for item in value):

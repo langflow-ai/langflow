@@ -82,6 +82,7 @@ class SourcedReportComponent(Component):
             ),
             sources=(*collected.sources, *(SourceRecord.model_validate(item.data.get("source")) for item in evidence)),
             source_uses=collected.uses,
+            tool_dependencies=collected.tool_dependencies,
         )
         if self.require_resolved:
             report.require_resolved_citations()

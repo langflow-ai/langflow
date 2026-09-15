@@ -4,9 +4,30 @@ from uuid import uuid4
 import pytest
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph.flow_builder import add_component, add_connection, empty_flow
-from lfx.projects.tool_packs import ToolPackReference, exported_flow_ids, tool_pack_manifest
+from lfx.projects.tool_packs import ToolPackReference, exported_flow_ids, tool_pack_manifest, tool_pack_references
 
 from lfx.projects import get_project_type, get_slot
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        None,
+        {},
+        ["id"],
+        [{"project_id": str(uuid4())}],
+        [{"project_id": str(uuid4()), "expected_type": "agent-harness", "revision": "a" * 64}],
+    ],
+)
+def test_invalid_consumer_references_are_rejected(value):
+    with pytest.raises((TypeError, ValueError)):
+        tool_pack_references(value)
+
+
+def test_duplicate_consumer_references_are_rejected():
+    reference = ToolPackReference(project_id=uuid4(), revision="a" * 64).model_dump(mode="json")
+    with pytest.raises(ValueError, match="only once"):
+        tool_pack_references([reference, reference])
 
 
 @pytest.fixture

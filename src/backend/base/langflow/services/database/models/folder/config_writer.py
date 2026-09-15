@@ -6,6 +6,7 @@ from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from fastapi import HTTPException
 from lfx.base.agents.harness import HarnessRuntimeConfig
@@ -19,20 +20,23 @@ from lfx.projects.context import compose_context
 from lfx.projects.flow_slots import BINDING_LABELS, ProjectFlowBindings, validate_project_binding
 from lfx.projects.hooks import compose_hooks
 from lfx.projects.permissions import compose_permission
+from lfx.projects.tool_packs import ToolPackToolBinding, tool_pack_references
 from lfx.projects.tools import agent_node_ids, compose_tools
 from sqlmodel import col, select
 
+from langflow.services.authorization import FlowAction
 from langflow.services.database.models.flow.guards import LockedFlowError, ensure_flow_unlocked
 from langflow.services.database.models.flow.model import Flow, FlowType
 from langflow.services.database.models.flow_version.crud import create_flow_version_entry
 from langflow.services.database.models.flow_version.model import FlowVersion
-from langflow.services.database.models.folder.tool_packs import describe_tool_pack
+from langflow.services.database.models.folder.tool_packs import describe_tool_pack, resolve_tool_pack
 from lfx.projects import DEFAULT_PROJECT_TYPE, apply_project_config, get_project_type
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.folder.model import Folder
+    from langflow.services.database.models.user.model import User
 
 
 @dataclass
@@ -157,17 +161,19 @@ async def _binding_version(session: AsyncSession, source: Flow, field_name: str)
             source.id,
             source.user_id,
             data=deepcopy(source.data),
-            description=f"Harness {BINDING_LABELS[field_name]} binding",
+            description=f"Harness {BINDING_LABELS.get(field_name, field_name)} binding",
         )
     return str(version.id)
 
 
 async def write_project_config_to_flows(
-    session: AsyncSession, project: Folder, *, previous_config: dict | None = None
+    session: AsyncSession, project: Folder, *, current_user: User, previous_config: dict | None = None
 ) -> ProjectConfigWrite:
     result = ProjectConfigWrite()
     clearing_config = project.project_config is None
-    if not project.project_config and not (previous_config or {}).get("flow_bindings"):
+    if not project.project_config and not any(
+        (previous_config or {}).get(key) for key in ("flow_bindings", "tool_packs", "tools")
+    ):
         return result
     try:
         project_type = get_project_type(project.project_type or DEFAULT_PROJECT_TYPE)
@@ -201,6 +207,7 @@ async def write_project_config_to_flows(
         config["agent_flow_id"] = previous_config.get("agent_flow_id")
     targets = flows
     tools = []
+    pack_targets = []
     instruction_target = None
     instruction_binding = None
     bindings = ProjectFlowBindings()
@@ -227,6 +234,46 @@ async def write_project_config_to_flows(
                 )
         if "tools" in config:
             tools = selected_tools(flows, agent, config["tools"])
+        try:
+            references = tool_pack_references(config.get("tool_packs", []))
+        except (ValueError, TypeError) as exc:
+            raise HTTPException(422, str(exc)) from exc
+        if references and agent is None:
+            raise HTTPException(422, "Choose an agent flow before adding tool packs.")
+        resolved = []
+        for reference in references:
+            manifest, exports = await resolve_tool_pack(
+                session, current_user, reference.project_id, action=FlowAction.EXECUTE
+            )
+            if manifest.reference != reference:
+                raise HTTPException(422, "The tool pack changed. Review its exports before saving the harness.")
+            resolved.append((manifest, {export.id: export for export in exports}))
+        for manifest, exports in resolved:
+            for export in manifest.tools:
+                source = exports[export.flow_id]
+                try:
+                    reject_recursive_binding(
+                        [
+                            {"id": str(item.id), "name": item.name, "data": item.data}
+                            for item in [*flows, *exports.values()]
+                        ],
+                        str(source.id),
+                        str(agent.id),
+                    )
+                except ValueError as exc:
+                    raise HTTPException(422, str(exc)) from exc
+                version_id = await _binding_version(session, source, "Tool Pack")
+                binding = ToolPackToolBinding(reference=manifest.reference, tool=export, version_id=UUID(version_id))
+                pack_targets.append(
+                    {
+                        "id": str(source.id),
+                        "name": source.name,
+                        "data": source.data,
+                        "tool_pack": binding.model_dump(mode="json"),
+                    }
+                )
+        if "tool_packs" in config:
+            config["tool_packs"] = [reference.model_dump(mode="json") for reference in references]
         if agent is not None:
             config["agent_flow_id"] = str(agent.id)
         try:
@@ -326,7 +373,9 @@ async def write_project_config_to_flows(
                 )
             except (ValueError, KeyError, TypeError) as exc:
                 raise HTTPException(422, f"Could not bind Permissions: {exc}") from exc
-        if project_type.name == "agent-harness" and "tools" in config:
+        if project_type.name == "agent-harness" and (
+            "tools" in config or "tool_packs" in config or (previous_config or {}).get("tool_packs") or clearing_config
+        ):
             try:
                 data = compose_tools(
                     data,
@@ -340,7 +389,8 @@ async def write_project_config_to_flows(
                             "updated_at": tool.updated_at.isoformat() if tool.updated_at else None,
                         }
                         for tool in tools
-                    ],
+                    ]
+                    + pack_targets,
                 )
             except (ValueError, KeyError, TypeError) as exc:
                 raise HTTPException(422, f"Could not configure the selected tools: {exc}") from exc

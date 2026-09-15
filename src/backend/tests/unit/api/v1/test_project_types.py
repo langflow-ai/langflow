@@ -66,6 +66,7 @@ async def test_the_harness_form_renders_with_canvas_widgets(client, logged_in_he
         "system_prompt",
         "model",
         "tools",
+        "tool_packs",
         "n_messages",
         "tool_policy",
         "context_strategy",
@@ -87,7 +88,8 @@ async def test_the_form_carries_the_sections_it_should_be_grouped_into(client, l
     harness = await harness_from_api(client, logged_in_headers)
 
     sections = [field["section"] for field in harness["template"].values()]
-    assert sections == ["Instructions", "Model", "Tools", *(["Runtime"] * 8), "Hooks"]
+    assert sections == ["Instructions", "Model", "Tools", "Tools", *(["Runtime"] * 8), "Hooks"]
+    assert harness["template"]["tool_packs"]["show"] is False
     assert harness["template"]["hooks"]["show"] is True
     assert harness["template"]["hooks"]["renders"] == "hook_flows"
 

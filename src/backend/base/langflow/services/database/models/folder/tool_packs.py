@@ -1,15 +1,19 @@
 """Resolve a typed project's explicit tool exports within the caller's permissions."""
 
+from copy import deepcopy
 from uuid import UUID
 
 from fastapi import HTTPException
-from lfx.projects.tool_packs import ToolPackManifest, exported_flow_ids, tool_pack_manifest
+from lfx.projects.bindings import flow_revision
+from lfx.projects.tool_packs import ToolPackManifest, ToolPackToolBinding, exported_flow_ids, tool_pack_manifest
+from lfx.schema.data import Data
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.authorization import FlowAction, ProjectAction, ensure_flow_permission, ensure_project_permission
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_authorization_service
@@ -80,3 +84,29 @@ async def resolve_tool_pack(
     except (ValueError, KeyError, TypeError) as exc:
         raise HTTPException(409, "The tool pack has invalid exports. Review its configuration.") from exc
     return manifest, flows
+
+
+async def resolve_tool_pack_snapshot(session: AsyncSession, user: User, binding: ToolPackToolBinding) -> Data:
+    """Authorize current access, then load exactly the reviewed executable definition."""
+    manifest, flows = await resolve_tool_pack(session, user, binding.reference.project_id, action=FlowAction.EXECUTE)
+    if manifest.reference != binding.reference or binding.tool not in manifest.tools:
+        msg = "The tool pack changed. Review its exports and save the harness before running it."
+        raise ValueError(msg)
+    source = next(flow for flow in flows if flow.id == binding.tool.flow_id)
+    version = await session.get(FlowVersion, binding.version_id)
+    if (
+        version is None
+        or version.flow_id != source.id
+        or version.user_id != source.user_id
+        or flow_revision(version.data) != binding.tool.revision
+    ):
+        msg = "The reviewed tool snapshot is unavailable. Review and save its Tool Pack reference again."
+        raise ValueError(msg)
+    return Data(
+        data={
+            "id": str(source.id),
+            "name": binding.tool.name,
+            "description": binding.tool.description,
+            "data": deepcopy(version.data),
+        }
+    )

@@ -88,6 +88,19 @@ AGENT_HARNESS = register_project_type(
                 ),
             ),
             ProjectTypeField(
+                name="tool_packs",
+                section="Tools",
+                renders="project_refs",
+                input=StrInput(
+                    name="tool_packs",
+                    display_name="Tool packs",
+                    info="Reviewed tools from reusable Tool Pack projects.",
+                    list=True,
+                    value=[],
+                    show=False,
+                ),
+            ),
+            ProjectTypeField(
                 name="n_messages",
                 section="Runtime",
                 writes_to=FieldTarget("Agent", "n_messages"),

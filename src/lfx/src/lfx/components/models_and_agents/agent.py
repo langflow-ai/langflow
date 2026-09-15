@@ -669,7 +669,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
 
             # Retain completed source results before compaction mutates message state.
             # The same state is checkpointed when an approval suspends this run.
-            middleware.append(SourceEvidenceMiddleware())
+            middleware.append(SourceEvidenceMiddleware(self.tools))
             middleware.append(ToolCallIDMiddleware())
         max_iterations = getattr(self, "max_iterations", None)
         if max_iterations is not None:
