@@ -390,6 +390,10 @@ async def _stream_event_frames(
         for event in adapter.initial_events():
             yield _frame(event, seq)
             seq += 1
+        if parsed.component_substitution_warning:
+            for event in adapter.translate("warning", {"message": parsed.component_substitution_warning}):
+                yield _frame(event, seq)
+                seq += 1
         while True:
             _, value, _ = await queue.get()
             if value is None:

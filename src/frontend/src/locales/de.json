@@ -2406,5 +2406,6 @@
   "sharing.permission.for": "Permission for {{target}}",
   "_translationNeeded.le1905EnterpriseSharing": "TODO(LE-1905): Review the English Enterprise sharing values in this locale.",
   "slider.strict": "Streng",
-  "slider.permissive": "Tolerant"
+  "slider.permissive": "Tolerant",
+  "playground.workflowWarning": "Warnung zum Workflow"
 }

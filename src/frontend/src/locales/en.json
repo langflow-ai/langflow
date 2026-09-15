@@ -2405,5 +2405,6 @@
   "sharing.file.level.admin.desc": "View, edit, and delete this file.",
   "sharing.permission.for": "Permission for {{target}}",
   "slider.strict": "Strict",
-  "slider.permissive": "Permissive"
+  "slider.permissive": "Permissive",
+  "playground.workflowWarning": "Workflow warning"
 }
