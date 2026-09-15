@@ -806,6 +806,8 @@ export const BUNDLES_SIDEBAR_FOLDER_NAMES = [
 export const AUTHORIZED_DUPLICATE_REQUESTS = [
   "/health",
   "/flows",
+  // Report pagination, reopen, and retry reads are coordinated by React Query.
+  "/reports",
   "/logout",
   "/refresh",
   "/login",
