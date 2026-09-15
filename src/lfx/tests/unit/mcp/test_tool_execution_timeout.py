@@ -242,8 +242,12 @@ async def test_streamable_http_session_creation_waits_with_configured_budget():
         await manager.cleanup_all()
 
     assert transport == "streamable_http"
-    # The background task also bounds session.initialize() (2 s); the readiness wait is the budget.
-    assert 45.0 in observed
+    # Both waits on this path take the budget: the readiness wait here, and the
+    # `session.initialize()` the background task makes. The latter used to be a
+    # hardcoded 2 s, which no value of LANGFLOW_MCP_SERVER_TIMEOUT could lift, and
+    # whose TimeoutError counts as transient so there was no SSE fallback either.
+    assert observed.count(45.0) >= 2
+    assert 2.0 not in observed
     assert 30.0 not in observed
 
 
