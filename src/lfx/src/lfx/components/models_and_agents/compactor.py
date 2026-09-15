@@ -47,7 +47,9 @@ class CompactorComponent(Component):
         summarizer.summary_prompt += "\n" + self.instructions.replace("{", "{{").replace("}", "}}")
         update = await summarizer.abefore_model({"messages": deepcopy(conversation)}, None)
         if not update:
-            return CompactionResult(kept_messages=messages_to_table(messages), dropped_count=0)
+            result = CompactionResult(kept_messages=messages_to_table(messages), dropped_count=0)
+            self.status = result.model_dump()
+            return result
         # Remove-all sentinel, summary, then the untouched suffix selected by LangChain.
         suffix = update["messages"][2:]
         cutoff = len(conversation) - len(suffix)
@@ -56,8 +58,10 @@ class CompactorComponent(Component):
         keep_indices.update(conversation_indices[cutoff:])
         kept = [message for i, message in enumerate(messages) if i in keep_indices]
         summary = update["messages"][1].content.removeprefix("Summary of earlier conversation:\n")
-        return CompactionResult(
+        result = CompactionResult(
             kept_messages=messages_to_table(kept),
             summary_message=Message(text=summary),
             dropped_count=len(messages) - len(kept),
         )
+        self.status = result.model_dump()
+        return result

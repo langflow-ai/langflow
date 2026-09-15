@@ -156,6 +156,7 @@ class TestAgentHarness:
     def test_compaction_offers_only_what_the_runtime_honours(self, harness):
         """Every offered mode has a tested middleware implementation."""
         assert harness.to_template()["compaction"]["options"] == ["off", "summarize"]
+        assert harness.to_template()["compaction"]["supports_flow_binding"] is True
 
 
 class TestSections:

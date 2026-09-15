@@ -306,8 +306,11 @@ def test_invalid_binding_settings_fail(settings):
         CompactionBinding(flow_id="f", node_id="n", output_name="result", revision="r", **settings)
 
 
-async def test_standalone_preview_uses_the_connected_preview_model():
-    flow = build_slot_baseline("builtin:compaction", initial_config={"compaction_keep_messages": 1})
+@pytest.mark.parametrize("keep", [1, 12])
+async def test_standalone_preview_uses_the_connected_preview_model(keep):
+    from lfx.schema.schema import build_output_logs
+
+    flow = build_slot_baseline("builtin:compaction", initial_config={"compaction_keep_messages": keep})
     graph = Graph.from_payload(flow["data"])
     model = CompactionModel()
     graph.get_vertex(flow["data"]["nodes"][0]["id"]).update_raw_params({"preview_model": model}, overwrite=True)
@@ -316,9 +319,15 @@ async def test_standalone_preview_uses_the_connected_preview_model():
     terminal = graph.get_vertex(flow["data"]["nodes"][-1]["id"])
     output = terminal.custom_component.get_output("result").value
     assert isinstance(output, CompactionResult)
-    assert output.dropped_count == 2
-    assert "source-1" in output.summary_message.text
-    assert len(model.seen) == 1
+    assert output.dropped_count == (2 if keep == 1 else 0)
+    if keep == 1:
+        assert "source-1" in output.summary_message.text
+    assert len(model.seen) == (1 if keep == 1 else 0)
+    preview = build_output_logs(terminal, (terminal.custom_component,))["result"]
+    assert preview["type"] == "object"
+    assert preview["message"]["dropped_count"] == output.dropped_count
+    assert preview["message"]["kept_messages"][-1]["data"]["content"] == "Continue researching."
+    assert preview["message"]["summary_message"] == (output.summary_message.model_dump() if keep == 1 else None)
 
 
 async def test_structured_output_runs_custom_compaction_with_scalar_off(tmp_path, monkeypatch):

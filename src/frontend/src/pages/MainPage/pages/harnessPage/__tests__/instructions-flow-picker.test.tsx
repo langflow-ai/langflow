@@ -403,3 +403,129 @@ describe("Context flow selection", () => {
     ).toBeDisabled();
   });
 });
+
+describe("Compaction flow selection", () => {
+  const compaction = {
+    ...binding,
+    output_name: "result",
+    timeout_seconds: 2.5,
+    trigger_tokens: 1600,
+  };
+  beforeEach(() => {
+    choices = [
+      {
+        ...compaction,
+        flow_name: "Evidence compaction",
+        display_name: "Compact Conversation · Compaction",
+      },
+    ];
+  });
+
+  it("keeps threshold and timeout when reviewing a new revision, and drops the previous snapshot", () => {
+    choices[0].revision = "changed";
+    const onChange = setup({ fieldName: "compaction", value: compaction });
+    expect(screen.getByText("Compaction from a flow")).toBeVisible();
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      "/flow/source?harnessField=compaction",
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Update binding/i }));
+    expect(onChange.mock.calls[0][0]).toEqual({
+      flow_id: "source",
+      node_id: "output",
+      output_name: "result",
+      revision: "changed",
+      trigger_tokens: 1600,
+      timeout_seconds: 2.5,
+    });
+  });
+
+  it("creates from the retained-message setting and binds the current threshold", async () => {
+    createFlow.mockResolvedValue({ id: "created" });
+    refetch.mockResolvedValue({
+      data: [{ ...choices[0], flow_id: "created" }],
+    });
+    const initialConfig = {
+      compaction_keep_messages: 3,
+      compaction_trigger_tokens: 2400,
+    };
+    const onChange = setup({ fieldName: "compaction", initialConfig });
+    fireEvent.click(
+      screen.getByRole("button", { name: /Use a flow instead/i }),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /Create Compaction Flow/i }),
+    );
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    expect(createFlow).toHaveBeenCalledWith(
+      "project",
+      "compaction",
+      "",
+      initialConfig,
+    );
+    expect(onChange.mock.calls[0][0]).toMatchObject({
+      flow_id: "created",
+      timeout_seconds: 60,
+      trigger_tokens: 2400,
+    });
+  });
+
+  it.each([0, 1.5, 10_000_001, NaN, Infinity])(
+    "keeps invalid threshold %s visible until correction",
+    (threshold) => {
+      const onChange = setup({
+        fieldName: "compaction",
+        value: { ...compaction, trigger_tokens: threshold },
+      });
+      const input = screen.getByRole("spinbutton", {
+        name: "Trigger at estimated tokens",
+      });
+      expect(input).toHaveAttribute("aria-invalid", "true");
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "whole-number threshold",
+      );
+      fireEvent.change(input, { target: { value: "8000" } });
+      expect(onChange).toHaveBeenCalledWith({
+        ...compaction,
+        trigger_tokens: 8000,
+      });
+    },
+  );
+
+  it("uses runtime defaults for an existing binding instead of unrelated scalar settings", () => {
+    setup({
+      fieldName: "compaction",
+      value: binding,
+      initialConfig: { compaction_trigger_tokens: 1234 },
+    });
+    expect(
+      screen.getByRole("spinbutton", { name: "Trigger at estimated tokens" }),
+    ).toHaveValue(8000);
+    expect(
+      screen.getByRole("spinbutton", { name: "Timeout (seconds)" }),
+    ).toHaveValue(60);
+  });
+
+  it("preserves the threshold when fixing a timeout and disables both during saves", () => {
+    const onChange = setup({
+      fieldName: "compaction",
+      value: { ...compaction, timeout_seconds: 0 },
+    });
+    fireEvent.change(
+      screen.getByRole("spinbutton", { name: "Timeout (seconds)" }),
+      { target: { value: "1.5" } },
+    );
+    expect(onChange).toHaveBeenCalledWith({
+      ...compaction,
+      timeout_seconds: 1.5,
+    });
+  });
+
+  it("disables Compaction changes during a save", () => {
+    setup({ fieldName: "compaction", value: compaction, disabled: true });
+    screen
+      .getAllByRole("spinbutton")
+      .forEach((input) => expect(input).toBeDisabled());
+    expect(screen.getByRole("combobox")).toBeDisabled();
+  });
+});

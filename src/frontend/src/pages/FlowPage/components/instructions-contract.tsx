@@ -22,7 +22,8 @@ export function HarnessFlowContract() {
   const fieldName =
     requestedField === "system_prompt" ||
     requestedField === "hooks" ||
-    requestedField === "context_strategy"
+    requestedField === "context_strategy" ||
+    requestedField === "compaction"
       ? requestedField
       : marker?.slot === "SystemPromptBuilder"
         ? "system_prompt"
@@ -30,13 +31,17 @@ export function HarnessFlowContract() {
           ? "hooks"
           : marker?.slot === "ContextManager"
             ? "context_strategy"
-            : undefined;
+            : marker?.slot === "Compactor"
+              ? "compaction"
+              : undefined;
   const kind =
     fieldName === "hooks"
       ? "hook"
       : fieldName === "context_strategy"
         ? "context"
-        : "instructions";
+        : fieldName === "compaction"
+          ? "compaction"
+          : "instructions";
   const capitalized = kind[0].toUpperCase() + kind.slice(1);
   const projectId = fieldName ? flow?.folder_id : undefined;
   // Selection and layout do not affect the output contract or trigger validation requests.
