@@ -67,6 +67,18 @@ describe("SIDEBAR_BUNDLES", () => {
     );
   });
 
+  it("classifies Slack as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Slack",
+          icon: "Slack",
+          name: "slack",
+        }),
+      ]),
+    );
+  });
+
   it("classifies Figranium as a sidebar bundle", () => {
     expect(SIDEBAR_BUNDLES).toEqual(
       expect.arrayContaining([
