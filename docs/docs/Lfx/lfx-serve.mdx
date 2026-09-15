@@ -163,7 +163,7 @@ curl -X POST http://localhost:8000/flows/$FLOW_ID/run \
 ```
 
 Request-scoped values are consulted before the process environment, so a caller's value always wins.
-Start the server with `--no-env-fallback` to remove the environment from resolution entirely, which makes `global_vars` the only accepted source:
+With the built-in environment resolver, start the server with `--no-env-fallback` to prevent process-environment fallback. Custom resolvers retain their own credential lookup behavior:
 
 ```bash
 uv run lfx serve ./flows/ --no-env-fallback

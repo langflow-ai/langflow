@@ -163,7 +163,9 @@ The base class authorizes the policy before `_resolve()` can fetch a secret and 
 
 <CodeBlock language="python" title="secret_manager_resolver.py">{sampleSecretManagerResolver}</CodeBlock>
 
-Select the resolver at deploy time.
+Save `secret_manager_resolver.py` in a directory on the serving process's `PYTHONPATH`, or install it as part of your host application and update the module path below.
+The sample module is reference code in this repository and is not included in the `lfx` wheel; copying `lfx.toml` alone does not install it.
+Copy the following configuration to `$LANGFLOW_CONFIG_DIR/lfx.toml` to select the resolver at deploy time.
 Configuration beats an `lfx.services` entry point, and `lfx.toml` beats `pyproject.toml`'s `[tool.lfx.services]`:
 
 <CodeBlock language="toml" title="lfx.toml">{sampleLfxToml}</CodeBlock>

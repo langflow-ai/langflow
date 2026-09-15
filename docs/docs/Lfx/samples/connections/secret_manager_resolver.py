@@ -63,7 +63,8 @@ class SecretManagerConnectionResolver(BaseConnectionResolverService):
         # A resolver that is not ready fails closed in get_connection_resolver()
         # instead of degrading to the environment resolver, so preload whatever
         # your store needs (client, auth, cache) before calling set_ready().
-        self.set_ready()
+        if callable(fetch_secret):
+            self.set_ready()
 
     def secret_name(self, ref: ConnectionRef) -> str:
         """Return the store key holding this connection's credential."""
@@ -87,14 +88,17 @@ class SecretManagerConnectionResolver(BaseConnectionResolverService):
         """Read the credential only after the base class authorizes the request."""
         _ = policy
         secret_name = self.secret_name(request.ref)
-        try:
-            raw = await asyncio.to_thread(self.fetch_secret, secret_name)
-        except Exception:  # noqa: BLE001 - vendor exceptions can contain credentials
-            failed = True
-        else:
-            failed = False
+
+        def fetch_safely() -> tuple[str | None, bool]:
+            # Catch vendor failures inside the worker so their exceptions never
+            # cross the async boundary, including through __context__ on Python 3.10.
+            try:
+                return self.fetch_secret(secret_name), False
+            except Exception:  # noqa: BLE001 - vendor exceptions can contain credentials
+                return None, True
+
+        raw, failed = await asyncio.to_thread(fetch_safely)
         if failed:
-            # Outside the handler: even __context__ must not retain store errors.
             raise ProviderUnavailableError(provider=request.ref.provider)
         if not raw:
             # No secret name and no store detail in the error: the message reaches
@@ -120,6 +124,7 @@ class MountedSecretsConnectionResolver(SecretManagerConnectionResolver):
     def __init__(self, secrets_dir: str | None = None) -> None:
         super().__init__()
         self._secrets_dir = Path(secrets_dir or DEFAULT_SECRETS_DIR)
+        self.set_ready()
 
     def secret_name(self, ref: ConnectionRef) -> str:
         """Return the file name holding this connection's credential."""
@@ -149,6 +154,7 @@ class MountedSecretsConnectionResolver(SecretManagerConnectionResolver):
 #         def __init__(self) -> None:
 #             super().__init__()
 #             self._client = boto3.client("secretsmanager")
+#             self.set_ready()
 #
 #         def fetch_secret(self, secret_name: str) -> str | None:
 #             try:
@@ -164,6 +170,7 @@ class MountedSecretsConnectionResolver(SecretManagerConnectionResolver):
 #         def __init__(self) -> None:
 #             super().__init__()
 #             self._client = hvac.Client()
+#             self.set_ready()
 #
 #         def fetch_secret(self, secret_name: str) -> str | None:
 #             read = self._client.secrets.kv.v2.read_secret_version(path=secret_name)

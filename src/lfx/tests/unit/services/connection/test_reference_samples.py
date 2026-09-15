@@ -26,7 +26,9 @@ from lfx.integrations import (
 )
 from lfx.services.authorization.base import ExecutionPrincipal
 from lfx.services.connection.base import BaseConnectionResolverService
+from lfx.services.deps import get_connection_resolver
 from lfx.services.manager import ServiceManager
+from lfx.services.schema import ServiceType
 from lfx.services.variable.service import VariableService
 
 from tests.unit.services.connection.sample_loader import load_connection_sample, requires_samples
@@ -207,6 +209,7 @@ async def test_secret_manager_sample_resolves_through_a_callable_client(secret_s
 async def test_secret_manager_sample_reads_a_mounted_secret_file(secret_sample, tmp_path) -> None:
     resolver = _mounted_resolver(secret_sample, tmp_path)
 
+    assert resolver.ready is True
     credential = await resolver.resolve(_request())
 
     # The trailing newline mounted secrets carry is stripped, not sent as part of the token.
@@ -305,6 +308,7 @@ async def test_secret_manager_sample_sanitizes_store_failures(secret_sample) -> 
         await resolver.resolve(_request())
 
     assert excinfo.value.__context__ is None
+    assert excinfo.value.__cause__ is None
     assert "must-not-leak" not in "".join(traceback.format_exception(excinfo.value))
 
 
@@ -319,6 +323,21 @@ def test_secret_manager_sample_refuses_a_path_that_escapes_the_secrets_directory
 def test_secret_manager_sample_without_a_client_fails_loudly(secret_sample) -> None:
     with pytest.raises(NotImplementedError, match="fetch_secret"):
         secret_sample.SecretManagerConnectionResolver().fetch_secret("any")
+
+
+@pytest.mark.parametrize("fetch_secret", [None, "not-callable"])
+def test_secret_manager_sample_without_a_callable_backend_fails_closed(
+    secret_sample, monkeypatch, fetch_secret
+) -> None:
+    resolver = secret_sample.SecretManagerConnectionResolver(fetch_secret=fetch_secret)
+    assert resolver.ready is False
+
+    manager = ServiceManager()
+    manager.services[ServiceType.CONNECTION_RESOLVER_SERVICE] = resolver
+    monkeypatch.setattr("lfx.services.manager.get_service_manager", lambda: manager)
+
+    with pytest.raises(RuntimeError, match="must be valid and ready"):
+        get_connection_resolver()
 
 
 # --------------------------------------------------------------------------- #
@@ -360,15 +379,44 @@ def test_wrong_resolver_class_fails_closed_instead_of_using_the_env_fallback() -
 # serve_request.sh
 # --------------------------------------------------------------------------- #
 
-_CURL_STUB = """#!/usr/bin/env bash
-# Stand in for curl: emit the request body the sample would have sent, NUL-terminated
-# so a pretty-printed multi-line JSON body stays one record.
-prev=""
+_CHILD_SAFETY_CHECK = """#!/usr/bin/env bash
+set -eu
+if [ "${LANGFLOW_API_KEY+x}" = x ] || [ "${GOOGLE_ACCESS_TOKEN+x}" = x ]; then
+  echo 'Credentials leaked into a child environment' >&2
+  exit 1
+fi
 for arg in "$@"; do
-  if [ "$prev" = "-d" ]; then printf '%s\\0' "$arg"; fi
-  prev="$arg"
+  case "$arg" in
+    *served-token*|*int13-test-api-key*)
+      echo 'Credentials leaked into child arguments' >&2
+      exit 1 ;;
+  esac
 done
 """
+
+_CURL_STUB = (
+    _CHILD_SAFETY_CHECK
+    + """
+# Check the API-key descriptor and emit the streamed body, NUL-terminated so
+# a pretty-printed multi-line JSON body stays one record.
+prev=""
+has_api_key=false
+has_body=false
+for arg in "$@"; do
+  if [ "$prev" = "-H" ] && [[ "$arg" = @/dev/fd/* ]]; then
+    IFS= read -r header < "${arg#@}"
+    [ "$header" = 'x-api-key: int13-test-api-key' ]
+    has_api_key=true
+  fi
+  if [ "$prev" = "--data-binary" ] && [ "$arg" = '@-' ]; then has_body=true; fi
+  prev="$arg"
+done
+[ "$has_api_key" = true ]
+[ "$has_body" = true ]
+cat
+printf '\\0'
+"""
+)
 
 requires_shell_tools = pytest.mark.skipif(
     shutil.which("bash") is None or shutil.which("jq") is None,
@@ -376,7 +424,7 @@ requires_shell_tools = pytest.mark.skipif(
 )
 
 
-def _serve_request_bodies(tmp_path) -> list[dict]:
+def _serve_request_bodies(tmp_path, *, trace: bool = False) -> list[dict]:
     """Run the sample script with a curl stub and return the bodies it would POST."""
     from tests.unit.services.connection.sample_loader import SAMPLES_DIR
 
@@ -385,12 +433,16 @@ def _serve_request_bodies(tmp_path) -> list[dict]:
     stub = bin_dir / "curl"
     stub.write_text(_CURL_STUB, encoding="utf-8")
     stub.chmod(0o755)
+    jq_stub = bin_dir / "jq"
+    jq_stub.write_text(_CHILD_SAFETY_CHECK + 'exec "$REAL_JQ" "$@"\n', encoding="utf-8")
+    jq_stub.chmod(0o755)
 
     served_credential = "served-token"  # pragma: allowlist secret
     env = dict(os.environ)
     env.update(
         {
             "PATH": f"{bin_dir}{os.pathsep}{env['PATH']}",
+            "REAL_JQ": shutil.which("jq"),
             "FLOW_ID": "00000000-0000-0000-0000-0000000013a1",
             "LANGFLOW_API_KEY": "int13-test-api-key",  # pragma: allowlist secret
             "GOOGLE_ACCESS_TOKEN": served_credential,
@@ -398,20 +450,23 @@ def _serve_request_bodies(tmp_path) -> list[dict]:
         }
     )
     result = subprocess.run(  # noqa: S603
-        [shutil.which("bash"), str(SAMPLES_DIR / "serve_request.sh")],
+        [shutil.which("bash"), *(["-x"] if trace else []), str(SAMPLES_DIR / "serve_request.sh")],
         capture_output=True,
         check=True,
         env=env,
     )
+    assert served_credential.encode() not in result.stderr
+    assert env["LANGFLOW_API_KEY"].encode() not in result.stderr
     return [json.loads(record) for record in result.stdout.split(b"\0") if record.strip()]
 
 
 @requires_shell_tools
-async def test_serve_request_sample_sends_credentials_that_actually_resolve(env_sample, tmp_path) -> None:
+@pytest.mark.parametrize("trace", [False, True])
+async def test_serve_request_sample_sends_credentials_that_actually_resolve(env_sample, tmp_path, trace) -> None:
     """The documented curl bodies resolve; the sample is executed, not just displayed."""
     from lfx.cli.runtime_variables import build_request_variables_from_global_vars
 
-    direct, structured = _serve_request_bodies(tmp_path)
+    direct, structured = _serve_request_bodies(tmp_path, trace=trace)
 
     credential = await env_sample.resolve_with_request_scope(
         HANDLE, direct["global_vars"], required_scopes=[DRIVE_SCOPE]

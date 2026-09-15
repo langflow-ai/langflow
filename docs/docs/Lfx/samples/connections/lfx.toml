@@ -1,4 +1,8 @@
 # Copy to $LANGFLOW_CONFIG_DIR/lfx.toml to select a host connection resolver.
+# Copy secret_manager_resolver.py to a directory on the serving process's
+# PYTHONPATH, or install it in your host application's Python environment and
+# update the module path below. The sample is not included in the lfx wheel;
+# copying this configuration alone does not install the resolver module.
 #
 # The value is "<module>:<Class>". The module must be importable by the serving
 # process, and the class must subclass BaseConnectionResolverService; anything
