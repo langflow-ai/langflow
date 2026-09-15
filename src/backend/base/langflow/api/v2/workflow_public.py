@@ -237,6 +237,8 @@ async def execute_public_workflow(
 
     # The narrower public schema has no ``data``/``tweaks`` fields; we
     # carry only the partial-run knobs into ParsedWorkflowRun.
+    # Substitution notices are for authenticated callers. Anonymous shared-link
+    # visitors cannot edit the flow and should not receive server policy details.
     parsed = ParsedWorkflowRun(
         flow_id=str(virtual_flow_id),
         input_value=request.input_value,
