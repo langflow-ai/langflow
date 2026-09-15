@@ -55,10 +55,22 @@ To migrate your database, do the following:
 Changing `LANGFLOW_DATABASE_URL` from SQLite to PostgreSQL does **not** copy existing SQLite data into PostgreSQL.
 Langflow initializes and migrates the new database schema, and your previous SQLite file remains where it was.
 
-There is no built-in SQLite-to-PostgreSQL data migrator.
-Langflow creates a new PostgreSQL schema, and then you can restore application data you saved.
+To copy everything from SQLite into PostgreSQL, stop Langflow and run `langflow convert-sqlite-to-postgres`:
 
-To migrate your flows while switching from SQLite to PostgreSQL, do the following:
+```bash
+langflow convert-sqlite-to-postgres \
+  --source sqlite:////path/to/langflow.db \
+  --target postgresql://user:password@host:5432/langflow
+```
+
+The SQLite database must already be on the schema of the Langflow version you run the command with, so start that version against it once first.
+If you copy the SQLite file before converting, use `sqlite3 langflow.db ".backup copy.db"` or `VACUUM INTO`. Langflow runs SQLite in WAL mode, so a plain file copy can come out empty.
+
+The command creates the PostgreSQL schema, copies every row in one transaction, and checks each table's row count before committing.
+If anything is refused, such as a value PostgreSQL does not accept or a target database that already belongs to another instance, nothing is written and the command lists the problems.
+Keep the same `LANGFLOW_SECRET_KEY` when you point Langflow at the new database, or stored credentials can't be decrypted.
+
+To move only your flows instead, do the following:
 
 1. [Export flows](/concepts-flows-import), and note any [global variables](/configuration-global-variables) or credentials.
 2. Provision PostgreSQL 15+ and set `LANGFLOW_DATABASE_URL` as described in [Configure an external PostgreSQL database](/configuration-custom-database).
