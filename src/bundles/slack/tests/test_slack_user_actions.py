@@ -60,6 +60,29 @@ async def test_search_surfaces_pagination_without_a_second_api_call(transport: S
     assert pagination.data["total_count"] == 2
 
 
+@pytest.mark.usefixtures("user_resolver")
+async def test_search_initializes_cursor_pagination_and_can_fetch_the_next_page(transport: SlackTransport) -> None:
+    transport.enqueue(load_fixture("search_messages"))
+    second_page = load_fixture("search_messages")
+    second_page["messages"]["matches"] = [{"text": "next page"}]
+    second_page["response_metadata"]["next_cursor"] = ""
+    transport.enqueue(second_page)
+    component = build_component(SlackSearchComponent, query="deploy")
+
+    pagination = await component.build_pagination()
+
+    assert transport.last.params["cursor"] == "*"
+    component.set(cursor=pagination.data["next_cursor"])
+    component._pre_run_setup()
+    matches = await component.build_matches()
+    last_page = await component.build_pagination()
+
+    assert transport.last.params["cursor"] == pagination.data["next_cursor"]
+    assert [match.data["text"] for match in matches] == ["next page"]
+    assert last_page.data["next_cursor"] is None
+    assert len(transport.calls) == 2
+
+
 @pytest.mark.usefixtures("user_resolver", "transport")
 async def test_search_rejects_an_out_of_range_page_size() -> None:
     component = build_component(SlackSearchComponent, query="deploy", count=250)

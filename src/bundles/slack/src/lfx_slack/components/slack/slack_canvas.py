@@ -43,7 +43,7 @@ class SlackCanvasComponent(SlackBaseComponent):
         StrInput(
             name="channel_id",
             display_name="Channel ID",
-            info="Creates a channel canvas instead of a standalone one. Required on free Slack plans.",
+            info="Adds the canvas as a channel tab. Required on free Slack plans.",
             advanced=True,
         ),
     ]

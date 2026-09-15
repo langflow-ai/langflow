@@ -83,7 +83,8 @@ class SlackSearchComponent(SlackBaseComponent):
             msg = "Query is required."
             raise ValueError(msg)
         count = self._request_count()
-        cursor = (self.cursor or "").strip() or None
+        # Slack requires "*" on the first request to enable cursor pagination.
+        cursor = (self.cursor or "").strip() or "*"
 
         async def call(client: SlackClient) -> dict:
             return await client.call(

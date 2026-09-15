@@ -16,6 +16,7 @@ Slack's own ``not_allowed_token_type`` error.
 
 from __future__ import annotations
 
+from functools import partial
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from lfx.custom.custom_component.component import Component
@@ -175,16 +176,16 @@ class SlackBaseComponent(Component):
 
         lease = self.connection_lease()
         credential = await lease.get_credential()
-        client = SlackClient(lease)
+        client = SlackClient(lease, credential_validator=partial(require_identity, expected=self.slack_identity))
         async with integration_action(
             self,
             provider=PROVIDER_ID,
             capability=self.capability_id,
             owner_kind=credential.owner_kind,
         ):
-            # Inside the span so a fail-closed identity denial is counted like
-            # any other integration error instead of vanishing from telemetry.
-            require_identity(credential, expected=self.slack_identity)
+            # The client checks the identity of the actual token before every
+            # request, including after a proactive or reactive refresh. Keep
+            # those checks inside the span so denials are counted in telemetry.
             body = await action(client)
         self.__dict__[_CACHE_KEY] = body
         return body

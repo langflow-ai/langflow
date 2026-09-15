@@ -8,10 +8,13 @@ request left the process.
 
 from __future__ import annotations
 
+from dataclasses import replace
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from conftest import FakeResolver, SlackTransport, build_component, load_fixture
 from lfx.integrations.errors import ConnectionNotAuthorizedError
-from lfx_slack import SlackPostAsAppComponent, SlackSearchComponent
+from lfx_slack import SlackPostAsAppComponent, SlackSearchComponent, SlackSendAsUserComponent
 from lfx_slack._base import SlackIdentityMismatchError
 
 
@@ -95,3 +98,45 @@ async def test_the_mismatch_message_names_neither_the_token_nor_the_workspace(
     rendered = f"{raised.value.message} {raised.value.safe_message} {raised.value.hint}"
     assert "xoxp" not in rendered
     assert "U0SLACKUSER" not in rendered
+
+
+@pytest.mark.parametrize(
+    ("component_class", "initial_identity", "refreshed_identity"),
+    [
+        (SlackPostAsAppComponent, "bot", "user_delegated"),
+        (SlackSendAsUserComponent, "user_delegated", "bot"),
+    ],
+)
+@pytest.mark.parametrize("refresh", ["auth_rejection", "expiry"])
+async def test_refreshed_identity_is_checked_before_using_its_token(
+    monkeypatch: pytest.MonkeyPatch,
+    transport: SlackTransport,
+    component_class: type,
+    initial_identity: str,
+    refreshed_identity: str,
+    refresh: str,
+) -> None:
+    fake = _resolver(monkeypatch, initial_identity)
+    original_resolve = fake.resolve
+
+    async def resolve(request):
+        credential = await original_resolve(request)
+        if len(fake.requests) > 1:
+            return replace(credential, identity=refreshed_identity)
+        if refresh == "expiry":
+            return replace(credential, expires_at=datetime.now(timezone.utc) + timedelta(seconds=10))
+        return credential
+
+    monkeypatch.setattr(fake, "resolve", resolve)
+    if refresh == "auth_rejection":
+        transport.enqueue(load_fixture("error_invalid_auth"))
+    transport.enqueue(load_fixture("chat_postmessage"))
+    component = build_component(component_class, channel="C0SLACKDEMO", text="hi")
+
+    with pytest.raises(SlackIdentityMismatchError) as raised:
+        await component.build_message()
+
+    assert raised.value.expected == initial_identity
+    assert raised.value.actual == refreshed_identity
+    assert len(fake.requests) == 2
+    assert len(transport.calls) == (1 if refresh == "auth_rejection" else 0)

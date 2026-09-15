@@ -2,11 +2,10 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 import pytest
 from conftest import FakeResolver, SlackTransport, build_component, load_fixture
 from lfx.integrations.errors import ScopeMissingError
+from lfx.services.manager import get_service_manager
 from lfx.services.schema import ServiceType
 from lfx_slack import SlackPostAsAppComponent, SlackSearchComponent
 from lfx_slack._base import SlackIdentityMismatchError
@@ -17,11 +16,10 @@ def telemetry(monkeypatch: pytest.MonkeyPatch) -> list:
     captured: list = []
 
     class Telemetry:
-        async def send_telemetry_data(self, payload, event_name):
-            captured.append((payload, event_name))
+        async def log_integration_action(self, payload):
+            captured.append(payload)
 
-    manager = SimpleNamespace(services={ServiceType.TELEMETRY_SERVICE: Telemetry()})
-    monkeypatch.setattr("lfx.services.manager.get_service_manager", lambda: manager)
+    monkeypatch.setitem(get_service_manager().services, ServiceType.TELEMETRY_SERVICE, Telemetry())
     return captured
 
 
@@ -42,9 +40,8 @@ async def test_a_successful_action_reports_only_the_capability(
 
     await component.build_matches()
 
-    payload, event_name = telemetry[0]
+    payload = telemetry[0]
     rendered = payload.model_dump()
-    assert event_name == "integration_action"
     assert rendered["provider"] == "slack"
     assert rendered["capability"] == "slack.user.search"
     assert rendered["success"] is True
@@ -67,7 +64,7 @@ async def test_a_failed_action_reports_the_typed_error_code(
     with pytest.raises(ScopeMissingError):
         await component.build_matches()
 
-    payload, _ = telemetry[0]
+    payload = telemetry[0]
     assert payload.success is False
     assert payload.error_code == "scope-missing"
 
@@ -80,8 +77,7 @@ async def test_a_fail_closed_identity_denial_is_counted(telemetry: list) -> None
     with pytest.raises(SlackIdentityMismatchError):
         await component.build_message()
 
-    payload, event_name = telemetry[0]
-    assert event_name == "integration_action"
+    payload = telemetry[0]
     assert payload.provider == "slack"
     assert payload.capability == "slack.bot.post"
     assert payload.success is False

@@ -51,7 +51,9 @@ from slack_sdk.errors import SlackApiError
 from slack_sdk.web.async_client import AsyncWebClient
 
 if TYPE_CHECKING:
-    from lfx.integrations.models import CredentialLease
+    from collections.abc import Callable
+
+    from lfx.integrations.models import CredentialLease, ResolvedCredential
     from slack_sdk.web.async_slack_response import AsyncSlackResponse
 
 PROVIDER_ID = "slack"
@@ -162,18 +164,33 @@ class SlackClient:
     the only signal a rotation happened.
     """
 
-    def __init__(self, lease: CredentialLease, *, timeout: int = DEFAULT_TIMEOUT_SECONDS) -> None:
+    def __init__(
+        self,
+        lease: CredentialLease,
+        *,
+        timeout: int = DEFAULT_TIMEOUT_SECONDS,
+        credential_validator: Callable[[ResolvedCredential], None] | None = None,
+    ) -> None:
         self._lease = lease
         self._timeout = timeout
+        self._credential_validator = credential_validator
         self._client: AsyncWebClient | None = None
 
     async def _web_client(self) -> AsyncWebClient:
+        credential = await self._lease.get_credential()
+        if self._credential_validator is not None:
+            self._credential_validator(credential)
+        token = credential.access_token.get_secret_value()
         if self._client is None:
             self._client = AsyncWebClient(
-                token=await self._lease.get_token(),
+                token=token,
                 base_url=SLACK_API_BASE_URL,
                 timeout=self._timeout,
             )
+        else:
+            # Multi-call actions can outlive a token. Always use the same
+            # credential that was just resolved and identity-checked.
+            self._client.token = token
         return self._client
 
     async def _invoke(self, method: str, **kwargs: Any) -> AsyncSlackResponse:
@@ -199,9 +216,7 @@ class SlackClient:
         except AuthExpiredError as exc:
             # Raises the original error when the single allowed re-resolve has
             # already been spent, so a permanently rejected token cannot loop.
-            token = await self._lease.get_token_after_auth_error(exc)
-            if self._client is not None:
-                self._client.token = token
+            await self._lease.get_token_after_auth_error(exc)
             response = await self._invoke(method, **payload)
         body = response.data
         return dict(body) if isinstance(body, dict) else {}

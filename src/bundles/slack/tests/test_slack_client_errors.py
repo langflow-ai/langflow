@@ -8,6 +8,9 @@ grant-scopes affordances would never fire.
 
 from __future__ import annotations
 
+from dataclasses import replace
+from datetime import datetime, timedelta, timezone
+
 import pytest
 from conftest import FakeResolver, SlackTransport, load_fixture
 from lfx.integrations.errors import (
@@ -148,6 +151,37 @@ async def test_a_second_auth_rejection_stops_instead_of_looping(transport: Slack
 
     assert len(transport.calls) == 2
     assert len(resolver.requests) == 2
+
+
+async def test_a_multi_request_action_uses_a_proactively_refreshed_token(
+    monkeypatch: pytest.MonkeyPatch,
+    transport: SlackTransport,
+) -> None:
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    expires_at = now + timedelta(hours=1)
+    resolver = FakeResolver(tokens=["xoxp-first", "xoxp-refreshed"])  # pragma: allowlist secret
+    original_resolve = resolver.resolve
+
+    async def resolve(request):
+        credential = await original_resolve(request)
+        return replace(credential, expires_at=expires_at) if len(resolver.requests) == 1 else credential
+
+    monkeypatch.setattr(resolver, "resolve", resolve)
+    lease = CredentialLease(
+        resolver,
+        ConnectionResolutionRequest(ref=ConnectionRef(provider="slack", name="workspace"), principal=PRINCIPAL),
+        now=lambda: now,
+    )
+    client = SlackClient(lease)
+    transport.enqueue(load_fixture("users_info"))
+    transport.enqueue(load_fixture("users_info"))
+
+    await client.call("users_info", user="U001")
+    now = expires_at
+    await client.call("users_info", user="U002")
+
+    assert len(resolver.requests) == 2
+    assert [call.authorization for call in transport.calls] == ["Bearer xoxp-first", "Bearer xoxp-refreshed"]
 
 
 async def test_none_valued_arguments_are_dropped(transport: SlackTransport) -> None:
