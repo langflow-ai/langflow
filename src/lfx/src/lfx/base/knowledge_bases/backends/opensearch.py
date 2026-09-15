@@ -279,6 +279,18 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             space_type=space_type,
         )
 
+    async def _write_embedded(self, ids: list[str], docs: list[IngestedDocument]) -> None:
+        # Like ingestion, no per-call field override: LangChain writes vectors to
+        # ``LANGCHAIN_DEFAULT_VECTOR_FIELD``, which is where ``iter_documents``
+        # and similarity search already look. ``add_embeddings`` creates the index
+        # with the right dimension when it does not exist yet.
+        await asyncio.to_thread(
+            self.vector_store.add_embeddings,  # type: ignore[attr-defined]
+            [(doc.content, doc.embedding) for doc in docs],
+            metadatas=[doc.metadata for doc in docs],
+            ids=ids,
+        )
+
     async def similarity_search(
         self,
         query: str,
@@ -559,6 +571,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                             content=str(content),
                             metadata=dict(metadata),
                             embedding=embedding,
+                            id=hit.get("_id") if isinstance(hit, dict) else None,
                         )
                     )
                     if len(buf) >= batch_size:
