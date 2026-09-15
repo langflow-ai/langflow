@@ -103,6 +103,7 @@ async def test_a_playground_build_that_succeeds_records_the_user_and_trigger(
     [run] = await _run_events(flow_id)
     assert (run.result, run.actor_type, run.user_id) == ("succeeded", "user", active_user.id)
     assert run.details["run"]["trigger"] == "interactive_chat"
+    assert run.resource_name == created.json()["name"]
 
 
 async def test_a_build_whose_component_fails_records_a_failed_run(client, logged_in_headers):
@@ -117,6 +118,7 @@ async def test_a_build_whose_component_fails_records_a_failed_run(client, logged
     [run] = await _run_events(flow_id)
     assert (run.event_type, run.result, run.error_code) == ("action", "failed", "FLOW_EXECUTION_FAILED")
     assert set(run.details) == {"schema_version", "run"}
+    assert run.resource_name == created.json()["name"]
 
 
 async def test_a_webhook_run_is_attributed_to_the_webhook_trigger(client, added_flow_webhook_test, created_api_key):
