@@ -121,8 +121,9 @@ def get_unified_models_detailed(
 
     for prov, models in provider_map.items():
         models.sort(key=_sort_key)
+        all_models_default = model_provider_metadata.get(prov, {}).get("all_models_default", False)
         for i, model in enumerate(models):
-            model["metadata"]["default"] = i < default_model_count
+            model["metadata"]["default"] = all_models_default or i < default_model_count
 
         # If only_defaults is True, filter to only default models
         if only_defaults:
