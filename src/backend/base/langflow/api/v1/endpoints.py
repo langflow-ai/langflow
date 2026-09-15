@@ -127,7 +127,6 @@ from langflow.services.integration_policy_discovery import (
     filter_component_palette_by_integration_policy,
 )
 from langflow.services.telemetry.schema import RunPayload
-from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
 
 if TYPE_CHECKING:
@@ -296,7 +295,7 @@ async def get_all(
         all_types = translate_component_dict(visible_types_en, locale) if locale != "en" else visible_types_en
 
         component_display_names = build_component_display_names(visible_types_en)
-        return compress_response({**all_types, "component_display_names": component_display_names})
+        return JSONResponse(content=jsonable_encoder({**all_types, "component_display_names": component_display_names}))
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
