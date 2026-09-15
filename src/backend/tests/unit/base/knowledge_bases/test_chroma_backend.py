@@ -713,3 +713,77 @@ class TestChromaCloudCollectionIsolation:
         with patch("lfx.base.knowledge_bases.backends.chroma.logger") as fake_logger:
             self._built_collection(backend)
         fake_logger.warning.assert_not_called()
+
+
+class TestChromaEmbeddedDocuments:
+    """Write chunks with precomputed vectors, the path a KB migration uses."""
+
+    async def _read_all(self, bk: ChromaLocalBackend) -> list[IngestedDocument]:
+        out: list[IngestedDocument] = []
+        async for batch in bk.iter_documents(batch_size=2, include_embeddings=True):
+            out.extend(batch)
+        return out
+
+    async def test_iter_documents_returns_store_ids(self, backend: ChromaBackend):
+        await backend.add_documents(
+            [Document(id="chunk-a", page_content="alpha", metadata={"n": 1})],
+        )
+        docs = await self._read_all(backend)
+        assert [d.id for d in docs] == ["chunk-a"]
+
+    async def test_copy_between_stores_preserves_vectors_without_an_embedder(
+        self, backend: ChromaBackend, tmp_path: Path
+    ):
+        await backend.add_documents(
+            [
+                Document(id="chunk-a", page_content="alpha", metadata={"n": 1}),
+                Document(id="chunk-b", page_content="beta", metadata={"n": 2}),
+                Document(id="chunk-c", page_content="gamma", metadata={"n": 3}),
+            ]
+        )
+        source = await self._read_all(backend)
+
+        target_path = tmp_path / "target_kb"
+        target_path.mkdir()
+        # No embedding function: nothing on this path may call a model.
+        target = ChromaLocalBackend(kb_name="target_kb", kb_path=target_path)
+        try:
+            await target.add_embedded_documents(source)
+            copied = {d.id: d for d in await self._read_all(target)}
+        finally:
+            await target.teardown()
+            gc.collect()
+
+        assert set(copied) == {"chunk-a", "chunk-b", "chunk-c"}
+        for original in source:
+            got = copied[original.id]
+            assert got.content == original.content
+            assert got.metadata == original.metadata
+            assert got.embedding == pytest.approx(original.embedding)
+
+    async def test_rewriting_the_same_batch_upserts(self, tmp_path: Path):
+        path = tmp_path / "upsert_kb"
+        path.mkdir()
+        bk = ChromaLocalBackend(kb_name="upsert_kb", kb_path=path)
+        docs = [
+            IngestedDocument(id=f"c{i}", content=f"doc {i}", metadata={"i": i}, embedding=[i / 10] * 4)
+            for i in range(5)
+        ]
+        try:
+            await bk.add_embedded_documents(docs)
+            await bk.add_embedded_documents(docs)
+            assert await bk.count() == 5
+        finally:
+            await bk.teardown()
+            gc.collect()
+
+    async def test_rejects_a_document_without_an_embedding(self, tmp_path: Path):
+        path = tmp_path / "reject_kb"
+        path.mkdir()
+        bk = ChromaLocalBackend(kb_name="reject_kb", kb_path=path)
+        try:
+            with pytest.raises(ValueError, match="embedding"):
+                await bk.add_embedded_documents([IngestedDocument(id="x", content="no vector")])
+        finally:
+            await bk.teardown()
+            gc.collect()
