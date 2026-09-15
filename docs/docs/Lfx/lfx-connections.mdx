@@ -187,6 +187,8 @@ Resolution failures are sanitized `IntegrationError` subclasses. Their string fo
 | `rate-limited` | The provider returned 429. | Retry after the provider's backoff. |
 | `provider-unavailable` | The provider failed or was unreachable. | Retry later. |
 | `action-unsupported` | The provider does not support the action. | Use a different action. |
+| `invalid-request` | The action's inputs are invalid or were rejected by the provider. | Correct the inputs before retrying. |
+| `resource-not-found` | The requested provider resource was not found or is inaccessible. | Check the resource ID and the connected account's access before retrying. |
 | `policy-blocked` | The deployment's integration policy blocks the provider or action. | Ask an administrator to approve the integration or action. |
 
 ## Declare connections in deployment artifacts
