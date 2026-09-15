@@ -275,3 +275,15 @@ def test_input_named_after_a_component_property_is_allowed():
     component = PropertyNamedInput()
 
     assert component.list_inputs() == ["code"]
+
+
+def test_input_named_after_a_metaclass_member_is_allowed():
+    """``mro`` is declared on the metaclass, which instance attribute lookup never consults."""
+
+    class MetaclassNamedInput(Component):
+        inputs = [StrInput(name="mro", display_name="Mro")]
+        outputs = [Output(display_name="Output", name="output", method="build")]
+
+    component = MetaclassNamedInput(mro="configured-value-42")
+
+    assert component.mro == "configured-value-42"

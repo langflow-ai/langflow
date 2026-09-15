@@ -352,18 +352,18 @@ class Component(CustomComponent):
         return input_names & output_names
 
     def _input_names_shadowing_component_members(self) -> set[str]:
-        """Input names that a method on the component shadows.
+        """Input names that a member of the component shadows.
 
         ``__getattr__`` resolves an input's value only when normal attribute lookup fails, so an
         input whose name matches a real class member silently resolves to that member instead of
         the value configured on the node. The failure is silent and the wrong value usually looks
         like a formatting bug, so it is reported instead.
 
-        Only callables are reported. Properties are deliberately left alone: ``code`` is a
-        property and is a legitimate input name that custom components rely on.
+        ``code`` is deliberately allowed: it is a property and an input name that custom
+        components rely on, and properties are not reported.
 
         Returns:
-            set[str]: Input names shadowed by a callable member of the component class.
+            set[str]: Input names shadowed by a member of the component class.
         """
         return {
             input_.name
@@ -373,9 +373,20 @@ class Component(CustomComponent):
 
     @classmethod
     def _shadows_component_member(cls, name: str) -> bool:
-        """Whether attribute lookup for ``name`` finds a method rather than an input value."""
-        member = getattr(cls, name, None)
-        return member is not None and callable(member) and not isinstance(member, property)
+        """Whether instance attribute lookup for ``name`` finds a member rather than an input.
+
+        Only names declared on the classes of ``cls.__mro__`` are considered. A plain
+        ``getattr(cls, name)`` would also reach the metaclass, and instance lookup never
+        consults it, so a name like ``mro`` would be reported even though ``self.mro``
+        correctly reaches ``__getattr__``.
+        """
+        for klass in cls.__mro__:
+            if name not in vars(klass):
+                continue
+            if isinstance(vars(klass)[name], property):
+                return False
+            return callable(getattr(cls, name, None))
+        return False
 
     def get_base_args(self):
         """Get the base arguments required for component initialization.
