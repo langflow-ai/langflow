@@ -3,6 +3,8 @@
 Status: implemented on `feat/harness-skill-packs`, based on `90a7dd4069`.
 This is the first slice following the [n8n comparison](n8n-harness-gap-analysis.md).
 Eval Suites and the complete Harness release lifecycle are subsequent slices.
+The [revised production plan](harness-production-plan.md) now defines the intervening
+artifact and Workflows API work, host boundaries, and branch acceptance gates.
 
 ## Authoring and execution
 
@@ -61,11 +63,13 @@ Two archives serve different purposes:
 - **Project composition ZIP:** imports reviewed projects, flows, and source versions
   into Langflow storage. This is the tested path for a Harness with Skill Packs and
   Tool Packs on a Langflow host. Configure destination credentials after import.
-- **Standalone deployment package (`.lfpkg`):** currently provisions flow files,
-  memory, and knowledge resources. It does not provision the project/version store
-  required by Tool Pack adapters. Packaging now rejects those references with a
-  specific remediation message, including skills that require them. It must not
-  silently produce an artifact that cannot run.
+- **Deployment package (`.lfpkg`):** contains flow files plus provisioning requirements
+  for memory, knowledge, variables, and connections. The writer does not include a
+  complete Harness dependency closure and verified runtime resolver. Packaging now
+  rejects Tool Pack references with a specific remediation message, including skills
+  that require them. The intended fix is immutable packaged definitions, not a
+  replica of the authoring database. Bare `lfx serve` loading graph files is not
+  proof that it reads this package format.
 
 Instruction-only skills carry their entire definition in the Agent and run through
 standalone `lfx serve`'s Workflows API without project storage. This is exercised by
@@ -76,25 +80,11 @@ customization or arbitrary dynamic reference.
 
 ## Gates for subsequent slices
 
-Every capability branch must preserve the API execution tests and document its
-supported hosts. Before calling the complete Harness production-ready:
-
-1. Package the full reviewed dependency closure for standalone deployments, with
-   credential placeholders and validation against the actual target host. Exercise
-   that artifact in a clean runtime, without access to the author's database.
-2. Extend Workflows API scenarios across Instructions, Hooks, Context, Compaction,
-   Permissions, tools, skills, and sourced artifacts together. Include stale/missing
-   versions, revoked access, malformed outputs, cancellation, timeout, disconnect,
-   reconnect, duplicate submission, and service restart during approval.
-3. Run the supported production database and worker topology, concurrent sessions,
-   and real provider smoke tests. Deterministic provider tests do not prove provider
-   availability, model quality, production isolation, or load behavior.
-4. Add Eval Suites targeting an exact candidate composition. Quality, policy,
-   latency, and budget results must remain attached to that candidate.
-5. Publish immutable complete compositions using existing version/deployment
-   facilities. Callers pin a release; preview, promotion, rollback, and in-flight
-   resume across deployment must have explicit tested semantics. Bound flow
-   snapshots alone are not a complete release mechanism.
+Use the [production plan](harness-production-plan.md) as the execution sequence:
+immutable runtime candidates → Workflows API reliability → Eval Suites → releases.
+Candidate identity comes before evaluations so the evaluated content is exactly
+what gets deployed. The plan distinguishes missing implementation from additional
+Harness-specific verification of existing platform facilities.
 
 ## Scope and verification limits
 

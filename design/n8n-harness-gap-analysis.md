@@ -2,6 +2,12 @@
 
 Research date: 2026-09-15. Langflow source reviewed at `90a7dd4069`. This is a research comparison and proposed sequence, not an implementation change.
 
+**Implementation update:** `2872d0193d` delivers the core reviewed Skill Pack slice.
+The comparison below preserves the research baseline. Follow the
+[revised production gap and branch plan](harness-production-plan.md) for current
+status and ordering: runtime artifacts, API reliability, Eval Suites, then releases.
+An immutable candidate must exist before evaluations can gate promotion of it.
+
 ## The relevant n8n product
 
 The relevant comparison is **n8n Agents and its Agent Builder**, announced on August 5, 2026. It creates an agent as its own project resource, distinct from the existing AI Agent node inside a workflow. The release packages instructions, model, tools, conversation continuity, channels, schedules, publishing, and delegation around that resource. “Harness builder” is a useful description of this direction; the official product name in the sources is Agent Builder. [n8n announcement](https://community.n8n.io/t/introducing-n8n-agents-a-new-way-to-build-agents-you-set-up-once-and-use-anywhere/306323).
