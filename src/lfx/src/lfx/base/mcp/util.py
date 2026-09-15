@@ -1596,7 +1596,14 @@ class MCPSessionManager:
                         ) as (read, write, _):
                             session = ClientSession(read, write)
                             async with session:
-                                await asyncio.wait_for(session.initialize(), timeout=2.0)
+                                # Same budget as the outer wait on `session_future` below, and as
+                                # the SSE branch, which has no inner cap at all. A hardcoded 2 s here
+                                # meant a healthy remote server that needs longer to initialize could
+                                # never connect: the TimeoutError it raises counts as transient, so
+                                # there is no SSE fallback either, and no value of
+                                # LANGFLOW_MCP_SERVER_TIMEOUT could lift it. The outer wait still
+                                # bounds the whole attempt sequence.
+                                await asyncio.wait_for(session.initialize(), timeout=get_session_init_timeout())
                                 used_transport.append("streamable_http")
                                 await logger.ainfo(f"Session {session_id} connected via Streamable HTTP")
                                 session_future.set_result(session)
