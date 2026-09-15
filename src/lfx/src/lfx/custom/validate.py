@@ -746,15 +746,25 @@ def extract_class_name(code: str) -> str:
     """
     try:
         module = ast.parse(code)
+        component_classes = []
         for node in module.body:
             if not isinstance(node, ast.ClassDef):
                 continue
 
             # Check bases for Component inheritance
             # TODO: Build a more robust check for Component inheritance
-            for base in node.bases:
-                if isinstance(base, ast.Name) and any(pattern in base.id for pattern in ["Component", "LC"]):
-                    return node.name
+            if any(
+                isinstance(base, ast.Name) and any(pattern in base.id for pattern in ["Component", "LC"])
+                for base in node.bases
+            ):
+                component_classes.append(node.name)
+
+        if len(component_classes) == 1:
+            return component_classes[0]
+        if len(component_classes) > 1:
+            class_names = ", ".join(component_classes)
+            msg = f"Multiple Component subclasses found in the code string: {class_names}"
+            raise ValueError(msg)
 
         msg = f"No Component subclass found in the code string. Code snippet: {code[:100]}"
         raise TypeError(msg)
