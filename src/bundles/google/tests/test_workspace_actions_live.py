@@ -25,13 +25,24 @@ refresh token:
     export LANGFLOW_GOOGLE_LIVE_RECIPIENT=you@example.com    # send-to-self target
 
 ``_mint_access_token`` below performs that exchange once per session and exports
-``LF_CONNECTION__GOOGLE__LIVE``. Alternatively export that variable yourself:
+``LF_CONNECTION__GOOGLE__LIVE`` with the ``scopes`` Google reports in the token
+response. Alternatively export that variable yourself, including ``scopes``:
 
-    export LF_CONNECTION__GOOGLE__LIVE='{"access_token":"ya29...."}'
+    export LF_CONNECTION__GOOGLE__LIVE='{"access_token":"ya29....",
+      "scopes":["https://www.googleapis.com/auth/gmail.send", ...]}'
 
-The Google project needs the scopes for these five actions on its consent screen. A project
-in *Testing* publishing status issues refresh tokens that expire after 7 days, so
-a maintained project in *In production* status is what keeps this suite runnable.
+The ``scopes`` list is not optional. The env resolver marks a credential without it as
+unverified, and every action declares required scopes, so the resolver's portable floor
+rejects all five before a request is built.
+
+Mint the refresh token with exactly the four distinct scopes the capability manifest
+declares (``gmail.send``, ``drive.file``, ``calendar.events.readonly``,
+``calendar.events``) and without ``include_granted_scopes``:
+``test_live_grant_is_least_privilege`` fails when Google reports any other grant, so
+the suite proves the least-privilege scope set rather than only the happy path. The
+Google project needs those scopes on its consent screen. A project in *Testing*
+publishing status issues refresh tokens that expire after 7 days, so a maintained
+project in *In production* status is what keeps this suite runnable.
 """
 
 from __future__ import annotations
@@ -39,6 +50,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -57,10 +69,19 @@ LIVE_ENV_KEY = "LF_CONNECTION__GOOGLE__LIVE"
 CONNECTION_HANDLE = "google/live"
 TOKEN_URL = "https://oauth2.googleapis.com/token"  # noqa: S105 - endpoint URL, not a credential
 HTTP_OK = 200
+MANIFEST_PATH = (
+    Path(__file__).resolve().parents[1] / "src" / "lfx_google" / "components" / "google" / "capabilities.v1.json"
+)
 
 
-def _mint_access_token() -> str | None:
-    """Exchange a stored refresh token for an access token, or return None."""
+def _manifest_scopes() -> set[str]:
+    """The distinct scopes the five capabilities declare: the least-privilege grant."""
+    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    return {scope for capability in manifest["capabilities"] for scope in capability["required_scopes"]}
+
+
+def _mint_access_token() -> dict | None:
+    """Exchange a stored refresh token for an env-resolver payload, or return None."""
     client_id = os.environ.get("GOOGLE_LIVE_CLIENT_ID")
     client_secret = os.environ.get("GOOGLE_LIVE_CLIENT_SECRET")
     refresh_token = os.environ.get("GOOGLE_LIVE_REFRESH_TOKEN")
@@ -80,7 +101,13 @@ def _mint_access_token() -> str | None:
     )
     if response.status_code != HTTP_OK:
         pytest.skip(f"Google refused the refresh-token exchange: {response.status_code}")
-    return response.json()["access_token"]
+    exchange = response.json()
+    # Google returns the granted scopes as one space-delimited string. Carrying them is
+    # what lets the resolver verify each action's required scopes.
+    payload: dict = {"access_token": exchange["access_token"], "scopes": exchange.get("scope", "").split()}
+    if isinstance(exchange.get("expires_in"), int | float):
+        payload["expires_at"] = int(time.time() + exchange["expires_in"])
+    return payload
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -88,13 +115,21 @@ def live_credential() -> None:
     """Make sure LF_CONNECTION__GOOGLE__LIVE holds a usable access token."""
     if os.environ.get(LIVE_ENV_KEY):
         return
-    token = _mint_access_token()
-    if token is None:
+    payload = _mint_access_token()
+    if payload is None:
         pytest.skip(
             f"Set {LIVE_ENV_KEY}, or GOOGLE_LIVE_CLIENT_ID/GOOGLE_LIVE_CLIENT_SECRET/"
             "GOOGLE_LIVE_REFRESH_TOKEN, to run the live Google suite."
         )
-    os.environ[LIVE_ENV_KEY] = json.dumps({"access_token": token})
+    os.environ[LIVE_ENV_KEY] = json.dumps(payload)
+
+
+def test_live_grant_is_least_privilege() -> None:
+    """The credential carries exactly the manifest's scopes: verified, and nothing broader."""
+    payload = json.loads(os.environ[LIVE_ENV_KEY])
+
+    assert "scopes" in payload, f"{LIVE_ENV_KEY} has no scopes list, so every action would fail as unverified."
+    assert set(payload["scopes"]) == _manifest_scopes()
 
 
 @pytest.fixture

@@ -73,6 +73,26 @@ def test_manifest_actions_match_the_capability_matrix() -> None:
         assert capability["identity"] == action["identity"], action_id
 
 
+# ``risk`` is served to the UI (api/v1/integrations.py) but the capability matrix
+# records no risk field, so nothing upstream approves it. Pin each value here so a
+# change is a reviewed edit of two files rather than a silent manifest flip. Until the
+# matrix carries risk, this bundle's rule is: an action that creates, sends or changes
+# provider state is ``write``; one that only reads is ``read``.
+EXPECTED_RISK = {
+    "google.gmail.send": "write",
+    "google.drive.list": "read",
+    "google.drive.fetch": "read",
+    "google.calendar.list": "read",
+    "google.calendar.create": "write",
+}
+
+
+def test_capability_risk_is_pinned() -> None:
+    risks = {capability["id"]: capability["risk"] for capability in _manifest()["capabilities"]}
+
+    assert risks == EXPECTED_RISK
+
+
 def test_gmail_search_is_not_shipped() -> None:
     # decisions/google-restricted-scopes.md Option B: gmail.readonly is restricted
     # and the wave-1 hosted app requests no restricted scope.
