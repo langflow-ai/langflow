@@ -22,8 +22,18 @@ from lfx.utils.validate_cloud import is_astra_cloud_environment
 
 
 def _escape_markdown_cell(value: Any) -> Any:
-    """A markdown table row is split on every unescaped pipe."""
-    return value.replace("|", r"\|") if isinstance(value, str) else value
+    """A markdown table row is split on every unescaped pipe.
+
+    A value `tabulate` will render through `str()` -- a list, a dict, an object
+    -- can hold one too, so it is escaped as the text it becomes. Anything
+    whose rendering carries no pipe is handed back untouched, so numbers keep
+    their type and their column keeps its alignment.
+    """
+    if isinstance(value, str):
+        return value.replace("|", r"\|")
+
+    rendered = str(value)
+    return rendered.replace("|", r"\|") if "|" in rendered else value
 
 
 def _dataframe_to_markdown(dataframe: pd.DataFrame) -> str:

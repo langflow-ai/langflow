@@ -1023,6 +1023,18 @@ class TestDataFrameToMarkdown:
         assert rows[0] == ["Pass|Fail", "Units"]
         assert rows[-1] == ["pass", "12"]
 
+    def test_a_pipe_in_a_value_tabulate_renders_through_str(self):
+        from lfx.components.files_and_knowledge.save_file import _dataframe_to_markdown
+
+        # tabulate renders a list, a dict or any other object with `str()` and
+        # escapes nothing, so the pipe inside it would add a column.
+        dataframe = pd.DataFrame({"Tags": [["a|b"]], "Units": [12]})
+
+        rows = _parse_markdown_rows(_dataframe_to_markdown(dataframe))
+
+        assert rows[0] == ["Tags", "Units"]
+        assert rows[-1] == ["['a|b']", "12"]
+
     def test_a_frame_that_needs_neither_is_unchanged(self):
         from lfx.components.files_and_knowledge.save_file import _dataframe_to_markdown
 
