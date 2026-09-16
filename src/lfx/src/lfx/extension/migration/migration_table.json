@@ -1517,6 +1517,11 @@
       "added_in": "1.12.0"
     },
     {
+      "bare_class_name": "AnonRouterComponent",
+      "target": "ext:anonrouter:AnonRouterComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
       "bare_class_name": "VllmComponent",
       "target": "ext:vllm:VllmComponent@official",
       "added_in": "1.11.0"
