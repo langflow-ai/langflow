@@ -78,8 +78,13 @@ def url_component_with_real_parser(monkeypatch):
     """Import URLComponent with only the non-parser dependencies stubbed.
 
     `_text_extractor` is what the parser does, so bs4 and lxml have to be real
-    here; the other stubs keep the import cheap.
+    here; the other stubs keep the import cheap. Both live in lfx's `integration`
+    extra rather than its base dependencies, which is why the fixture above stubs
+    them and why these cases are skipped where they are not installed.
     """
+    pytest.importorskip("bs4")
+    pytest.importorskip("lxml")
+
     for mod in (
         "langchain_community",
         "langchain_community.document_loaders",
