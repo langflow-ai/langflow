@@ -32,7 +32,7 @@ from lfx.log.logger import logger
 
 from langflow.services.background_execution.executor import InProcessExecutor
 from langflow.services.background_execution.live_bus import InMemoryLiveBus, LiveFrame
-from langflow.services.background_execution.runner import JobRunner
+from langflow.services.background_execution.runner import JobRunner, execution_timeout
 from langflow.services.base import Service
 from langflow.services.database.models.jobs.model import JobStatus, JobType, SignalType
 from langflow.services.deps import get_job_service
@@ -165,6 +165,7 @@ class BackgroundExecutionService(Service):
         # process owns execution. The input-deadline watchdog still runs here:
         # it is a pure-DB sweep, and the worker fleet does not run it.
         if self._scaled:
+            self._start_evaluation_coordinator()
             self._start_deadline_watchdog()
             return
         await self._executor.start()
@@ -646,17 +647,12 @@ class BackgroundExecutionService(Service):
             self._frame_source_factory = _default_frame_source_factory
         adapter = self._build_adapter(request, job_id, flow_id)
         source = self._frame_source_factory(request=request, flow_id=flow_id, user=user, adapter=adapter)
-        timeout = self._settings.background_job_timeout
-        # This field is server-owned; the public Workflows request does not carry it.
-        # Each active pass is bounded; time awaiting a human decision consumes no worker.
-        if request.get("evaluation_timeout_s") is not None:
-            timeout = min(timeout, request["evaluation_timeout_s"]) if timeout else request["evaluation_timeout_s"]
         runner = JobRunner(
             job_service=job_service,
             live_bus=self._bus,
             adapter=adapter,
             frame_source=source,
-            job_timeout=timeout,
+            job_timeout=execution_timeout(request, self._settings.background_job_timeout),
             owner=self._owner,
             heartbeat_interval_s=self._settings.background_heartbeat_interval_s,
             input_deadline_s=self._settings.background_input_deadline_s,
@@ -873,9 +869,9 @@ class BackgroundExecutionService(Service):
         reconstructed request. Best-effort per job so one bad row can't block the
         rest. The scaled backend reconciles via its worker-side watchdog.
         """
+        await self.start()
         if self._is_scaled_configured:
             return
-        await self.start()
         job_service = get_job_service()
         lease_ttl = self._settings.background_lease_ttl_s
         # Single-flight the IN_PROGRESS reconcile: only the worker that wins the

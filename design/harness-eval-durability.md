@@ -4,6 +4,11 @@ September 16, 2026. Branch `feat/harness-eval-durability`, based on
 `5cef7a99173597a096e4a020ecf6fa20699cf568` (`feat/harness-eval-suites`).
 One capability branch; no pull request.
 
+**Follow-up:** `feat/harness-eval-scaled-db` connects this lifecycle to #13508's
+database-backed queue and separate workers. See [the scaled contract and
+verification](harness-eval-scaled-db.md). The in-process restriction below describes
+this original delivery; it is removed by that verified follow-up.
+
 An Eval Suite now runs in the background and keeps its progress across page
 reloads and application restarts. Candidate and scorer flows execute as ordinary
 Workflows jobs. Both can pause for human input. The desktop workbench shows the
@@ -71,7 +76,7 @@ not promise exactly-once external side effects or arbitrary mid-tool recovery.
 ## Supported profile and limits
 
 - Authenticated authoring host with the developer Workflows API enabled and the
-  **in-process** Workflows backend. New submissions reject the scaled/Redis
+  **in-process** Workflows backend. This original branch rejects the scaled
   profile rather than accepting work that this coordinator cannot run there.
   Serving end-user identity mode remains unsupported for private Eval Suites.
 - At most 10 cases, processed sequentially within each suite. Children share the

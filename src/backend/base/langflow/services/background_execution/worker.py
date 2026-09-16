@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.log.logger import logger
 
 from langflow.services.background_execution.db_backend import _coerce_uuid
-from langflow.services.background_execution.runner import JobRunner
+from langflow.services.background_execution.runner import JobRunner, execution_timeout
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -95,9 +95,10 @@ class WorkerJobRunner:
             live_bus=self._live_bus,
             adapter=adapter,
             frame_source=source,
-            job_timeout=self._settings.background_job_timeout,
+            job_timeout=execution_timeout(request, self._settings.background_job_timeout),
             owner=self._owner,
             heartbeat_interval_s=self._settings.background_heartbeat_interval_s,
+            input_deadline_s=self._settings.background_input_deadline_s,
         )
         await runner.run(job_id=job_uuid, source_kwargs={"job_id": job_uuid})
 

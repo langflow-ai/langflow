@@ -47,7 +47,6 @@ from langflow.services.deployment_artifacts.harness_runtime import (
 from langflow.services.deps import (
     get_background_execution_service,
     get_job_service,
-    get_settings_service,
     session_scope,
 )
 from langflow.services.evaluations.state import ACTIVE, save_progress
@@ -112,9 +111,6 @@ async def run_suite(
     suite.require_runnable()
     if suite.revision != expected_revision or suite.candidate_digest != expected_candidate_digest:
         raise HTTPException(409, "The saved suite changed. Reload it before running.")
-    if get_settings_service().settings.background_backend_is_scaled:
-        raise HTTPException(422, "Durable Eval Suites currently require the in-process Workflows backend.")
-
     host = LangflowWorkflowHost()
     target = await host.get_flow(str(suite.workflow_id), caller)
     await host.authorize(caller, target, WorkflowAction.EXECUTE)
