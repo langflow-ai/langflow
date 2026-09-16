@@ -519,10 +519,7 @@ describe("SidebarFilterComponent", () => {
   describe("Callback Functions", () => {
     it("should work with different resetFilters implementations", async () => {
       const user = userEvent.setup();
-      const customResetFilters = jest.fn(() => {
-        // Custom implementation
-        console.log("Custom reset");
-      });
+      const customResetFilters = jest.fn();
 
       const propsWithCustomCallback = {
         ...defaultProps,

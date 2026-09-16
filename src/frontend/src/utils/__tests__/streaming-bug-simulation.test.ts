@@ -78,13 +78,6 @@ describe("Streaming Bug Simulation - Rodrigo's Report", () => {
         expect(fragment2IsBlock).toBe(true); // Wrong! Should be false
 
         // This caused the visual bug: 2 separate code blocks rendered
-        console.log("OLD BEHAVIOR (BUGGY):");
-        console.log(
-          `Fragment 1 is block: ${fragment1IsBlock} (should be false)`,
-        );
-        console.log(
-          `Fragment 2 is block: ${fragment2IsBlock} (should be false)`,
-        );
       });
 
       it("should_show_why_duplicate_blocks_appeared", () => {
@@ -105,9 +98,6 @@ describe("Streaming Bug Simulation - Rodrigo's Report", () => {
 
         // BUG: All 3 chunks become separate blocks!
         expect(blocksCreated.length).toBe(3);
-        console.log(
-          `OLD: ${blocksCreated.length} blocks created from ${chunks.length} chunks`,
-        );
       });
     });
 
@@ -130,10 +120,6 @@ describe("Streaming Bug Simulation - Rodrigo's Report", () => {
         // FIXED: Neither fragment is treated as a code block
         expect(fragment1IsBlock).toBe(false);
         expect(fragment2IsBlock).toBe(false);
-
-        console.log("NEW BEHAVIOR (FIXED):");
-        console.log(`Fragment 1 is block: ${fragment1IsBlock} (correct!)`);
-        console.log(`Fragment 2 is block: ${fragment2IsBlock} (correct!)`);
       });
 
       it("should_only_create_one_block_when_properly_marked", () => {
@@ -157,13 +143,6 @@ describe("Streaming Bug Simulation - Rodrigo's Report", () => {
           isCodeBlockNEW("language-python", {}, chunk),
         );
         expect(blocksWithMarker.length).toBe(3);
-
-        console.log(
-          `NEW: ${blocksWithoutMarker.length} blocks without marker (correct: 0)`,
-        );
-        console.log(
-          `NEW: ${blocksWithMarker.length} blocks with marker (correct: all)`,
-        );
       });
 
       it("should_handle_complete_code_correctly_when_streaming_ends", () => {
@@ -181,10 +160,6 @@ describe("Streaming Bug Simulation - Rodrigo's Report", () => {
           completeCode,
         );
         expect(afterStreaming).toBe(true);
-
-        console.log("Complete code handling:");
-        console.log(`During streaming (no marker): ${duringStreaming}`);
-        console.log(`After streaming (with marker): ${afterStreaming}`);
       });
     });
 
@@ -196,15 +171,6 @@ else "Max iterations reached"`;
 
         const oldResult = isCodeBlockOLD(undefined, {}, testContent);
         const newResult = isCodeBlockNEW(undefined, {}, testContent);
-
-        console.log("\n=== BUG DEMONSTRATION ===");
-        console.log("Content with newlines but NO language marker:");
-        console.log(
-          `OLD isCodeBlock(): ${oldResult} -> Would render as code block (BUG)`,
-        );
-        console.log(
-          `NEW isCodeBlock(): ${newResult} -> Correctly NOT a code block (FIXED)`,
-        );
 
         expect(oldResult).toBe(true); // Bug
         expect(newResult).toBe(false); // Fixed
