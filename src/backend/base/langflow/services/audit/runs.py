@@ -29,6 +29,7 @@ from sqlmodel import select
 
 from langflow.services.audit.attribution import resolve_audit_actor
 from langflow.services.audit.details import bounded_name
+from langflow.services.audit.exclusions import is_action_audited
 from langflow.services.audit.operations import AuditedOperation, database_cause, record_denial
 from langflow.services.audit.vocabulary import (
     FLOW_EXECUTE,
@@ -198,7 +199,7 @@ def audited_flow_run(
 
         @functools.wraps(run)
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-            if not is_audit_enabled() or _outcome.get() is not None:
+            if not is_audit_enabled() or not is_action_audited(FLOW_EXECUTE) or _outcome.get() is not None:
                 return await run(*args, **kwargs)
             bound = signature.bind_partial(*args, **kwargs)
             bound.apply_defaults()
