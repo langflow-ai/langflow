@@ -78,11 +78,11 @@ def _create_trigger() -> None:
         sa.ForeignKeyConstraint(["deployment_id"], ["deployment.id"], ondelete="SET NULL"),
         sa.ForeignKeyConstraint(["flow_version_id"], ["flow_version.id"], ondelete="NO ACTION"),
         sa.PrimaryKeyConstraint("id"),
-        sa.CheckConstraint(f"state IN ({_TRIGGER_STATES})", name="ck_trigger_state"),
-        sa.CheckConstraint("binding_target IN ('flow', 'deployment')", name="ck_trigger_binding_target"),
-        sa.CheckConstraint("session_policy IN ('per_event', 'shared')", name="ck_trigger_session_policy"),
-        sa.CheckConstraint("concurrency_limit >= 1", name="ck_trigger_concurrency_limit_positive"),
-        sa.CheckConstraint("max_attempts >= 1", name="ck_trigger_max_attempts_positive"),
+        sa.CheckConstraint(f"state IN ({_TRIGGER_STATES})", name=op.f("ck_trigger_state")),
+        sa.CheckConstraint("binding_target IN ('flow', 'deployment')", name=op.f("ck_trigger_binding_target")),
+        sa.CheckConstraint("session_policy IN ('per_event', 'shared')", name=op.f("ck_trigger_session_policy")),
+        sa.CheckConstraint("concurrency_limit >= 1", name=op.f("ck_trigger_concurrency_limit_positive")),
+        sa.CheckConstraint("max_attempts >= 1", name=op.f("ck_trigger_max_attempts_positive")),
     )
     op.create_index("ix_trigger_flow_id", "trigger", ["flow_id"])
     op.create_index("ix_trigger_user_id", "trigger", ["user_id"])
@@ -127,8 +127,8 @@ def _create_trigger_event() -> None:
         sa.ForeignKeyConstraint(["replay_of_event_id"], ["trigger_event.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("trigger_id", "dedupe_key", name="uq_trigger_event_trigger_dedupe"),
-        sa.CheckConstraint(f"state IN ({_EVENT_STATES})", name="ck_trigger_event_state"),
-        sa.CheckConstraint("attempt >= 0", name="ck_trigger_event_attempt_non_negative"),
+        sa.CheckConstraint(f"state IN ({_EVENT_STATES})", name=op.f("ck_trigger_event_state")),
+        sa.CheckConstraint("attempt >= 0", name=op.f("ck_trigger_event_attempt_non_negative")),
     )
     op.create_index("ix_trigger_event_trigger_id", "trigger_event", ["trigger_id"])
     op.create_index("ix_trigger_event_created_at", "trigger_event", ["created_at"])
@@ -183,7 +183,7 @@ def _create_trigger_subscription() -> None:
         sa.UniqueConstraint(
             "provider", "provider_subscription_id", name="uq_trigger_subscription_provider_external_id"
         ),
-        sa.CheckConstraint(f"state IN ({_SUBSCRIPTION_STATES})", name="ck_trigger_subscription_state"),
+        sa.CheckConstraint(f"state IN ({_SUBSCRIPTION_STATES})", name=op.f("ck_trigger_subscription_state")),
     )
     op.create_index("ix_trigger_subscription_trigger_id", "trigger_subscription", ["trigger_id"])
     op.create_index("ix_trigger_subscription_renew_after", "trigger_subscription", ["state", "renew_after"])

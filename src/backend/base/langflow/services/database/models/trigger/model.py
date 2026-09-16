@@ -30,6 +30,7 @@ from uuid import UUID, uuid4
 import sqlalchemy as sa
 from sqlalchemy import CheckConstraint, ForeignKey, Index, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.sql.naming import conv
 from sqlmodel import JSON, Column, DateTime, Field, SQLModel, func
 
 from langflow.services.database.models.trigger.schemas import (
@@ -55,11 +56,11 @@ class Trigger(SQLModel, table=True):  # type: ignore[call-arg]
 
     __tablename__ = "trigger"
     __table_args__ = (
-        CheckConstraint(f"state IN ({_values(TriggerState)})", name="ck_trigger_state"),
-        CheckConstraint(f"binding_target IN ({_values(TriggerBindingTarget)})", name="ck_trigger_binding_target"),
-        CheckConstraint(f"session_policy IN ({_values(TriggerSessionPolicy)})", name="ck_trigger_session_policy"),
-        CheckConstraint("concurrency_limit >= 1", name="ck_trigger_concurrency_limit_positive"),
-        CheckConstraint("max_attempts >= 1", name="ck_trigger_max_attempts_positive"),
+        CheckConstraint(f"state IN ({_values(TriggerState)})", name=conv("ck_trigger_state")),
+        CheckConstraint(f"binding_target IN ({_values(TriggerBindingTarget)})", name=conv("ck_trigger_binding_target")),
+        CheckConstraint(f"session_policy IN ({_values(TriggerSessionPolicy)})", name=conv("ck_trigger_session_policy")),
+        CheckConstraint("concurrency_limit >= 1", name=conv("ck_trigger_concurrency_limit_positive")),
+        CheckConstraint("max_attempts >= 1", name=conv("ck_trigger_max_attempts_positive")),
         # Reconciliation identity: one trigger row per canvas node. Partial so
         # API-created triggers (no node) are unconstrained.
         Index(
@@ -145,8 +146,8 @@ class TriggerEvent(SQLModel, table=True):  # type: ignore[call-arg]
     __table_args__ = (
         # THE deduplication guarantee. Application code never checks first.
         UniqueConstraint("trigger_id", "dedupe_key", name="uq_trigger_event_trigger_dedupe"),
-        CheckConstraint(f"state IN ({_values(TriggerEventState)})", name="ck_trigger_event_state"),
-        CheckConstraint("attempt >= 0", name="ck_trigger_event_attempt_non_negative"),
+        CheckConstraint(f"state IN ({_values(TriggerEventState)})", name=conv("ck_trigger_event_state")),
+        CheckConstraint("attempt >= 0", name=conv("ck_trigger_event_attempt_non_negative")),
         Index("ix_trigger_event_state_available_at", "state", "available_at"),
         Index("ix_trigger_event_trigger_created_at", "trigger_id", "created_at"),
     )
@@ -239,7 +240,7 @@ class TriggerSubscription(SQLModel, table=True):  # type: ignore[call-arg]
 
     __tablename__ = "trigger_subscription"
     __table_args__ = (
-        CheckConstraint(f"state IN ({_values(TriggerSubscriptionState)})", name="ck_trigger_subscription_state"),
+        CheckConstraint(f"state IN ({_values(TriggerSubscriptionState)})", name=conv("ck_trigger_subscription_state")),
         UniqueConstraint("provider", "provider_subscription_id", name="uq_trigger_subscription_provider_external_id"),
         Index("ix_trigger_subscription_renew_after", "state", "renew_after"),
     )

@@ -9,6 +9,8 @@ from uuid import uuid4
 
 import pytest
 from alembic import command
+from alembic.migration import MigrationContext
+from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.exc import IntegrityError
 
@@ -24,6 +26,36 @@ _TRIGGER_TABLES = {
     "trigger_listener_lease",
     "trigger_subscription",
 }
+
+
+@pytest.mark.parametrize("prior_revision", ["c5a8e2f7d9b1", "d2f6a8c1e9b4"])  # pragma: allowlist secret
+def test_trigger_and_release_heads_upgrade_to_single_head(db_url, prior_revision):  # noqa: F811
+    """Databases on either side of the release merge can upgrade without losing data."""
+    config = _make_alembic_cfg(db_url)
+    command.upgrade(config, prior_revision)
+
+    engine = create_engine(_engine_url(db_url))
+    user_id = str(uuid4())
+    try:
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    'INSERT INTO "user" (id, username, password, is_active, is_superuser, create_at, updated_at) '
+                    "VALUES (:id, :username, 'x', true, false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                ),
+                {"id": user_id, "username": f"merge-owner-{user_id}"},
+            )
+
+        command.upgrade(config, "head")
+
+        with engine.connect() as connection:
+            assert set(inspect(connection).get_table_names()) >= _TRIGGER_TABLES
+            assert connection.execute(text('SELECT COUNT(*) FROM "user" WHERE id = :id'), {"id": user_id}).scalar() == 1
+            assert MigrationContext.configure(connection).get_current_heads() == (
+                ScriptDirectory.from_config(config).get_current_head(),
+            )
+    finally:
+        engine.dispose()
 
 
 def _seed_flow_owner_and_trigger(connection, trigger_id):
