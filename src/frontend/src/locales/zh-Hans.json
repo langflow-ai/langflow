@@ -1388,6 +1388,7 @@
   "mcp.servers.description": "管理 MCP 服务器，以便在您的流程中使用。",
   "mcp.servers.editMenuItem": "编辑",
   "mcp.servers.errorDeleting": "删除服务器时发生错误",
+  "mcp.servers.errorNoLongerExists": "此 MCP 服务器已不存在，可能已在其他位置被删除。",
   "mcp.servers.errorFetching": "无法连接服务器",
   "mcp.servers.noServersAdded": "未添加任何 MCP 服务器",
   "mcp.servers.statusError": "错误",

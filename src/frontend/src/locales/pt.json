@@ -1388,6 +1388,7 @@
   "mcp.servers.description": "Gerencie servidores MCP para uso em seus fluxos.",
   "mcp.servers.editMenuItem": "Editar",
   "mcp.servers.errorDeleting": "Erro ao excluir o servidor",
+  "mcp.servers.errorNoLongerExists": "Este servidor MCP não existe mais. Ele pode ter sido excluído em outro lugar.",
   "mcp.servers.errorFetching": "Erro ao acessar o servidor",
   "mcp.servers.noServersAdded": "Nenhum servidor MCP foi adicionado",
   "mcp.servers.statusError": "Erro",
