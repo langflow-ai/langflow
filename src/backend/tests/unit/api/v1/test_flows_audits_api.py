@@ -210,3 +210,18 @@ async def test_with_a_plugin_the_flow_audit_permission_decides(client, logged_in
     assert [item["operation"] for item in allowed.json()["items"]] == ["create"]
     assert read_only.status_code == status.HTTP_403_FORBIDDEN
     assert wrong_resource.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_excluding_an_action_stops_new_events_but_keeps_the_stored_history_readable(client, logged_in_headers):
+    settings = get_settings_service().settings
+    flow = await _flow(client, logged_in_headers)
+    await client.patch(f"api/v1/flows/{flow['id']}", json={"name": f"before-{uuid4().hex}"}, headers=logged_in_headers)
+
+    settings.audit_exclude_events = "flow:write"
+    await client.patch(f"api/v1/flows/{flow['id']}", json={"name": f"after-{uuid4().hex}"}, headers=logged_in_headers)
+    page = await _audits(client, logged_in_headers, f"?flow_id={flow['id']}")
+
+    assert [(item["action"], item["result"]) for item in page["items"]] == [
+        ("flow:write", "succeeded"),
+        ("flow:create", "succeeded"),
+    ]
