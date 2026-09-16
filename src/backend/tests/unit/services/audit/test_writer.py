@@ -75,6 +75,61 @@ async def test_nothing_is_staged_when_auditing_is_off(audit_session, audit_disab
     assert await _stored(audit_session) == []
 
 
+async def test_an_excluded_action_is_not_staged(audit_session, audit_enabled, excluded_events):  # noqa: ARG001
+    excluded_events("project:write")
+
+    assert await stage_audit_event(audit_session, project_patch_draft()) is None
+    await audit_session.commit()
+
+    assert await _stored(audit_session) == []
+
+
+async def test_excluding_one_action_keeps_the_others_on_the_same_resource(
+    audit_session,
+    audit_enabled,  # noqa: ARG001
+    excluded_events,
+):
+    excluded_events("project:write")
+
+    await stage_audit_event(audit_session, project_patch_draft())
+    kept = await stage_audit_event(
+        audit_session, project_patch_draft(action=PROJECT_DELETE, operation=AuditOperation.DELETE)
+    )
+    await audit_session.commit()
+
+    assert [row.id for row in await _stored(audit_session)] == [kept.id]
+
+
+@pytest.mark.parametrize("entry", ["project:*", "*:write"])
+async def test_a_wildcard_exclusion_is_not_staged(audit_session, audit_enabled, excluded_events, entry):  # noqa: ARG001
+    excluded_events(entry)
+
+    assert await stage_audit_event(audit_session, project_patch_draft()) is None
+
+
+async def test_a_misspelled_exclusion_never_hides_an_event(audit_session, audit_enabled, excluded_events):  # noqa: ARG001
+    excluded_events("projects.write,project:writes")
+
+    staged = await stage_audit_event(audit_session, project_patch_draft())
+    await audit_session.commit()
+
+    assert [row.id for row in await _stored(audit_session)] == [staged.id]
+
+
+async def test_an_excluded_action_leaves_the_callers_pending_writes_unflushed(
+    audit_session,
+    audit_enabled,  # noqa: ARG001
+    excluded_events,
+):
+    excluded_events("project:write")
+    pending_mutation = build_audit_event(project_patch_draft(action=PROJECT_DELETE))
+    audit_session.add(pending_mutation)
+
+    await stage_audit_event(audit_session, project_patch_draft())
+
+    assert list(audit_session.new) == [pending_mutation]
+
+
 async def test_a_stateless_runtime_stages_nothing_and_does_not_raise(audit_enabled):  # noqa: ARG001
     assert await stage_audit_event(NoopSession(), project_patch_draft()) is None
 

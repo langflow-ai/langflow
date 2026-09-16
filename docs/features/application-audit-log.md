@@ -96,8 +96,9 @@ Error codes: `PERMISSION_DENIED`, `PROJECT_NOT_FOUND`, `PROJECT_NAME_CONFLICT`,
 |---|---|
 | `resolve_audit_actor(user_id)` | Derives account and credential from the request's authentication context. A caller cannot supply them. |
 | `build_audit_event(draft)` | Validates a draft against the contract; raises `AuditContractError`. |
-| `stage_audit_event(session, draft)` | Writes a committed operation's event in the mutation's transaction, flushed right after the mutation's own write, so a refused event fails the request and rolls the mutation back before any response. No-op when disabled or without a database. |
-| `record_audit_event_after_rollback(draft)` | Writes a failure or denial in its own transaction, at most 4 concurrently, within 5 seconds. A storage failure is logged as an error and never raised into the already failing caller. |
+| `stage_audit_event(session, draft)` | Writes a committed operation's event in the mutation's transaction, flushed right after the mutation's own write, so a refused event fails the request and rolls the mutation back before any response. No-op, without a flush, when disabled, when the action is excluded, or without a database. |
+| `record_audit_event_after_rollback(draft)` | Writes a failure or denial in its own transaction, at most 4 concurrently, within 5 seconds. A storage failure is logged as an error and never raised into the already failing caller. No-op, without opening a connection, when disabled or when the action is excluded. |
+| `is_action_audited(action)` | False when `LANGFLOW_AUDIT_EXCLUDE_EVENTS` excludes the action. Both writers above check it, so no producer can bypass an exclusion. |
 | `list_audit_events(session, filters, limit, cursor, visibility)` | Filters (OR within a field, AND across), orders by `(timestamp DESC, id DESC)`, keyset pagination, cursor bound to its filters, no total. |
 | `purge_expired_audit_events(session, retention_days)` | Deletes by age only. |
 
@@ -112,6 +113,8 @@ Error codes: `PERMISSION_DENIED`, `PROJECT_NOT_FOUND`, `PROJECT_NAME_CONFLICT`,
 4. Deleting a resource, user, or API key never deletes its events.
 5. A traversal returns each event at most once, newest first; later inserts do not appear midway.
 6. With `lfx serve` (no database), nothing is written and nothing raises.
+7. An excluded action writes nothing for any outcome, and the operation behaves exactly as with auditing off.
+8. An exclusion entry that matches no audited action excludes nothing and never stops startup.
 
 ## Settings
 
@@ -119,6 +122,40 @@ Error codes: `PERMISSION_DENIED`, `PROJECT_NOT_FOUND`, `PROJECT_NAME_CONFLICT`,
 |---|---|---|
 | `LANGFLOW_AUDIT_ENABLED` | `false` | Turns event production on. When on, production is always durable. |
 | `LANGFLOW_AUDIT_RETENTION_DAYS` | `90` | Startup sweep plus a scheduled sweep on the `AUTHZ_AUDIT_CLEANUP_INTERVAL` cadence; `0` keeps everything. |
+| `LANGFLOW_AUDIT_EXCLUDE_EVENTS` | empty | Comma-separated actions never recorded. See [Excluding actions](#excluding-actions). |
+
+### Excluding actions
+
+`LANGFLOW_AUDIT_EXCLUDE_EVENTS` names actions exactly as the `action` column
+stores them, so a value copied from an event works as an entry.
+
+| Entry | Excludes |
+|---|---|
+| `project:delete` | That one action |
+| `flow:*` | Every action on that resource |
+| `*:delete` | That action on every resource |
+
+```bash
+LANGFLOW_AUDIT_EXCLUDE_EVENTS=flow:write,project:delete
+```
+
+- **Every outcome.** An excluded action records no `succeeded`, `failed` or
+  `deny` event. To keep refusals while dropping routine writes, do not exclude
+  the action.
+- **Normalized.** Entries are trimmed and lowercased; empty and repeated
+  entries are dropped.
+- **Ignored, never guessed.** An entry that matches no audited action is ignored
+  and excludes nothing: a misspelling such as `projects.delete`, an unknown
+  resource or action, or a malformed entry. Startup logs one warning per ignored
+  entry, with the correct spelling when there is an obvious one. `*:*` and `*`
+  are ignored too: to record nothing, set `LANGFLOW_AUDIT_ENABLED=false`.
+  Ignoring rather than refusing to start keeps a typo on the side of recording
+  too much, and lets an older replica start with a value only a newer release
+  understands.
+- **Future events only.** Excluding an action deletes nothing already stored,
+  and the read APIs are unchanged.
+- **Read per event.** The value is compiled once per distinct setting, so a
+  settings change applies to the next event without a restart.
 
 ## Out of scope
 

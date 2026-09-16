@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Iterator
+    from collections.abc import AsyncIterator, Callable, Iterator
 
 
 @pytest.fixture
@@ -54,6 +54,19 @@ def audit_disabled() -> Iterator[None]:
     settings.audit_enabled = False
     yield
     settings.audit_enabled = original
+
+
+@pytest.fixture
+def excluded_events() -> Iterator[Callable[[str], None]]:
+    """Set LANGFLOW_AUDIT_EXCLUDE_EVENTS for one test, as the env var would."""
+    settings = get_settings_service().settings
+    original = list(settings.audit_exclude_events)
+
+    def apply(value: str) -> None:
+        settings.audit_exclude_events = value
+
+    yield apply
+    settings.audit_exclude_events = original
 
 
 def user_actor(user_id: UUID | None = None) -> AuditActor:
