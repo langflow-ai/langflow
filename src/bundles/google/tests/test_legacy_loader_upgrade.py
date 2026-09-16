@@ -1,9 +1,11 @@
 """A 1.12 flow using the legacy Google loaders must still open cleanly.
 
-The fixture contains the original templates and source before managed connections
-were added. Adding the optional connection input should classify saved nodes as
-``outdated_safe``, while a missing component or incompatible input must still
-produce a blocked or breaking verdict.
+The fixture contains the original templates and source before this release changed
+the loaders: the Drive loader gained an optional managed connection, and both loaders
+changed code. Those changes should classify saved nodes as ``outdated_safe``, while a
+missing component or incompatible input must still produce a blocked or breaking
+verdict. The Gmail loader deliberately gained no connection (see
+``decisions/google-restricted-scopes.md``).
 """
 
 from __future__ import annotations
@@ -16,6 +18,16 @@ from lfx.upgrade.checker import COMPONENTS_TO_IGNORE_UPDATE, check_flow_compatib
 from lfx_google.components.google import GmailLoaderComponent, GoogleDriveComponent
 
 FLOW_FIXTURE = Path(__file__).resolve().parent / "fixtures" / "flows" / "gmail_loader_1.12.json"
+
+# Authorized-user token JSON with obviously fake values; google-auth only checks the keys.
+AUTHORIZED_USER_JSON = json.dumps(
+    {
+        "client_id": "fake-client-id",
+        "client_secret": "fake-client-secret",  # pragma: allowlist secret
+        "refresh_token": "fake-refresh-token",  # pragma: allowlist secret
+        "token": "fake-access-token",  # pragma: allowlist secret
+    }
+)
 
 LEGACY_CLASSES = {
     "GmailLoaderComponent": GmailLoaderComponent,
@@ -38,8 +50,19 @@ def test_fixture_predates_the_connection_field() -> None:
     """Guard the guard: a stale fixture would make the checks below vacuous."""
     for node in _flow()["nodes"]:
         assert "connection" not in node["data"]["node"]["template"]
-    for component_class in LEGACY_CLASSES.values():
-        assert "connection" in component_class().to_frontend_node()["data"]["node"]["template"]
+    assert "connection" in GoogleDriveComponent().to_frontend_node()["data"]["node"]["template"]
+
+
+def test_gmail_loader_offers_no_managed_connection() -> None:
+    """gmail.readonly is restricted; a self-managed restricted profile is deferred to 1.14.
+
+    decisions/google-restricted-scopes.md keeps Option C out of 1.13, and a connection
+    field here would ship it outside capabilities.v1.json, beyond action-level policy.
+    """
+    template = GmailLoaderComponent().to_frontend_node()["data"]["node"]["template"]
+
+    assert not any(field.get("type") == "connection_ref" for field in template.values() if isinstance(field, dict))
+    assert template["json_string"]["required"] is True
 
 
 def test_saved_1_12_flow_opens_without_a_blocking_or_breaking_verdict() -> None:
@@ -90,25 +113,19 @@ def test_the_added_field_is_structurally_non_breaking() -> None:
 
 
 def test_the_new_connection_field_is_optional_in_the_registry_template() -> None:
-    for entry in _current_registry().values():
-        connection = entry["template"]["connection"]
-        assert connection["type"] == "connection_ref"
-        assert connection["required"] is False
-        # json_string was relaxed so a connection-only configuration is valid.
-        assert entry["template"]["json_string"]["required"] is False
+    entry = _current_registry()["GoogleDriveComponent"]
+    connection = entry["template"]["connection"]
+    assert connection["type"] == "connection_ref"
+    assert connection["required"] is False
+    # json_string was relaxed so a connection-only configuration is valid.
+    assert entry["template"]["json_string"]["required"] is False
 
 
-async def test_gmail_loader_requires_exactly_one_credential_source() -> None:
-    component = GmailLoaderComponent(connection="", json_string="", label_ids="INBOX", max_results="5")
+async def test_gmail_loader_requires_token_json() -> None:
+    component = GmailLoaderComponent(json_string="", label_ids="INBOX", max_results="5")
 
-    with pytest.raises(ValueError, match="either a managed Google connection or a token JSON"):
+    with pytest.raises(ValueError, match="needs a token JSON string"):
         await component.load_emails()
-
-    both = GmailLoaderComponent(
-        connection="google/work", json_string='{"token": "x"}', label_ids="INBOX", max_results="5"
-    )
-    with pytest.raises(ValueError, match="not both"):
-        await both.load_emails()
 
 
 async def test_drive_loader_requires_exactly_one_credential_source() -> None:
@@ -122,26 +139,6 @@ async def test_drive_loader_requires_exactly_one_credential_source() -> None:
         await both.load_documents()
 
 
-async def test_gmail_loader_builds_credentials_from_a_connection(resolver, monkeypatch) -> None:
-    """A connection-configured loader gets a lease token, never a pasted secret."""
-    from conftest import FAKE_ACCESS_TOKEN, wire
-
-    captured: dict = {}
-    monkeypatch.setattr(
-        "langchain_google_community.gmail.loader.GMailLoader.__init__",
-        lambda _self, creds, n=100, _raise_error=False: captured.update(creds=creds, n=n),
-    )
-    monkeypatch.setattr("langchain_google_community.gmail.loader.GMailLoader.load", lambda _self: [])
-
-    component = GmailLoaderComponent(connection="google/work")
-    wire(component, [])  # no Google call is made; this supplies the graph principal
-
-    await component.load_emails()
-
-    assert captured["creds"].token == FAKE_ACCESS_TOKEN
-    assert resolver.requests[0].required_scopes == frozenset({"https://www.googleapis.com/auth/gmail.readonly"})
-
-
 async def test_a_padded_connection_handle_still_resolves(resolver, monkeypatch) -> None:
     """A pasted handle with surrounding whitespace resolves instead of failing late.
 
@@ -152,16 +149,15 @@ async def test_a_padded_connection_handle_still_resolves(resolver, monkeypatch) 
     """
     from conftest import wire
 
+    monkeypatch.setattr("langchain_google_community.GoogleDriveLoader.load", lambda _self: [object()])
     monkeypatch.setattr(
-        "langchain_google_community.gmail.loader.GMailLoader.__init__",
-        lambda _self, _creds, _n=100, _raise_error=False: None,
+        "lfx_google.components.google.google_drive.docs_to_data", lambda docs: [{"text": "doc"} for _ in docs]
     )
-    monkeypatch.setattr("langchain_google_community.gmail.loader.GMailLoader.load", lambda _self: [])
 
-    component = GmailLoaderComponent(json_string="", label_ids="INBOX", max_results="5")
+    component = GoogleDriveComponent(json_string="", document_id="doc-1")
     wire(component, [], connection="  google/work  ")
 
-    await component.load_emails()
+    await component.load_documents()
 
     assert resolver.requests[0].ref.to_handle() == "google/work"
 
@@ -171,12 +167,17 @@ async def test_a_padded_connection_handle_still_resolves(resolver, monkeypatch) 
 @pytest.mark.parametrize(
     ("component_class", "operation", "loader_path", "kwargs"),
     [
-        (GmailLoaderComponent, "load_emails", "langchain_google_community.gmail.loader.GMailLoader.load", {}),
+        (
+            GmailLoaderComponent,
+            "load_emails",
+            "langchain_google_community.gmail.loader.GMailLoader.load",
+            {"json_string": AUTHORIZED_USER_JSON},
+        ),
         (
             GoogleDriveComponent,
             "load_documents",
             "langchain_google_community.GoogleDriveLoader.load",
-            {"document_id": "doc-1"},
+            {"connection": "google/work", "document_id": "doc-1"},
         ),
     ],
 )
@@ -197,8 +198,9 @@ async def test_loader_failures_log_context_without_provider_payload(
     monkeypatch.setattr(loader_path, fail)
     log = MagicMock()
     monkeypatch.setattr(f"{component_class.__module__}.logger", log)
-    component = component_class(connection="google/work", **kwargs)
-    wire(component, [])
+    component = component_class(**kwargs)
+    if "connection" in kwargs:
+        wire(component, [], connection=kwargs["connection"])
 
     with pytest.raises(ValueError, match=r"Authentication error|Error loading documents") as caught:
         await getattr(component, operation)()

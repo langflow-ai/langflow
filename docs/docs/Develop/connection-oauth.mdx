@@ -285,8 +285,7 @@ the form Google returns in the token response and therefore the form stored on t
 connection and compared against when an action resolves. A short suffix such as
 `drive.file` on its own fails resolution with `scope-missing`.
 
-Two legacy components — **Gmail Loader** and **Google Drive Loader** — accept an optional
-connection as an alternative to pasted token JSON. The Gmail Loader needs
-`https://www.googleapis.com/auth/gmail.readonly`, which is a **restricted** scope: it works
-only with a self-managed, customer-owned registration that includes it, never with a
-Langflow-owned hosted or Desktop registration.
+The legacy **Google Drive Loader** accepts an optional connection on `drive.file` as an
+alternative to pasted token JSON. The legacy **Gmail Loader** does not: reading a mailbox
+needs `https://www.googleapis.com/auth/gmail.readonly`, a **restricted** scope that 1.13
+connections do not use, so it keeps pasted token JSON only.

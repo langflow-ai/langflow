@@ -12,7 +12,6 @@ from __future__ import annotations
 from lfx.io import ConnectionRefInput
 
 GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send"
-GMAIL_READONLY_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
 DRIVE_FILE_SCOPE = "https://www.googleapis.com/auth/drive.file"
 CALENDAR_EVENTS_READONLY_SCOPE = "https://www.googleapis.com/auth/calendar.events.readonly"
 CALENDAR_EVENTS_SCOPE = "https://www.googleapis.com/auth/calendar.events"

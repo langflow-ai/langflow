@@ -36,9 +36,8 @@ TEST_API_KEY = "google-key"  # pragma: allowlist secret
 
 
 async def test_gmail_loader_rejects_non_numeric_max_results() -> None:
-    # load_emails became a coroutine with managed connection support so it can await a connection lease.
+    # load_emails is a coroutine so the blocking Gmail load runs off the event loop.
     component = GmailLoaderComponent()
-    component.connection = ""
     component.json_string = "{}"
     component.label_ids = "INBOX"
     component.max_results = "not-a-number"
