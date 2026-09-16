@@ -1,4 +1,12 @@
 {
+  "evaluations.refreshAfterSaveError": "La suite se guardó, pero no se pudo cargar la revisión actualizada. Tus cambios se conservaron. Guarda de nuevo antes de ejecutar.",
+  "evaluations.scorerChanged": "El evaluador o una de sus dependencias ha cambiado. Esta suite mantiene la versión revisada hasta que aceptes y guardes la actualización.",
+  "evaluations.useUpdatedScorer": "Usar evaluador actualizado",
+  "evaluations.nameRequired": "Introduce un nombre para el caso.",
+  "evaluations.inputRequired": "Introduce la entrada que se enviará al candidato.",
+  "evaluations.scoreRange": "Introduce una puntuación entre 0 y 1.",
+  "evaluations.latencyRange": "Introduce un número entero entre 1 y 3.600.000 ms o déjalo en blanco.",
+  "evaluations.costRange": "Introduce un coste mayor que cero o déjalo en blanco.",
   "field.required": "Obligatorio",
   "accordion.addVariable": "Añadir variable",
   "accordion.fullscreen": "Pantalla completa",

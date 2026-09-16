@@ -245,8 +245,6 @@ const HarnessPage = ({
             fieldName !== toolsFieldName &&
             fieldName !== modelFieldName &&
             field.renders !== "project_refs" &&
-            field.renders !== "skill_pack_refs" &&
-            field.renders !== "skill_definitions" &&
             isProjectFieldVisible(field, values) &&
             // A long free-text field says nothing useful at a glance.
             !field?.multiline,
@@ -257,22 +255,30 @@ const HarnessPage = ({
             name: fieldName,
             label: field?.display_name ?? fieldName,
             value:
-              (field as { renders?: string }).renders === "hook_flows"
-                ? t("harness.hookCount", {
-                    count: Array.isArray(bindings[fieldName])
-                      ? bindings[fieldName].length
+              field.renders === "skill_pack_refs" ||
+              field.renders === "skill_definitions"
+                ? String(
+                    Array.isArray(values[fieldName])
+                      ? values[fieldName].length
                       : 0,
-                  })
-                : binding && !Array.isArray(binding)
-                  ? t("harness.flowImplementation", {
-                      name:
-                        flows.find((flow) => flow.id === binding.flow_id)
-                          ?.name ?? t("harness.boundFlowUnavailable"),
+                  )
+                : (field as { renders?: string }).renders === "hook_flows"
+                  ? t("harness.hookCount", {
+                      count: Array.isArray(bindings[fieldName])
+                        ? bindings[fieldName].length
+                        : 0,
                     })
-                  : values[fieldName] === undefined || values[fieldName] === ""
-                    ? "—"
-                    : (field.option_labels?.[String(values[fieldName])] ??
-                      String(values[fieldName])),
+                  : binding && !Array.isArray(binding)
+                    ? t("harness.flowImplementation", {
+                        name:
+                          flows.find((flow) => flow.id === binding.flow_id)
+                            ?.name ?? t("harness.boundFlowUnavailable"),
+                      })
+                    : values[fieldName] === undefined ||
+                        values[fieldName] === ""
+                      ? "—"
+                      : (field.option_labels?.[String(values[fieldName])] ??
+                        String(values[fieldName])),
           };
         }),
     [type, toolsFieldName, modelFieldName, values, bindings, flows, t],
@@ -735,6 +741,7 @@ const HarnessPage = ({
             details={summaryDetails}
             agentFlow={selectedAgent}
             showModel={Boolean(modelFieldName)}
+            showTools={Boolean(toolsFieldName || type.template?.tool_packs)}
           />
           {projectType === "agent-harness" && (
             <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">

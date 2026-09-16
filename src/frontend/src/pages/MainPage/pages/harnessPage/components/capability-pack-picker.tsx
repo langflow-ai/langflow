@@ -51,7 +51,7 @@ export function CapabilityPackPicker({
       </p>
       {value.map((reference) => (
         <div
-          className="flex items-center justify-between gap-3 rounded-md border p-3"
+          className="flex items-center justify-between gap-3 border-b py-3 last:border-b-0"
           key={reference.project_id}
         >
           <div className="min-w-0">
@@ -127,7 +127,7 @@ export function CapabilityPackPicker({
           </select>
           <Button
             variant="outline"
-            size="sm"
+            className="h-10 rounded-lg"
             disabled={
               disabled || !choices.some((folder) => folder.id === selected)
             }

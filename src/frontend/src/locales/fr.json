@@ -1,4 +1,12 @@
 {
+  "evaluations.refreshAfterSaveError": "La suite a été enregistrée, mais sa révision actualisée n’a pas pu être chargée. Vos modifications sont conservées. Enregistrez à nouveau avant de lancer.",
+  "evaluations.scorerChanged": "L’évaluateur ou l’une de ses dépendances a changé. Cette suite conserve la version vérifiée jusqu’à ce que vous acceptiez et enregistriez la mise à jour.",
+  "evaluations.useUpdatedScorer": "Utiliser l’évaluateur mis à jour",
+  "evaluations.nameRequired": "Saisissez un nom pour le cas.",
+  "evaluations.inputRequired": "Saisissez l’entrée à envoyer au candidat.",
+  "evaluations.scoreRange": "Saisissez un score entre 0 et 1.",
+  "evaluations.latencyRange": "Saisissez un entier entre 1 et 3 600 000 ms, ou laissez vide.",
+  "evaluations.costRange": "Saisissez un coût supérieur à zéro, ou laissez vide.",
   "field.required": "Obligatoire",
   "accordion.addVariable": "Ajouter la variable",
   "accordion.fullscreen": "Plein écran",

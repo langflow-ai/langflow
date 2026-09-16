@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,21 @@ export const emptyCase = (): EvalCase => ({
   max_cost_usd: null,
 });
 
+const validScore = (value: number) =>
+  Number.isFinite(value) && value >= 0 && value <= 1;
+const validLatency = (value: number | null) =>
+  value === null || (Number.isInteger(value) && value > 0 && value <= 3600000);
+const validCost = (value: number | null) =>
+  value === null || (Number.isFinite(value) && value > 0);
+export const validEvalCase = (item: EvalCase) =>
+  Boolean(
+    item.name.trim() &&
+      item.input.trim() &&
+      validScore(item.minimum_score) &&
+      validLatency(item.max_latency_ms) &&
+      validCost(item.max_cost_usd),
+  );
+
 export function EvalCases({
   cases,
   onChange,
@@ -27,6 +43,9 @@ export function EvalCases({
   disabled: boolean;
 }) {
   const { t } = useTranslation();
+  const [touched, setTouched] = useState<Set<string>>(() => new Set());
+  const touch = (field: string) =>
+    setTouched((previous) => new Set([...previous, field]));
   const update = (id: string, patch: Partial<EvalCase>) =>
     onChange(
       cases.map((item) => (item.id === id ? { ...item, ...patch } : item)),
@@ -55,24 +74,16 @@ export function EvalCases({
         <fieldset
           disabled={disabled}
           key={item.id}
-          className="space-y-4 rounded-lg border p-5"
+          className="min-w-0 space-y-5 rounded-xl bg-muted/40 p-5"
+          aria-labelledby={`${item.id}-heading`}
         >
-          <legend className="px-2 text-sm text-muted-foreground">
-            {t("evaluations.caseNumber", { number: index + 1 })}
-          </legend>
-          <div className="flex items-end gap-4">
-            <label className="flex-1 space-y-2 text-sm">
-              {t("evaluations.name")}
-              <Input
-                value={item.name}
-                maxLength={200}
-                onChange={(event) =>
-                  update(item.id, { name: event.target.value })
-                }
-              />
-            </label>
+          <div className="flex items-center justify-between gap-4">
+            <h4 id={`${item.id}-heading`} className="text-sm font-semibold">
+              {t("evaluations.caseNumber", { number: index + 1 })}
+            </h4>
             <Button
               variant="ghost"
+              size="sm"
               onClick={() =>
                 onChange(cases.filter((row) => row.id !== item.id))
               }
@@ -80,10 +91,48 @@ export function EvalCases({
               {t("evaluations.remove")}
             </Button>
           </div>
+          <label className="block space-y-2 text-sm">
+            <span className="block">{t("evaluations.name")}</span>
+            <Input
+              aria-label={t("evaluations.name")}
+              required
+              aria-invalid={touched.has(`${item.id}-name`) && !item.name.trim()}
+              aria-describedby={
+                touched.has(`${item.id}-name`) && !item.name.trim()
+                  ? `${item.id}-name-error`
+                  : undefined
+              }
+              onBlur={() => touch(`${item.id}-name`)}
+              value={item.name}
+              maxLength={200}
+              onChange={(event) =>
+                update(item.id, { name: event.target.value })
+              }
+            />
+            {touched.has(`${item.id}-name`) && !item.name.trim() && (
+              <span
+                id={`${item.id}-name-error`}
+                className="block text-xs text-destructive"
+              >
+                {t("evaluations.nameRequired")}
+              </span>
+            )}
+          </label>
           <div className="grid grid-cols-2 gap-4">
             <label className="space-y-2 text-sm">
-              {t("evaluations.input")}
+              <span className="block">{t("evaluations.input")}</span>
               <Textarea
+                aria-label={t("evaluations.input")}
+                required
+                aria-invalid={
+                  touched.has(`${item.id}-input`) && !item.input.trim()
+                }
+                aria-describedby={
+                  touched.has(`${item.id}-input`) && !item.input.trim()
+                    ? `${item.id}-input-error`
+                    : undefined
+                }
+                onBlur={() => touch(`${item.id}-input`)}
                 value={item.input}
                 maxLength={16000}
                 rows={4}
@@ -91,9 +140,17 @@ export function EvalCases({
                   update(item.id, { input: event.target.value })
                 }
               />
+              {touched.has(`${item.id}-input`) && !item.input.trim() && (
+                <span
+                  id={`${item.id}-input-error`}
+                  className="block text-xs text-destructive"
+                >
+                  {t("evaluations.inputRequired")}
+                </span>
+              )}
             </label>
             <label className="space-y-2 text-sm">
-              {t("evaluations.reference")}
+              <span className="block">{t("evaluations.reference")}</span>
               <Textarea
                 value={item.reference}
                 maxLength={16000}
@@ -106,21 +163,49 @@ export function EvalCases({
           </div>
           <div className="grid grid-cols-3 gap-4">
             <label className="space-y-2 text-sm">
-              {t("evaluations.minimumScore")}
+              <span className="block min-h-10 leading-5">
+                {t("evaluations.minimumScore")}
+              </span>
               <Input
+                aria-label={t("evaluations.minimumScore")}
+                aria-invalid={!validScore(item.minimum_score)}
+                aria-describedby={
+                  !validScore(item.minimum_score)
+                    ? `${item.id}-score-error`
+                    : undefined
+                }
                 type="number"
                 min={0}
                 max={1}
                 step={0.05}
-                value={item.minimum_score}
+                value={
+                  Number.isFinite(item.minimum_score) ? item.minimum_score : ""
+                }
                 onChange={(event) =>
                   update(item.id, { minimum_score: event.target.valueAsNumber })
                 }
               />
+              {!validScore(item.minimum_score) && (
+                <span
+                  id={`${item.id}-score-error`}
+                  className="block text-xs text-destructive"
+                >
+                  {t("evaluations.scoreRange")}
+                </span>
+              )}
             </label>
             <label className="space-y-2 text-sm">
-              {t("evaluations.latency")}
+              <span className="block min-h-10 leading-5">
+                {t("evaluations.latency")}
+              </span>
               <Input
+                aria-label={t("evaluations.latency")}
+                aria-invalid={!validLatency(item.max_latency_ms)}
+                aria-describedby={
+                  !validLatency(item.max_latency_ms)
+                    ? `${item.id}-latency-error`
+                    : undefined
+                }
                 type="number"
                 min={1}
                 max={3600000}
@@ -134,10 +219,29 @@ export function EvalCases({
                   })
                 }
               />
+              {!validLatency(item.max_latency_ms) && (
+                <span
+                  id={`${item.id}-latency-error`}
+                  className="block text-xs text-destructive"
+                >
+                  {t("evaluations.latencyRange")}
+                </span>
+              )}
             </label>
             <label className="space-y-2 text-sm">
-              {t("evaluations.cost")}
+              <span className="block min-h-10 leading-5">
+                {t("evaluations.cost")}
+              </span>
               <Input
+                aria-label={t("evaluations.cost")}
+                aria-invalid={!validCost(item.max_cost_usd)}
+                aria-describedby={
+                  !validCost(item.max_cost_usd)
+                    ? `${item.id}-cost-error`
+                    : item.max_cost_usd !== null
+                      ? `${item.id}-cost-warning`
+                      : undefined
+                }
                 type="number"
                 min={0.000001}
                 step="any"
@@ -151,12 +255,21 @@ export function EvalCases({
                   })
                 }
               />
+              {!validCost(item.max_cost_usd) && (
+                <span
+                  id={`${item.id}-cost-error`}
+                  className="block text-xs text-destructive"
+                >
+                  {t("evaluations.costRange")}
+                </span>
+              )}
             </label>
           </div>
           <div className="flex flex-wrap items-center gap-5 text-sm">
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
+                className="size-4 accent-primary"
                 checked={item.require_sourced_artifact}
                 onChange={(event) =>
                   update(item.id, {
@@ -169,6 +282,7 @@ export function EvalCases({
             <label className="flex items-center gap-2">
               <input
                 type="checkbox"
+                className="size-4 accent-primary"
                 checked={item.require_supported_claims}
                 onChange={(event) =>
                   update(item.id, {
@@ -197,7 +311,10 @@ export function EvalCases({
             </label>
           </div>
           {item.max_cost_usd !== null && (
-            <p className="text-sm text-warning-foreground">
+            <p
+              id={`${item.id}-cost-warning`}
+              className="rounded-lg bg-background p-3 text-sm text-foreground"
+            >
               {t("evaluations.costUnavailable")}
             </p>
           )}

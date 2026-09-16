@@ -1,4 +1,12 @@
 {
+  "evaluations.refreshAfterSaveError": "A suíte foi salva, mas não foi possível carregar a revisão atualizada. Suas edições foram preservadas. Salve novamente antes de executar.",
+  "evaluations.scorerChanged": "O avaliador ou uma de suas dependências mudou. Esta suíte mantém a versão revisada até você aceitar e salvar a atualização.",
+  "evaluations.useUpdatedScorer": "Usar avaliador atualizado",
+  "evaluations.nameRequired": "Insira um nome para o caso.",
+  "evaluations.inputRequired": "Insira a entrada a ser enviada ao candidato.",
+  "evaluations.scoreRange": "Insira uma pontuação de 0 a 1.",
+  "evaluations.latencyRange": "Insira um número inteiro de 1 a 3.600.000 ms ou deixe em branco.",
+  "evaluations.costRange": "Insira um custo maior que zero ou deixe em branco.",
   "field.required": "Obrigatório",
   "accordion.addVariable": "Incluir variável",
   "accordion.fullscreen": "Tela cheia",

@@ -1,4 +1,12 @@
 {
+  "evaluations.refreshAfterSaveError": "The suite was saved, but its refreshed revision could not be loaded. Your edits are preserved. Save again before running.",
+  "evaluations.scorerChanged": "The scorer or one of its dependencies has changed. This suite still uses the reviewed version until you accept and save the update.",
+  "evaluations.useUpdatedScorer": "Use updated scorer",
+  "evaluations.nameRequired": "Enter a case name.",
+  "evaluations.inputRequired": "Enter the input to send to the candidate.",
+  "evaluations.scoreRange": "Enter a score from 0 to 1.",
+  "evaluations.latencyRange": "Enter a whole number from 1 to 3,600,000 ms, or leave blank.",
+  "evaluations.costRange": "Enter a cost greater than zero, or leave blank.",
   "field.required": "required",
   "crash.title": "Sorry, we found an unexpected error!",
   "crash.descriptionBefore": "Please report errors with detailed tracebacks on the",
