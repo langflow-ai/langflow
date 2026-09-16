@@ -385,6 +385,44 @@ class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
     created_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
 
 
+class AuthzAccessException(SQLModel, table=True):  # type: ignore[call-arg]
+    """A per-(user, resource) revocation of role/scope-derived access.
+
+    Deliberately narrow: one row means "this user's access to this resource
+    via a role or scope grant is revoked" — it says nothing about, and never
+    cancels, an independent :class:`AuthzShare` on the same resource. Those
+    are two separate grants with two separate removal paths on purpose, so a
+    revoke here can never silently take away more than it says it does.
+
+    ``user_id`` cascades on delete (an exception naming a deleted user is
+    meaningless); ``created_by`` uses ``SET NULL`` like ``AuthzShare.created_by``
+    so deleting the person who revoked something doesn't undo the revoke.
+    """
+
+    __tablename__ = "authz_access_exception"
+    __table_args__ = (
+        Index("ix_authz_access_exception_resource", "resource_type", "resource_id"),
+        UniqueConstraint(
+            "user_id",
+            "resource_type",
+            "resource_id",
+            name="uq_authz_access_exception_target",
+        ),
+    )
+
+    id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
+    user_id: UUIDstr = Field(
+        sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+    )
+    resource_type: str = Field(index=True)
+    resource_id: UUIDstr = Field(index=True)
+    created_by: UUIDstr | None = Field(
+        default=None,
+        sa_column=Column(sa.Uuid(), ForeignKey("user.id", ondelete="SET NULL"), nullable=True),
+    )
+    created_at: datetime = Field(default_factory=_tz_aware_now, sa_column=_tz_column())
+
+
 class AuthzEditLock(SQLModel, table=True):  # type: ignore[call-arg]
     """Optimistic edit lock that prevents concurrent edits to the same flow."""
 
