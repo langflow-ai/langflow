@@ -30,16 +30,18 @@ from langflow.services.database.models.traces.model import (
     TraceTable,
 )
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import session_scope
+from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.tracing.repository import fetch_single_trace, fetch_traces
 from langflow.services.tracing.validation import sanitize_query_string
 
 logger = logging.getLogger(__name__)
 
-# Keeps the API responsive when the trace table doesn't exist yet or the DB is slow at startup.
-DB_TIMEOUT = 5.0
-
 router = APIRouter(prefix="/monitor/traces", tags=["Traces"])
+
+
+def _get_traces_db_timeout() -> float:
+    """Keeps the API responsive when the trace table doesn't exist yet or the DB is slow."""
+    return get_settings_service().settings.traces_db_timeout
 
 
 @router.get("", response_model_by_alias=True)
@@ -70,6 +72,7 @@ async def get_traces(
     Returns:
         List of traces
     """
+    db_timeout = _get_traces_db_timeout()
     try:
         sanitized_query = sanitize_query_string(query)
         # Frontend uses 0-based pages; repository expects 1-based.
@@ -86,10 +89,10 @@ async def get_traces(
                 effective_page,
                 size,
             ),
-            timeout=DB_TIMEOUT,
+            timeout=db_timeout,
         )
     except asyncio.TimeoutError:
-        logger.warning("Traces query timed out after %ss (table may not exist or DB is slow)", DB_TIMEOUT)
+        logger.warning("Traces query timed out after %ss (table may not exist or DB is slow)", db_timeout)
         return TraceListResponse(traces=[], total=0, pages=0)
     except (OperationalError, ProgrammingError) as e:
         logger.debug("Database error getting traces (table may not exist): %s", e)
@@ -113,17 +116,18 @@ async def get_trace(
     Returns:
         TraceRead containing the trace and its hierarchical span tree.
     """
+    db_timeout = _get_traces_db_timeout()
     try:
         result = await asyncio.wait_for(
             fetch_single_trace(current_user.id, trace_id),
-            timeout=DB_TIMEOUT,
+            timeout=db_timeout,
         )
         if result is None:
             raise HTTPException(status_code=404, detail="Trace not found")
     except HTTPException:
         raise
     except asyncio.TimeoutError:
-        logger.warning("Single trace query timed out after %ss", DB_TIMEOUT)
+        logger.warning("Single trace query timed out after %ss", db_timeout)
         raise HTTPException(status_code=504, detail="Database query timed out") from None
     except (OperationalError, ProgrammingError) as e:
         logger.debug("Database error getting trace: %s", e)
