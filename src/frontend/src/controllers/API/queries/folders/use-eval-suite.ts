@@ -51,7 +51,20 @@ export type EvalRun = {
   candidate_digest: string;
   scorer_digest: string;
   suite_revision: string;
+  cancel_requested?: boolean;
+  error?: string | null;
+  pending_approval?: {
+    job_id: string;
+    phase: "candidate" | "scorer";
+    case_id: string;
+    request: Record<string, unknown>;
+  } | null;
   result: {
+    current?: {
+      job_id: string;
+      phase: "candidate" | "scorer";
+      case_id: string;
+    } | null;
     suite: EvalConfig;
     cases: EvalCaseResult[];
     complete: boolean;
@@ -75,7 +88,8 @@ export function useEvalRuns(projectId: string, watching: boolean) {
     queryFn: async ({ signal }) =>
       (await api.get<EvalRun[]>(`${evalURL(projectId)}/runs`, { signal })).data,
     retry: false,
-    refetchInterval: watching ? 2000 : false,
+    refetchInterval: (query) =>
+      watching || query.state.data?.some(isEvalRunActive) ? 2000 : false,
   });
 }
 
@@ -87,6 +101,26 @@ export function useRunEvalSuite(projectId: string) {
       expected_revision: string;
       expected_candidate_digest: string;
     }) => (await api.post<EvalRun>(`${evalURL(projectId)}/runs`, body)).data,
+    retry: false,
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: ["evalRuns", projectId] });
+    },
+  });
+}
+
+export function isEvalRunActive(run: EvalRun): boolean {
+  return ["queued", "in_progress", "suspended"].includes(run.status);
+}
+
+export function useCancelEvalRun(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (runId: string) =>
+      (
+        await api.post<EvalRun>(
+          `${evalURL(projectId)}/runs/${encodeURIComponent(runId)}/cancel`,
+        )
+      ).data,
     retry: false,
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["evalRuns", projectId] });

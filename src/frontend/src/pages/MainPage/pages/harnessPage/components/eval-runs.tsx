@@ -3,9 +3,18 @@ import { useTranslation } from "react-i18next";
 import {
   comparableRuns,
   type EvalRun,
+  isEvalRunActive,
 } from "@/controllers/API/queries/folders/use-eval-suite";
 
-export function EvalRuns({ runs }: { runs: EvalRun[] }) {
+import { EvalRunProgress } from "./eval-run-progress";
+
+export function EvalRuns({
+  runs,
+  projectId,
+}: {
+  runs: EvalRun[];
+  projectId: string;
+}) {
   const { t } = useTranslation();
   const [selectedId, setSelectedId] = useState("");
   const [baselineId, setBaselineId] = useState("");
@@ -13,7 +22,7 @@ export function EvalRuns({ runs }: { runs: EvalRun[] }) {
   const baseline = runs.find((run) => run.id === baselineId);
   const comparable = selected && baseline && comparableRuns(selected, baseline);
   const label = (run: EvalRun) =>
-    `${new Date(run.created_at).toLocaleString()} · ${run.candidate_digest.slice(0, 12)} · ${t(run.passed ? "evaluations.passed" : run.result?.complete && run.status === "completed" ? "evaluations.failed" : "evaluations.incomplete")}`;
+    `${new Date(run.created_at).toLocaleString()} · ${run.candidate_digest.slice(0, 12)} · ${t(isEvalRunActive(run) ? `evaluations.status.${run.status}` : run.passed ? "evaluations.passed" : run.result?.complete && run.status === "completed" ? "evaluations.failed" : "evaluations.incomplete")}`;
   return (
     <section
       className="space-y-4 border-t pt-6"
@@ -72,6 +81,13 @@ export function EvalRuns({ runs }: { runs: EvalRun[] }) {
             <dt>{t("evaluations.runId")}</dt>
             <dd className="font-mono">{selected.id}</dd>
           </dl>
+          {(isEvalRunActive(selected) || selected.error) && (
+            <EvalRunProgress
+              key={selected.id}
+              projectId={projectId}
+              run={selected}
+            />
+          )}
           <div className="overflow-x-auto rounded-md border">
             <table className="w-full text-left text-sm">
               <thead className="bg-muted">
@@ -160,11 +176,12 @@ export function EvalRuns({ runs }: { runs: EvalRun[] }) {
               </tbody>
             </table>
           </div>
-          {(!selected.result?.complete || selected.status !== "completed") && (
-            <p role="status" className="text-sm text-muted-foreground">
-              {t("evaluations.incompleteRun", { status: selected.status })}
-            </p>
-          )}
+          {!isEvalRunActive(selected) &&
+            (!selected.result?.complete || selected.status !== "completed") && (
+              <p role="status" className="text-sm text-muted-foreground">
+                {t("evaluations.incompleteRun", { status: selected.status })}
+              </p>
+            )}
         </>
       )}
     </section>

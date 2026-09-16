@@ -6,8 +6,9 @@ Implemented on `feat/harness-eval-suites`, stacked on `77775b5302` from
 An **Eval Suite** is a project containing cases and a reviewed scorer flow. It
 evaluates an exact mounted harness candidate. The desktop page provides case
 editing, candidate/scorer selection, retained results and score comparisons.
-This is the first bounded evaluation runner, not production certification or
-the complete release lifecycle.
+The subsequent `feat/harness-eval-durability` branch adds background execution,
+recovery, cancellation and human approval. See [its contract and evidence](harness-eval-durability.md).
+Neither slice certifies the full production release lifecycle.
 
 ## Authoring and execution
 
@@ -55,9 +56,10 @@ The project API surface is `/api/v1/projects/{id}/evaluations`:
 | --- | --- |
 | GET | Saved config/revision, authorized mounts and compatible local scorer outputs |
 | POST `/scorer-baseline` | Prepare the starter graph; ordinary flow creation saves it |
-| POST `/runs` | Run with `run_id`, `expected_revision`, `expected_candidate_digest` |
+| POST `/runs` | Accept a background run (202) with `run_id`, `expected_revision`, `expected_candidate_digest` |
 | GET `/runs` | The caller's latest 20 records in this suite |
-| GET `/runs/{run_id}` | Read the caller's retained record |
+| GET `/runs/{run_id}` | Read the caller's retained record and pending approval |
+| POST `/runs/{run_id}/cancel` | Persist a cancellation request (202); poll until terminal |
 
 Project configuration still saves through the ordinary project PATCH endpoint.
 Execution requires the developer Workflows API to be enabled. Evaluation is an
@@ -104,17 +106,21 @@ candidate permits comparison; changing the rubric or scorer does not.
 
 ## Explicit limits and remaining work
 
-- At most **10 cases**, **300 seconds** including queue time, and **2 executing
-  suites per process**. This is synchronous request execution, not a durable
-  background evaluation scheduler or a distributed concurrency limit. Process
-  loss can leave an incomplete record; it is not resumed or reported as passing.
-- Candidates/scorers requiring durable human approval are rejected before
-  provider execution. Approval-aware orchestration remains a subsequent slice.
-- Elapsed wall time is measured for each candidate workflow. Provider cost is
-  **unavailable** in this runner. Setting a cost budget fails closed; the UI says
-  this before execution. Provider-metered cost and cancellation when a budget is
-  exhausted remain work. Latency budgets assess completed calls; they do not
-  impose a per-case deadline.
+- External evaluation-platform integrations (Braintrust, LangSmith and Phoenix
+  import/export adapters) are postponed by the user as of September 16, 2026.
+  They are not acceptance requirements for this native Eval Suite slice.
+- At most **10 cases**. Candidate and scorer execute as durable Workflows children
+  in the existing bounded worker pool. Each active child pass has a **300-second**
+  ceiling (or a smaller configured background timeout). Queue time and approval
+  waiting do not consume that execution budget. There is no suite-wide wall-clock
+  deadline or distributed suite admission limit.
+- Candidate and scorer approvals are supported through the existing Workflows
+  resume endpoint. Completed cases and suspended checkpoints survive restarts.
+  An interrupted in-flight child fails the evaluation; it is not automatically
+  re-executed because its tools may already have acted.
+- The candidate's elapsed wall time includes queueing and human approval waiting.
+  The optional elapsed budget assesses that value; it is not an execution timeout.
+  Provider cost remains **unavailable**. A cost requirement fails closed.
 - Responses are retained up to 48 KB each. A larger response fails the case.
   Combined case/reference/response must fit the Workflows global's 64 KiB
   character limit. Larger evidence needs an artifact-reference scoring protocol.
@@ -122,12 +128,15 @@ candidate permits comparison; changing the rubric or scorer does not.
   candidate/snapshot IDs. Portable suite archives with retained scorer and
   candidate references remain work.
 - Live-provider acceptance remains open. Deployed-topology verification is
-  deferred at the user's request. Earlier PostgreSQL verification belongs to the
-  reliability branch; the new evaluation API tests in this slice use SQLite.
+  deferred at the user's request. The durability follow-up verifies the evaluation lifecycle on local SQLite and
+  PostgreSQL. That does not establish the intended deployed topology.
 - Evaluation-gated promotion, release retention and rollback follow after these
   evaluation limits are addressed for the intended production profile.
 
-## Verification
+## Original slice verification
+
+These results describe `5cef7a9917`. Current durability verification is recorded
+in [the follow-up](harness-eval-durability.md).
 
 - 13 real API/graph tests with deterministic provider replacement: frozen
   candidate and scorer after draft edits; persisted history; repeated and

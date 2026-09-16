@@ -178,6 +178,7 @@ test("only compares complete runs with identical evaluation requirements and sco
   }
   render(
     <EvalRuns
+      projectId="suite"
       runs={[first, record("second", { suite_revision: "different" })]}
     />,
   );

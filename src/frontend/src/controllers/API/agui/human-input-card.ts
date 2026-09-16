@@ -40,7 +40,7 @@ export function findHumanInputContent(
   return undefined;
 }
 
-function toInteractiveContent(
+export function toInteractiveContent(
   payload: Record<string, unknown>,
   jobId: string,
 ): InteractiveContent {
