@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 
 class ObservabilitySettings(BaseModel):
@@ -23,6 +23,20 @@ class ObservabilitySettings(BaseModel):
     """
     audit_retention_days: int = 90
     """Days an audit event is kept. Cleanup deletes by timestamp only; 0 keeps events forever."""
+    audit_exclude_events: list[str] = []
+    """Audited actions never recorded, comma-separated: ``flow:write``, ``flow:*`` or ``*:delete``.
+
+    Entries are only normalized here. The application decides what they match, and an
+    entry that matches nothing is reported at startup and excludes nothing.
+    """
+
+    @field_validator("audit_exclude_events", mode="before")
+    @classmethod
+    def normalize_audit_exclude_events(cls, value: str | list[str] | None) -> list[str]:
+        entries = value.split(",") if isinstance(value, str) else (value or [])
+        normalized = (str(entry).strip().lower() for entry in entries)
+        return list(dict.fromkeys(entry for entry in normalized if entry))
+
     max_flow_version_entries_per_flow: int = 50
     """Max version history entries per flow. Oldest entries pruned on next snapshot.
 
