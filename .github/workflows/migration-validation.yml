@@ -12,6 +12,7 @@ on:
       - 'src/backend/base/langflow/services/jobs/**'
       - 'src/backend/base/langflow/services/job_queue/**'
       - 'src/backend/tests/unit/background_execution/**'
+      - 'src/backend/base/langflow/tests/services/database/models/flow_version/**'
 
 jobs:
   model-migration-consistency:
@@ -58,7 +59,13 @@ jobs:
           MIGRATION_VALIDATION_CI: "true"
           LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
         run: |
-          uv run pytest src/backend/tests/unit/alembic/test_migration_execution.py -x -v
+          uv run pytest src/backend/tests/unit/alembic/test_migration_execution.py src/backend/tests/unit/alembic/test_message_history_index_migration.py -x -v
+
+      - name: Check flow version deletion and attachment concurrency
+        env:
+          LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
+        run: |
+          uv run pytest -c pyproject.toml src/backend/base/langflow/tests/services/database/models/flow_version/test_delete_attachment_concurrency.py -x -v
 
   background-real-service:
     name: Background Execution Real-Service Tests (real Postgres + Redis)

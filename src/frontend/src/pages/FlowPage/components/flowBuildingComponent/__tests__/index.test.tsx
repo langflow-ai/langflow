@@ -1,15 +1,17 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
-import { useEffect } from "react";
+import { act, render, screen } from "@testing-library/react";
+import type { ComponentProps, ReactNode } from "react";
 import FlowBuildingComponent from "../index";
 
 // Mock dependencies
 jest.mock("framer-motion", () => {
-  const React = require("react");
+  const React = jest.requireActual<typeof import("react")>("react");
   return {
-    AnimatePresence: ({ children }: any) => <div>{children}</div>,
+    AnimatePresence: ({ children }: { children?: ReactNode }) => (
+      <div>{children}</div>
+    ),
     motion: {
-      div: React.forwardRef(
-        ({ children, className, ...props }: any, ref: any) => (
+      div: React.forwardRef<HTMLDivElement, ComponentProps<"div">>(
+        ({ children, className, ...props }, ref) => (
           <div ref={ref} className={className} {...props}>
             {children}
           </div>
@@ -21,7 +23,7 @@ jest.mock("framer-motion", () => {
 
 jest.mock("react-markdown", () => ({
   __esModule: true,
-  default: ({ children }: any) => <div>{children}</div>,
+  default: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 }));
 
 jest.mock("remark-gfm", () => ({
@@ -38,7 +40,7 @@ jest.mock(
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: ({ name, className }: any) => (
+  default: ({ name, className }: { name: string; className?: string }) => (
     <div data-testid={`icon-${name}`} className={className}>
       {name}
     </div>
@@ -50,7 +52,12 @@ jest.mock("@/components/core/border-trail", () => ({
 }));
 
 jest.mock("@/components/ui/button", () => ({
-  Button: ({ children, onClick, "data-testid": testId, ...props }: any) => (
+  Button: ({
+    children,
+    onClick,
+    "data-testid": testId,
+    ...props
+  }: ComponentProps<"button"> & { "data-testid"?: string }) => (
     <button onClick={onClick} data-testid={testId} {...props}>
       {children}
     </button>
@@ -58,13 +65,13 @@ jest.mock("@/components/ui/button", () => ({
 }));
 
 jest.mock("@/components/ui/TextShimmer", () => ({
-  TextShimmer: ({ children }: any) => (
+  TextShimmer: ({ children }: { children?: ReactNode }) => (
     <div data-testid="text-shimmer">{children}</div>
   ),
 }));
 
 jest.mock("@/utils/utils", () => ({
-  cn: (...classes: any[]) => classes.filter(Boolean).join(" "),
+  cn: (...classes: unknown[]) => classes.filter(Boolean).join(" "),
 }));
 
 jest.mock("@/constants/enums", () => ({
@@ -82,12 +89,12 @@ const mockBuildFlow = jest.fn();
 
 let mockIsBuilding = false;
 let mockFlowBuildStatus = {};
-let mockBuildInfo: any = null;
-let mockPastBuildFlowParams: any = null;
+let mockBuildInfo: { error?: string[]; success?: boolean } | null = null;
+let mockPastBuildFlowParams: Record<string, unknown> | null = null;
 
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
-  default: (selector: any) => {
+  default: (selector: (state: Record<string, unknown>) => unknown) => {
     const state = {
       isBuilding: mockIsBuilding,
       flowBuildStatus: mockFlowBuildStatus,
@@ -255,6 +262,21 @@ describe("FlowBuildingComponent - Timer Tests", () => {
 
       expect(screen.getByText("Flow build failed")).toBeInTheDocument();
       expect(screen.getByTestId("icon-CircleAlert")).toBeInTheDocument();
+    });
+
+    it("makes the full error and policy explanation keyboard accessible", () => {
+      const error = "No model selected. Please select a language model.";
+      const note =
+        "Note: custom components are disabled on this server (LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false).";
+      mockBuildInfo = { error: [`${error}\n\n${note}`] };
+
+      render(<FlowBuildingComponent />);
+
+      const details = screen.getByRole("region", { name: "Flow build failed" });
+      expect(details).toHaveTextContent(error);
+      expect(details).toHaveTextContent(note);
+      details.focus();
+      expect(details).toHaveFocus();
     });
 
     it("should show stop button when building", () => {

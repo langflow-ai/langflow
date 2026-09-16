@@ -5,6 +5,7 @@ import {
   useGetAuthSession,
   useGetAutoLogin,
 } from "@/controllers/API/queries/auth";
+import { canSessionProbeClearAuth } from "@/controllers/API/queries/auth/session-probe";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import { useGetBasicExamplesQuery } from "@/controllers/API/queries/flows/use-get-basic-examples";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
@@ -69,8 +70,12 @@ export function AppInitPage() {
       if (sessionData.store_api_key) {
         storeApiKey(sessionData.store_api_key);
       }
-    } else if (sessionData && !sessionData.authenticated) {
-      // Explicitly not authenticated
+    } else if (
+      sessionData &&
+      !sessionData.authenticated &&
+      canSessionProbeClearAuth()
+    ) {
+      // Explicitly not authenticated, and auto-login hasn't signed the page in.
       setIsAuthenticated(false);
     }
   }, [sessionData]);
