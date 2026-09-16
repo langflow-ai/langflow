@@ -565,7 +565,7 @@ class TestMultiUserMCPServerAccess:
 
         # Verify User One's server is deleted
         response_one = await client.get(f"/api/v2/mcp/servers/{server_name}", headers={"x-api-key": user_one_api_key})
-        assert response_one.json() is None
+        assert response_one.status_code == 404
 
         # Verify User Two's server still exists
         response_two = await client.get(f"/api/v2/mcp/servers/{server_name}", headers={"x-api-key": user_two_api_key})
@@ -577,7 +577,7 @@ class TestMultiUserMCPServerAccess:
         assert response.status_code == 200
 
         response_two = await client.get(f"/api/v2/mcp/servers/{server_name}", headers={"x-api-key": user_two_api_key})
-        assert response_two.json() is None
+        assert response_two.status_code == 404
 
 
 class TestMCPPatchServerConfig:
@@ -663,6 +663,42 @@ class TestMCPPatchServerConfig:
             assert response.json() == expected_config
         finally:
             await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
+
+    @pytest.mark.asyncio
+    async def test_should_return_404_and_not_create_when_patching_missing_server(
+        self, client: AsyncClient, created_api_key
+    ):
+        server_name = f"missing-patch-{uuid4()}"
+        auth_headers = {"x-api-key": created_api_key.api_key}
+
+        try:
+            response = await client.patch(
+                f"/api/v2/mcp/servers/{server_name}",
+                json={"url": "http://example.com/mcp"},
+                headers=auth_headers,
+            )
+            assert response.status_code == 404
+            assert response.json() == {"detail": "Server not found."}
+
+            response = await client.get("/api/v2/mcp/servers?action_count=false", headers=auth_headers)
+            assert response.status_code == 200
+            assert server_name not in [server["name"] for server in response.json()]
+        finally:
+            await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
+
+
+class TestMCPGetServerEndpoint:
+    """Test GET semantics for a single MCP server."""
+
+    @pytest.mark.asyncio
+    async def test_should_return_404_when_getting_missing_server(self, client: AsyncClient, created_api_key):
+        server_name = f"missing-get-{uuid4()}"
+        auth_headers = {"x-api-key": created_api_key.api_key}
+
+        response = await client.get(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
+
+        assert response.status_code == 404
+        assert response.json() == {"detail": "Server not found."}
 
 
 class TestMCPWithDefaultFolderName:
