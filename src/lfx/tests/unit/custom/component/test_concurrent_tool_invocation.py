@@ -9,8 +9,14 @@ import asyncio
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
+from types import MethodType
 
-from lfx.base.tools.component_tool import ComponentToolkit, send_message_noop
+from lfx.base.tools.component_tool import (
+    ComponentToolkit,
+    _build_output_async_function,
+    _build_output_function,
+    send_message_noop,
+)
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DataInput, MessageTextInput
 from lfx.io import Output
@@ -52,6 +58,46 @@ class SlowLabelComponent(Component):
                 "label_after": self.label,
             }
         )
+
+
+class RuntimeOutputComponent(Component):
+    """Component whose declared output can be replaced at runtime."""
+
+    display_name = "Runtime Output"
+    description = "Returns the invocation input."
+    inputs = [MessageTextInput(name="input_value", display_name="Input", value="original", tool_mode=True)]
+    outputs = [Output(display_name="Result", name="result", method="static_output")]
+
+    def static_output(self) -> str:
+        return self.input_value
+
+
+def test_runtime_bound_sync_output_executes_on_component_copy():
+    """Runtime output methods must read inputs from the isolated invocation copy."""
+    component = RuntimeOutputComponent()
+
+    def runtime_output(self) -> str:
+        return self.input_value
+
+    component.runtime_output = MethodType(runtime_output, component)
+    output_function = _build_output_function(component, component.runtime_output)
+
+    assert output_function(input_value="tool input") == "tool input"
+    assert component.input_value == "original"
+
+
+async def test_runtime_bound_async_output_executes_on_component_copy():
+    """Async RunFlow-style resolvers must not fall back to the original component."""
+    component = RuntimeOutputComponent()
+
+    async def runtime_output(self) -> str:
+        return self.input_value
+
+    component.runtime_output = MethodType(runtime_output, component)
+    output_function = _build_output_async_function(component, component.runtime_output)
+
+    assert await output_function(input_value="tool input") == "tool input"
+    assert component.input_value == "original"
 
 
 def test_should_isolate_inputs_when_tool_invoked_concurrently():
