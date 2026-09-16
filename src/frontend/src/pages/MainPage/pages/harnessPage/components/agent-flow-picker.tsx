@@ -40,7 +40,7 @@ export function AgentFlowPicker({
   const candidates = agentCandidates(flows);
   return (
     <section
-      className="flex min-w-0 flex-col gap-3 border-b border-border pb-6"
+      className="flex min-w-0 flex-col gap-4 border-b border-border/60 pb-8"
       data-testid="harness-agent-section"
     >
       <div>

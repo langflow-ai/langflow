@@ -1,0 +1,57 @@
+/* Hallmark · component: Harness form · genre: modern-minimal · theme: Langflow
+ * pre-emit critique: P4 H4 E4 S5 R5 V4
+ * Keep control boundaries accessible; use spacing and surfaces to quiet the form.
+ * Canvas controls retain their own compact dimensions.
+ */
+.harness-form
+:is(input.primary-input, textarea, button[role="combobox"], select) {
+  @apply min-h-10 rounded-lg border-control bg-background;
+}
+
+.harness-form :is(button[role="combobox"], select) {
+  @apply px-3;
+}
+
+.harness-form textarea {
+  @apply p-3 leading-relaxed;
+}
+
+.harness-form .chakra-numberinput {
+  @apply w-48 max-w-full;
+}
+
+.harness-form
+  :is(input.primary-input, textarea, button[role="combobox"], select):disabled {
+  @apply bg-muted text-muted-foreground;
+}
+
+@media (hover: hover) {
+  .harness-form
+    :is(input.primary-input, textarea, button[role="combobox"], select):not(
+      :disabled
+    ):hover {
+    @apply bg-muted/30;
+  }
+}
+
+.harness-form
+  :is(
+    input.primary-input,
+    textarea,
+    button[role="combobox"],
+    select
+  ):focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.harness-form
+  :is(
+    input.primary-input,
+    textarea,
+    button[role="combobox"],
+    select
+  )[aria-invalid="true"] {
+  @apply border-destructive;
+}

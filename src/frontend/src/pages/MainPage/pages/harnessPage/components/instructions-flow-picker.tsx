@@ -141,7 +141,7 @@ export function HarnessFlowPicker({
   if (!expanded)
     return (
       <Button
-        className="self-start"
+        className="h-auto self-start px-0 py-1 text-xs text-muted-foreground hover:text-foreground"
         variant="link"
         size="sm"
         disabled={disabled || !agentId}
@@ -152,7 +152,7 @@ export function HarnessFlowPicker({
     );
   return (
     <div
-      className="flex min-w-0 flex-col gap-3 rounded-lg border border-border p-3 [&_button]:active:bg-accent"
+      className="flex min-w-0 flex-col gap-4 rounded-xl bg-muted/40 p-4"
       data-testid={`${kind}-flow-picker`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">

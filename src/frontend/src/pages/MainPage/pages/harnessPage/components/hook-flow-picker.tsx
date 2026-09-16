@@ -94,7 +94,7 @@ export function HookFlowPicker({
     <div className="min-w-0 space-y-4" data-testid="hook-flow-picker">
       <p className="text-sm text-muted-foreground">{t("harness.hooksHelp")}</p>
       {value.length > 0 && (
-        <ol className="divide-y divide-border rounded-lg border border-border">
+        <ol className="space-y-3">
           {orderedHooks(value).map(({ hook, index }, position) => {
             const choice = choices.find(
               (item) => outputKey(item) === outputKey(hook),
@@ -105,12 +105,12 @@ export function HookFlowPicker({
             return (
               <li
                 key={`${index}:${outputKey(hook)}`}
-                className="min-w-0 space-y-3 p-4"
+                className="min-w-0 space-y-4 rounded-xl bg-muted/40 p-5"
                 data-testid={`hook-row-${position}`}
               >
                 <div className="flex items-start gap-3">
-                  <span className="mt-1 text-sm tabular-nums text-muted-foreground">
-                    {position + 1}.
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-background text-xs font-medium tabular-nums text-muted-foreground">
+                    {position + 1}
                   </span>
                   <div className="min-w-0 flex-1">
                     <Link
@@ -384,6 +384,7 @@ export function HookFlowPicker({
           />
         </div>
         <Button
+          className="h-10 shrink-0 rounded-lg"
           size="sm"
           variant="outline"
           disabled={locked || !agentId || !selected || isLoading || isError}

@@ -57,7 +57,7 @@ export const HarnessSummary = ({
       data-testid="harness-summary"
       aria-label={t("harness.summaryTitle")}
       className={cn(
-        "flex h-fit min-w-0 flex-col gap-5 rounded-lg border border-border bg-background p-4",
+        "flex h-fit min-w-0 flex-col gap-5 rounded-xl bg-muted/40 p-5",
         className,
       )}
     >
