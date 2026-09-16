@@ -11,6 +11,11 @@ the Workflows API. Research producing a sourced artifact remains the proof workf
 Agent Harness, Tool Pack, Skill Pack, and Eval Suite remain the product
 model; deployment artifacts and releases are lifecycle records.
 
+**September 16 completion review:** `feat/harness-delivery-completion` fixes
+accepted-scorer retention, Eval Suite editing/review races, and desktop form polish
+without expanding the capability scope. See the [review, checks, and screenshots](harness-delivery-review.md).
+The production gates and deferrals below remain unchanged.
+
 ## Runtime artifact delivery update
 
 The first branch now implements an explicit v5 candidate writer/reader and LFX
