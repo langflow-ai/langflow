@@ -23,7 +23,7 @@
 - **Multi-agent orchestration** with conversation management and retrieval.
 - **Deploy as an API** or export as JSON for Python apps.
 - **Deploy as an MCP server** and turn your flows into tools for MCP clients.
-- **Observability** with LangSmith, LangFuse and other integrations.
+- **Observability** with LangSmith, LangFuse, Opik, and other integrations.
 - **Enterprise-ready** security and scalability.
 
 ## 🖥️  Langflow Desktop
