@@ -55,10 +55,20 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | `IntegrationError` and typed subclasses / `INTEGRATION_ERROR_CODES` | `lfx.integrations` |
 | `normalize_integration_error()` / `register_error_normalizer()` | `lfx.integrations` |
 | `IntegrationProvider` / `OAuthProfile` / `IntegrationCapability` / `ScopeSet` | `lfx.integrations` |
+| `McpToolPin` (pinned MCP action contract on a capability) | `lfx.integrations` |
 | `integration_action()` | `lfx.integrations` |
 | `Component.resolve_connection(field_name)` | `lfx.custom.custom_component.component.Component` |
 | `Component.select_integration_capabilities(capability_ids)` | `lfx.custom.custom_component.component.Component` |
 | `BaseConnectionResolverService`, `ConnectionAccessPolicy` | `lfx.services.connection` |
+
+### Preset MCP components
+
+| Symbol | Source |
+| --- | --- |
+| `MCPPresetComponent` (`_mcp_server_config`, `_pinned_spec`, `_get_tools`, `run_tool`) | `lfx.base.mcp.preset` |
+| `preset_control_inputs()` | `lfx.base.mcp.preset` |
+| `PinnedServerSpec` / `PinnedToolSpec` / `PinnedToolDiff` | `lfx.base.mcp.pinned` |
+| `pinned_spec_from_capabilities()` / `tools_list_digest()` / `enforce_pinned_tools()` | `lfx.base.mcp.pinned` |
 
 ### Outputs
 
@@ -749,3 +759,40 @@ the deserialize half is covered by
   messages and winner selection are unchanged, and two physically distinct
   manifests for one canonical name still error.  No public symbol's name or
   signature changed.
+
+- **Pinned action-to-tool mode for preset MCP components (additive).**
+  `MCPPresetComponent` gains a `_pinned_spec()` hook returning a
+  `PinnedServerSpec` (`lfx.base.mcp.pinned`); in pinned mode the component fixes
+  the endpoint and transport, refuses any pinned tool that was removed, renamed,
+  or re-shaped relative to the pin, compares the pinned subset's `tools/list` content digest and
+  the `InitializeResult.serverInfo` name/version when they are pinned, keeps the
+  Tool dropdown off the live server, and re-checks call arguments against the
+  pinned schema on both of a tool's call paths (`coroutine` and `func`). Only an
+  argument the pin does not declare is treated as drift; an omitted required
+  field is left to the derived args schema, whose error is self-correctable.
+  `pinned_spec_from_capabilities()` additionally refuses a `tools_list_hash`
+  that is not the digest of exactly the tools the manifest pins, so that
+  authoring mistake surfaces at build time instead of as runtime "drift".
+  Drift raises the new `IncompatibleToolError`
+  (`incompatible-tool`, added to `INTEGRATION_ERROR_CODES`). Capabilities carry
+  the pin as `IntegrationCapability.mcp_pin: McpToolPin`; a capability whose
+  `substrate` is `mcp` must now declare both `mcp_tool` and `mcp_pin`. Tools
+  discovered by `update_tools` carry their raw `input_schema`/`output_schema` on
+  `metadata`, and a server config may set `allow_sse_fallback=False` to pin the
+  transport. Components that do not override `_pinned_spec()` are unaffected;
+  `BUNDLE_API_VERSION` remains `1`.
+  Pinned discovery validates the raw tool list before schema conversion can skip
+  entries and rejects duplicate or unnamed tools. Extra unpinned tools may vary
+  with the user's grant: they are informational in `PinnedToolDiff.added`, do not
+  affect `is_compatible` or the pinned digest, and are excluded before conversion
+  from the component's toolset and execution cache. A missing pinned tool's error
+  hint also directs the operator to check the connection's grants.
+  Session reuse separates callers that permit SSE fallback from callers
+  that require Streamable HTTP, so a live legacy session cannot bypass the pin.
+
+- **`discovered_tool()` accepts a recorded `tools/list` entry.**
+  `lfx.base.mcp.pinned.discovered_tool()` (and therefore `tools_list_digest()`)
+  now normalizes a plain mapping in addition to a live MCP tool object, so a
+  bundle author can compute a pin's `tools_list_hash` directly from the recorded
+  `tools/list` response that the pin is derived from. Additive;
+  `BUNDLE_API_VERSION` remains `1`.

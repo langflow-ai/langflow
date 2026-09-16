@@ -31,6 +31,7 @@ from lfx.integrations.errors import (
     AuthExpiredError,
     ConnectionNotAuthorizedError,
     ConnectionUnresolvedError,
+    IncompatibleToolError,
     RateLimitedError,
     ScopeMissingError,
 )
@@ -55,6 +56,7 @@ HTTP_TOO_MANY_REQUESTS = 429
         (AuthExpiredError(provider="google"), "auth-expired"),
         (ScopeMissingError(frozenset({"calendar.write"}), provider="google"), "scope-missing"),
         (RateLimitedError(provider="google", retry_after=12.0), "rate-limited"),
+        (IncompatibleToolError(provider="google"), "incompatible-tool"),
         (IntegrationPolicyError("google", IntegrationPolicyPurpose.USE), "policy-blocked"),
     ],
 )

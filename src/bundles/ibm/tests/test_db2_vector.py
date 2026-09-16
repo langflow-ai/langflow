@@ -614,79 +614,23 @@ class TestDB2VectorStoreComponent:
             # Should not raise
             component.search_documents()
 
-    def test_metadata_cleared_during_ingestion(self, component, mock_embedding):
-        """Test that metadata is cleared during document ingestion."""
+    def test_metadata_cleared_without_community(self, component, mock_embedding):
+        """Preserve content deduplication and strip all metadata without an optional helper."""
         component.embedding = mock_embedding
-
-        # Create data with complex metadata
+        component.allow_duplicates = False
         component.ingest_data = [
-            Data(
-                text="Test document",
-                data={
-                    "text": "Test document",
-                    "metadata_field": "should be removed",
-                    "nested": {"key": "value"},
-                },
-            )
+            Data(data={"text": "Test document", "field": "remove", "nested": {"key": "value"}}),
+            Data(data={"text": "Test document", "field": "different metadata"}),
         ]
-
-        with (
-            patch("ibm_db_dbi.connect") as mock_connect,
-            patch("langchain_community.vectorstores.utils.filter_complex_metadata") as mock_filter,
-        ):
-            mock_connection = MagicMock()
-            mock_connect.return_value = mock_connection
-
-            from langchain_core.documents import Document
-            from lfx_ibm.components.ibm.db2vs import DB2VS
-
-            # Mock filter to return documents
-            filtered_doc = Document(page_content="Test document", metadata={"some": "metadata"})
-            mock_filter.return_value = [filtered_doc]
-
-            mock_vector_store = MagicMock()
-            with (
-                patch.object(DB2VS, "__init__", return_value=None),
-                patch.object(DB2VS, "add_documents") as mock_add_docs,
-                patch.object(component, "build_vector_store", return_value=mock_vector_store),
-            ):
-                mock_vector_store.add_documents = mock_add_docs
-                component._add_documents_to_vector_store(mock_vector_store)
-
-                # Verify documents were added with cleared metadata
-                if mock_add_docs.called:
-                    added_docs = mock_add_docs.call_args[0][0]
-                    for doc in added_docs:
-                        assert doc.metadata == {}
-
-    def test_metadata_cleared_fallback_without_filter(self, component, mock_embedding):
-        """Test metadata clearing fallback when filter_complex_metadata is unavailable."""
-        component.embedding = mock_embedding
-        component.ingest_data = [Data(text="Test document", data={"text": "Test document", "field": "value"})]
-
-        with (
-            patch("ibm_db_dbi.connect") as mock_connect,
-            patch.dict("sys.modules", {"langchain_community.vectorstores.utils": None}),
-        ):
-            mock_connection = MagicMock()
-            mock_connect.return_value = mock_connection
-
-            from lfx_ibm.components.ibm.db2vs import DB2VS
-
-            mock_vector_store = MagicMock()
-            with (
-                patch.object(DB2VS, "__init__", return_value=None),
-                patch.object(DB2VS, "add_documents") as mock_add_docs,
-                patch.object(component, "build_vector_store", return_value=mock_vector_store),
-            ):
-                mock_vector_store.add_documents = mock_add_docs
-                component._add_documents_to_vector_store(mock_vector_store)
-
-                # Verify fallback was used and metadata was cleared
-                if mock_add_docs.called:
-                    added_docs = mock_add_docs.call_args[0][0]
-                    for doc in added_docs:
-                        assert doc.metadata == {}
+        vector_store = MagicMock()
+        vector_store.get.return_value = {"ids": [], "documents": [], "metadatas": []}
+        with patch.dict("sys.modules", {"langchain_community.vectorstores.utils": None}):
+            component._add_documents_to_vector_store(vector_store)
+        vector_store.add_documents.assert_called_once()
+        documents = vector_store.add_documents.call_args.args[0]
+        assert len(documents) == 1
+        assert documents[0].page_content == "Test document"
+        assert documents[0].metadata == {}
 
     def test_search_results_return_text_only(self, component, mock_embedding):
         """Test that search results return only text, not metadata."""
@@ -776,8 +720,7 @@ class TestDB2VectorStoreComponent:
             mock_connection = MagicMock()
             mock_connect.return_value = mock_connection
 
-            from langchain_community.vectorstores.utils import DistanceStrategy
-            from lfx_ibm.components.ibm.db2vs import DB2VS
+            from lfx_ibm.components.ibm.db2vs import DB2VS, DistanceStrategy
 
             # Test COSINE
             component.distance_strategy = "COSINE"

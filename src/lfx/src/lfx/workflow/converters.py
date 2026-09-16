@@ -89,6 +89,8 @@ class ParsedWorkflowRun:
     # per-user state to the end user. ``None`` for anonymous / feature-off / editor
     # runs, so those are byte-for-byte unchanged.
     end_user_id: str | None = None
+    # Server-derived before component sanitization; never accepted from the request body.
+    component_substitution_warning: str | None = None
 
 
 def parse_workflow_run_request(request: WorkflowRunRequest) -> ParsedWorkflowRun:
