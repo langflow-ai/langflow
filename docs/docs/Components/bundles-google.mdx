@@ -170,6 +170,13 @@ Each component requests exactly one scope, the one its action needs. No componen
 for a scope Google classifies as restricted, so the Langflow-managed OAuth app does not
 require a security assessment.
 
+:::important
+The visual editor does not yet have a control for the **Google Connection** field, so these
+five components are not offered in the component menu in this release. Flows that already
+contain them, such as flows created through the API or run with `lfx run`, keep working and
+keep their connection handle.
+:::
+
 ### Drive reach on the drive.file scope
 
 `drive.file` is a non-sensitive scope that grants access **only to files this application
@@ -205,8 +212,7 @@ requires a restricted scope, which is deliberately out of scope for this release
     ```
 
 4. Navigate to the returned `authorization_url` and complete consent.
-5. In the flow, set the component's **Google Connection** field to the handle
-   `google/work`.
+5. In the flow JSON, set the component's `connection` field to the handle `google/work`.
 
 Verify the grant with `POST /api/v1/connections/CONNECTION_ID/test`. A connection that is
 missing a scope fails the action with a `scope-missing` error rather than a partial result.
@@ -255,6 +261,11 @@ reasons, and `provider-unavailable` on server failures. Unsupported methods use
 `action-unsupported`. Invalid requests are not retryable; correct the inputs first. Google response
 bodies are never passed through verbatim.
 
+Drive outcomes name the `drive.file` boundary. A file Google reports as not authorized for
+this app fails with `connection-not-authorized`, and a Drive file that is not found fails with
+`resource-not-found` whose hint also says to check the file ID. Both hints explain that only
+files created by or opened with this app are reachable.
+
 ### Fetching Drive content
 
 **Drive: Fetch File (app files)** returns at most 25 MiB of content before text decoding
@@ -268,11 +279,15 @@ Google also imposes a [10 MB export limit](https://developers.google.com/workspa
 The **Google Drive** knowledge-base ingestion source reads the same
 `drive.file` scope through the same managed connection, so a knowledge base can be
 kept in sync with the files this application created or the user opened with it.
-Configure it with a connection handle:
+Start an ingestion with a connection handle through
+`POST /api/v1/knowledge_bases/KB_NAME/ingest/connector`:
 
 ```json
 {"source_type": "google_drive", "source_config": {"connection": "google/work", "folder_id": "FOLDER_ID"}}
 ```
+
+The knowledge-base UI does not offer connector sources yet, so this request is the
+way to start a Drive ingestion in this release.
 
 Google-native documents are exported on the way in: Docs and Slides as plain
 text, Sheets as CSV. Folders, Forms, Sites, and shortcuts are skipped because
@@ -280,37 +295,30 @@ they carry no text to ingest.
 
 Because ingestion runs as a background job rather than an interactive request,
 the connection must have been created with `allow_non_interactive` set. Without
-it the run fails with `connection-not-authorized`, which is the intended
+it the request fails with `connection-not-authorized` (HTTP 403), which is the intended
 behavior: a scheduled job acting on a user's Drive is something that user opts
-into explicitly.
-
-:::important
-The source is not registered by default in this release. It resolves its
-connection under a `job_owner` execution principal, and background jobs do not
-carry an execution principal yet, so every resolution would fail closed. Set
-`LANGFLOW_KB_GOOGLE_DRIVE_ENABLED=true` on a build that carries the
-executing-identity work to opt in.
-:::
+into explicitly. The connection is checked before the job is created, so this and
+other connection errors, such as `scope-missing`, are returned with their code and
+hint rather than as a failed job.
 
 ### Swapping an action to a different substrate
 
-All five actions run on the Google Python SDK today. If a future release moves one of them
-to a different substrate — for example an MCP-backed Gmail send — the swap is contained by
-the capability manifest at
-`src/bundles/google/src/lfx_google/components/google/capabilities.v1.json`:
+All five actions run on the Google Python SDK today. When a Google Workspace MCP server
+reaches general availability, an action can move to it without changing saved flows, by
+following the GA-swap procedure in
+`design/dedicated-integrations/ga-swap-procedure.md`. That record names
+**Calendar: List Events** as the first Google candidate and lists every file the swap touches.
 
-1. Change the capability's `substrate` value and, if the new path needs different scopes,
-   its `required_scopes`. Leave its `id`, `policy_keys`, `component_ref`, and
-   `display_name` untouched so saved flows, operator policy, and the palette do not move.
-2. Reimplement the component's output method against the new substrate. The component
-   class name and its input and output names are the compatibility surface and must not
-   change; nothing else in the component is.
-3. Re-record the contract fixtures for that action and rerun
-   `pytest src/bundles/google/tests`. The manifest test asserts the manifest still matches
-   the capability matrix, so a scope change has to be made in
-   `design/dedicated-integrations/matrices/google.json` first.
-4. Ship it as a bundle minor version through
-   `python scripts/ci/bundle_release_plan.py update`. No Langflow release is required.
+The compatibility surface is fixed:
+
+1. The component class name, display name, input and output names, and the capability's
+   `id`, `policy_keys`, `component_ref`, `risk`, and `required_scopes` do not change. Only
+   the capability's `substrate` changes, and it gains `mcp_tool` and `mcp_pin`.
+2. An action whose MCP server would need a broader scope than the one it requests today
+   does not move. Gmail and Drive are in that position: their preview servers request
+   restricted scopes.
+3. The swap ships as a bundle version bump with swap-equivalence and drift tests. No
+   Langflow release is required.
 
 ## Google Vertex AI
 
@@ -342,21 +350,15 @@ the [Google Workspace action components](#google-workspace-actions), or
 <details>
 <summary>Gmail Loader</summary>
 
-This component loads emails from Gmail using label ID filters and either a
-[managed connection](../Develop/connection-oauth.mdx) or
-authorized-user OAuth token JSON in **OAuth Token JSON**. Service-account keys are
-not supported. Set exactly one of the two.
+This component loads emails from Gmail using label ID filters and authorized-user OAuth
+token JSON in **OAuth Token JSON**. Service-account keys are not supported.
 
-Adding the connection field changed these components' code, so a flow saved before
-Langflow 1.13 shows the ordinary "update available" prompt on the loader node. The update
-is additive — the checker classifies it `outdated_safe`, never breaking — and the flow runs
-unchanged whether or not you take it.
+This component does not accept a managed connection. Reading a mailbox requires the
+restricted `gmail.readonly` scope, which Langflow 1.13 managed connections do not use.
 
-The optional **Google Connection** field requires the restricted `gmail.readonly` scope.
-The Langflow-managed hosted and Desktop OAuth apps never request restricted scopes, so this
-field only resolves against a **self-managed, customer-owned** registration whose scope
-ceiling includes `gmail.readonly`. It is not exposed as a Google capability for policy or
-discovery.
+This release changed the component's code, so a flow saved before Langflow 1.13 shows the
+ordinary "update available" prompt on the loader node. The checker classifies the update as
+`outdated_safe`, never breaking, and the flow runs unchanged whether or not you take it.
 
 As an alternative, you can use [Composio components](/bundles-composio) to connect your flows to Google services.
 
@@ -369,7 +371,8 @@ This component loads a single document from Google Drive using a document ID and
 [managed connection](../Develop/connection-oauth.mdx) or
 authorized-user OAuth token JSON in **OAuth Token JSON**. Service-account keys are
 not supported. Set exactly one of the two. A managed connection resolves on `drive.file`, so it
-reaches only files this application created or the user opened with it.
+reaches only files this application created or the user opened with it. The visual editor has
+no control for the connection field yet, so set it in the flow JSON.
 
 For new flows, use [**Drive: Fetch File (app files)**](#google-workspace-actions).
 

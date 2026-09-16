@@ -11,17 +11,15 @@ each module's docstring under
   only, so the UI picker doesn't surface a non-functional choice.
 
 Google Drive left this list in INT-10: it is implemented against managed
-connections, but stays unregistered by default until execution principals are
-stamped on background jobs. Its own behaviour is covered in
+connections and registered. Its own behaviour is covered in
 ``src/lfx/tests/unit/base/knowledge_bases/test_google_drive_source.py``; what is
-kept here is the half that still holds — the picker must not offer it.
+kept here is the registry half.
 """
 
 from __future__ import annotations
 
 import pytest
 from lfx.base.knowledge_bases.ingestion_sources import (
-    GOOGLE_DRIVE_SOURCE_REGISTERED,
     GoogleDriveSource,
     OneDriveSource,
     S3Source,
@@ -76,32 +74,15 @@ class TestStubbedSourceDirectInstantiation:
             await instance.validate_config()
 
 
-class TestGoogleDriveSourceIsImplementedButUnregistered:
-    """Google Drive is real code that the picker still must not offer.
+class TestGoogleDriveSourceIsRegistered:
+    """Google Drive is real code, bound in the default registry."""
 
-    Registering it before background jobs carry an execution principal would put
-    an entry in the connector catalog whose every run fails closed. The opt-in
-    switch is documented in ``ingestion_sources/__init__.py``.
-    """
+    def test_in_the_default_registry(self):
+        assert SourceType.GOOGLE_DRIVE in registered_sources()
 
-    def test_not_in_the_default_registry(self):
-        """Registration is decided at import, so compare against that decision.
-
-        ``LANGFLOW_KB_GOOGLE_DRIVE_ENABLED`` is read once when the registry module is
-        imported and a test cannot undo the result, so a machine with the opt-in switch
-        set would fail a bare "not registered" assertion for a legitimate reason.
-        """
-        assert GOOGLE_DRIVE_SOURCE_REGISTERED is False, (
-            "This suite pins the default build. Unset LANGFLOW_KB_GOOGLE_DRIVE_ENABLED to run it."
-        )
-        assert SourceType.GOOGLE_DRIVE not in registered_sources()
-
-    def test_create_source_raises(self):
-        assert GOOGLE_DRIVE_SOURCE_REGISTERED is False, (
-            "This suite pins the default build. Unset LANGFLOW_KB_GOOGLE_DRIVE_ENABLED to run it."
-        )
-        with pytest.raises(ValueError, match="not registered"):
-            create_source(SourceType.GOOGLE_DRIVE, user_id=None, source_config={})
+    def test_create_source_builds_the_drive_source(self):
+        source = create_source(SourceType.GOOGLE_DRIVE, user_id=None, source_config={})
+        assert isinstance(source, GoogleDriveSource)
 
     @pytest.mark.asyncio
     async def test_validate_config_asks_for_a_connection_rather_than_raising_not_implemented(self):

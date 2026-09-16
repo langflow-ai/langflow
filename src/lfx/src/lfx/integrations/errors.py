@@ -159,7 +159,13 @@ _CONNECTION_NOT_AUTHORIZED_HINTS: dict[ConnectionNotAuthorizedReason, str] = {
 class ConnectionNotAuthorizedError(IntegrationError):
     code = "connection-not-authorized"
 
-    def __init__(self, *, provider: str | None = None, reason: ConnectionNotAuthorizedReason = "principal") -> None:
+    def __init__(
+        self,
+        *,
+        provider: str | None = None,
+        reason: ConnectionNotAuthorizedReason = "principal",
+        hint: str | None = None,
+    ) -> None:
         if reason not in _CONNECTION_NOT_AUTHORIZED_HINTS:
             msg = "Unknown connection authorization reason"
             raise ValueError(msg)
@@ -167,7 +173,9 @@ class ConnectionNotAuthorizedError(IntegrationError):
             "The provider denied this action."
             if reason == "provider"
             else "This execution principal is not authorized to use the requested connection.",
-            hint=_CONNECTION_NOT_AUTHORIZED_HINTS[reason],
+            # A provider adapter that recognizes a narrower denial (for example a
+            # per-file grant boundary) may name the remedy; the reason stays typed.
+            hint=hint or _CONNECTION_NOT_AUTHORIZED_HINTS[reason],
             provider=provider,
             http_status=403,
             details={"reason": reason},
@@ -287,10 +295,10 @@ class InvalidRequestError(IntegrationError):
 class ResourceNotFoundError(IntegrationError):
     code = "resource-not-found"
 
-    def __init__(self, *, provider: str | None = None) -> None:
+    def __init__(self, *, provider: str | None = None, hint: str | None = None) -> None:
         super().__init__(
             "The requested provider resource was not found or is inaccessible.",
-            hint="Check the resource ID and the connected account's access to it.",
+            hint=hint or "Check the resource ID and the connected account's access to it.",
             provider=provider,
             http_status=404,
         )

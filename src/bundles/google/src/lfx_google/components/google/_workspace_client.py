@@ -33,6 +33,7 @@ import json
 from contextlib import asynccontextmanager
 from io import BytesIO
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlsplit
 
 from google.auth.exceptions import RefreshError
 from google.oauth2.credentials import Credentials
@@ -91,6 +92,21 @@ _SCOPE_REASONS = frozenset(
     }
 )
 
+# drive.file reaches only files this app created or the user opened with it
+# (frontend-surfaces.md B14). Google's documented signal for a file outside that
+# set is 403 appNotAuthorizedToFile, but a 404 cannot be told apart from a
+# mistyped ID, so a Drive 404 keeps resource-not-found and names both causes.
+_DRIVE_API_PATH = "/drive/"
+_DRIVE_FILE_BOUNDARY = (
+    "Langflow can access only Drive files created by or opened with this app (the drive.file scope). "
+    "Connecting the account does not grant access to all Drive files, and file selection with Google "
+    "Picker is not available in this release."
+)
+_DRIVE_GRANT_HINT = f"Use a file this app created or opened. {_DRIVE_FILE_BOUNDARY}"
+_DRIVE_NOT_FOUND_HINT = (
+    f"Check the file ID. {_DRIVE_FILE_BOUNDARY} Google can report a file outside that set as not found."
+)
+
 
 def _error_reasons(exc: HttpError) -> set[str]:
     """Return every lowercase ``reason``/``status`` token Google put in the body."""
@@ -129,6 +145,11 @@ def _retry_after_seconds(exc: HttpError) -> float | None:
         return None
 
 
+def _is_drive_request(exc: HttpError) -> bool:
+    uri = getattr(exc, "uri", None)
+    return isinstance(uri, str) and _DRIVE_API_PATH in urlsplit(uri).path
+
+
 def normalize_google_error(exc: BaseException) -> IntegrationError | None:
     """Map Google SDK failures onto the sanitized integration error vocabulary."""
     if isinstance(exc, IntegrationError):
@@ -163,10 +184,14 @@ def normalize_google_error(exc: BaseException) -> IntegrationError | None:
                 provider=PROVIDER_ID,
                 http_status=status,
             )
+        if "appnotauthorizedtofile" in reasons:
+            return ConnectionNotAuthorizedError(provider=PROVIDER_ID, reason="provider", hint=_DRIVE_GRANT_HINT)
         return ConnectionNotAuthorizedError(provider=PROVIDER_ID, reason="provider")
     if status == _HTTP_TOO_MANY_REQUESTS:
         return RateLimitedError(provider=PROVIDER_ID, retry_after=_retry_after_seconds(exc), http_status=status)
     if status == _HTTP_NOT_FOUND:
+        if _is_drive_request(exc):
+            return ResourceNotFoundError(provider=PROVIDER_ID, hint=_DRIVE_NOT_FOUND_HINT)
         return ResourceNotFoundError(provider=PROVIDER_ID)
     if status in {_HTTP_METHOD_NOT_ALLOWED, _HTTP_NOT_IMPLEMENTED}:
         return ActionUnsupportedError(provider=PROVIDER_ID, http_status=status)

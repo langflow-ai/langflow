@@ -21,15 +21,13 @@ from uuid import uuid4
 import httpx
 import pytest
 from lfx.base.knowledge_bases.ingestion_sources import (
-    GOOGLE_DRIVE_ENABLED_ENV_VAR,
-    GOOGLE_DRIVE_SOURCE_REGISTERED,
     GoogleDriveSource,
-    google_drive_source_enabled,
+    create_source,
     registered_sources,
 )
 from lfx.base.knowledge_bases.ingestion_sources.base import IngestionItem, SourceType
 from lfx.base.knowledge_bases.ingestion_sources.google_drive import DRIVE_FILE_SCOPE
-from lfx.integrations.errors import ConnectionNotAuthorizedError
+from lfx.integrations.errors import ConnectionNotAuthorizedError, ResourceNotFoundError
 from lfx.integrations.models import ResolvedCredential
 from lfx.services.connection.base import BaseConnectionResolverService, ConnectionAccessPolicy
 from pydantic import SecretStr
@@ -134,35 +132,13 @@ def _json(payload: dict) -> httpx.Response:
 # -- registration -----------------------------------------------------------
 
 
-def test_the_switch_is_off_when_the_variable_is_unset(monkeypatch: pytest.MonkeyPatch) -> None:
-    """It stays out of the connector picker until INT-6 stamps a job principal."""
-    monkeypatch.delenv(GOOGLE_DRIVE_ENABLED_ENV_VAR, raising=False)
+def test_registered_by_default() -> None:
+    """The source builds its own job_owner principal, so nothing gates registration."""
+    assert SourceType.GOOGLE_DRIVE in registered_sources()
 
-    assert google_drive_source_enabled() is False
+    source = create_source(SourceType.GOOGLE_DRIVE, user_id=USER_ID, source_config={"connection": "google/work"})
 
-
-def test_registration_follows_the_switch_as_it_stood_at_import() -> None:
-    """Registration happens once, at import, so assert against the recorded decision.
-
-    Clearing the variable in a test cannot un-register the source, so asserting
-    ``GOOGLE_DRIVE not in registered_sources()`` unconditionally would fail on any
-    machine that happens to have the opt-in switch set. What must hold is that the
-    registry and the recorded decision agree.
-    """
-    assert (SourceType.GOOGLE_DRIVE in registered_sources()) is GOOGLE_DRIVE_SOURCE_REGISTERED
-
-
-@pytest.mark.parametrize("value", ["true", "TRUE", "1", "yes", "on"])
-def test_the_opt_in_switch_accepts_the_usual_truthy_spellings(monkeypatch: pytest.MonkeyPatch, value: str) -> None:
-    monkeypatch.setenv(GOOGLE_DRIVE_ENABLED_ENV_VAR, value)
-
-    assert google_drive_source_enabled() is True
-
-
-def test_the_opt_in_switch_rejects_other_values(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv(GOOGLE_DRIVE_ENABLED_ENV_VAR, "maybe")
-
-    assert google_drive_source_enabled() is False
+    assert isinstance(source, GoogleDriveSource)
 
 
 # -- identity ---------------------------------------------------------------
@@ -331,6 +307,42 @@ async def test_a_provider_error_surfaces_as_a_typed_integration_error(mock_http)
 
     with pytest.raises(ConnectionNotAuthorizedError):
         _ = [item async for item in source.list_items()]
+
+
+@pytest.mark.usefixtures("resolver")
+async def test_a_file_outside_the_grant_explains_the_drive_file_boundary(mock_http) -> None:
+    """frontend-surfaces.md B14: the access outcome names the limitation, not a generic denial."""
+    body = {
+        "error": {
+            "code": 403,
+            "message": "The user has not granted the app 123456 read access to the file drive-file-notes.",
+            "errors": [{"domain": "global", "reason": "appNotAuthorizedToFile", "message": "private"}],
+        }
+    }
+    mock_http([_json({"files": [BINARY_FILE]}), httpx.Response(403, json=body)])
+    source = _source()
+    items = [item async for item in source.list_items()]
+
+    with pytest.raises(ConnectionNotAuthorizedError) as excinfo:
+        await source.fetch_content(items[0])
+
+    assert "drive.file" in excinfo.value.hint
+    assert "123456" not in str(excinfo.value)
+
+
+@pytest.mark.usefixtures("resolver")
+async def test_a_missing_file_is_not_found_and_names_the_drive_file_boundary(mock_http) -> None:
+    body = {"error": {"code": 404, "message": "File not found: x.", "errors": [{"reason": "notFound"}]}}
+    mock_http([_json({"files": [BINARY_FILE]}), httpx.Response(404, json=body)])
+    source = _source()
+    items = [item async for item in source.list_items()]
+
+    with pytest.raises(ResourceNotFoundError) as excinfo:
+        await source.fetch_content(items[0])
+
+    assert excinfo.value.code == "resource-not-found"
+    assert "file ID" in excinfo.value.hint
+    assert "drive.file" in excinfo.value.hint
 
 
 # -- describe ---------------------------------------------------------------

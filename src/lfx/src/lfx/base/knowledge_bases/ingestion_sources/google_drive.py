@@ -20,13 +20,6 @@ user-owned connection for such a principal unless the connection was created
 with ``allow_non_interactive``, so a user has to opt in before a scheduled
 ingestion can act on their behalf.
 
-Registration
-------------
-This source is **not registered by default**. Nothing in langflow-base stamps an
-execution principal on a background job until INT-6 lands, so every resolution
-would fail closed with ``connection-not-authorized``. See
-``ingestion_sources/__init__.py`` for the opt-in switch.
-
 HTTP is deliberately plain ``httpx`` rather than ``google-api-python-client``:
 lfx core must not take a Google SDK dependency, and Drive's REST surface for
 list, download and export is three URLs.
@@ -46,7 +39,12 @@ from lfx.base.knowledge_bases.ingestion_sources.connector_base import (
     HTTP_STATUS_CLIENT_ERROR_FLOOR,
     KBConnectorSource,
 )
-from lfx.integrations.errors import normalize_integration_error
+from lfx.integrations.errors import (
+    ConnectionNotAuthorizedError,
+    IntegrationError,
+    ResourceNotFoundError,
+    normalize_integration_error,
+)
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
@@ -73,6 +71,40 @@ NATIVE_EXPORT_MIME_TYPES = {
 # Filename suffix appended to an exported native document so downstream text
 # extraction, which dispatches on the extension, sees a usable one.
 _DEFAULT_EXPORT_SUFFIX = ".txt"
+
+# frontend-surfaces.md B14: an access outcome names the drive.file boundary. Kept in
+# step with lfx_google's _workspace_client, which this core module cannot import.
+_DRIVE_FILE_BOUNDARY = (
+    "Langflow can access only Drive files created by or opened with this app (the drive.file scope). "
+    "Connecting the account does not grant access to all Drive files, and file selection with Google "
+    "Picker is not available in this release."
+)
+_DRIVE_GRANT_HINT = f"Use a file this app created or opened. {_DRIVE_FILE_BOUNDARY}"
+_DRIVE_NOT_FOUND_HINT = (
+    f"Check the file ID. {_DRIVE_FILE_BOUNDARY} Google can report a file outside that set as not found."
+)
+HTTP_STATUS_FORBIDDEN = 403
+HTTP_STATUS_NOT_FOUND = 404
+
+
+def _drive_access_error(response) -> IntegrationError | None:
+    """Map Drive's grant-boundary responses before the provider-neutral normalizer.
+
+    That normalizer reads a bare 404 as an unsupported method and a 403 as a generic
+    provider denial; for a Drive file both usually mean the file is outside drive.file.
+    """
+    if response.status_code == HTTP_STATUS_NOT_FOUND:
+        return ResourceNotFoundError(provider=PROVIDER_ID, hint=_DRIVE_NOT_FOUND_HINT)
+    if response.status_code != HTTP_STATUS_FORBIDDEN:
+        return None
+    try:
+        errors = response.json().get("error", {}).get("errors") or []
+    except (ValueError, AttributeError):
+        return None
+    reasons = {entry.get("reason") for entry in errors if isinstance(entry, dict)}
+    if "appNotAuthorizedToFile" in reasons:
+        return ConnectionNotAuthorizedError(provider=PROVIDER_ID, reason="provider", hint=_DRIVE_GRANT_HINT)
+    return None
 
 
 class GoogleDriveSource(KBConnectorSource):
@@ -152,6 +184,8 @@ class GoogleDriveSource(KBConnectorSource):
         except httpx.HTTPError as exc:
             raise normalize_integration_error(exc, provider=PROVIDER_ID) from exc
         if response.status_code >= HTTP_STATUS_CLIENT_ERROR_FLOOR:
+            if (drive_error := _drive_access_error(response)) is not None:
+                raise drive_error
             error = httpx.HTTPStatusError("Drive request failed", request=response.request, response=response)
             raise normalize_integration_error(error, provider=PROVIDER_ID)
         return response

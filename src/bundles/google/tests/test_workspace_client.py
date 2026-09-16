@@ -73,3 +73,52 @@ def test_google_errors_preserve_the_recovery_action(status, reason, code):
     assert "private-provider-payload" not in str(error)
     if code != "scope-missing":
         assert "reconnect" not in (error.hint or "").lower()
+
+
+def _drive_error(status: int, reason: str, uri: str | None):
+    import json
+
+    from googleapiclient.errors import HttpError
+    from httplib2 import Response
+
+    payload = {"error": {"code": status, "message": "private-provider-payload", "errors": [{"reason": reason}]}}
+    return HttpError(Response({"status": str(status)}), json.dumps(payload).encode(), uri=uri)
+
+
+DRIVE_FILE_URI = "https://www.googleapis.com/drive/v3/files/file-outside-grant?alt=json"
+CALENDAR_URI = "https://www.googleapis.com/calendar/v3/calendars/primary/events?alt=json"
+
+
+@pytest.mark.parametrize("uri", [DRIVE_FILE_URI, None])
+def test_drive_grant_boundary_names_the_drive_file_limitation(uri):
+    """frontend-surfaces.md B14: a fetch outside the grant explains the drive.file boundary."""
+    from lfx_google.components.google._workspace_client import normalize_google_error
+
+    error = normalize_google_error(_drive_error(403, "appNotAuthorizedToFile", uri))
+
+    assert error.code == "connection-not-authorized"
+    assert error.details == {"reason": "provider"}
+    assert "drive.file" in error.hint
+    assert "Picker" in error.hint
+    assert "private-provider-payload" not in str(error)
+
+
+def test_drive_not_found_names_the_drive_file_limitation_without_changing_the_code():
+    """A 404 stays resource-not-found, so a mistyped ID is still reported as one."""
+    from lfx_google.components.google._workspace_client import normalize_google_error
+
+    error = normalize_google_error(_drive_error(404, "notFound", DRIVE_FILE_URI))
+
+    assert error.code == "resource-not-found"
+    assert "file ID" in error.hint
+    assert "drive.file" in error.hint
+
+
+@pytest.mark.parametrize("uri", [CALENDAR_URI, None])
+def test_non_drive_not_found_keeps_the_generic_hint(uri):
+    from lfx_google.components.google._workspace_client import normalize_google_error
+
+    error = normalize_google_error(_drive_error(404, "notFound", uri))
+
+    assert error.code == "resource-not-found"
+    assert "drive.file" not in error.hint

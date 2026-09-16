@@ -33,9 +33,11 @@ from conftest import (
 from lfx.custom.custom_component.component import Component
 from lfx.integrations import (
     AuthExpiredError,
+    ConnectionNotAuthorizedError,
     InvalidRequestError,
     ProviderUnavailableError,
     RateLimitedError,
+    ResourceNotFoundError,
     ScopeMissingError,
 )
 from lfx.utils.file_path_security import LocalFileAccessError
@@ -638,6 +640,31 @@ async def test_insufficient_scope_surfaces_as_scope_missing() -> None:
     assert excinfo.value.code == "scope-missing"
     # The sanitized message never carries Google's own body back to the client.
     assert "insufficient authentication scopes" not in str(excinfo.value)
+
+
+@pytest.mark.usefixtures("resolver")
+async def test_drive_fetch_outside_the_grant_explains_the_drive_file_boundary() -> None:
+    component = drive_fetch_component(file_id="file-outside-grant")
+    wire(component, [json_response("error_app_not_authorized_to_file", status="403")])
+
+    with pytest.raises(ConnectionNotAuthorizedError) as excinfo:
+        await component.fetch_file()
+
+    assert "drive.file" in excinfo.value.hint
+    assert "123456" not in str(excinfo.value)
+
+
+@pytest.mark.usefixtures("resolver")
+async def test_drive_fetch_not_found_keeps_its_code_and_names_the_drive_file_boundary() -> None:
+    component = drive_fetch_component(file_id="file-outside-grant")
+    wire(component, [json_response("error_file_not_found", status="404")])
+
+    with pytest.raises(ResourceNotFoundError) as excinfo:
+        await component.fetch_file()
+
+    assert excinfo.value.code == "resource-not-found"
+    assert "file ID" in excinfo.value.hint
+    assert "drive.file" in excinfo.value.hint
 
 
 @pytest.mark.usefixtures("resolver")
