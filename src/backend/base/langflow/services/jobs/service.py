@@ -127,6 +127,8 @@ class JobService(Service):
         end_user_id: str | None = None,
         initial_metadata: dict | None = None,
         initial_checkpoints: dict[str, str] | None = None,
+        initial_result: dict | None = None,
+        parent_update: tuple[UUID, int, dict] | None = None,
     ) -> Job:
         """Create a new job record with QUEUED status.
 
@@ -150,6 +152,9 @@ class JobService(Service):
                 initialized job.
             initial_checkpoints: Opaque blobs committed in that same transaction. Candidate
                 runs retain their executable archive before any worker can claim the job.
+            initial_result: Progress initialized atomically with the job.
+            parent_update: Evaluation ID, expected progress version and next progress.
+                Link a workflow child and advance its parent in the same transaction.
 
         Returns:
             Created Job object
@@ -161,6 +166,13 @@ class JobService(Service):
             flow_id = UUID(flow_id)
 
         async with session_scope() as session:
+            if parent_update is not None:
+                from langflow.services.evaluations.state import write_progress
+                from langflow.services.jobs.exceptions import ParentJobChangedError
+
+                parent_id, version, progress = parent_update
+                if not await write_progress(session, parent_id, user_id, version, progress, JobStatus.IN_PROGRESS):
+                    raise ParentJobChangedError
             if dedupe_key is not None:
                 # Why: scope uniqueness to the owner — a client-controlled idempotency_key flows into
                 # dedupe_key, so a global count would let user A collide with / DoS user B's key (and leak
@@ -199,6 +211,7 @@ class JobService(Service):
                 asset_type=asset_type,
                 user_id=user_id,
                 dedupe_key=dedupe_key,
+                result=initial_result,
                 # Job-owned context is stamped atomically with the insert. A later shallow
                 # update_job_metadata preserves what is already on the row.
                 #
@@ -812,7 +825,7 @@ class JobService(Service):
             result = await session.exec(stmt)
             return list(result.all())
 
-    async def claim_queued_job(self, job_id: UUID) -> bool:
+    async def claim_queued_job(self, job_id: UUID, *, owner: str | None = None) -> bool:
         """Atomically claim a QUEUED job for execution. Returns True if we won.
 
         Single-flight guard for the startup sweep: a conditional
@@ -826,11 +839,17 @@ class JobService(Service):
         from sqlmodel import update
 
         async with session_scope() as session:
-            stmt = (
-                update(Job)
-                .where(Job.job_id == job_id, Job.status == JobStatus.QUEUED)
-                .values(status=JobStatus.IN_PROGRESS)
-            )
+            values: dict[str, object] = {"status": JobStatus.IN_PROGRESS}
+            if owner is not None:
+                job = await session.get(Job, job_id)
+                if job is None or job.status != JobStatus.QUEUED:
+                    return False
+                values["job_metadata"] = {
+                    **(job.job_metadata or {}),
+                    "owner": owner,
+                    "heartbeat_at": datetime.now(timezone.utc).isoformat(),
+                }
+            stmt = update(Job).where(Job.job_id == job_id, Job.status == JobStatus.QUEUED).values(**values)
             result = await session.exec(stmt)  # type: ignore[call-overload]
             await session.flush()
             return result.rowcount == 1
@@ -862,6 +881,10 @@ class JobService(Service):
             now = datetime.now(timezone.utc)
             hb_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
             for job in in_progress:
+                # Evaluation coordinators recover from child-job records. They never
+                # replay an interrupted child, and have no long-lived owner lease.
+                if job.type == JobType.EVALUATION and (job.job_metadata or {}).get("evaluation_format") == 1:
+                    continue
                 if not self.is_lease_stale(job, lease_ttl_s=lease_ttl_s):
                     # Live owner still heartbeating — leave the run alone.
                     continue

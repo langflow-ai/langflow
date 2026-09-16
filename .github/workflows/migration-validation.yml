@@ -124,6 +124,7 @@ jobs:
         run: |
           uv run pytest src/backend/tests/unit/background_execution -m real_services -x -v
           uv run pytest src/backend/tests/unit/api/v2/test_workflow_candidates.py -k postgres -x -v
+          uv run pytest src/backend/tests/unit/api/v1/test_eval_durability.py -k postgres -x -v
 
   validate-migration:
     name: Migration Pattern Validation

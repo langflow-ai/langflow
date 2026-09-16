@@ -3,14 +3,18 @@
 import json
 
 from lfx.custom import Component
-from lfx.io import DataInput, Output, StrInput
+from lfx.io import DataInput, MessageTextInput, Output, StrInput
 from lfx.schema.data import Data
 
 
 class FixtureJudge(Component):
     name = "FixtureJudge"
     display_name = "Fixture Judge"
-    inputs = [DataInput(name="case", required=True), StrInput(name="outcome", value="supported")]
+    inputs = [
+        DataInput(name="case", required=True),
+        StrInput(name="outcome", value="supported"),
+        MessageTextInput(name="approval", value=""),
+    ]
     outputs = [Output(name="judgment", method="judge")]
 
     def judge(self) -> Data:
