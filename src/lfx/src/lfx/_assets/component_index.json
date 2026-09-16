@@ -30145,6 +30145,211 @@
           },
           "tool_mode": false
         },
+        "OpticParseTool": {
+          "base_classes": [
+            "JSON",
+            "Tool"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Extract structured text and markdown from any URL using multimodal vision. Bypasses Cloudflare Turnstile, anti-bot protections, and complex dynamic JS SPAs.",
+          "display_name": "OpticParse Web Scraper",
+          "documentation": "",
+          "edited": false,
+          "field_order": [
+            "url",
+            "query",
+            "api_key",
+            "portal_url"
+          ],
+          "frozen": false,
+          "icon": "globe",
+          "legacy": false,
+          "metadata": {
+            "code_hash": "cf9a421e3c07",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "requests",
+                  "version": "2.34.2"
+                },
+                {
+                  "name": "langchain_core",
+                  "version": "1.5.1"
+                },
+                {
+                  "name": "pydantic",
+                  "version": "2.13.4"
+                },
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 4
+            },
+            "module": "lfx.components.tools.opticparse_tool.OpticParseToolComponent"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "JSON",
+              "group_outputs": false,
+              "method": "run_model",
+              "name": "api_run_model",
+              "selected": "JSON",
+              "tool_mode": true,
+              "types": [
+                "JSON"
+              ],
+              "value": "__UNDEFINED__"
+            },
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Tool",
+              "group_outputs": false,
+              "method": "build_tool",
+              "name": "api_build_tool",
+              "selected": "Tool",
+              "tool_mode": true,
+              "types": [
+                "Tool"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "api_key": {
+              "_input_type": "SecretStrInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "OpticParse API Key",
+              "dynamic": false,
+              "info": "Optional API key for higher rate limits. Free trial quota available by default.",
+              "input_types": [],
+              "load_from_db": true,
+              "name": "api_key",
+              "override_skip": false,
+              "password": true,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "code": {
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "import json\nfrom urllib.parse import urlparse\n\nimport requests\nfrom langchain_core.tools import StructuredTool\nfrom pydantic import BaseModel, Field\n\nfrom lfx.base.langchain_utilities.model import LCToolComponent\nfrom lfx.field_typing import Tool\nfrom lfx.inputs.inputs import MessageTextInput, MultilineInput, SecretStrInput\nfrom lfx.schema.data import Data\n\n\ndef normalize_target_url(target: str) -> str:\n    \"\"\"Validate and normalize a target URL or domain to standard https format.\"\"\"\n    clean = target.strip()\n    if not clean:\n        msg = \"Target URL or domain cannot be empty.\"\n        raise ValueError(msg)\n\n    parsed_initial = urlparse(clean)\n    if parsed_initial.scheme and parsed_initial.scheme not in (\"http\", \"https\"):\n        msg = f\"Invalid or unsupported URL scheme: {parsed_initial.scheme}\"\n        raise ValueError(msg)\n\n    if not clean.startswith((\"http://\", \"https://\")):\n        clean = f\"https://{clean}\"\n\n    parsed = urlparse(clean)\n    if not (parsed.scheme in (\"http\", \"https\") and parsed.netloc):\n        msg = f\"Invalid target URL or domain: {target}\"\n        raise ValueError(msg)\n\n    return clean\n\n\ndef resolve_portal_url(portal_url: str, api_key: str) -> str:\n    \"\"\"Resolve and enforce secure HTTPS transport for custom portal URLs when API keys are configured.\"\"\"\n    portal = (portal_url or \"https://opticparse-api.onrender.com\").strip().rstrip(\"/\")\n    if api_key and portal.startswith(\"http://\"):\n        msg = \"Insecure HTTP portal URL is not allowed when an API key is configured. Use HTTPS.\"\n        raise ValueError(msg)\n    return portal\n\n\nclass OpticParseToolComponent(LCToolComponent):\n    display_name: str = \"OpticParse Web Scraper\"\n    description: str = (\n        \"Extract structured text and markdown from any URL using multimodal vision. \"\n        \"Bypasses Cloudflare Turnstile, anti-bot protections, and complex dynamic JS SPAs.\"\n    )\n    name: str = \"OpticParseTool\"\n    icon: str = \"globe\"\n\n    inputs = [\n        MessageTextInput(\n            name=\"url\",\n            display_name=\"Target URL\",\n            info=\"The webpage URL to scrape (e.g., 'https://news.ycombinator.com').\",\n            required=True,\n        ),\n        MultilineInput(\n            name=\"query\",\n            display_name=\"Extraction Query\",\n            info=\"Optional natural language prompt specifying fields or sections to extract.\",\n            value=\"Extract all primary text, articles, tables, and structured data.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpticParse API Key\",\n            info=\"Optional API key for higher rate limits. Free trial quota available by default.\",\n            required=False,\n        ),\n        MessageTextInput(\n            name=\"portal_url\",\n            display_name=\"Portal URL\",\n            info=\"OpticParse API Portal URL.\",\n            value=\"https://opticparse-api.onrender.com\",\n            advanced=True,\n        ),\n    ]\n\n    class OpticParseToolSchema(BaseModel):\n        url: str = Field(..., description=\"The webpage URL to extract content from.\")\n        query: str = Field(\n            default=\"Extract all primary text, articles, tables, and structured data.\",\n            description=\"Specific instruction on what data or elements to extract.\",\n        )\n\n    def _scrape_webpage(self, url: str, query: str = \"\") -> str:\n        \"\"\"Execute visual extraction over HTTP with MCP fallback.\"\"\"\n        target_url = normalize_target_url(url)\n        api_key_str = self.api_key if hasattr(self, \"api_key\") and self.api_key else \"\"\n        portal = resolve_portal_url(getattr(self, \"portal_url\", \"\"), api_key_str)\n\n        headers = {\n            \"Content-Type\": \"application/json\",\n            \"User-Agent\": \"Langflow-OpticParse-Tool/1.0.0\",\n        }\n        if api_key_str:\n            headers[\"Authorization\"] = f\"Bearer {api_key_str}\"\n            headers[\"X-API-Key\"] = api_key_str\n\n        endpoint = f\"{portal}/api/v1/parse\"\n        payload = {\"url\": target_url, \"query\": query or \"Extract all primary text.\"}\n\n        response = requests.post(\n            endpoint,\n            json=payload,\n            headers=headers,\n            timeout=45,\n            allow_redirects=False,\n        )\n\n        if response.status_code in (404, 405):\n            mcp_endpoint = f\"{portal}/mcp\"\n            rpc_payload = {\n                \"jsonrpc\": \"2.0\",\n                \"id\": 1,\n                \"method\": \"tools/call\",\n                \"params\": {\n                    \"name\": \"opticparse_scrape\",\n                    \"arguments\": {\"target_url\": target_url, \"extraction_query\": query},\n                },\n            }\n            response = requests.post(\n                mcp_endpoint,\n                json=rpc_payload,\n                headers=headers,\n                timeout=45,\n                allow_redirects=False,\n            )\n\n        if response.status_code in (301, 302, 307, 308):\n            return \"Error: Gateway returned an unexpected redirect. Request aborted to prevent credential leakage.\"\n\n        response.raise_for_status()\n        data = response.json()\n        if isinstance(data, dict):\n            if \"content\" in data:\n                return str(data[\"content\"])\n            if \"result\" in data:\n                return json.dumps(data[\"result\"], indent=2)\n            return json.dumps(data, indent=2)\n        return str(data)\n\n    def run_model(self) -> list[Data]:\n        \"\"\"Run the component within a Langflow pipeline and return Data records.\"\"\"\n        content = self._scrape_webpage(self.url, getattr(self, \"query\", \"\"))\n        return [Data(data={\"result\": content}, text=content)]\n\n    def build_tool(self) -> Tool:\n        \"\"\"Construct and return a LangChain-compatible StructuredTool instance.\"\"\"\n        return StructuredTool.from_function(\n            name=\"opticparse_scrape\",\n            description=\"Autonomous multimodal vision web scraper bypassing dynamic JS and bot challenges.\",\n            func=self._scrape_webpage,\n            args_schema=self.OpticParseToolSchema,\n        )\n"
+            },
+            "portal_url": {
+              "_input_type": "MessageTextInput",
+              "advanced": true,
+              "api_editable": false,
+              "display_name": "Portal URL",
+              "dynamic": false,
+              "info": "OpticParse API Portal URL.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "portal_url",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": "https://opticparse-api.onrender.com"
+            },
+            "query": {
+              "_input_type": "MultilineInput",
+              "advanced": false,
+              "ai_enabled": false,
+              "api_editable": false,
+              "copy_field": false,
+              "display_name": "Extraction Query",
+              "dynamic": false,
+              "info": "Optional natural language prompt specifying fields or sections to extract.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "multiline": true,
+              "name": "query",
+              "override_skip": false,
+              "password": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": "Extract all primary text, articles, tables, and structured data."
+            },
+            "url": {
+              "_input_type": "MessageTextInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Target URL",
+              "dynamic": false,
+              "info": "The webpage URL to scrape (e.g., 'https://news.ycombinator.com').",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "url",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            }
+          },
+          "tool_mode": false
+        },
         "PythonREPLTool": {
           "base_classes": [
             "JSON",
@@ -31985,9 +32190,9 @@
     ]
   ],
   "metadata": {
-    "num_components": 128,
+    "num_components": 129,
     "num_modules": 16
   },
-  "sha256": "cafb8508c6d02921c73e170d6aae1812ea437bb1a28c3c136ce48e0658151356",
+  "sha256": "4f992b38e56bf6d3a36b6bb6aaf0c04ecff16e8217781b85044412eea0e4c35b",
   "version": "1.12.2"
 }
