@@ -488,6 +488,80 @@ async def test_delete_user_removes_their_role_assignments(client: AsyncClient, l
     await client.delete(f"api/v1/authz/roles/{role_id}", headers=logged_in_headers_super_user)
 
 
+async def test_delete_user_clears_assigned_by_on_assignments_they_granted(
+    client: AsyncClient, logged_in_headers_super_user
+):
+    """Deleting the *granter* must clear ``assigned_by``, not delete the grantee's assignment.
+
+    AuthzRoleAssignment.assigned_by has its own (also SQLite-inert) SET NULL
+    FK to user.id, separate from the user_id FK that owns the assignment.
+    """
+    suffix = uuid4().hex
+    granter_password = "password" + "123"
+    granter_response = await client.post(
+        "api/v1/users/",
+        json={"username": f"granter-{suffix}", "password": granter_password},
+        headers=logged_in_headers_super_user,
+    )
+    assert granter_response.status_code == status.HTTP_201_CREATED
+    granter_id = granter_response.json()["id"]
+
+    promote_response = await client.patch(
+        f"api/v1/users/{granter_id}",
+        json={"is_superuser": True, "is_active": True},
+        headers=logged_in_headers_super_user,
+    )
+    assert promote_response.status_code == status.HTTP_200_OK
+
+    login_response = await client.post(
+        "api/v1/login",
+        data={"username": f"granter-{suffix}", "password": granter_password},
+    )
+    assert login_response.status_code == status.HTTP_200_OK
+    granter_headers = {"Authorization": f"Bearer {login_response.json()['access_token']}"}
+    client.cookies.clear()  # the granter's login also set a session cookie on the shared client
+
+    grantee_response = await client.post(
+        "api/v1/users/",
+        json={"username": f"grantee-{suffix}", "password": "password123"},
+        headers=logged_in_headers_super_user,
+    )
+    assert grantee_response.status_code == status.HTTP_201_CREATED
+    grantee_id = grantee_response.json()["id"]
+
+    role_response = await client.post(
+        "api/v1/authz/roles/",
+        json={"name": f"granter-check-role-{suffix}", "permissions": ["flow:read"]},
+        headers=logged_in_headers_super_user,
+    )
+    assert role_response.status_code == status.HTTP_201_CREATED
+    role_id = role_response.json()["id"]
+
+    assignment_response = await client.post(
+        "api/v1/authz/role-assignments/",
+        json={"user_id": grantee_id, "role_id": role_id},
+        headers=granter_headers,
+    )
+    assert assignment_response.status_code == status.HTTP_201_CREATED
+    assert assignment_response.json()["assigned_by"] == granter_id
+
+    delete_response = await client.delete(f"api/v1/users/{granter_id}", headers=logged_in_headers_super_user)
+    assert delete_response.status_code == status.HTTP_200_OK
+
+    remaining = await client.get(
+        f"api/v1/authz/role-assignments/?user_id={grantee_id}",
+        headers=logged_in_headers_super_user,
+    )
+    assert remaining.status_code == status.HTTP_200_OK
+    assignments = remaining.json()
+    assert len(assignments) == 1
+    assert assignments[0]["assigned_by"] is None
+
+    await client.delete(f"api/v1/authz/role-assignments/{assignments[0]['id']}", headers=logged_in_headers_super_user)
+    await client.delete(f"api/v1/authz/roles/{role_id}", headers=logged_in_headers_super_user)
+    await client.delete(f"api/v1/users/{grantee_id}", headers=logged_in_headers_super_user)
+
+
 async def test_patch_user_self_deactivation_forbidden(client: AsyncClient, logged_in_headers, active_user):
     """Test that a user cannot deactivate their own account."""
     user_id = str(active_user.id)
