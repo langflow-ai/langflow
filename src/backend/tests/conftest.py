@@ -12,7 +12,6 @@ from contextlib import suppress
 from pathlib import Path
 from uuid import UUID, uuid4
 
-import anyio
 import orjson
 import pytest
 from asgi_lifespan import LifespanManager
@@ -555,44 +554,45 @@ async def client_fixture(
     if "noclient" in request.keywords:
         yield
     else:
+        from sqlalchemy.engine import make_url
 
-        def init_app():
-            db_dir = tempfile.mkdtemp()
-            db_path = Path(db_dir) / "test.db"
-            monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
-            monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
-            monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
-            monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
-            monkeypatch.setenv("DO_NOT_TRACK", "true")
-            if "load_flows" in request.keywords:
-                shutil.copyfile(
-                    pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
-                )
-                monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
-                monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
-            # Clear the services cache
-            from lfx.services.manager import get_service_manager
+        from tests.api_database import api_test_database
 
-            get_service_manager().factories.clear()
-            get_service_manager().services.clear()  # Clear the services cache
-            app = create_app()
-            db_service = get_db_service()
-            db_service.database_url = f"sqlite:///{db_path}"
-            db_service.reload_engine()
-            return app, db_path
+        # Tests opt into the real PostgreSQL variant with indirect parametrization.
+        # Each invocation gets a new database; no shared database is truncated.
+        async with api_test_database(getattr(request, "param", "sqlite")) as database_url:
 
-        app, db_path = await asyncio.to_thread(init_app)
-        # app.dependency_overrides[get_session] = get_session_override
-        async with (
-            LifespanManager(app, startup_timeout=None, shutdown_timeout=60) as manager,
-            AsyncClient(transport=ASGITransport(app=manager.app), base_url="http://testserver/", http2=True) as client,
-        ):
-            yield client
-        # app.dependency_overrides.clear()
-        monkeypatch.undo()
-        # clear the temp db
-        with suppress(FileNotFoundError):
-            await anyio.Path(db_path).unlink()
+            def init_app():
+                monkeypatch.setenv("LANGFLOW_DATABASE_URL", database_url)
+                monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+                monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
+                monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
+                monkeypatch.setenv("DO_NOT_TRACK", "true")
+                if "load_flows" in request.keywords:
+                    shutil.copyfile(
+                        pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"
+                    )
+                    monkeypatch.setenv("LANGFLOW_LOAD_FLOWS_PATH", load_flows_dir)
+                    monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "true")
+                # Clear the services cache
+                from lfx.services.manager import get_service_manager
+
+                get_service_manager().factories.clear()
+                get_service_manager().services.clear()
+                app = create_app()
+                db_service = get_db_service()
+                assert db_service.engine.url == make_url(database_url)
+                return app
+
+            app = await asyncio.to_thread(init_app)
+            async with (
+                LifespanManager(app, startup_timeout=None, shutdown_timeout=60) as manager,
+                AsyncClient(
+                    transport=ASGITransport(app=manager.app), base_url="http://testserver/", http2=True
+                ) as client,
+            ):
+                yield client
+            monkeypatch.undo()
 
 
 @pytest.fixture

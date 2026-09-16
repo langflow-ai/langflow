@@ -95,9 +95,10 @@ The feature is opt-in; the default mapping is empty. Deploy the code with candid
 mounts absent, retain the existing durable job schema, and upgrade **all** execution
 processes before enabling a mount. All processes must share the same configuration,
 durable job database, encryption key, and compatible runtime/package environment.
-The verified local topology is the existing single-process asyncio executor with
-SQLite. The available PostgreSQL fixture remains an acceptance lane; it was not
-available in this session. This is not a new claim of scaled Redis worker support.
+The initial verification used the existing single-process asyncio executor with
+SQLite. The September 16 follow-up below adds actual local PostgreSQL evidence.
+Neither local test arrangement establishes deployed-image or scaled Redis worker
+support.
 
 Do not run candidate jobs on mixed old/new binaries: older runners do not understand
 the candidate marker and could select authoring graphs. Before rolling back to a
@@ -135,8 +136,63 @@ database, with no original candidate file or in-memory service state.
   candidate field. The follow-up helper/policy/reconstruction/compatibility selection
   passed **63 tests**, including that corrected response case. Counts overlap.
 
-Remaining production evidence: actual provider calls/streaming, PostgreSQL and
-intended deployed topology, combined compaction/permission/error variants and sourced
-artifact quality, workload thresholds, and release lifecycle/retention. The next
-capability branch is Eval Suites tied to the retained digest; production enablement
-still depends on these acceptance gates.
+Remaining production evidence: actual provider calls/streaming and the intended
+deployed topology, combined compaction/permission/error variants and sourced artifact
+quality, workload thresholds, and release lifecycle/retention. Production verification
+now takes priority over starting Eval Suites.
+
+### September 16: PostgreSQL verification correction
+
+The existing background-execution fixture assigned `settings.database_url` directly.
+Its validator selected the environment URL or default SQLite instead, so a test
+parameter named `postgres` could pass without accessing PostgreSQL. An initial
+16-pass run was discarded after an independent connection found the test PostgreSQL
+database empty. That result is **not** PostgreSQL evidence.
+
+The fixture now sets the production environment variable for its lifetime and
+asserts the engine dialect and complete destination URL before migrations or writes.
+A regression test checks the JobService's actual session, queries PostgreSQL's
+server version, and reads the committed job through an independent connection.
+SQLite now uses its intended temporary database too.
+
+The candidate API suite is parameterized over SQLite and PostgreSQL. Each PostgreSQL
+API case creates and deletes its own randomly named database; the supplied test URL
+is an administrative connection, never a database to truncate. Its role needs
+`CREATEDB`. Tests skip PostgreSQL when `LANGFLOW_TEST_DATABASE_URI` is absent; a
+configured but broken database fails. The existing migration CI job now runs these
+candidate API cases against its PostgreSQL 16 service as well. That CI change has
+not yet been executed remotely.
+
+Reproduce with a disposable PostgreSQL service and the PostgreSQL dependency extra:
+
+```sh
+LANGFLOW_UPDATE_STARTER_PROJECTS=false uv run --no-sync pytest \
+  src/backend/tests/unit/background_execution -m real_services -k postgres -v
+LANGFLOW_UPDATE_STARTER_PROJECTS=false uv run --no-sync pytest \
+  src/backend/tests/unit/api/v2/test_workflow_candidates.py -k postgres -v
+```
+
+Set `LANGFLOW_TEST_DATABASE_URI` in the environment before either command. The first
+command migrates and writes the supplied disposable database; the second creates
+isolated databases on that service. Do not point the first command at application
+data.
+
+Local verification uses Homebrew PostgreSQL **17.11**, psycopg **3.3.4**, and Python
+**3.13**, with deterministic provider replacements:
+
+- **133 passed** in the PostgreSQL background-execution selection, including
+  candidate retention, atomic rollback, concurrency, signals, replay, resume,
+  deadline handling, orphan reconciliation, and submission deduplication.
+- **10 passed** in the PostgreSQL candidate API selection, including a new database
+  for each case and approval → fresh Python process → resume with the original
+  archive deleted. The application is exercised with ASGI transport, not a deployed
+  HTTP proxy/image.
+- The earlier **18-pass** focused store/fixture result is included in the 133;
+  these counts must not be added together.
+- **28 passed** in the SQLite candidate API, store, and fixture regression selection
+  after the database fixture changes.
+
+Live-provider acceptance still
+needs a selected provider/model and configured credentials. Deployed-topology
+acceptance still needs the intended process/worker arrangement and image/runtime.
+Neither gate is satisfied by the local PostgreSQL run.

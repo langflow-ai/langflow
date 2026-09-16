@@ -20,6 +20,8 @@ from tests.unit.api.v1.test_harness_skill_packs import skill_harness  # noqa: F4
 from tests.unit.api.v1.test_project_config_write_through import save_config, stored_flow
 from tests.unit.api.v2.test_workflow_skills import provider, wait_status, workflow_harness  # noqa: F401
 
+pytestmark = pytest.mark.parametrize("client", ["sqlite", "postgres"], indirect=True)
+
 
 async def mount(client, headers, project, root, monkeypatch, tmp_path, *, customizations=False):
     response = await client.get(f"/api/v1/projects/{project}/harness-artifact", headers=headers)
