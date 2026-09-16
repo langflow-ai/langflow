@@ -28,6 +28,7 @@ function makeRecordingContext() {
     handleLogEvent: () => calls.push("log"),
     onFinished: () => calls.push("finished"),
     onError: (message) => calls.push(`error:${message}`),
+    onWarning: (message) => calls.push(`warning:${message}`),
   };
   return { ctx, calls };
 }
@@ -71,6 +72,38 @@ describe("handleAGUIEvent terminal contract", () => {
 });
 
 describe("handleAGUIEvent non-terminal contract", () => {
+  it("surfaces a workflow warning without ending the run", () => {
+    const { ctx, calls } = makeRecordingContext();
+    const terminal = handleAGUIEvent(
+      {
+        type: EventType.CUSTOM,
+        name: "langflow.warning",
+        value: { message: "Server code substituted" },
+      } as BaseEvent,
+      ctx,
+    );
+    expect(terminal).toBe(false);
+    expect(calls).toEqual(["warning:Server code substituted"]);
+  });
+
+  it.each([undefined, null, {}, { message: 7 }, { message: "" }])(
+    "ignores malformed warning payloads: %j",
+    (value) => {
+      const { ctx, calls } = makeRecordingContext();
+      expect(
+        handleAGUIEvent(
+          {
+            type: EventType.CUSTOM,
+            name: "langflow.warning",
+            value,
+          } as BaseEvent,
+          ctx,
+        ),
+      ).toBe(false);
+      expect(calls).toEqual([]);
+    },
+  );
+
   it("returns false for RUN_STARTED and propagates the runId", () => {
     const { ctx, calls } = makeRecordingContext();
 

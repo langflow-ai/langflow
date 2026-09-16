@@ -49,6 +49,7 @@ beforeEach(() => {
   });
   useAlertStore.setState({
     errorData: { title: "", list: [] },
+    noticeData: { title: "", list: [] },
     notificationList: [],
     tempNotificationList: [],
   });
@@ -98,6 +99,37 @@ function sseResponse(events: object[]): unknown {
 }
 
 describe("runFlowAGUI end-to-end", () => {
+  it("keeps a substitution notice visible when the workflow succeeds", async () => {
+    const message =
+      "Custom components are disabled (LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false). This run uses the server's Agent code. The saved flow is unchanged.";
+    const events = [
+      { type: "RUN_STARTED", threadId: "thread-1", runId: "run-1" },
+      { type: "CUSTOM", name: "langflow.warning", value: { message } },
+      { type: "RUN_FINISHED", threadId: "thread-1", runId: "run-1" },
+    ];
+    const fetchSpy = jest
+      .spyOn(global, "fetch")
+      .mockResolvedValue(sseResponse(events) as Response);
+    try {
+      await runFlowAGUI({ flowId: "flow-1", threadId: "thread-1" });
+      expect(useFlowStore.getState().buildInfo).toEqual({ success: true });
+      expect(useFlowStore.getState().isBuilding).toBe(false);
+      const alerts = useAlertStore.getState();
+      expect(alerts.errorData.title).toBe("");
+      expect(alerts.noticeData).toEqual({
+        title: "Workflow warning",
+        list: [message],
+      });
+      expect(alerts.notificationList).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: "notice", list: [message] }),
+        ]),
+      );
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
   it("folds a full RUN_STARTED → STATE_DELTA → RUN_FINISHED stream into flowStore", async () => {
     const events = [
       {

@@ -92,7 +92,9 @@ class TaskService(Service):
 
     async def revoke_task(self, task_id: UUID | str) -> bool:
         if self.use_celery:
-            return await self.backend.revoke_task(str(task_id))
+            # CeleryBackend.revoke_task is synchronous and publishes to the
+            # broker, so run it off the event loop instead of awaiting it.
+            return await asyncio.to_thread(self.backend.revoke_task, str(task_id))
 
         job_queue_service = get_queue_service()
         try:

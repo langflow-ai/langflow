@@ -88,10 +88,24 @@ export default function SingleAlert({
       <div className="flex-shrink-0 cursor-help">
         <IconComponent name="Info" className="h-5 w-5 text-status-blue" />
       </div>
-      <div className="ml-3 flex-1 md:flex md:justify-between">
+      <div className="ml-3 min-w-0 flex-1">
         <p className="text-sm font-medium text-info-foreground">
           {dropItem.title}
         </p>
+        {!!dropItem.list?.length && (
+          <div
+            role="region"
+            aria-label={dropItem.title}
+            tabIndex={0}
+            className="mt-2 max-h-48 overflow-y-auto text-sm text-info-foreground"
+          >
+            {dropItem.list.map((item, index) => (
+              <p key={index} className="whitespace-pre-wrap break-words">
+                {item}
+              </p>
+            ))}
+          </div>
+        )}
         <p className="mt-3 text-sm md:ml-6 md:mt-0">
           {dropItem.link ? (
             <CustomLink

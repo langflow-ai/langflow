@@ -1044,7 +1044,7 @@ async def delete_project(
             ).all()
             if len(flows) > 0:
                 for flow in flows:
-                    memory_base_cleanups.extend(await cascade_delete_flow(session, flow.id))
+                    await cascade_delete_flow(session, flow.id, memory_base_cleanups=memory_base_cleanups)
 
             await check_project_has_deployments(session, project_id=project_id)
             await session.delete(target)
