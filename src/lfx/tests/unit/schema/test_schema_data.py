@@ -1,4 +1,5 @@
 import base64
+import copy
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
@@ -93,6 +94,28 @@ class TestDataSchema:
         data = Data(data={"incomplete": "data"})
         with pytest.raises(ValueError, match="Missing required keys"):
             data.to_lc_message()
+
+    def test_deepcopy_keeps_fields_and_isolates_data(self):
+        """Test that deep copying a Data keeps its fields and does not share nested values."""
+        data = Data(data={"text": "hello", "nested": ["a"]}, text_key="text", default_value="fallback")
+        copied = copy.deepcopy(data)
+
+        assert isinstance(copied, Data)
+        assert copied.text_key == "text"
+        assert copied.default_value == "fallback"
+        assert copied.data == data.data
+
+        copied.data["nested"].append("b")
+        assert data.data["nested"] == ["a"]
+
+    def test_model_copy_deep_returns_data(self):
+        """Test that model_copy(deep=True) works - pydantic calls __deepcopy__ without a memo."""
+        data = Data(data={"text": "hello"}, text_key="text")
+        copied = data.model_copy(deep=True)
+
+        assert isinstance(copied, Data)
+        assert copied.data == {"text": "hello"}
+        assert copied.data is not data.data
 
     def test_data_to_message_invalid_image_path(self, tmp_path):
         """Test handling of invalid image path."""
