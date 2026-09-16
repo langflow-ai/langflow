@@ -165,6 +165,83 @@ async def test_a_run_started_inside_another_run_is_not_counted_twice():
     assert len(await _events_for([flow_id])) == 1
 
 
+@pytest.mark.usefixtures("client", "audit_enabled")
+@pytest.mark.parametrize("outcome", ["returns", "fails", "raises"])
+async def test_an_excluded_run_schedules_no_write_whatever_its_outcome(excluded_events, outcome):
+    excluded_events("flow:execute")
+    flow_id = uuid4()
+
+    async def behaviour():
+        if outcome == "fails":
+            mark_run_failed()
+        if outcome == "raises":
+            msg = "component failed"
+            raise RuntimeError(msg)
+        return "done"
+
+    if outcome == "raises":
+        with pytest.raises(RuntimeError):
+            await _run(behaviour)(flow_id)
+    else:
+        assert await _run(behaviour)(flow_id) == "done"
+
+    assert runs_module._pending_writes == set()
+    assert await _events_for([flow_id]) == []
+
+
+@pytest.mark.usefixtures("client", "audit_enabled")
+async def test_a_run_excluded_through_a_wildcard_is_not_recorded(excluded_events):
+    excluded_events("*:execute")
+    flow_id = uuid4()
+
+    async def ok():
+        return None
+
+    await _run(ok)(flow_id)
+
+    assert await _events_for([flow_id]) == []
+
+
+@pytest.mark.usefixtures("client", "audit_enabled")
+async def test_excluding_other_flow_actions_keeps_runs(excluded_events):
+    excluded_events("flow:create,flow:write,flow:delete")
+    flow_id = uuid4()
+
+    async def ok():
+        return None
+
+    await _run(ok)(flow_id)
+
+    [event] = await _events_for([flow_id])
+    assert event.action == "flow:execute"
+
+
+@pytest.mark.usefixtures("client", "audit_enabled")
+async def test_an_excluded_event_handed_straight_to_the_independent_writer_is_dropped(excluded_events):
+    from langflow.services.audit.writer import AuditEventDraft, build_audit_event, persist_audit_event_independently
+
+    from .conftest import user_actor
+
+    excluded_events("flow:execute")
+    flow_id = uuid4()
+    event = build_audit_event(
+        AuditEventDraft(
+            resource_type=FLOW,
+            resource_id=flow_id,
+            resource_name="f",
+            action="flow:execute",
+            operation=AuditOperation.RUN,
+            event_type=runs_module.AuditEventType.ACTION,
+            result=AuditResult.SUCCEEDED,
+            actor=user_actor(),
+            details={"schema_version": 1, "run": {"trigger": "v1_run", "duration_ms": 1}},
+        )
+    )
+
+    assert await persist_audit_event_independently(event) is False
+    assert await _stored_events([flow_id]) == []
+
+
 @pytest.mark.parametrize(
     ("exc", "expected"),
     [
