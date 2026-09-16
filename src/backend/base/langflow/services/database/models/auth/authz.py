@@ -259,7 +259,7 @@ class AuthzTeamMemberGrant(SQLModel, table=True):  # type: ignore[call-arg]
             "AND legacy_source IS NULL) OR "
             "(source_kind = 'legacy' AND provider_id IS NULL AND external_group_id IS NULL "
             "AND legacy_source IS NOT NULL)",
-            name="ck_authz_team_member_grant_source",
+            name=conv("ck_authz_team_member_grant_source"),
         ),
         Index(
             "uq_authz_team_member_grant_manual",

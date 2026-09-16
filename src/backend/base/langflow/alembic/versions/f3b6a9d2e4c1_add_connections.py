@@ -50,15 +50,15 @@ def upgrade() -> None:
             sa.CheckConstraint(
                 "(ownership_mode = 'user' AND owner_id IS NOT NULL) OR "
                 "(ownership_mode = 'instance' AND owner_id IS NULL)",
-                name="ck_connection_owner_mode",
+                name=op.f("ck_connection_owner_mode"),
             ),
             sa.CheckConstraint(
                 "status IN ('pending', 'ready', 'expired', 'revoked', 'error')",
-                name="ck_connection_status",
+                name=op.f("ck_connection_status"),
             ),
             sa.CheckConstraint(
                 "health IN ('unknown', 'healthy', 'unhealthy')",
-                name="ck_connection_health",
+                name=op.f("ck_connection_health"),
             ),
             sa.ForeignKeyConstraint(["owner_id"], ["user.id"], ondelete="CASCADE"),
             sa.PrimaryKeyConstraint("id"),
