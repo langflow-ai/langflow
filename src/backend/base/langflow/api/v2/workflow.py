@@ -584,7 +584,7 @@ def _parse_persisted_workflow_request(request: dict) -> ParsedWorkflowRun:
     user). Legacy rows that predate the fields fall back to persist=True /
     end_user_id=None, matching prior behavior.
     """
-    internal = {"persist_messages", "end_user_id"}
+    internal = {"persist_messages", "end_user_id", "component_substitution_warning"}
     persist_messages = request.get("persist_messages", True)
     end_user_id = request.get("end_user_id")
     request_fields = {k: v for k, v in request.items() if k not in internal}
@@ -592,6 +592,7 @@ def _parse_persisted_workflow_request(request: dict) -> ParsedWorkflowRun:
         parse_workflow_run_request(WorkflowRunRequest(**request_fields)),
         persist_messages=persist_messages,
         end_user_id=end_user_id,
+        component_substitution_warning=request.get("component_substitution_warning"),
     )
 
 
@@ -721,6 +722,8 @@ async def execute_workflow_background(
             # it must survive the round-trip so an identified background/resume run
             # stamps memory to the end user on the worker, not the SID.
             "end_user_id": parsed.end_user_id,
+            # Sanitized code no longer reveals the substitution when the worker rebuilds it.
+            "component_substitution_warning": parsed.component_substitution_warning,
         }
         job_id_new = await service.submit(flow_id=flow.id, request=request_dict, user=current_user)
         return WorkflowJobResponse(job_id=str(job_id_new), flow_id=parsed.flow_id, status=JobStatus.QUEUED)
@@ -868,6 +871,10 @@ async def get_workflow_status(
             # searched structurally — the persisted request is the source of truth.
             persisted_request = (job.job_metadata or {}).get("request") or {}
             effective_session_id = persisted_request.get("session_id") or flow_id_str
+            warning = (job.job_metadata or {}).get("component_substitution_warning") or persisted_request.get(
+                "component_substitution_warning"
+            )
+            warnings = [warning] if isinstance(warning, str) and warning else []
 
             # Default GET-status path: rebuild from the protocol-neutral terminal
             # captures the runner stored in ``Job.result``. This needs no
@@ -884,7 +891,7 @@ async def get_workflow_status(
                         job_id=job_id_str,
                         session_id=effective_session_id,
                         fail_on_rejected=True,
-                    )
+                    ).model_copy(update={"warnings": warnings})
                 except ValueError:
                     # Preserve every decodable capture in case the legacy
                     # vertex-build fallback is also unavailable.
@@ -893,7 +900,7 @@ async def get_workflow_status(
                         flow_id=flow_id_str,
                         job_id=job_id_str,
                         session_id=effective_session_id,
-                    )
+                    ).model_copy(update={"warnings": warnings})
 
             # Fallback: ``Job.result`` carried no outputs, has an invalid shape,
             # contains rejected/version-skewed entries, or predates capture.
@@ -914,11 +921,11 @@ async def get_workflow_status(
                     flow_id=flow_id_str,
                     job_id=job_id_str,
                     session_id=effective_session_id,
-                )
+                ).model_copy(update={"warnings": warnings})
             else:
                 if reconstructed.session_id is None:
                     reconstructed = reconstructed.model_copy(update={"session_id": effective_session_id})
-                return reconstructed
+                return reconstructed.model_copy(update={"warnings": warnings})
 
         if job.status == JobStatus.FAILED:
             # Surface the durable error JSON the runner persisted, additively.
