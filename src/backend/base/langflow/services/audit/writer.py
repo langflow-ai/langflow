@@ -138,8 +138,11 @@ async def persist_audit_event_independently(
 ) -> bool:
     """Insert an already built event in its own transaction, or raise.
 
-    Returns ``False`` when there is no database, as under ``lfx serve``.
+    Returns ``False`` when the action is excluded or there is no database, as
+    under ``lfx serve``. Checked here too because run events arrive already built.
     """
+    if not is_action_audited(event.action):
+        return False
 
     async def _write() -> bool:
         async with _slots(), session_scope() as session:

@@ -207,12 +207,18 @@ stores them, so a value copied from an event works as an entry.
 | `*:delete` | That action on every resource |
 
 ```bash
-LANGFLOW_AUDIT_EXCLUDE_EVENTS=flow:write,project:delete
+LANGFLOW_AUDIT_EXCLUDE_EVENTS=flow:execute,project:delete
 ```
 
 - **Every outcome.** An excluded action records no `succeeded`, `failed` or
   `deny` event. To keep refusals while dropping routine writes, do not exclude
   the action.
+- **Exact, per action.** Excluding `project:delete` keeps the `flow:delete`
+  event of each Flow the deleted Project removed, and excluding `flow:*` keeps
+  every Project event, including the Flow summary inside it.
+- **Runs.** `flow:execute` is the highest-volume action. Excluding it skips the
+  run event before any timing, name lookup or background write, on every run
+  surface, and drops refused runs too.
 - **Normalized.** Entries are trimmed and lowercased; empty and repeated
   entries are dropped.
 - **Ignored, never guessed.** An entry that matches no audited action is ignored
