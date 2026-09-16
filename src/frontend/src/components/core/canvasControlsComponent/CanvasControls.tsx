@@ -31,10 +31,12 @@ const CanvasControls = ({
   children,
   selectedNode,
   effectiveLocked,
+  assistantLocked: assistantLockedProp,
 }: {
   children?: ReactNode;
   selectedNode: AllNodeType | null;
   effectiveLocked?: boolean;
+  assistantLocked?: boolean;
 }) => {
   const { t } = useTranslation();
   const reactFlowStoreApi = useStoreApi();
@@ -50,11 +52,7 @@ const CanvasControls = ({
   const assistantSidebarOpen = useAssistantManagerStore(
     (state) => state.assistantSidebarOpen,
   );
-  const isAssistantProcessing = useAssistantManagerStore(
-    (state) => state.isAssistantProcessing,
-  );
-  // Its own run locks the canvas, but the panel must stay reopenable mid-run.
-  const assistantLocked = locked && !isAssistantProcessing;
+  const assistantLocked = assistantLockedProp ?? locked;
   // While the FlowBuilderWelcome overlay is open, suppress the onboarding
   // tooltip — it renders via Portal and would float over the welcome.
   const isWelcomeOpen = useFlowBuilderWelcomeStore((state) => state.isOpen);

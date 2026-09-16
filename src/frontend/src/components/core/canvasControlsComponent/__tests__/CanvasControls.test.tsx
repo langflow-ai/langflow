@@ -212,7 +212,13 @@ describe("CanvasControls", () => {
   it("should_keep_assistant_reachable_when_only_the_assistant_run_locks_the_canvas", () => {
     mockAssistantState.isAssistantProcessing = true;
 
-    render(<CanvasControls selectedNode={null} effectiveLocked />);
+    render(
+      <CanvasControls
+        selectedNode={null}
+        effectiveLocked
+        assistantLocked={false}
+      />,
+    );
 
     const assistantButton = screen.getByTestId("assistant-button");
     expect(assistantButton).toBeEnabled();
@@ -223,6 +229,21 @@ describe("CanvasControls", () => {
     expect(mockAssistantState.setAssistantSidebarOpen).toHaveBeenCalledWith(
       true,
     );
+  });
+
+  it("should_preserve_read_only_while_the_assistant_is_processing", () => {
+    mockAssistantState.isAssistantProcessing = true;
+
+    render(
+      <CanvasControls selectedNode={null} effectiveLocked assistantLocked />,
+    );
+
+    const assistantButton = screen.getByTestId("assistant-button");
+    expect(assistantButton).toBeDisabled();
+    expect(assistantButton).toHaveAttribute("title", "(Read-Only)");
+    expect(screen.getByTestId("canvas-add-note-button")).toBeDisabled();
+    fireEvent.click(assistantButton);
+    expect(mockAssistantState.setAssistantSidebarOpen).not.toHaveBeenCalled();
   });
 
   it("should_render_children_when_provided", () => {
