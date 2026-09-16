@@ -28,6 +28,8 @@ from langflow.api.utils import (
     remove_api_keys,
     strip_flow_secrets,
 )
+from langflow.services.audit import vocabulary as audit_vocab
+from langflow.services.audit.operations import stage_flow_succeeded
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_move_allowed
@@ -467,6 +469,15 @@ async def _new_flow(
         session.add(db_flow)
         await session.flush()
         await session.refresh(db_flow)
+        await stage_flow_succeeded(
+            session,
+            action=audit_vocab.FLOW_CREATE,
+            operation=audit_vocab.AuditOperation.CREATE,
+            flow_id=db_flow.id,
+            flow_name=db_flow.name,
+            written_fields=flow.model_fields_set,
+            project_after=db_flow.folder_id,
+        )
         await _save_flow_to_fs(db_flow, user_id, storage_service)
 
         return FlowRead.model_validate(db_flow, from_attributes=True)
@@ -663,6 +674,16 @@ async def _update_existing_flow(
     session.add(existing_flow)
     await session.flush()
     await session.refresh(existing_flow)
+    await stage_flow_succeeded(
+        session,
+        action=audit_vocab.FLOW_WRITE,
+        operation=audit_vocab.AuditOperation.REPLACE,
+        flow_id=existing_flow.id,
+        flow_name=existing_flow.name,
+        written_fields=update_data.keys() & _UPDATABLE_FLOW_FIELDS,
+        project_before=existing_folder_id,
+        project_after=existing_flow.folder_id,
+    )
     # Writes happen under the owner's storage namespace, not the actor's.
     await _save_flow_to_fs(existing_flow, owner_user_id, storage_service)
 
@@ -774,6 +795,16 @@ async def _patch_flow(
     session.add(db_flow)
     await session.flush()
     await session.refresh(db_flow)
+    await stage_flow_succeeded(
+        session,
+        action=audit_vocab.FLOW_WRITE,
+        operation=audit_vocab.AuditOperation.PATCH,
+        flow_id=db_flow.id,
+        flow_name=db_flow.name,
+        written_fields=update_data.keys() & _UPDATABLE_FLOW_FIELDS,
+        project_before=existing_folder_id,
+        project_after=db_flow.folder_id,
+    )
     # Writes happen under the owner's storage namespace, not the actor's.
     await _save_flow_to_fs(db_flow, owner_user_id, storage_service)
 

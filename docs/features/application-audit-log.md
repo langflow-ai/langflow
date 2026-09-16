@@ -105,6 +105,75 @@ Error codes: `PERMISSION_DENIED`, `PROJECT_NOT_FOUND`, `PROJECT_NAME_CONFLICT`,
 `AuditRequestContextMiddleware` gives every HTTP request its own
 `request_id`, so the authorization and action events of one request share it.
 
+## Producers (existing write routes)
+
+Each route below carries one `@audited_route` decorator. Succeeded events are
+written where the mutation happens, right after its own write; failures and
+denials are written by the decorator and the permission guards.
+
+| Route | resource / action / operation | Succeeded `details` |
+|---|---|---|
+| `POST /flows/` | flow / `flow:create` / `create` | `written_fields`, `project.after_id` |
+| `PATCH /flows/{id}` | flow / `flow:write` / `patch` | `written_fields`; `project` when moved |
+| `PUT /flows/{id}` existing | flow / `flow:write` / `replace` | `written_fields`; `project` when moved |
+| `PUT /flows/{id}` new id | flow / `flow:create` / `create` | as create |
+| `DELETE /flows/{id}` | flow / `flow:delete` / `delete` | `project.before_id` |
+| `POST /flows/batch/`, `POST /flows/upload/` | one flow event per Flow created or replaced | |
+| `DELETE /flows/` | one `flow:delete` per Flow | |
+| `POST /flows/{id}/versions/{v}/activate` | flow / `flow:write` / `patch` | `written_fields: ["data"]` |
+| Any flow run (`simple_run_flow`, build driver) | flow / `flow:execute` / `run` | `run.trigger`, `run.duration_ms` |
+| `POST /projects/` | project / `project:create` / `create` | `description` when supplied; `flows` (added) |
+| `PATCH /projects/{id}` | project / `project:write` / `patch` | `description` only when written |
+| `PUT /projects/{id}` existing | project / `project:write` / `patch` | same as PATCH (the route has PATCH semantics) |
+| `PUT /projects/{id}` new id | project / `project:create` / `create` | as create |
+| `DELETE /projects/{id}` | project / `project:delete` / `delete` | `flows` (removed); plus one `flow:delete` per Flow removed |
+| `POST /projects/upload/` | project / `project:create` / `create` | `description`, `flows` (added); plus one `flow:create` per Flow |
+
+`replace` for Projects (atomic complete-content replacement) arrives with the
+atomic Project APIs; no existing route replaces a Project's contents.
+
+**Flow runs** — every run records one `flow` / `flow:execute` / `run` event with
+its outcome, whichever surface started it. Both run funnels are decorated, so
+the API (`/run`, streaming), webhooks, the Playground build, MCP, OpenAI
+Responses and the workflow API are all covered without per-route code.
+
+| Field | Value |
+|---|---|
+| actor | who ran it: the user, or `api_key` with the key id |
+| `result` / `error_code` | `succeeded`; or `failed` with `INVALID_CONTENT` (the request was wrong), `FLOW_NOT_FOUND`, `CONSTRAINT_VIOLATION`, `SERVICE_UNAVAILABLE`, or `FLOW_EXECUTION_FAILED` (a component failed, raised or not) |
+| `details` | `{"schema_version": 1, "run": {"trigger": "<execution family>", "duration_ms": <int>}}` only |
+
+Never stored for a run: inputs, outputs, tweaks, the request body, the result,
+or the error text. A paused run (human input) records nothing until the resume
+that completes it; a cancelled run records nothing. A refused `flow:execute`
+records one `authz`/`deny` at the permission guard, so every run surface is
+covered. A run writes nothing to the Flow, so its event has its own transaction.
+
+The run event is written in the background, so it never delays or fails the
+response. Busy databases (SQLite under a burst of runs) can refuse or time out a
+write, so each event is retried with backoff (6 attempts, 30s each). Every
+attempt inserts a fresh row with the same id, so an attempt that committed
+but then timed out is not duplicated: the primary key rejects the retry.
+Pending writes finish on shutdown. An event that never lands is logged with
+`op=persist_run_event outcome=not_persisted`. A run that fails because the
+database is locked records `failed` with `SERVICE_UNAVAILABLE`.
+
+**Outcome rules**
+
+- A request refused before authorization (unknown id, owner-scoped 404, malformed body) records nothing.
+- A guard that refuses records one `authz`/`deny` with `PERMISSION_DENIED` and no action event. For Flow PATCH, DELETE and create the guard is the route dependency.
+- Anything raised after authorization records one `action`/`failed` after the transaction rolled back, with a code derived from the error: a uniqueness message maps to `*_NAME_CONFLICT`, a duplicate id to `FLOW_ID_CONFLICT`, 400/422 to `INVALID_CONTENT`, a domain 403 or 423 to `CONSTRAINT_VIOLATION`, a generic 500 by its database cause (`OperationalError` to `SERVICE_UNAVAILABLE`, `IntegrityError` to `CONSTRAINT_VIOLATION`), else `INTERNAL_ERROR`.
+- A failure after an explicit commit (the Memory Base teardown after a delete) is never recorded as failed.
+- A failed attempt with no identity yet (a denied or failed create without an id) uses `resource_id = 00000000-0000-0000-0000-000000000000`.
+- The failed or denied `resource_name` is the known name of an existing resource, otherwise the attempted name.
+
+**Transaction ownership.** Project create, rename and auth reconciliation used to
+commit the request transaction midway through MCP server registration, so a
+create that failed afterwards left the Project behind. Those calls now join the
+request transaction (`owns_transaction=False`). Project delete still commits MCP
+cleanup first; that does not affect the audit, because the Project removal and
+its event share the later transaction.
+
 ## Invariants
 
 1. A succeeded event and its mutation commit or roll back together.
@@ -113,8 +182,10 @@ Error codes: `PERMISSION_DENIED`, `PROJECT_NOT_FOUND`, `PROJECT_NAME_CONFLICT`,
 4. Deleting a resource, user, or API key never deletes its events.
 5. A traversal returns each event at most once, newest first; later inserts do not appear midway.
 6. With `lfx serve` (no database), nothing is written and nothing raises.
-7. An excluded action writes nothing for any outcome, and the operation behaves exactly as with auditing off.
-8. An exclusion entry that matches no audited action excludes nothing and never stops startup.
+7. A request that is not audited (auditing off, or a helper called outside an audited route such as startup or the assistant) writes nothing.
+8. A run records at most one outcome, even when it starts nested runs, is retried, or streams.
+9. An excluded action writes nothing for any outcome, and the operation behaves exactly as with auditing off.
+10. An exclusion entry that matches no audited action excludes nothing and never stops startup.
 
 ## Settings
 
@@ -136,12 +207,18 @@ stores them, so a value copied from an event works as an entry.
 | `*:delete` | That action on every resource |
 
 ```bash
-LANGFLOW_AUDIT_EXCLUDE_EVENTS=flow:write,project:delete
+LANGFLOW_AUDIT_EXCLUDE_EVENTS=flow:execute,project:delete
 ```
 
 - **Every outcome.** An excluded action records no `succeeded`, `failed` or
   `deny` event. To keep refusals while dropping routine writes, do not exclude
   the action.
+- **Exact, per action.** Excluding `project:delete` keeps the `flow:delete`
+  event of each Flow the deleted Project removed, and excluding `flow:*` keeps
+  every Project event, including the Flow summary inside it.
+- **Runs.** `flow:execute` is the highest-volume action. Excluding it skips the
+  run event before any timing, name lookup or background write, on every run
+  surface, and drops refused runs too.
 - **Normalized.** Entries are trimmed and lowercased; empty and repeated
   entries are dropped.
 - **Ignored, never guessed.** An entry that matches no audited action is ignored
@@ -162,7 +239,7 @@ LANGFLOW_AUDIT_EXCLUDE_EVENTS=flow:write,project:delete
 - Atomic Project create/replace endpoints, inbound `request_id` propagation, and
   accepting an acting identity from the configured Control Plane service identity.
   The columns exist; nothing sets the acting pair yet.
-- Flow run events, field-level content differences, version storage.
+- Field-level content differences, version storage, run inputs and outputs.
 - Retiring `authz_audit_log`.
 
 ## Platform compatibility
