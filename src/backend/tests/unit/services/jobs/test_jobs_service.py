@@ -225,3 +225,42 @@ async def test_sweep_orphans_noop_when_clean():
     await service.update_job_status(job_id, JobStatus.COMPLETED, finished_timestamp=True)
 
     assert await service.sweep_orphans() == []
+
+
+@pytest.mark.usefixtures("client")
+async def test_fail_in_progress_job_writes_error_with_the_flip():
+    """Regression: the error blob must ride the same UPDATE as the FAILED flip.
+
+    It used to land in a separate set_error transaction after the flip, so a
+    concurrent reader (the events() tail ending on terminal status) could
+    observe FAILED with error still None. The winning call must leave status,
+    error, and finished_timestamp all set; a losing call must write nothing.
+    """
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), job_type=JobType.WORKFLOW, user_id=uuid4())
+    await service.update_job_status(job_id, JobStatus.IN_PROGRESS)
+
+    assert await service.fail_in_progress_job(job_id, error={"type": "worker_lost"}) is True
+    job = await service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.FAILED
+    assert (job.error or {}).get("type") == "worker_lost"
+    assert job.finished_timestamp is not None
+
+    # Single-flight: a second racer loses and must not clobber the blob.
+    assert await service.fail_in_progress_job(job_id, error={"type": "other"}) is False
+    job = await service.get_job_by_job_id(job_id)
+    assert (job.error or {}).get("type") == "worker_lost"
+
+
+@pytest.mark.usefixtures("client")
+async def test_fail_in_progress_job_leaves_non_in_progress_rows_untouched():
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), job_type=JobType.WORKFLOW, user_id=uuid4())
+
+    # Still QUEUED: the conditional UPDATE must not match, and no error lands.
+    assert await service.fail_in_progress_job(job_id, error={"type": "worker_lost"}) is False
+    job = await service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.QUEUED
+    assert job.error is None

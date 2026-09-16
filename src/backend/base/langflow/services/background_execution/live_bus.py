@@ -6,8 +6,9 @@ durable log (via the injected ``read_durable``) from the caller's last seen seq,
 then switches to the live tail — deduplicating any seq already replayed so a
 frame straddling the replay/tail boundary is emitted exactly once.
 
-This bus is process-local; the redis backend (Phase 3) swaps it for redis
-Streams behind the same facade method (``events``). Nothing else changes.
+This bus is process-local; the scaled backend does not use it for cross-replica
+delivery — durable ``job_events`` rows polled by the DB backend's ``events``
+tail are the cross-replica transport. Nothing else changes.
 """
 
 from __future__ import annotations
