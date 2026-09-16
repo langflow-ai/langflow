@@ -77,6 +77,11 @@ async def download_project_flows(
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
 
+        if project.project_type == "eval-suite":
+            raise HTTPException(
+                422, "Eval Suite export needs retained candidate and scorer archives; it is not supported yet."
+            )
+
         flows_query = select(Flow).where(Flow.folder_id == project_id, Flow.user_id == owner_id)
         flows_result = await session.exec(flows_query)
         visible_flows = await filter_visible_resources(
@@ -175,6 +180,10 @@ def _imported_project_type(value: object) -> str:
     may come from a deployment that has a project type this one does not, and refusing the whole
     import over it would lose the flows too. Fall back to the default and say so in the log.
     """
+    if value == "eval-suite":
+        raise HTTPException(
+            422, "Eval Suite import is not supported. Create a suite and review its candidate and scorer here."
+        )
     if value is None:
         return DEFAULT_PROJECT_TYPE
     if not isinstance(value, str) or value not in registered_project_types():
