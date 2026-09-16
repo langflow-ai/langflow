@@ -289,6 +289,76 @@ async def test_workspace_scope_sql_matches_in_memory_for_project_nulls_and_exclu
         )
 
 
+async def test_excluded_resource_ids_wins_over_global_wildcard_but_not_ownership(async_session):
+    """A per-resource access exception overrides a global wildcard grant, without affecting an owned resource."""
+    owner_id = uuid4()
+    other_owner_id = uuid4()
+    visible_flow = Flow(name="visible", user_id=other_owner_id)
+    excepted_flow = Flow(name="excepted", user_id=other_owner_id)
+    owned_but_excepted_flow = Flow(name="owned despite exception", user_id=owner_id)
+    async_session.add_all([visible_flow, excepted_flow, owned_but_excepted_flow])
+    await async_session.commit()
+
+    scope = ResourceVisibilityScope(
+        all_resources=True,
+        excluded_resource_ids=(excepted_flow.id, owned_but_excepted_flow.id),
+    )
+    stmt = restrict_to_owned_or_visible_scope(
+        select(Flow),
+        id_column=Flow.id,
+        owner_clause=Flow.user_id == owner_id,
+        workspace_column=Flow.workspace_id,
+        project_column=Flow.folder_id,
+        visibility=scope,
+    )
+    rows = list((await async_session.exec(stmt)).all())
+
+    assert {row.id for row in rows} == {visible_flow.id, owned_but_excepted_flow.id}
+    assert resource_visible_in_scope(resource_id=visible_flow.id, visibility=scope)
+    assert not resource_visible_in_scope(resource_id=excepted_flow.id, visibility=scope)
+
+
+async def test_excluded_resource_ids_wins_over_a_workspace_grant(async_session):
+    owner_id = uuid4()
+    other_owner_id = uuid4()
+    workspace_id = uuid4()
+    visible_flow = Flow(name="visible", user_id=other_owner_id, workspace_id=workspace_id)
+    excepted_flow = Flow(name="excepted", user_id=other_owner_id, workspace_id=workspace_id)
+    async_session.add_all([visible_flow, excepted_flow])
+    await async_session.commit()
+
+    scope = ResourceVisibilityScope(
+        workspace_ids=(workspace_id,),
+        excluded_resource_ids=(excepted_flow.id,),
+    )
+    stmt = restrict_to_owned_or_visible_scope(
+        select(Flow),
+        id_column=Flow.id,
+        owner_clause=Flow.user_id == owner_id,
+        workspace_column=Flow.workspace_id,
+        project_column=Flow.folder_id,
+        visibility=scope,
+    )
+    rows = list((await async_session.exec(stmt)).all())
+
+    assert {row.id for row in rows} == {visible_flow.id}
+    assert resource_visible_in_scope(resource_id=visible_flow.id, workspace_id=workspace_id, visibility=scope)
+    assert not resource_visible_in_scope(resource_id=excepted_flow.id, workspace_id=workspace_id, visibility=scope)
+
+
+def test_empty_excluded_resource_ids_is_a_complete_no_op():
+    """The common case (no exceptions) must be a no-op: a plain, unwrapped global-wildcard scope."""
+    scope = ResourceVisibilityScope(all_resources=True)
+    stmt = restrict_to_owned_or_visible_scope(
+        select(Flow),
+        id_column=Flow.id,
+        owner_clause=Flow.user_id == uuid4(),
+        visibility=scope,
+    )
+    # No WHERE clause at all — the fast path for an unrestricted global grant.
+    assert stmt.whereclause is None
+
+
 def test_scope_reports_cross_user_access_without_resource_enumeration():
     assert ResourceVisibilityScope().has_cross_user_access is False
     assert ResourceVisibilityScope(all_resources=True).has_cross_user_access is True
