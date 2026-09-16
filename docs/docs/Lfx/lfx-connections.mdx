@@ -190,6 +190,7 @@ Resolution failures are sanitized `IntegrationError` subclasses. Their string fo
 | `invalid-request` | The action's inputs are invalid or were rejected by the provider. | Correct the inputs before retrying. |
 | `resource-not-found` | The requested provider resource was not found or is inaccessible. | Check the resource ID and the connected account's access before retrying. |
 | `policy-blocked` | The deployment's integration policy blocks the provider or action. | Ask an administrator to approve the integration or action. |
+| `incompatible-tool` | The MCP server's tools no longer match the contract pinned by the action. | Upgrade to a bundle release whose pinned tools match the server before retrying. |
 
 ## Declare connections in deployment artifacts
 
