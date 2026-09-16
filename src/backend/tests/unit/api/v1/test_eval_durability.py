@@ -45,6 +45,85 @@ async def wait_run(client, headers, suite, run_id, statuses, *, completed_cases=
     pytest.fail(f"Evaluation did not advance: {payload}")
 
 
+@pytest.mark.parametrize("change", ["prune", "revoke_scorer", "revoke_dependency"])
+async def test_accepted_evaluation_uses_retained_scorer_but_checks_current_access(
+    client,
+    logged_in_headers,
+    created_api_key,
+    active_user,
+    user_two,
+    evaluation,  # noqa: F811
+    workflow_harness,  # noqa: F811
+    monkeypatch,
+    tmp_path,
+    change,
+):
+    from langflow.services.database.models.flow_version.crud import create_flow_version_entry
+    from langflow.services.database.models.flow_version.model import FlowVersion
+    from lfx.components.flow_controls.run_flow import RunFlowComponent
+    from lfx.graph.flow_builder import add_component
+
+    from tests.unit.api.v1.test_project_config_write_through import create_flow, echo_flow_data
+
+    suite, root, scorer, config, _, _ = evaluation
+    project, _, _, _, harness_config, _ = workflow_harness
+    await save_config(client, logged_in_headers, project, {**harness_config, "tool_policy": "ask"})
+    provider(monkeypatch, await stored_flow(root), probe_scope=False)
+    candidate = await mount(client, logged_in_headers, project, root, monkeypatch, tmp_path)
+    # Even a declared dependency outside the selected output must remain authorized.
+    dependency = await create_flow(active_user, folder_id=suite, data=echo_flow_data(), name="Scorer helper")
+    nested = RunFlowComponent().to_frontend_node()["data"]["node"]
+    nested["template"]["flow_id_selected"]["value"] = dependency
+    async with session_scope() as session:
+        row = await session.get(Flow, UUID(scorer))
+        graph = {"data": deepcopy(row.data)}
+        add_component(graph, "RunFlow", {"RunFlow": nested})
+        row.data = graph["data"]
+        session.add(row)
+    context = (await client.get(f"/api/v1/projects/{suite}/evaluations", headers=logged_in_headers)).json()
+    choice = next(item for item in context["scorers"] if item["flow_id"] == scorer)
+    config["scorer"] = {key: value for key, value in choice.items() if key not in {"flow_name", "display_name"}}
+    config["candidate_digest"] = candidate.digest
+    config = (await save_config(client, logged_in_headers, suite, config))["project_config"]
+    assert config["scorer"]["dependencies"][0]["flow_id"] == dependency
+    run = await submit(client, logged_in_headers, suite)
+    paused = await wait_run(client, logged_in_headers, suite, run["id"], {"suspended"})
+    pending = paused["pending_approval"]
+    assert pending["phase"] == "candidate"
+
+    if change == "prune":
+        monkeypatch.setattr(get_settings_service().settings, "max_flow_version_entries_per_flow", 1)
+        async with session_scope() as session:
+            for flow_id in (scorer, dependency):
+                row = await session.get(Flow, UUID(flow_id))
+                await create_flow_version_entry(session, row.id, row.user_id, {"nodes": [], "edges": []})
+        async with session_scope() as session:
+            for binding in [config["scorer"], *config["scorer"]["dependencies"]]:
+                assert await session.get(FlowVersion, UUID(binding["version_id"])) is None
+    else:
+        async with session_scope() as session:
+            row = await session.get(Flow, UUID(scorer if change == "revoke_scorer" else dependency))
+            row.user_id = user_two.id
+            session.add(row)
+    response = await client.post(
+        f"/api/v2/workflows/{pending['job_id']}/resume",
+        headers={"x-api-key": created_api_key.api_key},
+        json={"request_id": pending["request"]["request_id"], "decision": {"action_id": "approve"}},
+    )
+    assert response.status_code == 200, response.text
+    finished = await wait_run(
+        client, logged_in_headers, suite, run["id"], {"completed" if change == "prune" else "failed"}
+    )
+    assert finished["scorer_digest"] == paused["scorer_digest"]
+    if change == "prune":
+        assert finished["passed"], finished
+        assert len(finished["result"]["cases"]) == 1
+    else:
+        assert not finished["passed"]
+        assert not finished["result"]["complete"]
+        assert not finished["result"]["cases"]
+
+
 @pytest.mark.parametrize("restart", ["services", "process"])
 async def test_evaluation_resumes_after_restart_with_original_candidate_and_scorer(
     client,
