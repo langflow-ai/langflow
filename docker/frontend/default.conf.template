@@ -23,6 +23,7 @@ http {
         gzip_disable "MSIE [4-6] \.";
 
         listen ${FRONTEND_PORT};
+        proxy_read_timeout ${LANGFLOW_PROXY_READ_TIMEOUT}s;
 
         location / {
             root /usr/share/nginx/html;
