@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from functools import partial
 from typing import TYPE_CHECKING, Any, TypeVar
 
+from lfx.helpers.base_model import coalesce_bool
 from lfx.integrations.models import ConnectionRef
 from sqlmodel import col, select
 
@@ -797,8 +798,9 @@ async def _resolve_dependencies(
                 item["columnConfig"] = [
                     {
                         "columnName": entry.get("column_name", entry.get("columnName", "")),
-                        "vectorize": bool(entry.get("vectorize", False)),
-                        "identifier": bool(entry.get("identifier", False)),
+                        # Rows can hold flags typed into the column table as strings.
+                        "vectorize": coalesce_bool(entry.get("vectorize")),
+                        "identifier": coalesce_bool(entry.get("identifier")),
                     }
                     for entry in kb.column_config
                     if isinstance(entry, dict)

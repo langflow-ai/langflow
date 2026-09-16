@@ -126,6 +126,8 @@ class AGUITranslator:
             return self._translate_add_message(data)
         if event_type == "log":
             return [CustomEvent(name="langflow.log", value=data)]
+        if event_type == "warning":
+            return [CustomEvent(name="langflow.warning", value=data)]
         if event_type == "remove_message":
             removed_id = str(data.get("id") or "")
             # A retracted message (e.g. the agent error path removing its

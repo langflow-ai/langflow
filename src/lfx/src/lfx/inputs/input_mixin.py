@@ -10,6 +10,7 @@ from pydantic import (
     model_serializer,
 )
 
+from lfx.field_typing.conditional_options import ConditionalOptions
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.validators import CoalesceBool
 from lfx.integrations.capabilities import ConditionalScopeRequirement
@@ -310,6 +311,8 @@ class RangeMixin(BaseModel):
 class DropDownMixin(BaseModel):
     options: list[str] | None = None
     """List of options for the field. Only used when is_list=True. Default is an empty list."""
+    conditional_options: list[ConditionalOptions] | None = None
+    """Ordered option rules evaluated against the other field values before configuration."""
     options_metadata: list[dict[str, Any]] | None = None
     """List of dictionaries with metadata for each option."""
     combobox: CoalesceBool = False
@@ -422,6 +425,9 @@ class SliderMixin(BaseModel):
     slider_buttons: bool = Field(default=False)
     slider_buttons_options: list[str] = Field(default=[])
     slider_input: bool = Field(default=False)
+    value_inverted: bool = Field(default=False)
+    """Display min + max - value while preserving the stored numeric value."""
+    slider_color: Literal["default", "red"] = Field(default="default")
 
 
 class TableMixin(BaseModel):
