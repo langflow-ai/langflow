@@ -1081,7 +1081,10 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def temp_file_close_failure(self, monkeypatch, tmp_path):
         """Record real temp files and emulate a closing flush failure after releasing the handle."""
-        monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+        # Keep downloads separate from the notes.txt created by default_kwargs.
+        temp_dir = tmp_path / "component-tmp"
+        temp_dir.mkdir()
+        monkeypatch.setattr(tempfile, "tempdir", str(temp_dir))
         self._apply_windows_unlink_semantics(monkeypatch)
         real_ntf = tempfile.NamedTemporaryFile
         handles = []
@@ -1103,7 +1106,7 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
             return handle
 
         monkeypatch.setattr(tempfile, "NamedTemporaryFile", failing_close_ntf)
-        return handles, close_error
+        return handles, close_error, temp_dir
 
     @patch("lfx.base.data.cloud_storage_utils.create_s3_client")
     @patch("lfx.base.data.cloud_storage_utils.validate_aws_credentials")
@@ -1112,7 +1115,6 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
         mock_validate,  # noqa: ARG002
         mock_create_client,
         temp_file_close_failure,
-        tmp_path,
     ):
         """A closing flush failure must remove the S3 download and preserve its cause."""
         from pathlib import Path
@@ -1120,7 +1122,7 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
         component = FileComponent()
         component.set_attributes({"bucket_name": "test-bucket", "s3_file_key": "test-file.txt"})
         mock_create_client.return_value.download_fileobj.side_effect = lambda _bucket, _key, fd: fd.write(b"download")
-        handles, close_error = temp_file_close_failure
+        handles, close_error, temp_dir = temp_file_close_failure
 
         with pytest.raises(RuntimeError, match="Failed to download file from S3") as exc_info:
             component._read_from_aws_s3()
@@ -1129,13 +1131,13 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
         assert len(handles) == 1
         assert handles[0].closed
         assert not Path(handles[0].name).exists()
-        assert list(tmp_path.iterdir()) == []
+        assert list(temp_dir.iterdir()) == []
         mock_create_client.return_value.download_fileobj.assert_called_once()
 
     @patch("googleapiclient.http.MediaIoBaseDownload")
     @patch("lfx.base.data.cloud_storage_utils.create_google_drive_service")
     def test_google_drive_temp_file_cleanup_on_close_failure(
-        self, mock_create_service, mock_downloader_class, temp_file_close_failure, tmp_path
+        self, mock_create_service, mock_downloader_class, temp_file_close_failure
     ):
         """A closing flush failure must remove the Drive download and preserve its cause."""
         from pathlib import Path
@@ -1162,7 +1164,7 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
             return downloader
 
         mock_downloader_class.side_effect = make_downloader
-        handles, close_error = temp_file_close_failure
+        handles, close_error, temp_dir = temp_file_close_failure
 
         with pytest.raises(RuntimeError, match="Failed to download file from Google Drive") as exc_info:
             component._read_from_google_drive()
@@ -1171,7 +1173,7 @@ class TestFileComponentToolMode(ComponentTestBaseWithoutClient):
         assert len(handles) == 1
         assert handles[0].closed
         assert not Path(handles[0].name).exists()
-        assert list(tmp_path.iterdir()) == []
+        assert list(temp_dir.iterdir()) == []
         mock_downloader_class.assert_called_once()
 
     @patch("googleapiclient.http.MediaIoBaseDownload")
