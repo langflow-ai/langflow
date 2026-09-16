@@ -44,6 +44,7 @@ def test_integration_error_codes_are_stable() -> None:
         "policy-blocked",
         "invalid-request",
         "resource-not-found",
+        "incompatible-tool",
     } == INTEGRATION_ERROR_CODES
 
 
