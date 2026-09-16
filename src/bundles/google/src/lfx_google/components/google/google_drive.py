@@ -46,6 +46,11 @@ class GoogleDriveComponent(Component):
                 msg = "No credentials provided."
                 raise ValueError(msg)
 
+            def _load_documents_from_ids(self):
+                # This component loads one Google Doc. Preserve that path instead of
+                # the 5.x loader's MIME discovery via an unsupported files.list id query.
+                return [self._load_document_from_id(document_id) for document_id in self.document_ids]
+
             class Config:
                 arbitrary_types_allowed = True
 

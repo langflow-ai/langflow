@@ -272,6 +272,8 @@ export function ParameterRenderComponent({
             sliderButtons={templateData?.slider_buttons}
             sliderButtonsOptions={templateData?.slider_buttons_options}
             sliderInput={templateData?.slider_input}
+            valueInverted={templateData?.value_inverted}
+            sliderColor={templateData?.slider_color}
             id={`slider_${id}`}
           />
         );
