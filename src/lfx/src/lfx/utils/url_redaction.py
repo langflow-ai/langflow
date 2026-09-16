@@ -10,6 +10,26 @@ import re
 from urllib.parse import urlparse
 
 URL_IN_TEXT_PATTERN = re.compile(r"[a-zA-Z][a-zA-Z0-9+.\-]*://[^\s'\"<>]+")
+_SCHEME_PREFIX_PATTERN = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.\-]*://")
+
+
+def _strip_credentials_from_unparseable_url(url: str) -> str:
+    """Best-effort credential stripping for a URL ``urlparse`` itself rejects.
+
+    An unterminated IPv6 literal (``https://user:pw@[::1/mcp``) makes ``urlparse`` raise
+    before userinfo or query are ever separated out, so handing the input back unchanged
+    would leak exactly what this module exists to remove. Text that isn't URL-shaped to
+    begin with carries no such risk and is returned as-is.
+    """
+    match = _SCHEME_PREFIX_PATTERN.match(url)
+    if not match:
+        return url
+    scheme = url[: match.end()]
+    rest = url[match.end() :]
+    rest = re.split(r"[?#]", rest, maxsplit=1)[0]
+    authority, sep, path = rest.partition("/")
+    authority = authority.rpartition("@")[2]
+    return f"{scheme}{authority}{sep}{path}"
 
 
 def sanitize_url_for_display(url: str) -> str:
@@ -21,7 +41,7 @@ def sanitize_url_for_display(url: str) -> str:
     try:
         parsed = urlparse(url)
     except ValueError:
-        return url
+        return _strip_credentials_from_unparseable_url(url)
     if not parsed.scheme or not parsed.hostname:
         return url
     try:

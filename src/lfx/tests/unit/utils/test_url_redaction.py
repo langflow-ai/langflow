@@ -32,6 +32,16 @@ class TestSanitizeUrlForDisplay:
             "https://host.internal:abc/mcp"
         )
 
+    def test_should_drop_userinfo_when_urlparse_itself_rejects_the_url(self):
+        """An unterminated IPv6 literal makes urlparse raise before userinfo is split out."""
+        assert sanitize_url_for_display("https://user:hunter2@[::1/mcp") == "https://[::1/mcp"
+
+    def test_should_drop_the_query_when_urlparse_itself_rejects_the_url(self):
+        assert sanitize_url_for_display("https://[::1/mcp?api_key=secret") == "https://[::1/mcp"
+
+    def test_should_leave_non_url_text_alone_when_urlparse_raises(self):
+        assert sanitize_url_for_display("not-a-url-at-all") == "not-a-url-at-all"
+
 
 class TestRedactUrlsInText:
     def test_should_redact_a_url_embedded_in_a_sentence(self):
@@ -72,3 +82,12 @@ class TestRedactUrlsInText:
         text = "unhandled errors in a TaskGroup (1 sub-exception)"
 
         assert redact_urls_in_text(text) == text
+
+    def test_should_redact_a_url_urlparse_itself_rejects(self):
+        """Redaction must not hand back the raw, credential-bearing text it failed to parse."""
+        text = "MCP connection failed: https://user:hunter2@[::1/mcp"
+
+        redacted = redact_urls_in_text(text)
+
+        assert "hunter2" not in redacted
+        assert "[::1" in redacted
