@@ -118,6 +118,12 @@ class TestURLComponentTextExtraction:
 
         assert url_component_with_real_parser._text_extractor(html) == "Hello world! See this."
 
+    def test_the_title_reads_as_its_own_line(self, url_component_with_real_parser):
+        """Not a block, but it is a line once the page is flattened."""
+        html = "<html><head><title>Test Page</title></head><body><p>Body text</p></body></html>"
+
+        assert url_component_with_real_parser._text_extractor(html) == "Test Page\nBody text"
+
     def test_a_line_break_element_becomes_a_line_break(self, url_component_with_real_parser):
         html = "<p>line one<br>line two</p>"
 

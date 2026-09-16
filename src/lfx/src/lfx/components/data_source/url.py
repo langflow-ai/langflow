@@ -219,17 +219,21 @@ class URLComponent(Component):
         """Extract raw HTML content."""
         return x
 
-    # Elements a browser renders on a line of their own. Without a break after
-    # them, the text on either side of the boundary runs together.
+    # Elements a browser renders on a line of their own, plus the few that are
+    # not laid out at all but still read as a line once a page is flattened
+    # (`title`, `option`). Without a break after them, the text on either side
+    # of the boundary runs together.
     _BLOCK_LEVEL_TAGS = (
         "address",
         "article",
         "aside",
         "blockquote",
+        "caption",
         "dd",
         "div",
         "dl",
         "dt",
+        "details",
         "fieldset",
         "figcaption",
         "figure",
@@ -242,17 +246,22 @@ class URLComponent(Component):
         "h5",
         "h6",
         "header",
+        "hgroup",
         "hr",
+        "legend",
         "li",
         "main",
         "nav",
         "ol",
+        "option",
         "p",
         "pre",
         "section",
+        "summary",
         "table",
         "td",
         "th",
+        "title",
         "tr",
         "ul",
     )
