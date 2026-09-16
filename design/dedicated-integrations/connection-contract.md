@@ -314,7 +314,8 @@ construction.**
   `ConnectionNotAuthorizedError` (`connection-not-authorized`), `AuthExpiredError` (`auth-expired`),
   `ScopeMissingError` (`scope-missing`, with `missing: frozenset`), `RateLimitedError` (`rate-limited`, with
   `retry_after`), `ProviderUnavailableError` (`provider-unavailable`), `ActionUnsupportedError`
-  (`action-unsupported`). `INTEGRATION_ERROR_CODES` is a frozenset and the contract, with the same rule as
+  (`action-unsupported`), `InvalidRequestError` (`invalid-request`), and
+  `ResourceNotFoundError` (`resource-not-found`). The latter two are non-retryable. `INTEGRATION_ERROR_CODES` is a frozenset and the contract, with the same rule as
   `ERROR_CODES` in `extension/errors.py`: adding is additive, removing bumps `BUNDLE_API_VERSION`.
 - `normalize_integration_error(exc, *, provider)` maps HTTP status via `extract_http_status` (already unwraps anyio
   ExceptionGroups, `base/mcp/util.py`), scrubs with `redact_urls_in_text`, and consults

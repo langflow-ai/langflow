@@ -16,15 +16,22 @@ differ from ``FileUploadSource`` / ``FolderSource`` in two ways:
    on — connectors don't need to reinvent that.
 
 This base class gives connectors a single ``resolve_secret`` helper so
-every provider talks to the variable service the same way, and a single
-``connection_lease`` helper for connectors backed by a dedicated
-integration connection rather than by hand-managed
-refresh-token variables.
+every provider talks to the variable service the same way, plus two
+entry points onto the managed-connection path: ``connection_lease`` for
+sources that declare their provider and scopes on the class (OneDrive,
+SharePoint) and ``resolve_connection_credential`` for sources that pass
+scopes per call (Google Drive). Both build the same resolution request:
+``source_config["connection"]`` carries a portable ``provider/name``
+handle and the host's connection resolver mints a short-lived access
+token for it.
 
-``OAuthConnectorBase`` keeps the original bring-your-own-refresh-token
-flow for connectors that still need it, but prefers the connection
-resolver whenever ``source_config["connection"]`` names a connection
-handle.
+The managed-connection and bring-your-own-refresh-token paths coexist on
+purpose. A managed connection is the better answer — the credential
+lives in encrypted server-side storage and is refreshed by the worker
+that uses it — but it needs an execution principal, and ingestion runs
+in a background job. ``OAuthConnectorBase`` keeps the refresh-token flow
+for deployments that have not adopted connections, and prefers the
+connection resolver whenever a handle is configured.
 """
 
 from __future__ import annotations
@@ -33,7 +40,10 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from uuid import UUID
 
 from lfx.base.knowledge_bases.ingestion_sources.base import KBIngestionSource
+from lfx.integrations.errors import ConnectionNotAuthorizedError
+from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
 from lfx.log.logger import logger
+from lfx.services.authorization.base import ExecutionPrincipal
 from lfx.utils.env_var_security import safe_getenv
 
 if TYPE_CHECKING:
@@ -66,6 +76,10 @@ class KBConnectorSource(KBIngestionSource):
     #: the connection must opt in with ``allow_non_interactive``.
     connection_family: ClassVar[str] = "knowledge_base_ingestion"
 
+    # ``source_config`` key holding a managed-connection handle, e.g.
+    # ``{"connection": "google/work"}``.
+    connection_config_key: str = "connection"
+
     def required_connection_scopes(self) -> tuple[str, ...]:
         """Return the scopes this configuration needs.
 
@@ -76,28 +90,61 @@ class KBConnectorSource(KBIngestionSource):
         return self.connection_required_scopes
 
     def connection_handle(self) -> str | None:
-        """Return the configured connection handle, if the source has one."""
-        handle = self.source_config.get("connection")
-        return handle if isinstance(handle, str) and handle else None
+        """Return the configured managed-connection handle, if any."""
+        value = self.source_config.get(self.connection_config_key)
+        if not isinstance(value, str) or not value or value.isspace():
+            return None
+        return value
+
+    def execution_principal(self) -> ExecutionPrincipal:
+        """Return the principal an ingestion job runs under.
+
+        Ingestion is a background job started earlier by a person, so the
+        principal is ``job_owner``: it carries that person's identity but is
+        explicitly non-interactive. The portable deny floor in
+        ``lfx.services.connection.base`` refuses a user-owned connection for a
+        non-interactive principal unless the connection was created with
+        ``allow_non_interactive``, which is exactly the consent this path needs.
+        """
+        return ExecutionPrincipal(
+            kind="job_owner",
+            user_id=str(self.user_id) if self.user_id is not None else None,
+            family=self.connection_family,
+            interactive=False,
+        )
 
     def connection_lease(self) -> CredentialLease:
-        """Return a credential lease for the configured connection handle.
+        """Return a credential lease for the configured handle and class scopes.
 
-        The lease resolves lazily, so building one is cheap and safe to do
+        Building the lease is cheap and does not resolve, so it is safe to do
         during ``validate_config``. Resolution itself is what enforces
         ownership: the ingestion job is a ``job_owner`` principal, which the
         portable deny floor refuses unless the connection allows
         non-interactive use.
         """
-        from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest, CredentialLease
-        from lfx.services.authorization.base import ExecutionPrincipal
+        return self._credential_lease(frozenset(self.required_connection_scopes()))
+
+    async def resolve_connection_credential(self, required_scopes: frozenset[str]) -> CredentialLease:
+        """Return a credential lease for the configured handle and ``required_scopes``."""
+        return self._credential_lease(required_scopes)
+
+    def _credential_lease(self, required_scopes: frozenset[str]) -> CredentialLease:
+        """Build the lease both connection entry points share.
+
+        Raises ``ValueError`` for a missing handle or one naming another
+        provider, and ``ConnectionNotAuthorizedError`` when no resolver is
+        installed, so a host without connection support fails closed rather
+        than silently falling back to another credential source.
+        """
+        from lfx.integrations.models import CredentialLease
         from lfx.services.deps import get_connection_resolver
 
         handle = self.connection_handle()
-        if not handle:
+        if handle is None:
             msg = (
                 f"{type(self).__name__} requires a connection. Set "
-                f"source_config['connection'] to a {self.connection_provider or 'provider'} connection handle."
+                f"source_config[{self.connection_config_key!r}] to a "
+                f"{self.connection_provider or 'provider'} connection handle."
             )
             raise ValueError(msg)
         ref = ConnectionRef.parse(handle)
@@ -107,18 +154,15 @@ class KBConnectorSource(KBIngestionSource):
                 f"{type(self).__name__} requires {self.connection_provider!r}."
             )
             raise ValueError(msg)
-        principal = ExecutionPrincipal(
-            kind="job_owner",
-            user_id=str(self.user_id) if self.user_id is not None else None,
-            family=self.connection_family,
-            interactive=False,
-        )
+        resolver = get_connection_resolver()
+        if resolver is None:
+            raise ConnectionNotAuthorizedError(provider=ref.provider)
         request = ConnectionResolutionRequest(
             ref=ref,
-            principal=principal,
-            required_scopes=frozenset(self.required_connection_scopes()),
+            principal=self.execution_principal(),
+            required_scopes=required_scopes,
         )
-        return CredentialLease(get_connection_resolver(), request)
+        return CredentialLease(resolver, request)
 
     async def resolve_secret(self, variable_name: str) -> str | None:
         """Return the value of a Langflow variable, or ``None`` if absent.
@@ -207,10 +251,14 @@ class KBConnectorSource(KBIngestionSource):
         Since connectors store credential *references* in
         ``source_config`` (e.g. ``{"access_key_variable":
         "AWS_ACCESS_KEY_ID"}``), the default describe already leaks
-        only variable names. Subclasses can override if they carry
+        only variable names. A managed-connection handle is likewise a
+        non-secret reference. Subclasses can override if they carry
         additional secret-adjacent fields.
         """
-        return super().describe()
+        base = super().describe()
+        base.setdefault("config", {})
+        base["uses_managed_connection"] = self.connection_handle() is not None
+        return base
 
 
 class OAuthConnectorBase(KBConnectorSource):

@@ -105,19 +105,21 @@ def _reinstall_builtin_sources() -> None:
 
     This list MUST mirror the ``register_source(...)`` calls at the
     bottom of ``lfx.base.knowledge_bases.ingestion_sources.__init__``:
-    ``file_upload``, ``folder``, ``onedrive`` and ``sharepoint``. Miss
-    one and every test that runs after this module in the same process
-    sees a registry that is quietly missing it. The S3 and Google Drive
-    stubs stay unregistered because the production import path does not
-    register them either — see the ``__init__`` module's docstring.
+    ``file_upload``, ``folder``, ``google_drive``, ``onedrive`` and
+    ``sharepoint``. Miss one and every test that runs after this module in
+    the same process sees a registry that is quietly missing it. The S3
+    stub stays unregistered because the production import path does not
+    register it either — see the ``__init__`` module's docstring.
     """
     from lfx.base.knowledge_bases.ingestion_sources.file_upload import FileUploadSource
     from lfx.base.knowledge_bases.ingestion_sources.folder import FolderSource
+    from lfx.base.knowledge_bases.ingestion_sources.google_drive import GoogleDriveSource
     from lfx.base.knowledge_bases.ingestion_sources.onedrive import OneDriveSource
     from lfx.base.knowledge_bases.ingestion_sources.sharepoint import SharePointSource
 
     ingestion_registry.register_source(SourceType.FILE_UPLOAD, FileUploadSource)
     ingestion_registry.register_source(SourceType.FOLDER, FolderSource)
+    ingestion_registry.register_source(SourceType.GOOGLE_DRIVE, GoogleDriveSource)
     ingestion_registry.register_source(SourceType.ONEDRIVE, OneDriveSource)
     ingestion_registry.register_source(SourceType.SHAREPOINT, SharePointSource)
 

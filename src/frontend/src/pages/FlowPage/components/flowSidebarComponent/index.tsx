@@ -1,4 +1,3 @@
-import { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
@@ -14,6 +13,7 @@ import {
 import SkeletonGroup from "@/components/ui/skeletonGroup";
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
 import {
+  ENABLE_INTEGRATIONS,
   ENABLE_KNOWLEDGE_BASES,
   ENABLE_NEW_SIDEBAR,
 } from "@/customization/feature-flags";
@@ -38,6 +38,7 @@ import SidebarMenuButtons from "./components/sidebarFooterButtons";
 import { SidebarHeaderComponent } from "./components/sidebarHeader";
 import SidebarSegmentedNav from "./components/sidebarSegmentedNav";
 import { useSearchContext } from "./context/SearchContext";
+import { applyFeatureFlagFilters } from "./helpers/apply-feature-flag-filters";
 import { computeSectionVisibility } from "./helpers/compute-section-visibility";
 import sensitiveSort from "./helpers/sensitive-sort";
 import { useDebouncedSearch } from "./hooks/useDebouncedSearch";
@@ -76,30 +77,16 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     (state) => state.catalogGovernanceEnabled,
   );
 
-  // Filter out knowledge components from files_and_knowledge category when ENABLE_KNOWLEDGE_BASES is OFF
-  const data = useMemo(() => {
-    if (ENABLE_KNOWLEDGE_BASES) {
-      return rawData;
-    }
-
-    const knowledgeComponentNames = ["KnowledgeBase"];
-
-    // Create a deep copy to avoid mutating the original
-    const filteredData = cloneDeep(rawData);
-
-    if (filteredData.files_and_knowledge) {
-      // Filter out knowledge components by creating a new object without them
-      const filteredCategory = Object.fromEntries(
-        Object.entries(filteredData.files_and_knowledge).filter(
-          ([componentName]) => !knowledgeComponentNames.includes(componentName),
-        ),
-      );
-
-      filteredData.files_and_knowledge = filteredCategory;
-    }
-
-    return filteredData;
-  }, [rawData]);
+  // Filter out knowledge components when ENABLE_KNOWLEDGE_BASES is OFF and
+  // connection-backed components when ENABLE_INTEGRATIONS is OFF
+  const data = useMemo(
+    () =>
+      applyFeatureFlagFilters(rawData, {
+        enableKnowledgeBases: ENABLE_KNOWLEDGE_BASES,
+        enableIntegrations: ENABLE_INTEGRATIONS,
+      }),
+    [rawData],
+  );
 
   const {
     getFilterEdge,

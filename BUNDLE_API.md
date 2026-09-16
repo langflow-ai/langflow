@@ -216,6 +216,15 @@ the deserialize half is covered by
 
 ## Changelog
 
+### 2026-09-15 — Permanent provider request and resource errors
+
+- Add `InvalidRequestError` (`invalid-request`) and `ResourceNotFoundError`
+  (`resource-not-found`) to `lfx.integrations` and `INTEGRATION_ERROR_CODES`.
+  Both are non-retryable and provide sanitized input/access hints. Bundles can
+  distinguish invalid inputs and missing resources from temporary provider
+  failures and unsupported actions. Existing codes and normalization defaults
+  remain compatible; this additive change retains `BUNDLE_API_VERSION = 1`.
+
 ### 2026-09-14 — Integration action selection and execution denials
 
 - Add the pure `Component.select_integration_capabilities(capability_ids)` hook.
