@@ -48,6 +48,8 @@ export default function SliderComponent({
   minLabelIcon = MIN_LABEL_ICON,
   maxLabelIcon = MAX_LABEL_ICON,
   sliderButtons = false,
+  valueInverted = false,
+  sliderColor = "default",
   sliderButtonsOptions = DEFAULT_SLIDER_BUTTONS_OPTIONS,
   handleOnNewValue,
   showParameter = true,
@@ -66,7 +68,8 @@ export default function SliderComponent({
   minLabel = minLabel || MIN_LABEL;
   maxLabel = maxLabel || MAX_LABEL;
 
-  const valueAsNumber = getMinOrMaxValue(Number(value), min, max);
+  const storedValue = getMinOrMaxValue(Number(value), min, max);
+  const valueAsNumber = valueInverted ? min + max - storedValue : storedValue;
   const step = rangeSpec?.step ?? 0.01;
 
   useEffect(() => {
@@ -76,7 +79,11 @@ export default function SliderComponent({
   }, [disabled]);
 
   const handleChange = (newValue: number[]) => {
-    handleOnNewValue({ value: newValue[0] });
+    const displayed = newValue[0];
+    const stored = valueInverted ? min + max - displayed : displayed;
+    handleOnNewValue({
+      value: valueInverted ? Number(stored.toFixed(10)) : stored,
+    });
   };
 
   const handleOptionClick = (option: number) => {
@@ -84,7 +91,7 @@ export default function SliderComponent({
 
     if (selectedPercentage !== undefined) {
       const calculatedValue = min + (max - min) * selectedPercentage;
-      handleOnNewValue({ value: calculatedValue });
+      handleChange([calculatedValue]);
     }
 
     return null;
@@ -97,6 +104,8 @@ export default function SliderComponent({
     Balanced: t("slider.balanced"),
     Creative: t("slider.creative"),
     Wild: t("slider.wild"),
+    Strict: t("slider.strict"),
+    Permissive: t("slider.permissive"),
   };
 
   const displayMinLabel = labelTranslations[minLabel] ?? minLabel;
@@ -169,7 +178,7 @@ export default function SliderComponent({
     const newValue = parseFloat(inputValue);
     if (!isNaN(newValue)) {
       const clampedValue = Math.min(Math.max(newValue, min), max);
-      handleOnNewValue({ value: clampedValue });
+      handleChange([clampedValue]);
     }
     setIsEditing(false);
     setInputValue(valueAsNumber.toFixed(2));
@@ -199,8 +208,18 @@ export default function SliderComponent({
   const accentPinkForeground = getComputedStyle(
     document.documentElement,
   ).getPropertyValue("--accent-pink-foreground");
+  const accentRedForeground = getComputedStyle(
+    document.documentElement,
+  ).getPropertyValue("--accent-red-foreground");
 
-  const getThumbColor = (percentage) => {
+  const getThumbColor = (percentage: number) => {
+    if (sliderColor === "red") {
+      return buildColorByName(
+        accentIndigoForeground || DEFAULT_ACCENT_INDIGO_FOREGROUND_COLOR,
+        accentRedForeground || "0 72% 51%",
+        percentage,
+      );
+    }
     if (accentIndigoForeground && accentPinkForeground) {
       return buildColorByName(
         accentIndigoForeground,

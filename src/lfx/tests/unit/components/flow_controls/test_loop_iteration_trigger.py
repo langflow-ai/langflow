@@ -16,14 +16,17 @@ import json
 import pytest
 from lfx.components.flow_controls.loop import LoopComponent
 from lfx.components.input_output import ChatOutput
+from lfx.components.processing.combine_text import CombineTextComponent
+from lfx.components.processing.parser import ParserComponent
+from lfx.custom.custom_component.component import Component
 from lfx.events.event_manager import create_default_event_manager
 from lfx.graph import Graph
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 
 
-def _attach_feedback(loop: LoopComponent, source: ChatOutput) -> None:
-    """Wire a loop feedback edge from `source.message` to `loop.item`.
+def _attach_feedback(loop: LoopComponent, source: Component, source_output: str = "message") -> None:
+    """Wire a loop feedback edge from `source.<source_output>` to `loop.item`.
 
     `loop.set(item=source.message_response)` is the "right" way but is
     rejected by edge validation here because the loop target handle's
@@ -38,9 +41,9 @@ def _attach_feedback(loop: LoopComponent, source: ChatOutput) -> None:
             "target": loop.get_id(),
             "data": {
                 "sourceHandle": {
-                    "dataType": "ChatOutput",
+                    "dataType": type(source).__name__,
                     "id": source.get_id(),
-                    "name": "message",
+                    "name": source_output,
                     "output_types": ["Message"],
                 },
                 "targetHandle": {
@@ -149,6 +152,31 @@ async def test_classic_topology_both_outputs_connected_runs_subgraph_once():
     body_runs = [d for d in events.get("end_vertex", []) if d.get("build_data", {}).get("id") == "ChatOutput-body"]
     # If iteration ran twice (once per output), we'd see 6 builds.
     assert len(body_runs) == 3, f"Expected 3 body builds (one per row), got {len(body_runs)}"
+
+
+@pytest.mark.asyncio
+async def test_item_fanning_out_to_multiple_branches_reaches_every_branch():
+    """Every vertex connected directly to Loop.item must receive the current row.
+
+    Regression for https://github.com/langflow-ai/langflow/issues/14964: only the
+    first outgoing item edge got the row injected, so other branches got None.
+    """
+    loop = LoopComponent(_id="loop")
+    loop.set(data=DataFrame([Data(text="Q001"), Data(text="Q002")]))
+
+    branch_a = ParserComponent(_id="branch_a")
+    branch_a.set(input_data=loop.item_output, pattern="A={text}", mode="Parser")
+    branch_b = ParserComponent(_id="branch_b")
+    branch_b.set(input_data=loop.item_output, pattern="B={text}", mode="Parser")
+
+    merge = CombineTextComponent(_id="merge")
+    merge.set(text1=branch_a.parse_combined_text, text2=branch_b.parse_combined_text, delimiter=" ")
+    _attach_feedback(loop, merge, source_output="combined_text")
+
+    graph = Graph(loop, merge)
+    [r async for r in graph.async_start()]
+
+    assert [d.text for d in loop.ctx["loop_aggregated"]] == ["A=Q001 B=Q001", "A=Q002 B=Q002"]
 
 
 @pytest.mark.asyncio

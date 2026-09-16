@@ -189,6 +189,50 @@ async def test_resolve_dependencies_shapes_specs_and_strips_secret():
 
 
 @pytest.mark.asyncio
+async def test_resolve_dependencies_reads_typed_column_config_flags():
+    """KB rows can hold flags typed into the column table as strings; ``bool("false")`` is True."""
+    owner_id = uuid4()
+    kb = SimpleNamespace(
+        id=uuid4(),
+        user_id=owner_id,
+        name="typedKb",
+        backend_type="chroma",
+        backend_config={"mode": "cloud", "api_key_variable": _KEY_VAR_NAME},
+        model_selection={"provider": "Ollama", "name": "nomic-embed-text"},
+        column_config=[
+            {"column_name": "question", "vectorize": True, "identifier": "true"},
+            {"column_name": "answer", "vectorize": "true", "identifier": "false"},
+            {"column_name": "category", "vectorize": "False", "identifier": ""},
+        ],
+    )
+    session = AsyncMock()
+    session.exec.side_effect = [_exec_result([kb])]
+    snapshot = SimpleNamespace(
+        owner_id=owner_id,
+        payload={"data": {"nodes": [{"data": {"node": {"template": {"knowledge_base": {"value": "typedKb"}}}}}]}},
+    )
+
+    with patch(
+        "langflow.services.deployment_artifacts.builder.ensure_knowledge_base_permission",
+        new_callable=AsyncMock,
+    ):
+        deps = await _resolve_dependencies(
+            session,
+            user=SimpleNamespace(id=owner_id),
+            owner_id=owner_id,
+            workspace_id=uuid4(),
+            project_id=uuid4(),
+            snapshots=(snapshot,),
+        )
+
+    assert deps["knowledgeBases"][0]["columnConfig"] == [
+        {"columnName": "question", "vectorize": True, "identifier": True},
+        {"columnName": "answer", "vectorize": True, "identifier": False},
+        {"columnName": "category", "vectorize": False, "identifier": False},
+    ]
+
+
+@pytest.mark.asyncio
 async def test_resolve_dependencies_empty_when_no_refs_and_hits_no_db():
     session = AsyncMock()
     snapshot = SimpleNamespace(payload={"data": {"nodes": []}})

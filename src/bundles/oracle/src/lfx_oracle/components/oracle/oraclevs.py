@@ -6,8 +6,7 @@ from importlib.metadata import version
 from typing import Any
 
 import oracledb
-from langchain_community.vectorstores.utils import DistanceStrategy
-from langchain_oracledb.vectorstores import OracleVS
+from langchain_oracledb.vectorstores import DistanceStrategy, OracleVS
 from langchain_oracledb.vectorstores.oraclevs import create_index
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data

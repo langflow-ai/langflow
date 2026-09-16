@@ -14,15 +14,19 @@ Langflow integrates with [OpenDsStar](https://github.com/IBM/OpenDsStar) through
 
 ## Prerequisites
 
-* **OpenDsStar package (File Description Generator only)**: The **File Description Generator** component requires the `OpenDsStar` package and Python 3.11 or later.
+* **OpenDsStar package (File Description Generator only)**: The **File Description Generator** component requires a separate manual OpenDsStar installation. The last managed combination supported Python 3.11–3.13, excluding Intel macOS.
 
     Install the dependency with:
 
     ```bash
-    uv pip install OpenDsStar
+    uv pip install 'OpenDsStar==1.0.26' 'langchain-litellm==0.5.1'
     ```
 
     For more information, see [Install custom dependencies](/install-custom-dependencies).
+
+OpenDsStar is no longer included in Langflow's managed dependencies or bundle extras.
+Manual installation restores its unpatched DiskCache dependency; review the [Code Agents installation guidance](/bundles-codeagents#prerequisites) before opting in.
+File Content Retriever and other components that do not use OpenDsStar are unaffected.
 
 ## Use File Processing components in a flow
 
