@@ -52,6 +52,24 @@ HTTP_PARTIAL_CONTENT = 206
 HTTP_REDIRECT = 300
 MAX_DOWNLOAD_REDIRECTS = 5
 _REDIRECT_STATUSES = frozenset({301, 302, 303, 307, 308})
+HTTP_BAD_REQUEST = 400
+
+
+def _is_license_rejection(response: httpx.Response) -> bool:
+    """Return whether Graph refused the call because the workload is unlicensed.
+
+    Graph reports this as a bare ``400 BadRequest`` whose only signal is the
+    message, for example ``Tenant does not have a SPO license.``
+    """
+    if response.status_code != HTTP_BAD_REQUEST:
+        return False
+    try:
+        payload = response.json()
+    except ValueError:
+        return False
+    error = payload.get("error") if isinstance(payload, dict) else None
+    message = error.get("message") if isinstance(error, dict) else None
+    return isinstance(message, str) and "license" in message.casefold()
 
 
 class MicrosoftGraphSource(OAuthConnectorBase):
@@ -140,6 +158,15 @@ class MicrosoftGraphSource(OAuthConnectorBase):
             successful = response.status_code in {HTTP_SUCCESS, HTTP_PARTIAL_CONTENT}
         if not successful:
             msg = f"Microsoft Graph {context} failed with {response.status_code}."
+            # Downloads are streamed and their bodies are never read here; a
+            # listing body is already in memory, so its error can name the one
+            # setup failure Graph reports only in text.
+            if context != "download" and _is_license_rejection(response):
+                msg = (
+                    f"Microsoft Graph {context} failed with {response.status_code}: the Microsoft 365 "
+                    "tenant or user has no license for SharePoint Online and OneDrive. Assign a Microsoft 365 "
+                    "license that includes them; retrying does not help."
+                )
             raise OSError(msg)
 
     @staticmethod

@@ -149,6 +149,21 @@ connection that has not been marked as usable without an interactive user is
 refused before any Graph call is made, and the run fails with a
 connection-not-authorized error rather than silently ingesting nothing.
 
+## Error behavior
+
+Every action maps Graph failures onto the stable, sanitized error vocabulary:
+`auth-expired` when the token is rejected (retried once against a freshly minted
+token before surfacing), `scope-missing` for an explicit missing-permission
+code, `connection-not-authorized` for other `403` denials, `action-unsupported`
+for `404`, `405`, and `501`, `rate-limited` for `429` and `503`, and
+`provider-unavailable` for request timeouts and server failures. Any other
+`4xx` is `invalid-request`, which is not retryable: change the inputs or the
+account setup first. A workload the tenant or user is not licensed for, and a
+mailbox Exchange Online cannot serve, also surface as `invalid-request`, with a
+hint naming the Microsoft 365 license to assign. See the
+[Entra registration prerequisites](../Develop/entra-app-registration.mdx#what-you-need).
+Graph response bodies are never passed through verbatim.
+
 ## Rate limits
 
 Microsoft throttles per service and returns `429` (or `503`) with a `Retry-After` header. The components surface that as a `rate-limited` error carrying the retry interval; they do not retry on your behalf.

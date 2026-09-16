@@ -32,6 +32,7 @@ from lfx.integrations.errors import (
     AuthExpiredError,
     ConnectionNotAuthorizedError,
     IntegrationError,
+    InvalidRequestError,
     ProviderUnavailableError,
     RateLimitedError,
     ScopeMissingError,
@@ -72,9 +73,11 @@ HTTP_UNAUTHORIZED = 401
 HTTP_FORBIDDEN = 403
 HTTP_NOT_FOUND = 404
 HTTP_METHOD_NOT_ALLOWED = 405
+HTTP_REQUEST_TIMEOUT = 408
 HTTP_TOO_MANY_REQUESTS = 429
 HTTP_NOT_IMPLEMENTED = 501
 HTTP_SERVICE_UNAVAILABLE = 503
+HTTP_SERVER_ERROR_FLOOR = 500
 
 _REDIRECT_STATUSES = frozenset(
     {
@@ -103,18 +106,58 @@ _AUTH_ERROR_PREFIXES = ("compacttoken", "invalidauthenticationtoken")
 # hitting a transient provider condition.
 _SCOPE_ERROR_CODES = frozenset({"insufficient_scope", "invalid_scope"})
 
+# Graph error code for a user whose mailbox Exchange Online cannot serve: no
+# Exchange Online license, or a mailbox that is inactive or hosted on-premises.
+_MAILBOX_UNAVAILABLE_CODE = "mailboxnotenabledforrestapi"
+
 MAX_PAGE_SIZE = 999
 
 
-def graph_error_code(payload: Any) -> str:
-    """Return the lowercased ``error.code`` carried by a Graph error body."""
+def _graph_error_field(payload: Any, field: str) -> str:
     if not isinstance(payload, dict):
         return ""
     error = payload.get("error")
     if not isinstance(error, dict):
         return ""
-    code = error.get("code")
-    return code.casefold() if isinstance(code, str) else ""
+    value = error.get(field)
+    return value.casefold() if isinstance(value, str) else ""
+
+
+def graph_error_code(payload: Any) -> str:
+    """Return the lowercased ``error.code`` carried by a Graph error body."""
+    return _graph_error_field(payload, "code")
+
+
+def _setup_error(status: int, code: str, message: str) -> InvalidRequestError | None:
+    """Recognize rejections caused by the tenant's Microsoft 365 setup.
+
+    Graph reports an unlicensed workload as a bare ``400 BadRequest`` whose
+    only signal is the message (for example ``Tenant does not have a SPO
+    license.``), so that one case is matched on text. The provider's wording
+    is never forwarded: the error carries fixed, sanitized text.
+    """
+    if code == _MAILBOX_UNAVAILABLE_CODE:
+        return InvalidRequestError(
+            "Microsoft Graph cannot reach this user's mailbox.",
+            hint=(
+                "Assign the user a Microsoft 365 license that includes Exchange Online; "
+                "mailboxes that are inactive or hosted on-premises are not supported."
+            ),
+            provider=PROVIDER_ID,
+            http_status=status,
+        )
+    if status == HTTP_BAD_REQUEST and "license" in message:
+        return InvalidRequestError(
+            "The Microsoft 365 tenant or user has no license for this service.",
+            hint=(
+                "Assign a Microsoft 365 license that includes the workload this action uses "
+                "(SharePoint Online and OneDrive, Exchange Online, or Teams). "
+                "Reconnecting or retrying does not help."
+            ),
+            provider=PROVIDER_ID,
+            http_status=status,
+        )
+    return None
 
 
 def _retry_after_seconds(headers: Mapping[str, str]) -> float | None:
@@ -137,7 +180,10 @@ def _decode(response: httpx.Response) -> Any:
 def integration_error_for_response(response: httpx.Response) -> IntegrationError:
     """Map one Graph error response onto the sanitized error vocabulary."""
     status = response.status_code
-    code = graph_error_code(_decode(response))
+    payload = _decode(response)
+    code = graph_error_code(payload)
+    if (setup_error := _setup_error(status, code, _graph_error_field(payload, "message"))) is not None:
+        return setup_error
     if status == HTTP_UNAUTHORIZED or code in _AUTH_ERROR_CODES or code.startswith(_AUTH_ERROR_PREFIXES):
         return AuthExpiredError(provider=PROVIDER_ID, http_status=status)
     if code in _SCOPE_ERROR_CODES:
@@ -152,6 +198,11 @@ def integration_error_for_response(response: httpx.Response) -> IntegrationError
         )
     if status in {HTTP_NOT_FOUND, HTTP_METHOD_NOT_ALLOWED, HTTP_NOT_IMPLEMENTED}:
         return ActionUnsupportedError(provider=PROVIDER_ID, http_status=status)
+    # Any other 4xx except a timeout is Graph refusing this request as sent;
+    # retrying the same call cannot succeed, so it must not read as a transient
+    # outage.
+    if HTTP_BAD_REQUEST <= status < HTTP_SERVER_ERROR_FLOOR and status != HTTP_REQUEST_TIMEOUT:
+        return InvalidRequestError(provider=PROVIDER_ID, http_status=status)
     return ProviderUnavailableError(provider=PROVIDER_ID, http_status=status)
 
 

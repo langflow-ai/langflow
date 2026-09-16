@@ -387,6 +387,23 @@ class TestWalk:
         with pytest.raises(OSError, match="403"):
             _ = [item async for item in source.list_items()]
 
+    async def test_an_unlicensed_tenant_names_the_license_rather_than_a_bare_status(
+        self, resolver, graph_transport
+    ) -> None:
+        resolver(_Resolver(_credential()))
+        graph_transport(
+            lambda _request: httpx.Response(
+                400, json={"error": {"code": "BadRequest", "message": "Tenant does not have a SPO license."}}
+            )
+        )
+        source = OneDriveSource(user_id=USER_ID, source_config={"connection": "microsoft/work"})
+
+        with pytest.raises(OSError, match="400") as caught:
+            _ = [item async for item in source.list_items()]
+
+        assert "Microsoft 365 license" in str(caught.value)
+        assert "SPO" not in str(caught.value)
+
 
 class TestFetch:
     async def test_fetch_follows_the_302_without_the_bearer_header(self, resolver, graph_transport) -> None:
