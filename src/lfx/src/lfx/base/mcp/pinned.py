@@ -11,11 +11,13 @@ component freezes, in its capability manifest:
   server sends one (the MCP specification does not require it, and several GA
   servers do not).
 
-At load time the discovered toolset is compared against that pin and any
-difference -- an added, removed, or renamed tool, an argument- or result-schema
-change, or a server-version/digest mismatch -- raises
+At load time the pinned subset of the discovered toolset is compared against
+that pin. A missing or renamed pinned tool, an argument- or result-schema
+change, or a server-version/digest mismatch raises
 :class:`~lfx.integrations.errors.IncompatibleToolError` instead of degrading to
-whatever the server currently offers.  At call time the pinned argument schema
+whatever the server currently offers. Extra unpinned tools may vary with the
+user's grant; they do not invalidate the pin and are never exposed by the
+component. At call time the pinned argument schema
 is enforced again, because ``MCPStructuredTool`` deliberately passes keys that
 are not in the derived args schema through to the server
 (``lfx.base.mcp.util`` ``_convert_parameters``); a discovery-time check alone
@@ -198,7 +200,7 @@ def _view(tool: Any) -> DiscoveredTool:
 # ----------------------------------------------------------------------- diff
 @dataclass(frozen=True, slots=True)
 class PinnedToolDiff:
-    """Every way a discovered tool set can differ from its pin."""
+    """Differences from a pin; added tools are informational, not incompatibilities."""
 
     added: tuple[str, ...] = ()
     removed: tuple[str, ...] = ()
@@ -208,7 +210,7 @@ class PinnedToolDiff:
 
     @property
     def is_compatible(self) -> bool:
-        return not (self.added or self.removed or self.changed or self.server_mismatch)
+        return not (self.removed or self.changed or self.server_mismatch)
 
     def as_details(self) -> dict[str, Any]:
         """Sanitizable details for the typed error."""
@@ -270,7 +272,12 @@ def diff_pinned_tools(
     *,
     server_info: MCPServerInfo | None = None,
 ) -> PinnedToolDiff:
-    """Compare a discovered tool set against its pin. Any difference is a drift."""
+    """Check the pinned contract, allowing unrelated tools outside the pin.
+
+    Added tools remain in the diff for diagnostics and rename detection. They
+    cannot widen the component's toolset and do not enter the pinned digest.
+    Malformed discovery (unnamed or duplicate entries) still fails closed.
+    """
     views = [_view(tool) for tool in discovered]
     found: dict[str, DiscoveredTool] = {}
     changed: list[tuple[str, str]] = []
@@ -295,7 +302,7 @@ def diff_pinned_tools(
 
     server_mismatch: list[str] = []
     if spec.tools_list_hash is not None:
-        actual = tools_list_digest(views)
+        actual = tools_list_digest(view for view in views if view.name in pinned)
         if actual != spec.tools_list_hash:
             server_mismatch.append(f"tools/list digest {actual} does not match the pinned {spec.tools_list_hash}")
     expected_version = spec.server_version
@@ -328,13 +335,19 @@ def enforce_pinned_tools(
     server_label: str | None = None,
     server_info: MCPServerInfo | None = None,
 ) -> PinnedToolDiff:
-    """Raise :class:`IncompatibleToolError` unless discovery matches the pin exactly."""
+    """Raise :class:`IncompatibleToolError` unless all pinned tools match exactly."""
     diff = diff_pinned_tools(spec, discovered, server_info=server_info)
     if diff.is_compatible:
         return diff
     label = server_label or spec.server_url
     msg = f"The MCP server {label} no longer matches the tool contract pinned by this component: {diff.summary()}."
-    raise IncompatibleToolError(msg, provider=provider, details=diff.as_details())
+    hint = None
+    if diff.removed:
+        hint = (
+            "Check that the connection grants access to every pinned tool, or upgrade to a bundle release "
+            "whose pinned tools match the server, then retry."
+        )
+    raise IncompatibleToolError(msg, provider=provider, hint=hint, details=diff.as_details())
 
 
 # ------------------------------------------------------------------ arguments
@@ -404,16 +417,15 @@ def pinned_spec_from_capabilities(capabilities: Sequence[Any]) -> PinnedServerSp
     """Build the runtime pin from the ``substrate == "mcp"`` capabilities of a manifest.
 
     Every MCP capability that shares one server contributes one pinned tool, so
-    the union is the complete tool set the server is allowed to expose: a tool
-    outside it is an *added* tool and fails closed.  All contributing
+    the union is the complete tool set the component may expose. Extra server
+    tools are ignored, since discovery can vary with the user's grant. All contributing
     capabilities must agree on the endpoint, transport, digest, and server
     identity; disagreement is a manifest error, not a runtime decision.
 
     A declared ``tools_list_hash`` must also be the digest of exactly these
     tools.  Computing it over a wider recording than the manifest pins is an easy
-    authoring mistake, and it would otherwise surface at every load as two
-    stacked runtime complaints (an added tool plus a digest mismatch) that read
-    like provider drift; checked here it is a bundle error at build time.
+    authoring mistake, and it would otherwise surface as a digest mismatch that
+    reads like provider drift; checked here it is a bundle error at build time.
     """
     mcp_capabilities = [cap for cap in capabilities if getattr(cap, "substrate", None) == "mcp"]
     if not mcp_capabilities:

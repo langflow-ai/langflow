@@ -76,7 +76,7 @@ class McpToolPin(BaseModel):
     action from its SDK/REST adapter to MCP without changing the component class,
     its identity, or the saved-flow schema (see
     ``design/dedicated-integrations/ga-swap-procedure.md``). ``tools_list_hash`` is
-    the content digest of the whole pinned ``tools/list``
+    the content digest of only the pinned subset of ``tools/list``
     (``lfx.base.mcp.pinned.tools_list_digest``); ``server_name`` and
     ``server_version`` are the ``InitializeResult.serverInfo`` values, pinned only
     when the server actually publishes them.

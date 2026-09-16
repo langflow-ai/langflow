@@ -39,21 +39,25 @@ Two consequences worth stating plainly, because both are easy to get wrong:
 1. **Capture the evidence.** Obtain a dated, authenticated `tools/list` from the official server with the app the
    bundle actually uses, and record, per candidate action: server URL, `InitializeResult.serverInfo` (name and
    version, if any), the exact tool identifier, the raw `inputSchema`, the raw `outputSchema`, and the authorization
-   exchange the server accepted. Store it under `design/dedicated-integrations/evidence/`. This capture is the
+   exchange and granted scopes the server accepted. A server may return different tools for different grants;
+   record the grant alongside the capture. Store it under `design/dedicated-integrations/evidence/`. This capture is the
    re-open trigger in the provider's substrate decision record; without it, stop here.
 2. **Re-open the substrate decision.** Amend `decisions/substrate-<provider>.md` (new dated amendment section, facts
    with citations, `Status: accepted` by the release owner) and add `mcp` to `substrate_decision.chosen` in
    `matrices/<provider>.json`. Flip the action's row to `substrate: "mcp"` with a source whose `kind` is
    `mcp_tools_list` pointing at the capture. Run `scripts/ci/check_capability_matrices.py`; it rejects an included
    action whose substrate is outside `chosen`, and rejects `confidence: high` on a non-GA MCP row.
-3. **Pin every tool the server exposes, not just the one you use.** Add `mcp_tool` and `mcp_pin` to each MCP
+3. **Pin the tools the component exposes.** Add `mcp_tool` and `mcp_pin` to each MCP
    capability in the bundle's capability manifest. `pinned_spec_from_capabilities()` unions the MCP capabilities that
-   share one server into the complete tool set the component may see, so a tool that is present on the server but
-   absent from the manifest is an *added* tool and fails closed. All capabilities on one server must agree on
+   share one server into the complete tool set the component may expose. Extra tools returned for broader user
+   grants are ignored and never enter the component's toolset, dropdown, or execution cache. Every pinned tool
+   must still be present with exactly its pinned schemas. All capabilities on one server must agree on
    `server_url`, `transport`, `tools_list_hash`, `server_name`, and `server_version`.
-4. **Compute the pin values from the capture.** `tools_list_hash` is
-   `lfx.base.mcp.pinned.tools_list_digest(recording["result"]["tools"])` — the helper accepts the raw recorded
-   entries. It must cover *exactly* the tools the manifest pins: `pinned_spec_from_capabilities()` recomputes the
+4. **Compute the pin values from the pinned subset of the capture.** Collect the manifest's `mcp_tool` names in
+   `pinned_names`, then compute `tools_list_hash` as
+   `tools_list_digest(tool for tool in recording["result"]["tools"] if tool["name"] in pinned_names)` using
+   `lfx.base.mcp.pinned.tools_list_digest`. The helper accepts the raw recorded entries. The hash must cover
+   *exactly* the tools the manifest pins: `pinned_spec_from_capabilities()` recomputes the
    digest and refuses a hash taken over a wider recording, so that authoring slip is a bundle error at build time
    rather than a runtime "drift" complaint. Set `server_name`/`server_version` only if the server actually publishes
    `serverInfo`; a pinned version that the server later stops sending fails closed, by design.
@@ -68,12 +72,15 @@ Two consequences worth stating plainly, because both are easy to get wrong:
    equal, one saved-flow value set producing the same rows on both halves, and the manifest diff limited to
    `substrate`, `mcp_tool`, `mcp_pin`. `src/lfx/tests/unit/base/mcp/test_ga_swap_procedure.py` is the worked
    example.
-8. **Prove it fails closed.** Add drift tests driven by a copy of the capture: a tool added, a tool removed, a tool
-   renamed, an argument schema widened, a result schema drifted, a server version moved. Each must raise
+8. **Prove the pinned boundary.** Add drift tests driven by a copy of the capture: a pinned tool removed, a pinned
+   tool renamed, a pinned argument schema widened, a pinned result schema drifted, a server version moved. Each must raise
    `IncompatibleToolError` (`incompatible-tool`) and none may return a partial toolset. Drive at least one case
    through the real engine (`update_tools` against a fake transport) rather than only through test doubles: a
    double's attribute surface is not the pydantic tool `update_tools` actually builds, and that gap has already
    hidden one defect (a LangChain tool is a `Runnable`, which owns `input_schema`/`output_schema` names of its own).
+   Also prove that extra tools from a broader grant leave the action working with and without a digest pin, while
+   remaining absent from the component's toolset, dropdown, and execution cache. Removing or reshaping an
+   unpinned tool must leave the action working too.
 9. **Release the bundle.** Bump the bundle version through `scripts/ci/bundle_release_plan.py`, raise the bundle's
    `lfx` floor through `scripts/ci/sync_bundle_lfx_pin.py` (pinned mode is new lfx surface), and add the
    `BUNDLE_API.md` changelog line if the bundle's own public surface moved.
@@ -82,14 +89,16 @@ Two consequences worth stating plainly, because both are easy to get wrong:
 ## Failure behavior and the support answer
 
 Drift does not degrade: it raises `IncompatibleToolError`, whose `code` is `incompatible-tool` and whose sanitized
-`details` name what was added, removed, renamed, changed, and which server pin failed. The remedy is a bundle
-release whose pin matches the server (or a provider-side rollback) — there is no operator override, because an
-override would silently reintroduce exactly the drift the pin exists to catch. Support answer: "this action's
-provider tools changed; upgrade the provider bundle."
+`details` name what was removed, renamed, changed, and which server pin failed. Added tools are retained only
+as diagnostic information, including possible rename matches; they do not themselves cause incompatibility.
+If a pinned tool is missing, first check that the connection grants access to it and re-authorize if necessary.
+For schema or server-identity drift, the remedy is a bundle release whose pin matches the server (or a
+provider-side rollback). There is no operator override that bypasses the pinned contract.
 
 Four deliberate boundaries:
 
-- The digest covers tool identity and schemas, not descriptions. Descriptions are prompt material that providers
+- The digest covers only pinned tool identities and schemas, not the grant-dependent full discovery list or
+  descriptions. Descriptions are prompt material that providers
   edit routinely; folding them in would turn a copy edit into an outage. Descriptions still pass through the MCP
   redaction path.
 - The pin fails on *any* input or output schema difference, including a new optional property. Relaxing that (for

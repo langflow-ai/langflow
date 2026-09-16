@@ -39,6 +39,7 @@ from lfx.schema.dataframe import DataFrame
 FIXTURE = Path(__file__).parent / "fixtures" / "slack-mcp-tools-list.synthetic.json"
 UPDATE_TOOLS_TARGET = "lfx.base.mcp.preset.update_tools"
 PINNED_URL = "https://mcp.example.com/mcp"
+PINNED_TOOL_NAMES = {"example_search_messages", "example_read_channel_history"}
 
 MATCHES = [
     {"permalink": "https://example.invalid/archives/C1/p1", "text": "the orders report is late", "ts": "1.1"},
@@ -86,14 +87,16 @@ def _pin_for(tool_name: str, recording: dict[str, Any]) -> dict[str, Any]:
         "server_url": PINNED_URL,
         "input_schema": tool["inputSchema"],
         "output_schema": tool["outputSchema"],
-        "tools_list_hash": tools_list_digest(recording["result"]["tools"]),
+        "tools_list_hash": tools_list_digest(
+            entry for entry in recording["result"]["tools"] if entry["name"] in PINNED_TOOL_NAMES
+        ),
         "server_name": server_info["name"],
         "server_version": server_info["version"],
     }
 
 
 def mcp_capabilities(recording: dict[str, Any] | None = None) -> list[IntegrationCapability]:
-    """The post-swap manifest: every tool the pinned server may expose is pinned."""
+    """The post-swap manifest: every tool the component may expose is pinned."""
     recording = recording or _recording()
     search = IntegrationCapability(
         **{
@@ -348,7 +351,6 @@ def _with_drifted_results(recording: dict[str, Any]) -> dict[str, Any]:
 @pytest.mark.parametrize(
     ("mutate", "expected_key", "expected_value"),
     [
-        (_with_added_tool, "added", ["example_delete_message"]),
         (_with_removed_tool, "removed", ["example_read_channel_history"]),
         (_with_renamed_tool, "renamed", ["example_search_messages -> example_search_messages_v2"]),
         (_with_widened_arguments, "changed", ["example_search_messages: argument schema"]),
@@ -364,6 +366,29 @@ async def test_the_pinned_action_fails_closed_when_the_server_drifts(mutate, exp
     assert excinfo.value.details[expected_key] == expected_value
     # The digest pin catches the same drift a second time, independently.
     assert excinfo.value.details["server"]
+
+
+async def test_the_swapped_action_ignores_tools_from_a_broader_grant():
+    broader_grant = _with_added_tool(copy.deepcopy(_recording()))
+    component = _pinned_component()
+    with patch(UPDATE_TOOLS_TARGET, new=_engine_for(broader_grant)):
+        pinned_rows = (await component.search()).to_dict(orient="records")
+        tools, cache = await component._load_tools()
+    assert pinned_rows == (await _rest_component().search()).to_dict(orient="records") == MATCHES
+    assert (
+        {tool.name for tool in tools}
+        == set(cache)
+        == {
+            "example_search_messages",
+            "example_read_channel_history",
+        }
+    )
+
+
+def test_the_manifest_can_be_authored_from_a_broader_grant_capture():
+    broader_grant = _with_added_tool(copy.deepcopy(_recording()))
+    spec = pinned_spec_from_capabilities(mcp_capabilities(broader_grant))
+    assert spec == pinned_spec_from_capabilities(mcp_capabilities())
 
 
 async def test_the_pinned_action_fails_closed_when_the_server_version_moves():

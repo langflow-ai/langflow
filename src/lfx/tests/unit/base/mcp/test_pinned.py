@@ -1,10 +1,11 @@
 """Unit tests for ``lfx.base.mcp.pinned``: the pinned action-to-tool engine.
 
 Every case here is a way an official MCP server can drift away from what a
-bundle pinned -- a tool added, removed, renamed, or re-shaped, a server version
+bundle pinned -- a pinned tool removed, renamed, or re-shaped, a server version
 or ``tools/list`` digest that moved -- and every one of them must fail closed
 with the typed ``incompatible-tool`` error rather than degrade to whatever the
-server currently offers.
+server currently offers. Extra unpinned tools may vary with the user's grant
+and must not invalidate the pinned contract.
 """
 
 from __future__ import annotations
@@ -158,17 +159,37 @@ def test_unnamed_tool_is_not_silently_dropped():
     assert "<unnamed>: missing tool name" in excinfo.value.details["changed"]
 
 
-def test_added_tool_fails_closed_and_names_the_addition():
+@pytest.mark.parametrize("pin_digest", [False, True])
+def test_added_tool_is_compatible_with_the_pinned_contract(pin_digest):
     discovered = [*_matching(), _found("delete_message", {"type": "object", "properties": {}})]
-    diff = diff_pinned_tools(_pin(), discovered)
+    spec = _pin(tools_list_hash=_pin().digest()) if pin_digest else _pin()
+    diff = enforce_pinned_tools(spec, iter(discovered), provider="slack")
     assert diff.added == ("delete_message",)
     assert not diff.removed
-    assert not diff.is_compatible
+    assert not diff.server_mismatch
+    assert diff.is_compatible
 
-    with pytest.raises(IncompatibleToolError) as excinfo:
-        enforce_pinned_tools(_pin(), discovered, provider="slack")
-    assert "delete_message" in str(excinfo.value.message)
-    assert excinfo.value.details["added"] == ["delete_message"]
+
+def test_changes_to_unpinned_tools_do_not_change_compatibility():
+    spec = _pin(tools_list_hash=_pin().digest())
+    for extra in ([], [_found("extra", SEARCH_INPUT)], [_found("extra", POST_INPUT, SEARCH_OUTPUT)]):
+        assert enforce_pinned_tools(spec, [*_matching(), *extra]).is_compatible
+
+
+@pytest.mark.parametrize("drift", ["missing", "input", "output", "duplicate"])
+def test_extra_tools_cannot_hide_pinned_tool_drift(drift):
+    tools = _matching()
+    if drift == "missing":
+        tools.pop(0)
+    elif drift == "input":
+        tools[0] = _found("search_messages", POST_INPUT, SEARCH_OUTPUT)
+    elif drift == "output":
+        tools[0] = _found("search_messages", SEARCH_INPUT, {"type": "string"})
+    else:
+        tools.append(tools[0])
+    tools.append(_found("extra", SEARCH_INPUT, SEARCH_OUTPUT))
+    with pytest.raises(IncompatibleToolError):
+        enforce_pinned_tools(_pin(tools_list_hash=_pin().digest()), tools)
 
 
 def test_removed_tool_fails_closed_with_no_partial_toolset():
@@ -178,6 +199,7 @@ def test_removed_tool_fails_closed_with_no_partial_toolset():
     with pytest.raises(IncompatibleToolError) as excinfo:
         enforce_pinned_tools(_pin(), discovered)
     assert "removed post_message" in excinfo.value.message
+    assert "connection grants access" in excinfo.value.hint
 
 
 def test_empty_discovery_reports_every_pinned_tool_as_removed():
@@ -427,7 +449,7 @@ def test_pinned_spec_accepts_a_hash_computed_over_exactly_the_pinned_tools():
 def test_pinned_spec_rejects_a_hash_that_is_not_the_digest_of_its_tools():
     """A hash taken over a wider recording than the manifest pins is a bundle error.
 
-    Left unchecked it would surface at every load as an added tool plus a digest
+    Left unchecked it would surface at every load as a pinned-subset digest
     mismatch, which reads like the server drifted rather than like the pin is wrong.
     """
     whole_recording = tools_list_digest(_matching())

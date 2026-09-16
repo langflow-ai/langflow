@@ -763,8 +763,8 @@ the deserialize half is covered by
 - **Pinned action-to-tool mode for preset MCP components (additive).**
   `MCPPresetComponent` gains a `_pinned_spec()` hook returning a
   `PinnedServerSpec` (`lfx.base.mcp.pinned`); in pinned mode the component fixes
-  the endpoint and transport, refuses any tool that was added, removed, renamed,
-  or re-shaped relative to the pin, compares the `tools/list` content digest and
+  the endpoint and transport, refuses any pinned tool that was removed, renamed,
+  or re-shaped relative to the pin, compares the pinned subset's `tools/list` content digest and
   the `InitializeResult.serverInfo` name/version when they are pinned, keeps the
   Tool dropdown off the live server, and re-checks call arguments against the
   pinned schema on both of a tool's call paths (`coroutine` and `func`). Only an
@@ -782,8 +782,12 @@ the deserialize half is covered by
   transport. Components that do not override `_pinned_spec()` are unaffected;
   `BUNDLE_API_VERSION` remains `1`.
   Pinned discovery validates the raw tool list before schema conversion can skip
-  entries, rejects duplicate or unnamed tools, and includes every entry in the
-  digest. Session reuse separates callers that permit SSE fallback from callers
+  entries and rejects duplicate or unnamed tools. Extra unpinned tools may vary
+  with the user's grant: they are informational in `PinnedToolDiff.added`, do not
+  affect `is_compatible` or the pinned digest, and are excluded before conversion
+  from the component's toolset and execution cache. A missing pinned tool's error
+  hint also directs the operator to check the connection's grants.
+  Session reuse separates callers that permit SSE fallback from callers
   that require Streamable HTTP, so a live legacy session cannot bypass the pin.
 
 - **`discovered_tool()` accepts a recorded `tools/list` entry.**

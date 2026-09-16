@@ -121,12 +121,19 @@ async def test_pinned_load_accepts_an_exactly_matching_server(pinned):
     assert config["headers"] == {"Authorization": "Bearer t"}
 
 
-async def test_pinned_load_rejects_an_added_tool(pinned):
+@pytest.mark.parametrize("pin_digest", [False, True])
+async def test_pinned_load_excludes_an_added_tool_from_toolset_and_cache(pinned, pin_digest):
     tools = [_tool("search_messages"), _tool("delete_message")]
-    with patch(UPDATE_TOOLS_TARGET, new=_engine(tools)), pytest.raises(IncompatibleToolError) as excinfo:
-        await pinned._get_tools()
-    assert excinfo.value.details["added"] == ["delete_message"]
-    assert excinfo.value.provider == "example"
+    if pin_digest:
+        pinned.pin = _spec(tools_list_hash=tools_list_digest(tools[:1]))
+    with patch(UPDATE_TOOLS_TARGET, new=_engine(tools)):
+        loaded, cache = await pinned._load_tools()
+        assert [tool.name for tool in loaded] == ["search_messages"]
+        assert set(cache) == {"search_messages"}
+        pinned.tool = "delete_message"
+        with pytest.raises(ValueError, match="not available"):
+            await pinned.run_tool()
+    assert tools[1].calls == []
 
 
 async def test_pinned_load_rejects_a_removed_tool(pinned):
@@ -277,30 +284,50 @@ async def test_guard_validates_the_engine_effective_keyword_arguments(pinned, sy
     assert validate.call_args.args[1] == client.calls[0][1]
 
 
-async def test_raw_discovery_is_checked_before_schema_conversion_can_skip_a_tool(pinned):
-    """The unpinned engine skips unconvertible schemas; a pin must see every tool."""
+async def test_extra_tools_are_excluded_before_schema_conversion(pinned):
+    """A grant's extra tools must never become component tools or prompt material."""
     from lfx.base.mcp import util
 
     extra = _server_tool("delete_message")
     extra.inputSchema = {"type": "object", "properties": {"message_id": {"type": "string"}}}
     client = _EngineClient([_server_tool("search_messages"), extra])
     pinned._streamable_http_client = client
+    pinned.pin = _spec(tools_list_hash=_spec().digest())
     convert = util.create_input_schema_from_json_schema
 
     def fail_for_extra(schema):
         if schema is extra.inputSchema:
-            msg = "Unsupported schema"
-            raise TypeError(msg)
+            pytest.fail("Unpinned tools must not reach schema conversion")
         return convert(schema)
 
     with (
         patch("lfx.base.mcp.util.validate_connector_url_for_ssrf", new=lambda _url: None),
         patch("lfx.base.mcp.util.create_input_schema_from_json_schema", side_effect=fail_for_extra),
+    ):
+        tools, cache = await pinned._load_tools()
+        assert [tool.name for tool in tools] == ["search_messages"]
+        assert set(cache) == {"search_messages"}
+        await tools[0].coroutine(query="orders")
+        pinned.tool = "delete_message"
+        with pytest.raises(ValueError, match="not available"):
+            await pinned.run_tool()
+    assert client.calls == [("search_messages", {"query": "orders"})]
+
+
+async def test_raw_pinned_schema_drift_fails_before_conversion(pinned):
+    """The raw contract check must still run before lossy schema conversion."""
+    drifted = _server_tool("search_messages")
+    drifted.inputSchema = {"type": "object", "properties": {}}
+    client = _EngineClient([drifted, _server_tool("extra")])
+    pinned._streamable_http_client = client
+    with (
+        patch("lfx.base.mcp.util.validate_connector_url_for_ssrf", new=lambda _url: None),
+        patch("lfx.base.mcp.util.create_input_schema_from_json_schema") as convert,
         pytest.raises(IncompatibleToolError) as excinfo,
     ):
         await pinned._load_tools()
-    assert excinfo.value.details["added"] == ["delete_message"]
-    assert excinfo.value.provider == "example"
+    convert.assert_not_called()
+    assert excinfo.value.details["changed"] == ["search_messages: argument schema"]
     assert client.calls == []
 
 

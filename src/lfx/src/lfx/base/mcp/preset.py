@@ -280,8 +280,8 @@ class MCPPresetComponent(ComponentWithCache):
                 raise ValueError(msg)
             return tools, tool_cache
 
-        # Fail closed: any added, removed, renamed, or re-shaped tool, and any
-        # server-version or tools/list digest mismatch, is an incompatibility.
+        # Recheck the converted tools so a pinned tool skipped by conversion
+        # cannot leave a partial toolset. Unrelated server tools are ignored.
         enforce_pinned_tools(
             spec,
             tools,
@@ -289,7 +289,7 @@ class MCPPresetComponent(ComponentWithCache):
             server_label=server_name,
             server_info=self._streamable_http_client.server_info,
         )
-        guarded = [self._guarded_tool(tool, spec) for tool in tools]
+        guarded = [self._guarded_tool(tool, spec) for tool in tools if tool.name in spec.names]
         return guarded, {tool.name: tool for tool in guarded}
 
     def _parse_tool_arguments(self) -> dict[str, Any]:

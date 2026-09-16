@@ -2788,8 +2788,7 @@ async def update_tools(
         return "", [], {}
 
     if pinned_spec is not None:
-        # Schema conversion may skip malformed tools for unpinned discovery. Compare
-        # the raw list first so an added tool cannot disappear before the pin check.
+        # Validate raw schemas before conversion can drop or reshape pinned tools.
         enforce_pinned_tools(
             pinned_spec,
             tools,
@@ -2797,6 +2796,9 @@ async def update_tools(
             server_label=server_name,
             server_info=mcp_streamable_http_client.server_info,
         )
+        # Grant-dependent extras are outside the component's contract. Exclude
+        # them before conversion so they never enter its cache or tool descriptions.
+        tools = [tool for tool in tools if tool.name in pinned_spec.names]
 
     if not tools or not client or not client._connected:
         logger.warning(f"No tools available from MCP server '{server_name}' or connection failed")
