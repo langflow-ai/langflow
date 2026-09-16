@@ -24,7 +24,17 @@ def sanitize_url_for_display(url: str) -> str:
         return url
     if not parsed.scheme or not parsed.hostname:
         return url
-    host = f"{parsed.hostname}:{parsed.port}" if parsed.port else parsed.hostname
+    try:
+        port = parsed.port
+    except ValueError:
+        # ``.port`` rejects a port that is out of range or not a number. The URL is
+        # malformed, but it can still carry a credential, so the netloc is kept
+        # verbatim minus the userinfo rather than handing the whole URL back.
+        return f"{parsed.scheme}://{parsed.netloc.rpartition('@')[2]}{parsed.path}"
+    # An IPv6 literal needs its brackets back, or host and port run together into
+    # something that no longer parses as the address it came from.
+    hostname = f"[{parsed.hostname}]" if ":" in parsed.hostname else parsed.hostname
+    host = f"{hostname}:{port}" if port else hostname
     return f"{parsed.scheme}://{host}{parsed.path}"
 
 

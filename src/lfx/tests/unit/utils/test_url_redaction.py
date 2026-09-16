@@ -19,6 +19,19 @@ class TestSanitizeUrlForDisplay:
     def test_should_leave_a_url_without_a_host(self):
         assert sanitize_url_for_display("file:///tmp/x") == "file:///tmp/x"
 
+    def test_should_keep_the_brackets_of_an_ipv6_host(self):
+        """Without them the host and port run together and no longer parse as that address."""
+        assert sanitize_url_for_display("http://user:pw@[::1]:8080/mcp?k=v") == "http://[::1]:8080/mcp"
+
+    def test_should_drop_userinfo_when_the_port_is_unparseable(self):
+        """A malformed port must not stop the credential from being stripped."""
+        assert sanitize_url_for_display("https://user:hunter2@host.internal:99999/mcp?k=v") == (
+            "https://host.internal:99999/mcp"
+        )
+        assert sanitize_url_for_display("https://user:hunter2@host.internal:abc/mcp") == (
+            "https://host.internal:abc/mcp"
+        )
+
 
 class TestRedactUrlsInText:
     def test_should_redact_a_url_embedded_in_a_sentence(self):
@@ -44,6 +57,16 @@ class TestRedactUrlsInText:
         assert "secret" not in redacted
         assert "pw@" not in redacted
         assert "token=t" not in redacted
+
+    def test_should_redact_a_url_whose_port_is_unparseable(self):
+        """Redaction runs while an error is being reported; it must not raise its own."""
+        text = "httpx.ConnectError: failed to reach https://admin:hunter2@other.internal:99999/x?token=t"
+
+        redacted = redact_urls_in_text(text)
+
+        assert "hunter2" not in redacted
+        assert "token=t" not in redacted
+        assert "other.internal" in redacted
 
     def test_should_leave_text_without_urls_alone(self):
         text = "unhandled errors in a TaskGroup (1 sub-exception)"
