@@ -342,6 +342,9 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await audit_event_cleanup_worker.start()
             except Exception as exc:  # noqa: BLE001
                 await logger.awarning(f"Failed to start audit event cleanup worker: {exc}")
+            from langflow.services.audit.exclusions import warn_about_ignored_exclusions
+
+            await warn_about_ignored_exclusions()
 
             # Keep the default OSS provider ceiling coherent across backend
             # worker processes after an administrator commits a replacement.

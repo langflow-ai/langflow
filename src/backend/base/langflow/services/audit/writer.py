@@ -21,6 +21,7 @@ from lfx.services.session import NoopSession
 
 from langflow.services.audit.attribution import AuditActor, current_request_id
 from langflow.services.audit.details import AuditContractError, bounded_name, validate_details
+from langflow.services.audit.exclusions import is_action_audited
 from langflow.services.audit.vocabulary import (
     ACTIONS_BY_RESOURCE_TYPE,
     RESULTS_BY_EVENT_TYPE,
@@ -110,9 +111,11 @@ async def stage_audit_event(session: AsyncSession, draft: AuditEventDraft) -> Au
     started. Flushing after the mutation already holds the write lock, so it never
     becomes the read-to-write upgrade SQLite refuses under concurrency.
 
-    Returns ``None`` when auditing is off or there is no database, as under ``lfx serve``.
+    Returns ``None`` when auditing is off, the action is excluded, or there is no
+    database, as under ``lfx serve``. An excluded action does not flush either, so the
+    caller's transaction behaves exactly as it would with auditing off.
     """
-    if not is_audit_enabled() or isinstance(session, NoopSession):
+    if not is_audit_enabled() or not is_action_audited(draft.action) or isinstance(session, NoopSession):
         return None
     event = build_audit_event(draft)
     session.add(event)
@@ -136,8 +139,9 @@ async def record_audit_event_after_rollback(draft: AuditEventDraft) -> bool:
     Bounded to a few concurrent connections so a burst of refusals cannot drain
     the pool its own requests need. The caller is already failing or denied, so
     a storage outage is surfaced as an error log rather than a second exception.
+    An excluded action, denials included, is dropped before a connection is taken.
     """
-    if not is_audit_enabled():
+    if not is_audit_enabled() or not is_action_audited(draft.action):
         return False
     event = build_audit_event(draft)
 
