@@ -1,9 +1,6 @@
 import json
-import os
-from typing import Any
-from urllib.parse import urlparse
-import requests
 
+import requests
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
@@ -11,6 +8,7 @@ from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import MessageTextInput, SecretStrInput
 from lfx.schema.data import Data
+
 from .opticparse_tool import normalize_target_url, resolve_portal_url
 
 

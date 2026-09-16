@@ -41,9 +41,9 @@ _dynamic_imports = {
 
 __all__ = [
     "CalculatorToolComponent",
+    "FileSystemToolComponent",
     "OpticParseToolComponent",
     "PhishVisionToolComponent",
-    "FileSystemToolComponent",
     "PythonREPLToolComponent",
     "SearXNGToolComponent",
     "SearchAPIComponent",

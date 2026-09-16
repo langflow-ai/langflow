@@ -1,9 +1,7 @@
 import json
-import os
-from typing import Any
 from urllib.parse import urlparse
-import requests
 
+import requests
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
