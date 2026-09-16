@@ -98,12 +98,20 @@ jest.mock(
   () => "mock-assistant-idle-icon.svg",
 );
 
+const mockAssistantState = {
+  toggleAssistant: jest.fn(),
+  isAssistantProcessing: false,
+  assistantSidebarOpen: false,
+  setAssistantSidebarOpen: jest.fn(),
+};
+
 jest.mock("@/stores/assistantManagerStore", () => ({
   __esModule: true,
-  default: jest.fn((selector) => {
-    const state = { toggleAssistant: jest.fn() };
-    return typeof selector === "function" ? selector(state) : state;
-  }),
+  default: jest.fn((selector) =>
+    typeof selector === "function"
+      ? selector(mockAssistantState)
+      : mockAssistantState,
+  ),
 }));
 
 jest.mock("@/customization/feature-flags", () => ({
@@ -120,6 +128,8 @@ describe("CanvasControls", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAssistantState.isAssistantProcessing = false;
+    mockAssistantState.assistantSidebarOpen = false;
     window.dispatchEvent = mockDispatchEvent;
   });
 
@@ -197,6 +207,22 @@ describe("CanvasControls", () => {
 
     fireEvent.click(screen.getByTestId("canvas-add-note-button"));
     expect(mockDispatchEvent).not.toHaveBeenCalled();
+  });
+
+  it("should_keep_assistant_reachable_when_only_the_assistant_run_locks_the_canvas", () => {
+    mockAssistantState.isAssistantProcessing = true;
+
+    render(<CanvasControls selectedNode={null} effectiveLocked />);
+
+    const assistantButton = screen.getByTestId("assistant-button");
+    expect(assistantButton).toBeEnabled();
+    expect(assistantButton).not.toHaveAttribute("title", "(Read-Only)");
+    expect(screen.getByTestId("canvas-add-note-button")).toBeDisabled();
+
+    fireEvent.click(assistantButton);
+    expect(mockAssistantState.setAssistantSidebarOpen).toHaveBeenCalledWith(
+      true,
+    );
   });
 
   it("should_render_children_when_provided", () => {

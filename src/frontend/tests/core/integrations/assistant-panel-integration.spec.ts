@@ -98,6 +98,40 @@ test.describe("Assistant Panel Integration", { tag: ["@release"] }, () => {
     await expect(textarea).toBeEnabled();
   });
 
+  test("should reopen the panel after clicking the canvas while a generation is running", async ({
+    page,
+  }) => {
+    await page
+      .getByTestId("assistant-input-textarea")
+      .fill(
+        "Write a very detailed 2000-word essay about the history of computing",
+      );
+    await page.getByTestId("assistant-send-button").click();
+    const stopButton = page.getByTestId("assistant-stop-button");
+    await expect(stopButton).toBeVisible();
+
+    try {
+      await page
+        .locator(".react-flow__pane")
+        .click({ position: { x: 5, y: 5 } });
+      await expect(page.getByTestId("assistant-panel")).not.toBeVisible();
+
+      const assistantButton = page.getByTestId("assistant-button");
+      await expect(assistantButton).toBeEnabled();
+      await expect(assistantButton).not.toHaveAttribute("title", "(Read-Only)");
+      await expect(page.getByTestId("canvas-add-note-button")).toBeDisabled();
+
+      await assistantButton.click();
+      await expect(page.getByTestId("assistant-panel")).toBeVisible();
+      await expect(stopButton).toBeVisible();
+
+      await stopButton.click();
+      await expect(stopButton).not.toBeVisible();
+    } finally {
+      assistantMock.releaseCancelledRequest();
+    }
+  });
+
   test("should clear history and reset the backend session", async ({
     page,
   }) => {

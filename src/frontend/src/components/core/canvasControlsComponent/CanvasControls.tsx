@@ -50,6 +50,11 @@ const CanvasControls = ({
   const assistantSidebarOpen = useAssistantManagerStore(
     (state) => state.assistantSidebarOpen,
   );
+  const isAssistantProcessing = useAssistantManagerStore(
+    (state) => state.isAssistantProcessing,
+  );
+  // Its own run locks the canvas, but the panel must stay reopenable mid-run.
+  const assistantLocked = locked && !isAssistantProcessing;
   // While the FlowBuilderWelcome overlay is open, suppress the onboarding
   // tooltip — it renders via Portal and would float over the welcome.
   const isWelcomeOpen = useFlowBuilderWelcomeStore((state) => state.isOpen);
@@ -83,7 +88,7 @@ const CanvasControls = ({
   }, []);
 
   const handleAssistantClick = () => {
-    if (locked) return;
+    if (assistantLocked) return;
     if (!discovered) markDiscovered();
     setAssistantSidebarOpen(!assistantSidebarOpen);
   };
@@ -183,8 +188,8 @@ const CanvasControls = ({
                 data-testid="assistant-button"
                 className="group/btn relative flex h-8 w-8 items-center justify-center overflow-hidden rounded-md hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={handleAssistantClick}
-                disabled={locked}
-                title={locked ? t("version.readOnly") : undefined}
+                disabled={assistantLocked}
+                title={assistantLocked ? t("version.readOnly") : undefined}
                 aria-label={t("assistant.title")}
               >
                 {/* Idle state — uses the design-tuned
