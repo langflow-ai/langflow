@@ -1,5 +1,6 @@
 import contextlib
 import json
+import re
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
@@ -975,3 +976,90 @@ def test_end_user_segment_blocks_path_traversal():
 
 def test_end_user_segment_sanitizes_separators():
     assert _save_component_with_end_user("a/b\\c")._serving_end_user_segment() == "a_b_c"
+
+
+class TestDataFrameToMarkdown:
+    """`to_markdown` needs help before its output reads back as the table it was."""
+
+    def test_a_missing_number_is_written_as_blank(self):
+        from lfx.components.files_and_knowledge.save_file import _dataframe_to_markdown
+
+        # A missing value upcasts the column to float, and `to_markdown` writes
+        # the NaN out as the word "nan", so a blank becomes visible text.
+        dataframe = pd.DataFrame({"Product": ["Cable", "Hub"], "Price": [1.5, None]})
+
+        rows = _parse_markdown_rows(_dataframe_to_markdown(dataframe))
+
+        assert rows[0] == ["Product", "Price"]
+        assert rows[-1] == ["Hub", ""]
+
+    def test_a_missing_string_is_written_as_blank(self):
+        from lfx.components.files_and_knowledge.save_file import _dataframe_to_markdown
+
+        # The control: an object column already writes None as blank.
+        dataframe = pd.DataFrame({"Product": ["Cable", "Hub"], "Note": [None, "spare"]})
+
+        rows = _parse_markdown_rows(_dataframe_to_markdown(dataframe))
+
+        assert rows[-2] == ["Cable", ""]
+
+    def test_a_pipe_in_a_cell_stays_inside_the_cell(self):
+        from lfx.components.files_and_knowledge.save_file import _dataframe_to_markdown
+
+        dataframe = pd.DataFrame({"Product": ["Cable"], "Modes": ["a|b|c"], "Units": [12]})
+
+        rows = _parse_markdown_rows(_dataframe_to_markdown(dataframe))
+
+        assert rows[0] == ["Product", "Modes", "Units"]
+        assert rows[-1] == ["Cable", "a|b|c", "12"]
+
+    def test_a_pipe_in_a_column_name_stays_inside_the_header(self):
+        from lfx.components.files_and_knowledge.save_file import _dataframe_to_markdown
+
+        dataframe = pd.DataFrame({"Pass|Fail": ["pass"], "Units": [12]})
+
+        rows = _parse_markdown_rows(_dataframe_to_markdown(dataframe))
+
+        assert rows[0] == ["Pass|Fail", "Units"]
+        assert rows[-1] == ["pass", "12"]
+
+    def test_a_pipe_in_a_value_tabulate_renders_through_str(self):
+        from lfx.components.files_and_knowledge.save_file import _dataframe_to_markdown
+
+        # tabulate renders a list, a dict or any other object with `str()` and
+        # escapes nothing, so the pipe inside it would add a column.
+        dataframe = pd.DataFrame({"Tags": [["a|b"]], "Units": [12]})
+
+        rows = _parse_markdown_rows(_dataframe_to_markdown(dataframe))
+
+        assert rows[0] == ["Tags", "Units"]
+        assert rows[-1] == ["['a|b']", "12"]
+
+    def test_a_frame_that_needs_neither_is_unchanged(self):
+        from lfx.components.files_and_knowledge.save_file import _dataframe_to_markdown
+
+        dataframe = pd.DataFrame({"A": ["x", "y"], "N": [1, 2]})
+
+        assert _dataframe_to_markdown(dataframe) == dataframe.to_markdown(index=False)
+
+    def test_a_frame_with_no_rows_is_unchanged(self):
+        from lfx.components.files_and_knowledge.save_file import _dataframe_to_markdown
+
+        dataframe = pd.DataFrame({"A": [], "B": []})
+
+        assert _dataframe_to_markdown(dataframe) == dataframe.to_markdown(index=False)
+
+
+def _parse_markdown_rows(markdown: str) -> list[list[str]]:
+    """Read the markdown table back the way a reader does."""
+    rows = []
+    for raw_line in markdown.splitlines():
+        line = raw_line.strip()
+        if not line.startswith("|"):
+            continue
+        cells = re.split(r"(?<!\\)\|", line.strip("|"))
+        resolved = [re.sub(r"\\(.)", r"\1", cell).strip() for cell in cells]
+        if set("".join(resolved)) <= set("-:"):
+            continue
+        rows.append(resolved)
+    return rows
