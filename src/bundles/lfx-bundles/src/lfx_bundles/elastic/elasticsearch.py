@@ -42,10 +42,10 @@ def _cloud_id_elasticsearch_url(cloud_id: str) -> str:
 
 
 class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
-    """Elasticsearch Vector Store with with advanced, customizable search capabilities."""
+    """Elasticsearch Vector Store with advanced, customizable search capabilities."""
 
     display_name: str = "Elasticsearch"
-    description: str = "Elasticsearch Vector Store with with advanced, customizable search capabilities."
+    description: str = "Elasticsearch Vector Store with advanced, customizable search capabilities."
     name = "Elasticsearch"
     icon = "ElasticsearchStore"
 
