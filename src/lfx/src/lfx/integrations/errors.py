@@ -23,6 +23,8 @@ INTEGRATION_ERROR_CODES = frozenset(
         "rate-limited",
         "provider-unavailable",
         "action-unsupported",
+        "invalid-request",
+        "resource-not-found",
         "policy-blocked",
         "incompatible-tool",
     }
@@ -157,7 +159,13 @@ _CONNECTION_NOT_AUTHORIZED_HINTS: dict[ConnectionNotAuthorizedReason, str] = {
 class ConnectionNotAuthorizedError(IntegrationError):
     code = "connection-not-authorized"
 
-    def __init__(self, *, provider: str | None = None, reason: ConnectionNotAuthorizedReason = "principal") -> None:
+    def __init__(
+        self,
+        *,
+        provider: str | None = None,
+        reason: ConnectionNotAuthorizedReason = "principal",
+        hint: str | None = None,
+    ) -> None:
         if reason not in _CONNECTION_NOT_AUTHORIZED_HINTS:
             msg = "Unknown connection authorization reason"
             raise ValueError(msg)
@@ -165,7 +173,9 @@ class ConnectionNotAuthorizedError(IntegrationError):
             "The provider denied this action."
             if reason == "provider"
             else "This execution principal is not authorized to use the requested connection.",
-            hint=_CONNECTION_NOT_AUTHORIZED_HINTS[reason],
+            # A provider adapter that recognizes a narrower denial (for example a
+            # per-file grant boundary) may name the remedy; the reason stays typed.
+            hint=hint or _CONNECTION_NOT_AUTHORIZED_HINTS[reason],
             provider=provider,
             http_status=403,
             details={"reason": reason},
@@ -264,6 +274,34 @@ class IntegrationPolicyBlockedError(IntegrationError):
             details={"policy_key": policy_key} if policy_key else None,
         )
         self.policy_key = policy_key
+
+
+class InvalidRequestError(IntegrationError):
+    """The inputs must change before the provider can perform the action."""
+
+    code = "invalid-request"
+
+    def __init__(
+        self,
+        message: str = "The provider rejected the action's inputs.",
+        *,
+        hint: str = "Check the action's inputs and try again.",
+        provider: str | None = None,
+        http_status: int | None = 400,
+    ) -> None:
+        super().__init__(message, hint=hint, provider=provider, http_status=http_status)
+
+
+class ResourceNotFoundError(IntegrationError):
+    code = "resource-not-found"
+
+    def __init__(self, *, provider: str | None = None, hint: str | None = None) -> None:
+        super().__init__(
+            "The requested provider resource was not found or is inaccessible.",
+            hint=hint or "Check the resource ID and the connected account's access to it.",
+            provider=provider,
+            http_status=404,
+        )
 
 
 class ActionUnsupportedError(IntegrationError):

@@ -103,16 +103,18 @@ def _reinstall_builtin_sources() -> None:
     ``lfx.base.knowledge_bases.ingestion_sources.__init__`` at import
     time; after ``_reset_registries`` we reinstall them explicitly.
 
-    In this phase only ``file_upload`` and ``folder`` are registered.
-    The S3 / Google Drive / OneDrive / SharePoint stubs are NOT
+    In this phase ``file_upload``, ``folder`` and ``google_drive`` are
+    registered. The S3 / OneDrive / SharePoint stubs are NOT
     re-registered because the production import path doesn't register
     them either — see the ``__init__`` module's docstring.
     """
     from lfx.base.knowledge_bases.ingestion_sources.file_upload import FileUploadSource
     from lfx.base.knowledge_bases.ingestion_sources.folder import FolderSource
+    from lfx.base.knowledge_bases.ingestion_sources.google_drive import GoogleDriveSource
 
     ingestion_registry.register_source(SourceType.FILE_UPLOAD, FileUploadSource)
     ingestion_registry.register_source(SourceType.FOLDER, FolderSource)
+    ingestion_registry.register_source(SourceType.GOOGLE_DRIVE, GoogleDriveSource)
 
 
 def _make_ensure_discovered(config_dir):
