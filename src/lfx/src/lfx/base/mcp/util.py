@@ -9,6 +9,7 @@ import shlex
 import shutil
 import unicodedata
 from collections.abc import AsyncIterator, Awaitable, Callable
+from dataclasses import dataclass
 from pathlib import Path
 from types import UnionType
 from typing import Annotated, Any, TypedDict, Union, get_args, get_origin
@@ -26,6 +27,7 @@ from pydantic import BaseModel, SkipValidation
 
 from lfx.base.agents.utils import maybe_unflatten_dict
 from lfx.base.mcp import security as mcp_security
+from lfx.base.mcp.pinned import PinnedServerSpec, enforce_pinned_tools
 from lfx.base.mcp.security import (
     AGENTIC_MCP_MODULE,
     AGENTIC_USER_ID_ENV_VAR,
@@ -1108,6 +1110,40 @@ def _is_mcp_session_bust_error(exc: BaseException) -> bool:
     return False
 
 
+# Attribute the client session carries the ``InitializeResult`` on. The MCP SDK
+# discards the handshake result once the session is live, but a pinned preset
+# (``lfx.base.mcp.pinned``) needs ``serverInfo`` to compare the server it reached
+# against the one its bundle pinned.
+_INITIALIZE_RESULT_ATTR = "_lf_initialize_result"
+
+
+@dataclass(frozen=True, slots=True)
+class MCPServerInfo:
+    """The ``InitializeResult.serverInfo`` fields, when the server sends them."""
+
+    name: str | None = None
+    version: str | None = None
+
+
+def _remember_initialize_result(session: Any, result: Any) -> None:
+    """Retain the handshake result on the session (best effort, never fatal)."""
+    with contextlib.suppress(AttributeError, TypeError):
+        session.__dict__[_INITIALIZE_RESULT_ATTR] = result
+
+
+def server_info_from_session(session: Any) -> MCPServerInfo | None:
+    """Return the retained ``serverInfo`` for a live session, or ``None``."""
+    if session is None:
+        return None
+    result = getattr(session, _INITIALIZE_RESULT_ATTR, None)
+    info = getattr(result, "serverInfo", None)
+    if info is None:
+        return None
+    name = getattr(info, "name", None)
+    version = getattr(info, "version", None)
+    return MCPServerInfo(name=str(name) if name is not None else None, version=str(version) if version else None)
+
+
 class _ServerLockEntry(TypedDict):
     """Shape of each value in ``MCPSessionManager._server_locks``.
 
@@ -1323,6 +1359,9 @@ class MCPSessionManager:
             url = connection_params["url"]
             headers = str(sorted((connection_params.get("headers", {})).items()))
             key_input = f"{url}|{headers}"
+            if not connection_params.get("allow_sse_fallback", True):
+                # A pinned caller must never inherit a discovery caller's live SSE session.
+                key_input += "|streamable_http_only"
             return f"streamable_http_{hash(key_input)}"
 
         # Fallback to a generic key
@@ -1567,6 +1606,12 @@ class MCPSessionManager:
         sse_preference_locked: list[bool] = [False]
 
         verify_ssl = connection_params.get("verify_ssl", True)
+        # A pinned preset pins the transport as well as the tools: an endpoint that
+        # answers on a transport the pin does not name is drift, not a fallback
+        # opportunity, and a misleading SSE connection error would mask it.
+        allow_sse_fallback = connection_params.get("allow_sse_fallback", True)
+        if not allow_sse_fallback:
+            preferred_transport = None
 
         def custom_httpx_factory(
             headers: dict[str, str] | None = None,
@@ -1596,7 +1641,8 @@ class MCPSessionManager:
                         ) as (read, write, _):
                             session = ClientSession(read, write)
                             async with session:
-                                await asyncio.wait_for(session.initialize(), timeout=2.0)
+                                initialize_result = await asyncio.wait_for(session.initialize(), timeout=2.0)
+                                _remember_initialize_result(session, initialize_result)
                                 used_transport.append("streamable_http")
                                 await logger.ainfo(f"Session {session_id} connected via Streamable HTTP")
                                 session_future.set_result(session)
@@ -1642,6 +1688,19 @@ class MCPSessionManager:
             else:
                 await logger.adebug(f"Skipping Streamable HTTP for session {session_id}, using cached SSE preference")
 
+            if not allow_sse_fallback:
+                await logger.aerror(
+                    f"Streamable HTTP failed for session {session_id} and SSE fallback is disabled "
+                    f"for this pinned endpoint: {streamable_error}"
+                )
+                if not session_future.done():
+                    session_future.set_exception(
+                        streamable_error
+                        if streamable_error is not None
+                        else ValueError("Streamable HTTP transport is required for this endpoint")
+                    )
+                return
+
             # SSE path: preferred mode, or Streamable indicated legacy transport
             try:
                 await logger.adebug(f"Attempting SSE connection for session {session_id}")
@@ -1656,7 +1715,8 @@ class MCPSessionManager:
                 ) as (read, write):
                     session = ClientSession(read, write)
                     async with session:
-                        await session.initialize()
+                        initialize_result = await session.initialize()
+                        _remember_initialize_result(session, initialize_result)
                         used_transport.append("sse")
                         sse_preference_locked[0] = True
                         fallback_msg = " (fallback)" if streamable_error else " (preferred)"
@@ -2223,6 +2283,7 @@ class MCPStreamableHttpClient:
         sse_read_timeout_seconds: int = 30,
         *,
         verify_ssl: bool = True,
+        allow_sse_fallback: bool = True,
     ) -> list[StructuredTool]:
         """Connect to MCP server using Streamable HTTP transport with SSE fallback (SDK style)."""
         # Validate and sanitize headers early
@@ -2250,6 +2311,8 @@ class MCPStreamableHttpClient:
             }
         elif headers:
             self._connection_params["headers"] = validated_headers
+        # Session reuse must respect the caller's transport policy.
+        self._connection_params["allow_sse_fallback"] = allow_sse_fallback
 
         # If no session context is set, create a default one
         if not self._session_context:
@@ -2280,14 +2343,24 @@ class MCPStreamableHttpClient:
         sse_read_timeout_seconds: int = 30,
         *,
         verify_ssl: bool = True,
+        allow_sse_fallback: bool = True,
     ) -> list[StructuredTool]:
         """Connect to MCP server using Streamable HTTP with SSE fallback transport (SDK style)."""
         return await asyncio.wait_for(
             self._connect_to_server(
-                url, headers, sse_read_timeout_seconds=sse_read_timeout_seconds, verify_ssl=verify_ssl
+                url,
+                headers,
+                sse_read_timeout_seconds=sse_read_timeout_seconds,
+                verify_ssl=verify_ssl,
+                allow_sse_fallback=allow_sse_fallback,
             ),
             timeout=get_settings_service().settings.mcp_server_timeout,
         )
+
+    @property
+    def server_info(self) -> MCPServerInfo | None:
+        """``serverInfo`` from the last handshake, when the server sent one."""
+        return server_info_from_session(self.session)
 
     def set_session_context(self, context_id: str):
         """Set the session context (e.g., flow_id + user_id + session_id)."""
@@ -2576,6 +2649,8 @@ async def update_tools(
     current_user_id: str | UUID | None = None,
     end_user_id: str | None = None,
     url_variables: dict[str, str] | None = None,
+    pinned_spec: PinnedServerSpec | None = None,
+    pinned_provider: str | None = None,
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
     """Fetch server config and update available tools.
 
@@ -2600,6 +2675,8 @@ async def update_tools(
         end_user_id: Serving-plane end-user identity of the run. Forwarded as the end-user header
             ONLY to operator-allowlisted internal hosts (fail-closed); external servers never
             receive it. None / feature-off means no header is appended (BC).
+        pinned_spec: Optional contract checked against raw discovery before schema conversion.
+        pinned_provider: Provider identifier attached to pinned-contract errors.
     """
     if server_config is None:
         server_config = {}
@@ -2692,7 +2769,13 @@ async def update_tools(
         headers = _maybe_inject_end_user_header(headers, url, end_user_id)
         verify_ssl = server_config.get("verify_ssl", True)
         try:
-            tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)
+            tools = await mcp_streamable_http_client.connect_to_server(
+                url,
+                headers=headers,
+                verify_ssl=verify_ssl,
+                # Pinned presets set this to False so the pinned transport is the only one tried.
+                allow_sse_fallback=bool(server_config.get("allow_sse_fallback", True)),
+            )
         except Exception as exc:
             # A rejected credential otherwise surfaced as "unhandled errors in a TaskGroup",
             # naming neither the target nor the fact that authentication was the problem.
@@ -2703,6 +2786,19 @@ async def update_tools(
     else:
         logger.error(f"Invalid MCP server mode for '{server_name}': {mode}")
         return "", [], {}
+
+    if pinned_spec is not None:
+        # Validate raw schemas before conversion can drop or reshape pinned tools.
+        enforce_pinned_tools(
+            pinned_spec,
+            tools,
+            provider=pinned_provider,
+            server_label=server_name,
+            server_info=mcp_streamable_http_client.server_info,
+        )
+        # Grant-dependent extras are outside the component's contract. Exclude
+        # them before conversion so they never enter its cache or tool descriptions.
+        tools = [tool for tool in tools if tool.name in pinned_spec.names]
 
     if not tools or not client or not client._connected:
         logger.warning(f"No tools available from MCP server '{server_name}' or connection failed")
@@ -2803,7 +2899,14 @@ async def update_tools(
                 func=create_tool_func(tool.name, args_schema, client),
                 coroutine=create_tool_coroutine(tool.name, args_schema, client),
                 tags=[tool.name],
-                metadata={"server_name": server_name, "output_schema": getattr(tool, "outputSchema", None)},
+                metadata={
+                    "server_name": server_name,
+                    # The raw JSON Schemas are kept alongside the derived args schema so a
+                    # pinned component can compare what the server actually published
+                    # (``create_input_schema_from_json_schema`` above is lossy).
+                    "input_schema": getattr(tool, "inputSchema", None),
+                    "output_schema": getattr(tool, "outputSchema", None),
+                },
                 response_format="content_and_artifact",
             )
 
