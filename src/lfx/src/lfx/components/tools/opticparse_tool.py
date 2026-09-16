@@ -12,28 +12,34 @@ from lfx.schema.data import Data
 
 
 def normalize_target_url(target: str) -> str:
+    """Validate and normalize a target URL or domain to standard https format."""
     clean = target.strip()
     if not clean:
-        raise ValueError("Target URL or domain cannot be empty.")
+        msg = "Target URL or domain cannot be empty."
+        raise ValueError(msg)
 
     parsed_initial = urlparse(clean)
     if parsed_initial.scheme and parsed_initial.scheme not in ("http", "https"):
-        raise ValueError(f"Invalid or unsupported URL scheme: {parsed_initial.scheme}")
+        msg = f"Invalid or unsupported URL scheme: {parsed_initial.scheme}"
+        raise ValueError(msg)
 
     if not clean.startswith(("http://", "https://")):
         clean = f"https://{clean}"
 
     parsed = urlparse(clean)
     if not (parsed.scheme in ("http", "https") and parsed.netloc):
-        raise ValueError(f"Invalid target URL or domain: {target}")
+        msg = f"Invalid target URL or domain: {target}"
+        raise ValueError(msg)
 
     return clean
 
 
 def resolve_portal_url(portal_url: str, api_key: str) -> str:
+    """Resolve and enforce secure HTTPS transport for custom portal URLs when API keys are configured."""
     portal = (portal_url or "https://opticparse-api.onrender.com").strip().rstrip("/")
     if api_key and portal.startswith("http://"):
-        raise ValueError("Insecure HTTP portal URL is not allowed when an API key is configured. Use HTTPS.")
+        msg = "Insecure HTTP portal URL is not allowed when an API key is configured. Use HTTPS."
+        raise ValueError(msg)
     return portal
 
 
@@ -82,6 +88,7 @@ class OpticParseToolComponent(LCToolComponent):
         )
 
     def _scrape_webpage(self, url: str, query: str = "") -> str:
+        """Execute visual extraction over HTTP with MCP fallback."""
         target_url = normalize_target_url(url)
         api_key_str = self.api_key if hasattr(self, "api_key") and self.api_key else ""
         portal = resolve_portal_url(getattr(self, "portal_url", ""), api_key_str)
@@ -138,10 +145,12 @@ class OpticParseToolComponent(LCToolComponent):
         return str(data)
 
     def run_model(self) -> list[Data]:
+        """Run the component within a Langflow pipeline and return Data records."""
         content = self._scrape_webpage(self.url, getattr(self, "query", ""))
         return [Data(data={"result": content}, text=content)]
 
     def build_tool(self) -> Tool:
+        """Construct and return a LangChain-compatible StructuredTool instance."""
         return StructuredTool.from_function(
             name="opticparse_scrape",
             description="Autonomous multimodal vision web scraper bypassing dynamic JS and bot challenges.",

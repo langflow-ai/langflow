@@ -47,6 +47,7 @@ class PhishVisionToolComponent(LCToolComponent):
         target: str = Field(..., description="The website URL or bare domain to audit.")
 
     def _scan_threat(self, target: str) -> str:
+        """Execute real-time zero-day cybersecurity threat analysis."""
         target_url = normalize_target_url(target)
         api_key_str = self.api_key if hasattr(self, "api_key") and self.api_key else ""
         portal = resolve_portal_url(getattr(self, "portal_url", ""), api_key_str)
@@ -59,7 +60,7 @@ class PhishVisionToolComponent(LCToolComponent):
             headers["Authorization"] = f"Bearer {api_key_str}"
             headers["X-API-Key"] = api_key_str
 
-        endpoint = f"{portal}/phishvision/scan"
+        endpoint = f"{portal}/api/phish-detect"
         payload = {"url": target_url}
 
         response = requests.post(
@@ -99,10 +100,12 @@ class PhishVisionToolComponent(LCToolComponent):
         return str(data)
 
     def run_model(self) -> list[Data]:
+        """Run the PhishVision component and return audit results as Data records."""
         audit_json = self._scan_threat(self.target)
         return [Data(data={"result": audit_json}, text=audit_json)]
 
     def build_tool(self) -> Tool:
+        """Build and return a StructuredTool instance for PhishVision."""
         return StructuredTool.from_function(
             name="phishvision_scan",
             description="Real-time zero-day cybersecurity phishing and impersonation threat scanner.",
