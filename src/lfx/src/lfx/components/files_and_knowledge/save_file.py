@@ -21,6 +21,27 @@ from lfx.utils.file_path_security import component_file_access_scopes, enforce_l
 from lfx.utils.validate_cloud import is_astra_cloud_environment
 
 
+def _escape_markdown_cell(value: Any) -> Any:
+    """A markdown table row is split on every unescaped pipe."""
+    return value.replace("|", r"\|") if isinstance(value, str) else value
+
+
+def _dataframe_to_markdown(dataframe: pd.DataFrame) -> str:
+    """Render `dataframe` as a markdown table that reads back as the same table.
+
+    `to_markdown` writes a blank cell as the string `nan`, so an empty value
+    becomes visible text, and it passes a cell through unchanged, so a pipe in a
+    value splits the row into columns the header does not have.
+    """
+    escaped = dataframe.apply(lambda column: column.map(_escape_markdown_cell))
+    escaped.columns = [_escape_markdown_cell(column) for column in escaped.columns]
+
+    # Replacing the blanks has to come last: `map` re-infers the column, which
+    # would put `nan` straight back.
+    filled = escaped.astype(object).where(escaped.notna(), None)
+    return filled.to_markdown(index=False, missingval="")
+
+
 def _get_storage_location_options():
     """Get storage location options, filtering out Local if in Astra cloud environment."""
     all_options = [{"name": "AWS", "icon": "Amazon"}, {"name": "Google Drive", "icon": "google"}]
@@ -495,7 +516,7 @@ class SaveToFileComponent(Component):
             else:
                 dataframe.to_json(path, orient="records", indent=2)
         elif fmt == "markdown":
-            content = dataframe.to_markdown(index=False)
+            content = _dataframe_to_markdown(dataframe)
             if should_append:
                 path.write_text(path.read_text(encoding="utf-8") + "\n\n" + content, encoding="utf-8")
             else:
@@ -550,7 +571,7 @@ class SaveToFileComponent(Component):
                 content = orjson.dumps(new_data, option=orjson.OPT_INDENT_2).decode("utf-8")
                 path.write_text(content, encoding="utf-8")
         elif fmt == "markdown":
-            content = pd.DataFrame(data.data).to_markdown(index=False)
+            content = _dataframe_to_markdown(pd.DataFrame(data.data))
             if should_append:
                 path.write_text(path.read_text(encoding="utf-8") + "\n\n" + content, encoding="utf-8")
             else:
