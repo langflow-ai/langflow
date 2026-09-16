@@ -74,7 +74,7 @@ class TestFetchModels:
         component = AnonRouterComponent(api_key="")
 
         with patch("httpx.get") as mock_get:
-            assert component.fetch_models() == []
+            assert component.fetch_models() is None
 
         mock_get.assert_not_called()
 
@@ -95,13 +95,28 @@ class TestFetchModels:
         assert "baai/bge-m3" not in ids
         assert "alibaba/z-image-turbo" not in ids
 
-    def test_request_error_degrades_to_an_empty_list(self):
+    def test_request_error_reports_discovery_failure(self):
         import httpx
 
         component = AnonRouterComponent(api_key="ar_test-key")
 
         with patch("httpx.get", side_effect=httpx.RequestError("boom")):
-            assert component.fetch_models() == []
+            assert component.fetch_models() is None
+
+    def test_http_error_reports_discovery_failure(self):
+        import httpx
+
+        component = AnonRouterComponent(api_key="ar_test-key")
+        request = httpx.Request("GET", f"{BASE_URL}/models")
+        response = httpx.Response(401, request=request)
+        error = httpx.HTTPStatusError("unauthorized", request=request, response=response)
+        mock_response = _mock_response(MODELS_PAYLOAD)
+        mock_response.raise_for_status.side_effect = error
+
+        with patch("httpx.get", return_value=mock_response):
+            assert component.fetch_models() is None
+
+        assert "Error fetching models" in component.status
 
     def test_a_bare_list_payload_is_accepted(self):
         component = AnonRouterComponent(api_key="ar_test-key")
@@ -155,6 +170,23 @@ class TestUpdateBuildConfig:
         assert updated["model_name"]["options"] == [saved]
         assert updated["model_name"]["value"] == saved
 
+    def test_successful_empty_catalog_clears_a_stale_selection(self):
+        component = AnonRouterComponent(api_key="ar_test-key")
+        build_config = {
+            "model_name": {
+                "options": ["gone/model"],
+                "tooltips": {"gone/model": "Gone Model"},
+                "value": "gone/model",
+            }
+        }
+
+        with patch("httpx.get", return_value=_mock_response({"data": []})):
+            updated = component.update_build_config(build_config, "ar_test-key", "api_key")
+
+        assert updated["model_name"]["options"] == []
+        assert updated["model_name"]["tooltips"] == {}
+        assert updated["model_name"]["value"] == ""
+
     def test_unrelated_fields_do_not_trigger_discovery(self):
         component = AnonRouterComponent(api_key="ar_test-key")
         build_config = {"model_name": {"options": [], "value": ""}}
@@ -183,6 +215,7 @@ class TestBuildModel:
         assert kwargs["model"] == "meta-llama/llama-3.3-70b"
         assert kwargs["api_key"] == "ar_test-key"  # pragma: allowlist secret
         assert kwargs["temperature"] == 0.7
+        assert kwargs["max_retries"] == 0
         assert "max_tokens" not in kwargs
 
     def test_temperature_falls_back_to_the_default(self):
