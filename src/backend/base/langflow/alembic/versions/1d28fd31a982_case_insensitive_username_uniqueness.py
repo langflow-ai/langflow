@@ -2,7 +2,7 @@
 
 Phase: EXPAND
 Revision ID: 1d28fd31a982
-Revises: b4c7d2e8f1a3
+Revises: d2f6a8c1e9b4
 Create Date: 2026-09-15
 
 ``user.username`` was only unique byte-for-byte, so "owner1" and "Owner1"
@@ -40,7 +40,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 revision: str = "1d28fd31a982"  # pragma: allowlist secret
-down_revision: str | None = "b4c7d2e8f1a3"  # pragma: allowlist secret
+down_revision: str | None = "d2f6a8c1e9b4"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

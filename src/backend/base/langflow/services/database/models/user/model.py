@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
-from sqlalchemy import JSON, Column
+from sqlalchemy import JSON, Column, Index, text
 from sqlmodel import Field, Relationship, SQLModel
 
 from langflow.schema.serialize import UUIDstr
@@ -26,6 +26,11 @@ class UserOptin(BaseModel):
 
 
 class User(SQLModel, table=True):  # type: ignore[call-arg]
+    # Created by migration 1d28fd31a982. Declared here as well so autogenerate
+    # (and the startup ``alembic check``) sees it: Postgres reflects expression
+    # indexes, so an index missing from the model reads as a ``remove_index`` diff.
+    __table_args__ = (Index("ix_user_username_lower", text("lower(username)"), unique=True),)
+
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True, unique=True)
     username: str = Field(index=True, unique=True)
     password: str = Field()
