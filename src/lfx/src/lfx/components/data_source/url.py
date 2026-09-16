@@ -219,10 +219,63 @@ class URLComponent(Component):
         """Extract raw HTML content."""
         return x
 
+    # Elements a browser renders on a line of their own. Without a break after
+    # them, the text on either side of the boundary runs together.
+    _BLOCK_LEVEL_TAGS = (
+        "address",
+        "article",
+        "aside",
+        "blockquote",
+        "dd",
+        "div",
+        "dl",
+        "dt",
+        "fieldset",
+        "figcaption",
+        "figure",
+        "footer",
+        "form",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "header",
+        "hr",
+        "li",
+        "main",
+        "nav",
+        "ol",
+        "p",
+        "pre",
+        "section",
+        "table",
+        "td",
+        "th",
+        "tr",
+        "ul",
+    )
+
     @staticmethod
     def _text_extractor(x: str) -> str:
-        """Extract clean text from HTML."""
-        return BeautifulSoup(x, "lxml").get_text()
+        """Extract clean text from HTML.
+
+        `get_text()` concatenates every text node with nothing in between, so a
+        page's blocks arrive glued: `<h1>Title</h1><p>Body.</p>` becomes
+        `TitleBody.`. A separator argument would fix that but would also push one
+        between inline elements, turning `Hello <b>world</b>!` into
+        `Hello world !`. Marking the end of each block instead keeps both right.
+        """
+        soup = BeautifulSoup(x, "lxml")
+
+        for line_break in soup.find_all("br"):
+            line_break.replace_with("\n")
+
+        for block in soup.find_all(URLComponent._BLOCK_LEVEL_TAGS):
+            block.append("\n")
+
+        return re.sub(r"\n{3,}", "\n\n", soup.get_text()).strip()
 
     @staticmethod
     def _markdown_extractor(x: str) -> str:
