@@ -121,6 +121,7 @@ def downgrade():
     good_file = create_test_migration(good_contract, "good_contract.py")
     result = validator.validate_migration_file(good_file)
     print(f"  ✅ Good CONTRACT: Valid={result['valid']} (expected: True)")
+    assert result["valid"], "Good CONTRACT should pass"  # noqa: S101
     os.unlink(good_file)  # noqa: PTH108
 
 
