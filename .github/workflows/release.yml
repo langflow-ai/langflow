@@ -321,6 +321,19 @@ jobs:
             fi
           }
 
+          # A package whose final is already on PyPI is reused rather than re-released,
+          # so the RCs it shipped in an earlier cycle must not raise the shared number.
+          consider_unreleased_versions() {
+            local label="$1"
+            local base_version="$2"
+            local versions_file="$3"
+            if grep -Fxq "$base_version" "$versions_file"; then
+              echo "${label}: final ${base_version} is already published; excluding its historical RCs."
+              return
+            fi
+            consider_versions "$label" "$base_version" "$versions_file"
+          }
+
           tmp_dir="$(mktemp -d)"
 
           if [ "${{ inputs.release_package_main }}" = "true" ]; then
@@ -344,7 +357,7 @@ jobs:
           if [ "${{ inputs.release_sdk || inputs.release_lfx }}" = "true" ]; then
             version="$(read_pyproject_version src/sdk/pyproject.toml)"
             fetch_pypi_versions "langflow-sdk" "$tmp_dir/langflow-sdk-pypi.txt"
-            consider_versions "PyPI langflow-sdk" "$version" "$tmp_dir/langflow-sdk-pypi.txt"
+            consider_unreleased_versions "PyPI langflow-sdk" "$version" "$tmp_dir/langflow-sdk-pypi.txt"
           fi
 
           if [ "${{ inputs.release_bundles }}" = "true" ]; then
@@ -361,11 +374,7 @@ jobs:
               version="$(read_pyproject_version "$pyproject")"
               output_file="$tmp_dir/${package_name}-pypi.txt"
               fetch_pypi_versions "$package_name" "$output_file"
-              if grep -Fxq "$version" "$output_file"; then
-                echo "PyPI ${package_name}: final ${version} is already published; excluding its historical RCs."
-              else
-                consider_versions "PyPI ${package_name}" "$version" "$output_file"
-              fi
+              consider_unreleased_versions "PyPI ${package_name}" "$version" "$output_file"
             done
           fi
 
@@ -591,10 +600,19 @@ jobs:
             fi
           else
             if [ ${{inputs.pre_release}} == "true" ]; then
-              rc_number="${{ needs.determine-rc-number.outputs.rc_number }}"
-              version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" --rc-number "$rc_number")"
-              echo "Shared release candidate number: rc$rc_number"
-              echo "SDK pre-release version to be released: $version"
+              # Fail the step rather than guess: determine-rc-number left a published SDK out of
+              # the shared number, so minting an RC of it by mistake could collide on PyPI.
+              sdk_pypi_json="$(curl --retry 3 --retry-delay 2 --retry-connrefused -fsS "https://pypi.org/pypi/langflow-sdk/json")"
+              sdk_published="$(jq --arg version "$version" '.releases | has($version)' <<< "$sdk_pypi_json")"
+              if [ "$sdk_published" = "true" ]; then
+                echo "SDK $version is already published; reusing it for this pre-release."
+                last_released_version="$version"
+              else
+                rc_number="${{ needs.determine-rc-number.outputs.rc_number }}"
+                version="$(uv run ./scripts/ci/langflow_pre_release_tag.py "$version" --rc-number "$rc_number")"
+                echo "Shared release candidate number: rc$rc_number"
+                echo "SDK pre-release version to be released: $version"
+              fi
             else
               last_released_version=$(curl -s "https://pypi.org/pypi/langflow-sdk/json" | jq -r '.releases | keys | .[]' | grep -vE '(a|b|rc|dev|alpha|beta)' | sort -V | tail -n 1)
               echo "Latest SDK release version: $last_released_version"

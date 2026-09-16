@@ -5,7 +5,9 @@ on:
     paths:
       - "scripts/ci/**"
       - "design/dedicated-integrations/**"
+      - "design/dedicated-integrations-triggers/**"
       - ".github/workflows/ci-scripts-test.yml"
+      - ".github/workflows/release.yml"
       - "pyproject.toml"
       - "src/bundles/*/pyproject.toml"
       - "src/bundles/lfx-bundles/src/lfx_bundles/*/__init__.py"

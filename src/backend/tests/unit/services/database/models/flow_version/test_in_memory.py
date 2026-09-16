@@ -25,9 +25,11 @@ from langflow.services.database.models.deployment_provider_account.model import 
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.crud import (
     create_flow_version_entry,
+    delete_flow_version_entry,
     get_flow_versions_with_provider_status,
     has_deployment_attachments,
 )
+from langflow.services.database.models.flow_version.exceptions import FlowVersionDeployedError, FlowVersionNotFoundError
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     count_attachments_by_deployment_ids,
@@ -247,12 +249,65 @@ class TestGuardOrphanPruning:
 
 
 # ===========================================================================
+# delete_flow_version_entry
+# ===========================================================================
+
+
+@pytest.mark.asyncio
+class TestDeleteFlowVersionEntry:
+    async def test_rejects_deployed_version(self, db: AsyncSession, flow: Flow, user: User, deployment: Deployment):
+        version = await _create_version(db, flow, user)
+        await _attach(db, user, version, deployment)
+
+        with pytest.raises(FlowVersionDeployedError):
+            await delete_flow_version_entry(db, version.id, user.id)
+
+        assert (await db.exec(select(FlowVersion.id).where(FlowVersion.id == version.id))).one() == version.id
+
+    async def test_rejects_another_users_version(self, db: AsyncSession, flow: Flow, user: User):
+        version = await _create_version(db, flow, user)
+
+        with pytest.raises(FlowVersionNotFoundError):
+            await delete_flow_version_entry(db, version.id, uuid4())
+
+        assert (await db.exec(select(FlowVersion.id).where(FlowVersion.id == version.id))).one() == version.id
+
+
+# ===========================================================================
 # cascade_delete_flow
 # ===========================================================================
 
 
 @pytest.mark.asyncio
 class TestCascadeDeleteFlow:
+    async def test_reports_whether_flow_was_deleted(self, db: AsyncSession, flow: Flow):
+        flow_id = flow.id
+
+        assert await cascade_delete_flow(db, flow_id) is True
+        await db.commit()
+        assert await cascade_delete_flow(db, flow_id) is False
+
+    async def test_reports_deletion_and_collects_memory_base_cleanup(self, db: AsyncSession, flow: Flow, user: User):
+        from langflow.services.database.models.memory_base.model import MemoryBase
+
+        flow_id = flow.id
+        kb_name = f"kb_{uuid4().hex}"
+        memory_base = MemoryBase(name="delete-test", flow_id=flow_id, user_id=user.id, kb_name=kb_name)
+        db.add(memory_base)
+        await db.commit()
+        cleanups = []
+
+        assert await cascade_delete_flow(db, flow_id, memory_base_cleanups=cleanups) is True
+        await db.commit()
+        assert len(cleanups) == 1
+        assert cleanups[0].kb_name == kb_name
+        assert cleanups[0].user_id == user.id
+        assert cleanups[0].kb_username == user.username
+        assert (await db.exec(select(MemoryBase).where(MemoryBase.id == memory_base.id))).first() is None
+
+        assert await cascade_delete_flow(db, flow_id, memory_base_cleanups=cleanups) is False
+        assert len(cleanups) == 1
+
     async def test_deletes_related_rows_under_fk_enforcement(self, db: AsyncSession, flow: Flow, user: User):
         version = await _create_version(db, flow, user)
 

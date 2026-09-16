@@ -10,6 +10,7 @@ from langflow.schema.serialize import UUIDstr
 
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key.model import ApiKey
+    from langflow.services.database.models.auth.authz import AuthzRoleAssignment
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
     from langflow.services.database.models.file.model import File
@@ -63,6 +64,28 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     folders: list["Folder"] = Relationship(
         back_populates="user",
         sa_relationship_kwargs={"cascade": "delete"},
+    )
+    # No back_populates: AuthzRoleAssignment has two FKs to user.id, so each
+    # relationship disambiguates its own join column explicitly rather than
+    # relying on inference. SQLite never enforces ON DELETE CASCADE/SET NULL
+    # (see AuthzRoleAssignment's own docstring), so without ORM-level cascade
+    # here a deleted user's assignment rows — or rows they merely granted —
+    # survive as unresolvable "unknown user" references in Access Control.
+    role_assignments: list["AuthzRoleAssignment"] = Relationship(
+        sa_relationship_kwargs={
+            "cascade": "delete",
+            "foreign_keys": "AuthzRoleAssignment.user_id",
+        },
+    )
+    # Deleting whoever granted a role must not delete the grant itself — only
+    # clear who granted it, matching the FK's own SET NULL semantics. Default
+    # relationship cascade ("save-update, merge", no "delete") is exactly
+    # that: on session.delete(user), SQLAlchemy nulls assigned_by on any
+    # related rows rather than deleting them.
+    role_assignments_granted: list["AuthzRoleAssignment"] = Relationship(
+        sa_relationship_kwargs={
+            "foreign_keys": "AuthzRoleAssignment.assigned_by",
+        },
     )
     optins: dict[str, Any] | None = Field(
         sa_column=Column(JSON, default=lambda: UserOptin().model_dump(), nullable=True)

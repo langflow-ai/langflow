@@ -16,13 +16,20 @@ Public surface:
 * ``register_source`` / ``create_source`` / ``registered_sources`` —
   the registry entry points.
 
-In this phase only **file_upload** and **folder** are registered. The
-S3 / Google Drive / OneDrive / SharePoint classes are preserved as
-stubs so the framework wiring (enum values, type imports, DB-stored
-``source_type`` strings on existing ``ingestion_run`` rows) keeps
-round-tripping, but they are not instantiable through ``create_source``
-and the picker UI hides them. Reinstate by restoring the full source
-class and re-adding ``register_source(...)`` for that source below.
+In this phase **file_upload**, **folder** and **google_drive** are
+registered by default. The S3 / OneDrive / SharePoint classes are
+preserved as stubs so the framework wiring (enum values, type imports,
+DB-stored ``source_type`` strings on existing ``ingestion_run`` rows)
+keeps round-tripping, but they are not instantiable through
+``create_source`` and the catalog hides them. Reinstate by restoring the
+full source class and re-adding ``register_source(...)`` for that source
+below.
+
+``GoogleDriveSource`` (INT-10) resolves a managed connection under the
+``job_owner`` principal it builds from the requesting user's id (see
+``KBConnectorSource.execution_principal``), so it needs nothing stamped on
+the background job. The portable deny floor still refuses a user-owned
+connection unless its owner set ``allow_non_interactive``.
 """
 
 from lfx.base.knowledge_bases.ingestion_sources.base import (
@@ -56,10 +63,11 @@ from lfx.base.knowledge_bases.ingestion_sources.s3 import S3Source
 from lfx.base.knowledge_bases.ingestion_sources.sharepoint import SharePointSource
 
 # Register the supported built-in sources on import. S3Source /
-# GoogleDriveSource / OneDriveSource / SharePointSource are intentionally
-# NOT registered while they're stubbed out — see each module's docstring.
+# OneDriveSource / SharePointSource are intentionally NOT registered while
+# they're stubbed out — see each module's docstring.
 register_source(SourceType.FILE_UPLOAD, FileUploadSource)
 register_source(SourceType.FOLDER, FolderSource)
+register_source(SourceType.GOOGLE_DRIVE, GoogleDriveSource)
 
 __all__ = [
     "FileUploadSource",

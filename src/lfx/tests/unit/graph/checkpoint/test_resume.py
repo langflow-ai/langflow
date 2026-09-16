@@ -99,12 +99,14 @@ async def test_resume_keeps_inactivated_branch_stopped():
     graph, _ = await _paused_checkpoint()
     # Simulate a ConditionalRouter having stopped the chat_output branch before the pause.
     graph.inactivated_vertices = {"chat_output"}
+    graph.branch_inactivation_sources = {"chat_input": {"chat_output"}}
     graph.get_vertex("chat_output").state = VertexStates.INACTIVE
     checkpoint = graph.build_checkpoint()
 
     resumed = Graph.resume_from_checkpoint(checkpoint)
     # The inactivated state survives resume and the dead branch is NOT queued to run again.
     assert resumed.inactivated_vertices == {"chat_output"}
+    assert resumed.branch_inactivation_sources == {"chat_input": {"chat_output"}}
     assert resumed.get_vertex("chat_output").state == VertexStates.INACTIVE
     assert "chat_output" not in resumed.resume_first_layer()
 
