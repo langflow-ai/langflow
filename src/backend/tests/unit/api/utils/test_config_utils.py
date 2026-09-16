@@ -686,6 +686,33 @@ class TestMCPPatchServerConfig:
         finally:
             await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
 
+    @pytest.mark.asyncio
+    async def test_should_keep_server_deleted_when_stale_client_patches_it(self, client: AsyncClient, created_api_key):
+        server_name = f"stale-patch-{uuid4()}"
+        auth_headers = {"x-api-key": created_api_key.api_key}
+        full_config = {"url": "http://real.example.com/mcp", "headers": {"X-Key": "abc"}}
+
+        try:
+            response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=full_config, headers=auth_headers)
+            assert response.status_code == 200
+            response = await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
+            assert response.status_code == 200
+
+            response = await client.get(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
+            assert response.status_code == 404
+
+            response = await client.patch(
+                f"/api/v2/mcp/servers/{server_name}",
+                json={"url": full_config["url"]},
+                headers=auth_headers,
+            )
+            assert response.status_code == 404
+
+            response = await client.get(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
+            assert response.status_code == 404
+        finally:
+            await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=auth_headers)
+
 
 class TestMCPGetServerEndpoint:
     """Test GET semantics for a single MCP server."""

@@ -1388,6 +1388,7 @@
   "mcp.servers.description": "フローで使用するMCPサーバーを管理します。",
   "mcp.servers.editMenuItem": "編集",
   "mcp.servers.errorDeleting": "サーバーの削除に失敗しました",
+  "mcp.servers.errorNoLongerExists": "この MCP サーバーは存在しません。別の場所で削除された可能性があります。",
   "mcp.servers.errorFetching": "サーバーの取得に失敗しました",
   "mcp.servers.noServersAdded": "MCPサーバーは追加されていません",
   "mcp.servers.statusError": "エラー",

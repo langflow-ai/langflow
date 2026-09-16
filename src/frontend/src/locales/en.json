@@ -543,6 +543,7 @@
   "mcp.servers.deleteMenuItem": "Delete",
   "mcp.servers.errorFetching": "Error fetching server",
   "mcp.servers.errorDeleting": "Error deleting server",
+  "mcp.servers.errorNoLongerExists": "This MCP server no longer exists. It may have been deleted elsewhere.",
   "mcp.modal.addTitle": "Add MCP Server",
   "mcp.modal.updateTitle": "Update MCP Server",
   "mcp.modal.descriptionSettings": "Add and save MCP servers to use across your flows.",

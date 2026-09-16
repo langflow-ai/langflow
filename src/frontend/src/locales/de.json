@@ -1388,6 +1388,7 @@
   "mcp.servers.description": "Verwalten Sie MCP-Server für die Verwendung in Ihren Abläufen.",
   "mcp.servers.editMenuItem": "Bearbeiten",
   "mcp.servers.errorDeleting": "Fehler beim Löschen des Servers",
+  "mcp.servers.errorNoLongerExists": "Dieser MCP-Server existiert nicht mehr. Er wurde möglicherweise an anderer Stelle gelöscht.",
   "mcp.servers.errorFetching": "Fehler beim Abrufen des Servers",
   "mcp.servers.noServersAdded": "Es wurden keine MCP-Server hinzugefügt",
   "mcp.servers.statusError": "Fehler",

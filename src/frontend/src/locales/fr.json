@@ -1388,6 +1388,7 @@
   "mcp.servers.description": "Gérer les serveurs MCP à utiliser dans vos flux.",
   "mcp.servers.editMenuItem": "Editer",
   "mcp.servers.errorDeleting": "Erreur lors de la suppression du serveur",
+  "mcp.servers.errorNoLongerExists": "Ce serveur MCP n'existe plus. Il a peut-être été supprimé ailleurs.",
   "mcp.servers.errorFetching": "Erreur lors de la connexion au serveur",
   "mcp.servers.noServersAdded": "Aucun serveur MCP n'a été ajouté",
   "mcp.servers.statusError": "Erreur",
