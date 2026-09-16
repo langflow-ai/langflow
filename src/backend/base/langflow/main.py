@@ -51,6 +51,7 @@ from langflow.initial_setup.setup import (
 )
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.plugin_routes import load_plugin_routes
+from langflow.services.audit.attribution import AuditRequestContextMiddleware
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
@@ -318,6 +319,15 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await audit_log_cleanup_worker.start()
             except Exception as exc:  # noqa: BLE001 — never block startup on cleanup scheduling
                 await logger.awarning(f"Failed to start authz audit-log cleanup worker: {exc}")
+            try:
+                from langflow.services.audit.retention import audit_event_cleanup_worker
+
+                await audit_event_cleanup_worker.start()
+            except Exception as exc:  # noqa: BLE001
+                await logger.awarning(f"Failed to start audit event cleanup worker: {exc}")
+            from langflow.services.audit.exclusions import warn_about_ignored_exclusions
+
+            await warn_about_ignored_exclusions()
 
             # Keep the default OSS provider ceiling coherent across backend
             # worker processes after an administrator commits a replacement.
@@ -777,6 +787,12 @@ def get_lifespan(*, fix_migration=False, version=None):
                     except Exception as e:  # noqa: BLE001
                         await logger.aerror(f"Failed to stop authz audit-log cleanup worker: {e}")
                     try:
+                        from langflow.services.audit.retention import audit_event_cleanup_worker
+
+                        await audit_event_cleanup_worker.stop()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop audit event cleanup worker: {e}")
+                    try:
                         from langflow.services.task.model_provider_policy_refresh import (
                             model_provider_policy_refresh_worker,
                         )
@@ -928,6 +944,7 @@ def create_app():
         allow_headers=settings.cors_allow_headers,
     )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
+    app.add_middleware(AuditRequestContextMiddleware)
 
     @app.middleware("http")
     async def bind_execution_client(request: Request, call_next):
