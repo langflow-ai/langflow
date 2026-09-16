@@ -1505,6 +1505,8 @@
   "messages.column.timestamp": "indicación de fecha y hora",
   "messages.description": "Revisa, edita y elimina mensajes para explorar y perfeccionar los comportamientos del modelo.",
   "messages.title": "Mensajes",
+  "messages.loadOlder": "Cargar mensajes anteriores",
+  "messages.loadError": "No se pudieron cargar los mensajes.",
   "misc.activateToShare": "Actívalo para compartir una versión pública de este Playground",
   "misc.addChatInputOutput": "Añade una entrada de chat o una salida de chat para acceder a tu flujo",
   "misc.addChatInputOutputPlayground": "Añade una entrada de chat o una salida de chat para utilizar el entorno de pruebas",
@@ -2429,5 +2431,8 @@
   "sharing.file.level.write.desc": "View and edit this file.",
   "sharing.file.level.admin.desc": "View, edit, and delete this file.",
   "sharing.permission.for": "Permission for {{target}}",
-  "_translationNeeded.le1905EnterpriseSharing": "TODO(LE-1905): Review the English Enterprise sharing values in this locale."
+  "_translationNeeded.le1905EnterpriseSharing": "TODO(LE-1905): Review the English Enterprise sharing values in this locale.",
+  "slider.strict": "Estricto",
+  "slider.permissive": "Permisivo",
+  "playground.workflowWarning": "Advertencia del flujo de trabajo"
 }

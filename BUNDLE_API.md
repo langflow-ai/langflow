@@ -55,9 +55,20 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | `IntegrationError` and typed subclasses / `INTEGRATION_ERROR_CODES` | `lfx.integrations` |
 | `normalize_integration_error()` / `register_error_normalizer()` | `lfx.integrations` |
 | `IntegrationProvider` / `OAuthProfile` / `IntegrationCapability` / `ScopeSet` | `lfx.integrations` |
+| `McpToolPin` (pinned MCP action contract on a capability) | `lfx.integrations` |
 | `integration_action()` | `lfx.integrations` |
 | `Component.resolve_connection(field_name)` | `lfx.custom.custom_component.component.Component` |
+| `Component.select_integration_capabilities(capability_ids)` | `lfx.custom.custom_component.component.Component` |
 | `BaseConnectionResolverService`, `ConnectionAccessPolicy` | `lfx.services.connection` |
+
+### Preset MCP components
+
+| Symbol | Source |
+| --- | --- |
+| `MCPPresetComponent` (`_mcp_server_config`, `_pinned_spec`, `_get_tools`, `run_tool`) | `lfx.base.mcp.preset` |
+| `preset_control_inputs()` | `lfx.base.mcp.preset` |
+| `PinnedServerSpec` / `PinnedToolSpec` / `PinnedToolDiff` | `lfx.base.mcp.pinned` |
+| `pinned_spec_from_capabilities()` / `tools_list_digest()` / `enforce_pinned_tools()` | `lfx.base.mcp.pinned` |
 
 ### Outputs
 
@@ -205,6 +216,71 @@ the deserialize half is covered by
 
 ## Changelog
 
+### 2026-09-14 — Integration action selection and execution denials
+
+- Add the pure `Component.select_integration_capabilities(capability_ids)` hook.
+  Its argument is the tuple of declared capability IDs from a connection input
+  or the loaded manifest's `component_ref`. An action-picker bundle returns a
+  non-empty subset based on the invocation's current inputs. Empty or undeclared
+  selections fail with HTTP 422 and `action-unsupported`, independently of
+  governance policy. The default requires all declared capabilities, so
+  existing single-action components need no change. The hook runs before the
+  output body in graph and sync/async tool execution, after tool arguments are
+  applied, and before creating a credential lease. The resolver receives only
+  the selected IDs. Graph construction using the default `ComponentToolkit`
+  checks its providers; selected-action checks wait until the agent supplies
+  invocation arguments. Custom `_get_tools()` or `to_toolkit()` implementations
+  require every declared capability at construction, and their connection leases
+  carry every declared capability. The selection hook cannot narrow an opaque
+  toolset whose returned callables bypass the standard invocation wrappers.
+  Picker option filtering remains bundle-owned; changing the
+  picker alone never authorizes an action. For example:
+
+  ```python
+  def select_integration_capabilities(self, capability_ids: tuple[str, ...]) -> tuple[str, ...]:
+      return ({"search": "google.drive.search", "delete": "google.drive.delete"}[self.action],)
+  ```
+
+  Use the same action-to-capability mapping to dispatch the output's adapter.
+  Implementations must inspect input values without I/O or side effects; the
+  hook may run more than once. For a component requiring several actions in one
+  invocation, return every capability it will use. This is additive;
+  `BUNDLE_API_VERSION` remains `1`.
+- `IntegrationPolicyError` also implements `IntegrationError`, retaining
+  `PermissionError` compatibility while carrying `policy-blocked`, HTTP 403,
+  an administrator-action hint and owner-only key details. Component policy
+  denials now pass through the normal error-message persistence handler.
+- Empty persisted integration ceilings retain unrestricted semantics when a
+  plugin is installed. External deny-all must be explicitly configured; plugins
+  changing semantics must provide an operator-visible migration/configuration
+  step. No automatic Enterprise migration is included here.
+
+### 2026-09-14 — Integration policy review follow-up
+
+- Policy bundle coordinators expose `read_state()` to atomically return the
+  immutable revision and source availability. Custom `BasePolicyBundleService`
+  implementations must supply this method. Integration policy resolution pins
+  both provider and action decisions to that state, including across async
+  plugin hooks, so concurrent publication cannot combine different revisions.
+- Failure to look up a component's integration identity now stops execution;
+  `None` is reserved for a successful lookup with no matching capability.
+  Template building clears previous integration identity stamps before lookup,
+  including when registry access fails.
+
+### 2026-09-14 — Integration policy review
+
+- Component and host resolver gates require metadata for every declared
+  capability when an action deny-list is configured. Missing or unavailable
+  metadata produces a typed policy denial before credential access; an
+  unconfigured installation retains pass-through behavior.
+- Integration policy snapshots support dotted provider IDs and expire cached
+  allows when refreshing a configured shared policy fails, including policies
+  that restrict integration actions without a provider ceiling.
+- The synchronous and asynchronous `require_integration_actions` helpers accept
+  optional `capability_ids`; `policy_keys_for_capabilities` accepts optional
+  `require_loaded` validation. These additions do not change previously released
+  Bundle API signatures; `BUNDLE_API_VERSION` remains `1`.
+
 ### 2026-09-14 — Actionable connection authorization denials
 
 - `ConnectionNotAuthorizedError.reason` and `details.reason` identify the denial.
@@ -228,6 +304,21 @@ the deserialize half is covered by
   Manifests without integrations retain their existing behavior.
 
 ### v0 (this release)
+
+- **Integration policy gating of bundle capabilities (additive).**
+  `IntegrationPolicyBlockedError` (code `policy-blocked`, HTTP 403) is added to
+  the typed integration error envelope and to `INTEGRATION_ERROR_CODES`.
+  `IntegrationCapability.policy_keys` is now validated against the
+  `integrations.<provider_id>.<action>` grammar and `IntegrationProvider`
+  rejects capability policy keys outside its own provider prefix, so every
+  declared action is addressable by an operator deny-list.
+  `ConnectionResolutionRequest.capability_ids` carries the capability ids
+  declared by the requesting input, letting a host resolver enforce the
+  deny-list before it selects a credential row.  `Component` gains
+  `require_integration_policy()`, called from `build_results()`, so a blocked
+  provider or action fails before the component body runs and before any
+  credential is minted, decrypted, or refreshed.  Bundles that declare no
+  integrations are unaffected; `BUNDLE_API_VERSION` remains `1`.
 
 - **Owner-only route families on the execution principal (additive).**
   `ExecutionPrincipal.allow_explicit_shares` is a new field defaulting to `True`,
@@ -668,3 +759,40 @@ the deserialize half is covered by
   messages and winner selection are unchanged, and two physically distinct
   manifests for one canonical name still error.  No public symbol's name or
   signature changed.
+
+- **Pinned action-to-tool mode for preset MCP components (additive).**
+  `MCPPresetComponent` gains a `_pinned_spec()` hook returning a
+  `PinnedServerSpec` (`lfx.base.mcp.pinned`); in pinned mode the component fixes
+  the endpoint and transport, refuses any pinned tool that was removed, renamed,
+  or re-shaped relative to the pin, compares the pinned subset's `tools/list` content digest and
+  the `InitializeResult.serverInfo` name/version when they are pinned, keeps the
+  Tool dropdown off the live server, and re-checks call arguments against the
+  pinned schema on both of a tool's call paths (`coroutine` and `func`). Only an
+  argument the pin does not declare is treated as drift; an omitted required
+  field is left to the derived args schema, whose error is self-correctable.
+  `pinned_spec_from_capabilities()` additionally refuses a `tools_list_hash`
+  that is not the digest of exactly the tools the manifest pins, so that
+  authoring mistake surfaces at build time instead of as runtime "drift".
+  Drift raises the new `IncompatibleToolError`
+  (`incompatible-tool`, added to `INTEGRATION_ERROR_CODES`). Capabilities carry
+  the pin as `IntegrationCapability.mcp_pin: McpToolPin`; a capability whose
+  `substrate` is `mcp` must now declare both `mcp_tool` and `mcp_pin`. Tools
+  discovered by `update_tools` carry their raw `input_schema`/`output_schema` on
+  `metadata`, and a server config may set `allow_sse_fallback=False` to pin the
+  transport. Components that do not override `_pinned_spec()` are unaffected;
+  `BUNDLE_API_VERSION` remains `1`.
+  Pinned discovery validates the raw tool list before schema conversion can skip
+  entries and rejects duplicate or unnamed tools. Extra unpinned tools may vary
+  with the user's grant: they are informational in `PinnedToolDiff.added`, do not
+  affect `is_compatible` or the pinned digest, and are excluded before conversion
+  from the component's toolset and execution cache. A missing pinned tool's error
+  hint also directs the operator to check the connection's grants.
+  Session reuse separates callers that permit SSE fallback from callers
+  that require Streamable HTTP, so a live legacy session cannot bypass the pin.
+
+- **`discovered_tool()` accepts a recorded `tools/list` entry.**
+  `lfx.base.mcp.pinned.discovered_tool()` (and therefore `tools_list_digest()`)
+  now normalizes a plain mapping in addition to a live MCP tool object, so a
+  bundle author can compute a pin's `tools_list_hash` directly from the recorded
+  `tools/list` response that the pin is derived from. Additive;
+  `BUNDLE_API_VERSION` remains `1`.

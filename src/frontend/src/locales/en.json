@@ -516,6 +516,8 @@
   "settings.recordingKeyboard": "Recording your keyboard",
   "settings.nav.messages": "Messages",
   "messages.title": "Messages",
+  "messages.loadOlder": "Load older messages",
+  "messages.loadError": "Could not load messages.",
   "messages.description": "Inspect, edit and remove messages to explore and refine model behaviors.",
   "messages.column.timestamp": "timestamp",
   "messages.column.text": "text",
@@ -2428,5 +2430,8 @@
   "sharing.file.level.execute.desc": "View this file. Files do not use the Can run level.",
   "sharing.file.level.write.desc": "View and edit this file.",
   "sharing.file.level.admin.desc": "View, edit, and delete this file.",
-  "sharing.permission.for": "Permission for {{target}}"
+  "sharing.permission.for": "Permission for {{target}}",
+  "slider.strict": "Strict",
+  "slider.permissive": "Permissive",
+  "playground.workflowWarning": "Workflow warning"
 }

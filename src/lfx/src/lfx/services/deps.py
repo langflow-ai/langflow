@@ -83,6 +83,18 @@ def get_model_provider_policy_service():
     return service
 
 
+def get_integration_policy_service():
+    """Return the configured integration policy service or fail closed."""
+    from lfx.services.integration_policy.base import BaseIntegrationPolicyService
+    from lfx.services.integration_policy.service import IntegrationPolicyService  # noqa: F401
+
+    service = get_service(ServiceType.INTEGRATION_POLICY_SERVICE)
+    if not isinstance(service, BaseIntegrationPolicyService) or not service.ready:
+        msg = "A valid, ready integration_policy_service is required"
+        raise TypeError(msg)
+    return service
+
+
 def get_policy_bundle_service() -> BasePolicyBundleService:
     """Return the ready process-local shared policy bundle coordinator."""
     from lfx.services.policy_bundle import BasePolicyBundleService, PolicyBundleService  # noqa: F401

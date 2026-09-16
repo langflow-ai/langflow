@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 import sqlalchemy as sa
 from sqlalchemy import CheckConstraint, ForeignKey, Index
+from sqlalchemy.sql.naming import conv
 from sqlmodel import JSON, Column, DateTime, Field, SQLModel, func
 
 from langflow.schema.serialize import UUIDstr  # noqa: TC001 - SQLModel resolves annotations at runtime
@@ -38,15 +39,15 @@ class Connection(ConnectionBase, table=True):  # type: ignore[call-arg]
     __table_args__ = (
         CheckConstraint(
             "(ownership_mode = 'user' AND owner_id IS NOT NULL) OR (ownership_mode = 'instance' AND owner_id IS NULL)",
-            name="ck_connection_owner_mode",
+            name=conv("ck_connection_owner_mode"),
         ),
         CheckConstraint(
             "status IN ('pending', 'ready', 'expired', 'revoked', 'error')",
-            name="ck_connection_status",
+            name=conv("ck_connection_status"),
         ),
         CheckConstraint(
             "health IN ('unknown', 'healthy', 'unhealthy')",
-            name="ck_connection_health",
+            name=conv("ck_connection_health"),
         ),
         Index(
             "uq_connection_user_provider_name",

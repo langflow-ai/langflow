@@ -1505,6 +1505,8 @@
   "messages.column.timestamp": "时间戳记",
   "messages.description": "检查、编辑和删除消息，以探索和优化模型行为。",
   "messages.title": "消息",
+  "messages.loadOlder": "加载更早的消息",
+  "messages.loadError": "无法加载消息。",
   "misc.activateToShare": "启用此功能以分享此 Playground 的公开版本",
   "misc.addChatInputOutput": "添加“聊天输入”或“聊天输出”以访问您的流程",
   "misc.addChatInputOutputPlayground": "添加“聊天输入”或“聊天输出”以使用该演示环境",
@@ -2428,5 +2430,8 @@
   "sharing.file.level.execute.desc": "查看此文件。文件不使用“可运行”权限级别。",
   "sharing.file.level.write.desc": "查看和编辑此文件。",
   "sharing.file.level.admin.desc": "查看、编辑和删除此文件。",
-  "sharing.permission.for": "{{target}} 的权限"
+  "sharing.permission.for": "{{target}} 的权限",
+  "slider.strict": "严格",
+  "slider.permissive": "宽松",
+  "playground.workflowWarning": "工作流警告"
 }

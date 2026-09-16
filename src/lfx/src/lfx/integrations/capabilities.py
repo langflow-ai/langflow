@@ -69,6 +69,30 @@ class OAuthProfile(BaseModel):
     tenant_param: StrictStr | None = None
 
 
+class McpToolPin(BaseModel):
+    """The frozen MCP contract for one ``substrate == "mcp"`` capability.
+
+    Pinning is manifest data, not component code, so a provider bundle can move an
+    action from its SDK/REST adapter to MCP without changing the component class,
+    its identity, or the saved-flow schema (see
+    ``design/dedicated-integrations/ga-swap-procedure.md``). ``tools_list_hash`` is
+    the content digest of only the pinned subset of ``tools/list``
+    (``lfx.base.mcp.pinned.tools_list_digest``); ``server_name`` and
+    ``server_version`` are the ``InitializeResult.serverInfo`` values, pinned only
+    when the server actually publishes them.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    server_url: StrictStr = Field(min_length=1)
+    transport: Literal["streamable_http"] = "streamable_http"
+    input_schema: dict[str, Any]
+    output_schema: dict[str, Any] | None = None
+    tools_list_hash: StrictStr | None = None
+    server_name: StrictStr | None = None
+    server_version: StrictStr | None = None
+
+
 class IntegrationCapability(BaseModel):
     """One executable provider action and its credential requirements."""
 
@@ -87,6 +111,7 @@ class IntegrationCapability(BaseModel):
     risk: Literal["read", "write", "destructive"]
     component_ref: StrictStr | None = Field(default=None, min_length=1)
     mcp_tool: StrictStr | None = Field(default=None, min_length=1)
+    mcp_pin: McpToolPin | None = None
 
     @field_validator("required_scopes", "policy_keys", "deployment_contexts")
     @classmethod
@@ -99,10 +124,57 @@ class IntegrationCapability(BaseModel):
             raise ValueError(msg)
         return value
 
+    @field_validator("policy_keys")
+    @classmethod
+    def _policy_keys_use_the_governance_grammar(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        """Reject action policy keys operators could never block (INT-7).
+
+        Governance blocks capabilities by their declared ``policy_keys``, so a
+        key outside the ``integrations.<provider_id>.<action>`` namespace is a
+        manifest bug that would make the capability ungovernable. The provider
+        segment itself is checked against the owning provider by
+        :class:`IntegrationProvider`.
+        """
+        from lfx.services.integration_policy.base import normalize_integration_policy_key
+
+        for key in value:
+            normalize_integration_policy_key(key)
+        return value
+
     @model_validator(mode="after")
     def _has_an_execution_target(self) -> IntegrationCapability:
         if self.component_ref is None and self.mcp_tool is None:
             msg = "An integration capability must declare component_ref or mcp_tool"
+            raise ValueError(msg)
+        return self
+
+    @model_validator(mode="after")
+    def _mcp_capabilities_are_pinned(self) -> IntegrationCapability:
+        """MCP actions run in pinned mode only: an unpinned MCP action fails validation.
+
+        Runtime discovery may not decide what an MCP action can do, so the manifest
+        must name the tool and freeze its endpoint and schemas before the loader
+        will accept the capability.
+
+        This is deliberately stricter than the free-form ``mcp_tool`` INT-3
+        accepted: it closes the door on an unpinned MCP capability rather than
+        merely adding optional fields.  Nothing in the tree declares ``substrate``
+        at all today, so no shipped manifest changes meaning and ``schema_version``
+        stays 1 -- but a future unpinned MCP action would need this rule relaxed,
+        not just a new field.
+        """
+        if self.substrate == "mcp":
+            if self.mcp_tool is None:
+                msg = "An integration capability with substrate 'mcp' must declare mcp_tool"
+                raise ValueError(msg)
+            if self.mcp_pin is None:
+                msg = (
+                    "An integration capability with substrate 'mcp' must declare mcp_pin "
+                    "(server endpoint plus argument and result schemas)"
+                )
+                raise ValueError(msg)
+        elif self.mcp_pin is not None:
+            msg = "mcp_pin is only valid on a capability whose substrate is 'mcp'"
             raise ValueError(msg)
         return self
 
@@ -136,6 +208,21 @@ class IntegrationProvider(BaseModel):
             msg = (
                 f"Integration provider {self.provider_id!r} has capability ids outside its provider namespace: "
                 f"{', '.join(wrong_provider)}"
+            )
+            raise ValueError(msg)
+        from lfx.services.integration_policy.base import integration_policy_key_prefix
+
+        expected_prefix = integration_policy_key_prefix(self.provider_id)
+        foreign_keys = sorted(
+            key
+            for capability in self.capabilities
+            for key in capability.policy_keys
+            if not key.casefold().startswith(expected_prefix)
+        )
+        if foreign_keys:
+            msg = (
+                f"Integration provider {self.provider_id!r} has capability policy keys outside "
+                f"{expected_prefix!r}: {', '.join(foreign_keys)}"
             )
             raise ValueError(msg)
         unknown = sorted({cap.auth_profile_id for cap in self.capabilities} - set(profile_ids))

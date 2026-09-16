@@ -33,6 +33,7 @@ from lfx.observability import (
 from pydantic import PydanticDeprecatedSince20
 from pydantic_core import PydanticSerializationError
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
+from starlette.middleware.gzip import DEFAULT_EXCLUDED_CONTENT_TYPES, GZipMiddleware
 
 from langflow.api import log_router
 from langflow.api.health_check_router import health_check_router
@@ -79,6 +80,18 @@ warnings.filterwarnings("ignore", category=ResourceWarning, message=".*MemoryObj
 _tasks: list[asyncio.Task] = []
 
 MAX_PORT = 65535
+GZIP_MINIMUM_SIZE = 1000
+GZIP_COMPRESS_LEVEL = 6
+# application/x-ndjson is deliberately absent: build event streams compress 78-99% and,
+# being streamed, bypass GZIP_MINIMUM_SIZE entirely.
+GZIP_ALREADY_COMPRESSED_CONTENT_TYPES = (
+    "application/octet-stream",
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+)
+GZIP_EXCLUDED_CONTENT_TYPES = (*DEFAULT_EXCLUDED_CONTENT_TYPES, *GZIP_ALREADY_COMPRESSED_CONTENT_TYPES)
 
 # Enterprise lifespan hook registry. Enterprise plugins append async callables
 # at app-construction time (plugin registration runs before the lifespan
@@ -869,6 +882,14 @@ def create_app():
         lifespan=lifespan,
         root_path=settings.root_path,
     )
+    # Registered first so it sits innermost: the BaseHTTPMiddleware layers above turn every
+    # response into a stream, and a streamed response carries no Content-Length to test.
+    app.add_middleware(
+        GZipMiddleware,
+        minimum_size=GZIP_MINIMUM_SIZE,
+        compresslevel=GZIP_COMPRESS_LEVEL,
+        exclude_content_types=GZIP_EXCLUDED_CONTENT_TYPES,
+    )
     app.add_middleware(
         ContentSizeLimitMiddleware,
     )
@@ -1099,6 +1120,33 @@ def create_app():
             headers={
                 "Retry-After": retry_after_seconds,
             },
+        )
+
+    from fastapi.exceptions import ResponseValidationError
+
+    @app.exception_handler(ResponseValidationError)
+    async def response_validation_exception_handler(_request: Request, exc: ResponseValidationError):
+        """A route returned what its response_model rejects: log it in full, answer generically.
+
+        str(exc) lists each pydantic error with its ``input`` -- the server-side value
+        that failed to serialize, or for a missing field the whole object -- then the
+        endpoint's file, line and function. The catch-all below sent all of it to the
+        client and to telemetry.
+        """
+        # exc_info renders the full errors to the console and log file; the message is the
+        # field OTel log export can carry, so it names the failure without the values.
+        await logger.aerror("Response validation failed", exc_info=exc)
+        # Telemetry leaves the server. Send a copy that keeps the type, the traceback and
+        # the route template, and reduces each error to its type and location. A location
+        # is field names, list indexes and dict keys, never the value.
+        located = ResponseValidationError(
+            [{"type": error.get("type"), "loc": error.get("loc")} for error in exc.errors()],
+            endpoint_ctx={"path": exc.endpoint_path} if exc.endpoint_path else None,
+        )
+        await log_exception_to_telemetry(located.with_traceback(exc.__traceback__), "handler")
+        return JSONResponse(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            content={"message": "Internal server error: the response failed validation"},
         )
 
     @app.exception_handler(Exception)

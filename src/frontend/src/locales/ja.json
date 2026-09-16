@@ -1505,6 +1505,8 @@
   "messages.column.timestamp": "タイムスタンプ",
   "messages.description": "メッセージを確認、編集、削除して、モデルの挙動を検証し、最適化します。",
   "messages.title": "メッセージ",
+  "messages.loadOlder": "以前のメッセージを読み込む",
+  "messages.loadError": "メッセージを読み込めませんでした。",
   "misc.activateToShare": "有効にすると、このプレイグラウンドの公開版を共有できます",
   "misc.addChatInputOutput": "フローにチャット入力またはチャット出力を追加してアクセスする",
   "misc.addChatInputOutputPlayground": "プレイグラウンドを使用するには、チャット入力またはチャット出力を追加してください",
@@ -2429,5 +2431,8 @@
   "sharing.file.level.write.desc": "View and edit this file.",
   "sharing.file.level.admin.desc": "View, edit, and delete this file.",
   "sharing.permission.for": "Permission for {{target}}",
-  "_translationNeeded.le1905EnterpriseSharing": "TODO(LE-1905): Review the English Enterprise sharing values in this locale."
+  "_translationNeeded.le1905EnterpriseSharing": "TODO(LE-1905): Review the English Enterprise sharing values in this locale.",
+  "slider.strict": "厳格",
+  "slider.permissive": "寛容",
+  "playground.workflowWarning": "ワークフローの警告"
 }

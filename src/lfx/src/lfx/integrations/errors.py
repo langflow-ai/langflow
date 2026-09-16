@@ -23,6 +23,8 @@ INTEGRATION_ERROR_CODES = frozenset(
         "rate-limited",
         "provider-unavailable",
         "action-unsupported",
+        "policy-blocked",
+        "incompatible-tool",
     }
 )
 
@@ -241,6 +243,29 @@ class ProviderUnavailableError(IntegrationError):
         )
 
 
+class IntegrationPolicyBlockedError(IntegrationError):
+    """The provider or action is denied by the deployment's integration policy.
+
+    Discovery hides blocked capabilities, so reaching this error means a saved
+    or crafted flow named an action the operator has not approved. The message
+    is deliberately non-specific about *why* a key is denied: the sanitized
+    client body carries the stable ``policy-blocked`` code, and the blocked key
+    itself is only surfaced through ``details`` for the flow owner.
+    """
+
+    code = "policy-blocked"
+
+    def __init__(self, *, provider: str | None = None, policy_key: str | None = None) -> None:
+        super().__init__(
+            "This integration action is not available under the current integration policy.",
+            hint="Ask an administrator to approve the integration or unblock the action.",
+            provider=provider,
+            http_status=403,
+            details={"policy_key": policy_key} if policy_key else None,
+        )
+        self.policy_key = policy_key
+
+
 class ActionUnsupportedError(IntegrationError):
     code = "action-unsupported"
 
@@ -249,6 +274,35 @@ class ActionUnsupportedError(IntegrationError):
             "The provider does not support this action.",
             provider=provider,
             http_status=http_status,
+        )
+
+
+class IncompatibleToolError(IntegrationError):
+    """A pinned MCP server no longer matches the tool contract a bundle pinned.
+
+    Raised instead of degrading to whatever the server currently offers: an added,
+    removed, renamed, or re-shaped tool, a server-version or ``tools/list`` digest
+    mismatch, or a call whose arguments fall outside the pinned schema. Not
+    retryable -- only a bundle release (or a provider rollback) can resolve it.
+    """
+
+    code = "incompatible-tool"
+
+    def __init__(
+        self,
+        message: str = "The MCP server does not match the tool contract pinned by this action.",
+        *,
+        provider: str | None = None,
+        hint: str | None = None,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        super().__init__(
+            message,
+            hint=hint or "Upgrade to a bundle release whose pinned tools match the server, then retry.",
+            provider=provider,
+            retryable=False,
+            safe_message="This action's provider tools changed and no longer match what the bundle pinned.",
+            details=details,
         )
 
 

@@ -1,4 +1,4 @@
-from langchain_community.retrievers.needle import NeedleRetriever
+from langchain_core.documents import Document
 from lfx.custom.custom_component.component import Component
 from lfx.io import IntInput, MessageTextInput, Output, SecretStrInput
 from lfx.schema.message import Message
@@ -71,14 +71,15 @@ class NeedleComponent(Component):
             raise ValueError(error_msg)
 
         try:
-            # Initialize the retriever and get documents
-            retriever = NeedleRetriever(
-                needle_api_key=self.needle_api_key,
+            from needle.v1 import NeedleClient
+
+            client = NeedleClient(api_key=self.needle_api_key)
+            results = client.collections.search(
                 collection_id=self.collection_id,
+                text=actual_query,
                 top_k=top_k,
             )
-
-            docs = retriever.get_relevant_documents(actual_query)
+            docs = [Document(page_content=result.content) for result in results]
 
             # Format the response
             if not docs:

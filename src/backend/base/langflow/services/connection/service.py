@@ -14,6 +14,7 @@ from lfx.integrations.errors import (
     ConnectionNotAuthorizedError,
     ConnectionUnresolvedError,
     IntegrationError,
+    IntegrationPolicyBlockedError,
     ScopeMissingError,
 )
 from lfx.integrations.models import (
@@ -220,6 +221,37 @@ def _access_policy(row: Connection, *, explicit_share_authorized: bool) -> Conne
     )
 
 
+async def enforce_integration_policy_for_provider(
+    provider_key: str,
+    *,
+    user_id: UUID | str | None,
+    capability_ids: frozenset[str] = frozenset(),
+    purpose: str = "use",
+) -> None:
+    """Deny a governed provider or action before any credential work happens.
+
+    Raised as an ``IntegrationPolicyBlockedError`` rather than the policy's own
+    ``PermissionError`` so the failure travels through the sanitized integration
+    error family and reaches clients as the stable ``policy-blocked`` code.
+    """
+    from lfx.services.integration_policy import (
+        IntegrationPolicyError,
+        IntegrationPolicyPurpose,
+        arequire_integration_actions,
+    )
+
+    try:
+        await arequire_integration_actions(
+            user_id=user_id,
+            provider_id=provider_key,
+            policy_keys=(),
+            capability_ids=capability_ids,
+            purpose=IntegrationPolicyPurpose(purpose),
+        )
+    except IntegrationPolicyError as exc:
+        raise IntegrationPolicyBlockedError(provider=provider_key, policy_key=exc.policy_key) from exc
+
+
 class DatabaseConnectionResolverService(BaseConnectionResolverService):
     """Resolve encrypted database connections while exposing only safe metadata."""
 
@@ -236,6 +268,10 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         user: User | UserRead,
         payload: ConnectionCreate,
     ) -> ConnectionRead:
+        # "Enable an integration within the operator ceiling" happens here:
+        # creating a connection for a provider outside the ceiling is refused
+        # before any credential material is encrypted or stored.
+        await enforce_integration_policy_for_provider(payload.provider_key, user_id=user.id)
         owner_id = user.id if payload.ownership_mode == ConnectionOwnershipMode.USER else None
         now = _utc_now()
         raw_credentials = _credential_payload(payload)
@@ -278,14 +314,54 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
         user: User | UserRead,
         provider_key: str | None = None,
     ) -> list[ConnectionRead]:
+        rows = await self._list_visible_rows(
+            session, user=user, provider_ids=frozenset({provider_key}) if provider_key is not None else None
+        )
+        secret_ids = (
+            set(
+                (
+                    await session.exec(
+                        select(ConnectionSecret.connection_id).where(
+                            col(ConnectionSecret.connection_id).in_([row.id for row in rows])
+                        )
+                    )
+                ).all()
+            )
+            if rows
+            else set()
+        )
+        return [self.to_read(row, has_credentials=row.id in secret_ids) for row in rows]
+
+    async def count_for_user(
+        self,
+        session: AsyncSession,
+        *,
+        user: User | UserRead,
+        provider_ids: frozenset[str],
+    ) -> dict[str, int]:
+        """Count visible connections using the same share decisions as listing."""
+        if not provider_ids:
+            return {}
+        counts: dict[str, int] = {}
+        for row in await self._list_visible_rows(session, user=user, provider_ids=provider_ids):
+            counts[row.provider_key] = counts.get(row.provider_key, 0) + 1
+        return counts
+
+    async def _list_visible_rows(
+        self,
+        session: AsyncSession,
+        *,
+        user: User | UserRead,
+        provider_ids: frozenset[str] | None,
+    ) -> list[Connection]:
         is_superuser = bool(getattr(user, "is_superuser", False))
         owner_clause = or_(
             Connection.owner_id == user.id,
             Connection.ownership_mode == ConnectionOwnershipMode.INSTANCE.value,
         )
         stmt = select(Connection)
-        if provider_key is not None:
-            stmt = stmt.where(Connection.provider_key == provider_key)
+        if provider_ids is not None:
+            stmt = stmt.where(col(Connection.provider_key).in_(provider_ids))
         authz = get_authorization_service()
         cross_user = await authz.is_enabled() and await authz.supports_cross_user_fetch()
         if not is_superuser:
@@ -312,20 +388,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
                 else item.owner_id,
                 act="read",
             )
-        secret_ids = (
-            set(
-                (
-                    await session.exec(
-                        select(ConnectionSecret.connection_id).where(
-                            col(ConnectionSecret.connection_id).in_([row.id for row in rows])
-                        )
-                    )
-                ).all()
-            )
-            if rows
-            else set()
-        )
-        return [self.to_read(row, has_credentials=row.id in secret_ids) for row in rows]
+        return rows
 
     async def get_for_user(
         self,
@@ -430,6 +493,15 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
 
     async def _get_access_policy(self, request: ConnectionResolutionRequest) -> ConnectionAccessPolicy:
         user_id = _principal_user_id(request.principal)
+        # The policy gate runs before candidate discovery: no connection row is
+        # read, locked, decrypted, or refreshed for a denied provider or action,
+        # and every entry point (canvas, /api/v1/run, webhooks, deployments)
+        # goes through this one resolver.
+        await enforce_integration_policy_for_provider(
+            request.ref.provider,
+            user_id=request.principal.user_id,
+            capability_ids=request.capability_ids,
+        )
         async with session_scope() as session:
             row = await self._owned_or_instance_row(session, request.ref, user_id)
             explicit_share = row is None
