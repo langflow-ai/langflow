@@ -7,7 +7,16 @@ from enum import Enum
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, StringConstraints, computed_field, model_validator
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    computed_field,
+    model_serializer,
+    model_validator,
+)
 
 from lfx.schema.validators import null_check_validator, uuid_validator
 
@@ -386,7 +395,20 @@ class PublicWorkflowRunRequest(BaseModel):
         return self
 
 
-class WorkflowExecutionResponse(BaseModel):
+class _CandidateResponse(BaseModel):
+    """Candidate identity is additive only for artifact-backed runs."""
+
+    candidate_digest: str | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        data = handler(self)
+        if self.candidate_digest is None:
+            data.pop("candidate_digest", None)
+        return data
+
+
+class WorkflowExecutionResponse(_CandidateResponse):
     """Synchronous workflow execution response."""
 
     flow_id: str
@@ -430,7 +452,7 @@ class WorkflowExecutionResponse(BaseModel):
         return len(self.errors) > 0
 
 
-class WorkflowJobResponse(BaseModel):
+class WorkflowJobResponse(_CandidateResponse):
     """Background job response."""
 
     job_id: JobId

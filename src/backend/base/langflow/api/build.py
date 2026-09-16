@@ -471,6 +471,8 @@ async def _generate_flow_events(
     expose_error_details: bool = False,
     persist_messages: bool = True,
     end_user_id: str | None = None,
+    runtime_candidate=None,
+    request_variables: dict | None = None,
 ) -> None:
     """Generate events for flow building process.
 
@@ -507,7 +509,13 @@ async def _generate_flow_events(
             # Why: re-dispatching here (resume/job_id still set) recurses to RecursionError; a missing
             # or expired checkpoint is unrecoverable, so surface a clean 404 instead.
             raise HTTPException(status_code=404, detail="Checkpoint expired or not found; cannot resume this run.")
-        graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
+        if checkpoint.candidate_digest is not None and (
+            checkpoint.job_id != str(job_id) or checkpoint.user_id != str(current_user.id)
+        ):
+            raise HTTPException(status_code=409, detail="Checkpoint identity does not match this run.")
+        graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store, runtime_candidate=runtime_candidate)
+        if runtime_candidate is not None and request_variables:
+            graph.context["request_variables"] = dict(request_variables)
         if not graph.user_id:
             graph.user_id = str(current_user.id)
         # F5: the in-memory end_user_id is lost when the graph is rebuilt from the durable
@@ -559,6 +567,10 @@ async def _generate_flow_events(
             # Create a fresh session for database operations
             async with session_scope() as fresh_session:
                 graph = await create_graph(fresh_session, flow_id_str, flow_name)
+            if runtime_candidate is not None:
+                runtime_candidate.bind(graph)
+                if request_variables:
+                    graph.context["request_variables"] = dict(request_variables)
 
             # Apply request tweaks to the built graph. The sync path applies
             # tweaks before Graph construction; the streaming/background path
@@ -941,13 +953,27 @@ async def _generate_flow_events(
             _build_job_svc = get_job_service()
             # Background path already created the job; re-creating it = UNIQUE violation.
             if await _build_job_svc.get_job_by_job_id(_build_run_id) is None:
+                candidate_kwargs = {}
+                if runtime_candidate is not None:
+                    from langflow.services.deployment_artifacts.harness_runtime import (
+                        CANDIDATE_KIND,
+                        candidate_checkpoint,
+                    )
+
+                    candidate_kwargs = {
+                        "initial_metadata": {"candidate_digest": runtime_candidate.digest},
+                        "initial_checkpoints": {CANDIDATE_KIND: await candidate_checkpoint(runtime_candidate)},
+                    }
                 await _build_job_svc.create_job(
                     job_id=_build_run_id,
                     flow_id=flow_id,
                     user_id=current_user.id,
                     job_type=JobType.WORKFLOW,
+                    **candidate_kwargs,
                 )
-    except Exception:  # noqa: BLE001
+    except Exception:
+        if runtime_candidate is not None:
+            raise
         await logger.awarning(
             "Failed to create workflow job for /build — memory base tracking disabled for flow %s",
             flow_id,
