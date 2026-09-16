@@ -51,7 +51,7 @@ class AnonRouterComponent(LCModelComponent):
         IntInput(name="max_tokens", display_name="Max Tokens", advanced=True),
     ]
 
-    def fetch_models(self, api_key: str | None = None) -> list[dict]:
+    def fetch_models(self, api_key: str | None = None) -> list[dict] | None:
         """Fetch the chat models enabled for an AnonRouter key.
 
         ``GET /v1/models`` requires the key: the origin routes it on the bearer and
@@ -60,7 +60,7 @@ class AnonRouterComponent(LCModelComponent):
         token = secret_value_to_str(api_key if api_key is not None else getattr(self, "api_key", None), strip=True)
         if not token:
             self.status = "Enter an AnonRouter API key to load the model list."
-            return []
+            return None
 
         try:
             response = httpx.get(
@@ -74,7 +74,7 @@ class AnonRouterComponent(LCModelComponent):
         except (httpx.RequestError, httpx.HTTPStatusError, ValueError) as e:
             self.status = f"Error fetching models: {e}"
             self.log(f"Error fetching models: {e}")
-            return []
+            return None
 
         return sorted(
             [
@@ -111,7 +111,7 @@ class AnonRouterComponent(LCModelComponent):
             return build_config
 
         models = self.fetch_models(field_value if field_name == "api_key" else None)
-        if not models:
+        if models is None:
             # Discovery failed or no key is set yet. Leave the saved selection alone
             # rather than clearing a flow that works; ``status`` carries the reason.
             return build_config
@@ -138,6 +138,9 @@ class AnonRouterComponent(LCModelComponent):
             "api_key": api_key,
             "base_url": BASE_URL,
             "temperature": self.temperature if self.temperature is not None else 0.7,
+            # Billing may already have occurred when a transient transport error is
+            # raised. Let the flow decide whether to retry instead of doing it here.
+            "max_retries": 0,
         }
 
         if self.max_tokens:

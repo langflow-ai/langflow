@@ -2,9 +2,14 @@ import type React from "react";
 import { forwardRef } from "react";
 import SvgAnonRouter from "./AnonRouterIcon";
 
-export const AnonRouterIcon = forwardRef<
-  SVGSVGElement,
-  React.PropsWithChildren<{}>
->((props, ref) => {
-  return <SvgAnonRouter ref={ref} {...props} />;
-});
+type AnonRouterIconProps = React.SVGProps<SVGSVGElement> & {
+  isDark?: boolean;
+};
+
+export const AnonRouterIcon = forwardRef<SVGSVGElement, AnonRouterIconProps>(
+  ({ isDark: _isDark, ...props }, ref) => {
+    return <SvgAnonRouter ref={ref} {...props} />;
+  },
+);
+
+AnonRouterIcon.displayName = "AnonRouterIcon";
