@@ -1,6 +1,6 @@
-import pytest
 from unittest.mock import MagicMock, patch
 
+import pytest
 from lfx.components.tools.opticparse_tool import (
     OpticParseToolComponent,
     normalize_target_url,
