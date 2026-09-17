@@ -54,12 +54,17 @@ async def test_project_download_uses_resolved_owner_namespace():
     session = AsyncMock()
     session.exec.side_effect = [project_result, flows_result]
 
-    response = await download_project_flows(
-        session=session,
-        project_id=project_id,
-        current_user=SimpleNamespace(id=actor_id),
-        project_owner_id=owner_id,
-    )
+    with patch(
+        "langflow.api.v1.projects_files._export_variable_names",
+        new_callable=AsyncMock,
+        return_value=frozenset(),
+    ) as export_variable_names:
+        response = await download_project_flows(
+            session=session,
+            project_id=project_id,
+            current_user=SimpleNamespace(id=actor_id),
+            project_owner_id=owner_id,
+        )
 
     assert response.status_code == 200
     project_sql = str(session.exec.await_args_list[0].args[0].compile(compile_kwargs={"literal_binds": True}))
@@ -67,6 +72,8 @@ async def test_project_download_uses_resolved_owner_namespace():
     assert owner_id.hex in project_sql
     assert owner_id.hex in flows_sql
     assert actor_id.hex not in project_sql
+    # Exported bindings are checked against the project owner's variables, not the actor's.
+    export_variable_names.assert_awaited_once_with(session, owner_id)
 
 
 async def test_shared_project_download_filters_flows_by_read_permission():
@@ -86,12 +93,19 @@ async def test_shared_project_download_filters_flows_by_read_permission():
     session = AsyncMock()
     session.exec.side_effect = [project_result, flows_result]
 
-    with patch(
-        "langflow.api.v1.projects_files.filter_visible_resources",
-        new_callable=AsyncMock,
-        create=True,
-        return_value=[allowed_flow],
-    ) as filter_visible:
+    with (
+        patch(
+            "langflow.api.v1.projects_files.filter_visible_resources",
+            new_callable=AsyncMock,
+            create=True,
+            return_value=[allowed_flow],
+        ) as filter_visible,
+        patch(
+            "langflow.api.v1.projects_files._export_variable_names",
+            new_callable=AsyncMock,
+            return_value=frozenset(),
+        ),
+    ):
         response = await download_project_flows(
             session=session,
             project_id=project_id,
