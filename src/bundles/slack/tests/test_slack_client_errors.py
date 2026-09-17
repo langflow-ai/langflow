@@ -180,6 +180,31 @@ def test_slack_http_200_never_becomes_the_error_status(
     assert error.http_status == expected_status
 
 
+@pytest.mark.parametrize("code", ["invalid_auth", "missing_scope", "ratelimited", "no_text", "restricted_action"])
+@pytest.mark.parametrize("status", [500, 502, 503])
+def test_a_slack_5xx_is_provider_unavailable_whatever_the_body_says(code: str, status: int) -> None:
+    """A server-side failure is not evidence about the token, the scopes, or the inputs."""
+    error = normalize_slack_error(_slack_api_error(code, status=status))
+
+    assert isinstance(error, ProviderUnavailableError)
+    assert error.http_status == status
+    assert error.retryable is True
+
+
+async def test_a_5xx_auth_code_does_not_spend_the_reactive_re_resolve(transport: SlackTransport) -> None:
+    transport.enqueue(load_fixture("error_invalid_auth"), status_code=503)
+    transport.enqueue(load_fixture("chat_postmessage"))
+    resolver = FakeResolver(tokens=["xoxp-still-valid", "xoxp-unneeded"])  # pragma: allowlist secret
+    client = SlackClient(_lease(resolver))
+
+    with pytest.raises(ProviderUnavailableError) as raised:
+        await client.call("chat_postMessage", channel="C0SLACKDEMO", text="hi")
+
+    assert raised.value.http_status == 503
+    assert len(transport.calls) == 1
+    assert len(resolver.requests) == 1
+
+
 def test_the_error_code_families_do_not_overlap() -> None:
     """The normalizer checks families in order, so an overlap would silently shadow a code."""
     families = {

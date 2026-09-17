@@ -68,6 +68,7 @@ DEFAULT_TIMEOUT_SECONDS = 30
 HTTP_BAD_REQUEST = 400
 HTTP_TOO_MANY_REQUESTS = 429
 HTTP_UNAUTHORIZED = 401
+HTTP_SERVER_ERROR = 500
 
 # Slack ``ok:false`` error codes that mean "this token will never work again";
 # the connection must be reconnected (or, for a rotated token, re-resolved).
@@ -254,6 +255,11 @@ def normalize_slack_error(exc: BaseException) -> IntegrationError | None:
     data = getattr(response, "data", None)
     code = data.get("error") if isinstance(data, dict) else None
 
+    # ``slack_sdk`` parses a JSON body whatever the status, so a 5xx can still
+    # carry a code. A server-side failure says nothing about the token, scopes,
+    # or inputs: an ``invalid_auth`` here must not spend the one re-resolve.
+    if status is not None and status >= HTTP_SERVER_ERROR:
+        return ProviderUnavailableError(provider=PROVIDER_ID, http_status=status)
     if code in _AUTH_ERROR_CODES or raw_status == HTTP_UNAUTHORIZED:
         return AuthExpiredError(provider=PROVIDER_ID, http_status=status or HTTP_UNAUTHORIZED)
     if code == "missing_scope":
