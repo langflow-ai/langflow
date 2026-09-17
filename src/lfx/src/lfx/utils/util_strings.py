@@ -1,15 +1,14 @@
 import contextlib
 import re
-from urllib.parse import quote
+from urllib.parse import quote, unquote_plus
 
 from lfx.serialization import constants
 
 _CREDENTIAL_MASK = "***"
 _URL_SCHEME = re.compile(r"^[a-z][a-z0-9+.\-]*://", re.IGNORECASE)
 # Query parameters that carry secrets, e.g. libpq's ``password`` and ``sslpassword``.
-_SENSITIVE_QUERY_KEYWORDS = r"pass|pwd|secret|token|key"
-_SENSITIVE_QUERY_KEY = re.compile(_SENSITIVE_QUERY_KEYWORDS, re.IGNORECASE)
-_SENSITIVE_QUERY_PARAM = re.compile(rf"([?&][^=&#]*(?:{_SENSITIVE_QUERY_KEYWORDS})[^=&#]*)=[^&#]*", re.IGNORECASE)
+_SENSITIVE_QUERY_KEY = re.compile(r"pass|pwd|secret|token|key", re.IGNORECASE)
+_QUERY_PARAM = re.compile(r"([?&][^=&#]*)=[^&#]*")
 
 
 def escape_like_pattern(value: str) -> str:
@@ -95,13 +94,21 @@ def _mask_unparsed_database_url(url: str) -> str:
     Everything between the scheme (when present) and the last ``@`` is treated as
     userinfo, because unescaped passwords may themselves contain ``@``, ``:`` or ``/``.
     """
-    masked = _SENSITIVE_QUERY_PARAM.sub(rf"\1={_CREDENTIAL_MASK}", url)
+    masked = _QUERY_PARAM.sub(_mask_sensitive_query_value, url)
     scheme_match = _URL_SCHEME.match(masked)
     scheme = scheme_match.group(0) if scheme_match else ""
     _userinfo, at_sign, host_and_path = masked[len(scheme) :].rpartition("@")
     if not at_sign:
         return masked
     return f"{scheme}{_CREDENTIAL_MASK}:{_CREDENTIAL_MASK}@{host_and_path}"
+
+
+def _mask_sensitive_query_value(match: re.Match[str]) -> str:
+    """Mask a query value whose key names a secret once decoded (``p%61ssword`` is ``password``)."""
+    key = match.group(1)
+    if not _SENSITIVE_QUERY_KEY.search(unquote_plus(key)):
+        return match.group(0)
+    return f"{key}={_CREDENTIAL_MASK}"
 
 
 def is_valid_database_url(url: str) -> bool:

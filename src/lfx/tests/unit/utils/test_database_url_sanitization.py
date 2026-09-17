@@ -50,6 +50,11 @@ REJECTED_DATABASE_URLS = [
         id="password-in-query",
     ),
     pytest.param(
+        "postgresql://db:notaport/lf?p%61ssword=hunter2",  # pragma: allowlist secret
+        ["hunter2"],  # pragma: allowlist secret
+        id="percent-encoded-query-key",
+    ),
+    pytest.param(
         "postgresql+psycopg://myuser:mysecretpassword@127.0.0.1::5432/mydb?sslmode=disable",  # pragma: allowlist secret
         ["myuser", "mysecretpassword"],  # pragma: allowlist secret
         id="double-colon-port",
@@ -244,6 +249,10 @@ class TestSanitizeDatabaseUrl:
         [
             "postgres://db.example/lf?user=u&password=hunter2&sslmode=disable",  # pragma: allowlist secret
             "notadialect://db.example:bad/lf?sslmode=disable&sslpassword=hunter2",  # pragma: allowlist secret
+            # Percent-encoded keys that decode to a sensitive name, on both parse paths.
+            "postgres://db.example/lf?sslmode=disable&p%61ssword=hunter2",  # pragma: allowlist secret
+            "postgresql://db.example:notaport/lf?p%61ssword=hunter2&sslmode=disable",  # pragma: allowlist secret
+            "postgresql://db.example:notaport/lf?sslmode=disable&sslp%61ssw%6Frd=hunter2",  # pragma: allowlist secret
         ],
     )
     def test_should_mask_sensitive_query_parameters(self, url: str):
@@ -252,6 +261,12 @@ class TestSanitizeDatabaseUrl:
 
         assert "hunter2" not in sanitized  # pragma: allowlist secret
         assert "sslmode=disable" in sanitized
+
+    def test_should_keep_encoded_query_key_when_masking_unparsed_url(self):
+        """The fallback masks the value of an encoded sensitive key but leaves the key as written."""
+        sanitized = sanitize_database_url("postgresql://db:notaport/lf?p%61ssword=hunter2")  # pragma: allowlist secret
+
+        assert sanitized == "postgresql://db:notaport/lf?p%61ssword=***"
 
     def test_should_handle_empty_url(self):
         """Test that empty URL returns empty string."""
