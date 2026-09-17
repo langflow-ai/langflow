@@ -8,12 +8,14 @@ from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
 from lfx.projects import all_project_types
+from lfx.projects.baselines import build_slot_baseline
+from lfx.projects.bindings import flow_revision, instruction_outputs
 from lfx.services.mcp_composer.service import MCPComposerService
 from lfx.utils.util_strings import escape_like_pattern
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import literal, null, or_, update
 from sqlalchemy.orm import selectinload
-from sqlmodel import select
+from sqlmodel import col, select
 
 from langflow.api.utils import (
     CurrentActiveUser,
@@ -352,6 +354,123 @@ async def read_project_types(
         )
         for project_type in all_project_types()
     ]
+
+
+async def _instructions_project(session: DbSession, current_user: User, project_id: UUID, field_name: str) -> Folder:
+    """Keep baseline and draft validation scoped like the field's output picker."""
+    project = (
+        await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
+    ).first()
+    if project is None:
+        raise HTTPException(404, "Project not found")
+    await ensure_project_permission(
+        current_user,
+        ProjectAction.READ,
+        project_id=project.id,
+        project_user_id=project.user_id,
+        workspace_id=project.workspace_id,
+    )
+    if project.project_type != "agent-harness" or field_name != "system_prompt":
+        raise HTTPException(422, "Only harness Instructions currently supports a flow binding.")
+    return project
+
+
+class InstructionsBaselineRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    initial_value: str | None = None
+
+
+class InstructionsValidationRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    data: dict
+
+
+@router.post("/{project_id}/flow-baseline")
+async def prepare_project_flow_baseline(
+    *,
+    session: DbSession,
+    project_id: UUID,
+    current_user: CurrentActiveUser,
+    request: InstructionsBaselineRequest,
+    field_name: str = "system_prompt",
+):
+    """Prepare a working template. Persist it through the normal authorized flow creation API."""
+    project = await _instructions_project(session, current_user, project_id, field_name)
+    project_type = next(candidate for candidate in all_project_types() if candidate.name == project.project_type)
+    field = next(field for field in project_type.fields if field.name == field_name)
+    reference = field.slot_definition.default_flow_ref if field.slot_definition else None
+    if not reference:
+        raise HTTPException(422, "This field does not yet provide a working baseline.")
+    return {**build_slot_baseline(reference, request.initial_value), "folder_id": str(project.id)}
+
+
+@router.post("/{project_id}/flow-outputs/validate")
+async def validate_project_flow_outputs(
+    *,
+    session: DbSession,
+    project_id: UUID,
+    current_user: CurrentActiveUser,
+    request: InstructionsValidationRequest,
+    field_name: str = "system_prompt",
+):
+    """Inspect an unsaved graph's contract, without running or persisting its code."""
+    await _instructions_project(session, current_user, project_id, field_name)
+    try:
+        outputs = instruction_outputs(request.data)
+    except (ValueError, TypeError, KeyError, AttributeError):
+        # Saved code and arbitrary payload content must never leak through parser exceptions.
+        return {
+            "outputs": [],
+            "valid": False,
+            "reason": "Configure required inputs and connect a terminal text output.",
+        }
+    return {
+        "outputs": outputs,
+        "valid": bool(outputs),
+        "reason": None if outputs else "Add a System Prompt Builder with an unconnected Instructions output.",
+    }
+
+
+@router.get("/{project_id}/flow-outputs")
+async def read_project_flow_outputs(
+    *,
+    session: DbSession,
+    project_id: UUID,
+    current_user: CurrentActiveUser,
+    field_name: str = "system_prompt",
+):
+    """List compatible local outputs without executing any saved component code."""
+    project = await _instructions_project(session, current_user, project_id, field_name)
+    flows = (
+        await session.exec(
+            select(Flow).where(
+                Flow.folder_id == project_id, Flow.user_id == current_user.id, col(Flow.is_component).is_(False)
+            )
+        )
+    ).all()
+    flows = await filter_visible_resources(
+        current_user,
+        resource_type="flow",
+        candidates=list(flows),
+        domain_extractor=lambda flow: _resolve_authz_domain(project.workspace_id, flow.folder_id),
+        owner_extractor=lambda flow: flow.user_id,
+        act=FlowAction.READ,
+    )
+    candidates = []
+    for flow in flows:
+        try:
+            outputs = instruction_outputs(flow.data or {})
+            revision = flow_revision(flow.data or {})
+        except (ValueError, TypeError, KeyError):
+            continue
+        candidates.extend(
+            {"flow_id": str(flow.id), "flow_name": flow.name, "revision": revision, **output} for output in outputs
+        )
+    return sorted(
+        candidates, key=lambda candidate: (candidate["flow_name"], candidate["node_id"], candidate["output_name"])
+    )
 
 
 @router.get("/", response_model=list[FolderListRead], status_code=200)

@@ -1,6 +1,6 @@
 /* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: DESIGN.md
  * pre-emit critique: P4 H4 E4 S5 R5 V4 · designed-as-app */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
@@ -12,15 +12,25 @@ import { usePatchFolders } from "@/controllers/API/queries/folders/use-patch-fol
 import { getCustomParameterTitle } from "@/customization/components/custom-parameter";
 import useAlertStore from "@/stores/alertStore";
 import type { APIClassType, InputFieldType } from "@/types/api";
-import type { ProjectConfig, ProjectSaveResult } from "../../entities";
+import type {
+  FlowBinding,
+  ProjectConfig,
+  ProjectSaveResult,
+  ProjectTypeType,
+} from "../../entities";
 import {
   AgentFlowPicker,
   agentCandidates,
   defaultAgent,
 } from "./components/agent-flow-picker";
 import { HarnessSummary } from "./components/harness-summary";
+import { InstructionsFlowPicker } from "./components/instructions-flow-picker";
 import { LongTextField } from "./components/long-text-field";
+import { ProjectChoiceField } from "./components/project-choice-field";
 import { ProjectFlowPicker } from "./components/project-flow-picker";
+
+import { editorDraft } from "./editor-draft";
+import { isProjectFieldVisible } from "./field-visibility";
 
 interface HarnessPageProps {
   projectId: string;
@@ -84,12 +94,32 @@ const HarnessPage = ({
     if (projectType === "agent-harness" && projectConfig?.agent_flow_id) {
       defaults.agent_flow_id = projectConfig.agent_flow_id;
     }
+    if (projectConfig?.flow_bindings)
+      defaults.flow_bindings = projectConfig.flow_bindings;
     return defaults;
   }, [type, projectConfig, projectType]);
 
-  const [edits, setEdits] = useState<ProjectConfig>({});
+  const [edits, setEdits] = useState<ProjectConfig>(() =>
+    editorDraft.get(projectId),
+  );
+  useEffect(() => {
+    editorDraft.clear(projectId);
+  }, [projectId]);
+  useEffect(() => {
+    if (
+      new URLSearchParams(window.location.search).get("field") ===
+        "system_prompt" &&
+      type
+    ) {
+      document
+        .getElementById("harness-field-system_prompt")
+        ?.scrollIntoView?.({ block: "center" });
+      document.getElementById("harness-field-system_prompt")?.focus();
+    }
+  }, [type]);
   const [lastSave, setLastSave] = useState<ProjectSaveResult | null>(null);
   const values = { ...savedValues, ...edits };
+  const bindings = (values.flow_bindings ?? {}) as Record<string, FlowBinding>;
   const isDirty = Object.keys(edits).some(
     (fieldName) =>
       JSON.stringify(edits[fieldName]) !==
@@ -111,14 +141,18 @@ const HarnessPage = ({
 
   // One group per section, in the order the type's fields first name them.
   const sections = useMemo(() => {
-    const grouped = new Map<string, [string, Partial<InputFieldType>][]>();
+    const grouped = new Map<
+      string,
+      [string, ProjectTypeType["template"][string]][]
+    >();
     for (const [fieldName, field] of Object.entries(type?.template ?? {})) {
+      if (!isProjectFieldVisible(field, values)) continue;
       const section = (field as { section?: string })?.section ?? "";
       if (!grouped.has(section)) grouped.set(section, []);
       grouped.get(section)?.push([fieldName, field]);
     }
     return [...grouped.entries()];
-  }, [type]);
+  }, [type, values]);
 
   const toolsFieldName = useMemo(
     () =>
@@ -162,6 +196,7 @@ const HarnessPage = ({
           ([fieldName, field]) =>
             fieldName !== toolsFieldName &&
             fieldName !== modelFieldName &&
+            isProjectFieldVisible(field, values) &&
             // A long free-text field says nothing useful at a glance.
             !field?.multiline,
         )
@@ -171,7 +206,8 @@ const HarnessPage = ({
           value:
             values[fieldName] === undefined || values[fieldName] === ""
               ? "—"
-              : String(values[fieldName]),
+              : (field.option_labels?.[String(values[fieldName])] ??
+                String(values[fieldName])),
         })),
     [type, toolsFieldName, modelFieldName, values],
   );
@@ -308,7 +344,11 @@ const HarnessPage = ({
       </div>
 
       <div className="grid min-w-0 items-start gap-8 py-6 xl:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="flex min-w-0 flex-col gap-6">
+        <fieldset
+          disabled={isPending}
+          inert={isPending}
+          className="flex min-w-0 flex-col gap-6"
+        >
           {projectType === "agent-harness" && (
             <AgentFlowPicker
               flows={flows}
@@ -343,6 +383,8 @@ const HarnessPage = ({
               {fields.map(([fieldName, field]) => (
                 <div
                   key={fieldName}
+                  id={`harness-field-${fieldName}`}
+                  tabIndex={-1}
                   className="flex flex-col gap-1.5"
                   data-testid={`harness-field-${fieldName}`}
                 >
@@ -361,19 +403,43 @@ const HarnessPage = ({
 
                   {(field as { renders?: string })?.renders ===
                   LONG_TEXT_WIDGET ? (
-                    <LongTextField
-                      name={fieldName}
-                      label={field?.display_name ?? fieldName}
-                      disabled={isPending}
-                      value={String(values[fieldName] ?? "")}
-                      placeholder={field?.placeholder ?? ""}
-                      onChange={(next) =>
-                        setEdits((current) => ({
-                          ...current,
-                          [fieldName]: next,
-                        }))
-                      }
-                    />
+                    <>
+                      {!bindings[fieldName] && (
+                        <LongTextField
+                          name={fieldName}
+                          label={field?.display_name ?? fieldName}
+                          disabled={isPending}
+                          value={String(values[fieldName] ?? "")}
+                          placeholder={field?.placeholder ?? ""}
+                          onChange={(next) =>
+                            setEdits((current) => ({
+                              ...current,
+                              [fieldName]: next,
+                            }))
+                          }
+                        />
+                      )}
+                      {(field as { supports_flow_binding?: boolean })
+                        .supports_flow_binding && (
+                        <InstructionsFlowPicker
+                          projectId={projectId}
+                          fieldName={fieldName}
+                          agentId={selectedAgentId}
+                          value={bindings[fieldName]}
+                          initialValue={String(values[fieldName] ?? "")}
+                          onOpen={() => editorDraft.keep(projectId, edits)}
+                          disabled={isPending}
+                          onChange={(binding) =>
+                            setEdits((current) => {
+                              const next = { ...bindings };
+                              if (binding) next[fieldName] = binding;
+                              else delete next[fieldName];
+                              return { ...current, flow_bindings: next };
+                            })
+                          }
+                        />
+                      )}
+                    </>
                   ) : (field as { renders?: string })?.renders ===
                     PROJECT_FLOWS_WIDGET ? (
                     <ProjectFlowPicker
@@ -390,6 +456,20 @@ const HarnessPage = ({
                         setEdits((current) => ({
                           ...current,
                           [fieldName]: picked,
+                        }))
+                      }
+                    />
+                  ) : field.option_labels ? (
+                    <ProjectChoiceField
+                      name={fieldName}
+                      label={field.display_name ?? fieldName}
+                      options={field.option_labels}
+                      value={String(values[fieldName] ?? "")}
+                      disabled={isPending}
+                      onChange={(value) =>
+                        setEdits((current) => ({
+                          ...current,
+                          [fieldName]: value,
                         }))
                       }
                     />
@@ -412,20 +492,27 @@ const HarnessPage = ({
                       inspectionPanel={false}
                       handleNodeClass={() => {}}
                       nodeClass={syntheticNodeClass}
-                      disabled={isPending}
+                      // Canvas widgets use `disabled` for a connected input and may clear
+                      // its value. The fieldset handles temporary form save restrictions.
+                      disabled={false}
                       placeholder={field?.placeholder ?? ""}
                       isToolMode={false}
                       // No flow is open here, so provider credentials scope to the project.
                       providerScope={{ projectId }}
                     />
                   )}
+                  {field.info && !(field as { renders?: string }).renders && (
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      {field.info}
+                    </p>
+                  )}
                 </div>
               ))}
             </section>
           ))}
-        </div>
+        </fieldset>
 
-        <div className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-24">
+        <div className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-32">
           <HarnessSummary
             displayName={type.display_name}
             icon={type.icon}

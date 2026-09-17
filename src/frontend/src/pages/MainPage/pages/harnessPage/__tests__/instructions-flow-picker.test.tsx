@@ -1,0 +1,260 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { FlowBinding, FlowOutputChoice } from "@/pages/MainPage/entities";
+import { InstructionsFlowPicker } from "../components/instructions-flow-picker";
+
+let choices: FlowOutputChoice[];
+let isError = false;
+let isLoading = false;
+const refetch = jest.fn();
+const createFlow = jest.fn();
+jest.mock(
+  "@/controllers/API/queries/folders/use-create-instructions-flow",
+  () => ({ useCreateInstructionsFlow: () => createFlow }),
+);
+jest.mock(
+  "@/controllers/API/queries/folders/use-get-project-flow-outputs",
+  () => ({
+    useGetProjectFlowOutputsQuery: () => ({
+      data: choices,
+      isError,
+      isLoading,
+      refetch,
+    }),
+  }),
+);
+jest.mock("react-router-dom", () => ({
+  Link: ({
+    to,
+    children,
+    onClick,
+  }: {
+    to: string;
+    children: React.ReactNode;
+    onClick?: () => void;
+  }) => (
+    <a href={to} onClick={onClick}>
+      {children}
+    </a>
+  ),
+}));
+// Exercise selection semantics with a native control. The real Radix picker is checked in-browser.
+jest.mock("@/components/ui/select", () => ({
+  Select: ({
+    value,
+    disabled,
+    onValueChange,
+    children,
+  }: {
+    value: string;
+    disabled: boolean;
+    onValueChange: (value: string) => void;
+    children: React.ReactNode;
+  }) => (
+    <select
+      aria-label="Instructions output"
+      value={value}
+      disabled={disabled}
+      onChange={(event) => onValueChange(event.target.value)}
+    >
+      <option value="">Choose</option>
+      {children}
+    </select>
+  ),
+  SelectTrigger: () => null,
+  SelectValue: () => null,
+  SelectContent: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  SelectItem: ({
+    value,
+    disabled,
+    children,
+  }: {
+    value: string;
+    disabled?: boolean;
+    children: React.ReactNode;
+  }) => (
+    <option value={value} disabled={disabled}>
+      {children}
+    </option>
+  ),
+}));
+
+const binding: FlowBinding = {
+  flow_id: "source",
+  node_id: "output",
+  output_name: "instructions",
+  revision: "reviewed",
+  version_id: "snapshot",
+};
+const key = (value: FlowBinding) =>
+  JSON.stringify([value.flow_id, value.node_id, value.output_name]);
+const setup = (
+  props: Partial<React.ComponentProps<typeof InstructionsFlowPicker>> = {},
+) => {
+  const onChange = jest.fn();
+  render(
+    <InstructionsFlowPicker
+      projectId="project"
+      fieldName="system_prompt"
+      agentId="agent"
+      disabled={false}
+      onChange={onChange}
+      {...props}
+    />,
+  );
+  return onChange;
+};
+
+beforeEach(() => {
+  choices = [
+    {
+      ...binding,
+      flow_name: "Research instructions",
+      display_name: "Builder · Instructions",
+    },
+  ];
+  isError = false;
+  isLoading = false;
+  jest.clearAllMocks();
+});
+
+it("requires selecting an explicit output and strips presentation metadata", () => {
+  choices.push({
+    ...choices[0],
+    node_id: "second",
+    display_name: "Another output",
+  });
+  const onChange = setup();
+  fireEvent.click(screen.getByRole("button", { name: /Use a flow instead/i }));
+  expect(onChange).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByRole("combobox"), {
+    target: { value: key(choices[1]) },
+  });
+  expect(onChange).toHaveBeenCalledWith({
+    flow_id: "source",
+    node_id: "second",
+    output_name: "instructions",
+    revision: "reviewed",
+  });
+});
+
+it("requires an agent and respects pending saves", () => {
+  setup({ agentId: undefined });
+  expect(
+    screen.getByRole("button", { name: /Use a flow instead/i }),
+  ).toBeDisabled();
+});
+
+it("opens the selected source and allows returning to the form", () => {
+  const onChange = setup({ value: binding });
+  expect(screen.getByRole("link")).toHaveAttribute(
+    "href",
+    "/flow/source?harnessField=system_prompt",
+  );
+  fireEvent.click(screen.getByRole("button", { name: /Use the form value/i }));
+  expect(onChange).toHaveBeenCalledWith(undefined);
+});
+
+it("makes a changed definition an explicit update", () => {
+  choices[0].revision = "changed";
+  const onChange = setup({ value: binding });
+  expect(onChange).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: /Update binding/i }));
+  expect(onChange).toHaveBeenCalledWith({
+    flow_id: "source",
+    node_id: "output",
+    output_name: "instructions",
+    revision: "changed",
+  });
+});
+
+it("retains an unavailable binding until the user replaces or removes it", () => {
+  choices = [];
+  const onChange = setup({ value: binding });
+  expect(screen.getByRole("status")).toHaveTextContent(
+    /choose another output|form value/i,
+  );
+  expect(onChange).not.toHaveBeenCalled();
+  expect(
+    screen.getByRole("button", { name: /Use the form value/i }),
+  ).toBeEnabled();
+});
+
+it("offers retry for a discovery failure", () => {
+  isError = true;
+  setup({ value: binding });
+  expect(screen.getByRole("alert")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: /Retry/i }));
+  expect(refetch).toHaveBeenCalledTimes(1);
+});
+
+it("disables binding changes while saving", () => {
+  choices[0].revision = "changed";
+  setup({ value: binding, disabled: true });
+  expect(screen.getByRole("combobox")).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: /Use the form value/i }),
+  ).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: /Update binding/i }),
+  ).toBeDisabled();
+});
+
+it("creates from current form text, selects its output, and keeps a path back", async () => {
+  createFlow.mockResolvedValue({ id: "created" });
+  refetch.mockResolvedValue({ data: [{ ...choices[0], flow_id: "created" }] });
+  const onOpen = jest.fn();
+  const onChange = setup({
+    value: binding,
+    initialValue: "Unsaved instructions",
+    onOpen,
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: /Create Instructions Flow/i }),
+  );
+  await waitFor(() =>
+    expect(onChange).toHaveBeenCalledWith({
+      flow_id: "created",
+      node_id: "output",
+      output_name: "instructions",
+      revision: "reviewed",
+    }),
+  );
+  expect(createFlow).toHaveBeenCalledWith(
+    "project",
+    "system_prompt",
+    "Unsaved instructions",
+  );
+  expect(screen.getByText(/Flow created/i)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("link", { name: "Open the new flow" }));
+  expect(onOpen).toHaveBeenCalled();
+});
+
+it("keeps the selected binding when creation fails", async () => {
+  createFlow.mockRejectedValue(new Error("denied"));
+  const onChange = setup({ value: binding });
+  fireEvent.click(
+    screen.getByRole("button", { name: /Create Instructions Flow/i }),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    /Could not create/,
+  );
+  expect(onChange).not.toHaveBeenCalled();
+});
+
+it("keeps a successful creation accessible when output refresh fails", async () => {
+  createFlow.mockResolvedValue({ id: "created" });
+  refetch.mockRejectedValue(new Error("offline"));
+  const onChange = setup({ value: binding });
+  fireEvent.click(
+    screen.getByRole("button", { name: /Create Instructions Flow/i }),
+  );
+  const link = await screen.findByRole("link", { name: "Open the new flow" });
+  expect(link).toHaveAttribute(
+    "href",
+    "/flow/created?harnessField=system_prompt",
+  );
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(onChange).not.toHaveBeenCalled();
+});

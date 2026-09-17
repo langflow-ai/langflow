@@ -8,8 +8,9 @@ the form safe to save with nothing filled in.
 from __future__ import annotations
 
 from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
-from lfx.inputs.inputs import DropdownInput, IntInput, ModelInput, MultilineInput, StrInput
-from lfx.projects.builtin_slots import COMPACTOR, CONTEXT_MANAGER, SYSTEM_PROMPT_BUILDER, TOOL
+from lfx.base.agents.harness import harness_runtime_inputs
+from lfx.inputs.inputs import IntInput, ModelInput, MultilineInput, StrInput
+from lfx.projects.builtin_slots import COMPACTOR, CONTEXT_MANAGER, PERMISSION_GATE, SYSTEM_PROMPT_BUILDER, TOOL
 from lfx.projects.registry import register_project_type
 from lfx.projects.schema import FieldTarget, ProjectType, ProjectTypeField
 
@@ -39,6 +40,7 @@ AGENT_HARNESS = register_project_type(
                 name="system_prompt",
                 section="Instructions",
                 slot_definition=SYSTEM_PROMPT_BUILDER,
+                supports_flow_binding=True,
                 # The canvas renders a multiline field as one line plus a modal, which suits a
                 # node. Instructions are the main thing written here, so the page gives them a
                 # real editor instead.
@@ -88,29 +90,41 @@ AGENT_HARNESS = register_project_type(
             ProjectTypeField(
                 name="n_messages",
                 section="Runtime",
-                slot_definition=CONTEXT_MANAGER,
                 writes_to=FieldTarget("Agent", "n_messages"),
                 input=IntInput(
                     name="n_messages",
-                    display_name="Memory",
-                    info="How many past messages the agent sees.",
+                    display_name="History messages",
+                    info="Past messages loaded from memory. Context preparation selects what reaches each model call.",
                     value=100,
                 ),
             ),
-            ProjectTypeField(
-                name="compaction",
-                section="Runtime",
-                slot_definition=COMPACTOR,
-                # No write-through target: nothing in the runtime consumes this yet.
-                # langchain ships SummarizationMiddleware unused, so the only honest option
-                # today is off. See the harness notes in the design docs.
-                input=DropdownInput(
-                    name="compaction",
-                    display_name="Compaction",
-                    info="Summarise old turns when the conversation grows. Not wired up yet.",
-                    options=["off"],
-                    value="off",
-                ),
+            *(
+                ProjectTypeField(
+                    name=inp.name,
+                    section="Runtime",
+                    input=inp,
+                    writes_to=FieldTarget("Agent", inp.name),
+                    option_labels={
+                        "context_strategy": {"all": "All loaded messages", "recent_turns": "Recent complete turns"},
+                        "compaction": {"off": "Off", "summarize": "Summarize older messages"},
+                        "tool_policy": {
+                            "tool_defaults": "Use tool settings",
+                            "ask": "Ask before each call",
+                            "deny": "Block all tools",
+                        },
+                    }.get(inp.name, {}),
+                    show_when={
+                        "context_turns": {"context_strategy": "recent_turns"},
+                        "compaction_trigger_tokens": {"compaction": "summarize"},
+                        "compaction_keep_messages": {"compaction": "summarize"},
+                    }.get(inp.name, {}),
+                    slot_definition={
+                        "context_strategy": CONTEXT_MANAGER,
+                        "compaction": COMPACTOR,
+                        "tool_policy": PERMISSION_GATE,
+                    }.get(inp.name),
+                )
+                for inp in harness_runtime_inputs()
             ),
         ),
     )

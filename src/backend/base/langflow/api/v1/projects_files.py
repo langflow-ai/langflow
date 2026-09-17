@@ -5,14 +5,17 @@ Extracted from projects.py to reduce file size and separate file I/O concerns.
 
 import io
 import zipfile
+from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Annotated
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import orjson
 from fastapi import File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
+from lfx.projects.bindings import BINDING_ORIGIN, FlowBinding, flow_revision, validate_instruction_binding
+from lfx.projects.tools import TOOL_ORIGIN
 from sqlmodel import select
 
 from langflow.api.utils import (
@@ -39,6 +42,7 @@ from langflow.services.creation_hooks import (
 )
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
+from langflow.services.database.models.folder.config_writer import config_from_request, write_project_config_to_flows
 from langflow.services.database.models.folder.model import (
     Folder,
     FolderCreate,
@@ -274,6 +278,7 @@ async def upload_project_flows(
     # Generate unique names, tracking names already assigned within this batch
     # to avoid collisions when multiple flows would get the same generated name
     used_names_in_batch: set[str] = set()
+    original_names = {str(flow.id): flow.name for flow in flow_list.flows}
     for flow in flow_list.flows:
         flow_name = await generate_unique_flow_name(flow.name, current_user.id, session)
         # Ensure the name is also unique within the current batch;
@@ -290,4 +295,68 @@ async def upload_project_flows(
         flow.folder_id = new_project.id
         flow.workspace_id = new_project.workspace_id
 
-    return await create_flows(session=session, flow_list=flow_list, current_user=current_user)
+    # A harness binding refers to both project and flow identities. Import it as a new
+    # composition, including when the original project still exists in this account.
+    bindings = (new_project.project_config or {}).get("flow_bindings", {})
+    if new_project.project_type == "agent-harness" and not isinstance(bindings, dict):
+        raise HTTPException(422, "Imported flow bindings must be an object.")
+    has_bindings = new_project.project_type == "agent-harness" and bool(bindings)
+    if has_bindings:
+        id_map = {str(flow.id): str(uuid4()) for flow in flow_list.flows if flow.id is not None}
+        by_original_id = {str(flow.id): flow for flow in flow_list.flows}
+        if len(id_map) != len(flow_list.flows):
+            raise HTTPException(422, "Every bound project flow must have a unique ID in the archive.")
+        by_original_name = {name: flow_id for flow_id, name in original_names.items()}
+        config = config_from_request(new_project.project_config) or {}
+        for binding in config["flow_bindings"].values():
+            try:
+                reviewed = FlowBinding.model_validate(binding)
+                source = by_original_id[reviewed.flow_id]
+                validate_instruction_binding(source.data or {}, reviewed)
+            except (ValueError, KeyError, TypeError) as exc:
+                raise HTTPException(422, f"The imported Instructions binding is invalid: {exc}") from exc
+        if config.get("agent_flow_id") in id_map:
+            config["agent_flow_id"] = id_map[config["agent_flow_id"]]
+        if isinstance(config.get("tools"), list):
+            config["tools"] = [id_map.get(value, value) for value in config["tools"]]
+        for flow in flow_list.flows:
+            if str(flow.id) in id_map:
+                flow.id = UUID(id_map[str(flow.id)])
+            for node in (flow.data or {}).get("nodes", []):
+                node_data = node.get("data", {})
+                template = node_data.get("node", {}).get("template", {})
+                target = template.get("flow_id_selected", {}).get("value")
+                if node_data.get("type") in {"RunFlow", "SubFlow"} and not target:
+                    name_field = template.get("flow_name_selected", template.get("flow_name", {}))
+                    target = by_original_name.get(name_field.get("value"))
+                if target in id_map:
+                    if "flow_id_selected" in template:
+                        template["flow_id_selected"]["value"] = id_map[target]
+                    if "flow_name_selected" in template:
+                        template["flow_name_selected"].update(
+                            value=by_original_id[target].name,
+                            options=[by_original_id[target].name],
+                            options_metadata=[{"id": id_map[target], "name": by_original_id[target].name}],
+                        )
+                    elif "flow_name" in template:
+                        template["flow_name"]["value"] = by_original_id[target].name
+                for key in (BINDING_ORIGIN, TOOL_ORIGIN):
+                    origin = node_data.get(key)
+                    if isinstance(origin, dict):
+                        origin["project_id"] = str(new_project.id)
+                        origin["flow_id"] = id_map.get(origin.get("flow_id"), origin.get("flow_id"))
+                        if key == BINDING_ORIGIN:
+                            origin.pop("version_id", None)
+        for binding in config["flow_bindings"].values():
+            if not isinstance(binding, dict) or binding.get("flow_id") not in id_map:
+                raise HTTPException(422, "The imported Instructions binding must reference a flow in the archive.")
+            source = by_original_id[binding["flow_id"]]
+            binding["flow_id"] = id_map[binding["flow_id"]]
+            binding["revision"] = flow_revision(source.data or {})
+            binding.pop("version_id", None)
+        new_project.project_config = config
+    created = await create_flows(session=session, flow_list=flow_list, current_user=current_user)
+    if has_bindings:
+        await write_project_config_to_flows(session, new_project, previous_config=deepcopy(new_project.project_config))
+        created = [FlowRead.model_validate(await session.get(Flow, flow.id), from_attributes=True) for flow in created]
+    return created
