@@ -465,7 +465,6 @@
         "PATCH|/{connection_id}|update_connection|write|authenticated",
         "POST|/{connection_id}/revoke|revoke_connection|write|authenticated",
         "DELETE|/{connection_id}|delete_connection|delete|authenticated",
-        "GET|/oauth/registrations|list_oauth_registrations|read|authenticated",
         "POST|/{connection_id}/oauth/start|start_connection_oauth|write|authenticated",
         "GET|/oauth/registrations|list_oauth_registrations|read|authenticated",
         "GET|/oauth/{provider}/callback|complete_connection_oauth|write|conditional"
