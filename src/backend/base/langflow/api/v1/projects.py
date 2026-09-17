@@ -1428,6 +1428,29 @@ async def delete_project(
         raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_DELETE_FAILED)) from e
 
 
+@router.get("/{project_id}/harness-artifact", status_code=200)
+async def download_harness_artifact(project_id: UUID, session: DbSession, current_user: CurrentActiveUser):
+    """Freeze the saved Harness into a candidate for an artifact-aware runtime."""
+    from langflow.services.deployment_artifacts import LFPKG_MEDIA_TYPE, ProjectArtifactNotFoundError
+    from langflow.services.deployment_artifacts.harness import build_harness_download
+
+    try:
+        candidate, content = await build_harness_download(session, current_user, project_id)
+    except ProjectArtifactNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    return Response(
+        content=content,
+        media_type=LFPKG_MEDIA_TYPE,
+        headers={
+            "Content-Disposition": f'attachment; filename="harness-{project_id}.lfpkg"',
+            "ETag": f'"{candidate.digest}"',
+            "Cache-Control": "private, no-store",
+        },
+    )
+
+
 @router.get("/download/{project_id}", status_code=200)
 async def download_file(
     *,
