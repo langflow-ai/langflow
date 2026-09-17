@@ -1392,3 +1392,15 @@ def test_human_input_survives_opt_out():
     events = translator.translate("human_input_required", {"message": "approve?"})
 
     assert [e.name for e in events] == ["langflow.human_input_required"]
+
+
+def test_warning_survives_opt_out():
+    """A run-level warning is a notice to the caller, not graph state.
+
+    It has its own disclosure rule upstream (component names only for the flow
+    owner), so the narrowed stream still delivers it.
+    """
+    translator = AGUITranslator(run_id="run-1", thread_id="session-1", expose_graph_state=False)
+    events = translator.translate("warning", {"message": "Saved component code was replaced."})
+
+    assert [e.name for e in events] == ["langflow.warning"]
