@@ -11,6 +11,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from lfx.base.agents.harness import HarnessRuntimeConfig
 from lfx.log.logger import logger
+from lfx.projects import DEFAULT_PROJECT_TYPE, apply_project_config, get_project_type
 from lfx.projects.bindings import (
     compose_instructions,
     reject_recursive_binding,
@@ -33,7 +34,6 @@ from langflow.services.database.models.flow_version.crud import create_flow_vers
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.folder.skill_packs import resolve_skill_pack
 from langflow.services.database.models.folder.tool_packs import resolve_tool_pack
-from lfx.projects import DEFAULT_PROJECT_TYPE, apply_project_config, get_project_type
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession

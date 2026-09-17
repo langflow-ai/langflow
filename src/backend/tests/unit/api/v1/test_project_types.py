@@ -7,7 +7,6 @@ endpoint reads the lfx registry directly: no database rows, no component cache.
 import pytest
 from fastapi import status
 from httpx import AsyncClient
-
 from lfx.projects import all_project_types
 
 

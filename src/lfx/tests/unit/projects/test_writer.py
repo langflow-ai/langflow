@@ -11,9 +11,8 @@ shape being written into is the shape a flow actually holds.
 import pytest
 from lfx.components.models_and_agents.agent import AgentComponent
 from lfx.inputs.inputs import StrInput
-from lfx.projects.schema import FieldTarget, ProjectType, ProjectTypeField
-
 from lfx.projects import apply_project_config, get_project_type
+from lfx.projects.schema import FieldTarget, ProjectType, ProjectTypeField
 
 
 def agent_node(node_id: str = "Agent-1") -> dict:

@@ -9,7 +9,6 @@ real input on a real component.
 import pytest
 from lfx.components.models_and_agents.agent import AgentComponent
 from lfx.inputs.inputs import StrInput
-
 from lfx.projects import (
     CORE_PROJECT_TYPES,
     DEFAULT_PROJECT_TYPE,

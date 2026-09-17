@@ -4,7 +4,6 @@ from dataclasses import replace
 
 import pytest
 from lfx.inputs.inputs import StrInput
-
 from lfx.projects import (
     Cardinality,
     FireTiming,

@@ -4,9 +4,8 @@ from uuid import uuid4
 import pytest
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph.flow_builder import add_component, add_connection, empty_flow
-from lfx.projects.tool_packs import ToolPackReference, exported_flow_ids, tool_pack_manifest, tool_pack_references
-
 from lfx.projects import get_project_type, get_slot
+from lfx.projects.tool_packs import ToolPackReference, exported_flow_ids, tool_pack_manifest, tool_pack_references
 
 
 @pytest.mark.parametrize(

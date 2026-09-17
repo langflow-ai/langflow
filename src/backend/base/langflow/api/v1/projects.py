@@ -7,6 +7,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
+from lfx.projects import all_project_types
 from lfx.projects.baselines import build_slot_baseline
 from lfx.projects.bindings import flow_revision
 from lfx.projects.flow_slots import BINDING_LABELS, binding_outputs
@@ -88,7 +89,6 @@ from langflow.services.database.models.folder.utils import validate_project_type
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service, get_settings_service, get_storage_service
 from langflow.services.schema import ServiceType
-from lfx.projects import all_project_types
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
