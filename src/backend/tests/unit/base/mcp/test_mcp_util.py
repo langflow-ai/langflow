@@ -4509,3 +4509,40 @@ class TestMCPToolNameResolution:
 
         assert result is not None, f"the server published {name!r} and then refused it"
         assert result.id == "flow-1"
+
+
+class TestBuildMcpToolNameMap:
+    """The helper both MCP halves derive their names from."""
+
+    LONG_NAME = "Portfolio Website Code Generator"  # 32 chars
+
+    def test_truncates_to_the_published_limit(self):
+        name_map = util.build_mcp_tool_name_map([_NameFlow(self.LONG_NAME, "flow-1")])
+
+        assert list(name_map) == ["portfolio_website_code_generat"]
+
+    def test_de_duplicates_in_the_order_the_flows_arrive(self):
+        first = _NameFlow(self.LONG_NAME, "flow-1")
+        second = _NameFlow(self.LONG_NAME, "flow-2")
+
+        assert util.build_mcp_tool_name_map([first, second]) == {
+            "portfolio_website_code_generat": first,
+            "portfolio_website_code_gener_1": second,
+        }
+        # Reversed input, reversed suffix: both call sites order by Flow.id so that
+        # which flow holds the bare name cannot flip between a list and a call.
+        assert util.build_mcp_tool_name_map([second, first]) == {
+            "portfolio_website_code_generat": second,
+            "portfolio_website_code_gener_1": first,
+        }
+
+    def test_action_name_is_used_only_on_the_project_surface(self):
+        flow = _NameFlow("Some Flow", "flow-1", action_name="Renamed Action")
+
+        assert list(util.build_mcp_tool_name_map([flow], is_action=True)) == ["renamed_action"]
+        assert list(util.build_mcp_tool_name_map([flow])) == ["some_flow"]
+
+    def test_an_empty_action_name_falls_back_to_the_flow_name(self):
+        flow = _NameFlow("Some Flow", "flow-1", action_name=None)
+
+        assert list(util.build_mcp_tool_name_map([flow], is_action=True)) == ["some_flow"]
