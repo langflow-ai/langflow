@@ -13,7 +13,13 @@ Migrated database fields:
 - folder.auth_settings: MCP oauth_client_secret and api_key fields
 - sso_config.client_secret_encrypted: SSO/OIDC client secrets
 - apikey.api_key: stored API key values
+- deployment_provider_account.api_key: deployment provider credentials
+- connection_secret.encrypted_payload: connection credentials
 - mcp_server.config: secret values in the env and headers maps
+
+Run it with Langflow stopped, no background jobs queued and no OAuth connection
+flows in progress. Queued jobs' request overrides and pending OAuth verifiers are
+also encrypted under the key, are short-lived, and are not rotated.
 
 Usage:
     uv run python scripts/migrate_secret_key.py --help
@@ -42,6 +48,13 @@ from platformdirs import user_cache_dir
 from sqlalchemy import create_engine, inspect, text
 
 MINIMUM_KEY_LENGTH = 32
+# Columns that hold a single Fernet token: (table, primary key, column, description).
+FERNET_TOKEN_COLUMNS = [
+    # Authentication uses apikey.api_key_hash, but the stored value is lost if not rotated.
+    ("apikey", "id", "api_key", "stored API key values"),
+    ("deployment_provider_account", "id", "api_key", "deployment provider API keys"),
+    ("connection_secret", "connection_id", "encrypted_payload", "connection credentials"),
+]
 SENSITIVE_AUTH_FIELDS = ["oauth_client_secret", "api_key"]
 # Must match langflow.services.auth.mcp_encryption.MCP_SECRET_CONFIG_MAPS
 MCP_SECRET_CONFIG_MAPS = ("env", "headers")
@@ -322,13 +335,17 @@ def verify_migration(conn, new_key: str) -> tuple[int, int]:
         except (InvalidToken, json.JSONDecodeError):
             failed += 1
 
-    if inspect(conn).has_table("apikey"):
-        api_keys = conn.execute(text("SELECT id, api_key FROM apikey WHERE api_key IS NOT NULL LIMIT 3")).fetchall()
-        for _, encrypted_key in api_keys:
-            if not looks_like_fernet_token(encrypted_key):
+    for table, key, column, _ in FERNET_TOKEN_COLUMNS:
+        if not inspect(conn).has_table(table):
+            continue
+        rows = conn.execute(
+            text(f"SELECT {key}, {column} FROM {table} WHERE {column} IS NOT NULL LIMIT 3")  # noqa: S608
+        ).fetchall()
+        for _, encrypted_value in rows:
+            if not looks_like_fernet_token(encrypted_value):
                 continue
             try:
-                decrypt_with_key(encrypted_key, new_key)
+                decrypt_with_key(encrypted_value, new_key)
                 verified += 1
             except InvalidToken:
                 failed += 1
@@ -539,32 +556,36 @@ def migrate(
         total_migrated += migrated
         total_failed += failed
 
-        # Migrate apikey.api_key. Authentication uses api_key_hash, which does not
-        # depend on the key, but the stored value is lost if it is not rotated.
-        print("\n5. Migrating stored API key values...")
-        migrated, failed = 0, 0
-        if inspect(conn).has_table("apikey"):
-            api_keys = conn.execute(text("SELECT id, api_key FROM apikey WHERE api_key IS NOT NULL")).fetchall()
-            for key_id, encrypted_key in api_keys:
-                if not looks_like_fernet_token(encrypted_key):
-                    continue
-                new_encrypted = migrate_value(encrypted_key, old_key, new_key)
-                if new_encrypted:
-                    if not dry_run:
-                        conn.execute(
-                            text("UPDATE apikey SET api_key = :val WHERE id = :id"),
-                            {"val": new_encrypted, "id": key_id},
-                        )
-                    migrated += 1
-                else:
-                    failed += 1
-                    print(f"   Warning: Could not decrypt API key {key_id}")
-        print(f"   {'Would migrate' if dry_run else 'Migrated'}: {migrated}, Failed: {failed}")
-        total_migrated += migrated
-        total_failed += failed
+        step = 5
+        for table, key, column, description in FERNET_TOKEN_COLUMNS:
+            print(f"\n{step}. Migrating {description}...")
+            step += 1
+            migrated, failed = 0, 0
+            if inspect(conn).has_table(table):
+                rows = conn.execute(
+                    text(f"SELECT {key}, {column} FROM {table} WHERE {column} IS NOT NULL")  # noqa: S608
+                ).fetchall()
+                for row_id, encrypted_value in rows:
+                    if not looks_like_fernet_token(encrypted_value):
+                        continue
+                    new_encrypted = migrate_value(encrypted_value, old_key, new_key)
+                    if new_encrypted:
+                        if not dry_run:
+                            conn.execute(
+                                text(f"UPDATE {table} SET {column} = :val WHERE {key} = :id"),  # noqa: S608
+                                {"val": new_encrypted, "id": row_id},
+                            )
+                        migrated += 1
+                    else:
+                        failed += 1
+                        print(f"   Warning: Could not decrypt {table}.{column} for {row_id}")
+            print(f"   {'Would migrate' if dry_run else 'Migrated'}: {migrated}, Failed: {failed}")
+            total_migrated += migrated
+            total_failed += failed
 
         # Migrate mcp_server.config secret values
-        print("\n6. Migrating MCP server config secrets...")
+        print(f"\n{step}. Migrating MCP server config secrets...")
+        step += 1
         migrated, failed = 0, 0
         if inspect(conn).has_table("mcp_server"):
             servers = conn.execute(text("SELECT id, name, config FROM mcp_server WHERE config IS NOT NULL")).fetchall()
@@ -602,7 +623,7 @@ def migrate(
         # Verify migrated data can be decrypted with new key. A dry run wrote nothing,
         # so the rows still hold old-key ciphertext and there is nothing to verify.
         if total_migrated > 0 and not dry_run:
-            print("\n7. Verifying migration...")
+            print(f"\n{step}. Verifying migration...")
             verified, verify_failed = verify_migration(conn, new_key)
             if verify_failed > 0:
                 print(f"   ERROR: {verify_failed} records failed verification!")
@@ -622,12 +643,12 @@ def migrate(
     if not dry_run:
         backup_file = config_dir / f"secret_key.backup.{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
         write_secret_key_to_file(config_dir, old_key, backup_file.name)
-        print(f"\n8. Backed up old key to: {backup_file}")
+        print(f"\n{step + 1}. Backed up old key to: {backup_file}")
         write_secret_key_to_file(config_dir, new_key)
-        print(f"9. Saved new secret key to: {config_dir / 'secret_key'}")
+        print(f"{step + 2}. Saved new secret key to: {config_dir / 'secret_key'}")
     else:
-        print("\n8. [DRY RUN] Would backup old key")
-        print(f"9. [DRY RUN] Would save new key to: {config_dir / 'secret_key'}")
+        print(f"\n{step + 1}. [DRY RUN] Would backup old key")
+        print(f"{step + 2}. [DRY RUN] Would save new key to: {config_dir / 'secret_key'}")
 
     # Summary
     print("\n" + "=" * 50)
