@@ -101,6 +101,21 @@ class TestSourceChecks:
         assert not report.ok
         assert any("no Langflow schema" in p and "VACUUM INTO" in p for p in report.problems)
 
+    def test_unreachable_target_is_reported_without_the_password(self, sqlite_source):
+        from langflow.__main__ import app
+        from typer.testing import CliRunner
+
+        secret = "SuperSecretPw123"  # noqa: S105  # pragma: allowlist secret
+        target = f"postgresql://postgres:{secret}@127.0.0.1:1/none"
+
+        result = CliRunner().invoke(app, ["convert-sqlite-to-postgres", "--source", sqlite_source, "--target", target])
+
+        assert result.exit_code == 1
+        # An exception escaping the command is printed by Typer with its locals, URL included.
+        assert result.exception is None or isinstance(result.exception, SystemExit)
+        assert "Problem:" in result.output
+        assert secret not in result.output
+
 
 # --------------------------------------------------------------------------
 # End to end against a real Postgres server
@@ -230,6 +245,34 @@ class TestConversionEndToEnd:
         engine = sa.create_engine(postgres_database)
         with engine.connect() as conn:
             assert sa.inspect(conn).get_table_names() == []
+        engine.dispose()
+
+    def test_value_that_cannot_be_converted_is_reported_with_its_column(self, sqlite_source, postgres_database):
+        _seed(sqlite_source)
+        engine = sa.create_engine(sqlite_source)
+        with engine.begin() as conn:
+            conn.execute(sa.text("UPDATE flow SET data = '{bad'"))
+        engine.dispose()
+
+        report = convert_sqlite_to_postgres(sqlite_source, postgres_database)
+
+        assert not report.ok
+        assert any("flow.data" in p for p in report.problems), report.problems
+        assert _counts(postgres_database, ["flow"]) == {"flow": 0}
+
+    def test_sql_null_in_json_columns_stays_sql_null(self, sqlite_source, postgres_database):
+        _seed(sqlite_source)
+        engine = sa.create_engine(sqlite_source)
+        with engine.begin() as conn:
+            conn.execute(sa.text("UPDATE flow SET tags = NULL"))
+        engine.dispose()
+
+        report = convert_sqlite_to_postgres(sqlite_source, postgres_database)
+
+        assert report.ok, report.problems
+        engine = sa.create_engine(postgres_database)
+        with engine.connect() as conn:
+            assert conn.execute(sa.text("SELECT count(*) FROM flow WHERE tags IS NULL")).scalar_one() == 1
         engine.dispose()
 
     def test_legacy_uppercase_trace_enums_are_carried_as_langflow_reads_them(self, sqlite_source, postgres_database):

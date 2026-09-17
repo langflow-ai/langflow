@@ -97,6 +97,10 @@ def convert_sqlite_to_postgres(source_url: str, target_url: str, *, batch_size: 
                 return report
             upgrade_to_head(target_url)
             _convert(source, target, models, report, batch_size=batch_size)
+        except sa.exc.SQLAlchemyError as exc:
+            # Reported rather than raised: a traceback would print the target URL,
+            # password included. The driver's own message never contains it.
+            report.problems.append(f"could not use the target database: {_describe(exc)}")
         finally:
             target.dispose()
     finally:
@@ -127,7 +131,8 @@ def copy_order(metadata: sa.MetaData) -> list[sa.Table]:
 def coerce_value(value: Any, column_type: sa.types.TypeEngine) -> Any:
     """Turn a raw SQLite value into what a Postgres column of ``column_type`` expects."""
     if value is None:
-        return None
+        # JSON columns would otherwise store a JSON null, which IS NULL no longer matches.
+        return sa.null() if isinstance(column_type, sa.JSON) else None
     if isinstance(column_type, sa.Boolean):
         if isinstance(value, str):
             return value.strip().lower() in {"1", "true", "t", "yes"}
@@ -193,12 +198,31 @@ def _convert(
                 _reset_sequences(tgt)
         except _RollbackError:
             pass
+        except _CoercionError as exc:
+            report.problems.append(f"copy failed and was rolled back: {exc}")
         except sa.exc.SQLAlchemyError as exc:
-            report.problems.append(f"copy failed and was rolled back: {exc.__class__.__name__}: {exc.orig or exc}")
+            report.problems.append(f"copy failed and was rolled back: {_describe(exc)}")
 
 
 class _RollbackError(Exception):
     """Raised inside the copy transaction to roll it back after recording problems."""
+
+
+class _CoercionError(Exception):
+    """A source value the target column cannot take."""
+
+
+def _describe(exc: sa.exc.SQLAlchemyError) -> str:
+    cause = getattr(exc, "orig", None) or exc
+    return f"{cause.__class__.__name__}: {str(cause).splitlines()[0]}"
+
+
+def _coerce(value: Any, model_type: sa.types.TypeEngine | None, column: sa.Column) -> Any:
+    try:
+        return coerce_value(_enum_label(value, model_type), column.type)
+    except (ValueError, TypeError) as exc:
+        msg = f"{column.table.name}.{column.name} holds a value {column.type} cannot take: {exc}"
+        raise _CoercionError(msg) from exc
 
 
 def _source_columns(conn: sa.Connection, table: str) -> set[str]:
@@ -336,7 +360,7 @@ def _copy_table(
     )
     rows = (
         {
-            column.name: coerce_value(_enum_label(value, model_type), column.type)
+            column.name: _coerce(value, model_type, column)
             for column, model_type, value in zip(columns, model_types, raw, strict=True)
         }
         for raw in src.execute(select_sql)
