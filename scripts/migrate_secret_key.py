@@ -599,8 +599,9 @@ def migrate(
             conn.rollback()
             sys.exit(1)
 
-        # Verify migrated data can be decrypted with new key
-        if total_migrated > 0:
+        # Verify migrated data can be decrypted with new key. A dry run wrote nothing,
+        # so the rows still hold old-key ciphertext and there is nothing to verify.
+        if total_migrated > 0 and not dry_run:
             print("\n7. Verifying migration...")
             verified, verify_failed = verify_migration(conn, new_key)
             if verify_failed > 0:
