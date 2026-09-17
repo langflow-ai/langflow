@@ -4,7 +4,7 @@ import re
 from urllib.parse import urljoin, urlparse
 
 import httpx
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString, Tag
 from markitdown import MarkItDown
 
 from lfx.custom.custom_component.component import Component
@@ -47,6 +47,9 @@ if importlib.util.find_spec("langflow"):
 else:
     langflow_installed = False
     USER_AGENT = "lfx"
+
+
+_END_OF_CHILDREN = object()
 
 
 class URLComponent(Component):
@@ -219,10 +222,92 @@ class URLComponent(Component):
         """Extract raw HTML content."""
         return x
 
+    # Elements a browser renders on a line of their own, plus the few that are
+    # not laid out at all but still read as a line once a page is flattened
+    # (`title`, `option`). Without a break after them, the text on either side
+    # of the boundary runs together.
+    _BLOCK_LEVEL_TAGS = (
+        "address",
+        "article",
+        "aside",
+        "blockquote",
+        "caption",
+        "dd",
+        "div",
+        "dl",
+        "dt",
+        "details",
+        "fieldset",
+        "figcaption",
+        "figure",
+        "footer",
+        "form",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "header",
+        "hgroup",
+        "hr",
+        "legend",
+        "li",
+        "main",
+        "nav",
+        "ol",
+        "option",
+        "p",
+        "pre",
+        "section",
+        "summary",
+        "table",
+        "td",
+        "th",
+        "title",
+        "tr",
+        "ul",
+    )
+
     @staticmethod
     def _text_extractor(x: str) -> str:
-        """Extract clean text from HTML."""
-        return BeautifulSoup(x, "lxml").get_text()
+        """Extract clean text from HTML.
+
+        `get_text()` concatenates every text node with nothing in between, so a
+        page's blocks arrive glued: `<h1>Title</h1><p>Body.</p>` becomes
+        `TitleBody.`. A separator argument would fix that but would also push one
+        between inline elements, turning `Hello <b>world</b>!` into
+        `Hello world !`. A line break after each block and at each `<br>` keeps
+        both right.
+
+        The tree is walked once instead of rewritten: replacing each `<br>` in
+        place scans its siblings every time, which is quadratic on a page with
+        thousands of them.
+        """
+        soup = BeautifulSoup(x, "lxml")
+        # The strings get_text() joins: script, style and template text stays
+        # out exactly as it does there.
+        wanted = {id(string) for string in soup.strings}
+        parts: list[str] = []
+        children = [iter(soup.contents)]
+        open_tags: list[str | None] = [None]
+        while children:
+            node = next(children[-1], _END_OF_CHILDREN)
+            if node is _END_OF_CHILDREN:
+                children.pop()
+                if open_tags.pop() in URLComponent._BLOCK_LEVEL_TAGS:
+                    parts.append("\n")
+            elif isinstance(node, NavigableString):
+                if id(node) in wanted:
+                    parts.append(node)
+            elif isinstance(node, Tag):
+                if node.name == "br":
+                    parts.append("\n")
+                else:
+                    children.append(iter(node.contents))
+                    open_tags.append(node.name)
+
+        return re.sub(r"\n{3,}", "\n\n", "".join(parts)).strip()
 
     @staticmethod
     def _markdown_extractor(x: str) -> str:
