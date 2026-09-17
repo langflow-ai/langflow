@@ -9,6 +9,7 @@ These tests pin the 429 contract and the per-endpoint counter namespaces.
 from __future__ import annotations
 
 import ast
+import textwrap
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -304,14 +305,18 @@ async def test_oauth_registration_listing_is_rate_limited(
     _assert_limited(await client.get("api/v1/connections", headers=logged_in_headers))
 
 
-def test_every_connections_route_checks_the_rate_limit() -> None:
-    """A new route must not ship unlimited: INT-14-01 covered the whole router."""
-    source = Path(connections_module.__file__).read_text(encoding="utf-8")
+def _routes_without_rate_limit(source: str) -> list[str]:
+    """Names of the module's router handlers whose body never calls ``check_rate_limit``.
+
+    FastAPI accepts both ``async def`` and ``def`` handlers, and ``ast.AsyncFunctionDef``
+    is not a subclass of ``ast.FunctionDef``, so both node types have to be walked or a
+    synchronous route could ship unlimited without failing the guard below.
+    """
     tree = ast.parse(source)
-    unlimited = [
+    return [
         node.name
         for node in tree.body
-        if isinstance(node, ast.AsyncFunctionDef)
+        if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef))
         and any(
             isinstance(decorator, ast.Call)
             and isinstance(decorator.func, ast.Attribute)
@@ -325,4 +330,31 @@ def test_every_connections_route_checks_the_rate_limit() -> None:
             if isinstance(call, ast.Call)
         )
     ]
+
+
+def test_every_connections_route_checks_the_rate_limit() -> None:
+    """A new route must not ship unlimited: INT-14-01 covered the whole router."""
+    source = Path(connections_module.__file__).read_text(encoding="utf-8")
+
+    unlimited = _routes_without_rate_limit(source)
+
     assert unlimited == [], f"connections routes without a rate-limit check: {unlimited}"
+
+
+def test_route_guard_covers_synchronous_handlers() -> None:
+    """A ``def`` handler is as real a route as an ``async def`` one."""
+    source = textwrap.dedent("""
+        @router.get("/a")
+        def sync_unlimited() -> None: ...
+
+        @router.get("/b")
+        def sync_limited(request: Request) -> None:
+            check_rate_limit(request)
+
+        @router.get("/c")
+        async def async_unlimited() -> None: ...
+
+        def not_a_route() -> None: ...
+    """)
+
+    assert _routes_without_rate_limit(source) == ["sync_unlimited", "async_unlimited"]

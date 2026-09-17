@@ -11,6 +11,7 @@ from check_ga_checklist import (
     DEFAULT_CHECKLIST,
     REQUIRED_CONTEXTS,
     REQUIRED_ITEMS,
+    REQUIRED_SIGNOFF_GATES,
     validate_checklist,
 )
 
@@ -136,6 +137,44 @@ def test_path_matcher_keeps_single_star_inside_one_segment() -> None:
     assert not _github_path_matches("scripts/ci/nested/check.py", "scripts/ci/*.py")
     assert not _github_path_matches("docs/docs/Develop/connection-oauth.mdx", "docs/*.mdx")
     assert not _github_path_matches("docs/docs/Develop/connection-oauth.mdx.bak", "docs/**/connection-oauth.mdx")
+
+
+def test_every_required_signoff_gate_is_present() -> None:
+    """Neither human sign-off gate may be dropped from the checklist."""
+    checklist = _load()
+    ids = {item["id"] for item in checklist["items"]}
+    assert set(REQUIRED_SIGNOFF_GATES) <= ids
+
+
+def test_checker_rejects_deleting_a_signoff_gate(tmp_path: Path) -> None:
+    """Deleting a pending gate would otherwise leave a checklist that reads as fully validated."""
+    checklist = _load()
+    checklist["items"] = [item for item in checklist["items"] if item["id"] != "live-tenant-consent"]
+
+    errors = validate_checklist(_write(tmp_path, checklist))
+
+    assert any("sign-off gates" in error and "live-tenant-consent" in error for error in errors)
+
+
+def test_checker_reports_object_valued_item_status_instead_of_raising(tmp_path: Path) -> None:
+    """Frozenset membership hashes the value, so an object status would raise TypeError."""
+    checklist = _load()
+    checklist["items"][0]["status"] = {}
+
+    errors = validate_checklist(_write(tmp_path, checklist))
+
+    assert any("status must be one of" in error for error in errors)
+
+
+def test_checker_reports_object_valued_context_status_instead_of_raising(tmp_path: Path) -> None:
+    """The same hazard on the context side of the record."""
+    checklist = _load()
+    context_name = next(iter(checklist["contexts"]))
+    checklist["contexts"][context_name]["status"] = []
+
+    errors = validate_checklist(_write(tmp_path, checklist))
+
+    assert any(f"contexts/{context_name}: status must be one of" in error for error in errors)
 
 
 def test_checker_rejects_missing_acceptance_item(tmp_path: Path) -> None:

@@ -462,6 +462,12 @@ provider's account or admin console as well. `not_applicable` means no OAuth cre
 was stored. For Microsoft's `unsupported`, remove the app's consent in Entra as
 described in [Revocation](./entra-app-registration.mdx#revocation).
 
+`revoked` reports token revocation, not a complete uninstall. Langflow sends only the
+stored access token to Slack's `auth.revoke`, which revokes that token without
+uninstalling the app; if the app uses token rotation, the installation survives and can
+still issue new tokens. To end the installation itself, remove the app from the
+workspace in Slack.
+
 Refresh behavior also differs by provider:
 
 - Google and Microsoft issue refresh tokens for offline access. Microsoft rotates its
