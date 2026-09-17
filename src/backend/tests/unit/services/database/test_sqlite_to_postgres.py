@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import sqlite3
+import sys
 import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
@@ -115,6 +116,16 @@ class TestSourceChecks:
         assert result.exception is None or isinstance(result.exception, SystemExit)
         assert "Problem:" in result.output
         assert secret not in result.output
+
+    def test_a_missing_postgres_driver_is_reported(self, sqlite_source, monkeypatch):
+        # CI's unit environment has no Postgres driver. An unhandled ImportError
+        # would reach the same traceback that prints the password.
+        monkeypatch.setitem(sys.modules, "psycopg", None)
+
+        report = convert_sqlite_to_postgres(sqlite_source, "postgresql+psycopg://user:pw@127.0.0.1:1/none")
+
+        assert not report.ok
+        assert any("langflow[postgresql]" in problem for problem in report.problems)
 
 
 # --------------------------------------------------------------------------

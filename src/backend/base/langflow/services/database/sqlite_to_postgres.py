@@ -88,8 +88,10 @@ def convert_sqlite_to_postgres(source_url: str, target_url: str, *, batch_size: 
             return report
 
         models = _model_tables()
-        target = sa.create_engine(_sync_postgres_url(target_url))
+        target = None
         try:
+            # create_engine imports the driver, so it belongs inside the handler below.
+            target = sa.create_engine(_sync_postgres_url(target_url))
             # Everything that can refuse runs before the target is migrated, so a
             # refused run leaves the target exactly as it was.
             report.problems.extend(_preflight(source, target, models))
@@ -97,12 +99,16 @@ def convert_sqlite_to_postgres(source_url: str, target_url: str, *, batch_size: 
                 return report
             upgrade_to_head(target_url)
             _convert(source, target, models, report, batch_size=batch_size)
+        except ImportError as exc:
+            # No Postgres driver installed. Reported for the same reason as below.
+            report.problems.append(f"could not use the target database: {exc}; install langflow[postgresql]")
         except sa.exc.SQLAlchemyError as exc:
             # Reported rather than raised: a traceback would print the target URL,
             # password included. The driver's own message never contains it.
             report.problems.append(f"could not use the target database: {_describe(exc)}")
         finally:
-            target.dispose()
+            if target is not None:
+                target.dispose()
     finally:
         source.dispose()
     return report
