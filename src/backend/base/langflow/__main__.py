@@ -1189,6 +1189,9 @@ def relocate_kb(
     target holds all of them, then repoints the knowledge base at the new store.
     Memory bases move with the knowledge bases they refer to.
 
+    Stop ingestion and memory capture before running this: chunks written while a
+    knowledge base moves would stay behind on the old store.
+
     Safe to re-run: chunks keep their ids, so a second run upserts, and knowledge
     bases already on the target are skipped. Nothing is deleted from the source.
     Exits non-zero if any knowledge base could not be moved.
@@ -1215,6 +1218,14 @@ def relocate_kb(
         raise typer.Exit(1)
 
 
+def relocation_line(result) -> str:
+    """One line per knowledge base: what moved, out of how many chunks."""
+    moved = result.status in {"relocated", "failed"}
+    counts = f"{result.copied}/{result.source_count}" if moved else str(result.source_count)
+    line = f"{result.status:15} {result.owner}/{result.kb_name}  {result.source_backend} -> {result.target_backend}"
+    return f"{line}  chunks {counts}"
+
+
 async def _relocate_kb(
     *,
     target_backend_type: str,
@@ -1234,9 +1245,7 @@ async def _relocate_kb(
         batch_size=batch_size,
     )
     for result in results:
-        counts = f"{result.copied or result.source_count}/{result.source_count}"
-        line = f"{result.status:15} {result.owner}/{result.kb_name}  {result.source_backend} -> {result.target_backend}"
-        typer.echo(f"{line}  chunks {counts}" + (f"  ({result.reason})" if result.reason else ""))
+        typer.echo(relocation_line(result) + (f"  ({result.reason})" if result.reason else ""))
         for warning in result.warnings:
             typer.echo(f"{'':15} warning: {warning}")
     by_status: dict[str, int] = {}

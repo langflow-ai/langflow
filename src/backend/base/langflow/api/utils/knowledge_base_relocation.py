@@ -8,6 +8,10 @@ bases need no separate pass: each one refers to a ``knowledge_base`` row by
 Nothing is deleted from the source. A knowledge base is repointed only after the
 copy is confirmed complete, so a failure at any step leaves its row pointing at
 data that is still there.
+
+Nothing may ingest into a knowledge base or capture memories while it moves. A
+change seen during the copy stops the repoint, but a job that resolved the old
+backend before the repoint can still write there afterwards.
 """
 
 from __future__ import annotations
@@ -21,7 +25,7 @@ from lfx.log.logger import logger
 from sqlmodel import select
 
 from langflow.api.utils.kb_helpers import resolve_local_store_path
-from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
+from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
 
@@ -109,6 +113,9 @@ async def _relocate_one(
         result.status = "skipped"
         result.reason = "already on the target backend"
         return result
+    if record.status == KnowledgeBaseStatus.INGESTING.value:
+        result.reason = "knowledge base is ingesting; wait for it to finish, then re-run"
+        return result
     if not record.model_selection:
         # Copying the vectors is still correct. Querying them later is not
         # guaranteed: embedding resolution falls back to a default model when the
@@ -135,6 +142,10 @@ async def _relocate_one(
                 f"row caches {record.chunks} chunks but the source holds {result.source_count}; using the source"
             )
         if dry_run:
+            connection = await target.test_connection()
+            if not connection.ok:
+                result.reason = f"target is not reachable: {connection.message}"
+                return result
             result.status = "would_relocate"
             return result
 
@@ -152,11 +163,27 @@ async def _relocate_one(
             return result
 
         result.target_count = await _settled_count(target, result.source_count)
-        if result.target_count < result.source_count:
-            result.reason = f"target holds {result.target_count} of {result.source_count} chunks; not repointing"
+        if result.target_count != result.source_count:
+            # More than the source means the target already held other chunks
+            # (a store left from an earlier move, say), which would join this KB.
+            result.reason = (
+                f"target holds {result.target_count} chunks, the source {result.source_count}; not repointing"
+            )
             return result
 
-        await _repoint(record.id, target_backend_type, target_backend_config, result.source_count)
+        # A read can page past chunks written after it started, so the copy and
+        # the target can agree while the source has moved on.
+        source_now = await source.count()
+        if source_now != result.source_count:
+            result.reason = (
+                f"source changed during the copy ({result.source_count} -> {source_now} chunks); "
+                "stop ingestion and memory capture, then re-run"
+            )
+            return result
+
+        if not await _repoint(record.id, target_backend_type, target_backend_config, result.source_count):
+            result.reason = "knowledge base was deleted during the move"
+            return result
         result.status = "relocated"
     except Exception as exc:  # noqa: BLE001 - reported per knowledge base
         result.reason = f"{type(exc).__name__}: {exc}"
@@ -198,13 +225,14 @@ async def _settled_count(backend: BaseVectorStoreBackend, expected: int) -> int:
     return count
 
 
-async def _repoint(record_id: UUID, backend_type: str, backend_config: dict[str, Any], chunks: int) -> None:
+async def _repoint(record_id: UUID, backend_type: str, backend_config: dict[str, Any], chunks: int) -> bool:
     async with session_scope() as session:
         row = await session.get(KnowledgeBaseRecord, record_id)
         if row is None:
-            return
+            return False
         row.backend_type = backend_type
         row.backend_config = backend_config
         row.chunks = chunks
         session.add(row)
         await session.commit()
+    return True
