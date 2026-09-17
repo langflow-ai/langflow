@@ -100,9 +100,9 @@ def remove_api_keys(flow: dict) -> dict:
 
 def strip_secret_field_values(flow_data: dict | None) -> dict | None:
     """Return a deep-copied flow-data mapping with persisted secrets removed."""
-    # Only ``None`` short-circuits. An empty mapping must still be copied: callers such as
-    # ``strip_flow_secrets`` promise the returned ``data`` is detached from the ORM-backed
-    # payload, and returning the original ``{}`` would alias it.
+    # Only ``None`` short-circuits. An empty mapping must still be copied: callers promise
+    # the returned data is detached from the ORM-backed payload, and returning the
+    # original ``{}`` would alias it.
     if flow_data is None:
         return flow_data
     return strip_secret_field_values_in_place(deepcopy(flow_data))
@@ -117,13 +117,18 @@ def strip_flow_secrets(flow: dict) -> dict:
     than the legacy :func:`remove_api_keys`, which only nulled fields that were
     both ``password``-marked *and* named like an API key.
 
+    Fields bound to a global variable (``load_from_db``) keep the variable
+    *name*, not the secret, so the importing instance can resolve the
+    credential by that name. Values that fail the variable-name shape check
+    are still nulled.
+
     The returned envelope is a shallow copy whose ``data`` is detached, so the
     caller never mutates the ORM-backed payload it serialized from.
     """
     if not isinstance(flow, dict) or "data" not in flow:
         return flow
     scrubbed = dict(flow)
-    scrubbed["data"] = strip_secret_field_values(flow["data"])
+    scrubbed["data"] = strip_secret_field_values_in_place(deepcopy(flow["data"]), variable_references=set())
     return scrubbed
 
 
@@ -368,10 +373,10 @@ def strip_secret_field_values_in_place(
     By default every secret-bearing value is nulled, including the names of
     global variables bound via ``load_from_db`` — the right contract for
     anonymous consumers such as the public-flow endpoint. Deployment packaging
-    passes ``variable_references``: fields (and table cells) that the runtime
-    resolves from the database then keep their variable-*name* values, and
-    every preserved name is added to the set so the caller can emit a
-    required-variables manifest.
+    and flow/project export pass ``variable_references``: fields (and table
+    cells) that the runtime resolves from the database then keep their
+    variable-*name* values, and every preserved name is added to the set so the
+    caller can emit a required-variables manifest.
 
     Only values the runtime would look up are preserved — a table cell the row
     marks as not loading from the database holds the literal secret, so it is
