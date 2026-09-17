@@ -28,7 +28,10 @@ _TRIGGER_TABLES = {
 }
 
 
-@pytest.mark.parametrize("prior_revision", ["c5a8e2f7d9b1", "d2f6a8c1e9b4"])  # pragma: allowlist secret
+@pytest.mark.parametrize(
+    "prior_revision",
+    ["c5a8e2f7d9b1", "d2f6a8c1e9b4", "1d28fd31a982"],  # pragma: allowlist secret
+)
 def test_trigger_and_release_heads_upgrade_to_single_head(db_url, prior_revision):  # noqa: F811
     """Databases on either side of the release merge can upgrade without losing data."""
     config = _make_alembic_cfg(db_url)
