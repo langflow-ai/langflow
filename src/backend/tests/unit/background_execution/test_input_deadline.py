@@ -11,6 +11,7 @@ negative budget so its ``input_deadline_at`` is already in the past.
 
 from __future__ import annotations
 
+import asyncio
 import json
 from uuid import uuid4
 
@@ -91,6 +92,17 @@ async def test_sweep_fails_overdue_suspended_run(real_services_job_service) -> N
     assert job.finished_timestamp is not None
     events = await job_service.read_events(job_id)
     assert any(e.event_type == "input_timed_out" for e in events)
+
+
+@pytest.mark.real_services
+@pytest.mark.no_blockbuster
+async def test_competing_deadline_watchdogs_terminalize_a_pause_once(real_services_job_service) -> None:
+    jobs = real_services_job_service
+    _, job_id = await _suspend_a_job(jobs, input_deadline_s=-1)
+    results = await asyncio.gather(*(jobs.sweep_input_deadlines() for _ in range(3)))
+    assert sum(job_id in result for result in results) == 1
+    events = await jobs.read_events(job_id)
+    assert sum(event.event_type == "input_timed_out" for event in events) == 1
 
 
 @pytest.mark.real_services

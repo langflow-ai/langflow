@@ -309,12 +309,12 @@ async def test_generic_archive_cannot_copy_unreviewed_eval_bindings(client, logg
     assert "Eval Suite import" in imported.text
 
 
-async def test_scaled_profile_rejects_evaluation_before_provider_execution(
+async def test_redis_event_queue_does_not_select_scaled_evaluation_execution(
     client, logged_in_headers, evaluation, monkeypatch
 ):
     suite, _, _, _, _, model = evaluation
     monkeypatch.setattr(get_settings_service().settings, "job_queue_type", "redis")
     response = await execute(client, logged_in_headers, suite)
-    assert response.status_code == 422, response.text
-    assert "in-process Workflows backend" in response.text
-    assert model.seen == []
+    assert response.status_code == 200, response.text
+    assert response.json()["passed"]
+    assert model.seen

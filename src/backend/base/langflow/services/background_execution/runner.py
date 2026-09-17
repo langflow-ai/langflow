@@ -50,6 +50,18 @@ async def _passthrough_resume_hook(checkpoint: Any, decision: Any) -> None:  # n
     return None
 
 
+def execution_timeout(request: dict[str, Any], host_timeout: float | None) -> float | None:
+    """Apply the server-owned evaluation ceiling on every active execution pass.
+
+    The public Workflows request cannot supply this field. Queueing and human
+    waiting consume no execution time; a resume starts a fresh bounded pass.
+    """
+    ceiling = request.get("evaluation_timeout_s")
+    if ceiling is None:
+        return host_timeout
+    return min(host_timeout, ceiling) if host_timeout else ceiling
+
+
 class JobRunner:
     def __init__(
         self,

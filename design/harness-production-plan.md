@@ -31,6 +31,13 @@ Workflows child jobs, candidate/scorer approval, cancellation, and restart recov
 See [its contract and verification](harness-eval-durability.md). Measured costs and
 portable evaluation archives remain follow-up work before claiming the full
 production evaluation profile.
+
+`feat/harness-eval-scaled-db` ports #13508's database-backed Workflows queue and
+connects native evaluations to separate workers, including approval, frozen
+candidate recovery and execution deadlines. See [the implementation and local
+verification](harness-eval-scaled-db.md). Redis is not required. Live-provider and
+actual deployed-topology acceptance remain production gates; deployment-topology
+work and external evaluation integrations remain deferred.
 Files, memory/knowledge services, and request-only credential provisioning remain
 blocked by the initial standalone mount; their production host provisioning still
 needs verification. Existing Control Plane deployment is not candidate-aware.
@@ -40,7 +47,7 @@ needs verification. Existing Control Plane deployment is not candidate-aware.
 user's request. They are not prerequisites for the current native Eval Suite
 delivery or the next implementation slice. This supersedes the original taxonomy's
 "from day one" adapter requirement; interoperability remains a future direction.
-Native evaluation durability is the current delivery. Measured costs and portable
+Native evaluation durability and the database queue integration are delivered. Measured costs and portable
 Langflow suite archives remain separate follow-up items; external adapters remain deferred.
 
 ## Revised gap assessment
