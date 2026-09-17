@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import TYPE_CHECKING, Any
 
 from langchain.agents.middleware import AgentMiddleware, SummarizationMiddleware
@@ -35,8 +36,9 @@ def prepare_context(messages: list, turns: int) -> list:
 
 
 class HarnessContextMiddleware(AgentMiddleware):
-    def __init__(self, policy: HarnessRuntimeConfig):
+    def __init__(self, policy: HarnessRuntimeConfig, *, context_flow=None):
         self.policy = policy
+        self.context_flow = context_flow
 
     def _prepare(self, request):
         messages = request.messages
@@ -45,24 +47,59 @@ class HarnessContextMiddleware(AgentMiddleware):
             if self.policy.context_strategy == "recent_turns"
             else list(messages)
         )
-        evidence = {
+        return request.override(messages=prepared), self._evidence(messages, prepared)
+
+    def _evidence(self, messages, prepared):
+        return {
             "kind": "context_prepared",
-            "strategy": self.policy.context_strategy,
+            "strategy": "flow" if self.context_flow else self.policy.context_strategy,
             "messages_before": len(messages),
             "messages_after": len(prepared),
             "estimated_tokens": count_tokens_approximately(prepared),
             "retained_message_ids": [m.id for m in prepared if m.id],
             "iteration_limit": self.policy.max_iterations,
         }
-        return request.override(messages=prepared), evidence
 
     def wrap_model_call(self, request, handler):
+        if self.context_flow:
+            from lfx.projects.context import ContextFlowError
+
+            msg = "Context flows require asynchronous Agent execution. Use the flow runtime or ainvoke."
+            raise ContextFlowError(msg)
         prepared, evidence = self._prepare(request)
         dispatch_custom_event(HARNESS_EVENT, evidence)
         return handler(prepared)
 
     async def awrap_model_call(self, request, handler):
-        prepared, evidence = self._prepare(request)
+        if self.context_flow:
+            from lfx.projects.context import ContextFlowError, ContextSourceChangedError
+
+            binding = self.context_flow.binding
+            try:
+                messages = await asyncio.wait_for(self.context_flow(request.messages), timeout=binding.timeout_seconds)
+                prepared, evidence = request.override(messages=messages), self._evidence(request.messages, messages)
+            except Exception as exc:
+                reason = (
+                    str(exc)
+                    if isinstance(exc, ContextSourceChangedError)
+                    else "Context flow timed out. Its output was not applied; review the flow or its timeout."
+                    if isinstance(exc, (TimeoutError, asyncio.TimeoutError))
+                    else "Context flow failed. Its output was not applied; review its message table before retrying."
+                )
+                await adispatch_custom_event(
+                    HARNESS_EVENT,
+                    {
+                        "kind": "context_failed",
+                        "strategy": "flow",
+                        **binding.model_dump(),
+                        "error_type": type(exc).__name__,
+                        "reason": reason,
+                    },
+                )
+                raise ContextFlowError(reason) from exc
+            evidence.update(binding.model_dump())
+        else:
+            prepared, evidence = self._prepare(request)
         await adispatch_custom_event(HARNESS_EVENT, evidence)
         return await handler(prepared)
 

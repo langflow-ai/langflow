@@ -5,13 +5,21 @@ import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 
 /** Prepare the contract baseline, then use ordinary flow creation and its guards. */
-export function useCreateInstructionsFlow() {
+export function useCreateProjectFlow() {
   const { mutateAsync: createFlow } = usePostAddFlow();
   const queryClient = useQueryClient();
-  return async (projectId: string, fieldName: string, initialValue: string) => {
+  return async (
+    projectId: string,
+    fieldName: string,
+    initialValue = "",
+    initialConfig?: Record<string, unknown>,
+  ) => {
     const { data } = await api.post<FlowType>(
       `${getURL("PROJECTS")}/${projectId}/flow-baseline`,
-      { initial_value: initialValue },
+      {
+        initial_value: initialValue,
+        ...(initialConfig ? { initial_config: initialConfig } : {}),
+      },
       { params: { field_name: fieldName } },
     );
     const flow = await createFlow({
@@ -34,3 +42,5 @@ export function useCreateInstructionsFlow() {
     return flow;
   };
 }
+
+export const useCreateInstructionsFlow = useCreateProjectFlow;

@@ -9,7 +9,7 @@ import useFlowStore from "@/stores/flowStore";
 type Validation = { valid: boolean; outputs: unknown[] };
 
 /** Inspect the live graph using the same static contract resolver as the harness picker. */
-export function InstructionsContract() {
+export function HarnessFlowContract() {
   const { t } = useTranslation();
   const [params] = useSearchParams();
   const flow = useFlowStore((state) => state.currentFlow);
@@ -18,10 +18,27 @@ export function InstructionsContract() {
   const marker = (
     flow?.data as { harness_contract?: { slot?: string } } | undefined
   )?.harness_contract;
-  const active =
-    params.get("harnessField") === "system_prompt" ||
-    marker?.slot === "SystemPromptBuilder";
-  const projectId = active ? flow?.folder_id : undefined;
+  const requestedField = params.get("harnessField");
+  const fieldName =
+    requestedField === "system_prompt" ||
+    requestedField === "hooks" ||
+    requestedField === "context_strategy"
+      ? requestedField
+      : marker?.slot === "SystemPromptBuilder"
+        ? "system_prompt"
+        : marker?.slot === "Hook"
+          ? "hooks"
+          : marker?.slot === "ContextManager"
+            ? "context_strategy"
+            : undefined;
+  const kind =
+    fieldName === "hooks"
+      ? "hook"
+      : fieldName === "context_strategy"
+        ? "context"
+        : "instructions";
+  const capitalized = kind[0].toUpperCase() + kind.slice(1);
+  const projectId = fieldName ? flow?.folder_id : undefined;
   // Selection and layout do not affect the output contract or trigger validation requests.
   const definition = useMemo(
     () =>
@@ -32,7 +49,7 @@ export function InstructionsContract() {
     [nodes, edges],
   );
   const [attempt, setAttempt] = useState(0);
-  const validationKey = `${flow?.id}:${projectId}:${definition}:${attempt}`;
+  const validationKey = `${flow?.id}:${projectId}:${fieldName}:${definition}:${attempt}`;
   const [result, setResult] = useState<{
     key: string;
     validation?: Validation;
@@ -46,7 +63,7 @@ export function InstructionsContract() {
         .post<Validation>(
           `${getURL("PROJECTS")}/${projectId}/flow-outputs/validate`,
           { data: JSON.parse(definition) },
-          { signal: controller.signal },
+          { signal: controller.signal, params: { field_name: fieldName } },
         )
         .then(({ data }) => {
           if (!controller.signal.aborted)
@@ -61,26 +78,22 @@ export function InstructionsContract() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [projectId, definition, validationKey]);
+  }, [projectId, definition, validationKey, fieldName]);
   if (!projectId) return null;
   const current = result?.key === validationKey ? result : undefined;
   const status = !current
-    ? "checkingInstructionsContract"
-    : current.error
-      ? "instructionsContractUnavailable"
-      : current.validation?.valid
-        ? "instructionsContractReady"
-        : "instructionsContractInvalid";
+    ? `checking${capitalized}Contract`
+    : `${kind}Contract${current.error ? "Unavailable" : current.validation?.valid ? "Ready" : "Invalid"}`;
   return (
     <aside
-      aria-label={t("harness.instructionsContract")}
+      aria-label={t(`harness.${kind}Contract`)}
       className="max-h-[45%] shrink-0 overflow-y-auto border-b border-border bg-background px-4 py-3"
-      data-testid="instructions-contract"
+      data-testid={`${kind}-contract`}
     >
       <div className="flex flex-col items-start justify-between gap-x-4 gap-y-2 sm:flex-row">
         <details className="w-full min-w-0 flex-1 sm:w-auto">
           <summary className="cursor-pointer text-sm font-medium">
-            {t("harness.instructionsContract")}
+            {t(`harness.${kind}Contract`)}
             <span
               role="status"
               className={`ml-2 font-normal ${current?.error || current?.validation?.valid === false ? "text-destructive" : "text-muted-foreground"}`}
@@ -89,7 +102,7 @@ export function InstructionsContract() {
             </span>
           </summary>
           <div className="mt-2 max-w-2xl space-y-1 text-sm text-muted-foreground">
-            <p>{t("harness.instructionsContractHelp")}</p>
+            <p>{t(`harness.${kind}ContractHelp`)}</p>
             {current?.error && (
               <Button
                 size="sm"
@@ -100,16 +113,16 @@ export function InstructionsContract() {
               </Button>
             )}
             {current?.validation?.valid === false && (
-              <p>{t("harness.instructionsContractFix")}</p>
+              <p>{t(`harness.${kind}ContractFix`)}</p>
             )}
-            <p>{t("harness.instructionsContractReview")}</p>
+            <p>{t(`harness.${kind}ContractReview`)}</p>
           </div>
         </details>
         <Link
-          to={`/all/folder/${projectId}?tab=harness&field=system_prompt`}
+          to={`/all/folder/${projectId}?tab=harness&field=${fieldName}`}
           className="shrink-0 text-sm text-primary underline underline-offset-4"
         >
-          {t("harness.returnToInstructions")}
+          {t(`harness.returnTo${kind === "hook" ? "Hooks" : capitalized}`)}
         </Link>
       </div>
     </aside>

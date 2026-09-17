@@ -10,7 +10,7 @@ from __future__ import annotations
 from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 from lfx.base.agents.harness import harness_runtime_inputs
 from lfx.inputs.inputs import IntInput, ModelInput, MultilineInput, StrInput
-from lfx.projects.builtin_slots import COMPACTOR, CONTEXT_MANAGER, PERMISSION_GATE, SYSTEM_PROMPT_BUILDER, TOOL
+from lfx.projects.builtin_slots import COMPACTOR, CONTEXT_MANAGER, HOOK, PERMISSION_GATE, SYSTEM_PROMPT_BUILDER, TOOL
 from lfx.projects.registry import register_project_type
 from lfx.projects.schema import FieldTarget, ProjectType, ProjectTypeField
 
@@ -104,6 +104,7 @@ AGENT_HARNESS = register_project_type(
                     section="Runtime",
                     input=inp,
                     writes_to=FieldTarget("Agent", inp.name),
+                    supports_flow_binding=inp.name == "context_strategy",
                     option_labels={
                         "context_strategy": {"all": "All loaded messages", "recent_turns": "Recent complete turns"},
                         "compaction": {"off": "Off", "summarize": "Summarize older messages"},
@@ -125,6 +126,20 @@ AGENT_HARNESS = register_project_type(
                     }.get(inp.name),
                 )
                 for inp in harness_runtime_inputs()
+            ),
+            ProjectTypeField(
+                name="hooks",
+                section="Hooks",
+                slot_definition=HOOK,
+                supports_flow_binding=True,
+                renders="hook_flows",
+                input=StrInput(
+                    name="hooks",
+                    display_name="Hooks",
+                    list=True,
+                    value=[],
+                    info="Ordered flows that observe or control model and tool calls.",
+                ),
             ),
         ),
     )

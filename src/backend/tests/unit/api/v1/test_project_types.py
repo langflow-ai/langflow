@@ -7,6 +7,7 @@ endpoint reads the lfx registry directly: no database rows, no component cache.
 import pytest
 from fastapi import status
 from httpx import AsyncClient
+
 from lfx.projects import all_project_types
 
 
@@ -73,6 +74,7 @@ async def test_the_harness_form_renders_with_canvas_widgets(client, logged_in_he
         "compaction_trigger_tokens",
         "compaction_keep_messages",
         "max_iterations",
+        "hooks",
     ]
     for name, field in harness["template"].items():
         assert field["name"] == name
@@ -85,7 +87,9 @@ async def test_the_form_carries_the_sections_it_should_be_grouped_into(client, l
     harness = await harness_from_api(client, logged_in_headers)
 
     sections = [field["section"] for field in harness["template"].values()]
-    assert sections == ["Instructions", "Model", "Tools", *(["Runtime"] * 8)]
+    assert sections == ["Instructions", "Model", "Tools", *(["Runtime"] * 8), "Hooks"]
+    assert harness["template"]["hooks"]["show"] is True
+    assert harness["template"]["hooks"]["renders"] == "hook_flows"
 
 
 async def test_the_form_exposes_shared_contracts_without_changing_config_keys(
@@ -107,12 +111,12 @@ async def test_the_form_exposes_shared_contracts_without_changing_config_keys(
     assert "flow_contract" not in template
 
 
-async def test_only_two_fields_ask_for_a_widget_from_the_page(client, logged_in_headers, harness_from_api):
+async def test_visible_fields_use_available_page_widgets(client, logged_in_headers, harness_from_api):
     """Every other field has to render with a shipped canvas widget, or the form is bespoke."""
     harness = await harness_from_api(client, logged_in_headers)
 
-    bespoke = {name: f["renders"] for name, f in harness["template"].items() if f.get("renders")}
-    assert bespoke == {"system_prompt": "long_text", "tools": "project_flows"}
+    bespoke = {name: f["renders"] for name, f in harness["template"].items() if f.get("renders") and f.get("show")}
+    assert bespoke == {"system_prompt": "long_text", "tools": "project_flows", "hooks": "hook_flows"}
 
 
 async def test_the_harness_form_can_be_saved_as_a_project_config(client, logged_in_headers, harness_from_api):

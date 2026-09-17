@@ -4,6 +4,7 @@ from dataclasses import replace
 
 import pytest
 from lfx.inputs.inputs import StrInput
+
 from lfx.projects import (
     Cardinality,
     FireTiming,
@@ -142,6 +143,7 @@ def test_contract_metadata_does_not_replace_the_existing_field_value_or_widget()
     }
     assert template["n_messages"]["value"] == 100
     assert template["context_strategy"]["flow_contract"]["name"] == "ContextManager"
+    assert template["context_strategy"]["supports_flow_binding"]
     assert template["tool_policy"]["flow_contract"]["name"] == "PermissionGate"
     assert not template["tool_policy"].get("supports_flow_binding", False)
 
@@ -167,6 +169,8 @@ def test_registered_vocabulary_does_not_claim_unbuilt_baseline_flows():
         definition.name: definition.default_flow_ref for definition in all_slots() if definition.default_flow_ref
     } == {
         "SystemPromptBuilder": "builtin:instructions",
+        "Hook": "builtin:hook",
+        "ContextManager": "builtin:context",
     }
     # These contracts are ready for runtime adapters; no inert fields are added to the form.
     assert set(get_project_type("agent-harness").field_names()) == {
@@ -174,6 +178,7 @@ def test_registered_vocabulary_does_not_claim_unbuilt_baseline_flows():
         "model",
         "tools",
         "n_messages",
+        "hooks",
         "tool_policy",
         "context_strategy",
         "context_turns",

@@ -36,7 +36,7 @@ import {
   FlowSearchProvider,
   FlowSidebarComponent,
 } from "./components/flowSidebarComponent";
-import { InstructionsContract } from "./components/instructions-contract";
+import { HarnessFlowContract } from "./components/instructions-contract";
 import MemoriesMainContent from "./components/MemoriesMainContent";
 import Page from "./components/PageComponent";
 import { FlowInsightsContent } from "./components/TraceComponent/FlowInsightsContent";
@@ -341,7 +341,7 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                       )}
                     >
                       <div className="flex h-full w-full flex-col">
-                        <InstructionsContract />
+                        <HarnessFlowContract />
                         <div className="min-h-0 flex-1">
                           <FlowPageMainContent
                             flowId={id}

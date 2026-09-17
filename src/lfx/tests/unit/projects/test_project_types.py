@@ -9,6 +9,7 @@ real input on a real component.
 import pytest
 from lfx.components.models_and_agents.agent import AgentComponent
 from lfx.inputs.inputs import StrInput
+
 from lfx.projects import (
     CORE_PROJECT_TYPES,
     DEFAULT_PROJECT_TYPE,
@@ -99,11 +100,12 @@ class TestAgentHarness:
             "compaction_trigger_tokens",
             "compaction_keep_messages",
             "max_iterations",
+            "hooks",
         )
 
     def test_the_form_reads_as_sections(self, harness):
         """The type decides how its own form is grouped, so the UI does not hardcode the order."""
-        assert harness.sections() == ("Instructions", "Model", "Tools", "Runtime")
+        assert harness.sections() == ("Instructions", "Model", "Tools", "Runtime", "Hooks")
 
     def test_every_field_belongs_to_a_section(self, harness):
         assert all(field.section for field in harness.fields)
@@ -116,11 +118,11 @@ class TestAgentHarness:
         """A node-sized one-line input with a modal is the wrong shape for the main field."""
         assert harness.to_template()["system_prompt"]["renders"] == "long_text"
 
-    def test_only_those_two_fields_need_a_widget_from_the_page(self, harness):
+    def test_visible_fields_use_the_available_page_widgets(self, harness):
         """Everything else must render with a shipped canvas widget, or the form is bespoke."""
-        bespoke = {f.name: f.renders for f in harness.fields if f.renders}
+        bespoke = {f.name: f.renders for f in harness.fields if f.renders and f.input.show}
 
-        assert bespoke == {"system_prompt": "long_text", "tools": "project_flows"}
+        assert bespoke == {"system_prompt": "long_text", "tools": "project_flows", "hooks": "hook_flows"}
 
     def test_every_field_renders_with_a_shipped_widget(self, harness):
         """The form reuses the canvas field renderer, so each field must carry a real input type."""

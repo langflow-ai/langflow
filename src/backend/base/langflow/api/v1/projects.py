@@ -7,9 +7,9 @@ from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.log.logger import logger
-from lfx.projects import all_project_types
 from lfx.projects.baselines import build_slot_baseline
-from lfx.projects.bindings import flow_revision, instruction_outputs
+from lfx.projects.bindings import flow_revision
+from lfx.projects.flow_slots import BINDING_LABELS, binding_outputs
 from lfx.services.mcp_composer.service import MCPComposerService
 from lfx.utils.util_strings import escape_like_pattern
 from pydantic import BaseModel, ConfigDict
@@ -88,6 +88,7 @@ from langflow.services.database.models.folder.utils import validate_project_type
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_service, get_settings_service, get_storage_service
 from langflow.services.schema import ServiceType
+from lfx.projects import all_project_types
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
 
@@ -356,7 +357,7 @@ async def read_project_types(
     ]
 
 
-async def _instructions_project(session: DbSession, current_user: User, project_id: UUID, field_name: str) -> Folder:
+async def _binding_project(session: DbSession, current_user: User, project_id: UUID, field_name: str) -> Folder:
     """Keep baseline and draft validation scoped like the field's output picker."""
     project = (
         await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
@@ -370,18 +371,19 @@ async def _instructions_project(session: DbSession, current_user: User, project_
         project_user_id=project.user_id,
         workspace_id=project.workspace_id,
     )
-    if project.project_type != "agent-harness" or field_name != "system_prompt":
-        raise HTTPException(422, "Only harness Instructions currently supports a flow binding.")
+    if project.project_type != "agent-harness" or field_name not in BINDING_LABELS:
+        raise HTTPException(422, "Only harness Instructions, Hooks, and Context currently support flow bindings.")
     return project
 
 
-class InstructionsBaselineRequest(BaseModel):
+class FlowBaselineRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     initial_value: str | None = None
+    initial_config: dict | None = None
 
 
-class InstructionsValidationRequest(BaseModel):
+class FlowValidationRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     data: dict
@@ -393,17 +395,21 @@ async def prepare_project_flow_baseline(
     session: DbSession,
     project_id: UUID,
     current_user: CurrentActiveUser,
-    request: InstructionsBaselineRequest,
+    request: FlowBaselineRequest,
     field_name: str = "system_prompt",
 ):
     """Prepare a working template. Persist it through the normal authorized flow creation API."""
-    project = await _instructions_project(session, current_user, project_id, field_name)
+    project = await _binding_project(session, current_user, project_id, field_name)
     project_type = next(candidate for candidate in all_project_types() if candidate.name == project.project_type)
     field = next(field for field in project_type.fields if field.name == field_name)
     reference = field.slot_definition.default_flow_ref if field.slot_definition else None
     if not reference:
         raise HTTPException(422, "This field does not yet provide a working baseline.")
-    return {**build_slot_baseline(reference, request.initial_value), "folder_id": str(project.id)}
+    try:
+        baseline = build_slot_baseline(reference, request.initial_value, initial_config=request.initial_config)
+    except ValueError as exc:
+        raise HTTPException(422, "Check the context strategy and recent-turn count before creating its flow.") from exc
+    return {**baseline, "folder_id": str(project.id)}
 
 
 @router.post("/{project_id}/flow-outputs/validate")
@@ -412,24 +418,35 @@ async def validate_project_flow_outputs(
     session: DbSession,
     project_id: UUID,
     current_user: CurrentActiveUser,
-    request: InstructionsValidationRequest,
+    request: FlowValidationRequest,
     field_name: str = "system_prompt",
 ):
     """Inspect an unsaved graph's contract, without running or persisting its code."""
-    await _instructions_project(session, current_user, project_id, field_name)
+    await _binding_project(session, current_user, project_id, field_name)
+    hint = {
+        "hooks": "Connect one Hook Event to a terminal Hook decision and configure required inputs.",
+        "context_strategy": "Connect one Agent Context to a terminal message Table and configure required inputs.",
+        "system_prompt": "Configure required inputs and connect a terminal text output.",
+    }[field_name]
     try:
-        outputs = instruction_outputs(request.data)
+        outputs = binding_outputs(field_name, request.data)
     except (ValueError, TypeError, KeyError, AttributeError):
         # Saved code and arbitrary payload content must never leak through parser exceptions.
         return {
             "outputs": [],
             "valid": False,
-            "reason": "Configure required inputs and connect a terminal text output.",
+            "reason": hint,
         }
     return {
         "outputs": outputs,
         "valid": bool(outputs),
-        "reason": None if outputs else "Add a System Prompt Builder with an unconnected Instructions output.",
+        "reason": None
+        if outputs
+        else (
+            "Add a System Prompt Builder with an unconnected Instructions output."
+            if field_name == "system_prompt"
+            else hint
+        ),
     }
 
 
@@ -442,7 +459,7 @@ async def read_project_flow_outputs(
     field_name: str = "system_prompt",
 ):
     """List compatible local outputs without executing any saved component code."""
-    project = await _instructions_project(session, current_user, project_id, field_name)
+    project = await _binding_project(session, current_user, project_id, field_name)
     flows = (
         await session.exec(
             select(Flow).where(
@@ -461,7 +478,7 @@ async def read_project_flow_outputs(
     candidates = []
     for flow in flows:
         try:
-            outputs = instruction_outputs(flow.data or {})
+            outputs = binding_outputs(field_name, flow.data or {})
             revision = flow_revision(flow.data or {})
         except (ValueError, TypeError, KeyError):
             continue
