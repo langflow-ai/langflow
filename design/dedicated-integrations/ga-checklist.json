@@ -1,0 +1,211 @@
+{
+  "ticket": "INT-14",
+  "jira": "LE-2472",
+  "title": "GA validation: cross-context tests, security review, docs, accessibility, i18n",
+  "updated_on": "2026-09-17",
+  "contexts": {
+    "hosted": {
+      "status": "pending-signoff",
+      "pending": {
+        "owner": "release owner",
+        "reason": "Hosted live validation requires a deployed hosted environment with the Langflow-owned OAuth registrations; automated evidence covers the shared code paths but the signed hosted run is a human gate."
+      }
+    },
+    "self_managed": {
+      "status": "pending-signoff",
+      "pending": {
+        "owner": "release owner",
+        "reason": "Self-managed validation requires a customer-style deployment with customer-owned OAuth apps and a real tenant consent policy; recorded here as pending until the release owner signs the run."
+      }
+    },
+    "desktop": {
+      "status": "pending-signoff",
+      "pending": {
+        "owner": "release owner",
+        "reason": "Desktop validation requires the Tauri build exercising the loopback_redirect path with Langflow-owned public clients; automated tests cover the loopback configuration rules but the signed Desktop run is a human gate."
+      }
+    },
+    "headless": {
+      "status": "validated",
+      "evidence": [
+        "src/lfx/tests/unit/services/connection/test_env_resolver.py",
+        "docs/docs/Lfx/lfx-connections.mdx"
+      ]
+    }
+  },
+  "items": [
+    {
+      "id": "stable-schemas",
+      "title": "Stable schemas across supported install and upgrade paths",
+      "contexts": ["hosted", "self_managed", "desktop", "headless"],
+      "status": "validated",
+      "evidence": [
+        "src/backend/tests/unit/api/v1/test_integration_schema_stability.py",
+        "src/backend/tests/unit/api/v1/test_flow_connection_ref_import.py",
+        "src/backend/tests/unit/api/v1/test_connections.py",
+        "src/backend/tests/unit/api/v1/test_integrations.py",
+        "src/backend/tests/unit/alembic/test_connection_migration.py",
+        "src/backend/tests/unit/alembic/test_connection_oauth_migration.py"
+      ]
+    },
+    {
+      "id": "least-privilege-scopes",
+      "title": "Least-privilege scopes: scope-missing refused before provider calls; conditional scopes gated on inputs",
+      "contexts": ["hosted", "self_managed", "desktop", "headless"],
+      "status": "validated",
+      "evidence": [
+        "src/backend/tests/unit/api/v1/test_connection_resolution_families.py",
+        "src/lfx/tests/unit/services/connection/test_discovery.py",
+        "src/lfx/tests/unit/integrations/test_contracts.py",
+        "src/bundles/microsoft/tests/test_sharepoint_actions.py",
+        "design/dedicated-integrations/matrices/google.json",
+        "design/dedicated-integrations/matrices/microsoft.json",
+        "design/dedicated-integrations/matrices/slack.json"
+      ]
+    },
+    {
+      "id": "secret-redaction",
+      "title": "Secret redaction: no token material in client error payloads, API responses, logs, or credential reprs",
+      "contexts": ["hosted", "self_managed", "desktop", "headless"],
+      "status": "validated",
+      "evidence": [
+        "src/backend/tests/unit/api/utils/test_execution_errors_integration.py",
+        "src/backend/tests/unit/api/v1/test_integration_run_errors.py",
+        "src/backend/tests/unit/api/v1/test_connection_oauth.py",
+        "src/backend/tests/unit/services/connection/test_refresh_skew.py",
+        "design/dedicated-integrations/security-review.md"
+      ]
+    },
+    {
+      "id": "revocation-refresh",
+      "title": "Revocation and refresh: revoke resolves as connection-unresolved; refresh with skew; rotating-token reuse via rejected_token_digest",
+      "contexts": ["hosted", "self_managed", "desktop"],
+      "status": "validated",
+      "evidence": [
+        "src/backend/tests/unit/api/v1/test_connection_oauth.py",
+        "src/backend/tests/unit/services/connection/test_refresh_skew.py",
+        "src/backend/tests/unit/alembic/test_connection_oauth_workers.py"
+      ]
+    },
+    {
+      "id": "policy-enforcement",
+      "title": "Policy enforcement: blocked providers and actions refused at discovery and execution",
+      "contexts": ["hosted", "self_managed", "desktop", "headless"],
+      "status": "validated",
+      "evidence": [
+        "src/backend/tests/unit/api/v1/test_integration_execution_policy.py",
+        "src/backend/tests/unit/api/v1/test_integrations.py"
+      ]
+    },
+    {
+      "id": "rate-limit-handling",
+      "title": "Rate-limit handling: provider 429 normalized to typed rate-limited errors; connection/OAuth endpoints rate limited",
+      "contexts": ["hosted", "self_managed", "desktop"],
+      "status": "validated",
+      "evidence": [
+        "src/backend/tests/unit/api/v1/test_connections_rate_limit.py",
+        "docs/docs/Components/bundles-microsoft.mdx",
+        "docs/docs/Components/bundles-slack.mdx"
+      ]
+    },
+    {
+      "id": "install-upgrade",
+      "title": "Install and upgrade on supported environments: migrations apply and roll back; GoogleOAuthToken deprecation path",
+      "contexts": ["hosted", "self_managed", "desktop"],
+      "status": "validated",
+      "evidence": [
+        "src/backend/tests/unit/alembic/test_connection_migration.py",
+        "src/backend/tests/unit/alembic/test_connection_oauth_migration.py",
+        "docs/docs/Components/bundles-google.mdx"
+      ]
+    },
+    {
+      "id": "unavailable-incompatible-tools",
+      "title": "Unavailable and incompatible tool behavior is explicit, tested, and fail-closed",
+      "contexts": ["hosted", "self_managed", "desktop", "headless"],
+      "status": "validated",
+      "evidence": [
+        "src/lfx/tests/unit/base/mcp/test_ga_swap_procedure.py",
+        "src/backend/tests/unit/api/v1/test_integration_run_errors.py",
+        "docs/docs/Develop/connection-oauth.mdx"
+      ]
+    },
+    {
+      "id": "callback-paths-client-types",
+      "title": "Both callback paths (server_redirect, loopback_redirect) times both client types (confidential, public/PKCE) covered",
+      "contexts": ["hosted", "self_managed", "desktop"],
+      "status": "validated",
+      "evidence": [
+        "src/backend/tests/unit/api/v1/test_connection_oauth.py",
+        "src/backend/tests/unit/services/connection/test_oauth_config.py",
+        "scripts/ci/test_capability_matrices.py"
+      ]
+    },
+    {
+      "id": "security-review",
+      "title": "Security review of the OAuth broker, connection API, and identity rules; every HIGH-or-higher finding closed",
+      "contexts": ["hosted", "self_managed", "desktop", "headless"],
+      "status": "validated",
+      "evidence": [
+        "design/dedicated-integrations/security-review.md",
+        "src/backend/tests/unit/api/v1/test_connections_rate_limit.py"
+      ]
+    },
+    {
+      "id": "documentation",
+      "title": "Documentation published: broker configuration, per-context setup, revocation, tenant-consent rollout, portability, bundle guides",
+      "contexts": ["hosted", "self_managed", "desktop", "headless"],
+      "status": "validated",
+      "evidence": [
+        "docs/docs/Develop/connection-oauth.mdx",
+        "docs/docs/Develop/entra-app-registration.mdx",
+        "docs/docs/Lfx/lfx-connections.mdx",
+        "docs/docs/Components/bundles-google.mdx",
+        "docs/docs/Components/bundles-microsoft.mdx",
+        "docs/docs/Components/bundles-slack.mdx"
+      ]
+    },
+    {
+      "id": "accessibility",
+      "title": "Accessibility checks green in CI for all current surfaces; Connections-UI audit pending INT-8",
+      "contexts": ["hosted", "self_managed", "desktop"],
+      "status": "validated",
+      "evidence": [
+        ".github/workflows/a11y-unit-tests.yml",
+        ".github/workflows/a11y-scan.yml",
+        "scripts/a11y/a11y_routes.json"
+      ]
+    },
+    {
+      "id": "i18n",
+      "title": "i18n extraction and parity checks green in CI",
+      "contexts": ["hosted", "self_managed", "desktop"],
+      "status": "validated",
+      "evidence": [
+        "src/frontend/scripts/check-i18n.mjs",
+        "src/frontend/src/locales/__tests__/locale-parity.test.ts",
+        ".github/workflows/jest_test.yml"
+      ]
+    },
+    {
+      "id": "live-tenant-consent",
+      "title": "Live tenant/workspace consent validation per provider registration",
+      "contexts": ["hosted", "self_managed", "desktop"],
+      "status": "pending-signoff",
+      "pending": {
+        "owner": "release owner",
+        "reason": "Documentation review does not establish tenant consent. Each target tenant/workspace consent policy and administrator approval must be recorded against the real registration and scope set before rollout, per the matrices' tenant_consent open question."
+      }
+    },
+    {
+      "id": "connections-ui-a11y-i18n",
+      "title": "Accessibility audit and i18n coverage of the new Connections UI (surfaces B1-B5)",
+      "contexts": ["hosted", "self_managed", "desktop"],
+      "status": "pending-signoff",
+      "pending": {
+        "owner": "frontend owner",
+        "reason": "The /settings/connections UI is INT-8 scope and does not exist on this branch yet; its axe baseline (connections.a11y.spec.ts) and locale coverage can only run once INT-8 lands."
+      }
+    }
+  ]
+}

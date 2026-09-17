@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, HTTPException, Query, Request, status
 from lfx.integrations.models import PROVIDER_ID_PATTERN
 from lfx.services.deps import get_integration_policy_service
 from lfx.services.integration_policy import IntegrationPolicyPurpose, aresolve_integration_policy
@@ -19,8 +19,13 @@ from pydantic import BaseModel, Field
 from langflow.api.utils import CurrentActiveUser, DbSessionReadOnly
 from langflow.api.v1.connections import ConnectionService
 from langflow.api.v1.model_provider_policy_scope import ProviderPolicyAttributesDependency
+from langflow.services.rate_limit import check_rate_limit
 
 router = APIRouter(prefix="/integrations", tags=["Integrations"])
+
+# Counter namespace shared by the catalog reads; distinct from the connections
+# buckets so browsing the catalog cannot consume mutation/OAuth budget.
+_SCOPE_INTEGRATIONS = "integrations"
 
 
 class IntegrationCapabilityRead(BaseModel):
@@ -84,6 +89,7 @@ class EffectiveIntegrationPolicyRead(BaseModel):
 @router.get("", response_model=IntegrationListRead)
 @router.get("/", response_model=IntegrationListRead, include_in_schema=False)
 async def list_integrations(
+    request: Request,
     session: DbSessionReadOnly,
     current_user: CurrentActiveUser,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
@@ -101,6 +107,7 @@ async def list_integrations(
     is (``/api/v1/all``, starter projects, basic examples): the deny decision is
     operator information, not something a plain caller may enumerate.
     """
+    check_rate_limit(request, scope=_SCOPE_INTEGRATIONS)
     if include_blocked and not current_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -173,10 +180,12 @@ async def list_integrations(
 
 @router.get("/policy/effective", response_model=EffectiveIntegrationPolicyRead)
 async def read_effective_integration_policy(
+    request: Request,
     current_user: CurrentActiveUser,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
 ) -> EffectiveIntegrationPolicyRead:
     """Return the integration decision set that applies to this caller."""
+    check_rate_limit(request, scope=_SCOPE_INTEGRATIONS)
     loaded_provider_ids = frozenset(integration.provider_id for integration in _loaded_integrations())
     policy = await aresolve_integration_policy(
         user_id=current_user.id,
