@@ -66,7 +66,10 @@ const I18N_KEY_RE = /\bi18nKey=\{?\s*(["'])([^"'\n]+)\1/g;
 
 const usedKeys = new Map(); // key -> [{ file, line }]
 let callCount = 0;
-let dynamicCount = 0;
+// Only `t(` matches may be subtracted from `callCount`: `<Trans i18nKey>` uses
+// are recorded as keys but are not `t(` calls, so counting them here would
+// undercount (and could negate) the dynamic total.
+let staticTCallCount = 0;
 
 const record = (key, file, line) => {
   if (!usedKeys.has(key)) usedKeys.set(key, []);
@@ -80,6 +83,7 @@ for (const file of collectSourceFiles(srcRoot)) {
   callCount += (content.match(ANY_CALL_RE) ?? []).length;
 
   for (const match of content.matchAll(STATIC_CALL_RE)) {
+    staticTCallCount++;
     record(match[2], rel, lineOf(content, match.index));
   }
   for (const match of content.matchAll(I18N_KEY_RE)) {
@@ -91,7 +95,7 @@ const staticCallCount = [...usedKeys.values()].reduce(
   (sum, uses) => sum + uses.length,
   0,
 );
-dynamicCount = callCount - staticCallCount;
+const dynamicCount = callCount - staticTCallCount;
 
 // --- Check 1: every static key used in code exists in en.json -------------
 const missing = [];
