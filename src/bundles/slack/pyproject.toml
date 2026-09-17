@@ -1,6 +1,6 @@
 [project]
 name = "lfx-slack"
-version = "0.1.0"
+version = "0.1.1"
 description = "Slack Web API actions (user-identity and bot-identity) as a standalone Langflow Extension Bundle backed by connections."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
