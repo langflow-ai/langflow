@@ -28,6 +28,19 @@ const contextBinding = {
   output_name: "context",
   timeout_seconds: 5,
 };
+const compactionBinding = {
+  ...instructionsBinding,
+  flow_id: "compaction-source",
+  output_name: "result",
+  timeout_seconds: 2.5,
+  trigger_tokens: 2400,
+};
+const permissionBinding = {
+  ...instructionsBinding,
+  flow_id: "permission-source",
+  output_name: "permission",
+  timeout_seconds: 2.5,
+};
 const hookBinding: HookBinding = {
   flow_id: "hook-source",
   node_id: "hook",
@@ -88,7 +101,11 @@ jest.mock("../components/instructions-flow-picker", () => ({
         data-testid={
           fieldName === "context_strategy"
             ? "bind-context"
-            : "bind-instructions"
+            : fieldName === "compaction"
+              ? "bind-compaction"
+              : fieldName === "tool_policy"
+                ? "bind-permission"
+                : "bind-instructions"
         }
         data-initial-config={JSON.stringify(initialConfig)}
         onClick={() =>
@@ -97,12 +114,31 @@ jest.mock("../components/instructions-flow-picker", () => ({
               ? undefined
               : fieldName === "context_strategy"
                 ? contextBinding
-                : instructionsBinding,
+                : fieldName === "compaction"
+                  ? compactionBinding
+                  : fieldName === "tool_policy"
+                    ? permissionBinding
+                    : instructionsBinding,
           )
         }
       >
         {value ? "Unbind" : "Bind"}
       </button>
+      {fieldName === "tool_policy" && (
+        <>
+          <button data-testid="open-permission" onClick={onOpen}>
+            Open permission
+          </button>
+          <button
+            data-testid="invalidate-permission"
+            onClick={() =>
+              onChange({ ...permissionBinding, timeout_seconds: NaN })
+            }
+          >
+            Invalid permission timeout
+          </button>
+        </>
+      )}
       {fieldName === "context_strategy" && (
         <>
           <button data-testid="open-context" onClick={onOpen}>
@@ -115,6 +151,29 @@ jest.mock("../components/instructions-flow-picker", () => ({
             }
           >
             Invalid context timeout
+          </button>
+        </>
+      )}
+      {fieldName === "compaction" && (
+        <>
+          <button data-testid="open-compaction" onClick={onOpen}>
+            Open compaction
+          </button>
+          <button
+            data-testid="invalidate-compaction-threshold"
+            onClick={() =>
+              onChange({ ...compactionBinding, trigger_tokens: 1.5 })
+            }
+          >
+            Invalid threshold
+          </button>
+          <button
+            data-testid="invalidate-compaction-timeout"
+            onClick={() =>
+              onChange({ ...compactionBinding, timeout_seconds: NaN })
+            }
+          >
+            Invalid timeout
           </button>
         </>
       )}
@@ -848,6 +907,236 @@ const enableContextFields = () => {
     description: "",
   } as FlowType);
 };
+
+const enableCompactionFields = () => {
+  enableContextFields();
+  const type = projectTypes![0];
+  projectTypes = [
+    {
+      ...type,
+      template: {
+        ...type.template,
+        compaction: {
+          name: "compaction",
+          display_name: "Compaction",
+          section: "Runtime",
+          value: "summarize",
+          option_labels: { off: "Off", summarize: "Summarize older messages" },
+          supports_flow_binding: true,
+        },
+        compaction_trigger_tokens: {
+          name: "compaction_trigger_tokens",
+          display_name: "Token threshold",
+          section: "Runtime",
+          value: 2400,
+          type: "int",
+          show_when: { compaction: "summarize" },
+        },
+        compaction_keep_messages: {
+          name: "compaction_keep_messages",
+          display_name: "Keep recent messages",
+          section: "Runtime",
+          value: 3,
+          type: "int",
+          show_when: { compaction: "summarize" },
+        },
+      },
+    },
+  ];
+  projectFlows!.push({
+    id: "compaction-source",
+    name: "Evidence compaction",
+    description: "",
+  } as FlowType);
+};
+
+const enablePermissionFields = () => {
+  enableCompactionFields();
+  const type = projectTypes![0];
+  projectTypes = [
+    {
+      ...type,
+      template: {
+        ...type.template,
+        tool_policy: {
+          name: "tool_policy",
+          display_name: "Permissions",
+          section: "Runtime",
+          value: "deny",
+          option_labels: {
+            tool_defaults: "Use tool settings",
+            ask: "Ask before each call",
+            deny: "Block all tools",
+          },
+          supports_flow_binding: true,
+        },
+      },
+    },
+  ];
+  projectFlows!.push({
+    id: "permission-source",
+    name: "Review research tools",
+    description: "",
+  } as FlowType);
+};
+
+it("creates Permissions from the current policy and restores that policy when unbound", () => {
+  enablePermissionFields();
+  renderPage();
+  expect(screen.getByTestId("bind-permission")).toHaveAttribute(
+    "data-initial-config",
+    JSON.stringify({ tool_policy: "deny" }),
+  );
+  fireEvent.click(screen.getByTestId("bind-permission"));
+  expect(
+    screen.queryByTestId("harness-choice-tool_policy"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByTestId("harness-summary-detail-tool_policy"),
+  ).toHaveTextContent("Review research tools · flow");
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.lastCall[0].data.project_config).toMatchObject({
+    tool_policy: "deny",
+    flow_bindings: { tool_policy: permissionBinding },
+  });
+  fireEvent.click(screen.getByTestId("bind-permission"));
+  expect(screen.getByTestId("harness-choice-tool_policy")).toHaveTextContent(
+    "Block all tools",
+  );
+});
+
+it("retains five bindings and form edits across the permission canvas round trip", () => {
+  enablePermissionFields();
+  const projectConfig = {
+    flow_bindings: {
+      system_prompt: instructionsBinding,
+      context_strategy: contextBinding,
+      compaction: compactionBinding,
+      hooks: [hookBinding],
+    },
+  };
+  const first = renderPage({ projectConfig });
+  fireEvent.click(screen.getByTestId("bind-permission"));
+  fireEvent.change(screen.getByTestId("input-n_messages"), {
+    target: { value: "27" },
+  });
+  fireEvent.click(screen.getByTestId("open-permission"));
+  first.unmount();
+  renderPage({ projectConfig });
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.lastCall[0].data.project_config).toMatchObject({
+    n_messages: "27",
+    flow_bindings: {
+      ...projectConfig.flow_bindings,
+      tool_policy: permissionBinding,
+    },
+  });
+});
+
+it("blocks a save with invalid permission timeout while retaining other bindings", () => {
+  enablePermissionFields();
+  renderPage({
+    projectConfig: {
+      flow_bindings: {
+        context_strategy: contextBinding,
+        compaction: compactionBinding,
+        hooks: [hookBinding],
+      },
+    },
+  });
+  fireEvent.click(screen.getByTestId("invalidate-permission"));
+  fireEvent.change(screen.getByTestId("input-n_messages"), {
+    target: { value: "27" },
+  });
+  expect(screen.getByTestId("harness-save-btn")).toBeDisabled();
+  expect(mockPatch).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByTestId("bind-permission"));
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(
+    mockPatch.mock.lastCall[0].data.project_config.flow_bindings,
+  ).toMatchObject({
+    context_strategy: contextBinding,
+    compaction: compactionBinding,
+    hooks: [hookBinding],
+  });
+});
+
+it("creates Compaction from current settings and restores scalar controls when unbound", () => {
+  enableCompactionFields();
+  renderPage();
+  expect(screen.getByTestId("bind-compaction")).toHaveAttribute(
+    "data-initial-config",
+    JSON.stringify({
+      compaction_trigger_tokens: 2400,
+      compaction_keep_messages: 3,
+    }),
+  );
+  fireEvent.click(screen.getByTestId("bind-compaction"));
+  expect(
+    screen.queryByTestId("input-compaction_trigger_tokens"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByTestId("input-compaction_keep_messages"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByTestId("harness-summary-detail-compaction"),
+  ).toHaveTextContent("Evidence compaction · flow");
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.lastCall[0].data.project_config).toMatchObject({
+    compaction: "summarize",
+    compaction_trigger_tokens: 2400,
+    compaction_keep_messages: 3,
+    flow_bindings: { compaction: compactionBinding },
+  });
+  fireEvent.click(screen.getByTestId("bind-compaction"));
+  expect(screen.getByTestId("input-compaction_keep_messages")).toHaveValue("3");
+});
+
+it("keeps all four bindings and other edits through the Compaction canvas round trip", () => {
+  enableCompactionFields();
+  const projectConfig = {
+    flow_bindings: {
+      system_prompt: instructionsBinding,
+      context_strategy: contextBinding,
+      hooks: [hookBinding],
+    },
+  };
+  const first = renderPage({ projectConfig });
+  fireEvent.click(screen.getByTestId("bind-compaction"));
+  fireEvent.change(screen.getByTestId("input-n_messages"), {
+    target: { value: "27" },
+  });
+  fireEvent.click(screen.getByTestId("open-compaction"));
+  first.unmount();
+  renderPage({ projectConfig });
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.lastCall[0].data.project_config).toMatchObject({
+    n_messages: "27",
+    flow_bindings: {
+      ...projectConfig.flow_bindings,
+      compaction: compactionBinding,
+    },
+  });
+});
+
+it.each(["threshold", "timeout"])(
+  "blocks an invalid Compaction %s without discarding other bindings",
+  (setting) => {
+    enableCompactionFields();
+    renderPage({ projectConfig: { flow_bindings: { hooks: [hookBinding] } } });
+    fireEvent.click(screen.getByTestId(`invalidate-compaction-${setting}`));
+    fireEvent.change(screen.getByTestId("input-n_messages"), {
+      target: { value: "27" },
+    });
+    expect(screen.getByTestId("harness-save-btn")).toBeDisabled();
+    fireEvent.click(screen.getByTestId("bind-compaction"));
+    expect(screen.getByTestId("harness-save-btn")).toBeEnabled();
+    fireEvent.click(screen.getByTestId("harness-save-btn"));
+    expect(
+      mockPatch.mock.lastCall[0].data.project_config.flow_bindings,
+    ).toEqual({ hooks: [hookBinding] });
+  },
+);
 
 it("replaces scalar Context controls, retains their values, and names the flow in the summary", () => {
   enableContextFields();

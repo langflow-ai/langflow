@@ -14,9 +14,11 @@ from lfx.projects.bindings import (
     compose_instructions,
     reject_recursive_binding,
 )
+from lfx.projects.compaction import compose_compaction
 from lfx.projects.context import compose_context
 from lfx.projects.flow_slots import BINDING_LABELS, ProjectFlowBindings, validate_project_binding
 from lfx.projects.hooks import compose_hooks
+from lfx.projects.permissions import compose_permission
 from lfx.projects.tools import agent_node_ids, compose_tools
 from sqlmodel import col, select
 
@@ -221,7 +223,8 @@ async def write_project_config_to_flows(
             bindings = ProjectFlowBindings.model_validate(config.get("flow_bindings", {}))
         except ValueError as exc:
             raise HTTPException(
-                422, "Invalid flow bindings. Choose Instructions or Context outputs, or a list of Hook bindings."
+                422,
+                "Invalid flow bindings. Choose compatible harness outputs and valid binding settings.",
             ) from exc
         sources = {str(flow.id): flow for flow in flows if not flow.is_component}
         for field_name, binding in bindings.entries():
@@ -295,6 +298,24 @@ async def write_project_config_to_flows(
                 )
             except (ValueError, KeyError, TypeError) as exc:
                 raise HTTPException(422, f"Could not bind Context: {exc}") from exc
+            try:
+                data = compose_compaction(
+                    data,
+                    project_id=str(project.id),
+                    agent_id=agent_node_ids(data)[0],
+                    binding=bindings.compaction,
+                )
+            except (ValueError, KeyError, TypeError) as exc:
+                raise HTTPException(422, f"Could not bind Compaction: {exc}") from exc
+            try:
+                data = compose_permission(
+                    data,
+                    project_id=str(project.id),
+                    agent_id=agent_node_ids(data)[0],
+                    binding=bindings.tool_policy,
+                )
+            except (ValueError, KeyError, TypeError) as exc:
+                raise HTTPException(422, f"Could not bind Permissions: {exc}") from exc
         if project_type.name == "agent-harness" and "tools" in config:
             try:
                 data = compose_tools(

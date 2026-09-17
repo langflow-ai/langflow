@@ -232,6 +232,24 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             info="The reviewed ContextManager flow that prepares each model request.",
         ),
         MultilineInput(
+            name="compaction_binding",
+            display_name="Reviewed compaction flow",
+            value="",
+            advanced=True,
+            show=False,
+            override_skip=True,
+            info="The reviewed Compactor flow that replaces conversation state at the token threshold.",
+        ),
+        MultilineInput(
+            name="permission_binding",
+            display_name="Reviewed permission flow",
+            value="",
+            advanced=True,
+            show=False,
+            override_skip=True,
+            info="The reviewed PermissionGate flow applied before tool execution.",
+        ),
+        MultilineInput(
             name="hook_bindings",
             display_name="Reviewed hook flows",
             value="[]",
@@ -686,17 +704,27 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         policy = policy.model_copy(
             update={"max_iterations": max(1, int(max_iterations if max_iterations is not None else 15))}
         )
+        from lfx.projects.compaction import CompactionFlowRunner, parse_compaction_binding
         from lfx.projects.context import ContextFlowRunner, parse_context_binding
 
         context_binding = parse_context_binding(getattr(self, "context_binding", ""))
-        if context_binding or policy.context_strategy != "all" or policy.compaction != "off":
+        compaction_binding = parse_compaction_binding(getattr(self, "compaction_binding", ""))
+        if compaction_binding or context_binding or policy.context_strategy != "all" or policy.compaction != "off":
             from lfx.components.models_and_agents.agent_helpers.harness_middleware import (
                 HarnessCompactionMiddleware,
                 HarnessContextMiddleware,
             )
 
-            if policy.compaction == "summarize":
-                middleware.append(HarnessCompactionMiddleware(llm, policy))
+            if compaction_binding or policy.compaction == "summarize":
+                middleware.append(
+                    HarnessCompactionMiddleware(
+                        llm,
+                        policy,
+                        compaction_flow=CompactionFlowRunner(self, compaction_binding, llm)
+                        if compaction_binding
+                        else None,
+                    )
+                )
             middleware.append(
                 HarnessContextMiddleware(
                     policy, context_flow=ContextFlowRunner(self, context_binding) if context_binding else None
@@ -706,15 +734,26 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             DenyToolsMiddleware,
             ToolApprovalMiddleware,
         )
+        from lfx.projects.permissions import parse_permission_binding
 
-        if policy.tool_policy == "deny" and self.tools:
+        permission_binding = parse_permission_binding(getattr(self, "permission_binding", ""))
+        if not permission_binding and policy.tool_policy == "deny" and self.tools:
             middleware.append(DenyToolsMiddleware())
         interrupt_on = self._gated_interrupt_on()
         if interrupt_on:
             if not allow_interrupts:
                 msg = "Tool approvals are unavailable with structured output. Use Agent message output to review calls."
                 raise ValueError(msg)
-            middleware.append(ToolApprovalMiddleware(interrupt_on, policy=policy.tool_policy))
+            if permission_binding:
+                from lfx.components.models_and_agents.agent_helpers.permission_flow_middleware import (
+                    PermissionFlowMiddleware,
+                )
+
+                # A failed permission flow must not be retried away. Hooks are added
+                # outside this layer below, so permission sees their final arguments.
+                middleware.insert(0, PermissionFlowMiddleware(self, permission_binding, interrupt_on))
+            else:
+                middleware.append(ToolApprovalMiddleware(interrupt_on, policy=policy.tool_policy))
         from lfx.components.models_and_agents.agent_helpers.hook_middleware import (
             HarnessHookMiddleware,
             parse_hook_bindings,
@@ -1008,6 +1047,8 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             or getattr(self, "compaction", "off") != "off"
             or getattr(self, "hook_bindings", "[]").strip() not in {"", "[]"}
             or getattr(self, "context_binding", "").strip() not in {"", "null", "{}"}
+            or getattr(self, "compaction_binding", "").strip() not in {"", "null", "{}"}
+            or getattr(self, "permission_binding", "").strip() not in {"", "null", "{}"}
         )
 
         async def _run_agent_for_fallback(augmented_prompt: str) -> str:

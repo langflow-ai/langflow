@@ -9,6 +9,8 @@ if TYPE_CHECKING:
     from lfx.components.models_and_agents.a2a_agent import A2AAgentComponent
     from lfx.components.models_and_agents.agent import AgentComponent
     from lfx.components.models_and_agents.agent_context import AgentContextComponent
+    from lfx.components.models_and_agents.compaction_input import CompactionInputComponent
+    from lfx.components.models_and_agents.compactor import CompactorComponent
     from lfx.components.models_and_agents.context_manager import ContextManagerComponent
     from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
     from lfx.components.models_and_agents.hook import HookComponent
@@ -16,6 +18,8 @@ if TYPE_CHECKING:
     from lfx.components.models_and_agents.language_model import LanguageModelComponent
     from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
     from lfx.components.models_and_agents.memory import MemoryComponent
+    from lfx.components.models_and_agents.permission_gate import PermissionGateComponent
+    from lfx.components.models_and_agents.permission_request import PermissionRequestComponent
     from lfx.components.models_and_agents.policies_component import PoliciesComponent
     from lfx.components.models_and_agents.prompt import PromptComponent
     from lfx.components.models_and_agents.system_prompt_builder import SystemPromptBuilderComponent
@@ -24,6 +28,8 @@ _dynamic_imports = {
     "A2AAgentComponent": "a2a_agent",
     "AgentComponent": "agent",
     "AgentContextComponent": "agent_context",
+    "CompactionInputComponent": "compaction_input",
+    "CompactorComponent": "compactor",
     "ContextManagerComponent": "context_manager",
     "EmbeddingModelComponent": "embedding_model",
     "HookComponent": "hook",
@@ -31,6 +37,8 @@ _dynamic_imports = {
     "LanguageModelComponent": "language_model",
     "MCPToolsComponent": "mcp_component",
     "MemoryComponent": "memory",
+    "PermissionGateComponent": "permission_gate",
+    "PermissionRequestComponent": "permission_request",
     "PoliciesComponent": "policies_component",
     "PromptComponent": "prompt",
     "SystemPromptBuilderComponent": "system_prompt_builder",
@@ -40,6 +48,8 @@ __all__ = [
     "A2AAgentComponent",
     "AgentComponent",
     "AgentContextComponent",
+    "CompactionInputComponent",
+    "CompactorComponent",
     "ContextManagerComponent",
     "EmbeddingModelComponent",
     "HookComponent",
@@ -47,6 +57,8 @@ __all__ = [
     "LanguageModelComponent",
     "MCPToolsComponent",
     "MemoryComponent",
+    "PermissionGateComponent",
+    "PermissionRequestComponent",
     "PromptComponent",
     "SystemPromptBuilderComponent",
 ]
