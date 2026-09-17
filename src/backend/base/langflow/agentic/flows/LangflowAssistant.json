@@ -509,7 +509,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "int",
-                "value": 30
+                "value": 60
               },
               "max_tokens": {
                 "_input_type": "IntInput",
@@ -1413,7 +1413,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": true,
                 "type": "int",
-                "value": 30
+                "value": 60
               },
               "max_tokens": {
                 "_input_type": "IntInput",
