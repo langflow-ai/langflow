@@ -1,0 +1,18 @@
+{
+  "kind": "calendar#events",
+  "summary": "primary",
+  "timeZone": "America/Chicago",
+  "nextPageToken": "page-token-2",
+  "nextSyncToken": "sync-token-2",
+  "items": [
+    {
+      "kind": "calendar#event",
+      "id": "event-design-review",
+      "status": "confirmed",
+      "summary": "Design review",
+      "start": {"dateTime": "2026-09-08T15:00:00-05:00"},
+      "end": {"dateTime": "2026-09-08T16:00:00-05:00"},
+      "htmlLink": "https://www.google.com/calendar/event?eid=event-design-review"
+    }
+  ]
+}

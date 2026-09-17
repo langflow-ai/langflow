@@ -16,6 +16,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
 from langflow.services.authorization import ConnectionAction, ensure_connection_permission
+from langflow.services.authorization.guards import audit_guard_in_transaction
 from langflow.services.connection import ConnectionConflictError, DatabaseConnectionResolverService
 from langflow.services.connection.oauth import broker as oauth_broker
 from langflow.services.connection.oauth.config import OAuthError, get_oauth_settings
@@ -169,6 +170,16 @@ async def _authorized_row(
     row = await service.get_for_user(session, user=user, connection_id=connection_id, for_update=True)
     if row is None or (row.ownership_mode, row.owner_id) != authorized_owner:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Connection not found")
+    # Ownership can stay unchanged while the plugin's policy is revoked.
+    # Recheck after acquiring the lock; durable audit must use this transaction
+    # (or release it on denial) rather than wait on another SQLite writer.
+    async with audit_guard_in_transaction(session):
+        await ensure_connection_permission(
+            user,
+            action,
+            connection_id=row.id,
+            connection_owner_id=row.owner_id,
+        )
     return row
 
 

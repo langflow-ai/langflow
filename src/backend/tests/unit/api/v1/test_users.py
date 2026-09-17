@@ -138,6 +138,24 @@ async def test_add_user_duplicate_username(client: AsyncClient):
     assert "unavailable" in response2.json()["detail"].lower()
 
 
+async def test_add_user_rejects_a_case_variant_of_an_existing_username(client: AsyncClient):
+    """Case variants such as "owner1" and "Owner1" must not coexist as two separate accounts.
+
+    A byte-for-byte unique constraint alone lets a lookalike account through
+    silently, which reads to a user as their password having "stopped
+    working" once they land on the wrong one by accident.
+    """
+    response1 = await client.post("api/v1/users/", json={"username": "owner1", "password": "password123"})
+    assert response1.status_code == status.HTTP_201_CREATED
+
+    response2 = await client.post(
+        "api/v1/users/",
+        json={"username": "Owner1", "password": "password456"},  # pragma: allowlist secret
+    )
+    assert response2.status_code == status.HTTP_400_BAD_REQUEST
+    assert "unavailable" in response2.json()["detail"].lower()
+
+
 async def test_add_user(client: AsyncClient, logged_in_headers_super_user):
     basic_case = {"username": "string", "password": "string"}
     response = await client.post("api/v1/users/", json=basic_case, headers=logged_in_headers_super_user)
@@ -322,6 +340,34 @@ async def test_patch_user(client: AsyncClient, logged_in_headers_super_user):
     assert "updated_at" in result, "The result must have an 'updated_at' key"
     assert "username" in result, "The result must have an 'username' key"
     assert result["username"] == updated_name, "The username must be updated"
+
+
+async def test_patch_user_rejects_a_case_variant_of_an_existing_username(
+    client: AsyncClient, logged_in_headers_super_user
+):
+    """Renaming onto another account's case variant gets the signup 400, not the raw SQL error."""
+    owner = await client.post(
+        "api/v1/users/", json={"username": "owner1", "password": "password123"}, headers=logged_in_headers_super_user
+    )
+    assert owner.status_code == status.HTTP_201_CREATED
+    other = await client.post(
+        "api/v1/users/", json={"username": "other1", "password": "password123"}, headers=logged_in_headers_super_user
+    )
+    assert other.status_code == status.HTTP_201_CREATED
+
+    response = await client.patch(
+        f"api/v1/users/{other.json()['id']}", json={"username": "OWNER1"}, headers=logged_in_headers_super_user
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"] == "This username is unavailable."
+
+    # Re-casing your own username only collides with yourself, so it is allowed.
+    recased = await client.patch(
+        f"api/v1/users/{other.json()['id']}", json={"username": "OTHER1"}, headers=logged_in_headers_super_user
+    )
+    assert recased.status_code == status.HTTP_200_OK
+    assert recased.json()["username"] == "OTHER1"
 
 
 async def test_reset_password(client: AsyncClient, logged_in_headers, active_user):

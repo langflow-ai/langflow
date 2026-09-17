@@ -152,6 +152,61 @@ tool schemas map onto the REST-shaped inputs INT-12 ships without changing a sin
 do not, the swap needs an argument-mapping layer in the component and the "no saved-flow change" promise must be
 re-proved by the equivalence test before the PR merges.
 
+## How `lfx-google` adopts this
+
+`lfx-google` (INT-10) ships all five wave-1 actions on google-api-python-client in 1.13; `matrices/google.json`
+`substrate_decision.chosen` stays `["sdk"]` (`decisions/substrate-google.md`). The Workspace MCP servers are in
+Google's Developer Preview Program, whose terms forbid shipping to end users outside our own domain before GA (that
+record's fact 2), so there is no GA server to pin and no capture to take.
+
+The first adoption is expected to be **`google.calendar.list` (Calendar: List Events)**. It is the only wave-1 action
+whose MCP path is not already ruled out by scope tier: the Gmail server requests `gmail.readonly` and `gmail.compose`
+and the Drive server requests `drive.readonly` (fact 3), all restricted, while Gmail send runs on the sensitive
+`gmail.send` and Drive on the non-sensitive `drive.file`. Moving either would change `required_scopes`, which the
+table above forbids, and would re-open `decisions/google-restricted-scopes.md`. A read action is also the cheaper
+equivalence proof: no side effect to clean up between the SDK and MCP halves.
+
+When a GA capture exists, the swap touches exactly these files:
+
+- `design/dedicated-integrations/evidence/google-calendar-mcp-tools-list-<date>.json` (new; the capture, including the
+  grant the server accepted)
+- `design/dedicated-integrations/decisions/substrate-google.md` (dated amendment re-opening the substrate for this
+  action, citing the GA announcement and the capture)
+- `design/dedicated-integrations/matrices/google.json` (`substrate_decision.chosen` gains `mcp`; the
+  `google.calendar.list` row moves to `substrate: "mcp"` with an `mcp_tools_list` source; its `scopes` must stay
+  exactly `calendar.events.readonly`)
+- `src/bundles/google/src/lfx_google/components/google/capabilities.v1.json`: the `google.calendar.list` capability
+  gains `mcp_tool` and `mcp_pin` and its `substrate` becomes `mcp`; every other field stays byte-identical
+- `src/bundles/google/src/lfx_google/components/google/google_calendar_list.py`: `GoogleCalendarListComponent` keeps
+  `name`, `display_name`, `icon`, the `connection` field from `_workspace_inputs.google_connection_input`, the inputs
+  `calendar_id`, `time_min`, `time_max`, `query`, `max_results`, `single_events`, `order_by`, `page_token`, and the
+  outputs `events` (`list_events`) and `listing` (`list_page`); it is rebased on `MCPPresetComponent` with
+  `_pinned_spec()` returning the manifest pin and `_mcp_server_config()` returning the Bearer header from the
+  connection lease, and it maps the tool result back onto the `events`, `next_page_token`, `next_sync_token` and
+  `time_zone` keys `list_page` returns today
+- `src/bundles/google/tests/test_calendar_list_ga_swap.py` (new): swap-equivalence and drift tests modeled on
+  `src/lfx/tests/unit/base/mcp/test_ga_swap_procedure.py`, driven by a copy of the capture
+- `src/bundles/google/tests/test_workspace_actions_contract.py`: the Calendar list cases move off
+  `calendar_list_response.json` and the SDK `HttpMockSequence` onto the pinned transport;
+  `test_capability_manifest.py` keeps passing unchanged apart from the substrate it reads from the matrix
+- `src/bundles/google/pyproject.toml` and `src/bundles/google/src/lfx_google/extension.json` (version bump through
+  `scripts/ci/bundle_release_plan.py`) and the `lfx` floor through `scripts/ci/sync_bundle_lfx_pin.py`
+- `docs/docs/Components/bundles-google.mdx` (the substrate note for Calendar: List Events)
+
+Files the swap must not touch, because they carry the saved-flow identity: the `GoogleCalendarListComponent` row in
+`src/lfx/src/lfx/extension/migration/migration_table.json`, `_workspace_inputs.py` (the shared connection field and
+scope constants), and `_workspace_client.py`, which keeps serving the four SDK actions.
+`tests/test_workspace_actions_live.py::test_live_calendar_list` is also left as is: it asserts on the flow-facing
+output, so running it before and after the swap is the live half of the equivalence proof.
+
+Google-specific facts the capture must settle before that PR is written: that the GA Calendar server's
+`tools/list` for a `calendar.events.readonly` grant includes an events-listing tool (fact 3 records the Gmail and
+Drive scope sets, not Calendar's); whether the server accepts the access token INT-5's broker mints for the
+Langflow-owned OAuth client as a Bearer, since the preview servers have users bring their own Google Cloud OAuth
+client (fact 3); and whether its argument and result schemas carry `timeMin`/`timeMax`, `q`, `singleEvents`,
+`orderBy`, paging and sync tokens, and the calendar time zone. If any flow-facing input or output cannot be mapped
+without a new field, the swap does not preserve the saved-flow schema and stops at step 2.
+
 ## Open items handed on
 
 - The client-facing error mapping for `incompatible-tool` is INT-6's `IntegrationError` branch in

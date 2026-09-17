@@ -225,7 +225,7 @@ is therefore a deployment-wide grant of that provider account; see
 
 When resolution fails, the response carries a machine-readable `error_code` (`connection-unresolved`,
 `connection-not-authorized`, `auth-expired`, `scope-missing`, `rate-limited`, `provider-unavailable`,
-`action-unsupported`) together with `hint`, `provider`, `retryable`, and `retry_after` where it applies, and
+`action-unsupported`, `invalid-request`, `resource-not-found`) together with `hint`, `provider`, `retryable`, and `retry_after` where it applies, and
 the HTTP status the provider situation warrants (403 for an unauthorized connection, 401 for expired
 credentials, 429 for a rate limit). The error's own sentence, which names the connection handle, is returned
 only to the flow's owner; delegated and anonymous callers get a generic message alongside the same code, so
@@ -238,6 +238,160 @@ The opt-in hint asks the connection owner to enable the setting and retry; it co
 owner ID, or credential, so delegated callers can pass the remedy along safely. A caller without ownership
 or an explicit share receives no information about another user's connection or its opt-in setting.
 
+## Microsoft 365 bundle
+
+The [Microsoft 365 bundle](../Components/bundles-microsoft.mdx) resolves its connections through a
+`provider: "microsoft"` registration configured above. Its components hold a
+portable handle such as `microsoft/work`, never a token.
+
+[Register a Microsoft Entra application](./entra-app-registration.mdx) is the operator
+runbook for that registration: the per-action delegated permission table, the
+redirect URIs per deployment context, the consent and admin-consent rules, and
+the troubleshooting table. Two constraints are worth repeating here.
+
+Use Microsoft's **short** scope names, such as `Mail.Read`, consistently in the
+registration and consent request. For execution checks, the resolver normalizes
+Microsoft Graph's fully qualified names (such as
+`https://graph.microsoft.com/Mail.Read`) to the same permission.
+
+Include `offline_access` in the registration's `scopes`, because it is what makes
+Entra issue a refresh token. No component requires it as an action permission:
+Entra never echoes `offline_access` in a token response, so requiring it per
+action would fail every Microsoft resolution.
+
+Only customer-owned single-tenant registrations are configurable today, since
+this broker uses a fixed-tenant authority. A Langflow-owned multitenant
+application, which also needs Entra publisher verification, is a follow-up.
+
+{/* INT-12 (LE-2470): appended section. Keep additions to this page as new
+    trailing sections so stacked integration branches do not collide. */}
+
+## Slack redirect URLs and scopes per action
+
+### Redirect URLs
+
+Register both forms the deployment needs. A server redirect is used for hosted and
+self-managed instances; the loopback form is used by the Desktop PKCE app.
+
+```text
+https://YOUR_INSTANCE/api/v1/connections/oauth/slack/callback
+http://localhost:7860/api/v1/connections/oauth/slack/callback
+```
+
+### Scopes per action
+
+The `lfx-slack` bundle declares these scopes per action. A registration's `scopes`
+array is the operator ceiling, so it must be a superset of the actions you intend to
+enable; the connection then requests the subset an action needs.
+
+| Action | Identity | Registration | Scopes |
+| --- | --- | --- | --- |
+| Search | user | `profile: "user"` | `search:read` |
+| Read Thread | user | `profile: "user"` | `channels:history`, `groups:history`, `im:history`, `mpim:history` |
+| Send Message | user | `profile: "user"` | `chat:write` |
+| Create Canvas | user | `profile: "user"` | `canvases:write` |
+| Post Message | bot | `profile: "bot"` | `chat:write` |
+| Add Reaction | bot | `profile: "bot"` | `reactions:write` |
+| List Channel Members | bot | `profile: "bot"` | `channels:read`, plus `groups:read` for private channels and `users:read` to resolve display names |
+
+User Token Scopes and Bot Token Scopes are configured separately in the Slack app,
+and `chat:write` appears in both lists. Because the two token types cannot be told
+apart from their granted scopes, keep one registration and one connection per
+identity, and name them accordingly.
+
+A worked two-registration example, covering every action above:
+
+```json
+{
+  "slack-user": {
+    "provider": "slack",
+    "profile": "user",
+    "owner": "customer",
+    "context": "self_managed",
+    "client_type": "confidential",
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET",
+    "redirect_uri": "https://langflow.example/api/v1/connections/oauth/slack/callback",
+    "allowed_tenants": ["T0SLACKTEAM"],
+    "scopes": [
+      "search:read",
+      "channels:history",
+      "groups:history",
+      "im:history",
+      "mpim:history",
+      "chat:write",
+      "canvases:write"
+    ]
+  },
+  "slack-bot": {
+    "provider": "slack",
+    "profile": "bot",
+    "owner": "customer",
+    "context": "self_managed",
+    "client_type": "confidential",
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET",
+    "redirect_uri": "https://langflow.example/api/v1/connections/oauth/slack/callback",
+    "allowed_tenants": ["T0SLACKTEAM"],
+    "scopes": ["chat:write", "reactions:write", "channels:read", "groups:read", "users:read"]
+  }
+}
+```
+
+Slack desktop redirects may not request bot scopes, so the Desktop PKCE app carries
+only the user scopes; bot actions are unavailable there. For headless runtimes,
+provide the token directly as `LF_CONNECTION__SLACK__<NAME>` instead of registering
+an OAuth app. That path records no executing identity, so the bundle trusts the
+operator to supply the right token type.
+
 ## Headless connection resolution
 
 - [Resolve connections in headless LFX](../Lfx/lfx-connections.mdx), for hosts that resolve the same connection references without Langflow's database.
+
+## Google Workspace action scopes
+
+The wave-1 Google action components each request exactly one scope. Configure a Google
+registration whose `scopes` ceiling contains the ones your flows use:
+
+| Component | Scope |
+|---|---|
+| **Gmail: Send Email** | `https://www.googleapis.com/auth/gmail.send` |
+| **Drive: List Files (app files)** | `https://www.googleapis.com/auth/drive.file` |
+| **Drive: Fetch File (app files)** | `https://www.googleapis.com/auth/drive.file` |
+| **Calendar: List Events** | `https://www.googleapis.com/auth/calendar.events.readonly` |
+| **Calendar: Create Event** | `https://www.googleapis.com/auth/calendar.events` |
+
+```json
+{
+  "google-work": {
+    "provider": "google",
+    "owner": "customer",
+    "context": "self_managed",
+    "client_type": "confidential",
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET",
+    "redirect_uri": "https://langflow.example/api/v1/connections/oauth/google/callback",
+    "scopes": [
+      "https://www.googleapis.com/auth/gmail.send",
+      "https://www.googleapis.com/auth/drive.file",
+      "https://www.googleapis.com/auth/calendar.events.readonly",
+      "https://www.googleapis.com/auth/calendar.events"
+    ]
+  }
+}
+```
+
+`gmail.send`, `calendar.events`, and `calendar.events.readonly` are sensitive scopes and
+require Google's sensitive-scope verification before a published app can request them.
+`drive.file` is non-sensitive. No wave-1 action requests a restricted scope, so no Google
+security assessment is required for these components.
+
+Declare scopes as the full `https://www.googleapis.com/auth/...` URLs shown above. That is
+the form Google returns in the token response and therefore the form stored on the
+connection and compared against when an action resolves. A short suffix such as
+`drive.file` on its own fails resolution with `scope-missing`.
+
+The legacy **Google Drive Loader** accepts an optional connection on `drive.file` as an
+alternative to pasted token JSON. The legacy **Gmail Loader** does not: reading a mailbox
+needs `https://www.googleapis.com/auth/gmail.readonly`, a **restricted** scope that 1.13
+connections do not use, so it keeps pasted token JSON only.

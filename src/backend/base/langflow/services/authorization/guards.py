@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from contextlib import contextmanager
+from contextlib import asynccontextmanager, contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -36,8 +36,10 @@ from langflow.services.authorization.actions import (
 from langflow.services.deps import get_authorization_service, get_settings_service
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator, Sequence
+    from collections.abc import AsyncIterator, Iterator, Sequence
     from uuid import UUID
+
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.user.model import User, UserRead
 
@@ -98,6 +100,36 @@ def _auth_audit_details() -> dict[str, str]:
 _capability_probe: ContextVar[bool] = ContextVar("langflow_authz_capability_probe", default=False)
 
 
+_transaction_guard_audits: ContextVar[list[dict[str, Any]] | None] = ContextVar(
+    "transaction_guard_audits", default=None
+)
+
+
+@asynccontextmanager
+async def audit_guard_in_transaction(session: AsyncSession) -> AsyncIterator[None]:
+    """Audit a locked permission recheck without waiting on a second DB writer.
+
+    Durable allows commit with the caller's mutation. A denial first releases
+    the lock, then persists its audit through the normal writer before raising.
+    """
+    decisions: list[dict[str, Any]] = []
+    token = _transaction_guard_audits.set(decisions)
+    try:
+        try:
+            yield
+        except Exception:
+            await session.rollback()
+            for decision in decisions:
+                await _audit.audit_decision(**decision)
+            raise
+        else:
+            for decision in decisions:
+                if not _audit.stage_audit_decision(session=session, **decision):
+                    await _audit.audit_decision(**decision)
+    finally:
+        _transaction_guard_audits.reset(token)
+
+
 @contextmanager
 def capability_probe() -> Iterator[None]:
     """Evaluate permissions for a UI capability answer without auditing the check.
@@ -139,13 +171,18 @@ def _audit_guard_decision(
     """
     if _capability_probe.get():
         return _audit_suppressed()
-    return _audit.audit_decision(
-        user_id=user_id,
-        action=action,
-        obj=obj,
-        result=result,
-        details={**(details or {}), "event": _audit.AUDIT_EVENT_DECISION},
-    )
+    decision: dict[str, Any] = {
+        "user_id": user_id,
+        "action": action,
+        "obj": obj,
+        "result": result,
+        "details": {**(details or {}), "event": _audit.AUDIT_EVENT_DECISION},
+    }
+    pending = _transaction_guard_audits.get()
+    if pending is not None:
+        pending.append(decision)
+        return _audit_suppressed()
+    return _audit.audit_decision(**decision)
 
 
 async def _api_key_scopes_require_plugin_enforcement() -> bool:
