@@ -225,14 +225,16 @@ This example uses an OpenSearch container running locally, but you can also use 
     - **Cluster URL**: Enter `http://localhost:9200`.
     - **Username**: Leave blank if security is disabled. Otherwise, enter your basic auth username.
     - **Password**: Leave blank if security is disabled. Otherwise, enter your basic auth password.
-    - **Default Index name**: Enter `langflow_knowledge`. The OpenSearch index to write and read from. This index is created in the later ingestion step, so it isn't immediately available.
+    - **Default index name (optional)**: Leave blank. Knowledge bases don't use this value because each knowledge base gets its own index.
     - **Vector field**: Enter `vector_field`. The document field for storing the embedding vector.
     - **Text field**: Enter `text`. The document field for storing the chunk text.
     - **Use TLS (HTTPS)**: Turn off. Enable if your cluster uses HTTPS.
     - **Verify TLS certificate**: Turn off. Enable if your cluster uses CA-signed certificates.
 
     :::tip
-    The knowledge base name doesn't need to match the OpenSearch index name — it is the internal label used to scope searches within the shared OpenSearch index.
+    Each knowledge base stores its chunks in its own OpenSearch index, named `lf_` followed by 24 hexadecimal characters derived from the knowledge base's owner and name.
+    Users can create knowledge bases with the same name without sharing chunks.
+    The index is created when the knowledge base first ingests data.
     :::
 
 6. Click **Save and Use OpenSearch**.
@@ -242,6 +244,14 @@ This example uses an OpenSearch container running locally, but you can also use 
     The OpenSearch database is now connected to Langflow as a knowledge base provider.
 
 To create a knowledge base using this provider, see [Create a knowledge base](#create-a-knowledge-base).
+
+:::important Upgrade note: OpenSearch knowledge bases created by earlier versions
+Earlier versions named each OpenSearch index after the knowledge base name alone, so knowledge bases with the same name that belonged to different users shared one index.
+When you upgrade, the database migration keeps existing data available without changing anything on the OpenSearch cluster:
+
+* If only one user's knowledge bases used an index, they keep using it. The migration records the index in their `backend_config` as `index_name`, with `index_name_origin` set to `legacy_kb_name`. No action is needed.
+* If knowledge bases that belong to different users used the same index, their chunks are mixed and can't be separated by owner. Those knowledge bases start with their own empty index, and the old index isn't changed or deleted. Their `backend_config` records the old index as `legacy_shared_index`, and Langflow logs a warning each time they are used. To restore their data, ingest each knowledge base's sources again, and then delete the old index from your OpenSearch cluster.
+:::
 
 #### Postgres pgvector
 

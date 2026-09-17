@@ -19,13 +19,23 @@ secrets — and round-trips cleanly through the UI.
   variable name. Only the *variable name* lives in config — never
   the raw credential.
 * ``index_name`` — OpenSearch index this KB writes / reads.
-  Optional. When omitted, the index is derived from ``kb_name`` (see
-  ``derive_index_name``) so every Knowledge Base / Memory Base gets its
-  own isolated index — mirroring how the Chroma backends use
-  ``collection_name=kb_name``. Set this explicitly only to point the KB
-  at a pre-existing, externally-managed index; doing so opts out of
+  Optional. When omitted, the index is owner-scoped (see
+  ``derive_index_name``): the same ``lf_<sha256[:24]>`` name pgvector gives
+  this KB's table. KB names are unique per user, not globally, so an index
+  named from ``kb_name`` alone would let two users' same-named KBs read,
+  count, and delete each other's chunks. Set this explicitly only to point
+  the KB at a pre-existing, externally-managed index; doing so opts out of
   per-KB isolation (the index is then shared by every KB configured with
-  the same value), so it should name a dedicated index per KB.
+  the same value), so it should name a dedicated index per KB. Names shaped
+  like an owner-scoped index are rejected unless they are this KB's own.
+  Alembic revision ``386662af02e9`` pins KBs created before owner scoping to
+  the ``kb_name``-derived index they already use, recording
+  ``index_name_origin: legacy_kb_name``.
+* ``legacy_shared_index`` — written by that migration instead of a pin
+  when two users' KBs already shared one ``kb_name``-derived index. Those
+  chunks cannot be attributed to one owner, so the KB moves to its own
+  empty index and the shared index is left untouched for an operator to
+  resolve. The backend logs a warning while the marker is present.
 * ``vector_field`` — document field for the embedding vector.
   Defaults to ``vector_field`` — the field LangChain's
   ``OpenSearchVectorSearch`` actually writes to. That wrapper derives
@@ -56,7 +66,6 @@ from __future__ import annotations
 
 import asyncio
 import queue as sync_queue
-import re
 import threading
 from typing import TYPE_CHECKING, Any
 
@@ -67,10 +76,12 @@ from lfx.base.knowledge_bases.backends.base import (
     TestConnectionResult,
     drain_queue_until_sentinel,
 )
+from lfx.base.knowledge_bases.backends.naming import OWNER_SCOPED_NAME_RE, owner_scoped_collection_name
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+    from uuid import UUID
 
     from langchain_core.vectorstores import VectorStore
 
@@ -105,36 +116,24 @@ DEFAULT_TEXT_FIELD = "text"
 DEFAULT_ENGINE = "faiss"
 DEFAULT_SPACE_TYPE = "l2"
 
-# Chars OpenSearch forbids anywhere in an index name, plus whitespace.
-_OS_INDEX_FORBIDDEN = re.compile(r'[\\/*?"<>|,#: \t\n\r]+')
-# Anything outside the safe index-name alphabet (after the pass above).
-_OS_INDEX_NON_ALNUM = re.compile(r"[^a-z0-9._-]+")
+# ``backend_config`` keys written by the migration that moved existing installs
+# to owner-scoped indexes. Kept in sync with alembic revision ``386662af02e9``.
+INDEX_NAME_ORIGIN_KEY = "index_name_origin"
+LEGACY_KB_NAME_ORIGIN = "legacy_kb_name"
+LEGACY_SHARED_INDEX_KEY = "legacy_shared_index"
 
 
-def derive_index_name(kb_name: str) -> str:
-    r"""Derive a valid OpenSearch index name from a KB name.
+def derive_index_name(kb_name: str, owner_id: UUID) -> str:
+    """Derive the owner-scoped OpenSearch index for ``owner_id``'s ``kb_name``.
 
-    OpenSearch index names must be lowercase, may not contain
-    ``\\ / * ? " < > | , # :`` / whitespace, and may not begin with
-    ``-``, ``_``, ``+`` or ``.``. Memory-Base ``kb_name``s are already
-    lowercase ``<sanitized>_<8hex>`` and pass through unchanged; regular
-    Knowledge Base names are user-supplied (only spaces get replaced at
-    create time) so they need full sanitization here.
-
-    This is what gives each KB / MB its own index: MB names are globally
-    unique by construction, and KB names are unique per user, so the
-    derived index isolates one base's vectors from another's — the same
-    role ``collection_name=kb_name`` plays for the Chroma backends.
+    KB names are unique per user, not globally, so the owner is part of the
+    name. The result is the name pgvector uses for the same KB's table:
+    ``lf_`` + 24 lowercase hex chars, which is a valid OpenSearch index name
+    for any ``kb_name`` (lowercase, no reserved characters, far below the
+    255-byte limit). Memory Base names are globally unique already; scoping
+    them too keeps one rule for every base.
     """
-    name = (kb_name or "").strip().lower()
-    name = _OS_INDEX_FORBIDDEN.sub("_", name)
-    name = _OS_INDEX_NON_ALNUM.sub("_", name)
-    # Index names cannot start with these; strip leading occurrences.
-    name = name.lstrip("-_+.")
-    if not name or name in {".", ".."}:
-        name = "kb"
-    # OpenSearch caps index names at 255 bytes.
-    return name[:255]
+    return owner_scoped_collection_name(owner_id, kb_name)
 
 
 def _coerce_bool(value: Any, *, default: bool) -> bool:
@@ -176,14 +175,29 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         """Resolve the effective index for this KB.
 
         An explicit ``index_name`` in ``backend_config`` is honored as an
-        operator override (e.g. an externally-managed index); otherwise the
-        index is derived per-KB from ``kb_name`` so each Knowledge Base /
-        Memory Base is isolated in its own index.
+        operator override (an externally-managed index, or the pre-scoping
+        index a migration pinned). Otherwise the index is owner-scoped, and a
+        missing owner fails closed instead of falling back to a shared name.
         """
+        owner_id = self._coerce_user_uuid()
         configured = self.backend_config.get("index_name")
         if configured:
-            return str(configured)
-        return derive_index_name(self.kb_name)
+            index_name = str(configured)
+            # ``backend_config`` is tenant-supplied: an override must not reach
+            # into another knowledge base's owner-scoped index.
+            if OWNER_SCOPED_NAME_RE.fullmatch(index_name.lower()) and (
+                owner_id is None or index_name != derive_index_name(self.kb_name, owner_id)
+            ):
+                msg = (
+                    f"OpenSearch index_name {index_name!r} is reserved for owner-scoped knowledge base "
+                    "indexes. Remove index_name to use this knowledge base's own index."
+                )
+                raise ValueError(msg)
+            return index_name
+        if owner_id is None:
+            msg = "OpenSearchBackend requires a valid user_id to isolate its index."
+            raise ValueError(msg)
+        return derive_index_name(self.kb_name, owner_id)
 
     async def _resolve_secrets(self) -> None:
         """Resolve URL + optional basic-auth credentials via variable_service.
@@ -219,6 +233,18 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         if not url:
             msg = "OpenSearchBackend.ensure_ready() must be awaited before _build_vector_store."
             raise RuntimeError(msg)
+        shared_legacy_index = self.backend_config.get(LEGACY_SHARED_INDEX_KEY)
+        if shared_legacy_index and index_name != shared_legacy_index:
+            logger.warning(
+                "Knowledge base %s used to share OpenSearch index %s with another user's knowledge base "
+                "of the same name. Those chunks were left in %s because they cannot be attributed to one "
+                "owner; this knowledge base now uses its own index %s. Re-ingest its sources, or set "
+                "index_name on the rightful owner's knowledge base after removing the other owner's chunks.",
+                self.kb_name,
+                shared_legacy_index,
+                shared_legacy_index,
+                index_name,
+            )
 
         vector_field = self.backend_config.get("vector_field") or DEFAULT_VECTOR_FIELD
         text_field = self.backend_config.get("text_field") or DEFAULT_TEXT_FIELD
