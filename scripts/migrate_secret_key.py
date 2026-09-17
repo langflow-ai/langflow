@@ -30,6 +30,7 @@ Usage:
 import argparse
 import base64
 import binascii
+import hashlib
 import json
 import os
 import platform
@@ -40,7 +41,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from cryptography.exceptions import InvalidTag
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import Fernet, InvalidToken, MultiFernet
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
@@ -131,27 +132,36 @@ def write_secret_key_to_file(config_dir: Path, key: str, filename: str = "secret
 
 
 def ensure_valid_key(s: str) -> bytes:
-    """Convert a secret key string to valid Fernet key bytes.
+    """Convert a secret key string to the Fernet key the app encrypts with.
 
-    For keys shorter than MINIMUM_KEY_LENGTH (32), generates a deterministic
-    key by seeding random with the input string. For longer keys, pads with
+    For keys shorter than MINIMUM_KEY_LENGTH (32), the key is the SHA-256 digest
+    of the secret, as the app has done since 1.10.1. For longer keys, pads with
     '=' to ensure valid base64 encoding.
 
-    NOTE: This function is duplicated from langflow.services.auth.utils.ensure_valid_key
-    to keep the migration script self-contained (can run without full Langflow installation).
+    NOTE: This mirrors langflow.services.auth.utils.ensure_fernet_key to keep the
+    migration script self-contained (can run without full Langflow installation).
     Keep in sync if encryption logic changes.
     """
     if len(s) < MINIMUM_KEY_LENGTH:
-        random.seed(s)
-        key = bytes(random.getrandbits(8) for _ in range(32))
-        return base64.urlsafe_b64encode(key)
+        return base64.urlsafe_b64encode(hashlib.sha256(s.encode()).digest())
     padding_needed = 4 - len(s) % 4
     return (s + "=" * padding_needed).encode()
 
 
+def legacy_short_key(s: str) -> bytes:
+    """The pre-1.10.1 key for a short secret, used only to read values written back then.
+
+    Mirrors langflow.services.auth.utils._ensure_legacy_fernet_key.
+    """
+    legacy_random = random.Random(s)  # noqa: S311 - reproduces a historical derivation, never encrypts
+    return base64.urlsafe_b64encode(bytes(legacy_random.getrandbits(8) for _ in range(32)))
+
+
 def decrypt_with_key(encrypted: str, key: str) -> str:
-    """Decrypt data with the given key."""
+    """Decrypt data with the given key, reading pre-1.10.1 values of short keys too."""
     fernet = Fernet(ensure_valid_key(key))
+    if len(key) < MINIMUM_KEY_LENGTH:
+        fernet = MultiFernet([fernet, Fernet(legacy_short_key(key))])
     return fernet.decrypt(encrypted.encode()).decode()
 
 
