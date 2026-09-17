@@ -52,8 +52,9 @@ loopback callback, for example `http://localhost:7860/api/v1/connections/oauth/g
 Public registrations cannot contain a client secret or private key, and consent for a
 public client always uses PKCE. A Desktop distribution can provision Langflow-owned client
 IDs with `owner: "langflow"`; customer-owned registrations use the same configuration format
-and remain available as the override for tenants that require their own registration. Register and configure the actual client IDs before
-shipping. The broker does not provide an OAuth redirect relay or provision provider apps.
+and remain available as the override for tenants that require their own registration.
+Register and configure the actual client IDs before shipping. The broker does not provide
+an OAuth redirect relay or provision provider apps.
 Use the same hostname in the browser and the redirect (`localhost` and `127.0.0.1` have
 different cookie origins). Both loopback IP families are supported.
 

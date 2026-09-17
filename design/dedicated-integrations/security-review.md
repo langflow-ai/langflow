@@ -17,7 +17,8 @@ feature. Method: read every line of the files in scope, then check each security
 (open redirects, state replay, CSRF on the callback, timing oracles, log/telemetry leakage of
 tokens or codes, authorization bypass via shares or instance connections, SQL/ORM injection, mass
 assignment on PATCH). Line references were verified against `feat/int-14-ga-validation` on
-2026-09-17. Existing regression coverage relied on: `test_connections.py`, `test_connection_oauth.py`,
+2026-09-17 and re-verified at `13e1ec8ed7` after `release-1.13.0` merged in. Existing regression
+coverage relied on: `test_connections.py`, `test_connection_oauth.py`,
 `test_connection_resolution_families.py`, `test_integrations.py`, and
 `tests/unit/services/connection/`.
 
@@ -40,9 +41,10 @@ already limited; these routers were not.
 
 Fix, mirroring `login.py`'s `check_rate_limit` idiom with per-endpoint counter namespaces:
 
-- `api/v1/connections.py:63-67` defines the scopes; checks at `:213` (list), `:226` (create),
-  `:255` (test), `:285` (health), `:320` (update), `:350` (revoke), `:370` (delete),
-  `:394` (OAuth start), `:433` (OAuth callback).
+- `api/v1/connections.py:65-69` defines the scopes; checks at `:239` (list), `:252` (create),
+  `:281` (test), `:311` (health), `:346` (update), `:376` (revoke), `:396` (delete),
+  `:420` (OAuth start), `:471` (registration listing), `:520` (OAuth callback) — every route the
+  router exposes.
 - `api/v1/integrations.py:28` defines the `integrations` scope; checks at `:110` (catalog) and
   `:188` (effective policy).
 - Same config knobs as the rest of the platform: `rate_limit_enabled`, `rate_limit_per_minute`,
@@ -50,9 +52,13 @@ Fix, mirroring `login.py`'s `check_rate_limit` idiom with per-endpoint counter n
   (`src/lfx/src/lfx/services/settings/groups/security.py:334-345`). OAuth start/callback and
   test/health get their own buckets so a burst of provider-bound traffic cannot consume a client's
   CRUD budget, and so unauthenticated callback spam cannot block a user's consent starts.
-- Tests: `src/backend/tests/unit/api/v1/test_connections_rate_limit.py` (7 tests: 429 contract with
-  `Retry-After: 60` on CRUD, test/health, OAuth start, the unauthenticated callback, bucket
-  independence, the shared integrations bucket, and the disabled-setting passthrough).
+- Tests: `src/backend/tests/unit/api/v1/test_connections_rate_limit.py` (9 tests: 429 contract with
+  `Retry-After: 60` on CRUD, test/health, OAuth start, the registration listing, the
+  unauthenticated callback, bucket independence, the shared integrations bucket, and the
+  disabled-setting passthrough). `test_every_connections_route_checks_the_rate_limit` walks the
+  router's decorated handlers so a route added later cannot ship unlimited — the gap that
+  `GET /oauth/registrations` opened when INT-8 landed on the branch after this review's first
+  pass.
 
 ### INT-14-02 (LOW, open): row lock held across an outbound refresh
 
@@ -114,25 +120,25 @@ is out of scope for INT-14. Accepted as platform-wide behavior.
 ### Connection API (`api/v1/connections.py`) — one HIGH (fixed), otherwise clean
 
 - Log leakage: the custom route class strips callback query strings from the request scope before
-  dependencies or access logs can render them (`connections.py:37-49`), and the handler clears the
-  scope again at response time (`:437`). The authorization `code` and `state` therefore never reach
+  dependencies or access logs can render them (`connections.py:39-51`), and the handler clears the
+  scope again at response time (`:524`). The authorization `code` and `state` therefore never reach
   uvicorn's access log.
 - Browser binding: the cookie name derives from the state digest, is HttpOnly, `SameSite=lax`,
   `secure` when the registration's redirect is HTTPS, path-scoped to the OAuth subtree, and lives
-  600 seconds (`:416-424`). This also defeats login-CSRF account linking: a victim who
+  600 seconds (`:442-450`). This also defeats login-CSRF account linking: a victim who
   opens an attacker's authorization URL completes the callback without the attacker's cookie and
-  fails the browser-digest check (`:439`, `broker.py:88-92`).
-- Callback responses carry `no-store`, `no-referrer`, and a `default-src 'none'` CSP (`:71-75`),
-  and the failure body is a fixed string with no request data (`:456-459`).
+  fails the browser-digest check (`:526`, `:530-537`, `broker.py:88-92`).
+- Callback responses carry `no-store`, `no-referrer`, and a `default-src 'none'` CSP (`:73-77`),
+  and the failure body is a fixed string with no request data (`:543-546`).
 - Authorization ordering: mutations authorize in a separate read transaction before the row lock
   is taken, re-verify ownership under the lock, and re-check the permission after acquiring it
-  (`:158-194`); the instance-connection superuser floor applies even when authorization is disabled
-  or a plugin would allow (`:57`, `:140-148`). Tests: `test_non_owner_cannot_test_or_delete_connection`,
+  (`:155-220`); the instance-connection superuser floor applies even when authorization is disabled
+  or a plugin would allow (`:59`, `:166-174`). Tests: `test_non_owner_cannot_test_or_delete_connection`,
   `test_denied_cross_user_fetch_does_not_lock_connection`,
   `test_mutation_rechecks_policy_under_lock_without_blocking_durable_audit`.
 - Mass assignment: `ConnectionCreate`/`ConnectionUpdate` are `extra="forbid"`; PATCH touches only
   `display_name` and `allow_non_interactive`, and only the owner may widen the opt-in
-  (`schemas.py:64-131`, `connections.py:197-201`, `:328-336`). The handle, scopes, identity, and
+  (`schemas.py:64-131`, `connections.py:223-227`, `:355-363`). The handle, scopes, identity, and
   credentials are immutable post-creation. All queries are parameterized through SQLModel; no raw
   SQL is built from request data.
 - Responses never contain credential material (`schemas.py:134-154`;
@@ -162,7 +168,7 @@ would refuse (`:137-164`).
   closed (`service.py:549-575`). A user-owned row shadows an instance row with the same handle, so a
   denied owned connection never silently falls back to the instance credential (`:598-631`).
 - Non-interactive opt-in is enforced in the portable floor itself (`base.py:140-151`); enabling it
-  is owner-only at the API (`connections.py:186-190`).
+  is owner-only at the API (`connections.py:223-227`).
 
 ### Persistence (`services/database/models/connection/`) — clean
 

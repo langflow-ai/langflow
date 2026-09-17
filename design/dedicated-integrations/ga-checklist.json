@@ -167,7 +167,7 @@
     },
     {
       "id": "accessibility",
-      "title": "Accessibility checks green in CI for all current surfaces; Connections-UI audit pending INT-8",
+      "title": "Accessibility checks green in CI for every route in the a11y scan manifest; /settings/connections is unscanned and tracked by connections-ui-a11y-i18n",
       "contexts": ["hosted", "self_managed", "desktop"],
       "status": "validated",
       "evidence": [
@@ -204,7 +204,7 @@
       "status": "pending-signoff",
       "pending": {
         "owner": "frontend owner",
-        "reason": "The /settings/connections UI is INT-8 scope and does not exist on this branch yet; its axe baseline (connections.a11y.spec.ts) and locale coverage can only run once INT-8 lands."
+        "reason": "INT-8 landed on this branch with the release-1.13.0 merge: ENABLE_INTEGRATIONS is true and /settings/connections is a registered route, so the surface is live. It has no entry in scripts/a11y/a11y_routes.json, so the route scan does not cover it, and its axe baseline (connections.a11y.spec.ts) and locale coverage still have to be added by the frontend owner."
       }
     }
   ]
