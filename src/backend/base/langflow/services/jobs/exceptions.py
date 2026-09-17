@@ -10,6 +10,10 @@ class JobError(RuntimeError):
     """Base exception for job-domain errors."""
 
 
+class ParentJobChangedError(JobError):
+    """A coordinator lost its conditional progress update; no child was created."""
+
+
 class DuplicateJobError(JobError):
     """Raised by create_job() when a non-retryable job with the same dedupe_key already exists.
 

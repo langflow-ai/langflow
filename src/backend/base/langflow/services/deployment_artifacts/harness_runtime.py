@@ -135,14 +135,16 @@ async def candidate_checkpoint(candidate: RuntimeCandidate) -> str:
         return await _run_sync_non_abandoning(lambda: base64.b64encode(candidate.archive()).decode("ascii"))
 
 
-async def retained_candidate(job: Job, *, check_enabled: bool = True) -> RuntimeCandidate | None:
+async def retained_candidate(
+    job: Job, *, check_enabled: bool = True, kind: str = CANDIDATE_KIND
+) -> RuntimeCandidate | None:
     """No mount/draft fallback, including legacy jobs started without a candidate."""
     digest = (job.job_metadata or {}).get("candidate_digest")
     if digest is None:
         return None
     if check_enabled:
         _check_enabled(job.flow_id)
-    blob = await get_job_service().load_checkpoint(job.job_id, CANDIDATE_KIND)
+    blob = await get_job_service().load_checkpoint(job.job_id, kind)
     if not isinstance(blob, str) or len(blob) > ((_MAX_ARCHIVE + 2) // 3) * 4:
         msg = "The retained Harness candidate is missing or too large; this run cannot resume."
         raise candidate_error(msg)

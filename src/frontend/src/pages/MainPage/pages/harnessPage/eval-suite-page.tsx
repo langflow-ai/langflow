@@ -314,18 +314,18 @@ export default function EvalSuitePage({ projectId }: { projectId: string }) {
           </div>
         </div>
       </div>
-      <EvalCases
-        cases={config.cases}
-        disabled={busy}
-        onChange={(cases) => change({ cases })}
-      />
       {history.isError ? (
         <p role="alert" className="text-sm text-destructive">
           {t("evaluations.historyError")}
         </p>
       ) : (
-        <EvalRuns runs={history.data ?? []} />
+        <EvalRuns projectId={projectId} runs={history.data ?? []} />
       )}
+      <EvalCases
+        cases={config.cases}
+        disabled={busy}
+        onChange={(cases) => change({ cases })}
+      />
     </div>
   );
 }

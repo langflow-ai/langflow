@@ -26,11 +26,22 @@ contract](harness-workflow-reliability.md). Local PostgreSQL verification now pa
 and authorized the next capability. `feat/harness-eval-suites` implements the first
 bounded Eval Suite API and desktop workbench; see [its contract and evidence](harness-eval-suites.md).
 Live-provider and intended deployed-topology acceptance remain production gates.
-Durable/approval-aware evaluation, measured costs and portable evaluation archives
-remain follow-up work before claiming the full production evaluation profile.
+The follow-up `feat/harness-eval-durability` adds persistent evaluation coordination,
+Workflows child jobs, candidate/scorer approval, cancellation, and restart recovery.
+See [its contract and verification](harness-eval-durability.md). Measured costs and
+portable evaluation archives remain follow-up work before claiming the full
+production evaluation profile.
 Files, memory/knowledge services, and request-only credential provisioning remain
 blocked by the initial standalone mount; their production host provisioning still
 needs verification. Existing Control Plane deployment is not candidate-aware.
+
+**September 16 scope decision:** external evaluation-platform integrations
+(Braintrust, LangSmith and Phoenix import/export adapters) are postponed at the
+user's request. They are not prerequisites for the current native Eval Suite
+delivery or the next implementation slice. This supersedes the original taxonomy's
+"from day one" adapter requirement; interoperability remains a future direction.
+Native evaluation durability is the current delivery. Measured costs and portable
+Langflow suite archives remain separate follow-up items; external adapters remain deferred.
 
 ## Revised gap assessment
 

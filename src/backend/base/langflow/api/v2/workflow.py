@@ -586,7 +586,7 @@ def _parse_persisted_workflow_request(request: dict) -> ParsedWorkflowRun:
     user). Legacy rows that predate the fields fall back to persist=True /
     end_user_id=None, matching prior behavior.
     """
-    internal = {"persist_messages", "end_user_id"}
+    internal = {"persist_messages", "end_user_id", "evaluation_timeout_s"}
     persist_messages = request.get("persist_messages", True)
     end_user_id = request.get("end_user_id")
     request_fields = {k: v for k, v in request.items() if k not in internal}
