@@ -16,7 +16,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID
 
-NOW = datetime.now(timezone.utc)
 DIM = 8  # vector width; the transport does not care what it is
 
 
@@ -61,6 +60,9 @@ async def main() -> None:
     from langflow.services.database.utils import initialize_database
 
     await initialize_database()
+    # Taken after the schema exists, so seeded rows are not older than the rows
+    # alembic seeds (the system roles, policy bundle revision 1).
+    now = datetime.now(timezone.utc)
 
     import sqlalchemy as sa
     from langflow.services.auth.utils import encrypt_api_key, get_password_hash
@@ -84,9 +86,12 @@ async def main() -> None:
             # Type the UUID params. Without this the raw string is stored verbatim
             # and SQLite ends up with a spelling the ORM cannot match.
             stmt = text(sql)
-            uuid_binds = [bindparam(k, type_=sa.Uuid()) for k, v in p.items() if isinstance(v, UUID)]
-            if uuid_binds:
-                stmt = stmt.bindparams(*uuid_binds)
+            typed = [bindparam(k, type_=sa.Uuid()) for k, v in p.items() if isinstance(v, UUID)]
+            # Same for timestamps: bound raw, SQLite stores "...+00:00", a spelling the
+            # ORM never writes, and those rows read back tz-aware beside naive ones.
+            typed += [bindparam(k, type_=sa.DateTime(timezone=True)) for k, v in p.items() if isinstance(v, datetime)]
+            if typed:
+                stmt = stmt.bindparams(*typed)
             await s.exec(stmt, params=p)
 
         # --- identity -------------------------------------------------------
@@ -104,7 +109,7 @@ async def main() -> None:
                 p=password_hash,
                 a=True,
                 s=su,
-                c=NOW,
+                c=now,
             )
 
         # --- authz ----------------------------------------------------------
@@ -120,7 +125,7 @@ async def main() -> None:
             sys=False,
             perm="[]",
             par=admin_id,
-            c=NOW,
+            c=now,
         )
         # A second custom role under the first, so remapping a chain is exercised
         # rather than only a single custom-to-system link.
@@ -133,7 +138,7 @@ async def main() -> None:
             sys=False,
             perm="[]",
             par=R_CUSTOM,
-            c=NOW,
+            c=now,
         )
 
         # Assignments on both a system role and a custom one.
@@ -144,7 +149,7 @@ async def main() -> None:
                 i=aid,
                 u=uid_,
                 r=rid,
-                c=NOW,
+                c=now,
             )
         await ex(
             "insert into authz_team(id,team_name,adom_name,is_active,created_at,updated_at)"
@@ -153,14 +158,14 @@ async def main() -> None:
             n="platform",
             a="default",
             act=True,
-            c=NOW,
+            c=now,
         )
         await ex(
             "insert into authz_team_member(id,team_id,user_id,source,created_at) values (:i,:t,:u,'manual',:c)",
             i=uid(1, "6"),
             t=T_TEAM,
             u=U_BOB,
-            c=NOW,
+            c=now,
         )
         # Shares to a user and to a team. Catches: resource_id and target_id are
         # polymorphic with no foreign key, so stale values insert cleanly and
@@ -174,7 +179,7 @@ async def main() -> None:
                 sc=scope,
                 tg=target,
                 cb=U_ALICE,
-                c=NOW,
+                c=now,
             )
 
         # --- content --------------------------------------------------------
@@ -212,7 +217,7 @@ async def main() -> None:
             f=FL_MAIN,
             u=U_SUPER,
             d="{}",
-            c=NOW,
+            c=now,
         )
         # A two-version chain on the flow both shares point at, so version ordering
         # has something to carry.
@@ -225,7 +230,7 @@ async def main() -> None:
                 u=U_SUPER,
                 v=vnum,
                 d="{}",
-                c=NOW,
+                c=now,
             )
 
         # --- secret-bearing rows, four different mechanisms -----------------
@@ -238,7 +243,7 @@ async def main() -> None:
             n="OPENAI_API_KEY",
             v=enc("sk-fixture-secret-123"),
             u=U_SUPER,
-            c=NOW,
+            c=now,
         )
         await ex(
             "insert into apikey(id,name,api_key,api_key_hash,user_id,total_uses,is_active,created_at)"
@@ -249,7 +254,7 @@ async def main() -> None:
             h="0" * 64,
             u=U_SUPER,
             a=True,
-            c=NOW,
+            c=now,
         )
         await ex(
             # config is where this model keeps secrets. MCP_SECRET_CONFIG_MAPS names
@@ -261,7 +266,7 @@ async def main() -> None:
             n="fixture-mcp",
             cfg=json.dumps({"command": "uvx", "env": {"API_TOKEN": enc("mcp-fixture-token")}}),
             e=True,
-            c=NOW,
+            c=now,
         )
         # scripts/migrate_secret_key.py enumerates the secret-key-derived columns.
         # Seed the two that sit on rows this fixture already creates, plus an SSO config.
@@ -285,7 +290,7 @@ async def main() -> None:
             # rejects anything else, so enc() is the wrong encryptor here.
             cs=encrypt_sso_client_secret("sso-fixture-secret"),
             u=U_SUPER,
-            c=NOW,
+            c=now,
         )
 
         # --- files, both path shapes ----------------------------------------
@@ -300,7 +305,7 @@ async def main() -> None:
             n="logical.txt",
             p=f"{U_SUPER}/logical.txt",
             s=11,
-            c=NOW,
+            c=now,
         )
         await ex(
             "insert into file(id,user_id,name,path,size,provider,created_at,updated_at)"
@@ -310,7 +315,7 @@ async def main() -> None:
             n="absolute.txt",
             p=f"/var/lib/langflow/{U_SUPER}/absolute.txt",
             s=12,
-            c=NOW,
+            c=now,
         )
 
         # --- knowledge bases, three awkward shapes --------------------------
@@ -336,7 +341,7 @@ async def main() -> None:
                 sel=json.dumps(sel),
                 bt=backend,
                 ch=chunks,
-                c=NOW,
+                c=now,
             )
 
         # --- memory base ----------------------------------------------------
@@ -353,7 +358,7 @@ async def main() -> None:
             em="text-embedding-3-small",
             pp=False,
             kb="kb-ok",
-            c=NOW,
+            c=now,
         )
         await ex(
             "insert into memory_base_session(id,session_id,total_processed,memory_base_id) values (:i,:s,2,:m)",
@@ -367,7 +372,7 @@ async def main() -> None:
                 "insert into message(id,timestamp,sender,sender_name,session_id,text,error,edit,is_output)"
                 " values (:i,:t,'User','alice','session-fixture',:tx,:e,:e,:e)",
                 i=mid,
-                t=NOW,
+                t=now,
                 tx=f"fixture message {n}",
                 e=False,
             )
@@ -377,7 +382,7 @@ async def main() -> None:
                 i=uid(20 + n, "1"),
                 m=mid,
                 mb=MB_ONE,
-                c=NOW,
+                c=now,
             )
 
         # --- live state that looks like history -----------------------------
@@ -389,7 +394,7 @@ async def main() -> None:
             "insert into job(job_id,flow_id,status,created_timestamp,user_id) values (:i,:f,'suspended',:c,:u)",
             i=JOB_PAUSED,
             f=FL_MAIN,
-            c=NOW,
+            c=now,
             u=U_SUPER,
         )
         await ex(
@@ -397,7 +402,7 @@ async def main() -> None:
             i=uid(1, "0"),
             j=JOB_PAUSED,
             b='{"resume":"state"}',
-            c=NOW,
+            c=now,
         )
         await ex(
             "insert into a2a_tasks(id,owner,task) values (:i,:o,:t)",
@@ -426,7 +431,7 @@ async def main() -> None:
             i=True,
             p='["openai"]',
             h="f" * 64,
-            c=NOW,
+            c=now,
             r="fixture second revision",
         )
         # The real writer sets revision and initialized together. Setting revision alone
