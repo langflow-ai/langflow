@@ -1692,7 +1692,9 @@ class MCPSessionManager:
                 else:
                     await logger.aerror(f"SSE connection failed for session {session_id}: {sse_error}")
                     if not session_future.done():
-                        session_future.set_exception(ValueError(f"Failed to connect via SSE: {sse_error}"))
+                        # Raise the transport error itself: wrapping it hides the HTTP status (e.g. a 401)
+                        # that describe_mcp_connection_failure reports.
+                        session_future.set_exception(sse_error)
 
         task = asyncio.create_task(session_task())
         self._background_tasks.add(task)

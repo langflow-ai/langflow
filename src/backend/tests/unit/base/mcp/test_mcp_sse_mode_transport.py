@@ -90,6 +90,11 @@ async def _reject_every_request_with_400(scope, receive, send) -> None:
         await JSONResponse({"error": "missing X-Tenant header"}, status_code=400)(scope, receive, send)
 
 
+async def _reject_every_request_with_401(scope, receive, send) -> None:
+    if scope["type"] == "http":
+        await JSONResponse({"error": "invalid token"}, status_code=401)(scope, receive, send)
+
+
 @pytest.fixture
 async def legacy_sse_server() -> AsyncIterator[LegacySseServer]:
     app = LegacySseServer()
@@ -161,6 +166,20 @@ async def test_should_keep_http_status_in_error_when_both_transports_get_400():
                 await _update_tools(url, "Streamable_HTTP", client)
 
         assert "HTTP 400" in str(exc_info.value)
+    finally:
+        await client.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_should_report_rejected_credential_when_sse_mode_gets_401():
+    client = MCPStreamableHttpClient()
+    try:
+        async with _serve(_reject_every_request_with_401) as url:
+            with pytest.raises(ConnectionError) as exc_info:
+                await _update_tools(url, "SSE", client)
+
+        assert "HTTP 401" in str(exc_info.value)
+        assert "credential was refused" in str(exc_info.value)
     finally:
         await client.disconnect()
 
