@@ -1,25 +1,39 @@
 """Identity mismatches fail closed before the first Slack request.
 
 Slack user and bot tokens share scope names, so ``granted_scopes`` cannot tell
-them apart. Without this guard, the first signal that a bot action was handed a
-user connection would be Slack's own ``not_allowed_token_type`` -- after the
-request left the process.
+them apart, and ``chat.postMessage`` accepts both token types, so Slack's own
+``not_allowed_token_type`` is no backstop either. Without this guard a message
+could post under the wrong identity with no error at all.
 """
 
 from __future__ import annotations
 
+import json
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 
 import pytest
 from conftest import FakeResolver, SlackTransport, build_component, load_fixture
 from lfx.integrations.errors import ConnectionNotAuthorizedError
+from lfx.services.authorization.base import ExecutionPrincipal
+from lfx.services.connection.env_resolver import EnvConnectionResolver
 from lfx_slack import SlackPostAsAppComponent, SlackSearchComponent, SlackSendAsUserComponent
-from lfx_slack._base import SlackIdentityMismatchError
+from lfx_slack._base import SlackIdentityMismatchError, SlackIdentityUnverifiedError, token_identity
+
+_TOKEN_FOR = {
+    "bot": "xoxb-bot-token",  # pragma: allowlist secret
+    "user_delegated": "xoxp-user-token",  # pragma: allowlist secret
+}
 
 
-def _resolver(monkeypatch: pytest.MonkeyPatch, identity: str | None) -> FakeResolver:
-    fake = FakeResolver(identity=identity)
+def _resolver(
+    monkeypatch: pytest.MonkeyPatch,
+    identity: str | None,
+    *,
+    tokens: list[str] | None = None,
+) -> FakeResolver:
+    fake = FakeResolver(identity=identity, tokens=tokens or [_TOKEN_FOR[identity]])
     monkeypatch.setattr("lfx.services.deps.get_connection_resolver", lambda: fake)
     return fake
 
@@ -71,19 +85,161 @@ async def test_the_mismatch_is_a_connection_authorization_denial(
     assert transport.calls == []
 
 
-async def test_a_headless_credential_without_an_identity_is_trusted(
+@pytest.mark.parametrize(
+    ("token", "identity"),
+    [
+        ("xoxb-1-bot", "bot"),  # pragma: allowlist secret
+        ("xoxp-1-user", "user_delegated"),  # pragma: allowlist secret
+        ("xoxe.xoxb-1-rotating-bot", "bot"),  # pragma: allowlist secret
+        ("xoxe.xoxp-1-rotating-user", "user_delegated"),  # pragma: allowlist secret
+        ("xoxe-1-refresh-token", None),  # pragma: allowlist secret
+        ("xapp-1-app-level-token", None),
+        ("opaque-token", None),
+        ("", None),
+    ],
+)
+def test_the_token_prefix_proves_the_identity(token: str, identity: str | None) -> None:
+    assert token_identity(token) == identity
+
+
+@pytest.mark.parametrize(
+    ("component_class", "token"),
+    [
+        (SlackPostAsAppComponent, "xoxb-headless-bot"),  # pragma: allowlist secret
+        (SlackPostAsAppComponent, "xoxe.xoxb-headless-bot"),  # pragma: allowlist secret
+        (SlackSendAsUserComponent, "xoxp-headless-user"),  # pragma: allowlist secret
+    ],
+)
+async def test_a_headless_token_whose_prefix_matches_the_action_runs(
     monkeypatch: pytest.MonkeyPatch,
     transport: SlackTransport,
+    component_class: type,
+    token: str,
 ) -> None:
-    """LF_CONNECTION__SLACK__* has no place to declare an identity."""
-    _resolver(monkeypatch, None)
+    """LF_CONNECTION__SLACK__* has no place to declare an identity; the prefix proves it."""
+    _resolver(monkeypatch, None, tokens=[token])
     transport.enqueue(load_fixture("chat_postmessage"))
-    component = build_component(SlackPostAsAppComponent, channel="C0SLACKDEMO", text="hi")
+    component = build_component(component_class, channel="C0SLACKDEMO", text="hi")
 
     message = await component.build_message()
 
     assert message.data["ts"] == "1700000200.000400"
+    assert transport.last.authorization == f"Bearer {token}"
+
+
+@pytest.mark.parametrize(
+    ("component_class", "token", "actual"),
+    [
+        (SlackSendAsUserComponent, "xoxb-headless-bot", "bot"),  # pragma: allowlist secret
+        (SlackPostAsAppComponent, "xoxp-headless-user", "user_delegated"),  # pragma: allowlist secret
+    ],
+)
+async def test_a_headless_token_of_the_other_identity_is_refused(
+    monkeypatch: pytest.MonkeyPatch,
+    transport: SlackTransport,
+    component_class: type,
+    token: str,
+    actual: str,
+) -> None:
+    """LE-2470: without a recorded identity, both of these used to post under the wrong author."""
+    _resolver(monkeypatch, None, tokens=[token])
+    component = build_component(component_class, channel="C0SLACKDEMO", text="hi")
+
+    with pytest.raises(SlackIdentityMismatchError) as raised:
+        await component.build_message()
+
+    assert raised.value.code == "connection-not-authorized"
+    assert raised.value.actual == actual
+    assert transport.calls == [], "the guard must fire before any HTTP call"
+
+
+async def test_a_token_that_proves_no_identity_is_refused(
+    monkeypatch: pytest.MonkeyPatch,
+    transport: SlackTransport,
+) -> None:
+    _resolver(monkeypatch, None, tokens=["opaque-headless-token"])  # pragma: allowlist secret
+    component = build_component(SlackPostAsAppComponent, channel="C0SLACKDEMO", text="hi")
+
+    with pytest.raises(SlackIdentityUnverifiedError) as raised:
+        await component.build_message()
+
+    error = raised.value
+    assert isinstance(error, ConnectionNotAuthorizedError)
+    assert error.code == "connection-not-authorized"
+    assert error.http_status == 403
+    assert error.retryable is False
+    assert "requires a bot token" in error.message
+    assert "xoxb-" in (error.hint or "")  # pragma: allowlist secret
+    rendered = f"{error.message} {error.safe_message} {error.hint} {error.details}"
+    assert "opaque-headless-token" not in rendered
+    assert transport.calls == []
+
+
+async def test_a_token_that_contradicts_the_recorded_identity_is_refused(
+    monkeypatch: pytest.MonkeyPatch,
+    transport: SlackTransport,
+) -> None:
+    """The token is what Slack acts on, so it must agree with the connection row too."""
+    _resolver(monkeypatch, "bot", tokens=["xoxp-user-token-on-a-bot-row"])  # pragma: allowlist secret
+    component = build_component(SlackPostAsAppComponent, channel="C0SLACKDEMO", text="hi")
+
+    with pytest.raises(SlackIdentityMismatchError) as raised:
+        await component.build_message()
+
+    assert raised.value.expected == "bot"
+    assert raised.value.actual == "user_delegated"
+    assert transport.calls == []
+
+
+async def test_a_recorded_identity_still_vouches_for_a_token_without_a_prefix(
+    monkeypatch: pytest.MonkeyPatch,
+    transport: SlackTransport,
+) -> None:
+    """A host that records the identity keeps working with opaque test tokens."""
+    _resolver(monkeypatch, "bot", tokens=["opaque-host-token"])  # pragma: allowlist secret
+    transport.enqueue(load_fixture("chat_postmessage"))
+    component = build_component(SlackPostAsAppComponent, channel="C0SLACKDEMO", text="hi")
+
+    await component.build_message()
+
     assert len(transport.calls) == 1
+
+
+@pytest.mark.parametrize(
+    ("component_class", "token", "actual"),
+    [
+        (SlackSendAsUserComponent, "xoxb-env-bot", "bot"),  # pragma: allowlist secret
+        (SlackPostAsAppComponent, "xoxp-env-user", "user_delegated"),  # pragma: allowlist secret
+    ],
+)
+async def test_the_env_resolver_path_refuses_the_other_identity(
+    monkeypatch: pytest.MonkeyPatch,
+    transport: SlackTransport,
+    component_class: type,
+    token: str,
+    actual: str,
+) -> None:
+    """The LE-2470 repro, end to end through ``EnvConnectionResolver``."""
+    monkeypatch.setenv(
+        "LF_CONNECTION__SLACK__QA",
+        json.dumps({"access_token": token, "token_type": "Bearer", "scopes": ["chat:write"]}),
+    )
+    resolver = EnvConnectionResolver()
+    monkeypatch.setattr("lfx.services.deps.get_connection_resolver", lambda: resolver)
+    component = component_class(connection="slack/qa", channel="C0SLACKDEMO", text="hi")
+    component.set_vertex(
+        SimpleNamespace(
+            graph=SimpleNamespace(
+                execution_principal=ExecutionPrincipal(kind="headless_operator"), flow_id=None, run_id=None
+            )
+        )
+    )
+
+    with pytest.raises(SlackIdentityMismatchError) as raised:
+        await component.build_message()
+
+    assert raised.value.actual == actual
+    assert transport.calls == []
 
 
 async def test_the_mismatch_message_names_neither_the_token_nor_the_workspace(

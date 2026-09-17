@@ -106,8 +106,9 @@ class ResolvedCredential:
     # tell the identities apart from ``granted_scopes``, so a bundle capability
     # that must run as a bot compares this instead and fails closed. ``None``
     # means the resolver does not know -- the headless env wire format has no
-    # place to declare one -- and callers treat that as "the operator vouched
-    # for this token".
+    # place to declare one. ``None`` is not proof of any identity: a caller
+    # that needs one must establish it another way (``lfx-slack`` reads the
+    # token's type prefix) or fail closed.
     #
     # The literal mirrors ``lfx.integrations.capabilities.IntegrationIdentity``;
     # it is spelled out here because ``capabilities`` imports from this module.
