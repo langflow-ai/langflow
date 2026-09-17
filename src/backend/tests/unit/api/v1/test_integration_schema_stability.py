@@ -43,10 +43,12 @@ SECRET_FIELD_NAMES = {"access_token", "refresh_token", "credentials", "encrypted
 
 
 def _fields(model: type) -> set[str]:
+    """The model's declared field names, as the API contract sees them."""
     return set(model.model_fields)
 
 
 def test_connection_read_fields_are_frozen() -> None:
+    """The connection read contract is pinned field by field."""
     assert _fields(ConnectionRead) == {
         "id",
         "owner_id",
@@ -81,16 +83,19 @@ def test_connection_read_fields_are_frozen() -> None:
     ],
 )
 def test_no_read_model_exposes_credential_fields(model: type) -> None:
+    """No read model may carry a credential field, whatever else it gains."""
     assert SECRET_FIELD_NAMES.isdisjoint(_fields(model))
 
 
 def test_connection_revoke_read_adds_only_the_provider_outcome() -> None:
+    """Revoke returns the read model plus the provider outcome, and nothing else."""
     assert _fields(ConnectionRevokeRead) == _fields(ConnectionRead) | {"provider_revocation"}
     annotation = ConnectionRevokeRead.model_fields["provider_revocation"].annotation
     assert set(get_args(annotation)) == {"revoked", "unsupported", "failed", "not_applicable"}
 
 
 def test_connection_status_vocabularies_are_frozen() -> None:
+    """The persisted and computed status vocabularies are pinned."""
     assert {member.value for member in PersistedConnectionStatus} == {
         "pending",
         "ready",
@@ -107,6 +112,7 @@ def test_connection_status_vocabularies_are_frozen() -> None:
 
 
 def test_connection_create_is_the_only_write_schema_accepting_credentials() -> None:
+    """Credentials enter through create alone; every other write schema refuses them."""
     assert _fields(ConnectionCreate) == {
         "provider_key",
         "name",
@@ -139,6 +145,7 @@ def test_connection_create_is_the_only_write_schema_accepting_credentials() -> N
 
 
 def test_credential_write_masks_secrets_in_json_and_repr() -> None:
+    """Secret material never survives serialization or repr, which is what reaches logs."""
     credentials = ConnectionCredentialWrite(
         access_token=SecretStr("access-must-not-leak"),  # pragma: allowlist secret
         refresh_token=SecretStr("refresh-must-not-leak"),  # pragma: allowlist secret
@@ -151,6 +158,7 @@ def test_credential_write_masks_secrets_in_json_and_repr() -> None:
 
 
 def test_connection_update_exposes_only_owner_editable_metadata() -> None:
+    """Update may change display metadata and the opt-in, never the handle or credentials."""
     assert _fields(ConnectionUpdate) == {"display_name", "allow_non_interactive"}
     # Rebinding a handle, widening scopes, or replacing the executing identity
     # is re-authorization, not an update.
@@ -159,16 +167,19 @@ def test_connection_update_exposes_only_owner_editable_metadata() -> None:
 
 
 def test_oauth_and_test_request_schemas_are_frozen() -> None:
+    """The OAuth start and connection test request bodies are pinned."""
     assert _fields(OAuthStartRequest) == {"registration_id", "scopes"}
     assert _fields(OAuthStartResponse) == {"authorization_url"}
     assert _fields(ConnectionTestRequest) == {"required_scopes"}
 
 
 def test_executing_identity_descriptor_is_frozen() -> None:
+    """The executing-identity descriptor is pinned on both read and write sides."""
     assert _fields(ExecutingIdentityDescriptor) == {"identity", "account"}
 
 
 def test_integration_catalog_schemas_are_frozen() -> None:
+    """The integrations catalog read models are pinned."""
     assert _fields(IntegrationCapabilityRead) == {
         "id",
         "display_name",
@@ -198,6 +209,7 @@ def test_integration_catalog_schemas_are_frozen() -> None:
 
 
 def test_effective_policy_schema_is_frozen() -> None:
+    """The effective-policy read model is pinned."""
     assert _fields(EffectiveIntegrationPolicyRead) == {
         "approved_provider_ids",
         "blocked_action_keys",

@@ -46,15 +46,17 @@ def _enable_rate_limit(monkeypatch: pytest.MonkeyPatch, *, limit: int = _LIMIT) 
 
 
 def _assert_limited(response) -> None:
+    """Pin the throttled response: 429, a Retry-After, and the shared detail message."""
     assert response.status_code == 429, response.text
     assert response.headers["Retry-After"] == "60"
     assert response.json()["detail"] == "Too many requests. Please try again later."
 
 
-def _create_payload() -> dict:
+def _create_payload(name: str = "work") -> dict:
+    """Body for a connection create; the name is the per-provider handle."""
     return {
         "provider_key": "google_workspace",
-        "name": "work",
+        "name": name,
         "display_name": "Work Google",
         "ownership_mode": "user",
         "granted_scopes": ["calendar.readonly"],
@@ -69,8 +71,9 @@ def _create_payload() -> dict:
     }
 
 
-async def _create_connection(client: AsyncClient, headers: dict[str, str]) -> str:
-    created = await client.post("api/v1/connections", json=_create_payload(), headers=headers)
+async def _create_connection(client: AsyncClient, headers: dict[str, str], name: str = "work") -> str:
+    """Create a connection and return its id. Callers that need the limiter off do this first."""
+    created = await client.post("api/v1/connections", json=_create_payload(name), headers=headers)
     assert created.status_code == 201, created.text
     return created.json()["id"]
 
@@ -81,11 +84,86 @@ async def test_connection_crud_endpoints_are_rate_limited(
     logged_in_headers: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """The ordinary CRUD bucket admits its allowance of reads and then throttles."""
     _enable_rate_limit(monkeypatch)
     for _ in range(_LIMIT):
         listed = await client.get("api/v1/connections", headers=logged_in_headers)
         assert listed.status_code == 200, listed.text
     _assert_limited(await client.get("api/v1/connections", headers=logged_in_headers))
+
+
+@pytest.mark.parametrize("route", ["create", "update", "revoke", "delete"])
+@pytest.mark.usefixtures("active_user")
+async def test_every_mutating_crud_route_admits_then_limits(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+    route: str,
+) -> None:
+    """Each mutating CRUD route admits its allowance and then answers 429.
+
+    `test_every_connections_route_checks_the_rate_limit` proves the call is
+    present in the source; this proves the call is reached and enforced on the
+    write paths, which are the ones that change credential state. Every request
+    below targets a distinct connection so nothing but the limiter can change
+    the status code between the admitted calls and the rejected one.
+    """
+    # Fixtures run with the limiter disabled, so the setup rows are free.
+    prepared = [
+        await _create_connection(client, logged_in_headers, name=f"prepared_{index}") for index in range(_LIMIT + 1)
+    ]
+    _enable_rate_limit(monkeypatch)
+
+    async def call(index: int):
+        """Issue the route under test against the index-th prepared target."""
+        if route == "create":
+            return await client.post(
+                "api/v1/connections", json=_create_payload(f"fresh_{index}"), headers=logged_in_headers
+            )
+        if route == "update":
+            return await client.patch(
+                f"api/v1/connections/{prepared[index]}",
+                json={"display_name": f"Renamed {index}"},
+                headers=logged_in_headers,
+            )
+        if route == "revoke":
+            return await client.post(f"api/v1/connections/{prepared[index]}/revoke", headers=logged_in_headers)
+        return await client.delete(f"api/v1/connections/{prepared[index]}", headers=logged_in_headers)
+
+    admitted = {"create": 201, "update": 200, "revoke": 200, "delete": 204}[route]
+    for index in range(_LIMIT):
+        response = await call(index)
+        assert response.status_code == admitted, response.text
+    _assert_limited(await call(_LIMIT))
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_mutating_routes_share_the_crud_bucket_with_reads(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """One budget covers reads and writes: a write burst cannot be laundered through another verb."""
+    connection_id = await _create_connection(client, logged_in_headers)
+    _enable_rate_limit(monkeypatch, limit=1)
+
+    renamed = await client.patch(
+        f"api/v1/connections/{connection_id}",
+        json={"display_name": "Renamed"},
+        headers=logged_in_headers,
+    )
+    assert renamed.status_code == 200, renamed.text
+
+    # The single allowance is now spent for every route in the CRUD namespace.
+    _assert_limited(await client.get("api/v1/connections", headers=logged_in_headers))
+    _assert_limited(await client.post("api/v1/connections", json=_create_payload("second"), headers=logged_in_headers))
+    _assert_limited(await client.post(f"api/v1/connections/{connection_id}/revoke", headers=logged_in_headers))
+    _assert_limited(await client.delete(f"api/v1/connections/{connection_id}", headers=logged_in_headers))
+
+    # ...but the dedicated health bucket is untouched, so the rejections above
+    # are the CRUD counter rather than a limiter-wide stop.
+    health = await client.post(f"api/v1/connections/{connection_id}/health", headers=logged_in_headers)
+    assert health.status_code == 200, health.text
 
 
 @pytest.mark.usefixtures("active_user")
@@ -94,6 +172,7 @@ async def test_connection_test_and_health_are_rate_limited(
     logged_in_headers: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Test and health each own a bucket: both make outbound provider calls."""
     _enable_rate_limit(monkeypatch)
     connection_id = await _create_connection(client, logged_in_headers)
 
@@ -124,6 +203,7 @@ async def test_oauth_start_is_rate_limited(
     logged_in_headers: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Minting OAuth state is throttled before the registration is even resolved."""
     _enable_rate_limit(monkeypatch)
     connection_id = await _create_connection(client, logged_in_headers)
     url = f"api/v1/connections/{connection_id}/oauth/start"
@@ -187,6 +267,7 @@ async def test_integrations_endpoints_are_rate_limited(
     logged_in_headers: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """The integrations catalog and the effective-policy read share one bucket."""
     _enable_rate_limit(monkeypatch)
     for _ in range(_LIMIT):
         listed = await client.get("api/v1/integrations", headers=logged_in_headers)
@@ -196,6 +277,7 @@ async def test_integrations_endpoints_are_rate_limited(
 
 
 async def test_rate_limiting_disabled_allows_bursts(client: AsyncClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    """With the limiter off, no endpoint throttles: the gate is settings-driven."""
     settings = get_settings_service().settings
     monkeypatch.setattr(settings, "rate_limit_enabled", False)
     if rate_limit_service._limiter is not None:

@@ -31,6 +31,7 @@ STORED_ACCESS_TOKEN = "stored-access-must-not-leak"  # noqa: S105 - test fixture
 
 
 def _registration() -> dict:
+    """A desktop public-client OAuth registration for the fixture connection."""
     return {
         "provider": "google",
         "client_id": "test-client",
@@ -43,11 +44,13 @@ def _registration() -> dict:
 
 @pytest.fixture
 def oauth_config(monkeypatch):
+    """Point the broker at the fixture registration in the desktop context."""
     monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_CONTEXT", "desktop")
     monkeypatch.setenv("LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS", json.dumps({"google-work": _registration()}))
 
 
 def _resolution(owner_id: str, **overrides) -> ConnectionResolutionRequest:
+    """A resolution request for the fixture connection's owner, with optional overrides."""
     request = ConnectionResolutionRequest(
         ref=ConnectionRef(provider="google", name="work"),
         principal=ExecutionPrincipal(kind="actor", user_id=owner_id, actor_id=owner_id, interactive=True),
@@ -68,6 +71,7 @@ async def _rewrite_stored_payload(connection_id: str, **changes) -> dict:
 
 
 async def _read_stored_payload(connection_id: str) -> dict:
+    """Decrypt the stored credential envelope so the test can assert on what persisted."""
     async with session_scope() as session:
         secret = await session.get(ConnectionSecret, UUID(connection_id))
         assert secret is not None
@@ -117,6 +121,7 @@ async def authorized_connection(client, logged_in_headers, oauth_config, monkeyp
 
 
 def _recording_refresh(monkeypatch, *, omit_refresh_token: bool = False) -> list[dict]:
+    """Stub the provider refresh call and return the list it records requests into."""
     calls: list[dict] = []
 
     async def refresh(_url, data, **_kwargs):
@@ -136,6 +141,7 @@ def _recording_refresh(monkeypatch, *, omit_refresh_token: bool = False) -> list
 
 
 async def test_token_inside_the_sixty_second_skew_is_refreshed(authorized_connection, monkeypatch):
+    """A token expiring inside the 60s skew is refreshed before it is handed out."""
     row = authorized_connection
     await _rewrite_stored_payload(
         row["id"], expires_at=(datetime.now(timezone.utc) + timedelta(seconds=30)).isoformat()
@@ -151,6 +157,7 @@ async def test_token_inside_the_sixty_second_skew_is_refreshed(authorized_connec
 
 
 async def test_token_fresh_beyond_the_skew_is_not_refreshed(authorized_connection, monkeypatch):
+    """A token expiring past the skew is used as stored: no needless rotation."""
     row = authorized_connection
     await _rewrite_stored_payload(
         row["id"], expires_at=(datetime.now(timezone.utc) + timedelta(seconds=90)).isoformat()
@@ -190,6 +197,7 @@ async def test_mismatched_rejected_token_digest_leaves_a_fresh_token_alone(autho
 
 
 async def test_refresh_without_a_replacement_keeps_the_stored_refresh_token(authorized_connection, monkeypatch):
+    """A provider that omits a new refresh token must not erase the stored one."""
     row = authorized_connection
     await _rewrite_stored_payload(row["id"], expires_at=(datetime.now(timezone.utc) - timedelta(seconds=1)).isoformat())
     calls = _recording_refresh(monkeypatch, omit_refresh_token=True)
@@ -204,6 +212,7 @@ async def test_refresh_without_a_replacement_keeps_the_stored_refresh_token(auth
 
 
 async def test_expired_oauth_credential_without_a_refresh_token_is_auth_expired(authorized_connection, monkeypatch):
+    """An expired token with nothing to refresh from raises auth-expired, carrying no token material."""
     row = authorized_connection
     await _rewrite_stored_payload(
         row["id"],

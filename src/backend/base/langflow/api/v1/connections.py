@@ -393,6 +393,7 @@ async def delete_connection(
     current_user: CurrentActiveUser,
     service: ConnectionService,
 ) -> Response:
+    """Delete a connection and its stored credential; only a deleter of the row may call this."""
     check_rate_limit(request, scope=_SCOPE_CONNECTIONS)
     row = await _authorized_row(
         service=service,

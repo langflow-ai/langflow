@@ -25,6 +25,7 @@ UNAVAILABLE_COMPONENT = "GoogleDriveListComponentNoLongerInstalled"
 
 
 def _flow_data() -> dict:
+    """A one-node flow whose component type and connection handle exist in no local install."""
     return {
         "nodes": [
             {
@@ -59,14 +60,17 @@ def _flow_data() -> dict:
 
 
 def _flow_payload() -> dict:
+    """A create/upload body carrying the unavailable node under a unique flow name."""
     return {"name": f"imported-{uuid.uuid4().hex[:8]}", "data": _flow_data()}
 
 
 def _stored_template(flow: dict) -> dict:
+    """The saved node's template, where the connection_ref field lives."""
     return flow["data"]["nodes"][0]["data"]["node"]["template"]
 
 
 def _assert_node_preserved_verbatim(flow: dict) -> None:
+    """The node, its component type, and its connection handle survive the round trip unchanged."""
     nodes = flow["data"]["nodes"]
     assert len(nodes) == 1
     # The unavailable component type and the unavailable handle both survive.
@@ -80,6 +84,7 @@ def _assert_node_preserved_verbatim(flow: dict) -> None:
 async def test_create_preserves_a_node_referencing_an_unavailable_connection(
     client: AsyncClient, logged_in_headers: dict[str, str]
 ) -> None:
+    """Creating a flow keeps an unresolvable connection handle instead of stripping it."""
     created = await client.post("api/v1/flows/", json=_flow_payload(), headers=logged_in_headers)
     assert created.status_code == status.HTTP_201_CREATED, created.text
     flow = created.json()
@@ -93,6 +98,7 @@ async def test_create_preserves_a_node_referencing_an_unavailable_connection(
 async def test_upload_preserves_unavailable_nodes_and_connection_handles(
     client: AsyncClient, logged_in_headers: dict[str, str]
 ) -> None:
+    """The upload path preserves the same node as the create path, byte for byte."""
     payload = _flow_payload()
     uploaded = await client.post(
         "api/v1/flows/upload/",

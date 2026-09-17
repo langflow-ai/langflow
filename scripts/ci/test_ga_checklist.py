@@ -45,31 +45,37 @@ def _github_path_matches(path: str, pattern: str) -> bool:
 
 
 def _load() -> dict:
+    """Read the committed checklist as a dict the tests can mutate per case."""
     return json.loads(DEFAULT_CHECKLIST.read_text(encoding="utf-8"))
 
 
 def _write(tmp_path: Path, checklist: dict) -> Path:
+    """Write a mutated checklist to a temp path and return it for the checker."""
     path = tmp_path / "ga-checklist.json"
     path.write_text(json.dumps(checklist), encoding="utf-8")
     return path
 
 
 def test_ga_checklist_is_valid() -> None:
+    """The checklist committed to the repo passes the checker as-is."""
     assert validate_checklist(DEFAULT_CHECKLIST) == []
 
 
 def test_every_required_acceptance_item_is_present() -> None:
+    """No acceptance item may be dropped from the checklist without failing this gate."""
     checklist = _load()
     ids = {item["id"] for item in checklist["items"]}
     assert set(REQUIRED_ITEMS) <= ids
 
 
 def test_every_required_context_has_a_checklist() -> None:
+    """Each GA context the feature ships in carries its own status block."""
     checklist = _load()
     assert set(REQUIRED_CONTEXTS) <= set(checklist["contexts"])
 
 
 def test_ci_workflow_watches_the_checklist_and_checker() -> None:
+    """Editing the checklist or the checker must trigger the workflow that validates them."""
     workflow_paths = _workflow_pull_request_paths()
     canonical_paths = [
         "design/dedicated-integrations/ga-checklist.json",
@@ -82,6 +88,7 @@ def test_ci_workflow_watches_the_checklist_and_checker() -> None:
 
 
 def test_checker_rejects_missing_acceptance_item(tmp_path: Path) -> None:
+    """A checklist that silently drops an acceptance item is rejected."""
     checklist = _load()
     checklist["items"] = [item for item in checklist["items"] if item["id"] != "secret-redaction"]
 
@@ -91,6 +98,7 @@ def test_checker_rejects_missing_acceptance_item(tmp_path: Path) -> None:
 
 
 def test_checker_rejects_missing_context(tmp_path: Path) -> None:
+    """A checklist that omits a required context is rejected."""
     checklist = _load()
     checklist["contexts"].pop("desktop")
 
@@ -100,6 +108,7 @@ def test_checker_rejects_missing_context(tmp_path: Path) -> None:
 
 
 def test_checker_rejects_validated_item_without_evidence(tmp_path: Path) -> None:
+    """`validated` is only claimable with evidence attached."""
     checklist = _load()
     item = next(item for item in checklist["items"] if item["status"] == "validated")
     item["evidence"] = []
@@ -110,6 +119,7 @@ def test_checker_rejects_validated_item_without_evidence(tmp_path: Path) -> None
 
 
 def test_checker_rejects_evidence_path_that_does_not_exist(tmp_path: Path) -> None:
+    """Evidence must name a path that exists in the tree being validated."""
     checklist = _load()
     item = next(item for item in checklist["items"] if item["status"] == "validated")
     item["evidence"] = ["src/backend/tests/unit/api/v1/test_does_not_exist.py"]
@@ -120,6 +130,7 @@ def test_checker_rejects_evidence_path_that_does_not_exist(tmp_path: Path) -> No
 
 
 def test_checker_rejects_pending_item_without_owner(tmp_path: Path) -> None:
+    """A `pending-signoff` item must name the human who owes the signature."""
     checklist = _load()
     pending_ids = [item["id"] for item in checklist["items"] if item["status"] == "pending-signoff"]
     assert pending_ids, "fixture needs at least one pending-signoff item"
@@ -132,6 +143,7 @@ def test_checker_rejects_pending_item_without_owner(tmp_path: Path) -> None:
 
 
 def test_checker_rejects_pending_item_claiming_evidence(tmp_path: Path) -> None:
+    """A pending item may not also claim evidence: that is a validated item mislabeled."""
     checklist = _load()
     item = next(item for item in checklist["items"] if item["status"] == "pending-signoff")
     item["evidence"] = ["design/dedicated-integrations/README.md"]
@@ -142,6 +154,7 @@ def test_checker_rejects_pending_item_claiming_evidence(tmp_path: Path) -> None:
 
 
 def test_checker_rejects_duplicate_item_ids(tmp_path: Path) -> None:
+    """Duplicate ids would let one item's evidence stand in for another's."""
     checklist = _load()
     checklist["items"].append(dict(checklist["items"][0]))
 
@@ -151,6 +164,7 @@ def test_checker_rejects_duplicate_item_ids(tmp_path: Path) -> None:
 
 
 def test_checker_rejects_unknown_status(tmp_path: Path) -> None:
+    """Only the known status vocabulary is accepted."""
     checklist = _load()
     checklist["items"][0]["status"] = "done"
 
@@ -160,6 +174,7 @@ def test_checker_rejects_unknown_status(tmp_path: Path) -> None:
 
 
 def test_checker_reports_malformed_json(tmp_path: Path) -> None:
+    """A checklist that is not JSON fails with a message rather than a traceback."""
     path = tmp_path / "ga-checklist.json"
     path.write_text("{not-json", encoding="utf-8")
 
@@ -170,6 +185,7 @@ def test_checker_reports_malformed_json(tmp_path: Path) -> None:
 
 
 def test_checker_reports_missing_file(tmp_path: Path) -> None:
+    """A missing checklist fails the gate instead of passing vacuously."""
     missing = tmp_path / "ga-checklist.json"
 
     errors = validate_checklist(missing)
@@ -190,6 +206,7 @@ def test_checker_rejects_absolute_evidence_path(tmp_path: Path) -> None:
 
 
 def test_checker_rejects_evidence_path_escaping_the_repository(tmp_path: Path) -> None:
+    """`..` in an evidence path cannot reach outside the repository."""
     checklist = _load()
     item = next(item for item in checklist["items"] if item["status"] == "validated")
     item["evidence"] = ["../../../etc/hosts"]
@@ -200,6 +217,7 @@ def test_checker_rejects_evidence_path_escaping_the_repository(tmp_path: Path) -
 
 
 def test_checker_rejects_repository_root_as_evidence(tmp_path: Path) -> None:
+    """The repository root is not evidence for anything."""
     checklist = _load()
     item = next(item for item in checklist["items"] if item["status"] == "validated")
     item["evidence"] = ["."]
@@ -210,6 +228,7 @@ def test_checker_rejects_repository_root_as_evidence(tmp_path: Path) -> None:
 
 
 def test_checker_rejects_absolute_context_evidence_path(tmp_path: Path) -> None:
+    """A context's evidence is held to the same in-repo rule as an item's."""
     checklist = _load()
     context = next(
         entry
