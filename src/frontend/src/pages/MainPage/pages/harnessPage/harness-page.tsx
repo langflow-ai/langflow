@@ -1,6 +1,6 @@
 /* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: DESIGN.md
  * pre-emit critique: P4 H4 E4 S5 R5 V4 · designed-as-app */
-import { useEffect, useMemo, useState } from "react";
+import { lazy, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { ParameterRenderComponent } from "@/components/core/parameterRenderComponent";
@@ -774,4 +774,12 @@ const HarnessPage = ({
   );
 };
 
-export default HarnessPage;
+const EvalSuitePage = lazy(() => import("./eval-suite-page"));
+
+export default function ProjectForm(props: HarnessPageProps) {
+  return props.projectType === "eval-suite" ? (
+    <EvalSuitePage key={props.projectId} projectId={props.projectId} />
+  ) : (
+    <HarnessPage {...props} />
+  );
+}

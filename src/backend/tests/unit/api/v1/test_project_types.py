@@ -68,6 +68,7 @@ async def test_the_harness_form_renders_with_canvas_widgets(client, logged_in_he
         "tools",
         "tool_packs",
         "n_messages",
+        "skill_packs",
         "tool_policy",
         "context_strategy",
         "context_turns",
@@ -88,7 +89,7 @@ async def test_the_form_carries_the_sections_it_should_be_grouped_into(client, l
     harness = await harness_from_api(client, logged_in_headers)
 
     sections = [field["section"] for field in harness["template"].values()]
-    assert sections == ["Instructions", "Model", "Tools", "Tools", *(["Runtime"] * 8), "Hooks"]
+    assert sections == ["Instructions", "Model", "Tools", "Tools", "Runtime", "Skills", *(["Runtime"] * 7), "Hooks"]
     assert harness["template"]["tool_packs"]["show"] is True
     assert harness["template"]["hooks"]["show"] is True
     assert harness["template"]["hooks"]["renders"] == "hook_flows"
@@ -122,6 +123,7 @@ async def test_visible_fields_use_available_page_widgets(client, logged_in_heade
         "system_prompt": "long_text",
         "tools": "project_flows",
         "tool_packs": "project_refs",
+        "skill_packs": "skill_pack_refs",
         "hooks": "hook_flows",
     }
 

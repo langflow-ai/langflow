@@ -138,8 +138,10 @@ database, with no original candidate file or in-memory service state.
 
 Remaining production evidence: actual provider calls/streaming and the intended
 deployed topology, combined compaction/permission/error variants and sourced artifact
-quality, workload thresholds, and release lifecycle/retention. Production verification
-now takes priority over starting Eval Suites.
+quality, workload thresholds, and release lifecycle/retention. On September 16 the
+user deferred deployed-topology verification and authorized the first
+[Eval Suite slice](harness-eval-suites.md). This changes the implementation order;
+the outstanding production gates remain open.
 
 ### September 16: PostgreSQL verification correction
 
