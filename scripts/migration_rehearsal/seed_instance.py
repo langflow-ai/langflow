@@ -46,8 +46,15 @@ FL_SHARED = uid(2, "e")
 KB_OK = uid(1, "f")
 KB_NOMODEL = uid(2, "f")
 KB_STUB = uid(3, "f")
+KB_MEMORY = uid(4, "f")
 MB_ONE = uid(1, "9")
 JOB_PAUSED = uid(1, "8")
+JOB_INGEST = uid(2, "8")
+RUN_INGEST = uid(3, "8")
+EMBEDDING = {"provider": "OpenAI", "name": "text-embedding-3-small"}  # the key the app reads is "name"
+# MemoryBaseService names its backing knowledge base "<sanitized name>_<8 hex>".
+MB_KB_NAME = f"fixture_memory_{MB_ONE.hex[:8]}"
+MB_VECTORS = 2  # one per ingested message
 
 
 async def main() -> None:
@@ -323,31 +330,94 @@ async def main() -> None:
             c=now,
         )
 
-        # --- knowledge bases, three awkward shapes --------------------------
+        # --- knowledge bases, three awkward shapes plus a memory base's own ----
         kbs = (
             # normal: local Chroma, model recorded. The copy path.
-            (KB_OK, "kb-ok", "chroma", {"provider": "OpenAI", "model": "text-embedding-3-small"}, args.chunks),
-            # empty model_selection. Catches: resolve_embedding_selection silently
-            # falling back to OpenAI, so the row claims a model it may never have used.
-            (KB_NOMODEL, "kb-no-model", "chroma", {}, 5),
+            (KB_OK, "kb-ok", "chroma", EMBEDDING, args.chunks, []),
+            # empty model_selection, with vectors that match its chunk count, so the
+            # empty selection is the only thing wrong with it. Catches:
+            # resolve_embedding_selection silently falling back to a default model,
+            # so the row claims a model it may never have used.
+            (KB_NOMODEL, "kb-no-model", "chroma", {}, 5, []),
             # a backend that parses but cannot be instantiated. Catches: BackendType
             # still carries astra/mongodb while create_backend refuses them.
-            (KB_STUB, "kb-stubbed-backend", "astra", {"provider": "OpenAI", "model": "x"}, 0),
+            (KB_STUB, "kb-stubbed-backend", "astra", {**EMBEDDING, "name": "x"}, 0, []),
+            # the memory base's backing knowledge base, in the shape MemoryBaseService writes.
+            (KB_MEMORY, MB_KB_NAME, "chroma", EMBEDDING, MB_VECTORS, ["memory"]),
         )
-        for kid, nm, backend, sel, chunks in kbs:
+        for kid, nm, backend, sel, chunks, source_types in kbs:
             await ex(
                 "insert into knowledge_base(id,name,user_id,model_selection,chunk_size,chunk_overlap,"
                 "column_config,backend_type,backend_config,chunks,words,characters,size_bytes,"
                 "source_types,status,created_at,updated_at)"
-                " values (:i,:n,:u,:sel,1000,200,'[]',:bt,'{}',:ch,0,0,0,'[]','ready',:c,:c)",
+                " values (:i,:n,:u,:sel,1000,200,'[]',:bt,'{}',:ch,0,0,0,:st,'ready',:c,:c)",
                 i=kid,
                 n=nm,
                 u=U_SUPER,
                 sel=json.dumps(sel),
                 bt=backend,
                 ch=chunks,
+                st=json.dumps(source_types),
                 c=now,
             )
+
+        # An ingestion run for kb-ok. Runs now live on the job row's job_metadata,
+        # linked to the knowledge base through asset_id, which is what the app reads.
+        # The legacy ingestion_run row is what an older instance still holds.
+        # Catches: kb_id's ON DELETE SET NULL FK, the kb_name pointer, and job_id,
+        # which has no FK at all.
+        run = {
+            "kind": "kb_ingestion",
+            "kb_name": "kb-ok",
+            "kb_id": str(KB_OK),
+            "source_type": "file_upload",
+            "source_config": {},
+            "user_metadata": {},
+            "status": "succeeded",
+            "error_message": None,
+            "total_items": 1,
+            "succeeded": 1,
+            "failed": 0,
+            "skipped": 0,
+            "total_bytes": len(LOGICAL_FILE_BYTES),
+            "chunks_created": args.chunks,
+            "items": [
+                {
+                    "item_id": "fixture.txt",
+                    "display_name": "fixture.txt",
+                    "status": "succeeded",
+                    "chunks_created": args.chunks,
+                    "error_message": None,
+                }
+            ],
+            "started_at": now.isoformat(),
+            "ingestion_run_id": str(JOB_INGEST),
+        }
+        await ex(
+            # An ingestion job's flow_id is its own job_id.
+            "insert into job(job_id,flow_id,status,created_timestamp,finished_timestamp,type,user_id,"
+            "asset_id,asset_type,job_metadata) values (:i,:i,'completed',:c,:c,'ingestion',:u,:a,"
+            "'knowledge_base',:m)",
+            i=JOB_INGEST,
+            c=now,
+            u=U_SUPER,
+            a=KB_OK,
+            m=json.dumps(run),
+        )
+        await ex(
+            "insert into ingestion_run(id,job_id,kb_name,kb_id,user_id,source_type,source_config,status,"
+            "total_items,succeeded,failed,skipped,total_bytes,chunks_created,items,user_metadata,"
+            "started_at,finished_at) values (:i,:j,'kb-ok',:k,:u,'file_upload','{}','succeeded',1,1,0,0,"
+            ":b,:ch,:it,'{}',:c,:c)",
+            i=RUN_INGEST,
+            j=JOB_INGEST,
+            k=KB_OK,
+            u=U_SUPER,
+            b=len(LOGICAL_FILE_BYTES),
+            ch=args.chunks,
+            it=json.dumps(run["items"]),
+            c=now,
+        )
 
         # --- memory base ----------------------------------------------------
         # Catches: message_ingestion_record cursors advance only after a confirmed
@@ -362,7 +432,7 @@ async def main() -> None:
             ac=True,
             em="text-embedding-3-small",
             pp=False,
-            kb="kb-ok",
+            kb=MB_KB_NAME,
             c=now,
         )
         await ex(
@@ -460,20 +530,23 @@ async def main() -> None:
         # reconciliation compares backend count() against the row's cached
         # `chunks`, so an empty store under a row claiming N reports an N-row
         # shortfall, which is exactly the signature of a silently truncated read.
-        kb_dir = None
-        if args.chunks:
-            from langflow.api.utils.kb_helpers import KBStorageHelper
-            from lfx.base.knowledge_bases.backends import ChromaLocalBackend
+        from langflow.api.utils.kb_helpers import KBStorageHelper
+        from lfx.base.knowledge_bases.backends import ChromaLocalBackend
 
-            kb_dir = KBStorageHelper.get_root_path() / "langflow" / "kb-ok"
+        kb_root = KBStorageHelper.get_root_path() / "langflow"
+        # Every local Chroma row gets as many vectors as it records.
+        for _, nm, backend_type, _, chunks, _ in kbs:
+            if backend_type != "chroma" or not chunks:
+                continue
+            kb_dir = kb_root / nm
             kb_dir.mkdir(parents=True, exist_ok=True)
             # No embedding model is involved. The copy path moves opaque float
             # arrays, so deterministic values exercise it exactly as real ones do.
-            backend = ChromaLocalBackend(kb_name="kb-ok", kb_path=kb_dir)
+            backend = ChromaLocalBackend(kb_name=nm, kb_path=kb_dir)
             await backend.ensure_ready()
             # Chroma rejects a single upsert above its max batch size (5461 locally).
-            for start in range(0, args.chunks, CHROMA_UPSERT_BATCH):
-                batch = range(start, min(start + CHROMA_UPSERT_BATCH, args.chunks))
+            for start in range(0, chunks, CHROMA_UPSERT_BATCH):
+                batch = range(start, min(start + CHROMA_UPSERT_BATCH, chunks))
                 backend.vector_store._collection.upsert(  # noqa: SLF001
                     ids=[f"chunk-{i:05d}" for i in batch],
                     embeddings=[[round(((i * 7 + j * 13) % 100) / 100, 4) for j in range(DIM)] for i in batch],
@@ -504,9 +577,12 @@ async def main() -> None:
                 "normal": str(KB_OK),
                 "empty_model_selection": str(KB_NOMODEL),
                 "stubbed_backend": str(KB_STUB),
+                "memory_base": str(KB_MEMORY),
             },
-            "bulk_kb_vectors": args.chunks,
-            "vector_store_path": str(kb_dir) if kb_dir else None,
+            "vectors": {nm: chunks for _, nm, bt, _, chunks, _ in kbs if bt == "chroma"},
+            "vector_store_root": str(kb_root),
+            "memory_base": {"id": str(MB_ONE), "kb_name": MB_KB_NAME},
+            "kb_ingestion": {"job": str(JOB_INGEST), "legacy_ingestion_run": str(RUN_INGEST)},
             "files": {
                 "logical_path": f"{U_SUPER}/logical.txt",
                 "absolute_path": f"/var/lib/langflow/{U_SUPER}/absolute.txt",
