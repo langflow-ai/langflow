@@ -54,6 +54,13 @@ class TestCoerceValue:
         got = coerce_value("2026-09-10 14:37:14", sa.DateTime(timezone=True))
         assert got == datetime(2026, 9, 10, 14, 37, 14, tzinfo=timezone.utc)
 
+    def test_offset_on_a_naive_column_is_stored_as_utc_wall_time(self):
+        # Rows written through raw SQL can keep an offset. Bound as-is, Postgres converts
+        # it to the session time zone, which is not UTC on every server.
+        got = coerce_value("2026-09-10 16:37:14+02:00", sa.DateTime())
+        assert got == datetime(2026, 9, 10, 14, 37, 14)  # noqa: DTZ001 - naive column
+        assert got.tzinfo is None
+
     def test_none_and_untyped_values_pass_through(self):
         assert coerce_value(None, sa.Boolean()) is None
         assert coerce_value("text", sa.String()) == "text"
@@ -251,6 +258,28 @@ class TestConversionEndToEnd:
             ).scalar_one()
         engine.dispose()
         assert status == "ok"
+
+    def test_policy_history_that_does_not_start_at_revision_one_is_carried_verbatim(
+        self, sqlite_source, postgres_database
+    ):
+        # The shared policy bundle migration seeds its first revision from
+        # model_provider_policy.version, so an instance that changed its provider
+        # policy before upgrading starts its history above 1. A fresh target seeds 1.
+        _seed(sqlite_source)
+        engine = sa.create_engine(sqlite_source)
+        with engine.begin() as conn:
+            conn.execute(sa.text("UPDATE policy_bundle_revision SET revision = 7"))
+            conn.execute(sa.text("UPDATE policy_bundle_active SET revision = 7"))
+        engine.dispose()
+
+        report = convert_sqlite_to_postgres(sqlite_source, postgres_database)
+
+        assert report.ok, report.problems
+        engine = sa.create_engine(postgres_database)
+        with engine.connect() as conn:
+            assert conn.execute(sa.text("SELECT revision FROM policy_bundle_revision")).scalars().all() == [7]
+            assert conn.execute(sa.text("SELECT revision FROM policy_bundle_active")).scalar_one() == 7
+        engine.dispose()
 
     def test_target_holding_another_instances_users_is_refused(self, sqlite_source, postgres_database, tmp_path):
         _seed(sqlite_source)

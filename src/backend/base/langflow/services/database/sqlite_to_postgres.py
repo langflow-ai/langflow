@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 # Postgres caps bind parameters per statement at 65535.
 _MAX_PARAMS_PER_STATEMENT = 60_000
 _VERSION_TABLE = "alembic_version"
+_POLICY_HISTORY_TABLE = "policy_bundle_revision"
 # How many offending rows a refusal names, enough to find the pattern.
 _ROWS_NAMED = 10
 
@@ -142,6 +143,10 @@ def coerce_value(value: Any, column_type: sa.types.TypeEngine) -> Any:
         if column_type.timezone and parsed.tzinfo is None:
             # Langflow writes UTC. SQLite drops the offset, so restore it.
             parsed = parsed.replace(tzinfo=timezone.utc)
+        elif not column_type.timezone and parsed.tzinfo is not None:
+            # Rows written through raw SQL can keep an offset. Postgres would convert it to
+            # the session time zone, which is not UTC on every server, so store UTC wall time.
+            parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
         return parsed
     if isinstance(column_type, sa.Date) and not isinstance(value, date):
         return date.fromisoformat(str(value))
@@ -171,6 +176,8 @@ def _convert(
         try:
             with target.begin() as tgt:
                 _align_system_roles(src, tgt)
+                if any(table.name == _POLICY_HISTORY_TABLE for table in tables):
+                    _clear_seeded_policy_history(tgt)
                 for table in tables:
                     columns = [column for column in table.columns if column.name in source_columns[table.name]]
                     source_rows = _copy_table(src, tgt, table, columns, models.get(table.name), batch_size=batch_size)
@@ -296,6 +303,18 @@ def _align_system_roles(src: sa.Connection, tgt: sa.Connection) -> None:
             sa.text("UPDATE authz_role SET id = :source_id WHERE name = :name AND is_system AND id <> :source_id"),
             {"source_id": coerce_value(source_id, sa.Uuid()), "name": name},
         )
+
+
+def _clear_seeded_policy_history(tgt: sa.Connection) -> None:
+    """Drop the target's seeded policy bundle history so the source's lands verbatim.
+
+    The history is append-only, not a singleton, and the migration numbers its first
+    revision from model_provider_policy.version. A source that changed its provider
+    policy before upgrading starts above 1, so upserting on the revision would leave
+    the target's seeded revision 1 behind. policy_bundle_active is upserted after this
+    and points into the copied history.
+    """
+    tgt.execute(sa.text(f'DELETE FROM "{_POLICY_HISTORY_TABLE}"'))  # noqa: S608
 
 
 def _copy_table(
