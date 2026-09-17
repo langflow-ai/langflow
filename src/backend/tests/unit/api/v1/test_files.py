@@ -261,6 +261,53 @@ async def test_list_files(files_client, files_created_api_key, files_flow):
     assert files[0].endswith("test.txt")
 
 
+async def test_sourced_report_artifacts_download_with_evidence_and_flow_access(
+    files_client, files_created_api_key, files_other_created_api_key, files_flow
+):
+    from lfx.components.data_source.record_source import RecordSourceComponent
+    from lfx.components.files_and_knowledge.sourced_report import SourcedReportComponent
+    from lfx.graph.graph.base import Graph
+    from lfx.projects.artifacts import SourcedReport, SourceRecord
+
+    evidence = SourceRecord(
+        uri="https://example.org/offline-study",
+        title="Offline fixture",
+        content="This fixture records three observations. No provider or live retrieval was used.",
+    )
+    capture = RecordSourceComponent()
+    capture.set(uri=evidence.uri, title=evidence.title, content=evidence.content)
+    report = SourcedReportComponent()
+    report.set(
+        title="Stored evidence test",
+        report=f"The fixture records three observations. [@{evidence.id}]",
+        sources=capture.record_source,
+    )
+    graph = Graph(capture, report, flow_id=str(files_flow.id), user_id=str(files_flow.user_id))
+    results = [result async for result in graph.async_start()]
+    assert all(getattr(result, "valid", True) for result in results)
+    output = graph.get_vertex(report._id).custom_component.get_output("artifact").value.data
+    canonical = SourcedReport.model_validate(output["artifact"])
+    headers = {"x-api-key": files_created_api_key.api_key}
+    for path in output["files"]:
+        url = f"api/v1/files/download/{path}"
+        response = await files_client.get(url, headers=headers)
+        assert response.status_code == 200, response.text
+        assert response.headers["content-disposition"].startswith("attachment;")
+        if path.endswith(".json"):
+            restored = SourcedReport.model_validate_json(response.content)
+            assert restored == canonical
+            assert restored.sources[0].content == evidence.content
+            assert str(restored.execution.run_id) == graph.run_id
+            restored.require_resolved_citations()
+        else:
+            assert response.text == canonical.render_markdown()
+            assert "https://example.org/offline-study" in response.text
+        denied = await files_client.get(url, headers={"x-api-key": files_other_created_api_key.api_key})
+        assert denied.status_code == 404
+        unauthenticated = await files_client.get(url)
+        assert unauthenticated.status_code in {401, 403}
+
+
 async def test_delete_file(files_client, files_created_api_key, files_flow):
     headers = {"x-api-key": files_created_api_key.api_key}
 
