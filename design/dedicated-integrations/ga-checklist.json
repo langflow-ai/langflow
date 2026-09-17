@@ -99,11 +99,12 @@
     },
     {
       "id": "rate-limit-handling",
-      "title": "Rate-limit handling: provider 429 normalized to typed rate-limited errors; connection/OAuth endpoints rate limited",
+      "title": "Rate-limit handling: provider 429 normalized to typed rate-limited errors; connection/OAuth endpoints rate limited, with metadata reads on their own bucket so the pending-consent poll survives (INT-14-04)",
       "contexts": ["hosted", "self_managed", "desktop"],
       "status": "validated",
       "evidence": [
-        "src/backend/tests/unit/api/v1/test_connections_rate_limit.py",
+        "src/backend/tests/unit/api/v1/test_connections_rate_limit.py::test_shipped_defaults_admit_a_full_minute_of_the_pending_oauth_poll",
+        "docs/docs/Develop/api-keys-and-authentication.mdx",
         "docs/docs/Components/bundles-microsoft.mdx",
         "docs/docs/Components/bundles-slack.mdx"
       ]

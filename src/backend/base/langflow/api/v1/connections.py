@@ -33,7 +33,7 @@ from langflow.services.database.models.connection import (
 )
 from langflow.services.database.models.connection.schemas import ConnectionRevokeRead
 from langflow.services.deps import get_connection_resolver_service, session_scope
-from langflow.services.rate_limit import check_rate_limit
+from langflow.services.rate_limit import check_rate_limit, get_metadata_read_limit
 
 
 class _ConnectionRoute(APIRoute):
@@ -62,7 +62,14 @@ _INSTANCE_OPERATOR_ACTIONS = frozenset({ConnectionAction.WRITE, ConnectionAction
 # calls get their own buckets so a burst of OAuth or health traffic cannot
 # consume a client's budget for ordinary CRUD, and so the unauthenticated
 # callback cannot block a user's ability to start a consent flow.
+#
+# Metadata reads are split off from the write bucket and sized by
+# connection_metadata_rate_limit_per_minute rather than the login budget: they
+# decrypt nothing and call no provider, and the connections UI polls the listing
+# every two seconds while a consent is pending, which the 5/minute login default
+# would cut off about ten seconds in.
 _SCOPE_CONNECTIONS = "connections"
+_SCOPE_CONNECTIONS_READ = "connections-read"
 _SCOPE_CONNECTION_TEST = "connections-test"
 _SCOPE_CONNECTION_HEALTH = "connections-health"
 _SCOPE_CONNECTION_OAUTH_START = "connections-oauth-start"
@@ -236,7 +243,7 @@ async def list_connections(
     provider: Annotated[str | None, Query(pattern=PROVIDER_ID_PATTERN, max_length=120)] = None,
 ) -> list[ConnectionRead]:
     """List owned, instance-owned, and explicitly shared connection metadata."""
-    check_rate_limit(request, scope=_SCOPE_CONNECTIONS)
+    check_rate_limit(request, scope=_SCOPE_CONNECTIONS_READ, limit_per_minute=get_metadata_read_limit())
     return await service.list_for_user(session, user=current_user, provider_key=provider)
 
 
@@ -469,7 +476,7 @@ async def list_oauth_registrations(
     returned, and a registration that this deployment would refuse is omitted
     rather than advertised: a picker must not offer consent that cannot start.
     """
-    check_rate_limit(request, scope=_SCOPE_CONNECTIONS)
+    check_rate_limit(request, scope=_SCOPE_CONNECTIONS_READ, limit_per_minute=get_metadata_read_limit())
     # The list is filtered per caller, so a shared cache must never replay one
     # user's answer to another.
     response.headers["Cache-Control"] = "no-store"
