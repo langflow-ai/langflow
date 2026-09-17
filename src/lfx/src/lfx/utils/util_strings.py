@@ -1,4 +1,15 @@
+import contextlib
+import re
+from urllib.parse import quote
+
 from lfx.serialization import constants
+
+_CREDENTIAL_MASK = "***"
+_URL_SCHEME = re.compile(r"^[a-z][a-z0-9+.\-]*://", re.IGNORECASE)
+# Query parameters that carry secrets, e.g. libpq's ``password`` and ``sslpassword``.
+_SENSITIVE_QUERY_KEYWORDS = r"pass|pwd|secret|token|key"
+_SENSITIVE_QUERY_KEY = re.compile(_SENSITIVE_QUERY_KEYWORDS, re.IGNORECASE)
+_SENSITIVE_QUERY_PARAM = re.compile(rf"([?&][^=&#]*(?:{_SENSITIVE_QUERY_KEYWORDS})[^=&#]*)=[^&#]*", re.IGNORECASE)
 
 
 def escape_like_pattern(value: str) -> str:
@@ -60,19 +71,37 @@ def sanitize_database_url(url: str) -> str:
     if not url:
         return url
 
-    try:
+    with contextlib.suppress(Exception):
         from sqlalchemy.engine import make_url
 
         parsed_url = make_url(url)
-        if parsed_url.username or parsed_url.password:
-            parsed_url = parsed_url.set(username="***", password="***")  # noqa: S106
-        return str(parsed_url)
-    except Exception:  # noqa: BLE001
-        # Fallback: use regex if SQLAlchemy fails to parse
-        import re
+        # SQLAlchemy ends the password at the first "@", so an unescaped "@" in the
+        # password leaves the rest of it in the host. Mask the raw string instead.
+        if "@" not in (parsed_url.host or ""):
+            if parsed_url.username or parsed_url.password:
+                parsed_url = parsed_url.set(username=_CREDENTIAL_MASK, password=_CREDENTIAL_MASK)
+            sensitive_query = {key: _CREDENTIAL_MASK for key in parsed_url.query if _SENSITIVE_QUERY_KEY.search(key)}
+            if sensitive_query:
+                parsed_url = parsed_url.update_query_dict(sensitive_query)
+            # SQLAlchemy percent-encodes the mask outside the password slot; show it as-is.
+            return str(parsed_url).replace(quote(_CREDENTIAL_MASK, safe=""), _CREDENTIAL_MASK)
 
-        pattern = r"(://)[^:/@]*(?::[^@]*)?@"
-        return re.sub(pattern, r"\1***:***@", url)
+    return _mask_unparsed_database_url(url)
+
+
+def _mask_unparsed_database_url(url: str) -> str:
+    """Mask credentials in a database URL whose structure SQLAlchemy could not determine.
+
+    Everything between the scheme (when present) and the last ``@`` is treated as
+    userinfo, because unescaped passwords may themselves contain ``@``, ``:`` or ``/``.
+    """
+    masked = _SENSITIVE_QUERY_PARAM.sub(rf"\1={_CREDENTIAL_MASK}", url)
+    scheme_match = _URL_SCHEME.match(masked)
+    scheme = scheme_match.group(0) if scheme_match else ""
+    _userinfo, at_sign, host_and_path = masked[len(scheme) :].rpartition("@")
+    if not at_sign:
+        return masked
+    return f"{scheme}{_CREDENTIAL_MASK}:{_CREDENTIAL_MASK}@{host_and_path}"
 
 
 def is_valid_database_url(url: str) -> bool:
