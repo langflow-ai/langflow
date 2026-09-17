@@ -29,6 +29,7 @@ coverage relied on: `test_connections.py`, `test_connection_oauth.py`,
 | INT-14-01 | HIGH | No rate limiting on the connections or integrations routers | `api/v1/connections.py` and `api/v1/integrations.py` had no `check_rate_limit` call; only `api/v1/login.py:43`, `api/v1/chat.py:1141-1146`, and `api/v2/workflow_public.py:86-89` used the rate-limit service | fixed |
 | INT-14-02 | LOW | Health/test hold the connection row lock across a possible outbound token refresh | `services/connection/service.py:549-575`, `services/connection/oauth/broker.py:186-190`, provider timeout `providers.py:87` | open (accepted) |
 | INT-14-03 | LOW | Rate-limit counters are keyed by client IP only | `services/rate_limit/service.py:128-150` | open (accepted) |
+| INT-14-04 | HIGH | The login-sized limit from INT-14-01 cut off the pending-consent poll | `GET /connections` on `rate_limit_per_minute` (5) vs `usePendingConnectionPoll`'s 2000ms refetch with `retry: false` (`src/frontend/src/controllers/API/queries/connections/use-connections.ts:155-171`) | fixed |
 
 ### INT-14-01 (HIGH, fixed): no rate limiting on the connections or integrations routers
 
@@ -41,20 +42,23 @@ already limited; these routers were not.
 
 Fix, mirroring `login.py`'s `check_rate_limit` idiom with per-endpoint counter namespaces:
 
-- `api/v1/connections.py:65-69` defines the scopes; checks at `:239` (list), `:252` (create),
-  `:281` (test), `:311` (health), `:346` (update), `:376` (revoke), `:396` (delete),
-  `:420` (OAuth start), `:471` (registration listing), `:520` (OAuth callback) — every route the
+- `api/v1/connections.py:71-76` defines the scopes; checks at `:246` (list), `:259` (create),
+  `:288` (test), `:318` (health), `:353` (update), `:383` (revoke), `:404` (delete),
+  `:428` (OAuth start), `:479` (registration listing), `:528` (OAuth callback) — every route the
   router exposes.
-- `api/v1/integrations.py:28` defines the `integrations` scope; checks at `:110` (catalog) and
-  `:188` (effective policy).
+- `api/v1/integrations.py:28` defines the `integrations` scope; checks at `:113` (catalog) and
+  `:191` (effective policy).
 - Same config knobs as the rest of the platform: `rate_limit_enabled`, `rate_limit_per_minute`,
   `rate_limit_storage_uri`, `rate_limit_trust_proxy`
-  (`src/lfx/src/lfx/services/settings/groups/security.py:334-345`). OAuth start/callback and
-  test/health get their own buckets so a burst of provider-bound traffic cannot consume a client's
-  CRUD budget, and so unauthenticated callback spam cannot block a user's consent starts.
-- Tests: `src/backend/tests/unit/api/v1/test_connections_rate_limit.py` (9 tests: 429 contract with
-  `Retry-After: 60` on CRUD, test/health, OAuth start, the registration listing, the
-  unauthenticated callback, bucket independence, the shared integrations bucket, and the
+  (`src/lfx/src/lfx/services/settings/groups/security.py:334-352`), plus
+  `connection_metadata_rate_limit_per_minute` for the read bucket INT-14-04 added. OAuth
+  start/callback and test/health get their own buckets so a burst of provider-bound traffic cannot
+  consume a client's write budget, and so unauthenticated callback spam cannot block a user's
+  consent starts.
+- Tests: `src/backend/tests/unit/api/v1/test_connections_rate_limit.py` (16 tests: the 429 contract
+  with `Retry-After: 60` on metadata reads, every mutating route, test/health, OAuth start, the
+  registration listing, the unauthenticated callback, bucket independence in both directions, the
+  shared integrations bucket, the pending-consent poll at shipped defaults, and the
   disabled-setting passthrough). `test_every_connections_route_checks_the_rate_limit` walks the
   router's decorated handlers so a route added later cannot ship unlimited — the gap that
   `GET /oauth/registrations` opened when INT-8 landed on the branch after this review's first
@@ -67,6 +71,44 @@ database-wide write reservation) while `broker.refresh_if_needed` may wait up to
 provider token endpoint. This is the contract's deliberate cross-worker single-flight choice
 (`connection-contract.md` question 12.b.4), and INT-14-01's rate limits bound how often a caller
 can drive it. Accepted; revisit if provider latency incidents appear.
+
+### INT-14-04 (HIGH, fixed): the login-sized limit cut off the pending-consent poll
+
+Found while validating INT-14-01 rather than in the first pass, and it is INT-14-01's own fix that
+caused it. `check_rate_limit` with no explicit allowance falls back to `rate_limit_per_minute`,
+which defaults to 5 — that number is sized for login attempts. `GET /api/v1/connections` inherited
+it, and the Connections UI that landed with INT-8 polls exactly that endpoint every 2000ms while an
+OAuth consent is pending (`usePendingConnectionPoll`), with `refetchIntervalInBackground: true` and
+`retry: false`.
+
+Thirty reads a minute against an allowance of five: the poll took a 429 on its sixth request, about
+ten seconds in, and `retry: false` means that one rejection ends it. A user authorizing at the
+provider — which takes longer than ten seconds — came back to a row that never flipped to
+authorized, with no error surfaced and no recovery short of a manual reload. Reproduced at stock
+defaults before the fix:
+
+```
+12 polls -> [200, 200, 200, 200, 200, 429, 429, 429, 429, 429, 429, 429]
+```
+
+Fix: metadata reads move to their own counter namespace with their own allowance, following the
+`public_flow_rate_limit_per_minute` precedent of throttling a different traffic shape separately
+from login.
+
+- New scope `connections-read` for `GET /connections` and `GET /oauth/registrations`; the
+  integrations catalog and effective-policy reads keep the `integrations` namespace but take the
+  same allowance. All four decrypt nothing and make no outbound provider call.
+- `connection_metadata_rate_limit_per_minute` defaults to 60, i.e. double the poll rate.
+  `get_metadata_read_limit` returns `None` when rate limiting is disabled, so the disabled path is
+  unchanged.
+- Writes, credential tests, health checks, OAuth start, and the OAuth callback are untouched and
+  stay on the tighter buckets. The split is enforced in both directions:
+  `test_exhausted_read_bucket_does_not_block_writes` proves a polling tab cannot lock the owner out
+  of a rename, and `test_mutating_routes_share_one_write_bucket` proves a write burst cannot
+  throttle the poll.
+- `test_shipped_defaults_admit_a_full_minute_of_the_pending_oauth_poll` runs 30 reads at the
+  shipped defaults with no override, so lowering the default re-breaks the flow in CI rather than
+  in a user's consent screen.
 
 ### INT-14-03 (LOW, open): IP-only rate-limit keys
 
