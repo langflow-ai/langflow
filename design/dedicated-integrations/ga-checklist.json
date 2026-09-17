@@ -204,7 +204,7 @@
       "status": "pending-signoff",
       "pending": {
         "owner": "frontend owner",
-        "reason": "INT-8 landed on this branch with the release-1.13.0 merge: ENABLE_INTEGRATIONS is true and /settings/connections is a registered route, so the surface is live. It has no entry in scripts/a11y/a11y_routes.json, so the route scan does not cover it, and its axe baseline (connections.a11y.spec.ts) and locale coverage still have to be added by the frontend owner."
+        "reason": "INT-8 landed on this branch with the release-1.13.0 merge: ENABLE_INTEGRATIONS is true and /settings/connections is a registered route, so the surface is live. The route is now recorded in scripts/a11y/a11y_routes.json under gated, and src/frontend/src/__tests__/a11y-route-manifest.test.ts keeps that manifest in step with routes.tsx. It is still held out of the scanned static batch: a default-load IBM Equal Access scan reports 2 aria_id_unique violations (the view Tabs trigger aria-controls values point at TabsContent panels the page never mounts). That fix, the axe baseline (connections.a11y.spec.ts) covering surfaces B2-B5 with a seeded connection, and locale coverage still have to be added by the frontend owner."
       }
     }
   ]
