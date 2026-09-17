@@ -454,6 +454,7 @@ async def start_connection_oauth(
 
 @router.get("/oauth/registrations", response_model=OAuthRegistrationListRead)
 async def list_oauth_registrations(
+    request: Request,
     current_user: CurrentActiveUser,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
     response: Response,
@@ -467,6 +468,7 @@ async def list_oauth_registrations(
     returned, and a registration that this deployment would refuse is omitted
     rather than advertised: a picker must not offer consent that cannot start.
     """
+    check_rate_limit(request, scope=_SCOPE_CONNECTIONS)
     # The list is filtered per caller, so a shared cache must never replay one
     # user's answer to another.
     response.headers["Cache-Control"] = "no-store"

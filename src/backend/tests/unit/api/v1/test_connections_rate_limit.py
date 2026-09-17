@@ -8,9 +8,12 @@ These tests pin the 429 contract and the per-endpoint counter namespaces.
 
 from __future__ import annotations
 
+import ast
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
+from langflow.api.v1 import connections as connections_module
 from langflow.services.deps import get_settings_service
 from langflow.services.rate_limit import service as rate_limit_service
 
@@ -200,3 +203,44 @@ async def test_rate_limiting_disabled_allows_bursts(client: AsyncClient, monkeyp
     for _ in range(5):
         response = await client.get(_CALLBACK_URL, params={"state": "c" * 43})
         assert response.status_code == 400, response.text
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_oauth_registration_listing_is_rate_limited(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The registration listing shares the CRUD bucket; it makes no outbound call."""
+    _enable_rate_limit(monkeypatch)
+    url = "api/v1/connections/oauth/registrations"
+    for _ in range(_LIMIT):
+        listed = await client.get(url, headers=logged_in_headers)
+        assert listed.status_code == 200, listed.text
+    _assert_limited(await client.get(url, headers=logged_in_headers))
+    # Same bucket as plain CRUD, so the allowance is already spent there too.
+    _assert_limited(await client.get("api/v1/connections", headers=logged_in_headers))
+
+
+def test_every_connections_route_checks_the_rate_limit() -> None:
+    """A new route must not ship unlimited: INT-14-01 covered the whole router."""
+    source = Path(connections_module.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    unlimited = [
+        node.name
+        for node in tree.body
+        if isinstance(node, ast.AsyncFunctionDef)
+        and any(
+            isinstance(decorator, ast.Call)
+            and isinstance(decorator.func, ast.Attribute)
+            and isinstance(decorator.func.value, ast.Name)
+            and decorator.func.value.id == "router"
+            for decorator in node.decorator_list
+        )
+        and not any(
+            isinstance(call.func, ast.Name) and call.func.id == "check_rate_limit"
+            for call in ast.walk(node)
+            if isinstance(call, ast.Call)
+        )
+    ]
+    assert unlimited == [], f"connections routes without a rate-limit check: {unlimited}"
