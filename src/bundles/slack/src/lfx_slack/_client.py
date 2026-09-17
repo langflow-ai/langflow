@@ -132,6 +132,9 @@ _INVALID_REQUEST_ERROR_CODES = frozenset(
         "metadata_too_large",
         "missing_post_type",
         "msg_blocks_too_long",
+        # Legacy: current docs say Slack truncates long text, but older API
+        # versions rejected it with this code.
+        "msg_too_long",
         "no_item_specified",
         "no_query",
         "no_text",

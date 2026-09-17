@@ -162,6 +162,7 @@ def test_an_unrecognized_slack_code_stays_provider_unavailable() -> None:
         ("invalid_auth", 200, 401),
         ("ratelimited", 200, 429),
         ("no_text", 200, 400),
+        ("msg_too_long", 200, 400),
         ("channel_not_found", 200, 400),
         ("not_allowed_token_type", 200, None),
         ("internal_error", 200, None),
