@@ -429,6 +429,7 @@ async def start_connection_oauth(
 async def list_oauth_registrations(
     current_user: CurrentActiveUser,
     provider_policy_attributes: ProviderPolicyAttributesDependency,
+    response: Response,
     provider: Annotated[str | None, Query(pattern=PROVIDER_ID_PATTERN, max_length=120)] = None,
 ) -> OAuthRegistrationListRead:
     """List the registrations a caller may name in an authorization request.
@@ -439,6 +440,9 @@ async def list_oauth_registrations(
     returned, and a registration that this deployment would refuse is omitted
     rather than advertised: a picker must not offer consent that cannot start.
     """
+    # The list is filtered per caller, so a shared cache must never replay one
+    # user's answer to another.
+    response.headers["Cache-Control"] = "no-store"
     settings = get_oauth_settings()
     available: list[tuple[str, OAuthRegistration]] = []
     for registration_id in settings.registration_ids():

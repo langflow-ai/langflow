@@ -84,6 +84,14 @@ async def test_never_returns_client_credentials(client: AsyncClient, logged_in_h
     assert "redirect_uri" not in body
 
 
+async def test_is_never_cached_by_a_shared_proxy(client: AsyncClient, logged_in_headers, registrations):
+    _ = registrations
+    response = await client.get("api/v1/connections/oauth/registrations", headers=logged_in_headers)
+
+    # The payload depends on the caller's policy, so it must not be shared.
+    assert response.headers.get("cache-control") == "no-store"
+
+
 async def test_filters_by_provider(client: AsyncClient, logged_in_headers, registrations):
     _ = registrations
     response = await client.get("api/v1/connections/oauth/registrations?provider=slack", headers=logged_in_headers)
