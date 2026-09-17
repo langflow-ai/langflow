@@ -134,8 +134,11 @@ class TestURLComponentTextExtraction:
         assert url_component_with_real_parser._text_extractor(html) == "line one\nline two"
 
     def test_many_line_breaks_are_read_in_linear_time(self, url_component_with_real_parser):
-        """Replacing each <br> in place scans its siblings every time, which is
-        quadratic: 50,000 of them in one element took well over 10 s."""
+        """Many <br> elements in one parent are read in linear time.
+
+        Replacing each <br> in place scans its siblings every time, which is
+        quadratic: 50,000 of them in one element took 41 s.
+        """
         html = "<div>" + "x<br>" * 50_000 + "</div>"
 
         started = time.perf_counter()
