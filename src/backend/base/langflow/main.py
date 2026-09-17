@@ -267,6 +267,21 @@ def get_lifespan(*, fix_migration=False, version=None):
             await initialize_environment_variables()
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
+            # Surface the custom-component execution posture. Component code is exec()'d on
+            # the server at flow-build time (the feature); in multi-user mode with the
+            # permissive defaults every active non-admin user can therefore run arbitrary
+            # code. Warn once so operators discover the two lockdown settings rather than
+            # learning about the exposure from a report. No-op for the single-user default
+            # and for any deployment that already restricted this.
+            try:
+                from langflow.utils.security_posture import custom_component_execution_warning
+
+                custom_component_warning = custom_component_execution_warning(get_settings_service())
+                if custom_component_warning:
+                    await logger.awarning(custom_component_warning)
+            except Exception as exc:  # noqa: BLE001 — never block startup on a posture log
+                await logger.adebug(f"Custom-component security-posture check skipped: {exc}")
+
             # Surface env-driven pgVector so operators can confirm the deployment
             # snap-configured to Postgres as the default Knowledge Base vector store.
             try:
