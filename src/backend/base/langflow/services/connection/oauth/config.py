@@ -126,6 +126,20 @@ class OAuthSettings(BaseSettings):
     hosted_enabled: bool = False
     context: Literal["self_managed", "hosted", "desktop"] = "self_managed"
 
+    def registration_ids(self) -> list[str]:
+        """Return the configured registration names, without validating them.
+
+        A caller that needs a registration still goes through
+        :meth:`registration`, which is where every availability rule lives.
+        """
+        try:
+            configs = json.loads(self.registrations.get_secret_value())
+        except ValueError:
+            return []
+        if not isinstance(configs, dict):
+            return []
+        return sorted(str(registration_id) for registration_id in configs)
+
     def registration(self, registration_id: str) -> OAuthRegistration:
         try:
             configs = json.loads(self.registrations.get_secret_value())
