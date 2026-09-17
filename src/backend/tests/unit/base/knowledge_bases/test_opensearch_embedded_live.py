@@ -59,3 +59,24 @@ async def test_copy_preserves_ids_and_vectors_without_an_embedder(tmp_path: Path
     finally:
         await backend.delete_collection()
         await backend.teardown()
+
+
+@pytest.mark.api_key_required
+async def test_writes_a_batch_larger_than_one_bulk_request(tmp_path: Path) -> None:
+    _require_live_opensearch()
+    backend = create_backend(
+        "opensearch",
+        kb_name=f"kb_emb_{uuid.uuid4().hex[:8]}",
+        kb_path=tmp_path,
+        backend_config={"url_variable": "OPENSEARCH_URL"},
+        user_id=uuid.uuid4(),
+    )
+    docs = [IngestedDocument(id=f"chunk-{i}", content=f"doc {i}", embedding=[0.5] * 4) for i in range(501)]
+    try:
+        await backend.ensure_ready()
+        await backend.add_embedded_documents(docs)
+        backend._os_client.indices.refresh(index=backend._os_index)
+        assert await backend.count() == 501
+    finally:
+        await backend.delete_collection()
+        await backend.teardown()
