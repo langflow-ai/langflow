@@ -4,8 +4,23 @@
 > Updated on: 2026-03-30
 > Updated on: 2026-05-19
 > Updated on: 2026-05-27
+> Updated on: 2026-09-17
 > Status: Draft
 > Owner: Engineering Team
+
+> **2026-09-17 revision** — **100-step default budget and a slash-command
+> menu.** (1) A gpt-5.6 build turn that generated two custom components and a
+> 9-component flow used ~25 of the 30 iterations, so identical prompts failed
+> or succeeded run to run with "The agent ran out of steps". The pinned default
+> (`DEFAULT_ASSISTANT_ITERATIONS`, both Agent nodes in `LangflowAssistant.json`,
+> frontend `DEFAULT_ITERATIONS_LIMIT`) is now **100** → `recursion_limit` 205;
+> `LANGFLOW_ASSISTANT_ITERATIONS` and `/iterations N` still override it. This
+> supersedes the 30 in the 2026-07-09 revision. (2) Typing `/` in the composer
+> opens a list of `/skip-all`, `/history` and `/iterations` (ADR-034). Enter,
+> Tab or a click writes the command into the input; it is never sent from the
+> list. Escape dismisses only the list: the flow page's global Escape hotkey
+> would otherwise close the panel. The panel root is now a named
+> `role="complementary"` landmark.
 
 > **2026-05-19 revision** — Single-agent-loop pivot (Claude Code / Codex pattern):
 > the assistant is now ONE agent + an MCP toolkit instead of a multi-phase
@@ -896,6 +911,23 @@ The frontend implements automatic model selection to ensure a valid model is alw
 - **Then** a single terminal token like `'LanguageModelComponent-XSmrK.api_key'` should replace the reference
 - **And** the agent should resolve it to that field's current value via `get_flow_component_field_value`
 
+### Scenario: Pick a slash command from the composer list
+- **Given** the assistant panel is open
+- **When** I type `/` as the first character of the input
+- **Then** a list of `/skip-all`, `/history [N | off]` and `/iterations [N | off]` should open, each with a description
+- **And** typing more characters (`/it`) should narrow the list by command-name prefix
+- **When** I move the highlight with the arrow keys and press Enter or Tab (or click an item)
+- **Then** the command should be written into the input (with a trailing space when it takes an argument) and nothing should be sent
+- **When** I press Enter again
+- **Then** the command should run locally and its acknowledgement should appear
+
+### Scenario: The slash command list stays out of normal prompts
+- **Given** the assistant panel is open
+- **When** I type a prompt with a slash in it (`use a/b`), an unknown command (`/zzz`), or a space after the command name
+- **Then** the list should not open and Enter should send the input as typed
+- **When** the list is open and I press Escape
+- **Then** only the list should close — the panel, the draft and the input focus should remain
+
 ### Scenario: Keyboard navigation scrolls the mention list into view
 - **Given** the mention list is open and taller than the popover
 - **When** I move the highlight past the visible area with the arrow keys
@@ -1540,7 +1572,7 @@ A model can be *available* and still reject the call: gpt-5.6 refuses function t
 
 #### Step budget (`max_iterations`) and the `/iterations` command
 
-The Agent's `max_iterations` caps its model-call loop **and derives LangGraph's recursion limit** (`max_iterations * 2 + 5`). The original pin of 15 therefore produced a recursion limit of 35 — too low for a compound one-turn task ("build the flow, then report what you built"), which died with `Recursion limit of 35 reached`. The pin is now **30** (recursion limit 65) on every Agent node in the assistant flow.
+The Agent's `max_iterations` caps its model-call loop **and derives LangGraph's recursion limit** (`max_iterations * 2 + 5`). The original pin of 15 therefore produced a recursion limit of 35 — too low for a compound one-turn task ("build the flow, then report what you built"), which died with `Recursion limit of 35 reached`. The pin was raised to **30** (recursion limit 65) and then to **100** (recursion limit 205) on every Agent node in the assistant flow: a build turn that generates custom components and a multi-component flow used ~25 of 30 iterations, so the same prompt failed or succeeded depending on how many tool calls the model made. The budget is a ceiling — turns that finish sooner cost the same.
 
 The pin is a **cost** decision (a larger budget raises worst-case token spend per attempt), so a tripwire test asserts it: changing it must stay conscious. `/iterations N` overrides it per session (clamped to 1–200, persisted in localStorage, `off` resets); the client parses the command locally — it is never sent as a prompt — and puts `iterations_limit` on the request.
 
@@ -1870,6 +1902,34 @@ Non-conflicting proposals (no `ChatInput`/`Webhook`, or a canvas without one) ar
 - `src/frontend/.../assistantPanel/components/assistant-flow-preview.tsx` — conflict evaluation + conditional actions
 - `src/frontend/.../assistantPanel/hooks/use-assistant-chat.ts` — `filterPlaceableSelection` guard on the merge path
 - `src/frontend/src/utils/componentConstraints.ts` — unchanged; the canonical policy both paths consume
+
+---
+
+### ADR-034: Slash-Command List in the Assistant Composer
+
+**Status**: Accepted
+
+#### Context
+`/skip-all`, `/history` and `/iterations` were discoverable only from docs or by typing a command and reading its acknowledgement. The composer already had an `@`-mention list, so users expected the same terminal-style completion for commands.
+
+#### Decision
+Open a list when the draft starts with `/` and the caret is still inside that first word (`detectSlashCommandQuery`), filtered by name prefix (`filterSlashCommands`). Arrow keys move the highlight; Enter, Tab or a click **insert** `/<name>` (plus a trailing space when the command takes an argument) and never send — the user adds an argument and presses Enter to run it through the existing command handlers in `useAssistantChat`. Escape closes only the list and stops propagation, because the flow page's global Escape hotkey closes the whole panel. The completion is committed with `flushSync` and the caret placed immediately, so a fast-typed argument cannot land before the caret. Accessibility follows the ARIA combobox-with-listbox pattern on the textarea (`aria-controls`, `aria-activedescendant`, `aria-autocomplete="list"`); options are not tab stops.
+
+#### Consequences
+
+**Benefits:**
+- Commands are discoverable without leaving the panel, with argument syntax and a translated description
+- No backend change: the list only writes text the existing handlers already parse
+
+**Trade-offs:**
+- Selecting a command takes a second Enter to run it; sending from the list was rejected so a command can never fire by accident
+- The command catalog (`ASSISTANT_SLASH_COMMANDS`) must be updated alongside any new command handler and its 7 locale description keys
+- The `@`-mention list still lets Escape reach the page hotkey (not changed here)
+
+**Key Files:**
+- `src/frontend/.../assistantPanel/helpers/slash-commands.ts` — catalog, `detectSlashCommandQuery`, `filterSlashCommands`
+- `src/frontend/.../assistantPanel/hooks/use-slash-commands.ts` — highlight, insert and Escape handling
+- `src/frontend/.../assistantPanel/components/assistant-slash-command-popover.tsx` — listbox rendering and keyboard hint
 
 ---
 

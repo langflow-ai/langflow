@@ -282,6 +282,26 @@ For example, to prompt **Langflow Assistant** to update the system prompt field 
 Update @Agent.System Prompt to always respond in bullet points.
 ```
 
+## Use slash commands
+
+Slash commands change how **Langflow Assistant** behaves in your browser session.
+Commands run locally and are never sent to the model.
+
+In the **Langflow Assistant** prompt input, enter `/` to list the available commands.
+Use the arrow keys to highlight a command, and then press <kbd>Enter</kbd> or <kbd>Tab</kbd>, or click the command, to insert it into the input.
+Add an argument if the command takes one, and then press <kbd>Enter</kbd> to run it.
+To close the list without inserting a command, press <kbd>Esc</kbd>.
+
+| Command | Description |
+|---------|-------------|
+| `/skip-all` | Turns automatic approval on or off for plans, flow proposals, and validated components. The setting persists across sessions. |
+| `/history [N \| off]` | Sets how many past messages the Assistant remembers, from `0` to `100`. `/history off` restores the default. Without an argument, the command reports the current value. |
+| `/iterations [N \| off]` | Sets the maximum number of steps the Assistant can take for each request, from `1` to `200`. `/iterations off` restores the default of `100`. Without an argument, the command reports the current value. |
+
+If **Langflow Assistant** reports that it ran out of steps, raise the limit with `/iterations`, or split the request into smaller prompts.
+A higher limit can increase token usage for long requests.
+To change the default for every user of your Langflow server, set [`LANGFLOW_ASSISTANT_ITERATIONS`](/environment-variables).
+
 ## Use a local or OpenAI-compatible model
 
 **Langflow Assistant** can run on a model served from your own machine or from any OpenAI-compatible endpoint, so your prompts never leave your environment.
