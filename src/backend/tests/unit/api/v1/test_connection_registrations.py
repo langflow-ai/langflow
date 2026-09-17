@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 import pytest
+from lfx.services.deps import get_integration_policy_service, get_policy_bundle_service
 
 if TYPE_CHECKING:
     from httpx import AsyncClient
@@ -53,6 +55,42 @@ def registrations(monkeypatch):
 
     configure({"google-work": _google(), "slack-bot": _slack()})
     return configure
+
+
+@pytest.fixture
+def integration_policy():
+    """Publish an approved-provider ceiling for one test and restore it afterwards."""
+    bundle = get_policy_bundle_service()
+    original = bundle.snapshot
+
+    def _approve(*providers: str) -> None:
+        bundle.publish(
+            replace(
+                original,
+                revision=original.revision + 1,
+                initialized=True,
+                approved_integration_provider_ids=frozenset(providers),
+            )
+        )
+        get_integration_policy_service().invalidate()
+
+    yield _approve
+
+    bundle.publish(replace(original, revision=bundle.snapshot.revision + 1))
+    get_integration_policy_service().invalidate()
+
+
+async def test_omits_providers_outside_the_integration_policy(
+    client: AsyncClient, logged_in_headers, registrations, integration_policy
+):
+    _ = registrations
+    integration_policy("google")
+
+    response = await client.get("api/v1/connections/oauth/registrations", headers=logged_in_headers)
+
+    assert response.status_code == 200, response.text
+    # Slack is configured but outside the ceiling, so consent could not start.
+    assert [entry["id"] for entry in response.json()["registrations"]] == ["google-work"]
 
 
 async def test_lists_configured_registrations(client: AsyncClient, logged_in_headers, registrations):
