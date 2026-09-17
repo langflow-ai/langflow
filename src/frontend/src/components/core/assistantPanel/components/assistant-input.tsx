@@ -155,16 +155,6 @@ export function AssistantInput({
     textareaRef,
   });
 
-  const handleSend = () => {
-    const trimmedMessage = message.trim();
-    if (!trimmedMessage || disabled || isProcessing) return;
-    if (trimmedMessage.length > maxMessageLength) return;
-    if (!isCatalogReady || !isModelEnabled(selectedModel)) return;
-    inputHistory.push(trimmedMessage);
-    onSend(trimmedMessage, selectedModel);
-    updateMessage("");
-  };
-
   const completeSlashCommand = (text: string) => {
     // Commit synchronously so the caret lands after the completion before the next
     // keystroke; a deferred caret move would split a fast-typed argument.
@@ -175,6 +165,20 @@ export function AssistantInput({
   const slashCommands = useSlashCommands({
     onComplete: completeSlashCommand,
   });
+
+  const handleSend = () => {
+    const trimmedMessage = message.trim();
+    if (!trimmedMessage || disabled || isProcessing) return;
+    if (trimmedMessage.length > maxMessageLength) return;
+    if (!isCatalogReady || !isModelEnabled(selectedModel)) return;
+    inputHistory.push(trimmedMessage);
+    onSend(trimmedMessage, selectedModel);
+    updateMessage("");
+    // Popovers only re-evaluate on textarea input, so a programmatic clear (the Send
+    // button) would leave them open over an empty draft.
+    slashCommands.close();
+    mentions.handleValueChange("", 0);
+  };
   const activeSlashCommand = slashCommands.isOpen
     ? slashCommands.items[slashCommands.activeIndex]
     : undefined;
@@ -317,6 +321,8 @@ export function AssistantInput({
             }}
             data-testid="assistant-input-textarea"
             onKeyDown={handleKeyDown}
+            // Option clicks keep focus (the list prevents mousedown), so blur means focus really left.
+            onBlur={slashCommands.close}
             placeholder={
               isProcessing
                 ? isPostGenerationStep

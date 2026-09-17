@@ -19,6 +19,7 @@ export interface UseSlashCommandsReturn {
   handleKeyDown: (event: React.KeyboardEvent<HTMLTextAreaElement>) => boolean;
   setActiveIndex: (index: number) => void;
   complete: (index?: number) => void;
+  close: () => void;
 }
 
 export function useSlashCommands({
@@ -92,5 +93,6 @@ export function useSlashCommands({
     handleKeyDown,
     setActiveIndex,
     complete,
+    close,
   };
 }

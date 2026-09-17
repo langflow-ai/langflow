@@ -87,6 +87,44 @@ test.describe("Assistant slash command menu", { tag: ["@release"] }, () => {
     await expect(textarea).toBeFocused();
   });
 
+  test("should close the menu when the draft is sent with the Send button", async ({
+    page,
+  }) => {
+    const textarea = await openAssistantComposer(page);
+    // A session that already has messages keeps the composer mounted after sending.
+    await textarea.pressSequentially("/iterations");
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("Iteration budget:")).toBeVisible();
+    // The first message swaps the compact composer for the conversation layout;
+    // wait for the remounted, empty textarea before typing into it.
+    await expect(textarea).toHaveValue("");
+    await textarea.click();
+
+    const popover = page.getByTestId("assistant-slash-command-popover");
+    await textarea.pressSequentially("/");
+    await expect(popover).toBeVisible();
+    await page.getByTestId("assistant-send-button").click();
+
+    await expect(textarea).toHaveValue("");
+    await expect(popover).toBeHidden();
+    await expect(textarea).not.toHaveAttribute("aria-activedescendant");
+  });
+
+  test("should close the menu when focus moves to another control", async ({
+    page,
+  }) => {
+    const textarea = await openAssistantComposer(page);
+
+    const popover = page.getByTestId("assistant-slash-command-popover");
+    await textarea.pressSequentially("/");
+    await expect(popover).toBeVisible();
+    // Query by test id: the model dropdown hides the rest of the page from role queries.
+    await page.getByTestId("assistant-model-selector").click();
+
+    await expect(popover).toBeHidden();
+  });
+
   test("should pass the live accessibility scan with the menu open", async ({
     page,
   }) => {

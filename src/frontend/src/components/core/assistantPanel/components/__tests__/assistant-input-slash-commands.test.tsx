@@ -209,6 +209,42 @@ describe("AssistantInput slash commands", () => {
     }
   });
 
+  it("should_close_the_menu_when_the_draft_is_sent_with_the_send_button", async () => {
+    const { onSend, user, textarea } = setup();
+
+    await user.type(textarea, "/");
+    await user.click(screen.getByTestId("assistant-send-button"));
+
+    expect(onSend).toHaveBeenCalledWith("/", MODEL);
+    expect(textarea).toHaveValue("");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(textarea).not.toHaveAttribute("aria-activedescendant");
+  });
+
+  it("should_close_the_menu_when_focus_leaves_the_textarea", async () => {
+    const { user, textarea } = setup();
+
+    await user.type(textarea, "/");
+    await user.click(screen.getByTestId("assistant-send-button"));
+    await user.type(textarea, "/");
+    fireEvent.blur(textarea);
+
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(textarea).not.toHaveAttribute("aria-activedescendant");
+  });
+
+  it("should_keep_the_textarea_focused_when_an_option_is_clicked", async () => {
+    const { user, textarea } = setup();
+
+    await user.type(textarea, "/");
+    await user.click(
+      screen.getByTestId("assistant-slash-command-option-history"),
+    );
+
+    expect(textarea).toHaveValue("/history ");
+    expect(textarea).toHaveFocus();
+  });
+
   it("should_send_an_unknown_slash_prompt_as_typed", async () => {
     const { onSend, user, textarea } = setup();
 
