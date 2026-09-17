@@ -15,7 +15,8 @@ export function applyFeatureFlagFilters(
   rawData: APIDataType,
   { enableKnowledgeBases, enableIntegrations }: FeatureFlagFilterOptions,
 ): APIDataType {
-  // Connection-backed components have no connection_ref renderer until INT-8
+  // With integrations off there is no connection picker, so a connection-backed
+  // component could never be configured: keep it out of the palette.
   const paletteData = enableIntegrations
     ? rawData
     : hideConnectionBackedComponents(rawData);
