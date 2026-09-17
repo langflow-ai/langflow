@@ -1,34 +1,10 @@
 import type { useQueryFunctionType } from "@/types/api";
-import { api } from "../../api";
-import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import { listConnections } from "./api";
+import { connectionsKeys } from "./keys";
+import type { ConnectionRead } from "./types";
 
-/** Credential-free connection metadata, mirroring `ConnectionRead`. */
-export interface ConnectionRead {
-  id: string;
-  owner_id: string | null;
-  ownership_mode: "user" | "instance";
-  provider_key: string;
-  name: string;
-  display_name: string;
-  status: "pending" | "ready" | "expired" | "revoked" | "error";
-  status_reason?: "credential-missing" | "credential-undecryptable" | null;
-  health: "unknown" | "healthy" | "unhealthy";
-  granted_scopes: string[];
-  executing_identity: {
-    identity: string;
-    account?: {
-      id: string;
-      display?: string | null;
-      tenant_id?: string | null;
-    } | null;
-  };
-  allow_non_interactive: boolean;
-  has_credentials: boolean;
-  health_checked_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
+export type { ConnectionRead } from "./types";
 
 export interface GetConnectionsParams {
   /** Provider id from the component's `connection_ref` field, e.g. "google". */
@@ -37,7 +13,7 @@ export interface GetConnectionsParams {
 }
 
 export const getConnectionsQueryKey = (provider?: string) =>
-  ["useGetConnections", provider ?? "all"] as const;
+  connectionsKeys.list(provider);
 
 export const useGetConnections: useQueryFunctionType<
   GetConnectionsParams | undefined,
@@ -45,20 +21,9 @@ export const useGetConnections: useQueryFunctionType<
 > = (params, options) => {
   const { query } = UseRequestProcessor();
 
-  const getConnectionsFn = async (): Promise<ConnectionRead[]> => {
-    const search = params?.provider
-      ? `?provider=${encodeURIComponent(params.provider)}`
-      : "";
-    const response = await api.get<ConnectionRead[]>(
-      `${getURL("CONNECTIONS")}${search}`,
-    );
-    // The axios instance only attaches auth, so nothing upstream checks the
-    // shape. A non-array body would otherwise reach the picker's `.map`.
-    return Array.isArray(response.data) ? response.data : [];
-  };
-
-  return query(getConnectionsQueryKey(params?.provider), getConnectionsFn, {
-    refetchOnWindowFocus: true,
-    ...options,
-  });
+  return query(
+    connectionsKeys.list(params?.provider),
+    () => listConnections(params?.provider),
+    { refetchOnWindowFocus: true, ...options },
+  );
 };
