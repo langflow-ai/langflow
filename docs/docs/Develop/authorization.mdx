@@ -177,6 +177,8 @@ Each share write fires an invalidation call to the authorization plugin so cache
 
 Returns a paginated, filterable view of the authorization audit log.
 
+This API records permission *decisions*. For an append-only history of Flow and Project operations, see [Audit logging](./audit-logging).
+
 **Query parameters:**
 
 | Parameter | Type | Description |
@@ -194,6 +196,7 @@ Page size is capped at 200 rows.
 ## See also
 
 - [Authentication and authorization overview](./authentication-overview)
+- [Audit logging](./audit-logging)
 - [API keys and authentication](/api-keys-and-authentication)
 - [External authentication](./external-authentication)
 - [JWT authentication](/api-keys-and-authentication#configure-jwt-token-signing)
