@@ -323,7 +323,7 @@ async def _build_project_tools_response(
 
             # Sent to clients so they show the name the backend registers, instead of
             # each client deriving its own and disagreeing about non-Latin names.
-            server_name = project_mcp_server_name(project.name, project.id)
+            server_name = project_mcp_server_name(project.name)
 
             # Query flows in the project
             flows_query = select(Flow).where(Flow.folder_id == project_id, Flow.is_component == False)  # noqa: E712
@@ -970,7 +970,7 @@ async def install_mcp_config(
             args = ["/c", "uvx", *args]
             await logger.adebug("Windows detected, using cmd command")
 
-        server_name = project_mcp_server_name(project.name, project.id)
+        server_name = project_mcp_server_name(project.name)
 
         # Create the MCP configuration
         server_config: dict[str, Any] = {

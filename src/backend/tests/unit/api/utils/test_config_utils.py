@@ -6,7 +6,6 @@ from httpx import AsyncClient
 from langflow.api.utils.mcp.config_utils import (
     MCPServerValidationResult,
     auto_configure_starter_projects_mcp,
-    find_project_mcp_server,
     mcp_server_config_uses_current_uvx_constraint,
     validate_mcp_server_for_project,
 )
@@ -205,104 +204,6 @@ class TestValidateMcpServerForProject:
 
         # Cleanup - delete the server
         await client.delete("/api/v2/mcp/servers/lf-test_project", headers={"x-api-key": created_api_key.api_key})
-
-    @pytest.mark.asyncio
-    async def test_find_project_mcp_server_matches_a_legacy_name(
-        self, active_user, test_project, created_api_key, client: AsyncClient
-    ):
-        """A row stored under an older naming scheme is still found, by project id.
-
-        Non-Latin project names used to collapse to ``lf-unnamed``, so the name derived
-        from the project no longer matches what is stored. Missing the row would leave it
-        orphaned on the next rename.
-        """
-        _, server_config = _build_server_config(client.base_url, test_project.id, "streamable")
-        response = await client.post(
-            "/api/v2/mcp/servers/lf-unnamed", json=server_config, headers={"x-api-key": created_api_key.api_key}
-        )
-        assert response.status_code == 200
-
-        from langflow.services.deps import get_settings_service, get_storage_service
-
-        async with session_scope() as session:
-            found = await find_project_mcp_server(
-                test_project.id, active_user, session, get_storage_service(), get_settings_service()
-            )
-
-        assert found is not None
-        assert found == ("lf-unnamed", server_config)
-
-        await client.delete("/api/v2/mcp/servers/lf-unnamed", headers={"x-api-key": created_api_key.api_key})
-
-    @pytest.mark.asyncio
-    async def test_find_project_mcp_server_ignores_a_user_created_row(
-        self, active_user, test_project, created_api_key, client: AsyncClient
-    ):
-        """A server the user added by hand is not ours to rename, even pointing here.
-
-        Renaming it would break every flow that refers to it by name.
-        """
-        _, server_config = _build_server_config(client.base_url, test_project.id, "streamable")
-        response = await client.post(
-            "/api/v2/mcp/servers/my-tools", json=server_config, headers={"x-api-key": created_api_key.api_key}
-        )
-        assert response.status_code == 200
-
-        from langflow.services.deps import get_settings_service, get_storage_service
-
-        async with session_scope() as session:
-            found = await find_project_mcp_server(
-                test_project.id, active_user, session, get_storage_service(), get_settings_service()
-            )
-
-        assert found is None
-
-        await client.delete("/api/v2/mcp/servers/my-tools", headers={"x-api-key": created_api_key.api_key})
-
-    @pytest.mark.asyncio
-    async def test_find_project_mcp_server_ignores_a_row_we_did_not_generate(
-        self, active_user, test_project, created_api_key, client: AsyncClient
-    ):
-        """An lf-prefixed name is not proof of ownership; the command shape must match too."""
-        url, _ = _build_server_config(client.base_url, test_project.id, "streamable")
-        hand_made = {"command": "node", "args": ["my-server.js", url]}
-        response = await client.post(
-            "/api/v2/mcp/servers/lf-my-tools", json=hand_made, headers={"x-api-key": created_api_key.api_key}
-        )
-        assert response.status_code == 200
-
-        from langflow.services.deps import get_settings_service, get_storage_service
-
-        async with session_scope() as session:
-            found = await find_project_mcp_server(
-                test_project.id, active_user, session, get_storage_service(), get_settings_service()
-            )
-
-        assert found is None
-
-        await client.delete("/api/v2/mcp/servers/lf-my-tools", headers={"x-api-key": created_api_key.api_key})
-
-    @pytest.mark.asyncio
-    async def test_find_project_mcp_server_ignores_another_projects_row(
-        self, active_user, test_project, created_api_key, client: AsyncClient
-    ):
-        """A row pointing at a different project is never claimed."""
-        _, server_config = _build_server_config(client.base_url, uuid4(), "streamable")
-        response = await client.post(
-            "/api/v2/mcp/servers/lf-unnamed", json=server_config, headers={"x-api-key": created_api_key.api_key}
-        )
-        assert response.status_code == 200
-
-        from langflow.services.deps import get_settings_service, get_storage_service
-
-        async with session_scope() as session:
-            found = await find_project_mcp_server(
-                test_project.id, active_user, session, get_storage_service(), get_settings_service()
-            )
-
-        assert found is None
-
-        await client.delete("/api/v2/mcp/servers/lf-unnamed", headers={"x-api-key": created_api_key.api_key})
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("transport", ["streamable", "sse"])

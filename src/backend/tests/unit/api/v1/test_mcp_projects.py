@@ -1691,7 +1691,7 @@ async def test_list_project_tools_returns_registered_server_name(
     )
 
     assert response.status_code == 200
-    assert response.json()["server_name"] == project_mcp_server_name(user_test_project.name, user_test_project.id)
+    assert response.json()["server_name"] == project_mcp_server_name(user_test_project.name)
 
 
 async def test_list_project_tools_server_name_keeps_chinese_characters(client: AsyncClient, logged_in_headers):

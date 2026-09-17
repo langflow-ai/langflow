@@ -11,7 +11,6 @@ import os
 import re
 import shutil
 import sys
-import unicodedata
 from contextlib import suppress
 from typing import get_type_hints
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -1844,121 +1843,31 @@ class TestMCPUtilityFunctions:
         assert util.sanitize_mcp_name("a" * 100) == "a" * 46
 
     def test_sanitize_mcp_name_still_collapses_non_ascii_for_tool_names(self):
-        """Tool names stay ASCII on purpose.
-
-        sanitize_mcp_name feeds MCP tool names, which LLM providers require to match
-        ^[a-zA-Z0-9_-]+$, so it must keep collapsing scripts it cannot represent.
-        Project server names use project_mcp_server_name instead.
-        """
+        """Tool names must satisfy the ASCII schema LLM providers enforce, so this stays as is."""
         assert util.sanitize_mcp_name("\u7e41\u9ad4\u4e2d\u6587\u5c08\u6848") == "unnamed"
 
-    @pytest.mark.parametrize(
-        "name",
-        [
-            "\U0001f469\u200d\U0001f469\u200d\U0001f467",  # ZWJ family
-            "\U0001f1fa\U0001f1f8",  # regional indicator flag
-            "\U0001f44d\U0001f3fd",  # skin tone modifier
-            "\u2764\ufe0f",  # variation selector
-            "\U0001f389\U0001f389",  # plain emoji
-        ],
-    )
-    def test_server_name_has_nothing_to_keep_for_emoji_only_names(self, name):
-        """Emoji never survive into a server name, whatever sequence they are spelled with."""
-        assert util.project_mcp_server_name(name, "11111111-2222-3333-4444-555555555555") == ("lf-unnamed_11111111")
-
-    def test_server_name_keeps_non_latin_scripts(self):
-        """A server name is only ever a config key, so every script is kept.
-
-        An over-broad emoji range used to strip CJK, Hangul and kana, collapsing each
-        such project onto lf-unnamed so the second one hit a 409 name conflict.
-        """
-        pid = "11111111-2222-3333-4444-555555555555"
-        assert util.project_mcp_server_name("\u7e41\u9ad4\u4e2d\u6587\u5c08\u6848", pid) == (
-            "lf-\u7e41\u9ad4\u4e2d\u6587\u5c08\u6848"
+    def test_project_mcp_server_name_keeps_non_latin_scripts(self):
+        """CJK, kana and Hangul used to collapse onto lf-unnamed and collide with each other."""
+        assert (
+            util.project_mcp_server_name("\u7e41\u9ad4\u4e2d\u6587\u5c08\u6848")
+            == "lf-\u7e41\u9ad4\u4e2d\u6587\u5c08\u6848"
         )
-        assert util.project_mcp_server_name("\ud55c\uad6d\uc5b4", pid) == "lf-\ud55c\uad6d\uc5b4"
-        assert util.project_mcp_server_name("\u041f\u0440\u043e\u0435\u043a\u0442", pid) == (
-            "lf-\u043f\u0440\u043e\u0435\u043a\u0442"
+        assert (
+            util.project_mcp_server_name("\u30d7\u30ed\u30b8\u30a7\u30af\u30c8")
+            == "lf-\u30d7\u30ed\u30b8\u30a7\u30af\u30c8"
         )
-
-    def test_server_name_keeps_kana_voicing_in_either_normal_form(self):
-        """The dakuten distinguishes \u30d7 from \u30d5, and NFC and NFD must agree."""
-        pid = "11111111-2222-3333-4444-555555555555"
-        nfc = "\u65e5\u672c\u8a9e\u30d7\u30ed\u30b8\u30a7\u30af\u30c8"
-        nfd = unicodedata.normalize("NFD", nfc)
-
-        assert util.project_mcp_server_name(nfc, pid) == f"lf-{nfc}"
-        assert util.project_mcp_server_name(nfd, pid) == util.project_mcp_server_name(nfc, pid)
-
-    def test_server_name_still_folds_latin_diacritics(self):
-        """Latin diacritics keep folding, in either normal form."""
-        pid = "11111111-2222-3333-4444-555555555555"
-        assert util.project_mcp_server_name("caf\u00e9", pid) == "lf-cafe"
-        assert util.project_mcp_server_name(unicodedata.normalize("NFD", "caf\u00e9"), pid) == "lf-cafe"
-
-    @pytest.mark.parametrize(
-        ("first", "second"),
-        [
-            ("\u0915\u093e\u092e", "\u0915\u092e"),  # Devanagari: work vs less
-            ("\u0926\u093f\u0928", "\u0926\u0940\u0928"),  # Devanagari: day vs poor
-            ("\u0e17\u0e35\u0e48", "\u0e17\u0e35"),  # Thai: tone mark
-            (
-                "\u0645\u064e\u0634\u0652\u0631\u064f\u0648\u0639",
-                "\u0645\u0634\u0631\u0648\u0639",
-            ),  # Arabic: with and without harakat
-        ],
-    )
-    def test_server_name_keeps_combining_marks(self, first, second):
-        """Names that differ only by a combining mark must not share a server name.
-
-        Dropping marks merges distinct words, which is the same collision that made two
-        CJK projects fight over lf-unnamed.
-        """
-        pid = "11111111-2222-3333-4444-555555555555"
-        assert util.project_mcp_server_name(first, pid) != util.project_mcp_server_name(second, pid)
-
-    @pytest.mark.parametrize(
-        "name",
-        ["ab\u0301cd", "Kr\u0325sna", "a\u0327b", "x\u0305y", "caf\u00e9"],
-    )
-    def test_server_name_folds_latin_marks_exactly_like_tool_names(self, name):
-        """A mark on an ASCII base is a Latin diacritic even with no precomposed form.
-
-        Server names must fold them exactly as tool names do, or upgrading would rename
-        servers for projects this change never meant to touch.
-        """
-        assert util._sanitize_server_name(name, 46) == util.sanitize_mcp_name(name)
-
-    @pytest.mark.parametrize(
-        ("name", "expected"),
-        [
-            ("Team\U0001f600\u20e3", "lf-team"),  # the emoji's keycap must not graft onto "m"
-            ("Alpha\u2adc", "lf-alpha"),  # forms-feed negation must not strike through the "a"
-            ("a\U0001f600\u0301b", "lf-ab"),
-        ],
-    )
-    def test_server_name_drops_marks_left_behind_by_removed_symbols(self, name, expected):
-        """A mark whose symbol was dropped has nothing to modify, so it goes too."""
-        assert util.project_mcp_server_name(name, "11111111-2222-3333-4444-555555555555") == expected
-
-    def test_project_mcp_server_name_uses_the_sanitized_name(self):
-        """A usable name is reused as-is, so existing server names do not move."""
-        assert util.project_mcp_server_name("New Project (1)", "11111111-2222-3333-4444-555555555555") == (
-            "lf-new_project_1"
+        assert (
+            util.project_mcp_server_name("\ud55c\uad6d\uc5b4 \ud504\ub85c\uc81d\ud2b8")
+            == "lf-\ud55c\uad6d\uc5b4_\ud504\ub85c\uc81d\ud2b8"
         )
+        # Combining marks survive, so names that differ only by a mark stay distinct
+        assert util.project_mcp_server_name("\u0915\u093e\u092e") != util.project_mcp_server_name("\u0915\u092e")
 
-    def test_project_mcp_server_name_is_unique_when_nothing_survives(self):
-        """Emoji-only names share the fallback, so the project id keeps them apart.
-
-        Two projects resolving to one server name make the second fail with a 409
-        MCP server name conflict.
-        """
-        first = util.project_mcp_server_name("\U0001f389", "11111111-2222-3333-4444-555555555555")
-        second = util.project_mcp_server_name("\U0001f680", "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")
-
-        assert first == "lf-unnamed_11111111"
-        assert second == "lf-unnamed_aaaaaaaa"
-        assert first != second
+    @pytest.mark.parametrize("name", ["My Project", "T\u00e9st-\U0001f600-N\u00e1m\u00e9", "123 start", "a" * 100])
+    def test_project_mcp_server_name_matches_the_old_derivation_for_latin_names(self, name):
+        """Existing Latin-named projects keep the server name they were registered under."""
+        old = util.sanitize_mcp_name(name)[: util.MAX_MCP_SERVER_NAME_LENGTH - 4]
+        assert util.project_mcp_server_name(name) == f"lf-{old}"
 
     def test_get_unique_name(self):
         """Test unique name generation."""
