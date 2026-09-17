@@ -45,6 +45,7 @@ export default function ConnectionRefComponent({
   placeholder,
   provider,
   requiredScopes = [],
+  identityKind,
   ariaLabelledBy,
 }: InputProps<string, ConnectionRefComponentType>) {
   const [open, setOpen] = useState(false);
@@ -56,8 +57,8 @@ export default function ConnectionRefComponent({
   );
 
   const options = useMemo(
-    () => buildConnectionOptions(data ?? [], requiredScopes),
-    [data, requiredScopes],
+    () => buildConnectionOptions(data ?? [], requiredScopes, identityKind),
+    [data, requiredScopes, identityKind],
   );
   const selectedHandle = typeof value === "string" ? value : "";
   const selected = options.find((option) => option.handle === selectedHandle);

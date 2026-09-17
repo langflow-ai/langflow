@@ -33,6 +33,28 @@ export function connectionHandle(connection: ConnectionRead): string {
   return `${connection.provider_key}/${connection.name}`;
 }
 
+/**
+ * A field declares the identity it must run as. Bundles derive that from the
+ * capability manifest with `{user_delegated: "user", bot: "instance", service:
+ * "instance"}` (see `lfx_microsoft.manifest`), so the picker maps a connection
+ * the same way rather than inventing a second vocabulary.
+ */
+export function identityKindOf(
+  connection: ConnectionRead,
+): "user" | "instance" {
+  return connection.executing_identity?.identity === "user_delegated"
+    ? "user"
+    : "instance";
+}
+
+export function identityMatches(
+  connection: ConnectionRead,
+  identityKind: string | undefined,
+): boolean {
+  if (!identityKind || identityKind === "any") return true;
+  return identityKindOf(connection) === identityKind;
+}
+
 export function missingScopesFor(
   connection: ConnectionRead,
   requiredScopes: string[],
@@ -44,9 +66,15 @@ export function missingScopesFor(
 function unusableReason(
   connection: ConnectionRead,
   missingScopes: string[],
+  identityKind: string | undefined,
 ): string | undefined {
   if (connection.status !== "ready")
     return `Connection is ${connection.status}`;
+  if (!identityMatches(connection, identityKind)) {
+    return identityKind === "user"
+      ? "Runs as the instance, not a user"
+      : "Runs as a user, not the instance";
+  }
   if (missingScopes.length)
     return `Missing ${missingScopes.map(shortScope).join(", ")}`;
   return undefined;
@@ -61,11 +89,12 @@ function unusableReason(
 export function buildConnectionOptions(
   connections: ConnectionRead[],
   requiredScopes: string[] = [],
+  identityKind?: string,
 ): ConnectionOption[] {
   return connections
     .map((connection) => {
       const missingScopes = missingScopesFor(connection, requiredScopes);
-      const reason = unusableReason(connection, missingScopes);
+      const reason = unusableReason(connection, missingScopes, identityKind);
       return {
         handle: connectionHandle(connection),
         connection,

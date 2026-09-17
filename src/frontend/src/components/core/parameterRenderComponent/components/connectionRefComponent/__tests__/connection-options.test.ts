@@ -3,6 +3,8 @@ import {
   accountLabel,
   buildConnectionOptions,
   connectionHandle,
+  identityKindOf,
+  identityMatches,
   missingScopesFor,
   shortScope,
 } from "../helpers/connection-options";
@@ -138,5 +140,50 @@ describe("accountLabel", () => {
 
   it("falls back to the connection's display name", () => {
     expect(accountLabel(connection())).toBe("Work Google");
+  });
+});
+
+describe("identity kind", () => {
+  const botConnection = connection({
+    executing_identity: { identity: "bot" },
+  });
+
+  it("maps a delegated account to the user kind and everything else to instance", () => {
+    expect(identityKindOf(connection())).toBe("user");
+    expect(identityKindOf(botConnection)).toBe("instance");
+    expect(
+      identityKindOf(
+        connection({ executing_identity: { identity: "service" } }),
+      ),
+    ).toBe("instance");
+  });
+
+  it("accepts any connection when the field does not constrain the identity", () => {
+    expect(identityMatches(botConnection, undefined)).toBe(true);
+    expect(identityMatches(botConnection, "any")).toBe(true);
+  });
+
+  it("rejects a connection whose identity is not the one the field runs as", () => {
+    expect(identityMatches(botConnection, "user")).toBe(false);
+    expect(identityMatches(connection(), "instance")).toBe(false);
+  });
+
+  it("explains the identity mismatch before the scope check", () => {
+    const [option] = buildConnectionOptions(
+      [botConnection],
+      [GMAIL_SEND],
+      "user",
+    );
+    expect(option.usable).toBe(false);
+    expect(option.unusableReason).toBe("Runs as the instance, not a user");
+  });
+
+  it("keeps a matching identity usable", () => {
+    const [option] = buildConnectionOptions(
+      [connection()],
+      [CALENDAR_READ],
+      "user",
+    );
+    expect(option.usable).toBe(true);
   });
 });
