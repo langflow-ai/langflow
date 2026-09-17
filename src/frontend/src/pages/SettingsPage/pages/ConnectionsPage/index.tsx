@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ConnectionRead } from "@/controllers/API/queries/connections";
 import {
   useDeleteConnectionMutation,
@@ -163,6 +163,41 @@ export default function ConnectionsPage() {
   }).filter((tab) => !tab.hidden);
   const activeExtra = extraTabs.find((tab) => tab.value === view);
 
+  // One panel body for both built-in tabs: `visible` is already filtered by
+  // `view`, and Radix only renders the children of the selected TabsContent.
+  const connectionsPanel = (
+    <div className="flex flex-col gap-6">
+      <Input
+        placeholder={t("connections.search")}
+        value={search}
+        onChange={(event) => setSearch(event.target.value)}
+        className="max-w-sm"
+        data-testid="connections-search"
+      />
+      {connectionsQuery.isLoading ? (
+        <p className="text-sm text-muted-foreground">
+          {t("connections.loading")}
+        </p>
+      ) : visible.length === 0 ? (
+        <div
+          className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground"
+          data-testid="connections-empty"
+        >
+          {t("connections.empty")}
+        </div>
+      ) : (
+        <ConnectionsTable
+          connections={visible}
+          providers={providers}
+          currentUserId={userData?.id}
+          isSuperuser={isSuperuser}
+          busyId={busyId}
+          actions={actions}
+        />
+      )}
+    </div>
+  );
+
   return (
     <div className="flex h-full w-full flex-col gap-6">
       <div className="flex w-full items-start justify-between gap-4">
@@ -184,7 +219,22 @@ export default function ConnectionsPage() {
         </Button>
       </div>
 
-      <Tabs value={view} onValueChange={setView}>
+      {/*
+        Every trigger needs a TabsContent with the matching value: Radix points
+        each trigger's aria-controls at the panel id it derives from that value,
+        so a panel the page never mounts leaves the reference dangling.
+
+        Radix keeps the unselected panels mounted and marks them `hidden`, so no
+        `display` utility may sit on TabsContent itself - a class beats the
+        `[hidden] { display: none }` UA rule and would put an empty panel back
+        into the layout and the accessibility tree. Panel bodies bring their own
+        wrapper instead.
+      */}
+      <Tabs
+        value={view}
+        onValueChange={setView}
+        className="flex w-full flex-col gap-6"
+      >
         <TabsList aria-label={t("connections.tabs.label")}>
           <TabsTrigger value="mine">{t("connections.tabs.mine")}</TabsTrigger>
           <TabsTrigger value="instance">
@@ -196,42 +246,20 @@ export default function ConnectionsPage() {
             </TabsTrigger>
           ))}
         </TabsList>
-      </Tabs>
 
-      {activeExtra ? (
-        activeExtra.render()
-      ) : (
-        <>
-          <Input
-            placeholder={t("connections.search")}
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            className="max-w-sm"
-            data-testid="connections-search"
-          />
-          {connectionsQuery.isLoading ? (
-            <p className="text-sm text-muted-foreground">
-              {t("connections.loading")}
-            </p>
-          ) : visible.length === 0 ? (
-            <div
-              className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground"
-              data-testid="connections-empty"
-            >
-              {t("connections.empty")}
-            </div>
-          ) : (
-            <ConnectionsTable
-              connections={visible}
-              providers={providers}
-              currentUserId={userData?.id}
-              isSuperuser={isSuperuser}
-              busyId={busyId}
-              actions={actions}
-            />
-          )}
-        </>
-      )}
+        <TabsContent value="mine" className="mt-0">
+          {connectionsPanel}
+        </TabsContent>
+        <TabsContent value="instance" className="mt-0">
+          {connectionsPanel}
+        </TabsContent>
+        {extraTabs.map((tab) => (
+          <TabsContent key={tab.value} value={tab.value} className="mt-0">
+            {/* The seam contract says render() only runs for the active tab. */}
+            {activeExtra?.value === tab.value ? tab.render() : null}
+          </TabsContent>
+        ))}
+      </Tabs>
 
       {dialogOpen && (
         <AddConnectionDialog

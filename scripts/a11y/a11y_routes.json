@@ -113,6 +113,12 @@
           ]
         }
       ]
+    },
+    {
+      "id": "settings-connections",
+      "path": "/settings/connections",
+      "surface": "Connections settings page",
+      "ready": [{ "testId": "add-connection" }, { "testId": "connections-search" }]
     }
   ],
   "dynamic": [
@@ -134,11 +140,6 @@
     }
   ],
   "gated": [
-    {
-      "path": "/settings/connections",
-      "surface": "Connections settings page",
-      "currentBehavior": "Live and reachable: the route is registered unconditionally in src/frontend/src/routes.tsx, so it is not auth-gated. It is held out of the default batch because a default-load scan reports 2 aria_id_unique violations - the view Tabs render TabsTrigger elements whose aria-controls point at TabsContent panels the page never mounts - and because the connection table, row menu, and status badge surfaces need a seeded connection before they render at all. Promote to static with ready checks on add-connection and connections-search once the frontend owner clears the baseline tracked by connections-ui-a11y-i18n in design/dedicated-integrations/ga-checklist.json."
-    },
     {
       "path": "/login",
       "surface": "Login page",
