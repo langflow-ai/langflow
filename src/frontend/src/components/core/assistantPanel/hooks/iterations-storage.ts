@@ -13,7 +13,7 @@
 
 const STORAGE_KEY = "langflow-assistant-iterations-limit";
 export const MAX_ITERATIONS_LIMIT = 200;
-export const DEFAULT_ITERATIONS_LIMIT = 60;
+export const DEFAULT_ITERATIONS_LIMIT = 100;
 
 export function readIterationsLimit(): number | null {
   try {

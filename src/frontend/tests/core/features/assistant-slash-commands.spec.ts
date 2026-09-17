@@ -47,7 +47,7 @@ test.describe("Assistant slash command menu", { tag: ["@release"] }, () => {
 
     await page.keyboard.press("Enter");
     await expect(
-      page.getByText("Iteration budget: default (60).", { exact: false }),
+      page.getByText("Iteration budget: default (100).", { exact: false }),
     ).toBeVisible();
     await expect(textarea).toHaveValue("");
     expect(assistantRequests).toEqual([]);

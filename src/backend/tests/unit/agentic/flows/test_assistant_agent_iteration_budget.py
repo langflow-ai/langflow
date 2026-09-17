@@ -16,7 +16,7 @@ LE-2324 (2026-08-27): the pin is now the FALLBACK, not the ceiling. An operator 
 ``/iterations N`` only tunes one browser session. The tripwire still guards the shipped
 default, which is what a user gets out of the box.
 
-2026-09-17: raised 30 -> 60 (recursion limit 125). A single build turn that generates two
+2026-09-17: raised 30 -> 100 (recursion limit 205). A single build turn that generates two
 custom components and a 9-component flow used ~25 of the 30 iterations, so identical
 prompts failed or succeeded run to run with "The agent ran out of steps". The budget is a
 ceiling, not a target: turns that finish sooner spend the same tokens as before.
@@ -28,7 +28,7 @@ from pathlib import Path
 FLOW_PATH = Path(__file__).parents[4] / "base" / "langflow" / "agentic" / "flows" / "LangflowAssistant.json"
 PY_FLOW_PATH = Path(__file__).parents[4] / "base" / "langflow" / "agentic" / "flows" / "flow_builder_assistant.py"
 
-ASSISTANT_ITERATION_BUDGET = 60
+ASSISTANT_ITERATION_BUDGET = 100
 
 
 def test_should_pin_json_agents_at_the_assistant_budget():
