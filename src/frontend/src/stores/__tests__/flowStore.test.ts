@@ -1983,7 +1983,7 @@ describe("useFlowStore", () => {
 });
 
 it("preserves flow contract metadata when canvas nodes are edited or removed", () => {
-  const contract = { slot: "SystemPromptBuilder", field_name: "system_prompt" };
+  const contract = { slot: "Instructions", field_name: "system_prompt" };
   useFlowStore.setState({
     currentFlow: {
       id: "instructions",

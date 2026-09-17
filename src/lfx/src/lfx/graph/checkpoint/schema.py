@@ -40,6 +40,8 @@ class GraphCheckpoint(BaseModel):
     user_id: str | None = None
     job_id: str | None = None
     flow_payload: dict[str, Any] = Field(default_factory=dict)
+    reviewed_tool_packs: dict[str, dict] = Field(default_factory=dict)
+    reviewed_harness_flows: dict[str, dict] = Field(default_factory=dict)
     run_map: dict[str, list[str]] = Field(default_factory=dict)
     run_predecessors: dict[str, list[str]] = Field(default_factory=dict)
     vertices_to_run: set[str] = Field(default_factory=set)

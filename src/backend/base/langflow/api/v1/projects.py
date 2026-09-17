@@ -324,6 +324,12 @@ async def create_project(
         raise HTTPException(status_code=500, detail=sanitize_database_error(e, PROJECT_CREATE_FAILED)) from e
 
 
+class ProjectStarterRead(BaseModel):
+    name: str
+    display_name: str
+    description: str
+
+
 class ProjectTypeRead(BaseModel):
     """A project type and the form the UI renders for it."""
 
@@ -334,6 +340,26 @@ class ProjectTypeRead(BaseModel):
     #: The form, keyed by field name, in the same shape as a component's template. The frontend
     #: renders it with the field renderer it already uses on the canvas.
     template: dict[str, dict]
+    starters: tuple[ProjectStarterRead, ...] = ()
+
+
+@router.post("/starters/{starter_name}", response_model=FolderRead, status_code=201)
+async def create_project_starter(*, session: DbSession, current_user: CurrentActiveUser, starter_name: str):
+    """Create an editable starter composition with fresh project/flow/snapshot identities."""
+    from fastapi.concurrency import run_in_threadpool
+    from lfx.projects.starters import build_research_starter
+
+    from langflow.api.v1.project_compositions import composition_error, import_composition
+
+    if starter_name != "research":
+        raise HTTPException(404, "Project starter not found.")
+    await ensure_project_permission(current_user, ProjectAction.CREATE)
+    try:
+        composition = await run_in_threadpool(build_research_starter)
+        flows = await import_composition(session, current_user, composition)
+        return await session.get(Folder, flows[0].folder_id)
+    except (ValueError, KeyError, TypeError) as exc:
+        raise composition_error(exc) from exc
 
 
 # Declared before ``/{project_id}`` so "types" is not parsed as a project id.
@@ -347,6 +373,8 @@ async def read_project_types(
     Read straight out of the lfx registry. There is no database and no component cache behind
     this, so it answers before the component index is built.
     """
+    from lfx.projects.starters import PROJECT_STARTERS
+
     return [
         ProjectTypeRead(
             name=project_type.name,
@@ -354,13 +382,17 @@ async def read_project_types(
             icon=project_type.icon,
             description=project_type.description,
             template=project_type.to_template(),
+            starters=tuple(
+                ProjectStarterRead(**starter)
+                for starter in PROJECT_STARTERS
+                if starter["project_type"] == project_type.name
+            ),
         )
         for project_type in all_project_types()
     ]
 
 
-async def _binding_project(session: DbSession, current_user: User, project_id: UUID, field_name: str) -> Folder:
-    """Keep baseline and draft validation scoped like the field's output picker."""
+async def _harness_project(session: DbSession, current_user: User, project_id: UUID) -> Folder:
     project = (
         await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
     ).first()
@@ -373,9 +405,39 @@ async def _binding_project(session: DbSession, current_user: User, project_id: U
         project_user_id=project.user_id,
         workspace_id=project.workspace_id,
     )
-    if project.project_type != "agent-harness" or field_name not in BINDING_LABELS:
+    if project.project_type != "agent-harness":
+        raise HTTPException(422, "Choose an Agent Harness project.")
+    return project
+
+
+async def _binding_project(session: DbSession, current_user: User, project_id: UUID, field_name: str) -> Folder:
+    """Keep baseline and draft validation scoped like the field's output picker."""
+    project = await _harness_project(session, current_user, project_id)
+    if field_name not in BINDING_LABELS:
         raise HTTPException(422, "Choose a supported harness field for this flow binding.")
     return project
+
+
+@router.get("/{project_id}/tool-definitions")
+async def read_local_tool_definitions(*, session: DbSession, project_id: UUID, current_user: CurrentActiveUser):
+    """Return authorized, statically validated local tool definitions for explicit review."""
+    from lfx.projects.local_tools import local_tool_definition
+
+    from langflow.services.database.models.folder.flow_bindings import flow_definitions, resolve_binding_flows
+
+    await _harness_project(session, current_user, project_id)
+    flows = (
+        await session.exec(select(Flow).where(Flow.folder_id == project_id, col(Flow.is_component).is_(False)))
+    ).all()
+    definitions = []
+    for flow in flows:
+        try:
+            sources = await resolve_binding_flows(session, current_user, flow)
+            definition = local_tool_definition(flow_definitions([flow])[0], flow_definitions(sources.values()))
+        except (ValueError, KeyError, TypeError, AttributeError, HTTPException):
+            continue
+        definitions.append(definition.model_dump(mode="json"))
+    return sorted(definitions, key=lambda item: (item["name"], item["flow_id"]))
 
 
 class FlowBaselineRequest(BaseModel):
@@ -451,7 +513,7 @@ async def validate_project_flow_outputs(
         "reason": None
         if outputs
         else (
-            "Add a System Prompt Builder with an unconnected Instructions output."
+            "Configure a Prompt Template and leave its Message output available for Instructions."
             if field_name == "system_prompt"
             else hint
         ),
@@ -484,14 +546,29 @@ async def read_project_flow_outputs(
         act=FlowAction.READ,
     )
     candidates = []
+    from lfx.projects.dependencies import binding_dependencies
+
+    from langflow.services.database.models.folder.flow_bindings import flow_definitions, resolve_binding_flows
+
     for flow in flows:
         try:
             outputs = binding_outputs(field_name, flow.data or {})
+            if not outputs:
+                continue
             revision = flow_revision(flow.data or {})
-        except (ValueError, TypeError, KeyError):
+            sources = await resolve_binding_flows(session, current_user, flow)
+            dependencies = binding_dependencies(str(flow.id), flow_definitions(sources.values()))
+        except (ValueError, TypeError, KeyError, HTTPException):
             continue
         candidates.extend(
-            {"flow_id": str(flow.id), "flow_name": flow.name, "revision": revision, **output} for output in outputs
+            {
+                "flow_id": str(flow.id),
+                "flow_name": flow.name,
+                "revision": revision,
+                **({"dependencies": [item.model_dump() for item in dependencies]} if dependencies else {}),
+                **output,
+            }
+            for output in outputs
         )
     return sorted(
         candidates, key=lambda candidate: (candidate["flow_name"], candidate["node_id"], candidate["output_name"])

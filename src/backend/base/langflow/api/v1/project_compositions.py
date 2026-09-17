@@ -12,8 +12,9 @@ from lfx.projects.archives import (
     ProjectComposition,
 )
 from lfx.projects.bindings import BINDING_ORIGIN, flow_revision
+from lfx.projects.dependencies import flow_references
 from lfx.projects.flow_slots import ProjectFlowBindings, flow_runtime_bindings
-from lfx.projects.tool_packs import ToolPackToolBinding, tool_pack_references
+from lfx.projects.tool_packs import FlowDependencyVersion, ToolPackToolBinding, tool_pack_references
 from lfx.projects.tools import TOOL_ORIGIN, tool_node_revision
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -24,7 +25,13 @@ from langflow.api.v1.schemas import FlowListCreate
 from langflow.helpers.flow import generate_unique_flow_name
 from langflow.helpers.folders import generate_unique_folder_name
 from langflow.services.auth.mcp_encryption import encrypt_auth_settings
-from langflow.services.authorization import FlowAction, filter_visible_resources
+from langflow.services.authorization import (
+    FlowAction,
+    ProjectAction,
+    ensure_project_permission,
+    filter_visible_resources,
+)
+from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
 from langflow.services.authorization.utils import _resolve_authz_domain
 from langflow.services.creation_hooks import RESOURCE_PROJECT, PreCreationContext, enforce_pre_creation
 from langflow.services.database.models.flow.model import Flow, FlowCreate, FlowRead
@@ -84,6 +91,63 @@ async def export_composition(
                 act=FlowAction.READ,
             )
             pending.append((dependency, visible))
+        # Ordinary nested flow calls may cross project boundaries too. Carry those
+        # authorized projects instead of leaving IDs tied to the source installation.
+        for flow in flows:
+            for reference in flow_references(flow.data or {}):
+                if reference.flow_id:
+                    child = await authorized_or_owner_scoped(
+                        session,
+                        Flow,
+                        id_column=Flow.id,
+                        resource_id=UUID(reference.flow_id),
+                        owner_column=Flow.user_id,
+                        owner_id=user.id,
+                    )
+                else:
+                    child = (
+                        await session.exec(select(Flow).where(Flow.user_id == user.id, Flow.name == reference.name))
+                    ).first()
+                if child is None or child.folder_id is None:
+                    raise HTTPException(404, "A referenced project flow is unavailable.")
+                if str(child.folder_id) in projects:
+                    continue
+                dependency = await authorized_or_owner_scoped(
+                    session,
+                    Folder,
+                    id_column=Folder.id,
+                    resource_id=child.folder_id,
+                    owner_column=Folder.user_id,
+                    owner_id=user.id,
+                )
+                if dependency is None:
+                    raise HTTPException(404, "A referenced project is unavailable.")
+                try:
+                    await ensure_project_permission(
+                        user,
+                        ProjectAction.READ,
+                        project_id=dependency.id,
+                        project_user_id=dependency.user_id,
+                        workspace_id=dependency.workspace_id,
+                    )
+                except HTTPException as exc:
+                    raise deny_to_404(exc, "A referenced project is unavailable.") from exc
+                candidates = list(
+                    (
+                        await session.exec(
+                            select(Flow).where(Flow.folder_id == dependency.id, Flow.user_id == dependency.user_id)
+                        )
+                    ).all()
+                )
+                visible = await filter_visible_resources(
+                    user,
+                    resource_type="flow",
+                    candidates=candidates,
+                    domain_extractor=lambda item: _resolve_authz_domain(item.workspace_id, item.folder_id),
+                    owner_extractor=lambda item: item.user_id,
+                    act=FlowAction.READ,
+                )
+                pending.append((dependency, visible))
         if len(projects) > MAX_COMPOSITION_PROJECTS or len(rows) > MAX_COMPOSITION_FLOWS:
             msg = "The composition exceeds the archive resource limit."
             raise ValueError(msg)
@@ -94,6 +158,9 @@ async def export_composition(
     versions = []
     for project in composition.projects:
         if project.project_type == "agent-harness":
+            from lfx.projects.local_tools import local_tool_bindings
+
+            versions.extend(local_tool_bindings((project.project_config or {}).get("tool_bindings", {})).values())
             versions.extend(
                 binding
                 for _, binding in ProjectFlowBindings.model_validate(
@@ -119,15 +186,25 @@ async def export_composition(
                         ).entries()
                     )
                 pack = data.get(TOOL_ORIGIN, {}).get("tool_pack")
+                local = data.get(TOOL_ORIGIN, {}).get("local_tool")
+                if local:
+                    from lfx.projects.local_tools import LocalToolBinding
+
+                    versions.append(LocalToolBinding.model_validate(local))
                 if pack:
                     binding = ToolPackToolBinding.model_validate(pack)
                     versions.append(binding)
+                    versions.extend(binding.dependency_versions)
+    versions.extend(dependency for binding in list(versions) for dependency in getattr(binding, "dependencies", []))
     checked = set()
     for binding in versions:
         if not binding.version_id:
             continue
-        source_id = str(binding.tool.flow_id) if isinstance(binding, ToolPackToolBinding) else binding.flow_id
-        revision = binding.tool.revision if isinstance(binding, ToolPackToolBinding) else binding.revision
+        if isinstance(binding, (ToolPackToolBinding, FlowDependencyVersion)):
+            definition = binding.tool if isinstance(binding, ToolPackToolBinding) else binding.flow
+            source_id, revision = str(definition.flow_id), definition.revision
+        else:
+            source_id, revision = binding.flow_id, binding.revision
         key = (str(binding.version_id), source_id, revision)
         if key in checked:
             continue

@@ -86,3 +86,43 @@ it("does not invent dependency evidence for legacy reports", () => {
   expect(screen.queryByRole("region")).not.toBeInTheDocument();
   expect(api.get).not.toHaveBeenCalled();
 });
+
+it("shows historical nested snapshots and preserves the draft when following a source flow", async () => {
+  const child = {
+    flow_id: "child",
+    name: "Reviewed source reader",
+    revision: "d".repeat(64),
+  };
+  jest.mocked(api.get).mockResolvedValue({
+    data: {
+      name: "Current pack",
+      reference: { ...recorded.binding.reference, revision: "c".repeat(64) },
+      tools: [],
+    },
+  });
+  mount([
+    {
+      ...recorded,
+      binding: {
+        ...recorded.binding,
+        tool: { ...recorded.binding.tool, dependencies: [child] },
+        dependency_versions: [{ flow: child, version_id: "nested-snapshot" }],
+      },
+    },
+  ]);
+  await screen.findByText("Pack changed since this run");
+  expect(screen.getByText(child.name)).toBeInTheDocument();
+  expect(screen.getByText(child.revision)).toBeInTheDocument();
+  expect(screen.getByText("nested-snapshot")).toBeInTheDocument();
+  expect(
+    screen.getByText(/The run may use only some of these flows/),
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByText("Recorded revisions and calls"));
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Open current flow: Reviewed source reader",
+    }),
+  );
+  expect(mockOpen).toHaveBeenCalled();
+  expect(mockNavigate).toHaveBeenCalledWith("/flow/child");
+});

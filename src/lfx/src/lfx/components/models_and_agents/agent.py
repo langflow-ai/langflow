@@ -658,18 +658,19 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         # because some providers do credential resolution / client instantiation
         # lazily on each call. The caller — `create_agent_runnable` — already
         # resolved it once for `bind_tools`, so reuse that instance here.
-        middleware: list = []
+        from lfx.components.models_and_agents.agent_helpers.source_evidence import SourceEvidenceMiddleware
+        from lfx.projects.run_configuration import capture_agent_configuration
+
+        evidence = SourceEvidenceMiddleware(self.tools or [])
+        middleware: list = [evidence]
         # LangChain accepts missing IDs on AIMessage.tool_calls, but LangGraph's
         # invalid-call path and ToolRetryMiddleware both require a string when
         # they construct an error ToolMessage. Normalize at the model boundary
         # so either recovery path can return the error to the model instead of
         # crashing the flow.
         if self.tools:
-            from lfx.components.models_and_agents.agent_helpers.source_evidence import SourceEvidenceMiddleware
-
             # Retain completed source results before compaction mutates message state.
             # The same state is checkpointed when an approval suspends this run.
-            middleware.append(SourceEvidenceMiddleware(self.tools))
             middleware.append(ToolCallIDMiddleware())
         max_iterations = getattr(self, "max_iterations", None)
         if max_iterations is not None:
@@ -709,6 +710,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         policy = policy.model_copy(
             update={"max_iterations": max(1, int(max_iterations if max_iterations is not None else 15))}
         )
+        evidence.configuration = capture_agent_configuration(self, llm, policy)
         from lfx.projects.compaction import CompactionFlowRunner, parse_compaction_binding
         from lfx.projects.context import ContextFlowRunner, parse_context_binding
 

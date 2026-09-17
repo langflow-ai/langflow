@@ -2,7 +2,52 @@ import type { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
-import type { ToolDependencyUse } from "./use-project-tool-pack";
+import type {
+  ToolDependencyUse,
+  ToolPackBinding,
+} from "./use-project-tool-pack";
+
+export type RecordedFlowBinding = {
+  flow_id: string;
+  dependencies?: import("@/pages/MainPage/entities").BoundFlowDependency[];
+  node_id: string;
+  output_name: string;
+  revision: string;
+  version_id?: string | null;
+};
+
+export type AgentConfiguration = {
+  schema_version: 1;
+  revision: string;
+  captured_at: string;
+  flow_id: string | null;
+  agent_node_id: string;
+  flow_revision: string | null;
+  component_revision: string | null;
+  model: {
+    implementation: string;
+    name: string;
+    parameters: Record<string, unknown>;
+  };
+  system_prompt: string;
+  runtime: Record<string, string | number>;
+  history_messages: number;
+  loaded_history_messages: number;
+  tool_retry_count: number;
+  tools: {
+    name: string;
+    description: string;
+    input_schema: Record<string, unknown>;
+    return_direct: boolean;
+    approval_actions: string[];
+    tool_pack: ToolPackBinding | null;
+    local_flow?: import("@/pages/MainPage/entities").LocalToolBinding | null;
+  }[];
+  flow_bindings: Record<
+    string,
+    RecordedFlowBinding | RecordedFlowBinding[] | null
+  >;
+};
 
 export type ReportExecution = {
   flow_id: string;
@@ -46,6 +91,7 @@ export type SourcedReport = {
     tool_name: string | null;
   }[];
   tool_dependencies?: ToolDependencyUse[];
+  configurations?: AgentConfiguration[];
   claim_support: "not_evaluated";
 };
 

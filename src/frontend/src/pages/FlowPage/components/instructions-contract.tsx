@@ -9,7 +9,7 @@ import useFlowStore from "@/stores/flowStore";
 type Validation = { valid: boolean; outputs: unknown[] };
 
 const contracts = [
-  { slot: "SystemPromptBuilder", field: "system_prompt", kind: "instructions" },
+  { slot: "Instructions", field: "system_prompt", kind: "instructions" },
   { slot: "Hook", field: "hooks", kind: "hook" },
   { slot: "ContextManager", field: "context_strategy", kind: "context" },
   { slot: "Compactor", field: "compaction", kind: "compaction" },

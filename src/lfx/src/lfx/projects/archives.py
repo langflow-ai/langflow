@@ -14,13 +14,20 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from lfx.projects.bindings import BINDING_ORIGIN, flow_revision
+from lfx.projects.dependencies import binding_dependencies, validate_binding_dependencies
 from lfx.projects.flow_slots import (
     _RUNTIME_FIELDS,
     ProjectFlowBindings,
     flow_runtime_bindings,
     validate_project_binding,
 )
-from lfx.projects.tool_packs import ToolPackToolBinding, tool_pack_manifest, tool_pack_references
+from lfx.projects.local_tools import (
+    LocalToolBinding,
+    local_tool_bindings,
+    local_tool_definition,
+    validate_local_tool_source,
+)
+from lfx.projects.tool_packs import FlowDependencyVersion, ToolPackToolBinding, tool_pack_manifest, tool_pack_references
 from lfx.projects.tools import TOOL_ORIGIN, tool_node_revision
 
 MAX_COMPOSITION_PROJECTS = 100
@@ -92,7 +99,11 @@ class CompositionGraph:
             msg = "A referenced Tool Pack is missing from the composition archive."
             raise ValueError(msg)
         return tool_pack_manifest(
-            project_id=project.id, name=project.name, config=project.project_config, flows=project.flows
+            project_id=project.id,
+            name=project.name,
+            config=project.project_config,
+            flows=project.flows,
+            dependency_flows=list(self.flows.values()),
         )
 
     def selected_flow(self, node: dict) -> str | None:
@@ -117,6 +128,7 @@ class CompositionGraph:
         """Check reviewed definitions before any credential stripping or ID changes."""
 
         def validate_binding(field_name, data, binding):
+            validate_binding_dependencies(binding, list(self.flows.values()))
             if not allow_missing_secrets:
                 validate_project_binding(field_name, data, binding)
                 return
@@ -146,6 +158,12 @@ class CompositionGraph:
                 raise ValueError(msg)
             for flow_id in tools:
                 self.local_source(project_id, flow_id)
+            for binding in local_tool_bindings(config.get("tool_bindings", {})).values():
+                if binding.flow_id not in tools:
+                    msg = "An archived local tool binding is not selected by its harness."
+                    raise ValueError(msg)
+                validate_local_tool_source(self.local_source(project_id, binding.flow_id), binding)
+                validate_binding_dependencies(binding, list(self.flows.values()))
             for reference in tool_pack_references(config.get("tool_packs", [])):
                 if reference != self.manifest(str(reference.project_id)).reference:
                     msg = "A Tool Pack changed. Review and save its reference before exporting."
@@ -178,6 +196,7 @@ class CompositionGraph:
                         validate_binding("system_prompt", self.source(target)["data"], binding)
                     elif origin.get("tool_pack"):
                         binding = ToolPackToolBinding.model_validate(origin["tool_pack"])
+                        binding.dependency_snapshots()
                         manifest = self.manifest(str(binding.reference.project_id))
                         if binding.reference != manifest.reference or binding.tool not in manifest.tools:
                             msg = "An archived tool has an unreviewed Tool Pack definition."
@@ -185,6 +204,13 @@ class CompositionGraph:
                         if str(binding.tool.flow_id) != target:
                             msg = "An archived tool targets a different flow from its reviewed export."
                             raise ValueError(msg)
+                    elif origin.get("local_tool"):
+                        binding = LocalToolBinding.model_validate(origin["local_tool"])
+                        if binding.flow_id != target:
+                            msg = "An archived local tool targets a different reviewed flow."
+                            raise ValueError(msg)
+                        validate_local_tool_source(self.source(target), binding)
+                        validate_binding_dependencies(binding, list(self.flows.values()))
 
     def relocate(
         self,
@@ -204,6 +230,7 @@ class CompositionGraph:
         visited: set[str] = set()
         active: set[str] = set()
         pack_manifests = {}
+        original_flow_ids = {new_id: old_id for old_id, new_id in flow_ids.items()}
         names = flow_names or {flow_id: flow["name"] for flow_id, flow in self.flows.items()}
 
         def pack(project_id):
@@ -215,7 +242,11 @@ class CompositionGraph:
                 config = deepcopy(project.project_config or {})
                 config["tools"] = [flow_ids[item] for item in config.get("tools", [])]
                 pack_manifests[project_id] = tool_pack_manifest(
-                    project_id=UUID(project_ids[project_id]), name=project.name, config=config, flows=project.flows
+                    project_id=UUID(project_ids[project_id]),
+                    name=project.name,
+                    config=config,
+                    flows=project.flows,
+                    dependency_flows=list(target.flows.values()),
                 )
             return pack_manifests[project_id]
 
@@ -228,8 +259,20 @@ class CompositionGraph:
                 binding.flow_id = flow_ids[original_id]
                 binding.revision = flow_revision(target.flows[original_id]["data"])
                 binding.version_id = version_ids[original_id]
+                binding.dependencies = binding_dependencies(binding.flow_id, list(target.flows.values()))
+                for dependency in binding.dependencies:
+                    dependency.version_id = version_ids[original_flow_ids[dependency.flow_id]]
                 updated.append(binding.model_dump())
             return updated if isinstance(value, list) else updated[0] if updated else None
+
+        def local_binding(value):
+            original_id = LocalToolBinding.model_validate(value).flow_id
+            visit(original_id)
+            binding = local_tool_definition(target.flows[original_id], list(target.flows.values()))
+            binding.version_id = version_ids[original_id]
+            for dependency in binding.dependencies:
+                dependency.version_id = version_ids[original_flow_ids[dependency.flow_id]]
+            return binding.model_dump(mode="json")
 
         def visit(flow_id):
             if flow_id in active:
@@ -272,20 +315,30 @@ class CompositionGraph:
                             runtime_origin[origin_key] = binding_value(field_name, runtime_origin[origin_key])
                 instruction = data.get(BINDING_ORIGIN)
                 if isinstance(instruction, dict):
-                    instruction.update(
-                        project_id=project_id,
-                        flow_id=flow_ids[selected],
-                        revision=flow_revision(target.flows[selected]["data"]),
-                        version_id=version_ids[selected],
+                    value = binding_value(
+                        "system_prompt",
+                        {key: value for key, value in instruction.items() if key not in {"project_id", "field_name"}},
                     )
+                    instruction.update(project_id=project_id, **value)
                 if isinstance(origin, dict):
                     origin.update(project_id=project_id, flow_id=flow_ids[selected])
+                    if origin.get("local_tool"):
+                        origin["local_tool"] = local_binding(origin["local_tool"])
                     if origin.get("tool_pack"):
                         original_binding = ToolPackToolBinding.model_validate(origin["tool_pack"])
                         manifest = pack(str(original_binding.reference.project_id))
                         export = next(item for item in manifest.tools if str(item.flow_id) == flow_ids[selected])
                         origin["tool_pack"] = ToolPackToolBinding(
-                            reference=manifest.reference, tool=export, version_id=UUID(version_ids[selected])
+                            reference=manifest.reference,
+                            tool=export,
+                            version_id=UUID(version_ids[selected]),
+                            dependency_versions=tuple(
+                                FlowDependencyVersion(
+                                    flow=dependency,
+                                    version_id=UUID(version_ids[original_flow_ids[str(dependency.flow_id)]]),
+                                )
+                                for dependency in export.dependencies
+                            ),
                         ).model_dump(mode="json")
                     if unchanged_tool:
                         origin["applied_revision"] = tool_node_revision(node)
@@ -314,6 +367,10 @@ class CompositionGraph:
                     config["flow_bindings"] = {
                         field_name: binding_value(field_name, value)
                         for field_name, value in config["flow_bindings"].items()
+                    }
+                if "tool_bindings" in config:
+                    config["tool_bindings"] = {
+                        flow_ids[key]: local_binding(value) for key, value in config["tool_bindings"].items()
                     }
                 if isinstance(config.get("_applied"), dict):
                     config["_applied"] = {

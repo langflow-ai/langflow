@@ -17,8 +17,10 @@ import {
   moveHook,
   orderedHooks,
   outputKey,
+  sameBindingDefinition,
   validFlowTimeout,
 } from "../flow-binding";
+import { FlowBindingDependencies } from "./flow-binding-dependencies";
 import { ProjectChoiceField } from "./project-choice-field";
 
 export function HookFlowPicker({
@@ -99,7 +101,7 @@ export function HookFlowPicker({
             );
             const control = hook.mode === "control";
             const timeout = hook.timeout_seconds ?? 10;
-            const stale = choice && choice.revision !== hook.revision;
+            const stale = choice && !sameBindingDefinition(choice, hook);
             return (
               <li
                 key={`${index}:${outputKey(hook)}`}
@@ -312,6 +314,13 @@ export function HookFlowPicker({
                     {t("harness.hookUnavailableHelp")}
                   </p>
                 )}
+                <FlowBindingDependencies
+                  dependencies={
+                    choice ? (choice.dependencies ?? []) : hook.dependencies
+                  }
+                  reviewed={choice ? (hook.dependencies ?? []) : undefined}
+                  onOpen={onOpen}
+                />
                 {stale && (
                   <div
                     role="status"

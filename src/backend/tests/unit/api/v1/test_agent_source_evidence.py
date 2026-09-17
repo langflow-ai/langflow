@@ -13,6 +13,7 @@ from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import get_job_service, session_scope
 from lfx.components.data_source.record_source import RecordSourceComponent
 from lfx.components.files_and_knowledge.sourced_report import SourcedReportComponent
+from lfx.components.flow_controls.run_flow import RunFlowComponent
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.components.models_and_agents.agent import AgentComponent
 from lfx.custom import Component
@@ -20,6 +21,7 @@ from lfx.graph.flow_builder import add_component, add_connection, configure_comp
 from lfx.graph.graph.base import Graph
 from lfx.io import MessageTextInput, Output
 from lfx.projects.artifacts import AgentRunResult, SourcedReport
+from lfx.projects.tools import prepare_tool_template
 from lfx.schema.message import Message
 from pydantic import Field
 from sqlmodel import select
@@ -102,9 +104,9 @@ def registry():
 
 
 @pytest.mark.parametrize("gated", [False, True])
-@pytest.mark.parametrize("use_pack", [False, True])
+@pytest.mark.parametrize(("use_pack", "nested"), [(False, False), (True, False), (True, True)])
 async def test_saved_agent_collects_flow_tool_evidence_and_downloads_report(
-    client, logged_in_headers, active_user, gated, use_pack
+    client, logged_in_headers, active_user, gated, use_pack, nested
 ):
     project_id = await create_project(client, logged_in_headers, name="Offline evidence harness")
     components = registry()
@@ -121,13 +123,41 @@ async def test_saved_agent_collects_flow_tool_evidence_and_downloads_report(
             "title": "Offline study fixture",
         },
     )
-    add_connection(source_flow, "ChatInput-query", "message", "OfflineSourceFixture-lookup", "query")
     add_connection(source_flow, "OfflineSourceFixture-lookup", "text", "RecordSource-capture", "content")
     pack_id = (
         await create_project(client, logged_in_headers, name="Offline evidence tools", project_type="tool-pack")
         if use_pack
         else None
     )
+    if nested:
+        from tests.unit.api.v1.test_project_config_write_through import echo_flow_data
+
+        child_id = await create_flow(active_user, folder_id=pack_id, name="Reviewed query", data=echo_flow_data())
+        child = {"id": child_id, "name": "Reviewed query", "data": (await stored_flow(child_id)).data}
+        adapter = prepare_tool_template(child)
+        child_graph = Graph.from_payload(child["data"], instantiate_components=False)
+        adapter["outputs"] = [output.model_dump() for output in RunFlowComponent()._format_flow_outputs(child_graph)]
+        adapter["add_tool_output"] = False
+        components["RunFlow"] = adapter
+        add_component(source_flow, "RunFlow", components, component_id="RunFlow-query")
+        add_connection(
+            source_flow,
+            "ChatInput-query",
+            "message",
+            "RunFlow-query",
+            "ChatInput-echo~input_value",
+            registry=components,
+        )
+        add_connection(
+            source_flow,
+            "RunFlow-query",
+            "ChatOutput-echo~message",
+            "OfflineSourceFixture-lookup",
+            "query",
+            registry=components,
+        )
+    else:
+        add_connection(source_flow, "ChatInput-query", "message", "OfflineSourceFixture-lookup", "query")
     source_id = await create_flow(
         active_user, folder_id=pack_id or project_id, data=source_flow["data"], name="offline-sources"
     )
@@ -157,17 +187,30 @@ async def test_saved_agent_collects_flow_tool_evidence_and_downloads_report(
     job_id = uuid4()
     jobs = get_job_service()
     await jobs.create_job(job_id=job_id, flow_id=UUID(agent_id), user_id=active_user.id)
+    builds = 0
 
-    async def build():
-        graph = Graph.from_payload(
-            deepcopy((await stored_flow(agent_id)).data), flow_id=agent_id, user_id=str(active_user.id)
+    async def build(checkpoint=None):
+        nonlocal builds
+        graph = (
+            Graph.resume_from_checkpoint(checkpoint)
+            if checkpoint
+            else Graph.from_payload(
+                deepcopy((await stored_flow(agent_id)).data), flow_id=agent_id, user_id=str(active_user.id)
+            )
         )
         graph.set_run_id(job_id)
         graph.session_id = f"evidence-test-{agent_id}"
         model = StoredEvidenceModel()
         graph.get_vertex("Agent-research").update_raw_params(
-            {"model": model, "input_value": "Research the alpha and beta fixtures."}, overwrite=True
+            {
+                "model": model,
+                "input_value": "Research the alpha and beta fixtures.",
+                "system_prompt": f"Research alpha and beta. Configuration attempt {builds}.",
+                "max_iterations": 8 + builds,
+            },
+            overwrite=True,
         )
+        builds += 1
         return graph, model
 
     async def execute_until_pause(graph):
@@ -187,13 +230,44 @@ async def test_saved_agent_collects_flow_tool_evidence_and_downloads_report(
             request = graph.pause_info["data"]
             assert request["action_requests"][0]["tool_call_id"] == call_id
             assert await jobs.load_checkpoint(job_id, "agent")
+            checkpoint = None
+            if nested:
+                from lfx.graph.checkpoint.builder import build_checkpoint
+                from lfx.graph.checkpoint.schema import GraphCheckpoint
+
+                from tests.unit.api.v1.test_transitive_tool_snapshots import change_child
+
+                checkpoint = GraphCheckpoint.model_validate_json(build_checkpoint(graph).model_dump_json())
+                if call_id == "call-alpha":
+                    # The edited query would make the deterministic lookup reject
+                    # the input if a resumed nested call read the current flow.
+                    await change_child(child_id)
             # New Graph, Agent, model, and saver; only database state survives.
-            graph, model = await build()
+            graph, model = await build(checkpoint)
+            if checkpoint:
+                graph.get_vertex("Agent-research").built = False
             graph.human_input_decisions = {request["request_id"]: {"action_id": "approve"}}
             await execute_until_pause(graph)
     assert not graph.pause_requested
     output = graph.get_vertex("SourcedReport-save").custom_component.get_output("artifact").value.data
     report = SourcedReport.model_validate(output["artifact"])
+    assert report.configurations
+    assert [item.runtime.max_iterations for item in report.configurations] == ([8, 9, 10] if gated else [8])
+    assert all(
+        f"Configuration attempt {index}." in item.system_prompt for index, item in enumerate(report.configurations)
+    )
+    configuration = report.configurations[-1]
+    assert configuration.agent_node_id == "Agent-research"
+    assert configuration.flow_id == agent_id
+    assert configuration.component_revision
+    assert configuration.runtime.tool_policy == ("ask" if gated else "tool_defaults")
+    assert configuration.model.name == "stored-offline-evidence-test"
+    assert configuration.tools[0].name == model.tool_name
+    assert any(
+        message.type == "system" and message.content == configuration.system_prompt
+        for messages in model.seen
+        for message in messages
+    )
     assert len(report.sources) == 2
     assert all(len(source.content.encode()) > 128_000 for source in report.sources)
     assert {use.tool_call_id for use in report.source_uses} == {"call-alpha", "call-beta"}
@@ -204,6 +278,11 @@ async def test_saved_agent_collects_flow_tool_evidence_and_downloads_report(
             use.binding.reference.model_dump(mode="json") == manifest["reference"] for use in report.tool_dependencies
         )
         assert all(str(use.binding.tool.flow_id) == source_id for use in report.tool_dependencies)
+        if nested:
+            assert all(
+                [str(item.flow.flow_id) for item in use.binding.dependency_versions] == [child_id]
+                for use in report.tool_dependencies
+            )
     else:
         assert report.tool_dependencies == ()
     assert report.claim_support == "not_evaluated"
@@ -219,6 +298,7 @@ async def test_saved_agent_collects_flow_tool_evidence_and_downloads_report(
         assert run.evidence.sources == report.sources
         assert run.evidence.uses == report.source_uses
         assert run.evidence.tool_dependencies == report.tool_dependencies
+        assert run.configurations == report.configurations
         assert run.answer == report.markdown
     for path in output["files"]:
         response = await client.get(f"api/v1/files/download/{path}", headers=logged_in_headers)

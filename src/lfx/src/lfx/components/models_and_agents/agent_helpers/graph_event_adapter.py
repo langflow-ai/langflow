@@ -88,11 +88,13 @@ def _reshape_chain_end(event: dict[str, Any]) -> dict[str, Any]:
             break
 
     return_values: dict[str, Any] = {"output": final_text}
-    if evidence := output.get("harness_source_evidence"):
+    if output.get("harness_source_evidence") or output.get("harness_run_configurations"):
         from lfx.projects.artifacts import AgentRunResult, CollectedEvidence
 
         return_values["agent_run_result"] = AgentRunResult(
-            answer=final_text, evidence=CollectedEvidence.model_validate(evidence)
+            answer=final_text,
+            evidence=CollectedEvidence.model_validate(output.get("harness_source_evidence") or {}),
+            configurations=output.get("harness_run_configurations") or (),
         ).model_dump(mode="json")
     return {**event, "data": {**data, "output": AgentFinish(return_values=return_values, log="")}}
 

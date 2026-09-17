@@ -204,6 +204,8 @@ class RunFlowBaseComponent(Component):
 
     async def get_flow(self, flow_name_selected: str | None = None, flow_id_selected: str | None = None) -> Data:
         """Get a flow's data by name or id."""
+        if (frozen := self._frozen_flow(flow_id_selected, flow_name_selected)) is not None:
+            return Data(data=deepcopy(frozen))
         if (sibling := self._sibling_flow(flow_name_selected, flow_id_selected)) is not None:
             return sibling
         flow = await get_flow_by_id_or_name(
@@ -212,6 +214,22 @@ class RunFlowBaseComponent(Component):
             flow_name=flow_name_selected,
         )
         return flow or Data(data={})
+
+    def _frozen_flow(self, flow_id, flow_name):
+        definitions = getattr(self.graph, "frozen_tool_flows", None) if self.graph is not None else None
+        if definitions is None:
+            return None
+        source = definitions.get(str(flow_id)) if flow_id else None
+        if not flow_id:
+            matches = [item for item in definitions.values() if item["name"] == flow_name]
+            source = matches[0] if len(matches) == 1 else None
+        if source is None:
+            msg = (
+                "This flow was not included in the reviewed dependency snapshots. "
+                "Review and save its containing flow or Tool Pack."
+            )
+            raise ValueError(msg)
+        return source
 
     async def get_graph(
         self,
@@ -224,21 +242,87 @@ class RunFlowBaseComponent(Component):
             msg = "Flow name or id is required"
             raise ValueError(msg)
         binding = self._tool_pack_binding()
+        local = self._local_tool_binding()
         if binding is not None and str(binding.tool.flow_id) != str(flow_id_selected):
             msg = "The Tool Pack adapter points to a different flow. Restore its reviewed reference."
             raise ValueError(msg)
+        if local is not None and local.flow_id != str(flow_id_selected):
+            msg = "The local tool adapter points to another flow. Restore its reviewed selection."
+            raise ValueError(msg)
+        frozen = self._frozen_flow(flow_id_selected, flow_name_selected)
         async with _model_provider_policy(
             user_id=self.user_id,
-            flow_id=flow_id_selected,
+            flow_id=frozen["id"] if frozen else flow_id_selected,
             flow_name=flow_name_selected,
         ):
+            if frozen is not None:
+                graph = Graph.from_payload(
+                    payload=deepcopy(frozen["data"]),
+                    flow_id=frozen["id"],
+                    flow_name=frozen["name"],
+                    user_id=self.user_id,
+                )
+                graph.frozen_tool_flows = self.graph.frozen_tool_flows
+                graph.description = frozen.get("description")
+                return graph
+            if local is not None:
+                from lfx.projects.invocation import reviewed_flow_source
+                from lfx.projects.local_tools import validate_local_tool_source
+
+                key = (getattr(self.graph, "_run_id", None), local.model_dump_json())
+                if getattr(self, "_local_snapshot_key", None) != key:
+                    self._local_snapshot = await reviewed_flow_source(
+                        self, local, field_name="tools", validate=validate_local_tool_source
+                    )
+                    self._local_snapshot_key = key
+                snapshot = self._local_snapshot
+                graph = Graph.from_payload(
+                    deepcopy(snapshot["data"]), flow_id=local.flow_id, flow_name=local.name, user_id=self.user_id
+                )
+                graph.frozen_tool_flows = snapshot.get("dependencies")
+                graph.description = local.description
+                return graph
+            if instruction := self._instruction_binding():
+                from lfx.projects.bindings import validate_instruction_binding
+                from lfx.projects.invocation import reviewed_flow_source
+
+                if instruction.flow_id != str(flow_id_selected):
+                    msg = "The bound Instructions flow was changed on the canvas. Update the harness binding."
+                    raise ValueError(msg)
+                key = (getattr(self.graph, "_run_id", None), instruction.model_dump_json())
+                if getattr(self, "_instruction_snapshot_key", None) != key:
+                    self._instruction_snapshot = await reviewed_flow_source(
+                        self, instruction, field_name="system_prompt", validate=validate_instruction_binding
+                    )
+                    self._instruction_snapshot_key = key
+                snapshot = self._instruction_snapshot
+                graph = Graph.from_payload(
+                    deepcopy(snapshot["data"]),
+                    flow_id=instruction.flow_id,
+                    flow_name=snapshot.get("name"),
+                    user_id=self.user_id,
+                )
+                graph.frozen_tool_flows = snapshot.get("dependencies")
+                return graph
             if binding is not None:
                 run_id = getattr(getattr(self, "graph", None), "run_id", None)
                 key = (run_id, binding)
                 if getattr(self, "_pack_snapshot_key", None) != key:
-                    snapshot = await get_tool_pack_flow(user_id=self.user_id, binding=binding)
+                    recorded = getattr(self.graph, "reviewed_tool_packs", {})
+                    binding_value = binding.model_dump(mode="json")
+                    if recorded.get(str(binding.tool.flow_id)) == binding_value:
+                        snapshot = await get_tool_pack_flow(
+                            user_id=self.user_id, binding=binding, require_current=False
+                        )
+                    else:
+                        snapshot = await get_tool_pack_flow(user_id=self.user_id, binding=binding)
+                    if binding.tool.dependencies and not snapshot.data.get("dependencies"):
+                        msg = "The reviewed tool dependency snapshots are unavailable. Review the Tool Pack again."
+                        raise ValueError(msg)
                     self._pack_snapshot = deepcopy(snapshot.data)
                     self._pack_snapshot_key = key
+                    if self.graph is not None:
+                        self.graph.reviewed_tool_packs[str(binding.tool.flow_id)] = binding_value
                 # A fresh graph per invocation prevents tool arguments and build state
                 # leaking between calls. Its definition is fixed for this compiled run.
                 graph = Graph.from_payload(
@@ -248,6 +332,7 @@ class RunFlowBaseComponent(Component):
                     user_id=self.user_id,
                 )
                 graph.description = binding.tool.description
+                graph.frozen_tool_flows = self._pack_snapshot.get("dependencies")
                 return graph
             if flow_id_selected and (flow := self._flow_cache_call("get", flow_id=flow_id_selected)):
                 if str(getattr(flow, "flow_id", "")) != str(flow_id_selected):
@@ -425,6 +510,9 @@ class RunFlowBaseComponent(Component):
         if (binding := self._tool_pack_binding()) is not None:
             for tool in tools:
                 tool.metadata = {**(tool.metadata or {}), "harness_tool_pack": binding.model_dump(mode="json")}
+        if (binding := self._local_tool_binding()) is not None:
+            for tool in tools:
+                tool.metadata = {**(tool.metadata or {}), "harness_local_tool": binding.model_dump(mode="json")}
         return tools
 
     ################################################################
@@ -466,11 +554,12 @@ class RunFlowBaseComponent(Component):
             output_type="any",
         )
         if binding is not None:
-            value = getattr(self, "_last_instruction_output", None)
-            if not isinstance(value, str) or not value.strip():
-                msg = "The bound Instructions flow did not return non-empty text."
-                raise ValueError(msg)
-            return value
+            from lfx.projects.bindings import validate_instruction_result
+
+            return validate_instruction_result(getattr(self, "_last_instruction_output", None))
+        values = getattr(self, "_last_flow_outputs", {})
+        if (vertex_id, output_name) in values:
+            return values[vertex_id, output_name]
         if not run_outputs:
             return None
 
@@ -506,6 +595,15 @@ class RunFlowBaseComponent(Component):
             return None
         return FlowBinding.model_validate({key: origin[key] for key in FlowBinding.model_fields if key in origin})
 
+    def _local_tool_binding(self):
+        from lfx.projects.local_tools import LocalToolBinding
+        from lfx.projects.tools import TOOL_ORIGIN
+
+        vertex = getattr(self, "_vertex", None)
+        origin = vertex.data.get(TOOL_ORIGIN) if vertex is not None else None
+        binding = origin.get("local_tool") if isinstance(origin, dict) else None
+        return LocalToolBinding.model_validate(binding) if binding is not None else None
+
     def __deepcopy__(self, memo: dict):
         component = super().__deepcopy__(memo)
         # The base copy reconstructs declared inputs/outputs, but these methods
@@ -514,6 +612,9 @@ class RunFlowBaseComponent(Component):
         if hasattr(self, "_pack_snapshot_key"):
             component._pack_snapshot_key = self._pack_snapshot_key  # noqa: SLF001
             component._pack_snapshot = deepcopy(self._pack_snapshot)  # noqa: SLF001
+        if hasattr(self, "_local_snapshot_key"):
+            component._local_snapshot_key = self._local_snapshot_key  # noqa: SLF001
+            component._local_snapshot = deepcopy(self._local_snapshot)  # noqa: SLF001
         return component
 
     def _clear_dynamic_flow_output_methods(self) -> None:
@@ -599,7 +700,7 @@ class RunFlowBaseComponent(Component):
     ################################################################
     # Tool mode + formatting
     ################################################################
-    def _format_flow_outputs(self, graph: Graph) -> list[Output]:
+    def _format_flow_outputs(self, graph: Graph, *, selected_output: tuple[str, str] | None = None) -> list[Output]:
         """Generate Output objects from the graph's outputs.
 
         The Output objects modify the name and method of the graph's outputs.
@@ -610,11 +711,16 @@ class RunFlowBaseComponent(Component):
 
         Args:
             graph: The graph to generate outputs for.
+            selected_output: An explicitly bound leaf output, including ordinary Prompt components.
 
         Returns:
             A list of Output objects.
         """
-        output_vertices: list[Vertex] = [v for v in graph.vertices if v.is_output]
+        if selected_output is None and (binding := self._instruction_binding()) is not None:
+            selected_output = (binding.node_id, binding.output_name)
+        output_vertices: list[Vertex] = [
+            v for v in graph.vertices if (v.id == selected_output[0] if selected_output else v.is_output)
+        ]
         outputs: list[Output] = []
         vdisp_cts = Counter(v.display_name for v in output_vertices)
         for vertex in output_vertices:
@@ -623,6 +729,8 @@ class RunFlowBaseComponent(Component):
                 continue
             one_out = len(vertex.outputs) == 1
             for vertex_output in vertex.outputs:
+                if selected_output and vertex_output["name"] != selected_output[1]:
+                    continue
                 new_name = self._get_ioput_name(vertex.id, vertex_output.get("name"))
                 output = Output(**vertex_output)
                 output.name = new_name
@@ -690,6 +798,8 @@ class RunFlowBaseComponent(Component):
                     msg = "The bound Instructions flow was changed on the canvas. Update the harness binding."
                     raise ValueError(msg)
                 validate_instruction_binding(graph.raw_graph_data, binding)
+                # Expose the reviewed leaf for this invocation without changing the saved flow.
+                graph.get_vertex(binding.node_id).is_output = True
                 self.status = {
                     "flow_id": binding.flow_id,
                     "revision": binding.revision,
@@ -718,6 +828,18 @@ class RunFlowBaseComponent(Component):
                 output_type=output_type,
                 graph=graph,
             )
+            from lfx.template.field.base import UNDEFINED
+
+            # The transport result may replace values with display artifacts (for
+            # example {repr, raw, type} for text). A flow edge needs the actual
+            # declared value, just like an edge within the child graph.
+            self._last_flow_outputs = {
+                (vertex.id, name): output.value
+                for vertex in graph.vertices
+                if vertex.built and vertex.custom_component is not None
+                for name, output in vertex.custom_component.get_outputs_map().items()
+                if output.value is not UNDEFINED
+            }
             if binding is not None:
                 terminal = graph.get_vertex(binding.node_id)
                 if not terminal.built or terminal.custom_component is None:
@@ -725,11 +847,10 @@ class RunFlowBaseComponent(Component):
                     raise ValueError(msg)
                 # Read the actual edge value. Display artifacts can stringify a list
                 # or object, which must never satisfy this runtime text contract.
+                from lfx.projects.bindings import validate_instruction_result
+
                 value = terminal.custom_component.get_output(binding.output_name).value
-                if not isinstance(value, str) or not value.strip():
-                    msg = "The bound Instructions flow did not return non-empty text."
-                    raise ValueError(msg)
-                self._last_instruction_output = value
+                self._last_instruction_output = validate_instruction_result(value)
 
         except Exception as exc:
             from lfx.exceptions.tweaks import TweakRefusedError
