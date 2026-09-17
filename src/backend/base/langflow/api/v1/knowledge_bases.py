@@ -544,7 +544,6 @@ async def _cancel_inflight_ingestion_for_kb(
     *,
     kb_name: str,
     asset_id: uuid.UUID,
-    current_user: CurrentActiveUser,
     job_service: JobService,
 ) -> None:
     """Cancel queued / in-progress ingestion jobs for the named KB.
@@ -559,12 +558,15 @@ async def _cancel_inflight_ingestion_for_kb(
     user's actual delete intent. Failures are logged and the delete
     proceeds — the worst case is the same as before this helper
     existed.
+
+    Not filtered by user: ``asset_id`` is the KB row the caller is already
+    authorized to delete, and a collaborator's run on a shared KB must stop
+    too, or it keeps writing into the deleted KB's storage.
     """
     try:
         cancelled = await job_service.cancel_in_flight_jobs_by_asset(
             asset_id=asset_id,
             asset_type="knowledge_base",
-            user_id=current_user.id,
         )
     except Exception as exc:  # noqa: BLE001
         await logger.awarning("Cancel-on-delete failed for KB %s: %s", kb_name, exc)
@@ -1167,6 +1169,7 @@ async def ingest_files_to_knowledge_base(
             separator=separator,
             source_name=source_name,
             current_user=current_user,
+            kb_owner=_kb_guard.owner_user,
             model_selection=model_selection,
             task_job_id=job_id,
             job_service=job_service,
@@ -1318,6 +1321,7 @@ async def ingest_folder_to_knowledge_base(
             separator=payload.separator,
             source_name=payload.source_name,
             current_user=current_user,
+            kb_owner=_kb_guard.owner_user,
             model_selection=model_selection,
             task_job_id=job_id,
             job_service=job_service,
@@ -1883,6 +1887,7 @@ async def ingest_via_connector(
             separator=payload.separator,
             source_name=payload.source_name,
             current_user=current_user,
+            kb_owner=_kb_guard.owner_user,
             model_selection=model_selection,
             task_job_id=job_id,
             job_service=job_service,
@@ -2036,7 +2041,6 @@ async def delete_knowledge_base(
         await _cancel_inflight_ingestion_for_kb(
             kb_name=kb_name,
             asset_id=record.id,
-            current_user=kb_owner,
             job_service=job_service,
         )
 
@@ -2155,7 +2159,6 @@ async def delete_knowledge_bases_bulk(
                 await _cancel_inflight_ingestion_for_kb(
                     kb_name=kb_name,
                     asset_id=record.id,
-                    current_user=kb_guard.owner_user,
                     job_service=job_service,
                 )
                 remote_warning = await _delete_remote_backend_collection(
@@ -2263,19 +2266,17 @@ async def cancel_ingestion(
         # Update status immediately so background task can see it
         await job_service.update_job_status(job.job_id, JobStatus.CANCELLED)
 
-        # Clean up any partially ingested chunks from this job. Forward
-        # the KB's configured backend + user_id so non-Chroma KBs
-        # (Mongo/Astra/Postgres) actually find their variable-backed
-        # credentials and delete against the right store — otherwise
-        # cleanup silently falls back to Chroma and remote chunks
-        # written before the cancel stick around.
+        # Clean up any partially ingested chunks from this job. Forward the KB's
+        # configured backend and its owner's id: remote backends name their
+        # storage from the owner, so a collaborator cancelling a shared KB's run
+        # must still delete from the owner's collection, not their own.
         await KBIngestionHelper.cleanup_chroma_chunks_by_job(
             job.job_id,
             kb_path,
             kb_name,
             backend_type=backend_type_value,
             backend_config=backend_config,
-            user_id=current_user.id,
+            user_id=_kb_guard.owner_user.id,
         )
 
         if revoked:
