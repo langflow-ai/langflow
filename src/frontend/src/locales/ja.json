@@ -1986,6 +1986,7 @@
   "sidebar.discoverMore": "その他のコンポーネントを見る",
   "sidebar.download": "ダウンロード",
   "sidebar.downloadError": "プロジェクトのダウンロード中にエラーが発生しました。",
+  "sidebar.renameError": "プロジェクトの名前変更中にエラーが発生しました。",
   "sidebar.emptyMessage": "プロジェクトまたはフローの作成を開始する",
   "sidebar.getStarted": "使用を開始する",
   "sidebar.joinCommunity": "コミュニティに参加しましょう",

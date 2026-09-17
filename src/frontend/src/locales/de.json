@@ -1986,6 +1986,7 @@
   "sidebar.discoverMore": "Entdecken Sie weitere Komponenten",
   "sidebar.download": "Herunterladen",
   "sidebar.downloadError": "Beim Herunterladen Ihres Projekts ist ein Fehler aufgetreten.",
+  "sidebar.renameError": "Beim Umbenennen Ihres Projekts ist ein Fehler aufgetreten.",
   "sidebar.emptyMessage": "Erstellen Sie ein Projekt oder einen Ablauf",
   "sidebar.getStarted": "Erste Schritte",
   "sidebar.joinCommunity": "Werde Teil der Community",

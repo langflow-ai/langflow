@@ -2,11 +2,11 @@ import asyncio
 import platform
 from asyncio.subprocess import create_subprocess_exec
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 from uuid import UUID
 
 from fastapi import HTTPException
-from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
-from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.base.mcp.util import project_mcp_server_name, sanitize_mcp_name
 from lfx.base.mcp.uvx import mcp_sdk_constraint_args
 from lfx.log import logger
 from lfx.services.deps import get_settings_service
@@ -101,6 +101,10 @@ class MCPServerValidationResult:
         return not self.server_exists or self.project_id_matches
 
 
+GENERATED_SERVER_NAME_PREFIX = "lf-"
+GENERATED_SERVER_PACKAGE = "mcp-proxy"
+
+
 async def validate_mcp_server_for_project(
     project_id: UUID,
     project_name: str,
@@ -125,7 +129,7 @@ async def validate_mcp_server_for_project(
         MCPServerValidationResult with validation details
     """
     # Generate server name that would be used for this project
-    server_name = f"lf-{sanitize_mcp_name(project_name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+    server_name = project_mcp_server_name(project_name, project_id)
 
     try:
         existing_servers = await get_server_list(user, session, storage_service, settings_service)
@@ -254,6 +258,50 @@ async def _get_project_base_url() -> tuple[str, str | None, int | None]:
         return configured, None, None
     host, port = await _get_project_base_url_components()
     return f"http://{host}:{port}".rstrip("/"), host, port
+
+
+def _is_project_endpoint_url(url: str, project_id: UUID) -> bool:
+    """True when the URL is this project's own MCP endpoint.
+
+    Matched on the full path rather than by searching for the id anywhere in the string,
+    so an unrelated URL that happens to carry the id cannot claim the row.
+    """
+    path = urlparse(url).path.rstrip("/")
+    return any(path.endswith(f"/mcp/project/{project_id}/{suffix}") for suffix in ("sse", "streamable"))
+
+
+async def find_project_mcp_server(
+    project_id: UUID,
+    user,
+    session,
+    storage_service,
+    settings_service,
+) -> tuple[str, dict] | None:
+    """Find a project's stored MCP server row by project id, whatever the row is named.
+
+    A server name is derived from the project name, so a row written under an older
+    naming scheme no longer matches the name derived today -- every non-Latin name used
+    to collapse to ``lf-unnamed``. Matching on the project id inside the server's args
+    finds the row anyway, which keeps a rename from orphaning it.
+    """
+    try:
+        existing_servers = await get_server_list(user, session, storage_service, settings_service)
+    except Exception as e:  # noqa: BLE001
+        await logger.awarning(f"Could not list MCP servers for project {project_id}: {e}")
+        return None
+
+    for name, config in (existing_servers.get("mcpServers") or {}).items():
+        # Only rows Langflow generated are ours to rename or delete. A server the user
+        # added by hand can legitimately point at this project's endpoint, and moving it
+        # would break every flow that refers to it by name. The name prefix alone is not
+        # proof (a user may type it), so the generated command shape has to match too.
+        args = config.get("args") or []
+        if not name.startswith(GENERATED_SERVER_NAME_PREFIX) or GENERATED_SERVER_PACKAGE not in args:
+            continue
+        urls = await extract_urls_from_strings(args)
+        if any(_is_project_endpoint_url(url, project_id) for url in urls):
+            return name, config
+    return None
 
 
 async def _build_project_url(project_id: UUID, suffix: str) -> str:

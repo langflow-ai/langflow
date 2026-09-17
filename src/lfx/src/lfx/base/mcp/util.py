@@ -26,6 +26,7 @@ from pydantic import BaseModel, SkipValidation
 
 from lfx.base.agents.utils import maybe_unflatten_dict
 from lfx.base.mcp import security as mcp_security
+from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.security import (
     AGENTIC_MCP_MODULE,
     AGENTIC_USER_ID_ENV_VAR,
@@ -340,6 +341,120 @@ def sanitize_mcp_name(name: str, max_length: int = 46) -> str:
         name = "unnamed"
 
     return name
+
+
+_MCP_SERVER_NAME_FALLBACK = "unnamed"
+
+
+def _fold_latin_diacritics(name: str) -> str:
+    """Strip combining marks from Latin characters, leaving other scripts intact.
+
+    Folding every script rewrites the ones where combining marks carry meaning:
+    Japanese プ decomposes into フ plus a dakuten, so a blind fold turns
+    プロジェクト into フロシェクト.
+    """
+    # Compose first, or a decomposed プ reaches the filter below as フ plus a
+    # lone combining mark, which is dropped as a non-word character.
+    name = unicodedata.normalize("NFC", name)
+    folded: list[str] = []
+    base_is_ascii = False
+    for char in name:
+        if unicodedata.category(char) in _COMBINING_MARK_CATEGORIES:
+            # Marks on an ASCII base are Latin diacritics even when no precomposed form
+            # exists (r plus ring below), so they fold away like the composed ones do.
+            if not base_is_ascii:
+                folded.append(char)
+            continue
+
+        decomposed = unicodedata.normalize("NFD", char)
+        if decomposed[0].isascii():
+            folded.append("".join(c for c in decomposed if unicodedata.category(c) != "Mn"))
+            base_is_ascii = True
+        else:
+            folded.append(char)
+            base_is_ascii = False
+    return "".join(folded)
+
+
+_COMBINING_MARK_CATEGORIES = frozenset({"Mn", "Mc", "Me"})
+
+
+# Variation selectors are categorised as marks but only restyle the glyph before them
+_VARIATION_SELECTORS = range(0xFE00, 0xFE10)
+_VARIATION_SELECTORS_SUPPLEMENT = range(0xE0100, 0xE01F0)
+
+
+def _is_variation_selector(char: str) -> bool:
+    """Variation selectors are marks, but they only style the glyph before them."""
+    code = ord(char)
+    return code in _VARIATION_SELECTORS or code in _VARIATION_SELECTORS_SUPPLEMENT
+
+
+def _keep_server_name_chars(name: str) -> str:
+    r"""Keep word characters, spaces, hyphens, and marks that modify a letter.
+
+    Filtering on ``\w`` alone drops every combining mark, which merges names a reader
+    sees as different: Devanagari काम and कम, Thai ที่ and ที, Arabic text with and
+    without harakat. That is the same collision this function exists to avoid, one
+    script family over.
+    """
+    kept: list[str] = []
+    # Marks mean nothing on their own, so they need a letter (or a mark already kept,
+    # since Thai and Devanagari stack them) to attach to.
+    attachable = False
+    for char in name:
+        if char.isalnum() or char in "_-" or char.isspace():
+            kept.append(char)
+            attachable = char.isalpha()
+        elif (
+            attachable and unicodedata.category(char) in _COMBINING_MARK_CATEGORIES and not _is_variation_selector(char)
+        ):
+            kept.append(char)
+        else:
+            # Whatever this was, it is gone, so a mark after it has nothing to modify
+            attachable = False
+    return "".join(kept)
+
+
+def _sanitize_server_name(name: str, max_length: int) -> str:
+    """Sanitize a project name for use as an MCP server name, or "" if nothing is left.
+
+    Deliberately more permissive than :func:`sanitize_mcp_name`, which also names MCP
+    tools and therefore has to satisfy the ``^[a-zA-Z0-9_-]+$`` schema LLM providers
+    enforce on function names. A server name is only ever a config key, so letters from
+    any script are kept: stripping them collapsed every CJK, Hangul or kana name onto a
+    single fallback, and the second such project then collided with the first.
+    """
+    name = _fold_latin_diacritics(name)
+
+    # Letters of every script survive; emoji and punctuation do not.
+    name = _keep_server_name_chars(name)
+    name = re.sub(r"[-\s]+", "_", name)
+    name = re.sub(r"_+", "_", name)
+    name = name.strip("_")
+
+    if name and name[0].isdigit():
+        name = f"_{name}"
+
+    name = name.lower()
+
+    if len(name) > max_length:
+        name = name[:max_length].rstrip("_")
+
+    return name
+
+
+def project_mcp_server_name(project_name: str, project_id: Any) -> str:
+    """Build the MCP server name that a project's config entry is keyed by.
+
+    Names with nothing left to sanitize -- emoji- or symbol-only ones -- get a
+    per-project fallback: sharing a single fallback name makes the second such
+    project collide with the first and be rejected as a server name conflict.
+    """
+    sanitized = _sanitize_server_name(project_name or "", 46)
+    if not sanitized:
+        sanitized = f"{_MCP_SERVER_NAME_FALLBACK}_{str(project_id).replace('-', '')[:8]}"
+    return f"lf-{sanitized[: MAX_MCP_SERVER_NAME_LENGTH - 4]}"
 
 
 def _camel_to_snake(name: str) -> str:

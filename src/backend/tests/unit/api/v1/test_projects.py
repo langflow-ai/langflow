@@ -1267,6 +1267,204 @@ class TestProjectMCPIntegration:
             assert response.status_code == status.HTTP_409_CONFLICT
             assert "conflict" in response.json()["detail"].lower()
 
+    async def test_update_project_name_renames_a_legacy_mcp_server_row(
+        self,
+        client: AsyncClient,
+        logged_in_headers,
+        basic_case,
+        mock_mcp_settings_enabled,  # noqa: ARG002
+    ):
+        """A server row stored under an older name is renamed, not left behind.
+
+        Non-Latin project names used to collapse to ``lf-unnamed``, so the name derived
+        from the old project name no longer finds the row that is actually stored.
+        """
+        with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
+            patch("langflow.api.v1.projects_mcp_helpers.get_project_streamable_http_url"),
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate_create,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server"),
+            patch("langflow.api.v1.projects_mcp_helpers.create_api_key"),
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service"),
+        ):
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+
+            mock_validation_create = MagicMock()
+            mock_validation_create.has_conflict = False
+            mock_validation_create.should_skip = False
+            mock_validation_create.server_name = "lf-unnamed"
+            mock_validate_create.return_value = mock_validation_create
+
+            create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+            project_id = create_response.json()["id"]
+
+        legacy_config = {
+            "command": "uvx",
+            "args": ["mcp-proxy", f"http://testserver/api/v1/mcp/project/{project_id}/sse"],
+        }
+
+        with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.find_project_mcp_server") as mock_find,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server") as mock_update_server,
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service") as mock_storage,
+        ):
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+            mock_storage.return_value = MagicMock()
+
+            # The name derived from the old project name does not match what is stored
+            mock_old_validation = MagicMock()
+            mock_old_validation.server_exists = False
+            mock_old_validation.project_id_matches = False
+            mock_old_validation.server_name = "lf-derived_miss"
+
+            mock_new_validation = MagicMock()
+            mock_new_validation.has_conflict = False
+            mock_new_validation.server_name = "lf-\u65b0\u5c08\u6848"
+
+            mock_validate.side_effect = [mock_old_validation, mock_new_validation]
+            mock_find.return_value = ("lf-unnamed", legacy_config)
+
+            response = await client.patch(
+                f"api/v1/projects/{project_id}", json={"name": "\u65b0\u5c08\u6848"}, headers=logged_in_headers
+            )
+
+            assert response.status_code == status.HTTP_200_OK
+
+            deleted = [call for call in mock_update_server.call_args_list if call.kwargs.get("delete")]
+            assert [call.args[0] for call in deleted] == ["lf-unnamed"]
+
+            written = [call for call in mock_update_server.call_args_list if not call.kwargs.get("delete")]
+            assert written[-1].args[0] == "lf-\u65b0\u5c08\u6848"
+            assert written[-1].args[1] == legacy_config
+
+    async def test_create_project_replaces_a_row_stored_under_an_older_name(
+        self,
+        client: AsyncClient,
+        logged_in_headers,
+        basic_case,
+        mock_mcp_settings_enabled,  # noqa: ARG002
+    ):
+        """Registering writes the new row first, then drops the one stored under an older name.
+
+        Deleting first would leave the project with no MCP server at all if the write failed.
+        """
+        legacy_config = {"command": "uvx", "args": ["mcp-proxy", "http://testserver/api/v1/mcp/project/x/sse"]}
+
+        with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
+            patch("langflow.api.v1.projects_mcp_helpers.get_project_streamable_http_url"),
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.find_project_mcp_server") as mock_find,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server") as mock_update_server,
+            patch("langflow.api.v1.projects_mcp_helpers.create_api_key"),
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service"),
+        ):
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+
+            mock_validation = MagicMock()
+            mock_validation.has_conflict = False
+            mock_validation.should_skip = False
+            mock_validation.server_exists = False
+            mock_validation.server_name = "lf-new_project"
+            mock_validate.return_value = mock_validation
+            mock_find.return_value = ("lf-unnamed", legacy_config)
+
+            response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+            assert response.status_code == status.HTTP_201_CREATED
+
+            names = [call.args[0] for call in mock_update_server.call_args_list]
+            assert names.index("lf-new_project") < names.index("lf-unnamed")
+
+            deleted = [call.args[0] for call in mock_update_server.call_args_list if call.kwargs.get("delete")]
+            assert deleted == ["lf-unnamed"]
+
+    async def test_create_project_keeps_a_row_already_under_the_derived_name(
+        self,
+        client: AsyncClient,
+        logged_in_headers,
+        basic_case,
+        mock_mcp_settings_enabled,  # noqa: ARG002
+    ):
+        """Nothing is deleted when the stored row already carries the derived name."""
+        with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
+            patch("langflow.api.v1.projects_mcp_helpers.get_project_streamable_http_url"),
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.find_project_mcp_server") as mock_find,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server") as mock_update_server,
+            patch("langflow.api.v1.projects_mcp_helpers.create_api_key"),
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service"),
+        ):
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+
+            mock_validation = MagicMock()
+            mock_validation.has_conflict = False
+            mock_validation.should_skip = False
+            mock_validation.server_exists = False
+            mock_validation.server_name = "lf-new_project"
+            mock_validate.return_value = mock_validation
+            mock_find.return_value = ("lf-new_project", {"command": "uvx", "args": []})
+
+            response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+            assert response.status_code == status.HTTP_201_CREATED
+
+            assert [call for call in mock_update_server.call_args_list if call.kwargs.get("delete")] == []
+
+    async def test_delete_project_removes_a_row_stored_under_an_older_name(
+        self,
+        client: AsyncClient,
+        logged_in_headers,
+        basic_case,
+        mock_mcp_settings_enabled,  # noqa: ARG002
+    ):
+        """Deleting a project clears its server row even when stored under an older name."""
+        legacy_config = {"command": "uvx", "args": ["mcp-proxy", "http://testserver/api/v1/mcp/project/x/sse"]}
+
+        create_response = await client.post("api/v1/projects/", json=basic_case, headers=logged_in_headers)
+        project_id = create_response.json()["id"]
+
+        with (
+            patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
+            patch("langflow.api.v1.projects_mcp_helpers.get_settings_service") as mock_helper_settings,
+            patch("langflow.api.v1.projects_mcp_helpers.validate_mcp_server_for_project") as mock_validate,
+            patch("langflow.api.v1.projects_mcp_helpers.find_project_mcp_server") as mock_find,
+            patch("langflow.api.v1.projects_mcp_helpers.update_server") as mock_update_server,
+            patch("langflow.api.v1.projects_mcp_helpers.get_storage_service"),
+        ):
+            mock_settings = MagicMock()
+            mock_settings.settings.add_projects_to_mcp_servers = True
+            mock_settings.auth_settings.AUTO_LOGIN = False
+            mock_get_settings.return_value = mock_settings
+            mock_helper_settings.return_value = mock_settings
+
+            # The derived name finds nothing; the row is stored under the older one
+            mock_validation = MagicMock()
+            mock_validation.server_exists = False
+            mock_validation.project_id_matches = False
+            mock_validation.server_name = "lf-derived_miss"
+            mock_validate.return_value = mock_validation
+            mock_find.return_value = ("lf-unnamed", legacy_config)
+
+            response = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
+            assert response.status_code in (status.HTTP_200_OK, status.HTTP_204_NO_CONTENT)
+
+            deleted = [call.args[0] for call in mock_update_server.call_args_list if call.kwargs.get("delete")]
+            assert deleted == ["lf-unnamed"]
+
     async def test_update_project_name_with_mcp_conflict_legacy_sse(
         self,
         client: AsyncClient,

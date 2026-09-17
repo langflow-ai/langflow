@@ -20,12 +20,14 @@ export type MCPSettingsType = {
   action_description?: string;
   name?: string;
   description?: string;
-  input_schema?: Record<string, any>;
+  input_schema?: Record<string, unknown>;
 };
 
 export type MCPProjectResponseType = {
   tools: MCPSettingsType[];
   auth_settings?: AuthSettingsType;
+  /** Name the backend registers this project's MCP server under. */
+  server_name?: string | null;
 };
 
 export type MCPServerInfoType = {

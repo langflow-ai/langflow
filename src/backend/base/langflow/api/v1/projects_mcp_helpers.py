@@ -12,6 +12,7 @@ from lfx.log.logger import logger
 from lfx.services.mcp_composer.service import MCPComposerService
 
 from langflow.api.utils.mcp.config_utils import (
+    find_project_mcp_server,
     mcp_server_config_uses_current_uvx_constraint,
     validate_mcp_server_for_project,
 )
@@ -166,6 +167,20 @@ async def register_mcp_servers_for_project(
 
         server_name = validation_result.server_name
 
+        stale_server_name: str | None = None
+        if not validation_result.server_exists:
+            # A row written under an older naming scheme does not match the derived name,
+            # so writing the new one would leave the project with two server entries.
+            stored = await find_project_mcp_server(
+                project.id,
+                current_user,
+                session,
+                get_storage_service(),
+                get_settings_service(),
+            )
+            if stored is not None and stored[0] != server_name:
+                stale_server_name = stored[0]
+
         await update_server(
             server_name,
             server_config,
@@ -175,6 +190,26 @@ async def register_mcp_servers_for_project(
             get_settings_service(),
             owns_transaction=owns_transaction,
         )
+
+        if stale_server_name is not None:
+            # Dropped only once the replacement exists. Rows are keyed by (user_id, name),
+            # so the two coexist for an instant and a failed write leaves the old row alone
+            # rather than the project with no server at all.
+            await update_server(
+                stale_server_name,
+                {},
+                current_user,
+                session,
+                get_storage_service(),
+                get_settings_service(),
+                delete=True,
+                owns_transaction=owns_transaction,
+            )
+            await logger.adebug(
+                "Removed MCP server '%s' stored under an older name for project %s",
+                stale_server_name,
+                project.id,
+            )
     except HTTPException:
         raise
     except Exception as e:
@@ -246,7 +281,26 @@ async def handle_mcp_server_rename(
             operation="update",
         )
 
-        if old_validation.server_name != new_validation.server_name:
+        old_server_name = old_validation.server_name
+        old_config = old_validation.existing_config
+        old_server_is_ours = old_validation.server_exists and old_validation.project_id_matches
+
+        if not old_server_is_ours:
+            # The row may predate the current naming scheme, so it no longer matches the
+            # name derived from the old project name. Look it up by project id instead,
+            # or the rename leaves it behind and the next write adds a second row.
+            stored = await find_project_mcp_server(
+                existing_project.id,
+                current_user,
+                session,
+                get_storage_service(),
+                get_settings_service(),
+            )
+            if stored is not None:
+                old_server_name, old_config = stored
+                old_server_is_ours = True
+
+        if old_server_name != new_validation.server_name:
             if new_validation.has_conflict:
                 await logger.aerror(new_validation.conflict_message)
                 raise HTTPException(
@@ -254,9 +308,19 @@ async def handle_mcp_server_rename(
                     detail=new_validation.conflict_message,
                 )
 
-            if old_validation.server_exists and old_validation.project_id_matches:
+            if old_server_is_ours:
+                # Write before delete so a failure cannot leave the project with no row
                 await update_server(
-                    old_validation.server_name,
+                    new_validation.server_name,
+                    old_config or {},
+                    current_user,
+                    session,
+                    get_storage_service(),
+                    get_settings_service(),
+                )
+
+                await update_server(
+                    old_server_name,
                     {},
                     current_user,
                     session,
@@ -265,24 +329,15 @@ async def handle_mcp_server_rename(
                     delete=True,
                 )
 
-                await update_server(
-                    new_validation.server_name,
-                    old_validation.existing_config or {},
-                    current_user,
-                    session,
-                    get_storage_service(),
-                    get_settings_service(),
-                )
-
                 await logger.adebug(
                     "Updated MCP server name from %s to %s",
-                    old_validation.server_name,
+                    old_server_name,
                     new_validation.server_name,
                 )
             else:
                 await logger.adebug(
                     "Old MCP server '%s' not found for this project, skipping rename",
-                    old_validation.server_name,
+                    old_server_name,
                 )
 
     except HTTPException:
@@ -348,7 +403,33 @@ async def cleanup_mcp_on_delete(
                     validation_result.server_name,
                 )
             else:
-                await logger.adebug("No MCP server found for deleted project %s (%s)", project.name, project_id)
+                # The row may predate the current naming scheme, so the derived name does
+                # not find it. Look it up by project id or deleting the project orphans it.
+                stored = await find_project_mcp_server(
+                    project_id,
+                    current_user,
+                    session,
+                    get_storage_service(),
+                    get_settings_service(),
+                )
+                if stored is not None:
+                    await update_server(
+                        stored[0],
+                        {},
+                        current_user,
+                        session,
+                        get_storage_service(),
+                        get_settings_service(),
+                        delete=True,
+                    )
+                    await logger.adebug(
+                        "Deleted MCP server %s stored under an older name for deleted project %s (%s)",
+                        stored[0],
+                        project.name,
+                        project_id,
+                    )
+                else:
+                    await logger.adebug("No MCP server found for deleted project %s (%s)", project.name, project_id)
 
         except Exception as e:  # noqa: BLE001
             await logger.awarning("Failed to handle MCP server cleanup for deleted project %s: %s", project_id, e)
