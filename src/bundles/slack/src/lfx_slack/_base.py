@@ -3,15 +3,21 @@
 Slack is the only wave-1 provider with two executing identities behind one
 provider key, and its user and bot scopes share names (``chat:write`` is both a
 User Token Scope and a Bot Token Scope).  Granted scopes therefore cannot tell
-the identities apart, so this module checks
-:attr:`~lfx.integrations.models.ResolvedCredential.identity` -- populated from
-the connection row's ``executing_identity`` -- and fails closed *before* the
-first HTTP call when a bot action is handed a user connection or the reverse.
+the identities apart, so this module fails closed *before* the first HTTP call
+when a bot action is handed a user token or the reverse.  Two signals are
+checked, each one that is present must agree with the action, and at least one
+must be present:
+
+* :attr:`~lfx.integrations.models.ResolvedCredential.identity`, populated from
+  the connection row's ``executing_identity`` when the host knows it.
+* The token's own type prefix (``xoxb-`` bot, ``xoxp-`` user, optionally behind
+  the ``xoxe.`` rotation marker), which is what Slack itself acts on.
 
 Headless connections resolved from ``LF_CONNECTION__SLACK__<NAME>`` carry no
-identity (the wire format has no place to declare one), so ``identity is None``
-is treated as "the operator vouched for this token" and the guard defers to
-Slack's own ``not_allowed_token_type`` error.
+recorded identity (the wire format has no place to declare one), so for them
+the prefix is the only proof.  A credential that proves neither is refused:
+Slack's ``not_allowed_token_type`` cannot be the backstop, because
+``chat.postMessage`` accepts both token types.
 """
 
 from __future__ import annotations
@@ -41,6 +47,11 @@ BOT_IDENTITY = "bot"
 
 _IDENTITY_LABEL = {USER_IDENTITY: "user", BOT_IDENTITY: "bot"}
 
+# Slack prefixes every token with its type; a token issued with rotation
+# enabled carries ``xoxe.`` in front of that (``xoxe.xoxb-``, ``xoxe.xoxp-``).
+_TOKEN_PREFIX = {USER_IDENTITY: "xoxp-", BOT_IDENTITY: "xoxb-"}
+_ROTATING_TOKEN_MARKER = "xoxe."  # noqa: S105 - Slack token type marker, not a credential
+
 _CACHE_KEY = "_slack_cached_payload"
 
 
@@ -64,6 +75,31 @@ class SlackIdentityMismatchError(ConnectionNotAuthorizedError):
         )
         self.expected = expected
         self.actual = actual
+
+
+class SlackIdentityUnverifiedError(ConnectionNotAuthorizedError):
+    """A Slack credential whose token identity cannot be established at all.
+
+    Raised when the connection records no identity and the token carries no
+    recognizable Slack type prefix, so running the action would post under
+    whichever identity the token happens to hold.
+    """
+
+    def __init__(self, *, expected: str) -> None:
+        expected_label = _IDENTITY_LABEL.get(expected, expected)
+        prefix = _TOKEN_PREFIX.get(expected)
+        IntegrationError.__init__(
+            self,
+            f"The type of this Slack connection's token could not be verified; "
+            f"this action requires a {expected_label} token.",
+            hint=(
+                f"Supply a Slack {expected_label} token ({prefix}...), or use a connection "
+                f"created with the {expected_label} authorization profile."
+            ),
+            provider=PROVIDER_ID,
+            http_status=403,
+        )
+        self.expected = expected
 
 
 def _connection_input(
@@ -123,11 +159,29 @@ def bot_connection_input(
     )
 
 
+def token_identity(token: str) -> str | None:
+    """Return the identity a Slack token's type prefix proves, or ``None``."""
+    bare = token.removeprefix(_ROTATING_TOKEN_MARKER)
+    for identity, prefix in _TOKEN_PREFIX.items():
+        if bare.startswith(prefix):
+            return identity
+    return None
+
+
 def require_identity(credential: ResolvedCredential, *, expected: str) -> None:
-    """Fail closed when a resolved Slack credential is the wrong identity."""
-    actual = getattr(credential, "identity", None)
-    if actual is not None and actual != expected:
-        raise SlackIdentityMismatchError(expected=expected, actual=actual)
+    """Fail closed unless the resolved Slack credential proves ``expected``.
+
+    The recorded identity and the token prefix must each agree with the action
+    when present, and at least one of them must be present.
+    """
+    recorded = getattr(credential, "identity", None)
+    if recorded is not None and recorded != expected:
+        raise SlackIdentityMismatchError(expected=expected, actual=recorded)
+    proven = token_identity(credential.access_token.get_secret_value())
+    if proven is not None and proven != expected:
+        raise SlackIdentityMismatchError(expected=expected, actual=proven)
+    if recorded is None and proven is None:
+        raise SlackIdentityUnverifiedError(expected=expected)
 
 
 class SlackBaseComponent(Component):

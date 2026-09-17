@@ -216,6 +216,17 @@ the deserialize half is covered by
 
 ## Changelog
 
+### 2026-09-17 — `ResolvedCredential.identity = None` is not an identity proof
+
+- Clarify the documented meaning of `ResolvedCredential.identity is None`: the
+  resolver does not know the executing identity (the headless
+  `LF_CONNECTION__*` wire format has no place to declare one). It no longer
+  reads as "the operator vouched for this token". A capability that must run as
+  one identity has to establish it another way (`lfx-slack` reads the token's
+  type prefix) or fail closed with `connection-not-authorized`. Documentation
+  only: no symbol, signature, or default changes, and `BUNDLE_API_VERSION`
+  stays `1`.
+
 ### 2026-09-15 — Permanent provider request and resource errors
 
 - Add `InvalidRequestError` (`invalid-request`) and `ResourceNotFoundError`
