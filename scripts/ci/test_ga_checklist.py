@@ -11,6 +11,7 @@ from check_ga_checklist import (
     DEFAULT_CHECKLIST,
     REQUIRED_CONTEXTS,
     REQUIRED_ITEMS,
+    REQUIRED_SIGNOFF_GATES,
     validate_checklist,
 )
 
@@ -23,7 +24,11 @@ def _workflow_pull_request_paths() -> list[str]:
     assert workflow.count("    paths:\n") == 1, "expected exactly one pull-request paths block"
     assert "  workflow_dispatch:" in workflow, "expected workflow_dispatch to terminate the paths block"
     paths_block = workflow.split("    paths:\n", 1)[1].split("  workflow_dispatch:", 1)[0]
-    entries = [line.strip().removeprefix("- ") for line in paths_block.splitlines() if line.strip()]
+    entries = [
+        line.strip().removeprefix("- ")
+        for line in paths_block.splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    ]
     return [json.loads(entry) for entry in entries]
 
 
@@ -56,6 +61,22 @@ def _write(tmp_path: Path, checklist: dict) -> Path:
     return path
 
 
+def _evidence_path(entry: str) -> str:
+    """Drop a ``path::test_name`` selector: only the path part names a repository file."""
+    return entry.split("::", 1)[0]
+
+
+def _checklist_evidence_paths() -> list[str]:
+    """Every distinct repository path the checklist cites as evidence."""
+    checklist = _load()
+    entries: list[str] = []
+    for context in checklist["contexts"].values():
+        entries.extend(context.get("evidence") or [])
+    for item in checklist["items"]:
+        entries.extend(item.get("evidence") or [])
+    return sorted({_evidence_path(entry) for entry in entries})
+
+
 def test_ga_checklist_is_valid() -> None:
     """The checklist committed to the repo passes the checker as-is."""
     assert validate_checklist(DEFAULT_CHECKLIST) == []
@@ -75,16 +96,85 @@ def test_every_required_context_has_a_checklist() -> None:
 
 
 def test_ci_workflow_watches_the_checklist_and_checker() -> None:
-    """Editing the checklist or the checker must trigger the workflow that validates them."""
+    """The checker can only catch evidence rot in trees the workflow is triggered by.
+
+    Deleting or renaming an evidence file in a tree outside
+    ``ci-scripts-test.yml``'s ``pull_request.paths`` leaves the checklist
+    pointing at nothing, and nothing goes red until someone next happens to
+    touch ``scripts/ci/`` or the design directory. So every path the checklist
+    cites has to be watched, not just the checklist and the checker.
+    """
     workflow_paths = _workflow_pull_request_paths()
-    canonical_paths = [
+    evidence_paths = _checklist_evidence_paths()
+    assert evidence_paths, "checklist cites no evidence: this assertion would be vacuous"
+    watched_paths = [
         "design/dedicated-integrations/ga-checklist.json",
         "scripts/ci/check_ga_checklist.py",
+        *evidence_paths,
     ]
     uncovered = [
-        path for path in canonical_paths if not any(_github_path_matches(path, pattern) for pattern in workflow_paths)
+        path for path in watched_paths if not any(_github_path_matches(path, pattern) for pattern in workflow_paths)
     ]
-    assert uncovered == [], f"CI scripts checker is not triggered by GA checklist paths: {uncovered}"
+    assert uncovered == [], (
+        "these GA checklist paths are outside ci-scripts-test.yml's pull_request.paths, so a PR that "
+        f"changes them will not run this checker - add them to the workflow: {uncovered}"
+    )
+
+
+def test_evidence_paths_drop_pytest_selectors() -> None:
+    """``path::test_name`` evidence must be matched against the path alone."""
+    assert _evidence_path("src/backend/tests/unit/api/v1/test_connections.py::test_list") == (
+        "src/backend/tests/unit/api/v1/test_connections.py"
+    )
+    assert _evidence_path("docs/docs/Develop/connection-oauth.mdx") == "docs/docs/Develop/connection-oauth.mdx"
+
+
+def test_path_matcher_keeps_single_star_inside_one_segment() -> None:
+    """The coverage assertion above is only as strong as this matcher."""
+    assert _github_path_matches("docs/docs/Develop/connection-oauth.mdx", "docs/**")
+    assert _github_path_matches("docs/docs/Develop/connection-oauth.mdx", "docs/docs/Develop/connection-oauth.mdx")
+    assert _github_path_matches("scripts/ci/check_ga_checklist.py", "scripts/ci/*.py")
+    assert not _github_path_matches("scripts/ci/nested/check.py", "scripts/ci/*.py")
+    assert not _github_path_matches("docs/docs/Develop/connection-oauth.mdx", "docs/*.mdx")
+    assert not _github_path_matches("docs/docs/Develop/connection-oauth.mdx.bak", "docs/**/connection-oauth.mdx")
+
+
+def test_every_required_signoff_gate_is_present() -> None:
+    """Neither human sign-off gate may be dropped from the checklist."""
+    checklist = _load()
+    ids = {item["id"] for item in checklist["items"]}
+    assert set(REQUIRED_SIGNOFF_GATES) <= ids
+
+
+def test_checker_rejects_deleting_a_signoff_gate(tmp_path: Path) -> None:
+    """Deleting a pending gate would otherwise leave a checklist that reads as fully validated."""
+    checklist = _load()
+    checklist["items"] = [item for item in checklist["items"] if item["id"] != "live-tenant-consent"]
+
+    errors = validate_checklist(_write(tmp_path, checklist))
+
+    assert any("sign-off gates" in error and "live-tenant-consent" in error for error in errors)
+
+
+def test_checker_reports_object_valued_item_status_instead_of_raising(tmp_path: Path) -> None:
+    """Frozenset membership hashes the value, so an object status would raise TypeError."""
+    checklist = _load()
+    checklist["items"][0]["status"] = {}
+
+    errors = validate_checklist(_write(tmp_path, checklist))
+
+    assert any("status must be one of" in error for error in errors)
+
+
+def test_checker_reports_object_valued_context_status_instead_of_raising(tmp_path: Path) -> None:
+    """The same hazard on the context side of the record."""
+    checklist = _load()
+    context_name = next(iter(checklist["contexts"]))
+    checklist["contexts"][context_name]["status"] = []
+
+    errors = validate_checklist(_write(tmp_path, checklist))
+
+    assert any(f"contexts/{context_name}: status must be one of" in error for error in errors)
 
 
 def test_checker_rejects_missing_acceptance_item(tmp_path: Path) -> None:

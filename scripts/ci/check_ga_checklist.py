@@ -49,6 +49,17 @@ REQUIRED_ITEMS = frozenset(
     }
 )
 
+# The release gates only a human can close. They are not ticket acceptance areas,
+# so they stay out of REQUIRED_ITEMS, but a checklist that loses one of these rows
+# reads as fully validated. Sign-off flips the row to ``validated`` with evidence;
+# it never deletes it.
+REQUIRED_SIGNOFF_GATES = frozenset(
+    {
+        "live-tenant-consent",
+        "connections-ui-a11y-i18n",
+    }
+)
+
 
 def _evidence_path_error(entry: str) -> str | None:
     """Return why ``entry`` is unusable as evidence, or ``None`` when it is fine.
@@ -99,7 +110,9 @@ def _validate_item(item: object, index: int, errors: list[str]) -> None:
             errors.append(f"{prefix} ({item_id}): unknown contexts {unknown}")
 
     status = item.get("status")
-    if status not in VALID_STATUSES:
+    # Membership against a frozenset hashes the value, so an object or array
+    # status would raise TypeError instead of being reported.
+    if not isinstance(status, str) or status not in VALID_STATUSES:
         errors.append(f"{prefix} ({item_id}): status must be one of {sorted(VALID_STATUSES)}")
         return
 
@@ -162,7 +175,7 @@ def validate_checklist(path: Path) -> list[str]:
                 errors.append(f"contexts/{context}: entry must be an object")
                 continue
             c_status = entry.get("status")
-            if c_status not in VALID_STATUSES:
+            if not isinstance(c_status, str) or c_status not in VALID_STATUSES:
                 errors.append(f"contexts/{context}: status must be one of {sorted(VALID_STATUSES)}")
             if c_status == "validated" and not entry.get("evidence"):
                 errors.append(f"contexts/{context}: validated context must list evidence")
@@ -199,6 +212,10 @@ def validate_checklist(path: Path) -> list[str]:
     missing_items = sorted(REQUIRED_ITEMS - set(string_ids))
     if missing_items:
         errors.append(f"checklist is missing required acceptance items: {missing_items}")
+
+    missing_gates = sorted(REQUIRED_SIGNOFF_GATES - set(string_ids))
+    if missing_gates:
+        errors.append(f"checklist is missing required release sign-off gates: {missing_gates}")
 
     for index, item in enumerate(items):
         _validate_item(item, index, errors)

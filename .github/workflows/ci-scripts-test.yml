@@ -44,6 +44,34 @@ on:
       - "src/lfx/src/lfx/workflow/**"
       - "src/lfx/src/lfx/extension/integration_compat.py"
       - "src/bundles/**/extension.json"
+      # GA checklist (INT-14) evidence outside the trees above. The checker only
+      # proves a pointer in design/dedicated-integrations/ga-checklist.json is
+      # still real on a run it is triggered for, so each cited path is named
+      # here, file by file rather than globbed (docs/**), to keep unrelated docs
+      # PRs off this job. test_ci_workflow_watches_the_checklist_and_checker
+      # names the exact paths to add when the checklist cites something new.
+      - ".github/workflows/a11y-scan.yml"
+      - ".github/workflows/a11y-unit-tests.yml"
+      - ".github/workflows/jest_test.yml"
+      - "docs/docs/Components/bundles-google.mdx"
+      - "docs/docs/Components/bundles-microsoft.mdx"
+      - "docs/docs/Components/bundles-slack.mdx"
+      - "docs/docs/Develop/api-keys-and-authentication.mdx"
+      - "docs/docs/Develop/connection-oauth.mdx"
+      - "docs/docs/Develop/entra-app-registration.mdx"
+      - "docs/docs/Lfx/lfx-connections.mdx"
+      - "scripts/a11y/a11y_routes.json"
+      - "src/backend/tests/unit/alembic/test_connection_migration.py"
+      - "src/backend/tests/unit/alembic/test_connection_oauth_migration.py"
+      - "src/backend/tests/unit/alembic/test_connection_oauth_workers.py"
+      - "src/backend/tests/unit/services/connection/test_oauth_config.py"
+      - "src/backend/tests/unit/services/connection/test_refresh_skew.py"
+      - "src/bundles/microsoft/tests/test_sharepoint_actions.py"
+      - "src/frontend/scripts/check-i18n.mjs"
+      - "src/frontend/scripts/check-i18n.test.mjs"
+      - "src/frontend/src/locales/__tests__/locale-parity.test.ts"
+      - "src/lfx/tests/unit/base/mcp/test_ga_swap_procedure.py"
+      - "src/lfx/tests/unit/integrations/test_contracts.py"
   workflow_dispatch:
 
 jobs:
