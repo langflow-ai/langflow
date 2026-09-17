@@ -969,6 +969,19 @@ class TestMigrateEndToEnd:
 
         with engine.connect() as conn:
             assert conn.execute(text("SELECT config FROM mcp_server")).scalar() == before
+            variable = conn.execute(text("SELECT value FROM variable")).scalar()
+            api_key = conn.execute(text("SELECT api_key FROM apikey")).scalar()
+        # Stages that ran before the MCP failure are rolled back too.
+        assert migrate_module.decrypt_with_key(variable, old_key) == "variable-secret"
+        assert migrate_module.decrypt_with_key(api_key, old_key) == "lf-api-key-value"
+
+    def test_verification_samples_apikey_and_mcp_server(self, migrate_module, rotation_db, old_key, new_key):
+        engine, _, _ = rotation_db
+        with engine.connect() as conn:
+            # variable, apikey and the two encrypted MCP values; the plaintext MCP value is skipped.
+            assert migrate_module.verify_migration(conn, old_key) == (4, 0)
+            # One failure each for the variable, the API key and the MCP server row.
+            assert migrate_module.verify_migration(conn, new_key) == (0, 3)
 
     def test_dry_run_completes_without_changing_rows(self, migrate_module, rotation_db, old_key, new_key):
         engine, config_dir, url = rotation_db
