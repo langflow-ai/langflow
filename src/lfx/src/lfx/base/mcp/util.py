@@ -929,6 +929,12 @@ def extract_http_status(error: BaseException) -> int | None:
     return None
 
 
+def _describe_transport_error(error: BaseException) -> str:
+    """Prefix a transport failure with its HTTP status, which ``str()`` of a TaskGroup error hides."""
+    status = extract_http_status(error)
+    return f"HTTP {status}: {error}" if status is not None else str(error)
+
+
 def describe_mcp_tool_failure(tool_name: str, url: str | None, error: BaseException) -> str:
     """Describe a tool call the remote server rejected, naming the status when there is one.
 
@@ -1676,9 +1682,11 @@ class MCPSessionManager:
                         f"Streamable HTTP error: {streamable_error}. SSE error: {sse_error}"
                     )
                     if not session_future.done():
+                        streamable_detail = _describe_transport_error(streamable_error)
+                        sse_detail = _describe_transport_error(sse_error)
                         session_future.set_exception(
                             ValueError(
-                                f"Failed to connect via Streamable HTTP ({streamable_error}) or SSE ({sse_error})"
+                                f"Failed to connect via Streamable HTTP ({streamable_detail}) or SSE ({sse_detail})"
                             )
                         )
                 else:

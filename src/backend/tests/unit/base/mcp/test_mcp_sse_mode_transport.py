@@ -7,7 +7,7 @@ an explicit ``mode="SSE"`` config nor the Streamable HTTP fallback ever reached 
 
 import asyncio
 from collections.abc import AsyncIterator
-from contextlib import suppress
+from contextlib import asynccontextmanager, suppress
 
 import httpx
 import pytest
@@ -24,7 +24,7 @@ from mcp.server import Server
 from mcp.server.sse import SseServerTransport
 from sse_starlette.sse import AppStatus
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
 
 class LegacySseServer:
@@ -66,9 +66,8 @@ class LegacySseServer:
         await Response("method not allowed", status_code=405)(scope, receive, send)
 
 
-@pytest.fixture
-async def legacy_sse_server() -> AsyncIterator[LegacySseServer]:
-    app = LegacySseServer()
+@asynccontextmanager
+async def _serve(app) -> AsyncIterator[str]:
     server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=0, log_level="warning", lifespan="off"))
     serve_task = asyncio.create_task(server.serve())
     while not server.started:
@@ -76,15 +75,27 @@ async def legacy_sse_server() -> AsyncIterator[LegacySseServer]:
             serve_task.result()
         await asyncio.sleep(0.05)
     port = server.servers[0].sockets[0].getsockname()[1]
-    app.url = f"http://127.0.0.1:{port}/"
     try:
-        yield app
+        yield f"http://127.0.0.1:{port}/"
     finally:
         server.should_exit = True
         with suppress(asyncio.CancelledError):
             await asyncio.wait_for(serve_task, timeout=5)
         # sse_starlette records uvicorn shutdown in a process-wide flag that closes every later SSE stream.
         AppStatus.should_exit = False
+
+
+async def _reject_every_request_with_400(scope, receive, send) -> None:
+    if scope["type"] == "http":
+        await JSONResponse({"error": "missing X-Tenant header"}, status_code=400)(scope, receive, send)
+
+
+@pytest.fixture
+async def legacy_sse_server() -> AsyncIterator[LegacySseServer]:
+    app = LegacySseServer()
+    async with _serve(app) as url:
+        app.url = url
+        yield app
 
 
 async def _update_tools(url: str, mode: str, client: MCPStreamableHttpClient):
@@ -137,6 +148,19 @@ async def test_should_fall_back_to_sse_when_streamable_probe_gets_400(legacy_sse
         assert mode == "Streamable_HTTP"
         assert [tool.name for tool in tools] == ["echo"]
         assert legacy_sse_server.rejected_probes == 1
+    finally:
+        await client.disconnect()
+
+
+@pytest.mark.asyncio
+async def test_should_keep_http_status_in_error_when_both_transports_get_400():
+    client = MCPStreamableHttpClient()
+    try:
+        async with _serve(_reject_every_request_with_400) as url:
+            with pytest.raises(ConnectionError) as exc_info:
+                await _update_tools(url, "Streamable_HTTP", client)
+
+        assert "HTTP 400" in str(exc_info.value)
     finally:
         await client.disconnect()
 
