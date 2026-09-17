@@ -15,6 +15,7 @@ import type { ToolPackManifest } from "@/controllers/API/queries/folders/use-pro
 import { UseRequestProcessor } from "@/controllers/API/services/request-processor";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import type { CapabilityReference, SkillPackManifest } from "../skills";
+import { ProjectChoiceField } from "./project-choice-field";
 
 type Props = {
   kind: "skill-pack" | "tool-pack";
@@ -51,7 +52,7 @@ export function CapabilityPackPicker({
       </p>
       {value.map((reference) => (
         <div
-          className="flex items-center justify-between gap-3 rounded-md border p-3"
+          className="flex items-center justify-between gap-3 border-b py-3 last:border-b-0"
           key={reference.project_id}
         >
           <div className="min-w-0">
@@ -101,33 +102,31 @@ export function CapabilityPackPicker({
         </p>
       ) : (
         <div className="flex gap-2">
-          <select
-            className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm"
-            aria-label={t(
+          <ProjectChoiceField
+            name={`${kind}-picker`}
+            className="h-10 flex-1"
+            label={t(
               kind === "skill-pack"
                 ? "skills.chooseSkillPack"
                 : "skills.chooseToolPack",
             )}
-            value={selected}
+            value={
+              choices.some((folder) => folder.id === selected) ? selected : ""
+            }
             disabled={disabled || folders.isLoading}
-            onChange={(event) => setSelected(event.target.value)}
-          >
-            <option value="">
-              {t(
-                kind === "skill-pack"
-                  ? "skills.chooseSkillPack"
-                  : "skills.chooseToolPack",
-              )}
-            </option>
-            {choices.map((folder) => (
-              <option key={folder.id} value={folder.id}>
-                {folder.name}
-              </option>
-            ))}
-          </select>
+            onChange={setSelected}
+            placeholder={t(
+              kind === "skill-pack"
+                ? "skills.chooseSkillPack"
+                : "skills.chooseToolPack",
+            )}
+            options={Object.fromEntries(
+              choices.map((folder) => [folder.id, folder.name]),
+            )}
+          />
           <Button
             variant="outline"
-            size="sm"
+            className="h-10 rounded-lg"
             disabled={
               disabled || !choices.some((folder) => folder.id === selected)
             }

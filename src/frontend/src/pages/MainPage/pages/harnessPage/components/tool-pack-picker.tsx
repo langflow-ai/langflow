@@ -20,6 +20,7 @@ import {
   exportChanges,
   packProjectPath,
 } from "../tool-packs";
+import { ProjectChoiceField } from "./project-choice-field";
 
 type Props = {
   projectId: string;
@@ -108,22 +109,24 @@ export function ToolPackPicker({
         </p>
       ) : choices.length ? (
         <div className="flex items-center gap-2">
-          <select
-            aria-label={t("toolPacks.choose")}
-            className="h-9 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            value={candidate}
+          <ProjectChoiceField
+            name="tool-pack-picker"
+            label={t("toolPacks.choose")}
+            placeholder={t("toolPacks.choose")}
+            className="h-10 flex-1"
+            value={
+              choices.some((project) => project.id === candidate)
+                ? candidate
+                : ""
+            }
             disabled={disabled || !agent}
-            onChange={(event) => setCandidate(event.target.value)}
-          >
-            <option value="">{t("toolPacks.choose")}</option>
-            {choices.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
+            onChange={setCandidate}
+            options={Object.fromEntries(
+              choices.map((project) => [project.id, project.name]),
+            )}
+          />
           <Button
-            size="sm"
+            className="h-10"
             variant="outline"
             disabled={
               disabled || !agent || !choices.some((p) => p.id === candidate)

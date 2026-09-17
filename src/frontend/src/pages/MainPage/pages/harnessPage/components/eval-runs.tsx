@@ -7,6 +7,7 @@ import {
 } from "@/controllers/API/queries/folders/use-eval-suite";
 
 import { EvalRunProgress } from "./eval-run-progress";
+import { ProjectChoiceField } from "./project-choice-field";
 
 export function EvalRuns({
   runs,
@@ -37,35 +38,35 @@ export function EvalRuns({
         <>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <label className="space-y-2">
-              {t("evaluations.selectedRun")}
-              <select
-                className="w-full rounded-md border bg-background p-2"
+              <span className="block">{t("evaluations.selectedRun")}</span>
+              <ProjectChoiceField
+                name="eval-run"
+                label={t("evaluations.selectedRun")}
                 value={selected.id}
-                onChange={(event) => setSelectedId(event.target.value)}
-              >
-                {runs.map((run) => (
-                  <option key={run.id} value={run.id}>
-                    {label(run)}
-                  </option>
-                ))}
-              </select>
+                onChange={setSelectedId}
+                options={Object.fromEntries(
+                  runs.map((run) => [run.id, label(run)]),
+                )}
+              />
             </label>
             <label className="space-y-2">
-              {t("evaluations.compareWith")}
-              <select
-                className="w-full rounded-md border bg-background p-2"
-                value={baselineId}
-                onChange={(event) => setBaselineId(event.target.value)}
-              >
-                <option value="">{t("evaluations.noComparison")}</option>
-                {runs
-                  .filter((run) => run.id !== selected.id)
-                  .map((run) => (
-                    <option key={run.id} value={run.id}>
-                      {label(run)}
-                    </option>
-                  ))}
-              </select>
+              <span className="block">{t("evaluations.compareWith")}</span>
+              <ProjectChoiceField
+                name="eval-comparison"
+                label={t("evaluations.compareWith")}
+                value={baselineId || "none"}
+                onChange={(value) =>
+                  setBaselineId(value === "none" ? "" : value)
+                }
+                options={{
+                  none: t("evaluations.noComparison"),
+                  ...Object.fromEntries(
+                    runs
+                      .filter((run) => run.id !== selected.id)
+                      .map((run) => [run.id, label(run)]),
+                  ),
+                }}
+              />
             </label>
           </div>
           {baseline && !comparable && (

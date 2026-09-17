@@ -6,6 +6,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { AgentConfiguration } from "@/controllers/API/queries/folders/use-project-reports";
 import { ReportConfigurations } from "../components/report-configurations";
+import { selectOption } from "./select-option";
 
 const mockNavigate = jest.fn();
 const record: AgentConfiguration = {
@@ -101,7 +102,7 @@ it("shows recorded values and preserves the draft before opening a configured fl
   expect(mockNavigate).toHaveBeenCalledWith("/flow/instructions");
 });
 
-it("lets the reviewer inspect earlier settings after configuration changes during a run", () => {
+it("lets the reviewer inspect earlier settings after configuration changes during a run", async () => {
   const newer = {
     ...record,
     revision: "e".repeat(64),
@@ -111,9 +112,9 @@ it("lets the reviewer inspect earlier settings after configuration changes durin
   render(<ReportConfigurations configurations={[record, newer]} />);
   fireEvent.click(screen.getByText("Inspect configuration"));
   expect(screen.getByText("Updated instructions.")).toBeInTheDocument();
-  fireEvent.change(
+  await selectOption(
     screen.getByRole("combobox", { name: "Recorded configuration" }),
-    { target: { value: "0" } },
+    /^Configuration 1/,
   );
   expect(screen.getByText(record.system_prompt)).toBeInTheDocument();
   expect(screen.queryByText("Updated instructions.")).not.toBeInTheDocument();

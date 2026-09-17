@@ -246,7 +246,7 @@ function ReportContent({
     ...new Set([...citations, ...report.sources.map((source) => source.id)]),
   ];
   const [selectedSource, setSelectedSource] = useState(sourceIds[0] ?? "");
-  const sourcePicker = useRef<HTMLSelectElement>(null);
+  const sourcePicker = useRef<HTMLButtonElement>(null);
   const [downloading, setDownloading] = useState<"markdown" | "json">();
   const [downloadError, setDownloadError] = useState(false);
   const unresolved = citations.filter(

@@ -1,5 +1,6 @@
 /* Hallmark · genre: modern-minimal · macrostructure: Workbench · design-system: DESIGN.md
  * pre-emit critique: P4 H4 E4 S5 R5 V4 · designed-as-app */
+import "./harness-form.css";
 import { lazy, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -244,8 +245,6 @@ const HarnessPage = ({
             fieldName !== toolsFieldName &&
             fieldName !== modelFieldName &&
             field.renders !== "project_refs" &&
-            field.renders !== "skill_pack_refs" &&
-            field.renders !== "skill_definitions" &&
             isProjectFieldVisible(field, values) &&
             // A long free-text field says nothing useful at a glance.
             !field?.multiline,
@@ -256,22 +255,30 @@ const HarnessPage = ({
             name: fieldName,
             label: field?.display_name ?? fieldName,
             value:
-              (field as { renders?: string }).renders === "hook_flows"
-                ? t("harness.hookCount", {
-                    count: Array.isArray(bindings[fieldName])
-                      ? bindings[fieldName].length
+              field.renders === "skill_pack_refs" ||
+              field.renders === "skill_definitions"
+                ? String(
+                    Array.isArray(values[fieldName])
+                      ? values[fieldName].length
                       : 0,
-                  })
-                : binding && !Array.isArray(binding)
-                  ? t("harness.flowImplementation", {
-                      name:
-                        flows.find((flow) => flow.id === binding.flow_id)
-                          ?.name ?? t("harness.boundFlowUnavailable"),
+                  )
+                : (field as { renders?: string }).renders === "hook_flows"
+                  ? t("harness.hookCount", {
+                      count: Array.isArray(bindings[fieldName])
+                        ? bindings[fieldName].length
+                        : 0,
                     })
-                  : values[fieldName] === undefined || values[fieldName] === ""
-                    ? "—"
-                    : (field.option_labels?.[String(values[fieldName])] ??
-                      String(values[fieldName])),
+                  : binding && !Array.isArray(binding)
+                    ? t("harness.flowImplementation", {
+                        name:
+                          flows.find((flow) => flow.id === binding.flow_id)
+                            ?.name ?? t("harness.boundFlowUnavailable"),
+                      })
+                    : values[fieldName] === undefined ||
+                        values[fieldName] === ""
+                      ? "—"
+                      : (field.option_labels?.[String(values[fieldName])] ??
+                        String(values[fieldName])),
           };
         }),
     [type, toolsFieldName, modelFieldName, values, bindings, flows, t],
@@ -365,7 +372,7 @@ const HarnessPage = ({
 
   return (
     <div
-      className="mx-auto flex min-h-0 w-full min-w-0 max-w-6xl flex-col"
+      className="harness-form mx-auto flex min-h-0 w-full min-w-0 max-w-6xl flex-col"
       data-testid="harness-page"
     >
       {/* Stays in reach: the form runs past the viewport once a few sections are filled in. */}
@@ -433,7 +440,7 @@ const HarnessPage = ({
         <fieldset
           disabled={isPending}
           inert={isPending}
-          className="flex min-w-0 flex-col gap-6"
+          className="flex min-w-0 flex-col gap-8"
         >
           {projectType === "agent-harness" && (
             <AgentFlowPicker
@@ -460,7 +467,7 @@ const HarnessPage = ({
             <section
               key={section || "fields"}
               data-testid={`harness-section-${section || "fields"}`}
-              className="flex min-w-0 flex-col gap-4 border-b border-border pb-6 last:border-0"
+              className="flex min-w-0 flex-col gap-5 border-b border-border/60 pb-8 last:border-0"
             >
               {section && (
                 <h2 className="text-base font-semibold">{section}</h2>
@@ -471,7 +478,7 @@ const HarnessPage = ({
                   key={fieldName}
                   id={`harness-field-${fieldName}`}
                   tabIndex={-1}
-                  className="flex flex-col gap-1.5"
+                  className="flex min-w-0 flex-col gap-2"
                   data-testid={`harness-field-${fieldName}`}
                 >
                   {(field?.display_name ?? fieldName) !== section && (
@@ -734,6 +741,7 @@ const HarnessPage = ({
             details={summaryDetails}
             agentFlow={selectedAgent}
             showModel={Boolean(modelFieldName)}
+            showTools={Boolean(toolsFieldName || type.template?.tool_packs)}
           />
           {projectType === "agent-harness" && (
             <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">

@@ -230,8 +230,11 @@ async def _submit_child(service, job, progress, suite, caller):
         input_value = case.input
     else:
         async with session_scope() as session:
-            await resolve_binding_snapshot(session, caller, suite.scorer, "scorer", require_current=False)
+            # Submission retained the reviewed definitions. Authoring snapshots may
+            # be pruned while awaiting approval; only current access is checked here.
             row = await _authorize(session, caller, suite.scorer.flow_id, FlowAction.EXECUTE)
+            for dependency in suite.scorer.dependencies:
+                await _authorize(session, caller, dependency.flow_id, FlowAction.EXECUTE)
             flow = FlowRead.model_validate(row, from_attributes=True)
         scorer_job = job.model_copy(
             update={

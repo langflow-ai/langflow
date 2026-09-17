@@ -11,6 +11,7 @@ interface HarnessSummaryProps {
   /** The model value as the model widget stores it: a list holding the picked model. */
   model?: unknown;
   showModel?: boolean;
+  showTools?: boolean;
   toolFlows: FlowType[];
   toolPackCount?: number;
   /** Every other field the form holds, already formatted for reading. */
@@ -47,6 +48,7 @@ export const HarnessSummary = ({
   className,
   agentFlow,
   showModel = true,
+  showTools = true,
   toolPackCount = 0,
 }: HarnessSummaryProps) => {
   const { t } = useTranslation();
@@ -57,7 +59,7 @@ export const HarnessSummary = ({
       data-testid="harness-summary"
       aria-label={t("harness.summaryTitle")}
       className={cn(
-        "flex h-fit min-w-0 flex-col gap-5 rounded-lg border border-border bg-background p-4",
+        "flex h-fit min-w-0 flex-col gap-5 rounded-xl bg-muted/40 p-5",
         className,
       )}
     >
@@ -115,51 +117,53 @@ export const HarnessSummary = ({
         </div>
       )}
 
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-center justify-between gap-2">
-          <Eyebrow>{t("harness.summaryTools")}</Eyebrow>
-          {toolFlows.length > 0 && (
-            <Badge variant="secondaryStatic" size="tag">
-              {toolFlows.length}
-            </Badge>
+      {showTools && (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center justify-between gap-2">
+            <Eyebrow>{t("harness.summaryTools")}</Eyebrow>
+            {toolFlows.length > 0 && (
+              <Badge variant="secondaryStatic" size="tag">
+                {toolFlows.length}
+              </Badge>
+            )}
+          </div>
+          {toolPackCount > 0 && (
+            <a
+              href="#harness-field-tool_packs"
+              className="text-sm underline underline-offset-4"
+            >
+              {t("toolPacks.selectedCount", { count: toolPackCount })}
+            </a>
+          )}
+          {toolFlows.length === 0 && toolPackCount === 0 ? (
+            <span
+              className="text-sm text-muted-foreground"
+              data-testid="harness-summary-tools-empty"
+            >
+              {t("harness.summaryToolsEmpty")}
+            </span>
+          ) : (
+            <ul className="flex flex-col gap-1.5">
+              {toolFlows.map((flow) => (
+                <li
+                  key={flow.id}
+                  className="flex items-center gap-2"
+                  data-testid={`harness-summary-tool-${flow.id}`}
+                >
+                  <ForwardedIconComponent
+                    name={flow.icon || "Workflow"}
+                    aria-hidden="true"
+                    className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                  />
+                  <span className="truncate text-sm font-medium">
+                    {flow.name}
+                  </span>
+                </li>
+              ))}
+            </ul>
           )}
         </div>
-        {toolPackCount > 0 && (
-          <a
-            href="#harness-field-tool_packs"
-            className="text-sm underline underline-offset-4"
-          >
-            {t("toolPacks.selectedCount", { count: toolPackCount })}
-          </a>
-        )}
-        {toolFlows.length === 0 && toolPackCount === 0 ? (
-          <span
-            className="text-sm text-muted-foreground"
-            data-testid="harness-summary-tools-empty"
-          >
-            {t("harness.summaryToolsEmpty")}
-          </span>
-        ) : (
-          <ul className="flex flex-col gap-1.5">
-            {toolFlows.map((flow) => (
-              <li
-                key={flow.id}
-                className="flex items-center gap-2"
-                data-testid={`harness-summary-tool-${flow.id}`}
-              >
-                <ForwardedIconComponent
-                  name={flow.icon || "Workflow"}
-                  aria-hidden="true"
-                  className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
-                />
-                <span className="truncate text-sm font-medium">
-                  {flow.name}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      )}
 
       {details.length > 0 && (
         <div className="flex flex-col border-t border-border pt-2">

@@ -1,5 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import type { ToolPackReference } from "@/controllers/API/queries/folders/use-project-tool-pack";
 import { type SkillDefinition, validSkills } from "../skills";
 import { CapabilityPackPicker } from "./capability-pack-picker";
@@ -26,7 +28,7 @@ export function SkillDefinitionsEditor({
     <div className="space-y-5" data-testid="skill-definitions-editor">
       <p className="text-sm text-muted-foreground">{t("skills.editorHelp")}</p>
       {value.map((skill, index) => (
-        <section className="space-y-4 rounded-lg border p-5" key={index}>
+        <section className="space-y-5 rounded-xl bg-muted/40 p-5" key={index}>
           <div className="flex items-center justify-between">
             <h3 className="font-semibold">
               {skill.name || t("skills.newSkill")}
@@ -40,10 +42,9 @@ export function SkillDefinitionsEditor({
               {t("skills.remove")}
             </Button>
           </div>
-          <label className="block space-y-1 text-sm">
+          <label className="block space-y-2 text-sm">
             <span>{t("skills.name")}</span>
-            <input
-              className="h-9 w-full rounded-md border border-input bg-background px-3"
+            <Input
               value={skill.name}
               aria-label={t("skills.name")}
               maxLength={64}
@@ -55,10 +56,10 @@ export function SkillDefinitionsEditor({
               {t("skills.nameHelp")}
             </span>
           </label>
-          <label className="block space-y-1 text-sm">
+          <label className="block space-y-2 text-sm">
             <span>{t("skills.description")}</span>
-            <textarea
-              className="min-h-20 w-full rounded-md border border-input bg-background p-3"
+            <Textarea
+              rows={3}
               value={skill.description}
               maxLength={1024}
               disabled={disabled}
@@ -67,10 +68,10 @@ export function SkillDefinitionsEditor({
               }
             />
           </label>
-          <label className="block space-y-1 text-sm">
+          <label className="block space-y-2 text-sm">
             <span>{t("skills.instructions")}</span>
-            <textarea
-              className="min-h-56 w-full rounded-md border border-input bg-background p-3 leading-relaxed"
+            <Textarea
+              rows={9}
               value={skill.instructions}
               maxLength={50000}
               disabled={disabled}

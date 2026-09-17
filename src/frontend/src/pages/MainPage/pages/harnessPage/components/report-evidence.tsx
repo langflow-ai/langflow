@@ -1,6 +1,7 @@
 import type { Ref } from "react";
 import { useTranslation } from "react-i18next";
 import type { SourcedReport } from "@/controllers/API/queries/folders/use-project-reports";
+import { ProjectChoiceField } from "./project-choice-field";
 import { sourceURL } from "./report-markdown";
 
 export function ReportEvidence({
@@ -14,7 +15,7 @@ export function ReportEvidence({
   sourceIds: string[];
   selectedId: string;
   onSelect: (id: string) => void;
-  selectRef: Ref<HTMLSelectElement>;
+  selectRef: Ref<HTMLButtonElement>;
 }) {
   const { t, i18n } = useTranslation();
   const source = report.sources.find((item) => item.id === selectedId);
@@ -33,21 +34,21 @@ export function ReportEvidence({
           {t("reports.evidence")}
         </label>
         {sourceIds.length > 0 ? (
-          <select
+          <ProjectChoiceField
             id="report-evidence-source"
-            ref={selectRef}
+            name="report-evidence-source"
+            label={t("reports.evidence")}
+            triggerRef={selectRef}
             value={selectedId}
-            onChange={(event) => onSelect(event.target.value)}
-            className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
-          >
-            {sourceIds.map((id, index) => (
-              <option key={id} value={id}>
-                {index + 1}.{" "}
-                {report.sources.find((item) => item.id === id)?.title ||
-                  t("reports.missingSource")}
-              </option>
-            ))}
-          </select>
+            onChange={onSelect}
+            className="h-10"
+            options={Object.fromEntries(
+              sourceIds.map((id, index) => [
+                id,
+                `${index + 1}. ${report.sources.find((item) => item.id === id)?.title || t("reports.missingSource")}`,
+              ]),
+            )}
+          />
         ) : (
           <p className="text-sm text-muted-foreground">
             {t("reports.noSources")}

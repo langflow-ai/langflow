@@ -17,6 +17,7 @@ import {
   type SkillPackManifest,
   validSkills,
 } from "../skills";
+import { openSelect, selectOption } from "./select-option";
 
 const mockFolders = {
   data: [
@@ -71,12 +72,13 @@ it("shows instructions before accepting a reviewed Skill Pack", async () => {
       onChange={change}
     />,
   );
+  const user = await openSelect(
+    screen.getByRole("combobox", { name: "Choose a Skill Pack" }),
+  );
   expect(
     screen.queryByRole("option", { name: "Lookup tools" }),
   ).not.toBeInTheDocument();
-  fireEvent.change(screen.getByLabelText("Choose a Skill Pack"), {
-    target: { value: "skills" },
-  });
+  await user.click(screen.getByRole("option", { name: "Research skills" }));
   fireEvent.click(screen.getByRole("button", { name: "Review" }));
   expect(await screen.findByText("Read primary sources.")).toBeInTheDocument();
   expect(change).not.toHaveBeenCalled();
@@ -95,9 +97,10 @@ it("cannot accept a pack whose dependencies cannot be loaded", async () => {
       onChange={change}
     />,
   );
-  fireEvent.change(screen.getByLabelText("Choose a Skill Pack"), {
-    target: { value: "skills" },
-  });
+  await selectOption(
+    screen.getByRole("combobox", { name: "Choose a Skill Pack" }),
+    "Research skills",
+  );
   fireEvent.click(screen.getByRole("button", { name: "Review" }));
   await screen.findByRole("alert");
   expect(
