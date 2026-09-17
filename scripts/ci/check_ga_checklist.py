@@ -50,6 +50,29 @@ REQUIRED_ITEMS = frozenset(
 )
 
 
+def _evidence_path_error(entry: str) -> str | None:
+    """Return why ``entry`` is unusable as evidence, or ``None`` when it is fine.
+
+    Evidence must name something that lives in this repository. An absolute
+    path would discard ``REPO_ROOT`` on join and let the record claim a CI
+    runner's filesystem as GA evidence (``"/"`` always exists); a ``..`` path
+    would do the same by escaping upward.
+    """
+    # Allow ``path::test_name`` selectors; only the path part must resolve.
+    raw = entry.split("::", 1)[0]
+    if not raw:
+        return f"evidence entry has an empty path: {entry}"
+    candidate = Path(raw)
+    if candidate.is_absolute():
+        return f"evidence path must be repository-relative, not absolute: {entry}"
+    resolved = (REPO_ROOT / candidate).resolve()
+    if REPO_ROOT not in resolved.parents:
+        return f"evidence path is outside the repository: {entry}"
+    if not resolved.exists():
+        return f"evidence path does not exist: {entry}"
+    return None
+
+
 def _validate_item(item: object, index: int, errors: list[str]) -> None:
     prefix = f"items/{index}"
     if not isinstance(item, dict):
@@ -66,7 +89,11 @@ def _validate_item(item: object, index: int, errors: list[str]) -> None:
     if not isinstance(contexts, list) or not contexts:
         errors.append(f"{prefix} ({item_id}): 'contexts' must be a non-empty list")
     else:
-        unknown = sorted({c for c in contexts if c not in VALID_CONTEXTS})
+        # Membership against a frozenset raises TypeError on an unhashable
+        # value, so reject non-string entries before testing them.
+        if any(not isinstance(c, str) for c in contexts):
+            errors.append(f"{prefix} ({item_id}): 'contexts' entries must be strings")
+        unknown = sorted({c for c in contexts if isinstance(c, str) and c not in VALID_CONTEXTS})
         if unknown:
             errors.append(f"{prefix} ({item_id}): unknown contexts {unknown}")
 
@@ -84,10 +111,9 @@ def _validate_item(item: object, index: int, errors: list[str]) -> None:
                 if not isinstance(entry, str) or not entry:
                     errors.append(f"{prefix} ({item_id}): evidence entries must be non-empty strings")
                     continue
-                # Allow ``path::test_name`` selectors; only the path must exist.
-                path = REPO_ROOT / entry.split("::", 1)[0]
-                if not path.exists():
-                    errors.append(f"{prefix} ({item_id}): evidence path does not exist: {entry}")
+                path_error = _evidence_path_error(entry)
+                if path_error:
+                    errors.append(f"{prefix} ({item_id}): {path_error}")
         if "pending" in item or "signoff" in item:
             errors.append(f"{prefix} ({item_id}): validated item must not carry a pending-signoff block")
     else:
@@ -143,22 +169,33 @@ def validate_checklist(path: Path) -> list[str]:
                 pending = entry.get("pending")
                 if not isinstance(pending, dict) or not pending.get("owner") or not pending.get("reason"):
                     errors.append(f"contexts/{context}: pending-signoff context needs pending.owner and pending.reason")
-            for evidence_entry in entry.get("evidence") or []:
-                evidence_path = REPO_ROOT / str(evidence_entry).split("::", 1)[0]
-                if not evidence_path.exists():
-                    errors.append(f"contexts/{context}: evidence path does not exist: {evidence_entry}")
+            context_evidence = entry.get("evidence")
+            if context_evidence is not None and not isinstance(context_evidence, list):
+                # A bare string would otherwise iterate character by character.
+                errors.append(f"contexts/{context}: 'evidence' must be a list")
+                context_evidence = []
+            for evidence_entry in context_evidence or []:
+                if not isinstance(evidence_entry, str) or not evidence_entry:
+                    errors.append(f"contexts/{context}: evidence entries must be non-empty strings")
+                    continue
+                path_error = _evidence_path_error(evidence_entry)
+                if path_error:
+                    errors.append(f"contexts/{context}: {path_error}")
 
     items = checklist.get("items")
     if not isinstance(items, list) or not items:
         errors.append("top-level 'items' must be a non-empty list")
         return errors
 
-    ids: list[object] = [item.get("id") if isinstance(item, dict) else None for item in items]
-    duplicates = sorted({i for i in ids if i is not None and ids.count(i) > 1})
+    # Only string ids participate: an object id is unhashable and a mixed-type
+    # set is unsortable, and ``_validate_item`` already reports the bad id.
+    ids = [item.get("id") for item in items if isinstance(item, dict)]
+    string_ids = [i for i in ids if isinstance(i, str) and i]
+    duplicates = sorted({i for i in string_ids if string_ids.count(i) > 1})
     if duplicates:
         errors.append(f"duplicate item ids: {duplicates}")
 
-    missing_items = sorted(REQUIRED_ITEMS - {i for i in ids if isinstance(i, str)})
+    missing_items = sorted(REQUIRED_ITEMS - set(string_ids))
     if missing_items:
         errors.append(f"checklist is missing required acceptance items: {missing_items}")
 

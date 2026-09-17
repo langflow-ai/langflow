@@ -176,3 +176,97 @@ def test_checker_reports_missing_file(tmp_path: Path) -> None:
 
     assert len(errors) == 1
     assert "could not read GA checklist" in errors[0]
+
+
+def test_checker_rejects_absolute_evidence_path(tmp_path: Path) -> None:
+    """``/`` always exists: joining it onto REPO_ROOT would pass the existence check."""
+    checklist = _load()
+    item = next(item for item in checklist["items"] if item["status"] == "validated")
+    item["evidence"] = ["/"]
+
+    errors = validate_checklist(_write(tmp_path, checklist))
+
+    assert any("not absolute" in error for error in errors)
+
+
+def test_checker_rejects_evidence_path_escaping_the_repository(tmp_path: Path) -> None:
+    checklist = _load()
+    item = next(item for item in checklist["items"] if item["status"] == "validated")
+    item["evidence"] = ["../../../etc/hosts"]
+
+    errors = validate_checklist(_write(tmp_path, checklist))
+
+    assert any("outside the repository" in error for error in errors)
+
+
+def test_checker_rejects_repository_root_as_evidence(tmp_path: Path) -> None:
+    checklist = _load()
+    item = next(item for item in checklist["items"] if item["status"] == "validated")
+    item["evidence"] = ["."]
+
+    errors = validate_checklist(_write(tmp_path, checklist))
+
+    assert any("outside the repository" in error for error in errors)
+
+
+def test_checker_rejects_absolute_context_evidence_path(tmp_path: Path) -> None:
+    checklist = _load()
+    context = next(
+        entry
+        for entry in checklist["contexts"].values()
+        if entry.get("status") == "validated" and entry.get("evidence")
+    )
+    context["evidence"] = ["/"]
+
+    errors = validate_checklist(_write(tmp_path, checklist))
+
+    assert any("not absolute" in error for error in errors)
+
+
+def test_checker_rejects_non_list_context_evidence(tmp_path: Path) -> None:
+    """A bare string would otherwise be iterated one character at a time."""
+    checklist = _load()
+    context_name, context = next(
+        (name, entry) for name, entry in checklist["contexts"].items() if entry.get("evidence")
+    )
+    context["evidence"] = "design/dedicated-integrations/README.md"
+
+    errors = validate_checklist(_write(tmp_path, checklist))
+
+    assert any(f"contexts/{context_name}: 'evidence' must be a list" == error for error in errors)
+
+
+def test_checker_reports_object_valued_contexts_instead_of_raising(tmp_path: Path) -> None:
+    """Frozenset membership raises TypeError on an unhashable value."""
+    checklist = _load()
+    checklist["items"][0]["contexts"] = [{"hosted": True}]
+
+    errors = validate_checklist(_write(tmp_path, checklist))
+
+    assert any("'contexts' entries must be strings" in error for error in errors)
+
+
+def test_checker_reports_object_valued_item_id_instead_of_raising(tmp_path: Path) -> None:
+    """A repeated object id reaches the duplicate-id set comprehension, which hashes it."""
+    checklist = _load()
+    checklist["items"][0]["id"] = {"id": "stable-schemas"}
+    checklist["items"].append(dict(checklist["items"][0]))
+
+    errors = validate_checklist(_write(tmp_path, checklist))
+
+    assert any("missing or empty 'id'" in error for error in errors)
+
+
+def test_checker_reports_mixed_type_item_ids_instead_of_raising(tmp_path: Path) -> None:
+    """Sorting a set holding both an int and a str id would raise TypeError."""
+    checklist = _load()
+    checklist["items"][0]["id"] = 7
+    checklist["items"].append(dict(checklist["items"][0]))
+    checklist["items"].append(dict(checklist["items"][1]))
+
+    errors = validate_checklist(_write(tmp_path, checklist))
+
+    assert any("missing or empty 'id'" in error for error in errors)
+    assert [error for error in errors if "duplicate item ids" in error] == [
+        f"duplicate item ids: ['{checklist['items'][1]['id']}']"
+    ]
