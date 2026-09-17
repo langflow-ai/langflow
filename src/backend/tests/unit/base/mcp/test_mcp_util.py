@@ -1863,11 +1863,17 @@ class TestMCPUtilityFunctions:
         # Combining marks survive, so names that differ only by a mark stay distinct
         assert util.project_mcp_server_name("\u0915\u093e\u092e") != util.project_mcp_server_name("\u0915\u092e")
 
-    @pytest.mark.parametrize("name", ["My Project", "T\u00e9st-\U0001f600-N\u00e1m\u00e9", "123 start", "a" * 100])
+    @pytest.mark.parametrize(
+        "name", ["My Project", "T\u00e9st-\U0001f600-N\u00e1m\u00e9", "n\u0304ame", "123 start", "a" * 100]
+    )
     def test_project_mcp_server_name_matches_the_old_derivation_for_latin_names(self, name):
         """Existing Latin-named projects keep the server name they were registered under."""
         old = util.sanitize_mcp_name(name)[: util.MAX_MCP_SERVER_NAME_LENGTH - 4]
         assert util.project_mcp_server_name(name) == f"lf-{old}"
+
+    def test_project_mcp_server_name_falls_back_when_nothing_survives(self):
+        assert util.project_mcp_server_name("") == "lf-unnamed"
+        assert util.project_mcp_server_name("!!!") == "lf-unnamed"
 
     def test_get_unique_name(self):
         """Test unique name generation."""

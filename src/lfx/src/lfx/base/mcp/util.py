@@ -343,7 +343,7 @@ def sanitize_mcp_name(name: str, max_length: int = 46) -> str:
     return name
 
 
-def _sanitize_server_name(name: str, max_length: int) -> str:
+def _sanitize_server_name(name: str) -> str:
     """Sanitize a project name for use as an MCP server name, or "" if nothing is left.
 
     Deliberately more permissive than :func:`sanitize_mcp_name`, which also names MCP
@@ -357,7 +357,11 @@ def _sanitize_server_name(name: str, max_length: int) -> str:
         base = unicodedata.normalize("NFD", original)[0]
         # Latin diacritics fold away as before, so existing Latin names keep their server name
         char = base if base.isascii() else original
-        if char.isalnum() or char in "_-" or char.isspace() or unicodedata.category(char).startswith("M"):
+        if char.isalnum() or char in "_-" or char.isspace():
+            kept.append(char)
+        elif unicodedata.category(char).startswith("M") and kept and not kept[-1].isascii():
+            # A mark on a non-Latin letter carries meaning (Devanagari काम vs कम); on a
+            # Latin letter it is a diacritic, already folded above.
             kept.append(char)
     name = "".join(kept)
 
@@ -370,6 +374,8 @@ def _sanitize_server_name(name: str, max_length: int) -> str:
 
     name = name.lower()
 
+    # Same budget the old derivation used, so long Latin names keep their server name
+    max_length = MAX_MCP_SERVER_NAME_LENGTH - 4
     if len(name) > max_length:
         name = name[:max_length].rstrip("_")
 
@@ -378,8 +384,7 @@ def _sanitize_server_name(name: str, max_length: int) -> str:
 
 def project_mcp_server_name(project_name: str) -> str:
     """Build the MCP server name that a project's config entry is keyed by."""
-    sanitized = _sanitize_server_name(project_name or "", 46) or "unnamed"
-    return f"lf-{sanitized[: MAX_MCP_SERVER_NAME_LENGTH - 4]}"
+    return f"lf-{_sanitize_server_name(project_name or '') or 'unnamed'}"
 
 
 def _camel_to_snake(name: str) -> str:

@@ -16,11 +16,20 @@ from langflow.services.database.models.user.model import User
 _EMOJI_RE = re.compile("[\U0001f000-\U0001faff\u2600-\u27bf]")
 
 
-def reject_emoji(name: str | None) -> str | None:
-    """Project names feed MCP server names and filenames, so emoji are refused outright."""
-    if name is not None and _EMOJI_RE.search(name):
-        # PydanticCustomError so the client sees the message without the "Value error, " prefix
-        error_type, msg = "emoji_in_name", "Project names cannot contain emoji"
+def validate_project_name(name: str | None) -> str | None:
+    """Refuse names that cannot key an MCP server: emoji, and names with no letter or digit.
+
+    The server name is derived from the project name; a name that sanitizes to nothing
+    would share the ``lf-unnamed`` fallback with every other such project and collide.
+    """
+    if name is None:
+        return name
+    error_type = "invalid_project_name"
+    if _EMOJI_RE.search(name):
+        msg = "Project names cannot contain emoji"
+        raise PydanticCustomError(error_type, msg)
+    if not any(char.isalnum() for char in name):
+        msg = "Project names must contain at least one letter or number"
         raise PydanticCustomError(error_type, msg)
     return name
 
@@ -64,7 +73,7 @@ class FolderCreate(FolderBase):
     @field_validator("name")
     @classmethod
     def validate_name(cls, value: str | None) -> str | None:
-        return reject_emoji(value)
+        return validate_project_name(value)
 
 
 class FolderRead(FolderBase):
@@ -93,6 +102,6 @@ class FolderUpdate(SQLModel):
     @field_validator("name")
     @classmethod
     def validate_name(cls, value: str | None) -> str | None:
-        return reject_emoji(value)
+        return validate_project_name(value)
 
     auth_settings: dict | None = None
