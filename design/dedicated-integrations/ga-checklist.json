@@ -183,6 +183,7 @@
       "status": "validated",
       "evidence": [
         "src/frontend/scripts/check-i18n.mjs",
+        "src/frontend/scripts/check-i18n.test.mjs",
         "src/frontend/src/locales/__tests__/locale-parity.test.ts",
         ".github/workflows/jest_test.yml"
       ]

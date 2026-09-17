@@ -74,6 +74,7 @@ def _evidence_path_error(entry: str) -> str | None:
 
 
 def _validate_item(item: object, index: int, errors: list[str]) -> None:
+    """Append every structural problem found in one acceptance item to `errors`."""
     prefix = f"items/{index}"
     if not isinstance(item, dict):
         errors.append(f"{prefix}: item is not an object")
@@ -206,6 +207,7 @@ def validate_checklist(path: Path) -> list[str]:
 
 
 def main() -> int:
+    """Validate the checklist named on the command line; return the process exit code."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checklist", type=Path, default=DEFAULT_CHECKLIST)
     args = parser.parse_args()

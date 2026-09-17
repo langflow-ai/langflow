@@ -47,6 +47,10 @@ jobs:
         working-directory: src/frontend
         run: npm run check:i18n
 
+      - name: Test the i18n Checker Itself
+        working-directory: src/frontend
+        run: npm run test:i18n-checker
+
       - name: Run Frontend Unit Tests
         run: make test_frontend_ci
 

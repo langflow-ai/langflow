@@ -169,6 +169,7 @@
     "lint:types:changed": "bash scripts/lint-changed.sh",
     "check-format": "npx @biomejs/biome check",
     "check:i18n": "node scripts/check-i18n.mjs",
+    "test:i18n-checker": "node --test scripts/check-i18n.test.mjs",
     "type-check": "tsc --noEmit --pretty --project tsconfig.json && vite",
     "storybook": "storybook dev -p 6006",
     "storybook:network": "storybook dev -p 6006 --host 0.0.0.0",
