@@ -1713,10 +1713,6 @@ class TestGlobalsSyncOnlyDocumented:
         assert "ignored for stream/background" in description.lower()
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
-
-
 def test_parse_derives_side_channel_from_expose_graph_state():
     """Opting out of graph state also opts out of the v1 ``langflow.event`` mirror.
 
@@ -1730,7 +1726,38 @@ def test_parse_derives_side_channel_from_expose_graph_state():
 
 
 def test_parse_keeps_side_channel_by_default():
-    """The canvas and the playground both need the mirror, so it is on by default."""
+    """The canvas and the playground both need the mirror, so the passthrough protocol keeps it."""
     parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=str(uuid4())))
     assert parsed.expose_graph_state is True
     assert parsed.emit_v1_side_channel is True
+
+
+def test_expose_graph_state_defaults_off_for_agui():
+    """An AG-UI caller who says nothing gets the conversation only."""
+    request = WorkflowRunRequest(flow_id=str(uuid4()), stream_protocol="agui")
+    parsed = parse_workflow_run_request(request)
+    assert parsed.expose_graph_state is False
+    assert parsed.emit_v1_side_channel is False
+
+
+def test_expose_graph_state_defaults_on_for_langflow():
+    """The passthrough protocol keeps its shape: existing callers parse per-vertex events."""
+    parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=str(uuid4())))
+    assert parsed.expose_graph_state is True
+
+
+def test_explicit_expose_graph_state_wins_on_both_protocols():
+    """An explicit value is never overridden by the protocol default."""
+    flow_id = str(uuid4())
+    on_agui = parse_workflow_run_request(
+        WorkflowRunRequest(flow_id=flow_id, stream_protocol="agui", expose_graph_state=True)
+    )
+    off_langflow = parse_workflow_run_request(
+        WorkflowRunRequest(flow_id=flow_id, stream_protocol="langflow", expose_graph_state=False)
+    )
+    assert on_agui.expose_graph_state is True
+    assert off_langflow.expose_graph_state is False
+
+
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

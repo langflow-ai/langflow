@@ -38,6 +38,9 @@ def _agui_body(flow_id, *, message: str = "hello", mode: str = "sync", tweaks: d
         "mode": mode,
         "stream_protocol": "agui",
         "session_id": "thread-1",
+        # These assertions describe the canvas, which asks for graph state the
+        # way the frontend does. ``agui`` alone no longer implies it.
+        "expose_graph_state": True,
     }
     if tweaks:
         body["tweaks"] = tweaks
@@ -2111,7 +2114,11 @@ class TestAGUIBackgroundJobStatus:
         assert "langflow.event" not in replayed
 
     async def test_persisted_request_round_trip_keeps_graph_state_flag(self):
-        """The worker re-parse must not reset the flag to its ``True`` default."""
+        """The worker re-parse carries the caller's choice, on both values.
+
+        ``submit`` persists the resolved flag, so the worker never re-derives it
+        from the protocol default for a job submitted after this shipped.
+        """
         from langflow.api.v2.workflow import _parse_persisted_workflow_request
 
         request = {
@@ -2123,8 +2130,14 @@ class TestAGUIBackgroundJobStatus:
         }
         assert _parse_persisted_workflow_request(request).expose_graph_state is False
 
-        # Legacy rows written before the field existed keep today's behavior.
+        request["expose_graph_state"] = True
+        assert _parse_persisted_workflow_request(request).expose_graph_state is True
+
+        # A row written before the field existed has no choice recorded, so the
+        # protocol default applies, the same as a fresh request would get.
         del request["expose_graph_state"]
+        assert _parse_persisted_workflow_request(request).expose_graph_state is False
+        request["stream_protocol"] = "langflow"
         assert _parse_persisted_workflow_request(request).expose_graph_state is True
 
     async def test_message_with_json_shaped_run_error_payload_does_not_fail_job(

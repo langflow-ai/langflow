@@ -238,13 +238,16 @@ class TestExposeGraphState:
         assert [f.type for f in frames] == ["TEXT_MESSAGE_START", "TEXT_MESSAGE_CONTENT"]
         assert json.loads(frames[1].data_json)["delta"] == "Hi"
 
-    def test_suppressed_events_are_never_persisted(self):
-        """Nothing durable to filter: the translator emits no graph-state frame at all.
+    def test_no_durable_frame_survives_suppression(self):
+        """Nothing reaches the durable log, so re-attach cannot recover the graph.
 
-        The durable set is protocol-wide, so the guarantee that a re-attaching
-        client cannot recover the node graph rests on suppression happening
-        upstream of ``is_durable``, not on trimming the durable set.
+        The durable set is protocol-wide and still lists the graph-state types;
+        the guarantee rests on suppression happening upstream of ``is_durable``,
+        so assert on the frames that actually exist.
         """
         adapter = get_stream_adapter("agui", self._narrowed())
-        adapter.translate("vertices_sorted", {"to_run": ["ChatInput-a1b2c"]})
-        assert list(adapter.translate("build_start", {"id": "Agent-d3e4f"})) == []
+        frames = list(adapter.translate("vertices_sorted", {"to_run": ["ChatInput-a1b2c"]}))
+        frames += list(adapter.translate("build_start", {"id": "Agent-d3e4f"}))
+        assert not [f for f in frames if adapter.is_durable(f.type)]
+        # The types themselves are still durable; only their absence saves us.
+        assert adapter.is_durable("STATE_DELTA")

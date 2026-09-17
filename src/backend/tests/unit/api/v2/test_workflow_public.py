@@ -18,6 +18,7 @@ the mitigations the v2 public endpoint is supposed to inherit from v1:
 from __future__ import annotations
 
 import copy
+import json
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
@@ -810,6 +811,58 @@ async def test_public_endpoint_rejects_expose_graph_state_field(client: AsyncCli
     assert response.status_code == codes.UNPROCESSABLE_ENTITY
 
 
+def _mirrored_sources(body: str) -> list[dict]:
+    """Every ``properties.source`` carried by a message frame in an SSE body.
+
+    Covers both wire shapes: the ``langflow`` passthrough (``add_message``) and
+    the ``agui`` ``langflow.event`` mirror that wraps the same payload.
+    """
+    sources: list[dict] = []
+    for line in body.splitlines():
+        if not line.startswith("data:"):
+            continue
+        payload = json.loads(line.removeprefix("data:").strip())
+        data = payload.get("data") or {}
+        if payload.get("type") == "CUSTOM":
+            data = (payload.get("value") or {}).get("data") or {}
+        source = (data.get("properties") or {}).get("source")
+        if isinstance(source, dict):
+            sources.append(source)
+    return sources
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_public_default_protocol_stream_carries_no_graph_state(client: AsyncClient, public_flow_id):
+    """The guarantee holds on the endpoint's DEFAULT protocol, not just ``agui``.
+
+    ``stream_protocol`` defaults to ``langflow``, so a visitor who omits it was
+    the likeliest caller of all and used to receive ``vertices_sorted`` plus an
+    ``end_vertex`` per component, each carrying that component's own output.
+    """
+    _send_unauthenticated(client, "default-protocol-client")
+    async with client.stream(
+        "POST",
+        "api/v2/workflows/public",
+        json={"flow_id": str(public_flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    ) as response:
+        assert response.status_code == codes.OK
+        body = "".join([chunk async for chunk in response.aiter_text()])
+
+    assert '"event": "vertices_sorted"' not in body
+    assert '"event": "end_vertex"' not in body
+    assert '"event": "log"' not in body
+
+    # Messages no longer name the component that produced them.
+    sources = _mirrored_sources(body)
+    assert sources, "expected at least one message frame to check"
+    assert all(not any(source.values()) for source in sources), sources
+
+    # The flow's answer is not graph state, so the terminal output survives.
+    assert '"event": "output"' in body
+
+
 @pytest.mark.benchmark
 @pytest.mark.security
 async def test_public_agui_stream_carries_no_graph_state(client: AsyncClient, public_flow_id):
@@ -844,3 +897,10 @@ async def test_public_agui_stream_carries_no_graph_state(client: AsyncClient, pu
     # The playground's chat channel survives; without it a shared link renders
     # no messages at all (its chat-view has no TEXT_MESSAGE_* handling).
     assert "langflow.event" in body
+
+    # The mirror forwards message payloads verbatim, so assert on the payload
+    # rather than trusting the event-type assertions above: it used to carry
+    # ``properties.source``, naming the component (and, for an LLM, the model).
+    sources = _mirrored_sources(body)
+    assert sources, "expected at least one mirrored message to check"
+    assert all(not any(source.values()) for source in sources), sources

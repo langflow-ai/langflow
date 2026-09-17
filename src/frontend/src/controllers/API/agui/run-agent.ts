@@ -85,6 +85,7 @@ export interface WorkflowRunRequestBody {
   files?: string[];
   start_component_id?: string;
   stop_component_id?: string;
+  expose_graph_state?: boolean;
 }
 
 /**
@@ -123,6 +124,13 @@ export function buildWorkflowRunRequest(
   // visitors must never override the stored flow definition. Drop them
   // here instead of letting the request fail with a 422.
   const isPublic = !!opts.usePublicEndpoint;
+  // The canvas renders node status from the graph-state events, which `agui`
+  // no longer sends unless asked. Send it explicitly rather than relying on a
+  // default: the server's default is aimed at third-party clients, and this
+  // way a later change to it leaves the canvas alone. The public schema
+  // forbids the field (that endpoint always runs without graph state), so a
+  // shared link must not send it.
+  if (!isPublic) body.expose_graph_state = true;
   if (!isPublic && opts.tweaks) body.tweaks = opts.tweaks;
   if (opts.startComponentId) body.start_component_id = opts.startComponentId;
   if (opts.stopComponentId) body.stop_component_id = opts.stopComponentId;

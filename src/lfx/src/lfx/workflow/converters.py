@@ -105,6 +105,66 @@ class ParsedWorkflowRun:
     emit_v1_side_channel: bool = True
 
 
+# Protocols whose graph state is off unless the caller asks for it. ``agui``
+# exists to serve third-party clients, which consume the conversation and have
+# no use for the flow's internals; ``langflow`` is a passthrough whose existing
+# callers already parse the per-vertex shape, so it stays on.
+_GRAPH_STATE_OFF_BY_DEFAULT: frozenset[str] = frozenset({"agui"})
+
+
+def redact_component_identity(event_data: dict[str, Any]) -> dict[str, Any]:
+    """Return a copy of a message payload with ``properties.source`` emptied.
+
+    A message names the component that produced it, and for an LLM component
+    ``source.source`` is the model name. That is graph identity rather than
+    conversation, so a stream running without graph state must not carry it.
+    The keys stay present (clients read them unconditionally); only the values
+    go. Copied rather than mutated: the caller hands the same payload to the
+    adapter afterwards.
+    """
+    properties = event_data.get("properties")
+    if not isinstance(properties, dict) or not isinstance(properties.get("source"), dict):
+        return event_data
+    source = dict.fromkeys(properties["source"])
+    return {**event_data, "properties": {**properties, "source": source}}
+
+
+def resolve_expose_graph_state(stream_protocol: str, *, requested: bool | None) -> bool:
+    """Resolve the tri-state request field against the wire protocol.
+
+    An explicit value always wins. ``None`` means the caller did not choose, so
+    the protocol's own default applies.
+
+    A caller who relies on the ``agui`` default is running against a default
+    that changed, so say it once per process. Not per request: it would be one
+    line per streamed run for an integration that is working as intended.
+    """
+    if requested is not None:
+        return requested
+    default_on = stream_protocol not in _GRAPH_STATE_OFF_BY_DEFAULT
+    if not default_on:
+        _warn_graph_state_default_once(stream_protocol)
+    return default_on
+
+
+_graph_state_default_warned = False
+
+
+def _warn_graph_state_default_once(stream_protocol: str) -> None:
+    global _graph_state_default_warned  # noqa: PLW0603
+    if _graph_state_default_warned:
+        return
+    _graph_state_default_warned = True
+    from lfx.log.logger import logger
+
+    logger.warning(
+        "stream_protocol=%r now defaults to expose_graph_state=false, so this run streams the conversation "
+        "without the flow's graph state (no per-node events or component outputs). Send "
+        "expose_graph_state=true to restore them. This notice is logged once per process.",
+        stream_protocol,
+    )
+
+
 def parse_workflow_run_request(request: WorkflowRunRequest) -> ParsedWorkflowRun:
     """Extract Langflow run parameters from the native ``WorkflowRunRequest`` body.
 
@@ -118,6 +178,7 @@ def parse_workflow_run_request(request: WorkflowRunRequest) -> ParsedWorkflowRun
     Returns:
         ParsedWorkflowRun: the Langflow run parameters.
     """
+    expose_graph_state = resolve_expose_graph_state(request.stream_protocol, requested=request.expose_graph_state)
     return ParsedWorkflowRun(
         flow_id=request.flow_id,
         tweaks=request.tweaks,
@@ -131,8 +192,8 @@ def parse_workflow_run_request(request: WorkflowRunRequest) -> ParsedWorkflowRun
         data=request.data,
         files=request.files,
         globals=dict(request.globals or {}),
-        expose_graph_state=request.expose_graph_state,
-        emit_v1_side_channel=request.expose_graph_state,
+        expose_graph_state=expose_graph_state,
+        emit_v1_side_channel=expose_graph_state,
         idempotency_key=getattr(request, "idempotency_key", None),
     )
 
