@@ -9,10 +9,12 @@ import TableNodeComponent from "@/components/core/parameterRenderComponent/compo
 import TabComponent from "@/components/core/parameterRenderComponent/components/tabComponent";
 import { TEXT_FIELD_TYPES } from "@/constants/constants";
 import CustomConnectionComponent from "@/customization/components/custom-connectionComponent";
+import CustomConnectionRefComponent from "@/customization/components/custom-connectionRefComponent";
 import CustomInputFileComponent from "@/customization/components/custom-input-file";
 import CustomLinkComponent from "@/customization/components/custom-linkComponent";
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import type { APIClassType, InputFieldType } from "@/types/api";
+import { CONNECTION_REF_FIELD_TYPE } from "@/utils/connection-ref-gate";
 import AccordionPromptComponent from "./components/accordionPromptComponent";
 import ActionPickerComponent from "./components/actionPickerComponent";
 import DictComponent from "./components/dictComponent";
@@ -332,6 +334,18 @@ export function ParameterRenderComponent({
           />
         );
       }
+      case CONNECTION_REF_FIELD_TYPE:
+        return (
+          <CustomConnectionRefComponent
+            {...baseInputProps}
+            id={`connectionref_${id}`}
+            value={typeof templateValue === "string" ? templateValue : ""}
+            provider={templateData?.provider}
+            requiredScopes={templateData?.required_scopes ?? []}
+            capabilities={templateData?.capabilities ?? []}
+            identityKind={templateData?.identity_kind}
+          />
+        );
       case "tab":
         return (
           <TabComponent
