@@ -17,8 +17,7 @@ from anyio import BrokenResourceError
 from anyio.abc import TaskGroup, TaskStatus
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.responses import HTMLResponse, JSONResponse
-from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
-from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.base.mcp.util import project_mcp_server_name, sanitize_mcp_name
 from lfx.base.mcp.uvx import mcp_sdk_constraint_args
 from lfx.log import logger
 from lfx.services.deps import get_settings_service, session_scope
@@ -307,6 +306,7 @@ async def _build_project_tools_response(
 ) -> MCPProjectResponse:
     """Return tool metadata for a project."""
     tools: list[MCPSettings] = []
+    server_name: str | None = None
     try:
         async with session_scope() as session:
             # Fetch the project first to verify it exists and belongs to the current user
@@ -320,6 +320,10 @@ async def _build_project_tools_response(
 
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
+
+            # Sent to clients so they show the name the backend registers, instead of
+            # each client deriving its own and disagreeing about non-Latin names.
+            server_name = project_mcp_server_name(project.name)
 
             # Query flows in the project
             flows_query = select(Flow).where(Flow.folder_id == project_id, Flow.is_component == False)  # noqa: E712
@@ -372,12 +376,15 @@ async def _build_project_tools_response(
                         masked_settings["api_key"] = "*******"
                     auth_settings = AuthSettings(**masked_settings)
 
+    except HTTPException:
+        # A missing project is a 404, not a 500
+        raise
     except Exception as e:
         msg = f"Error listing project tools: {e!s}"
         await logger.aexception(msg)
         raise HTTPException(status_code=500, detail=str(e)) from e
 
-    return MCPProjectResponse(tools=tools, auth_settings=auth_settings)
+    return MCPProjectResponse(tools=tools, auth_settings=auth_settings, server_name=server_name)
 
 
 @router.get("/{project_id}")
@@ -963,8 +970,7 @@ async def install_mcp_config(
             args = ["/c", "uvx", *args]
             await logger.adebug("Windows detected, using cmd command")
 
-        name = project.name
-        server_name = f"lf-{sanitize_mcp_name(name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+        server_name = project_mcp_server_name(project.name)
 
         # Create the MCP configuration
         server_config: dict[str, Any] = {

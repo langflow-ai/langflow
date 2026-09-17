@@ -5,8 +5,7 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
-from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
-from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.base.mcp.util import project_mcp_server_name, sanitize_mcp_name
 from lfx.base.mcp.uvx import mcp_sdk_constraint_args
 from lfx.log import logger
 from lfx.services.deps import get_settings_service
@@ -101,6 +100,16 @@ class MCPServerValidationResult:
         return not self.server_exists or self.project_id_matches
 
 
+def _find_project_server_by_id(existing_servers: dict, project_id: UUID) -> tuple[str, dict] | None:
+    """Return the generated (``lf-``) server row whose URL carries this project id, if any."""
+    for name, config in (existing_servers.get("mcpServers") or {}).items():
+        if not name.startswith("lf-"):
+            continue
+        if any(str(project_id) in arg for arg in config.get("args") or [] if isinstance(arg, str)):
+            return name, config
+    return None
+
+
 async def validate_mcp_server_for_project(
     project_id: UUID,
     project_name: str,
@@ -125,13 +134,26 @@ async def validate_mcp_server_for_project(
         MCPServerValidationResult with validation details
     """
     # Generate server name that would be used for this project
-    server_name = f"lf-{sanitize_mcp_name(project_name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+    server_name = project_mcp_server_name(project_name)
 
     try:
         existing_servers = await get_server_list(user, session, storage_service, settings_service)
 
         if server_name not in existing_servers.get("mcpServers", {}):
-            # Server doesn't exist
+            # A row written under an older naming scheme (every CJK name used to collapse to
+            # lf-unnamed) does not match the derived name. Registration and deletion treat
+            # that row as this project's so they neither duplicate nor orphan it; a rename
+            # keeps deriving from names so a legitimately new name still moves the row.
+            if operation in {"create", "delete"}:
+                stored = _find_project_server_by_id(existing_servers, project_id)
+                if stored is not None:
+                    stored_name, stored_config = stored
+                    return MCPServerValidationResult(
+                        server_exists=True,
+                        project_id_matches=True,
+                        server_name=stored_name,
+                        existing_config=stored_config,
+                    )
             return MCPServerValidationResult(
                 project_id_matches=False,
                 server_exists=False,

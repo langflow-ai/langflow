@@ -26,6 +26,7 @@ from pydantic import BaseModel, SkipValidation
 
 from lfx.base.agents.utils import maybe_unflatten_dict
 from lfx.base.mcp import security as mcp_security
+from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.security import (
     AGENTIC_MCP_MODULE,
     AGENTIC_USER_ID_ENV_VAR,
@@ -340,6 +341,50 @@ def sanitize_mcp_name(name: str, max_length: int = 46) -> str:
         name = "unnamed"
 
     return name
+
+
+def _sanitize_server_name(name: str) -> str:
+    """Sanitize a project name for use as an MCP server name, or "" if nothing is left.
+
+    Deliberately more permissive than :func:`sanitize_mcp_name`, which also names MCP
+    tools and therefore has to satisfy the ``^[a-zA-Z0-9_-]+$`` schema LLM providers
+    enforce on function names. A server name is only ever a config key, so letters of
+    any script are kept: stripping them collapsed every CJK, Hangul or kana name onto a
+    single fallback, and the second such project then collided with the first.
+    """
+    kept: list[str] = []
+    for original in unicodedata.normalize("NFC", name):
+        base = unicodedata.normalize("NFD", original)[0]
+        # Latin diacritics fold away as before, so existing Latin names keep their server name
+        char = base if base.isascii() else original
+        if char.isalnum() or char in "_-" or char.isspace():
+            kept.append(char)
+        elif unicodedata.category(char).startswith("M") and kept and not kept[-1].isascii():
+            # A mark on a non-Latin letter carries meaning (Devanagari काम vs कम); on a
+            # Latin letter it is a diacritic, already folded above.
+            kept.append(char)
+    name = "".join(kept)
+
+    name = re.sub(r"[-\s]+", "_", name)
+    name = re.sub(r"_+", "_", name)
+    name = name.strip("_")
+
+    if name and name[0].isdigit():
+        name = f"_{name}"
+
+    name = name.lower()
+
+    # Same budget the old derivation used, so long Latin names keep their server name
+    max_length = MAX_MCP_SERVER_NAME_LENGTH - 4
+    if len(name) > max_length:
+        name = name[:max_length].rstrip("_")
+
+    return name
+
+
+def project_mcp_server_name(project_name: str) -> str:
+    """Build the MCP server name that a project's config entry is keyed by."""
+    return f"lf-{_sanitize_server_name(project_name or '') or 'unnamed'}"
 
 
 def _camel_to_snake(name: str) -> str:

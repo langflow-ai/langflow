@@ -1986,6 +1986,7 @@
   "sidebar.discoverMore": "Découvrez d'autres composants",
   "sidebar.download": "Télécharger",
   "sidebar.downloadError": "Une erreur s'est produite lors du téléchargement de votre projet.",
+  "sidebar.renameError": "Une erreur s'est produite lors du renommage de votre projet.",
   "sidebar.emptyMessage": "Commencez à créer un projet ou un flux",
   "sidebar.getStarted": "Premiers pas",
   "sidebar.joinCommunity": "Rejoignez la communauté",
