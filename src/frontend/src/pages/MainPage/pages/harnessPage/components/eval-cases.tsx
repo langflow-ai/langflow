@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { EvalCase } from "@/controllers/API/queries/folders/use-eval-suite";
+import { ProjectChoiceField } from "./project-choice-field";
 
 export const emptyCase = (): EvalCase => ({
   id: crypto.randomUUID(),
@@ -294,20 +295,26 @@ export function EvalCases({
             </label>
             <label className="flex items-center gap-2">
               {t("evaluations.policy")}
-              <select
-                className="rounded-md border bg-background p-2"
-                value={item.expected_policy ?? ""}
-                onChange={(event) =>
+              <ProjectChoiceField
+                name={`eval-policy-${item.id}`}
+                label={t("evaluations.policy")}
+                className="w-auto"
+                disabled={disabled}
+                value={item.expected_policy ?? "none"}
+                onChange={(value) =>
                   update(item.id, {
-                    expected_policy: (event.target.value ||
-                      null) as EvalCase["expected_policy"],
+                    expected_policy:
+                      value === "none"
+                        ? null
+                        : (value as EvalCase["expected_policy"]),
                   })
                 }
-              >
-                <option value="">{t("evaluations.noPolicyCheck")}</option>
-                <option value="compliant">{t("evaluations.compliant")}</option>
-                <option value="violation">{t("evaluations.violation")}</option>
-              </select>
+                options={{
+                  none: t("evaluations.noPolicyCheck"),
+                  compliant: t("evaluations.compliant"),
+                  violation: t("evaluations.violation"),
+                }}
+              />
             </label>
           </div>
           {item.max_cost_usd !== null && (

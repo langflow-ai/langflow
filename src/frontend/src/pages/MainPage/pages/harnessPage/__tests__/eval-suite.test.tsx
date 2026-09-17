@@ -14,6 +14,7 @@ import {
 } from "@/controllers/API/queries/folders/use-eval-suite";
 import { EvalRuns } from "../components/eval-runs";
 import EvalSuitePage from "../eval-suite-page";
+import { selectOption } from "./select-option";
 
 jest.mock("@/controllers/API/api", () => ({ api: { post: jest.fn() } }));
 const mockCreateFlow = jest.fn();
@@ -73,6 +74,11 @@ let mockContext: EvalContext;
 
 beforeEach(() => {
   jest.resetAllMocks();
+  jest.mocked(ResizeObserver).mockImplementation(() => ({
+    observe: jest.fn(),
+    unobserve: jest.fn(),
+    disconnect: jest.fn(),
+  }));
   mockContext = JSON.parse(JSON.stringify(initialContext));
   mockRun.mockResolvedValue({});
   mockRefetch.mockImplementation(async () => ({
@@ -233,12 +239,10 @@ test("scorer output names remain distinct even when the flow and node are shared
       <EvalSuitePage projectId="suite" />
     </MemoryRouter>,
   );
-  const option = screen.getByRole("option", {
-    name: /Scorer · other/,
-  }) as HTMLOptionElement;
-  fireEvent.change(screen.getByLabelText("Scorer"), {
-    target: { value: option.value },
-  });
+  await selectOption(
+    screen.getByRole("combobox", { name: "Scorer" }),
+    /Scorer · other/,
+  );
   fireEvent.click(screen.getByRole("button", { name: /Save suite/i }));
   await waitFor(() =>
     expect(mockSave).toHaveBeenCalledWith(
@@ -378,7 +382,7 @@ function record(id: string, patch: Partial<EvalRun> = {}): EvalRun {
   };
 }
 
-test("only compares complete runs with identical evaluation requirements and scorer", () => {
+test("only compares complete runs with identical evaluation requirements and scorer", async () => {
   const first = record("first");
   expect(
     comparableRuns(
@@ -403,8 +407,9 @@ test("only compares complete runs with identical evaluation requirements and sco
   expect(
     screen.getByText("Claim support was not established"),
   ).toBeInTheDocument();
-  fireEvent.change(screen.getByLabelText("Compare score with"), {
-    target: { value: "second" },
-  });
+  await selectOption(
+    screen.getByRole("combobox", { name: "Compare score with" }),
+    /Failed/,
+  );
   expect(screen.getByText(/These runs cannot be compared/)).toBeInTheDocument();
 });

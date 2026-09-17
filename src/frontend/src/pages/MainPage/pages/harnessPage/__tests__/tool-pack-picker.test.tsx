@@ -22,6 +22,7 @@ import type {
 } from "@/controllers/API/queries/folders/use-project-tool-pack";
 import type { FlowType } from "@/types/flow";
 import { HarnessReturn, ToolPackPicker } from "../components/tool-pack-picker";
+import { openSelect } from "./select-option";
 
 const mockNavigate = jest.fn();
 const mockOpen = jest.fn();
@@ -114,9 +115,14 @@ beforeEach(() => {
 it("offers only tool packs, reviews exports, and changes the draft only on acceptance", async () => {
   mount();
   const chooser = screen.getByRole("combobox", { name: "Choose a Tool Pack" });
-  expect(within(chooser).queryByText("Plain project")).not.toBeInTheDocument();
-  expect(within(chooser).queryByText("Other harness")).not.toBeInTheDocument();
-  fireEvent.change(chooser, { target: { value: "pack" } });
+  const user = await openSelect(chooser);
+  expect(
+    screen.queryByRole("option", { name: "Plain project" }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("option", { name: "Other harness" }),
+  ).not.toBeInTheDocument();
+  await user.click(screen.getByRole("option", { name: "Research tools" }));
   fireEvent.click(screen.getByRole("button", { name: "Review Exports" }));
   const dialog = await screen.findByRole("dialog");
   expect(await within(dialog).findByText("Source lookup")).toBeInTheDocument();

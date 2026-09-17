@@ -16,6 +16,7 @@ import { usePatchFolders } from "@/controllers/API/queries/folders/use-patch-fol
 import type { FlowType } from "@/types/flow";
 import { EvalCases, validEvalCase } from "./components/eval-cases";
 import { EvalRuns } from "./components/eval-runs";
+import { ProjectChoiceField } from "./components/project-choice-field";
 import { bindingOf, outputKey, sameBindingDefinition } from "./flow-binding";
 
 function errorDetail(error: unknown, fallback: string) {
@@ -213,15 +214,17 @@ export default function EvalSuitePage({ projectId }: { projectId: string }) {
         <div className="space-y-3">
           <label className="block space-y-2 text-sm font-medium">
             <span className="block">{t("evaluations.candidate")}</span>
-            <select
-              className="w-full rounded-md border bg-background p-2 font-normal"
+            <ProjectChoiceField
+              name="eval-candidate"
+              label={t("evaluations.candidate")}
+              placeholder={t("evaluations.chooseCandidate")}
+              className="font-normal"
               disabled={busy}
               value={config.workflow_id ? targetKey : ""}
-              onChange={(event) => {
+              onChange={(value) => {
                 const target = query.data.targets.find(
                   (item) =>
-                    `${item.workflow_id}:${item.candidate_digest}` ===
-                    event.target.value,
+                    `${item.workflow_id}:${item.candidate_digest}` === value,
                 );
                 if (target)
                   change({
@@ -229,24 +232,18 @@ export default function EvalSuitePage({ projectId }: { projectId: string }) {
                     candidate_digest: target.candidate_digest,
                   });
               }}
-            >
-              <option value="" disabled>
-                {t("evaluations.chooseCandidate")}
-              </option>
-              {config.workflow_id && !mounted && (
-                <option value={targetKey}>
-                  {t("evaluations.unavailableCandidate")}
-                </option>
-              )}
-              {query.data.targets.map((item) => (
-                <option
-                  key={`${item.workflow_id}:${item.candidate_digest}`}
-                  value={`${item.workflow_id}:${item.candidate_digest}`}
-                >
-                  {item.name} · {item.candidate_digest.slice(0, 12)}
-                </option>
-              ))}
-            </select>
+              options={{
+                ...(config.workflow_id && !mounted
+                  ? { [targetKey]: t("evaluations.unavailableCandidate") }
+                  : {}),
+                ...Object.fromEntries(
+                  query.data.targets.map((item) => [
+                    `${item.workflow_id}:${item.candidate_digest}`,
+                    `${item.name} · ${item.candidate_digest.slice(0, 12)}`,
+                  ]),
+                ),
+              }}
+            />
           </label>
           {config.candidate_digest && (
             <p className="break-all font-mono text-xs text-muted-foreground">
@@ -262,37 +259,33 @@ export default function EvalSuitePage({ projectId }: { projectId: string }) {
         <div className="space-y-3">
           <label className="block space-y-2 text-sm font-medium">
             <span className="block">{t("evaluations.scorer")}</span>
-            <select
-              className="w-full rounded-md border bg-background p-2 font-normal"
+            <ProjectChoiceField
+              name="eval-scorer"
+              label={t("evaluations.scorer")}
+              placeholder={t("evaluations.chooseScorer")}
+              className="font-normal"
               disabled={busy}
               value={scorerKey}
-              onChange={(event) => {
+              onChange={(value) => {
                 const choice = query.data.scorers.find(
-                  (item) => outputKey(item) === event.target.value,
+                  (item) => outputKey(item) === value,
                 );
                 if (choice) {
                   change({ scorer: bindingOf(choice) });
                 }
               }}
-            >
-              <option value="" disabled>
-                {t("evaluations.chooseScorer")}
-              </option>
-              {config.scorer && !currentScorer && (
-                <option value={scorerKey}>
-                  {t("evaluations.savedScorer")}
-                </option>
-              )}
-              {query.data.scorers.map((item) => (
-                <option key={outputKey(item)} value={outputKey(item)}>
-                  {item.flow_name} · {item.display_name} ·{" "}
-                  {(outputKey(item) === scorerKey && config.scorer
-                    ? config.scorer.revision
-                    : item.revision
-                  ).slice(0, 8)}
-                </option>
-              ))}
-            </select>
+              options={{
+                ...(config.scorer && !currentScorer
+                  ? { [scorerKey]: t("evaluations.savedScorer") }
+                  : {}),
+                ...Object.fromEntries(
+                  query.data.scorers.map((item) => [
+                    outputKey(item),
+                    `${item.flow_name} · ${item.display_name} · ${(outputKey(item) === scorerKey && config.scorer ? config.scorer.revision : item.revision).slice(0, 8)}`,
+                  ]),
+                ),
+              }}
+            />
           </label>
           {scorerChanged && (
             <div className="space-y-3 rounded-xl bg-muted/40 p-4">

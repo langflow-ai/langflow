@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import type { AgentConfiguration } from "@/controllers/API/queries/folders/use-project-reports";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { FlowBindingDependencies } from "./flow-binding-dependencies";
+import { ProjectChoiceField } from "./project-choice-field";
 
 const bindingLabels: Record<string, string> = {
   system_prompt: "harness.instructionsContract",
@@ -37,19 +38,21 @@ export function ReportConfigurations({
         <>
           <p className="text-xs text-muted-foreground">{t("runConfig.help")}</p>
           {configurations.length > 1 && (
-            <select
-              className="w-full rounded-md border border-input bg-background p-2 text-sm"
-              aria-label={t("runConfig.select")}
-              value={selected}
-              onChange={(event) => setSelected(Number(event.target.value))}
-            >
-              {configurations.map((item, index) => (
-                <option key={`${item.revision}-${index}`} value={index}>
-                  {t("runConfig.record", { number: index + 1 })} ·{" "}
-                  {new Date(item.captured_at).toLocaleString()}
-                </option>
-              ))}
-            </select>
+            <ProjectChoiceField
+              name="report-configuration"
+              className="h-10"
+              label={t("runConfig.select")}
+              value={String(
+                Math.max(0, Math.min(selected, configurations.length - 1)),
+              )}
+              onChange={(value) => setSelected(Number(value))}
+              options={Object.fromEntries(
+                configurations.map((item, index) => [
+                  String(index),
+                  `${t("runConfig.record", { number: index + 1 })} · ${new Date(item.captured_at).toLocaleString()}`,
+                ]),
+              )}
+            />
           )}
           <p className="break-words text-sm">
             <span className="font-medium">{t("harness.summaryModel")}:</span>{" "}

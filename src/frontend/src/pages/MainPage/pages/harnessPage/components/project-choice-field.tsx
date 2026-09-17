@@ -1,3 +1,4 @@
+import type { Ref } from "react";
 import {
   Select,
   SelectContent,
@@ -5,34 +6,44 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/utils/utils";
 
 export function ProjectChoiceField({
   name,
   label,
   options,
   value,
-  disabled,
+  disabled = false,
   placeholder,
   className,
   onChange,
+  id,
+  triggerRef,
 }: {
   name: string;
   label: string;
   options: Record<string, string>;
   value: string;
-  disabled: boolean;
+  disabled?: boolean;
   placeholder?: string;
   className?: string;
   onChange: (value: string) => void;
+  id?: string;
+  triggerRef?: Ref<HTMLButtonElement>;
 }) {
   return (
     <Select value={value} disabled={disabled} onValueChange={onChange}>
       <SelectTrigger
+        id={id}
+        ref={triggerRef}
         aria-label={label}
         data-testid={`harness-choice-${name}`}
-        className={className}
+        className={cn(
+          "w-full min-w-0 text-left [&>span]:truncate [&>svg]:shrink-0",
+          className,
+        )}
       >
-        <SelectValue placeholder={placeholder} />
+        <SelectValue placeholder={placeholder}>{options[value]}</SelectValue>
       </SelectTrigger>
       <SelectContent>
         {Object.entries(options).map(([key, text]) => (

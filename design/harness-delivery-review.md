@@ -1,6 +1,6 @@
 # Harness delivery completion review
 
-September 16, 2026 · `feat/harness-delivery-completion`
+September 16, 2026 · updated September 17 · `feat/harness-delivery-completion`
 
 This pass completes and polishes the delivered project types and Harness work.
 It adds no project type, integration, runtime capability, or deployment profile.
@@ -55,11 +55,19 @@ colored warning surface; it was unreadable on the light background. It now uses
 normal readable foreground text. New guidance is present in all seven locales.
 Light/dark controls, focus, disabled states, and inline errors were visually checked.
 
+The September 17 follow-up replaces the remaining native Harness dropdowns with
+the existing `ProjectChoiceField`, backed by Langflow's shared Select. It creates
+no new UI component. Candidate, scorer, run, comparison, policy, pack, and report
+selectors now share arrow placement, menu behavior, and focus handling. Selected
+labels truncate without shrinking the arrow. Browser measurements confirmed a
+centered 16px arrow with a 13px right inset in each Eval Suite selector. Keyboard
+opening, selection, dismissal, and focus return were checked in the browser.
+
 ## Verification
 
 | Check | Result |
 |---|---|
-| All Harness frontend suites after the final edits | **181 passed**, 14 suites |
+| All Harness frontend suites plus the shared Select accessibility suite after the dropdown follow-up | **184 passed**, 15 suites |
 | Backend project write-through, composition archives, starters, Skill Packs, evaluations, candidate Workflows, and skill Workflows selection | **95 passed, 22 skipped** before the targeted runtime fix |
 | Evaluation suites, durability, and scaled-queue selection after the runtime fix | **28 passed, 15 skipped**, including three new retention/access cases |
 | Shared project primitives and Harness middleware, skills, permissions, hooks in isolated LFX environment | **331 passed** |
@@ -98,6 +106,8 @@ LANGFLOW_UPDATE_STARTER_PROJECTS=false uv run --no-sync pytest \
 ## Screenshots
 
 These are unaltered desktop screenshots from the isolated fixture environment.
+The Eval Suite layout screenshot was refreshed September 17 after the dropdown
+correction; the remaining screenshots document the September 16 walkthrough.
 
 Eval Suite layout:
 

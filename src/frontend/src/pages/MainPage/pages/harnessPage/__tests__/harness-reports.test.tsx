@@ -20,6 +20,7 @@ import {
 import { api } from "@/controllers/API/api";
 import type { SourcedReport } from "@/controllers/API/queries/folders/use-project-reports";
 import { HarnessReports } from "../components/harness-reports";
+import { selectOption } from "./select-option";
 
 const mockNavigate = jest.fn();
 const request = jest.mocked(api.get);
@@ -127,12 +128,13 @@ it("loads on demand and reads complete original evidence beside the report", asy
   expect(screen.getByTestId("report-source-content")).toHaveTextContent(
     "Original beta evidence",
   );
-  expect(screen.getByRole("combobox", { name: "Source evidence" })).toHaveValue(
-    "beta",
+  expect(
+    screen.getByRole("combobox", { name: "Source evidence" }),
+  ).toHaveTextContent("Beta study");
+  await selectOption(
+    screen.getByRole("combobox", { name: "Source evidence" }),
+    "1. Alpha study",
   );
-  fireEvent.change(screen.getByRole("combobox"), {
-    target: { value: "alpha" },
-  });
   expect(
     screen.getByRole("link", { name: "https://example.com/alpha" }),
   ).toHaveAttribute("rel", "noopener noreferrer");

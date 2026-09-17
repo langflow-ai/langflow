@@ -3,12 +3,11 @@
  * Keep control boundaries accessible; use spacing and surfaces to quiet the form.
  * Canvas controls retain their own compact dimensions.
  */
-.harness-form
-:is(input.primary-input, textarea, button[role="combobox"], select) {
+.harness-form :is(input.primary-input, textarea, button[role="combobox"]) {
   @apply min-h-10 rounded-lg border-control bg-background;
 }
 
-.harness-form :is(button[role="combobox"], select) {
+.harness-form button[role="combobox"] {
   @apply px-3;
 }
 
@@ -21,13 +20,13 @@
 }
 
 .harness-form
-  :is(input.primary-input, textarea, button[role="combobox"], select):disabled {
+  :is(input.primary-input, textarea, button[role="combobox"]):disabled {
   @apply bg-muted text-muted-foreground;
 }
 
 @media (hover: hover) {
   .harness-form
-    :is(input.primary-input, textarea, button[role="combobox"], select):not(
+    :is(input.primary-input, textarea, button[role="combobox"]):not(
       :disabled
     ):hover {
     @apply bg-muted/30;
@@ -35,12 +34,7 @@
 }
 
 .harness-form
-  :is(
-    input.primary-input,
-    textarea,
-    button[role="combobox"],
-    select
-  ):focus-visible {
+  :is(input.primary-input, textarea, button[role="combobox"]):focus-visible {
   outline: 2px solid hsl(var(--ring));
   outline-offset: 2px;
   box-shadow: none;
@@ -50,8 +44,7 @@
   :is(
     input.primary-input,
     textarea,
-    button[role="combobox"],
-    select
+    button[role="combobox"]
   )[aria-invalid="true"] {
   @apply border-destructive;
 }
