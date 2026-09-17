@@ -27,6 +27,13 @@ from lfx.projects.local_tools import (
     local_tool_definition,
     validate_local_tool_source,
 )
+from lfx.projects.skills import (
+    SKILLS_ORIGIN,
+    HarnessSkills,
+    parse_harness_skills,
+    skill_pack_manifest,
+    skill_pack_references,
+)
 from lfx.projects.tool_packs import FlowDependencyVersion, ToolPackToolBinding, tool_pack_manifest, tool_pack_references
 from lfx.projects.tools import TOOL_ORIGIN, tool_node_revision
 
@@ -40,7 +47,7 @@ class ArchivedProject(BaseModel):
     id: UUID
     name: str = Field(min_length=1)
     description: str | None = None
-    project_type: Literal["flows", "agent-harness", "tool-pack"]
+    project_type: Literal["flows", "agent-harness", "tool-pack", "skill-pack"]
     project_config: dict | None = None
     flows: list[dict]
 
@@ -124,6 +131,19 @@ class CompositionGraph:
             raise ValueError(msg)
         return candidates[0]
 
+    def skill_manifest(self, project_id: str):
+        project = self.projects.get(project_id)
+        if project is None or project.project_type != "skill-pack":
+            msg = "A referenced Skill Pack is missing from the composition archive."
+            raise ValueError(msg)
+        manifest = skill_pack_manifest(project.id, project.name, project.project_config)
+        for skill in manifest.skills:
+            for reference in skill.tool_packs:
+                if reference != self.manifest(str(reference.project_id)).reference:
+                    msg = "A skill's Tool Pack changed. Review it before exporting."
+                    raise ValueError(msg)
+        return manifest
+
     def validate(self, *, allow_missing_secrets: bool = False) -> None:
         """Check reviewed definitions before any credential stripping or ID changes."""
 
@@ -148,6 +168,8 @@ class CompositionGraph:
             config = project.project_config or {}
             if project.project_type == "tool-pack":
                 self.manifest(project_id)
+            if project.project_type == "skill-pack":
+                self.skill_manifest(project_id)
             if project.project_type != "agent-harness":
                 continue
             if config.get("agent_flow_id"):
@@ -168,6 +190,10 @@ class CompositionGraph:
                 if reference != self.manifest(str(reference.project_id)).reference:
                     msg = "A Tool Pack changed. Review and save its reference before exporting."
                     raise ValueError(msg)
+            for reference in skill_pack_references(config.get("skill_packs", [])):
+                if reference != self.skill_manifest(str(reference.project_id)).reference:
+                    msg = "A Skill Pack changed. Review it before exporting."
+                    raise ValueError(msg)
             for field_name, binding in ProjectFlowBindings.model_validate(config.get("flow_bindings", {})).entries():
                 validate_binding(field_name, self.local_source(project_id, binding.flow_id)["data"], binding)
         for flow_id, flow in self.flows.items():
@@ -176,6 +202,14 @@ class CompositionGraph:
             for node in flow["data"].get("nodes", []):
                 target = self.selected_flow(node)
                 data = node.get("data", {})
+                if data.get("type") == "Agent":
+                    skills = parse_harness_skills(
+                        data.get("node", {}).get("template", {}).get("skill_bindings", {}).get("value") or ""
+                    )
+                    for pack in skills.packs:
+                        if pack != self.skill_manifest(str(pack.reference.project_id)):
+                            msg = "An archived skill snapshot differs from its included Skill Pack."
+                            raise ValueError(msg)
                 for origin_name in (BINDING_ORIGIN, TOOL_ORIGIN):
                     origin = data.get(origin_name)
                     if not isinstance(origin, dict):
@@ -219,6 +253,7 @@ class CompositionGraph:
         flow_ids: dict[str, str],
         version_ids: dict[str, str],
         flow_names: dict[str, str] | None = None,
+        project_names: dict[str, str] | None = None,
     ) -> ProjectComposition:
         """Rewrite known references, keeping canvas edits, baselines and all node/edge IDs.
 
@@ -227,9 +262,12 @@ class CompositionGraph:
         """
         result = self.composition.model_copy(deep=True)
         target = CompositionGraph(result)
+        for project_id, name in (project_names or {}).items():
+            target.projects[project_id].name = name
         visited: set[str] = set()
         active: set[str] = set()
         pack_manifests = {}
+        skill_manifests = {}
         original_flow_ids = {new_id: old_id for old_id, new_id in flow_ids.items()}
         names = flow_names or {flow_id: flow["name"] for flow_id, flow in self.flows.items()}
 
@@ -264,6 +302,28 @@ class CompositionGraph:
                     dependency.version_id = version_ids[original_flow_ids[dependency.flow_id]]
                 updated.append(binding.model_dump())
             return updated if isinstance(value, list) else updated[0] if updated else None
+
+        def skill_pack(project_id):
+            if project_id not in skill_manifests:
+                original = self.skill_manifest(project_id)
+                definitions = []
+                for skill in original.skills:
+                    definition = skill.model_dump(mode="json")
+                    definition["tool_packs"] = [
+                        pack(str(ref.project_id)).reference.model_dump(mode="json") for ref in skill.tool_packs
+                    ]
+                    definitions.append(definition)
+                skill_manifests[project_id] = skill_pack_manifest(
+                    UUID(project_ids[project_id]), target.projects[project_id].name, {"skills": definitions}
+                )
+            return skill_manifests[project_id]
+
+        def skill_value(value):
+            current = HarnessSkills.model_validate(value)
+            return HarnessSkills(
+                packs=tuple(skill_pack(str(item.reference.project_id)) for item in current.packs),
+                global_tool_pack_ids=tuple(UUID(project_ids[str(item)]) for item in current.global_tool_pack_ids),
+            ).model_dump(mode="json")
 
         def local_binding(value):
             original_id = LocalToolBinding.model_validate(value).flow_id
@@ -305,6 +365,12 @@ class CompositionGraph:
                     elif "flow_name" in template:
                         template["flow_name"]["value"] = names[selected]
                 if data.get("type") == "Agent":
+                    raw_skills = template.get("skill_bindings", {}).get("value")
+                    if raw_skills and raw_skills.strip() not in {"null", "{}"}:
+                        template["skill_bindings"]["value"] = json.dumps(skill_value(json.loads(raw_skills)))
+                    if isinstance(data.get(SKILLS_ORIGIN), dict):
+                        data[SKILLS_ORIGIN]["project_id"] = project_id
+                        data[SKILLS_ORIGIN]["binding"] = skill_value(data[SKILLS_ORIGIN]["binding"])
                     for field_name, (input_name, origin_name, origin_key, _) in _RUNTIME_FIELDS.items():
                         raw = template.get(input_name, {}).get("value")
                         if raw and raw.strip() not in {"null", "{}", "[]"}:
@@ -351,6 +417,8 @@ class CompositionGraph:
         for project_id, project in self.projects.items():
             if project.project_type == "tool-pack":
                 pack(project_id)
+            if project.project_type == "skill-pack":
+                skill_pack(project_id)
         for project_id, project in target.projects.items():
             config = project.project_config
             if config is not None:
@@ -358,6 +426,13 @@ class CompositionGraph:
                     config["agent_flow_id"] = flow_ids[config["agent_flow_id"]]
                 if "tools" in config:
                     config["tools"] = [flow_ids[item] for item in config["tools"]]
+                if project.project_type == "skill-pack":
+                    config["skills"] = [skill.model_dump(mode="json") for skill in skill_pack(project_id).skills]
+                if "skill_packs" in config:
+                    config["skill_packs"] = [
+                        skill_pack(str(ref.project_id)).reference.model_dump(mode="json")
+                        for ref in skill_pack_references(config["skill_packs"])
+                    ]
                 if "tool_packs" in config:
                     config["tool_packs"] = [
                         pack(str(reference.project_id)).reference.model_dump(mode="json")

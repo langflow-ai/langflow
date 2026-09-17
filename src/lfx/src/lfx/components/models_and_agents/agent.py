@@ -258,6 +258,15 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             override_skip=True,
             info="Ordered Hook flow bindings managed by the harness.",
         ),
+        MultilineInput(
+            name="skill_bindings",
+            display_name="Reviewed skills",
+            value="",
+            advanced=True,
+            show=False,
+            override_skip=True,
+            info="Reviewed Skill Pack content and tool scopes managed by the harness.",
+        ),
         IntInput(
             name="max_tokens",
             display_name="Max Tokens",
@@ -660,15 +669,17 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         # resolved it once for `bind_tools`, so reuse that instance here.
         from lfx.components.models_and_agents.agent_helpers.source_evidence import SourceEvidenceMiddleware
         from lfx.projects.run_configuration import capture_agent_configuration
+        from lfx.projects.skills import parse_harness_skills
 
         evidence = SourceEvidenceMiddleware(self.tools or [])
+        skills = parse_harness_skills(getattr(self, "skill_bindings", ""))
         middleware: list = [evidence]
         # LangChain accepts missing IDs on AIMessage.tool_calls, but LangGraph's
         # invalid-call path and ToolRetryMiddleware both require a string when
         # they construct an error ToolMessage. Normalize at the model boundary
         # so either recovery path can return the error to the model instead of
         # crashing the flow.
-        if self.tools:
+        if self.tools or skills.packs:
             # Retain completed source results before compaction mutates message state.
             # The same state is checkpointed when an approval suspends this run.
             middleware.append(ToolCallIDMiddleware())
@@ -683,7 +694,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         # it on a no-tools agent inflates the compiled graph and adds per-invocation
         # middleware overhead for nothing, which is a measurable contributor to
         # trivial-prompt latency (QA UI-003).
-        if getattr(self, "handle_parsing_errors", False) and self.tools:
+        if getattr(self, "handle_parsing_errors", False) and (self.tools or skills.packs):
             middleware.append(ToolRetryMiddleware(max_retries=2))
         # WatsonX models have two known platform quirks; both still reproduce on
         # the current API, so we keep the protections from the legacy
@@ -744,7 +755,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         from lfx.projects.permissions import parse_permission_binding
 
         permission_binding = parse_permission_binding(getattr(self, "permission_binding", ""))
-        if not permission_binding and policy.tool_policy == "deny" and self.tools:
+        if not permission_binding and policy.tool_policy == "deny" and (self.tools or skills.packs):
             middleware.append(DenyToolsMiddleware())
         interrupt_on = self._gated_interrupt_on()
         if interrupt_on:
@@ -770,6 +781,11 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             # Hooks surround retries and context middleware. Argument changes happen
             # before permission review; failed controlling hooks cannot be retried away.
             middleware.insert(0, HarnessHookMiddleware(self, hooks))
+        if skills.packs:
+            from lfx.components.models_and_agents.agent_helpers.skill_middleware import HarnessSkillMiddleware
+
+            # Innermost: scope validation sees final arguments after hooks and permission edits.
+            middleware.append(HarnessSkillMiddleware(skills, self.tools or []))
         return middleware
 
     async def run_agent(self, agent) -> Message:
@@ -1056,6 +1072,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             or getattr(self, "context_binding", "").strip() not in {"", "null", "{}"}
             or getattr(self, "compaction_binding", "").strip() not in {"", "null", "{}"}
             or getattr(self, "permission_binding", "").strip() not in {"", "null", "{}"}
+            or getattr(self, "skill_bindings", "").strip() not in {"", "null", "{}"}
         )
 
         async def _run_agent_for_fallback(augmented_prompt: str) -> str:

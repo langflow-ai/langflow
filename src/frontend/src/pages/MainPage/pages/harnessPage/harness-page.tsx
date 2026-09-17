@@ -26,6 +26,7 @@ import {
   agentCandidates,
   defaultAgent,
 } from "./components/agent-flow-picker";
+import { CapabilityPackPicker } from "./components/capability-pack-picker";
 import { HarnessReports } from "./components/harness-reports";
 import { HarnessSummary } from "./components/harness-summary";
 import { HookFlowPicker } from "./components/hook-flow-picker";
@@ -34,11 +35,16 @@ import { LocalToolReview } from "./components/local-tool-review";
 import { LongTextField } from "./components/long-text-field";
 import { ProjectChoiceField } from "./components/project-choice-field";
 import { ProjectFlowPicker } from "./components/project-flow-picker";
+import { SkillDefinitionsEditor } from "./components/skill-definitions-editor";
 import { HarnessReturn, ToolPackPicker } from "./components/tool-pack-picker";
-
 import { editorDraft } from "./editor-draft";
 import { isProjectFieldVisible } from "./field-visibility";
 import { validCompactionThreshold, validFlowTimeout } from "./flow-binding";
+import {
+  type SkillDefinition,
+  type SkillPackReference,
+  validSkills,
+} from "./skills";
 import { selectedToolPacks } from "./tool-packs";
 
 interface HarnessPageProps {
@@ -238,6 +244,8 @@ const HarnessPage = ({
             fieldName !== toolsFieldName &&
             fieldName !== modelFieldName &&
             field.renders !== "project_refs" &&
+            field.renders !== "skill_pack_refs" &&
+            field.renders !== "skill_definitions" &&
             isProjectFieldVisible(field, values) &&
             // A long free-text field says nothing useful at a glance.
             !field?.multiline,
@@ -381,7 +389,7 @@ const HarnessPage = ({
         </div>
 
         <div className="flex shrink-0 items-center gap-3">
-          {projectType === "tool-pack" &&
+          {(projectType === "tool-pack" || projectType === "skill-pack") &&
             new URLSearchParams(window.location.search).has("fromHarness") && (
               <HarnessReturn
                 onOpen={() => editorDraft.keep(projectId, edits)}
@@ -410,6 +418,8 @@ const HarnessPage = ({
               isPending ||
               isLoadingFlows ||
               agentSelectionRequired ||
+              (projectType === "skill-pack" &&
+                !validSkills((values.skills ?? []) as SkillDefinition[])) ||
               !bindingsValid
             }
             loading={isPending}
@@ -516,6 +526,33 @@ const HarnessPage = ({
                         />
                       )}
                     </>
+                  ) : field.renders === "skill_definitions" ? (
+                    <SkillDefinitionsEditor
+                      projectId={projectId}
+                      value={(values[fieldName] ?? []) as SkillDefinition[]}
+                      disabled={isPending}
+                      onOpen={() => editorDraft.keep(projectId, edits)}
+                      onChange={(next) =>
+                        setEdits((current) => ({
+                          ...current,
+                          [fieldName]: next,
+                        }))
+                      }
+                    />
+                  ) : field.renders === "skill_pack_refs" ? (
+                    <CapabilityPackPicker
+                      kind="skill-pack"
+                      projectId={projectId}
+                      value={(values[fieldName] ?? []) as SkillPackReference[]}
+                      disabled={isPending || !selectedAgent}
+                      onOpen={() => editorDraft.keep(projectId, edits)}
+                      onChange={(next) =>
+                        setEdits((current) => ({
+                          ...current,
+                          [fieldName]: next,
+                        }))
+                      }
+                    />
                   ) : field.renders === "project_refs" ? (
                     <ToolPackPicker
                       projectId={projectId}
