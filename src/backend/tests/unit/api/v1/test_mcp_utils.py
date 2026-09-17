@@ -1262,3 +1262,73 @@ async def test_handle_call_tool_blocks_hitl_flow(monkeypatch):
             await mcp_utils.handle_call_tool("hitl_tools", {"input_value": "hi"}, server=SimpleNamespace())
     finally:
         mcp_utils.current_user_ctx.reset(token)
+
+
+# ---------------------------------------------------------------------------
+# MCP tool name: what the server publishes
+#
+# These pin the names `tools/list` puts on the wire today. They are a safety net
+# for the name-map refactor, not a description of desired behavior: a client
+# stores the published name in its configuration, so changing it would break
+# every already-configured client.
+# ---------------------------------------------------------------------------
+
+_LONG_FLOW_NAME = "Portfolio Website Code Generator"  # 32 chars: a Langflow starter template
+
+
+def _tool_flow(name: str, *, flow_id: str = "flow-1", action_name: str | None = None) -> SimpleNamespace:
+    return SimpleNamespace(
+        id=flow_id,
+        user_id="user-1",
+        name=name,
+        description="",
+        action_name=action_name,
+        action_description=None,
+        data={"nodes": [], "edges": []},
+    )
+
+
+async def _published_names(monkeypatch, flows, *, project_id=None) -> list[str]:
+    monkeypatch.setattr(mcp_utils, "session_scope", lambda: FakeSessionContext(FakeSession(flows=flows, user_files=[])))
+    token = mcp_utils.current_user_ctx.set(SimpleNamespace(id="user-1"))
+    try:
+        tools = await mcp_utils.handle_list_tools(project_id=project_id)
+    finally:
+        mcp_utils.current_user_ctx.reset(token)
+    return [tool.name for tool in tools]
+
+
+@pytest.mark.asyncio
+async def test_published_tool_name_is_truncated_to_the_mcp_limit(monkeypatch):
+    names = await _published_names(monkeypatch, [_tool_flow(_LONG_FLOW_NAME)])
+
+    assert names == ["portfolio_website_code_generat"]
+    assert len(names[0]) == 30
+
+
+@pytest.mark.asyncio
+async def test_published_tool_names_are_deduplicated_with_a_suffix(monkeypatch):
+    flows = [_tool_flow(_LONG_FLOW_NAME, flow_id="flow-1"), _tool_flow(_LONG_FLOW_NAME, flow_id="flow-2")]
+
+    names = await _published_names(monkeypatch, flows)
+
+    assert names == ["portfolio_website_code_generat", "portfolio_website_code_gener_1"]
+
+
+@pytest.mark.asyncio
+async def test_project_scoped_names_prefer_the_action_name(monkeypatch):
+    flows = [_tool_flow("Some Flow", action_name="Renamed Action")]
+    project_id = uuid4()
+
+    names = await _published_names(monkeypatch, flows, project_id=project_id)
+
+    assert names == ["renamed_action"]
+
+
+@pytest.mark.asyncio
+async def test_global_names_ignore_the_action_name(monkeypatch):
+    flows = [_tool_flow("Some Flow", action_name="Renamed Action")]
+
+    names = await _published_names(monkeypatch, flows)
+
+    assert names == ["some_flow"]
