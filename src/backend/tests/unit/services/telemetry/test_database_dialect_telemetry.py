@@ -15,6 +15,7 @@ from langflow.services.telemetry.service import TelemetryService, database_diale
         ("sqlite+aiosqlite:////tmp/langflow.db", "sqlite"),
         ("postgresql://user:secret@db.internal:5432/langflow", "postgresql"),  # pragma: allowlist secret
         ("postgresql+psycopg://user:secret@db.internal:5432/langflow", "postgresql"),  # pragma: allowlist secret
+        ("postgresql://user:secret@db.internal:notaport/langflow", "unknown"),  # pragma: allowlist secret
         ("not a url", "unknown"),
         ("", "unknown"),
         (None, "unknown"),
