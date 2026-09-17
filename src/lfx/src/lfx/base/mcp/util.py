@@ -775,7 +775,12 @@ async def get_flow_snake_case(
     project_id: UUID | str | None = None,
     mcp_enabled_only: bool = False,
 ):
-    """Resolve an MCP tool name to a flow.
+    """Resolve a published MCP tool name to the flow it was published for.
+
+    ``flow_name`` is the name the server handed the client in ``tools/list``, which is
+    the only name a client can send back. It is looked up in ``build_mcp_tool_name_map``
+    rather than regenerated here: regenerating it is what made the server advertise
+    names past ``MAX_MCP_TOOL_NAME_LENGTH`` and then answer "not found" for them.
 
     ``project_id`` and ``mcp_enabled_only`` default to the historical behavior because
     this function is public ``lfx`` surface and still backs the global MCP server, where
@@ -804,15 +809,7 @@ async def get_flow_snake_case(
     stmt = stmt.order_by(Flow.id)
     flows = (await session.exec(stmt)).all()
 
-    for flow in flows:
-        if is_action and flow.action_name:
-            this_flow_name = sanitize_mcp_name(flow.action_name)
-        else:
-            this_flow_name = sanitize_mcp_name(flow.name)
-
-        if this_flow_name == flow_name:
-            return flow
-    return None
+    return build_mcp_tool_name_map(flows, is_action=bool(is_action)).get(flow_name)
 
 
 def _is_valid_key_value_item(item: Any) -> bool:
