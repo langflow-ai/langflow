@@ -18,9 +18,12 @@
 > supersedes the 30 in the 2026-07-09 revision. (2) Typing `/` in the composer
 > opens a list of `/skip-all`, `/history` and `/iterations` (ADR-034). Enter,
 > Tab or a click writes the command into the input; it is never sent from the
-> list. Escape dismisses only the list: the flow page's global Escape hotkey
+> list; each argument hint shows its range (`[1–200 | off]`). Escape dismisses
+> only the list: the flow page's global Escape hotkey
 > would otherwise close the panel. The panel root is now a named
-> `role="complementary"` landmark.
+> `role="complementary"` landmark. User docs gained a "Use slash commands"
+> section and a troubleshooting entry mapping "The agent ran out of steps" to
+> the step limit (`/iterations N`, `LANGFLOW_ASSISTANT_ITERATIONS`).
 
 > **2026-05-19 revision** — Single-agent-loop pivot (Claude Code / Codex pattern):
 > the assistant is now ONE agent + an MCP toolkit instead of a multi-phase
@@ -914,7 +917,7 @@ The frontend implements automatic model selection to ensure a valid model is alw
 ### Scenario: Pick a slash command from the composer list
 - **Given** the assistant panel is open
 - **When** I type `/` as the first character of the input
-- **Then** a list of `/skip-all`, `/history [N | off]` and `/iterations [N | off]` should open, each with a description
+- **Then** a list of `/skip-all`, `/history [0–100 | off]` and `/iterations [1–200 | off]` should open, each with a description and the argument range read from `MAX_HISTORY_LIMIT` / `MAX_ITERATIONS_LIMIT`
 - **And** typing more characters (`/it`) should narrow the list by command-name prefix
 - **When** I move the highlight with the arrow keys and press Enter or Tab (or click an item)
 - **Then** the command should be written into the input (with a trailing space when it takes an argument) and nothing should be sent

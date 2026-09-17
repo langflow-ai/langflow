@@ -1,3 +1,6 @@
+import { MAX_HISTORY_LIMIT } from "../hooks/history-storage";
+import { MAX_ITERATIONS_LIMIT } from "../hooks/iterations-storage";
+
 export interface AssistantSlashCommand {
   /** Command name without the leading slash; matches what `useAssistantChat` parses. */
   name: string;
@@ -14,12 +17,12 @@ export const ASSISTANT_SLASH_COMMANDS: readonly AssistantSlashCommand[] = [
   },
   {
     name: "history",
-    argumentHint: "[N | off]",
+    argumentHint: `[0–${MAX_HISTORY_LIMIT} | off]`,
     descriptionKey: "assistant.slashCommands.historyDescription",
   },
   {
     name: "iterations",
-    argumentHint: "[N | off]",
+    argumentHint: `[1–${MAX_ITERATIONS_LIMIT} | off]`,
     descriptionKey: "assistant.slashCommands.iterationsDescription",
   },
 ];

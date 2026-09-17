@@ -82,6 +82,19 @@ describe("AssistantInput slash commands", () => {
     ).toBeInTheDocument();
   });
 
+  it("should_show_each_argument_range_including_the_maximum", async () => {
+    const { user, textarea } = setup();
+
+    await user.type(textarea, "/");
+
+    expect(
+      screen.getByTestId("assistant-slash-command-option-iterations"),
+    ).toHaveTextContent("[1–200 | off]");
+    expect(
+      screen.getByTestId("assistant-slash-command-option-history"),
+    ).toHaveTextContent("[0–100 | off]");
+  });
+
   it("should_narrow_the_list_as_the_command_is_typed", async () => {
     const { user, textarea } = setup();
 
