@@ -18,7 +18,7 @@ from lfx.workflow.end_user_identity import (
 )
 
 from langflow.api.utils import extract_global_variables_from_headers
-from langflow.api.utils.execution_errors import error_for_client
+from langflow.api.utils.execution_errors import SAFE_TOOL_ERROR_MESSAGE, error_for_client
 from langflow.api.v1.endpoints import _caller_owns_flow, consume_and_yield, run_flow_generator, simple_run_flow
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.events.event_manager import create_stream_tokens_event_manager
@@ -29,7 +29,6 @@ from langflow.schema import (
     OpenAIResponsesResponse,
     OpenAIResponsesStreamChunk,
 )
-from langflow.schema.content_types import ToolContent
 from langflow.services.auth.utils import api_key_security
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.models.flow.model import FlowRead
@@ -48,6 +47,79 @@ def _flow_not_found_response(model: str) -> OpenAIErrorResponse:
         code="flow_not_found",
     )
     return OpenAIErrorResponse(error=error_response["error"])
+
+
+def _is_tool_step(block: Any) -> bool:
+    """True for a ``tool_use`` content block, whichever content-types module built it."""
+    return getattr(block, "type", None) == "tool_use"
+
+
+def _tool_error_text(error: Any) -> str:
+    """Render a ``ToolContent.error`` payload as the ``error`` string of a tool-call item."""
+    if isinstance(error, str):
+        return error
+    try:
+        return json.dumps(error, default=str)
+    except (TypeError, ValueError):
+        return str(error)
+
+
+def _client_tool_error(error: Any, *, expose_details: bool) -> str:
+    """Tool-error text that may cross the API boundary.
+
+    Same ownership policy as ``error_for_client``: the flow owner sees the tool's own
+    message, a delegated or shared caller only learns that the tool failed.
+    """
+    return _tool_error_text(error) if expose_details else SAFE_TOOL_ERROR_MESSAGE
+
+
+def _streamed_message_key(data: Any) -> str:
+    """Key a ``token`` or ``add_message`` event by the message it belongs to.
+
+    ``Component._send_message_event`` and both token emitters (``Component._process_chunk``,
+    ``lfx.base.agents.events``) put the stored message id at ``data["id"]``; a raw
+    ``Message.model_dump()`` keeps it at ``data["data"]["id"]``. Events carrying neither share
+    the anonymous key, so the tokens and the complete message of a producer that streams
+    outside ``send_message`` still pair up.
+    """
+    if not isinstance(data, dict):
+        return ""
+    nested = data.get("data")
+    message_id = data.get("id") or (nested.get("id") if isinstance(nested, dict) else None)
+    return str(message_id) if message_id else ""
+
+
+def _already_delivered(text: str, delivered: str) -> bool:
+    """Whether ``text`` carries nothing the client has not already received.
+
+    True when what the client has already ends with ``text``. Whitespace is ignored: token
+    concatenation and the stored text of one answer can differ by it alone. A suffix rather
+    than equality covers an agent whose final text is the last model round while its tokens
+    spanned every round. Empty text is trivially delivered.
+    """
+    return "".join(delivered.split()).endswith("".join(text.split()))
+
+
+def _split_already_sent(chunk: str, already_sent: str) -> tuple[str, str]:
+    """Split a token ``chunk`` into what the client still needs and what it already has.
+
+    Chat Output publishes the first streamed chunk twice: as the text of a
+    ``state="partial"`` add_message and, right after, as the first ``token`` event
+    of the same message. The partial text is forwarded the moment it arrives, so
+    the token repeating it must not be forwarded again.
+
+    Returns ``(text_to_send, still_ahead)``: ``still_ahead`` is the part of
+    ``already_sent`` that later tokens are still expected to repeat. A chunk that
+    matches neither way means the token stream diverged from the partial text; it
+    is then sent whole rather than risk dropping text.
+    """
+    if not already_sent:
+        return chunk, ""
+    if already_sent.startswith(chunk):
+        return "", already_sent[len(chunk) :]
+    if chunk.startswith(already_sent):
+        return chunk[len(already_sent) :], ""
+    return chunk, ""
 
 
 def has_chat_input(flow_data: dict | None) -> bool:
@@ -158,6 +230,24 @@ async def run_flow_for_openai_responses(
                 processed_tools = set()  # Track processed tool calls to avoid duplicates
                 previous_content = ""  # Track content already sent to calculate deltas
                 stream_usage_data = None  # Track usage from completed message
+                # Keys (see _streamed_message_key) of the messages whose text went out as
+                # non-empty ``token`` events. A ``state="complete"`` add_message repeats
+                # text the client already has only when its own id streamed. Every other
+                # complete message is the sole carrier of its text: a producer that never
+                # streamed (Stream toggle off, a Prompt feeding Chat Output), or a Chat
+                # Output re-publishing a streamed agent answer through a Prompt under the
+                # new id it stores it with.
+                streamed_message_ids: set[str] = set()
+                # Text already forwarded from an add_message that the token stream of the
+                # same message is expected to repeat, keyed like streamed_message_ids. Chat
+                # Output publishes the first streamed chunk as a partial add_message *before*
+                # the token event for it; an agent's interim text is republished *after* its
+                # tokens, so its delta is empty and nothing is recorded for it.
+                partial_text_ahead: dict[str, str] = {}
+                # A completion can repeat a partial answer or attach usage while other
+                # branches emit text in between. Remember each message's latest text
+                # independently of the response-wide delta baseline.
+                previous_message_text: dict[str, str] = {}
 
                 async for event_data in consume_and_yield(asyncio_queue, asyncio_queue_client_consumed):
                     if event_data is None:
@@ -165,7 +255,7 @@ async def run_flow_for_openai_responses(
                         break
 
                     content = ""
-                    token_data = {}
+                    token_data: str | dict[str, Any] = {}  # {} = no token in this event
 
                     # Parse byte string events as JSON
                     if isinstance(event_data, bytes):
@@ -187,7 +277,16 @@ async def run_flow_for_openai_responses(
                                 # Handle add_message events
                                 if event_type == "token":
                                     token_data = data.get("chunk", "")
-                                    if isinstance(token_data, str):
+                                    if isinstance(token_data, str) and token_data:
+                                        message_key = _streamed_message_key(data)
+                                        streamed_message_ids.add(message_key)
+                                        token_data, still_ahead = _split_already_sent(
+                                            token_data, partial_text_ahead.get(message_key, "")
+                                        )
+                                        if still_ahead:
+                                            partial_text_ahead[message_key] = still_ahead
+                                        else:
+                                            partial_text_ahead.pop(message_key, None)
                                         previous_content += token_data
                                     await logger.adebug(
                                         "[OpenAIResponses][stream] token: token_data=%s",
@@ -234,12 +333,7 @@ async def run_flow_for_openai_responses(
                                         message_state,
                                     )
 
-                                    # Skip processing text content if state is "complete"
-                                    # All content has already been streamed via token events
                                     if message_state == "complete":
-                                        await logger.adebug(
-                                            "[OpenAIResponses][stream] skipping add_message with state=complete"
-                                        )
                                         # Extract usage from completed message properties
                                         if isinstance(properties, dict) and "usage" in properties:
                                             usage_obj = properties.get("usage")
@@ -253,8 +347,25 @@ async def run_flow_for_openai_responses(
                                                 await logger.adebug(
                                                     "[OpenAIResponses][stream] captured usage: %s", stream_usage_data
                                                 )
-                                        # Still process content_blocks for tool calls, but skip text content
-                                        text = ""
+                                        # The text of a complete message is a repeat of what the client
+                                        # already has only when this very message went out as token
+                                        # events. Blanking every complete message dropped the answer of
+                                        # runs that never streamed; blanking on any earlier token dropped
+                                        # the Chat Output that re-publishes a streamed agent answer
+                                        # through a Prompt under its own id. A complete message that did
+                                        # not stream falls through to the delta logic below, which also
+                                        # keeps a republished identical message (Chat Output re-sending
+                                        # once usage is attached, or storing an unchanged upstream answer
+                                        # under a new id) from being emitted twice.
+                                        message_key = _streamed_message_key(data)
+                                        if message_key in streamed_message_ids:
+                                            await logger.adebug(
+                                                "[OpenAIResponses][stream] skipping text of add_message with "
+                                                "state=complete: message %r already streamed as tokens",
+                                                message_key,
+                                            )
+                                            # Still process content_blocks for tool calls, but skip text content
+                                            text = ""
 
                                     # Look for Agent Steps in content_blocks
                                     for block in content_blocks:
@@ -266,10 +377,16 @@ async def run_flow_for_openai_responses(
                                                     tool_name = step.get("name", "")
                                                     tool_input = step.get("tool_input", {})
                                                     tool_output = step.get("output")
+                                                    tool_error = step.get("error")
+                                                    # A step is terminal once it carries an output OR an
+                                                    # error. A failed tool never gets an output, so gating
+                                                    # on output alone dropped every failed call from the
+                                                    # stream while the persisted message still showed it.
+                                                    tool_finished = tool_output is not None or tool_error is not None
 
                                                     # Only emit tool calls with explicit tool names and
-                                                    # meaningful arguments
-                                                    if tool_name and tool_input is not None and tool_output is not None:
+                                                    # meaningful arguments, once the step has resolved
+                                                    if tool_name and tool_input is not None and tool_finished:
                                                         # Create unique identifier for this tool call
                                                         tool_signature = (
                                                             f"{tool_name}:{hash(str(sorted(tool_input.items())))}"
@@ -328,51 +445,67 @@ async def run_flow_for_openai_responses(
                                                             tool_name,
                                                         )
 
-                                                        # If there's output, send completion event
-                                                        if tool_output is not None:
-                                                            # Check if include parameter requests tool_call.results
-                                                            include_results = (
-                                                                request.include
-                                                                and "tool_call.results" in request.include
+                                                        # The step resolved (output or error): send the completion
+                                                        # event. A failed call carries status="failed" plus the
+                                                        # error text, mirroring OpenAI's server-executed call
+                                                        # items (mcp_call / web_search_call), so consumers can
+                                                        # render the failure instead of an in-flight call.
+                                                        # The outcome follows ``output``: on_tool_end only fires
+                                                        # when a run succeeds and the same block is rebound across
+                                                        # retry attempts, so output + error together mean "failed
+                                                        # once, then succeeded". Only an output-less error fails.
+                                                        tool_failed = tool_output is None and tool_error is not None
+                                                        tool_status = "failed" if tool_failed else "completed"
+                                                        # Check if include parameter requests tool_call.results
+                                                        include_results = (
+                                                            request.include and "tool_call.results" in request.include
+                                                        )
+
+                                                        if include_results:
+                                                            # Format with detailed results
+                                                            tool_done_event = {
+                                                                "type": "response.output_item.done",
+                                                                "item": {
+                                                                    "id": f"{tool_name}_{tool_id}",
+                                                                    "inputs": tool_input,  # Raw inputs as-is
+                                                                    "status": tool_status,
+                                                                    "type": "tool_call",
+                                                                    "tool_name": f"{tool_name}",
+                                                                    # Raw output as-is; a failed call has none
+                                                                    "results": tool_output
+                                                                    if tool_output is not None
+                                                                    else [],
+                                                                },
+                                                                "output_index": 0,
+                                                                "sequence_number": tool_call_counter + 5,
+                                                            }
+                                                        else:
+                                                            # Regular function call format
+                                                            tool_done_event = {
+                                                                "type": "response.output_item.done",
+                                                                "item": {
+                                                                    "id": tool_id,
+                                                                    "type": "function_call",  # Match OpenAI format
+                                                                    "status": tool_status,
+                                                                    "arguments": arguments_str,
+                                                                    "call_id": call_id,
+                                                                    "name": tool_name,
+                                                                },
+                                                            }
+                                                        if tool_failed:
+                                                            tool_done_event["item"]["error"] = _client_tool_error(
+                                                                tool_error, expose_details=expose_error_details
                                                             )
 
-                                                            if include_results:
-                                                                # Format with detailed results
-                                                                tool_done_event = {
-                                                                    "type": "response.output_item.done",
-                                                                    "item": {
-                                                                        "id": f"{tool_name}_{tool_id}",
-                                                                        "inputs": tool_input,  # Raw inputs as-is
-                                                                        "status": "completed",
-                                                                        "type": "tool_call",
-                                                                        "tool_name": f"{tool_name}",
-                                                                        "results": tool_output,  # Raw output as-is
-                                                                    },
-                                                                    "output_index": 0,
-                                                                    "sequence_number": tool_call_counter + 5,
-                                                                }
-                                                            else:
-                                                                # Regular function call format
-                                                                tool_done_event = {
-                                                                    "type": "response.output_item.done",
-                                                                    "item": {
-                                                                        "id": tool_id,
-                                                                        "type": "function_call",  # Match OpenAI format
-                                                                        "status": "completed",
-                                                                        "arguments": arguments_str,
-                                                                        "call_id": call_id,
-                                                                        "name": tool_name,
-                                                                    },
-                                                                }
-
-                                                            yield (
-                                                                f"event: response.output_item.done\n"
-                                                                f"data: {json.dumps(tool_done_event)}\n\n"
-                                                            )
-                                                            await logger.adebug(
-                                                                "[OpenAIResponses][stream] tool_call.done name=%s",
-                                                                tool_name,
-                                                            )
+                                                        yield (
+                                                            f"event: response.output_item.done\n"
+                                                            f"data: {json.dumps(tool_done_event)}\n\n"
+                                                        )
+                                                        await logger.adebug(
+                                                            "[OpenAIResponses][stream] tool_call.done %s status=%s",
+                                                            tool_name,
+                                                            tool_status,
+                                                        )
 
                                     # Extract text content for streaming (only AI responses)
                                     if (
@@ -380,10 +513,32 @@ async def run_flow_for_openai_responses(
                                         and text != request.input
                                         and sender_name in ["Agent", "AI"]
                                     ):
+                                        message_key = _streamed_message_key(data)
+                                        is_republished_complete = (
+                                            message_state == "complete"
+                                            and previous_message_text.get(message_key) == text
+                                        )
+                                        if text:
+                                            previous_message_text[message_key] = text
                                         # Calculate delta: only send newly generated content
-                                        if text.startswith(previous_content):
+                                        if is_republished_complete or _already_delivered(text, previous_content):
+                                            # Nothing new: this completed snapshot was already handled,
+                                            # the text was blanked because its id streamed, the frame is
+                                            # text-less, or a new id repeats what the tokens delivered.
+                                            # The baseline must survive here; letting such a frame fall
+                                            # into the reset below emptied it, so the next message was
+                                            # measured against nothing and re-sent the whole answer.
+                                            await logger.adebug(
+                                                "[OpenAIResponses][stream] text already delivered; skipping len=%d",
+                                                len(text),
+                                            )
+                                        elif text.startswith(previous_content):
                                             content = text[len(previous_content) :]
                                             previous_content = text
+                                            if content:
+                                                partial_text_ahead[message_key] = (
+                                                    partial_text_ahead.get(message_key, "") + content
+                                                )
                                             await logger.adebug(
                                                 "[OpenAIResponses][stream] delta computed len=%d total_len=%d",
                                                 len(content),
@@ -547,18 +702,21 @@ async def run_flow_for_openai_responses(
                                 # The agent's flat log carries tool_use as top-level
                                 # ToolContent leaves; the legacy/grouped shape nests
                                 # them inside a group's ``contents``. Handle both.
-                                if isinstance(block, ToolContent):
-                                    leaves = [block]
-                                else:
-                                    leaves = getattr(block, "contents", None) or []
+                                # Match on the ``type`` discriminator rather than
+                                # ``isinstance``: the agent builds its blocks from
+                                # ``lfx.schema.content_types``, a different class than
+                                # the langflow-side copy, so an isinstance check never
+                                # matched a real message and no tool call was returned.
+                                leaves = [block] if _is_tool_step(block) else getattr(block, "contents", None) or []
                                 tool_calls.extend(
                                     {
                                         "name": content.name,
                                         "input": content.tool_input,
                                         "output": content.output,
+                                        "error": content.error,
                                     }
                                     for content in leaves
-                                    if isinstance(content, ToolContent)
+                                    if _is_tool_step(content)
                                 )
                     if output_text:
                         break
@@ -580,6 +738,11 @@ async def run_flow_for_openai_responses(
 
     tool_call_id_counter = 1
     for tool_call in tool_calls:
+        # Same contract as the stream: an output-less error is a failure; otherwise the
+        # output wins (a retried call that eventually succeeded keeps its stale error).
+        tool_error = tool_call.get("error")
+        tool_failed = tool_call.get("output") is None and tool_error is not None
+        tool_status = "failed" if tool_failed else "completed"
         if include_results:
             # Format as detailed tool call with results (like file_search_call in sample)
             tool_call_item = {
@@ -587,7 +750,7 @@ async def run_flow_for_openai_responses(
                 "queries": list(tool_call["input"].values())
                 if isinstance(tool_call["input"], dict)
                 else [str(tool_call["input"])],
-                "status": "completed",
+                "status": tool_status,
                 "tool_name": f"{tool_call['name']}",
                 "type": "tool_call",
                 "results": tool_call["output"] if tool_call["output"] is not None else [],
@@ -597,10 +760,12 @@ async def run_flow_for_openai_responses(
             tool_call_item = {
                 "id": f"fc_{tool_call_id_counter}",
                 "type": "function_call",
-                "status": "completed",
+                "status": tool_status,
                 "name": tool_call["name"],
                 "arguments": json.dumps(tool_call["input"]) if tool_call["input"] is not None else "{}",
             }
+        if tool_failed:
+            tool_call_item["error"] = _client_tool_error(tool_error, expose_details=expose_error_details)
 
         output_items.append(tool_call_item)
         tool_call_id_counter += 1

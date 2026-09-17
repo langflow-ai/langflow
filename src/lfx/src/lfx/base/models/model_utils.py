@@ -427,8 +427,38 @@ def get_watsonx_embedding_models(
         return default_models
 
 
+def _environment_variable_value(variable_key: str) -> str | None:
+    """Process-environment value for a provider's REQUIRED variable, when allowed.
+
+    Scoped to required variables so the fallback matches provider enablement
+    exactly. An optional variable is an opt-in switch: ``OPENAI_BASE_URL`` in the
+    environment would otherwise flip discovery to a compatible endpoint and
+    replace OpenAI's curated chat catalog with that endpoint's raw ``/models``
+    listing (whisper, tts, embeddings). The request-scoped no-env-fallback flag
+    still wins, so a served flow stays isolated from process-wide environment.
+
+    Name shapes come from ``provider_variable_from_env``, the same reader
+    ``get_all_variables_for_provider`` uses, so enablement and discovery cannot
+    disagree about which environment spellings configure a provider.
+    """
+    from lfx.base.models.unified_models import is_required_provider_variable, provider_variable_from_env
+    from lfx.services.variable.request_scope import is_env_fallback_disabled
+
+    if is_env_fallback_disabled() or not is_required_provider_variable(variable_key):
+        return None
+    return provider_variable_from_env(variable_key)
+
+
 def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -> str | None:
     """Get a variable value from global variables for a provider.
+
+    Resolution order matches provider enablement: the user's stored variable
+    first, then the process environment for the provider's REQUIRED variables.
+    Discovery used to read the database alone, so a provider configured purely
+    through the environment (``OLLAMA_BASE_URL`` in a container) reported itself
+    connected while its live fetch returned nothing — callers then fell back to
+    the static catalog and offered models the server does not actually have.
+    Optional variables stay database-only; see :func:`_environment_variable_value`.
 
     Args:
         user_id: The user ID to look up global variables for
@@ -445,7 +475,7 @@ def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -
         non-Ollama user crashed retrieval (Knowledge component BUG-01).
     """
     if user_id is None or (isinstance(user_id, str) and user_id == "None"):
-        return None
+        return _environment_variable_value(variable_key)
 
     async def _get_variable():
         async with session_scope() as session:
@@ -464,7 +494,7 @@ def get_provider_variable_value(user_id: UUID | str | None, variable_key: str) -
                 # treat absence as "no value" rather than propagating.
                 return None
 
-    return _to_str(run_until_complete(_get_variable()))
+    return _to_str(run_until_complete(_get_variable())) or _environment_variable_value(variable_key)
 
 
 def fetch_live_ollama_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:

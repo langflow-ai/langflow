@@ -160,6 +160,10 @@ def restore_graph_from_checkpoint(checkpoint: GraphCheckpoint, *, store: Checkpo
     graph._call_order = list(checkpoint.call_order)  # noqa: SLF001
     # Without these, every vertex resumes ACTIVE and compute_resume_layer revives a ConditionalRouter-stopped branch.
     graph.inactivated_vertices = {str(v) for v in checkpoint.inactivated_vertices}
+    graph.branch_inactivation_sources = {
+        str(source): {str(vertex) for vertex in vertices}
+        for source, vertices in checkpoint.branch_inactivation_sources.items()
+    }
     graph.conditionally_excluded_vertices = {str(v) for v in checkpoint.conditionally_excluded_vertices}
     graph.human_input_decisions = dict(checkpoint.human_input_decisions)
     graph.activated_vertices = list(checkpoint.activated_vertices)

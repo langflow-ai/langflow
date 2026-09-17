@@ -18,6 +18,7 @@ from manage_bundle_profiles import (
     compile_profile,
     discover_bundle_catalog,
     read_json,
+    read_project,
     validate_contract,
     validate_installed,
 )
@@ -50,11 +51,13 @@ def test_profile_compilation_is_deterministic() -> None:
 
     first = compile_profile(contract, "enterprise-hardened", catalog)
     second = compile_profile(contract, "enterprise-hardened", catalog)
+    root_project = read_project(REPO_ROOT / "pyproject.toml")
+    lfx_project = read_project(REPO_ROOT / "src" / "lfx" / "pyproject.toml")
 
     assert first == second
     assert first["image_families"] == ["enterprise-ubi-hardened"]
-    assert first["application"]["requirement"] == "langflow==1.12.1"
-    assert first["bundle_api"]["requirement"] == "lfx==1.12.1"
+    assert first["application"]["requirement"] == f"langflow=={root_project['version']}"
+    assert first["bundle_api"]["requirement"] == f"lfx=={lfx_project['version']}"
     assert first["bundles"] == sorted(first["bundles"], key=lambda item: item["distribution"])
 
 

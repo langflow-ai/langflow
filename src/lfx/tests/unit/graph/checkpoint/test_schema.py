@@ -36,6 +36,7 @@ def _checkpoint(**overrides) -> GraphCheckpoint:
         "vertices_layers": [["n1"], ["n2"]],
         "first_layer": ["n1"],
         "inactivated_vertices": {"n3"},
+        "branch_inactivation_sources": {"n1": {"n3"}},
         "activated_vertices": ["n2"],
         "vertex_results": {
             "n1": VertexCheckpointData(vertex_id="n1", built=True, results={"text": "hello"}),
@@ -62,6 +63,7 @@ def test_checkpoint_round_trips_via_json_with_sets_preserved():
     assert restored.vertices_being_run == {"n1"}
     assert restored.ran_at_least_once == {"n1"}
     assert restored.inactivated_vertices == {"n3"}
+    assert restored.branch_inactivation_sources == {"n1": {"n3"}}
     assert restored.run_queue == ["n2"]
     assert restored.call_order == ["n1"]
     assert restored.pause_context == {"reason": "human_input_required", "data": {"options": ["a", "b"]}}
