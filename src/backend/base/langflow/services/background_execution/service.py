@@ -283,7 +283,7 @@ class BackgroundExecutionService(Service):
                 cancelled.append(stale_job_id)
         return cancelled
 
-    async def submit(self, *, flow_id: UUID, request: dict[str, Any], user: UserRead) -> UUID:
+    async def submit(self, *, flow_id: UUID, request: dict[str, Any], user: UserRead, runtime_candidate=None) -> UUID:
         # Lazy-start the executor so the facade works whether or not the app
         # lifespan called start() first. start() is idempotent.
         await self.start()
@@ -295,6 +295,12 @@ class BackgroundExecutionService(Service):
         # authenticated override envelope together; no worker can claim a row in
         # the old create-then-patch gap.
         initial_metadata = self._persisted_request_metadata(job_id=job_id, flow_id=flow_id, request=request)
+        candidate_kwargs = {}
+        if runtime_candidate is not None:
+            from langflow.services.deployment_artifacts.harness_runtime import CANDIDATE_KIND, candidate_checkpoint
+
+            initial_metadata["candidate_digest"] = runtime_candidate.digest
+            candidate_kwargs["initial_checkpoints"] = {CANDIDATE_KIND: await candidate_checkpoint(runtime_candidate)}
         try:
             await job_service.create_job(
                 job_id=job_id,
@@ -306,6 +312,7 @@ class BackgroundExecutionService(Service):
                 # _user_stub(job.user_id) still fetches the SID-owned flow on re-enqueue.
                 end_user_id=request.get("end_user_id"),
                 initial_metadata=initial_metadata,
+                **candidate_kwargs,
             )
         except DuplicateJobError:
             # Idempotent retry: a non-terminal job already exists for this key,
@@ -712,7 +719,7 @@ class BackgroundExecutionService(Service):
         await job_service.write_signal(job_id, SignalType.STOP)
         await self._executor.cancel(str(job_id))
 
-    async def resume_job(self, job_id: UUID, user: UserRead, *, request_id: str, decision: Any) -> bool:  # noqa: ARG002
+    async def resume_job(self, job_id: UUID, user: UserRead, *, request_id: str, decision: Any) -> bool:
         """Carry a human decision back into a SUSPENDED run and re-enqueue it.
 
         Returns True when the run was accepted for resume, False on a conflict
@@ -731,6 +738,13 @@ class BackgroundExecutionService(Service):
         # key-rotation/configuration error must leave the pause and decision seam
         # untouched so the caller can retry after restoring the key.
         request = self._reconstruct_request(job)
+        if (job.job_metadata or {}).get("candidate_digest") is not None:
+            from langflow.api.v2.workflow import resolve_flow_for_execution
+            from langflow.services.deployment_artifacts.harness_runtime import bind_flow, retained_candidate
+
+            candidate = await retained_candidate(job)
+            flow = await resolve_flow_for_execution(str(job.flow_id), user)
+            await bind_flow(flow, candidate, user)
         # Win the single-flight flip BEFORE writing the RESUME signal, so exactly one
         # RESUME row exists per suspend and a loser never strands a stray decision.
         if not await job_service.claim_suspended_for_resume(job_id, owner=self._owner):

@@ -79,6 +79,8 @@ class RuntimeCandidate:
 
         self.bind(child)
         child.execution_principal = parent.execution_principal
+        child.persist_messages = parent.persist_messages
+        child.end_user_id = parent.end_user_id
         for key in ("no_env_fallback", "request_variables"):
             if key in parent.context:
                 child.context[key] = deepcopy(parent.context[key])

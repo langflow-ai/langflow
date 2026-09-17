@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
+from sqlalchemy.engine import make_url
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -89,18 +90,29 @@ async def real_services_job_service(real_services_db_url: str) -> AsyncGenerator
     original_url = settings_service.settings.database_url
     original_db_service = manager.services.pop(ServiceType.DATABASE_SERVICE, None)
 
-    settings_service.settings.database_url = real_services_db_url
-    db_service = DatabaseServiceFactory().create(settings_service)
-    manager.services[ServiceType.DATABASE_SERVICE] = db_service
-
+    # The Settings validator selects the environment URL (or default SQLite),
+    # even on assignment. Setting only the attribute silently ran the postgres
+    # parametrization against SQLite. Exercise the production env path and
+    # assert the selected engine before any migration or write can occur.
+    db_service = None
     try:
-        await db_service.run_migrations()
-        yield JobService()
+        with pytest.MonkeyPatch.context() as env:
+            env.setenv("LANGFLOW_DATABASE_URL", real_services_db_url)
+            settings_service.settings.database_url = real_services_db_url
+            db_service = DatabaseServiceFactory().create(settings_service)
+            expected = "postgresql" if real_services_db_url.startswith("postgresql") else "sqlite"
+            assert db_service.engine.dialect.name == expected
+            assert db_service.engine.url == make_url(real_services_db_url)
+            manager.services[ServiceType.DATABASE_SERVICE] = db_service
+            await db_service.run_migrations()
+            yield JobService()
     finally:
         manager.services.pop(ServiceType.DATABASE_SERVICE, None)
-        with contextlib.suppress(Exception):
-            await db_service.teardown()
-        settings_service.settings.database_url = original_url
+        if db_service is not None:
+            with contextlib.suppress(Exception):
+                await db_service.teardown()
+        # Restore exactly; another assignment would run the URL selector again.
+        object.__setattr__(settings_service.settings, "database_url", original_url)
         if original_db_service is not None:
             manager.services[ServiceType.DATABASE_SERVICE] = original_db_service
 
