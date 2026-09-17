@@ -969,3 +969,15 @@ class TestMigrateEndToEnd:
 
         with engine.connect() as conn:
             assert conn.execute(text("SELECT config FROM mcp_server")).scalar() == before
+
+    def test_dry_run_completes_without_changing_rows(self, migrate_module, rotation_db, old_key, new_key):
+        engine, config_dir, url = rotation_db
+        query = text("SELECT (SELECT api_key FROM apikey), (SELECT config FROM mcp_server)")
+        with engine.connect() as conn:
+            before = tuple(conn.execute(query).one())
+
+        migrate_module.migrate(config_dir, url, old_key=old_key, new_key=new_key, dry_run=True)
+
+        with engine.connect() as conn:
+            assert tuple(conn.execute(query).one()) == before
+        assert not (config_dir / "secret_key").exists()
