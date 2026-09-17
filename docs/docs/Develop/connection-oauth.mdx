@@ -49,10 +49,12 @@ No provider registration is enabled without explicit configuration.
 
 For Desktop, set the context to `desktop`, configure a `public` client, and use the exact
 loopback callback, for example `http://localhost:7860/api/v1/connections/oauth/google/callback`.
-Public registrations cannot contain a client secret or private key. A Desktop distribution
-can provision Langflow-owned client IDs with `owner: "langflow"`; customer-owned registrations
-use the same configuration format. Register and configure the actual client IDs before
-shipping. The broker does not provide an OAuth redirect relay or provision provider apps.
+Public registrations cannot contain a client secret or private key, and consent for a
+public client always uses PKCE. A Desktop distribution can provision Langflow-owned client
+IDs with `owner: "langflow"`; customer-owned registrations use the same configuration format
+and remain available as the override for tenants that require their own registration.
+Register and configure the actual client IDs before shipping. The broker does not provide
+an OAuth redirect relay or provision provider apps.
 Use the same hostname in the browser and the redirect (`localhost` and `127.0.0.1` have
 different cookie origins). Both loopback IP families are supported.
 
@@ -422,3 +424,74 @@ The legacy **Google Drive Loader** accepts an optional connection on `drive.file
 alternative to pasted token JSON. The legacy **Gmail Loader** does not: reading a mailbox
 needs `https://www.googleapis.com/auth/gmail.readonly`, a **restricted** scope that 1.13
 connections do not use, so it keeps pasted token JSON only.
+
+## Tenant and workspace consent policy
+
+A working registration is not the same as an allowed one. Before rollout, validate the
+application, the executing identity, and the requested scope set against the consent
+policy of the target tenant or workspace, and record the administrator approval you
+relied on as a deployment prerequisite. Reviewing this documentation, or completing a
+test consent in a sandbox tenant, does not establish consent in the production tenant.
+
+- **Google:** A Workspace administrator controls which applications may access the
+  organization's data and can mark an app Trusted, Limited, or Blocked; a Limited or
+  Blocked app cannot complete consent for the affected services regardless of the
+  Langflow configuration. See
+  [Control which apps access Google Workspace data](https://knowledge.workspace.google.com/admin/apps/control-which-apps-access-google-workspace-data).
+- **Microsoft:** Tenant user-consent settings can restrict consent to verified
+  publishers and low-impact permissions, or disable it entirely, in which case each
+  connection needs administrator approval. See the consent guidance in
+  [Add delegated permissions](./entra-app-registration.mdx#add-delegated-permissions).
+- **Slack:** A workspace can require administrator approval before an app is installed
+  or before new scopes are added to it. Install the app in the target workspace and
+  confirm its approval before users connect accounts.
+
+## Provider revocation and token rotation
+
+`POST /api/v1/connections/CONNECTION_ID/revoke` always removes the stored credential
+locally; its `provider_revocation` field then reports what happened upstream:
+
+| Provider | Upstream call on revoke | `provider_revocation` |
+|---|---|---|
+| Google | Google's token revocation endpoint, with the refresh token when one is stored, otherwise the access token. See the [web server registration guide](https://developers.google.com/identity/protocols/oauth2/web-server). | `revoked` |
+| Slack | [`auth.revoke`](https://docs.slack.dev/reference/methods/auth.revoke/) with the stored token | `revoked` |
+| Microsoft | None: Entra exposes no per-grant revocation endpoint for this flow | `unsupported` |
+
+`failed` means the provider call could not complete, so revoke the grant in the
+provider's account or admin console as well. `not_applicable` means no OAuth credential
+was stored. For Microsoft's `unsupported`, remove the app's consent in Entra as
+described in [Revocation](./entra-app-registration.mdx#revocation).
+
+Refresh behavior also differs by provider:
+
+- Google and Microsoft issue refresh tokens for offline access. Microsoft rotates its
+  refresh token on use, and the broker stores each replacement atomically under the
+  connection lock, so rotation does not require re-consent. An Entra refresh token that
+  goes unused past its lifetime, 90 days by default, expires, after which the connection
+  must be reconnected. See [Refresh tokens](https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens).
+- Slack tokens do not expire unless the app opted into token rotation. With rotation
+  enabled, each refresh token is single-use and the broker stores the replacement under
+  the same lock. Without rotation, a provider rejection is the only signal that a token
+  died, so the component re-resolves the connection once before surfacing `auth-expired`.
+
+Whatever the provider outcome, revocation is always final locally: the connection's
+status becomes `revoked`, and every later resolution fails with `connection-unresolved`
+until a new authorization completes.
+
+## Move a flow between deployments
+
+A flow stores the connection handle, never the credential. Exporting a flow keeps each
+connection field as its portable handle, such as `google/work`; no token, account
+identity, or granted scope set is included.
+
+Importing a flow preserves its nodes and connection fields unchanged. Langflow never
+substitutes a different provider, action, or connection on import or at run time. If the
+target deployment has no connection with the referenced handle, the run fails with
+`connection-unresolved`. If one exists but the executing identity may not use it, the
+run fails with `connection-not-authorized`. If the deployment's integration policy
+blocks the provider or action, it fails with `policy-blocked`. See
+[Catalog and model policy](/api-governance-policy).
+
+Rebinding is explicit: either create a connection with the same provider and name in the
+target deployment, or edit the component's connection field to the handle you
+provisioned. Nothing rebinds a flow on its own.

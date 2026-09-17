@@ -182,8 +182,10 @@ keep their connection handle.
 `drive.file` is a non-sensitive scope that grants access **only to files this application
 created, or that the user explicitly opened with it**. The rest of the user's Drive is
 invisible to the listing and fetch components, so an empty listing is a normal result for
-a correctly configured connection rather than an error. Reaching arbitrary Drive content
-requires a restricted scope, which is deliberately out of scope for this release.
+a correctly configured connection rather than an error. Google Picker file selection is
+not available in this release, and entering a file ID cannot grant the app access to a
+file it has not created or opened. Reaching arbitrary Drive content requires a restricted
+scope, which is deliberately out of scope for this release.
 
 ### Connect a Google account
 
@@ -339,7 +341,9 @@ The following Google components are in legacy status:
 The **Google OAuth Token** component was deprecated in Langflow 1.4.0 and is hidden from the
 component palette. It runs a local-server OAuth flow, which cannot complete on a server
 deployment, and it puts a long-lived credential into flow data. Running it logs a
-deprecation warning.
+deprecation warning. The component declares the five Google Workspace action components
+as its replacements, so the editor's update hint on an existing node points at the
+connection-backed path.
 
 To connect your flows to Google services, use a [managed connection](../Develop/connection-oauth.mdx) with
 the [Google Workspace action components](#google-workspace-actions), or

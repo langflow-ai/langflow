@@ -101,6 +101,12 @@ it in the registration's permission list and in the broker's configured
 `offline_access` in the token response, so treating it as a per-action
 requirement would make every resolution fail with a missing-permission error.
 
+Entra rotates the refresh token each time it is used, and Langflow stores the
+replacement under the connection lock, so rotation requires no re-consent. A
+refresh token that goes unused past its lifetime, 90 days by default, expires,
+after which the connection must be reconnected. See
+[Refresh tokens](https://learn.microsoft.com/en-us/entra/identity-platform/refresh-tokens).
+
 Every permission above shows **No** for admin consent in Microsoft's
 [permissions reference](https://learn.microsoft.com/en-us/graph/permissions-reference),
 which means an ordinary user can consent unless your tenant restricts that.

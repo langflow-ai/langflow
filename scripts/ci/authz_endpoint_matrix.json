@@ -442,7 +442,7 @@
       "source": "api/v1/connections.py",
       "resource": "connection",
       "domain": "caller-global owner or explicit share scope",
-      "privacy": "connection identifier denials are returned as 404; responses contain metadata and health only",
+      "privacy": "connection identifier denials are returned as 404; responses contain metadata and health only. /oauth/registrations returns operator-configured registration metadata filtered by the caller's integration policy and never a client secret, private key, or connection identifier",
       "side_effects": "authorize before credential decryption, health checks, metadata updates, revocation, or deletion; instance connections change only by superuser; only the owner enables non-interactive use",
       "frontend": "connection pickers list only owned, instance, or explicitly shared metadata and never receive token material",
       "personas": "canonical_v1",
@@ -467,6 +467,7 @@
         "DELETE|/{connection_id}|delete_connection|delete|authenticated",
         "GET|/oauth/registrations|list_oauth_registrations|read|authenticated",
         "POST|/{connection_id}/oauth/start|start_connection_oauth|write|authenticated",
+        "GET|/oauth/registrations|list_oauth_registrations|read|authenticated",
         "GET|/oauth/{provider}/callback|complete_connection_oauth|write|conditional"
       ]
     },
