@@ -40,7 +40,9 @@ from typing import TYPE_CHECKING, Any
 from lfx.integrations.errors import (
     ActionUnsupportedError,
     AuthExpiredError,
+    ConnectionNotAuthorizedError,
     IntegrationError,
+    InvalidRequestError,
     ProviderUnavailableError,
     RateLimitedError,
     ScopeMissingError,
@@ -63,6 +65,7 @@ SLACK_API_BASE_URL = "https://slack.com/api/"
 
 DEFAULT_TIMEOUT_SECONDS = 30
 
+HTTP_BAD_REQUEST = 400
 HTTP_TOO_MANY_REQUESTS = 429
 HTTP_UNAUTHORIZED = 401
 
@@ -78,20 +81,109 @@ _AUTH_ERROR_CODES = frozenset(
     }
 )
 
+_RATE_LIMIT_ERROR_CODES = frozenset(
+    {
+        "message_limit_exceeded",
+        "rate_limited",
+        "ratelimited",
+    }
+)
+
+# The channel id is wrong, or the connection's identity cannot see or post in
+# it. Slack answers ``channel_not_found`` for a private channel the token is not
+# a member of, so both codes share one remedy.
+_CHANNEL_NOT_FOUND = "channel_not_found"
+_NOT_IN_CHANNEL = "not_in_channel"
+
+# Codes Slack documents as the caller's fault for the methods this bundle calls
+# (``chat.postMessage``, ``reactions.add``, ``conversations.replies``,
+# ``conversations.members``, ``search.messages``, ``canvases.create``,
+# ``users.info``): the inputs must change, so retrying cannot help.
+_INVALID_REQUEST_ERROR_CODES = frozenset(
+    {
+        "already_reacted",
+        "as_user_not_supported",
+        "attachment_payload_limit_exceeded",
+        "bad_timestamp",
+        "cannot_reply_to_message",
+        "duplicate_channel_not_found",
+        "duplicate_message_not_found",
+        "free_team_canvas_tab_already_exists",
+        "invalid_arg_name",
+        "invalid_arguments",
+        "invalid_array_arg",
+        "invalid_blocks",
+        "invalid_blocks_format",
+        "invalid_charset",
+        "invalid_cursor",
+        "invalid_form_data",
+        "invalid_limit",
+        "invalid_metadata_filter_keys",
+        "invalid_metadata_format",
+        "invalid_metadata_schema",
+        "invalid_name",
+        "invalid_post_type",
+        "invalid_ts_latest",
+        "invalid_ts_oldest",
+        "is_archived",
+        "markdown_text_conflict",
+        "message_not_found",
+        "metadata_must_be_sent_from_app",
+        "metadata_too_large",
+        "missing_post_type",
+        "msg_blocks_too_long",
+        "no_item_specified",
+        "no_query",
+        "no_text",
+        "not_reactable",
+        "restricted_action_non_threadable_channel",
+        "restricted_action_read_only_channel",
+        "restricted_action_thread_locked",
+        "restricted_action_thread_only_channel",
+        "team_not_found",
+        "thread_locked",
+        "thread_not_found",
+        "too_many_attachments",
+        "too_many_contact_cards",
+        "too_many_emoji",
+        "too_many_reactions",
+        "user_not_found",
+        "user_not_visible",
+    }
+)
+
+# Slack or a workspace administrator refused the action for this account.
+# Neither retrying nor changing the inputs helps.
+_PROVIDER_DENIED_ERROR_CODES = frozenset(
+    {
+        "access_denied",
+        "accesslimited",
+        "app_access_restricted",
+        "ekm_access_denied",
+        "no_access",
+        "no_permission",
+        "restricted_action",
+        "send_on_behalf_not_allowed",
+        "slack_connect_canvas_sharing_blocked",
+        "slack_connect_file_link_sharing_blocked",
+        "slack_connect_lists_sharing_blocked",
+        "team_access_not_granted",
+        "two_factor_setup_required",
+    }
+)
+
 # Codes that mean "the workspace, plan, channel type, or token type cannot do
 # this", i.e. retrying or re-granting scopes will not help.
 _UNSUPPORTED_ERROR_CODES = frozenset(
     {
-        "channel_not_found",
+        "canvas_disabled_user_team",
+        "deprecated_endpoint",
         "enterprise_is_restricted",
         "free_team_not_allowed",
-        "is_archived",
+        "free_teams_cannot_create_standalone_canvases",
+        "method_deprecated",
         "method_not_supported_for_channel_type",
         "not_allowed_token_type",
-        "not_in_channel",
-        "restricted_action",
-        "team_access_not_granted",
-        "thread_not_found",
         "unknown_method",
     }
 )
@@ -120,32 +212,63 @@ def _retry_after(headers: Any) -> float | None:
         return None
 
 
+def _error_status(status: Any) -> int | None:
+    """Return Slack's HTTP status only when it is itself an error status.
+
+    ``ok:false`` bodies arrive with HTTP 200. A terminal run handler answers
+    with the typed error's ``http_status``, so forwarding that 200 would report
+    a failed run as a success.
+    """
+    return status if isinstance(status, int) and status >= HTTP_BAD_REQUEST else None
+
+
+def _channel_error(code: str, status: int | None) -> InvalidRequestError:
+    if code == _NOT_IN_CHANNEL:
+        message = "This Slack connection is not a member of the channel."
+        hint = "Invite the app to the channel (or join it, for actions that run as you), then try again."
+    else:
+        message = "Slack could not find the channel, or this connection cannot see it."
+        hint = (
+            "Check the channel ID. If the channel is private, invite the app to it "
+            "(or join it, for actions that run as you)."
+        )
+    return InvalidRequestError(message, hint=hint, provider=PROVIDER_ID, http_status=status or HTTP_BAD_REQUEST)
+
+
 def normalize_slack_error(exc: BaseException) -> IntegrationError | None:
     """Map a ``slack_sdk`` failure onto lfx's sanitized error vocabulary.
 
     Returns ``None`` for exceptions this bundle has no opinion about, which
     lets ``normalize_integration_error`` fall through to its status-code rules.
+    A Slack code this bundle does not recognize stays ``provider-unavailable``.
     """
     if not isinstance(exc, SlackApiError):
         return None
     response = getattr(exc, "response", None)
-    status = getattr(response, "status_code", None)
+    raw_status = getattr(response, "status_code", None)
+    status = _error_status(raw_status)
     headers = getattr(response, "headers", None)
     data = getattr(response, "data", None)
     code = data.get("error") if isinstance(data, dict) else None
 
-    if code in _AUTH_ERROR_CODES or status == HTTP_UNAUTHORIZED:
-        return AuthExpiredError(provider=PROVIDER_ID, http_status=status)
+    if code in _AUTH_ERROR_CODES or raw_status == HTTP_UNAUTHORIZED:
+        return AuthExpiredError(provider=PROVIDER_ID, http_status=status or HTTP_UNAUTHORIZED)
     if code == "missing_scope":
         needed = data.get("needed") if isinstance(data, dict) else None
         missing = frozenset(part for part in str(needed or "").replace(",", " ").split() if part)
         return ScopeMissingError(missing, provider=PROVIDER_ID)
-    if code == "ratelimited" or status == HTTP_TOO_MANY_REQUESTS:
+    if code in _RATE_LIMIT_ERROR_CODES or raw_status == HTTP_TOO_MANY_REQUESTS:
         return RateLimitedError(
             provider=PROVIDER_ID,
             retry_after=_retry_after(headers),
             http_status=status or HTTP_TOO_MANY_REQUESTS,
         )
+    if code in {_CHANNEL_NOT_FOUND, _NOT_IN_CHANNEL}:
+        return _channel_error(code, status)
+    if code in _INVALID_REQUEST_ERROR_CODES:
+        return InvalidRequestError(provider=PROVIDER_ID, http_status=status or HTTP_BAD_REQUEST)
+    if code in _PROVIDER_DENIED_ERROR_CODES:
+        return ConnectionNotAuthorizedError(provider=PROVIDER_ID, reason="provider")
     if code in _UNSUPPORTED_ERROR_CODES:
         return ActionUnsupportedError(provider=PROVIDER_ID, http_status=status)
     return ProviderUnavailableError(provider=PROVIDER_ID, http_status=status)

@@ -16,7 +16,9 @@ from conftest import FakeResolver, SlackTransport, load_fixture
 from lfx.integrations.errors import (
     ActionUnsupportedError,
     AuthExpiredError,
+    ConnectionNotAuthorizedError,
     IntegrationError,
+    InvalidRequestError,
     ProviderUnavailableError,
     RateLimitedError,
     ScopeMissingError,
@@ -28,7 +30,8 @@ from lfx.integrations.models import (
     CredentialLease,
 )
 from lfx.services.authorization.base import ExecutionPrincipal
-from lfx_slack._client import SLACK_API_BASE_URL, SlackClient, next_cursor
+from lfx_slack import _client as slack_client
+from lfx_slack._client import SLACK_API_BASE_URL, SlackClient, next_cursor, normalize_slack_error
 from slack_sdk.errors import SlackApiError
 
 PRINCIPAL = ExecutionPrincipal(kind="actor", user_id="user-1", interactive=True)
@@ -55,7 +58,12 @@ def test_the_api_root_is_a_non_configurable_constant() -> None:
         ("error_missing_scope", ScopeMissingError, "scope-missing"),
         ("error_ratelimited", RateLimitedError, "rate-limited"),
         ("error_not_allowed_token_type", ActionUnsupportedError, "action-unsupported"),
-        ("error_channel_not_found", ActionUnsupportedError, "action-unsupported"),
+        ("error_channel_not_found", InvalidRequestError, "invalid-request"),
+        ("error_not_in_channel", InvalidRequestError, "invalid-request"),
+        ("error_invalid_name", InvalidRequestError, "invalid-request"),
+        ("error_invalid_blocks_format", InvalidRequestError, "invalid-request"),
+        ("error_no_text", InvalidRequestError, "invalid-request"),
+        ("error_restricted_action", ConnectionNotAuthorizedError, "connection-not-authorized"),
         ("error_internal_error", ProviderUnavailableError, "provider-unavailable"),
     ],
 )
@@ -76,6 +84,116 @@ async def test_ok_false_bodies_map_to_typed_errors(
 
     assert raised.value.code == code
     assert raised.value.provider == "slack"
+
+
+def _slack_api_error(code: str | None, *, status: int = 200) -> SlackApiError:
+    body = {"ok": False} if code is None else {"ok": False, "error": code}
+    response = type("Response", (), {"status_code": status, "headers": {}, "data": body})
+    return SlackApiError("failed", response())
+
+
+@pytest.mark.parametrize(
+    ("fixture", "method", "kwargs"),
+    [
+        ("error_invalid_name", "reactions_add", {"channel": "C0SLACKDEMO", "timestamp": "1.0", "name": "nope"}),
+        (
+            "error_invalid_blocks_format",
+            "chat_postMessage",
+            {"channel": "C0SLACKDEMO", "text": "fallback", "blocks": "not-json"},
+        ),
+        ("error_no_text", "chat_postMessage", {"channel": "C0SLACKDEMO", "text": ""}),
+    ],
+)
+@pytest.mark.filterwarnings("ignore:The top-level `text` argument is missing:UserWarning")
+async def test_caller_fault_rejections_are_not_retryable(
+    transport: SlackTransport,
+    fixture: str,
+    method: str,
+    kwargs: dict,
+) -> None:
+    """LE-2470: these reached users as "temporarily unavailable, retry later"."""
+    transport.enqueue(load_fixture(fixture))
+    client = SlackClient(_lease(FakeResolver()))
+
+    with pytest.raises(InvalidRequestError) as raised:
+        await client.call(method, **kwargs)
+
+    error = raised.value
+    assert error.code == "invalid-request"
+    assert error.retryable is False
+    assert error.http_status == 400
+    assert "retry" not in (error.hint or "").lower()
+    assert "temporarily unavailable" not in error.message
+    assert len(transport.calls) == 1
+
+
+@pytest.mark.parametrize("code", ["channel_not_found", "not_in_channel"])
+def test_membership_rejections_name_the_channel_remedy(code: str) -> None:
+    error = normalize_slack_error(_slack_api_error(code))
+
+    assert isinstance(error, InvalidRequestError)
+    assert error.retryable is False
+    hint = (error.hint or "").lower()
+    assert "invite the app" in hint
+    assert "does not support" not in error.message
+    if code == "channel_not_found":
+        assert "channel id" in hint
+
+
+@pytest.mark.parametrize("code", ["restricted_action", "team_access_not_granted", "no_permission", "access_denied"])
+def test_workspace_denials_are_provider_authorization_denials(code: str) -> None:
+    error = normalize_slack_error(_slack_api_error(code))
+
+    assert isinstance(error, ConnectionNotAuthorizedError)
+    assert error.details == {"reason": "provider"}
+    assert error.retryable is False
+
+
+def test_an_unrecognized_slack_code_stays_provider_unavailable() -> None:
+    error = normalize_slack_error(_slack_api_error("a_code_slack_adds_later"))
+
+    assert isinstance(error, ProviderUnavailableError)
+    assert error.retryable is True
+
+
+@pytest.mark.parametrize(
+    ("code", "status", "expected_status"),
+    [
+        ("invalid_auth", 200, 401),
+        ("ratelimited", 200, 429),
+        ("no_text", 200, 400),
+        ("channel_not_found", 200, 400),
+        ("not_allowed_token_type", 200, None),
+        ("internal_error", 200, None),
+        ("internal_error", 503, 503),
+        (None, 502, 502),
+    ],
+)
+def test_slack_http_200_never_becomes_the_error_status(
+    code: str | None, status: int, expected_status: int | None
+) -> None:
+    """A terminal run handler answers with ``http_status``; a 200 would report a failed run as a success."""
+    error = normalize_slack_error(_slack_api_error(code, status=status))
+
+    assert error is not None
+    assert error.http_status == expected_status
+
+
+def test_the_error_code_families_do_not_overlap() -> None:
+    """The normalizer checks families in order, so an overlap would silently shadow a code."""
+    families = {
+        "auth": slack_client._AUTH_ERROR_CODES,
+        "rate": slack_client._RATE_LIMIT_ERROR_CODES,
+        "channel": frozenset({slack_client._CHANNEL_NOT_FOUND, slack_client._NOT_IN_CHANNEL}),
+        "invalid": slack_client._INVALID_REQUEST_ERROR_CODES,
+        "denied": slack_client._PROVIDER_DENIED_ERROR_CODES,
+        "unsupported": slack_client._UNSUPPORTED_ERROR_CODES,
+    }
+    names = list(families)
+    for index, left in enumerate(names):
+        assert "missing_scope" not in families[left]
+        for right in names[index + 1 :]:
+            assert not families[left] & families[right], f"{left} and {right} share codes"
 
 
 async def test_missing_scope_reports_the_scopes_slack_asked_for(transport: SlackTransport) -> None:
