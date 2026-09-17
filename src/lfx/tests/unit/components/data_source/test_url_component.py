@@ -1,6 +1,7 @@
 """Tests for URLComponent input type configuration."""
 
 import sys
+import time
 from unittest.mock import MagicMock
 
 import pytest
@@ -92,7 +93,10 @@ def url_component_with_real_parser(monkeypatch):
     ):
         monkeypatch.setitem(sys.modules, mod, MagicMock())
     # The other fixture may have imported this module with bs4 stubbed out.
-    monkeypatch.delitem(sys.modules, "lfx.components.data_source.url", raising=False)
+    # `delitem` records nothing when the key is absent, so the module imported
+    # below would outlive the test; `setitem` records the previous state.
+    monkeypatch.setitem(sys.modules, "lfx.components.data_source.url", None)
+    del sys.modules["lfx.components.data_source.url"]
 
     from lfx.components.data_source.url import URLComponent
 
@@ -128,6 +132,19 @@ class TestURLComponentTextExtraction:
         html = "<p>line one<br>line two</p>"
 
         assert url_component_with_real_parser._text_extractor(html) == "line one\nline two"
+
+    def test_many_line_breaks_are_read_in_linear_time(self, url_component_with_real_parser):
+        """Replacing each <br> in place scans its siblings every time, which is
+        quadratic: 50,000 of them in one element took well over 10 s."""
+        html = "<div>" + "x<br>" * 50_000 + "</div>"
+
+        started = time.perf_counter()
+        lines = url_component_with_real_parser._text_extractor(html).split("\n")
+        elapsed = time.perf_counter() - started
+
+        assert elapsed < 5
+        assert len(lines) == 50_000
+        assert set(lines) == {"x"}
 
     def test_script_and_style_contents_stay_out(self, url_component_with_real_parser):
         html = "<p>x</p><script>var a = 1;</script><style>.a{color:red}</style><p>y</p>"

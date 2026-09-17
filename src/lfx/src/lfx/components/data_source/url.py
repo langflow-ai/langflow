@@ -4,7 +4,7 @@ import re
 from urllib.parse import urljoin, urlparse
 
 import httpx
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, NavigableString, Tag
 from markitdown import MarkItDown
 
 from lfx.custom.custom_component.component import Component
@@ -47,6 +47,9 @@ if importlib.util.find_spec("langflow"):
 else:
     langflow_installed = False
     USER_AGENT = "lfx"
+
+
+_END_OF_CHILDREN = object()
 
 
 class URLComponent(Component):
@@ -274,17 +277,37 @@ class URLComponent(Component):
         page's blocks arrive glued: `<h1>Title</h1><p>Body.</p>` becomes
         `TitleBody.`. A separator argument would fix that but would also push one
         between inline elements, turning `Hello <b>world</b>!` into
-        `Hello world !`. Marking the end of each block instead keeps both right.
+        `Hello world !`. A line break after each block and at each `<br>` keeps
+        both right.
+
+        The tree is walked once instead of rewritten: replacing each `<br>` in
+        place scans its siblings every time, which is quadratic on a page with
+        thousands of them.
         """
         soup = BeautifulSoup(x, "lxml")
+        # The strings get_text() joins: script, style and template text stays
+        # out exactly as it does there.
+        wanted = {id(string) for string in soup.strings}
+        parts: list[str] = []
+        children = [iter(soup.contents)]
+        open_tags: list[str | None] = [None]
+        while children:
+            node = next(children[-1], _END_OF_CHILDREN)
+            if node is _END_OF_CHILDREN:
+                children.pop()
+                if open_tags.pop() in URLComponent._BLOCK_LEVEL_TAGS:
+                    parts.append("\n")
+            elif isinstance(node, NavigableString):
+                if id(node) in wanted:
+                    parts.append(node)
+            elif isinstance(node, Tag):
+                if node.name == "br":
+                    parts.append("\n")
+                else:
+                    children.append(iter(node.contents))
+                    open_tags.append(node.name)
 
-        for line_break in soup.find_all("br"):
-            line_break.replace_with("\n")
-
-        for block in soup.find_all(URLComponent._BLOCK_LEVEL_TAGS):
-            block.append("\n")
-
-        return re.sub(r"\n{3,}", "\n\n", soup.get_text()).strip()
+        return re.sub(r"\n{3,}", "\n\n", "".join(parts)).strip()
 
     @staticmethod
     def _markdown_extractor(x: str) -> str:
