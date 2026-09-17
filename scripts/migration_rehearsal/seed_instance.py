@@ -17,6 +17,7 @@ from pathlib import Path
 from uuid import UUID
 
 DIM = 8  # vector width; the transport does not care what it is
+CHROMA_UPSERT_BATCH = 5000
 LOGICAL_FILE_BYTES = b"fixture-bytes"  # the logical file row's size is taken from this
 
 
@@ -470,12 +471,15 @@ async def main() -> None:
             # arrays, so deterministic values exercise it exactly as real ones do.
             backend = ChromaLocalBackend(kb_name="kb-ok", kb_path=kb_dir)
             await backend.ensure_ready()
-            backend.vector_store._collection.upsert(  # noqa: SLF001
-                ids=[f"chunk-{i:05d}" for i in range(args.chunks)],
-                embeddings=[[round(((i * 7 + j * 13) % 100) / 100, 4) for j in range(DIM)] for i in range(args.chunks)],
-                documents=[f"fixture chunk {i}" for i in range(args.chunks)],
-                metadatas=[{"source": "fixture.txt", "chunk_index": i} for i in range(args.chunks)],
-            )
+            # Chroma rejects a single upsert above its max batch size (5461 locally).
+            for start in range(0, args.chunks, CHROMA_UPSERT_BATCH):
+                batch = range(start, min(start + CHROMA_UPSERT_BATCH, args.chunks))
+                backend.vector_store._collection.upsert(  # noqa: SLF001
+                    ids=[f"chunk-{i:05d}" for i in batch],
+                    embeddings=[[round(((i * 7 + j * 13) % 100) / 100, 4) for j in range(DIM)] for i in batch],
+                    documents=[f"fixture chunk {i}" for i in batch],
+                    metadatas=[{"source": "fixture.txt", "chunk_index": i} for i in batch],
+                )
             await backend.teardown()
 
         # Bytes for the logical-path file row. The absolute-path row is left
