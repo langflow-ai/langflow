@@ -33,10 +33,17 @@ scope names, so the bundle ships two authorization profiles:
   desktop redirects may not request bot scopes.
 
 A component that runs as the bot fails closed with `connection-not-authorized`
-before its first request when it is handed a user-token connection, and the
-reverse, by comparing `ResolvedCredential.identity`. Connections resolved from
-`LF_CONNECTION__SLACK__<NAME>` carry no identity, so headless operators are
-trusted and Slack's own `not_allowed_token_type` remains the backstop.
+before its first request when it is handed a user token, and the reverse. It
+checks two signals, and each one that is present must match the action:
+`ResolvedCredential.identity`, recorded on the connection by the host, and the
+token's own type prefix (`xoxb-` bot, `xoxp-` user, optionally behind the
+`xoxe.` rotation marker).
+
+Connections resolved from `LF_CONNECTION__SLACK__<NAME>` carry no recorded
+identity, so the prefix is the only proof for them, and a headless token without
+a recognizable prefix is refused. Slack's own `not_allowed_token_type` is not a
+backstop: `chat.postMessage` accepts both token types, so a mismatched token
+would post under the wrong author without an error.
 
 Hiding the bot components on Desktop is delivered by capability discovery
 filtering on `deployment_contexts` (INT-7/INT-8), not by this bundle; the
@@ -53,9 +60,16 @@ reconnect and grant-scopes affordances would never appear.
 | --- | --- |
 | `invalid_auth`, `not_authed`, `token_expired`, `token_revoked`, `account_inactive` | `auth-expired` |
 | `missing_scope` (with `needed`) | `scope-missing` |
-| `ratelimited`, HTTP 429 | `rate-limited` (with `Retry-After`) |
-| `not_allowed_token_type`, `channel_not_found`, `not_in_channel`, … | `action-unsupported` |
+| `ratelimited`, `rate_limited`, `message_limit_exceeded`, HTTP 429 | `rate-limited` (with `Retry-After`) |
+| `channel_not_found`, `not_in_channel` | `invalid-request`, with a hint to check the channel ID or invite the app |
+| caller-fault codes such as `invalid_name`, `invalid_blocks_format`, `no_text`, `thread_not_found`, `is_archived` | `invalid-request` |
+| workspace or admin denials such as `restricted_action`, `team_access_not_granted`, `no_permission` | `connection-not-authorized` (reason `provider`) |
+| `not_allowed_token_type`, `method_not_supported_for_channel_type`, `free_team_not_allowed`, … | `action-unsupported` |
 | anything else | `provider-unavailable` |
+
+Only `rate-limited` and `provider-unavailable` are retryable. The full code sets
+live in `_client.py`. Slack's HTTP 200 is never copied onto the typed error, so a
+run that fails this way is not reported with a success status.
 
 An `auth-expired` rejection triggers exactly one reactive re-resolve through
 `CredentialLease.get_token_after_auth_error`, which is how a rotated Slack

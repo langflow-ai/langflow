@@ -23,7 +23,9 @@ Slack has two kinds of token, and a component is fixed to one of them:
 | Connected Slack user | `slack-user-oauth` | the person who authorized the connection | Yes |
 | App bot user | `slack-bot-install` | the app's bot user | No |
 
-Slack user scopes and bot scopes share names — `chat:write` is both a User Token Scope and a Bot Token Scope — so the scopes a connection was granted cannot tell the two identities apart. Each component instead checks the identity recorded on the connection and fails with a connection authorization error, before any request reaches Slack, when it is handed the wrong kind.
+Slack user scopes and bot scopes share names — `chat:write` is both a User Token Scope and a Bot Token Scope — so the scopes a connection was granted cannot tell the two identities apart. Each component instead checks the identity recorded on the connection and the token's own type prefix (`xoxb-` for a bot token, `xoxp-` for a user token), and fails with a connection authorization error, before any request reaches Slack, when either one names the wrong kind.
+
+A headless connection supplied through `LF_CONNECTION__SLACK__<NAME>` has no recorded identity, so its token must carry a recognizable Slack prefix; a token without one is refused.
 
 Bot components are unavailable on Langflow Desktop because Slack desktop redirects use PKCE and [may not request bot scopes](https://docs.slack.dev/authentication/using-pkce/). Use a hosted or self-managed workspace installation for those actions.
 
@@ -110,6 +112,9 @@ Slack reports application-level failures as `HTTP 200` with `{"ok": false, ...}`
 | `invalid_auth`, `token_expired`, `token_revoked`, `account_inactive`, `not_authed` | `auth-expired` | Reconnect the connection. |
 | `missing_scope` | `scope-missing` | Grant the listed scopes and reconnect. |
 | `ratelimited` | `rate-limited` | Retry after the reported interval. |
-| `not_allowed_token_type`, `channel_not_found`, `not_in_channel` | `action-unsupported` | Check the identity, the channel, and the bot's membership. |
+| `channel_not_found`, `not_in_channel` | `invalid-request` | Check the channel ID, and invite the app to the channel (or join it, for actions that run as you). |
+| Input errors such as `invalid_name`, `invalid_blocks_format`, `no_text`, `thread_not_found` | `invalid-request` | Fix the component's inputs. Retrying with the same inputs fails again. |
+| Workspace or admin denials such as `restricted_action`, `team_access_not_granted`, `no_permission` | `connection-not-authorized` | Ask a workspace administrator, or use a connection that is allowed to act. |
+| `not_allowed_token_type`, `method_not_supported_for_channel_type` | `action-unsupported` | Use a different component, channel type, or plan. |
 
 If Slack rejects a token, the component re-resolves the connection once and retries. That is how a rotated Slack token is picked up: Slack tokens do not expire unless the app opted into token rotation, so a rejection is the only signal.
