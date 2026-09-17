@@ -1332,3 +1332,65 @@ async def test_global_names_ignore_the_action_name(monkeypatch):
     names = await _published_names(monkeypatch, flows)
 
     assert names == ["some_flow"]
+
+
+# ---------------------------------------------------------------------------
+# The round trip: list then call
+#
+# The tool name is the whole of the contract between the two halves -- a client
+# stores the string `tools/list` gave it and sends that string back. These cells
+# publish through the real list path and then call every name it published.
+# ---------------------------------------------------------------------------
+
+_ROUND_TRIP_USER = "123e4567-e89b-12d3-a456-426614174000"
+
+
+def _round_trip_flows() -> list[SimpleNamespace]:
+    return [
+        # Longer than the limit, so it is published truncated.
+        _tool_flow(_LONG_FLOW_NAME, flow_id="flow-long"),
+        # Named exactly what the flow above truncates to, so it takes the suffix
+        # and the bare name belongs to a flow that does not regenerate it.
+        _tool_flow(_LONG_FLOW_NAME[:30], flow_id="flow-collides"),
+        # A second copy of the long name, for the plain de-duplication case.
+        _tool_flow(_LONG_FLOW_NAME, flow_id="flow-long-again"),
+        # Short and unique: the case that already worked.
+        _tool_flow("Simple Flow", flow_id="flow-simple"),
+    ]
+
+
+@pytest.mark.asyncio
+async def test_every_globally_published_name_resolves_to_its_own_flow(monkeypatch):
+    flows = _round_trip_flows()
+
+    names = await _published_names(monkeypatch, flows)
+
+    assert len(names) == len(flows)
+    for name, flow in zip(names, flows, strict=True):
+        resolved = await mcp_utils.get_flow_snake_case(name, _ROUND_TRIP_USER, FakeSession(flows=flows, user_files=[]))
+        assert resolved is not None, f"the server published {name!r} and then refused it"
+        assert resolved.id == flow.id, f"{name!r} resolved to {resolved.id}, not the flow it was published for"
+
+
+@pytest.mark.asyncio
+async def test_every_project_published_name_resolves_to_its_own_flow(monkeypatch):
+    flows = _round_trip_flows()
+    # The project surface addresses a flow by its action name when it has one.
+    flows[0].action_name = _LONG_FLOW_NAME
+    flows[1].action_name = _LONG_FLOW_NAME[:30]
+    project_id = uuid4()
+
+    names = await _published_names(monkeypatch, flows, project_id=project_id)
+
+    assert len(names) == len(flows)
+    for name, flow in zip(names, flows, strict=True):
+        resolved = await mcp_utils.get_flow_snake_case(
+            name,
+            _ROUND_TRIP_USER,
+            FakeSession(flows=flows, user_files=[]),
+            is_action=True,
+            project_id=project_id,
+            mcp_enabled_only=True,
+        )
+        assert resolved is not None, f"the server published {name!r} and then refused it"
+        assert resolved.id == flow.id, f"{name!r} resolved to {resolved.id}, not the flow it was published for"
