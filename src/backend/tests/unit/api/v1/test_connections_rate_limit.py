@@ -24,6 +24,8 @@ pytestmark = pytest.mark.no_blockbuster
 
 _LIMIT = 2
 _CALLBACK_URL = "api/v1/connections/oauth/google/callback"
+# usePendingConnectionPoll refetches the listing every 2000ms: 30 reads a minute.
+_POLLS_PER_MINUTE = 30
 
 
 @pytest.fixture(autouse=True)
@@ -36,11 +38,19 @@ def _reset_rate_limiter():
         rate_limit_service._limiter.reset()
 
 
-def _enable_rate_limit(monkeypatch: pytest.MonkeyPatch, *, limit: int = _LIMIT) -> None:
-    """Turn the limiter on after login; the fixtures run with it disabled."""
+def _enable_rate_limit(monkeypatch: pytest.MonkeyPatch, *, limit: int = _LIMIT, read_limit: int | None = None) -> None:
+    """Turn the limiter on after login; the fixtures run with it disabled.
+
+    `read_limit` sizes the metadata-read bucket, which is deliberately far more
+    generous than the write budget in production; it defaults to `limit` here so
+    a case that does not care about the split reads as one allowance.
+    """
     settings = get_settings_service().settings
     monkeypatch.setattr(settings, "rate_limit_enabled", True)
     monkeypatch.setattr(settings, "rate_limit_per_minute", limit)
+    monkeypatch.setattr(
+        settings, "connection_metadata_rate_limit_per_minute", limit if read_limit is None else read_limit
+    )
     if rate_limit_service._limiter is not None:
         rate_limit_service._limiter.reset()
 
@@ -79,17 +89,44 @@ async def _create_connection(client: AsyncClient, headers: dict[str, str], name:
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_connection_crud_endpoints_are_rate_limited(
+async def test_connection_metadata_reads_are_rate_limited(
     client: AsyncClient,
     logged_in_headers: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The ordinary CRUD bucket admits its allowance of reads and then throttles."""
+    """The metadata-read bucket admits its allowance and then throttles."""
     _enable_rate_limit(monkeypatch)
     for _ in range(_LIMIT):
         listed = await client.get("api/v1/connections", headers=logged_in_headers)
         assert listed.status_code == 200, listed.text
     _assert_limited(await client.get("api/v1/connections", headers=logged_in_headers))
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_shipped_defaults_admit_a_full_minute_of_the_pending_oauth_poll(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The connections UI polls the listing every 2s while a consent is pending.
+
+    `usePendingConnectionPoll` refetches `GET /connections` on a 2000ms interval
+    with `retry: false`, so 30 reads land per minute and a single 429 ends the
+    poll for good: the row never flips to authorized and the user is left at a
+    stale screen. On the login budget (5/minute) that happened about ten seconds
+    into every consent — well before a human finishes authorizing at the
+    provider — which is why the read bucket is sized separately. This runs at
+    the *shipped* defaults, so lowering them re-breaks the flow here.
+    """
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "rate_limit_enabled", True)
+    if rate_limit_service._limiter is not None:
+        rate_limit_service._limiter.reset()
+    assert settings.connection_metadata_rate_limit_per_minute >= _POLLS_PER_MINUTE
+
+    for poll in range(_POLLS_PER_MINUTE):
+        polled = await client.get("api/v1/connections", headers=logged_in_headers)
+        assert polled.status_code == 200, f"poll {poll + 1} of {_POLLS_PER_MINUTE}: {polled.text}"
 
 
 @pytest.mark.parametrize("route", ["create", "update", "revoke", "delete"])
@@ -138,12 +175,12 @@ async def test_every_mutating_crud_route_admits_then_limits(
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_mutating_routes_share_the_crud_bucket_with_reads(
+async def test_mutating_routes_share_one_write_bucket(
     client: AsyncClient,
     logged_in_headers: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """One budget covers reads and writes: a write burst cannot be laundered through another verb."""
+    """Every write shares one budget, so a burst cannot be laundered through another verb."""
     connection_id = await _create_connection(client, logged_in_headers)
     _enable_rate_limit(monkeypatch, limit=1)
 
@@ -154,16 +191,40 @@ async def test_mutating_routes_share_the_crud_bucket_with_reads(
     )
     assert renamed.status_code == 200, renamed.text
 
-    # The single allowance is now spent for every route in the CRUD namespace.
-    _assert_limited(await client.get("api/v1/connections", headers=logged_in_headers))
+    # The single allowance is now spent for every write route in the namespace.
     _assert_limited(await client.post("api/v1/connections", json=_create_payload("second"), headers=logged_in_headers))
     _assert_limited(await client.post(f"api/v1/connections/{connection_id}/revoke", headers=logged_in_headers))
     _assert_limited(await client.delete(f"api/v1/connections/{connection_id}", headers=logged_in_headers))
 
-    # ...but the dedicated health bucket is untouched, so the rejections above
-    # are the CRUD counter rather than a limiter-wide stop.
+    # ...while the metadata reads and the dedicated health bucket are untouched,
+    # so the rejections above are the write counter rather than a limiter-wide
+    # stop — and a write burst can never throttle the pending-consent poll.
+    listed = await client.get("api/v1/connections", headers=logged_in_headers)
+    assert listed.status_code == 200, listed.text
     health = await client.post(f"api/v1/connections/{connection_id}/health", headers=logged_in_headers)
     assert health.status_code == 200, health.text
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_exhausted_read_bucket_does_not_block_writes(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The split holds in both directions: a polling tab must not lock the owner out of a rename."""
+    connection_id = await _create_connection(client, logged_in_headers)
+    _enable_rate_limit(monkeypatch, limit=_LIMIT, read_limit=1)
+
+    listed = await client.get("api/v1/connections", headers=logged_in_headers)
+    assert listed.status_code == 200, listed.text
+    _assert_limited(await client.get("api/v1/connections", headers=logged_in_headers))
+
+    renamed = await client.patch(
+        f"api/v1/connections/{connection_id}",
+        json={"display_name": "Renamed"},
+        headers=logged_in_headers,
+    )
+    assert renamed.status_code == 200, renamed.text
 
 
 @pytest.mark.usefixtures("active_user")
@@ -254,11 +315,11 @@ async def test_oauth_callback_budget_does_not_consume_oauth_start(
         )
     )
 
-    # Distinct buckets again: health checks are unaffected. Plain CRUD shares
-    # one bucket, and the create above already spent this client's allowance.
+    # Distinct buckets again: health checks are unaffected. The writes share one
+    # bucket, and the create above already spent this client's allowance.
     health = await client.post(f"api/v1/connections/{connection_id}/health", headers=logged_in_headers)
     assert health.status_code == 200, health.text
-    _assert_limited(await client.get("api/v1/connections", headers=logged_in_headers))
+    _assert_limited(await client.post("api/v1/connections", json=_create_payload("another"), headers=logged_in_headers))
 
 
 @pytest.mark.usefixtures("active_user")
@@ -293,15 +354,23 @@ async def test_oauth_registration_listing_is_rate_limited(
     logged_in_headers: dict[str, str],
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """The registration listing shares the CRUD bucket; it makes no outbound call."""
+    """The registration listing rides the metadata-read bucket, not the write budget."""
     _enable_rate_limit(monkeypatch)
     url = "api/v1/connections/oauth/registrations"
     for _ in range(_LIMIT):
         listed = await client.get(url, headers=logged_in_headers)
         assert listed.status_code == 200, listed.text
     _assert_limited(await client.get(url, headers=logged_in_headers))
-    # Same bucket as plain CRUD, so the allowance is already spent there too.
+    # Same bucket as the connection listing, which is also a metadata read.
     _assert_limited(await client.get("api/v1/connections", headers=logged_in_headers))
+    # The write budget is untouched: a throttled picker must not block a rename.
+    connection_id = await _create_connection(client, logged_in_headers, name="writable")
+    renamed = await client.patch(
+        f"api/v1/connections/{connection_id}",
+        json={"display_name": "Renamed"},
+        headers=logged_in_headers,
+    )
+    assert renamed.status_code == 200, renamed.text
 
 
 def test_every_connections_route_checks_the_rate_limit() -> None:
