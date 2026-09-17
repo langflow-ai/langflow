@@ -8,7 +8,9 @@ connection string were exported verbatim.
 
 LE-2649: the export paths must still keep global-variable bindings. A
 ``load_from_db`` field stores the variable *name*, not the secret, and the
-importing instance resolves the credential by that name.
+importing instance resolves the credential by that name. A bound value is kept
+only when it names one of the flow owner's global variables, so a name-shaped
+literal behind a stale ``load_from_db`` flag is still nulled.
 
 Covered export boundaries:
 
@@ -26,6 +28,8 @@ from fastapi import status
 from httpx import AsyncClient
 from langflow.api.v1.flow_version import strip_version_data
 from langflow.services.database.models.flow.model import Flow, FlowCreate
+from langflow.services.deps import get_variable_service
+from langflow.services.variable.constants import CREDENTIAL_TYPE
 from langflow.utils.flow_secrets import strip_flow_secrets, strip_secret_field_values
 from lfx.services.deps import session_scope
 
@@ -40,8 +44,11 @@ _LEAKED_VALUES = (_SECRET_PASSWORD, _SECRET_TOKEN, _SECRET_API_KEY, _SECRET_DSN)
 # Global-variable names referenced by bound fields; these must survive an export.
 _BOUND_VARIABLE_NAME = "repro-binding"
 _BOUND_OPENAI_VARIABLE_NAME = "OPENAI_API_KEY"
+_BOUND_VARIABLE_NAMES = frozenset({_BOUND_VARIABLE_NAME, _BOUND_OPENAI_VARIABLE_NAME})
 # A credential-shaped literal behind a stale ``load_from_db`` flag is still a secret.
 _MISLABELLED_API_KEY = "sk-MISLABELLEDSECRET"  # pragma: allowlist secret
+# Passes the variable-name shape check but names no global variable.
+_NAME_SHAPED_SECRET = "sk_live_NAMESHAPEDSECRET"  # noqa: S105  # pragma: allowlist secret
 
 
 def _secret_flow_data() -> dict:
@@ -168,6 +175,15 @@ def _bound_flow_data() -> dict:
                                 "value": _MISLABELLED_API_KEY,
                                 "type": "str",
                             },
+                            # A name-shaped literal that names no variable of the owner.
+                            "stripe_key": {
+                                "_input_type": "SecretStrInput",
+                                "name": "stripe_key",
+                                "password": True,
+                                "load_from_db": True,
+                                "value": _NAME_SHAPED_SECRET,
+                                "type": "str",
+                            },
                         }
                     },
                 },
@@ -187,10 +203,28 @@ def _assert_bindings_kept(flow_dict: dict) -> None:
     assert template["api_key"]["load_from_db"] is True
     assert template["plain_password"]["value"] is None
     assert template["service_token"]["value"] is None
+    assert template["stripe_key"]["value"] is None
 
     serialized = json.dumps(flow_dict)
     assert _SECRET_PASSWORD not in serialized
     assert _MISLABELLED_API_KEY not in serialized
+    assert _NAME_SHAPED_SECRET not in serialized
+
+
+async def _create_bound_variables(active_user) -> None:
+    """Create the owner's global variables that the bound fields reference."""
+    variable_service = get_variable_service()
+    async with session_scope() as session:
+        existing = set(await variable_service.list_variables(user_id=active_user.id, session=session))
+        for name in _BOUND_VARIABLE_NAMES - existing:
+            await variable_service.create_variable(
+                active_user.id,
+                name,
+                "stored-credential",  # pragma: allowlist secret
+                default_fields=[],
+                type_=CREDENTIAL_TYPE,
+                session=session,
+            )
 
 
 async def _create_flow(active_user, *, folder_id=None, data=None, name="le2240-export-secret-flow") -> str:
@@ -247,6 +281,7 @@ async def test_project_download_strips_non_api_password_fields(client: AsyncClie
 @pytest.mark.usefixtures("active_user")
 async def test_flows_download_keeps_global_variable_bindings(client: AsyncClient, logged_in_headers, active_user):
     """LE-2649: POST /api/v1/flows/download/ keeps the variable name of bound fields."""
+    await _create_bound_variables(active_user)
     flow_id = await _create_flow(active_user, data=_bound_flow_data())
 
     read_response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
@@ -263,6 +298,7 @@ async def test_flows_download_keeps_global_variable_bindings(client: AsyncClient
 @pytest.mark.usefixtures("active_user")
 async def test_flows_download_zip_keeps_global_variable_bindings(client: AsyncClient, logged_in_headers, active_user):
     """LE-2649: the multi-flow ZIP export keeps bindings in every flow file."""
+    await _create_bound_variables(active_user)
     flow_ids = [
         await _create_flow(active_user, data=_bound_flow_data(), name=f"le2649-bound-flow-{index}")
         for index in range(2)
@@ -279,6 +315,23 @@ async def test_flows_download_zip_keeps_global_variable_bindings(client: AsyncCl
 
 
 @pytest.mark.usefixtures("active_user")
+async def test_flows_download_nulls_bindings_to_missing_variables(client: AsyncClient, logged_in_headers, active_user):
+    """A bound value that names none of the owner's variables is not exported."""
+    flow_id = await _create_flow(active_user, data=_bound_flow_data(), name="le2649-unbound-flow")
+
+    response = await client.post("api/v1/flows/download/", json=[flow_id], headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+
+    # ``api_key`` is not asserted: login may create ``OPENAI_API_KEY`` from the environment.
+    template = response.json()["data"]["nodes"][0]["data"]["node"]["template"]
+    assert template["secret_token"]["value"] is None
+    assert template["stripe_key"]["value"] is None
+    serialized = json.dumps(response.json())
+    assert _BOUND_VARIABLE_NAME not in serialized
+    assert _NAME_SHAPED_SECRET not in serialized
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_project_download_keeps_global_variable_bindings(client: AsyncClient, logged_in_headers, active_user):
     """LE-2649: GET /api/v1/projects/download/{project_id} keeps the variable name of bound fields."""
     create_response = await client.post(
@@ -289,6 +342,7 @@ async def test_project_download_keeps_global_variable_bindings(client: AsyncClie
     assert create_response.status_code == status.HTTP_201_CREATED
     project_id = create_response.json()["id"]
 
+    await _create_bound_variables(active_user)
     await _create_flow(active_user, folder_id=project_id, data=_bound_flow_data())
 
     response = await client.get(f"api/v1/projects/download/{project_id}", headers=logged_in_headers)
@@ -304,12 +358,23 @@ def test_strip_flow_secrets_keeps_bindings_without_mutating_input():
     """The export scrubber keeps bindings on a detached copy of the envelope."""
     flow = {"name": "bound", "data": _bound_flow_data()}
 
-    scrubbed = strip_flow_secrets(flow)
+    scrubbed = strip_flow_secrets(flow, known_variable_names=_BOUND_VARIABLE_NAMES)
 
     _assert_bindings_kept(scrubbed)
     template = flow["data"]["nodes"][0]["data"]["node"]["template"]
     assert template["plain_password"]["value"] == _SECRET_PASSWORD
     assert template["service_token"]["value"] == _MISLABELLED_API_KEY
+    assert template["stripe_key"]["value"] == _NAME_SHAPED_SECRET
+
+
+def test_strip_flow_secrets_nulls_bindings_without_known_variables():
+    """Without the owner's variable names, the export scrubber keeps no bound value."""
+    scrubbed = strip_flow_secrets({"name": "bound", "data": _bound_flow_data()})
+
+    template = scrubbed["data"]["nodes"][0]["data"]["node"]["template"]
+    assert template["secret_token"]["value"] is None
+    assert template["api_key"]["value"] is None
+    assert template["stripe_key"]["value"] is None
 
 
 def test_strip_secret_field_values_still_nulls_bindings():
