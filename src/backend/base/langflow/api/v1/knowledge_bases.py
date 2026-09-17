@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Reques
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.base.data.utils import extract_text_from_bytes
 from lfx.base.knowledge_bases.backends import BackendType, create_backend, is_local_chroma
+from lfx.base.knowledge_bases.backends.naming import StorageRoutingNotAllowedError, ensure_storage_routing_allowed
 from lfx.base.knowledge_bases.backends.postgres import resolve_default_kb_backend
 from lfx.base.knowledge_bases.ingestion_sources import (
     FolderSource,
@@ -754,6 +755,10 @@ async def create_knowledge_base(
         # guard below never runs for them — this is what keeps a name like
         # ``../victim_user/evil_kb`` from being persisted on a remote backend.
         _validate_kb_name_or_403(kb_name, current_user)
+        try:
+            ensure_storage_routing_allowed(request.backend_config, is_superuser=bool(current_user.is_superuser))
+        except StorageRoutingNotAllowedError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
         # The ``knowledge_base`` row is the authority on existence, and
         # ``uq_knowledge_base_user_name`` is the real guard against duplicates.
         existing_record = await knowledge_base_service.get_by_user_and_name(current_user.id, kb_name)

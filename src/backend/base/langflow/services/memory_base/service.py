@@ -18,6 +18,7 @@ import uuid
 from typing import TYPE_CHECKING
 
 from lfx.base.knowledge_bases.backends import is_local_chroma
+from lfx.base.knowledge_bases.backends.naming import ensure_storage_routing_allowed
 from lfx.base.knowledge_bases.backends.postgres import resolve_default_kb_backend
 from lfx.base.knowledge_bases.validation import validate_collection_name
 from lfx.base.models.provider_registry import is_api_key_optional, provider_name_for_id, resolve_provider_id
@@ -268,6 +269,8 @@ class MemoryBaseService(Service):
         rejection = local_chroma_rejection_reason(backend_type, backend_config, resource="memory base")
         if rejection is not None:
             raise BackendProvisioningError(rejection)
+        # Raises ``StorageRoutingNotAllowedError``, which the route maps to 403.
+        ensure_storage_routing_allowed(backend_config, is_superuser=is_superuser)
 
         # 1. Verify that the referenced flow belongs to this user.
         async with session_scope() as db:

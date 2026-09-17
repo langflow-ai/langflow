@@ -32,10 +32,13 @@ secrets — and round-trips cleanly through the UI.
   the ``kb_name``-derived index they already use, recording
   ``index_name_origin: legacy_kb_name``.
 * ``legacy_shared_index`` — written by that migration instead of a pin
-  when two users' KBs already shared one ``kb_name``-derived index. Those
-  chunks cannot be attributed to one owner, so the KB moves to its own
-  empty index and the shared index is left untouched for an operator to
-  resolve. The backend logs a warning while the marker is present.
+  when two users' KBs already shared one ``kb_name``-derived index (those
+  chunks cannot be attributed to one owner), or when that index's name is
+  shaped like an owner-scoped name. The KB moves to its own empty index and
+  the old index is left untouched for an operator to resolve. The backend
+  logs a warning while the marker is present.
+* ``index_name`` and the migration markers can only be persisted by a
+  superuser (see ``naming.ensure_storage_routing_allowed``).
 * ``vector_field`` — document field for the embedding vector.
   Defaults to ``vector_field`` — the field LangChain's
   ``OpenSearchVectorSearch`` actually writes to. That wrapper derives
@@ -76,7 +79,7 @@ from lfx.base.knowledge_bases.backends.base import (
     TestConnectionResult,
     drain_queue_until_sentinel,
 )
-from lfx.base.knowledge_bases.backends.naming import OWNER_SCOPED_NAME_RE, owner_scoped_collection_name
+from lfx.base.knowledge_bases.backends.naming import owner_scoped_collection_name, resolve_storage_name
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
@@ -179,25 +182,14 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         index a migration pinned). Otherwise the index is owner-scoped, and a
         missing owner fails closed instead of falling back to a shared name.
         """
-        owner_id = self._coerce_user_uuid()
-        configured = self.backend_config.get("index_name")
-        if configured:
-            index_name = str(configured)
-            # ``backend_config`` is tenant-supplied: an override must not reach
-            # into another knowledge base's owner-scoped index.
-            if OWNER_SCOPED_NAME_RE.fullmatch(index_name.lower()) and (
-                owner_id is None or index_name != derive_index_name(self.kb_name, owner_id)
-            ):
-                msg = (
-                    f"OpenSearch index_name {index_name!r} is reserved for owner-scoped knowledge base "
-                    "indexes. Remove index_name to use this knowledge base's own index."
-                )
-                raise ValueError(msg)
-            return index_name
-        if owner_id is None:
-            msg = "OpenSearchBackend requires a valid user_id to isolate its index."
-            raise ValueError(msg)
-        return derive_index_name(self.kb_name, owner_id)
+        return resolve_storage_name(
+            kb_name=self.kb_name,
+            owner_id=self._coerce_user_uuid(),
+            override=self.backend_config.get("index_name"),
+            override_key="index_name",
+            backend="OpenSearchBackend",
+            storage="index",
+        )
 
     async def _resolve_secrets(self) -> None:
         """Resolve URL + optional basic-auth credentials via variable_service.
@@ -236,10 +228,9 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         shared_legacy_index = self.backend_config.get(LEGACY_SHARED_INDEX_KEY)
         if shared_legacy_index and index_name != shared_legacy_index:
             logger.warning(
-                "Knowledge base %s used to share OpenSearch index %s with another user's knowledge base "
-                "of the same name. Those chunks were left in %s because they cannot be attributed to one "
-                "owner; this knowledge base now uses its own index %s. Re-ingest its sources, or set "
-                "index_name on the rightful owner's knowledge base after removing the other owner's chunks.",
+                "Knowledge base %s no longer uses OpenSearch index %s: another user's knowledge base used the "
+                "same index, or the name is reserved for owner-scoped indexes. Its earlier chunks were left in "
+                "%s, and it now uses its own index %s. Re-ingest its sources to restore them.",
                 self.kb_name,
                 shared_legacy_index,
                 shared_legacy_index,
