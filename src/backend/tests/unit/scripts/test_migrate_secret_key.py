@@ -10,8 +10,9 @@ from uuid import uuid4
 
 import pytest
 from cryptography.exceptions import InvalidTag
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from httpx import AsyncClient
+from langflow.services.auth.utils import _ensure_legacy_fernet_key, ensure_fernet_key
 from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE
 from sqlalchemy import create_engine, text
@@ -131,6 +132,33 @@ class TestEnsureValidKey:
         result1 = migrate_module.ensure_valid_key(short_old_key)
         result2 = migrate_module.ensure_valid_key(short_new_key)
         assert result1 != result2
+
+
+class TestShortKeysMatchTheApp:
+    """Short secrets use the app's derivation: SHA-256 for writes, the pre-1.10.1 key read-only."""
+
+    def test_reads_values_the_app_writes_today(self, migrate_module, short_old_key, short_new_key):
+        app_ciphertext = Fernet(ensure_fernet_key(short_old_key)).encrypt(b"current").decode()
+
+        migrated = migrate_module.migrate_value(app_ciphertext, short_old_key, short_new_key)
+
+        assert migrated is not None
+        assert Fernet(ensure_fernet_key(short_new_key)).decrypt(migrated.encode()) == b"current"
+
+    def test_still_reads_values_written_before_1_10_1(self, migrate_module, short_old_key, short_new_key):
+        legacy_ciphertext = Fernet(_ensure_legacy_fernet_key(short_old_key)).encrypt(b"legacy").decode()
+
+        migrated = migrate_module.migrate_value(legacy_ciphertext, short_old_key, short_new_key)
+
+        assert migrated is not None
+        assert Fernet(ensure_fernet_key(short_new_key)).decrypt(migrated.encode()) == b"legacy"
+
+    def test_writes_only_with_the_current_derivation(self, migrate_module, short_new_key):
+        ciphertext = migrate_module.encrypt_with_key("value", short_new_key).encode()
+
+        assert Fernet(ensure_fernet_key(short_new_key)).decrypt(ciphertext) == b"value"
+        with pytest.raises(InvalidToken):
+            Fernet(_ensure_legacy_fernet_key(short_new_key)).decrypt(ciphertext)
 
 
 class TestEncryptDecrypt:
