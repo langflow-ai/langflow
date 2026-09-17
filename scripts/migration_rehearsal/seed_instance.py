@@ -17,6 +17,7 @@ from pathlib import Path
 from uuid import UUID
 
 DIM = 8  # vector width; the transport does not care what it is
+LOGICAL_FILE_BYTES = b"fixture-bytes"  # the logical file row's size is taken from this
 
 
 def uid(n: int, tag: str = "0") -> UUID:
@@ -66,6 +67,7 @@ async def main() -> None:
 
     import sqlalchemy as sa
     from langflow.services.auth.utils import encrypt_api_key, get_password_hash
+    from langflow.services.database.models.api_key.crud import hash_api_key
     from langflow.services.database.models.auth.sso_secret import encrypt_sso_client_secret
     from langflow.services.deps import get_settings_service, session_scope
     from sqlalchemy import bindparam, text
@@ -251,7 +253,9 @@ async def main() -> None:
             i=uid(2, "3"),
             n="ci-key",
             k=enc("lf-fixture-apikey"),
-            h="0" * 64,
+            # The real hash, so the key authenticates: lookup is by hash, and the
+            # decrypt-and-compare fallback only considers rows whose hash is null.
+            h=hash_api_key("lf-fixture-apikey"),
             u=U_SUPER,
             a=True,
             c=now,
@@ -304,7 +308,7 @@ async def main() -> None:
             u=U_SUPER,
             n="logical.txt",
             p=f"{U_SUPER}/logical.txt",
-            s=11,
+            s=len(LOGICAL_FILE_BYTES),
             c=now,
         )
         await ex(
@@ -467,7 +471,7 @@ async def main() -> None:
         # dangling on purpose, so there is one passing case and one failing one.
         storage_root = Path(get_settings_service().settings.config_dir) / str(U_SUPER)
         storage_root.mkdir(parents=True, exist_ok=True)
-        (storage_root / "logical.txt").write_text("fixture-bytes")
+        (storage_root / "logical.txt").write_bytes(LOGICAL_FILE_BYTES)
 
         seeded = {
             "users": 3,
