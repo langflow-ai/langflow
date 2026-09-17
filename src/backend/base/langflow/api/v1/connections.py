@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
@@ -11,15 +11,17 @@ from fastapi.routing import APIRoute
 from lfx.integrations.errors import IntegrationPolicyBlockedError
 from lfx.integrations.models import PROVIDER_ID_PATTERN
 from lfx.services.authorization.base import ExecutionPrincipal
+from lfx.services.integration_policy import IntegrationPolicyPurpose, aresolve_integration_policy
 from pydantic import BaseModel, ConfigDict, Field
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import CurrentActiveUser, DbSession, DbSessionReadOnly
+from langflow.api.v1.model_provider_policy_scope import ProviderPolicyAttributesDependency
 from langflow.services.authorization import ConnectionAction, ensure_connection_permission
 from langflow.services.authorization.guards import audit_guard_in_transaction
 from langflow.services.connection import ConnectionConflictError, DatabaseConnectionResolverService
 from langflow.services.connection.oauth import broker as oauth_broker
-from langflow.services.connection.oauth.config import OAuthError, get_oauth_settings
+from langflow.services.connection.oauth.config import OAuthError, OAuthRegistration, get_oauth_settings
 from langflow.services.connection.service import enforce_integration_policy_for_provider
 from langflow.services.database.models.connection import (
     Connection,
@@ -83,6 +85,30 @@ class OAuthStartRequest(BaseModel):
 
 class OAuthStartResponse(BaseModel):
     authorization_url: str
+
+
+class OAuthRegistrationRead(BaseModel):
+    """One operator-configured registration, as a connection picker may show it.
+
+    Credential-free by construction: the client id, the client secret or private
+    key, and the redirect URI stay on the server. A caller needs the id to name
+    the registration in a start request, and the scope ceiling to know which
+    subset it may ask for.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    provider: str
+    profile: Literal["user", "bot"]
+    context: Literal["self_managed", "hosted", "desktop"]
+    client_type: Literal["confidential", "public"]
+    scopes: list[str] = Field(description="The operator's ceiling; a start request selects a nonempty subset.")
+    allowed_tenants: list[str] = Field(description="Workspaces or domains the provider account must belong to.")
+
+
+class OAuthRegistrationListRead(BaseModel):
+    registrations: list[OAuthRegistrationRead]
 
 
 def _oauth_cookie(state_value: str) -> str:
@@ -424,6 +450,65 @@ async def start_connection_oauth(
     )
     response.headers.update(_OAUTH_RESPONSE_HEADERS)
     return OAuthStartResponse(authorization_url=url)
+
+
+@router.get("/oauth/registrations", response_model=OAuthRegistrationListRead)
+async def list_oauth_registrations(
+    current_user: CurrentActiveUser,
+    provider_policy_attributes: ProviderPolicyAttributesDependency,
+    response: Response,
+    provider: Annotated[str | None, Query(pattern=PROVIDER_ID_PATTERN, max_length=120)] = None,
+) -> OAuthRegistrationListRead:
+    """List the registrations a caller may name in an authorization request.
+
+    Registration configuration is operator-only, so a client had no way to learn
+    the ids that ``POST /connections/{connection_id}/oauth/start`` accepts, or the
+    scope ceiling it must stay inside. Only availability and non-secret fields are
+    returned, and a registration that this deployment would refuse is omitted
+    rather than advertised: a picker must not offer consent that cannot start.
+    """
+    # The list is filtered per caller, so a shared cache must never replay one
+    # user's answer to another.
+    response.headers["Cache-Control"] = "no-store"
+    settings = get_oauth_settings()
+    available: list[tuple[str, OAuthRegistration]] = []
+    for registration_id in settings.registration_ids():
+        try:
+            registration = settings.registration(registration_id)
+        except OAuthError:
+            # Invalid, or configured for another deployment context. The start
+            # request would raise the same error, so leave it out.
+            continue
+        if provider is not None and registration.provider != provider:
+            continue
+        available.append((registration_id, registration))
+
+    if not available:
+        return OAuthRegistrationListRead(registrations=[])
+
+    # A provider outside the operator's integration ceiling is refused at
+    # oauth/start, so it must not appear here either.
+    policy = await aresolve_integration_policy(
+        user_id=current_user.id,
+        provider_ids=frozenset(registration.provider for _, registration in available),
+        purpose=IntegrationPolicyPurpose.DISCOVER,
+        attributes=provider_policy_attributes,
+    )
+    return OAuthRegistrationListRead(
+        registrations=[
+            OAuthRegistrationRead(
+                id=registration_id,
+                provider=registration.provider,
+                profile=registration.profile,
+                context=registration.context,
+                client_type=registration.client_type,
+                scopes=list(registration.scopes),
+                allowed_tenants=list(registration.allowed_tenants),
+            )
+            for registration_id, registration in available
+            if policy.allows_provider(registration.provider)
+        ]
+    )
 
 
 @router.get("/oauth/{provider}/callback", response_class=HTMLResponse)

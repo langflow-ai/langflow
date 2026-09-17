@@ -142,6 +142,33 @@ and vice versa; it is not an operator-only gate. Creating and changing an instan
 connection remains superuser-only. Configuring registrations and their scope ceilings
 requires access to instance configuration.
 
+Registration configuration is operator-only, so a client discovers the ids it may name,
+and the scopes it may request, from the listing endpoint. It returns availability and
+non-secret fields only: client ids, secrets, private keys, and redirect URIs stay on the
+server. A registration this deployment context would refuse, and a provider outside the
+integration policy's approved set, are omitted rather than listed, so a picker never
+offers consent that cannot start.
+
+```http
+GET /api/v1/connections/oauth/registrations?provider=google
+```
+
+```json
+{
+  "registrations": [
+    {
+      "id": "google-work",
+      "provider": "google",
+      "profile": "user",
+      "context": "self_managed",
+      "client_type": "confidential",
+      "scopes": ["https://www.googleapis.com/auth/calendar.events.readonly"],
+      "allowed_tenants": []
+    }
+  ]
+}
+```
+
 From an authenticated browser API client, start consent:
 
 ```http
