@@ -536,3 +536,16 @@ class TestChromaEmbeddedDocuments:
         finally:
             await bk.teardown()
             gc.collect()
+
+    async def test_round_trips_a_chunk_without_metadata(self, tmp_path: Path):
+        # Chroma stores an empty metadata dict as None; reading it back must not crash.
+        path = tmp_path / "no_meta_kb"
+        path.mkdir()
+        bk = ChromaLocalBackend(kb_name="no_meta_kb", kb_path=path)
+        try:
+            await bk.add_embedded_documents([IngestedDocument(id="bare", content="no metadata", embedding=[0.1] * 4)])
+            docs = await self._read_all(bk)
+            assert [(d.id, d.content, d.metadata) for d in docs] == [("bare", "no metadata", {})]
+        finally:
+            await bk.teardown()
+            gc.collect()
