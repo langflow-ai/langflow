@@ -293,7 +293,7 @@ class BaseVectorStoreBackend(ABC):
         """
         if not docs:
             return
-        missing = [i for i, doc in enumerate(docs) if not doc.embedding]
+        missing = [i for i, doc in enumerate(docs) if doc.embedding is None or len(doc.embedding) == 0]
         if missing:
             msg = f"add_embedded_documents needs an embedding on every document; missing at positions {missing[:5]}"
             raise ValueError(msg)

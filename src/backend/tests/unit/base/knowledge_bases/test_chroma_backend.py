@@ -549,3 +549,18 @@ class TestChromaEmbeddedDocuments:
         finally:
             await bk.teardown()
             gc.collect()
+
+    async def test_accepts_numpy_vectors(self, tmp_path: Path):
+        np = pytest.importorskip("numpy")
+        path = tmp_path / "numpy_kb"
+        path.mkdir()
+        bk = ChromaLocalBackend(kb_name="numpy_kb", kb_path=path)
+        try:
+            await bk.add_embedded_documents(
+                [IngestedDocument(id="np", content="numpy", metadata={"n": 1}, embedding=np.array([0.25] * 4))]
+            )
+            docs = await self._read_all(bk)
+            assert docs[0].embedding == pytest.approx([0.25] * 4)
+        finally:
+            await bk.teardown()
+            gc.collect()
