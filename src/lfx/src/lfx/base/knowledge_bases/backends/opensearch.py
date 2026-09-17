@@ -347,12 +347,17 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         # ``LANGCHAIN_DEFAULT_VECTOR_FIELD``, which is where ``iter_documents``
         # and similarity search already look. ``add_embeddings`` creates the index
         # with the right dimension when it does not exist yet.
-        await asyncio.to_thread(
-            self.vector_store.add_embeddings,  # type: ignore[attr-defined]
-            [(doc.content, doc.embedding) for doc in docs],
-            metadatas=[doc.metadata for doc in docs],
-            ids=ids,
-        )
+        # ``add_embeddings`` refuses more than the store's ``bulk_size`` (500 by
+        # default) per call, so split larger batches rather than fail the write.
+        bulk_size = self.vector_store.bulk_size  # type: ignore[attr-defined]
+        for start in range(0, len(docs), bulk_size):
+            chunk = docs[start : start + bulk_size]
+            await asyncio.to_thread(
+                self.vector_store.add_embeddings,  # type: ignore[attr-defined]
+                [(doc.content, doc.embedding) for doc in chunk],
+                metadatas=[doc.metadata for doc in chunk],
+                ids=ids[start : start + bulk_size],
+            )
 
     async def similarity_search(
         self,
