@@ -10,6 +10,7 @@ on:
       - ".github/workflows/release.yml"
       - "pyproject.toml"
       - "src/bundles/*/pyproject.toml"
+      - "src/bundles/*/src/*/**/capabilities.v1.json"
       - "src/bundles/lfx-bundles/src/lfx_bundles/*/__init__.py"
       - "src/backend/base/langflow/api/build.py"
       - "src/backend/base/langflow/api/v1/a2a.py"

@@ -1010,7 +1010,7 @@
           "source": "graph-permissions-reference",
           "role": "optional",
           "condition": {
-            "kind": "input_present",
+            "kind": "input_truthy",
             "input": "drive_id"
           },
           "notes": "'Read all files that user can access', including SharePoint libraries.",
@@ -1023,7 +1023,7 @@
           "source": "graph-permissions-reference",
           "role": "optional",
           "condition": {
-            "kind": "input_present",
+            "kind": "input_truthy",
             "input": "site_id"
           },
           "notes": "'Read items in all site collections' on behalf of the user; needed for /sites/{site-id}/drive.",
@@ -1149,7 +1149,7 @@
           "source": "graph-permissions-reference",
           "role": "optional",
           "condition": {
-            "kind": "input_present",
+            "kind": "input_truthy",
             "input": "drive_id"
           },
           "content_read_reach": "cross_resource"
@@ -1161,7 +1161,7 @@
           "source": "graph-permissions-reference",
           "role": "optional",
           "condition": {
-            "kind": "input_present",
+            "kind": "input_truthy",
             "input": "site_id"
           },
           "notes": "Needed for the /sites/{site-id}/drive download path behind the site_id input; same permission set as microsoft.files.list.",

@@ -341,6 +341,13 @@ the deserialize half is covered by
   principal with this flag set to `False`. Additive for bundles and
   resolvers alike; `BUNDLE_API_VERSION` remains `1`.
 
+- **2026-09-05 (`lfx-microsoft`).** First consumer of the bundle-owned
+  integration manifest: `lfx-microsoft` ships eight Microsoft Graph delegated
+  actions and builds its `ConnectionRefInput` scopes *from* its own
+  `capabilities.v1.json`. No surface in this document changed --
+  `BUNDLE_API_VERSION` remains `1` -- the entry is recorded so the contract's
+  history names its first out-of-tree consumer.
+
 - **Optional rejected-token digest for connection refresh.**
   `ConnectionResolutionRequest.rejected_token_digest` carries a SHA-256 digest only
   after a provider rejects a cached credential. `CredentialLease` supplies it on
@@ -768,6 +775,20 @@ the deserialize half is covered by
   messages and winner selection are unchanged, and two physically distinct
   manifests for one canonical name still error.  No public symbol's name or
   signature changed.
+- **`ResolvedCredential.identity` (additive, optional).**
+  `lfx.integrations.models.ResolvedCredential` gained
+  `identity: Literal["user_delegated", "bot", "service"] | None = None`,
+  mirroring `lfx.integrations.capabilities.IntegrationIdentity`.  The
+  database-backed resolver populates it from the connection row's
+  `executing_identity`; the headless environment resolver leaves it `None`
+  because the `LF_CONNECTION__*` wire format has no place to declare one.
+  Providers whose user and bot tokens share scope names — Slack's `chat:write`
+  is both a User Token Scope and a Bot Token Scope — cannot distinguish the two
+  identities from `granted_scopes`, so a bundle capability that must run as a
+  bot compares this field and fails closed with `connection-not-authorized`
+  before its first request.  The field defaults to `None`, no existing field
+  changed name, type, or meaning, and every existing construction site keeps
+  working, so `BUNDLE_API_VERSION` remains `1`.
 
 - **Pinned action-to-tool mode for preset MCP components (additive).**
   `MCPPresetComponent` gains a `_pinned_spec()` hook returning a

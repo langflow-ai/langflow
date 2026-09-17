@@ -139,6 +139,22 @@
           "providers": [
             "lfx-google"
           ]
+        },
+        {
+          "distribution": "lfx-microsoft",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-microsoft"
+          ]
+        },
+        {
+          "distribution": "lfx-slack",
+          "extras": [],
+          "version": ">=0.1.0,<1.0.0",
+          "providers": [
+            "lfx-slack"
+          ]
         }
       ]
     }

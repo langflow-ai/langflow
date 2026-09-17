@@ -1,0 +1,22 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('me')/messages",
+  "@odata.nextLink": "https://graph.microsoft.com/v1.0/me/messages?%24skip=2",
+  "value": [
+    {
+      "id": "AAMkAGI2TG93AAA=",
+      "subject": "Quarterly plan",
+      "receivedDateTime": "2026-08-31T09:12:44Z",
+      "isRead": false,
+      "from": {"emailAddress": {"name": "Ada Lovelace", "address": "ada@contoso.com"}},
+      "bodyPreview": "Draft attached."
+    },
+    {
+      "id": "AAMkAGI2TG94AAA=",
+      "subject": "Re: Quarterly plan",
+      "receivedDateTime": "2026-08-31T11:02:10Z",
+      "isRead": true,
+      "from": {"emailAddress": {"name": "Grace Hopper", "address": "grace@contoso.com"}},
+      "bodyPreview": "Looks good."
+    }
+  ]
+}
