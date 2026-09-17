@@ -921,6 +921,18 @@ class TestMigrateEndToEnd:
             conn.execute(text("CREATE TABLE sso_config (id TEXT PRIMARY KEY, client_secret_encrypted TEXT)"))
             conn.execute(text("CREATE TABLE apikey (id TEXT PRIMARY KEY, name TEXT, api_key TEXT)"))
             conn.execute(text("CREATE TABLE mcp_server (id TEXT PRIMARY KEY, name TEXT, config TEXT)"))
+            conn.execute(text("CREATE TABLE deployment_provider_account (id TEXT PRIMARY KEY, api_key TEXT)"))
+            conn.execute(
+                text("CREATE TABLE connection_secret (connection_id TEXT PRIMARY KEY, encrypted_payload TEXT)")
+            )
+            conn.execute(
+                text("INSERT INTO deployment_provider_account VALUES ('d1', :k)"),
+                {"k": migrate_module.encrypt_with_key("wxo-api-key", old_key)},
+            )
+            conn.execute(
+                text("INSERT INTO connection_secret VALUES ('c1', :p)"),
+                {"p": migrate_module.encrypt_with_key('{"access_token":"tok"}', old_key)},
+            )
             conn.execute(
                 text("INSERT INTO variable VALUES ('v1', 'OPENAI_API_KEY', :v, :t)"),
                 {"v": migrate_module.encrypt_with_key("variable-secret", old_key), "t": CREDENTIAL_TYPE},
@@ -939,7 +951,7 @@ class TestMigrateEndToEnd:
         config_dir.mkdir()
         return engine, config_dir, f"sqlite:///{db_path}"
 
-    def test_rotates_apikey_and_mcp_server_config(self, migrate_module, rotation_db, old_key, new_key):
+    def test_rotates_every_fernet_column(self, migrate_module, rotation_db, old_key, new_key):
         engine, config_dir, url = rotation_db
 
         migrate_module.migrate(config_dir, url, old_key=old_key, new_key=new_key)
@@ -947,7 +959,11 @@ class TestMigrateEndToEnd:
         with engine.connect() as conn:
             api_key = conn.execute(text("SELECT api_key FROM apikey")).scalar()
             config = json.loads(conn.execute(text("SELECT config FROM mcp_server")).scalar())
+            provider_key = conn.execute(text("SELECT api_key FROM deployment_provider_account")).scalar()
+            payload = conn.execute(text("SELECT encrypted_payload FROM connection_secret")).scalar()
         assert migrate_module.decrypt_with_key(api_key, new_key) == "lf-api-key-value"
+        assert migrate_module.decrypt_with_key(provider_key, new_key) == "wxo-api-key"
+        assert migrate_module.decrypt_with_key(payload, new_key) == '{"access_token":"tok"}'
         assert migrate_module.decrypt_with_key(config["env"]["API_TOKEN"], new_key) == "mcp-token"
         assert migrate_module.decrypt_with_key(config["headers"]["Authorization"], new_key) == "Bearer abc"
         # Plaintext values and structural fields are left alone.
@@ -978,10 +994,12 @@ class TestMigrateEndToEnd:
     def test_verification_samples_apikey_and_mcp_server(self, migrate_module, rotation_db, old_key, new_key):
         engine, _, _ = rotation_db
         with engine.connect() as conn:
-            # variable, apikey and the two encrypted MCP values; the plaintext MCP value is skipped.
-            assert migrate_module.verify_migration(conn, old_key) == (4, 0)
-            # One failure each for the variable, the API key and the MCP server row.
-            assert migrate_module.verify_migration(conn, new_key) == (0, 3)
+            # variable, apikey, the two encrypted MCP values, the provider account key and the
+            # connection payload; the plaintext MCP value is skipped.
+            assert migrate_module.verify_migration(conn, old_key) == (6, 0)
+            # One failure each for the variable, the API key, the MCP server row, the provider
+            # account and the connection secret.
+            assert migrate_module.verify_migration(conn, new_key) == (0, 5)
 
     def test_dry_run_completes_without_changing_rows(self, migrate_module, rotation_db, old_key, new_key):
         engine, config_dir, url = rotation_db
