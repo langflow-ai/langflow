@@ -32,10 +32,12 @@ import { HarnessFlowPicker } from "./components/instructions-flow-picker";
 import { LongTextField } from "./components/long-text-field";
 import { ProjectChoiceField } from "./components/project-choice-field";
 import { ProjectFlowPicker } from "./components/project-flow-picker";
+import { HarnessReturn, ToolPackPicker } from "./components/tool-pack-picker";
 
 import { editorDraft } from "./editor-draft";
 import { isProjectFieldVisible } from "./field-visibility";
 import { validCompactionThreshold, validFlowTimeout } from "./flow-binding";
+import { selectedToolPacks } from "./tool-packs";
 
 interface HarnessPageProps {
   projectId: string;
@@ -206,9 +208,11 @@ const HarnessPage = ({
 
   const flows = projectFlows ?? [];
   const selectedAgentId =
-    typeof values.agent_flow_id === "string"
-      ? values.agent_flow_id
-      : defaultAgent(flows)?.id;
+    projectType !== "agent-harness"
+      ? undefined
+      : typeof values.agent_flow_id === "string"
+        ? values.agent_flow_id
+        : defaultAgent(flows)?.id;
   const candidates = agentCandidates(flows);
   const selectedAgent = candidates.find((flow) => flow.id === selectedAgentId);
   const agentSelectionRequired =
@@ -229,6 +233,7 @@ const HarnessPage = ({
           ([fieldName, field]) =>
             fieldName !== toolsFieldName &&
             fieldName !== modelFieldName &&
+            field.renders !== "project_refs" &&
             isProjectFieldVisible(field, values) &&
             // A long free-text field says nothing useful at a glance.
             !field?.multiline,
@@ -364,12 +369,20 @@ const HarnessPage = ({
           <div className="flex min-w-0 flex-col">
             <h1 className="text-lg font-semibold">{type.display_name}</h1>
             <p className="text-sm text-muted-foreground">
-              {t("harness.configureAgent")}
+              {projectType === "agent-harness"
+                ? t("harness.configureAgent")
+                : type.description}
             </p>
           </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-3">
+          {projectType === "tool-pack" &&
+            new URLSearchParams(window.location.search).has("fromHarness") && (
+              <HarnessReturn
+                onOpen={() => editorDraft.keep(projectId, edits)}
+              />
+            )}
           {projectType === "agent-harness" && (
             <HarnessReports
               projectId={projectId}
@@ -499,6 +512,21 @@ const HarnessPage = ({
                         />
                       )}
                     </>
+                  ) : field.renders === "project_refs" ? (
+                    <ToolPackPicker
+                      projectId={projectId}
+                      agent={selectedAgent}
+                      value={selectedToolPacks(values[fieldName])}
+                      saved={selectedToolPacks(savedValues[fieldName])}
+                      disabled={isPending}
+                      onOpen={() => editorDraft.keep(projectId, edits)}
+                      onChange={(next) =>
+                        setEdits((current) => ({
+                          ...current,
+                          [fieldName]: next,
+                        }))
+                      }
+                    />
                   ) : (field as { renders?: string })?.renders ===
                     "hook_flows" ? (
                     <HookFlowPicker
@@ -518,6 +546,9 @@ const HarnessPage = ({
                   ) : (field as { renders?: string })?.renders ===
                     PROJECT_FLOWS_WIDGET ? (
                     <ProjectFlowPicker
+                      helpText={
+                        projectType === "tool-pack" ? field.info : undefined
+                      }
                       flows={flows.filter(
                         (flow) => flow.id !== selectedAgentId,
                       )}
@@ -632,12 +663,16 @@ const HarnessPage = ({
             icon={type.icon}
             model={modelFieldName ? values[modelFieldName] : undefined}
             toolFlows={toolFlows}
+            toolPackCount={selectedToolPacks(values.tool_packs).length}
             details={summaryDetails}
             agentFlow={selectedAgent}
+            showModel={Boolean(modelFieldName)}
           />
-          <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
-            {t("harness.canvasEditsKept")}
-          </div>
+          {projectType === "agent-harness" && (
+            <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
+              {t("harness.canvasEditsKept")}
+            </div>
+          )}
           {lastSave && (
             <div
               role="status"

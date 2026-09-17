@@ -17,6 +17,11 @@ if TYPE_CHECKING:
     from lfx.schema.data import Data
 
 
+async def get_tool_pack_flow(*, user_id: str, binding) -> Data:  # noqa: ARG001
+    msg = "Tool-pack references require project storage. Import their dependencies before standalone execution."
+    raise ValueError(msg)
+
+
 def get_flow_inputs(graph: Graph) -> list[Vertex]:
     """Retrieves the flow inputs from the given graph.
 

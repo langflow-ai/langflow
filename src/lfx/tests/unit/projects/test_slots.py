@@ -179,6 +179,7 @@ def test_registered_vocabulary_does_not_claim_unbuilt_baseline_flows():
         "system_prompt",
         "model",
         "tools",
+        "tool_packs",
         "n_messages",
         "hooks",
         "tool_policy",

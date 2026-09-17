@@ -15,6 +15,7 @@ interface ProjectFlowPickerProps {
   value: string[];
   onChange: (value: string[]) => void;
   disabled?: boolean;
+  helpText?: string;
 }
 
 /**
@@ -31,6 +32,7 @@ export const ProjectFlowPicker = ({
   value,
   onChange,
   disabled = false,
+  helpText,
 }: ProjectFlowPickerProps) => {
   const { t } = useTranslation();
   const [search, setSearch] = useState("");
@@ -92,7 +94,7 @@ export const ProjectFlowPicker = ({
           {t("harness.noFlowsTitle")}
         </span>
         <span className="max-w-sm text-xs text-muted-foreground">
-          {t("harness.noFlowsDescription")}
+          {helpText ?? t("harness.noFlowsDescription")}
         </span>
       </div>
     );
@@ -104,7 +106,9 @@ export const ProjectFlowPicker = ({
 
   return (
     <div className="flex flex-col gap-2" data-testid="flow-picker">
-      <p className="text-sm text-muted-foreground">{t("harness.toolsHelp")}</p>
+      <p className="text-sm text-muted-foreground">
+        {helpText ?? t("harness.toolsHelp")}
+      </p>
       {flows.length > 5 && (
         <Input
           value={search}

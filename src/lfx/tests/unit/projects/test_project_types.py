@@ -29,7 +29,7 @@ TARGETABLE_COMPONENTS = {AgentComponent.name: AgentComponent}
 
 class TestRegistry:
     def test_shipped_types_are_registered_on_import(self):
-        assert registered_project_types() == ("agent-harness", "flows")
+        assert registered_project_types() == ("agent-harness", "flows", "tool-pack")
 
     def test_default_type_is_registered(self):
         assert get_project_type(DEFAULT_PROJECT_TYPE).name == DEFAULT_PROJECT_TYPE
@@ -92,6 +92,7 @@ class TestAgentHarness:
             "system_prompt",
             "model",
             "tools",
+            "tool_packs",
             "n_messages",
             "tool_policy",
             "context_strategy",
@@ -122,7 +123,12 @@ class TestAgentHarness:
         """Everything else must render with a shipped canvas widget, or the form is bespoke."""
         bespoke = {f.name: f.renders for f in harness.fields if f.renders and f.input.show}
 
-        assert bespoke == {"system_prompt": "long_text", "tools": "project_flows", "hooks": "hook_flows"}
+        assert bespoke == {
+            "system_prompt": "long_text",
+            "tools": "project_flows",
+            "tool_packs": "project_refs",
+            "hooks": "hook_flows",
+        }
 
     def test_every_field_renders_with_a_shipped_widget(self, harness):
         """The form reuses the canvas field renderer, so each field must carry a real input type."""

@@ -10,7 +10,9 @@ interface HarnessSummaryProps {
   icon?: string;
   /** The model value as the model widget stores it: a list holding the picked model. */
   model?: unknown;
+  showModel?: boolean;
   toolFlows: FlowType[];
+  toolPackCount?: number;
   /** Every other field the form holds, already formatted for reading. */
   details: { name: string; label: string; value: string }[];
   className?: string;
@@ -44,6 +46,8 @@ export const HarnessSummary = ({
   details,
   className,
   agentFlow,
+  showModel = true,
+  toolPackCount = 0,
 }: HarnessSummaryProps) => {
   const { t } = useTranslation();
   const pickedModel = modelLabel(model);
@@ -90,24 +94,26 @@ export const HarnessSummary = ({
         </div>
       )}
 
-      <div className="flex flex-col gap-1.5">
-        <Eyebrow>{t("harness.summaryModel")}</Eyebrow>
-        {pickedModel ? (
-          <span
-            className="truncate text-sm font-medium"
-            data-testid="harness-summary-model"
-          >
-            {pickedModel}
-          </span>
-        ) : (
-          <span
-            className="text-sm text-muted-foreground"
-            data-testid="harness-summary-model-empty"
-          >
-            {t("harness.summaryModelEmpty")}
-          </span>
-        )}
-      </div>
+      {showModel && (
+        <div className="flex flex-col gap-1.5">
+          <Eyebrow>{t("harness.summaryModel")}</Eyebrow>
+          {pickedModel ? (
+            <span
+              className="truncate text-sm font-medium"
+              data-testid="harness-summary-model"
+            >
+              {pickedModel}
+            </span>
+          ) : (
+            <span
+              className="text-sm text-muted-foreground"
+              data-testid="harness-summary-model-empty"
+            >
+              {t("harness.summaryModelEmpty")}
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between gap-2">
@@ -118,7 +124,15 @@ export const HarnessSummary = ({
             </Badge>
           )}
         </div>
-        {toolFlows.length === 0 ? (
+        {toolPackCount > 0 && (
+          <a
+            href="#harness-field-tool_packs"
+            className="text-sm underline underline-offset-4"
+          >
+            {t("toolPacks.selectedCount", { count: toolPackCount })}
+          </a>
+        )}
+        {toolFlows.length === 0 && toolPackCount === 0 ? (
           <span
             className="text-sm text-muted-foreground"
             data-testid="harness-summary-tools-empty"
