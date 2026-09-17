@@ -202,7 +202,7 @@ class ChromaLocalBackend(BaseVectorStoreBackend):
                 batch.append(
                     IngestedDocument(
                         content=content or "",
-                        metadata=dict(metadatas[idx]) if idx < len(metadatas) else {},
+                        metadata=dict(metadatas[idx] or {}) if idx < len(metadatas) else {},
                         embedding=(list(embeddings[idx]) if embeddings is not None and idx < len(embeddings) else None),
                         id=ids[idx] if idx < len(ids) else None,
                     )
@@ -484,7 +484,7 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
                 batch.append(
                     IngestedDocument(
                         content=content or "",
-                        metadata=dict(metadatas[idx]) if idx < len(metadatas) else {},
+                        metadata=dict(metadatas[idx] or {}) if idx < len(metadatas) else {},
                         embedding=(list(embeddings[idx]) if embeddings is not None and idx < len(embeddings) else None),
                         id=ids[idx] if idx < len(ids) else None,
                     )
