@@ -365,17 +365,23 @@ async def main() -> None:
             c=now,
         )
         await ex(
-            "insert into memory_base_session(id,session_id,total_processed,memory_base_id) values (:i,:s,2,:m)",
+            "insert into memory_base_session(id,session_id,cursor_id,total_processed,memory_base_id)"
+            " values (:i,:s,:cur,2,:m)",
             i=uid(1, "1"),
             s="session-fixture",
+            # The cursor sits on the last ingested message. It has no foreign key.
+            cur=uid(11, "1"),
             m=MB_ONE,
         )
         for n in range(2):
             mid = uid(10 + n, "1")
             await ex(
-                "insert into message(id,timestamp,sender,sender_name,session_id,text,error,edit,is_output)"
-                " values (:i,:t,'User','alice','session-fixture',:tx,:e,:e,:e)",
+                "insert into message(id,timestamp,sender,sender_name,session_id,flow_id,text,error,edit,is_output,"
+                "category) values (:i,:t,'User','alice','session-fixture',:f,:tx,:e,:e,:e,'message')",
                 i=mid,
+                # Ingestion only reads non-error messages from the memory base's own flow,
+                # and a NULL category fails its category != 'error' filter.
+                f=FL_MAIN,
                 t=now,
                 tx=f"fixture message {n}",
                 e=False,
@@ -408,15 +414,20 @@ async def main() -> None:
             b='{"resume":"state"}',
             c=now,
         )
+        # These keys are string columns. Bound as UUID, SQLite stores the undashed form
+        # and Postgres the dashed one, and the app looks rows up by the dashed string.
+        a2a_task_id = str(uid(2, "0"))
         await ex(
             "insert into a2a_tasks(id,owner,task) values (:i,:o,:t)",
-            i=uid(2, "0"),
-            o=U_SUPER,
+            i=a2a_task_id,
+            # DurableTaskStore scopes a mounted flow's task to "<flow_id>:<principal>".
+            o=f"{FL_MAIN}:{U_SUPER}",
             t='{"state":"input-required"}',
         )
         await ex(
             "insert into a2a_checkpoints(run_id,checkpoint) values (:i,:c)",
-            i=uid(3, "0"),
+            # run_id is the A2A task id.
+            i=a2a_task_id,
             c='{"graph":"paused"}',
         )
 
