@@ -52,7 +52,9 @@ export const useGetConnections: useQueryFunctionType<
     const response = await api.get<ConnectionRead[]>(
       `${getURL("CONNECTIONS")}${search}`,
     );
-    return response.data;
+    // The axios instance only attaches auth, so nothing upstream checks the
+    // shape. A non-array body would otherwise reach the picker's `.map`.
+    return Array.isArray(response.data) ? response.data : [];
   };
 
   return query(getConnectionsQueryKey(params?.provider), getConnectionsFn, {

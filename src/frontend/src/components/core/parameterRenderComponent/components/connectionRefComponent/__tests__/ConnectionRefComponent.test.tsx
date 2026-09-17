@@ -134,6 +134,21 @@ describe("ConnectionRefComponent", () => {
     ).toBeInTheDocument();
   });
 
+  it("survives a response that is not a list", async () => {
+    mockUseGetConnections.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+      isFetching: false,
+      refetch: mockRefetch,
+    });
+    renderPicker();
+    await userEvent.click(screen.getByTestId("connectionref_connection"));
+    expect(
+      await screen.findByText(/No google connections yet/i),
+    ).toBeInTheDocument();
+  });
+
   it("reports a failed load rather than an empty list", async () => {
     setConnections([], { isError: true });
     renderPicker();
