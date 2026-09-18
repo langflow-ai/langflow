@@ -3,6 +3,7 @@ from langchain_community.document_loaders.confluence import ContentFormat
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput
 from lfx.schema.data import Data
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 
 class ConfluenceComponent(Component):
@@ -64,6 +65,9 @@ class ConfluenceComponent(Component):
     ]
 
     def build_confluence(self) -> ConfluenceLoader:
+        # url is tenant-controlled: block SSRF to internal/cloud-metadata hosts.
+        validate_connector_url_for_ssrf(self.url)
+
         content_format = ContentFormat(self.content_format)
         return ConfluenceLoader(
             url=self.url,
