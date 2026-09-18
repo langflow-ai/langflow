@@ -527,7 +527,7 @@ async def _ensure_typed(
 
     ``kwargs`` is the keyword-argument dict the caller passed to the public
     helper. The registry tells us which key carries the id, the owner, and the
-    domain components; everything else flows into ``extra_context`` verbatim.
+    domain components, plus which additional keys may enter ``extra_context``.
     """
     spec = _RESOURCE_SPECS[spec_key]
 
@@ -545,8 +545,9 @@ async def _ensure_typed(
         resolved_domain = _resolve_authz_domain(workspace_id, scope_id)
 
     # ``extra_context`` mirrors the legacy clone shape so audit rows and
-    # plugin matchers continue to see the same key names. We forward every
-    # kwarg the helper declares except ``domain`` (already resolved).
+    # plugin matchers continue to see the same registered key names. The
+    # explicit allowlist prevents a new helper argument from becoming policy
+    # context accidentally.
     extra_context: dict[str, Any] = {}
     if spec.workspace_kw is not None:
         extra_context[spec.workspace_kw] = workspace_id

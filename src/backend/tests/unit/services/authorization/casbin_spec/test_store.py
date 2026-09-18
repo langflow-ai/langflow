@@ -6,6 +6,7 @@ from uuid import uuid4
 
 import pytest
 from langflow.services.authorization.casbin import store
+from langflow.services.authorization.casbin.compiler import RoleHierarchyError
 from langflow.services.authorization.casbin.grammar import Rule
 from langflow.services.database.models.auth import (
     AuthzRole,
@@ -65,6 +66,38 @@ async def test_failed_compile_rolls_back_canonical_and_derived_state(policy_db, 
     async with AsyncSession(policy_db) as session:
         assert not (await session.exec(select(AuthzRole))).all()
         assert not (await session.exec(select(CasbinRule))).all()
+
+
+@pytest.mark.asyncio
+async def test_invalid_role_hierarchy_preserves_committed_policy_on_rollback(policy_db):
+    """A real compiler rejection cannot erase published grants or persist the bad parent."""
+    actor = User(username=str(uuid4()), password=str(uuid4()), is_active=True)
+    role = AuthzRole(name=str(uuid4()), permissions=["flow:read"])
+    role_id = role.id
+    async with AsyncSession(policy_db, expire_on_commit=False) as session:
+        await store.acquire_writer_lock(session)
+        session.add_all([actor, role])
+        await session.flush()
+        session.add(AuthzRoleAssignment(user_id=actor.id, role_id=role_id, domain_type="global"))
+        await store.reconcile_policy(session)
+        original = [(row.id, store.semantic_rule(row)) for row in (await session.exec(select(CasbinRule))).all()]
+        assert original
+        await session.commit()
+
+    async with AsyncSession(policy_db) as session:
+        await store.acquire_writer_lock(session)
+        stored_role = await session.get(AuthzRole, role_id)
+        stored_role.parent_role_id = role_id
+        with pytest.raises(RoleHierarchyError, match="contains a cycle"):
+            await store.reconcile_policy(session)
+        await session.rollback()
+
+    async with AsyncSession(policy_db) as session:
+        assert (await session.get(AuthzRole, role_id)).parent_role_id is None
+        assert [
+            (row.id, store.semantic_rule(row)) for row in (await session.exec(select(CasbinRule))).all()
+        ] == original
+        assert (await store.verify_projection(session))["valid"] is True
 
 
 @pytest.mark.asyncio

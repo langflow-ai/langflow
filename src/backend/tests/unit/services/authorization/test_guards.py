@@ -923,6 +923,33 @@ async def test_kb_permission_uses_kb_id_object_slug(monkeypatch, fake_user):
 
 
 @pytest.mark.anyio
+async def test_typed_guard_forwards_only_registered_extra_context(monkeypatch, fake_user):
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    await authz_guards._ensure_typed(
+        fake_user,
+        spec_key="knowledge_base",
+        act_str="read",
+        kwargs={
+            "kb_id": uuid4(),
+            "kb_name": "registered-name",
+            "kb_user_id": uuid4(),
+            "workspace_id": None,
+            "project_id": None,
+            "unregistered_matcher_input": "must-not-forward",
+        },
+        domain_override=None,
+    )
+
+    context = service.calls[0]["context"]
+    assert context["kb_name"] == "registered-name"
+    assert "unregistered_matcher_input" not in context
+
+
+@pytest.mark.anyio
 async def test_kb_permission_owner_override(monkeypatch, fake_user):
     install_settings(monkeypatch, authz_enabled=True)
     service = _StubAuthorizationService(allow=False)

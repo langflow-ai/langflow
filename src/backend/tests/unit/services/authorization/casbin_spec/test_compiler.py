@@ -9,6 +9,7 @@ from langflow.services.authorization.casbin.compiler import (
     AssignmentSnapshot,
     AssignmentSource,
     PolicySnapshot,
+    RoleHierarchyError,
     RoleSnapshot,
     TeamSnapshot,
     canonical_domains,
@@ -149,8 +150,31 @@ def test_output_is_deterministic_and_duplicate_sources_survive_independent_remov
     assert not any(rule.v2 == f"flow/{FLOW}" for rule in compile_policy(replace(snapshot, shares=())))
 
 
-@pytest.mark.parametrize("chain_length", [1, 31, 32, 33])
-def test_parent_depth_boundary_matches_existing_canonical_semantics(chain_length: int) -> None:
+@pytest.mark.parametrize(
+    ("chain_length", "expected_actions"),
+    [(1, {"write"}), (31, {"read", "write", "execute"}), (32, {"read", "write", "execute"})],
+)
+def test_parent_depth_up_to_boundary_compiles_all_permissions(chain_length: int, expected_actions: set[str]) -> None:
+    roles = tuple(
+        RoleSnapshot(
+            UUID(int=100 + i),
+            ("flow:write" if i == 0 else "flow:execute" if i == chain_length - 1 else "flow:read",),
+            UUID(int=101 + i) if i < chain_length - 1 else None,
+        )
+        for i in range(chain_length)
+    )
+    snapshot = PolicySnapshot(
+        active_user_ids=frozenset({USER}),
+        roles=roles,
+        assignments=(AssignmentSnapshot(UUID(int=9), USER, roles[0].id),),
+    )
+    assert set(compile_policy(snapshot)) == {
+        Rule("p", f"user:{USER}", "*", "flow/*", action) for action in expected_actions
+    }
+
+
+def test_parent_depth_above_boundary_raises_instead_of_silently_denying() -> None:
+    chain_length = 33
     roles = tuple(
         RoleSnapshot(UUID(int=100 + i), ("flow:read",), UUID(int=101 + i) if i < chain_length - 1 else None)
         for i in range(chain_length)
@@ -160,17 +184,38 @@ def test_parent_depth_boundary_matches_existing_canonical_semantics(chain_length
         roles=roles,
         assignments=(AssignmentSnapshot(UUID(int=9), USER, roles[0].id),),
     )
-    assert bool(compile_policy(snapshot)) is (chain_length < 32)
+    with pytest.raises(RoleHierarchyError, match="exceeds the maximum depth"):
+        compile_policy(snapshot)
 
 
-@pytest.mark.parametrize("parent_id", [ROLE, UUID(int=99)])
-def test_cyclic_or_missing_parent_does_not_partially_grant_child_permissions(parent_id: UUID) -> None:
+def test_cyclic_parent_raises_instead_of_silently_denying() -> None:
     snapshot = PolicySnapshot(
         active_user_ids=frozenset({USER}),
-        roles=(RoleSnapshot(ROLE, ("flow:write",), parent_id),),
+        roles=(RoleSnapshot(ROLE, ("flow:write",), ROLE),),
         assignments=(AssignmentSnapshot(UUID(int=9), USER, ROLE),),
     )
-    assert compile_policy(snapshot) == ()
+    with pytest.raises(RoleHierarchyError, match="contains a cycle"):
+        compile_policy(snapshot)
+
+
+def test_missing_parent_raises_instead_of_silently_denying() -> None:
+    snapshot = PolicySnapshot(
+        active_user_ids=frozenset({USER}),
+        roles=(RoleSnapshot(ROLE, ("flow:write",), UUID(int=99)),),
+        assignments=(AssignmentSnapshot(UUID(int=9), USER, ROLE),),
+    )
+    with pytest.raises(RoleHierarchyError, match="missing parent role"):
+        compile_policy(snapshot)
+
+
+@pytest.mark.parametrize("member_active", [False, True])
+def test_non_database_snapshot_must_preserve_canonical_activation_state(*, member_active: bool) -> None:
+    snapshot = PolicySnapshot(
+        active_user_ids=frozenset() if member_active else frozenset({USER}),
+        teams=(TeamSnapshot(TEAM, is_active=False, members=(TeamMemberState(USER, "user", member_active),)),),
+    )
+    with pytest.raises(ValueError, match="Inconsistent canonical user activation state"):
+        compile_policy(snapshot)
 
 
 def test_parent_permissions_flatten_without_inventing_parent_workspace_restrictions() -> None:

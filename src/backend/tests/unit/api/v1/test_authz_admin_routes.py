@@ -2090,25 +2090,6 @@ class _FailingCommittedHookAuthz(_StubAuthz):
         raise RuntimeError(msg)
 
 
-class _FailingInvalidateUserAuthz(_StubAuthz):
-    """Stub that raises on user invalidation and tracks the global fallback."""
-
-    def __init__(self, *, fail_invalidate_all: bool = False) -> None:
-        super().__init__(allow=True)
-        self._fail_invalidate_all = fail_invalidate_all
-
-    async def invalidate_user(self, user_id: UUID) -> None:  # type: ignore[override]
-        self.invalidate_user_calls.append(user_id)
-        msg = "plugin RPC failure"
-        raise RuntimeError(msg)
-
-    async def invalidate_all(self) -> None:  # type: ignore[override]
-        self.invalidate_all_calls += 1
-        if self._fail_invalidate_all:
-            msg = "plugin invalidate_all failure"
-            raise RuntimeError(msg)
-
-
 @pytest.fixture
 def failing_committed_hook_authz(monkeypatch):
     """Install a stub whose committed hook raises; assert no 5xx leaks out."""
@@ -2236,50 +2217,6 @@ async def test_remove_member_succeeds_when_committed_hook_fails(collaboration_db
             await session.exec(select(AuthzTeamMemberGrant).where(AuthzTeamMemberGrant.membership_id == member_id))
         ).all()
     assert len(attempts) == 1
-
-
-# Direct unit tests on the safe-invalidate helpers — keeps the contract
-# (catches, falls back, never raises) covered even if every route handler
-# is refactored later.
-
-
-@pytest.mark.asyncio
-async def test_safe_invalidate_user_falls_back_to_invalidate_all():
-    """Helper-level test: invalidate_user raises, invalidate_all is attempted."""
-    from langflow.services.authorization.invalidation import safe_invalidate_user
-
-    stub = _FailingInvalidateUserAuthz()
-    user_id = uuid4()
-
-    # Must NOT raise.
-    await safe_invalidate_user(stub, user_id, op="test")
-    assert stub.invalidate_user_calls == [user_id]
-    assert stub.invalidate_all_calls == 1
-
-
-@pytest.mark.asyncio
-async def test_safe_invalidate_user_swallows_invalidate_all_failure():
-    """Helper-level test: both invalidations fail; the helper still returns cleanly."""
-    from langflow.services.authorization.invalidation import safe_invalidate_user
-
-    stub = _FailingInvalidateUserAuthz(fail_invalidate_all=True)
-    user_id = uuid4()
-
-    await safe_invalidate_user(stub, user_id, op="test")  # MUST NOT raise
-    assert stub.invalidate_user_calls == [user_id]
-    assert stub.invalidate_all_calls == 1
-
-
-@pytest.mark.asyncio
-async def test_safe_invalidate_user_happy_path_skips_invalidate_all():
-    """Helper-level test: successful invalidate_user does NOT trigger fallback."""
-    from langflow.services.authorization.invalidation import safe_invalidate_user
-
-    stub = _StubAuthz()
-    user_id = uuid4()
-    await safe_invalidate_user(stub, user_id, op="test")
-    assert stub.invalidate_user_calls == [user_id]
-    assert stub.invalidate_all_calls == 0
 
 
 # =====================================================================

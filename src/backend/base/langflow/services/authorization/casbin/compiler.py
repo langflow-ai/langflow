@@ -67,6 +67,13 @@ class PolicySnapshot:
     resources: tuple[ResourceRecord, ...] = ()
 
 
+class RoleHierarchyError(ValueError):
+    """Raised when canonical role ancestry cannot be compiled completely."""
+
+
+_MAX_ROLE_HIERARCHY_DEPTH = 32
+
+
 def canonical_domains(resource: ResourceRecord, projects: Mapping[UUID, ResourceRecord]) -> tuple[str, ...]:
     """Resolve literal domains without treating missing or conflicting context as global."""
     canonical_uuid(str(resource.resource_id))
@@ -98,17 +105,23 @@ def _permissions(role_id: UUID, roles: Mapping[UUID, RoleSnapshot]) -> frozenset
     permissions: set[str] = set()
     seen: set[UUID] = set()
     current_id: UUID | None = role_id
-    # Preserve the native traversal boundary, including its terminal iteration.
-    for _ in range(32):
+    for _ in range(_MAX_ROLE_HIERARCHY_DEPTH):
         if current_id is None:
             return frozenset(permissions)
-        if current_id in seen or current_id not in roles:
-            return frozenset()
+        if current_id in seen:
+            msg = "Canonical role hierarchy contains a cycle."
+            raise RoleHierarchyError(msg)
+        role = roles.get(current_id)
+        if role is None:
+            msg = "Canonical role hierarchy references a missing parent role."
+            raise RoleHierarchyError(msg)
         seen.add(current_id)
-        role = roles[current_id]
         permissions.update(permission for permission in role.permissions if isinstance(permission, str))
         current_id = role.parent_role_id
-    return frozenset()
+    if current_id is None:
+        return frozenset(permissions)
+    msg = f"Canonical role hierarchy exceeds the maximum depth of {_MAX_ROLE_HIERARCHY_DEPTH}."
+    raise RoleHierarchyError(msg)
 
 
 def _assignment_domain(
@@ -173,6 +186,8 @@ def _team_rules(snapshot: PolicySnapshot) -> tuple[set[Rule], set[UUID]]:
             msg = "Duplicate canonical team identity."
             raise ValueError(msg)
         seen.add(team.id)
+        # canonical_snapshot derives both values from the same active-user set.
+        # This invariant protects the compiler boundary for other snapshot producers.
         if any(member.is_active != (member.user_id in snapshot.active_user_ids) for member in team.members):
             msg = "Inconsistent canonical user activation state."
             raise ValueError(msg)
