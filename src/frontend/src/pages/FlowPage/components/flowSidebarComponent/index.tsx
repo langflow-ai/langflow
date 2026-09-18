@@ -16,6 +16,7 @@ import {
   ENABLE_INTEGRATIONS,
   ENABLE_KNOWLEDGE_BASES,
   ENABLE_NEW_SIDEBAR,
+  ENABLE_TRIGGERS,
 } from "@/customization/feature-flags";
 import { useAddComponent } from "@/hooks/use-add-component";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -77,13 +78,15 @@ export function FlowSidebarComponent({ isLoading }: FlowSidebarComponentProps) {
     (state) => state.catalogGovernanceEnabled,
   );
 
-  // Filter out knowledge components when ENABLE_KNOWLEDGE_BASES is OFF and
-  // connection-backed components when ENABLE_INTEGRATIONS is OFF
+  // Filter out knowledge components when ENABLE_KNOWLEDGE_BASES is OFF,
+  // connection-backed components when ENABLE_INTEGRATIONS is OFF, and trigger
+  // components when ENABLE_TRIGGERS is OFF
   const data = useMemo(
     () =>
       applyFeatureFlagFilters(rawData, {
         enableKnowledgeBases: ENABLE_KNOWLEDGE_BASES,
         enableIntegrations: ENABLE_INTEGRATIONS,
+        enableTriggers: ENABLE_TRIGGERS,
       }),
     [rawData],
   );
