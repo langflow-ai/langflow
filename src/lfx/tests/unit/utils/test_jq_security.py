@@ -24,6 +24,8 @@ class TestRejectedPrograms:
             '"\\(env)"',
             '"secret: \\($ENV.LANGFLOW_SECRET_KEY)"',
             '.data | "\\(env)"',
+            # Dangerous builtin inside a nested interpolation is still live code.
+            '"\\("\\(env)")"',
             # Source-location information disclosure.
             "$__loc__",
             "def f: $__loc__; f",
@@ -85,6 +87,9 @@ class TestAllowedPrograms:
             '"input data"',
             '.mode | select(. == "input")',
             '{label: "environment"}',
+            # A nested interpolation closes without ending the outer one; the
+            # remaining string text (here the literal word "env") is not code.
+            '"\\("\\(.)") env"',
             # Comments are not executable.
             "# reads the env field\n.env",
             ".data # input payload",

@@ -54,8 +54,7 @@ def _mask_strings_and_comments(program: str) -> str:
     n = len(program)
     i = 0
     in_string = False
-    depth = 0  # paren depth while scanning an interpolation's code
-    stack: list[str] = []  # one "string" frame per open interpolation
+    stack: list[int] = []  # paren depth of each open interpolation's code
     while i < n:
         ch = program[i]
         if in_string:
@@ -64,8 +63,7 @@ def _mask_strings_and_comments(program: str) -> str:
                     # Interpolation: mask the backslash, keep "(", scan as code.
                     out[i] = " "
                     in_string = False
-                    depth = 1
-                    stack.append("string")
+                    stack.append(1)
                 else:
                     # Escape sequence: mask both characters.
                     out[i] = out[i + 1] = " "
@@ -90,10 +88,10 @@ def _mask_strings_and_comments(program: str) -> str:
             continue
         if stack:  # inside an interpolation; find the paren that ends it
             if ch == "(":
-                depth += 1
+                stack[-1] += 1
             elif ch == ")":
-                depth -= 1
-                if depth == 0:
+                stack[-1] -= 1
+                if stack[-1] == 0:
                     stack.pop()
                     in_string = True
         i += 1
