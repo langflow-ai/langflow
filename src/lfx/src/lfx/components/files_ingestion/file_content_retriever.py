@@ -20,6 +20,7 @@ from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 
 
 class FileContentRetrieverComponent(Component):
@@ -111,9 +112,49 @@ class FileContentRetrieverComponent(Component):
         """Return a short hash for use as a safe filename."""
         return hashlib.sha256(file_path.encode()).hexdigest()[:16]
 
+    def _resolve_persistent_base(self) -> Path:
+        """Validate persistent_dir against local-file-access restrictions before use.
+
+        persistent_dir is a tenant-controlled input field. Without containment it can point
+        at any absolute server path, letting this component read/write outside the
+        authenticated user's storage scope even when LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS
+        is enabled. When the restriction is disabled (OSS default) this is a no-op and the
+        path is used as-is, preserving single-tenant behavior.
+        """
+        return enforce_local_file_access(
+            Path(self.persistent_dir).expanduser(),
+            scope_ids=component_file_access_scopes(self),
+        )
+
+    @staticmethod
+    def _resolve_index_entry(index_dir: Path, entry_name: object) -> Path | None:
+        """Resolve an index-listed file name inside *index_dir*, rejecting traversal.
+
+        Index files (text_index.json / dataframe_index.json) may be staged or tampered
+        with, so entry names are untrusted. Names with path separators or traversal
+        sequences are refused, and the resolved path must stay inside *index_dir*
+        (which also catches symlinks planted inside the directory pointing outside).
+        """
+        if not isinstance(entry_name, str) or not entry_name:
+            return None
+        if ".." in entry_name or any(char in entry_name for char in ("/", "\\", "\x00")):
+            logger.warning(
+                f"FileContentRetriever: Ignoring index entry '{entry_name}': contains path separators "
+                "or traversal sequences."
+            )
+            return None
+        resolved_dir = index_dir.resolve()
+        candidate = (resolved_dir / entry_name).resolve()
+        if candidate != resolved_dir and not candidate.is_relative_to(resolved_dir):
+            logger.warning(
+                f"FileContentRetriever: Ignoring index entry '{entry_name}': resolves outside its index directory."
+            )
+            return None
+        return candidate
+
     def _load_persistent_maps(self) -> tuple[dict[str, str], dict[str, DataFrame]]:
         """Load maps from the persistent directory. Returns ({}, {}) if nothing on disk."""
-        base = Path(self.persistent_dir)
+        base = self._resolve_persistent_base()
         text_map: dict[str, str] = {}
         dataframe_map: dict[str, DataFrame] = {}
 
@@ -124,8 +165,8 @@ class FileContentRetrieverComponent(Component):
             try:
                 index = json.loads(text_index_file.read_text(encoding="utf-8"))
                 for fp, txt_name in index.items():
-                    txt_path = text_dir / txt_name
-                    if txt_path.exists():
+                    txt_path = self._resolve_index_entry(text_dir, txt_name)
+                    if txt_path is not None and txt_path.exists():
                         try:
                             text_map[fp] = txt_path.read_text(encoding="utf-8")
                         except OSError as e:
@@ -141,8 +182,8 @@ class FileContentRetrieverComponent(Component):
             try:
                 index = json.loads(df_index_file.read_text(encoding="utf-8"))
                 for fp, parquet_name in index.items():
-                    pq_path = df_dir / parquet_name
-                    if pq_path.exists():
+                    pq_path = self._resolve_index_entry(df_dir, parquet_name)
+                    if pq_path is not None and pq_path.exists():
                         try:
                             dataframe_map[fp] = DataFrame(pd.read_parquet(pq_path))
                             dataframe_map[fp].attrs["source_file_path"] = fp
@@ -156,7 +197,7 @@ class FileContentRetrieverComponent(Component):
 
     def _save_persistent_maps(self, text_map: dict[str, str], dataframe_map: dict[str, DataFrame]) -> None:
         """Save maps to the persistent directory (atomic writes)."""
-        base = Path(self.persistent_dir)
+        base = self._resolve_persistent_base()
         base.mkdir(parents=True, exist_ok=True)
         text_dir = base / "texts"
         text_dir.mkdir(exist_ok=True)
