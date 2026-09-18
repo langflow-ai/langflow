@@ -1510,6 +1510,81 @@ class TestScanCodeSecurityRuntimeModuleBypass:
         result = scan_code_security("getattr(record, 'display' + '_name', None)")
         assert result.is_safe is True
 
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "def helper():\n    return None\ngetattr(helper, ''.join(['__glob', 'als__']))",
+                id="join-list-getattr-globals",
+            ),
+            pytest.param(
+                "getattr(object, ''.join(('__sub', 'classes__')))()",
+                id="join-tuple-getattr-subclasses",
+            ),
+            pytest.param(
+                "getattr(helper, ''.join(part for part in ['__glob', 'als__']))",
+                id="join-generator-getattr-globals",
+            ),
+            pytest.param(
+                "import os\ngetattr(os, ''.join(['sys', 'tem']))('id')",
+                id="join-getattr-os-system",
+            ),
+            pytest.param(
+                "import os\ngetattr(os, ''.join(['get', 'env']))('HOME')",
+                id="join-getattr-os-getenv",
+            ),
+            pytest.param(
+                "import os\nname = ''.join(['sy', 'stem'])\ngetattr(os, name)('id')",
+                id="join-name-then-getattr",
+            ),
+            pytest.param(
+                "import pathlib\npathlib.__dict__[''.join(['o', 's'])].fork()",
+                id="join-module-dict-key",
+            ),
+        ],
+    )
+    def test_should_detect_join_computed_dangerous_names(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+
+    def test_should_detect_join_computed_end_to_end_rce_payload(self):
+        """H1-3995693: join-computed reflection must not recover globals/builtins."""
+        code = (
+            "def helper():\n    return None\n\n"
+            "globals_map = getattr(helper, ''.join(['__glob', 'als__']))\n"
+            "builtins_map = globals_map[''.join(['__built', 'ins__'])]\n"
+            "import_function = builtins_map[''.join(['__imp', 'ort__'])]\n"
+            "os_module = import_function(''.join(['o', 's']))\n"
+            "os_module.system('placeholder')\n"
+        )
+        result = scan_code_security(code)
+        assert result.is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "separator = '-'\nvalue = separator.join(['a', 'b'])",
+                id="aliased-separator-join",
+            ),
+            pytest.param(
+                "value = ''.join(part for part in ['a', 'b'] if part)",
+                id="filtered-generator-join",
+            ),
+            pytest.param(
+                "value = ''.join([prefix, 'b'])",
+                id="dynamic-element-join",
+            ),
+            pytest.param(
+                "getattr(record, ''.join(['display', '_name']), None)",
+                id="safe-join-getattr",
+            ),
+        ],
+    )
+    def test_should_allow_unresolved_or_safe_join_strings(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is True
+
     def test_should_detect_reflective_call_through_assignment_alias(self):
         result = scan_code_security("import os\nmodule = os\ngetattr(module, 'system')('id')")
         assert result.is_safe is False
