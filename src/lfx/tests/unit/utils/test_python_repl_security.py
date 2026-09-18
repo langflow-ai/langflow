@@ -1,7 +1,14 @@
 """Unit tests for the Python REPL hardening helpers."""
 
+import types
+
 import pytest
-from lfx.utils.python_repl_security import safe_builtins, validate_code_safety
+from lfx.utils.python_repl_security import (
+    _ModuleProxy,
+    import_allowed_module,
+    safe_builtins,
+    validate_code_safety,
+)
 
 
 class TestSafeBuiltins:
@@ -322,3 +329,130 @@ class TestEnsureCodeExecutionEnabled:
         monkeypatch.setattr("lfx.services.deps.get_settings_service", _boom)
         with pytest.raises(ImportError, match="settings dependency failed to import"):
             ensure_code_execution_enabled()
+
+
+class TestModuleProxy:
+    """H1-3980271: transitive public-attribute chains off allow-listed modules.
+
+    get_globals() used to inject the *real* module objects, so
+    ``json.codecs.sys.modules['os']`` (also ``re.enum.sys``, ``typing.sys``,
+    ``numpy.sys``) reached the host ``os`` module through ordinary public attributes
+    that neither the AST gate nor the dunder wildcard block. The components now inject
+    ``_ModuleProxy`` wrappers, which refuse those names and recursively re-wrap
+    sub-modules, so no real module object ever enters the sandbox.
+    """
+
+    @staticmethod
+    def _build_globals(global_imports: str) -> dict:
+        """Build exec globals the same way PythonREPLComponent.get_globals() does."""
+        globals_dict = {}
+        for name in [m.strip() for m in global_imports.split(",")]:
+            module_name, safe_module = import_allowed_module(name)
+            globals_dict[module_name] = safe_module
+        globals_dict["__builtins__"] = safe_builtins()
+        return globals_dict
+
+    def test_returns_proxied_module_and_name(self):
+        module_name, safe_module = import_allowed_module("json")
+        assert module_name == "json"
+        assert isinstance(safe_module, _ModuleProxy)
+        assert not isinstance(safe_module, types.ModuleType)
+
+    def test_legitimate_attributes_still_work(self):
+        """Common module usage is unaffected: functions, constants, classes."""
+        _, math_proxy = import_allowed_module("math")
+        assert math_proxy.sqrt(16) == 4
+        assert math_proxy.pi == pytest.approx(3.14159, rel=1e-6)
+
+        _, json_proxy = import_allowed_module("json")
+        assert json_proxy.loads(json_proxy.dumps({"a": 1})) == {"a": 1}
+        assert json_proxy.JSONDecodeError is not None
+
+    def test_submodule_attributes_are_recursively_wrapped(self):
+        """A public sub-module attribute (json.encoder) is itself a filtered proxy."""
+        _, json_proxy = import_allowed_module("json")
+        encoder = json_proxy.encoder
+        assert isinstance(encoder, _ModuleProxy)
+        # Legitimate nested usage still works through the proxy.
+        assert encoder.JSONEncoder().encode([1, 2]) == "[1, 2]"
+
+    @pytest.mark.parametrize(
+        "attr",
+        [
+            # Interpreter internals / module-system reach.
+            "sys",
+            "modules",
+            "builtins",
+            "importlib",
+            "loader",
+            "spec",
+            "meta_path",
+            "find_spec",
+            "exec_module",
+            # Host-powerful transitive bindings.
+            "os",
+            "subprocess",
+            "ctypes",
+            "shutil",
+            "pathlib",
+            "io",
+            "socket",
+            # PoC chain hops.
+            "codecs",
+            "enum",
+            # Internal state / dunders must never be reachable.
+            "_module",
+            "__class__",
+            "__dict__",
+            "__getattribute__",
+        ],
+    )
+    def test_blocked_attributes_refused(self, attr):
+        _, json_proxy = import_allowed_module("json")
+        with pytest.raises(AttributeError, match="not allowed"):
+            getattr(json_proxy, attr)
+
+    def test_proxy_is_read_only(self):
+        _, json_proxy = import_allowed_module("json")
+        with pytest.raises(AttributeError, match="read-only"):
+            json_proxy.loads = lambda s: s
+        with pytest.raises(AttributeError, match="read-only"):
+            del json_proxy.loads
+
+    @pytest.mark.parametrize(
+        ("global_imports", "code"),
+        [
+            ("json", "os_mod = json.codecs.sys.modules['os']\nos_mod.system('id')"),
+            ("re", "os_mod = re.enum.sys.modules['os']\nos_mod.popen('id')"),
+            ("typing", "os_mod = typing.sys.modules['os']\nos_mod.getpid()"),
+            ("json", "json.decoder.sys.modules['os'].getuid()"),
+        ],
+    )
+    def test_reported_escape_chains_blocked(self, global_imports, code):
+        """The PoC chains pass the AST gate (all public attributes) but cannot execute."""
+        validate_code_safety(code)  # AST gate cannot see this attack class — by design
+        with pytest.raises(AttributeError, match="not allowed"):
+            exec(code, self._build_globals(global_imports))  # noqa: S102 - test-only controlled exec
+
+    def test_numpy_escape_chain_blocked(self):
+        """The docs-suggested numpy allow-list must not expose numpy.sys."""
+        pytest.importorskip("numpy")
+        code = "os_mod = numpy.sys.modules['os']\nos_mod.popen('id')"
+        validate_code_safety(code)
+        with pytest.raises(AttributeError, match="not allowed"):
+            exec(code, self._build_globals("numpy"))  # noqa: S102 - test-only controlled exec
+
+    def test_no_marker_written_end_to_end(self, tmp_path, monkeypatch):
+        """Full kill payload semantics: no file is written through the proxy chain."""
+        marker = tmp_path / "pwned"
+        monkeypatch.chdir(tmp_path)
+        code = "os_mod = json.codecs.sys.modules['os']\nos_mod.system('id > pwned')"
+        validate_code_safety(code)
+        with pytest.raises(AttributeError, match="not allowed"):
+            exec(code, self._build_globals("json"))  # noqa: S102 - test-only controlled exec
+        assert not marker.exists()
+        # Sanity: the gadget is real when unguarded (raw module injection).
+        raw_globals = {"json": __import__("json"), "__builtins__": safe_builtins()}
+        exec(code, raw_globals)  # noqa: S102 - test-only controlled exec
+        assert marker.exists()
+        marker.unlink()
