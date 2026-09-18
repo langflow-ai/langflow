@@ -64,6 +64,17 @@ from langflow.services.warm_registry.service import flow_version
 # Configuration constants
 EXECUTION_TIMEOUT = 300  # 5 minutes default timeout for sync execution, used as a fallback
 
+# Idle-keepalive interval for the SSE stream. While a node is executing
+# (long LLM call, agent loop, external API), the event queue can sit empty
+# for 50s+ (long enough for any idle-timeout middlebox: ALB default 60s,
+# nginx default 60s, many corporate proxies 30-50s) which silently kills
+# the connection. The backend keeps running and often completes the run,
+# but the UI sees a generic "network error". Emitting an SSE comment line
+# on a short cadence keeps middleboxes happy without changing the protocol
+# surface for the client (SSE comments are ignored by EventSource). See #15178.
+STREAM_KEEPALIVE_INTERVAL_SEC = 15
+_KEEPALIVE_FRAME = b": keepalive\n\n"
+
 
 def _resolve_execution_timeout() -> int:
     """Wall-clock ceiling for a single workflow run, from settings.
@@ -405,7 +416,17 @@ async def _stream_event_frames(
                 yield _frame(event, seq)
                 seq += 1
         while True:
-            _, value, _ = await queue.get()
+            try:
+                _, value, _ = await asyncio.wait_for(
+                    queue.get(), timeout=STREAM_KEEPALIVE_INTERVAL_SEC
+                )
+            except asyncio.TimeoutError:
+                # No new event in STREAM_KEEPALIVE_INTERVAL_SEC: emit an SSE
+                # comment so idle proxies don't close the connection. Loop
+                # continues without consuming any event payload. The buffer
+                # stores it verbatim; EventSource clients ignore it.
+                yield (_KEEPALIVE_FRAME, "keepalive")
+                continue
             if value is None:
                 break
             payload = json.loads(value.decode("utf-8"))
