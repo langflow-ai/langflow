@@ -188,6 +188,7 @@ async def test_frozen_vertex_restores_own_users_cached_result(monkeypatch):
     await graph.build_vertex(first_vertex.id, get_cache=get_cache, set_cache=set_cache, user_id="user-1")
 
     frozen_vertex = _mock_built_vertex("vertex-1", frozen=True)
+    frozen_vertex.built_object = "uncached-output"
     monkeypatch.setattr(graph, "get_vertex", lambda _vertex_id: frozen_vertex)
     await graph.build_vertex(frozen_vertex.id, get_cache=get_cache, set_cache=set_cache, user_id="user-1")
 

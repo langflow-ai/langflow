@@ -1763,6 +1763,9 @@ class Graph:
         # loadable and simply have no additional trusted storage namespace.
         state.setdefault("source_flow_id", None)
         state.setdefault("branch_inactivation_sources", {})
+        # __getstate__ omits end_user_id, so graphs restored from cache/checkpoint
+        # payloads need the default for _vertex_result_cache_key to read it safely.
+        state.setdefault("end_user_id", None)
         run_manager = state["run_manager"]
         if isinstance(run_manager, RunnableVerticesManager):
             state["run_manager"] = run_manager
