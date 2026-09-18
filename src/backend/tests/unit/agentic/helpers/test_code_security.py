@@ -486,6 +486,53 @@ class TestScanCodeSecurityExfiltrationAndEscapes:
         result = scan_code_security('data = open("/etc/passwd").read()')
         assert result.is_safe is False
 
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # H1-3992099: stdlib equivalents of bare open() must not bypass the scan.
+            "import io\nio.open('/etc/passwd').read()",
+            "import io\nio.open_code('/etc/passwd')",
+            "import io as io_alias\nio_alias.open('/etc/passwd').read()",
+            "from io import open\nopen('/etc/passwd').read()",
+            "from io import open_code\nopen_code('/etc/passwd')",
+            "import codecs\ncodecs.open('/etc/passwd').read()",
+            "from codecs import open\ncodec_open = open\ncodec_open('/etc/passwd')",
+            "import io\nopener = getattr(io, 'open')\nopener('/etc/passwd')",
+        ],
+        ids=[
+            "io-open",
+            "io-open-code",
+            "io-open-aliased-module",
+            "from-io-import-open",
+            "from-io-import-open-code",
+            "codecs-open",
+            "from-codecs-import-open",
+            "io-open-via-getattr",
+        ],
+    )
+    def test_should_detect_stdlib_open_equivalents(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # H1-3992099: pathlib is the object-oriented raw filesystem API
+            # (Path.read_text/write_text/open/...). The whole module is blocked.
+            "import pathlib\npathlib.Path('/etc/passwd').read_text()",
+            "from pathlib import Path\nPath('/etc/passwd').read_text()",
+            "from pathlib import Path\nPath('/tmp/x').write_text('payload')",
+            "from pathlib import Path\nPath('/tmp/x').open('r')",
+        ],
+        ids=[
+            "pathlib-module-read-text",
+            "pathlib-from-import-read-text",
+            "pathlib-write-text",
+            "pathlib-open",
+        ],
+    )
+    def test_should_detect_pathlib_file_access(self, code):
+        assert scan_code_security(code).is_safe is False
+
     def test_should_detect_subclasses_sandbox_escape(self):
         result = scan_code_security("evil = ().__class__.__bases__[0].__subclasses__()")
         assert result.is_safe is False
@@ -512,6 +559,16 @@ class TestScanCodeSecurityExfiltrationAndEscapes:
     def test_should_still_allow_getattr(self):
         # getattr is common/legit — banning it would regress real components.
         result = scan_code_security('v = getattr(self, "field", None)')
+        assert result.is_safe is True
+
+    def test_should_still_allow_in_memory_io_streams(self):
+        # io.StringIO/BytesIO are in-memory and legit; only io.open/open_code are blocked.
+        result = scan_code_security("import io\nbuf = io.BytesIO(b'data')\ntext = io.StringIO('x')")
+        assert result.is_safe is True
+
+    def test_should_still_allow_codecs_transcoding(self):
+        # codecs.encode/decode are legit; only codecs.open is blocked.
+        result = scan_code_security("import codecs\ndata = codecs.decode(b'x', 'utf-8')")
         assert result.is_safe is True
 
 
@@ -1387,9 +1444,9 @@ class TestScanCodeSecurityRuntimeModuleBypass:
     @pytest.mark.parametrize(
         "code",
         [
-            "import pathlib\npath = getattr.__call__(pathlib, 'Path')('a')",
-            "import pathlib\nreflect = getattr\npath = reflect.__call__(pathlib, 'Path')('a')",
-            "import builtins, pathlib\npath = builtins.getattr.__call__(pathlib, 'Path')('a')",
+            "import math\nresult = getattr.__call__(math, 'sqrt')(4)",
+            "import math\nreflect = getattr\nresult = reflect.__call__(math, 'sqrt')(4)",
+            "import builtins, math\nresult = builtins.getattr.__call__(math, 'sqrt')(4)",
         ],
         ids=["direct-getattr-call", "aliased-getattr-call", "builtins-getattr-call"],
     )
@@ -1623,7 +1680,7 @@ class TestScanCodeSecurityRuntimeModuleBypass:
         "code",
         [
             pytest.param(
-                "import pathlib\npathlib = object()\ngetattr(pathlib, 'os').system('ordinary object')",
+                "import glob\nglob = object()\ngetattr(glob, 'os').system('ordinary object')",
                 id="rebound-module-name",
             ),
             pytest.param(
@@ -1631,12 +1688,11 @@ class TestScanCodeSecurityRuntimeModuleBypass:
                 id="ordinary-object-getattribute",
             ),
             pytest.param(
-                "import pathlib\npathlib = object()\nvars = lambda value: {'os': value}\n"
-                "vars(pathlib)['os'].Path('file')",
+                "import glob\nglob = object()\nvars = lambda value: {'os': value}\nvars(glob)['os'].glob('file')",
                 id="shadowed-vars",
             ),
             pytest.param(
-                "import pathlib\nos_module = getattr(pathlib, 'os')\npath = os_module.path.join('a', 'b')",
+                "import logging\nos_module = getattr(logging, 'os')\npath = os_module.path.join('a', 'b')",
                 id="safe-os-member",
             ),
             pytest.param(
@@ -1645,15 +1701,15 @@ class TestScanCodeSecurityRuntimeModuleBypass:
                 id="rebound-getattr-alias",
             ),
             pytest.param(
-                "import pathlib\npath = pathlib.Path('a')\nname = getattr(pathlib, f\"{'P'}ath\")('b')",
-                id="direct-pathlib-and-static-safe-getattr",
+                "import glob\nfiles = glob.glob('*.txt')\nname = getattr(glob, f\"{'g'}lob\")('b')",
+                id="direct-glob-and-static-safe-getattr",
             ),
             pytest.param(
                 "import glob\nfiles = glob.glob('*.txt')\npath_class = glob.__dict__['magic_check']",
                 id="direct-glob-and-safe-dict-member",
             ),
             pytest.param(
-                "import pathlib\npath_class = vars(pathlib)['Path']",
+                "import glob\npath_class = vars(glob)['glob']",
                 id="vars-safe-member",
             ),
             pytest.param(
@@ -1661,7 +1717,7 @@ class TestScanCodeSecurityRuntimeModuleBypass:
                 id="vars-mapping-get-safe-member",
             ),
             pytest.param(
-                "import pathlib\npath_class = object.__getattribute__(pathlib, 'Path')",
+                "import glob\npath_class = object.__getattribute__(glob, 'glob')",
                 id="object-getattribute-safe-member",
             ),
             pytest.param(
@@ -1669,7 +1725,7 @@ class TestScanCodeSecurityRuntimeModuleBypass:
                 id="dict-get-safe-member",
             ),
             pytest.param(
-                "import pathlib\nlookup = pathlib.__dict__.get\npath_class = lookup.__call__('Path')",
+                "import glob\nlookup = glob.__dict__.get\npath_class = lookup.__call__('glob')",
                 id="normalized-call-safe-member",
             ),
         ],

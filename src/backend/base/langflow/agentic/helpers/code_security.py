@@ -101,6 +101,12 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("shutil", "rmtree", "shutil.rmtree() is forbidden"),
     ("shutil", "move", "shutil.move() is forbidden in components"),
     ("sys", "exit", "sys.exit() is forbidden in components"),
+    # Raw file access through stdlib equivalents of the blocked bare open().
+    # io.StringIO/BytesIO and codecs.encode/decode stay allowed; only the
+    # filesystem entry points are forbidden.
+    ("io", "open", "io.open() is forbidden in components — use Langflow's File components"),
+    ("io", "open_code", "io.open_code() is forbidden in components — use Langflow's File components"),
+    ("codecs", "open", "codecs.open() is forbidden in components — use Langflow's File components"),
 ]
 
 # Imports that are forbidden entirely
@@ -140,6 +146,12 @@ DANGEROUS_IMPORTS: set[str] = {
     "xmlrpc",
     # Pseudo-terminal — spawns an interactive shell (pty.spawn).
     "pty",
+    # pathlib is the object-oriented raw filesystem API (Path.read_text /
+    # write_text / open / unlink / ...). Path objects are constructed from
+    # call results, so member-level rules cannot relate them back to the
+    # module; the whole module is blocked, same as shutil. Components must
+    # use Langflow's File components for file access.
+    "pathlib",
 }
 
 # Dangerous *submodules* of packages that also expose safe siblings. Block the
@@ -190,6 +202,9 @@ RESTRICTED_IMPORT_NAMES: dict[str, set[str]] = {
         "dup",
     },
     "sys": {"modules"},
+    # Filesystem openers behind stdlib modules that otherwise stay importable.
+    "io": {"open", "open_code"},
+    "codecs": {"open"},
 }
 
 
