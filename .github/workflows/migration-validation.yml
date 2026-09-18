@@ -6,6 +6,8 @@ on:
       - 'src/backend/base/langflow/alembic/**'
       - 'src/backend/base/langflow/services/database/models/**'
       - 'src/backend/base/langflow/services/database/service.py'
+      - 'src/backend/base/langflow/services/database/sqlite_to_postgres.py'
+      - 'src/backend/tests/unit/services/database/test_sqlite_to_postgres.py'
       - 'src/backend/base/langflow/services/connection/**'
       - 'src/backend/base/langflow/api/v1/connections.py'
       - 'src/backend/tests/unit/alembic/**'
@@ -87,6 +89,12 @@ jobs:
           uv run pytest \
             src/backend/tests/unit/alembic/test_connection_oauth_migration.py \
             src/backend/tests/unit/alembic/test_connection_oauth_workers.py -x -v
+
+      - name: Run SQLite to PostgreSQL conversion tests
+        env:
+          LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
+        run: |
+          uv run pytest src/backend/tests/unit/services/database/test_sqlite_to_postgres.py -x -v
 
   background-real-service:
     name: Background Execution Real-Service Tests (real Postgres + Redis)
