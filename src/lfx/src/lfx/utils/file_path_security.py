@@ -4,10 +4,11 @@ The built-in file-reading components (File, Directory, JSON/CSV-to-Data) accept 
 path from a tenant-controlled input field. Without restriction a tenant can read arbitrary
 server files (``/etc/passwd``, the SQLite DB, secrets) or other tenants' uploads.
 
-When ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` is enabled, resolved local file paths must stay
-within the authenticated user's or executing flow's storage subdirectory under
-``settings.config_dir``. The check is a no-op when the setting is disabled (OSS default), so
-single-tenant deployments keep the existing "read any local file by absolute path" behavior.
+When ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` is enabled (the default), resolved local file paths
+must stay within the authenticated user's or executing flow's storage subdirectory under
+``settings.config_dir``. The check is a no-op when the setting is explicitly disabled, which
+single-tenant deployments may do to keep the legacy "read any local file by absolute path"
+behavior.
 
 Reserved-secret denial: the storage data directory IS ``config_dir``, which also holds the
 server-managed secret files as siblings of the per-flow upload subdirectories — the Fernet
@@ -54,10 +55,10 @@ def is_local_file_access_restricted() -> bool:
     """Return True if local file access is restricted to the storage directory."""
     try:
         return bool(get_settings_service().settings.restrict_local_file_access)
-    except Exception:  # noqa: BLE001 - settings service may be unavailable; fail open to default
+    except Exception:  # noqa: BLE001 - settings service may be unavailable; preserve legacy behavior
         logger.warning(
             "Could not read restrict_local_file_access setting; treating local file restriction "
-            "as DISABLED (fail-open to default). Local-file containment is not being enforced."
+            "as DISABLED (fail-open). Local-file containment is not being enforced."
         )
         return False
 

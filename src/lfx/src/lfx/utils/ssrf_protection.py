@@ -687,8 +687,9 @@ def validate_database_url_for_ssrf(url: str, *, validate_network_host: bool = Tr
       internal/blocked IP — guarded by SSRF protection (``LANGFLOW_SSRF_PROTECTION_ENABLED``,
       default on), so a tenant cannot reach the control-plane DB or other internal services.
     * Local-file-backed dialects (sqlite, duckdb, ...) read/write the server filesystem and
-      are blocked only when ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` is on (default off), so
-      single-tenant sqlite usage keeps working while multi-tenant deployments can disable it.
+      are blocked when ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` is on (default on), so a tenant
+      cannot turn a URI like ``sqlite:////etc/passwd`` into an arbitrary file read.
+      Single-tenant deployments can opt out to keep local sqlite/duckdb URLs working.
 
     Args:
         url: The SQLAlchemy database URL to validate.
@@ -721,7 +722,7 @@ def validate_database_url_for_ssrf(url: str, *, validate_network_host: bool = Tr
                 "(LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true). Use a network database (e.g. postgresql, mysql)."
             )
             raise SSRFProtectionError(msg)
-        # Not restricted: local-file DBs are allowed (single-tenant default).
+        # Not restricted: local-file DBs are allowed (explicit single-tenant opt-out).
         return
 
     query_items = parse_qsl(parsed.query, keep_blank_values=True)
