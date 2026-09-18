@@ -21,6 +21,7 @@ pytestmark = pytest.mark.no_blockbuster
         {"timezone": ""},
         {"timezone": None},
         {"cron": "* * * * * *"},
+        {"cron": "0 0 31 2 *"},
         {"catchup_policy": "other"},
         {"catchup_policy": []},
         {"share_session": "false"},
@@ -83,3 +84,39 @@ async def test_enable_preserves_active_cursor_and_resets_paused_cursor(client, l
         assert datetime.fromisoformat(response.json()["next_fire_at"]).replace(tzinfo=timezone.utc) == due
     else:
         assert response.json()["next_fire_at"] is None
+
+
+async def test_api_schedule_fix_rearms_a_trigger_the_system_disabled(client, logged_in_headers, flow):
+    """LE-2481, API path: a PATCH with a valid config clears the stale error."""
+    created = await _create(client, logged_in_headers, flow.id)
+    async with session_scope() as session:
+        trigger = await session.get(Trigger, UUID(created["id"]))
+        trigger.state = "error"
+        trigger.last_error = "Invalid cron expression: a valid five-field cron expression is required."
+        session.add(trigger)
+
+    response = await client.patch(
+        f"api/v1/triggers/{created['id']}",
+        json={"config": {**created["config"], "cron": "* * * * *"}},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert (body["state"], body["last_error"], body["next_fire_at"]) == ("active", None, None)
+
+
+async def test_api_rename_does_not_rearm_a_trigger_in_error(client, logged_in_headers, flow):
+    created = await _create(client, logged_in_headers, flow.id)
+    async with session_scope() as session:
+        trigger = await session.get(Trigger, UUID(created["id"]))
+        trigger.state = "error"
+        trigger.last_error = "boom"
+        session.add(trigger)
+
+    response = await client.patch(
+        f"api/v1/triggers/{created['id']}", json={"name": "renamed"}, headers=logged_in_headers
+    )
+
+    assert response.status_code == 200, response.text
+    assert (response.json()["state"], response.json()["last_error"]) == ("error", "boom")

@@ -7,9 +7,13 @@ The split this module enforces:
 * the **trigger row** is authoritative for everything else — armed state, the
   pinned version, the binding, the connection, the ledger it owns.
 
-So a save copies configuration onto the row and never touches state. Editing a
-schedule takes effect at the next tick; it does not silently re-arm a trigger
-the owner paused, and it does not move a pin.
+So a save copies configuration onto the row and never arms, pauses, or moves a
+pin. Editing a schedule takes effect at the next tick; it does not silently
+re-arm a trigger the owner paused.
+
+The one state a save does touch is the schedule's validity verdict, and it
+touches it symmetrically (see :func:`apply_schedule_verdict`): a broken schedule
+takes an armed trigger out of service, and fixing it puts the trigger back.
 
 Reconciliation must never fail a save. A flow is the user's document; a trigger
 that cannot be reconciled is logged and left alone, exactly as the webhook flag
@@ -51,6 +55,51 @@ _CONFIG_FIELDS: dict[str, tuple[tuple[str, str, Any], ...]] = {
         ("share_session", "share_session", False),
     ),
 }
+
+
+#: Why a trigger whose node left the canvas was paused. Reconciliation owns this
+#: reason, and a clean save must not erase it: re-adding the node leaves the
+#: trigger paused, and the reason is still the explanation.
+NODE_REMOVED_ERROR = "trigger node removed from the flow"
+
+#: States whose ``last_error`` a schedule verdict owns. The provider states and
+#: the terminal ``dead`` state carry reasons that a schedule edit cannot fix.
+_VERDICT_STATES = frozenset(
+    {
+        TriggerState.PENDING.value,
+        TriggerState.ACTIVE.value,
+        TriggerState.PAUSED.value,
+        TriggerState.ERROR.value,
+    }
+)
+
+
+def apply_schedule_verdict(row: Trigger, error: str | None) -> bool:
+    """Record whether ``row``'s schedule validates. Returns whether the row changed.
+
+    An invalid schedule takes an armed trigger out of service (``active`` to
+    ``error``) and says why; a pending or paused trigger keeps its state and
+    carries the reason. A schedule that validates undoes exactly that: the
+    stale reason is cleared and an ``error`` row goes back to ``active``.
+
+    Going back to ``active`` is not arming on the owner's behalf. A schedule row
+    only reaches ``error`` from ``active``, here or in the tick producer (which
+    reads only active rows), so the owner armed it and the system took it out.
+    Like ``enable``, re-arming starts from now: ticks missed while the schedule
+    was broken are not replayed.
+    """
+    before = (row.state, row.last_error, row.next_fire_at)
+    if error is not None:
+        row.last_error = error
+        if row.state == TriggerState.ACTIVE.value:
+            row.state = TriggerState.ERROR.value
+    else:
+        if row.state == TriggerState.ERROR.value:
+            row.state = TriggerState.ACTIVE.value
+            row.next_fire_at = None
+        if row.state in _VERDICT_STATES and row.last_error != NODE_REMOVED_ERROR:
+            row.last_error = None
+    return (row.state, row.last_error, row.next_fire_at) != before
 
 
 def _template_value(node_data: dict[str, Any], field: str, default: Any) -> Any:
@@ -98,7 +147,9 @@ async def reconcile_flow_triggers(
     """Sync trigger rows to the trigger nodes on ``flow_data``. Returns rows touched.
 
     Adding a node creates a ``pending`` trigger: appearing on a canvas is not
-    consent to start running unattended, so arming stays an explicit act.
+    consent to start running unattended, so arming stays an explicit act. That
+    holds for a node whose schedule is invalid too: it waits in ``pending`` with
+    the reason recorded, so fixing it later cannot arm it.
     Removing a node pauses its trigger rather than deleting it, so the ledger
     and its history survive an accidental delete-and-undo.
     """
@@ -133,7 +184,7 @@ async def reconcile_flow_triggers(
                     node_id=node_id,
                     config=config,
                     provider_state={},
-                    state=TriggerState.PENDING.value if error is None else TriggerState.ERROR.value,
+                    state=TriggerState.PENDING.value,
                     last_error=error,
                     session_policy=session_policy,
                     concurrency_limit=1,
@@ -142,15 +193,17 @@ async def reconcile_flow_triggers(
             )
             touched += 1
             continue
-        if row.config != config or row.session_policy != session_policy or (error and row.last_error != error):
+        changed = row.config != config or row.session_policy != session_policy
+        if changed:
             if schedule_timing_changed(row.config or {}, config):
                 row.next_fire_at = None
             row.config = config
             row.session_policy = session_policy
-            if error:
-                row.last_error = error
-                if row.state == TriggerState.ACTIVE.value:
-                    row.state = TriggerState.ERROR.value
+        # Evaluated on every save, not only when the config changed, so a row an
+        # earlier save left in ``error`` with an already-valid config heals.
+        if kind == "schedule" and apply_schedule_verdict(row, error):
+            changed = True
+        if changed:
             session.add(row)
             touched += 1
 
@@ -158,7 +211,7 @@ async def reconcile_flow_triggers(
         if node_id in nodes or row.state in {TriggerState.PAUSED.value, TriggerState.DEAD.value}:
             continue
         row.state = TriggerState.PAUSED.value
-        row.last_error = "trigger node removed from the flow"
+        row.last_error = NODE_REMOVED_ERROR
         session.add(row)
         touched += 1
 

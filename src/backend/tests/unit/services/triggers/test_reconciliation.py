@@ -281,3 +281,118 @@ async def test_removing_a_dead_trigger_node_preserves_its_terminal_state(trigger
     async with session_scope() as session:
         await reconcile_flow_triggers(session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=_flow_data())
     assert (await _triggers(owned_flow))[0].state == "dead"
+
+
+async def _save(owned_flow, trigger_owner, *nodes) -> None:
+    async with session_scope() as session:
+        await reconcile_flow_triggers(session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=_flow_data(*nodes))
+
+
+async def _set_state(owned_flow, state: str) -> None:
+    async with session_scope() as session:
+        row = (await session.exec(select(Trigger).where(Trigger.flow_id == owned_flow))).one()
+        row.state = state
+        session.add(row)
+
+
+@pytest.mark.parametrize("invalid_cron", ["not a cron", "0 0 31 2 *"])
+async def test_correcting_an_invalid_schedule_rearms_the_trigger_it_disabled(
+    trigger_owner, owned_flow, invalid_cron
+) -> None:
+    """LE-2481: a fixed cron must not leave the trigger stranded in ``error``."""
+    from datetime import datetime, timedelta, timezone
+
+    from langflow.services.database.models.trigger.model import TriggerEvent
+    from langflow.services.triggers.scheduler import produce_ticks
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="* * * * *", timezone="UTC"))
+    await _set_state(owned_flow, "active")
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron=invalid_cron, timezone="UTC"))
+    (row,) = await _triggers(owned_flow)
+    assert row.state == TriggerState.ERROR.value
+    assert row.last_error.startswith("Invalid cron expression")
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="* * * * *", timezone="UTC"))
+    (row,) = await _triggers(owned_flow)
+    assert row.state == TriggerState.ACTIVE.value
+    assert row.last_error is None
+    assert row.config["cron"] == "* * * * *"
+    # Re-arming starts from now, like enable: nothing broken-time is replayed.
+    assert row.next_fire_at is None
+
+    # And the schedule really runs again: first sight arms, the next minute fires.
+    now = datetime(2026, 9, 18, 12, 0, 30, tzinfo=timezone.utc)
+    async with session_scope() as session:
+        assert await produce_ticks(session, now=now) == 0
+        assert await produce_ticks(session, now=now + timedelta(minutes=1)) == 1
+        events = (await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == row.id))).all()
+    assert len(events) == 1
+
+
+async def test_a_trigger_already_stuck_in_error_recovers_on_the_next_save(trigger_owner, owned_flow) -> None:
+    """Rows the old code stranded (valid config, stale error) heal on any save."""
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="* * * * *"))
+    async with session_scope() as session:
+        row = (await session.exec(select(Trigger).where(Trigger.flow_id == owned_flow))).one()
+        row.state = TriggerState.ERROR.value
+        row.last_error = "Invalid cron expression: a valid five-field cron expression is required."
+        session.add(row)
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="* * * * *"))
+
+    (row,) = await _triggers(owned_flow)
+    assert row.state == TriggerState.ACTIVE.value
+    assert row.last_error is None
+
+
+async def test_an_invalid_new_node_is_never_armed_by_its_fix(trigger_owner, owned_flow) -> None:
+    """Appearing on a canvas is not consent to run, broken or not."""
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="not a cron"))
+    (row,) = await _triggers(owned_flow)
+    assert row.state == TriggerState.PENDING.value
+    assert row.last_error.startswith("Invalid cron expression")
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="* * * * *"))
+    (row,) = await _triggers(owned_flow)
+    assert row.state == TriggerState.PENDING.value
+    assert row.last_error is None
+
+
+async def test_fixing_a_paused_schedule_clears_the_reason_but_stays_paused(trigger_owner, owned_flow) -> None:
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="* * * * *"))
+    await _set_state(owned_flow, "paused")
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="not a cron"))
+    (row,) = await _triggers(owned_flow)
+    assert (row.state, bool(row.last_error)) == (TriggerState.PAUSED.value, True)
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="* * * * *"))
+    (row,) = await _triggers(owned_flow)
+    assert (row.state, row.last_error) == (TriggerState.PAUSED.value, None)
+
+
+async def test_a_clean_save_keeps_the_reason_a_removed_node_was_paused(trigger_owner, owned_flow) -> None:
+    """Undoing a node delete keeps the trigger paused, and says why."""
+    await _save(owned_flow, trigger_owner, _schedule_node())
+    await _set_state(owned_flow, "active")
+    await _save(owned_flow, trigger_owner)
+    await _save(owned_flow, trigger_owner, _schedule_node())
+
+    (row,) = await _triggers(owned_flow)
+    assert row.state == TriggerState.PAUSED.value
+    assert "removed" in row.last_error
+
+
+async def test_a_clean_save_leaves_a_dead_trigger_alone(trigger_owner, owned_flow) -> None:
+    await _save(owned_flow, trigger_owner, _schedule_node())
+    async with session_scope() as session:
+        row = (await session.exec(select(Trigger).where(Trigger.flow_id == owned_flow))).one()
+        row.state = TriggerState.DEAD.value
+        row.last_error = "dead-lettered"
+        session.add(row)
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="*/5 * * * *"))
+
+    (row,) = await _triggers(owned_flow)
+    assert (row.state, row.last_error) == (TriggerState.DEAD.value, "dead-lettered")

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from croniter import croniter
+from croniter import CroniterError, croniter
 
 DEFAULT_TIMEZONE = "UTC"
 CRON_FIELD_COUNT = 5
@@ -30,9 +31,16 @@ def validate_schedule_config(config: dict[str, Any]) -> dict[str, Any]:
         msg = "A non-empty IANA timezone is required."
         raise InvalidScheduleError(msg)
     try:
-        ZoneInfo(zone)
+        tzinfo = ZoneInfo(zone)
     except (ZoneInfoNotFoundError, ValueError) as exc:
         msg = "Unknown timezone; use an IANA timezone name."
+        raise InvalidScheduleError(msg) from exc
+    # ``is_valid`` is syntactic: '0 0 31 2 *' passes it and then never fires.
+    # Probe one fire time so "validates" means the tick producer can run it.
+    try:
+        croniter(expression, datetime.now(tzinfo)).get_next(datetime)
+    except (CroniterError, ValueError, KeyError, OverflowError) as exc:
+        msg = "Invalid cron expression: it never matches a real date."
         raise InvalidScheduleError(msg) from exc
     catchup = config.get("catchup_policy", "coalesce")
     if not isinstance(catchup, str) or catchup not in {"coalesce", "skip"}:

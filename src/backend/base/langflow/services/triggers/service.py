@@ -30,6 +30,7 @@ from langflow.services.database.models.trigger.schemas import (
 )
 from langflow.services.triggers.cleanup import delete_triggers
 from langflow.services.triggers.errors import TriggerNotFoundError
+from langflow.services.triggers.reconciliation import apply_schedule_verdict
 from langflow.services.triggers.schedule_config import schedule_timing_changed, validate_schedule_config
 
 if TYPE_CHECKING:
@@ -147,6 +148,8 @@ class TriggerService(Service):
             changes["config"] = validate_schedule_config(changes["config"])
             if schedule_timing_changed(row.config or {}, changes["config"]):
                 row.next_fire_at = None
+            # A schedule that validates clears the error a broken one left.
+            apply_schedule_verdict(row, None)
         for field, value in changes.items():
             setattr(row, field, value.value if hasattr(value, "value") else value)
         row.updated_at = datetime.now(timezone.utc)
