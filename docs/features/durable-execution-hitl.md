@@ -4,7 +4,6 @@
 > Status: Draft
 > Owner: Engineering Team
 > Related PRs: #13633 (HITL v2); Epic LE-1437
-> Companion document: [`../../CZL/HITL_FEATURE_OVERVIEW.md`](../../CZL/HITL_FEATURE_OVERVIEW.md) — the engineering deep-dive (8-stage code walk-through), and [`../../CZL/HITL_STATUS.md`](../../CZL/HITL_STATUS.md) — the status/decision summary.
 
 ---
 
