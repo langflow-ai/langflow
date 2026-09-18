@@ -1,7 +1,9 @@
 """Tests for RedisCache teardown functionality."""
 
+import hashlib
+import hmac
 import ssl
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import fakeredis
 import pytest
@@ -277,3 +279,109 @@ class TestRedisCacheSerialization:
 
         # ...and the stale entry is gone, so the next access recomputes.
         assert await cache.get("vertex-id") is CACHE_MISS
+
+
+def _settings_mock(config_dir: str, secret_key: str) -> MagicMock:
+    """A settings service stub with a known CONFIG_DIR and SECRET_KEY."""
+    settings = MagicMock()
+    settings.auth_settings.CONFIG_DIR = config_dir
+    settings.auth_settings.SECRET_KEY.get_secret_value.return_value = secret_key
+    return settings
+
+
+@pytest.mark.asyncio
+class TestRedisCacheSigningKeySeparation:
+    """Regression for H1-3982189 (variant of CVE-2026-8476).
+
+    The cache HMAC signing key must derive from a dedicated secret stored
+    separately from SECRET_KEY, so that disclosure of SECRET_KEY (e.g. via a
+    file-read vulnerability) does not let an attacker forge integrity tags and
+    reach dill.loads().
+    """
+
+    # Known value published in the H1-3982189 PoC (public, not a real credential).
+    _STOLEN_SECRET_KEY = "k-lyUY0mU0cJTG1nJy6kdbLCp-jFe0e7pqBTx-OiiPY"  # noqa: S105  # pragma: allowlist secret
+
+    async def test_signing_key_not_derived_from_secret_key(self, tmp_path):
+        """The signing key must not equal sha256('langflow-redis-cache-hmac:' + SECRET_KEY)."""
+        settings = _settings_mock(str(tmp_path), self._STOLEN_SECRET_KEY)
+        with (
+            patch("redis.asyncio.StrictRedis"),
+            patch("langflow.services.deps.get_settings_service", return_value=settings),
+        ):
+            cache = RedisCache(host="localhost", port=6379, db=0, expiration_time=3600)
+            signing_key = cache._get_signing_key()
+
+        pre_fix_key = hashlib.sha256(b"langflow-redis-cache-hmac:" + self._STOLEN_SECRET_KEY.encode()).digest()
+        assert signing_key != pre_fix_key
+        # The dedicated secret was persisted in its own file, next to but
+        # separate from the auth ``secret_key`` file.
+        assert (tmp_path / "cache_secret_key").exists()
+
+    async def test_secret_key_compromise_cannot_forge_tags(self, tmp_path):
+        """Replay the H1-3982189 PoC: knowing SECRET_KEY must not suffice to forge a tag."""
+        import dill
+
+        settings = _settings_mock(str(tmp_path), self._STOLEN_SECRET_KEY)
+        _MARKER_PATH_HOLDER.clear()
+        with (
+            patch("redis.asyncio.StrictRedis") as mock_redis_class,
+            patch("langflow.services.deps.get_settings_service", return_value=settings),
+        ):
+            mock_client = AsyncMock()
+            mock_redis_class.return_value = mock_client
+            cache = RedisCache(host="localhost", port=6379, db=0, expiration_time=3600)
+
+            # Attacker derives the signing key from the stolen SECRET_KEY using
+            # the pre-fix derivation and signs a reduce-gadget payload.
+            attacker_key = hashlib.sha256(b"langflow-redis-cache-hmac:" + self._STOLEN_SECRET_KEY.encode()).digest()
+            payload = dill.dumps(_Gadget("gadget-ran"))
+            ns_key = cache._key("rce_test")
+            key_bytes = ns_key.encode("utf-8")
+            mac = hmac.new(attacker_key, digestmod=hashlib.sha256)
+            mac.update(len(key_bytes).to_bytes(8, "big"))
+            mac.update(key_bytes)
+            mac.update(payload)
+            mock_client.get.return_value = mac.digest() + payload
+
+            result = await cache.get("rce_test")
+
+        assert result is CACHE_MISS  # forged tag rejected
+        assert _MARKER_PATH_HOLDER == []  # gadget never executed
+
+    async def test_signing_secret_shared_across_instances(self, tmp_path):
+        """Workers sharing a CONFIG_DIR derive the same signing key (multi-worker deployments)."""
+        settings = _settings_mock(str(tmp_path), self._STOLEN_SECRET_KEY)
+        with (
+            patch("redis.asyncio.StrictRedis"),
+            patch("langflow.services.deps.get_settings_service", return_value=settings),
+        ):
+            cache_a = RedisCache(host="localhost", port=6379, db=0, expiration_time=3600)
+            cache_b = RedisCache(host="localhost", port=6379, db=0, expiration_time=3600)
+            assert cache_a._get_signing_key() == cache_b._get_signing_key()
+
+    async def test_roundtrip_uses_dedicated_secret(self, tmp_path):
+        """set()/get() still round-trip with the dedicated-secret signing key."""
+        settings = _settings_mock(str(tmp_path), self._STOLEN_SECRET_KEY)
+        with (
+            patch("redis.asyncio.StrictRedis"),
+            patch("langflow.services.deps.get_settings_service", return_value=settings),
+        ):
+            cache = RedisCache(expiration_time=3600)
+            cache._client = fakeredis.FakeAsyncRedis()
+
+            await cache.set("k", {"a": 1})
+            assert await cache.get("k") == {"a": 1}
+
+    async def test_ephemeral_secret_when_no_config_dir(self):
+        """Without a CONFIG_DIR, an ephemeral per-process secret is used (no crash)."""
+        settings = _settings_mock("", self._STOLEN_SECRET_KEY)
+        with (
+            patch("redis.asyncio.StrictRedis"),
+            patch("langflow.services.deps.get_settings_service", return_value=settings),
+        ):
+            cache = RedisCache(host="localhost", port=6379, db=0, expiration_time=3600)
+            signing_key = cache._get_signing_key()
+
+        assert isinstance(signing_key, bytes)
+        assert len(signing_key) == hashlib.sha256().digest_size
