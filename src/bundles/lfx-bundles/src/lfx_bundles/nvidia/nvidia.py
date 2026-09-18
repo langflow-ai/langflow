@@ -1,10 +1,13 @@
 from typing import Any
 
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.provider_ssrf import validate_provider_base_url
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
 from lfx.schema.dotdict import dotdict
+
+DEFAULT_NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
 
 class NVIDIAModelComponent(LCModelComponent):
@@ -48,7 +51,7 @@ class NVIDIAModelComponent(LCModelComponent):
         MessageTextInput(
             name="base_url",
             display_name="NVIDIA Base URL",
-            value="https://integrate.api.nvidia.com/v1",
+            value=DEFAULT_NVIDIA_BASE_URL,
             info="The base URL of the NVIDIA API. Defaults to https://integrate.api.nvidia.com/v1.",
         ),
         SecretStrInput(
@@ -81,6 +84,10 @@ class NVIDIAModelComponent(LCModelComponent):
         except ImportError as e:
             msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
             raise ImportError(msg) from e
+
+        # base_url is tenant-editable and the SDK sends the operator's API key to whatever
+        # host it names. Block internal/cloud-metadata destinations before connecting.
+        validate_provider_base_url(self.base_url, default_url=DEFAULT_NVIDIA_BASE_URL)
 
         # Note: don't include the previous model, as it may not exist in available models from the new base url
         model = ChatNVIDIA(base_url=self.base_url, api_key=self.api_key)
@@ -125,6 +132,9 @@ class NVIDIAModelComponent(LCModelComponent):
         model_name: str = self.model_name
         max_tokens = self.max_tokens
         seed = self.seed
+        # base_url is tenant-editable and the SDK sends the operator's API key to whatever
+        # host it names. Block internal/cloud-metadata destinations before connecting.
+        validate_provider_base_url(self.base_url, default_url=DEFAULT_NVIDIA_BASE_URL)
         return ChatNVIDIA(
             max_tokens=max_tokens or None,
             model=model_name,

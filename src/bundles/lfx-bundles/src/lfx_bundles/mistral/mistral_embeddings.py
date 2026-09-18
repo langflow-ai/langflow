@@ -1,8 +1,11 @@
 from langchain_mistralai import MistralAIEmbeddings
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.provider_ssrf import provider_httpx_clients
 from lfx.field_typing import Embeddings
 from lfx.io import DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from pydantic.v1 import SecretStr
+
+DEFAULT_MISTRAL_ENDPOINT = "https://api.mistral.ai/v1"
 
 
 class MistralAIEmbeddingsComponent(LCModelComponent):
@@ -47,6 +50,16 @@ class MistralAIEmbeddingsComponent(LCModelComponent):
 
         api_key = SecretStr(self.mistral_api_key).get_secret_value()
 
+        # endpoint is tenant-editable and the SDK sends the operator's API key to whatever
+        # host it names. Route a custom endpoint through DNS-pinned, redirect-free clients
+        # (no-op for the default Mistral endpoint).
+        ssrf_clients = provider_httpx_clients(self.endpoint, default_url=DEFAULT_MISTRAL_ENDPOINT)
+        client_kwargs = {}
+        if "http_client" in ssrf_clients:
+            client_kwargs["client"] = ssrf_clients["http_client"]
+        if "http_async_client" in ssrf_clients:
+            client_kwargs["async_client"] = ssrf_clients["http_async_client"]
+
         return MistralAIEmbeddings(
             api_key=api_key,
             model=self.model,
@@ -54,4 +67,5 @@ class MistralAIEmbeddingsComponent(LCModelComponent):
             max_concurrent_requests=self.max_concurrent_requests,
             max_retries=self.max_retries,
             timeout=self.timeout,
+            **client_kwargs,
         )
