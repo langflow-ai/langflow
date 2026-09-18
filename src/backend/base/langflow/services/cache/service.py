@@ -3,7 +3,7 @@ import atexit
 import hashlib
 import hmac
 import os
-import pickle
+import secrets
 import tempfile
 import threading
 import time
@@ -14,6 +14,7 @@ from typing import Generic, Union
 import dill
 from lfx.log.logger import logger
 from lfx.services.cache.utils import CACHE_MISS
+from lfx.services.settings.utils import read_secret_from_file, write_secret_to_file
 from typing_extensions import override
 
 from langflow.services.cache.base import (
@@ -26,6 +27,41 @@ from langflow.services.cache.base import (
 
 _redis_cache_experimental_warning_lock = threading.Lock()
 _redis_cache_experimental_warning_emitted = False
+
+# File (inside the Langflow config dir) holding the dedicated secret used to
+# sign Redis cache payloads. Kept separate from the auth ``secret_key`` file so
+# that disclosure of SECRET_KEY alone does not let an attacker forge cache
+# integrity tags (H1-3982189).
+_CACHE_SIGNING_SECRET_FILENAME = "cache_secret_key"  # noqa: S105 - file name, not a secret  # pragma: allowlist secret
+
+
+def _load_or_create_cache_signing_secret() -> str:
+    """Return the dedicated secret used to sign Redis cache payloads.
+
+    The secret is generated at random on first use and persisted in its own
+    file inside the Langflow config dir, separate from the auth ``secret_key``
+    file, so all workers of a deployment share it while a leak of SECRET_KEY
+    does not compromise cache integrity. When no config dir is available (or
+    the file cannot be written), an ephemeral per-process secret is used;
+    existing cache entries then simply become misses after a restart.
+    """
+    from langflow.services.deps import get_settings_service
+
+    config_dir = get_settings_service().auth_settings.CONFIG_DIR
+    if not config_dir:
+        return secrets.token_urlsafe(32)
+
+    secret_path = Path(config_dir) / _CACHE_SIGNING_SECRET_FILENAME
+    if secret_path.exists():
+        secret = read_secret_from_file(secret_path).strip()
+        if secret:
+            return secret
+    secret = secrets.token_urlsafe(32)
+    try:
+        write_secret_to_file(secret_path, secret)
+    except OSError:
+        logger.exception("RedisCache: could not persist the cache signing secret, using an ephemeral one")
+    return secret
 
 
 def _warn_redis_experimental_once() -> None:
@@ -110,8 +146,10 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
             if self.expiration_time is None or time.time() - item["time"] < self.expiration_time:
                 # Move the key to the end to make it recently used
                 self._cache.move_to_end(key)
-                # Check if the value is pickled
-                return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]
+                # Return the value exactly as stored. Bytes must never be fed to
+                # pickle.loads here: the cache has no integrity protection, so
+                # deserializing them would be unauthenticated CWE-502 (H1-3982189).
+                return item["value"]
             self.delete(key)
         return CACHE_MISS
 
@@ -132,7 +170,6 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
             elif self.max_size and len(self._cache) >= self.max_size:
                 # Remove least recently used item
                 self._cache.popitem(last=False)
-            # pickle locally to mimic Redis
 
             self._cache[key] = {"value": value, "time": time.time()}
 
@@ -264,15 +301,16 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         return f"{self.KEY_PREFIX}{key}"
 
     def _get_signing_key(self) -> bytes:
-        """Derive the HMAC key for cache payload integrity from the server secret.
+        """Derive the HMAC key for cache payload integrity from a dedicated secret.
 
-        Bound to the same ``SECRET_KEY`` used elsewhere, so no extra config is
-        required. Cached after first use (the secret does not change at runtime).
+        The secret is generated and stored separately from the auth
+        ``SECRET_KEY`` (see ``_load_or_create_cache_signing_secret``), so
+        disclosure of ``SECRET_KEY`` alone does not allow forging cache
+        integrity tags (H1-3982189). Cached after first use (the secret does
+        not change at runtime).
         """
         if self._signing_key is None:
-            from langflow.services.deps import get_settings_service
-
-            secret = get_settings_service().auth_settings.SECRET_KEY.get_secret_value()
+            secret = _load_or_create_cache_signing_secret()
             self._signing_key = hashlib.sha256(b"langflow-redis-cache-hmac:" + secret.encode()).digest()
         return self._signing_key
 
@@ -434,7 +472,10 @@ class AsyncInMemoryCache(AsyncBaseCacheService, Generic[AsyncLockType]):
         if item:
             if time.time() - item["time"] < self.expiration_time:
                 self.cache.move_to_end(key)
-                return pickle.loads(item["value"]) if isinstance(item["value"], bytes) else item["value"]
+                # Return the value exactly as stored. Bytes must never be fed to
+                # pickle.loads here: the cache has no integrity protection, so
+                # deserializing them would be unauthenticated CWE-502 (H1-3982189).
+                return item["value"]
             await logger.ainfo(f"Cache item for key '{key}' has expired and will be deleted.")
             await self._delete(key)  # Log before deleting the expired item
         return CACHE_MISS
