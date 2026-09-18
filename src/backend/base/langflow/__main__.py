@@ -21,6 +21,7 @@ if __name__ == "__main__":
 
 import asyncio
 import inspect
+import json
 import os
 import platform
 import signal
@@ -1137,6 +1138,90 @@ async def _reconcile_kb_from_disk(*, username: str | None, dry_run: bool) -> Non
     scope = f"user '{username}'" if username else "all users"
     verb = "would adopt" if dry_run else "adopted"
     typer.echo(f"Knowledge base reconciliation complete: {verb} {inserted} knowledge base(s) for {scope}.")
+
+
+@app.command(name="relocate-kb")
+def relocate_kb(
+    to: str = typer.Option(..., "--to", help="Target backend type, for example 'postgres' or 'opensearch'."),
+    target_config: str = typer.Option(
+        "{}", help="Target backend_config as JSON. Postgres needs none; it reads PGVECTOR_CONNECTION_STRING."
+    ),
+    username: str = typer.Option("", help="Only relocate this user's knowledge bases."),
+    dry_run: bool = typer.Option(default=False, help="Report what would be moved without writing."),  # noqa: FBT001
+    batch_size: int = typer.Option(500, help="Chunks read and written per batch."),
+    log_level: str = typer.Option("info", help="Logging level.", envvar="LANGFLOW_LOG_LEVEL"),
+) -> None:
+    """Move knowledge base vectors to another backend without re-embedding.
+
+    Copies each knowledge base's chunks with their existing vectors, confirms the
+    target holds all of them, then repoints the knowledge base at the new store.
+    Memory bases move with the knowledge bases they refer to.
+
+    Stop ingestion and memory capture before running this: chunks written while a
+    knowledge base moves would stay behind on the old store.
+
+    Safe to re-run: chunks keep their ids, so a second run upserts, and knowledge
+    bases already on the target are skipped. Nothing is deleted from the source.
+    Exits non-zero if any knowledge base could not be moved.
+    """
+    try:
+        config = json.loads(target_config)
+    except json.JSONDecodeError as exc:
+        typer.echo(f"--target-config is not valid JSON: {exc}", err=True)
+        raise typer.Exit(2) from exc
+    if not isinstance(config, dict):
+        typer.echo("--target-config must be a JSON object", err=True)
+        raise typer.Exit(2)
+    configure(log_level=log_level)
+    failed = asyncio.run(
+        _relocate_kb(
+            target_backend_type=to,
+            target_backend_config=config,
+            username=username or None,
+            dry_run=dry_run,
+            batch_size=batch_size,
+        )
+    )
+    if failed:
+        raise typer.Exit(1)
+
+
+def relocation_line(result) -> str:
+    """One line per knowledge base: what moved, out of how many chunks."""
+    moved = result.status in {"relocated", "failed"}
+    counts = f"{result.copied}/{result.source_count}" if moved else str(result.source_count)
+    line = f"{result.status:15} {result.owner}/{result.kb_name}  {result.source_backend} -> {result.target_backend}"
+    return f"{line}  chunks {counts}"
+
+
+async def _relocate_kb(
+    *,
+    target_backend_type: str,
+    target_backend_config: dict,
+    username: str | None,
+    dry_run: bool,
+    batch_size: int,
+) -> int:
+    from langflow.api.utils.knowledge_base_relocation import relocate_knowledge_bases
+
+    await initialize_services()
+    results = await relocate_knowledge_bases(
+        target_backend_type=target_backend_type,
+        target_backend_config=target_backend_config,
+        username=username,
+        dry_run=dry_run,
+        batch_size=batch_size,
+    )
+    for result in results:
+        typer.echo(relocation_line(result) + (f"  ({result.reason})" if result.reason else ""))
+        for warning in result.warnings:
+            typer.echo(f"{'':15} warning: {warning}")
+    by_status: dict[str, int] = {}
+    for result in results:
+        by_status[result.status] = by_status.get(result.status, 0) + 1
+    summary = ", ".join(f"{count} {status}" for status, count in sorted(by_status.items())) or "no knowledge bases"
+    typer.echo(f"Knowledge base relocation {'dry run ' if dry_run else ''}complete: {summary}.")
+    return by_status.get("failed", 0)
 
 
 # command to copy the langflow database from the cache to the current directory
