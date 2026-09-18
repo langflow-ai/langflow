@@ -17,6 +17,8 @@ from slowapi.wrappers import Limit
 from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
+    from uuid import UUID
+
     from fastapi import Request
 
 # Global limiter instance
@@ -46,6 +48,27 @@ def get_metadata_read_limit() -> int | None:
     if not settings.rate_limit_enabled:
         return None
     return settings.connection_metadata_rate_limit_per_minute
+
+
+def get_connection_write_limit() -> int | None:
+    """Per-minute allowance for connection creates, updates, revokes, and deletes.
+
+    Returns None when rate limiting is disabled, so callers fall through to the
+    effectively-unlimited string `get_rate_limit_string` already returns.
+    """
+    settings = get_settings_service().settings
+    if not settings.rate_limit_enabled:
+        return None
+    return settings.connection_write_rate_limit_per_minute
+
+
+def get_user_limiter_key(user_id: UUID | str) -> str:
+    """Counter key for an authenticated caller: one bucket per user instead of per client IP.
+
+    Pass it as `check_rate_limit(..., key=...)` only once authentication has
+    resolved the user. The prefix keeps it disjoint from every IP key.
+    """
+    return f"user:{user_id}"
 
 
 def get_rate_limiter() -> Limiter:
@@ -79,6 +102,7 @@ def check_rate_limit(
     *,
     scope: str | None = None,
     limit_per_minute: int | None = None,
+    key: str | None = None,
 ) -> None:
     """Enforce the configured rate limit for a request.
 
@@ -91,6 +115,9 @@ def check_rate_limit(
         scope: Optional counter namespace, such as a public flow identifier.
         limit_per_minute: Optional endpoint-specific limit. When omitted, the
             configured login limit is used.
+        key: Optional counter key that replaces the client-IP key, such as
+            `get_user_limiter_key(user.id)` on an authenticated route. When
+            omitted, the limiter's client-IP key is used.
 
     Raises:
         RateLimitExceeded: If the configured limit has been exceeded.
@@ -98,7 +125,7 @@ def check_rate_limit(
     limiter = request.app.state.limiter
     limit_string = f"{limit_per_minute}/minute" if limit_per_minute is not None else get_rate_limit_string()
     limit_item = parse(limit_string)
-    client_key = limiter._key_func(request)  # noqa: SLF001
+    client_key = key if key is not None else limiter._key_func(request)  # noqa: SLF001
     identifiers = (scope, client_key) if scope is not None else (client_key,)
 
     if not limiter._limiter.hit(limit_item, *identifiers):  # noqa: SLF001

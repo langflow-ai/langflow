@@ -33,7 +33,12 @@ from langflow.services.database.models.connection import (
 )
 from langflow.services.database.models.connection.schemas import ConnectionRevokeRead
 from langflow.services.deps import get_connection_resolver_service, session_scope
-from langflow.services.rate_limit import check_rate_limit, get_metadata_read_limit
+from langflow.services.rate_limit import (
+    check_rate_limit,
+    get_connection_write_limit,
+    get_metadata_read_limit,
+    get_user_limiter_key,
+)
 
 
 class _ConnectionRoute(APIRoute):
@@ -67,7 +72,16 @@ _INSTANCE_OPERATOR_ACTIONS = frozenset({ConnectionAction.WRITE, ConnectionAction
 # connection_metadata_rate_limit_per_minute rather than the login budget: they
 # decrypt nothing and call no provider, and the connections UI polls the listing
 # every two seconds while a consent is pending, which the 5/minute login default
-# would cut off about ten seconds in.
+# would cut off about ten seconds in. Writes (create, update, revoke, delete)
+# share one bucket sized by connection_write_rate_limit_per_minute for the same
+# reason: on the login budget a user was refused after five actions. Test,
+# health, and OAuth start keep the login-sized allowance.
+#
+# Every authenticated route counts per user, not per client IP: current_user is
+# resolved as a dependency before the handler runs, so the caller is known by
+# the time the limiter is consulted, and an IP key would only make users behind
+# one NAT or proxy throttle each other. The OAuth callback is unauthenticated
+# (state replaces login), so it alone stays keyed by client IP.
 _SCOPE_CONNECTIONS = "connections"
 _SCOPE_CONNECTIONS_READ = "connections-read"
 _SCOPE_CONNECTION_TEST = "connections-test"
@@ -243,7 +257,12 @@ async def list_connections(
     provider: Annotated[str | None, Query(pattern=PROVIDER_ID_PATTERN, max_length=120)] = None,
 ) -> list[ConnectionRead]:
     """List owned, instance-owned, and explicitly shared connection metadata."""
-    check_rate_limit(request, scope=_SCOPE_CONNECTIONS_READ, limit_per_minute=get_metadata_read_limit())
+    check_rate_limit(
+        request,
+        scope=_SCOPE_CONNECTIONS_READ,
+        limit_per_minute=get_metadata_read_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
     return await service.list_for_user(session, user=current_user, provider_key=provider)
 
 
@@ -256,7 +275,12 @@ async def create_connection(
     service: ConnectionService,
 ) -> ConnectionRead:
     """Create connection metadata and optionally store encrypted credentials."""
-    check_rate_limit(request, scope=_SCOPE_CONNECTIONS)
+    check_rate_limit(
+        request,
+        scope=_SCOPE_CONNECTIONS,
+        limit_per_minute=get_connection_write_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
     if payload.ownership_mode.value == "instance" and not current_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -285,7 +309,7 @@ async def test_connection(
     service: ConnectionService,
 ) -> ConnectionRead:
     """Validate the local credential envelope and requested scope coverage."""
-    check_rate_limit(request, scope=_SCOPE_CONNECTION_TEST)
+    check_rate_limit(request, scope=_SCOPE_CONNECTION_TEST, key=get_user_limiter_key(current_user.id))
     row = await _authorized_row(
         service=service,
         session=session,
@@ -315,7 +339,7 @@ async def refresh_connection_health(
     service: ConnectionService,
 ) -> ConnectionRead:
     """Refresh credential health without returning or logging token material."""
-    check_rate_limit(request, scope=_SCOPE_CONNECTION_HEALTH)
+    check_rate_limit(request, scope=_SCOPE_CONNECTION_HEALTH, key=get_user_limiter_key(current_user.id))
     row = await _authorized_row(
         service=service,
         session=session,
@@ -350,7 +374,12 @@ async def update_connection(
     widens which executions reach the owner's account, so only the owner (a
     superuser, for an instance connection) may turn it on.
     """
-    check_rate_limit(request, scope=_SCOPE_CONNECTIONS)
+    check_rate_limit(
+        request,
+        scope=_SCOPE_CONNECTIONS,
+        limit_per_minute=get_connection_write_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
     row = await _authorized_row(
         service=service,
         session=session,
@@ -380,7 +409,12 @@ async def revoke_connection(
     service: ConnectionService,
 ) -> ConnectionRead:
     """Revoke at the provider when supported and always remove local credentials."""
-    check_rate_limit(request, scope=_SCOPE_CONNECTIONS)
+    check_rate_limit(
+        request,
+        scope=_SCOPE_CONNECTIONS,
+        limit_per_minute=get_connection_write_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
     row = await _authorized_row(
         service=service,
         session=session,
@@ -401,7 +435,12 @@ async def delete_connection(
     service: ConnectionService,
 ) -> Response:
     """Delete a connection and its stored credential; only a deleter of the row may call this."""
-    check_rate_limit(request, scope=_SCOPE_CONNECTIONS)
+    check_rate_limit(
+        request,
+        scope=_SCOPE_CONNECTIONS,
+        limit_per_minute=get_connection_write_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
     row = await _authorized_row(
         service=service,
         session=session,
@@ -425,7 +464,7 @@ async def start_connection_oauth(
     response: Response,
 ) -> OAuthStartResponse:
     """Authorize an instance-configured registration for an existing connection."""
-    check_rate_limit(request, scope=_SCOPE_CONNECTION_OAUTH_START)
+    check_rate_limit(request, scope=_SCOPE_CONNECTION_OAUTH_START, key=get_user_limiter_key(current_user.id))
     row = await _authorized_row(
         service=service,
         session=session,
@@ -476,7 +515,12 @@ async def list_oauth_registrations(
     returned, and a registration that this deployment would refuse is omitted
     rather than advertised: a picker must not offer consent that cannot start.
     """
-    check_rate_limit(request, scope=_SCOPE_CONNECTIONS_READ, limit_per_minute=get_metadata_read_limit())
+    check_rate_limit(
+        request,
+        scope=_SCOPE_CONNECTIONS_READ,
+        limit_per_minute=get_metadata_read_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
     # The list is filtered per caller, so a shared cache must never replay one
     # user's answer to another.
     response.headers["Cache-Control"] = "no-store"

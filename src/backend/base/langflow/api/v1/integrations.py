@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 from langflow.api.utils import CurrentActiveUser, DbSessionReadOnly
 from langflow.api.v1.connections import ConnectionService
 from langflow.api.v1.model_provider_policy_scope import ProviderPolicyAttributesDependency
-from langflow.services.rate_limit import check_rate_limit, get_metadata_read_limit
+from langflow.services.rate_limit import check_rate_limit, get_metadata_read_limit, get_user_limiter_key
 
 router = APIRouter(prefix="/integrations", tags=["Integrations"])
 
@@ -27,7 +27,8 @@ router = APIRouter(prefix="/integrations", tags=["Integrations"])
 # buckets so browsing the catalog cannot consume mutation/OAuth budget.
 # Catalog and policy reads carry no credential material and make no outbound
 # call, so they share the connections metadata-read budget rather than the
-# login budget: the connections UI loads both on every page open.
+# login budget: the connections UI loads both on every page open. Both routes
+# are authenticated, so they count per user like the connections routes.
 _SCOPE_INTEGRATIONS = "integrations"
 
 
@@ -110,7 +111,12 @@ async def list_integrations(
     is (``/api/v1/all``, starter projects, basic examples): the deny decision is
     operator information, not something a plain caller may enumerate.
     """
-    check_rate_limit(request, scope=_SCOPE_INTEGRATIONS, limit_per_minute=get_metadata_read_limit())
+    check_rate_limit(
+        request,
+        scope=_SCOPE_INTEGRATIONS,
+        limit_per_minute=get_metadata_read_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
     if include_blocked and not current_user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -188,7 +194,12 @@ async def read_effective_integration_policy(
     provider_policy_attributes: ProviderPolicyAttributesDependency,
 ) -> EffectiveIntegrationPolicyRead:
     """Return the integration decision set that applies to this caller."""
-    check_rate_limit(request, scope=_SCOPE_INTEGRATIONS, limit_per_minute=get_metadata_read_limit())
+    check_rate_limit(
+        request,
+        scope=_SCOPE_INTEGRATIONS,
+        limit_per_minute=get_metadata_read_limit(),
+        key=get_user_limiter_key(current_user.id),
+    )
     loaded_provider_ids = frozenset(integration.provider_id for integration in loaded_integrations())
     policy = await aresolve_integration_policy(
         user_id=current_user.id,
