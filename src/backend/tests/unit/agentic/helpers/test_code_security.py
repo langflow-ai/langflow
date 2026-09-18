@@ -1846,6 +1846,37 @@ class TestScanCodeSecurityStdlibReexportBypass:
                 "import requests\nrequests.__dict__['__builtins__']['eval']('1')", id="third-party-dict-builtins"
             ),
             pytest.param(
+                "import requests\nrequests.__dict__.get('__builtins__')['eval']('1')",
+                id="third-party-dict-get-builtins",
+            ),
+            pytest.param(
+                "import requests\nrequests.__dict__.__getitem__('__builtins__')['eval']('1')",
+                id="third-party-dict-getitem-builtins",
+            ),
+            pytest.param(
+                "import requests\ndict.get(requests.__dict__, '__builtins__')['eval']('1')",
+                id="third-party-dict-get-unbound-builtins",
+            ),
+            pytest.param(
+                "import requests\ndict.__getitem__(requests.__dict__, '__builtins__')['eval']('1')",
+                id="third-party-dict-getitem-unbound-builtins",
+            ),
+            pytest.param(
+                "import platform\nplatform.__dict__.get('__builtins__')['eval']('1')", id="platform-dict-get-builtins"
+            ),
+            pytest.param(
+                "import zipfile\nzipfile.__dict__.__getitem__('__builtins__')['eval']('1')",
+                id="zipfile-dict-getitem-builtins",
+            ),
+            pytest.param(
+                "import zipfile\ndict.get(zipfile.__dict__, '__builtins__')['eval']('1')",
+                id="zipfile-dict-get-unbound-builtins",
+            ),
+            pytest.param(
+                "import requests\nrequests.__dict__.get('__builtins__', {})['eval']('1')",
+                id="third-party-dict-get-default-builtins",
+            ),
+            pytest.param(
                 "import zipfile\nzipfile.__dict__['__loader__'].load_module('os').system('id')",
                 id="zipfile-dict-loader",
             ),
@@ -1892,6 +1923,14 @@ class TestScanCodeSecurityStdlibReexportBypass:
                 id="ordinary-object-dict-dynamic",
             ),
             pytest.param("data = {'__builtins__': 'text'}\nvalue = data['__builtins__']", id="plain-dict-dunder-key"),
+            pytest.param(
+                "import requests\nsession_class = requests.__dict__.get('Session')",
+                id="third-party-dict-get-safe-member",
+            ),
+            pytest.param(
+                "import requests\nname = 'Ses' + 'sion'\nsession_class = requests.__dict__.get(name)",
+                id="third-party-dict-get-dynamic-safe",
+            ),
         ],
     )
     def test_should_allow_safe_stdlib_and_object_access(self, code):

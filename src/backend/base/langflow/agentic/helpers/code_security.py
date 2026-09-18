@@ -1397,14 +1397,18 @@ class _SecurityChecker(ast.NodeVisitor):
             if node.args and method_name == "__getattribute__" and receiver_name in _RESTRICTED_MODULE_REFERENCES:
                 _validate_selector(node.args[0], frozenset({receiver_name}), "__getattribute__()")
                 return 1
-            if (
-                node.args
-                and method_name in {"get", "__getitem__"}
-                and receiver_name.endswith(".__dict__")
-                and _is_restricted_module_reference(receiver_name)
-            ):
-                _validate_selector(node.args[0], frozenset({receiver_name}), f"{method_name}()")
-                return 1
+            if node.args and method_name in {"get", "__getitem__"} and receiver_name.endswith(".__dict__"):
+                if _is_restricted_module_reference(receiver_name):
+                    _validate_selector(node.args[0], frozenset({receiver_name}), f"{method_name}()")
+                    return 1
+                # Every imported module's ``__dict__`` carries ``__builtins__``
+                # (and loader dunders), whether or not the module is on the
+                # restricted list, so a dunder key is rejected on any module
+                # mapping — mirroring visit_Subscript.
+                member_name = _static_string_value(node.args[0])
+                if member_name in DANGEROUS_DUNDER_ATTRS:
+                    self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
+                    return 1
             if _restricted_mapping_owner(receiver_name) is not None:
                 self.violations.append(
                     f"Use of '{method_name}()' on restricted module mapping '{receiver_name}' is forbidden"
@@ -1416,6 +1420,13 @@ class _SecurityChecker(ast.NodeVisitor):
             mapping_names = _restricted_mappings(node.args[0])
             if mapping_names:
                 _validate_selector(node.args[1], mapping_names, "module mapping")
+                return 2
+            # Same dunder-key rule as above for non-restricted module mappings.
+            member_name = _static_string_value(node.args[1])
+            if member_name in DANGEROUS_DUNDER_ATTRS and any(
+                name.endswith(".__dict__") for name in self._resolved_assignment_value(node.args[0])
+            ):
+                self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
                 return 2
 
         return 0
