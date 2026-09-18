@@ -393,6 +393,7 @@ class TestModuleProxy:
             "os",
             "subprocess",
             "ctypes",
+            "ctypeslib",
             "shutil",
             "pathlib",
             "io",
@@ -439,6 +440,14 @@ class TestModuleProxy:
         pytest.importorskip("numpy")
         code = "os_mod = numpy.sys.modules['os']\nos_mod.popen('id')"
         validate_code_safety(code)
+        with pytest.raises(AttributeError, match="not allowed"):
+            exec(code, self._build_globals("numpy"))  # noqa: S102 - test-only controlled exec
+
+    def test_numpy_ctypeslib_escape_chain_blocked(self):
+        """numpy.ctypeslib.load_library loads arbitrary native code (e.g. libc.system)."""
+        pytest.importorskip("numpy")
+        code = "libc = numpy.ctypeslib.load_library('libSystem.B', '/usr/lib')\nlibc.system('id')"
+        validate_code_safety(code)  # AST gate cannot see this attack class — by design
         with pytest.raises(AttributeError, match="not allowed"):
             exec(code, self._build_globals("numpy"))  # noqa: S102 - test-only controlled exec
 

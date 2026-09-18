@@ -225,6 +225,10 @@ _BLOCKED_MODULE_ATTRIBUTES = frozenset(
         "os",
         "subprocess",
         "ctypes",
+        # numpy.ctypeslib.load_library(...) loads arbitrary native libraries and hands
+        # out callable C functions (e.g. libc.system) even though ``ctypes`` itself is
+        # blocked; ``ctypeslib`` is a public sub-module attribute on numpy.
+        "ctypeslib",
         "shutil",
         "pathlib",
         "io",
