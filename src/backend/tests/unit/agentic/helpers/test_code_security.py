@@ -1510,6 +1510,65 @@ class TestScanCodeSecurityRuntimeModuleBypass:
         result = scan_code_security("getattr(record, 'display' + '_name', None)")
         assert result.is_safe is True
 
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param("method = vars(type)['__subclasses__']", id="vars-type-subscript"),
+            pytest.param("method = vars(type)['__sub' + 'classes__']", id="vars-type-computed-key"),
+            pytest.param("method = vars(type).get('__subclasses__')", id="vars-type-get"),
+            pytest.param("method = vars(type).__getitem__('__subclasses__')", id="vars-type-getitem"),
+            pytest.param("method = dict.get(vars(type), '__subclasses__')", id="unbound-dict-get"),
+            pytest.param("method = dict.__getitem__(vars(type), '__subclasses__')", id="unbound-dict-getitem"),
+            pytest.param("lookup = vars(type).get\nmethod = lookup('__subclasses__')", id="aliased-vars-get"),
+            pytest.param("g = vars(init).get('__globals__')", id="opaque-receiver-get-globals"),
+            pytest.param("g = namespace['__globals__']", id="opaque-receiver-subscript-globals"),
+            pytest.param("b = g['__builtins__']", id="opaque-receiver-subscript-builtins"),
+        ],
+    )
+    def test_should_detect_dangerous_dunder_mapping_reads(self, code):
+        """Dunder keys must be blocked regardless of the mapping's receiver."""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("(sandbox escape)" in violation for violation in result.violations)
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param("config = {'timeout': 5}\nvalue = config.get('timeout')", id="dict-get-safe-key"),
+            pytest.param("record = {'name': 'x'}\nname = record['name']", id="subscript-safe-key"),
+            pytest.param("class Record:\n    value = 1\ndata = vars(Record())", id="vars-plain-read"),
+            pytest.param("import glob\nchecker = vars(glob).get('magic_check')", id="vars-module-safe-key"),
+            pytest.param("import glob\nchecker = dict.get(glob.__dict__, 'magic_check')", id="dict-get-safe-member"),
+            pytest.param("d = {}\nvalue = d.get('__name__')", id="non-dangerous-dunder-key"),
+        ],
+    )
+    def test_should_allow_safe_mapping_reads(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    def test_should_detect_vars_subclasses_subscript_rce(self):
+        """H1-3989735: vars() subscript access to __subclasses__ bypasses the scanner."""
+        code = """
+obj = type(()).mro()[1]
+method = vars(type)["__subclasses__"]
+subs = method(obj)
+for s in subs:
+    try:
+        init = vars(s).get("__init__")
+        if init:
+            g = vars(init).get("__globals__")
+            if g and "__builtins__" in g:
+                b = g["__builtins__"]
+                if isinstance(b, dict) and "__import__" in b:
+                    os_mod = b["__import__"]("os")
+                    result = os_mod.popen("id").read()
+                    break
+    except Exception:
+        pass
+"""
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("__subclasses__" in violation for violation in result.violations)
+
     def test_should_detect_reflective_call_through_assignment_alias(self):
         result = scan_code_security("import os\nmodule = os\ngetattr(module, 'system')('id')")
         assert result.is_safe is False
