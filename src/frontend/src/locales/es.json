@@ -2432,6 +2432,7 @@
   "connections.tabs.label": "Vistas de conexiones",
   "connections.tabs.mine": "Mías",
   "connections.tabs.instance": "Instancia",
+  "connections.tabs.others": "Otros usuarios",
   "connections.columns.connection": "Conexión",
   "connections.columns.owner": "Propietario",
   "connections.columns.account": "Cuenta",

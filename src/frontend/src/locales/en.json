@@ -2431,6 +2431,7 @@
   "connections.tabs.label": "Connection views",
   "connections.tabs.mine": "Mine",
   "connections.tabs.instance": "Instance",
+  "connections.tabs.others": "Other users",
   "connections.columns.connection": "Connection",
   "connections.columns.owner": "Owner",
   "connections.columns.account": "Account",
