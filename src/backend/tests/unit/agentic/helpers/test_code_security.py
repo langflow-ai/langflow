@@ -1796,6 +1796,147 @@ class TestScanCodeSecurityRuntimeModuleBypass:
         assert scan_code_security(code).is_safe is True
 
 
+class TestScanCodeSecurityStdlibReexportBypass:
+    """Stdlib modules re-exporting os/sys/__builtins__ must not bypass the scan.
+
+    Regression tests for H1-3991551: ``platform`` (and any other stdlib module
+    with a module-level ``import os`` / ``import sys``) re-exports the real
+    restricted modules, and every imported module's ``__dict__`` carries
+    ``__builtins__``.
+    """
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param("import platform\nplatform.os.system('id')", id="platform-os-call"),
+            pytest.param("import platform\nsecret = platform.os.environ", id="platform-os-read"),
+            pytest.param(
+                "import platform\nplatform.sys.modules['subprocess'].Popen(['id'])", id="platform-sys-modules"
+            ),
+            pytest.param("import platform\ngetattr(platform, 'o' + 's').spawnv()", id="platform-reflective-os"),
+            pytest.param("from platform import os\nos.system('id')", id="from-platform-import-os"),
+            pytest.param(
+                "from platform import sys as runtime\nruntime.modules['os'].fork()", id="from-platform-import-sys"
+            ),
+            pytest.param("import zipfile\nzipfile.os.system('id')", id="zipfile-os-call"),
+            pytest.param("import tarfile\ntarfile.sys.modules['os'].posix_spawn()", id="tarfile-sys-modules"),
+            pytest.param("import zipfile\nzipfile.__dict__['os'].spawnv()", id="zipfile-dict-os"),
+            pytest.param("import tarfile\nvars(tarfile).get('os').fork()", id="tarfile-vars-get-os"),
+        ],
+    )
+    def test_should_detect_stdlib_module_reexports(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "import platform\nplatform.__dict__['__builtins__']['eval']('1')", id="platform-dict-builtins"
+            ),
+            pytest.param(
+                "import platform\nvars(platform)['__builtins__']['__import__']('os').system('id')",
+                id="platform-vars-builtins",
+            ),
+            pytest.param(
+                "import platform\ngetattr(platform, '__dict__')['__builtins__']['eval']('1')",
+                id="getattr-dict-builtins",
+            ),
+            pytest.param("import zipfile\nzipfile.__dict__['__builtins__']['eval']('1')", id="zipfile-dict-builtins"),
+            pytest.param(
+                "import requests\nrequests.__dict__['__builtins__']['eval']('1')", id="third-party-dict-builtins"
+            ),
+            pytest.param(
+                "import requests\nrequests.__dict__.get('__builtins__')['eval']('1')",
+                id="third-party-dict-get-builtins",
+            ),
+            pytest.param(
+                "import requests\nrequests.__dict__.__getitem__('__builtins__')['eval']('1')",
+                id="third-party-dict-getitem-builtins",
+            ),
+            pytest.param(
+                "import requests\ndict.get(requests.__dict__, '__builtins__')['eval']('1')",
+                id="third-party-dict-get-unbound-builtins",
+            ),
+            pytest.param(
+                "import requests\ndict.__getitem__(requests.__dict__, '__builtins__')['eval']('1')",
+                id="third-party-dict-getitem-unbound-builtins",
+            ),
+            pytest.param(
+                "import platform\nplatform.__dict__.get('__builtins__')['eval']('1')", id="platform-dict-get-builtins"
+            ),
+            pytest.param(
+                "import zipfile\nzipfile.__dict__.__getitem__('__builtins__')['eval']('1')",
+                id="zipfile-dict-getitem-builtins",
+            ),
+            pytest.param(
+                "import zipfile\ndict.get(zipfile.__dict__, '__builtins__')['eval']('1')",
+                id="zipfile-dict-get-unbound-builtins",
+            ),
+            pytest.param(
+                "import requests\nrequests.__dict__.get('__builtins__', {})['eval']('1')",
+                id="third-party-dict-get-default-builtins",
+            ),
+            pytest.param(
+                "import zipfile\nzipfile.__dict__['__loader__'].load_module('os').system('id')",
+                id="zipfile-dict-loader",
+            ),
+        ],
+    )
+    def test_should_detect_builtins_reflection_through_module_dict(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "import platform\ndef expose():\n    return platform\nexpose().os.system('id')",
+                id="returned-platform",
+            ),
+            pytest.param(
+                "import platform\nname = 'o' + 's'\nplatform.__dict__[name].system('id')",
+                id="platform-dict-dynamic-key",
+            ),
+        ],
+    )
+    def test_should_treat_platform_as_restricted_module(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            pytest.param(
+                "import platform\nname = platform.system()\nrelease = platform.release()", id="platform-safe-api"
+            ),
+            pytest.param('import json\ndata = json.loads(\'{"key": "value"}\')', id="json-loads"),
+            pytest.param(
+                "import glob\nfiles = glob.glob('*.txt')\npath_class = glob.__dict__['magic_check']",
+                id="glob-dict-safe-member",
+            ),
+            pytest.param("import pathlib\npath_class = vars(pathlib)['Path']", id="vars-safe-member"),
+            pytest.param(
+                "import example_module\nexample_module.os.system('ordinary object')",
+                id="unknown-module-os-attribute",
+            ),
+            pytest.param("from example_module import os\nos.system('ordinary object')", id="unknown-module-import-os"),
+            pytest.param(
+                "class Record:\n    value = 1\nobj = Record()\nkey = 'value'\nresult = obj.__dict__[key]",
+                id="ordinary-object-dict-dynamic",
+            ),
+            pytest.param("data = {'__builtins__': 'text'}\nvalue = data['__builtins__']", id="plain-dict-dunder-key"),
+            pytest.param(
+                "import requests\nsession_class = requests.__dict__.get('Session')",
+                id="third-party-dict-get-safe-member",
+            ),
+            pytest.param(
+                "import requests\nname = 'Ses' + 'sion'\nsession_class = requests.__dict__.get(name)",
+                id="third-party-dict-get-dynamic-safe",
+            ),
+        ],
+    )
+    def test_should_allow_safe_stdlib_and_object_access(self, code):
+        assert scan_code_security(code).is_safe is True
+
+
 class TestScanCodeSecurityDottedSubmoduleAccess:
     """Bare-package imports must not reach a blocked submodule via dotted access.
 

@@ -6,6 +6,7 @@ to user.
 """
 
 import ast
+import sys
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 
@@ -298,13 +299,36 @@ _DANGEROUS_CALL_MEMBERS, _DANGEROUS_READ_MEMBERS = _build_dangerous_members()
 # Known stdlib modules that expose restricted modules under their original
 # names. Keep this exact-host allowlist narrow: an arbitrary third-party
 # module's ``.os`` or ``.sys`` attribute is not necessarily the stdlib module.
+# Hosts listed here are treated as fully restricted modules: they cannot cross
+# opaque boundaries (returns, call arguments, class attributes) and their
+# ``__dict__`` rejects dynamic reads. Stdlib modules beyond this list still
+# have their ``.os`` / ``.sys`` members canonicalized — see
+# _is_reexported_restricted_module below.
 _RESTRICTED_MODULE_REEXPORTS: dict[str, frozenset[str]] = {
     "glob": frozenset({"os", "sys"}),
     "logging": frozenset({"os"}),
     "os": frozenset({"sys"}),
     "os.path": frozenset({"os", "sys"}),
     "pathlib": frozenset({"os", "sys"}),
+    "platform": frozenset({"os", "sys"}),
 }
+
+# A stdlib module that runs ``import os`` / ``import sys`` at module level
+# re-exports the real restricted module under its original name
+# (``platform.os is os``), which is how the allowlist above would otherwise be
+# bypassed (``platform.os.system(...)``). Unlike third-party modules, a
+# stdlib-rooted attribute named ``os`` or ``sys`` is near-certainly the stdlib
+# module, so canonicalize it for every stdlib host.
+_STDLIB_REEXPORTED_MODULE_NAMES: frozenset[str] = frozenset({"os", "sys"})
+_STDLIB_MODULE_NAMES: frozenset[str] = frozenset(sys.stdlib_module_names)
+
+
+def _is_reexported_restricted_module(module_name: str, member_name: str) -> bool:
+    """Whether ``<module_name>.<member_name>`` is the stdlib module ``member_name`` re-exported."""
+    if member_name in _RESTRICTED_MODULE_REEXPORTS.get(module_name, ()):
+        return True
+    return member_name in _STDLIB_REEXPORTED_MODULE_NAMES and module_name.split(".")[0] in _STDLIB_MODULE_NAMES
+
 
 # Modules with a mix of allowed and forbidden members may be used directly so
 # legitimate operations such as ``os.path.join`` remain available. They must
@@ -368,7 +392,7 @@ def _collect_imports(tree: ast.AST) -> tuple[dict[str, str], set[str]]:
             wildcard_modules.add(node.module.split(".")[0])
         elif isinstance(node, ast.ImportFrom) and node.module:
             for alias in node.names:
-                if alias.name in _RESTRICTED_MODULE_REEXPORTS.get(node.module, ()):
+                if _is_reexported_restricted_module(node.module, alias.name):
                     aliases[alias.asname or alias.name] = alias.name
     return aliases, wildcard_modules
 
@@ -419,7 +443,7 @@ class _SecurityChecker(ast.NodeVisitor):
         for base_name in base_names:
             if member_name == "__call__":
                 resolved.add(base_name)
-            elif member_name in _RESTRICTED_MODULE_REEXPORTS.get(base_name, ()):
+            elif _is_reexported_restricted_module(base_name, member_name):
                 resolved.add(member_name)
             else:
                 resolved.add(f"{base_name}.{member_name}")
@@ -807,7 +831,7 @@ class _SecurityChecker(ast.NodeVisitor):
                 binding = alias.asname or alias.name
                 imported_name = (
                     alias.name
-                    if alias.name in _RESTRICTED_MODULE_REEXPORTS.get(node.module, ())
+                    if _is_reexported_restricted_module(node.module, alias.name)
                     else f"{node.module}.{alias.name}"
                 )
                 imported_names = frozenset({imported_name})
@@ -1214,19 +1238,20 @@ class _SecurityChecker(ast.NodeVisitor):
 
     def visit_Subscript(self, node: ast.Subscript):
         """Reject dynamic reads from a restricted module's ``__dict__`` mapping."""
-        mapping_names = frozenset(
-            name
-            for name in self._resolved_assignment_value(node.value)
-            if name.endswith(".__dict__") and _is_restricted_module_reference(name)
+        resolved_values = self._resolved_assignment_value(node.value)
+        member_name = _static_string_value(node.slice)
+        restricted_mapping_names = frozenset(
+            name for name in resolved_values if name.endswith(".__dict__") and _is_restricted_module_reference(name)
         )
-        if mapping_names:
-            member_name = _static_string_value(node.slice)
-            if member_name is None:
-                self.violations.append(
-                    f"Dynamic mapping access on module '{sorted(mapping_names)[0]}' is forbidden in components"
-                )
-            elif member_name in DANGEROUS_DUNDER_ATTRS:
-                self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
+        if restricted_mapping_names and member_name is None:
+            self.violations.append(
+                f"Dynamic mapping access on module '{sorted(restricted_mapping_names)[0]}' is forbidden in components"
+            )
+        elif member_name in DANGEROUS_DUNDER_ATTRS and any(name.endswith(".__dict__") for name in resolved_values):
+            # Every imported module's ``__dict__`` carries ``__builtins__`` (and
+            # loader dunders), whether or not the module is on the restricted
+            # list, so a dunder key is rejected on any module mapping.
+            self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
         return self.generic_visit(node)
 
     def _resolved_dotted(self, node: ast.Attribute) -> frozenset[str]:
@@ -1372,14 +1397,18 @@ class _SecurityChecker(ast.NodeVisitor):
             if node.args and method_name == "__getattribute__" and receiver_name in _RESTRICTED_MODULE_REFERENCES:
                 _validate_selector(node.args[0], frozenset({receiver_name}), "__getattribute__()")
                 return 1
-            if (
-                node.args
-                and method_name in {"get", "__getitem__"}
-                and receiver_name.endswith(".__dict__")
-                and _is_restricted_module_reference(receiver_name)
-            ):
-                _validate_selector(node.args[0], frozenset({receiver_name}), f"{method_name}()")
-                return 1
+            if node.args and method_name in {"get", "__getitem__"} and receiver_name.endswith(".__dict__"):
+                if _is_restricted_module_reference(receiver_name):
+                    _validate_selector(node.args[0], frozenset({receiver_name}), f"{method_name}()")
+                    return 1
+                # Every imported module's ``__dict__`` carries ``__builtins__``
+                # (and loader dunders), whether or not the module is on the
+                # restricted list, so a dunder key is rejected on any module
+                # mapping — mirroring visit_Subscript.
+                member_name = _static_string_value(node.args[0])
+                if member_name in DANGEROUS_DUNDER_ATTRS:
+                    self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
+                    return 1
             if _restricted_mapping_owner(receiver_name) is not None:
                 self.violations.append(
                     f"Use of '{method_name}()' on restricted module mapping '{receiver_name}' is forbidden"
@@ -1391,6 +1420,13 @@ class _SecurityChecker(ast.NodeVisitor):
             mapping_names = _restricted_mappings(node.args[0])
             if mapping_names:
                 _validate_selector(node.args[1], mapping_names, "module mapping")
+                return 2
+            # Same dunder-key rule as above for non-restricted module mappings.
+            member_name = _static_string_value(node.args[1])
+            if member_name in DANGEROUS_DUNDER_ATTRS and any(
+                name.endswith(".__dict__") for name in self._resolved_assignment_value(node.args[0])
+            ):
+                self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
                 return 2
 
         return 0
