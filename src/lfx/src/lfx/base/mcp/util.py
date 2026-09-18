@@ -1048,8 +1048,9 @@ def _is_transient_streamable_http_error(exc: BaseException) -> bool:
                 return True
             if leaf.response.status_code == HTTP_TOO_MANY_REQUESTS:
                 return True
-            # 404/405/406: try SSE; other 4xx: retry Streamable HTTP
+            # 400/404/405/406: try SSE; other 4xx: retry Streamable HTTP
             return leaf.response.status_code not in (
+                HTTP_BAD_REQUEST,
                 HTTP_NOT_FOUND,
                 HTTP_METHOD_NOT_ALLOWED,
                 HTTP_NOT_ACCEPTABLE,
@@ -1082,6 +1083,7 @@ def _should_attempt_sse_after_streamable_failure(exc: BaseException) -> bool:
         return False
     for leaf in _iter_exception_leaves(exc):
         if isinstance(leaf, httpx.HTTPStatusError) and leaf.response.status_code in (
+            HTTP_BAD_REQUEST,
             HTTP_NOT_FOUND,
             HTTP_METHOD_NOT_ALLOWED,
             HTTP_NOT_ACCEPTABLE,

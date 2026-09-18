@@ -4161,6 +4161,29 @@ class TestStreamableHttpTransportPolicy:
         assert _should_attempt_sse_after_streamable_failure(e) is True
         assert _should_attempt_sse_after_streamable_failure(ConnectionError("x")) is False
 
+    @pytest.mark.parametrize("status_code", [400, 404, 405, 406])
+    def test_sse_fallback_on_transport_rejection_statuses(self, status_code):
+        """A legacy SSE-only server rejects the Streamable HTTP probe with 400/404/405/406.
+
+        Those mean "wrong transport", so Streamable HTTP must not be retried and the SSE
+        fallback has to run. See issue #15024: 400 was missing from both sets, so the probe
+        was retried until the connect timeout instead of falling back.
+        """
+        req = httpx.Request("POST", "http://x/mcp")
+        resp = httpx.Response(status_code, request=req)
+        exc = httpx.HTTPStatusError("x", request=req, response=resp)
+        assert _is_transient_streamable_http_error(exc) is False
+        assert _should_attempt_sse_after_streamable_failure(exc) is True
+
+    @pytest.mark.parametrize("status_code", [401, 429, 500])
+    def test_real_outage_statuses_stay_on_streamable_http(self, status_code):
+        """Auth, rate-limit and server errors are outages: retry Streamable HTTP, do not downgrade to SSE."""
+        req = httpx.Request("POST", "http://x/mcp")
+        resp = httpx.Response(status_code, request=req)
+        exc = httpx.HTTPStatusError("x", request=req, response=resp)
+        assert _is_transient_streamable_http_error(exc) is True
+        assert _should_attempt_sse_after_streamable_failure(exc) is False
+
 
 # ---------------------------------------------------------------------------
 # Regression tests for the CPU-spin / workflow-hang fix
