@@ -24198,7 +24198,7 @@
           "icon": "file-json",
           "legacy": true,
           "metadata": {
-            "code_hash": "4ad7dbc5a8b8",
+            "code_hash": "92f9d0b781ef",
             "dependencies": {
               "dependencies": [
                 {
@@ -25726,7 +25726,7 @@
           "icon": "wand-sparkles",
           "legacy": false,
           "metadata": {
-            "code_hash": "4c2a33c778d3",
+            "code_hash": "f15ba610cfd0",
             "dependencies": {
               "dependencies": [
                 {
@@ -27451,7 +27451,7 @@
           "icon": "braces",
           "legacy": true,
           "metadata": {
-            "code_hash": "cf5cd4144fff",
+            "code_hash": "66042257e948",
             "dependencies": {
               "dependencies": [
                 {
@@ -31988,6 +31988,6 @@
     "num_components": 128,
     "num_modules": 16
   },
-  "sha256": "359435c403e8aa8e8350af95f8a38223ac3f1f16f34adb3ec4a6978c5d11f563",
+  "sha256": "9b48eb0aaf9e59faabc5e34ca5baf39781acab26b5a7fbf8297ef5d2d0047158",
   "version": "1.12.3"
 }
