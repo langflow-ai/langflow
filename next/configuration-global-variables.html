@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
 <script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.67f1fdf3.css">
-<script src="/assets/js/runtime~main.decd6710.js" defer="defer"></script>
-<script src="/assets/js/main.de7b1cdd.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.d946f368.js" defer="defer"></script>
+<script src="/assets/js/main.0172ef92.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -130,6 +130,17 @@ For example, if you set <code>OPENAI_API_KEY</code> in your runtime environment,
 <p>You can declare additional variables in <code>LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT</code>.
 For example, <code>LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT=WATSONX_PROJECT_ID,WATSONX_API_KEY</code> creates global variables named <code>WATSONX_PROJECT_ID</code> and <code>WATSONX_API_KEY</code> in Langflow&#x27;s database.
 Then, you can use these variables wherever they are needed in your component settings.</p>
+<p>With the default database variable store (<code>LANGFLOW_VARIABLE_STORE=db</code>) and <code>LANGFLOW_STORE_ENVIRONMENT_VARIABLES=True</code>, server startup attempts to import configured environment variables for all existing users, including SSO users.
+A successful Gunicorn master import is inherited by its workers. Import failures are logged and do not block server startup; other users&#x27; imports continue after an individual user fails.
+Service initialization for commands such as <code>langflow migration --test</code> does not run this all-user import.
+Account creation and password sign-in also import variables for that user.</p>
+<p>Imports use nonblank environment values with surrounding whitespace removed. Model-provider policy can exclude provider variables, and provider secret values equal to <code>dummy</code> (case-insensitive) are skipped.
+Environment-managed credentials follow subsequent environment value changes. Unchanged values do not rewrite stored credentials.
+Saving a value yourself, renaming the variable, or changing its type makes it user-owned; changing only <strong>Apply to fields</strong> retains environment management.</p>
+<p>After upgrading, a legacy credential is adopted for environment management only when its stored value already matches the environment.
+Matching legacy values can include an earlier user override that happens to equal the environment; future rotations update adopted values.
+Differing legacy values are preserved. Explicit user overrides saved after upgrading are never automatically adopted, even if their value matches the environment.
+To rotate a differing legacy value, its owner can update it in <strong>Settings</strong> &gt; <strong>Global Variables</strong>.</p>
 <div class="theme-tabs-container tabs-container tabList__CuJ"><ul role="tablist" aria-orientation="horizontal" class="tabs"><li role="tab" tabindex="0" aria-selected="true" class="tabs__item tabItem_LNqP tabs__item--active">Local</li><li role="tab" tabindex="-1" aria-selected="false" class="tabs__item tabItem_LNqP">Docker</li></ul><div class="margin-top--md"><div role="tabpanel" aria-label="Local" class="tabItem_s4ch"><p>If you installed Langflow locally, set <code>LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT</code> in your Langflow <code>.env</code> file:</p><ol>
 <li class="">
 <p>Create or edit your Langflow <code>.env</code> file.</p>

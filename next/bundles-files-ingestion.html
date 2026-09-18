@@ -25,8 +25,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
 <script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.67f1fdf3.css">
-<script src="/assets/js/runtime~main.decd6710.js" defer="defer"></script>
-<script src="/assets/js/main.de7b1cdd.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.d946f368.js" defer="defer"></script>
+<script src="/assets/js/main.0172ef92.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
 <svg style="display: none;"><defs>
@@ -58,12 +58,15 @@ See <a class="" href="/extensions-bundle-list#additional-bundles">Additional bun
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="prerequisites">Prerequisites<a href="#prerequisites" class="hash-link" aria-label="Direct link to Prerequisites" title="Direct link to Prerequisites" translate="no">​</a></h2>
 <ul>
 <li class="">
-<p><strong>OpenDsStar package (File Description Generator only)</strong>: The <strong>File Description Generator</strong> component requires the <code>OpenDsStar</code> package and Python 3.11 or later.</p>
+<p><strong>OpenDsStar package (File Description Generator only)</strong>: The <strong>File Description Generator</strong> component requires a separate manual OpenDsStar installation. The last managed combination supported Python 3.11–3.13, excluding Intel macOS.</p>
 <p>Install the dependency with:</p>
-<div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#64748b;--prism-background-color:#f9f9fd"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#64748b;background-color:#f9f9fd"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#64748b"><span class="token function-modern keyword" style="color:#077d9a">uv</span><span class="token plain"> </span><span class="token function-modern keyword" style="color:#077d9a">pip</span><span class="token plain"> </span><span class="token bash-plain">install</span><span class="token plain"> OpenDsStar</span><br></span></code></pre></div></div>
+<div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#64748b;--prism-background-color:#f9f9fd"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#64748b;background-color:#f9f9fd"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#64748b"><span class="token function-modern keyword" style="color:#077d9a">uv</span><span class="token plain"> </span><span class="token function-modern keyword" style="color:#077d9a">pip</span><span class="token plain"> </span><span class="token bash-plain">install</span><span class="token plain"> </span><span class="token string" style="color:#04835c">&#x27;OpenDsStar==1.0.26&#x27;</span><span class="token plain"> </span><span class="token string" style="color:#04835c">&#x27;langchain-litellm==0.5.1&#x27;</span><br></span></code></pre></div></div>
 <p>For more information, see <a class="" href="/install-custom-dependencies">Install custom dependencies</a>.</p>
 </li>
 </ul>
+<p>OpenDsStar is no longer included in Langflow&#x27;s managed dependencies or bundle extras.
+Manual installation restores its unpatched DiskCache dependency; review the <a class="" href="/bundles-codeagents#prerequisites">Code Agents installation guidance</a> before opting in.
+File Content Retriever and other components that do not use OpenDsStar are unaffected.</p>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="use-file-processing-components-in-a-flow">Use File Processing components in a flow<a href="#use-file-processing-components-in-a-flow" class="hash-link" aria-label="Direct link to Use File Processing components in a flow" title="Direct link to Use File Processing components in a flow" translate="no">​</a></h2>
 <p>For an example of using this component, see the <strong>Structured Data Agent</strong> starter template.</p>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="file-processing-components">File Processing components<a href="#file-processing-components" class="hash-link" aria-label="Direct link to File Processing components" title="Direct link to File Processing components" translate="no">​</a></h2>
