@@ -210,3 +210,70 @@ def test_embeddings_explicit_default_endpoint_is_still_a_no_op(mock_embeddings):
     kwargs = mock_embeddings.call_args.kwargs
     assert "http_client" not in kwargs
     assert "http_async_client" not in kwargs
+
+
+_OPERATOR_ENV_KEY = "sk-operator-only-canary-f0e1d2c3"  # pragma: allowlist secret
+
+
+class TestOpenAICredentialEgress:
+    """Credential-egress guard for the OpenAI components (H1-4000668 / LE-2670).
+
+    A key provisioned in the server environment (which the tenant may use but
+    never read) must not be forwarded to a tenant-chosen endpoint.
+    """
+
+    @patch("lfx_openai.components.openai.openai_chat_model.ChatOpenAI")
+    def test_should_block_env_sourced_key_to_custom_host(self, mock_chat_openai, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", _OPERATOR_ENV_KEY)
+        monkeypatch.delenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", raising=False)
+        component = _component("https://attacker.example.com/v1")
+        component.api_key = _OPERATOR_ENV_KEY  # resolved from the server environment
+
+        with pytest.raises(ValueError, match="server-provisioned API credential"):
+            component.build_model()
+
+        mock_chat_openai.assert_not_called()
+
+    @patch("lfx_openai.components.openai.openai_chat_model.ChatOpenAI")
+    def test_should_allow_env_sourced_key_to_default_endpoint(self, mock_chat_openai, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", _OPERATOR_ENV_KEY)
+        component = _component(None)
+        component.api_key = _OPERATOR_ENV_KEY
+
+        component.build_model()
+
+        assert mock_chat_openai.call_args.kwargs["base_url"] == "https://api.openai.com/v1"
+
+    @patch("lfx_openai.components.openai.openai_chat_model.ChatOpenAI")
+    def test_should_allow_env_sourced_key_to_operator_allowlisted_host(self, mock_chat_openai, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", _OPERATOR_ENV_KEY)
+        monkeypatch.setenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", "llm-gateway.corp.example")
+        monkeypatch.setattr("lfx.utils.ssrf_protection.resolve_hostname", lambda _hostname: ["93.184.216.34"])
+        component = _component("https://llm-gateway.corp.example/v1")
+        component.api_key = _OPERATOR_ENV_KEY
+
+        component.build_model()
+
+        assert mock_chat_openai.call_args.kwargs["base_url"] == "https://llm-gateway.corp.example/v1"
+
+    @patch("lfx_openai.components.openai.openai_chat_model.ChatOpenAI")
+    def test_should_allow_tenant_owned_key_to_custom_host(self, mock_chat_openai, monkeypatch):
+        """Bring-your-own-key flows against custom endpoints are unaffected."""
+        monkeypatch.setattr("lfx.utils.ssrf_protection.resolve_hostname", lambda _hostname: ["93.184.216.34"])
+        component = _component("https://provider.example/v1")  # _FAKE_OPENAI_API_KEY is not in env
+
+        component.build_model()
+
+        assert mock_chat_openai.call_args.kwargs["base_url"] == "https://provider.example/v1"
+
+    @patch("lfx_openai.components.openai.openai.OpenAIEmbeddings")
+    def test_embeddings_should_block_env_sourced_key_to_custom_host(self, mock_embeddings, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", _OPERATOR_ENV_KEY)
+        monkeypatch.delenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", raising=False)
+        component = _embeddings_component("https://attacker.example.com/v1")
+        component.openai_api_key = _OPERATOR_ENV_KEY
+
+        with pytest.raises(ValueError, match="server-provisioned API credential"):
+            component.build_embeddings()
+
+        mock_embeddings.assert_not_called()

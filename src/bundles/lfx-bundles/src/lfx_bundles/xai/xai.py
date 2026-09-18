@@ -1,6 +1,7 @@
 import httpx
 from langchain_openai import ChatOpenAI
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import (
@@ -18,6 +19,7 @@ from pydantic.v1 import SecretStr
 from typing_extensions import override
 
 XAI_DEFAULT_MODELS = ["grok-2-latest"]
+XAI_DEFAULT_BASE_URL = "https://api.x.ai/v1"
 
 
 class XAIModelComponent(LCModelComponent):
@@ -62,7 +64,7 @@ class XAIModelComponent(LCModelComponent):
             display_name="xAI API Base",
             advanced=True,
             info="The base URL of the xAI API. Defaults to https://api.x.ai/v1",
-            value="https://api.x.ai/v1",
+            value=XAI_DEFAULT_BASE_URL,
         ),
         SecretStrInput(
             name="api_key",
@@ -93,7 +95,10 @@ class XAIModelComponent(LCModelComponent):
         if not self.api_key:
             return XAI_DEFAULT_MODELS
 
-        base_url = self.base_url or "https://api.x.ai/v1"
+        base_url = self.base_url or XAI_DEFAULT_BASE_URL
+        # The key sent below may resolve to the operator's environment-provisioned
+        # credential; refuse to forward it to a tenant-chosen endpoint.
+        ensure_credential_endpoint_allowed(self.api_key, base_url, default_url=XAI_DEFAULT_BASE_URL)
         url = f"{base_url}/language-models"
         headers = {"Authorization": f"Bearer {self.api_key}", "Accept": "application/json"}
 
@@ -130,10 +135,11 @@ class XAIModelComponent(LCModelComponent):
         model_name: str = self.model_name
         max_tokens = self.max_tokens
         model_kwargs = self.model_kwargs or {}
-        base_url = self.base_url or "https://api.x.ai/v1"
+        base_url = self.base_url or XAI_DEFAULT_BASE_URL
         json_mode = self.json_mode
         seed = self.seed
 
+        ensure_credential_endpoint_allowed(self.api_key, base_url, default_url=XAI_DEFAULT_BASE_URL)
         ssrf_client_kwargs = ssrf_protected_openai_clients_for_url(base_url)
         api_key = SecretStr(api_key).get_secret_value() if api_key else None
 

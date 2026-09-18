@@ -5,6 +5,7 @@ and that model options are populated dynamically via update_build_config.
 """
 
 import contextlib
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -115,3 +116,66 @@ class TestNVIDIAModelComponentLazyLoading:
 
         assert build_config["model_name"]["options"] == []
         assert build_config["model_name"]["value"] is None
+
+
+class TestNVIDIACredentialEgress:
+    """Credential-egress guard for the NVIDIA component (H1-4000668 / LE-2670).
+
+    An operator key held only in the server environment must not be sent to a
+    tenant-chosen base_url -- including on the model-discovery request, which
+    fires before any inference call.
+    """
+
+    OPERATOR_KEY = "nvapi-operator-canary-b7c6d5e4"  # pragma: allowlist secret
+    CUSTOM_URL = "https://attacker.example.com/v1"
+
+    def _component(self, base_url: str, api_key: str):
+        from lfx_bundles.nvidia.nvidia import NVIDIAModelComponent
+
+        component = NVIDIAModelComponent()
+        component._attributes = {
+            "base_url": base_url,
+            "api_key": api_key,
+            "tool_model_enabled": False,
+            "model_name": "model-a",
+            "max_tokens": 10,
+            "temperature": 0.1,
+            "seed": 1,
+        }
+        return component
+
+    def test_get_models_blocks_env_sourced_key_to_custom_host(self, monkeypatch):
+        monkeypatch.setenv("NVIDIA_API_KEY", self.OPERATOR_KEY)
+        monkeypatch.delenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", raising=False)
+        component = self._component(self.CUSTOM_URL, self.OPERATOR_KEY)
+
+        with pytest.raises(ValueError, match="server-provisioned API credential"):
+            component.get_models()
+
+    def test_build_model_blocks_env_sourced_key_to_custom_host(self, monkeypatch):
+        monkeypatch.setenv("NVIDIA_API_KEY", self.OPERATOR_KEY)
+        monkeypatch.delenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", raising=False)
+        component = self._component(self.CUSTOM_URL, self.OPERATOR_KEY)
+
+        with pytest.raises(ValueError, match="server-provisioned API credential"):
+            component.build_model()
+
+    def test_build_model_allows_env_sourced_key_to_default_endpoint(self, monkeypatch):
+        monkeypatch.setenv("NVIDIA_API_KEY", self.OPERATOR_KEY)
+        component = self._component("https://integrate.api.nvidia.com/v1", self.OPERATOR_KEY)
+
+        mock_module = MagicMock()
+        monkeypatch.setitem(sys.modules, "langchain_nvidia_ai_endpoints", mock_module)
+        component.build_model()
+
+        assert mock_module.ChatNVIDIA.call_args.kwargs["base_url"] == "https://integrate.api.nvidia.com/v1"
+
+    def test_build_model_allows_tenant_owned_key_to_custom_host(self, monkeypatch):
+        monkeypatch.delenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", raising=False)
+        component = self._component(self.CUSTOM_URL, "nvapi-tenant-owned-1a2b3c4d")  # pragma: allowlist secret
+
+        mock_module = MagicMock()
+        monkeypatch.setitem(sys.modules, "langchain_nvidia_ai_endpoints", mock_module)
+        component.build_model()
+
+        assert mock_module.ChatNVIDIA.call_args.kwargs["base_url"] == self.CUSTOM_URL
