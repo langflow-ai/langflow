@@ -33,6 +33,7 @@ coverage relied on: `test_connections.py`, `test_connection_oauth.py`,
 | INT-14-03 | LOW | Rate-limit counters are keyed by client IP only | `services/rate_limit/service.py:88` (the limiter's client-IP key function) | fixed (by INT-14-05) |
 | INT-14-04 | HIGH | The login-sized limit from INT-14-01 cut off the pending-consent poll | `GET /connections` on `rate_limit_per_minute` (5) vs `usePendingConnectionPoll`'s 2000ms refetch with `retry: false` (`src/frontend/src/controllers/API/queries/connections/use-connections.ts:155-171`) | fixed |
 | INT-14-05 | MEDIUM | Connection writes stayed on the login-sized limit, keyed by client IP | create, PATCH, revoke, and delete called `check_rate_limit(request, scope="connections")` with no allowance, so they fell back to `rate_limit_per_minute` (5) per client IP | fixed |
+| INT-14-06 | MEDIUM | Deleting a user left their connections and encrypted credentials behind on SQLite | `connection.owner_id`, `connection_secret.connection_id` and `connection_oauth` declare `ON DELETE CASCADE`, which SQLite never enforces, and no ORM cascade covered them | fixed |
 
 ### INT-14-01 (HIGH, fixed): no rate limiting on the connections or integrations routers
 
@@ -154,6 +155,26 @@ Fix, following the INT-14-04 precedent:
   walks both routers so a new authenticated route cannot fall back to the IP key, and the callback
   cannot claim a user key.
 
+### INT-14-06 (MEDIUM, fixed): a deleted user's connections and credentials outlived them on SQLite
+
+Found in QA of the INT-8 Connections UI. `Connection.owner_id` declares
+`ForeignKey("user.id", ondelete="CASCADE")`, and `connection_secret` and `connection_oauth` cascade
+from the connection (the OAuth row also from `user.id`), but SQLite enforces none of that: Langflow
+never issues `PRAGMA foreign_keys=ON`. On the default backend, `DELETE /api/v1/users/{id}` left
+the user's connection rows, their encrypted credential envelopes, and any consent the user had left
+pending. PostgreSQL enforced the declared cascade and was not affected. This is the gap #15124
+closed for role assignments.
+
+Fix: ORM cascades, following #15124. `User.connections` and `User.connection_oauth_bindings`
+delete with the user, and `Connection.secret` and `Connection.oauth_binding` delete with the
+connection, so the credential envelope goes wherever a connection row is deleted. Instance
+connections have no owner and survive. Nothing is revoked at the provider, matching the user-delete
+route's documented choice to avoid outbound calls; the provider grant stays valid until it expires
+or is revoked there. `test_delete_user_removes_their_connections_and_credentials` fails
+against the previous models. Not covered: bulk `delete(User)` statements (for example
+`FlowRunner.clear_user_state`) skip ORM cascades, and connection share rows carry no foreign key,
+so neither a connection delete nor a user delete removes them.
+
 ### INT-14-03 (LOW, fixed by INT-14-05): IP-only rate-limit keys
 
 The shared rate-limit service keys counters by client IP (rightmost `X-Forwarded-For` hop only
@@ -258,7 +279,7 @@ would refuse (`:143-173`).
 - Non-interactive opt-in is enforced in the portable floor itself (`base.py:140-151`); enabling it
   is owner-only at the API (`connections.py:244-248`).
 
-### Persistence (`services/database/models/connection/`) — clean
+### Persistence (`services/database/models/connection/`) — INT-14-06 fixed, otherwise clean
 
 Credential material lives only in `connection_secret.encrypted_payload` (Fernet envelope via the
 shared `encrypt_api_key` path), isolated from metadata queries (`model.py:87-103`); the OAuth table
