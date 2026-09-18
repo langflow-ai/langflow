@@ -288,6 +288,14 @@ class ResourceVisibilityScope:
     resources in an explicit workspace.
     ``excluded_global_project_ids`` removes reserved projects from a global
     wildcard while preserving owner and concrete resource grants.
+    ``excluded_resource_ids`` removes specific resources from every grant
+    mechanism above (``all_resources``, ``resource_ids``, ``workspace_ids``,
+    ``project_ids``) without expanding a wildcard to a concrete id list — a
+    plugin-level per-resource exception (e.g. "this user's role access to
+    this one resource is revoked") that must win over any of those, while
+    never suppressing the caller's own ownership (a resource visible only via
+    ``owner_clause`` is unaffected; exclusion applies solely to the plugin's
+    granted visibility).
     """
 
     all_resources: bool = False
@@ -297,6 +305,7 @@ class ResourceVisibilityScope:
     include_unassigned_workspace: bool = False
     excluded_workspace_project_ids: tuple[UUID, ...] = ()
     excluded_global_project_ids: tuple[UUID, ...] = ()
+    excluded_resource_ids: tuple[UUID, ...] = ()
 
     @property
     def has_cross_user_access(self) -> bool:
