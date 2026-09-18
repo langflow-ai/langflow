@@ -18,6 +18,7 @@ from lfx.components.processing.operations import (
     TEXT_OPERATIONS,
     OperationsComponent,
 )
+from lfx.components.processing.parse_json_data import ParseJSONDataComponent
 from lfx.components.processing.text_operations import TextOperations
 from lfx.schema import Data
 from lfx.schema.dataframe import DataFrame
@@ -158,6 +159,72 @@ class TestJsonOperations:
         )
         with pytest.raises(ValueError, match="not supported for multiple data objects"):
             component.as_data()
+
+
+class TestJqProgramSecurity:
+    """jq programs must never reach the server environment (H1-3977755 / LE-2550).
+
+    The JQ Expression / Path Selection operations and the legacy Parse JSON /
+    JSON Operations components evaluate a user-supplied jq program with the
+    in-process libjq binding, where ``$ENV`` / ``env`` expose the whole server
+    process environment (LANGFLOW_SECRET_KEY, database URL, provider API keys).
+    """
+
+    CANARY = "le-2550-canary-secret"
+
+    @pytest.fixture(autouse=True)
+    def _canary_env(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_SECRET_KEY", self.CANARY)
+
+    @pytest.mark.parametrize("payload", ["$ENV", "env", "env.LANGFLOW_SECRET_KEY", '"\\(env)"'])
+    def test_operations_json_query_rejects_env_access(self, payload):
+        component = OperationsComponent(
+            data=Data(data={"key1": "value1"}),
+            operation=[{"name": "JQ Expression"}],
+            query=payload,
+        )
+        with pytest.raises(ValueError, match="not allowed"):
+            component.json_query()
+
+    @pytest.mark.parametrize("payload", ["$ENV", "env.LANGFLOW_SECRET_KEY"])
+    def test_operations_json_path_rejects_env_access(self, payload):
+        component = OperationsComponent(
+            data=Data(data={"key1": "value1"}),
+            operation=[{"name": "Path Selection"}],
+            selected_key=payload,
+        )
+        result = component.json_path()
+        assert "error" in result.data
+        assert "not allowed" in result.data["error"]
+        assert self.CANARY not in str(result.data)
+
+    def test_operations_json_query_still_allows_normal_queries(self):
+        component = OperationsComponent(
+            data=Data(data={"key1": "value1"}),
+            operation=[{"name": "JQ Expression"}],
+            query=".key1",
+        )
+        result = component.json_query()
+        assert result.data == {"result": "value1"}
+
+    @pytest.mark.parametrize("payload", ["$ENV", "env"])
+    def test_legacy_data_operations_json_query_rejects_env_access(self, payload):
+        component = DataOperationsComponent(
+            data=Data(data={"key1": "value1"}),
+            operations=[{"name": "JQ Expression"}],
+            query=payload,
+        )
+        with pytest.raises(ValueError, match="not allowed"):
+            component.json_query()
+
+    @pytest.mark.parametrize("payload", ["$ENV", "env.LANGFLOW_SECRET_KEY"])
+    def test_legacy_parse_json_data_rejects_env_access(self, payload):
+        component = ParseJSONDataComponent(
+            input_value=Data(data={"key1": "value1"}),
+            query=payload,
+        )
+        with pytest.raises(ValueError, match="not allowed"):
+            component.filter_data()
 
 
 class TestTableOperations:
