@@ -16,6 +16,10 @@ A multi-worker deployment runs more than one worker process on the same host. Co
 A Redis-backed job queue stores build events in [Redis Streams](https://redis.io/docs/latest/develop/data-types/streams/), so any worker can pick up and serve any job's events.
 To configure a multi-worker Langflow process, follow the steps to enable the Redis job queue.
 
+:::note
+The Redis job queue covers the v1 build endpoints (`/api/v1/build/*`). It has no effect on background runs of the v2 workflows API, which are configured separately with `LANGFLOW_BACKGROUND_BACKEND`. See [Scale background runs](#scale-background-runs).
+:::
+
 After the Redis job queue is configured, you can optionally follow [recommended Gunicorn settings](#recommended-gunicorn-settings) to reduce memory use and keep workers healthy. This tuning applies to Linux production hosts only. On Windows and macOS, `langflow run` uses a single Uvicorn process.
 
 ## Prerequisites
@@ -281,6 +285,55 @@ To verify that cancellation works across workers, trigger a build with the API t
 
    For more information, see [Monitor the job queue](#monitor-the-job-queue).
 
+## Scale background runs {#scale-background-runs}
+
+Background runs are runs submitted to `POST /api/v2/workflows` with `"mode": "background"`. The request returns a job ID right away, and you poll, stream, stop, or resume the run with that ID later. The visual editor also uses background mode for runs that pause for human input.
+
+Background runs are configured with `LANGFLOW_BACKGROUND_BACKEND`. They do not depend on `LANGFLOW_JOB_QUEUE_TYPE`.
+
+### Default backend
+
+With the default backend (`LANGFLOW_BACKGROUND_BACKEND=default`), a background run executes inside the API worker that accepted it, up to `LANGFLOW_BACKGROUND_MAX_CONCURRENCY` runs per worker.
+
+The run's status, result, and events are stored in the database, so any worker can serve them. A worker that is not running the job reads new events from the database every 0.5 seconds. This works with multiple workers without extra configuration.
+
+### Scaled backend
+
+With the scaled backend (`LANGFLOW_BACKGROUND_BACKEND=scaled`), API workers only queue background runs, and separate `langflow worker` processes execute them. The queue is the Langflow database itself, so no additional infrastructure is required.
+
+Use the scaled backend when background runs need to scale independently of the API, or when they should not compete with API requests for CPU and memory.
+
+Each `langflow worker` process runs one background job at a time. To add capacity, run more worker processes.
+
+The scaled backend requires the following:
+
+- Every API process and every worker uses the same database. Use PostgreSQL when processes run on more than one host. SQLite only works when every process runs on the same host.
+- Every process uses the same `LANGFLOW_SECRET_KEY`, because workers decrypt stored credentials and request overrides.
+- Workers run the same Langflow version, with the same components and bundles installed, as the API. Workers build and run the flows themselves.
+- At least one worker is running. Without a worker, background runs stay `queued`. The API logs a reminder at startup when the scaled backend is enabled.
+
+To enable the scaled backend, set the following environment variables on the API and on every worker:
+
+```text
+LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@your-postgres-host:5432/langflow
+LANGFLOW_SECRET_KEY=your-secret-key
+LANGFLOW_BACKGROUND_BACKEND=scaled
+```
+
+Then start one or more workers:
+
+```bash
+langflow worker
+```
+
+`langflow worker` accepts `--env-file` to load the variables from a file and `--log-level` to set the logging level.
+
+The scaled backend changes the following behaviors:
+
+- Event streams for background runs carry durable milestones, such as build progress, messages, and the final result. They do not carry token-by-token output.
+- Stopping a run reaches its worker at the next component boundary.
+- If a worker crashes mid-run, its job is reconciled after the lease expires (`LANGFLOW_BACKGROUND_LEASE_TTL_S`, 45 seconds by default), so a run is never left stuck as in progress.
+
 ## Troubleshoot
 
 See [Troubleshoot multi-worker deployments](./troubleshoot#multi-worker-deployments).
@@ -313,6 +366,20 @@ LANGFLOW_RATE_LIMIT_STORAGE_URI=redis://your-redis-host:6379/2
 
 For more information, see [Login rate limiting](/api-keys-and-authentication#login-rate-limiting).
 :::
+
+### Background run settings
+
+These settings control background runs of the v2 workflows API. For details, see [Scale background runs](#scale-background-runs).
+
+| Variable | Default | Description |
+|---|---|---|
+| `LANGFLOW_BACKGROUND_BACKEND` | `default` | `default` runs background jobs inside API workers. `scaled` queues them in the database for `langflow worker` processes to run. |
+| `LANGFLOW_BACKGROUND_MAX_CONCURRENCY` | `5` | With the default backend, the number of background runs each API worker executes at once. |
+| `LANGFLOW_BACKGROUND_POLL_INTERVAL_S` | `0.5` | With the scaled backend, how often in seconds an event stream checks the database for new events. |
+| `LANGFLOW_BACKGROUND_LEASE_TTL_S` | `45` | How long in seconds a running job can go without a heartbeat before it is considered lost. Keep it well above `LANGFLOW_BACKGROUND_HEARTBEAT_INTERVAL_S`. |
+| `LANGFLOW_BACKGROUND_HEARTBEAT_INTERVAL_S` | `15` | How often in seconds a running job refreshes its heartbeat. |
+| `LANGFLOW_BACKGROUND_WATCHDOG_INTERVAL_S` | `15` | With the scaled backend, how often in seconds each worker checks for jobs whose worker has died. |
+| `LANGFLOW_BACKGROUND_CLAIM_CANDIDATES` | `5` | With the scaled backend, how many of the oldest queued jobs a worker considers on each claim attempt. If workers sit idle while jobs are queued, raise it to roughly your worker count. |
 
 ## Monitor the job queue
 
