@@ -140,6 +140,9 @@ export default defineConfig({
         OPENAI_BASE_URL: "http://127.0.0.1:8787/v1",
         // The E2E harness intentionally routes provider calls to its local OpenAI stub.
         LANGFLOW_SSRF_ALLOWED_HOSTS: "127.0.0.1",
+        // The stub's key is also the backend's OPENAI_API_KEY, so the
+        // credential-egress guard must allowlist the same loopback host.
+        LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS: "127.0.0.1",
         DO_NOT_TRACK: "true",
         // Serve the A2A discovery + JSON-RPC endpoints so the Agent tab tests
         // can publish and exercise a live agent.
