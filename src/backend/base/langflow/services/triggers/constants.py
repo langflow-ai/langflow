@@ -17,14 +17,8 @@ TRIGGER_FAMILIES = frozenset({FAMILY_TRIGGER_PUSH, FAMILY_TRIGGER_LISTENER})
 #: The matrix ``actor`` word for a run nobody is waiting on.
 ACTOR_TRIGGER_DISPATCHER = "trigger_dispatcher"
 
-#: The keyword argument name INT-6's stamping helper takes the family under.
-#: Deliberately NOT a run-request field: ``WorkflowRunRequest`` forbids extras,
-#: so anything the dispatcher invented on the request body would be rejected by
-#: the worker's re-parse and every trigger run would fail. The family therefore
-#: travels as an argument (``trigger_execution_principal(..., family=...)``
-#: today, INT-6's ``stamp_execution_principal(..., execution_family=...)`` once
-#: that lands), and the single call site is
-#: ``langflow.services.triggers.principal``.
+#: Trusted background request field and graph-stamping keyword. The worker
+#: strips this internal field before validating the public run request.
 EXECUTION_FAMILY_KWARG = "execution_family"
 
 #: Template field the dispatcher writes the firing event into, as a JSON string,
