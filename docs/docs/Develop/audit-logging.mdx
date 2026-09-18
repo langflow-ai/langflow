@@ -1,0 +1,203 @@
+---
+title: Audit logging
+slug: /audit-logging
+---
+
+Audit logs record an append-only history of Flow and Project operations, including who attempted a change, on which resource, when, how it completed, and a description of what was written.
+
+When audit logs are enabled, Langflow OSS writes each operation as an event, and serves the event log to the [`/read` endpoints](#read-apis) for consumption.
+
+Audit logs are independent from [authorization audit logs](/authorization#audit-log-api), which record permission decisions for `allow`, `deny`, and `owner_override`.
+You can enable audit and auth logs simultaneously.
+Without an authorization plugin, OSS records successful mutations and failed runs. `deny` rows appear only when a request is actually refused, which requires a registered enforcement plugin. Langflow OSS **does not** include a registered authorization plugin.
+
+## Enable audit logging
+
+Audit logging is controlled by the `LANGFLOW_AUDIT_ENABLED` environment variable, and set to `false` by default.
+
+To enable audit logging in Langflow OSS, do the following:
+
+1. Set `LANGFLOW_AUDIT_ENABLED=true` in your `.env` file or environment.
+
+2. Restart Langflow.
+
+When audit logging is on, Langflow commits a Flow or Project change (also known as a _mutation_) and its event in the same database transaction.
+If an event cannot be written, the mutation is rolled back.
+
+Turning the flag off stops new events, but does not delete history.
+You can query events that were already stored even after you set `LANGFLOW_AUDIT_ENABLED=false`. 
+
+## Configure audit environment variables
+
+| Variable | Description | Default |
+|---|---|---|
+| `LANGFLOW_AUDIT_ENABLED` | Record an append-only event for audited Flow and Project operations. When `true`, production is durable. | `false` |
+| `LANGFLOW_AUDIT_RETENTION_DAYS` | Days to keep events. Cleanup deletes by event time only, never because a Flow, Project, user, or API key was deleted. Set to `0` to keep events indefinitely. | `90` |
+| `LANGFLOW_AUDIT_EXCLUDE_EVENTS` | Comma-separated actions that are never recorded, written as they appear in the event `action` field. | Not set |
+
+Retention sweeps run at startup and on the same cadence as [`LANGFLOW_AUTHZ_AUDIT_CLEANUP_INTERVAL`](/authorization#configure-authorization-environment-variables) (default 24 hours).
+
+### Exclude actions
+
+`LANGFLOW_AUDIT_EXCLUDE_EVENTS` names actions exactly as the `action` field stores them:
+
+| Entry | Excludes |
+|---|---|
+| `project:delete` | That action only |
+| `flow:*` | Every action on that resource type |
+| `*:delete` | That action on every resource type |
+
+```bash
+LANGFLOW_AUDIT_EXCLUDE_EVENTS=flow:execute,project:delete
+```
+
+- An excluded action records no `succeeded`, `failed`, or `deny` event.
+- `flow:execute` is the highest-volume action. Exclude it if you want mutation history without one event per Flow run.
+- Excluding `project:delete` still records `flow:delete` for each Flow removed with that Project.
+- Entries are trimmed and lowercased. A misspelled or unknown entry is ignored, with a startup warning, and excludes nothing. To record nothing, set `LANGFLOW_AUDIT_ENABLED=false`. `*:*` is ignored.
+- Exclusions apply to future events only. They do not delete stored rows, and the read APIs are unchanged.
+
+## What is recorded
+
+Each audited request produces **at most one** event:
+
+| Outcome | Event | When |
+|---|---|---|
+| Refused before authorization (unknown id, owner-scoped 404, malformed body) | None | The request never became an audited operation |
+| Permission denied | `event_type=authz`, `result=deny`, `error_code=PERMISSION_DENIED` | A guard refused the request. In OSS without a plugin, this does not occur |
+| Authorized, succeeded | `event_type=action`, `result=succeeded` | The mutation committed |
+| Authorized, then failed | `event_type=action`, `result=failed`, plus an `error_code` | After authorization, the operation failed. Exception text is never stored |
+
+Events survive deletion of the Flow, Project, user, or API key they name.
+
+A successful Flow write looks like this:
+
+```json
+{
+  "id": "…",
+  "timestamp": "2026-09-11T16:42:18.284123Z",
+  "flow_id": "…",
+  "flow_name": "support-router",
+  "action": "flow:write",
+  "operation": "patch",
+  "event_type": "action",
+  "result": "succeeded",
+  "error_code": null,
+  "request_id": "…",
+  "actor": {
+    "type": "user",
+    "id": "…",
+    "user_id": "…",
+    "acting_issuer": null,
+    "acting_subject": null
+  },
+  "details": {
+    "schema_version": 1,
+    "written_fields": ["name"]
+  }
+}
+```
+
+Project events use `project_id` and `project_name` in place of `flow_id` and `flow_name`.
+
+### Flow and Project writes
+
+| Action | Typical operations |
+|---|---|
+| `flow:create` | Create, upload, or replace a Flow that did not exist |
+| `flow:write` | Patch, replace, or activate a Flow version |
+| `flow:delete` | Delete a Flow, including Flows removed with a Project |
+| `project:create` | Create or upload a Project |
+| `project:write` | Patch a Project |
+| `project:delete` | Delete a Project |
+
+Succeeded Flow events store the attribute *names* that were written (`written_fields`) and, if the Flow moved, the Project id before and after. Succeeded Project events store the description when it was written, and a membership summary (counts, plus at most 100 Flow identity changes). Failed and denied events store attempted field names only, so an attempt cannot be read as a change.
+
+### Flow runs
+
+Every completed Flow run records one `flow:execute` event with `operation=run`, from the API, Playground, webhooks, MCP, OpenAI Responses, and the workflow API.
+
+The details are only the execution family (`run.trigger`) and duration (`run.duration_ms`). Inputs, outputs, tweaks, and error text are never stored.
+
+A paused human-in-the-loop run records nothing until a resume completes it. A cancelled run records nothing.
+
+## Read APIs
+
+Reading records no event, and the responses never include Flow graphs or Project content.
+
+| Endpoint | Permission | Resource filter |
+|---|---|---|
+| `GET /api/v1/projects/audits` | `project:audit_read` | `project_id` |
+| `GET /api/v1/flows/audits` | `flow:audit_read` | `flow_id` |
+
+`project:audit_read` does not grant `flow:audit_read`.
+
+Without an authorization plugin, a superuser sees every event of that resource type. Any other user sees events on resources they own **and** events they themselves made. A deleted resource's events stay readable by whoever acted on it.
+
+With a registered plugin that supports cross-user fetch, visibility follows `project:audit_read` or `flow:audit_read` on the requested resource (or globally, when you omit the id).
+
+Events are newest first. Pagination uses an opaque `cursor` from the previous page. There is no total count. `limit` is 1–200, default 50.
+
+Repeatable parameters (`operation`, `event_type`, `result`, `actor_type`) are ORed. Different parameters are ANDed. Unknown parameters, empty values, malformed UUIDs or timestamps, unsupported values, a repeated non-repeatable parameter, and a cursor reused with different filters all return `400`.
+
+**Query parameters**
+
+| Parameter | Description |
+|---|---|
+| `project_id` or `flow_id` | Exact resource. Use `project_id` only on the Project endpoint; `flow_id` only on the Flow endpoint |
+| `operation` | Repeatable. One of `create`, `replace`, `patch`, `delete`, `run` |
+| `event_type` | Repeatable. `authz` or `action` |
+| `result` | Repeatable. `allow`, `deny`, `succeeded`, or `failed` |
+| `user_id` | Langflow account that the request ran as |
+| `actor_type` | Repeatable. How the request authenticated: `user`, `api_key`, `service`, `system`, or `unknown` |
+| `actor_id` | Authenticated principal or credential id |
+| `request_id` | Server-generated id shared by every event from one HTTP request |
+| `since` | Inclusive RFC 3339 timestamp with a timezone offset |
+| `until` | Exclusive RFC 3339 timestamp, later than `since` |
+| `acting_subject` | Represented-user subject, when an overlay records one. OSS does not set this |
+| `acting_issuer` | Represented-user issuer. Requires `acting_subject` |
+| `cursor` | Opaque cursor from `next_cursor` |
+| `limit` | Page size. 1–200, default 50 |
+
+```bash
+curl -sS "$LANGFLOW_URL/api/v1/flows/audits?flow_id=FLOW_UUID&limit=50" \
+  -H "x-api-key: $LANGFLOW_API_KEY"
+```
+
+```json
+{
+  "items": [
+    {
+      "id": "…",
+      "timestamp": "2026-09-11T16:42:18.284123Z",
+      "flow_id": "…",
+      "flow_name": "support-router",
+      "action": "flow:write",
+      "operation": "patch",
+      "event_type": "action",
+      "result": "succeeded",
+      "error_code": null,
+      "request_id": "…",
+      "actor": {
+        "type": "user",
+        "id": "…",
+        "user_id": "…",
+        "acting_issuer": null,
+        "acting_subject": null
+      },
+      "details": {
+        "schema_version": 1,
+        "written_fields": ["name"]
+      }
+    }
+  ],
+  "next_cursor": null
+}
+```
+
+## See also
+
+- [Authorization](./authorization)
+- [API keys and authentication](/api-keys-and-authentication)
+- [Logs](/logging)
+- [Environment variables](/environment-variables)
