@@ -1,0 +1,258 @@
+import { useTranslation } from "react-i18next";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import type {
+  ConnectionRead,
+  IntegrationProviderRead,
+} from "@/controllers/API/queries/connections";
+import { connectionHandle } from "@/controllers/API/queries/connections";
+import { cn } from "@/utils/utils";
+import { shortScope } from "../helpers/scopes";
+import ConnectionRowMenu, {
+  type ConnectionRowMenuProps,
+} from "./ConnectionRowMenu";
+import ConnectionStatusBadge from "./ConnectionStatusBadge";
+
+export type OwnerKind = "you" | "instance" | "shared";
+
+export const ownerKindOf = (
+  connection: ConnectionRead,
+  currentUserId: string | undefined,
+): OwnerKind => {
+  if (connection.ownership_mode === "instance") return "instance";
+  return connection.owner_id !== null && connection.owner_id === currentUserId
+    ? "you"
+    : "shared";
+};
+
+const HEALTH_DOT: Record<ConnectionRead["health"], string> = {
+  healthy: "bg-accent-emerald",
+  unhealthy: "bg-error-red",
+  unknown: "bg-muted-foreground/50",
+};
+
+export interface ConnectionsTableProps {
+  connections: ConnectionRead[];
+  providers: Map<string, IntegrationProviderRead>;
+  currentUserId: string | undefined;
+  isSuperuser: boolean;
+  /** Row currently running a mutation; its menu is disabled while it does. */
+  busyId: string | null;
+  actions: Omit<
+    ConnectionRowMenuProps,
+    "connection" | "canAllowUnattended" | "busy"
+  >;
+}
+
+function ProviderMark({
+  providerKey,
+  provider,
+}: {
+  providerKey: string;
+  provider: IntegrationProviderRead | undefined;
+}) {
+  if (provider?.icon) {
+    return (
+      <ForwardedIconComponent
+        name={provider.icon}
+        className="h-4 w-4 shrink-0"
+        aria-hidden
+      />
+    );
+  }
+  return (
+    <span
+      aria-hidden
+      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border bg-muted text-[11px] font-semibold uppercase text-muted-foreground"
+    >
+      {providerKey.charAt(0)}
+    </span>
+  );
+}
+
+export function ConnectionsTable({
+  connections,
+  providers,
+  currentUserId,
+  isSuperuser,
+  busyId,
+  actions,
+}: ConnectionsTableProps) {
+  const { t } = useTranslation();
+
+  const lastChecked = (iso: string | null): string => {
+    if (!iso) return t("connections.health.never");
+    const then = Date.parse(/[zZ]|[+-]\d\d:\d\d$/.test(iso) ? iso : `${iso}Z`);
+    if (Number.isNaN(then)) return t("connections.health.never");
+    const minutes = Math.max(0, Math.round((Date.now() - then) / 60_000));
+    if (minutes < 1) return t("connections.health.justNow");
+    if (minutes < 60) return t("connections.health.minutesAgo", { minutes });
+    const hours = Math.round(minutes / 60);
+    if (hours < 24) return t("connections.health.hoursAgo", { hours });
+    return t("connections.health.daysAgo", { days: Math.round(hours / 24) });
+  };
+
+  return (
+    <div className="overflow-x-auto rounded-lg border">
+      <Table className="min-w-[880px]">
+        <TableHeader>
+          <TableRow>
+            <TableHead>{t("connections.columns.connection")}</TableHead>
+            <TableHead>{t("connections.columns.owner")}</TableHead>
+            <TableHead>{t("connections.columns.account")}</TableHead>
+            <TableHead>{t("connections.columns.status")}</TableHead>
+            <TableHead>{t("connections.columns.scopes")}</TableHead>
+            <TableHead>{t("connections.columns.lastCheck")}</TableHead>
+            <TableHead className="w-12">
+              <span className="sr-only">
+                {t("connections.columns.actions")}
+              </span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {connections.map((connection) => {
+            const owner = ownerKindOf(connection, currentUserId);
+            const account = connection.executing_identity?.account;
+            const isBot =
+              connection.executing_identity?.identity !== "user_delegated";
+            const scopes = connection.granted_scopes ?? [];
+
+            return (
+              <TableRow
+                key={connection.id}
+                data-testid={`connection-row-${connection.name}`}
+                className={cn(busyId === connection.id && "opacity-60")}
+              >
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <ProviderMark
+                      providerKey={connection.provider_key}
+                      provider={providers.get(connection.provider_key)}
+                    />
+                    <div className="flex min-w-0 flex-col">
+                      <span className="truncate text-sm font-medium">
+                        {connection.display_name}
+                      </span>
+                      <span className="truncate font-mono text-xs text-muted-foreground">
+                        {connectionHandle(connection)}
+                      </span>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="text-sm">
+                  {t(`connections.owner.${owner}`)}
+                </TableCell>
+                <TableCell className="text-sm">
+                  {account ? (
+                    <ShadTooltip
+                      content={
+                        account.tenant_id
+                          ? t("connections.account.tenant", {
+                              tenant: account.tenant_id,
+                            })
+                          : null
+                      }
+                    >
+                      <span className="truncate">
+                        {isBot && !account.display
+                          ? t("connections.account.bot")
+                          : (account.display ?? account.id)}
+                      </span>
+                    </ShadTooltip>
+                  ) : (
+                    // Credentials with no account: signed in, but no identity
+                    // scope was granted, so the provider named nobody.
+                    <span className="text-muted-foreground">
+                      {connection.has_credentials
+                        ? t("connections.account.unknown")
+                        : t("connections.account.notSignedIn")}
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <ConnectionStatusBadge
+                    connection={connection}
+                    onAuthorize={actions.onAuthorize}
+                  />
+                </TableCell>
+                <TableCell>
+                  {scopes.length === 0 ? (
+                    <span className="text-xs text-muted-foreground">
+                      {t("connections.scopes.none")}
+                    </span>
+                  ) : (
+                    <ShadTooltip
+                      content={
+                        <ul className="max-w-xs list-none space-y-0.5 p-0 font-mono text-xs">
+                          {scopes.map((scope) => (
+                            <li key={scope}>{scope}</li>
+                          ))}
+                        </ul>
+                      }
+                    >
+                      <span>
+                        <Badge variant="secondaryStatic" size="xq">
+                          {t("connections.scopes.count", {
+                            count: scopes.length,
+                          })}
+                        </Badge>
+                        <span className="sr-only">
+                          {scopes.map(shortScope).join(", ")}
+                        </span>
+                      </span>
+                    </ShadTooltip>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "h-2 w-2 shrink-0 rounded-full",
+                        HEALTH_DOT[connection.health],
+                      )}
+                    />
+                    <span className="sr-only">
+                      {t(`connections.health.${connection.health}`)}
+                    </span>
+                    <span
+                      className={cn(
+                        connection.health_checked_at
+                          ? ""
+                          : "text-muted-foreground",
+                      )}
+                    >
+                      {lastChecked(connection.health_checked_at)}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <ConnectionRowMenu
+                    connection={connection}
+                    canAllowUnattended={
+                      owner === "you" || (owner === "instance" && isSuperuser)
+                    }
+                    busy={busyId === connection.id}
+                    {...actions}
+                  />
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+export default ConnectionsTable;

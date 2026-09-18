@@ -530,8 +530,8 @@ async def test_delete_project_retry_does_not_leak_stale_memory_base_handle(
     # Stub cascade_delete_flow to populate the cleanup list WITHOUT taking the
     # writer lock, so the competing commit below is free to land. The handle it
     # records is the one that must NOT survive into the retry.
-    async def _fake_cascade_delete_flow(session, target_flow_id):  # noqa: ARG001
-        return [
+    async def _fake_cascade_delete_flow(session, target_flow_id, *, memory_base_cleanups):  # noqa: ARG001
+        memory_base_cleanups.append(
             FlowMemoryBaseCleanup(
                 kb_name=kb_name,
                 user_id=owner_id,
@@ -539,7 +539,8 @@ async def test_delete_project_retry_does_not_leak_stale_memory_base_handle(
                 backend_type="chroma",
                 backend_config={},
             )
-        ]
+        )
+        return True
 
     monkeypatch.setattr(projects_module, "cascade_delete_flow", _fake_cascade_delete_flow)
 

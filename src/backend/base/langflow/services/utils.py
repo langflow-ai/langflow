@@ -93,11 +93,11 @@ async def get_or_create_super_user(
     *,
     rotate_legacy_default_password: bool = False,
 ):
-    from langflow.services.database.models.user.model import User
+    from langflow.services.database.models.user.crud import get_user_by_username_case_insensitive
 
-    stmt = select(User).where(User.username == username)
-    result = await session.exec(stmt)
-    user = result.first()
+    # Case-insensitive so a configured "Admin" resolves to an existing "admin"
+    # (and the checks below) instead of a create that the unique index rejects.
+    user = await get_user_by_username_case_insensitive(session, username)
 
     auth = get_auth_service()
     if user and user.is_superuser:

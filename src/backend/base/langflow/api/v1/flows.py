@@ -1185,9 +1185,12 @@ async def delete_flow(
             flow_owner_ids.clear()
             memory_base_cleanups.clear()
             removed_share_rules = ()
-            retry_target = await _read_flow(session, target_flow_id, actor.id, for_update=True)
+            # Keep upstream's owner-scoped retry behavior when collaboration is disabled.
+            retry_target = await _read_flow(
+                session, target_flow_id, actor.id, for_update=await get_authorization_service().is_enabled()
+            )
             if retry_target is None:
-                return
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
             await ensure_flow_permission(
                 actor,
                 FlowAction.DELETE,
@@ -1204,7 +1207,8 @@ async def delete_flow(
                 actor_id=actor.id,
                 resources=(("flow", retry_target.id),),
             )
-            memory_base_cleanups.extend(await cascade_delete_flow(session, target_flow_id))
+            if not await cascade_delete_flow(session, target_flow_id, memory_base_cleanups=memory_base_cleanups):
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
 
         await retry_flow_operation_on_deployment_guard(
             db=session,
@@ -1419,25 +1423,31 @@ async def upload_file(
         if len(requested_ids) != len(requested_id_list):
             raise HTTPException(status_code=422, detail="Invalid upload: duplicate flow IDs are not allowed")
 
-        # Lock only rows this request is permitted to resolve. Disabled/legacy mode
-        # remains owner-scoped; the registered service may widen the candidate fetch,
-        # after which every row is still authorized below.
+        # Preserve upstream import semantics: only owned rows are upserted;
+        # another user's stable ID creates a copy, even when that flow is shared.
         existing_flows_by_id: dict[UUID, Flow] = {}
+        foreign_existing_ids: set[UUID] = set()
         if requested_ids:
-            from langflow.services.deps import get_authorization_service
-
-            authz = get_authorization_service()
-            await authz.acquire_resource_mutation_lock(session=session)
-            can_widen = await authz.supports_cross_user_fetch() and await authz.is_enabled()
-            existing_statement = select(Flow).where(col(Flow.id).in_(requested_ids)).order_by(Flow.id).with_for_update()
-            if not can_widen:
-                existing_statement = existing_statement.where(Flow.user_id == current_user.id)
+            existing_statement = (
+                select(Flow)
+                .where(col(Flow.id).in_(requested_ids), Flow.user_id == current_user.id)
+                .order_by(Flow.id)
+                .with_for_update()
+            )
             existing_flows = (await session.exec(existing_statement)).all()
             existing_flows_by_id = {existing_flow.id: existing_flow for existing_flow in existing_flows}
+            remaining_ids = requested_ids - existing_flows_by_id.keys()
+            if remaining_ids:
+                other_existing_flows = (await session.exec(select(Flow).where(col(Flow.id).in_(remaining_ids)))).all()
+                foreign_existing_ids = {
+                    existing_flow.id
+                    for existing_flow in other_existing_flows
+                    if existing_flow.user_id != current_user.id
+                }
 
         # Resolve and authorize the complete set before credential, filesystem, or
-        # flow persistence side effects. Existing stable IDs are updates, never
-        # copies: the stored owner remains authoritative.
+        # flow persistence side effects. Owned stable IDs are updates; foreign
+        # copies never inherit another user's stored graph.
         for flow in flow_list.flows:
             fallback_folder_id = None
             existing_flow = existing_flows_by_id.get(flow.id) if flow.id is not None else None
@@ -1544,6 +1554,9 @@ async def upload_file(
                     )
                 else:
                     flow.user_id = current_user.id
+                    if stable_id in foreign_existing_ids:
+                        flow.id = None
+                        stable_id = None
                     flow_read = await _new_flow(
                         session=session,
                         flow=flow,
@@ -1650,10 +1663,12 @@ async def delete_multiple_flows(
                 actor_id=actor.id,
                 resources=tuple(("flow", flow.id) for flow in flows_to_delete),
             )
+            deleted = 0
             for flow in flows_to_delete:
-                memory_base_cleanups.extend(await cascade_delete_flow(db, flow.id))
+                if await cascade_delete_flow(db, flow.id, memory_base_cleanups=memory_base_cleanups):
+                    deleted += 1
             await db.flush()
-            return len(flows_to_delete)
+            return deleted
 
         async def _delete_attempt(attempt: int) -> int:
             nonlocal actor

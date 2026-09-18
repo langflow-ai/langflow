@@ -809,6 +809,7 @@ class DatabaseConnectionResolverService(BaseConnectionResolverService):
             owner_kind=row.ownership_mode,
             provider=row.provider_key,
             name=row.name,
+            identity=identity.identity,
         )
 
     @staticmethod

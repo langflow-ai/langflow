@@ -465,7 +465,6 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Firecrawl", name: "firecrawl", icon: "FirecrawlCrawlApi" },
   { display_name: "Git", name: "git", icon: "GitLoader" },
   { display_name: "Glean", name: "glean", icon: "Glean" },
-  { display_name: "Gmail", name: "gmail", icon: "Gmail" },
   { display_name: "Google", name: "google", icon: "Google" },
   { display_name: "Groq", name: "groq", icon: "Groq" },
   {
@@ -485,6 +484,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "MariTalk", name: "maritalk", icon: "Maritalk" },
   { display_name: "Mem0", name: "mem0", icon: "Mem0" },
   { display_name: "Memories", name: "memories", icon: "Cpu" },
+  { display_name: "Microsoft 365", name: "microsoft", icon: "Microsoft" },
   { display_name: "Milvus", name: "milvus", icon: "Milvus" },
   { display_name: "MistralAI", name: "mistral", icon: "MistralAI" },
   { display_name: "MongoDB", name: "mongodb", icon: "MongoDB" },
@@ -514,6 +514,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "SerpApi", name: "serpapi", icon: "SerpSearch" },
   { display_name: "Serper", name: "serper", icon: "Serper" },
   { display_name: "Serply", name: "serply", icon: "Search" },
+  { display_name: "Slack", name: "slack", icon: "Slack" },
   { display_name: "Spider", name: "spider", icon: "Spider" },
   { display_name: "Supabase", name: "supabase", icon: "Supabase" },
   { display_name: "Tavily", name: "tavily", icon: "TavilyIcon" },

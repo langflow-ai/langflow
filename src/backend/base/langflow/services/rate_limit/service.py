@@ -36,6 +36,18 @@ def get_rate_limit_string() -> str:
     return f"{settings.rate_limit_per_minute}/minute"
 
 
+def get_metadata_read_limit() -> int | None:
+    """Per-minute allowance for connection and integration metadata reads.
+
+    Returns None when rate limiting is disabled, so callers fall through to the
+    effectively-unlimited string `get_rate_limit_string` already returns.
+    """
+    settings = get_settings_service().settings
+    if not settings.rate_limit_enabled:
+        return None
+    return settings.connection_metadata_rate_limit_per_minute
+
+
 def get_rate_limiter() -> Limiter:
     """Get or create the global rate limiter instance.
 

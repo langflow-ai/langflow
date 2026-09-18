@@ -1,4 +1,6 @@
+import { ENABLE_INTEGRATIONS } from "@/customization/feature-flags";
 import { InputFieldType } from "@/types/api";
+import { isConnectionRefField } from "@/utils/connection-ref-gate";
 
 export function isInternalField(templateField: string) {
   return templateField.charAt(0) === "_";
@@ -19,8 +21,21 @@ export function isToolModeEnabled(template: InputFieldType) {
   return template?.tool_mode;
 }
 
+/**
+ * With ENABLE_INTEGRATIONS OFF there is no connection picker, so a
+ * `connection_ref` field would show a label with an empty control. Keep those
+ * fields off the canvas and out of the Inspector Panel in that case.
+ */
+function isUnrenderedConnectionRef(template: InputFieldType | undefined) {
+  return !ENABLE_INTEGRATIONS && isConnectionRefField(template);
+}
+
 export function isHidden(template: InputFieldType, isToolMode: boolean) {
-  return !template?.show || (template?.tool_mode && isToolMode);
+  return (
+    !template?.show ||
+    (template?.tool_mode && isToolMode) ||
+    isUnrenderedConnectionRef(template)
+  );
 }
 
 /**
@@ -47,6 +62,7 @@ export function isManageableParameter(
   if (!template) return false;
   if (isInternalField(templateField)) return false;
   if (!template.show) return false;
+  if (isUnrenderedConnectionRef(template)) return false;
   if (isCodeField(templateField, template)) return false;
   if (isToolModeEnabled(template) && isToolMode) return false;
   if (template.readonly) return false;

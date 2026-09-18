@@ -373,16 +373,84 @@ async def test_project_scoped_developer_can_create_flow_in_foreign_project(clien
             },
         )
 
-    assert created["user_id"] == str(developer_id)
+    # The destination is what this test pins. Ownership follows the project the
+    # flow lands in, not the caller who created it — see
+    # ``test_flow_created_in_foreign_project_is_owned_by_the_project_owner``.
+    assert created["user_id"] == str(project_owner_id)
     assert created["folder_id"] == str(project_id)
     assert created["workspace_id"] == str(workspace_id)
     assert edit.status_code == 200, edit.text
     assert edit.json()["folder_id"] == str(project_id)
     assert edit.json()["workspace_id"] == str(workspace_id)
+    # ``upload_file`` only upserts rows the caller owns; an id that resolves to
+    # another user's flow is copied into the caller's own project rather than
+    # overwritten. That rule is unchanged — it now also covers flows the caller
+    # contributed to a project they do not own, because those belong to the
+    # project owner.
     assert upload.status_code == 201, upload.text
-    assert upload.json()[0]["id"] == created["id"]
-    assert upload.json()[0]["folder_id"] == str(project_id)
-    assert upload.json()[0]["workspace_id"] == str(workspace_id)
+    uploaded = upload.json()[0]
+    assert uploaded["id"] != created["id"]
+    assert uploaded["user_id"] == str(developer_id)
+    assert uploaded["folder_id"] != str(project_id)
+
+
+async def test_flow_created_in_foreign_project_is_owned_by_the_project_owner(client):
+    """A flow created in another user's project belongs to that project's owner.
+
+    Every owner-scoped query keys on ``Flow.user_id``: ``read_project`` filters a
+    project's flow list by it, and ``delete_project`` / ``_apply_project_update``
+    only sweep the project owner's rows. Stamping the *creator* onto a flow that
+    lands in a foreign project breaks that invariant — the row becomes reachable
+    only through the contributor's shared-project view, and the project owner
+    cannot enumerate what lives in their own project.
+    """
+    role_ids = await _seed_roles()
+    owner_username = f"project_owner_{uuid4().hex}"
+    project_owner_id = await _make_user(owner_username)
+    project_id = await _make_project(project_owner_id, f"shared_project_{uuid4().hex}")
+    owner_headers = await _login(client, owner_username)
+    _developer_id, dev_headers = await _role_user(
+        client,
+        "developer",
+        role_ids,
+        domain_type="project",
+        domain_id=project_id,
+    )
+
+    with install_policy_authz(get_settings_service()):
+        created = await client.post(
+            "api/v1/flows/",
+            headers=dev_headers,
+            json={
+                "name": f"contributed_flow_{uuid4().hex}",
+                "folder_id": str(project_id),
+                "data": {"nodes": [], "edges": []},
+            },
+        )
+        assert created.status_code == 201, created.text
+        flow_id = created.json()["id"]
+        # Both read_project branches filter the owner's own project by
+        # ``Flow.user_id``; the UI uses the paginated one.
+        owner_view = await client.get(f"api/v1/projects/{project_id}", headers=owner_headers)
+        owner_page = await client.get(
+            f"api/v1/projects/{project_id}",
+            headers=owner_headers,
+            params={"page": 1, "size": 50},
+        )
+
+    assert created.json()["user_id"] == str(project_owner_id)
+    assert created.json()["folder_id"] == str(project_id)
+
+    assert owner_view.status_code == 200, owner_view.text
+    assert flow_id in [flow["id"] for flow in owner_view.json()["flows"]]
+    assert owner_page.status_code == 200, owner_page.text
+    assert flow_id in [flow["id"] for flow in owner_page.json()["flows"]["items"]]
+
+    async with session_scope() as session:
+        stored = await session.get(Flow, UUID(flow_id))
+    assert stored is not None
+    assert stored.user_id == project_owner_id
+    assert stored.folder_id == project_id
 
 
 async def test_disabled_registered_authz_rejects_explicit_foreign_project(client, casbin_authorization):

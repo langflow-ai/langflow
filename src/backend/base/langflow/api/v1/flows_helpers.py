@@ -456,6 +456,37 @@ async def destination_folder_owner_id(session: AsyncSession, folder_id: UUID | N
     return getattr(folder, "user_id", None)
 
 
+async def _resolve_new_flow_owner(
+    session: AsyncSession,
+    creator_id: UUID,
+    folder_id: UUID | None,
+    *,
+    widen_for_authz: bool,
+) -> UUID:
+    """Return who owns a flow that is about to be created in *folder_id*.
+
+    A project is the ownership boundary for the flows it contains. Every
+    owner-scoped query keys on ``Flow.user_id``: ``read_project`` filters a
+    project's flow list by it, and ``delete_project`` / ``_apply_project_update``
+    sweep only the project owner's rows. A flow whose owner differs from its
+    project's owner therefore falls out of both sides' project views — the owner
+    cannot enumerate what is in their own project, and the creator has no project
+    of their own that contains it.
+
+    Only the authorized cross-user CREATE path sets ``widen_for_authz``; every
+    other destination (moves, upserts, bulk creates) resolves owner-scoped and
+    cannot land a flow in a foreign project. So this is the one place ownership
+    has to follow the destination rather than the caller.
+    """
+    if not widen_for_authz or folder_id is None:
+        return creator_id
+    folder_owner_id = await destination_folder_owner_id(session, folder_id)
+    # A missing or ownerless (system-managed) folder is not a valid write target:
+    # ``_validate_and_assign_folder`` redirects it to the creator's default
+    # project, so the creator stays the owner.
+    return folder_owner_id if folder_owner_id is not None else creator_id
+
+
 async def _canonicalize_flow_destination(
     session: AsyncSession,
     flow: Flow | FlowCreate | FlowUpdate,
@@ -498,7 +529,9 @@ async def _new_flow(
     Args:
         session: Database session.
         flow: Flow creation data.
-        user_id: Owner of the new flow.
+        user_id: Caller creating the flow. The flow's owner follows its destination
+            project, so this is the owner unless an authorized cross-user create
+            targets a project owned by someone else.
         storage_service: Service for filesystem operations.
         flow_id: Allows PUT upsert to create flows with a specific ID for syncing between instances.
         fail_on_endpoint_conflict: PUT should fail predictably on conflicts rather than silently renaming.
@@ -507,12 +540,24 @@ async def _new_flow(
         propagate_unhandled_errors: Let the caller own retry and sanitization of unexpected failures.
     """
     try:
-        await _verify_fs_path(flow.fs_path, user_id, storage_service)
+        # Ownership follows the destination project, so it has to be resolved
+        # before anything keyed on the owner: the filesystem sandbox, the
+        # ``(user_id, name)`` / ``(user_id, endpoint_name)`` de-duplication, and
+        # the folder validation below all scope to the flow's owner, not to
+        # whoever issued the request.
+        owner_id = await _resolve_new_flow_owner(
+            session,
+            user_id,
+            flow.folder_id,
+            widen_for_authz=widen_for_authz,
+        )
+
+        await _verify_fs_path(flow.fs_path, owner_id, storage_service)
 
         if validate_folder and flow.folder_id is not None:
             folder = await _get_flow_destination_folder(
                 session,
-                user_id,
+                owner_id,
                 flow.folder_id,
                 widen_for_authz=widen_for_authz,
             )
@@ -520,12 +565,12 @@ async def _new_flow(
                 raise HTTPException(status_code=400, detail="Folder not found")
 
         # Set user_id (ignore any user_id from body for security)
-        flow.user_id = user_id
-        flow.name = await _deduplicate_flow_name(session, flow.name, user_id)
+        flow.user_id = owner_id
+        flow.name = await _deduplicate_flow_name(session, flow.name, owner_id)
 
         if flow.endpoint_name:
             flow.endpoint_name = await _deduplicate_endpoint_name(
-                session, flow.endpoint_name, user_id, fail_on_conflict=fail_on_endpoint_conflict
+                session, flow.endpoint_name, owner_id, fail_on_conflict=fail_on_endpoint_conflict
             )
 
         # Exclude the id field from FlowCreate so that Flow.id (UUID, non-optional)
@@ -539,12 +584,12 @@ async def _new_flow(
             db_flow.id = effective_id
 
         db_flow.updated_at = datetime.now(timezone.utc)
-        await _validate_and_assign_folder(session, db_flow, user_id, widen_for_authz=widen_for_authz)
+        await _validate_and_assign_folder(session, db_flow, owner_id, widen_for_authz=widen_for_authz)
 
         session.add(db_flow)
         await session.flush()
         await session.refresh(db_flow)
-        await _save_flow_to_fs(db_flow, user_id, storage_service)
+        await _save_flow_to_fs(db_flow, owner_id, storage_service)
 
         return FlowRead.model_validate(db_flow, from_attributes=True)
     except ValidationError as exc:

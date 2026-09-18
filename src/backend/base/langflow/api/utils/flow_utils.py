@@ -119,16 +119,18 @@ async def build_and_cache_graph_from_data(
     return graph
 
 
-async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> list[FlowMemoryBaseCleanup]:
-    """Delete a flow and everything owned by it, atomically on ``session``.
+async def cascade_delete_flow(
+    session: AsyncSession,
+    flow_id: uuid.UUID,
+    *,
+    memory_base_cleanups: list[FlowMemoryBaseCleanup] | None = None,
+) -> bool:
+    """Delete a flow and its related rows, returning whether the flow was removed.
 
-    Returns the external-resource handles for the flow's Memory Bases (remote
-    vector-store collections + local KB directories). Those live outside the
-    database, so they cannot be torn down inside this transaction: the caller
-    must pass the returned list to
+    When supplied, ``memory_base_cleanups`` collects the external-resource handles
+    for the flow's Memory Bases. The caller must pass those handles to
     :func:`~langflow.services.memory_base.flow_cleanup.finalize_flow_memory_base_cleanup`
-    once the transaction has committed. Callers that don't manage Memory Bases
-    can ignore the return value.
+    only after the transaction commits, and discard them if it rolls back.
     """
     # Imported lazily so this module (loaded early, via ``api.utils``) stays free
     # of the memory-base service import chain.
@@ -143,7 +145,7 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> list
         # rows that reference this flow's messages, so the MessageTable delete below
         # cannot trip an FK constraint. Returns handles for the post-commit external
         # teardown of remote collections + local KB directories.
-        memory_base_cleanups = await purge_flow_memory_bases(session, flow_id)
+        flow_memory_base_cleanups = await purge_flow_memory_bases(session, flow_id)
         # TODO: Verify if deleting messages is safe in terms of session id relevance
         # If we delete messages directly, rather than setting flow_id to null,
         # it might cause unexpected behaviors because the session id could still be
@@ -170,7 +172,7 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> list
         await session.exec(
             delete(AuthzShare).where(AuthzShare.resource_type == "flow").where(AuthzShare.resource_id == flow_id)
         )
-        await session.exec(delete(Flow).where(Flow.id == flow_id))
+        result = await session.exec(delete(Flow).where(Flow.id == flow_id))
         await stage_resource_mutation(session, resource_type="flow", resource_id=flow_id, deleted=True)
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(
@@ -179,7 +181,9 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> list
         )
         msg = f"Unable to cascade delete flow: {flow_id}"
         raise RuntimeError(msg, e) from e
-    return memory_base_cleanups
+    if memory_base_cleanups is not None:
+        memory_base_cleanups.extend(flow_memory_base_cleanups)
+    return result.rowcount == 1
 
 
 # Public flow file paths must be ``{source_flow_id}/{safe_basename}`` — uploads

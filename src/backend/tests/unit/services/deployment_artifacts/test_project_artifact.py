@@ -1007,3 +1007,19 @@ async def test_build_project_artifact_rejects_deep_data_before_recursive_scrubbi
 
     with pytest.raises(ProjectArtifactLimitError, match="nesting limit"):
         await _build_authorized(session=session, user=user, project=project)
+
+
+@pytest.mark.parametrize("declared", [None, "microsoft", "google", ""])
+def test_connection_artifact_accepts_implicit_provider_but_rejects_mismatches(declared):
+    from langflow.services.deployment_artifacts.builder import ProjectArtifactError, _collect_required_connections
+
+    field = {"type": "connection_ref", "value": "microsoft/work", "required_scopes": ["Mail.Read"]}
+    if declared is not None:
+        field["provider"] = declared
+    payload = {"nodes": [{"data": {"node": {"template": {"connection": field}}}}]}
+    if declared in {None, "microsoft"}:
+        connections = _collect_required_connections(payload)
+        assert [(connection.provider, connection.name) for connection in connections] == [("microsoft", "work")]
+    else:
+        with pytest.raises(ProjectArtifactError, match="declared provider"):
+            _collect_required_connections(payload)

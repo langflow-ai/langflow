@@ -1,0 +1,9 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('me')/events/$entity",
+  "id": "AAMkAGV2bmV3AAA=",
+  "subject": "Design review",
+  "start": {"dateTime": "2026-09-02T15:00:00.0000000", "timeZone": "UTC"},
+  "end": {"dateTime": "2026-09-02T16:00:00.0000000", "timeZone": "UTC"},
+  "isOnlineMeeting": true,
+  "webLink": "https://outlook.office365.com/owa/?itemid=AAMkAGV2bmV3AAA%3D"
+}

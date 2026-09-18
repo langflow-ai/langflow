@@ -48,7 +48,17 @@ def merge_database_url(authz_database_url, tmp_path):
         yield f"sqlite+aiosqlite:///{tmp_path / 'merge.db'}"
 
 
-@pytest.mark.parametrize("starting_revision", [_REVISION, "d7e9f1a3b5c8", "e8a9b0c1d2f3", "b4c7d2e8f1a3"])
+@pytest.mark.parametrize(
+    "starting_revision",
+    [
+        _REVISION,
+        "d7e9f1a3b5c8",
+        "e8a9b0c1d2f3",
+        "b4c7d2e8f1a3",  # pragma: allowlist secret
+        "f2a4c6e8b0d1",  # pragma: allowlist secret
+        "1d28fd31a982",  # pragma: allowlist secret
+    ],
+)
 def test_upstream_merge_upgrades_both_existing_heads(merge_database_url, starting_revision):
     """Both released branches converge without losing existing canonical team rows."""
     config = _make_alembic_cfg(merge_database_url)
@@ -76,7 +86,7 @@ def test_upstream_merge_upgrades_both_existing_heads(merge_database_url, startin
             assert "edit_revision" in {c["name"] for c in inspector.get_columns(table)}
         with engine.connect() as connection:
             assert connection.execute(text("SELECT version_num FROM alembic_version")).scalars().all() == [
-                "f2a4c6e8b0d1"
+                "a7e3c9f1b5d2"  # pragma: allowlist secret
             ]
             assert (
                 connection.execute(

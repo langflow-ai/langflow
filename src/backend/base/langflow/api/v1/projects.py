@@ -1468,7 +1468,7 @@ async def delete_project(
                 ),
             )
             for child in children:
-                memory_base_cleanups.extend(await cascade_delete_flow(session, child.id))
+                await cascade_delete_flow(session, child.id, memory_base_cleanups=memory_base_cleanups)
             await session.delete(target)
             # Flush eagerly so guard/constraint errors surface in-request rather than at teardown commit.
             await session.flush()
@@ -1485,7 +1485,9 @@ async def delete_project(
         memory_base_cleanups.clear()
         await get_authorization_service().acquire_resource_mutation_lock(session=session)
         current_user = await load_mutation_actor(session, actor_id)
-        target = await _load_project(for_update=True)
+        # Disabled authorization retains upstream's owner-scoped retry behavior;
+        # the early row lock is needed for the enabled collaboration contract.
+        target = await _load_project(for_update=await get_authorization_service().is_enabled())
         if target is None:
             return
         children = await _validate_complete_delete_set(target)

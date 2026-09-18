@@ -147,7 +147,8 @@ class EnvConnectionResolver(BaseConnectionResolverService):
                 provider=request.ref.provider,
                 reason="env-fallback-disabled" if is_env_fallback_disabled() else "missing",
             )
-        credential = _parse_wire_value(str(raw), request)
+        value = raw.get_secret_value() if isinstance(raw, SecretStr) else str(raw)
+        credential = _parse_wire_value(value, request)
         if credential.expires_at is not None and credential.expires_at <= datetime.now(timezone.utc):
             raise AuthExpiredError(provider=request.ref.provider)
         return credential
