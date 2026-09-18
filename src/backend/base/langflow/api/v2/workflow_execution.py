@@ -417,9 +417,7 @@ async def _stream_event_frames(
                 seq += 1
         while True:
             try:
-                _, value, _ = await asyncio.wait_for(
-                    queue.get(), timeout=STREAM_KEEPALIVE_INTERVAL_SEC
-                )
+                _, value, _ = await asyncio.wait_for(queue.get(), timeout=STREAM_KEEPALIVE_INTERVAL_SEC)
             except asyncio.TimeoutError:
                 # No new event in STREAM_KEEPALIVE_INTERVAL_SEC: emit an SSE
                 # comment so idle proxies don't close the connection. Loop

@@ -25,7 +25,8 @@ from lfx.workflow.converters import ParsedWorkflowRun
 
 async def test_stream_emits_keepalive_when_queue_is_idle(monkeypatch):
     """During a long-running node the stream must emit periodic SSE comment
-    frames so idle proxies do not silently kill the connection."""
+    frames so idle proxies do not silently kill the connection.
+    """
     from langflow.api.v2 import workflow_execution as wf_exec
     from langflow.services import deps
 
@@ -53,9 +54,7 @@ async def test_stream_emits_keepalive_when_queue_is_idle(monkeypatch):
             flow_id=uuid4(),
             flow_name="flow",
             background_tasks=BackgroundTasks(),
-            parsed=ParsedWorkflowRun(
-                flow_id=str(uuid4()), input_value="", mode="stream"
-            ),
+            parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
             current_user=SimpleNamespace(id=uuid4()),
             run_id="keepalive-job",
             protocol="langflow",
@@ -85,7 +84,8 @@ async def test_stream_emits_keepalive_when_queue_is_idle(monkeypatch):
 
 async def test_stream_does_not_emit_keepalive_during_active_traffic(monkeypatch):
     """If events arrive faster than the keepalive interval, no keepalive is
-    needed (and emitting one would just inflate the wire)."""
+    needed (and emitting one would just inflate the wire).
+    """
     from langflow.api.v2 import workflow_execution as wf_exec
     from langflow.services import deps
 
@@ -113,9 +113,7 @@ async def test_stream_does_not_emit_keepalive_during_active_traffic(monkeypatch)
         flow_id=uuid4(),
         flow_name="flow",
         background_tasks=BackgroundTasks(),
-        parsed=ParsedWorkflowRun(
-            flow_id=str(uuid4()), input_value="", mode="stream"
-        ),
+        parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
         current_user=SimpleNamespace(id=uuid4()),
         run_id="active-job",
         protocol="langflow",
@@ -124,7 +122,4 @@ async def test_stream_does_not_emit_keepalive_during_active_traffic(monkeypatch)
         frames.append(frame)
 
     keepalives = [f for f in frames if f == wf_exec._KEEPALIVE_FRAME]
-    assert keepalives == [], (
-        f"expected zero keepalive frames during bursty traffic, got "
-        f"{len(keepalives)}"
-    )
+    assert keepalives == [], f"expected zero keepalive frames during bursty traffic, got {len(keepalives)}"
