@@ -3,11 +3,34 @@ from lfx.custom.custom_component.component import Component
 from lfx.io import IntInput, MultilineInput, Output, SecretStrInput
 from lfx.schema.dataframe import DataFrame
 
+# Google closed the Custom Search JSON API to new customers and shuts it down for
+# existing customers on this date.
+_SUNSET_DATE = "January 1, 2027"
+
+# Other components that return Google results, in the "<bundle>.<Class>" form the
+# canvas Legacy banner reads. Serper ships in this bundle, so it is present on every
+# install; the others are opt-in bundles and the banner skips them when absent.
+_REPLACEMENTS = [
+    "google.GoogleSerperAPICore",
+    "searchapi.SearchComponent",
+    "serpapi.Serp",
+    "serply.SerplySearchComponent",
+]
+
 
 class GoogleSearchAPICore(Component):
+    """Deprecated Custom Search JSON API client, kept so saved flows still load."""
+
     display_name = "Google Search API"
-    description = "Call Google Search API and return results as a DataFrame."
+    description = (
+        "Deprecated. Call Google's Custom Search JSON API and return results as a DataFrame. "
+        f"Google closed this API to new customers, and it stops working on {_SUNSET_DATE}. "
+        "Use Serper, SearchApi, or SerpApi instead."
+    )
+    documentation: str = "https://docs.langflow.org/bundles-google#google-search-api"
     icon = "Google"
+    legacy: bool = True
+    replacement = _REPLACEMENTS
 
     inputs = [
         SecretStrInput(
@@ -18,6 +41,10 @@ class GoogleSearchAPICore(Component):
         SecretStrInput(
             name="google_cse_id",
             display_name="Google CSE ID",
+            info=(
+                "The ID of your Programmable Search Engine. Google's Custom Search JSON API is closed "
+                f"to new customers and stops working on {_SUNSET_DATE}."
+            ),
             required=True,
         ),
         MultilineInput(
