@@ -1555,7 +1555,7 @@ class TestScanCodeSecurityRuntimeModuleBypass:
             "builtins_map = globals_map[''.join(['__built', 'ins__'])]\n"
             "import_function = builtins_map[''.join(['__imp', 'ort__'])]\n"
             "os_module = import_function(''.join(['o', 's']))\n"
-            "os_module.system('id > /tmp/pwned')\n"
+            "os_module.system('placeholder')\n"
         )
         result = scan_code_security(code)
         assert result.is_safe is False
