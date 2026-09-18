@@ -100,14 +100,15 @@ class JobRunner:
             else:
                 await self._drive(job_id=job_id, source_kwargs=source_kwargs)
 
-        heartbeat_task = self._start_heartbeat(job_id)
+        heartbeat_stop = asyncio.Event()
+        heartbeat_task = self._start_heartbeat(job_id, heartbeat_stop)
         paused = False
         try:
             await self._jobs.execute_with_status(job_id, _wrapped)
         except PauseRequested as exc:
             # Stop the heartbeat BEFORE stamping suspend metadata: both are whole-blob
             # read-modify-writes, so a beat racing the stamp would clobber the request id.
-            await self._stop_heartbeat(heartbeat_task)
+            await self._stop_heartbeat(heartbeat_task, heartbeat_stop)
             heartbeat_task = None
             try:
                 await self._suspend(job_id, exc)
@@ -133,7 +134,7 @@ class JobRunner:
         except Exception as exc:  # noqa: BLE001
             await logger.aerror(f"Background job {job_id} runner error: {exc}", exc_info=True)
         finally:
-            await self._stop_heartbeat(heartbeat_task)
+            await self._stop_heartbeat(heartbeat_task, heartbeat_stop)
             if not paused:  # a suspended run is resumable: keep the bus open, skip terminal reconcile
                 with contextlib.suppress(Exception):
                     if await asyncio.shield(self._reconcile_stop(job_id)):
@@ -193,31 +194,39 @@ class JobRunner:
                 await self._jobs.set_error(job_id, {"type": "cancelled"})
             await self._jobs.append_event(job_id, "run_cancelled", {"type": "cancelled"})
 
-    def _start_heartbeat(self, job_id: UUID) -> asyncio.Task | None:
+    def _start_heartbeat(self, job_id: UUID, stop: asyncio.Event) -> asyncio.Task | None:
         """Spawn the periodic heartbeat task for a run (None when owner unset).
 
         The task writes the owner + a fresh timestamp immediately, then refreshes
-        on the interval until cancelled in ``run``'s finally. A heartbeat write
+        on the interval until stopped in ``run``'s finally. A heartbeat write
         failure is swallowed so a transient DB hiccup never kills the run.
         """
         if self._owner is None:
             return None
 
         async def _beat() -> None:
-            while True:
+            while not stop.is_set():
                 with contextlib.suppress(Exception):
                     await self._jobs.heartbeat(job_id, self._owner)
-                await asyncio.sleep(self._heartbeat_interval_s)
+                with contextlib.suppress(asyncio.TimeoutError):
+                    await asyncio.wait_for(stop.wait(), timeout=self._heartbeat_interval_s)
 
         return asyncio.create_task(_beat())
 
     @staticmethod
-    async def _stop_heartbeat(task: asyncio.Task | None) -> None:
+    async def _stop_heartbeat(task: asyncio.Task | None, stop: asyncio.Event) -> None:
         if task is None:
             return
-        task.cancel()
+        # Let an active DB write finish. Cancelling it can be consumed during
+        # connection cleanup, leaving the heartbeat loop alive and shutdown hung.
+        stop.set()
         with contextlib.suppress(asyncio.CancelledError, Exception):
-            await task
+            try:
+                await asyncio.shield(task)
+            except asyncio.CancelledError:
+                # Executor shutdown can cancel the runner during this join.
+                # Drain the heartbeat before terminal writes or DB teardown.
+                await task
 
     async def _reconcile_stop(self, job_id: UUID) -> bool:
         """Force CANCELLED when a STOP signal exists. Returns True if it acted.
