@@ -75,11 +75,19 @@ export default function ConnectionsPage() {
     ].some((value) => value.toLowerCase().includes(needle));
   };
 
-  const visible = connections.filter((connection) => {
-    if (!matches(connection)) return false;
+  // A superuser lists every user's connections, so "not instance-owned" is not
+  // the same as "mine" for them: the rest belong to other people and are only
+  // visible for administration. Everyone else sees another user's connection
+  // only when it was shared with them, and those stay under Mine.
+  const viewOf = (connection: ConnectionRead) => {
     const owner = ownerKindOf(connection, userData?.id);
-    return view === "instance" ? owner === "instance" : owner !== "instance";
-  });
+    if (owner === "instance") return "instance";
+    if (owner === "shared" && isSuperuser) return "others";
+    return "mine";
+  };
+  const visible = connections.filter(
+    (connection) => matches(connection) && viewOf(connection) === view,
+  );
 
   const run = async (
     connection: ConnectionRead,
@@ -163,7 +171,7 @@ export default function ConnectionsPage() {
   }).filter((tab) => !tab.hidden);
   const activeExtra = extraTabs.find((tab) => tab.value === view);
 
-  // One panel body for both built-in tabs: `visible` is already filtered by
+  // One panel body for every built-in tab: `visible` is already filtered by
   // `view`, and Radix only renders the children of the selected TabsContent.
   const connectionsPanel = (
     <div className="flex flex-col gap-6">
@@ -240,6 +248,11 @@ export default function ConnectionsPage() {
           <TabsTrigger value="instance">
             {t("connections.tabs.instance")}
           </TabsTrigger>
+          {isSuperuser && (
+            <TabsTrigger value="others">
+              {t("connections.tabs.others")}
+            </TabsTrigger>
+          )}
           {extraTabs.map((tab) => (
             <TabsTrigger key={tab.value} value={tab.value}>
               {tab.label}
@@ -253,6 +266,11 @@ export default function ConnectionsPage() {
         <TabsContent value="instance" className="mt-0">
           {connectionsPanel}
         </TabsContent>
+        {isSuperuser && (
+          <TabsContent value="others" className="mt-0">
+            {connectionsPanel}
+          </TabsContent>
+        )}
         {extraTabs.map((tab) => (
           <TabsContent key={tab.value} value={tab.value} className="mt-0">
             {/* The seam contract says render() only runs for the active tab. */}
