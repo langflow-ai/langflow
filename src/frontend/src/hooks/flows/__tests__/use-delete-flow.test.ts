@@ -33,7 +33,13 @@ jest.mock("@/utils/reactflowUtils", () => ({
 }));
 
 const makeFlow = (id: string): FlowType =>
-  ({ id, name: id, data: { nodes: [], edges: [], viewport: {} } }) as FlowType;
+  ({
+    id,
+    edit_revision: 3,
+    name: id,
+    description: "",
+    data: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+  }) as FlowType;
 
 describe("useDeleteFlow", () => {
   beforeEach(() => {
@@ -47,6 +53,14 @@ describe("useDeleteFlow", () => {
 
     const { result } = renderHook(() => useDeleteFlow());
     await result.current.deleteFlow({ id: "flow-a" });
+
+    expect(mockMutate).toHaveBeenCalledWith(
+      {
+        flow_ids: ["flow-a"],
+        expected_edit_revision: { "flow-a": 3 },
+      },
+      expect.any(Object),
+    );
 
     expect(mockSetFlows).toHaveBeenCalledWith([
       expect.objectContaining({ id: "flow-b" }),

@@ -42,7 +42,9 @@ from langflow.api.v1.model_provider_policy_scope import (
     ProviderPolicyAttributesDependency,
 )
 from langflow.services.authorization import VariableAction, ensure_variable_permission
-from langflow.services.deps import get_settings_service, get_variable_service
+from langflow.services.authorization.fetch import authorization_admission, load_mutation_actor
+from langflow.services.database.lock_retry import run_with_lock_retry
+from langflow.services.deps import get_authorization_service, get_settings_service, get_variable_service
 from langflow.services.variable.constants import GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
 
@@ -1140,10 +1142,6 @@ async def update_enabled_models(
             detail=f"Cannot update more than {MAX_BATCH_UPDATE_SIZE} models at once",
         )
 
-    # Get current disabled and explicitly enabled models
-    disabled_models = await _get_disabled_models(session=session, current_user=current_user)
-    explicitly_enabled_models = await _get_enabled_models(session=session, current_user=current_user)
-
     all_models_by_provider = get_unified_models_detailed(
         include_unsupported=True,
         include_deprecated=True,
@@ -1155,9 +1153,6 @@ async def update_enabled_models(
     # request still gives a known identity for migrating a matching bare entry.
     for update in updates:
         providers_by_name.setdefault(update.model_id, set()).add(update.provider)
-
-    disabled_models = normalize_model_status_entries(disabled_models, providers_by_name)
-    explicitly_enabled_models = normalize_model_status_entries(explicitly_enabled_models, providers_by_name)
 
     unavailable_models: dict[tuple[str, str], str] = {}
     for provider_dict in all_models_by_provider:
@@ -1207,25 +1202,45 @@ async def update_enabled_models(
                     detail=f"Validation failed for {update.provider}: {e}",
                 ) from e
 
-    _update_model_sets(
-        updates,
-        disabled_models,
-        explicitly_enabled_models,
-        is_default_model,
-        model_types_by_identity=model_types_by_identity,
-    )
+    actor_id = current_user.id
 
-    # Log the operation for audit trail
-    logger.info(
-        "User %s updated model status: %d models affected",
-        current_user.id,
-        len(updates),
-    )
+    async def persist_attempt(_attempt: int) -> tuple[set[str], set[str]]:
+        await get_authorization_service().acquire_resource_mutation_lock(session=session)
+        actor = await load_mutation_actor(session, actor_id)
+        async with authorization_admission(session):
+            await ensure_variable_permission(actor, VariableAction.WRITE, variable_user_id=actor.id)
+        disabled_models = normalize_model_status_entries(
+            await _get_disabled_models(session=session, current_user=actor),
+            providers_by_name,
+        )
+        explicitly_enabled_models = normalize_model_status_entries(
+            await _get_enabled_models(session=session, current_user=actor),
+            providers_by_name,
+        )
+        _update_model_sets(
+            updates,
+            disabled_models,
+            explicitly_enabled_models,
+            is_default_model,
+            model_types_by_identity=model_types_by_identity,
+        )
 
-    # Save updated model lists
-    await _save_model_list_variable(variable_service, session, current_user, DISABLED_MODELS_VAR, disabled_models)
-    await _save_model_list_variable(
-        variable_service, session, current_user, ENABLED_MODELS_VAR, explicitly_enabled_models
+        # Log the operation for audit trail
+        logger.info(
+            "User %s updated model status: %d models affected",
+            actor.id,
+            len(updates),
+        )
+
+        # Save updated model lists
+        await _save_model_list_variable(variable_service, session, actor, DISABLED_MODELS_VAR, disabled_models)
+        await _save_model_list_variable(variable_service, session, actor, ENABLED_MODELS_VAR, explicitly_enabled_models)
+        return disabled_models, explicitly_enabled_models
+
+    disabled_models, explicitly_enabled_models = await run_with_lock_retry(
+        persist_attempt,
+        session=session,
+        description="update model-status variables",
     )
 
     # Cleanup of a now-hidden provider remains allowed, but the response must
@@ -1440,12 +1455,19 @@ async def clear_default_model(
         model_type,
     )
 
-    # Check if the variable exists and delete it
+    # Restart the complete deletion, including current actor authorization.
+    actor_id = current_user.id
+
+    async def delete_attempt(_attempt: int) -> None:
+        await get_authorization_service().acquire_resource_mutation_lock(session=session)
+        actor = await load_mutation_actor(session, actor_id)
+        async with authorization_admission(session):
+            await ensure_variable_permission(actor, VariableAction.DELETE, variable_user_id=actor.id)
+        existing_var = await variable_service.get_variable_object(user_id=actor.id, name=var_name, session=session)
+        await variable_service.delete_variable(user_id=actor.id, name=existing_var.name, session=session)
+
     try:
-        existing_var = await variable_service.get_variable_object(
-            user_id=current_user.id, name=var_name, session=session
-        )
-        await variable_service.delete_variable(user_id=current_user.id, name=existing_var.name, session=session)
+        await run_with_lock_retry(delete_attempt, session=session, description="clear default-model variable")
     except ValueError:
         # Variable not found, nothing to delete
         pass

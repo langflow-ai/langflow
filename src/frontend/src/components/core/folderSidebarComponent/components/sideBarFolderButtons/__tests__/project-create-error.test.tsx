@@ -78,7 +78,7 @@ jest.mock("@/contexts/permissionsContext", () => ({
   PermissionsProvider: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
   ),
-  usePermissions: () => ({ can: mockCan }),
+  usePermissions: () => ({ can: mockCan, capability: mockCan }),
 }));
 
 jest.mock("@/controllers/API/queries/auth", () => ({

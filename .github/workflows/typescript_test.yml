@@ -39,6 +39,11 @@ on:
         required: false
         type: string
         default: "ubuntu-latest"
+      authz-mode:
+        description: "Run the isolated registered-authorization acceptance suite."
+        required: false
+        type: boolean
+        default: false
       run_live_provider_smoke:
         description: "Run the isolated live-provider smoke suite."
         required: false
@@ -51,6 +56,10 @@ on:
         default: false
   workflow_dispatch:
     inputs:
+      ref:
+        description: "(Optional) ref to checkout"
+        required: false
+        type: string
       suites:
         description: "Test suites to run (JSON array)"
         required: false
@@ -76,6 +85,11 @@ on:
           - self-hosted
           - '["self-hosted", "linux", "ARM64", "langflow-ai-arm64-40gb-ephemeral"]'
         default: ubuntu-latest
+      authz-mode:
+        description: "Run the isolated registered-authorization acceptance suite."
+        required: false
+        type: boolean
+        default: false
       run_live_provider_smoke:
         description: "Run the isolated live-provider smoke suite."
         required: false
@@ -102,6 +116,12 @@ env:
   PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/ms-playwright
   PLAYWRIGHT_VERSION: "1.60.0"
   LANGFLOW_FEATURE_WXO_DEPLOYMENTS: "true"
+  LANGFLOW_E2E_AUTHZ: ${{ inputs['authz-mode'] && 'true' || 'false' }}
+  PLAYWRIGHT_ARTIFACT_NAMESPACE: ${{ inputs['authz-mode'] && 'authz' || 'core' }}
+  # The dedicated collaboration suite is also the blocking IBM Equal Access
+  # scan for the authenticated team/share surfaces it exercises.
+  RUN_A11Y: ${{ inputs['authz-mode'] && 'true' || 'false' }}
+  RUN_A11Y_ASSERT: ${{ inputs['authz-mode'] && 'true' || 'false' }}
 
 jobs:
   determine-test-suite:
@@ -130,6 +150,7 @@ jobs:
         env:
           INPUT_SUITES: ${{ inputs.suites }}
           INPUT_RELEASE: ${{ inputs.release }}
+          AUTHZ_MODE: ${{ inputs['authz-mode'] && 'true' || 'false' }}
           FILTER_OUTPUTS: ${{ toJSON(steps.filter.outputs) }}
           COMPONENTS_CHANGED: ${{ steps.filter.outputs.components }}
           STARTER_PROJECTS_CHANGED: ${{ steps.filter.outputs.starter-projects }}
@@ -155,7 +176,13 @@ jobs:
           fi
 
           declare -a TAGS=()
-          if [[ "$RELEASE" == "true" ]]; then
+          if [[ "$AUTHZ_MODE" == "true" ]]; then
+            if ! jq -e 'sort == ["api", "database", "workspace"]' <<<"$SUITES" >/dev/null; then
+              echo "Authorization mode requires suites=[\"api\",\"database\",\"workspace\"]." >&2
+              exit 1
+            fi
+            TAGS=("@authz")
+          elif [[ "$RELEASE" == "true" ]]; then
             SUITES='["release"]'
             TAGS=("@release")
           elif [[ "$(jq 'length' <<<"$SUITES")" == "0" ]]; then
@@ -234,6 +261,7 @@ jobs:
         env:
           TESTS_FOLDER: ${{ inputs.tests_folder }}
           TEST_GREP: ${{ steps.set-matrix.outputs.test_grep }}
+          AUTHZ_MODE: ${{ inputs['authz-mode'] && 'true' || 'false' }}
         run: |
           set -euo pipefail
           cd src/frontend
@@ -260,14 +288,41 @@ jobs:
             TEST_COUNT=${TEST_COUNT:-0}
           fi
 
+          if [[ "$AUTHZ_MODE" == "true" ]]; then
+            if [[ "$TESTS_FOLDER" != "tests/core/features/authz" ]]; then
+              echo "Authorization mode must select tests/core/features/authz exactly." >&2
+              exit 1
+            fi
+            if [[ "$TEST_COUNT" != "8" ]]; then
+              echo "Authorization acceptance requires exactly 8 collected journeys; got $TEST_COUNT." >&2
+              exit 1
+            fi
+            printf '%s\n' "$list_output" | node --input-type=module -e '
+              import { inspectAuthzJourneyTitles } from "./tests/utils/authz-e2e-mode.mjs";
+              let input = "";
+              for await (const chunk of process.stdin) input += chunk;
+              const titles = input.split(/\r?\n/).filter((line) => line.includes("[AUTHZ-JOURNEY-"));
+              const result = inspectAuthzJourneyTitles(titles);
+              if (!result.valid) {
+                console.error(JSON.stringify({ titles, ...result }, null, 2));
+                process.exit(1);
+              }
+            '
+          fi
+
           echo "Total tests to run: $TEST_COUNT"
 
           # Calculate optimal shard count - 1 shard per 5 tests, min 1, max 70
-          SHARD_COUNT=$(( (TEST_COUNT + 4) / 5 ))
-          if [ $SHARD_COUNT -lt 1 ]; then
+          if [[ "$AUTHZ_MODE" == "true" ]]; then
+            # The eight journeys form one serial, connected state machine.
             SHARD_COUNT=1
-          elif [ $SHARD_COUNT -gt 70 ]; then
-            SHARD_COUNT=70
+          else
+            SHARD_COUNT=$(( (TEST_COUNT + 4) / 5 ))
+            if [ $SHARD_COUNT -lt 1 ]; then
+              SHARD_COUNT=1
+            elif [ $SHARD_COUNT -gt 70 ]; then
+              SHARD_COUNT=70
+            fi
           fi
 
           # Create the matrix combinations string
@@ -294,7 +349,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.determine-test-suite.outputs.matrix) }}
-    continue-on-error: ${{ inputs.runs-on == 'windows-latest' }}
+    continue-on-error: ${{ !inputs['authz-mode'] && inputs.runs-on == 'windows-latest' }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v7
@@ -370,7 +425,14 @@ jobs:
           prune-cache: false
 
       - name: Install Python Dependencies
-        run: uv sync --extra audio
+        shell: bash
+        run: |
+          if [[ "$LANGFLOW_E2E_AUTHZ" == "true" ]]; then
+            uv sync --locked --package langflow --package langflow-base --extra audio --extra authorization
+            uv run --no-sync python -c "import sqlite3; import sys; from importlib.metadata import version; print('Authorization runtime: casbin==' + version('casbin') + ' Python=' + sys.version.split()[0] + ' SQLite=' + sqlite3.sqlite_version)"
+          else
+            uv sync --extra audio
+          fi
 
       # The backend spawns `uvx --with mcp~=1.28 mcp-proxy ...` for the
       # project MCP server as soon as the UI asks for tool counts
@@ -391,9 +453,10 @@ jobs:
         timeout-minutes: 18
         shell: bash
         env:
-          SERVER_LOG: playwright-server-${{ runner.os }}-${{ matrix.shardIndex }}-${{ github.run_attempt }}.log
+          SERVER_LOG: playwright-server-${{ env.PLAYWRIGHT_ARTIFACT_NAMESPACE }}-${{ runner.os }}-${{ matrix.shardIndex }}-${{ github.run_attempt }}.log
           TESTS_FOLDER: ${{ inputs.tests_folder }}
           TEST_GREP: ${{ needs.determine-test-suite.outputs.test_grep }}
+          AUTHZ_MODE: ${{ inputs['authz-mode'] && 'true' || 'false' }}
         working-directory: ./src/frontend
         run: |
           set -euo pipefail
@@ -409,12 +472,16 @@ jobs:
           printf '%s\n' "$TEST_LIST"
 
           WORKERS=2
-          if printf '%s\n' "$TEST_LIST" | grep -Eq 'starter-projects-outdated-components|user-flow-state-cleanup\.spec\.ts|user-progress-track\.spec\.ts|fileUploadComponent\.spec\.ts'; then
+          RETRIES=1
+          if [[ "$AUTHZ_MODE" == "true" ]]; then
+            WORKERS=1
+            RETRIES=0
+          elif printf '%s\n' "$TEST_LIST" | grep -Eq 'starter-projects-outdated-components|user-flow-state-cleanup\.spec\.ts|user-progress-track\.spec\.ts|fileUploadComponent\.spec\.ts'; then
             echo "Detected a shared-state or file-upload test; running with one worker."
             WORKERS=1
           fi
 
-          command=("${base_command[@]}" --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers "$WORKERS" --retries=1)
+          command=("${base_command[@]}" --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers "$WORKERS" --retries="$RETRIES")
           printf 'Running:'
           printf ' %q' "${command[@]}"
           printf '\n'
@@ -429,19 +496,29 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
-          name: blob-report-${{ runner.os }}-${{ matrix.shardIndex }}-of-${{ matrix.shardTotal }}-attempt-${{ github.run_attempt }}
-          path: src/frontend/blob-report
+          name: blob-report-${{ env.PLAYWRIGHT_ARTIFACT_NAMESPACE }}-${{ runner.os }}-${{ matrix.shardIndex }}-of-${{ matrix.shardTotal }}-attempt-${{ github.run_attempt }}
+          path: src/frontend/blob-report-${{ env.PLAYWRIGHT_ARTIFACT_NAMESPACE }}
           retention-days: 1
           overwrite: true
 
       - name: Upload Playwright Coverage Artifact
-        if: always() && hashFiles('src/frontend/coverage/playwright/**') != ''
+        if: ${{ always() && ((inputs['authz-mode'] && hashFiles('src/frontend/coverage/playwright-authz/**') != '') || (!inputs['authz-mode'] && hashFiles('src/frontend/coverage/playwright/**') != '')) }}
         continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-coverage-${{ runner.os }}-${{ matrix.shardIndex }}-attempt-${{ github.run_attempt }}
-          path: src/frontend/coverage/playwright
+          name: playwright-coverage-${{ env.PLAYWRIGHT_ARTIFACT_NAMESPACE }}-${{ runner.os }}-${{ matrix.shardIndex }}-attempt-${{ github.run_attempt }}
+          path: ${{ inputs['authz-mode'] && 'src/frontend/coverage/playwright-authz' || 'src/frontend/coverage/playwright' }}
           retention-days: 7
+          overwrite: true
+
+      - name: Upload Team Sharing IBM Equal Access reports
+        if: ${{ always() && inputs['authz-mode'] }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: accessibility-report-authz-${{ runner.os }}-attempt-${{ github.run_attempt }}
+          path: src/frontend/coverage/accessibility-reports
+          if-no-files-found: error
+          retention-days: 30
           overwrite: true
 
       - name: Upload Windows server log
@@ -449,8 +526,8 @@ jobs:
         continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-server-log-${{ runner.os }}-${{ matrix.shardIndex }}-attempt-${{ github.run_attempt }}
-          path: src/frontend/playwright-server-${{ runner.os }}-${{ matrix.shardIndex }}-${{ github.run_attempt }}.log
+          name: playwright-server-log-${{ env.PLAYWRIGHT_ARTIFACT_NAMESPACE }}-${{ runner.os }}-${{ matrix.shardIndex }}-attempt-${{ github.run_attempt }}
+          path: src/frontend/playwright-server-${{ env.PLAYWRIGHT_ARTIFACT_NAMESPACE }}-${{ runner.os }}-${{ matrix.shardIndex }}-${{ github.run_attempt }}.log
           if-no-files-found: warn
           retention-days: 14
 
@@ -462,7 +539,7 @@ jobs:
     needs: [determine-test-suite, setup-and-test]
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     if: ${{ always() && needs.determine-test-suite.outputs.test_grep != '' }}
-    continue-on-error: ${{ inputs.runs-on == 'windows-latest' }}
+    continue-on-error: ${{ !inputs['authz-mode'] && inputs.runs-on == 'windows-latest' }}
     outputs:
       test_status: ${{ steps.validate.outputs.test_status }}
     steps:
@@ -490,7 +567,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           path: all-blob-reports-raw
-          pattern: blob-report-${{ runner.os }}-*-attempt-*
+          pattern: blob-report-${{ env.PLAYWRIGHT_ARTIFACT_NAMESPACE }}-${{ runner.os }}-*-attempt-*
 
       - name: Check report count, merge, and validate
         id: validate
@@ -518,22 +595,10 @@ jobs:
             exit 1
           fi
 
-          # A shard that was re-run has a report under more than one attempt.
-          # Build "shard <tab> attempt <tab> path", sort by shard then attempt
-          # descending, and keep the first row per shard so the newest attempt
-          # wins. Avoids associative arrays, which need bash 4+ (macOS ships 3.2).
+          # Resolve both v8's flattened sole-artifact layout and named folders
+          # from multiple artifacts. Keep the newest attempt for each shard.
           manifest=$(mktemp)
-          find "$raw_dir" -type f -name '*.zip' -print | while IFS= read -r zip; do
-            artifact=$(basename "$(dirname "$zip")")
-            fields=$(printf '%s\n' "$artifact" \
-              | sed -nE 's/.*-([0-9]+)-of-[0-9]+-attempt-([0-9]+)$/\1 \2/p')
-            if [[ -z "$fields" ]]; then
-              echo "Ignoring unrecognized blob report artifact: $artifact" >&2
-              continue
-            fi
-            read -r shard attempt <<<"$fields"
-            printf '%s\t%s\t%s\n' "$shard" "$attempt" "$zip"
-          done | sort -k1,1n -k2,2nr | awk -F'\t' '!seen[$1]++' > "$manifest"
+          node tests/utils/resolve-blob-reports.mjs "$raw_dir" "$EXPECTED_REPORTS" > "$manifest"
 
           actual_reports=$(wc -l < "$manifest" | tr -d ' ')
           missing=$(awk -F'\t' -v total="$EXPECTED_REPORTS" '
@@ -551,7 +616,11 @@ jobs:
           rm -rf "$report_dir"
           mkdir -p "$report_dir"
           while IFS=$'\t' read -r shard attempt zip; do
-            echo "Shard $shard <- attempt $attempt"
+            if [[ "$attempt" == "single" ]]; then
+              echo "Shard $shard <- sole downloaded artifact"
+            else
+              echo "Shard $shard <- attempt $attempt"
+            fi
             cp "$zip" "$report_dir/"
           done < "$manifest"
 
@@ -569,7 +638,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
         with:
-          name: html-report-${{ runner.os }}-attempt-${{ github.run_attempt }}
+          name: html-report-${{ env.PLAYWRIGHT_ARTIFACT_NAMESPACE }}-${{ runner.os }}-attempt-${{ github.run_attempt }}
           path: src/frontend/playwright-report
           if-no-files-found: ignore
           retention-days: 14
@@ -580,7 +649,7 @@ jobs:
         if: ${{ always() && steps.validate.outputs.report_json == 'true' }}
         uses: actions/upload-artifact@v7
         with:
-          name: json-report-${{ runner.os }}-attempt-${{ github.run_attempt }}
+          name: json-report-${{ env.PLAYWRIGHT_ARTIFACT_NAMESPACE }}-${{ runner.os }}-attempt-${{ github.run_attempt }}
           path: ${{ runner.temp }}/playwright-report.json
           if-no-files-found: error
           retention-days: 30

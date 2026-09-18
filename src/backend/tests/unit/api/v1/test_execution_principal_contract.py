@@ -523,3 +523,32 @@ async def test_webhook_server_generated_tweaks_remain_trusted(monkeypatch: pytes
 
     assert captured["input_request"].tweaks.root == generated_tweaks
     assert captured["expose_error_details"] is True
+
+
+async def test_webhook_and_event_dependencies_remain_owner_scoped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from langflow.api.v1 import endpoints
+
+    owner = SimpleNamespace(id=uuid4())
+    flow = _flow(owner_id=owner.id)
+    lookups: list[dict[str, object]] = []
+
+    async def owner_scoped_lookup(flow_id_or_name: str, **kwargs):
+        lookups.append({"flow_id_or_name": flow_id_or_name, **kwargs})
+        return flow
+
+    auth_service = SimpleNamespace(get_webhook_user=AsyncMock(return_value=owner))
+    monkeypatch.setattr(endpoints, "get_flow_by_id_or_endpoint_name", owner_scoped_lookup)
+    monkeypatch.setattr(endpoints, "get_auth_service", lambda: auth_service)
+
+    sse_auth = await endpoints.get_flow_for_sse_user("shared-flow", owner)
+    webhook_auth = await endpoints.get_webhook_auth("shared-flow", _request())
+
+    assert sse_auth.flow is flow
+    assert webhook_auth.flow is flow
+    assert lookups == [
+        {"flow_id_or_name": "shared-flow", "user_id": owner.id},
+        {"flow_id_or_name": "shared-flow", "user_id": owner.id},
+    ]
+    assert all("widen_for_shares" not in lookup for lookup in lookups)

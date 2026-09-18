@@ -53,9 +53,11 @@ jest.mock("@/stores/flowsManagerStore", () => {
 describe("useSaveFlow", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSetCurrentFlow.mockReset();
 
     const savedFlow = {
       id: "flow-1",
+      edit_revision: 4,
       name: "Saved Flow",
       data: {
         nodes: [{ id: "old-node" }],
@@ -235,6 +237,7 @@ describe("useSaveFlow", () => {
       options.onSuccess({
         ...requestedFlow,
         ...payload,
+        edit_revision: payload.edit_revision + 1,
       });
     });
 
@@ -245,11 +248,13 @@ describe("useSaveFlow", () => {
     expect(mockMutate).toHaveBeenCalledTimes(2);
     expect(mockMutate.mock.calls[0][0]).toEqual({
       id: "flow-1",
+      edit_revision: 4,
       locked: false,
     });
     expect(mockMutate.mock.calls[1][0]).toEqual(
       expect.objectContaining({
         id: "flow-1",
+        edit_revision: 5,
         name: "Renamed after unlock",
         locked: false,
         data: requestedFlow.data,
@@ -315,6 +320,7 @@ describe("useSaveFlow", () => {
       options.onSuccess({
         ...requestedFlow,
         ...payload,
+        edit_revision: payload.edit_revision + 1,
       });
     });
 
@@ -325,11 +331,13 @@ describe("useSaveFlow", () => {
     expect(mockMutate).toHaveBeenCalledTimes(2);
     expect(mockMutate.mock.calls[0][0]).toEqual({
       id: "flow-1",
+      edit_revision: 4,
       locked: false,
     });
     expect(mockMutate.mock.calls[1][0]).toEqual(
       expect.objectContaining({
         id: "flow-1",
+        edit_revision: 5,
         locked: false,
         data: requestedFlow.data,
       }),
@@ -342,6 +350,7 @@ describe("useSaveFlow", () => {
     // flow being moved has no `data` field.
     const headerFlow = {
       id: "flow-1",
+      edit_revision: 4,
       name: "Saved Flow",
       data: null,
       description: "desc",
@@ -406,17 +415,18 @@ describe("useSaveFlow", () => {
     );
   });
   it("keeps canvas edits made while the save was in flight", async () => {
-    // The editor's `currentFlow` is the baseline the next autosave diffs
-    // against. Overwriting it with the response of a save that started before
-    // the edit makes that edit look already-persisted, so the follow-up save
-    // is skipped and the work is lost. Reproduced on Windows CI as a published
-    // flow whose edge never reached the backend.
+    // A successful save advances the revision, while newer canvas edits must
+    // remain unsaved and be included in the next request.
+    mockSetCurrentFlow.mockImplementation((flow) => {
+      flowStoreState.currentFlow = flow;
+    });
     let resolveSave: (() => void) | undefined;
     mockMutate.mockImplementation((payload, options) => {
       resolveSave = () =>
         options.onSuccess({
           ...flowsManagerState.currentFlow,
           data: payload.data,
+          edit_revision: payload.edit_revision + 1,
         });
     });
 
@@ -434,8 +444,15 @@ describe("useSaveFlow", () => {
     resolveSave!();
     await inFlight;
 
-    expect(mockSetCurrentFlow).not.toHaveBeenCalled();
     expect(flowStoreState.currentFlow.data.edges).toEqual(newEdges);
+    expect(flowStoreState.currentFlow.edit_revision).toBe(5);
+    const followUp = result.current();
+    expect(mockMutate.mock.calls[1][0]).toMatchObject({
+      edit_revision: 5,
+      data: { edges: newEdges },
+    });
+    resolveSave!();
+    await followUp;
   });
 
   it("still adopts the saved flow when the canvas did not change", async () => {
@@ -444,5 +461,34 @@ describe("useSaveFlow", () => {
     await expect(result.current()).resolves.toBeUndefined();
 
     expect(mockSetCurrentFlow).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps local content and explains a stale revision without retrying", async () => {
+    const staleError = {
+      response: {
+        status: 412,
+        data: {
+          detail: {
+            code: "RESOURCE_CHANGED",
+            message: "A newer revision exists.",
+          },
+        },
+      },
+    };
+    mockMutate.mockImplementation((_payload, options) => {
+      options.onError(staleError);
+    });
+    const localFlow = flowStoreState.currentFlow;
+    const { result } = renderHook(() => useSaveFlow());
+
+    await expect(result.current()).rejects.toBe(staleError);
+
+    expect(mockMutate).toHaveBeenCalledTimes(1);
+    expect(mockSetCurrentFlow).not.toHaveBeenCalled();
+    expect(flowStoreState.currentFlow).toBe(localFlow);
+    expect(mockSetErrorData).toHaveBeenCalledWith({
+      title: "Failed to save flow",
+      list: ["This workflow changed. Reload the latest version before saving."],
+    });
   });
 });

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
@@ -13,6 +14,7 @@ from langflow.services.auth.context import (
     set_current_auth_context,
 )
 from langflow.services.authorization import guards as authz_guards
+from langflow.services.authorization import listing as authz_listing
 from langflow.services.authorization.access_ceiling import (
     ExternalAccessContext,
     set_current_external_access_context,
@@ -413,6 +415,43 @@ async def test_api_key_scope_plugin_sees_owner_resource_instead_of_owner_overrid
     assert len(service.calls) == 1
     assert service.calls[0]["context"]["flow_user_id"] == fake_user.id
     assert service.calls[0]["context"]["auth_method"] == "api_key"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("surface", ["guard", "list"])
+async def test_api_key_scope_probe_failure_cannot_restore_owner_access(monkeypatch, fake_user, surface):
+    """An unavailable credential ceiling cannot admit an owned resource."""
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=False, supports_api_key_scopes=True)
+
+    async def unavailable_scopes():
+        message = "API-key scope discovery unavailable"
+        raise RuntimeError(message)
+
+    monkeypatch.setattr(service, "supports_api_key_scopes", unavailable_scopes)
+    install_authz(monkeypatch, service)
+    audit_calls = install_audit_recorder(monkeypatch)
+    flow = SimpleNamespace(id=uuid4(), user_id=fake_user.id)
+    set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_API_KEY, api_key_id=uuid4()))
+    try:
+        authorization_check = (
+            authz_guards.ensure_flow_permission(fake_user, FlowAction.READ, flow_id=flow.id, flow_user_id=flow.user_id)
+            if surface == "guard"
+            else authz_listing.filter_visible_resources(
+                fake_user,
+                resource_type="flow",
+                candidates=[flow],
+                owner_extractor=lambda item: item.user_id,
+            )
+        )
+        with pytest.raises(HTTPException) as exc_info:
+            await authorization_check
+    finally:
+        clear_current_auth_context()
+
+    assert exc_info.value.status_code == 503
+    assert exc_info.value.detail["code"] == "AUTHORIZATION_NOT_READY"
+    assert not any(call["result"] in {"allow", "owner_override"} for call in audit_calls)
 
 
 @pytest.mark.anyio
@@ -881,6 +920,33 @@ async def test_kb_permission_uses_kb_id_object_slug(monkeypatch, fake_user):
     # ``kb_name`` is forwarded in the context for debugging.
     assert service.calls[0]["context"]["kb_name"] == "my-kb"
     assert service.calls[0]["context"]["kb_id"] == kb_id
+
+
+@pytest.mark.anyio
+async def test_typed_guard_forwards_only_registered_extra_context(monkeypatch, fake_user):
+    install_settings(monkeypatch, authz_enabled=True)
+    service = _StubAuthorizationService(allow=True)
+    install_authz(monkeypatch, service)
+    install_audit_recorder(monkeypatch)
+
+    await authz_guards._ensure_typed(
+        fake_user,
+        spec_key="knowledge_base",
+        act_str="read",
+        kwargs={
+            "kb_id": uuid4(),
+            "kb_name": "registered-name",
+            "kb_user_id": uuid4(),
+            "workspace_id": None,
+            "project_id": None,
+            "unregistered_matcher_input": "must-not-forward",
+        },
+        domain_override=None,
+    )
+
+    context = service.calls[0]["context"]
+    assert context["kb_name"] == "registered-name"
+    assert "unregistered_matcher_input" not in context
 
 
 @pytest.mark.anyio

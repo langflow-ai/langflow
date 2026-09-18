@@ -147,7 +147,7 @@ coverage: ## run the tests and generate a coverage report
 	@uv run coverage erase
 
 unit_tests: ## run unit tests
-	@uv sync --frozen
+	@uv sync --frozen --package langflow --package langflow-base --extra authorization
 	@EXTRA_ARGS=""
 	@if [ "$(async)" = "true" ]; then \
 		EXTRA_ARGS="$$EXTRA_ARGS --instafail -n auto"; \
@@ -158,7 +158,7 @@ unit_tests: ## run unit tests
 	if [ "$(ff)" = "true" ]; then \
 		EXTRA_ARGS="$$EXTRA_ARGS --ff"; \
 	fi; \
-	uv run pytest src/backend/tests/unit \
+	uv run --no-sync pytest src/backend/tests/unit \
 	--ignore=src/backend/tests/integration \
 	--ignore=src/backend/tests/unit/template \
 	$$EXTRA_ARGS \
@@ -170,8 +170,8 @@ unit_tests_looponfail:
 	@make unit_tests args="-f"
 
 real_services_tests: ## run tests that need real service instances (needs LANGFLOW_TEST_DATABASE_URI + LANGFLOW_TEST_REDIS_URL)
-	@uv sync --frozen
-	uv run pytest src/backend/tests/unit \
+	@uv sync --frozen --package langflow --package langflow-base --extra authorization
+	uv run --no-sync pytest src/backend/tests/unit \
 	--ignore=src/backend/tests/integration \
 	--ignore=src/backend/tests/unit/template \
 	-m real_services -ra $(args)

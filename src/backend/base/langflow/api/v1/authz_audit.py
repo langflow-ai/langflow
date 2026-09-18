@@ -18,14 +18,21 @@ from pydantic import BaseModel
 from sqlalchemy import or_
 from sqlmodel import col, select
 
-from langflow.api.utils import DbSession
-from langflow.services.auth.utils import get_current_active_superuser
+from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.services.authorization.team_management import actor_can_administer_platform
 from langflow.services.database.models.auth import AuthzAuditLog
 from langflow.services.database.models.user.model import User
 
 router = APIRouter(prefix="/authz/audit", tags=["Authorization"], include_in_schema=False)
 
 _MAX_PAGE_SIZE = 200
+
+
+async def _get_current_platform_admin(current_user: CurrentActiveUser) -> User:
+    """Require effective platform authority, not only the persisted user bit."""
+    if not actor_can_administer_platform(current_user):
+        raise HTTPException(status_code=403, detail="Platform administrator access required")
+    return current_user
 
 
 class AuthzAuditLogRead(BaseModel):
@@ -59,7 +66,7 @@ class AuthzAuditPage(BaseModel):
 @router.get("/", response_model=AuthzAuditPage)
 async def list_audit_log(
     session: DbSession,
-    _admin: Annotated[User, Depends(get_current_active_superuser)],
+    _admin: Annotated[User, Depends(_get_current_platform_admin)],
     user_id: Annotated[UUID | None, Query(description="Filter by acting user id.")] = None,
     actor_type: Annotated[
         str | None,

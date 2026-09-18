@@ -110,7 +110,9 @@ class FakeAdminClient:
                 self.assignments[("user", user["username"])] = self.assignments.pop(previous_key)
         return deepcopy(user)
 
-    def create_team(self, *, adom_name: str, display_name: str, description=None, active=True) -> dict[str, Any]:
+    def create_team(
+        self, *, adom_name: str, display_name: str, description=None, active=True, members=None
+    ) -> dict[str, Any]:
         self.calls.append(f"team:create:{adom_name}")
         team = {
             "id": TEAM_ID,
@@ -120,6 +122,18 @@ class FakeAdminClient:
             "is_active": active,
         }
         self.teams.append(team)
+        assert members
+        assert "admin" in members.values()
+        self.members[team["id"]] = [
+            {
+                "id": self._id(),
+                "team_id": team["id"],
+                "user_id": self._user(name)["id"],
+                "source": "manual",
+                "role": role,
+            }
+            for name, role in members.items()
+        ]
         return deepcopy(team)
 
     def update_team(self, identifier: str, **payload: Any) -> dict[str, Any]:
@@ -194,7 +208,14 @@ def test_apply_is_dependency_ordered_and_rerun_converges() -> None:
             "users": [
                 {"username": "alice", "password_env": "ALICE_PASSWORD"}  # pragma: allowlist secret
             ],
-            "teams": [{"adom_name": "ops", "display_name": "Operators", "members": ["alice"]}],
+            "teams": [
+                {
+                    "adom_name": "ops",
+                    "display_name": "Operators",
+                    "members": ["alice"],
+                    "member_roles": {"alice": "admin"},
+                }
+            ],
             "assignments": [
                 {
                     "subject": {"type": "user", "name": "alice"},
@@ -214,10 +235,54 @@ def test_apply_is_dependency_ordered_and_rerun_converges() -> None:
         "role:create:operator",
         "user:create:alice",
         "team:create:ops",
-        "membership:add:ops/alice",
         "assignment:grant:user:alice/operator",
     ]
     assert second_drift == []
+    assert client.members[TEAM_ID][0]["role"] == "admin"
+
+
+@pytest.mark.parametrize("initially_active", [True, False])
+def test_admin_handoff_and_reactivation_use_one_roster_patch(monkeypatch, initially_active):
+    client = FakeAdminClient()
+    client.users = [
+        {"id": ALICE_ID, "username": "alice", "is_active": True},
+        {"id": BOB_ID, "username": "bob", "is_active": True},
+    ]
+    client.teams = [
+        {
+            "id": TEAM_ID,
+            "adom_name": "ops",
+            "team_name": "Operators",
+            "description": None,
+            "is_active": initially_active,
+        }
+    ]
+    client.members[TEAM_ID] = [
+        {"id": "member-alice", "team_id": TEAM_ID, "user_id": ALICE_ID, "source": "manual", "role": "admin"}
+    ]
+    writes = []
+
+    def record_update(identifier, **payload):
+        writes.append((identifier, payload))
+        return client.teams[0]
+
+    monkeypatch.setattr(client, "update_team", record_update)
+    state = AdminState.model_validate(
+        {
+            "apiVersion": "langflow.ai/v1",
+            "kind": "AdminState",
+            "teams": [
+                {"adom_name": "ops", "display_name": "Operators", "members": ["bob"], "member_roles": {"bob": "admin"}}
+            ],
+        }
+    )
+    result = AdminReconciler(client).apply(state, prune=True)
+    assert result["status"] == "success", result
+    expected = {"member_roles": {"bob": "admin"}, "remove_member_ids": [ALICE_ID]}
+    if not initially_active:
+        expected["active"] = True
+    assert writes == [(TEAM_ID, expected)]
+    assert client.calls == []
 
 
 def test_prune_removes_only_manual_records_and_reports_idp_skips() -> None:

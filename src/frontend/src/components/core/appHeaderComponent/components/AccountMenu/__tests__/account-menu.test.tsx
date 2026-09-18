@@ -22,6 +22,10 @@ jest.mock("@/customization/components/custom-profile-icon", () => ({
   CustomProfileIcon: () => <div data-testid="custom-profile-icon" />,
 }));
 
+jest.mock("@/customization/components/custom-admin-page-menu-item", () => ({
+  CustomAdminPageMenuItem: () => null,
+}));
+
 jest.mock("@/customization/hooks/use-custom-navigate", () => ({
   useCustomNavigate: () => jest.fn(),
 }));

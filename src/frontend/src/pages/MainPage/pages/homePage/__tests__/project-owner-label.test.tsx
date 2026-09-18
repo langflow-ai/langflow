@@ -41,7 +41,11 @@ jest.mock("react-i18next", () => ({
   }),
 }));
 jest.mock("react-router-dom", () => ({
-  useLocation: () => ({ state: undefined }),
+  useLocation: () => ({
+    state: undefined,
+    pathname: `/all/folder/${mockFolderId}`,
+  }),
+  useHref: (pathname: string) => pathname,
   useParams: () => ({ folderId: mockFolderId }),
 }));
 jest.mock("@/components/common/paginatorComponent", () => () => null);
@@ -55,6 +59,11 @@ jest.mock(
 jest.mock("@/constants/constants", () => ({ IS_MAC: false }));
 jest.mock("@/contexts/permissionsContext", () => ({
   PermissionsProvider: ({ children }) => <>{children}</>,
+  useResourceCapability: () => ({
+    allowed: true,
+    isLoading: false,
+    isUnavailable: false,
+  }),
 }));
 jest.mock("@/controllers/API/queries/folders/use-get-folder", () => ({
   useGetFolderQuery: () => mockFolderQuery,
@@ -101,6 +110,33 @@ jest.mock("@/pages/MainPage/pages/emptyFolder", () => () => null);
 describe("HomePage project names", () => {
   beforeEach(() => {
     mockFolderId = "foreign-id";
+    mockNavigate.mockClear();
+    window.history.replaceState({}, "", "/all/folder/foreign-id");
+  });
+
+  afterEach(() => {
+    window.history.replaceState({}, "", "/");
+  });
+
+  it("redirects an unavailable project while its route is still current", () => {
+    mockFolderId = "unavailable-id";
+    window.history.replaceState({}, "", "/all/folder/unavailable-id");
+    const error = jest.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      render(<HomePage type="flows" />);
+      expect(mockNavigate).toHaveBeenCalledWith("/all");
+    } finally {
+      error.mockRestore();
+    }
+  });
+
+  it("does not redirect a new route when the previous project becomes unavailable", () => {
+    mockFolderId = "unavailable-id";
+    window.history.replaceState({}, "", "/shared-with-me");
+
+    render(<HomePage type="flows" />);
+
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it("qualifies the visible header while preserving the canonical MCP name", async () => {

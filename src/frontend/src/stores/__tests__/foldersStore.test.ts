@@ -7,6 +7,7 @@ const mockFolder: FolderType = {
   name: "Test Folder",
   description: "Test folder description",
   parent_id: "parent-1",
+  edit_revision: 1,
   flows: [],
   components: [],
 };
@@ -16,6 +17,7 @@ const mockFolder2: FolderType = {
   name: "Another Folder",
   description: "Another test folder",
   parent_id: "parent-2",
+  edit_revision: 1,
   flows: [],
   components: ["component-1", "component-2"],
 };
@@ -283,14 +285,21 @@ describe("useFolderStore", () => {
       const { result } = renderHook(() => useFolderStore());
       const folderWithFlows: FolderType = {
         ...mockFolder,
-        flows: [{ id: "flow-1" } as any],
+        flows: [
+          {
+            id: "flow-1",
+            name: "Test Flow",
+            description: "",
+            data: null,
+          },
+        ],
       };
 
       act(() => {
         result.current.setFolders([folderWithFlows]);
       });
 
-      expect(result.current.folders[0].flows).toEqual([{ id: "flow-1" }]);
+      expect(result.current.folders[0].flows).toEqual(folderWithFlows.flows);
     });
   });
 
@@ -356,6 +365,7 @@ describe("useFolderStore", () => {
         name: "No ID Folder",
         description: "Folder without ID",
         parent_id: "parent-1",
+        edit_revision: 1,
         flows: [],
         components: [],
       };
@@ -375,6 +385,7 @@ describe("useFolderStore", () => {
         name: "Null ID Folder",
         description: "Folder with null ID",
         parent_id: "parent-1",
+        edit_revision: 1,
         flows: [],
         components: [],
       };

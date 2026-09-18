@@ -31,6 +31,7 @@ remove_api_keys = _flow_secrets.remove_api_keys
 strip_flow_secrets = _flow_secrets.strip_flow_secrets
 strip_secret_field_values = _flow_secrets.strip_secret_field_values
 strip_secret_field_values_in_place = _flow_secrets.strip_secret_field_values_in_place
+restore_redacted_secret_values = _flow_secrets.restore_redacted_secret_values
 
 MAX_PAGE_SIZE = 50
 MIN_PAGE_SIZE = 1

@@ -14,6 +14,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs-button";
 import { Textarea } from "@/components/ui/textarea";
+import { usePermissions } from "@/contexts/permissionsContext";
 import {
   type A2ACardForm,
   formToOverrides,
@@ -71,8 +72,10 @@ export default function AgentCardPanel({
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { mutateAsync, isPending } = usePatchUpdateFlow();
+  const { capability } = usePermissions();
 
   const flowId = currentFlow?.id ?? "";
+  const canManagePublication = capability(flowId, "can_manage_publication");
   const isPublished = !!currentFlow?.a2a_enabled;
 
   const publishOrigin = customA2aPublishOrigin();
@@ -107,9 +110,18 @@ export default function AgentCardPanel({
     setForm((prev) => ({ ...prev, [field]: value }));
 
   const handleSave = async () => {
+    if (!currentFlow) return;
+    if (typeof currentFlow.edit_revision !== "number") {
+      setErrorData({
+        title: t("errors.failedToSaveFlow"),
+        list: [t("errors.workflowRevisionUnavailable")],
+      });
+      return;
+    }
     try {
       const updatedFlow = await mutateAsync({
         id: flowId,
+        edit_revision: currentFlow.edit_revision,
         // flow_type derived from graph chat I/O so the langflow A2A serve guard
         // passes; an ineligible flow can never be served, so force it off.
         flow_type: eligible ? "agent" : "workflow",
@@ -119,6 +131,7 @@ export default function AgentCardPanel({
       // Apply only the persisted A2A fields, not the whole PATCH response: overwriting the flow
       // would drop unsaved canvas edits and reset the unsaved-changes guard.
       const a2aFields = {
+        edit_revision: updatedFlow.edit_revision,
         flow_type: updatedFlow.flow_type,
         a2a_enabled: updatedFlow.a2a_enabled,
         a2a_card_overrides: updatedFlow.a2a_card_overrides,
@@ -226,7 +239,9 @@ export default function AgentCardPanel({
             checked={enabled}
             // Block turning ON an ineligible flow, but leave it operable when
             // it's already serving so the user can honestly turn it off.
-            disabled={!serverEnabled || (!eligible && !enabled)}
+            disabled={
+              !canManagePublication || !serverEnabled || (!eligible && !enabled)
+            }
             onCheckedChange={setEnabled}
           />
         </div>
@@ -372,6 +387,7 @@ export default function AgentCardPanel({
               {t("agentTab.nameLabel")}
             </Label>
             <Input
+              disabled={!canManagePublication}
               placeholder={currentFlow?.name ?? ""}
               value={form.name}
               onChange={(e) => setField("name", e.target.value)}
@@ -382,6 +398,7 @@ export default function AgentCardPanel({
               {t("agentTab.versionLabel")}
             </Label>
             <Input
+              disabled={!canManagePublication}
               value={form.version}
               onChange={(e) => setField("version", e.target.value)}
             />
@@ -392,6 +409,7 @@ export default function AgentCardPanel({
             {t("agentTab.descriptionLabel")}
           </Label>
           <Textarea
+            disabled={!canManagePublication}
             className="min-h-16"
             placeholder={currentFlow?.description ?? ""}
             value={form.description}
@@ -408,7 +426,7 @@ export default function AgentCardPanel({
           <InputListComponent
             id="agent-tags"
             editNode={false}
-            disabled={false}
+            disabled={!canManagePublication}
             value={form.tags.length ? form.tags : [""]}
             handleOnNewValue={({ value }) =>
               setList("tags", (value ?? []) as string[])
@@ -427,7 +445,7 @@ export default function AgentCardPanel({
           <InputListComponent
             id="agent-examples"
             editNode={false}
-            disabled={false}
+            disabled={!canManagePublication}
             value={form.examples.length ? form.examples : [""]}
             handleOnNewValue={({ value }) =>
               setList("examples", (value ?? []) as string[])
@@ -442,7 +460,7 @@ export default function AgentCardPanel({
         className="w-full"
         onClick={handleSave}
         loading={isPending}
-        disabled={!isDirty}
+        disabled={!isDirty || !canManagePublication}
         data-testid="agent-save"
       >
         {t("agentTab.save")}

@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
 from lfx.graph.schema import RunOutputs
@@ -150,6 +150,23 @@ class FileResponse(ChatMessage):
 
 class FlowListCreate(BaseModel):
     flows: list[FlowCreate]
+    expected_edit_revision: dict[UUID, Annotated[int, Field(ge=1)]] = Field(
+        default_factory=dict,
+        max_length=1000,
+        description=(
+            "Input-only optimistic revision map for stable IDs that update existing flows. "
+            "Keys must identify flows in this request."
+        ),
+    )
+
+
+class FlowBulkDelete(BaseModel):
+    flow_ids: list[UUID] = Field(max_length=1000)
+    expected_edit_revision: dict[UUID, Annotated[int, Field(ge=1)]] = Field(
+        default_factory=dict,
+        max_length=1000,
+        description="Input-only optimistic revision map for every existing flow deleted by this request.",
+    )
 
 
 class FlowListIds(BaseModel):

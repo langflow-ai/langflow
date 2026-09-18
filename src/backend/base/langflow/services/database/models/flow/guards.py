@@ -4,12 +4,15 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from sqlalchemy import update
+from sqlmodel import col
+
+from langflow.services.database.models.flow.model import Flow
+
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
     from sqlmodel.ext.asyncio.session import AsyncSession
-
-    from langflow.services.database.models.flow.model import Flow
 
 LOCKED_FLOW_DETAIL = "Flow is locked. Unlock it before making changes."
 
@@ -20,6 +23,13 @@ class LockedFlowError(RuntimeError):
 
 async def lock_flow_for_update(session: AsyncSession, flow: Flow) -> None:
     """Refresh *flow* while holding its database row lock until transaction end."""
+    from langflow.services.deps import get_authorization_service
+
+    await get_authorization_service().acquire_resource_mutation_lock(session=session)
+    if session.get_bind().dialect.name == "sqlite":
+        # SQLite ignores FOR UPDATE. Establish its writer transaction before
+        # reading the revision, including when audit staging is disabled.
+        await session.exec(update(Flow).where(col(Flow.id) == flow.id).values(edit_revision=Flow.edit_revision))
     await session.refresh(flow, with_for_update=True)
 
 

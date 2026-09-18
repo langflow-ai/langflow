@@ -11,8 +11,6 @@ Testing library and framework: pytest
 import io
 import json
 import zipfile
-from contextlib import nullcontext
-from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
@@ -35,6 +33,11 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
 from sqlmodel import select
+
+from tests.unit.services.authorization import test_collaboration_management as collaboration_tests
+from tests.unit.services.authorization.test_collaboration_management import _seed_users, _user
+
+collaboration_db = collaboration_tests.collaboration_db
 
 NEW_CREDENTIAL = "new" + "password123"
 LIMIT_MESSAGE = "Your plan allows 3 projects."
@@ -299,98 +302,50 @@ async def test_project_hook_does_not_gate_the_default_project(client: AsyncClien
 # =====================================================================
 
 
-class _FakeAsyncSession:
-    """Minimal async-session stand-in that records writes, commits and rollbacks."""
-
-    def __init__(self) -> None:
-        self.added: list[Any] = []
-        self.committed = 0
-        self.rolled_back = 0
-
-    async def get(self, _model: type, _key: UUID, **_kwargs: Any) -> Any:
-        return None
-
-    def begin_nested(self):
-        return nullcontext()
-
-    def add(self, obj: Any) -> None:
-        self.added.append(obj)
-
-    async def flush(self) -> None:
-        return None
-
-    async def commit(self) -> None:
-        self.committed += 1
-
-    async def rollback(self) -> None:
-        self.rolled_back += 1
-
-    async def refresh(self, _obj: Any) -> None:
-        return None
-
-
-class _StubAuthz:
-    async def acquire_identity_mutation_lock(self, *, session, **_request) -> None:
-        del session
-
-    async def stage_identity_mutation(self, *, session, event) -> None:
-        del session, event
-
-    async def identity_mutation_committed(self, event) -> None:
-        del event
-
-    async def can_administer(self, *, user_id: UUID, resource: str) -> bool:
-        del user_id, resource
-        return True
-
-    async def is_enabled(self) -> bool:
-        return False
-
-
-@pytest.fixture
-def role_route(monkeypatch):
+async def test_create_role_denied_by_hook(collaboration_db, seen_contexts):
     from langflow.api.v1 import authz_roles
-
-    monkeypatch.setattr(authz_roles, "get_authorization_service", lambda: _StubAuthz())
-    return authz_roles
-
-
-async def test_create_role_denied_by_hook(role_route, seen_contexts):
     from langflow.api.v1.schemas.authz_roles import RoleCreate
 
     _register_denying_hook(RESOURCE_ROLE, seen_contexts)
-    session = _FakeAsyncSession()
-    user = SimpleNamespace(id=uuid4(), is_superuser=True, username="admin")
-    payload = RoleCreate(name="capped", description=None, permissions=["flow:read"])
+    user = _user("role-admin", is_superuser=True)
+    await _seed_users(collaboration_db, user)
+    payload = RoleCreate(name=f"capped-{uuid4()}", description=None, permissions=["flow:read"])
 
-    with pytest.raises(HTTPException) as excinfo:
-        await role_route.create_role(payload=payload, current_user=user, session=session, response=Response())
+    async with collaboration_db.session() as session:
+        with pytest.raises(HTTPException) as excinfo:
+            await authz_roles.create_role(payload=payload, current_user=user, session=session, response=Response())
+        assert not session.in_transaction()
+        assert seen_contexts[0].session is session
 
     assert excinfo.value.status_code == status.HTTP_403_FORBIDDEN
     assert excinfo.value.headers == {ERROR_CODE_HEADER: "tier_limit_reached"}
     assert excinfo.value.detail["message"] == LIMIT_MESSAGE
-    assert session.added == []
-    assert session.committed == 0
-    # The actor id is snapshotted before the rollback, so the audit row can name it.
-    assert session.rolled_back == 1
     assert seen_contexts[0].resource == RESOURCE_ROLE
-    assert seen_contexts[0].requested_name == "capped"
+    assert seen_contexts[0].requested_name == payload.name
     assert seen_contexts[0].actor_user_id == user.id
+    async with collaboration_db.session() as session:
+        assert (await session.exec(select(AuthzRole).where(AuthzRole.name == payload.name))).first() is None
+        assert await session.get(User, user.id) is not None
 
 
-async def test_create_role_survives_a_crashing_hook(role_route):
+async def test_create_role_survives_a_crashing_hook(collaboration_db):
+    from langflow.api.v1 import authz_roles
     from langflow.api.v1.schemas.authz_roles import RoleCreate
 
     _register_crashing_hook(RESOURCE_ROLE)
-    session = _FakeAsyncSession()
-    user = SimpleNamespace(id=uuid4(), is_superuser=True, username="admin")
-    payload = RoleCreate(name="uncapped", description=None, permissions=["flow:read"])
+    user = _user("role-admin", is_superuser=True)
+    await _seed_users(collaboration_db, user)
+    payload = RoleCreate(name=f"uncapped-{uuid4()}", description=None, permissions=["flow:read"])
 
-    result = await role_route.create_role(payload=payload, current_user=user, session=session, response=Response())
+    async with collaboration_db.session() as session:
+        result = await authz_roles.create_role(payload=payload, current_user=user, session=session, response=Response())
 
-    assert result.name == "uncapped"
-    assert len(session.added) == 1
-    assert session.committed == 1
+    assert result.name == payload.name
+    async with collaboration_db.session() as session:
+        persisted = await session.get(AuthzRole, result.id)
+        assert persisted is not None
+        assert persisted.name == payload.name
+        assert persisted.permissions == ["flow:read"]
 
 
 async def test_create_role_denied_by_hook_over_http(

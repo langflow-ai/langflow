@@ -365,6 +365,21 @@ async def test_external_access_ceiling_filters_effective_permissions(client, ext
     assert permissions["00000000-0000-0000-0000-000000000001"] == ["read"]
 
 
+async def test_external_first_request_can_discover_authorization(client, external_auth_settings):  # noqa: ARG001
+    """A JIT-created active identity can discover capabilities in its first request."""
+    token = _external_token(
+        sub="capabilities-first-request-subject",
+        preferred_username="capabilities-first-request-user",
+    )
+
+    response = await client.get(
+        "api/v1/authz/capabilities",
+        headers={_EXTERNAL_AUTH_HEADER: f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200, response.text
+
+
 async def test_session_external_recovers_despite_stale_native_cookie(client, external_auth_settings):  # noqa: ARG001
     """A stale/invalid native cookie must not shadow a valid external credential on /session (P1)."""
     token = _external_token(

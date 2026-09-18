@@ -1,3 +1,4 @@
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -10,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { usePermissions } from "@/contexts/permissionsContext";
 import CustomResourceShareAction from "@/customization/components/custom-resource-share-action";
+import ResourceShareDialog from "@/customization/components/resource-share-dialog";
 import type { FolderType } from "@/pages/MainPage/entities";
 import { getProjectDisplayName } from "@/utils/project-display-name";
 import { cn } from "@/utils/utils";
@@ -30,6 +32,8 @@ export const SelectOptions = ({
   checkPathName: (folderId: string) => boolean;
 }) => {
   const { t } = useTranslation();
+  const [openShareDialog, setOpenShareDialog] = useState(false);
+  const shareTriggerRef = useRef<HTMLButtonElement>(null);
   const { can } = usePermissions();
   const canRename = can(item.id, "write");
   const canDownload = can(item.id, "read");
@@ -49,78 +53,92 @@ export const SelectOptions = ({
     // The sidebar was the one surface rendering Share as a second, always-on
     // icon beside the trigger -- the only permanently visible control in the
     // list, on every row (LE-1905).
-    <DropdownMenu>
-      <ShadTooltip
-        content={t("folder.options")}
-        side="right"
-        styleClasses="z-50"
-      >
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 min-h-[24px] min-w-[24px]"
-            id={`options-trigger-${item.id}`}
-            data-testid={`more-options-button_${item.id}`}
-            aria-label={t("folder.optionsFor", { name: displayName })}
-            onClick={(e) => e.stopPropagation()}
+    <>
+      <DropdownMenu>
+        <ShadTooltip
+          content={t("folder.options")}
+          side="right"
+          styleClasses="z-50"
+        >
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 min-h-[24px] min-w-[24px]"
+              id={`options-trigger-${item.id}`}
+              ref={shareTriggerRef}
+              data-testid={`more-options-button_${item.id}`}
+              aria-label={t("folder.optionsFor", { name: displayName })}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <IconComponent
+                name={"MoreHorizontal"}
+                className={cn(
+                  `w-4 stroke-[1.5] px-0 text-muted-foreground group-hover/menu-button:block group-hover/menu-button:text-foreground group-focus-within/menu-button:block group-focus-within/menu-button:text-foreground`,
+                  checkPathName(item.id!) ? "block" : "hidden",
+                )}
+              />
+            </Button>
+          </DropdownMenuTrigger>
+        </ShadTooltip>
+        <DropdownMenuContent
+          align="end"
+          alignOffset={-16}
+          className="min-w-[11.5rem]"
+        >
+          <DropdownMenuItem
+            id="rename-button"
+            data-testid="btn-rename-project"
+            className="text-xs"
+            disabled={!canRename}
+            onClick={(e) => {
+              e.stopPropagation();
+              select("rename");
+            }}
           >
-            <IconComponent
-              name={"MoreHorizontal"}
-              className={cn(
-                `w-4 stroke-[1.5] px-0 text-muted-foreground group-hover/menu-button:block group-hover/menu-button:text-foreground group-focus-within/menu-button:block group-focus-within/menu-button:text-foreground`,
-                checkPathName(item.id!) ? "block" : "hidden",
-              )}
-            />
-          </Button>
-        </DropdownMenuTrigger>
-      </ShadTooltip>
-      <DropdownMenuContent
-        align="end"
-        alignOffset={-16}
-        className="min-w-[11.5rem]"
-      >
-        <DropdownMenuItem
-          id="rename-button"
-          data-testid="btn-rename-project"
-          className="text-xs"
-          disabled={!canRename}
-          onClick={(e) => {
-            e.stopPropagation();
-            select("rename");
-          }}
-        >
-          <FolderSelectItem name={t("folder.rename")} iconName="SquarePen" />
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          data-testid="btn-download-project"
-          className="text-xs"
-          disabled={!canDownload}
-          onClick={(e) => {
-            e.stopPropagation();
-            select("download");
-          }}
-        >
-          <FolderSelectItem name={t("folder.download")} iconName="Download" />
-        </DropdownMenuItem>
-        <CustomResourceShareAction
-          resourceId={item.id!}
+            <FolderSelectItem name={t("folder.rename")} iconName="SquarePen" />
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            data-testid="btn-download-project"
+            className="text-xs"
+            disabled={!canDownload}
+            onClick={(e) => {
+              e.stopPropagation();
+              select("download");
+            }}
+          >
+            <FolderSelectItem name={t("folder.download")} iconName="Download" />
+          </DropdownMenuItem>
+          <CustomResourceShareAction
+            resourceId={item.id!}
+            resourceType="project"
+            resourceName={displayName}
+            display="menu"
+            onShare={() => setOpenShareDialog(true)}
+          />
+          <DropdownMenuItem
+            data-testid="btn-delete-project"
+            className="text-xs"
+            disabled={!canDelete}
+            onClick={(e) => {
+              e.stopPropagation();
+              select("delete");
+            }}
+          >
+            <FolderSelectItem name={t("folder.delete")} iconName="Trash2" />
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {openShareDialog && (
+        <ResourceShareDialog
+          open
+          onOpenChange={setOpenShareDialog}
           resourceType="project"
+          resourceId={item.id!}
           resourceName={displayName}
-          display="menu"
+          returnFocusRef={shareTriggerRef}
         />
-        <DropdownMenuItem
-          data-testid="btn-delete-project"
-          className="text-xs"
-          disabled={!canDelete}
-          onClick={(e) => {
-            e.stopPropagation();
-            select("delete");
-          }}
-        >
-          <FolderSelectItem name={t("folder.delete")} iconName="Trash2" />
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      )}
+    </>
   );
 };

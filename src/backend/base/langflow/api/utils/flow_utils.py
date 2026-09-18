@@ -134,8 +134,11 @@ async def cascade_delete_flow(
     """
     # Imported lazily so this module (loaded early, via ``api.utils``) stays free
     # of the memory-base service import chain.
+    from langflow.services.authorization.lifecycle import stage_resource_mutation
+    from langflow.services.deps import get_authorization_service
     from langflow.services.memory_base.flow_cleanup import purge_flow_memory_bases
 
+    await get_authorization_service().acquire_resource_mutation_lock(session=session)
     try:
         await check_flow_has_deployed_versions(session, flow_id=flow_id)
         # Reclaim the flow's Memory Bases first: this drops the message_ingestion_record
@@ -170,6 +173,7 @@ async def cascade_delete_flow(
             delete(AuthzShare).where(AuthzShare.resource_type == "flow").where(AuthzShare.resource_id == flow_id)
         )
         result = await session.exec(delete(Flow).where(Flow.id == flow_id))
+        await stage_resource_mutation(session, resource_type="flow", resource_id=flow_id, deleted=True)
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(
             e,

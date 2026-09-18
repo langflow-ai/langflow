@@ -691,6 +691,10 @@ async def delete_deployment_by_resource_key(
     resource_key: str,
 ) -> int | UnconfirmedDeleteRowcount:
     resource_key_s = resource_key.strip()
+    from langflow.services.authorization.lifecycle import stage_resource_mutation
+    from langflow.services.deps import get_authorization_service
+
+    await get_authorization_service().acquire_resource_mutation_lock(session=db)
     # Delete attachment rows explicitly before deleting the deployment.
     # This keeps behavior correct even when DB-level FK cascades are disabled
     # (for example, SQLite with foreign_keys=OFF), avoiding orphan attachments.
@@ -717,6 +721,8 @@ async def delete_deployment_by_resource_key(
         Deployment.resource_key == resource_key_s,
     )
     result = await db.exec(stmt)
+    if deployment_id is not None:
+        await stage_resource_mutation(db, resource_type="deployment", resource_id=deployment_id, deleted=True)
     return await _interpret_delete_rowcount(result.rowcount, context=f"resource_key={resource_key_s!r}")
 
 
@@ -727,6 +733,10 @@ async def delete_deployment_by_id(
     deployment_id: UUID | str,
 ) -> int | UnconfirmedDeleteRowcount:
     deployment_uuid = parse_uuid(deployment_id, field_name="deployment_id")
+    from langflow.services.authorization.lifecycle import stage_resource_mutation
+    from langflow.services.deps import get_authorization_service
+
+    await get_authorization_service().acquire_resource_mutation_lock(session=db)
     # Delete attachment rows explicitly before deleting the deployment.
     # This keeps behavior correct even when DB-level FK cascades are disabled
     # (for example, SQLite with foreign_keys=OFF), avoiding orphan attachments.
@@ -742,6 +752,7 @@ async def delete_deployment_by_id(
         Deployment.id == deployment_uuid,
     )
     result = await db.exec(stmt)
+    await stage_resource_mutation(db, resource_type="deployment", resource_id=deployment_uuid, deleted=True)
     return await _interpret_delete_rowcount(result.rowcount, context=f"deployment_id={deployment_uuid}")
 
 
@@ -754,6 +765,10 @@ async def delete_deployments_by_ids(
     """Delete multiple deployments (and their attachments) in two batched statements."""
     if not deployment_ids:
         return 0
+    from langflow.services.authorization.lifecycle import stage_resource_mutation
+    from langflow.services.deps import get_authorization_service
+
+    await get_authorization_service().acquire_resource_mutation_lock(session=db)
     # Delete attachment rows explicitly before deleting the deployments, mirroring
     # delete_deployment_by_id so behavior stays correct when DB-level FK cascades
     # are disabled (for example, SQLite with foreign_keys=OFF).
@@ -769,4 +784,5 @@ async def delete_deployments_by_ids(
         col(Deployment.id).in_(deployment_ids),
     )
     result = await db.exec(stmt)
+    await stage_resource_mutation(db, resource_type="deployment", resource_id=deployment_ids[0], deleted=True)
     return await _interpret_delete_rowcount(result.rowcount, context=f"deployment_ids={deployment_ids}")

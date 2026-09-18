@@ -6,6 +6,7 @@ import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FlowType } from "@/types/flow";
+import { extractApiErrorCode } from "@/utils/apiError";
 import { useDebounce } from "../use-debounce";
 import useSaveFlow from "./use-save-flow";
 
@@ -70,23 +71,74 @@ const useAutoSaveFlow = () => {
   }, [setErrorData]);
   const saveFlow = useSaveFlow();
   const pendingAutoSaveRef = useRef<PendingAutoSave | null>(null);
+  const staleWriteRef = useRef<{
+    flowId: string | undefined;
+    editRevision: number | undefined;
+  } | null>(null);
   const saveQueueTailRef = useRef<Promise<void>>(Promise.resolve());
   const autoSaving = useFlowsManagerStore((state) => state.autoSaving);
   const autoSavingInterval = useFlowsManagerStore(
     (state) => state.autoSavingInterval,
   );
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const currentFlowRevision = useFlowsManagerStore(
+    (state) => state.currentFlow?.edit_revision,
+  );
+
+  useEffect(() => {
+    const staleWrite = staleWriteRef.current;
+    if (staleWrite && staleWrite.flowId !== currentFlowId) {
+      staleWriteRef.current = null;
+    }
+  }, [currentFlowId]);
+
+  const isBlockedByStaleWrite = useCallback(
+    (flow?: FlowType) => {
+      const staleWrite = staleWriteRef.current;
+      if (!staleWrite) return false;
+      // A refreshed list revision does not reconcile the local editor draft.
+      const requestedFlow = flow ?? useFlowStore.getState().currentFlow;
+      return (
+        staleWrite.flowId === (requestedFlow?.id ?? currentFlowId) &&
+        staleWrite.editRevision ===
+          (requestedFlow?.edit_revision ?? currentFlowRevision)
+      );
+    },
+    [currentFlowId, currentFlowRevision],
+  );
 
   const enqueueSave = useCallback(
     (flow?: FlowType): Promise<void> => {
-      const queuedSave = saveQueueTailRef.current.then(() => saveFlow(flow));
-      // Keep the tail fulfilled after a failed save so later edits still get a
-      // chance to persist. The queuedSave returned to the immediate caller
+      const queuedSave = saveQueueTailRef.current.then(async () => {
+        if (isBlockedByStaleWrite(flow)) return;
+        const requestedFlow = flow ?? useFlowStore.getState().currentFlow;
+        const attemptedWrite = {
+          flowId: requestedFlow?.id ?? currentFlowId,
+          editRevision: requestedFlow?.edit_revision ?? currentFlowRevision,
+        };
+        try {
+          await saveFlow(flow);
+        } catch (error) {
+          const status = (error as { response?: { status?: number } })?.response
+            ?.status;
+          if (
+            status === 403 ||
+            status === 404 ||
+            status === 412 ||
+            extractApiErrorCode(error) === "RESOURCE_CHANGED"
+          ) {
+            staleWriteRef.current = attemptedWrite;
+          }
+          throw error;
+        }
+      });
+      // Keep the tail fulfilled after a failed save. Permission and revision
+      // failures remain blocked until the flow is reloaded. The immediate caller
       // retains the original rejection while the shared barrier tracks settle.
       saveQueueTailRef.current = queuedSave.catch(() => undefined);
       return queuedSave;
     },
-    [saveFlow],
+    [currentFlowId, currentFlowRevision, isBlockedByStaleWrite, saveFlow],
   );
 
   const debouncedAutoSave = useDebounce((flow?: FlowType) => {
@@ -103,6 +155,9 @@ const useAutoSaveFlow = () => {
       // Hold the edit rather than discard it, so it still lands once the
       // blocking component is removed.
       pendingAutoSaveRef.current = { flow, flowId };
+      return;
+    }
+    if (isBlockedByStaleWrite(flow)) {
       return;
     }
     if (can(flowId, "write")) {
@@ -137,6 +192,9 @@ const useAutoSaveFlow = () => {
     if (pauseForBlockedComponents()) {
       return;
     }
+    if (isBlockedByStaleWrite(pendingAutoSave.flow)) {
+      return;
+    }
     if (can(flowId, "write")) {
       pendingAutoSaveRef.current = null;
       void enqueueSave(pendingAutoSave.flow);
@@ -147,6 +205,7 @@ const useAutoSaveFlow = () => {
     currentFlowId,
     enqueueSave,
     isLoading,
+    isBlockedByStaleWrite,
     pauseForBlockedComponents,
   ]);
 

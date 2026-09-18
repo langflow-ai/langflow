@@ -7,6 +7,7 @@ const makeFlow = (id: string): FlowType =>
 
 const makeFolder = (id: string, name = "default"): FolderType => ({
   id,
+  edit_revision: 1,
   name,
   description: "",
   parent_id: "",

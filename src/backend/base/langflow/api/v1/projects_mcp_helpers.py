@@ -6,7 +6,7 @@ Extracted from projects.py to reduce file size and isolate MCP concerns (SO1).
 from typing import Any, cast
 from uuid import UUID
 
-from fastapi import HTTPException
+from fastapi import BackgroundTasks, HTTPException
 from lfx.base.mcp.uvx import mcp_sdk_constraint_args
 from lfx.log.logger import logger
 from lfx.services.mcp_composer.service import MCPComposerService
@@ -208,6 +208,7 @@ async def reconcile_mcp_server_for_auth_update(
         {"auth_type": new_auth_type},
         current_user,
         session,
+        owns_transaction=False,
     )
 
 
@@ -263,6 +264,7 @@ async def handle_mcp_server_rename(
                     get_storage_service(),
                     get_settings_service(),
                     delete=True,
+                    owns_transaction=False,
                 )
 
                 await update_server(
@@ -272,6 +274,7 @@ async def handle_mcp_server_rename(
                     session,
                     get_storage_service(),
                     get_settings_service(),
+                    owns_transaction=False,
                 )
 
                 await logger.adebug(
@@ -296,22 +299,29 @@ async def cleanup_mcp_on_delete(
     project_id: UUID,
     current_user,
     session,
+    *,
+    background_tasks: BackgroundTasks,
 ) -> None:
     """Clean up MCP resources when a project is deleted.
 
     Stops the MCP Composer if the project uses OAuth, and removes the
     corresponding MCP server entry if auto-add was enabled.
     """
-    # Stop MCP Composer if project used OAuth
+    # Stop the provider after the caller's database transaction has completed.
     if project.auth_settings and project.auth_settings.get("auth_type") == "oauth":
-        try:
-            mcp_composer_service: MCPComposerService = cast(
-                MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
-            )
-            await mcp_composer_service.stop_project_composer(str(project_id))
-            await logger.adebug("Stopped MCP Composer for deleted OAuth project %s (%s)", project.name, project_id)
-        except Exception as e:  # noqa: BLE001
-            await logger.aerror("Failed to stop MCP Composer for deleted project %s: %s", project_id, e)
+        project_name = project.name
+
+        async def stop_composer() -> None:
+            try:
+                mcp_composer_service: MCPComposerService = cast(
+                    MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
+                )
+                await mcp_composer_service.stop_project_composer(str(project_id))
+                await logger.adebug("Stopped MCP Composer for deleted OAuth project %s (%s)", project_name, project_id)
+            except Exception as e:  # noqa: BLE001
+                await logger.aerror("Failed to stop MCP Composer for deleted project %s: %s", project_id, e)
+
+        background_tasks.add_task(stop_composer)
 
     # Delete corresponding MCP server if auto-add was enabled
     if get_settings_service().settings.add_projects_to_mcp_servers:
@@ -335,6 +345,7 @@ async def cleanup_mcp_on_delete(
                     get_storage_service(),
                     get_settings_service(),
                     delete=True,
+                    owns_transaction=False,
                 )
                 await logger.adebug(
                     "Deleted MCP server %s for deleted project %s (%s)",

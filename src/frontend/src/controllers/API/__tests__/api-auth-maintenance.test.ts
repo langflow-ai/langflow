@@ -1,4 +1,26 @@
+import type { AxiosError } from "axios";
+import { customShouldSkipAuthRefresh } from "@/customization/utils/custom-should-skip-auth-refresh";
 import { AUTH_MAINTENANCE_PATHS, isAuthMaintenanceURL } from "../api";
+
+describe("collaboration authorization failures", () => {
+  it.each([
+    [403, "/api/v1/flows/flow-id", true],
+    [403, "/api/v1/projects/project-id", true],
+    [403, "/api/v1/authz/teams/team-id", true],
+    [403, "/api/v1/authz/shares/share-id", true],
+    [403, "http://localhost/api/v1/flows/flow-id?download=false", true],
+    [401, "/api/v1/flows/flow-id", false],
+    [403, "/api/v1/login", false],
+    [403, "/api/v1/models", false],
+    [403, "/api/v1/flows_other", false],
+  ])(
+    "classifies %s on %s without replaying a denied collaboration request",
+    (status, url, skip) => {
+      const error = { response: { status }, config: { url } } as AxiosError;
+      expect(customShouldSkipAuthRefresh(error)).toBe(skip);
+    },
+  );
+});
 
 describe("isAuthMaintenanceURL", () => {
   it("matches refresh, login, logout, and auto_login endpoints", () => {

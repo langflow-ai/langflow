@@ -61,7 +61,7 @@ def _client(module, *, is_superuser: bool) -> TestClient:
     app.include_router(module.router)
 
     def _user() -> User:
-        return User(username="probe", password="x", is_superuser=is_superuser)  # noqa: S106
+        return User(username="probe", password="x", is_active=True, is_superuser=is_superuser)  # noqa: S106
 
     app.dependency_overrides[get_current_active_user] = _user
     return TestClient(app, raise_server_exceptions=False)

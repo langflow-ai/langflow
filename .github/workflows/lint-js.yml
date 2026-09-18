@@ -3,6 +3,10 @@ name: Lint Frontend
 on:
   workflow_call:
     inputs:
+      branch:
+        description: "(Optional) Branch or ref to checkout"
+        required: false
+        type: string
       allow-failure:
         description: "When true, Biome errors are reported but job exits 0 (non-blocking)."
         required: false

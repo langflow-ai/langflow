@@ -36,6 +36,7 @@ interface HeaderComponentProps {
   setSearch: (search: string) => void;
   isEmptyFolder: boolean;
   selectedFlows: string[];
+  canCreateFlow: boolean;
 }
 
 const HeaderComponent = ({
@@ -49,11 +50,13 @@ const HeaderComponent = ({
   setSearch,
   isEmptyFolder,
   selectedFlows,
+  canCreateFlow,
 }: HeaderComponentProps) => {
   const { t } = useTranslation();
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const isMCPEnabled = ENABLE_MCP;
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
   // Debounce the setSearch function from the parent
   const debouncedSetSearch = useCallback(
     debounce((value: string) => {
@@ -109,8 +112,26 @@ const HeaderComponent = ({
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
 
   const handleDelete = () => {
+    const selectedFlowRevisions = Object.fromEntries(
+      (flows ?? [])
+        .filter((flow) => selectedFlows.includes(flow.id))
+        .flatMap((flow) =>
+          typeof flow.edit_revision === "number"
+            ? ([[flow.id, flow.edit_revision]] as const)
+            : [],
+        ),
+    );
+    if (Object.keys(selectedFlowRevisions).length !== selectedFlows.length) {
+      setErrorData({
+        title: t("errors.workflowRevisionUnavailable"),
+      });
+      return;
+    }
     deleteFlows(
-      { flow_ids: selectedFlows },
+      {
+        flow_ids: selectedFlows,
+        expected_edit_revision: selectedFlowRevisions,
+      },
       {
         onSuccess: () => {
           setSuccessData({ title: t("mainPage.flowsDeletedSuccess") });
@@ -302,6 +323,7 @@ const HeaderComponent = ({
                       variant="default"
                       size="iconMd"
                       className="z-50 px-2.5 !text-mmd"
+                      disabled={!canCreateFlow}
                       onClick={() =>
                         onNewFlow ? onNewFlow() : setNewProjectModal(true)
                       }

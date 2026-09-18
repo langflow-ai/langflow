@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Annotated, Optional
 from uuid import UUID, uuid4
 
 from sqlalchemy import Text, UniqueConstraint
@@ -21,6 +21,7 @@ class FolderBase(SQLModel):
 
 class Folder(FolderBase, table=True):  # type: ignore[call-arg]
     id: UUID | None = Field(default_factory=uuid4, primary_key=True)
+    edit_revision: int = Field(default=1, nullable=False)
     parent_id: UUID | None = Field(default=None, foreign_key="folder.id")
 
     parent: Optional["Folder"] = Relationship(
@@ -44,10 +45,12 @@ class Folder(FolderBase, table=True):  # type: ignore[call-arg]
 class FolderCreate(FolderBase):
     components_list: list[UUID] | None = None
     flows_list: list[UUID] | None = None
+    expected_edit_revision: dict[UUID, Annotated[int, Field(ge=1)]] = Field(default_factory=dict, max_length=1000)
 
 
 class FolderRead(FolderBase):
     id: UUID
+    edit_revision: int = Field(default=1, ge=1)
     parent_id: UUID | None = Field()
 
 
@@ -58,6 +61,7 @@ class FolderListRead(FolderRead):
 
 class FolderReadWithFlows(FolderBase):
     id: UUID
+    edit_revision: int = Field(default=1, ge=1)
     parent_id: UUID | None = Field()
     flows: list[FlowRead] = Field(default=[])
 
@@ -69,3 +73,4 @@ class FolderUpdate(SQLModel):
     components: list[UUID] = Field(default_factory=list)
     flows: list[UUID] = Field(default_factory=list)
     auth_settings: dict | None = None
+    expected_edit_revision: dict[UUID, Annotated[int, Field(ge=1)]] = Field(default_factory=dict, max_length=1000)

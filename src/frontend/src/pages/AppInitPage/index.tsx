@@ -29,6 +29,7 @@ export function AppInitPage() {
   const { setUserData, storeApiKey } = useContext(AuthContext);
   const setIsAuthenticated = useAuthStore((state) => state.setIsAuthenticated);
   const setIsAdmin = useAuthStore((state) => state.setIsAdmin);
+  const setAuthStoreUserData = useAuthStore((state) => state.setUserData);
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
@@ -65,6 +66,7 @@ export function AppInitPage() {
   useEffect(() => {
     if (sessionData?.authenticated && sessionData.user) {
       setUserData(sessionData.user);
+      setAuthStoreUserData(sessionData.user);
       setIsAuthenticated(true);
       setIsAdmin(sessionData.user.is_superuser || false);
       if (sessionData.store_api_key) {
@@ -76,6 +78,7 @@ export function AppInitPage() {
       canSessionProbeClearAuth()
     ) {
       // Explicitly not authenticated, and auto-login hasn't signed the page in.
+      setAuthStoreUserData(null);
       setIsAuthenticated(false);
     }
   }, [sessionData]);

@@ -51,6 +51,10 @@ export const URLs = {
   INTEGRATIONS: `integrations`,
   EXTENSIONS: `extensions`,
   AUTHZ_ME_PERMISSIONS: `authz/me/permissions`,
+  AUTHZ_CAPABILITIES: `authz/capabilities`,
+  AUTHZ_RECIPIENTS: `authz/recipients`,
+  AUTHZ_SHARES: `authz/shares`,
+  AUTHZ_TEAMS: `authz/teams`,
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility

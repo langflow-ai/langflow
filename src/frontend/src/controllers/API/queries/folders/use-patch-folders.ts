@@ -1,12 +1,13 @@
-import type { AddFolderType } from "@/pages/MainPage/entities";
+import type { AddFolderType, FolderType } from "@/pages/MainPage/entities";
 import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface IPatchPatchFolders {
-  data: AddFolderType;
+  data: Pick<AddFolderType, "name" | "description">;
   folderId: string;
+  editRevision: number;
 }
 
 export const usePatchFolders: useMutationFunctionType<
@@ -17,17 +18,20 @@ export const usePatchFolders: useMutationFunctionType<
 
   const patchFoldersFn = async (
     newFolder: IPatchPatchFolders,
-  ): Promise<void> => {
+  ): Promise<FolderType> => {
     const payload = {
       name: newFolder.data.name,
       description: newFolder.data.description,
-      flows_list: newFolder.data.flows ?? [],
-      components_list: newFolder.data.components ?? [],
     };
 
-    const res = await api.patch(
+    const res = await api.patch<FolderType>(
       `${getURL("PROJECTS")}/${newFolder.folderId}`,
       payload,
+      {
+        headers: {
+          "If-Match": `"project:${newFolder.folderId}:${newFolder.editRevision}"`,
+        },
+      },
     );
     return res.data;
   };

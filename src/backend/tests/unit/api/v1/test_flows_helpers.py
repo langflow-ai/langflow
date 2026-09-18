@@ -91,7 +91,9 @@ async def test_patch_flow_non_owner_cannot_change_a2a(async_session, current_use
             storage_service=storage_service,
         )
     assert exc_info.value.status_code == 403
-    assert "a2a_enabled" in exc_info.value.detail
+    assert exc_info.value.detail == (
+        "Only the workflow owner may change ownership, scope, lock, or publication settings."
+    )
 
     # Cannot alter the agent card overrides.
     with pytest.raises(HTTPException) as exc_info:
@@ -103,7 +105,12 @@ async def test_patch_flow_non_owner_cannot_change_a2a(async_session, current_use
             storage_service=storage_service,
         )
     assert exc_info.value.status_code == 403
-    assert "a2a_card_overrides" in exc_info.value.detail
+    assert exc_info.value.detail == (
+        "Only the workflow owner may change ownership, scope, lock, or publication settings."
+    )
+    await async_session.refresh(db_flow)
+    assert db_flow.a2a_enabled is False
+    assert db_flow.a2a_card_overrides is None
 
 
 @pytest.mark.asyncio

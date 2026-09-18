@@ -17,7 +17,13 @@ function requestDeletesFlow(request: Request, flowId: string): boolean {
 
   try {
     const body = request.postDataJSON();
-    return Array.isArray(body) && body.includes(flowId);
+    if (Array.isArray(body)) return body.includes(flowId);
+    return (
+      body !== null &&
+      typeof body === "object" &&
+      Array.isArray((body as { flow_ids?: unknown }).flow_ids) &&
+      (body as { flow_ids: unknown[] }).flow_ids.includes(flowId)
+    );
   } catch {
     return false;
   }

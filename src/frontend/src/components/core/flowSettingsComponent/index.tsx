@@ -89,8 +89,6 @@ const FlowSettingsComponent = ({
     if (isReadOnly) return;
     setIsSaving(true);
     if (!flow) return;
-    const newFlow = updateFlowWithFormValues(flow, name, description, locked);
-
     if (autoSaving) {
       const persistSettings = async () => {
         try {
@@ -98,6 +96,15 @@ const FlowSettingsComponent = ({
           // before persisting settings so a stale canvas snapshot cannot land
           // after a lock-state update.
           await pendingAutoSave?.flush();
+          const persistedFlow = useFlowsManagerStore.getState().currentFlow;
+          const settingsBase =
+            persistedFlow?.id === flow.id ? persistedFlow : flow;
+          const newFlow = updateFlowWithFormValues(
+            settingsBase,
+            name,
+            description,
+            locked,
+          );
           await saveFlow(newFlow);
           setIsSaving(false);
           setSuccessData({ title: t("success.changesSaved") });
@@ -108,6 +115,7 @@ const FlowSettingsComponent = ({
       };
       void persistSettings();
     } else {
+      const newFlow = updateFlowWithFormValues(flow, name, description, locked);
       setCurrentFlow(newFlow);
       setIsSaving(false);
       close();

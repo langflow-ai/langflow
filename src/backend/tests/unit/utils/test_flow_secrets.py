@@ -2,7 +2,24 @@
 
 from __future__ import annotations
 
-from langflow.utils.flow_secrets import strip_secret_field_values, strip_secret_field_values_in_place
+from langflow.utils.flow_secrets import (
+    restore_redacted_secret_values,
+    strip_secret_field_values,
+    strip_secret_field_values_in_place,
+)
+
+
+def test_restoring_hidden_value_cannot_remove_its_secret_classification() -> None:
+    stored = _flow_data({"input": {"name": "input", "password": True, "value": "synthetic-hidden-value"}})
+    stored["nodes"][0]["id"] = "existing-node"
+    proposed = strip_secret_field_values(stored)
+    _template(proposed)["input"]["password"] = False
+
+    restored = restore_redacted_secret_values(proposed, stored)
+
+    assert _template(restored)["input"]["value"] == "synthetic-hidden-value"
+    assert _template(strip_secret_field_values(restored))["input"]["value"] is None
+    assert _template(proposed)["input"]["value"] is None
 
 
 def _flow_data(template: dict) -> dict:

@@ -7,6 +7,7 @@ import useLoadFlowForRoute from "../use-load-flow-for-route";
 
 const FLOW: FlowType = {
   id: "new-flow",
+  edit_revision: 1,
   name: "New Flow",
   description: "",
   data: null,

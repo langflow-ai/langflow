@@ -38,6 +38,7 @@ export default function CollectionPage(): JSX.Element {
     mutate(
       {
         folder_id: folderToEdit?.id!,
+        edit_revision: folderToEdit?.edit_revision!,
       },
       {
         onSuccess: () => {

@@ -1122,12 +1122,13 @@ class TestStorageFailureHandling:
             size=100,
         )
 
-        mock_current_user = MagicMock()
-        mock_current_user.id = user_id
+        mock_current_user = User(id=user_id, username="storage-failure-user", password="", is_active=True)
 
         mock_exec_result = MagicMock()
         mock_exec_result.first = MagicMock(return_value=mock_file)
+        mock_exec_result.all.return_value = [mock_file]
         mock_session = AsyncMock()
+        mock_session.get.return_value = mock_current_user
         mock_session.exec = AsyncMock(return_value=mock_exec_result)
         mock_session.delete = AsyncMock()
 
@@ -1216,12 +1217,12 @@ class TestStorageFailureHandling:
             for i in range(3)
         ]
 
-        mock_current_user = MagicMock()
-        mock_current_user.id = user_id
+        mock_current_user = User(id=user_id, username="storage-failure-user", password="", is_active=True)
 
         mock_exec_result = MagicMock()
-        mock_exec_result.all = MagicMock(return_value=mock_files)
+        mock_exec_result.all = MagicMock(side_effect=[mock_files, [mock_files[0], mock_files[2]]])
         mock_session = AsyncMock()
+        mock_session.get.return_value = mock_current_user
         mock_session.exec = AsyncMock(return_value=mock_exec_result)
         mock_session.delete = AsyncMock()
 
@@ -1275,12 +1276,12 @@ class TestStorageFailureHandling:
             for i in range(3)
         ]
 
-        mock_current_user = MagicMock()
-        mock_current_user.id = user_id
+        mock_current_user = User(id=user_id, username="storage-failure-user", password="", is_active=True)
 
         mock_exec_result = MagicMock()
         mock_exec_result.all = MagicMock(return_value=mock_files)
         mock_session = AsyncMock()
+        mock_session.get.return_value = mock_current_user
         mock_session.exec = AsyncMock(return_value=mock_exec_result)
         mock_session.delete = AsyncMock()
 
@@ -1311,12 +1312,12 @@ class TestStorageFailureHandling:
             for i in range(3)
         ]
 
-        mock_current_user = MagicMock()
-        mock_current_user.id = user_id
+        mock_current_user = User(id=user_id, username="storage-failure-user", password="", is_active=True)
 
         mock_exec_result = MagicMock()
-        mock_exec_result.all = MagicMock(return_value=mock_files)
+        mock_exec_result.all = MagicMock(side_effect=[mock_files, mock_files[1:]])
         mock_session = AsyncMock()
+        mock_session.get.return_value = mock_current_user
         mock_session.exec = AsyncMock(return_value=mock_exec_result)
         mock_session.delete = AsyncMock()
 
@@ -1357,12 +1358,12 @@ class TestStorageFailureHandling:
             for i in range(2)
         ]
 
-        mock_current_user = MagicMock()
-        mock_current_user.id = user_id
+        mock_current_user = User(id=user_id, username="storage-failure-user", password="", is_active=True)
 
         mock_exec_result = MagicMock()
         mock_exec_result.all = MagicMock(return_value=mock_files)
         mock_session = AsyncMock()
+        mock_session.get.return_value = mock_current_user
         mock_session.exec = AsyncMock(return_value=mock_exec_result)
         mock_session.delete = AsyncMock()
 
@@ -1395,12 +1396,12 @@ class TestStorageFailureHandling:
             for i in range(3)
         ]
 
-        mock_current_user = MagicMock()
-        mock_current_user.id = user_id
+        mock_current_user = User(id=user_id, username="storage-failure-user", password="", is_active=True)
 
         mock_exec_result = MagicMock()
-        mock_exec_result.all = MagicMock(return_value=mock_files)
+        mock_exec_result.all = MagicMock(side_effect=[mock_files, mock_files[1:]])
         mock_session = AsyncMock()
+        mock_session.get.return_value = mock_current_user
         mock_session.exec = AsyncMock(return_value=mock_exec_result)
         mock_session.delete = AsyncMock()
 

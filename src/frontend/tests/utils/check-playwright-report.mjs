@@ -1,5 +1,9 @@
 import { readFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
+import {
+  AUTHZ_JOURNEY_IDS,
+  inspectAuthzJourneyTitles,
+} from "./authz-e2e-mode.mjs";
 
 const FAILURE_RESULT_STATUSES = new Set(["failed", "timedOut", "interrupted"]);
 const TEST_STATUSES = new Set(["expected", "unexpected", "flaky", "skipped"]);
@@ -38,7 +42,7 @@ function collectTests(suites, tests, ancestorTitles = []) {
   }
 }
 
-export function inspectPlaywrightReport(report) {
+export function inspectPlaywrightReport(report, options = {}) {
   if (!report || typeof report !== "object" || !Array.isArray(report.suites)) {
     throw new Error("Malformed Playwright report: expected a suites array.");
   }
@@ -47,6 +51,17 @@ export function inspectPlaywrightReport(report) {
   collectTests(report.suites, tests);
   if (tests.length === 0) {
     throw new Error("Playwright report contains no tests.");
+  }
+
+  if (options.requireAuthzJourneys) {
+    const inventory = inspectAuthzJourneyTitles(
+      tests.map((test) => test.fullTitle),
+    );
+    if (!inventory.valid) {
+      throw new Error(
+        `Authorization journey inventory is incomplete: expected exactly ${AUTHZ_JOURNEY_IDS.length} tests; missing=${inventory.missing.join(",") || "none"}; duplicates=${inventory.duplicates.join(",") || "none"}.`,
+      );
+    }
   }
 
   const flaky = [];
@@ -60,6 +75,11 @@ export function inspectPlaywrightReport(report) {
     if (!Array.isArray(test.results)) {
       throw new Error(
         `Malformed Playwright test record at ${test.location}: expected a results array.`,
+      );
+    }
+    if (options.requireAuthzJourneys && test.status === "skipped") {
+      throw new Error(
+        `Authorization journey was skipped at ${test.location}: ${test.fullTitle}`,
       );
     }
     const results = test.results;
@@ -119,10 +139,18 @@ export function inspectPlaywrightReport(report) {
     throw new Error(`Playwright report is not clean:\n${details.join("\n")}`);
   }
 
+  if (options.requireAuthzJourneys && flaky.length > 0) {
+    throw new Error(
+      `Authorization journeys must pass without retries:\n${flaky
+        .map((title) => `  - flaky: ${title}`)
+        .join("\n")}`,
+    );
+  }
+
   return { testCount: tests.length, flaky };
 }
 
-export async function checkPlaywrightReportFile(reportPath) {
+export async function checkPlaywrightReportFile(reportPath, options = {}) {
   let contents;
   try {
     contents = await readFile(reportPath, "utf8");
@@ -140,7 +168,7 @@ export async function checkPlaywrightReportFile(reportPath) {
       cause: error,
     });
   }
-  return inspectPlaywrightReport(report);
+  return inspectPlaywrightReport(report, options);
 }
 
 const isCli =
@@ -152,7 +180,9 @@ if (isCli) {
     process.exitCode = 2;
   } else {
     try {
-      const { testCount, flaky } = await checkPlaywrightReportFile(reportPath);
+      const { testCount, flaky } = await checkPlaywrightReportFile(reportPath, {
+        requireAuthzJourneys: process.env.LANGFLOW_E2E_AUTHZ === "true",
+      });
       if (flaky.length > 0) {
         console.warn(
           `Playwright report has ${flaky.length} flaky test(s) (not failing the gate):\n${flaky

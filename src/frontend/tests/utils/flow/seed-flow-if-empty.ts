@@ -149,8 +149,27 @@ export async function seedFlowIfEmpty(page: Page): Promise<boolean> {
     // owns a blank placeholder that the normal flow-switch cleanup never sees,
     // so delete only that known id before returning home.
     if (placeholderFlowId) {
+      const placeholderResponse = await page.request.get(
+        `/api/v1/flows/${placeholderFlowId}`,
+      );
+      expect(
+        placeholderResponse.ok(),
+        `Reading the losing seed placeholder returned ${placeholderResponse.status()}`,
+      ).toBeTruthy();
+      const placeholder = (await placeholderResponse.json()) as {
+        edit_revision?: unknown;
+      };
+      expect(
+        typeof placeholder.edit_revision === "number",
+        "The losing seed placeholder did not expose its edit revision",
+      ).toBe(true);
       const cleanupResponse = await page.request.delete("/api/v1/flows/", {
-        data: [placeholderFlowId],
+        data: {
+          flow_ids: [placeholderFlowId],
+          expected_edit_revision: {
+            [placeholderFlowId]: placeholder.edit_revision,
+          },
+        },
       });
       expect(
         cleanupResponse.ok(),

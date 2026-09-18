@@ -4,6 +4,7 @@ import { TEXTS } from "../constants/texts";
 import { TIMEOUTS } from "../constants/timeouts";
 import { addComponentFromSidebar } from "./add-component-from-sidebar";
 import { openBlankFlow } from "./open-blank-flow";
+import { waitForFlowEditorReady } from "./wait-for-flow-editor-ready";
 
 async function addComponent(
   page: Page,
@@ -60,6 +61,17 @@ async function moveNodeBy(
 
 export async function createTextInputOutputFlow(page: Page): Promise<void> {
   await openBlankFlow(page);
+  await populateTextInputOutputFlow(page);
+}
+
+/**
+ * Build the text-input -> prompt -> text-output graph in the flow that is
+ * already open. This lets authorization journeys provision an empty resource
+ * through the API, then prove graph editing and autosave through the real UI
+ * without depending on the unrelated starter-template seed lifecycle.
+ */
+export async function populateTextInputOutputFlow(page: Page): Promise<void> {
+  await waitForFlowEditorReady(page);
   await addLegacyComponents(page);
   await addComponent(page, {
     search: TEXTS.searchTextInput,

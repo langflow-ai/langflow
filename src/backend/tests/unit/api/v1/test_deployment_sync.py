@@ -715,7 +715,7 @@ class TestListDeploymentsSynced:
     @patch(f"{MODULE}.delete_deployment_by_id", new_callable=AsyncMock)
     @patch(f"{MODULE}.fetch_provider_resource_keys", new_callable=AsyncMock)
     @patch(f"{MODULE}.list_deployments_page", new_callable=AsyncMock)
-    async def test_cursor_does_not_advance_on_delete(
+    async def test_cursor_counts_stale_rows_until_provider_fetches_finish(
         self,
         mock_list,
         mock_fetch,
@@ -724,12 +724,11 @@ class TestListDeploymentsSynced:
         mock_count_attachments,
         mock_count,
     ):
-        """When a stale row is deleted the cursor stays put (offset doesn't increment)."""
+        """Pagination reaches the good row while stale deletion waits for provider I/O."""
         stale = _mock_deployment_row("rk-stale")
         good = _mock_deployment_row("rk-good")
 
-        # First batch: stale row only. Cursor should stay at 0 for next fetch.
-        # Second batch: good row at the same offset (because deletion shifted it).
+        # Stale rows remain present until both provider fetches finish.
         mock_list.side_effect = [
             [(stale, 0, [])],
             [(good, 0, [])],
@@ -756,9 +755,8 @@ class TestListDeploymentsSynced:
             deployment_type=None,
         )
 
-        # Both list_deployments_page calls should use offset=0
         offsets = [call.kwargs["offset"] for call in mock_list.call_args_list[:2]]
-        assert offsets == [0, 0], f"Expected cursor to stay at 0 after deletion, got offsets={offsets}"
+        assert offsets == [0, 1]
         assert len(accepted) == 1
         assert accepted[0][0] is good
         mock_delete.assert_awaited_once()
@@ -811,7 +809,7 @@ class TestListDeploymentsSynced:
             user_id=(_uid := uuid4()),
             row_owner_id=_uid,
             provider_id=uuid4(),
-            db=AsyncMock(),
+            db=_mock_async_db(),
             page=1,
             size=2,
             deployment_type=None,
@@ -1586,7 +1584,7 @@ class TestSyncFlowVersionAttachments:
             user_id=uuid4(),
         )
 
-        db.begin_nested.assert_called_once()
+        assert db.begin_nested.call_count == 2  # Complete reconciliation plus isolated attachment cleanup.
         mock_delete_unbound.assert_awaited_once()
 
 

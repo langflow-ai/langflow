@@ -266,6 +266,9 @@ def teams_create(
     ctx: typer.Context,
     adom_name: Annotated[str, typer.Argument()],
     display_name: Annotated[str, typer.Option("--display-name")],
+    admins: Annotated[
+        list[str], typer.Option("--admin", help="Initial active Team Admin UUID or username; repeatable.")
+    ],
     description: Annotated[str | None, typer.Option("--description")] = None,
     active: Annotated[bool, typer.Option("--active/--disabled")] = True,
 ) -> None:
@@ -277,6 +280,7 @@ def teams_create(
                 display_name=display_name,
                 description=description,
                 active=active,
+                members=dict.fromkeys(admins, "admin"),
             )
         ),
     )
