@@ -33,7 +33,6 @@ from lfx.log.logger import logger
 
 from langflow.services.background_execution.executor import InProcessExecutor
 from langflow.services.background_execution.live_bus import InMemoryLiveBus, LiveFrame
-from langflow.services.background_execution.runner import JobRunner
 from langflow.services.base import Service
 from langflow.services.database.models.jobs.model import JobStatus, JobType, SignalType
 from langflow.services.deps import get_job_service
@@ -142,18 +141,32 @@ class BackgroundExecutionService(Service):
                     "background_backend=scaled is running on SQLite: single-host only, and all "
                     "workers contend on one writer lock. Use Postgres for real fleets."
                 )
-        self._backend = backend
         self._executor = InProcessExecutor(max_concurrency=self._settings.background_max_concurrency)
         self._bus = InMemoryLiveBus()
         self._frame_source_factory = frame_source_factory
+        if backend is None:
+            # Default path as a first-class backend: same executor + bus, so the
+            # facade makes identical polymorphic calls in both modes.
+            from langflow.services.background_execution.in_process_backend import InProcessBackend
+
+            backend = InProcessBackend(
+                executor=self._executor,
+                bus=self._bus,
+                settings=self._settings,
+                owner=self._owner,
+                # The v2 routes late-bind the frame source factory onto the
+                # facade after construction; read it through this closure.
+                get_frame_source_factory=lambda: self._frame_source_factory,
+            )
+        self._backend = backend
         self._deadline_task: asyncio.Task | None = None
         self._retention_task: asyncio.Task | None = None
         self.set_ready()
 
     @property
     def _scaled(self) -> bool:
-        """True when a scaled (worker-process) backend is wired behind this facade."""
-        return self._backend is not None
+        """True when jobs run in external worker processes, not in this API process."""
+        return bool(getattr(self._backend, "external_workers", True))
 
     def _build_scaled_backend(self) -> Any:
         """Build the DB-backed scaled backend from settings.
@@ -169,14 +182,11 @@ class BackgroundExecutionService(Service):
         return select_background_backend(self._settings, job_service=get_job_service(), owner=self._owner)
 
     async def start(self) -> None:
-        # Scaled mode: no executor to start in the API process — the worker
-        # process owns execution. The input-deadline watchdog still runs here:
-        # it is a pure-DB sweep, and the worker fleet does not run it.
-        if self._scaled:
-            self._start_deadline_watchdog()
-            self._start_retention_sweep()
-            return
-        await self._executor.start()
+        # The backend owns execution lifecycle (in-process executor, or nothing
+        # when separate workers run the jobs). The input-deadline watchdog and
+        # retention sweep run here in both modes: pure-DB sweeps the worker
+        # fleet does not run.
+        await self._backend.start()
         self._start_deadline_watchdog()
         self._start_retention_sweep()
 
@@ -187,9 +197,7 @@ class BackgroundExecutionService(Service):
                 task.cancel()
                 setattr(self, attr, None)
                 await asyncio.gather(task, return_exceptions=True)
-        # Mirror start(): scaled mode never started the executor.
-        if not self._scaled:
-            await self._executor.stop()
+        await self._backend.teardown()
 
     def _start_deadline_watchdog(self) -> None:
         """Run the input-deadline sweep on the watchdog interval (only when the budget is set).
@@ -264,7 +272,7 @@ class BackgroundExecutionService(Service):
 
         ``submit`` persists the submit request under ``job_metadata['request']`` and the
         runner threads ``request['session_id'] or str(flow_id)`` into the stream adapter
-        (``_build_adapter``), so the same fallback keys the supersede scope. Legacy rows
+        (the backend adapter builders), so the same fallback keys the supersede scope. Legacy rows
         written before the request was persisted keep a flat ``job_metadata['session_id']``
         — read it the way ``_reconstruct_request`` does rather than mis-scoping them.
         """
@@ -352,14 +360,10 @@ class BackgroundExecutionService(Service):
         # After create_job so an idempotent retry returns the existing job instead of
         # cancelling it; the new job is QUEUED, so the suspended-only query skips it.
         await self.supersede_suspended_runs(flow_id=flow_id, user_id=user.id, session_id=request.get("session_id"))
-        if self._scaled:
-            # Scaled mode: the QUEUED row persisted above IS the enqueue — the
-            # job table is the queue and a worker lease-claims it off the shared
-            # DB. The API does NOT run the flow; the worker hydrates the request
-            # from the job row. backend.enqueue is the (no-op) hook for that.
-            await self._backend.enqueue(str(job_id))
-        else:
-            await self._enqueue(job_id=job_id, flow_id=flow_id, request=request, user=user)
+        # In-process: build and submit the runner. Scaled: the QUEUED row
+        # persisted above IS the queue entry, so dispatch is a no-op and a
+        # worker lease-claims it off the shared DB.
+        await self._backend.dispatch(job_id, flow_id=flow_id, request=request, user=user)
         return job_id
 
     @staticmethod
@@ -628,29 +632,6 @@ class BackgroundExecutionService(Service):
             row = result.first()
             return row.job_id if row is not None else None
 
-    async def _enqueue(self, *, job_id: UUID, flow_id: UUID, request: dict[str, Any], user: UserRead | None) -> None:
-        """Build a runner for the job and submit it to the in-process executor."""
-        job_service = get_job_service()
-        adapter = self._build_adapter(request, job_id, flow_id)
-        source = self._frame_source_factory(request=request, flow_id=flow_id, user=user, adapter=adapter)
-        runner = JobRunner(
-            job_service=job_service,
-            live_bus=self._bus,
-            adapter=adapter,
-            frame_source=source,
-            job_timeout=self._settings.background_job_timeout,
-            owner=self._owner,
-            heartbeat_interval_s=self._settings.background_heartbeat_interval_s,
-            input_deadline_s=self._settings.background_input_deadline_s,
-        )
-
-        async def _coro() -> None:
-            # job_id reaches the frame source via source_kwargs so the default
-            # build-loop source can tag its memory-base hook with the run's job.
-            await runner.run(job_id=job_id, source_kwargs={"job_id": job_id})
-
-        await self._executor.submit(str(job_id), _coro)
-
     # ------------------------------------------------------------------ events
 
     async def events(
@@ -684,28 +665,15 @@ class BackgroundExecutionService(Service):
                 yield frame.data
             return
 
-        # Scaled mode: any API replica serves reattach by replaying durable
-        # job_events (from the DB) then polling the same table for new rows.
-        # The backend yields durable event rows (carry .seq); each is re-framed
-        # through the SSE formatter so replayed bytes match live frames
+        # Live tail is the backend's transport: the in-memory bus for the
+        # in-process path, durable-row replay + poll off the shared DB for
+        # scaled (any API replica serves the reattach). Framing rides the same
+        # SSE formatter in both, so replayed bytes match live frames
         # (Last-Event-ID resume).
-        if self._scaled:
-            async for item in self._backend.events(str(job_id), last_event_id=last_seq):
-                yield self._row_to_frame(item, protocol=protocol)
-            return
-
-        async def _is_terminal() -> bool:
-            # SUSPENDED ends the tail too: a run that connected while IN_PROGRESS and
-            # then suspended has no live tail to wait on (the pause isn't published live).
-            current = await job_service.get_job_by_job_id(job_id)
-            return current is not None and (
-                current.status in _TERMINAL_STATUSES or current.status == JobStatus.SUSPENDED
-            )
-
-        async for frame in self._bus.reattach(
-            str(job_id), last_seq=last_seq, read_durable=read_durable, is_done=_is_terminal
+        async for data in self._backend.tail(
+            str(job_id), last_seq=last_seq, frame_row=lambda r: self._row_to_frame(r, protocol=protocol)
         ):
-            yield frame.data
+            yield data
 
     # ------------------------------------------------------------------ status
 
@@ -740,13 +708,9 @@ class BackgroundExecutionService(Service):
         # running-job stop path instead of doing nothing.
         if job.status == JobStatus.SUSPENDED and await self._cancel_suspended(job_id, job_service):
             return
-        if self._scaled:
-            # Scaled mode: the owning worker runs in another process; backend.stop
-            # writes the durable STOP signal its JobRunner polls at vertex boundaries.
-            await self._backend.stop(str(job_id))
-            return
-        await job_service.write_signal(job_id, SignalType.STOP)
-        await self._executor.cancel(str(job_id))
+        # The backend writes the durable STOP signal the runner polls at durable
+        # frame boundaries; the in-process backend also cancels the local task.
+        await self._backend.stop(str(job_id))
 
     async def resume_job(self, job_id: UUID, user: UserRead, *, request_id: str, decision: Any) -> bool:  # noqa: ARG002
         """Carry a human decision back into a SUSPENDED run and re-enqueue it.
@@ -773,23 +737,21 @@ class BackgroundExecutionService(Service):
             return False
         await job_service.write_signal(job_id, SignalType.RESUME, {"decision": decision, "request_id": request_id})
         try:
-            if self._scaled:
-                # Scaled mode: the API must not run the job — hand the row back
-                # to the queue (QUEUED, lease cleared) so a worker claims it.
-                # The RESUME signal is already durable, so a worker that claims
-                # immediately still sees the decision. The IN_PROGRESS hop above
-                # is what keeps the single-flight: workers cannot claim the row
-                # between the SUSPENDED flip and the signal write.
-                if not await job_service.requeue_resumed_job(job_id, owner=self._owner):
-                    msg = f"resume requeue lost its claim for job {job_id}"
-                    raise RuntimeError(msg)
-            else:
-                await self._enqueue(
-                    job_id=job_id,
-                    flow_id=job.flow_id,
-                    request=request,
-                    user=self._user_stub(job.user_id),
-                )
+            # In-process: re-run the job right here. Scaled: hand the row back
+            # to the queue (QUEUED, lease cleared) so a worker claims it — the
+            # RESUME signal is already durable, so a worker that claims
+            # immediately still sees the decision, and the IN_PROGRESS hop above
+            # keeps the single-flight (workers cannot claim the row between the
+            # SUSPENDED flip and the signal write).
+            if not await self._backend.hand_back(
+                job_id,
+                flow_id=job.flow_id,
+                request=request,
+                user=self._user_stub(job.user_id),
+                owner=self._owner,
+            ):
+                msg = f"resume hand-back lost its claim for job {job_id}"
+                raise RuntimeError(msg)
         except Exception:
             # Why: claim already flipped SUSPENDED→IN_PROGRESS; a failed enqueue would strand the job
             # and lose the decision — roll back to SUSPENDED (clearing RESUME) so it can be retried.
@@ -900,12 +862,7 @@ class BackgroundExecutionService(Service):
                 continue
             user = self._user_stub(job.user_id)
             with contextlib.suppress(Exception):
-                await self._enqueue(
-                    job_id=job.job_id,
-                    flow_id=job.flow_id,
-                    request=request_dict,
-                    user=user,
-                )
+                await self._backend.dispatch(job.job_id, flow_id=job.flow_id, request=request_dict, user=user)
         # Give up on runs that have sat suspended past their human-input deadline.
         with contextlib.suppress(Exception):
             await self.sweep_input_deadlines()
@@ -1009,18 +966,6 @@ class BackgroundExecutionService(Service):
         if isinstance(request, dict):
             return request.get("stream_protocol") or "langflow"
         return meta.get("stream_protocol") or "langflow"
-
-    def _build_adapter(self, request: dict[str, Any], job_id: UUID, flow_id: UUID):
-        from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
-
-        protocol = request.get("stream_protocol", "langflow")
-        return get_stream_adapter(
-            protocol,
-            StreamAdapterContext(
-                run_id=str(job_id),
-                thread_id=request.get("session_id") or str(flow_id),
-            ),
-        )
 
     @staticmethod
     def _parse_last_event_id(last_event_id: str | None) -> int:
