@@ -1,5 +1,6 @@
 from langchain_community.chat_models.baidu_qianfan_endpoint import QianfanChatEndpoint
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.provider_ssrf import validate_provider_base_url
 from lfx.field_typing.constants import LanguageModel
 from lfx.io import DropdownInput, FloatInput, MessageTextInput, SecretStrInput
 
@@ -89,6 +90,10 @@ class QianfanChatEndpointComponent(LCModelComponent):
         temperature = self.temperature
         penalty_score = self.penalty_score
         endpoint = self.endpoint
+
+        # endpoint is tenant-editable and the SDK sends the operator's credentials to
+        # whatever host it names. Block internal/cloud-metadata destinations before connecting.
+        validate_provider_base_url(endpoint)
 
         try:
             kwargs = {
