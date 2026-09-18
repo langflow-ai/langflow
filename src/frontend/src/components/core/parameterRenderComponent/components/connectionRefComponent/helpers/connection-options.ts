@@ -1,4 +1,5 @@
 import type { ConnectionRead } from "@/controllers/API/queries/connections/use-get-connections";
+import { missingScopes as uncoveredScopes } from "@/utils/connection-scopes";
 
 /**
  * A connection as the picker offers it: the stored handle, why it cannot be
@@ -33,18 +34,24 @@ export function connectionHandle(connection: ConnectionRead): string {
   return `${connection.provider_key}/${connection.name}`;
 }
 
+const IDENTITY_KINDS = new Map<string, "user" | "instance">([
+  ["user_delegated", "user"],
+  ["bot", "instance"],
+  ["service", "instance"],
+]);
+
 /**
  * A field declares the identity it must run as. Bundles derive that from the
  * capability manifest with `{user_delegated: "user", bot: "instance", service:
  * "instance"}` (see `lfx_microsoft.manifest`), so the picker maps a connection
- * the same way rather than inventing a second vocabulary.
+ * the same way rather than inventing a second vocabulary. A connection that
+ * does not say who it runs as has no kind: it is unknown, not the instance.
  */
 export function identityKindOf(
   connection: ConnectionRead,
-): "user" | "instance" {
-  return connection.executing_identity?.identity === "user_delegated"
-    ? "user"
-    : "instance";
+): "user" | "instance" | undefined {
+  const identity = connection.executing_identity?.identity;
+  return identity ? IDENTITY_KINDS.get(identity) : undefined;
 }
 
 export function identityMatches(
@@ -52,15 +59,26 @@ export function identityMatches(
   identityKind: string | undefined,
 ): boolean {
   if (!identityKind || identityKind === "any") return true;
-  return identityKindOf(connection) === identityKind;
+  const kind = identityKindOf(connection);
+  // Only flag a mismatch the picker can see; the run-time check still refuses
+  // a connection whose identity turns out to be wrong.
+  return kind === undefined || kind === identityKind;
 }
 
+/**
+ * Required scopes the connection has not been granted, compared the way the
+ * backend compares them (`ScopeSet.missing`): Google and Microsoft scopes match
+ * with or without their URL prefix, and case does not matter.
+ */
 export function missingScopesFor(
   connection: ConnectionRead,
   requiredScopes: string[],
 ): string[] {
-  const granted = new Set(connection.granted_scopes ?? []);
-  return requiredScopes.filter((scope) => !granted.has(scope));
+  return uncoveredScopes(
+    connection.provider_key,
+    requiredScopes,
+    connection.granted_scopes ?? [],
+  );
 }
 
 function unusableReason(

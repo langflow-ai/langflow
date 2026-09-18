@@ -19,6 +19,14 @@ describe("custom-connectionRefComponent seam", () => {
 
   it("forwards the field's connection metadata to the OSS picker", () => {
     const handleOnNewValue = jest.fn();
+    const conditionalScopes = [
+      {
+        scope: "https://www.googleapis.com/auth/calendar.events",
+        role: "optional" as const,
+        condition: { kind: "input_present" as const, input: "calendar_id" },
+      },
+    ];
+    const inputValues = { calendar_id: "primary" };
     render(
       <CustomConnectionRefComponent
         id="connectionref_connection"
@@ -28,6 +36,8 @@ describe("custom-connectionRefComponent seam", () => {
         handleOnNewValue={handleOnNewValue}
         provider="google"
         requiredScopes={["https://www.googleapis.com/auth/gmail.send"]}
+        conditionalScopes={conditionalScopes}
+        inputValues={inputValues}
         capabilities={["google.gmail.send"]}
         identityKind="user"
       />,
@@ -40,6 +50,8 @@ describe("custom-connectionRefComponent seam", () => {
         handleOnNewValue,
         provider: "google",
         requiredScopes: ["https://www.googleapis.com/auth/gmail.send"],
+        conditionalScopes,
+        inputValues,
         capabilities: ["google.gmail.send"],
         identityKind: "user",
       }),
@@ -58,7 +70,11 @@ describe("custom-connectionRefComponent seam", () => {
     );
 
     expect(mockConnectionRefComponent).toHaveBeenCalledWith(
-      expect.objectContaining({ requiredScopes: [], capabilities: [] }),
+      expect.objectContaining({
+        requiredScopes: [],
+        conditionalScopes: [],
+        capabilities: [],
+      }),
     );
   });
 });
