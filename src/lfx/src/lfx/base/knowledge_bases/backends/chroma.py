@@ -47,6 +47,7 @@ from lfx.base.knowledge_bases.backends.base import (
 from lfx.base.knowledge_bases.backends.naming import resolve_storage_name
 from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.log.logger import logger
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -320,6 +321,17 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
         if self._resolved_database:
             kwargs["database"] = self._resolved_database
         if cfg.get("cloud_host"):
+            # ``cloud_host`` / ``cloud_port`` are tenant-controlled (they come
+            # straight from the request body's backend_config), so the server
+            # must not dial them blindly (CWE-918). Enforce the same connector
+            # SSRF policy the vector-store components use before handing the
+            # target to chromadb.CloudClient; private / link-local /
+            # cloud-metadata targets are rejected unless the operator
+            # allowlists the host via LANGFLOW_SSRF_ALLOWED_HOSTS.
+            # ``CloudClient`` speaks HTTPS by default, so the check URL uses
+            # the https scheme and the configured port (443 when unset).
+            cloud_port = int(cfg["cloud_port"]) if cfg.get("cloud_port") else 443
+            validate_connector_url_for_ssrf(f"https://{cfg['cloud_host']}:{cloud_port}")
             kwargs["cloud_host"] = cfg["cloud_host"]
         if cfg.get("cloud_port"):
             kwargs["cloud_port"] = int(cfg["cloud_port"])
