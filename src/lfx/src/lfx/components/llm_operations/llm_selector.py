@@ -205,12 +205,6 @@ class LLMSelectorComponent(Component):
             simplified_no_prefix = self._simplify_model_name(name_without_prefix)
             potential_names_to_check.append(simplified_no_prefix)
 
-        elif langflow_model_name.startswith("community_models/"):
-            name_without_prefix = langflow_model_name[len("community_models/") :]
-            potential_names_to_check.append(name_without_prefix)
-            simplified_no_prefix_comm = self._simplify_model_name(name_without_prefix)
-            potential_names_to_check.append(simplified_no_prefix_comm)
-
         unique_names_to_check = list(dict.fromkeys(potential_names_to_check))
 
         for name_variant in unique_names_to_check:
