@@ -2433,6 +2433,7 @@
   "connections.tabs.label": "接続の表示",
   "connections.tabs.mine": "自分",
   "connections.tabs.instance": "インスタンス",
+  "connections.tabs.others": "他のユーザー",
   "connections.columns.connection": "接続",
   "connections.columns.owner": "所有者",
   "connections.columns.account": "アカウント",

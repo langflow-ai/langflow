@@ -139,6 +139,7 @@ describe("AppInitPage - session probe vs auto-login", () => {
       autoLogin: null,
       isAuthenticated: false,
       isAdmin: false,
+      userData: null,
     });
     mockUseGetAuthSession.mockReturnValue(PENDING_PROBE);
   });
@@ -189,5 +190,26 @@ describe("AppInitPage - session probe vs auto-login", () => {
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
     expect(useAuthStore.getState().isAdmin).toBe(true);
     expect(mockSetUserData).toHaveBeenCalledWith(user);
+  });
+
+  it("mirrors the probed user into the auth store", () => {
+    // On a reload the probe is the only thing that restores the user. Pages
+    // that read `useAuthStore.userData` (Settings -> Connections derives its
+    // operator flag and row ownership from it) otherwise see null until
+    // something else happens to call /users/whoami.
+    const { rerender } = renderPage();
+    const user = {
+      id: "user-1",
+      username: "langflow",
+      is_active: true,
+      is_superuser: true,
+    };
+
+    deliverProbe(rerender, {
+      data: { authenticated: true, user },
+      isFetched: true,
+    });
+
+    expect(useAuthStore.getState().userData).toEqual(user);
   });
 });

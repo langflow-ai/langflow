@@ -20,6 +20,8 @@ from lfx_google.components.google import (
     GoogleDriveSearchComponent,
     GoogleGenerativeAIComponent,
     GoogleOAuthToken,
+    GoogleSearchAPICore,
+    GoogleSerperAPICore,
 )
 
 WORKSPACE_ACTION_CLASSES = (
@@ -260,6 +262,35 @@ def test_oauth_token_points_at_the_connection_backed_components() -> None:
 
 def test_drive_search_points_at_the_connection_backed_listing() -> None:
     assert GoogleDriveSearchComponent.replacement == ["google.GoogleDriveListComponent"]
+
+
+def test_search_api_is_legacy_and_gives_the_cse_sunset_date() -> None:
+    """Google's Custom Search JSON API stops working on January 1, 2027.
+
+    Renaming the class would break saved flows, so the deprecation lives in the
+    metadata the editor reads: ``legacy`` hides the component from the palette and
+    flags existing nodes, and the description and CSE ID tooltip give the date.
+    """
+    node = GoogleSearchAPICore().to_frontend_node()["data"]["node"]
+
+    assert node["display_name"] == "Google Search API"
+    assert node["legacy"] is True
+    assert node["replacement"] == GoogleSearchAPICore.replacement
+    assert "January 1, 2027" in node["description"]
+    assert "January 1, 2027" in node["template"]["google_cse_id"]["info"]
+
+
+def test_search_api_replacement_leads_with_serper_from_this_bundle() -> None:
+    """Serper ships in this bundle, so it is the one replacement present on every install.
+
+    SearchApi, SerpApi, and Serply are opt-in bundles and drop out of the hint when absent.
+    """
+    assert GoogleSearchAPICore.replacement == [
+        f"google.{GoogleSerperAPICore.__name__}",
+        "searchapi.SearchComponent",
+        "serpapi.Serp",
+        "serply.SerplySearchComponent",
+    ]
 
 
 @pytest.mark.parametrize("component_class", WORKSPACE_ACTION_CLASSES, ids=lambda cls: cls.__name__)

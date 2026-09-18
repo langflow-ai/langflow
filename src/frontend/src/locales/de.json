@@ -2433,6 +2433,7 @@
   "connections.tabs.label": "Verbindungsansichten",
   "connections.tabs.mine": "Meine",
   "connections.tabs.instance": "Instanz",
+  "connections.tabs.others": "Andere Benutzer",
   "connections.columns.connection": "Verbindung",
   "connections.columns.owner": "Eigentümer",
   "connections.columns.account": "Konto",
