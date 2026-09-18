@@ -81,6 +81,7 @@ from lfx.base.knowledge_bases.backends.base import (
 )
 from lfx.base.knowledge_bases.backends.naming import owner_scoped_collection_name, resolve_storage_name
 from lfx.log.logger import logger
+from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_url_for_ssrf
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -209,6 +210,16 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                 "(or env var of the same name) populated with the cluster URL."
             )
             raise ValueError(msg)
+        # The URL comes from a tenant-controlled Langflow variable, so the
+        # server must not dial it blindly (CWE-918). Enforce the same
+        # connector SSRF policy the vector-store components use: private /
+        # link-local / cloud-metadata targets are rejected unless the operator
+        # allowlists the host via LANGFLOW_SSRF_ALLOWED_HOSTS (or disables
+        # connector SSRF validation). Running the check here — inside
+        # ensure_ready()'s one-shot hook — covers test_connection, ingestion,
+        # and retrieval alike, so a KB created against a hostile variable
+        # stays blocked after configuration time too.
+        validate_connector_url_for_ssrf(url)
         self._resolved_url = url
 
         username_variable = self.backend_config.get("username_variable") or DEFAULT_USERNAME_VARIABLE
@@ -370,6 +381,14 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         """
         try:
             await self.ensure_ready()
+        except SSRFProtectionError as exc:
+            # SSRFProtectionError subclasses ValueError, so it must be caught
+            # ahead of the ConfigError branch to keep the reported type honest.
+            return TestConnectionResult(
+                ok=False,
+                message=str(exc),
+                details={"type": type(exc).__name__},
+            )
         except ValueError as exc:
             return TestConnectionResult(
                 ok=False,
