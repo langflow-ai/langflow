@@ -22,6 +22,7 @@ from langflow.services.store.utils import (
     process_tags_for_post,
     update_components_with_user_data,
 )
+from langflow.utils.flow_secrets import strip_secret_field_values_in_place
 
 if TYPE_CHECKING:
     from lfx.services.settings.service import SettingsService
@@ -50,6 +51,20 @@ async def user_data_context(store_service: StoreService, api_key: str | None = N
     finally:
         # Clear the user data from the context variable
         user_data_var.set(None)
+
+
+def _strip_component_secrets(component_dict: dict[str, Any]) -> dict[str, Any]:
+    """Scrub literal secret-field values from a store-bound component payload.
+
+    Publishing is an export boundary, so it must apply the same redaction as
+    every other path that lets flow data leave the instance. Fields bound to a
+    global variable keep the variable *name* (not a secret), while literal
+    values in password/secret-marked fields are nulled.
+    """
+    data = component_dict.get("data")
+    if isinstance(data, dict):
+        component_dict["data"] = strip_secret_field_values_in_place(data, variable_references=set())
+    return component_dict
 
 
 def get_id_from_search_string(search_string: str) -> str | None:
@@ -367,7 +382,7 @@ class StoreService(Service):
 
     async def upload(self, api_key: str, component_data: StoreComponentCreate) -> CreateComponentResponse:
         headers = {"Authorization": f"Bearer {api_key}"}
-        component_dict = component_data.model_dump(exclude_unset=True)
+        component_dict = _strip_component_secrets(component_data.model_dump(exclude_unset=True))
         # Parent is a UUID, but the store expects a string
         response = None
         if component_dict.get("parent"):
@@ -404,7 +419,7 @@ class StoreService(Service):
     ) -> CreateComponentResponse:
         # Patch is the same as post, but we need to add the id to the url
         headers = {"Authorization": f"Bearer {api_key}"}
-        component_dict = component_data.model_dump(exclude_unset=True)
+        component_dict = _strip_component_secrets(component_data.model_dump(exclude_unset=True))
         # Parent is a UUID, but the store expects a string
         response = None
         if component_dict.get("parent"):
