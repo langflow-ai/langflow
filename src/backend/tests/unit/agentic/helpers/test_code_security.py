@@ -1520,6 +1520,16 @@ class TestScanCodeSecurityRuntimeModuleBypass:
             pytest.param("method = dict.get(vars(type), '__subclasses__')", id="unbound-dict-get"),
             pytest.param("method = dict.__getitem__(vars(type), '__subclasses__')", id="unbound-dict-getitem"),
             pytest.param("lookup = vars(type).get\nmethod = lookup('__subclasses__')", id="aliased-vars-get"),
+            pytest.param("method = vars(type).get(*('__subclasses__',))", id="vars-type-get-starred"),
+            pytest.param("method = vars(type).__getitem__(*['__subclasses__'])", id="vars-type-getitem-starred-list"),
+            pytest.param("method = vars(type).get(*('__subclasses__', None))", id="vars-type-get-starred-default"),
+            pytest.param("method = dict.get(vars(type), *('__subclasses__',))", id="unbound-dict-get-starred"),
+            pytest.param(
+                "method = dict.__getitem__(vars(type), *('__subclasses__',))", id="unbound-dict-getitem-starred"
+            ),
+            pytest.param(
+                "lookup = vars(type).get\nmethod = lookup(*('__subclasses__',))", id="aliased-vars-get-starred"
+            ),
             pytest.param("g = vars(init).get('__globals__')", id="opaque-receiver-get-globals"),
             pytest.param("g = namespace['__globals__']", id="opaque-receiver-subscript-globals"),
             pytest.param("b = g['__builtins__']", id="opaque-receiver-subscript-builtins"),
@@ -1540,6 +1550,9 @@ class TestScanCodeSecurityRuntimeModuleBypass:
             pytest.param("import glob\nchecker = vars(glob).get('magic_check')", id="vars-module-safe-key"),
             pytest.param("import glob\nchecker = dict.get(glob.__dict__, 'magic_check')", id="dict-get-safe-member"),
             pytest.param("d = {}\nvalue = d.get('__name__')", id="non-dangerous-dunder-key"),
+            pytest.param("config = {'timeout': 5}\nvalue = config.get(*('timeout',))", id="dict-get-starred-safe-key"),
+            pytest.param("d = {}\nvalue = d.get(*('__name__',))", id="starred-non-dangerous-dunder-key"),
+            pytest.param("keys = ()\nconfig = {'timeout': 5}\nvalue = config.get(*keys)", id="dict-get-opaque-starred"),
         ],
     )
     def test_should_allow_safe_mapping_reads(self, code):

@@ -273,6 +273,26 @@ def _static_positional_argument_count(arguments: list[ast.expr]) -> int | None:
     return count
 
 
+def _expand_static_arguments(arguments: list[ast.expr]) -> list[ast.expr] | None:
+    """Splice statically known starred tuples/lists into the argument list.
+
+    Returns None when any starred value is opaque, mirroring
+    ``_static_positional_argument_count``.
+    """
+    expanded: list[ast.expr] = []
+    for argument in arguments:
+        if isinstance(argument, ast.Starred):
+            if not isinstance(argument.value, (ast.Tuple, ast.List)):
+                return None
+            nested = _expand_static_arguments(argument.value.elts)
+            if nested is None:
+                return None
+            expanded.extend(nested)
+        else:
+            expanded.append(argument)
+    return expanded
+
+
 def _build_dangerous_members() -> tuple[dict[str, set[str]], dict[str, set[str]]]:
     """Per-module dangerous member names, derived from the call/read tables.
 
@@ -1344,16 +1364,19 @@ class _SecurityChecker(ast.NodeVisitor):
         """
         selectors: list[ast.AST] = []
         function_names = self._resolved_assignment_value(node.func)
-        if isinstance(node.func, ast.Attribute) and node.func.attr in {"get", "__getitem__"} and node.args:
+        # A starred argument with no statically known size is treated like any
+        # other dynamic key; only expanded arguments expose a static selector.
+        arguments = _expand_static_arguments(node.args) or node.args
+        if isinstance(node.func, ast.Attribute) and node.func.attr in {"get", "__getitem__"} and arguments:
             # Bound form: ``mapping.get(key)`` / ``mapping.__getitem__(key)``.
-            selectors.append(node.args[0])
+            selectors.append(arguments[0])
         if function_names & {"dict.get", "dict.__getitem__", "builtins.dict.get", "builtins.dict.__getitem__"}:
             # Unbound form: ``dict.get(mapping, key)`` — the mapping is args[0].
-            if node.args[1:]:
-                selectors.append(node.args[1])
-        elif node.args and any(name.endswith((".__dict__.get", ".__dict__.__getitem__")) for name in function_names):
+            if arguments[1:]:
+                selectors.append(arguments[1])
+        elif arguments and any(name.endswith((".__dict__.get", ".__dict__.__getitem__")) for name in function_names):
             # Aliased bound accessor: ``lookup = vars(X).get; lookup(key)``.
-            selectors.append(node.args[0])
+            selectors.append(arguments[0])
         for selector in selectors:
             if (member_name := _static_string_value(selector)) in DANGEROUS_DUNDER_ATTRS:
                 self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
