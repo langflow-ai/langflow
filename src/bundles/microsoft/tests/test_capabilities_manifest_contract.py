@@ -13,6 +13,7 @@ import json
 from pathlib import Path
 
 import pytest
+from lfx.custom.custom_component.component import Component
 from lfx.integrations.capabilities import IntegrationCapabilityManifest
 from lfx_microsoft import components as component_package
 from lfx_microsoft.manifest import MANIFEST_PATH, load_manifest
@@ -51,6 +52,23 @@ def test_component_refs_resolve_to_exported_classes() -> None:
     refs = {capability.component_ref for capability in load_manifest().capabilities}
     assert refs <= exported
     assert len(refs) == len(load_manifest().capabilities)
+
+
+def test_no_output_method_shadows_a_component_attribute() -> None:
+    """An output method named after a Component attribute replaces it for the framework too.
+
+    ``send_error`` calls ``self.send_message(error)``, so an output method named
+    ``send_message`` turns every failure into a TypeError that hides the real one
+    (Gmail Send shipped with exactly that).
+    """
+    reserved = set(dir(Component))
+    shadowed = {
+        f"{name}.{output.method}"
+        for name in component_package.microsoft.__all__
+        for output in getattr(getattr(component_package.microsoft, name), "outputs", [])
+        if output.method in reserved
+    }
+    assert shadowed == set()
 
 
 def test_offline_access_is_never_a_per_action_scope() -> None:

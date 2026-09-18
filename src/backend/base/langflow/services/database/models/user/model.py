@@ -11,6 +11,8 @@ from langflow.schema.serialize import UUIDstr
 if TYPE_CHECKING:
     from langflow.services.database.models.api_key.model import ApiKey
     from langflow.services.database.models.auth.authz import AuthzRoleAssignment
+    from langflow.services.database.models.connection.model import Connection
+    from langflow.services.database.models.connection.oauth import ConnectionOAuth
     from langflow.services.database.models.deployment.model import Deployment
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
     from langflow.services.database.models.file.model import File
@@ -91,6 +93,18 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
         sa_relationship_kwargs={
             "foreign_keys": "AuthzRoleAssignment.assigned_by",
         },
+    )
+    # Same SQLite gap on connection.owner_id and connection_oauth.user_id, both
+    # declared ON DELETE CASCADE. Without these a deleted user's connections,
+    # their encrypted credential envelopes (removed through Connection.secret),
+    # and any consent the user left pending, possibly on an instance connection,
+    # survive as orphans. Instance connections have no owner and are untouched.
+    # Like the user-delete route itself, this revokes nothing at the provider.
+    connections: list["Connection"] = Relationship(
+        sa_relationship_kwargs={"cascade": "delete"},
+    )
+    connection_oauth_bindings: list["ConnectionOAuth"] = Relationship(
+        sa_relationship_kwargs={"cascade": "delete"},
     )
     optins: dict[str, Any] | None = Field(
         sa_column=Column(JSON, default=lambda: UserOptin().model_dump(), nullable=True)

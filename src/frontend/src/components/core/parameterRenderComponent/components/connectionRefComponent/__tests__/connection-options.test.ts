@@ -72,6 +72,29 @@ describe("missingScopesFor", () => {
       [],
     );
   });
+
+  it("matches a Microsoft scope with or without the Graph prefix", () => {
+    const outlook = connection({
+      provider_key: "microsoft",
+      granted_scopes: ["Mail.Send"],
+    });
+    expect(
+      missingScopesFor(outlook, ["https://graph.microsoft.com/Mail.Send"]),
+    ).toEqual([]);
+  });
+
+  it("matches a Google scope granted in its short form, in any case", () => {
+    const google = connection({ granted_scopes: ["GMAIL.SEND"] });
+    expect(missingScopesFor(google, [GMAIL_SEND])).toEqual([]);
+  });
+
+  it("does not strip another provider's prefix", () => {
+    const slack = connection({
+      provider_key: "slack",
+      granted_scopes: ["gmail.send"],
+    });
+    expect(missingScopesFor(slack, [GMAIL_SEND])).toEqual([GMAIL_SEND]);
+  });
 });
 
 describe("buildConnectionOptions", () => {
@@ -148,7 +171,7 @@ describe("identity kind", () => {
     executing_identity: { identity: "bot" },
   });
 
-  it("maps a delegated account to the user kind and everything else to instance", () => {
+  it("maps a delegated account to the user kind and bots and services to instance", () => {
     expect(identityKindOf(connection())).toBe("user");
     expect(identityKindOf(botConnection)).toBe("instance");
     expect(
@@ -156,6 +179,43 @@ describe("identity kind", () => {
         connection({ executing_identity: { identity: "service" } }),
       ),
     ).toBe("instance");
+  });
+
+  it("has no kind for a connection that does not say who it runs as", () => {
+    const missing = connection({
+      executing_identity:
+        undefined as unknown as ConnectionRead["executing_identity"],
+    });
+    const blank = connection({
+      executing_identity: {
+        identity: null,
+      } as unknown as ConnectionRead["executing_identity"],
+    });
+    expect(identityKindOf(missing)).toBeUndefined();
+    expect(identityKindOf(blank)).toBeUndefined();
+  });
+
+  it("lets an unknown identity match any field; the run-time check decides", () => {
+    const unknown = connection({
+      executing_identity: {} as ConnectionRead["executing_identity"],
+    });
+    expect(identityMatches(unknown, "user")).toBe(true);
+    expect(identityMatches(unknown, "instance")).toBe(true);
+    const [option] = buildConnectionOptions([unknown], [CALENDAR_READ], "user");
+    expect(option.usable).toBe(true);
+    expect(option.unusableReason).toBeUndefined();
+  });
+
+  it("flags a Slack bot connection on a field that must run as a user", () => {
+    const slackBot = connection({
+      provider_key: "slack",
+      name: "bot",
+      granted_scopes: ["chat:write"],
+      executing_identity: { identity: "bot" },
+    });
+    const [option] = buildConnectionOptions([slackBot], ["chat:write"], "user");
+    expect(option.usable).toBe(false);
+    expect(option.unusableReason).toBe("Runs as the instance, not a user");
   });
 
   it("accepts any connection when the field does not constrain the identity", () => {

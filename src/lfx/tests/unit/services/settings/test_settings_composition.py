@@ -208,6 +208,7 @@ EXPECTED_FIELDS = {
     "rate_limit_trust_proxy",
     "public_flow_rate_limit_per_minute",
     "connection_metadata_rate_limit_per_minute",
+    "connection_write_rate_limit_per_minute",
     "custom_component_admin_only",
     "allow_components_paths_override",
     # RuntimeSettings

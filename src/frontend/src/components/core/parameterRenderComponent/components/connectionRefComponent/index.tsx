@@ -9,6 +9,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useGetConnections } from "@/controllers/API/queries/connections/use-get-connections";
+import { activeRequiredScopes } from "@/utils/connection-scopes";
 import { cn } from "@/utils/utils";
 import type { InputProps } from "../../types";
 import {
@@ -45,26 +46,40 @@ export default function ConnectionRefComponent({
   placeholder,
   provider,
   requiredScopes = [],
+  conditionalScopes,
+  inputValues,
   identityKind,
   ariaLabelledBy,
 }: InputProps<string, ConnectionRefComponentType>) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const { data, isLoading, isError, isFetching, refetch } = useGetConnections(
-    { provider },
-    { enabled: Boolean(provider) },
-  );
+  const { data, isLoading, isError, isSuccess, isFetching, refetch } =
+    useGetConnections({ provider }, { enabled: Boolean(provider) });
 
+  // What the run will ask the resolver to cover: the field's required scopes
+  // plus the conditional ones the node's current inputs switch on.
+  const scopes = useMemo(
+    () =>
+      activeRequiredScopes(
+        provider,
+        requiredScopes,
+        conditionalScopes,
+        inputValues ?? {},
+      ),
+    [provider, requiredScopes, conditionalScopes, inputValues],
+  );
   const options = useMemo(
-    () => buildConnectionOptions(data ?? [], requiredScopes, identityKind),
-    [data, requiredScopes, identityKind],
+    () => buildConnectionOptions(data ?? [], scopes, identityKind),
+    [data, scopes, identityKind],
   );
   const selectedHandle = typeof value === "string" ? value : "";
   const selected = options.find((option) => option.handle === selectedHandle);
   // A handle can outlive the connection it names: the flow may come from
-  // another workspace, or the connection may have been deleted since.
-  const isDangling = Boolean(selectedHandle) && !selected;
+  // another workspace, or the connection may have been deleted since. Only a
+  // list that loaded can say so; while it loads, or after it failed, a missing
+  // match means nothing.
+  const isDangling = Boolean(selectedHandle) && isSuccess && !selected;
 
   const select = (handle: string) => {
     handleOnNewValue({ value: handle });
@@ -177,8 +192,8 @@ export default function ConnectionRefComponent({
 
         <div className="flex items-center justify-between gap-2 border-t border-border bg-background px-3 py-2">
           <span className="truncate text-[11px] text-muted-foreground">
-            {requiredScopes.length
-              ? `Requires ${requiredScopes.map(shortScope).join(", ")}`
+            {scopes.length
+              ? `Requires ${scopes.map(shortScope).join(", ")}`
               : "No scope required"}
           </span>
           <div className="flex items-center gap-1">

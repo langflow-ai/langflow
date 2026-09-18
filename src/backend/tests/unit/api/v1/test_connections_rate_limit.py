@@ -3,7 +3,8 @@
 Both routers sit in front of credential material and outbound provider calls
 (OAuth state minting, token exchange on the callback, health/test checks), so
 they share the rate-limit service used by /login and the public flow builds.
-These tests pin the 429 contract and the per-endpoint counter namespaces.
+These tests pin the 429 contract, the per-endpoint counter namespaces, and the
+counter keys: authenticated routes count per user, the OAuth callback per IP.
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from langflow.api.v1 import connections as connections_module
+from langflow.api.v1 import integrations as integrations_module
 from langflow.services.deps import get_settings_service
 from langflow.services.rate_limit import service as rate_limit_service
 
@@ -27,6 +29,12 @@ _LIMIT = 2
 _CALLBACK_URL = "api/v1/connections/oauth/google/callback"
 # usePendingConnectionPoll refetches the listing every 2000ms: 30 reads a minute.
 _POLLS_PER_MINUTE = 30
+# More writes than the 5/minute login budget the write routes used to inherit.
+_WRITE_BURST = 12
+# The conftest `user_two` fixture hashes this password.
+_USER_TWO_PASSWORD = "hashed_password"  # noqa: S105  # pragma: allowlist secret
+# Test-only header the patched limiter key function reads as the client IP.
+_CLIENT_IP_HEADER = "x-test-client-ip"
 
 
 @pytest.fixture(autouse=True)
@@ -39,12 +47,19 @@ def _reset_rate_limiter():
         rate_limit_service._limiter.reset()
 
 
-def _enable_rate_limit(monkeypatch: pytest.MonkeyPatch, *, limit: int = _LIMIT, read_limit: int | None = None) -> None:
+def _enable_rate_limit(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    limit: int = _LIMIT,
+    read_limit: int | None = None,
+    write_limit: int | None = None,
+) -> None:
     """Turn the limiter on after login; the fixtures run with it disabled.
 
-    `read_limit` sizes the metadata-read bucket, which is deliberately far more
-    generous than the write budget in production; it defaults to `limit` here so
-    a case that does not care about the split reads as one allowance.
+    `read_limit` and `write_limit` size the metadata-read and connection-write
+    buckets, which are deliberately more generous than the login budget in
+    production; both default to `limit` here so a case that does not care about
+    the split reads as one allowance.
     """
     settings = get_settings_service().settings
     monkeypatch.setattr(settings, "rate_limit_enabled", True)
@@ -52,8 +67,26 @@ def _enable_rate_limit(monkeypatch: pytest.MonkeyPatch, *, limit: int = _LIMIT, 
     monkeypatch.setattr(
         settings, "connection_metadata_rate_limit_per_minute", limit if read_limit is None else read_limit
     )
+    monkeypatch.setattr(
+        settings, "connection_write_rate_limit_per_minute", limit if write_limit is None else write_limit
+    )
     if rate_limit_service._limiter is not None:
         rate_limit_service._limiter.reset()
+
+
+def _key_client_ip_by_header(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Let a request pick its client IP; every test request otherwise shares one address."""
+    limiter = rate_limit_service.get_rate_limiter()
+    monkeypatch.setattr(limiter, "_key_func", lambda request: request.headers.get(_CLIENT_IP_HEADER, "127.0.0.1"))
+
+
+@pytest.fixture
+async def user_two_headers(client: AsyncClient, user_two) -> dict[str, str]:
+    """Bearer headers for a second user, who reaches the app from the same client IP as the first."""
+    login = await client.post("api/v1/login", data={"username": user_two.username, "password": _USER_TWO_PASSWORD})
+    assert login.status_code == 200, login.text
+    client.cookies.clear()  # the login set this user's session cookie on the shared client
+    return {"Authorization": f"Bearer {login.json()['access_token']}"}
 
 
 def _assert_limited(response) -> None:
@@ -128,6 +161,35 @@ async def test_shipped_defaults_admit_a_full_minute_of_the_pending_oauth_poll(
     for poll in range(_POLLS_PER_MINUTE):
         polled = await client.get("api/v1/connections", headers=logged_in_headers)
         assert polled.status_code == 200, f"poll {poll + 1} of {_POLLS_PER_MINUTE}: {polled.text}"
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_shipped_defaults_admit_a_burst_of_connection_writes(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A user managing connections must not hit the login budget.
+
+    The writes used to inherit `rate_limit_per_minute` (5), so every write after
+    the fifth in a minute took a 429, keyed by client IP. This runs at the
+    *shipped* defaults, so lowering the write allowance back toward the login
+    budget fails here.
+    """
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "rate_limit_enabled", True)
+    if rate_limit_service._limiter is not None:
+        rate_limit_service._limiter.reset()
+    assert settings.connection_write_rate_limit_per_minute > _WRITE_BURST
+
+    connection_id = await _create_connection(client, logged_in_headers)
+    for write in range(_WRITE_BURST):
+        renamed = await client.patch(
+            f"api/v1/connections/{connection_id}",
+            json={"display_name": f"Renamed {write}"},
+            headers=logged_in_headers,
+        )
+        assert renamed.status_code == 200, f"write {write + 2} of {_WRITE_BURST + 1}: {renamed.text}"
 
 
 @pytest.mark.parametrize("route", ["create", "update", "revoke", "delete"])
@@ -229,6 +291,77 @@ async def test_exhausted_read_bucket_does_not_block_writes(
 
 
 @pytest.mark.usefixtures("active_user")
+async def test_users_behind_one_ip_have_independent_write_buckets(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+    user_two_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Writes count per user: one user spending the allowance must not 429 a colleague on the same NAT."""
+    first_id = await _create_connection(client, logged_in_headers)
+    second_id = await _create_connection(client, user_two_headers)
+    _enable_rate_limit(monkeypatch, limit=1)
+
+    renamed = await client.patch(
+        f"api/v1/connections/{first_id}", json={"display_name": "First"}, headers=logged_in_headers
+    )
+    assert renamed.status_code == 200, renamed.text
+    _assert_limited(
+        await client.patch(f"api/v1/connections/{first_id}", json={"display_name": "Again"}, headers=logged_in_headers)
+    )
+
+    # Same client IP, different user: a fresh bucket.
+    renamed = await client.patch(
+        f"api/v1/connections/{second_id}", json={"display_name": "Second"}, headers=user_two_headers
+    )
+    assert renamed.status_code == 200, renamed.text
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_users_behind_one_ip_have_independent_read_buckets(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+    user_two_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two users polling from one NAT must not share the 60/minute pending-consent poll budget."""
+    _enable_rate_limit(monkeypatch, read_limit=1)
+
+    listed = await client.get("api/v1/connections", headers=logged_in_headers)
+    assert listed.status_code == 200, listed.text
+    _assert_limited(await client.get("api/v1/connections", headers=logged_in_headers))
+
+    listed = await client.get("api/v1/connections", headers=user_two_headers)
+    assert listed.status_code == 200, listed.text
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_changing_client_ip_does_not_reset_a_users_bucket(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The per-user key replaces the IP key rather than joining it, so hopping addresses buys nothing."""
+    connection_id = await _create_connection(client, logged_in_headers)
+    _enable_rate_limit(monkeypatch, limit=1)
+    _key_client_ip_by_header(monkeypatch)
+
+    renamed = await client.patch(
+        f"api/v1/connections/{connection_id}",
+        json={"display_name": "Renamed"},
+        headers={**logged_in_headers, _CLIENT_IP_HEADER: "198.51.100.1"},
+    )
+    assert renamed.status_code == 200, renamed.text
+    _assert_limited(
+        await client.patch(
+            f"api/v1/connections/{connection_id}",
+            json={"display_name": "Renamed again"},
+            headers={**logged_in_headers, _CLIENT_IP_HEADER: "198.51.100.2"},
+        )
+    )
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_connection_test_and_health_are_rate_limited(
     client: AsyncClient,
     logged_in_headers: dict[str, str],
@@ -321,6 +454,31 @@ async def test_oauth_callback_budget_does_not_consume_oauth_start(
     health = await client.post(f"api/v1/connections/{connection_id}/health", headers=logged_in_headers)
     assert health.status_code == 200, health.text
     _assert_limited(await client.post("api/v1/connections", json=_create_payload("another"), headers=logged_in_headers))
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_oauth_callback_stays_keyed_by_client_ip(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+    user_two_headers: dict[str, str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The callback is unauthenticated, so credentials riding along must not buy a per-user bucket."""
+    _enable_rate_limit(monkeypatch, limit=1)
+    _key_client_ip_by_header(monkeypatch)
+    params = {"state": "d" * 43}
+
+    first = await client.get(
+        _CALLBACK_URL, params=params, headers={**logged_in_headers, _CLIENT_IP_HEADER: "198.51.100.1"}
+    )
+    assert first.status_code == 400, first.text
+    # Another user's bearer token from the same address shares the spent bucket...
+    _assert_limited(
+        await client.get(_CALLBACK_URL, params=params, headers={**user_two_headers, _CLIENT_IP_HEADER: "198.51.100.1"})
+    )
+    # ...while another address has its own.
+    other_ip = await client.get(_CALLBACK_URL, params=params, headers={_CLIENT_IP_HEADER: "198.51.100.2"})
+    assert other_ip.status_code == 400, other_ip.text
 
 
 @pytest.mark.usefixtures("active_user")
@@ -427,3 +585,63 @@ def test_route_guard_covers_synchronous_handlers() -> None:
     """)
 
     assert _routes_without_rate_limit(source) == ["sync_unlimited", "async_unlimited"]
+
+
+def _route_keying_mismatches(source: str) -> list[str]:
+    """Names of router handlers whose rate-limit key does not match whether they authenticate.
+
+    A handler that takes ``current_user`` must pass ``key=`` to every
+    ``check_rate_limit`` call so it counts per user; one that does not (the
+    OAuth callback) must not, since it has no user to key on.
+    """
+    tree = ast.parse(source)
+    mismatched: list[str] = []
+    for node in tree.body:
+        if not isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)) or not any(
+            isinstance(decorator, ast.Call)
+            and isinstance(decorator.func, ast.Attribute)
+            and isinstance(decorator.func.value, ast.Name)
+            and decorator.func.value.id == "router"
+            for decorator in node.decorator_list
+        ):
+            continue
+        authenticated = any(arg.arg == "current_user" for arg in [*node.args.args, *node.args.kwonlyargs])
+        calls = [
+            call
+            for call in ast.walk(node)
+            if isinstance(call, ast.Call) and isinstance(call.func, ast.Name) and call.func.id == "check_rate_limit"
+        ]
+        if any(any(keyword.arg == "key" for keyword in call.keywords) != authenticated for call in calls):
+            mismatched.append(node.name)
+    return mismatched
+
+
+@pytest.mark.parametrize("module", [connections_module, integrations_module], ids=["connections", "integrations"])
+def test_authenticated_routes_key_the_rate_limit_per_user(module) -> None:
+    """Every authenticated route counts per user; only the unauthenticated callback counts per IP."""
+    source = Path(module.__file__).read_text(encoding="utf-8")
+
+    assert _route_keying_mismatches(source) == []
+
+
+def test_route_keying_guard_flags_both_directions() -> None:
+    """The guard catches an authenticated route on the IP key and an anonymous route claiming a user key."""
+    source = textwrap.dedent("""
+        @router.get("/a")
+        async def authenticated_on_ip(request: Request, current_user: CurrentActiveUser) -> None:
+            check_rate_limit(request, scope="a")
+
+        @router.get("/b")
+        async def authenticated_per_user(request: Request, current_user: CurrentActiveUser) -> None:
+            check_rate_limit(request, scope="b", key=get_user_limiter_key(current_user.id))
+
+        @router.get("/c")
+        async def anonymous_on_ip(request: Request) -> None:
+            check_rate_limit(request, scope="c")
+
+        @router.get("/d")
+        async def anonymous_with_key(request: Request) -> None:
+            check_rate_limit(request, scope="d", key="user:unknown")
+    """)
+
+    assert _route_keying_mismatches(source) == ["authenticated_on_ip", "anonymous_with_key"]

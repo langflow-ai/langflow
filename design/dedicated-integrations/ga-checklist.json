@@ -2,7 +2,7 @@
   "ticket": "INT-14",
   "jira": "LE-2472",
   "title": "GA validation: cross-context tests, security review, docs, accessibility, i18n",
-  "updated_on": "2026-09-17",
+  "updated_on": "2026-09-18",
   "contexts": {
     "hosted": {
       "status": "pending-signoff",
@@ -99,11 +99,13 @@
     },
     {
       "id": "rate-limit-handling",
-      "title": "Rate-limit handling: provider 429 normalized to typed rate-limited errors; connection/OAuth endpoints rate limited, with metadata reads on their own bucket so the pending-consent poll survives (INT-14-04)",
+      "title": "Rate-limit handling: provider 429 normalized to typed rate-limited errors; connection/OAuth endpoints rate limited, with metadata reads on their own bucket so the pending-consent poll survives (INT-14-04) and writes on their own per-user bucket (INT-14-05)",
       "contexts": ["hosted", "self_managed", "desktop"],
       "status": "validated",
       "evidence": [
         "src/backend/tests/unit/api/v1/test_connections_rate_limit.py::test_shipped_defaults_admit_a_full_minute_of_the_pending_oauth_poll",
+        "src/backend/tests/unit/api/v1/test_connections_rate_limit.py::test_shipped_defaults_admit_a_burst_of_connection_writes",
+        "src/backend/tests/unit/api/v1/test_connections_rate_limit.py::test_users_behind_one_ip_have_independent_write_buckets",
         "docs/docs/Develop/api-keys-and-authentication.mdx",
         "docs/docs/Components/bundles-microsoft.mdx",
         "docs/docs/Components/bundles-slack.mdx"

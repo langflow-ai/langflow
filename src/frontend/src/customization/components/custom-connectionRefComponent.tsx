@@ -11,6 +11,8 @@ import type { InputProps } from "@/components/core/parameterRenderComponent/type
 const CustomConnectionRefComponent = ({
   provider,
   requiredScopes = [],
+  conditionalScopes = [],
+  inputValues,
   capabilities = [],
   identityKind,
   ...baseInputProps
@@ -20,6 +22,8 @@ const CustomConnectionRefComponent = ({
       {...baseInputProps}
       provider={provider}
       requiredScopes={requiredScopes}
+      conditionalScopes={conditionalScopes}
+      inputValues={inputValues}
       capabilities={capabilities}
       identityKind={identityKind}
     />

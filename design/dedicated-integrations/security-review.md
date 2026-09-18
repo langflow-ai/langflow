@@ -7,7 +7,7 @@ Applies to: the OAuth broker (`services/connection/oauth/`), the connections and
 (`api/utils/execution_principal.py`, `lfx/services/connection/base.py`,
 `services/connection/service.py`, `services/database/models/connection/`)
 Owners (sign-off roles): langflow-base owner, lfx owner, Enterprise owner
-Last verified: 2026-09-17
+Last verified: 2026-09-18
 
 ## Scope and methodology
 
@@ -17,7 +17,9 @@ feature. Method: read every line of the files in scope, then check each security
 (open redirects, state replay, CSRF on the callback, timing oracles, log/telemetry leakage of
 tokens or codes, authorization bypass via shares or instance connections, SQL/ORM injection, mass
 assignment on PATCH). Line references were verified against `feat/int-14-ga-validation` on
-2026-09-17 and re-verified at `13e1ec8ed7` after `release-1.13.0` merged in. Existing regression
+2026-09-17 and re-verified at `13e1ec8ed7` after `release-1.13.0` merged in; the
+`api/v1/connections.py`, `api/v1/integrations.py`, and rate-limit references were re-verified on
+2026-09-18 after the INT-14-05 fix. Existing regression
 coverage relied on: `test_connections.py`, `test_connection_oauth.py`,
 `test_connection_resolution_families.py`, `test_integrations.py`, and
 `tests/unit/services/connection/`.
@@ -28,8 +30,10 @@ coverage relied on: `test_connections.py`, `test_connection_oauth.py`,
 |----|----------|-------|----------|--------|
 | INT-14-01 | HIGH | No rate limiting on the connections or integrations routers | `api/v1/connections.py` and `api/v1/integrations.py` had no `check_rate_limit` call; only `api/v1/login.py:43`, `api/v1/chat.py:1141-1146`, and `api/v2/workflow_public.py:86-89` used the rate-limit service | fixed |
 | INT-14-02 | LOW | Health/test hold the connection row lock across a possible outbound token refresh | `services/connection/service.py:549-575`, `services/connection/oauth/broker.py:186-190`, provider timeout `providers.py:87` | open (accepted) |
-| INT-14-03 | LOW | Rate-limit counters are keyed by client IP only | `services/rate_limit/service.py:128-150` | open (accepted) |
+| INT-14-03 | LOW | Rate-limit counters are keyed by client IP only | `services/rate_limit/service.py:88` (the limiter's client-IP key function) | fixed (by INT-14-05) |
 | INT-14-04 | HIGH | The login-sized limit from INT-14-01 cut off the pending-consent poll | `GET /connections` on `rate_limit_per_minute` (5) vs `usePendingConnectionPoll`'s 2000ms refetch with `retry: false` (`src/frontend/src/controllers/API/queries/connections/use-connections.ts:155-171`) | fixed |
+| INT-14-05 | MEDIUM | Connection writes stayed on the login-sized limit, keyed by client IP | create, PATCH, revoke, and delete called `check_rate_limit(request, scope="connections")` with no allowance, so they fell back to `rate_limit_per_minute` (5) per client IP | fixed |
+| INT-14-06 | MEDIUM | Deleting a user left their connections and encrypted credentials behind on SQLite | `connection.owner_id`, `connection_secret.connection_id` and `connection_oauth` declare `ON DELETE CASCADE`, which SQLite never enforces, and no ORM cascade covered them | fixed |
 
 ### INT-14-01 (HIGH, fixed): no rate limiting on the connections or integrations routers
 
@@ -42,24 +46,26 @@ already limited; these routers were not.
 
 Fix, mirroring `login.py`'s `check_rate_limit` idiom with per-endpoint counter namespaces:
 
-- `api/v1/connections.py:71-76` defines the scopes; checks at `:246` (list), `:259` (create),
-  `:288` (test), `:318` (health), `:353` (update), `:383` (revoke), `:404` (delete),
-  `:428` (OAuth start), `:479` (registration listing), `:528` (OAuth callback) — every route the
+- `api/v1/connections.py:85-90` defines the scopes; checks at `:260` (list), `:278` (create),
+  `:312` (test), `:342` (health), `:377` (update), `:412` (revoke), `:438` (delete),
+  `:467` (OAuth start), `:518` (registration listing), `:572` (OAuth callback) — every route the
   router exposes.
-- `api/v1/integrations.py:28` defines the `integrations` scope; checks at `:113` (catalog) and
-  `:191` (effective policy).
+- `api/v1/integrations.py:32` defines the `integrations` scope; checks at `:114` (catalog) and
+  `:197` (effective policy).
 - Same config knobs as the rest of the platform: `rate_limit_enabled`, `rate_limit_per_minute`,
   `rate_limit_storage_uri`, `rate_limit_trust_proxy`
-  (`src/lfx/src/lfx/services/settings/groups/security.py:334-352`), plus
-  `connection_metadata_rate_limit_per_minute` for the read bucket INT-14-04 added. OAuth
+  (`src/lfx/src/lfx/services/settings/groups/security.py:333-359`), plus
+  `connection_metadata_rate_limit_per_minute` for the read bucket INT-14-04 added and
+  `connection_write_rate_limit_per_minute` for the write bucket INT-14-05 added. OAuth
   start/callback and test/health get their own buckets so a burst of provider-bound traffic cannot
   consume a client's write budget, and so unauthenticated callback spam cannot block a user's
   consent starts.
-- Tests: `src/backend/tests/unit/api/v1/test_connections_rate_limit.py` (16 tests: the 429 contract
+- Tests: `src/backend/tests/unit/api/v1/test_connections_rate_limit.py` (25 tests: the 429 contract
   with `Retry-After: 60` on metadata reads, every mutating route, test/health, OAuth start, the
   registration listing, the unauthenticated callback, bucket independence in both directions, the
-  shared integrations bucket, the pending-consent poll at shipped defaults, and the
-  disabled-setting passthrough). `test_every_connections_route_checks_the_rate_limit` walks the
+  shared integrations bucket, the pending-consent poll and a write burst at shipped defaults,
+  per-user keying, and the disabled-setting passthrough).
+  `test_every_connections_route_checks_the_rate_limit` walks the
   router's decorated handlers so a route added later cannot ship unlimited — the gap that
   `GET /oauth/registrations` opened when INT-8 landed on the branch after this review's first
   pass.
@@ -110,12 +116,73 @@ from login.
   shipped defaults with no override, so lowering the default re-breaks the flow in CI rather than
   in a user's consent screen.
 
-### INT-14-03 (LOW, open): IP-only rate-limit keys
+### INT-14-05 (MEDIUM, fixed): connection writes stayed on the login-sized limit, keyed by client IP
+
+Found in QA of the INT-8 Connections UI. INT-14-04 moved the metadata reads off the login-sized
+fallback but left create, PATCH, revoke, and delete on it:
+`check_rate_limit(request, scope="connections")` with no allowance falls back to
+`rate_limit_per_minute`, which defaults to 5, and every counter was keyed by client IP. A user
+renaming, toggling, and revoking a few connections was refused within the minute. Behind a
+corporate NAT or shared egress proxy every user maps to one address, so one person's writes
+throttled everyone else's, and the same key made them share the 60/minute pending-consent poll
+budget from INT-14-04. At stock defaults before the fix,
+`test_shipped_defaults_admit_a_burst_of_connection_writes` (one create, then twelve renames) takes
+its first 429 on write 6 of 13.
+
+Fix, following the INT-14-04 precedent:
+
+- `connection_write_rate_limit_per_minute` defaults to 30 and sizes the `connections` bucket that
+  create, PATCH, revoke, and delete share (`api/v1/connections.py:278`, `:377`, `:412`, `:438`).
+  `get_connection_write_limit` returns `None` when rate limiting is disabled, so the disabled path
+  is unchanged. Test, health, and OAuth start keep the login-sized allowance on their own scopes.
+- `check_rate_limit` takes an optional `key` that replaces the client-IP key
+  (`services/rate_limit/service.py:128`), and `get_user_limiter_key` builds `user:{id}`
+  (`:65-71`). Every authenticated route on both routers counts per user: the connection listing,
+  the registration listing, create, test, health, PATCH, revoke, delete, OAuth start, the
+  integrations catalog, and the effective-policy read. `current_user` is a dependency, so the caller
+  is authenticated before the handler consults the limiter; unauthenticated requests are refused
+  by that dependency first, as they were before. The OAuth callback has no user (state replaces
+  login) and stays keyed by client IP.
+- Trade-off: a per-user key does not cap the total one address can send across several accounts.
+  That remains the login limit's job, which is unchanged and IP-keyed.
+- Tests: `test_shipped_defaults_admit_a_burst_of_connection_writes` (fails at write 6 against the
+  previous code), `test_users_behind_one_ip_have_independent_write_buckets` and
+  `test_users_behind_one_ip_have_independent_read_buckets` (one user's exhausted bucket does not
+  429 another user from the same IP),
+  `test_changing_client_ip_does_not_reset_a_users_bucket`, and
+  `test_oauth_callback_stays_keyed_by_client_ip` (a second user's token from the same IP shares the
+  spent callback bucket; another IP does not). `test_authenticated_routes_key_the_rate_limit_per_user`
+  walks both routers so a new authenticated route cannot fall back to the IP key, and the callback
+  cannot claim a user key.
+
+### INT-14-06 (MEDIUM, fixed): a deleted user's connections and credentials outlived them on SQLite
+
+Found in QA of the INT-8 Connections UI. `Connection.owner_id` declares
+`ForeignKey("user.id", ondelete="CASCADE")`, and `connection_secret` and `connection_oauth` cascade
+from the connection (the OAuth row also from `user.id`), but SQLite enforces none of that: Langflow
+never issues `PRAGMA foreign_keys=ON`. On the default backend, `DELETE /api/v1/users/{id}` left
+the user's connection rows, their encrypted credential envelopes, and any consent the user had left
+pending. PostgreSQL enforced the declared cascade and was not affected. This is the gap #15124
+closed for role assignments.
+
+Fix: ORM cascades, following #15124. `User.connections` and `User.connection_oauth_bindings`
+delete with the user, and `Connection.secret` and `Connection.oauth_binding` delete with the
+connection, so the credential envelope goes wherever a connection row is deleted. Instance
+connections have no owner and survive. Nothing is revoked at the provider, matching the user-delete
+route's documented choice to avoid outbound calls; the provider grant stays valid until it expires
+or is revoked there. `test_delete_user_removes_their_connections_and_credentials` fails
+against the previous models. Not covered: bulk `delete(User)` statements (for example
+`FlowRunner.clear_user_state`) skip ORM cascades, and connection share rows carry no foreign key,
+so neither a connection delete nor a user delete removes them.
+
+### INT-14-03 (LOW, fixed by INT-14-05): IP-only rate-limit keys
 
 The shared rate-limit service keys counters by client IP (rightmost `X-Forwarded-For` hop only
-under `rate_limit_trust_proxy`). Authenticated connection calls could instead be keyed per user;
-that requires extending `check_rate_limit`, is shared with login and the public-flow endpoints, and
-is out of scope for INT-14. Accepted as platform-wide behavior.
+under `rate_limit_trust_proxy`). First accepted as platform-wide behavior; INT-14-05 then showed the
+cost (users behind one NAT throttled each other's writes) and extended `check_rate_limit` with an
+optional key, so every authenticated connections and integrations route now counts per user. The
+login and public-flow endpoints and the OAuth callback are unauthenticated and stay keyed by
+client IP.
 
 ## Per-area narrative
 
@@ -159,28 +226,28 @@ is out of scope for INT-14. Accepted as platform-wide behavior.
 - `lock_connection` takes the row lock as the first statement of a fresh transaction, which the
   SQLite reservation semantics require (`locking.py:18-29`).
 
-### Connection API (`api/v1/connections.py`) — one HIGH (fixed), otherwise clean
+### Connection API (`api/v1/connections.py`) — rate-limit findings fixed (INT-14-01, -04, -05), otherwise clean
 
 - Log leakage: the custom route class strips callback query strings from the request scope before
-  dependencies or access logs can render them (`connections.py:39-51`), and the handler clears the
-  scope again at response time (`:524`). The authorization `code` and `state` therefore never reach
+  dependencies or access logs can render them (`connections.py:44-56`), and the handler clears the
+  scope again at response time (`:576`). The authorization `code` and `state` therefore never reach
   uvicorn's access log.
 - Browser binding: the cookie name derives from the state digest, is HttpOnly, `SameSite=lax`,
   `secure` when the registration's redirect is HTTPS, path-scoped to the OAuth subtree, and lives
-  600 seconds (`:442-450`). This also defeats login-CSRF account linking: a victim who
+  600 seconds (`:489-497`). This also defeats login-CSRF account linking: a victim who
   opens an attacker's authorization URL completes the callback without the attacker's cookie and
-  fails the browser-digest check (`:526`, `:530-537`, `broker.py:88-92`).
-- Callback responses carry `no-store`, `no-referrer`, and a `default-src 'none'` CSP (`:73-77`),
-  and the failure body is a fixed string with no request data (`:543-546`).
+  fails the browser-digest check (`:578`, `:582-591`, `broker.py:88-92`).
+- Callback responses carry `no-store`, `no-referrer`, and a `default-src 'none'` CSP (`:94-98`),
+  and the failure body is a fixed string with no request data (`:595-598`).
 - Authorization ordering: mutations authorize in a separate read transaction before the row lock
   is taken, re-verify ownership under the lock, and re-check the permission after acquiring it
-  (`:155-220`); the instance-connection superuser floor applies even when authorization is disabled
-  or a plugin would allow (`:59`, `:166-174`). Tests: `test_non_owner_cannot_test_or_delete_connection`,
+  (`:176-241`); the instance-connection superuser floor applies even when authorization is disabled
+  or a plugin would allow (`:64`, `:187-196`). Tests: `test_non_owner_cannot_test_or_delete_connection`,
   `test_denied_cross_user_fetch_does_not_lock_connection`,
   `test_mutation_rechecks_policy_under_lock_without_blocking_durable_audit`.
 - Mass assignment: `ConnectionCreate`/`ConnectionUpdate` are `extra="forbid"`; PATCH touches only
   `display_name` and `allow_non_interactive`, and only the owner may widen the opt-in
-  (`schemas.py:64-131`, `connections.py:223-227`, `:355-363`). The handle, scopes, identity, and
+  (`schemas.py:64-131`, `connections.py:244-248`, `:391-400`). The handle, scopes, identity, and
   credentials are immutable post-creation. All queries are parameterized through SQLModel; no raw
   SQL is built from request data.
 - Responses never contain credential material (`schemas.py:134-154`;
@@ -188,10 +255,10 @@ is out of scope for INT-14. Accepted as platform-wide behavior.
 
 ### Integrations API (`api/v1/integrations.py`) — clean besides the fixed INT-14-01
 
-`include_blocked` is superuser-only (`:111-115`), the effective-policy read returns
-`blocked_action_keys` and the unfiltered loaded-provider list only to superusers (`:199-203`), and
+`include_blocked` is superuser-only (`:120-124`), the effective-policy read returns
+`blocked_action_keys` and the unfiltered loaded-provider list only to superusers (`:213-217`), and
 blocked providers/capabilities are omitted by default so a picker cannot advertise what execution
-would refuse (`:137-164`).
+would refuse (`:143-173`).
 
 ### Identity rules (`api/utils/execution_principal.py`, `lfx/services/connection/base.py`, `services/connection/service.py`) — clean
 
@@ -210,9 +277,9 @@ would refuse (`:137-164`).
   closed (`service.py:549-575`). A user-owned row shadows an instance row with the same handle, so a
   denied owned connection never silently falls back to the instance credential (`:598-631`).
 - Non-interactive opt-in is enforced in the portable floor itself (`base.py:140-151`); enabling it
-  is owner-only at the API (`connections.py:223-227`).
+  is owner-only at the API (`connections.py:244-248`).
 
-### Persistence (`services/database/models/connection/`) — clean
+### Persistence (`services/database/models/connection/`) — INT-14-06 fixed, otherwise clean
 
 Credential material lives only in `connection_secret.encrypted_payload` (Fernet envelope via the
 shared `encrypt_api_key` path), isolated from metadata queries (`model.py:87-103`); the OAuth table

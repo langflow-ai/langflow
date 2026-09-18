@@ -15,6 +15,7 @@ import CustomLinkComponent from "@/customization/components/custom-linkComponent
 import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import type { APIClassType, InputFieldType } from "@/types/api";
 import { CONNECTION_REF_FIELD_TYPE } from "@/utils/connection-ref-gate";
+import { templateInputValues } from "@/utils/connection-scopes";
 import AccordionPromptComponent from "./components/accordionPromptComponent";
 import ActionPickerComponent from "./components/actionPickerComponent";
 import DictComponent from "./components/dictComponent";
@@ -342,6 +343,8 @@ export function ParameterRenderComponent({
             value={typeof templateValue === "string" ? templateValue : ""}
             provider={templateData?.provider}
             requiredScopes={templateData?.required_scopes ?? []}
+            conditionalScopes={templateData?.conditional_scopes ?? []}
+            inputValues={templateInputValues(nodeClass?.template)}
             capabilities={templateData?.capabilities ?? []}
             identityKind={templateData?.identity_kind}
           />

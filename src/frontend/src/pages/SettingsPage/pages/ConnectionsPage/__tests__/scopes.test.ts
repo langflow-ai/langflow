@@ -3,6 +3,7 @@ import type { APIDataType } from "@/types/api";
 import {
   findComponentByRef,
   partitionByCeiling,
+  reauthorizeScopeList,
   scopeRequirements,
   shortScope,
   uniqueScopes,
@@ -100,5 +101,70 @@ describe("partitionByCeiling", () => {
       requestable: [GMAIL_SEND],
       unavailable: [],
     });
+  });
+});
+
+describe("reauthorizeScopeList", () => {
+  const MAIL_SEND = "https://graph.microsoft.com/Mail.Send";
+  const MAIL_READ = "https://graph.microsoft.com/Mail.Read";
+
+  it("offers the requestable scopes and checks the ones already granted", () => {
+    expect(
+      reauthorizeScopeList({
+        provider: "google",
+        requestable: [CALENDAR, GMAIL_SEND],
+        granted: [CALENDAR],
+        ceiling: [CALENDAR, GMAIL_SEND],
+      }),
+    ).toEqual({
+      options: [CALENDAR, GMAIL_SEND],
+      granted: [CALENDAR],
+      outsideCeiling: [],
+    });
+  });
+
+  it("matches a granted short scope to the registration's spelling", () => {
+    const list = reauthorizeScopeList({
+      provider: "microsoft",
+      requestable: [MAIL_SEND, MAIL_READ],
+      granted: ["Mail.Send"],
+      ceiling: [MAIL_SEND, MAIL_READ],
+    });
+    expect(list.options).toEqual([MAIL_SEND, MAIL_READ]);
+    expect(list.granted).toEqual([MAIL_SEND]);
+  });
+
+  it("keeps a granted scope no action requires, in the ceiling's spelling", () => {
+    const list = reauthorizeScopeList({
+      provider: "microsoft",
+      requestable: [MAIL_SEND],
+      granted: ["mail.send", "offline_access"],
+      ceiling: [MAIL_SEND, "offline_access"],
+    });
+    expect(list.options).toEqual([MAIL_SEND, "offline_access"]);
+    expect(list.granted).toEqual([MAIL_SEND, "offline_access"]);
+    expect(list.outsideCeiling).toEqual([]);
+  });
+
+  it("reports a granted scope the registration cannot request again", () => {
+    const list = reauthorizeScopeList({
+      provider: "microsoft",
+      requestable: [MAIL_SEND],
+      granted: ["Mail.Send", "User.Read"],
+      ceiling: [MAIL_SEND],
+    });
+    expect(list.options).toEqual([MAIL_SEND]);
+    expect(list.outsideCeiling).toEqual(["User.Read"]);
+  });
+
+  it("asks for granted scopes as granted when the ceiling is unknown", () => {
+    const list = reauthorizeScopeList({
+      provider: "google",
+      requestable: [GMAIL_SEND],
+      granted: [CALENDAR],
+      ceiling: undefined,
+    });
+    expect(list.options).toEqual([GMAIL_SEND, CALENDAR]);
+    expect(list.granted).toEqual([CALENDAR]);
   });
 });

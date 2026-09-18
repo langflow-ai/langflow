@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from datetime import datetime  # noqa: TC003 - SQLModel resolves annotations at runtime
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
 from sqlalchemy import CheckConstraint, ForeignKey, Index
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql.naming import conv
-from sqlmodel import JSON, Column, DateTime, Field, SQLModel, func
+from sqlmodel import JSON, Column, DateTime, Field, Relationship, SQLModel, func
 
 from langflow.schema.serialize import UUIDstr  # noqa: TC001 - SQLModel resolves annotations at runtime
 from langflow.services.database.models.connection.schemas import (
@@ -16,6 +18,9 @@ from langflow.services.database.models.connection.schemas import (
     ConnectionOwnershipMode,
     PersistedConnectionStatus,
 )
+
+if TYPE_CHECKING:
+    from langflow.services.database.models.connection.oauth import ConnectionOAuth
 
 
 class ConnectionBase(SQLModel):
@@ -81,6 +86,18 @@ class Connection(ConnectionBase, table=True):  # type: ignore[call-arg]
     updated_at: datetime | None = Field(
         default=None,
         sa_column=Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False),
+    )
+    # The credential envelope and the OAuth consent binding reference this row
+    # with ON DELETE CASCADE, which SQLite never enforces (Langflow does not set
+    # PRAGMA foreign_keys=ON). Cascading through the ORM removes them wherever a
+    # connection row is deleted, including through User.connections. The
+    # relationship is spelled out with sa_relationship because this module's
+    # postponed annotations would otherwise reach SQLAlchemy as a bare string.
+    secret: ConnectionSecret | None = Relationship(
+        sa_relationship=relationship("ConnectionSecret", cascade="delete", uselist=False)
+    )
+    oauth_binding: ConnectionOAuth | None = Relationship(
+        sa_relationship=relationship("ConnectionOAuth", cascade="delete", uselist=False)
     )
 
 

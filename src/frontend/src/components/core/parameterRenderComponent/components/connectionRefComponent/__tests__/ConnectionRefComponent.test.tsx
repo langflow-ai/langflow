@@ -47,6 +47,7 @@ function setConnections(
     data: connections,
     isLoading: false,
     isError: false,
+    isSuccess: true,
     isFetching: false,
     refetch: mockRefetch,
     ...state,
@@ -125,6 +126,27 @@ describe("ConnectionRefComponent", () => {
     expect(trigger).toHaveTextContent("not found");
   });
 
+  it("does not call a stored handle missing while connections load", () => {
+    setConnections([], {
+      data: undefined,
+      isLoading: true,
+      isSuccess: false,
+      isFetching: true,
+    });
+    renderPicker({ value: "google/work" });
+    const trigger = screen.getByTestId("connectionref_connection");
+    expect(trigger).toHaveTextContent("google/work");
+    expect(trigger).not.toHaveTextContent("not found");
+  });
+
+  it("does not call a stored handle missing when the list failed to load", () => {
+    setConnections([], { data: undefined, isError: true, isSuccess: false });
+    renderPicker({ value: "google/work" });
+    const trigger = screen.getByTestId("connectionref_connection");
+    expect(trigger).toHaveTextContent("google/work");
+    expect(trigger).not.toHaveTextContent("not found");
+  });
+
   it("explains the empty state instead of showing a blank list", async () => {
     setConnections([]);
     renderPicker();
@@ -182,5 +204,116 @@ describe("ConnectionRefComponent", () => {
     expect(
       await screen.findByText(/Requires calendar.events.readonly/i),
     ).toBeInTheDocument();
+  });
+
+  it("accepts a Microsoft scope granted without its Graph prefix", async () => {
+    setConnections([
+      connection({
+        provider_key: "microsoft",
+        name: "outlook",
+        granted_scopes: ["mail.send"],
+      }),
+    ]);
+    renderPicker({
+      provider: "microsoft",
+      requiredScopes: ["https://graph.microsoft.com/Mail.Send"],
+    });
+    await userEvent.click(screen.getByTestId("connectionref_connection"));
+    const option = await screen.findByTestId(
+      "connection-option-microsoft/outlook",
+    );
+    expect(option).not.toHaveTextContent("Missing");
+  });
+
+  describe("conditional scopes", () => {
+    const FILES_CONDITIONAL = [
+      {
+        scope: "Files.Read.All",
+        role: "optional",
+        condition: { kind: "input_truthy", input: "drive_id" },
+      },
+      {
+        scope: "Sites.Read.All",
+        role: "optional",
+        condition: { kind: "input_truthy", input: "site_id" },
+      },
+    ];
+
+    beforeEach(() => {
+      setConnections([
+        connection({
+          provider_key: "microsoft",
+          name: "files",
+          granted_scopes: ["Files.Read"],
+        }),
+      ]);
+    });
+
+    const renderFilesPicker = (inputValues: Record<string, unknown>) =>
+      renderPicker({
+        provider: "microsoft",
+        requiredScopes: ["Files.Read"],
+        conditionalScopes: FILES_CONDITIONAL,
+        inputValues,
+      });
+
+    it("requires a conditional scope once its input is set", async () => {
+      renderFilesPicker({ drive_id: "b!shared", site_id: "" });
+      await userEvent.click(screen.getByTestId("connectionref_connection"));
+      expect(
+        await screen.findByText("Requires Files.Read, Files.Read.All"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("connection-option-microsoft/files"),
+      ).toHaveTextContent("Missing Files.Read.All");
+    });
+
+    it("leaves a conditional scope out while its input is empty", async () => {
+      renderFilesPicker({ drive_id: "", site_id: null });
+      await userEvent.click(screen.getByTestId("connectionref_connection"));
+      expect(
+        await screen.findByText("Requires Files.Read"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("connection-option-microsoft/files"),
+      ).not.toHaveTextContent("Missing");
+    });
+
+    it("ignores conditional scopes when the node's inputs are not passed", async () => {
+      renderPicker({
+        provider: "microsoft",
+        requiredScopes: ["Files.Read"],
+        conditionalScopes: FILES_CONDITIONAL,
+      });
+      await userEvent.click(screen.getByTestId("connectionref_connection"));
+      expect(
+        await screen.findByText("Requires Files.Read"),
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("flags a Slack bot connection on a user action but still lets it be picked", async () => {
+    setConnections([
+      connection({
+        provider_key: "slack",
+        name: "bot",
+        display_name: "Slack bot",
+        granted_scopes: ["chat:write"],
+        executing_identity: { identity: "bot" },
+      }),
+    ]);
+    const { handleOnNewValue } = renderPicker({
+      provider: "slack",
+      requiredScopes: ["chat:write"],
+      identityKind: "user",
+    });
+    await userEvent.click(screen.getByTestId("connectionref_connection"));
+    const option = await screen.findByTestId("connection-option-slack/bot");
+    expect(option).toHaveTextContent("Runs as the instance, not a user");
+
+    await userEvent.click(option);
+    await waitFor(() =>
+      expect(handleOnNewValue).toHaveBeenCalledWith({ value: "slack/bot" }),
+    );
   });
 });

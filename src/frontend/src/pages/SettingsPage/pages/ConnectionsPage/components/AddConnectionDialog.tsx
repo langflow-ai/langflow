@@ -33,17 +33,25 @@ import {
 } from "@/customization/components/custom-connection-authorization";
 import useAlertStore from "@/stores/alertStore";
 import { useTypesStore } from "@/stores/typesStore";
+import { uniqueNormalizedScopes } from "@/utils/connection-scopes";
 import {
   partitionByCeiling,
+  reauthorizeScopeList,
   scopeRequirements,
   shortScope,
   uniqueScopes,
 } from "../helpers/scopes";
+import ScopeChecklist from "./ScopeChecklist";
 
 /** Consent can take a while; stop waiting rather than polling forever. */
 const CONSENT_TIMEOUT_MS = 10 * 60 * 1000;
 
-type Step = "details" | "authorize";
+/** Opens the consent window on the click itself, so popup blockers allow it. */
+const openBlankConsentWindow = (): Window | null =>
+  window.open("about:blank", "langflow-oauth-consent", "width=520,height=700");
+
+/** Re-authorizing starts at `scopes`: the handle and identity already exist. */
+type Step = "details" | "scopes" | "authorize";
 
 type AuthorizeState =
   | { kind: "waiting" }
@@ -72,7 +80,7 @@ export function AddConnectionDialog({
   const typesData = useTypesStore((state) => state.data);
   useGetTypes({ enabled: open });
 
-  const [step, setStep] = useState<Step>(reauthorize ? "authorize" : "details");
+  const [step, setStep] = useState<Step>(reauthorize ? "scopes" : "details");
   const [providerId, setProviderId] = useState(
     reauthorize?.provider_key ?? providers[0]?.provider_id ?? "",
   );
@@ -90,6 +98,9 @@ export function AddConnectionDialog({
   const [pendingRow, setPendingRow] = useState<ConnectionRead | null>(null);
   const popupRef = useRef<Window | null>(null);
   const startedAt = useRef(0);
+  // What the last authorization asked for, so "Try again" repeats it exactly
+  // even if the scope list recomputes (a registrations refetch, say) meanwhile.
+  const requestedScopes = useRef<string[]>([]);
 
   const provider = providers.find((item) => item.provider_id === providerId);
   const create = useCreateConnectionMutation();
@@ -154,6 +165,26 @@ export function AddConnectionDialog({
     setSelectedScopes(new Set(requestable));
   }, [provider, reauthorize, requestable]);
 
+  // Re-authorizing offers the same requestable scopes plus everything the
+  // connection already holds, checked, so adding a scope never drops one.
+  const reauthorizeList = useMemo(
+    () =>
+      reauthorize
+        ? reauthorizeScopeList({
+            provider: reauthorize.provider_key,
+            requestable,
+            granted: reauthorize.granted_scopes ?? [],
+            ceiling,
+          })
+        : null,
+    [reauthorize, requestable, ceiling],
+  );
+
+  useEffect(() => {
+    if (!reauthorizeList) return;
+    setSelectedScopes(new Set(reauthorizeList.granted));
+  }, [reauthorizeList]);
+
   // Consent lands on the server: only a row that moved on from the state it had
   // when consent started carries this authorization's outcome.
   useEffect(() => {
@@ -195,12 +226,15 @@ export function AddConnectionDialog({
         preferredId: registrationId,
       });
       if (!registration) {
+        // The consent window was opened on the click; nothing will fill it.
+        popupRef.current?.close();
         setAuthorize({
           kind: "failed",
           message: t("connections.add.noRegistration"),
         });
         return;
       }
+      requestedScopes.current = scopes;
       startedAt.current = Date.now();
       setStep("authorize");
       setAuthorize({ kind: "waiting" });
@@ -225,16 +259,65 @@ export function AddConnectionDialog({
     [registrations.data, registrationId, startOAuth, t],
   );
 
-  // Re-authorizing skips the details step: the handle and identity already exist.
-  useEffect(() => {
-    if (!open || !reauthorize || authorize) return;
-    void beginAuthorize(
-      reauthorize,
-      reauthorize.granted_scopes.length > 0
-        ? reauthorize.granted_scopes
-        : requestable,
-    );
-  }, [open, reauthorize, authorize, beginAuthorize, requestable]);
+  const reauthorizeOptions = reauthorizeList?.options ?? [];
+  const reauthorizeSelection = reauthorizeOptions.filter((scope) =>
+    selectedScopes.has(scope),
+  );
+  // `oauth/start` refuses an empty request, and a guess at the registration is
+  // no better while the listing is still on its way.
+  const canAuthorize =
+    reauthorizeSelection.length > 0 &&
+    !noRegistration &&
+    !registrations.isLoading;
+  const notRequestable = uniqueNormalizedScopes(providerId, [
+    ...unavailable,
+    ...(reauthorizeList?.outsideCeiling ?? []),
+  ]);
+
+  const onAuthorize = () => {
+    if (!reauthorize || !canAuthorize) return;
+    popupRef.current = openBlankConsentWindow();
+    void beginAuthorize(reauthorize, reauthorizeSelection);
+  };
+
+  const onTryAgain = () => {
+    if (!pendingRow) return;
+    popupRef.current = openBlankConsentWindow();
+    void beginAuthorize(poll.data ?? pendingRow, requestedScopes.current);
+  };
+
+  const toggleScope = (scope: string, checked: boolean) =>
+    setSelectedScopes((current) => {
+      const next = new Set(current);
+      if (checked) next.add(scope);
+      else next.delete(scope);
+      return next;
+    });
+
+  const grantedOptions = useMemo(
+    () => new Set(reauthorizeList?.granted ?? []),
+    [reauthorizeList],
+  );
+
+  const registrationSelect = candidates.length > 1 && (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor="connection-registration">
+        {t("connections.add.registration")}
+      </Label>
+      <select
+        id="connection-registration"
+        className="h-9 rounded-md border border-border bg-background px-2 text-sm"
+        value={resolvedRegistration ?? ""}
+        onChange={(event) => setRegistrationId(event.target.value)}
+      >
+        {candidates.map((candidate) => (
+          <option key={candidate.id} value={candidate.id}>
+            {candidate.id}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
 
   const handleValid =
     CONNECTION_NAME_PATTERN.test(name) &&
@@ -249,11 +332,7 @@ export function AddConnectionDialog({
     if (!provider || !canContinue) return;
     setFieldError(null);
     // Open on the click itself so popup blockers treat it as user-initiated.
-    popupRef.current = window.open(
-      "about:blank",
-      "langflow-oauth-consent",
-      "width=520,height=700",
-    );
+    popupRef.current = openBlankConsentWindow();
     try {
       const row = await create.mutateAsync({
         provider_key: provider.provider_id,
@@ -291,7 +370,7 @@ export function AddConnectionDialog({
       });
     }
     popupRef.current?.close();
-    setStep(reauthorize ? "authorize" : "details");
+    setStep(reauthorize ? "scopes" : "details");
     setAuthorize(null);
     setBaseline(null);
     setPendingRow(null);
@@ -394,25 +473,7 @@ export function AddConnectionDialog({
               </div>
             )}
 
-            {candidates.length > 1 && (
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="connection-registration">
-                  {t("connections.add.registration")}
-                </Label>
-                <select
-                  id="connection-registration"
-                  className="h-9 rounded-md border border-border bg-background px-2 text-sm"
-                  value={resolvedRegistration ?? ""}
-                  onChange={(event) => setRegistrationId(event.target.value)}
-                >
-                  {candidates.map((candidate) => (
-                    <option key={candidate.id} value={candidate.id}>
-                      {candidate.id}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            {registrationSelect}
 
             {canCreateInstance && (
               <label className="flex items-center gap-2 text-sm">
@@ -436,27 +497,11 @@ export function AddConnectionDialog({
                   {t("connections.add.noScopes")}
                 </span>
               )}
-              <div className="flex flex-col gap-1.5">
-                {requestable.map((scope) => (
-                  <label
-                    key={scope}
-                    className="flex items-center gap-2 font-mono text-xs"
-                  >
-                    <Checkbox
-                      checked={selectedScopes.has(scope)}
-                      onCheckedChange={(checked) =>
-                        setSelectedScopes((current) => {
-                          const next = new Set(current);
-                          if (checked) next.add(scope);
-                          else next.delete(scope);
-                          return next;
-                        })
-                      }
-                    />
-                    {shortScope(scope)}
-                  </label>
-                ))}
-              </div>
+              <ScopeChecklist
+                scopes={requestable}
+                selected={selectedScopes}
+                onToggle={toggleScope}
+              />
               {unavailable.length > 0 && (
                 <span className="text-xs text-warning-foreground">
                   {t("connections.add.scopesOutsideCeiling", {
@@ -487,6 +532,55 @@ export function AddConnectionDialog({
                 data-testid="connection-continue"
               >
                 {t("connections.add.continue")}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {step === "scopes" && (
+          <div className="flex flex-col gap-4">
+            {registrationSelect}
+
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-medium">
+                {t("connections.add.scopes")}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {reauthorizeOptions.length === 0
+                  ? t("connections.add.noScopes")
+                  : t("connections.add.reauthorizeHint")}
+              </span>
+              <ScopeChecklist
+                scopes={reauthorizeOptions}
+                selected={selectedScopes}
+                onToggle={toggleScope}
+                granted={grantedOptions}
+              />
+              {notRequestable.length > 0 && (
+                <span className="text-xs text-warning-foreground">
+                  {t("connections.add.scopesOutsideCeiling", {
+                    scopes: notRequestable.map(shortScope).join(", "),
+                  })}
+                </span>
+              )}
+            </div>
+
+            {noRegistration && (
+              <p className="text-xs text-destructive" role="alert">
+                {t("connections.add.noRegistration")}
+              </p>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => close(true)}>
+                {t("connections.add.cancel")}
+              </Button>
+              <Button
+                disabled={!canAuthorize}
+                onClick={onAuthorize}
+                data-testid="connection-authorize"
+              >
+                {t("connections.add.authorize")}
               </Button>
             </div>
           </div>
@@ -530,14 +624,8 @@ export function AddConnectionDialog({
               {authorize?.kind === "failed" && pendingRow && (
                 <Button
                   variant="outline"
-                  onClick={() =>
-                    beginAuthorize(
-                      poll.data ?? pendingRow,
-                      reauthorize?.granted_scopes.length
-                        ? reauthorize.granted_scopes
-                        : [...selectedScopes],
-                    )
-                  }
+                  onClick={onTryAgain}
+                  data-testid="connection-try-again"
                 >
                   {t("connections.add.tryAgain")}
                 </Button>
