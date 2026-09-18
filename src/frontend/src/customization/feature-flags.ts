@@ -17,6 +17,11 @@ export const ENABLE_MCP = true;
 export const ENABLE_MCP_NOTICE = false;
 export const ENABLE_KNOWLEDGE_BASES = true;
 export const ENABLE_INSPECTION_PANEL = true;
+// Keeps the Triggers palette category (the Schedule trigger) hidden until
+// TRG-7 ships the enable toggle and state badge. Flow-save reconciliation
+// creates trigger rows in `pending`, and only the enable endpoint arms them,
+// so without that control a user could build a schedule that never fires.
+export const ENABLE_TRIGGERS = false;
 
 export const ENABLE_MCP_COMPOSER =
   import.meta.env.LANGFLOW_MCP_COMPOSER_ENABLED === "true";
