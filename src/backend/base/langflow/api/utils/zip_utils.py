@@ -68,7 +68,10 @@ def _extract_flows_sync(contents: bytes) -> _ZipExtractionResult:
                 )
                 continue
             try:
-                raw = zf.read(info.filename)
+                # Read by ZipInfo, not filename: with duplicate names a
+                # filename lookup resolves to the last matching entry, which
+                # could be oversized and fully decompressed before any check.
+                raw = zf.read(info)
                 if len(raw) > MAX_ENTRY_UNCOMPRESSED_BYTES:
                     result.warnings.append(
                         f"Skipping ZIP entry '{info.filename}': actual size "

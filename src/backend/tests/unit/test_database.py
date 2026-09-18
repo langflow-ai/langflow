@@ -1059,6 +1059,45 @@ async def test_upload_zip_skipped_entries_not_counted_against_aggregate(
 
 
 @pytest.mark.usefixtures("session")
+async def test_upload_zip_with_duplicate_filename(client: AsyncClient, json_flow: str, logged_in_headers, monkeypatch):
+    """Duplicate filenames: each entry must be read by its own ZipInfo.
+
+    A filename-based read resolves to the last entry with that name, so an
+    oversized duplicate behind a small first entry would be fully decompressed
+    before any size check. The oversized duplicate must be skipped by its own
+    declared size while the small first entry still imports.
+    """
+    import langflow.api.utils.zip_utils as zip_utils_mod
+
+    flow = orjson.loads(json_flow)
+    data = flow["data"]
+    small_flow = {"name": "dup_small", "data": {"nodes": [], "edges": []}}
+    big_flow = {"name": "dup_big", "data": data}
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w") as zf:
+        zf.writestr("dup.json", json.dumps(small_flow))
+        zf.writestr("dup.json", json.dumps(big_flow))
+
+    with zipfile.ZipFile(io.BytesIO(zip_buffer.getvalue()), "r") as zf:
+        sizes = [info.file_size for info in zf.infolist()]
+    small_size, big_size = sizes
+    assert small_size < big_size
+    monkeypatch.setattr(zip_utils_mod, "MAX_ENTRY_UNCOMPRESSED_BYTES", (small_size + big_size) // 2)
+
+    zip_buffer.seek(0)
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("duplicates.zip", zip_buffer.getvalue(), "application/zip")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 201
+    response_data = response.json()
+    assert len(response_data) == 1
+    assert response_data[0]["name"] == "dup_small"
+
+
+@pytest.mark.usefixtures("session")
 async def test_upload_zip_to_projects_filename_none(client: AsyncClient, json_flow: str, logged_in_headers):
     """When filename has no stem (e.g. '.zip'), the project name defaults to 'Imported Project'."""
     flow = orjson.loads(json_flow)
