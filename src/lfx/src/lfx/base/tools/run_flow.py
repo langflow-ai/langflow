@@ -3,7 +3,11 @@ from datetime import datetime
 from types import MethodType  # near the imports
 from typing import TYPE_CHECKING, Any
 
-from langflow.helpers.flow import get_flow_by_id_or_name, scoped_model_provider_policy_for_target_flow
+from langflow.helpers.flow import (
+    get_flow_by_id_or_name,
+    get_user_is_superuser,
+    scoped_model_provider_policy_for_target_flow,
+)
 
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
 from lfx.custom.custom_component.component import Component, get_component_toolkit
@@ -20,6 +24,7 @@ from lfx.schema.dotdict import dotdict
 from lfx.services.cache.utils import CacheMiss
 from lfx.services.deps import get_shared_component_cache_service
 from lfx.template.field.base import Output
+from lfx.utils.flow_validation import admin_only_build_required, prepare_flow_build_for_user
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -151,7 +156,14 @@ class RunFlowBaseComponent(Component):
             flow_id=flow_id_selected,
             flow_name=flow_name_selected,
         ):
-            if flow_id_selected and (flow := self._flow_cache_call("get", flow_id=flow_id_selected)):
+            # The stored child payload is caller-controlled: a regular user can persist
+            # component source through the flow-write API and this trusted component then
+            # hands it to Graph.from_payload. Apply the same caller-aware policy the
+            # top-level run path applies so LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY holds
+            # across the nested-flow boundary.
+            is_superuser = await get_user_is_superuser(self.user_id)
+            admin_only = admin_only_build_required(is_superuser=is_superuser)
+            if not admin_only and flow_id_selected and (flow := self._flow_cache_call("get", flow_id=flow_id_selected)):
                 if str(getattr(flow, "flow_id", "")) != str(flow_id_selected):
                     self._flow_cache_call("delete", flow_id=flow_id_selected)
                 elif self._is_cached_flow_up_to_date(flow, updated_at):
@@ -165,8 +177,10 @@ class RunFlowBaseComponent(Component):
                 msg = "Flow not found"
                 raise ValueError(msg)
 
+            payload = flow.data.get("data", {})
+            sanitized_payload = await prepare_flow_build_for_user(payload, is_superuser=is_superuser)
             graph = Graph.from_payload(
-                payload=flow.data.get("data", {}),
+                payload=sanitized_payload if sanitized_payload is not None else payload,
                 flow_id=flow_id_selected or flow.data.get("id"),
                 flow_name=flow_name_selected,
                 user_id=self.user_id,
@@ -174,7 +188,11 @@ class RunFlowBaseComponent(Component):
             graph.description = flow.data.get("description", None)
             graph.updated_at = flow.data.get("updated_at", None)
 
-            self._flow_cache_call("set", flow=graph)
+            # A cached graph carries no policy generation: under admin-only mode it may
+            # have been compiled from unchecked caller source, so it is neither served
+            # nor stored while the policy applies to this caller.
+            if not admin_only:
+                self._flow_cache_call("set", flow=graph)
 
             return graph
 
@@ -563,6 +581,7 @@ class RunFlowBaseComponent(Component):
         except Exception as exc:
             from lfx.exceptions.tweaks import TweakRefusedError
             from lfx.run.hitl import NestedHITLUnsupportedError
+            from lfx.utils.flow_validation import CustomComponentValidationError
 
             if isinstance(exc, NestedHITLUnsupportedError):
                 raise
@@ -570,6 +589,10 @@ class RunFlowBaseComponent(Component):
             # into a generic RuntimeError would discard the refused field names and
             # the reason, and the caller would never learn which key was rejected.
             if isinstance(exc, TweakRefusedError):
+                raise
+            # A component-policy refusal is also a caller-facing rejection: collapsing
+            # it into RuntimeError would hide the reason and the HTTP 400 mapping.
+            if isinstance(exc, CustomComponentValidationError):
                 raise
             msg = f"Error running flow: {self.flow_name_selected}"
             raise RuntimeError(msg) from None
