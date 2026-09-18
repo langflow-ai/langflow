@@ -5,6 +5,7 @@ and serves file content from various upstream input formats (Data objects,
 DataFrames with attrs, DataFrames with file_path column).
 """
 
+import os
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
@@ -444,7 +445,7 @@ class TestPersistentIndexTraversal:
         """A '../' entry in text_index.json must not escape the texts/ directory."""
         secret = tmp_path / "secret.txt"
         secret.write_text("SECRET_READ_VIA_TRAVERSAL", encoding="utf-8")
-        persist = self._stage_persistent_dir(tmp_path, {"victim_key": "../secret.txt"})
+        persist = self._stage_persistent_dir(tmp_path, {"victim_key": "../../secret.txt"})
         comp = _build_component(file_data=[], persistent_dir=persist)
 
         with _mock_settings(restricted=False, config_dir=str(tmp_path)):
@@ -492,17 +493,81 @@ class TestPersistentIndexTraversal:
         assert text_map == {"/x": "LEGIT CONTENT"}
 
     def test_dataframe_index_traversal_rejected(self, tmp_path):
-        """Traversal entries in dataframe_index.json must be rejected as well."""
+        """Traversal entries in dataframe_index.json must be rejected before any read.
+
+        The external target exists on disk; containment must reject the entry without
+        opening it (asserted via the read_parquet spy, since lfx has no parquet engine
+        dependency to stage a real parquet file with).
+        """
         import json
 
+        secret = tmp_path / "secret.parquet"
+        secret.write_bytes(b"PAR1-placeholder")
         base = tmp_path / "persist"
         (base / "dataframes").mkdir(parents=True)
-        (base / "dataframe_index.json").write_text(
-            json.dumps({"victim_key": "../../etc/passwd.parquet"}), encoding="utf-8"
-        )
+        (base / "dataframe_index.json").write_text(json.dumps({"victim_key": "../../secret.parquet"}), encoding="utf-8")
         comp = _build_component(file_data=[], persistent_dir=str(base))
 
-        with _mock_settings(restricted=False, config_dir=str(tmp_path)):
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)), patch.object(pd, "read_parquet") as mock_read:
             _, df_map = comp._load_persistent_maps()
 
         assert df_map == {}
+        mock_read.assert_not_called()
+
+    def test_nul_character_entry_rejected(self, tmp_path):
+        """Entries containing NUL bytes must be rejected instead of reaching filesystem calls."""
+        secret = tmp_path / "secret.txt"
+        secret.write_text("SECRET", encoding="utf-8")
+        persist = self._stage_persistent_dir(tmp_path, {"victim_key": "abc123.txt\x00/../../secret.txt"})
+        comp = _build_component(file_data=[], persistent_dir=persist)
+
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)):
+            text_map, _ = comp._load_persistent_maps()
+
+        assert text_map == {}
+
+    def test_nested_separator_entry_rejected(self, tmp_path):
+        """Entries with path separators must be rejected even when the nested file exists."""
+        import json
+
+        base = tmp_path / "persist"
+        nested = base / "texts" / "nested"
+        nested.mkdir(parents=True)
+        (nested / "evil.txt").write_text("NESTED CONTENT", encoding="utf-8")
+        (base / "text_index.json").write_text(json.dumps({"victim_key": "nested/evil.txt"}), encoding="utf-8")
+        comp = _build_component(file_data=[], persistent_dir=str(base))
+
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)):
+            text_map, _ = comp._load_persistent_maps()
+
+        assert text_map == {}
+
+    def test_backslash_separator_entry_rejected(self, tmp_path):
+        """Windows-style separators in entries must be rejected as well."""
+        persist = self._stage_persistent_dir(tmp_path, {"victim_key": "..\\..\\secret.txt"})
+        comp = _build_component(file_data=[], persistent_dir=persist)
+
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)):
+            text_map, _ = comp._load_persistent_maps()
+
+        assert text_map == {}
+
+    @pytest.mark.skipif(os.name == "nt", reason="symlink creation requires privileges on Windows")
+    def test_symlink_entry_escape_rejected(self, tmp_path):
+        """A symlink planted inside texts/ pointing outside must not be followed."""
+        import json
+
+        secret = tmp_path / "secret.txt"
+        secret.write_text("SECRET_VIA_SYMLINK", encoding="utf-8")
+        base = tmp_path / "persist"
+        texts = base / "texts"
+        texts.mkdir(parents=True)
+        (texts / "evil.txt").symlink_to(secret)
+        (base / "text_index.json").write_text(json.dumps({"victim_key": "evil.txt"}), encoding="utf-8")
+        comp = _build_component(file_data=[], persistent_dir=str(base))
+
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)):
+            text_map, _ = comp._load_persistent_maps()
+
+        assert "victim_key" not in text_map
+        assert all("SECRET_VIA_SYMLINK" not in v for v in text_map.values())
