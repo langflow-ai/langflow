@@ -6,6 +6,7 @@ to user.
 """
 
 import ast
+import re
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 
@@ -25,24 +26,65 @@ DANGEROUS_CALLS: dict[str, str] = {
     "breakpoint": "Use of breakpoint() is forbidden in components",
 }
 
-# Attribute names that are sandbox-escape vectors regardless of the
-# object they're read from (e.g. ``().__class__.__bases__[0]
-# .__subclasses__()``, ``func.__globals__``). Near-zero legitimate use
-# in a component; deliberately tight to avoid false positives (NOT
-# flagging benign dunders like ``__class__`` / ``__dict__`` / ``__name__``).
-DANGEROUS_DUNDER_ATTRS: set[str] = {
-    "__subclasses__",
-    "__globals__",
-    "__builtins__",
-    "__bases__",
-    "__mro__",
-    "__code__",
-    "__closure__",
-    "__subclasshook__",
-    # Module loaders can import arbitrary modules without an import statement.
-    "__loader__",
-    "__spec__",
-}
+# Attribute access that is a sandbox-escape vector regardless of the object it
+# is read from. ALL dunder (``__``-prefixed) attributes are rejected: the
+# escape chains (``().__class__.__base__``, ``func.__globals__``,
+# ``getattr(obj, name)``) are built entirely from dunders, and a fixed denylist
+# of "dangerous" dunders is bypassable the moment one is missed — H1-3977745
+# escaped via ``__class__`` / ``__base__`` / ``__init__``, which the previous
+# list deliberately did not flag. Component code never needs to *read* a dunder
+# attribute; dunder *methods* are defined with ``def`` and stay allowed. This
+# matches the stricter sibling lfx/utils/python_repl_security.py.
+#
+# The non-dunder names below are the equivalent gadgets that need no dunder at
+# all: ``int.mro()`` reaches the object hierarchy, frame/coroutine/traceback
+# introspection (``gen.gi_frame.f_globals``) reaches running code's globals and
+# builtins, and the formatter sinks evaluate attribute chains from runtime
+# strings that are invisible to the AST attribute check
+# (``"{0.__globals__[__builtins__]}".format(f)``).
+_BLOCKED_INTROSPECTION_ATTRS: frozenset[str] = frozenset(
+    {
+        "mro",
+        "gi_frame",
+        "gi_code",
+        "cr_frame",
+        "cr_code",
+        "ag_frame",
+        "ag_code",
+        "f_globals",
+        "f_locals",
+        "f_builtins",
+        "f_back",
+        "f_code",
+        "f_trace",
+        "tb_frame",
+        "tb_next",
+        "func_globals",
+        "func_code",
+        "format",
+        "format_map",
+        "vformat",
+        "get_field",
+        "get_value",
+        "format_field",
+        "convert_field",
+        "attrgetter",
+        "methodcaller",
+    }
+)
+
+# Matches a dunder reached inside a str.format()/Formatter replacement field,
+# e.g. "{0.__globals__}" or "{0[__builtins__]}". Such traversals live inside a
+# literal template string and are invisible to the AST attribute check, so a
+# literal dunder-bearing template is rejected regardless of which formatter
+# ultimately consumes it.
+_FORMAT_FIELD_DUNDER_RE = re.compile(r"\{[^{}]*__")
+
+
+def _is_blocked_attribute(attr: str) -> bool:
+    """True if reading attribute ``attr`` is a sandbox-escape vector on any object."""
+    return attr.startswith("__") or attr in _BLOCKED_INTROSPECTION_ATTRS
+
 
 # Non-call attribute *reads* that are forbidden: (module, attr, message).
 # Secret/env exfiltration is the concrete threat — components must use
@@ -1183,7 +1225,7 @@ class _SecurityChecker(ast.NodeVisitor):
 
     def visit_Attribute(self, node: ast.Attribute):
         """Check attribute access: dunder escapes, os.environ, urllib.request, ..."""
-        if node.attr in DANGEROUS_DUNDER_ATTRS:
+        if _is_blocked_attribute(node.attr):
             self.violations.append(f"Access to '{node.attr}' is forbidden in components (sandbox escape)")
         else:
             receiver_names = self._resolved_assignment_value(node.value)
@@ -1212,6 +1254,18 @@ class _SecurityChecker(ast.NodeVisitor):
             self.violations.append(f"Access to '{dotted}' is forbidden in components")
         return self.generic_visit(node)
 
+    def visit_Constant(self, node: ast.Constant):
+        """Reject literal format templates that traverse blocked attributes.
+
+        ``"{0.__globals__[__builtins__]}".format(f)`` carries the attribute
+        chain inside a string, invisible to the ast.Attribute check.
+        """
+        if isinstance(node.value, str) and _FORMAT_FIELD_DUNDER_RE.search(node.value):
+            self.violations.append(
+                "Format-string access to dunder attributes is forbidden in components (sandbox escape)"
+            )
+        return self.generic_visit(node)
+
     def visit_Subscript(self, node: ast.Subscript):
         """Reject dynamic reads from a restricted module's ``__dict__`` mapping."""
         mapping_names = frozenset(
@@ -1225,7 +1279,7 @@ class _SecurityChecker(ast.NodeVisitor):
                 self.violations.append(
                     f"Dynamic mapping access on module '{sorted(mapping_names)[0]}' is forbidden in components"
                 )
-            elif member_name in DANGEROUS_DUNDER_ATTRS:
+            elif _is_blocked_attribute(member_name):
                 self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
         return self.generic_visit(node)
 
@@ -1347,7 +1401,7 @@ class _SecurityChecker(ast.NodeVisitor):
                 self.violations.append(
                     f"Dynamic {operation} access on module '{sorted(module_names)[0]}' is forbidden in components"
                 )
-            elif member_name in DANGEROUS_DUNDER_ATTRS:
+            elif _is_blocked_attribute(member_name):
                 self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
 
         vars_names = {"vars", "builtins.vars", "__builtins__.vars"}
@@ -1396,13 +1450,16 @@ class _SecurityChecker(ast.NodeVisitor):
         return 0
 
     def _check_getattr_access(self, node: ast.Call) -> bool:
-        """Check reflective access to restricted module members.
+        """Check reflective attribute access.
 
         ``getattr`` is common in legitimate components, so it stays allowed for
-        ordinary objects and safe module attributes. On modules with restricted
-        members, a dynamic attribute name is rejected because it could resolve to
-        one of those members at runtime. Returns whether the object and attribute
-        arguments were fully validated here.
+        ordinary objects and safe module attributes when the attribute name is
+        a statically resolvable string. A dynamic attribute name is rejected on
+        ANY receiver: the receiver's type cannot be proven from the AST, and a
+        name assembled at runtime (``"__subclasses__".upper().lower()``,
+        ``"".join([...])``, slicing) can resolve to a sandbox-escape dunder on
+        an object this scanner never flagged (H1-3977745). Returns whether the
+        object and attribute arguments were fully validated here.
         """
         function_names = self._resolved_assignment_value(node.func)
 
@@ -1413,7 +1470,10 @@ class _SecurityChecker(ast.NodeVisitor):
         except IndexError:
             return False
         attr_name = _static_string_value(attr_node)
-        if attr_name in DANGEROUS_DUNDER_ATTRS:
+        if attr_name is None:
+            self.violations.append("Dynamic getattr() attribute name is forbidden in components")
+            return True
+        if _is_blocked_attribute(attr_name):
             self.violations.append(f"Access to '{attr_name}' is forbidden in components (sandbox escape)")
             return True
 
@@ -1426,15 +1486,6 @@ class _SecurityChecker(ast.NodeVisitor):
             if violation := self._dangerous_callable_message(receiver_name):
                 self.violations.append(violation)
                 return True
-        if attr_name is None:
-            dangerous_modules = sorted(
-                module_name for module_name in module_names if module_name in _RESTRICTED_MODULE_REFERENCES
-            )
-            if dangerous_modules:
-                self.violations.append(
-                    f"Dynamic getattr() access on module '{dangerous_modules[0]}' is forbidden in components"
-                )
-            return True
 
         if any(module_name in {"builtins", "__builtins__"} for module_name in module_names) and (
             violation := DANGEROUS_CALLS.get(attr_name)
