@@ -10,8 +10,9 @@ from uuid import uuid4
 
 import pytest
 from cryptography.exceptions import InvalidTag
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from httpx import AsyncClient
+from langflow.services.auth.utils import _ensure_legacy_fernet_key, ensure_fernet_key
 from langflow.services.deps import get_settings_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE
 from sqlalchemy import create_engine, text
@@ -131,6 +132,33 @@ class TestEnsureValidKey:
         result1 = migrate_module.ensure_valid_key(short_old_key)
         result2 = migrate_module.ensure_valid_key(short_new_key)
         assert result1 != result2
+
+
+class TestShortKeysMatchTheApp:
+    """Short secrets use the app's derivation: SHA-256 for writes, the pre-1.10.1 key read-only."""
+
+    def test_reads_values_the_app_writes_today(self, migrate_module, short_old_key, short_new_key):
+        app_ciphertext = Fernet(ensure_fernet_key(short_old_key)).encrypt(b"current").decode()
+
+        migrated = migrate_module.migrate_value(app_ciphertext, short_old_key, short_new_key)
+
+        assert migrated is not None
+        assert Fernet(ensure_fernet_key(short_new_key)).decrypt(migrated.encode()) == b"current"
+
+    def test_still_reads_values_written_before_1_10_1(self, migrate_module, short_old_key, short_new_key):
+        legacy_ciphertext = Fernet(_ensure_legacy_fernet_key(short_old_key)).encrypt(b"legacy").decode()
+
+        migrated = migrate_module.migrate_value(legacy_ciphertext, short_old_key, short_new_key)
+
+        assert migrated is not None
+        assert Fernet(ensure_fernet_key(short_new_key)).decrypt(migrated.encode()) == b"legacy"
+
+    def test_writes_only_with_the_current_derivation(self, migrate_module, short_new_key):
+        ciphertext = migrate_module.encrypt_with_key("value", short_new_key).encode()
+
+        assert Fernet(ensure_fernet_key(short_new_key)).decrypt(ciphertext) == b"value"
+        with pytest.raises(InvalidToken):
+            Fernet(_ensure_legacy_fernet_key(short_new_key)).decrypt(ciphertext)
 
 
 class TestEncryptDecrypt:
@@ -905,3 +933,110 @@ class TestVerifyMigration:
 
         assert verified == 1
         assert failed == 0
+
+
+class TestMigrateEndToEnd:
+    """Run migrate() itself against a database holding every encrypted column."""
+
+    @pytest.fixture
+    def rotation_db(self, tmp_path, migrate_module, old_key):
+        db_path = tmp_path / "langflow.db"
+        engine = create_engine(f"sqlite:///{db_path}")
+        with engine.begin() as conn:
+            conn.execute(text('CREATE TABLE "user" (id TEXT PRIMARY KEY, store_api_key TEXT)'))
+            conn.execute(text("CREATE TABLE variable (id TEXT PRIMARY KEY, name TEXT, value TEXT, type TEXT)"))
+            conn.execute(text("CREATE TABLE folder (id TEXT PRIMARY KEY, name TEXT, auth_settings TEXT)"))
+            conn.execute(text("CREATE TABLE sso_config (id TEXT PRIMARY KEY, client_secret_encrypted TEXT)"))
+            conn.execute(text("CREATE TABLE apikey (id TEXT PRIMARY KEY, name TEXT, api_key TEXT)"))
+            conn.execute(text("CREATE TABLE mcp_server (id TEXT PRIMARY KEY, name TEXT, config TEXT)"))
+            conn.execute(text("CREATE TABLE deployment_provider_account (id TEXT PRIMARY KEY, api_key TEXT)"))
+            conn.execute(
+                text("CREATE TABLE connection_secret (connection_id TEXT PRIMARY KEY, encrypted_payload TEXT)")
+            )
+            conn.execute(
+                text("INSERT INTO deployment_provider_account VALUES ('d1', :k)"),
+                {"k": migrate_module.encrypt_with_key("wxo-api-key", old_key)},
+            )
+            conn.execute(
+                text("INSERT INTO connection_secret VALUES ('c1', :p)"),
+                {"p": migrate_module.encrypt_with_key('{"access_token":"tok"}', old_key)},
+            )
+            conn.execute(
+                text("INSERT INTO variable VALUES ('v1', 'OPENAI_API_KEY', :v, :t)"),
+                {"v": migrate_module.encrypt_with_key("variable-secret", old_key), "t": CREDENTIAL_TYPE},
+            )
+            conn.execute(
+                text("INSERT INTO apikey VALUES ('k1', 'ci-key', :k)"),
+                {"k": migrate_module.encrypt_with_key("lf-api-key-value", old_key)},
+            )
+            config = {
+                "command": "uvx",
+                "env": {"API_TOKEN": migrate_module.encrypt_with_key("mcp-token", old_key), "PLAIN": "not-a-secret"},
+                "headers": {"Authorization": migrate_module.encrypt_with_key("Bearer abc", old_key)},
+            }
+            conn.execute(text("INSERT INTO mcp_server VALUES ('m1', 'fixture-mcp', :c)"), {"c": json.dumps(config)})
+        config_dir = tmp_path / "cfg"
+        config_dir.mkdir()
+        return engine, config_dir, f"sqlite:///{db_path}"
+
+    def test_rotates_every_fernet_column(self, migrate_module, rotation_db, old_key, new_key):
+        engine, config_dir, url = rotation_db
+
+        migrate_module.migrate(config_dir, url, old_key=old_key, new_key=new_key)
+
+        with engine.connect() as conn:
+            api_key = conn.execute(text("SELECT api_key FROM apikey")).scalar()
+            config = json.loads(conn.execute(text("SELECT config FROM mcp_server")).scalar())
+            provider_key = conn.execute(text("SELECT api_key FROM deployment_provider_account")).scalar()
+            payload = conn.execute(text("SELECT encrypted_payload FROM connection_secret")).scalar()
+        assert migrate_module.decrypt_with_key(api_key, new_key) == "lf-api-key-value"
+        assert migrate_module.decrypt_with_key(provider_key, new_key) == "wxo-api-key"
+        assert migrate_module.decrypt_with_key(payload, new_key) == '{"access_token":"tok"}'
+        assert migrate_module.decrypt_with_key(config["env"]["API_TOKEN"], new_key) == "mcp-token"
+        assert migrate_module.decrypt_with_key(config["headers"]["Authorization"], new_key) == "Bearer abc"
+        # Plaintext values and structural fields are left alone.
+        assert config["env"]["PLAIN"] == "not-a-secret"
+        assert config["command"] == "uvx"
+
+    def test_mcp_value_under_another_key_rolls_back(self, migrate_module, rotation_db, old_key, new_key):
+        engine, config_dir, url = rotation_db
+        stranger = migrate_module.encrypt_with_key("foreign", secrets.token_urlsafe(32))
+        with engine.begin() as conn:
+            before = conn.execute(text("SELECT config FROM mcp_server")).scalar()
+            bad = json.loads(before)
+            bad["env"]["OTHER"] = stranger
+            conn.execute(text("UPDATE mcp_server SET config = :c"), {"c": json.dumps(bad)})
+            before = json.dumps(bad)
+
+        with pytest.raises(SystemExit):
+            migrate_module.migrate(config_dir, url, old_key=old_key, new_key=new_key)
+
+        with engine.connect() as conn:
+            assert conn.execute(text("SELECT config FROM mcp_server")).scalar() == before
+            variable = conn.execute(text("SELECT value FROM variable")).scalar()
+            api_key = conn.execute(text("SELECT api_key FROM apikey")).scalar()
+        # Stages that ran before the MCP failure are rolled back too.
+        assert migrate_module.decrypt_with_key(variable, old_key) == "variable-secret"
+        assert migrate_module.decrypt_with_key(api_key, old_key) == "lf-api-key-value"
+
+    def test_verification_samples_apikey_and_mcp_server(self, migrate_module, rotation_db, old_key, new_key):
+        engine, _, _ = rotation_db
+        with engine.connect() as conn:
+            # variable, apikey, the two encrypted MCP values, the provider account key and the
+            # connection payload; the plaintext MCP value is skipped.
+            assert migrate_module.verify_migration(conn, old_key) == (6, 0)
+            # One failure each for the variable, the API key, the MCP server row, the provider
+            # account and the connection secret.
+            assert migrate_module.verify_migration(conn, new_key) == (0, 5)
+
+    def test_dry_run_completes_without_changing_rows(self, migrate_module, rotation_db, old_key, new_key):
+        engine, config_dir, url = rotation_db
+        query = text("SELECT (SELECT api_key FROM apikey), (SELECT config FROM mcp_server)")
+        with engine.connect() as conn:
+            before = tuple(conn.execute(query).one())
+
+        migrate_module.migrate(config_dir, url, old_key=old_key, new_key=new_key, dry_run=True)
+
+        with engine.connect() as conn:
+            assert tuple(conn.execute(query).one()) == before
+        assert not (config_dir / "secret_key").exists()
