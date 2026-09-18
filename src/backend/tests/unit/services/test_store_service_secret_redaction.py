@@ -96,7 +96,27 @@ async def test_upload_preserves_global_variable_reference(captured_request):
     service = _make_service()
     component = _make_component(load_from_db=True, value="MY_GLOBAL_VARIABLE")
 
-    await service.upload("store-api-key", component)
+    await service.upload("store-api-key", component, known_variable_names={"MY_GLOBAL_VARIABLE"})
+
+    sent_value = captured_request["json"]["data"]["nodes"][0]["data"]["node"]["template"]["api_key"]["value"]
+    assert sent_value == "MY_GLOBAL_VARIABLE"
+
+
+async def test_upload_nulls_name_shaped_literal_outside_known_variables(captured_request):
+    service = _make_service()
+    component = _make_component(load_from_db=True, value="PROD_DB_PASSWORD")
+
+    await service.upload("store-api-key", component, known_variable_names={"OTHER_VARIABLE"})
+
+    sent_value = captured_request["json"]["data"]["nodes"][0]["data"]["node"]["template"]["api_key"]["value"]
+    assert sent_value is None
+
+
+async def test_update_preserves_global_variable_reference(captured_request):
+    service = _make_service()
+    component = _make_component(load_from_db=True, value="MY_GLOBAL_VARIABLE")
+
+    await service.update("store-api-key", uuid4(), component, known_variable_names={"MY_GLOBAL_VARIABLE"})
 
     sent_value = captured_request["json"]["data"]["nodes"][0]["data"]["node"]["template"]["api_key"]["value"]
     assert sent_value == "MY_GLOBAL_VARIABLE"
