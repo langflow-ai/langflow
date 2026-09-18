@@ -987,6 +987,78 @@ async def test_upload_zip_with_mixed_valid_invalid(client: AsyncClient, json_flo
 
 
 @pytest.mark.usefixtures("session")
+async def test_upload_zip_exceeding_aggregate_size_limit(
+    client: AsyncClient, json_flow: str, logged_in_headers, monkeypatch
+):
+    """Entries individually under the per-entry limit but over the aggregate limit → 400."""
+    import langflow.api.utils.zip_utils as zip_utils_mod
+
+    flow = orjson.loads(json_flow)
+    data = flow["data"]
+    small_flow = {"name": "small_flow", "data": {"nodes": [], "edges": []}}
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w") as zf:
+        zf.writestr("small.json", json.dumps(small_flow))
+        zf.writestr("big_1.json", json.dumps({"name": "big_1", "data": data}))
+        zf.writestr("big_2.json", json.dumps({"name": "big_2", "data": data}))
+
+    # Allow each entry individually but cap the aggregate below their combined size
+    with zipfile.ZipFile(io.BytesIO(zip_buffer.getvalue()), "r") as zf:
+        sizes = {info.filename: info.file_size for info in zf.infolist()}
+    per_entry_limit = max(sizes.values()) + 1
+    aggregate_limit = sum(sizes.values()) - 1
+    monkeypatch.setattr(zip_utils_mod, "MAX_ENTRY_UNCOMPRESSED_BYTES", per_entry_limit)
+    monkeypatch.setattr(zip_utils_mod, "MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES", aggregate_limit)
+
+    zip_buffer.seek(0)
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("aggregate.zip", zip_buffer.getvalue(), "application/zip")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 400
+    assert "aggregate limit" in response.json()["detail"]
+
+
+@pytest.mark.usefixtures("session")
+async def test_upload_zip_skipped_entries_not_counted_against_aggregate(
+    client: AsyncClient, json_flow: str, logged_in_headers, monkeypatch
+):
+    """Entries skipped for the per-entry limit are never read, so they don't count against the aggregate."""
+    import langflow.api.utils.zip_utils as zip_utils_mod
+
+    flow = orjson.loads(json_flow)
+    data = flow["data"]
+    small_flow = {"name": "small_flow", "data": {"nodes": [], "edges": []}}
+    big_flow = {"name": "big_flow", "data": data}
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w") as zf:
+        zf.writestr("small.json", json.dumps(small_flow))
+        zf.writestr("big.json", json.dumps(big_flow))
+
+    # Per-entry limit between the two entry sizes; aggregate limit above the
+    # small entry but below the sum of both declared sizes.
+    with zipfile.ZipFile(io.BytesIO(zip_buffer.getvalue()), "r") as zf:
+        sizes = {info.filename: info.file_size for info in zf.infolist()}
+    per_entry_limit = (sizes["small.json"] + sizes["big.json"]) // 2
+    monkeypatch.setattr(zip_utils_mod, "MAX_ENTRY_UNCOMPRESSED_BYTES", per_entry_limit)
+    monkeypatch.setattr(zip_utils_mod, "MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES", sizes["small.json"] + 1)
+
+    zip_buffer.seek(0)
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("skipped.zip", zip_buffer.getvalue(), "application/zip")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 201
+    response_data = response.json()
+    assert len(response_data) == 1
+    assert response_data[0]["name"] == "small_flow"
+
+
+@pytest.mark.usefixtures("session")
 async def test_upload_zip_to_projects_filename_none(client: AsyncClient, json_flow: str, logged_in_headers):
     """When filename has no stem (e.g. '.zip'), the project name defaults to 'Imported Project'."""
     flow = orjson.loads(json_flow)
