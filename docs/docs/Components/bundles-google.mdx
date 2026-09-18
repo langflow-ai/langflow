@@ -129,6 +129,19 @@ For more information about using embedding model components in flows, see [Embed
 
 ## Google Search API
 
+:::warning Deprecated
+Google closed the [Custom Search JSON API](https://developers.google.com/custom-search/v1/overview) to new customers, and it stops working for existing customers on **January 1, 2027**.
+The **Google Search API** component calls this API, so it is now a [legacy component](#legacy-google-components) and is hidden from the component menu.
+Flows that already use it still load, but their searches fail after Google shuts the API down.
+
+Replace it with a component that returns Google search results:
+
+* [**Serper Google Search API** component](/bundles-serper), which is installed with the Google bundle.
+* [**SearchApi** component](/bundles-searchapi), with **Engine** set to `google`.
+* **Serp Search API** component, from the SerpApi bundle.
+* [**Serply Search** component](/bundles-serply).
+:::
+
 This component allows you to call the Google Search API.
 
 ### Google Search API parameters
@@ -390,6 +403,14 @@ This component searches Google Drive using [Service Account JSON](https://develo
 The connection-backed replacement is [**Drive: List Files (app files)**](#google-workspace-actions).
 It runs on `drive.file`, which is a narrower reach than a pasted token may have had: it lists
 only files this application created or the user opened with it.
+
+</details>
+
+<details>
+<summary>Google Search API</summary>
+
+This component calls Google's Custom Search JSON API, which stops working on January 1, 2027.
+For the replacement components, see [Google Search API](#google-search-api).
 
 </details>
 

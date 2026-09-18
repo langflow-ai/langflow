@@ -2431,6 +2431,7 @@
   "connections.tabs.label": "连接视图",
   "connections.tabs.mine": "我的",
   "connections.tabs.instance": "实例",
+  "connections.tabs.others": "其他用户",
   "connections.columns.connection": "连接",
   "connections.columns.owner": "所有者",
   "connections.columns.account": "账号",
