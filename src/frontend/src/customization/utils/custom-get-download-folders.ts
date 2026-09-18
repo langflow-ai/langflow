@@ -1,4 +1,5 @@
 import type { AxiosRequestConfig, ResponseType } from "axios";
+import { parseContentDispositionFilename } from "@/utils/parse-content-disposition-filename";
 import { track } from "./analytics";
 
 export const customGetDownloadTypeFolders = (): AxiosRequestConfig => {
@@ -26,10 +27,10 @@ export const customGetDownloadFolderBlob = (
   link.href = url;
 
   // Get filename from header or use default
-  const filename =
-    response.headers?.["content-disposition"]
-      ?.split("filename=")[1]
-      ?.replace(/['"]/g, "") ?? `${folderName || "flows"}.zip`;
+  const filename = parseContentDispositionFilename(
+    response.headers?.["content-disposition"] ?? null,
+    `${folderName || "flows"}.zip`,
+  );
 
   link.setAttribute("download", filename);
   document.body.appendChild(link);
