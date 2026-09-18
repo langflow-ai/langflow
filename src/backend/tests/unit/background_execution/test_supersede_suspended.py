@@ -313,3 +313,74 @@ async def test_supersede_reads_the_session_off_legacy_flat_metadata(real_service
     superseded = await _service().supersede_suspended_runs(flow_id=flow_id, user_id=user_id, session_id="session-a")
     assert superseded == [stale_job_id]
     assert (await job_service.get_job_by_job_id(stale_job_id)).status == JobStatus.CANCELLED
+
+
+def _scaled_service(job_service) -> BackgroundExecutionService:
+    from langflow.services.background_execution.db_backend import DBBackgroundQueue
+
+    def _end_source(**_kwargs):
+        async def _source(**_inner):
+            yield _frame("end", {})
+
+        return _source
+
+    return BackgroundExecutionService(
+        get_settings_service(),
+        frame_source_factory=_end_source,
+        backend=DBBackgroundQueue(job_service=job_service, owner="api:test"),
+    )
+
+
+async def test_scaled_supersede_actually_cancels_the_suspended_run(real_services_job_service):
+    """Scaled mode must cancel a SUSPENDED run directly, not write a STOP signal.
+
+    A SUSPENDED job has no live runner in any mode, so a durable STOP signal is
+    never consumed: the row stayed SUSPENDED forever, the pause kept cluttering
+    every pending surface, and a later resume self-cancelled on the stale STOP.
+    """
+    job_service = real_services_job_service
+    flow_id, user_id = uuid4(), uuid4()
+    stale_job_id = await _suspend_a_job(job_service, flow_id=flow_id, user_id=user_id)
+
+    svc = _scaled_service(job_service)
+    superseded = await svc.supersede_suspended_runs(flow_id=flow_id, user_id=user_id, session_id=str(flow_id))
+
+    assert stale_job_id in superseded
+    job = await job_service.get_job_by_job_id(stale_job_id)
+    assert job.status == JobStatus.CANCELLED
+    # No stale STOP may survive to poison a later run of this job id.
+    from langflow.services.database.models.jobs.model import SignalType
+
+    assert [s for s in await job_service.unconsumed_signals(stale_job_id) if s.signal_type == SignalType.STOP] == []
+
+
+async def test_scaled_supersede_reports_only_wins(real_services_job_service):
+    """A run claimed for resume mid-supersede must not be reported as cancelled."""
+    job_service = real_services_job_service
+    flow_id, user_id = uuid4(), uuid4()
+    job_id = await _suspend_a_job(job_service, flow_id=flow_id, user_id=user_id)
+    # A resume wins the flip first (row leaves SUSPENDED).
+    assert await job_service.claim_suspended_for_resume(job_id, owner="api:other") is True
+
+    svc = _scaled_service(job_service)
+    superseded = await svc.supersede_suspended_runs(flow_id=flow_id, user_id=user_id, session_id=str(flow_id))
+
+    assert superseded == []
+
+
+async def test_scaled_stop_job_cancels_a_suspended_run(real_services_job_service):
+    """stop_job on a SUSPENDED job in scaled mode must cancel it, not no-op."""
+    job_service = real_services_job_service
+    flow_id, user_id = uuid4(), uuid4()
+    job_id = await _suspend_a_job(job_service, flow_id=flow_id, user_id=user_id)
+
+    svc = _scaled_service(job_service)
+    await svc.stop_job(job_id, SimpleNamespace(id=user_id))
+
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.CANCELLED
+    events = await job_service.read_events(job_id)
+    assert any(e.event_type == "run_cancelled" for e in events)
+    from langflow.services.database.models.jobs.model import SignalType
+
+    assert [s for s in await job_service.unconsumed_signals(job_id) if s.signal_type == SignalType.STOP] == []
