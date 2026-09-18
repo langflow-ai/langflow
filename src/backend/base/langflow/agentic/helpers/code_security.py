@@ -273,6 +273,26 @@ def _static_positional_argument_count(arguments: list[ast.expr]) -> int | None:
     return count
 
 
+def _expand_static_arguments(arguments: list[ast.expr]) -> list[ast.expr] | None:
+    """Splice statically known starred tuples/lists into the argument list.
+
+    Returns None when any starred value is opaque, mirroring
+    ``_static_positional_argument_count``.
+    """
+    expanded: list[ast.expr] = []
+    for argument in arguments:
+        if isinstance(argument, ast.Starred):
+            if not isinstance(argument.value, (ast.Tuple, ast.List)):
+                return None
+            nested = _expand_static_arguments(argument.value.elts)
+            if nested is None:
+                return None
+            expanded.extend(nested)
+        else:
+            expanded.append(argument)
+    return expanded
+
+
 def _build_dangerous_members() -> tuple[dict[str, set[str]], dict[str, set[str]]]:
     """Per-module dangerous member names, derived from the call/read tables.
 
@@ -1213,20 +1233,24 @@ class _SecurityChecker(ast.NodeVisitor):
         return self.generic_visit(node)
 
     def visit_Subscript(self, node: ast.Subscript):
-        """Reject dynamic reads from a restricted module's ``__dict__`` mapping."""
+        """Reject dunder-key reads and dynamic reads from a restricted module's ``__dict__``."""
+        member_name = _static_string_value(node.slice)
+        if member_name in DANGEROUS_DUNDER_ATTRS:
+            # Dunder keys are sandbox escapes regardless of the receiver:
+            # ``vars(X)`` returns ``X.__dict__`` for ANY object, so gating the
+            # check on a restricted-module receiver lets
+            # ``vars(type)["__subclasses__"]`` slip through.
+            self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
+            return self.generic_visit(node)
         mapping_names = frozenset(
             name
             for name in self._resolved_assignment_value(node.value)
             if name.endswith(".__dict__") and _is_restricted_module_reference(name)
         )
-        if mapping_names:
-            member_name = _static_string_value(node.slice)
-            if member_name is None:
-                self.violations.append(
-                    f"Dynamic mapping access on module '{sorted(mapping_names)[0]}' is forbidden in components"
-                )
-            elif member_name in DANGEROUS_DUNDER_ATTRS:
-                self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
+        if mapping_names and member_name is None:
+            self.violations.append(
+                f"Dynamic mapping access on module '{sorted(mapping_names)[0]}' is forbidden in components"
+            )
         return self.generic_visit(node)
 
     def _resolved_dotted(self, node: ast.Attribute) -> frozenset[str]:
@@ -1267,6 +1291,7 @@ class _SecurityChecker(ast.NodeVisitor):
         self._check_name_call(node)
         self._check_attribute_call(node)
         getattr_arguments_validated = self._check_getattr_access(node)
+        self._check_dunder_mapping_read(node)
         resolved_call_names = self._resolved_assignment_value(node.func)
         reflective_arguments_validated = self._check_restricted_reflection_access(node, resolved_call_names)
         vars_names = {"vars", "builtins.vars", "__builtins__.vars"}
@@ -1327,6 +1352,35 @@ class _SecurityChecker(ast.NodeVisitor):
             if violation := self._dangerous_callable_message(resolved_name):
                 self.violations.append(violation)
                 return
+
+    def _check_dunder_mapping_read(self, node: ast.Call):
+        """Reject ``.get()``/``__getitem__()`` reads of dangerous dunder keys.
+
+        Mirrors the unconditional ``getattr`` dunder check: a dunder key is a
+        sandbox escape regardless of the receiver, because ``vars(X)`` yields
+        ``X.__dict__`` for any object — so ``vars(init).get("__globals__")``
+        must be blocked even when the receiver does not resolve to a
+        restricted module's mapping.
+        """
+        selectors: list[ast.AST] = []
+        function_names = self._resolved_assignment_value(node.func)
+        # A starred argument with no statically known size is treated like any
+        # other dynamic key; only expanded arguments expose a static selector.
+        arguments = _expand_static_arguments(node.args) or node.args
+        if isinstance(node.func, ast.Attribute) and node.func.attr in {"get", "__getitem__"} and arguments:
+            # Bound form: ``mapping.get(key)`` / ``mapping.__getitem__(key)``.
+            selectors.append(arguments[0])
+        if function_names & {"dict.get", "dict.__getitem__", "builtins.dict.get", "builtins.dict.__getitem__"}:
+            # Unbound form: ``dict.get(mapping, key)`` — the mapping is args[0].
+            if arguments[1:]:
+                selectors.append(arguments[1])
+        elif arguments and any(name.endswith((".__dict__.get", ".__dict__.__getitem__")) for name in function_names):
+            # Aliased bound accessor: ``lookup = vars(X).get; lookup(key)``.
+            selectors.append(arguments[0])
+        for selector in selectors:
+            if (member_name := _static_string_value(selector)) in DANGEROUS_DUNDER_ATTRS:
+                self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
+                break
 
     def _check_restricted_reflection_access(self, node: ast.Call, function_names: frozenset[str]) -> int:
         """Validate reflective access to restricted modules and return modeled positional arguments."""
