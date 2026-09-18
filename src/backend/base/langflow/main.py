@@ -272,15 +272,10 @@ def get_lifespan(*, fix_migration=False, version=None):
             # permissive defaults every active non-admin user can therefore run arbitrary
             # code. Warn once so operators discover the two lockdown settings rather than
             # learning about the exposure from a report. No-op for the single-user default
-            # and for any deployment that already restricted this.
-            try:
-                from langflow.utils.security_posture import custom_component_execution_warning
+            # and for any deployment that already restricted this. Never raises.
+            from langflow.utils.security_posture import log_custom_component_execution_posture
 
-                custom_component_warning = custom_component_execution_warning(get_settings_service())
-                if custom_component_warning:
-                    await logger.awarning(custom_component_warning)
-            except Exception as exc:  # noqa: BLE001 — never block startup on a posture log
-                await logger.adebug(f"Custom-component security-posture check skipped: {exc}")
+            await log_custom_component_execution_posture(get_settings_service())
 
             # Surface env-driven pgVector so operators can confirm the deployment
             # snap-configured to Postgres as the default Knowledge Base vector store.

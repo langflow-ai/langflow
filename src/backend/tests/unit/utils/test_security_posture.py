@@ -3,9 +3,11 @@
 from types import SimpleNamespace
 
 import pytest
+from langflow.utils import security_posture
 from langflow.utils.security_posture import (
     CUSTOM_COMPONENT_EXECUTION_WARNING,
     custom_component_execution_warning,
+    log_custom_component_execution_posture,
 )
 
 
@@ -60,3 +62,57 @@ def test_missing_attributes_use_model_defaults():
     """Absent attributes fall back to declared (permissive) defaults, so a bare multi-user object still warns."""
     svc = SimpleNamespace(auth_settings=SimpleNamespace(AUTO_LOGIN=False), settings=SimpleNamespace())
     assert custom_component_execution_warning(svc) == CUSTOM_COMPONENT_EXECUTION_WARNING
+
+
+class _RecordingLogger:
+    """Stand-in for the lfx logger that records calls and can simulate a failing log sink."""
+
+    def __init__(self, *, fail: bool = False):
+        self.fail = fail
+        self.calls: list[tuple[str, str]] = []
+
+    async def _log(self, level: str, message: str) -> None:
+        self.calls.append((level, message))
+        if self.fail:
+            msg = "log sink closed"
+            raise OSError(msg)
+
+    async def awarning(self, message: str) -> None:
+        await self._log("warning", message)
+
+    async def adebug(self, message: str) -> None:
+        await self._log("debug", message)
+
+
+async def test_log_posture_warns_once_when_exposed(monkeypatch):
+    recorder = _RecordingLogger()
+    monkeypatch.setattr(security_posture, "logger", recorder)
+
+    await log_custom_component_execution_posture(
+        _settings_service(auto_login=False, allow_custom_components=True, admin_only=False)
+    )
+
+    assert recorder.calls == [("warning", CUSTOM_COMPONENT_EXECUTION_WARNING)]
+
+
+async def test_log_posture_silent_when_locked_down(monkeypatch):
+    recorder = _RecordingLogger()
+    monkeypatch.setattr(security_posture, "logger", recorder)
+
+    await log_custom_component_execution_posture(
+        _settings_service(auto_login=False, allow_custom_components=True, admin_only=True)
+    )
+
+    assert recorder.calls == []
+
+
+async def test_log_posture_never_raises_when_log_sink_fails(monkeypatch):
+    """A broken sink fails the warning and the debug fallback alike; startup must still proceed."""
+    recorder = _RecordingLogger(fail=True)
+    monkeypatch.setattr(security_posture, "logger", recorder)
+
+    await log_custom_component_execution_posture(
+        _settings_service(auto_login=False, allow_custom_components=True, admin_only=False)
+    )
+
+    assert [level for level, _ in recorder.calls] == ["warning", "debug"]

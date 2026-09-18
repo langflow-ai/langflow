@@ -7,7 +7,10 @@ lifespan logs whatever they return.
 
 from __future__ import annotations
 
+from contextlib import suppress
 from typing import Any
+
+from lfx.log.logger import logger
 
 # Kept as a module constant so tests can assert the exact remediation guidance
 # without pinning the full sentence.
@@ -54,3 +57,19 @@ def custom_component_execution_warning(settings_service: Any) -> str | None:
         return None
 
     return CUSTOM_COMPONENT_EXECUTION_WARNING
+
+
+async def log_custom_component_execution_posture(settings_service: Any) -> None:
+    """Log the custom-component execution warning, if any, without ever raising.
+
+    Called from the app lifespan, where an exception would abort startup. The likeliest
+    failure here is the log sink itself (closed stream, full disk), which would fail the
+    fallback debug log too, so that fallback is suppressed as well.
+    """
+    try:
+        warning = custom_component_execution_warning(settings_service)
+        if warning:
+            await logger.awarning(warning)
+    except Exception as exc:  # noqa: BLE001 — never block startup on a posture log
+        with suppress(Exception):
+            await logger.adebug(f"Custom-component security-posture check skipped: {exc}")
