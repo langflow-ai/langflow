@@ -98,6 +98,10 @@ class TestRunFlowBaseComponentFlowRetrieval:
                 lambda *, is_superuser: False,  # noqa: ARG005
             ),
             patch(
+                "lfx.base.tools.run_flow.custom_component_admin_only_enabled",
+                lambda: None,
+            ),
+            patch(
                 "lfx.base.tools.run_flow.prepare_flow_build_for_user",
                 new_callable=AsyncMock,
                 return_value=None,

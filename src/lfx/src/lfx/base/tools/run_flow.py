@@ -24,7 +24,11 @@ from lfx.schema.dotdict import dotdict
 from lfx.services.cache.utils import CacheMiss
 from lfx.services.deps import get_shared_component_cache_service
 from lfx.template.field.base import Output
-from lfx.utils.flow_validation import admin_only_build_required, prepare_flow_build_for_user
+from lfx.utils.flow_validation import (
+    admin_only_build_required,
+    custom_component_admin_only_enabled,
+    prepare_flow_build_for_user,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -160,9 +164,16 @@ class RunFlowBaseComponent(Component):
             # component source through the flow-write API and this trusted component then
             # hands it to Graph.from_payload. Apply the same caller-aware policy the
             # top-level run path applies so LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY holds
-            # across the nested-flow boundary.
-            is_superuser = await get_user_is_superuser(self.user_id)
-            admin_only = admin_only_build_required(is_superuser=is_superuser)
+            # across the nested-flow boundary. Resolve the caller's superuser flag only
+            # when the policy is configured on (or unreadable, failing closed): with the
+            # policy off the flag cannot change the outcome, and the per-call user lookup
+            # would hit the database even on cache hits.
+            if custom_component_admin_only_enabled() is False:
+                is_superuser = False
+                admin_only = False
+            else:
+                is_superuser = await get_user_is_superuser(self.user_id)
+                admin_only = admin_only_build_required(is_superuser=is_superuser)
             if not admin_only and flow_id_selected and (flow := self._flow_cache_call("get", flow_id=flow_id_selected)):
                 if str(getattr(flow, "flow_id", "")) != str(flow_id_selected):
                     self._flow_cache_call("delete", flow_id=flow_id_selected)

@@ -102,6 +102,7 @@ def nested_env(monkeypatch):
     env = SimpleNamespace(
         get_user_is_superuser=AsyncMock(return_value=False),
         admin_only_build_required=Mock(return_value=False),
+        custom_component_admin_only_enabled=Mock(return_value=None),
     )
     monkeypatch.setattr(
         run_flow_module,
@@ -110,6 +111,11 @@ def nested_env(monkeypatch):
     )
     monkeypatch.setattr(run_flow_module, "get_user_is_superuser", env.get_user_is_superuser)
     monkeypatch.setattr(run_flow_module, "admin_only_build_required", env.admin_only_build_required)
+    monkeypatch.setattr(
+        run_flow_module,
+        "custom_component_admin_only_enabled",
+        env.custom_component_admin_only_enabled,
+    )
     return env
 
 
@@ -215,6 +221,31 @@ async def test_get_graph_skips_the_flow_cache_when_admin_only_applies(nested_env
     assert result is not None
     cache_calls.assert_not_called()
     prepare.assert_awaited_once()
+
+
+async def test_get_graph_skips_the_user_lookup_when_admin_only_is_configured_off(nested_env, monkeypatch):
+    """With the policy off, the caller's superuser flag cannot change any outcome.
+
+    Resolving it costs one database user lookup per retrieval, cache hits included,
+    so get_graph must consult the flow cache without touching the user table.
+    """
+    from lfx.base.tools import run_flow as run_flow_module
+
+    nested_env.custom_component_admin_only_enabled.return_value = False
+    component = _component(cache_flow=True)
+    prepare = AsyncMock(return_value=None)
+
+    monkeypatch.setattr(run_flow_module, "prepare_flow_build_for_user", prepare)
+    monkeypatch.setattr(run_flow_module.Graph, "from_payload", lambda **_kwargs: MagicMock(spec=Graph))
+    monkeypatch.setattr(component, "get_flow", AsyncMock(return_value=_child_flow_data("# caller-authored source")))
+
+    result = await component.get_graph(flow_id_selected=str(uuid4()))
+
+    assert result is not None
+    nested_env.get_user_is_superuser.assert_not_awaited()
+    nested_env.admin_only_build_required.assert_not_called()
+    prepare.assert_awaited_once()
+    assert prepare.await_args.kwargs["is_superuser"] is False
 
 
 async def test_run_flow_with_cached_graph_surfaces_policy_rejection_verbatim(nested_env, monkeypatch):  # noqa: ARG001
