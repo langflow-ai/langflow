@@ -101,6 +101,10 @@ def test_component_connection_fields_match_the_manifest(manifest: IntegrationCap
         assert {(s.scope, s.condition.input) for s in connection.conditional_scopes} == {
             (s.scope, s.condition.input) for s in capability.conditional_scopes
         }
+        # Same mapping the Microsoft bundle derives from its manifest. Slack's user
+        # and bot scopes share names, so this is what lets the picker flag a bot
+        # connection on a user action before the run's token-prefix check does.
+        assert connection.identity_kind == {"user_delegated": "user", "bot": "instance"}[capability.identity]
 
 
 def test_conditional_scope_inputs_exist_on_their_component(manifest: IntegrationCapabilityManifest) -> None:
