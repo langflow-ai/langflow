@@ -217,10 +217,46 @@ def _dotted_parts(node: ast.AST) -> list[str] | None:
     return None
 
 
+def _static_string_iterable(node: ast.AST) -> list[str] | None:
+    """Resolve a literal list/tuple of static strings, or a pass-through generator over one."""
+    if isinstance(node, (ast.List, ast.Tuple)):
+        parts: list[str] = []
+        for element in node.elts:
+            if isinstance(element, ast.Starred):
+                return None
+            value = _static_string_value(element)
+            if value is None:
+                return None
+            parts.append(value)
+        return parts
+    if isinstance(node, ast.GeneratorExp) and len(node.generators) == 1:
+        generator = node.generators[0]
+        if generator.is_async or generator.ifs or not isinstance(generator.target, ast.Name):
+            return None
+        values = _static_string_iterable(generator.iter)
+        if values is None:
+            return None
+        if isinstance(node.elt, ast.Name) and node.elt.id == generator.target.id:
+            return values
+        if (element := _static_string_value(node.elt)) is not None:
+            return [element] * len(values)
+    return None
+
+
 def _static_string_value(node: ast.AST) -> str | None:
-    """Resolve a literal string assembled with ``+`` or a static f-string."""
+    """Resolve a literal string assembled with ``+``, a static f-string, or ``str.join``."""
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
         return node.value
+    if (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "join"
+        and not node.keywords
+        and len(node.args) == 1
+        and (separator := _static_string_value(node.func.value)) is not None
+        and (parts := _static_string_iterable(node.args[0])) is not None
+    ):
+        return separator.join(parts)
     if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
         left = _static_string_value(node.left)
         right = _static_string_value(node.right)
