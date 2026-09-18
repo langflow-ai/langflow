@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import {
   checkConnectionHealth,
   createConnection,
@@ -157,7 +158,8 @@ export const usePendingConnectionPoll = (
   options?: { intervalMs?: number },
 ) => {
   const interval = options?.intervalMs ?? 2000;
-  return useQuery<ConnectionRead | undefined>({
+  const client = useQueryClient();
+  const query = useQuery<ConnectionRead | undefined>({
     queryKey: connectionsKeys.one(baseline?.id ?? "none"),
     queryFn: () => getConnection(baseline?.id as string),
     enabled: baseline !== null,
@@ -169,4 +171,18 @@ export const usePendingConnectionPoll = (
     refetchIntervalInBackground: true,
     retry: false,
   });
+
+  // Consent lands on the server from another window, outside every mutation
+  // that refreshes this cache, so the list would keep the row as it was cached
+  // at create time (pending, no credentials) until a reload. The focus refetch
+  // does not rescue it: React Query refetches on `visibilitychange`, and a
+  // consent popup closing never hides this tab. `all` also covers the provider
+  // catalog, whose connection_count moves with the row.
+  const landed = hasConsentLanded(query.data, baseline);
+  useEffect(() => {
+    if (landed)
+      void client.invalidateQueries({ queryKey: connectionsKeys.all });
+  }, [landed, client]);
+
+  return query;
 };
