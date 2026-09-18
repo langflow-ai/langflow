@@ -1,5 +1,5 @@
 import { useIsFetching, useIsMutating } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -83,6 +83,15 @@ const SideBarFoldersButtonsComponent = ({
   const pathname = location.pathname;
   const folders = useFolderStore((state) => state.folders);
   const loading = !folders;
+  // Ownership only, not "reachable" — every project a broad role/scope grant
+  // or an explicit share makes visible has a real home now (Shared with me /
+  // Visible via your role), so the sidebar's job narrows to the user's own
+  // projects. `is_owner !== false` mirrors getProjectDisplayName's own
+  // defensive check: treat an absent/undefined flag as owned.
+  const ownedFolders = useMemo(
+    () => folders.filter((folder) => folder.is_owner !== false),
+    [folders],
+  );
   const refInput = useRef<HTMLInputElement>(null);
 
   const _navigate = useCustomNavigate();
@@ -442,18 +451,18 @@ const SideBarFoldersButtonsComponent = ({
           <SidebarGroupContent>
             <PermissionsProvider
               resourceType="project"
-              resourceIds={folders
+              resourceIds={ownedFolders
                 .map((folder) => folder.id ?? "")
                 .filter(Boolean)}
             >
               <SidebarMenu>
                 {!loading ? (
-                  folders.length === 0 ? (
+                  ownedFolders.length === 0 ? (
                     <div className="px-2 py-5 text-center text-sm text-muted-foreground">
                       {t("sidebar.emptyMessage")}
                     </div>
                   ) : (
-                    folders.map((item) => {
+                    ownedFolders.map((item) => {
                       const editFolderName = editFolders?.filter(
                         (folder) => folder.id === item.id,
                       )[0];
