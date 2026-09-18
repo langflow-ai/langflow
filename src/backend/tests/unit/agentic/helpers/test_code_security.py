@@ -1408,9 +1408,12 @@ class TestScanCodeSecurityRuntimeModuleBypass:
     def test_should_detect_dangerous_getattr_call_variants(self, code):
         assert scan_code_security(code).is_safe is False
 
-    def test_should_allow_dynamic_getattr_on_ordinary_objects(self):
+    def test_should_detect_dynamic_getattr_on_ordinary_objects(self):
+        # Fail closed (H1-3980911): a runtime-built attribute name can resolve to
+        # a sandbox-escape dunder on any receiver, so it is rejected even when the
+        # receiver is an ordinary object with a default supplied.
         result = scan_code_security("field = 'value'\nvalue = getattr(self, field, None)")
-        assert result.is_safe is True
+        assert result.is_safe is False
 
     @pytest.mark.parametrize(
         "code",
@@ -2054,3 +2057,155 @@ class MyComponent:
         """The alias deferral itself must survive: ``module = os`` alone is not a violation."""
         result = scan_code_security("import os\nmodule = os\nmodule = object()\nmodule.system('not os')")
         assert result.is_safe is True
+
+
+class TestScanCodeSecuritySandboxEscapeBypasses:
+    """Regression for H1-3980911 — bypasses of the CVE-2026-33873 remediation.
+
+    Vector A: ``getattr`` with a runtime-built (non-static) attribute name on a
+    non-module receiver walked ``().__class__.__bases__[0].__subclasses__()``
+    without a single literal dunder, reaching ``subprocess.Popen`` with
+    ``is_safe=True``. Dynamic attribute names are now rejected on any receiver.
+    Vector B: ``yaml.load(..., Loader=yaml.UnsafeLoader)`` is an arbitrary
+    constructor-invocation (deserialization RCE) primitive that was absent from
+    every deny-list.
+    """
+
+    GETATTR_DYNAMIC_DUNDER_POC = (
+        '_c = "".join(["__", "class", "__"])\n'
+        '_b = "".join(["__", "bases", "__"])\n'
+        '_s = "".join(["__sub", "classes", "__"])\n'
+        "base = getattr(getattr((), _c), _b)[0]\n"
+        "subs = getattr(base, _s)()\n"
+        "for k in subs:\n"
+        '    if getattr(k, "".join(["__na", "me__"]), "") == "Popen":\n'
+        '        k(["/bin/sh", "-c", "id"])\n'
+    )
+
+    def test_should_detect_h1_3980911_getattr_dynamic_dunder_poc(self):
+        """The verbatim Vector A PoC must not pass."""
+        result = scan_code_security(self.GETATTR_DYNAMIC_DUNDER_POC)
+        assert result.is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # Runtime-built names on a literal-container receiver.
+            "subs = getattr((), ''.join(['__sub', 'classes__']))",
+            "subs = getattr((), chr(95) + '__subclasses_')",
+            "cls = getattr((), f'__cl{suffix}__')",
+            # Runtime-built names on a nested-getattr (call-result) receiver.
+            "bases = getattr(getattr((), '__class__'), ''.join(['__ba', 'ses__']))",
+            # Runtime-built names on an untracked local receiver.
+            "def f(k):\n    return getattr(k, name)",
+            # Runtime-built names via an aliased/qualified getattr.
+            "reflect = getattr\nsubs = reflect((), name)",
+            "import builtins\nsubs = builtins.getattr((), name)",
+        ],
+        ids=[
+            "str-join-on-literal-tuple",
+            "chr-built-name",
+            "fstring-name",
+            "nested-getattr-receiver",
+            "untracked-local-receiver",
+            "aliased-getattr",
+            "builtins-getattr",
+        ],
+    )
+    def test_should_detect_dynamic_getattr_attribute_names(self, code):
+        result = scan_code_security(code)
+        assert result.is_safe is False
+        assert any("Dynamic getattr()" in violation for violation in result.violations)
+
+    def test_should_detect_statically_assembled_dunder_getattr_name(self):
+        # Statically resolvable escape names are still caught by the dunder guard.
+        result = scan_code_security("subs = getattr((), '__sub' + 'classes__')")
+        assert result.is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            # Static, non-dunder attribute names remain allowed on any receiver.
+            "value = getattr(self, 'field', None)",
+            "size = getattr((), '__len__')()",
+            "import os\npath_module = getattr(os, 'path')",
+        ],
+        ids=["static-field-with-default", "static-benign-dunder", "static-module-attr"],
+    )
+    def test_should_allow_static_getattr_attribute_names(self, code):
+        assert scan_code_security(code).is_safe is True
+
+    YAML_UNSAFE_LOADER_POC = (
+        "import yaml\n"
+        "def load_config(untrusted_text):\n"
+        "    return yaml.load(untrusted_text, Loader=yaml.UnsafeLoader)\n"
+    )
+
+    def test_should_detect_h1_3980911_yaml_unsafe_loader_poc(self):
+        """The verbatim Vector B PoC must not pass."""
+        result = scan_code_security(self.YAML_UNSAFE_LOADER_POC)
+        assert result.is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import yaml\nyaml.load(text, Loader=yaml.UnsafeLoader)",
+            "import yaml\nyaml.load(text, Loader=yaml.Loader)",
+            "import yaml\nyaml.load(text, Loader=yaml.FullLoader)",
+            "import yaml\nyaml.load(text, Loader=yaml.CLoader)",
+            "import yaml\nyaml.load(text, Loader=yaml.CUnsafeLoader)",
+            "import yaml\nyaml.load(text, Loader=yaml.CFullLoader)",
+            "import yaml\nyaml.unsafe_load(text)",
+            "import yaml\nyaml.unsafe_load_all(text)",
+            "import yaml\nloader = yaml.UnsafeLoader\nyaml.load(text, Loader=loader)",
+            "import yaml\ngetattr(yaml, 'UnsafeLoader')",
+            "from yaml import UnsafeLoader",
+            "from yaml import Loader",
+            "from yaml import unsafe_load\nunsafe_load(text)",
+            "from yaml import *\nunsafe_load(text)",
+            "import yaml\nyaml.__dict__['UnsafeLoader']",
+            "import yaml\nvars(yaml)['Loader']",
+        ],
+        ids=[
+            "unsafe-loader-kwarg",
+            "loader-kwarg",
+            "full-loader-kwarg",
+            "c-loader-kwarg",
+            "c-unsafe-loader-kwarg",
+            "c-full-loader-kwarg",
+            "unsafe-load-call",
+            "unsafe-load-all-call",
+            "aliased-unsafe-loader",
+            "getattr-unsafe-loader",
+            "from-import-unsafe-loader",
+            "from-import-loader",
+            "from-import-unsafe-load",
+            "wildcard-import-unsafe-load",
+            "module-dict-unsafe-loader",
+            "vars-loader",
+        ],
+    )
+    def test_should_detect_yaml_unsafe_deserialization(self, code):
+        assert scan_code_security(code).is_safe is False
+
+    @pytest.mark.parametrize(
+        "code",
+        [
+            "import yaml\nconfig = yaml.safe_load(text)",
+            "import yaml\nconfig = yaml.safe_load_all(text)",
+            "import yaml\nconfig = yaml.load(text, Loader=yaml.SafeLoader)",
+            "import yaml\nconfig = yaml.load(text, yaml.SafeLoader)",
+            "from yaml import safe_load\nconfig = safe_load(text)",
+            "import yaml\nconfig = yaml.load(text, Loader=yaml.CSafeLoader)",
+        ],
+        ids=[
+            "safe-load",
+            "safe-load-all",
+            "load-with-safe-loader",
+            "load-with-positional-safe-loader",
+            "from-import-safe-load",
+            "load-with-c-safe-loader",
+        ],
+    )
+    def test_should_allow_yaml_safe_deserialization(self, code):
+        assert scan_code_security(code).is_safe is True

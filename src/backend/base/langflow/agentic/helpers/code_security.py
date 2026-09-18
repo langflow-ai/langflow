@@ -51,6 +51,16 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
     ("os", "environ", "os.environ is forbidden — use Langflow's variable/secret service"),
     ("os.path", "os", "os.path.os is forbidden in components"),
     ("sys", "modules", "sys.modules is forbidden in components"),
+    # PyYAML loaders that resolve ``!!python/object*`` tags — arbitrary
+    # constructor invocation (deserialization RCE) on untrusted text. Blocking
+    # the Loader attribute also blocks ``yaml.load(..., Loader=...)`` variants;
+    # ``yaml.safe_load`` / ``yaml.SafeLoader`` remain available.
+    ("yaml", "Loader", "yaml.Loader is forbidden in components — use yaml.safe_load() / yaml.SafeLoader"),
+    ("yaml", "UnsafeLoader", "yaml.UnsafeLoader is forbidden in components — use yaml.SafeLoader"),
+    ("yaml", "FullLoader", "yaml.FullLoader is forbidden in components — use yaml.SafeLoader"),
+    ("yaml", "CLoader", "yaml.CLoader is forbidden in components — use yaml.SafeLoader"),
+    ("yaml", "CUnsafeLoader", "yaml.CUnsafeLoader is forbidden in components — use yaml.SafeLoader"),
+    ("yaml", "CFullLoader", "yaml.CFullLoader is forbidden in components — use yaml.SafeLoader"),
 ]
 
 # Dangerous attribute calls: (module, method, violation_message)
@@ -101,6 +111,9 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("shutil", "rmtree", "shutil.rmtree() is forbidden"),
     ("shutil", "move", "shutil.move() is forbidden in components"),
     ("sys", "exit", "sys.exit() is forbidden in components"),
+    # PyYAML unsafe deserialization entry points (``!!python/object*`` tags).
+    ("yaml", "unsafe_load", "yaml.unsafe_load() is forbidden — use yaml.safe_load()"),
+    ("yaml", "unsafe_load_all", "yaml.unsafe_load_all() is forbidden — use yaml.safe_load_all()"),
 ]
 
 # Imports that are forbidden entirely
@@ -190,6 +203,18 @@ RESTRICTED_IMPORT_NAMES: dict[str, set[str]] = {
         "dup",
     },
     "sys": {"modules"},
+    # `from yaml import UnsafeLoader` style imports: same deserialization RCE
+    # as the dotted attribute reads blocked above.
+    "yaml": {
+        "Loader",
+        "UnsafeLoader",
+        "FullLoader",
+        "CLoader",
+        "CUnsafeLoader",
+        "CFullLoader",
+        "unsafe_load",
+        "unsafe_load_all",
+    },
 }
 
 
@@ -1227,6 +1252,27 @@ class _SecurityChecker(ast.NodeVisitor):
                 )
             elif member_name in DANGEROUS_DUNDER_ATTRS:
                 self.violations.append(f"Access to '{member_name}' is forbidden in components (sandbox escape)")
+            else:
+                # A static key into a restricted module's namespace reaches the
+                # same dangerous members as dotted access (``yaml.__dict__['UnsafeLoader']``).
+                module_names = {name.removesuffix(".__dict__") for name in mapping_names}
+                violation = next(
+                    (
+                        message
+                        for mod, attr, message in DANGEROUS_ATTRIBUTE_READS
+                        if mod in module_names and attr == member_name
+                    ),
+                    None,
+                ) or next(
+                    (
+                        message
+                        for mod, method, message in DANGEROUS_ATTR_CALLS
+                        if mod in module_names and method == member_name
+                    ),
+                    None,
+                )
+                if violation:
+                    self.violations.append(violation)
         return self.generic_visit(node)
 
     def _resolved_dotted(self, node: ast.Attribute) -> frozenset[str]:
@@ -1396,13 +1442,17 @@ class _SecurityChecker(ast.NodeVisitor):
         return 0
 
     def _check_getattr_access(self, node: ast.Call) -> bool:
-        """Check reflective access to restricted module members.
+        """Check reflective access via ``getattr``.
 
         ``getattr`` is common in legitimate components, so it stays allowed for
-        ordinary objects and safe module attributes. On modules with restricted
-        members, a dynamic attribute name is rejected because it could resolve to
-        one of those members at runtime. Returns whether the object and attribute
-        arguments were fully validated here.
+        ordinary objects and safe module attributes when the attribute name is a
+        statically known string. A runtime-built attribute name is rejected on
+        ANY receiver: it can resolve to a sandbox-escape dunder
+        (``__subclasses__`` and friends) at runtime, which the static-dunder
+        guard cannot see, and a receiver that is a literal container, a call
+        result, or an untracked local (e.g. ``getattr(getattr((), _c), _b)[0]``)
+        leaves nothing to resolve. Fail closed. Returns whether the object and
+        attribute arguments were fully validated here.
         """
         function_names = self._resolved_assignment_value(node.func)
 
@@ -1418,6 +1468,9 @@ class _SecurityChecker(ast.NodeVisitor):
             return True
 
         receiver = node.args[0]
+        if attr_name is None:
+            self.violations.append("Dynamic getattr() attribute names are forbidden in components (sandbox escape)")
+            return True
         if not isinstance(receiver, (ast.Name, ast.Attribute)):
             return False
 
@@ -1426,15 +1479,6 @@ class _SecurityChecker(ast.NodeVisitor):
             if violation := self._dangerous_callable_message(receiver_name):
                 self.violations.append(violation)
                 return True
-        if attr_name is None:
-            dangerous_modules = sorted(
-                module_name for module_name in module_names if module_name in _RESTRICTED_MODULE_REFERENCES
-            )
-            if dangerous_modules:
-                self.violations.append(
-                    f"Dynamic getattr() access on module '{dangerous_modules[0]}' is forbidden in components"
-                )
-            return True
 
         if any(module_name in {"builtins", "__builtins__"} for module_name in module_names) and (
             violation := DANGEROUS_CALLS.get(attr_name)
