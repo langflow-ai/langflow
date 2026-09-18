@@ -5,12 +5,17 @@ and serves file content from various upstream input formats (Data objects,
 DataFrames with attrs, DataFrames with file_path column).
 """
 
+import os
+from contextlib import contextmanager
+from unittest.mock import MagicMock, patch
+
 import pandas as pd
 import pytest
 from lfx.components.files_ingestion.file_content_retriever import FileContentRetrieverComponent
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+from lfx.utils.file_path_security import LocalFileAccessError
 
 # -- Helpers to build realistic upstream outputs --
 
@@ -340,3 +345,229 @@ class TestCaching:
 
         assert text_map1 is text_map2
         assert df_map1 is df_map2
+
+
+# ---------------------------------------------------------------------------
+# Tests for persistent_dir local-file-access enforcement (security)
+# ---------------------------------------------------------------------------
+
+
+@contextmanager
+def _mock_settings(*, restricted: bool, config_dir: str):
+    with patch("lfx.utils.file_path_security.get_settings_service") as mock_get:
+        settings = MagicMock()
+        settings.settings.restrict_local_file_access = restricted
+        settings.settings.config_dir = config_dir
+        settings.settings.database_url = ""
+        mock_get.return_value = settings
+        yield
+
+
+class TestPersistentDirFileAccess:
+    """persistent_dir is tenant-controlled and must honor LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS."""
+
+    def test_arbitrary_persistent_dir_allowed_when_unrestricted(self, tmp_path):
+        """OSS default (restriction off): any absolute persistent_dir keeps working."""
+        persist = tmp_path / "attacker_dir"
+        data = _make_data_with_content("/etc/hostname", "PAYLOAD")
+        comp = _build_component(file_data=[data], persistent_dir=str(persist))
+
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)):
+            comp._get_file_maps()
+
+        assert (persist / "text_index.json").exists()
+        assert (persist / "texts").is_dir()
+
+    def test_persistent_dir_outside_scope_blocked_when_restricted(self, tmp_path):
+        """Restricted mode: a persistent_dir outside the caller's storage scope is refused."""
+        persist = tmp_path / "outside" / "attacker_dir"
+        data = _make_data_with_content("/x", "PAYLOAD")
+        comp = _build_component(file_data=[data], persistent_dir=str(persist))
+        comp._user_id = "user-1"
+
+        with (
+            _mock_settings(restricted=True, config_dir=str(tmp_path)),
+            pytest.raises(LocalFileAccessError),
+        ):
+            comp._get_file_maps()
+
+        assert not persist.exists(), "No files may be created outside the storage scope"
+
+    def test_persistent_dir_inside_scope_allowed_when_restricted(self, tmp_path):
+        """Restricted mode: a persistent_dir inside the caller's storage scope still works."""
+        persist = tmp_path / "user-1" / "persist"
+        data = _make_data_with_content("/x", "PAYLOAD")
+        comp = _build_component(file_data=[data], persistent_dir=str(persist))
+        comp._user_id = "user-1"
+
+        with _mock_settings(restricted=True, config_dir=str(tmp_path)):
+            text_map, _ = comp._get_file_maps()
+
+        assert text_map["/x"] == "PAYLOAD"
+        assert (persist / "text_index.json").exists()
+
+    def test_persistent_dir_without_scope_fails_closed_when_restricted(self, tmp_path):
+        """Restricted mode with no authenticated user/flow scope must deny, not silently allow."""
+        comp = _build_component(file_data=[], persistent_dir=str(tmp_path / "persist"))
+
+        with (
+            _mock_settings(restricted=True, config_dir=str(tmp_path)),
+            pytest.raises(LocalFileAccessError, match="requires an authenticated user or flow scope"),
+        ):
+            comp._get_file_maps()
+
+    def test_save_persistent_maps_enforces_restriction(self, tmp_path):
+        """The write path itself must enforce containment, not only the load path."""
+        comp = _build_component(persistent_dir=str(tmp_path / "outside"))
+        comp._user_id = "user-1"
+
+        with (
+            _mock_settings(restricted=True, config_dir=str(tmp_path)),
+            pytest.raises(LocalFileAccessError),
+        ):
+            comp._save_persistent_maps({"/x": "PAYLOAD"}, {})
+
+        assert not (tmp_path / "outside").exists()
+
+
+class TestPersistentIndexTraversal:
+    """Index entry names from text_index.json / dataframe_index.json are untrusted."""
+
+    def _stage_persistent_dir(self, tmp_path, index: dict) -> str:
+        import json
+
+        base = tmp_path / "persist"
+        (base / "texts").mkdir(parents=True)
+        (base / "text_index.json").write_text(json.dumps(index), encoding="utf-8")
+        return str(base)
+
+    def test_traversal_entry_does_not_read_outside_texts_dir(self, tmp_path):
+        """A '../' entry in text_index.json must not escape the texts/ directory."""
+        secret = tmp_path / "secret.txt"
+        secret.write_text("SECRET_READ_VIA_TRAVERSAL", encoding="utf-8")
+        persist = self._stage_persistent_dir(tmp_path, {"victim_key": "../../secret.txt"})
+        comp = _build_component(file_data=[], persistent_dir=persist)
+
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)):
+            text_map, _ = comp._load_persistent_maps()
+
+        assert "victim_key" not in text_map
+        assert all("SECRET_READ_VIA_TRAVERSAL" not in v for v in text_map.values())
+
+    def test_absolute_path_entry_rejected(self, tmp_path):
+        """An absolute-path entry in the index must be rejected."""
+        secret = tmp_path / "secret.txt"
+        secret.write_text("SECRET", encoding="utf-8")
+        persist = self._stage_persistent_dir(tmp_path, {"victim_key": str(secret)})
+        comp = _build_component(file_data=[], persistent_dir=persist)
+
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)):
+            text_map, _ = comp._load_persistent_maps()
+
+        assert text_map == {}
+
+    def test_deep_traversal_entry_rejected(self, tmp_path):
+        """Multi-level traversal entries (the PoC payload) must be rejected."""
+        persist = self._stage_persistent_dir(tmp_path, {"victim_key": "../../../../etc/hostname"})
+        comp = _build_component(file_data=[], persistent_dir=persist)
+
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)):
+            text_map, _ = comp._load_persistent_maps()
+
+        assert text_map == {}
+
+    def test_legitimate_entry_still_loads(self, tmp_path):
+        """A well-formed hash-style entry written by _save_persistent_maps must still load."""
+        import json
+
+        base = tmp_path / "persist"
+        texts = base / "texts"
+        texts.mkdir(parents=True)
+        (texts / "abc123.txt").write_text("LEGIT CONTENT", encoding="utf-8")
+        (base / "text_index.json").write_text(json.dumps({"/x": "abc123.txt"}), encoding="utf-8")
+        comp = _build_component(file_data=[], persistent_dir=str(base))
+
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)):
+            text_map, _ = comp._load_persistent_maps()
+
+        assert text_map == {"/x": "LEGIT CONTENT"}
+
+    def test_dataframe_index_traversal_rejected(self, tmp_path):
+        """Traversal entries in dataframe_index.json must be rejected before any read.
+
+        The external target exists on disk; containment must reject the entry without
+        opening it (asserted via the read_parquet spy, since lfx has no parquet engine
+        dependency to stage a real parquet file with).
+        """
+        import json
+
+        secret = tmp_path / "secret.parquet"
+        secret.write_bytes(b"PAR1-placeholder")
+        base = tmp_path / "persist"
+        (base / "dataframes").mkdir(parents=True)
+        (base / "dataframe_index.json").write_text(json.dumps({"victim_key": "../../secret.parquet"}), encoding="utf-8")
+        comp = _build_component(file_data=[], persistent_dir=str(base))
+
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)), patch.object(pd, "read_parquet") as mock_read:
+            _, df_map = comp._load_persistent_maps()
+
+        assert df_map == {}
+        mock_read.assert_not_called()
+
+    def test_nul_character_entry_rejected(self, tmp_path):
+        """Entries containing NUL bytes must be rejected instead of reaching filesystem calls."""
+        secret = tmp_path / "secret.txt"
+        secret.write_text("SECRET", encoding="utf-8")
+        persist = self._stage_persistent_dir(tmp_path, {"victim_key": "abc123.txt\x00/../../secret.txt"})
+        comp = _build_component(file_data=[], persistent_dir=persist)
+
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)):
+            text_map, _ = comp._load_persistent_maps()
+
+        assert text_map == {}
+
+    def test_nested_separator_entry_rejected(self, tmp_path):
+        """Entries with path separators must be rejected even when the nested file exists."""
+        import json
+
+        base = tmp_path / "persist"
+        nested = base / "texts" / "nested"
+        nested.mkdir(parents=True)
+        (nested / "evil.txt").write_text("NESTED CONTENT", encoding="utf-8")
+        (base / "text_index.json").write_text(json.dumps({"victim_key": "nested/evil.txt"}), encoding="utf-8")
+        comp = _build_component(file_data=[], persistent_dir=str(base))
+
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)):
+            text_map, _ = comp._load_persistent_maps()
+
+        assert text_map == {}
+
+    def test_backslash_separator_entry_rejected(self, tmp_path):
+        """Windows-style separators in entries must be rejected as well."""
+        persist = self._stage_persistent_dir(tmp_path, {"victim_key": "..\\..\\secret.txt"})
+        comp = _build_component(file_data=[], persistent_dir=persist)
+
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)):
+            text_map, _ = comp._load_persistent_maps()
+
+        assert text_map == {}
+
+    @pytest.mark.skipif(os.name == "nt", reason="symlink creation requires privileges on Windows")
+    def test_symlink_entry_escape_rejected(self, tmp_path):
+        """A symlink planted inside texts/ pointing outside must not be followed."""
+        import json
+
+        secret = tmp_path / "secret.txt"
+        secret.write_text("SECRET_VIA_SYMLINK", encoding="utf-8")
+        base = tmp_path / "persist"
+        texts = base / "texts"
+        texts.mkdir(parents=True)
+        (texts / "evil.txt").symlink_to(secret)
+        (base / "text_index.json").write_text(json.dumps({"victim_key": "evil.txt"}), encoding="utf-8")
+        comp = _build_component(file_data=[], persistent_dir=str(base))
+
+        with _mock_settings(restricted=False, config_dir=str(tmp_path)):
+            text_map, _ = comp._load_persistent_maps()
+
+        assert "victim_key" not in text_map
+        assert all("SECRET_VIA_SYMLINK" not in v for v in text_map.values())
