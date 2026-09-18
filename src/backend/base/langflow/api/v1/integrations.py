@@ -119,7 +119,7 @@ async def list_integrations(
 
     manifests = {
         integration.provider_id: integration.capability_manifest
-        for integration in _loaded_integrations()
+        for integration in loaded_integrations()
         if provider is None or integration.provider_id == provider
     }
     if not manifests:
@@ -189,7 +189,7 @@ async def read_effective_integration_policy(
 ) -> EffectiveIntegrationPolicyRead:
     """Return the integration decision set that applies to this caller."""
     check_rate_limit(request, scope=_SCOPE_INTEGRATIONS, limit_per_minute=get_metadata_read_limit())
-    loaded_provider_ids = frozenset(integration.provider_id for integration in _loaded_integrations())
+    loaded_provider_ids = frozenset(integration.provider_id for integration in loaded_integrations())
     policy = await aresolve_integration_policy(
         user_id=current_user.id,
         provider_ids=loaded_provider_ids,
@@ -210,8 +210,12 @@ async def read_effective_integration_policy(
     )
 
 
-def _loaded_integrations():
-    """Return every integration the bundle registry has loaded in this process."""
+def loaded_integrations():
+    """Return every integration the bundle registry has loaded in this process.
+
+    Shared with the policy-bundle write path, which checks newly blocked action
+    keys against the capabilities these integrations declare.
+    """
     from lfx.extension.bundle_registry import get_default_registry
 
     return get_default_registry().list_integrations()
@@ -222,5 +226,6 @@ __all__ = [
     "IntegrationCapabilityRead",
     "IntegrationListRead",
     "IntegrationProviderRead",
+    "loaded_integrations",
     "router",
 ]
