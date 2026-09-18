@@ -312,7 +312,7 @@ def test_critical_defaults_unchanged():
     assert settings.allow_custom_components is True
     assert settings.block_code_interpreter_components is False
     assert settings.substitute_outdated_component_code is True
-    assert settings.restrict_local_file_access is False
+    assert settings.restrict_local_file_access is True
     assert settings.mcp_server_docker_hardening is False
     assert settings.mcp_server_interpreter_hardening is False
     assert settings.mcp_server_allowed_packages is None

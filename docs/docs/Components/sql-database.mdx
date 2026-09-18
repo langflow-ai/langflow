@@ -11,6 +11,10 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 The **SQL Database** component executes SQL queries on [SQLAlchemy-compatible databases](https://docs.sqlalchemy.org/en/20/).
 It supports any SQLAlchemy-compatible database, such as PostgreSQL, MySQL, and SQLite.
 
+:::info Local-file dialects are restricted by default
+The local-file dialects (`sqlite`, `duckdb`) are blocked unless [`LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`](/api-keys-and-authentication#multi-tenant-component-hardening) is set to `false`, because a database URL such as `sqlite:////etc/passwd` would otherwise let flow builders read arbitrary files on the server. To use a SQLite database in the **Database URL** field, either set `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=false` (trusted single-tenant deployments only) or use a network database such as PostgreSQL or MySQL.
+:::
+
 For CQL queries, see the [**DataStax** bundle](/bundles-datastax).
 
 ## Query an SQL database with natural language prompts

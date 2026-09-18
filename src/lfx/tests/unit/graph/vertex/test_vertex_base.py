@@ -445,6 +445,7 @@ def test_process_edge_parameters(parameter_handler, mock_edge):
     assert params["test_param"] == "source_vertex"
 
 
+@pytest.mark.usefixtures("unrestricted_file_access")
 def test_process_file_field(parameter_handler):
     """Test processing file fields."""
     # Test with file path
@@ -483,6 +484,15 @@ def restricted_file_access(tmp_path):
     settings_service.settings.database_url = ""
     with patch("lfx.utils.file_path_security.get_settings_service", return_value=settings_service):
         yield config_dir
+
+
+@pytest.fixture
+def unrestricted_file_access():
+    """Explicitly disable local-file restriction (the legacy single-tenant opt-out)."""
+    settings_service = Mock()
+    settings_service.settings.restrict_local_file_access = False
+    with patch("lfx.utils.file_path_security.get_settings_service", return_value=settings_service):
+        yield
 
 
 TRUSTED_FILE_COMPONENT_CODE = """
@@ -676,7 +686,7 @@ def test_process_file_field_preserves_unrestricted_local_path_compatibility(
     mock_storage_service,
     tmp_path,
 ):
-    """Single-tenant installs retain arbitrary local FileInput support by default."""
+    """Single-tenant installs retain arbitrary local FileInput support via the explicit opt-out."""
     settings_service = Mock()
     settings_service.settings.restrict_local_file_access = False
     outside_path = tmp_path / "local-file.txt"
@@ -965,6 +975,7 @@ def test_handle_optional_field(parameter_handler):
     assert params["test_field"] == "value"
 
 
+@pytest.mark.usefixtures("unrestricted_file_access")
 def test_process_field_parameters_valid(parameter_handler, mock_vertex):
     """Test processing field parameters with a valid mix of field types."""
     new_template = {
@@ -1330,8 +1341,8 @@ class TestFileInputStorageNamespaceOwnership:
     resolved path. Without a namespace check the shape of the input decides access, and a
     caller can point a FileInput at another user's upload.
 
-    These run at the OSS default (``restrict_local_file_access=False``) against a real
-    ``LocalStorageService``.
+    These run with containment explicitly disabled (``restrict_local_file_access=False``, the
+    legacy single-tenant opt-out) against a real ``LocalStorageService``.
     """
 
     VICTIM_ID = "11111111-1111-1111-1111-111111111111"

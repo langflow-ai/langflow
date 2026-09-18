@@ -209,20 +209,24 @@ class SecuritySettings(BaseModel):
     workloads, e.g. CI smoke tests or containers without /dev/kvm passthrough.
     Only used when sandbox_backend is not "none"."""
 
-    restrict_local_file_access: bool = False
+    restrict_local_file_access: bool = True
     """If set to True, the built-in file-reading components (File, Directory, JSON/CSV-to-Data)
     may only read paths that resolve inside the authenticated user's or executing flow's storage
     subdirectory under ``config_dir``, where uploaded files live.
 
-    These components accept a filesystem path from a tenant-controlled input field. With the
-    default (False) a tenant can set that path to an absolute server path (``/etc/passwd``, the
+    These components accept a filesystem path from a tenant-controlled input field. Without the
+    restriction a tenant can set that path to an absolute server path (``/etc/passwd``, the
     SQLite DB, secrets) or a traversal string and read arbitrary server files — or another
-    tenant's uploads. Multi-tenant / untrusted-user deployments that disallow user-authored
-    components should set this to True (alongside ``LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false``) so
-    these components cannot read server files or storage belonging to another user or flow.
+    tenant's uploads. The same flag also blocks the local-file SQL dialects (``sqlite``,
+    ``duckdb``) in the SQL Database components, which would otherwise turn an arbitrary path
+    such as ``sqlite:////etc/passwd`` or ``sqlite:////app/data/.cache/langflow/secret_key``
+    into an arbitrary file read.
 
-    Defaults to False to preserve existing single-tenant behavior, where reading local server
-    files by absolute path is a legitimate feature."""
+    Defaults to True (secure by default): tenant-controlled components cannot read server
+    files or storage belonging to another user or flow out of the box. Single-tenant
+    self-hosted deployments that intentionally read local server files by absolute path can
+    set ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=false`` to restore the previous behavior —
+    note that this re-enables arbitrary local file reads for any authenticated user."""
 
     mcp_server_docker_hardening: bool = False
     """If set to True, applies a strict docker-argument policy to MCP stdio servers (both
