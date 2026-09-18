@@ -1,12 +1,15 @@
 import httpx
 from langchain_openai import ChatOpenAI
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import IntInput, SecretStrInput, SliderInput, StrInput
 from lfx.utils.secrets import secret_value_to_str
 from lfx.utils.ssrf_httpx import ssrf_protected_openai_clients_for_url, ssrf_safe_httpx_get
 from lfx.utils.ssrf_protection import SSRFProtectionError
+
+DEFAULT_LITELLM_PROXY_BASE = "http://localhost:4000/v1"
 
 
 class LiteLLMProxyComponent(LCModelComponent):
@@ -22,7 +25,7 @@ class LiteLLMProxyComponent(LCModelComponent):
         StrInput(
             name="api_base",
             display_name="LiteLLM Proxy URL",
-            value="http://localhost:4000/v1",
+            value=DEFAULT_LITELLM_PROXY_BASE,
             required=True,
             info="Base URL of the LiteLLM proxy.",
         ),
@@ -73,6 +76,9 @@ class LiteLLMProxyComponent(LCModelComponent):
     def build_model(self) -> LanguageModel:
         """Build the LiteLLM proxy model."""
         api_key = secret_value_to_str(self.api_key) or ""
+        # The virtual key may resolve to the operator's environment-provisioned
+        # credential; refuse to forward it to a tenant-chosen endpoint.
+        ensure_credential_endpoint_allowed(api_key, self.api_base, default_url=DEFAULT_LITELLM_PROXY_BASE)
         ssrf_client_kwargs = ssrf_protected_openai_clients_for_url(self.api_base)
 
         self._validate_proxy_connection(api_key)

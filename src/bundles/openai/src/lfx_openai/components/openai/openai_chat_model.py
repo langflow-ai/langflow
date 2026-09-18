@@ -3,7 +3,7 @@ from typing import Any
 from langchain_openai import ChatOpenAI
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.openai_constants import OPENAI_CHAT_MODEL_NAMES, OPENAI_REASONING_MODEL_NAMES
-from lfx.base.models.provider_ssrf import openai_compatible_client_kwargs
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed, openai_compatible_client_kwargs
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
@@ -118,6 +118,11 @@ class OpenAIModelComponent(LCModelComponent):
             "max_retries": self.max_retries,
             "timeout": self.timeout,
         }
+
+        # A key that resolves to a value held in the server process environment is the
+        # operator's credential: it may only leave the deployment to an endpoint the
+        # operator sanctioned (the default OpenAI endpoint or an allowlisted host).
+        ensure_credential_endpoint_allowed(api_key_value, self.openai_api_base, default_url=DEFAULT_OPENAI_API_BASE)
 
         # openai_api_base is tenant-editable and the SDK sends the operator's stored API key to
         # whatever host it names. Apply the connector SSRF policy and route a custom endpoint

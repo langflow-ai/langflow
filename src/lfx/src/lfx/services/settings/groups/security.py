@@ -49,6 +49,21 @@ class SecuritySettings(BaseModel):
     networks can either allowlist those hosts or set this to False. For the SQL Database
     components, the separate LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS toggle still governs local-file
     dialects (e.g. sqlite) independently of this flag."""
+    provider_credential_allowed_hosts: list[str] = []
+    """Comma-separated list of hosts that may receive server-environment provider credentials.
+
+    Model-provider components whose API key resolves to a value provisioned in the server
+    process environment (seeded credential variables or the load-from-DB env fallback) only
+    send that key to the provider's own default endpoint. A tenant who points the
+    component's base URL at any other host gets the request refused, because the operator —
+    not the tenant — owns that credential and never sanctioned the destination.
+
+    List a host here (exact hostname, 'host:port', or wildcard '*.example.com') when the
+    deployment legitimately fronts a provider with a proxy/gateway and provisions the key
+    via the environment, e.g. 'llm-gateway.corp.example'. Tenants' own keys (typed or stored
+    as their own global variables) are unaffected by this setting and follow the ordinary
+    SSRF policy above."""
+
     connector_ssrf_allow_loopback: bool = True
     """Whether a literal loopback host (localhost, 127.0.0.0/8, ::1) is allowed for ordinary HTTP
     CONNECTOR URLs, even while connector SSRF validation is on.

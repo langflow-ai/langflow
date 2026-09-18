@@ -4,6 +4,7 @@ from urllib.parse import urljoin
 import httpx
 from langchain_openai import ChatOpenAI
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import DictInput, DropdownInput, FloatInput, IntInput, SecretStrInput, StrInput
@@ -108,6 +109,9 @@ class LMStudioModelComponent(LCModelComponent):
         base_url = self.base_url or "http://localhost:1234/v1"
         seed = self.seed
 
+        # The key may resolve to the operator's environment-provisioned credential;
+        # refuse to forward it to a tenant-chosen endpoint.
+        ensure_credential_endpoint_allowed(lmstudio_api_key, base_url, default_url="http://localhost:1234/v1")
         ssrf_client_kwargs = ssrf_protected_openai_clients_for_url(base_url)
 
         return ChatOpenAI(

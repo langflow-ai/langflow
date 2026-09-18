@@ -1,10 +1,13 @@
 from typing import Any
 
 from lfx.base.models.model import LCModelComponent
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
 from lfx.schema.dotdict import dotdict
+
+NVIDIA_DEFAULT_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
 
 class NVIDIAModelComponent(LCModelComponent):
@@ -48,7 +51,7 @@ class NVIDIAModelComponent(LCModelComponent):
         MessageTextInput(
             name="base_url",
             display_name="NVIDIA Base URL",
-            value="https://integrate.api.nvidia.com/v1",
+            value=NVIDIA_DEFAULT_BASE_URL,
             info="The base URL of the NVIDIA API. Defaults to https://integrate.api.nvidia.com/v1.",
         ),
         SecretStrInput(
@@ -76,13 +79,16 @@ class NVIDIAModelComponent(LCModelComponent):
     ]
 
     def get_models(self, *, tool_model_enabled: bool | None = None) -> list[str]:
+        # Note: don't include the previous model, as it may not exist in available models from the new base url
+        # The key sent below may resolve to the operator's environment-provisioned
+        # credential; refuse to forward it to a tenant-chosen endpoint.
+        ensure_credential_endpoint_allowed(self.api_key, self.base_url, default_url=NVIDIA_DEFAULT_BASE_URL)
         try:
             from langchain_nvidia_ai_endpoints import ChatNVIDIA
         except ImportError as e:
             msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
             raise ImportError(msg) from e
 
-        # Note: don't include the previous model, as it may not exist in available models from the new base url
         model = ChatNVIDIA(base_url=self.base_url, api_key=self.api_key)
         if tool_model_enabled:
             tool_models = [m for m in model.get_available_models() if m.supports_tools]
@@ -115,12 +121,13 @@ class NVIDIAModelComponent(LCModelComponent):
         return build_config
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+        api_key = self.api_key
+        ensure_credential_endpoint_allowed(api_key, self.base_url, default_url=NVIDIA_DEFAULT_BASE_URL)
         try:
             from langchain_nvidia_ai_endpoints import ChatNVIDIA
         except ImportError as e:
             msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
             raise ImportError(msg) from e
-        api_key = self.api_key
         temperature = self.temperature
         model_name: str = self.model_name
         max_tokens = self.max_tokens
