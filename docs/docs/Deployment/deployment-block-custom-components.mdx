@@ -21,6 +21,25 @@ This environment variable is a beta feature, and should not be your only safegua
 
 In the event that Langflow could execute untrusted or LLM-generated code, run Langflow in an isolated and containerized execution environment.
 
+## Multi-user deployments and code execution{#multi-user-code-execution}
+
+Custom component code runs on the Langflow server at flow-build time. In a single-user deployment (`LANGFLOW_AUTO_LOGIN=true`, the default) the only account is the superuser, so this is code you already trust.
+
+In a multi-user deployment (`LANGFLOW_AUTO_LOGIN=false`), any **active non-admin user** can author component code and have the server execute it — for example by saving a flow with custom code and triggering it through the [webhook](/webhook) or [`/run`](/api-flows-run) endpoints. This is expected behavior of the custom-component feature, not a defect, but it means every regular user effectively has code execution on the host unless you restrict it.
+
+When a deployment runs in multi-user mode with custom components still enabled for everyone, Langflow logs a warning at startup:
+
+```text
+SECURITY: Langflow is running in multi-user mode (LANGFLOW_AUTO_LOGIN=false) with custom components enabled for every user ...
+```
+
+To close this exposure, apply one of the two lockdowns below:
+
+- Set `LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY=true` to allow only superusers to author component code, while regular users keep using built-in and existing components. See [Restrict custom component creation to superusers](#restrict-custom-components-to-superusers).
+- Set `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false` to run only the server's built-in component code, as described above.
+
+For untrusted or multi-tenant deployments, combine a lockdown with hardware-level isolation via [`LANGFLOW_SANDBOX_BACKEND`](./sandbox-backends.mdx).
+
 ### Restrict custom component creation to superusers{#restrict-custom-components-to-superusers}
 
 To restrict custom component creation to superusers while keeping built-in components functional for users, set the following [environment variable](/environment-variables):
