@@ -81,5 +81,6 @@ async def test_mb_messages_returns_empty_text_for_legacy_null(client: AsyncClien
     response = await client.get(f"api/v1/memories/{mb_id}/messages", headers=logged_in_headers)
 
     assert response.status_code == 200
-    texts = {item["text"] for item in response.json()["items"]}
-    assert texts == {"hello", ""}
+    items = {item["id"]: item["text"] for item in response.json()["items"]}
+    assert set(items) == {str(good_id), str(empty_id), str(null_id)}
+    assert items[str(null_id)] == ""
