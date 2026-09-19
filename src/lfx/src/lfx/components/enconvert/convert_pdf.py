@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 
 import requests
+
 from lfx.custom.custom_component.component import Component
 from lfx.io import MessageTextInput, Output, SecretStrInput
 from lfx.schema.data import Data

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 import requests
+
 from lfx.custom.custom_component.component import Component
 from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput
 from lfx.schema.data import Data
@@ -24,9 +25,7 @@ def _post(endpoint: str, api_key: str, payload: dict) -> dict:
             "EnConvert API key is missing. Add your private key (starts with sk_) "
             "from https://www.enconvert.com/dashboard/api-keys."
         )
-    resp = requests.post(
-        BASE_URL + endpoint, json=payload, headers={"X-API-Key": api_key}, timeout=TIMEOUT
-    )
+    resp = requests.post(BASE_URL + endpoint, json=payload, headers={"X-API-Key": api_key}, timeout=TIMEOUT)
     if resp.status_code in (401, 403):
         raise ValueError(
             f"EnConvert rejected the API key (HTTP {resp.status_code}). Use a private "
@@ -55,10 +54,7 @@ class EnConvertExtractStructured(Component):
             name="extraction_schema",
             display_name="Schema",
             required=True,
-            info=(
-                'A JSON schema {"type":"object","properties":{...}} OR a flat '
-                '{"field":"description"} map.'
-            ),
+            info=('A JSON schema {"type":"object","properties":{...}} OR a flat {"field":"description"} map.'),
         ),
         MessageTextInput(
             name="urls",
@@ -91,9 +87,7 @@ class EnConvertExtractStructured(Component):
         urls = _csv(self.urls)
         discover = (self.discover_from_url or "").strip()
         if bool(urls) == bool(discover):
-            raise ValueError(
-                "Provide exactly one of 'URLs' or 'Discover from URL' (not both, not neither)."
-            )
+            raise ValueError("Provide exactly one of 'URLs' or 'Discover from URL' (not both, not neither).")
         raw_schema = (self.extraction_schema or "").strip()
         if not raw_schema:
             raise ValueError("Provide a JSON schema or a flat {field: description} map.")

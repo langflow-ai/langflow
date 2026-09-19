@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import requests
+
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, MessageTextInput, Output, SecretStrInput
 from lfx.schema.data import Data
@@ -22,9 +23,7 @@ def _post(endpoint: str, api_key: str, payload: dict) -> dict:
             "EnConvert API key is missing. Add your private key (starts with sk_) "
             "from https://www.enconvert.com/dashboard/api-keys."
         )
-    resp = requests.post(
-        BASE_URL + endpoint, json=payload, headers={"X-API-Key": api_key}, timeout=TIMEOUT
-    )
+    resp = requests.post(BASE_URL + endpoint, json=payload, headers={"X-API-Key": api_key}, timeout=TIMEOUT)
     if resp.status_code in (401, 403):
         raise ValueError(
             f"EnConvert rejected the API key (HTTP {resp.status_code}). Use a private "
