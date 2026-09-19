@@ -5405,6 +5405,1176 @@
       }
     ],
     [
+      "enconvert",
+      {
+        "enconvert_convert_to_markdown": {
+          "base_classes": [
+            "JSON"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Convert any file (from a URL) into clean markdown. The file bytes are fetched from the URL, converted, and returned as a presigned download URL.",
+          "display_name": "Convert File to Markdown",
+          "documentation": "https://www.enconvert.com/docs",
+          "edited": false,
+          "field_order": [
+            "file_url",
+            "api_key"
+          ],
+          "frozen": false,
+          "icon": "FileText",
+          "legacy": false,
+          "metadata": {
+            "code_hash": "a3c660063337",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "requests",
+                  "version": "2.34.2"
+                },
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 2
+            },
+            "module": "lfx.components.enconvert.convert_markdown.EnConvertConvertToMarkdown"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Data",
+              "group_outputs": false,
+              "method": "build",
+              "name": "data",
+              "selected": "JSON",
+              "tool_mode": true,
+              "types": [
+                "JSON"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "api_key": {
+              "_input_type": "SecretStrInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "EnConvert API Key",
+              "dynamic": false,
+              "info": "Private key (sk_...) from https://www.enconvert.com/dashboard/api-keys.",
+              "input_types": [],
+              "load_from_db": true,
+              "name": "api_key",
+              "override_skip": false,
+              "password": true,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "code": {
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "\"\"\"Convert File to Markdown — any file URL into clean markdown.\"\"\"\n\nfrom __future__ import annotations\n\nimport io\n\nimport requests\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import MessageTextInput, Output, SecretStrInput\nfrom lfx.schema.data import Data\n\nBASE_URL = \"https://api.enconvert.com\"\nTIMEOUT = 120\n\n\ndef _convert(endpoint: str, api_key: str, file_url: str) -> dict:\n    \"\"\"Fetch file_url bytes (NO api key on that GET), then POST as multipart ``file``.\n\n    Agent platforms hand tools a URL, not a local path, so the source fetch — and any\n    presigned result URL — are retrieved without the api-key header; only the EnConvert\n    POST carries X-API-Key. Inlined per component (bundle files are imported standalone).\n    \"\"\"\n    if not api_key:\n        raise ValueError(\n            \"EnConvert API key is missing. Add your private key (starts with sk_) \"\n            \"from https://www.enconvert.com/dashboard/api-keys.\"\n        )\n    if not file_url:\n        raise ValueError(\"Provide a file URL to convert.\")\n    src = requests.get(file_url, timeout=TIMEOUT)  # no api-key header on the source fetch\n    src.raise_for_status()\n    filename = file_url.split(\"?\", 1)[0].rsplit(\"/\", 1)[-1] or \"file\"\n    resp = requests.post(\n        BASE_URL + endpoint,\n        files={\"file\": (filename, io.BytesIO(src.content))},\n        headers={\"X-API-Key\": api_key},\n        timeout=TIMEOUT,\n    )\n    if resp.status_code in (401, 403):\n        raise ValueError(\n            f\"EnConvert rejected the API key (HTTP {resp.status_code}). Use a private \"\n            \"key (sk_...); public pk_ keys are not accepted.\"\n        )\n    resp.raise_for_status()\n    return resp.json()\n\n\nclass EnConvertConvertToMarkdown(Component):\n    display_name = \"Convert File to Markdown\"\n    description = (\n        \"Convert any file (from a URL) into clean markdown. The file bytes are fetched \"\n        \"from the URL, converted, and returned as a presigned download URL.\"\n    )\n    documentation = \"https://www.enconvert.com/docs\"\n    icon = \"FileText\"\n    name = \"enconvert_convert_to_markdown\"  # stable internal id — do not rename\n\n    inputs = [\n        MessageTextInput(\n            name=\"file_url\",\n            display_name=\"File URL\",\n            required=True,\n            info=\"URL of the file to convert. Fetched without your api key.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"EnConvert API Key\",\n            required=True,\n            info=\"Private key (sk_...) from https://www.enconvert.com/dashboard/api-keys.\",\n        ),\n    ]\n\n    outputs = [Output(display_name=\"Data\", name=\"data\", method=\"build\")]\n\n    def build(self) -> Data:\n        result = _convert(\"/v1/convert/anything-to-markdown\", self.api_key, self.file_url)\n        self.status = result.get(\"presigned_url\", \"done\")\n        return Data(data=result)\n"
+            },
+            "file_url": {
+              "_input_type": "MessageTextInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "File URL",
+              "dynamic": false,
+              "info": "URL of the file to convert. Fetched without your api key.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "file_url",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            }
+          },
+          "tool_mode": false
+        },
+        "enconvert_convert_to_pdf": {
+          "base_classes": [
+            "JSON"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Convert any file (from a URL) into a PDF. The file bytes are fetched from the URL, converted, and returned as a presigned download URL.",
+          "display_name": "Convert File to PDF",
+          "documentation": "https://www.enconvert.com/docs",
+          "edited": false,
+          "field_order": [
+            "file_url",
+            "api_key"
+          ],
+          "frozen": false,
+          "icon": "File",
+          "legacy": false,
+          "metadata": {
+            "code_hash": "fb3e02bea20e",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "requests",
+                  "version": "2.34.2"
+                },
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 2
+            },
+            "module": "lfx.components.enconvert.convert_pdf.EnConvertConvertToPdf"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Data",
+              "group_outputs": false,
+              "method": "build",
+              "name": "data",
+              "selected": "JSON",
+              "tool_mode": true,
+              "types": [
+                "JSON"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "api_key": {
+              "_input_type": "SecretStrInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "EnConvert API Key",
+              "dynamic": false,
+              "info": "Private key (sk_...) from https://www.enconvert.com/dashboard/api-keys.",
+              "input_types": [],
+              "load_from_db": true,
+              "name": "api_key",
+              "override_skip": false,
+              "password": true,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "code": {
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "\"\"\"Convert File to PDF — any file URL into a PDF.\"\"\"\n\nfrom __future__ import annotations\n\nimport io\n\nimport requests\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import MessageTextInput, Output, SecretStrInput\nfrom lfx.schema.data import Data\n\nBASE_URL = \"https://api.enconvert.com\"\nTIMEOUT = 120\n\n\ndef _convert(endpoint: str, api_key: str, file_url: str) -> dict:\n    \"\"\"Fetch file_url bytes (NO api key on that GET), then POST as multipart ``file``.\n\n    Agent platforms hand tools a URL, not a local path, so the source fetch — and any\n    presigned result URL — are retrieved without the api-key header; only the EnConvert\n    POST carries X-API-Key. Inlined per component (bundle files are imported standalone).\n    \"\"\"\n    if not api_key:\n        raise ValueError(\n            \"EnConvert API key is missing. Add your private key (starts with sk_) \"\n            \"from https://www.enconvert.com/dashboard/api-keys.\"\n        )\n    if not file_url:\n        raise ValueError(\"Provide a file URL to convert.\")\n    src = requests.get(file_url, timeout=TIMEOUT)  # no api-key header on the source fetch\n    src.raise_for_status()\n    filename = file_url.split(\"?\", 1)[0].rsplit(\"/\", 1)[-1] or \"file\"\n    resp = requests.post(\n        BASE_URL + endpoint,\n        files={\"file\": (filename, io.BytesIO(src.content))},\n        headers={\"X-API-Key\": api_key},\n        timeout=TIMEOUT,\n    )\n    if resp.status_code in (401, 403):\n        raise ValueError(\n            f\"EnConvert rejected the API key (HTTP {resp.status_code}). Use a private \"\n            \"key (sk_...); public pk_ keys are not accepted.\"\n        )\n    resp.raise_for_status()\n    return resp.json()\n\n\nclass EnConvertConvertToPdf(Component):\n    display_name = \"Convert File to PDF\"\n    description = (\n        \"Convert any file (from a URL) into a PDF. The file bytes are fetched from the \"\n        \"URL, converted, and returned as a presigned download URL.\"\n    )\n    documentation = \"https://www.enconvert.com/docs\"\n    icon = \"File\"\n    name = \"enconvert_convert_to_pdf\"  # stable internal id — do not rename\n\n    inputs = [\n        MessageTextInput(\n            name=\"file_url\",\n            display_name=\"File URL\",\n            required=True,\n            info=\"URL of the file to convert. Fetched without your api key.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"EnConvert API Key\",\n            required=True,\n            info=\"Private key (sk_...) from https://www.enconvert.com/dashboard/api-keys.\",\n        ),\n    ]\n\n    outputs = [Output(display_name=\"Data\", name=\"data\", method=\"build\")]\n\n    def build(self) -> Data:\n        result = _convert(\"/v1/convert/anything-to-pdf\", self.api_key, self.file_url)\n        self.status = result.get(\"presigned_url\", \"done\")\n        return Data(data=result)\n"
+            },
+            "file_url": {
+              "_input_type": "MessageTextInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "File URL",
+              "dynamic": false,
+              "info": "URL of the file to convert. Fetched without your api key.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "file_url",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            }
+          },
+          "tool_mode": false
+        },
+        "enconvert_discover_urls": {
+          "base_classes": [
+            "JSON"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Map a site via sitemap, crawl, or hybrid, and return the discovered URLs.",
+          "display_name": "Discover URLs",
+          "documentation": "https://www.enconvert.com/docs",
+          "edited": false,
+          "field_order": [
+            "url",
+            "mode",
+            "max_urls",
+            "max_depth",
+            "include_patterns",
+            "exclude_patterns",
+            "same_domain_only",
+            "api_key"
+          ],
+          "frozen": false,
+          "icon": "Compass",
+          "legacy": false,
+          "metadata": {
+            "code_hash": "73997a0b6c8f",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "requests",
+                  "version": "2.34.2"
+                },
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 2
+            },
+            "module": "lfx.components.enconvert.discover_urls.EnConvertDiscoverUrls"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Data",
+              "group_outputs": false,
+              "method": "build",
+              "name": "data",
+              "selected": "JSON",
+              "tool_mode": true,
+              "types": [
+                "JSON"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "api_key": {
+              "_input_type": "SecretStrInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "EnConvert API Key",
+              "dynamic": false,
+              "info": "Private key (sk_...) from https://www.enconvert.com/dashboard/api-keys.",
+              "input_types": [],
+              "load_from_db": true,
+              "name": "api_key",
+              "override_skip": false,
+              "password": true,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "code": {
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "\"\"\"Discover URLs — map or crawl a site into a list of URLs.\"\"\"\n\nfrom __future__ import annotations\n\nimport requests\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput\nfrom lfx.schema.data import Data\n\nBASE_URL = \"https://api.enconvert.com\"\nTIMEOUT = 120\n\n\ndef _post(endpoint: str, api_key: str, payload: dict) -> dict:\n    \"\"\"POST JSON to an EnConvert endpoint with the private-key header, return parsed JSON.\n\n    Inlined per component: the Langflow loader imports bundle files standalone, so\n    relative imports between them are unsupported.\n    \"\"\"\n    if not api_key:\n        raise ValueError(\n            \"EnConvert API key is missing. Add your private key (starts with sk_) \"\n            \"from https://www.enconvert.com/dashboard/api-keys.\"\n        )\n    resp = requests.post(BASE_URL + endpoint, json=payload, headers={\"X-API-Key\": api_key}, timeout=TIMEOUT)\n    if resp.status_code in (401, 403):\n        raise ValueError(\n            f\"EnConvert rejected the API key (HTTP {resp.status_code}). Use a private \"\n            \"key (sk_...); public pk_ keys are not accepted.\"\n        )\n    resp.raise_for_status()\n    return resp.json()\n\n\ndef _csv(raw: str) -> list[str]:\n    return [s.strip() for s in raw.split(\",\") if s.strip()] if raw else []\n\n\nclass EnConvertDiscoverUrls(Component):\n    display_name = \"Discover URLs\"\n    description = \"Map a site via sitemap, crawl, or hybrid, and return the discovered URLs.\"\n    documentation = \"https://www.enconvert.com/docs\"\n    icon = \"Compass\"\n    name = \"enconvert_discover_urls\"  # stable internal id — do not rename\n\n    inputs = [\n        MessageTextInput(\n            name=\"url\",\n            display_name=\"URL\",\n            required=True,\n            info=\"The site to discover URLs from.\",\n        ),\n        DropdownInput(\n            name=\"mode\",\n            display_name=\"Mode\",\n            options=[\"hybrid\", \"sitemap\", \"crawl\"],\n            value=\"hybrid\",\n        ),\n        IntInput(name=\"max_urls\", display_name=\"Max URLs\", value=100),\n        IntInput(name=\"max_depth\", display_name=\"Max depth\", value=2),\n        MessageTextInput(\n            name=\"include_patterns\",\n            display_name=\"Include patterns\",\n            info=\"Optional comma-separated glob patterns to keep.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"exclude_patterns\",\n            display_name=\"Exclude patterns\",\n            info=\"Optional comma-separated glob patterns to drop.\",\n            advanced=True,\n        ),\n        BoolInput(\n            name=\"same_domain_only\",\n            display_name=\"Same domain only\",\n            value=True,\n            advanced=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"EnConvert API Key\",\n            required=True,\n            info=\"Private key (sk_...) from https://www.enconvert.com/dashboard/api-keys.\",\n        ),\n    ]\n\n    outputs = [Output(display_name=\"Data\", name=\"data\", method=\"build\")]\n\n    def build(self) -> Data:\n        payload: dict = {\n            \"url\": self.url,\n            \"mode\": self.mode,\n            \"max_urls\": self.max_urls,\n            \"max_depth\": self.max_depth,\n            \"same_domain_only\": self.same_domain_only,\n        }\n        include = _csv(self.include_patterns)\n        exclude = _csv(self.exclude_patterns)\n        if include:\n            payload[\"include_patterns\"] = include\n        if exclude:\n            payload[\"exclude_patterns\"] = exclude\n        result = _post(\"/v2/discover\", self.api_key, payload)\n        self.status = f\"{result.get('total', len(result.get('urls', [])))} URLs\"\n        return Data(data=result)\n"
+            },
+            "exclude_patterns": {
+              "_input_type": "MessageTextInput",
+              "advanced": true,
+              "api_editable": false,
+              "display_name": "Exclude patterns",
+              "dynamic": false,
+              "info": "Optional comma-separated glob patterns to drop.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "exclude_patterns",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "include_patterns": {
+              "_input_type": "MessageTextInput",
+              "advanced": true,
+              "api_editable": false,
+              "display_name": "Include patterns",
+              "dynamic": false,
+              "info": "Optional comma-separated glob patterns to keep.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "include_patterns",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "max_depth": {
+              "_input_type": "IntInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Max depth",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "max_depth",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "int",
+              "value": 2
+            },
+            "max_urls": {
+              "_input_type": "IntInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Max URLs",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "max_urls",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "int",
+              "value": 100
+            },
+            "mode": {
+              "_input_type": "DropdownInput",
+              "advanced": false,
+              "api_editable": false,
+              "combobox": false,
+              "dialog_inputs": {},
+              "display_name": "Mode",
+              "dynamic": false,
+              "external_options": {},
+              "info": "",
+              "name": "mode",
+              "options": [
+                "hybrid",
+                "sitemap",
+                "crawl"
+              ],
+              "options_metadata": [],
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "toggle": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "str",
+              "value": "hybrid"
+            },
+            "same_domain_only": {
+              "_input_type": "BoolInput",
+              "advanced": true,
+              "api_editable": false,
+              "display_name": "Same domain only",
+              "dynamic": false,
+              "info": "",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "same_domain_only",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "bool",
+              "value": true
+            },
+            "url": {
+              "_input_type": "MessageTextInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "URL",
+              "dynamic": false,
+              "info": "The site to discover URLs from.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "url",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            }
+          },
+          "tool_mode": false
+        },
+        "enconvert_extract_structured": {
+          "base_classes": [
+            "JSON"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Extract structured data from one or more pages against a JSON schema (or a flat field:description map). Give either URLs or a site to discover from.",
+          "display_name": "Extract Structured",
+          "documentation": "https://www.enconvert.com/docs",
+          "edited": false,
+          "field_order": [
+            "extraction_schema",
+            "urls",
+            "discover_from_url",
+            "discover_max_pages",
+            "api_key"
+          ],
+          "frozen": false,
+          "icon": "Braces",
+          "legacy": false,
+          "metadata": {
+            "code_hash": "3159518a7c11",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "requests",
+                  "version": "2.34.2"
+                },
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 2
+            },
+            "module": "lfx.components.enconvert.extract_structured.EnConvertExtractStructured"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Data",
+              "group_outputs": false,
+              "method": "build",
+              "name": "data",
+              "selected": "JSON",
+              "tool_mode": true,
+              "types": [
+                "JSON"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "api_key": {
+              "_input_type": "SecretStrInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "EnConvert API Key",
+              "dynamic": false,
+              "info": "Private key (sk_...) from https://www.enconvert.com/dashboard/api-keys.",
+              "input_types": [],
+              "load_from_db": true,
+              "name": "api_key",
+              "override_skip": false,
+              "password": true,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "code": {
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "\"\"\"Extract Structured (distill) — pull typed data from pages against a schema.\"\"\"\n\nfrom __future__ import annotations\n\nimport json\n\nimport requests\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput\nfrom lfx.schema.data import Data\n\nBASE_URL = \"https://api.enconvert.com\"\nTIMEOUT = 120\n\n\ndef _post(endpoint: str, api_key: str, payload: dict) -> dict:\n    \"\"\"POST JSON to an EnConvert endpoint with the private-key header, return parsed JSON.\n\n    Inlined per component: the Langflow loader imports bundle files standalone, so\n    relative imports between them are unsupported.\n    \"\"\"\n    if not api_key:\n        raise ValueError(\n            \"EnConvert API key is missing. Add your private key (starts with sk_) \"\n            \"from https://www.enconvert.com/dashboard/api-keys.\"\n        )\n    resp = requests.post(BASE_URL + endpoint, json=payload, headers={\"X-API-Key\": api_key}, timeout=TIMEOUT)\n    if resp.status_code in (401, 403):\n        raise ValueError(\n            f\"EnConvert rejected the API key (HTTP {resp.status_code}). Use a private \"\n            \"key (sk_...); public pk_ keys are not accepted.\"\n        )\n    resp.raise_for_status()\n    return resp.json()\n\n\ndef _csv(raw: str) -> list[str]:\n    return [s.strip() for s in raw.split(\",\") if s.strip()] if raw else []\n\n\nclass EnConvertExtractStructured(Component):\n    display_name = \"Extract Structured\"\n    description = (\n        \"Extract structured data from one or more pages against a JSON schema \"\n        \"(or a flat field:description map). Give either URLs or a site to discover from.\"\n    )\n    documentation = \"https://www.enconvert.com/docs\"\n    icon = \"Braces\"\n    name = \"enconvert_extract_structured\"  # stable internal id — do not rename\n\n    inputs = [\n        MultilineInput(\n            name=\"extraction_schema\",\n            display_name=\"Schema\",\n            required=True,\n            info=('A JSON schema {\"type\":\"object\",\"properties\":{...}} OR a flat {\"field\":\"description\"} map.'),\n        ),\n        MessageTextInput(\n            name=\"urls\",\n            display_name=\"URLs\",\n            info=\"Comma-separated page URLs (max 50). Provide this OR 'Discover from URL'.\",\n        ),\n        MessageTextInput(\n            name=\"discover_from_url\",\n            display_name=\"Discover from URL\",\n            info=\"A site to discover pages from, instead of listing URLs.\",\n        ),\n        IntInput(\n            name=\"discover_max_pages\",\n            display_name=\"Discover max pages\",\n            value=25,\n            advanced=True,\n            info=\"Only used with 'Discover from URL'.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"EnConvert API Key\",\n            required=True,\n            info=\"Private key (sk_...) from https://www.enconvert.com/dashboard/api-keys.\",\n        ),\n    ]\n\n    outputs = [Output(display_name=\"Data\", name=\"data\", method=\"build\")]\n\n    def build(self) -> Data:\n        urls = _csv(self.urls)\n        discover = (self.discover_from_url or \"\").strip()\n        if bool(urls) == bool(discover):\n            raise ValueError(\"Provide exactly one of 'URLs' or 'Discover from URL' (not both, not neither).\")\n        raw_schema = (self.extraction_schema or \"\").strip()\n        if not raw_schema:\n            raise ValueError(\"Provide a JSON schema or a flat {field: description} map.\")\n        payload: dict = {\"schema\": json.loads(raw_schema)}\n        if urls:\n            payload[\"urls\"] = urls\n        else:\n            discover_from: dict = {\"url\": discover}\n            if self.discover_max_pages:\n                discover_from[\"max_pages\"] = self.discover_max_pages\n            payload[\"discover_from\"] = discover_from\n        result = _post(\"/v2/distill\", self.api_key, payload)\n        self.status = f\"tier={result.get('extraction_tier')}\"\n        return Data(data=result)\n"
+            },
+            "discover_from_url": {
+              "_input_type": "MessageTextInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Discover from URL",
+              "dynamic": false,
+              "info": "A site to discover pages from, instead of listing URLs.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "discover_from_url",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "discover_max_pages": {
+              "_input_type": "IntInput",
+              "advanced": true,
+              "api_editable": false,
+              "display_name": "Discover max pages",
+              "dynamic": false,
+              "info": "Only used with 'Discover from URL'.",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "discover_max_pages",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "int",
+              "value": 25
+            },
+            "extraction_schema": {
+              "_input_type": "MultilineInput",
+              "advanced": false,
+              "ai_enabled": false,
+              "api_editable": false,
+              "copy_field": false,
+              "display_name": "Schema",
+              "dynamic": false,
+              "info": "A JSON schema {\"type\":\"object\",\"properties\":{...}} OR a flat {\"field\":\"description\"} map.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "multiline": true,
+              "name": "extraction_schema",
+              "override_skip": false,
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "urls": {
+              "_input_type": "MessageTextInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "URLs",
+              "dynamic": false,
+              "info": "Comma-separated page URLs (max 50). Provide this OR 'Discover from URL'.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "urls",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            }
+          },
+          "tool_mode": false
+        },
+        "enconvert_perceive": {
+          "base_classes": [
+            "JSON"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Render a web page into agent-ready outputs (markdown, structured data, screenshot, PDF, links...) with a render_quality honesty score on every read.",
+          "display_name": "Perceive URL",
+          "documentation": "https://www.enconvert.com/docs",
+          "edited": false,
+          "field_order": [
+            "url",
+            "formats",
+            "only_main_content",
+            "api_key"
+          ],
+          "frozen": false,
+          "icon": "Eye",
+          "legacy": false,
+          "metadata": {
+            "code_hash": "50b233f0a537",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "requests",
+                  "version": "2.34.2"
+                },
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 2
+            },
+            "module": "lfx.components.enconvert.perceive.EnConvertPerceive"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Data",
+              "group_outputs": false,
+              "method": "build",
+              "name": "data",
+              "selected": "JSON",
+              "tool_mode": true,
+              "types": [
+                "JSON"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "api_key": {
+              "_input_type": "SecretStrInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "EnConvert API Key",
+              "dynamic": false,
+              "info": "Private key (sk_...) from https://www.enconvert.com/dashboard/api-keys.",
+              "input_types": [],
+              "load_from_db": true,
+              "name": "api_key",
+              "override_skip": false,
+              "password": true,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "code": {
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "\"\"\"Perceive URL — render a web page into agent-ready outputs with a quality score.\"\"\"\n\nfrom __future__ import annotations\n\nimport requests\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import BoolInput, MessageTextInput, Output, SecretStrInput\nfrom lfx.schema.data import Data\n\nBASE_URL = \"https://api.enconvert.com\"\nTIMEOUT = 120\n\n\ndef _post(endpoint: str, api_key: str, payload: dict) -> dict:\n    \"\"\"POST JSON to an EnConvert endpoint with the private-key header, return parsed JSON.\n\n    Bundle modules are imported standalone by the Langflow loader, so this helper is\n    inlined per component (relative imports between bundle files are unsupported).\n    \"\"\"\n    if not api_key:\n        raise ValueError(\n            \"EnConvert API key is missing. Add your private key (starts with sk_) \"\n            \"from https://www.enconvert.com/dashboard/api-keys.\"\n        )\n    resp = requests.post(BASE_URL + endpoint, json=payload, headers={\"X-API-Key\": api_key}, timeout=TIMEOUT)\n    if resp.status_code in (401, 403):\n        raise ValueError(\n            f\"EnConvert rejected the API key (HTTP {resp.status_code}). Use a private \"\n            \"key (sk_...); public pk_ keys are not accepted.\"\n        )\n    resp.raise_for_status()\n    return resp.json()\n\n\ndef _csv(raw: str) -> list[str]:\n    return [s.strip() for s in raw.split(\",\") if s.strip()] if raw else []\n\n\nclass EnConvertPerceive(Component):\n    display_name = \"Perceive URL\"\n    description = (\n        \"Render a web page into agent-ready outputs (markdown, structured data, \"\n        \"screenshot, PDF, links...) with a render_quality honesty score on every read.\"\n    )\n    documentation = \"https://www.enconvert.com/docs\"\n    icon = \"Eye\"\n    name = \"enconvert_perceive\"  # stable internal id — do not rename\n\n    inputs = [\n        MessageTextInput(\n            name=\"url\",\n            display_name=\"URL\",\n            required=True,\n            info=\"The page to perceive.\",\n        ),\n        MessageTextInput(\n            name=\"formats\",\n            display_name=\"Outputs\",\n            value=\"markdown,structured\",\n            info=(\n                \"Comma-separated. Allowed: markdown, html_cleaned, html_raw, screenshot, \"\n                \"screenshot_full_page, pdf, links, images, structured. markdown and \"\n                \"structured come back inline; screenshot/pdf/html return 15-minute signed URLs.\"\n            ),\n        ),\n        BoolInput(\n            name=\"only_main_content\",\n            display_name=\"Only main content\",\n            value=False,\n            info=\"Strip navigation and boilerplate, keep the main content.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"EnConvert API Key\",\n            required=True,\n            info=\"Private key (sk_...) from https://www.enconvert.com/dashboard/api-keys.\",\n        ),\n    ]\n\n    outputs = [Output(display_name=\"Data\", name=\"data\", method=\"build\")]\n\n    def build(self) -> Data:\n        payload: dict = {\"url\": self.url}\n        formats = _csv(self.formats)\n        if formats:\n            payload[\"outputs\"] = formats\n        if self.only_main_content:\n            payload[\"only_main_content\"] = True\n        result = _post(\"/v2/perceive\", self.api_key, payload)\n        self.status = f\"render_quality={result.get('render_quality')}\"\n        return Data(data=result)\n"
+            },
+            "formats": {
+              "_input_type": "MessageTextInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Outputs",
+              "dynamic": false,
+              "info": "Comma-separated. Allowed: markdown, html_cleaned, html_raw, screenshot, screenshot_full_page, pdf, links, images, structured. markdown and structured come back inline; screenshot/pdf/html return 15-minute signed URLs.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "formats",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": "markdown,structured"
+            },
+            "only_main_content": {
+              "_input_type": "BoolInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Only main content",
+              "dynamic": false,
+              "info": "Strip navigation and boilerplate, keep the main content.",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "only_main_content",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "bool",
+              "value": false
+            },
+            "url": {
+              "_input_type": "MessageTextInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "URL",
+              "dynamic": false,
+              "info": "The page to perceive.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "url",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            }
+          },
+          "tool_mode": false
+        },
+        "enconvert_web_search": {
+          "base_classes": [
+            "JSON"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Search the web and get back structured results (title, url, snippet, position).",
+          "display_name": "Web Search",
+          "documentation": "https://www.enconvert.com/docs",
+          "edited": false,
+          "field_order": [
+            "query",
+            "category",
+            "num_results",
+            "country",
+            "locale",
+            "time_filter",
+            "api_key"
+          ],
+          "frozen": false,
+          "icon": "Search",
+          "legacy": false,
+          "metadata": {
+            "code_hash": "1ce695a2297a",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "requests",
+                  "version": "2.34.2"
+                },
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 2
+            },
+            "module": "lfx.components.enconvert.web_search.EnConvertWebSearch"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Data",
+              "group_outputs": false,
+              "method": "build",
+              "name": "data",
+              "selected": "JSON",
+              "tool_mode": true,
+              "types": [
+                "JSON"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "api_key": {
+              "_input_type": "SecretStrInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "EnConvert API Key",
+              "dynamic": false,
+              "info": "Private key (sk_...) from https://www.enconvert.com/dashboard/api-keys.",
+              "input_types": [],
+              "load_from_db": true,
+              "name": "api_key",
+              "override_skip": false,
+              "password": true,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "category": {
+              "_input_type": "DropdownInput",
+              "advanced": false,
+              "api_editable": false,
+              "combobox": false,
+              "dialog_inputs": {},
+              "display_name": "Category",
+              "dynamic": false,
+              "external_options": {},
+              "info": "",
+              "name": "category",
+              "options": [
+                "web",
+                "news",
+                "images",
+                "scholar",
+                "patents",
+                "maps"
+              ],
+              "options_metadata": [],
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "toggle": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "str",
+              "value": "web"
+            },
+            "code": {
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "\"\"\"Web Search — search the web (or news/images/scholar/patents/maps) via EnConvert.\"\"\"\n\nfrom __future__ import annotations\n\nimport requests\n\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput\nfrom lfx.schema.data import Data\n\nBASE_URL = \"https://api.enconvert.com\"\nTIMEOUT = 120\n\n\ndef _post(endpoint: str, api_key: str, payload: dict) -> dict:\n    \"\"\"POST JSON to an EnConvert endpoint with the private-key header, return parsed JSON.\n\n    Inlined per component: the Langflow loader imports bundle files standalone, so\n    relative imports between them are unsupported.\n    \"\"\"\n    if not api_key:\n        raise ValueError(\n            \"EnConvert API key is missing. Add your private key (starts with sk_) \"\n            \"from https://www.enconvert.com/dashboard/api-keys.\"\n        )\n    resp = requests.post(BASE_URL + endpoint, json=payload, headers={\"X-API-Key\": api_key}, timeout=TIMEOUT)\n    if resp.status_code in (401, 403):\n        raise ValueError(\n            f\"EnConvert rejected the API key (HTTP {resp.status_code}). Use a private \"\n            \"key (sk_...); public pk_ keys are not accepted.\"\n        )\n    resp.raise_for_status()\n    return resp.json()\n\n\nclass EnConvertWebSearch(Component):\n    display_name = \"Web Search\"\n    description = \"Search the web and get back structured results (title, url, snippet, position).\"\n    documentation = \"https://www.enconvert.com/docs\"\n    icon = \"Search\"\n    name = \"enconvert_web_search\"  # stable internal id — do not rename\n\n    inputs = [\n        MessageTextInput(\n            name=\"query\",\n            display_name=\"Query\",\n            required=True,\n            info=\"The search query.\",\n        ),\n        DropdownInput(\n            name=\"category\",\n            display_name=\"Category\",\n            options=[\"web\", \"news\", \"images\", \"scholar\", \"patents\", \"maps\"],\n            value=\"web\",\n        ),\n        IntInput(\n            name=\"num_results\",\n            display_name=\"Results\",\n            value=10,\n            info=\"Number of results to return.\",\n        ),\n        MessageTextInput(\n            name=\"country\",\n            display_name=\"Country\",\n            info=\"Optional ISO country code (e.g. us).\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"locale\",\n            display_name=\"Locale\",\n            info=\"Optional locale (e.g. en).\",\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"time_filter\",\n            display_name=\"Time filter\",\n            options=[\"\", \"hour\", \"day\", \"week\", \"month\", \"year\"],\n            value=\"\",\n            advanced=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"EnConvert API Key\",\n            required=True,\n            info=\"Private key (sk_...) from https://www.enconvert.com/dashboard/api-keys.\",\n        ),\n    ]\n\n    outputs = [Output(display_name=\"Data\", name=\"data\", method=\"build\")]\n\n    def build(self) -> Data:\n        payload: dict = {\"query\": self.query, \"category\": self.category}\n        if self.num_results:\n            payload[\"num_results\"] = self.num_results\n        if self.country:\n            payload[\"country\"] = self.country\n        if self.locale:\n            payload[\"locale\"] = self.locale\n        if self.time_filter:\n            payload[\"time_filter\"] = self.time_filter\n        result = _post(\"/v2/search\", self.api_key, payload)\n        self.status = f\"{len(result.get('results', []))} results\"\n        return Data(data=result)\n"
+            },
+            "country": {
+              "_input_type": "MessageTextInput",
+              "advanced": true,
+              "api_editable": false,
+              "display_name": "Country",
+              "dynamic": false,
+              "info": "Optional ISO country code (e.g. us).",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "country",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "locale": {
+              "_input_type": "MessageTextInput",
+              "advanced": true,
+              "api_editable": false,
+              "display_name": "Locale",
+              "dynamic": false,
+              "info": "Optional locale (e.g. en).",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "locale",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "num_results": {
+              "_input_type": "IntInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Results",
+              "dynamic": false,
+              "info": "Number of results to return.",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "num_results",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "int",
+              "value": 10
+            },
+            "query": {
+              "_input_type": "MessageTextInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Query",
+              "dynamic": false,
+              "info": "The search query.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "name": "query",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "time_filter": {
+              "_input_type": "DropdownInput",
+              "advanced": true,
+              "api_editable": false,
+              "combobox": false,
+              "dialog_inputs": {},
+              "display_name": "Time filter",
+              "dynamic": false,
+              "external_options": {},
+              "info": "",
+              "name": "time_filter",
+              "options": [
+                "",
+                "hour",
+                "day",
+                "week",
+                "month",
+                "year"
+              ],
+              "options_metadata": [],
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "toggle": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "str",
+              "value": ""
+            }
+          },
+          "tool_mode": false
+        }
+      }
+    ],
+    [
       "files_and_knowledge",
       {
         "Directory": {
@@ -31985,9 +33155,9 @@
     ]
   ],
   "metadata": {
-    "num_components": 128,
-    "num_modules": 16
+    "num_components": 134,
+    "num_modules": 17
   },
-  "sha256": "cafb8508c6d02921c73e170d6aae1812ea437bb1a28c3c136ce48e0658151356",
+  "sha256": "0481751d9de0c3dd14d2ff528697d8e2706227b15f1ea652ac9bb6f58c5ee69a",
   "version": "1.12.2"
 }
