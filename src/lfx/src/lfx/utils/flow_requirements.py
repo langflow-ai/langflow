@@ -114,6 +114,10 @@ _PROVIDER_PACKAGE_FALLBACKS: dict[str, set[str]] = {
     # (MODEL_PROVIDER_METADATA), "IBM watsonx.ai" is the MODEL_PROVIDERS_DICT alias.
     "IBM WatsonX": {"langchain-ibm"},
     "IBM watsonx.ai": {"langchain-ibm"},
+    # OpenCode Go is unified-selectable and routes through ChatOpenAI at runtime,
+    # but is absent from MODEL_PROVIDERS_DICT, so only this fallback can supply
+    # its package. Guarded by test_provider_fallback_covers_unified_catalog.
+    "OpenCode Go": {"langchain-openai"},
     "Ollama": {"langchain-ollama"},
     "OpenAI": {"langchain-openai"},
     # OpenRouter is unified-selectable and routes through ChatOpenAI at runtime

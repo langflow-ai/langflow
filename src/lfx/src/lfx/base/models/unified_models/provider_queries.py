@@ -23,6 +23,7 @@ from lfx.base.models.openai_constants import (
     OPENAI_EMBEDDING_MODELS_DETAILED,
     OPENAI_MODELS_DETAILED,
 )
+from lfx.base.models.opencode_go_constants import OPENCODE_GO_MODELS_DETAILED
 from lfx.base.models.openrouter_constants import OPENROUTER_MODELS_DETAILED
 from lfx.base.models.watsonx_constants import WATSONX_MODELS_DETAILED
 
@@ -61,6 +62,12 @@ _STATIC_MODELS_DETAILED: list[list[dict]] = [
     # ``get_provider_for_model_name`` returns the first catalog hit, so keep
     # Foundry after established providers for 1.8.x backwards compat.
     AZURE_AI_FOUNDRY_MODELS_DETAILED,
+    # Truly last: OpenCode Go proxies other vendors' models under bare IDs
+    # ("claude-sonnet-5", "gpt-5.2") that collide with the Anthropic/OpenAI
+    # catalogs. ``get_provider_for_model_name`` returns the first hit, so keeping
+    # this list last means an existing flow's bare model name still resolves to
+    # the provider it was saved with.
+    OPENCODE_GO_MODELS_DETAILED,
 ]
 
 

@@ -55,7 +55,7 @@ def create_model_metadata(
     )
 
 
-LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX", "OpenRouter"]
+LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX", "OpenRouter", "OpenCode Go"]
 
 # Live only with a custom endpoint configured; empty live fetch keeps the static catalog.
 CONDITIONAL_LIVE_MODEL_PROVIDERS: list[str] = ["OpenAI", "Azure AI Foundry"]
@@ -434,6 +434,39 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
             },
         ],
         "api_docs_url": "https://openrouter.ai/docs",
+        "mapping": {
+            "model_class": "ChatOpenAI",
+            "model_param": "model",
+        },
+    },
+    "OpenCode Go": {
+        "provider_id": "opencode-go",
+        # No official brand asset ships with Langflow; "Terminal" resolves through
+        # the generic Lucide icon path, like other icon-less integrations.
+        "icon": "Terminal",
+        "max_tokens_field_name": "max_tokens",
+        # Fixed hosted endpoint. Deliberately NOT user-configurable: the
+        # x-opencode-session/User-Agent contract only applies to this service,
+        # and a fixed URL keeps the connection out of SSRF-relevant territory.
+        "base_url": "https://opencode.ai/zen/go/v1",
+        "variables": [
+            {
+                "variable_name": "OpenCode Go API Key",
+                "variable_key": "OPENCODE_GO_API_KEY",
+                "required": True,
+                "is_secret": True,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "api_key",
+                "component_metadata": {
+                    "mapping_field": "api_key",
+                    "required": False,
+                    "advanced": True,
+                    "info": "Falls back to OPENCODE_GO_API_KEY environment variable",
+                },
+            },
+        ],
+        "api_docs_url": "https://opencode.ai/docs/go/",
         "mapping": {
             "model_class": "ChatOpenAI",
             "model_param": "model",
