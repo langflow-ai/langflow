@@ -153,7 +153,7 @@ def _serialize_series(obj: pd.Series, max_length: int | None, max_items: int | N
     """Serialize pandas Series to a dictionary format."""
     if max_items is not None and len(obj) > max_items:
         obj = obj.head(max_items)
-    return {index: _truncate_value(value, max_length, max_items) for index, value in obj.items()}
+    return {index: _sanitize_non_finite(_truncate_value(value, max_length, max_items)) for index, value in obj.items()}
 
 
 def _is_numpy_type(obj: Any) -> bool:
@@ -161,16 +161,30 @@ def _is_numpy_type(obj: Any) -> bool:
     return hasattr(type(obj), "__module__") and type(obj).__module__ == np.__name__
 
 
+def _sanitize_non_finite(value: Any) -> Any:
+    """Replace non-finite floats with ``None``, as ``_serialize_primitive`` does.
+
+    Needed separately because ``np.float32`` and ``np.float16`` are not ``float``
+    subclasses, so the guard in ``_serialize_primitive`` never sees them and
+    ``json.dumps`` would emit the invalid ``NaN``/``Infinity`` tokens.
+    """
+    if isinstance(value, list):
+        return [_sanitize_non_finite(item) for item in value]
+    if isinstance(value, float | np.floating):
+        return value if math.isfinite(value) else None
+    return value
+
+
 def _serialize_numpy_type(obj: Any, max_length: int | None, max_items: int | None) -> Any:
     """Serialize numpy types."""
     try:
         # For single-element arrays
         if obj.size == 1 and hasattr(obj, "item"):
-            return obj.item()
+            return _sanitize_non_finite(obj.item())
 
         # For multi-element arrays
         if np.issubdtype(obj.dtype, np.number):
-            return obj.tolist()  # Convert to Python list
+            return _sanitize_non_finite(obj.tolist())  # Convert to Python list
         if np.issubdtype(obj.dtype, np.bool_):
             return bool(obj)
         if np.issubdtype(obj.dtype, np.complexfloating):
