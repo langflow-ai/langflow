@@ -41,6 +41,22 @@ def _validate_endpoint_name_value(v: str | None) -> str | None:
     return v
 
 
+def _serialize_flow_datetime(value):
+    """Serialize a flow timestamp to whole-second ISO-8601 with an explicit offset.
+
+    Shared by ``FlowBase`` (and therefore ``FlowRead``) and ``FlowHeader`` so the
+    two shapes put the same string on the wire for the same instant.
+    """
+    if isinstance(value, datetime):
+        # I'm getting 2024-05-29T17:57:17.631346
+        # and I want 2024-05-29T17:57:17-05:00
+        value = value.replace(microsecond=0)
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.isoformat()
+    return value
+
+
 class AccessTypeEnum(str, Enum):
     PRIVATE = "PRIVATE"
     PUBLIC = "PUBLIC"
@@ -198,14 +214,7 @@ class FlowBase(SQLModel):
     # updated_at can be serialized to JSON
     @field_serializer("updated_at")
     def serialize_datetime(self, value):
-        if isinstance(value, datetime):
-            # I'm getting 2024-05-29T17:57:17.631346
-            # and I want 2024-05-29T17:57:17-05:00
-            value = value.replace(microsecond=0)
-            if value.tzinfo is None:
-                value = value.replace(tzinfo=timezone.utc)
-            return value.isoformat()
-        return value
+        return _serialize_flow_datetime(value)
 
     @field_validator("updated_at", mode="before")
     @classmethod
@@ -291,6 +300,13 @@ class FlowHeader(BaseModel):
     a2a_card_overrides: dict | None = Field(None, description="User overrides for the served A2A agent card")
     action_name: str | None = Field(None, description="The name of the action associated with the flow")
     action_description: str | None = Field(None, description="The description of the action associated with the flow")
+    updated_at: datetime | None = Field(None, description="The timestamp of the last update to the flow")
+
+    # Serialized exactly like ``FlowBase.updated_at`` so a header and a full read
+    # of the same flow carry an identical timestamp string.
+    @field_serializer("updated_at")
+    def serialize_datetime(self, value):
+        return _serialize_flow_datetime(value)
 
     @field_validator("data", mode="before")
     @classmethod
