@@ -538,6 +538,9 @@ def fetch_live_ollama_models(user_id: UUID | str | None, model_type: str = "llm"
 OPENROUTER_API_BASE = "https://openrouter.ai/api/v1"
 OPENROUTER_FETCH_TIMEOUT = 10.0
 
+OPENCODE_GO_API_BASE = "https://opencode.ai/zen/go/v1"
+OPENCODE_GO_FETCH_TIMEOUT = 10.0
+
 
 OPENAI_COMPATIBLE_FETCH_TIMEOUT = 10.0
 
@@ -1047,6 +1050,88 @@ def fetch_live_openrouter_models(user_id: UUID | str | None, model_type: str = "
     ]
 
 
+def fetch_live_opencode_go_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
+    """Fetch the live OpenCode Go catalog using the user's configured API key.
+
+    The Go tier proxies a large, frequently changing set of upstream models, so
+    the live endpoint is authoritative for what a given subscription may call;
+    the seed list in ``opencode_go_constants`` only backs the pre-credential UI.
+
+    Unlike OpenRouter, the Go ``/models`` payload does not expose a
+    ``supported_parameters`` array, so per-model capability cannot be derived.
+    OpenCode Go is a coding-agent endpoint whose whole catalog is tool-calling
+    capable, so ``tool_calling`` is reported True — without it, Agent components
+    (which filter on ``tool_calling=True``) would show an empty dropdown.
+
+    Returns an empty list on any failure so a transient outage degrades to the
+    static seed catalog instead of raising into the caller.
+    """
+    from lfx.base.models.opencode_go_constants import OPENCODE_GO_MODELS_DETAILED
+
+    if model_type != "llm":
+        # Chat completions only; no embedding endpoint on the Go tier.
+        return []
+
+    api_key = get_provider_variable_value(user_id, "OPENCODE_GO_API_KEY")
+    if not api_key:
+        return []
+
+    url = f"{OPENCODE_GO_API_BASE}/models"
+    headers = {"Authorization": f"Bearer {api_key}"}
+    try:
+        response = httpx.get(url, headers=headers, timeout=OPENCODE_GO_FETCH_TIMEOUT)
+        response.raise_for_status()
+        raw_models = response.json().get("data", [])
+    except (httpx.RequestError, httpx.HTTPStatusError) as e:
+        # Warning, not debug: a user who just saved a key and sees an empty
+        # catalog needs a server-side breadcrumb.
+        status_code = getattr(getattr(e, "response", None), "status_code", None)
+        logger.warning("Could not fetch live OpenCode Go models from %s (status=%s): %s", url, status_code, e)
+        return []
+    except (ValueError, TypeError) as e:
+        logger.warning("Malformed OpenCode Go /models response from %s: %s", url, e)
+        return []
+
+    if not isinstance(raw_models, list):
+        logger.warning("Unexpected OpenCode Go /models payload (data is %s): %r", type(raw_models).__name__, raw_models)
+        return []
+
+    created_by_id: dict[str, int] = {}
+    for raw in raw_models:
+        if not isinstance(raw, dict):
+            continue
+        mid = raw.get("id")
+        if not mid:
+            continue
+        created_raw = raw.get("created")
+        try:
+            created = int(created_raw) if created_raw is not None else 0
+        except (TypeError, ValueError):
+            created = 0
+        created_by_id[mid] = max(created, 0)
+
+    if not created_by_id:
+        return []
+
+    sorted_ids = sorted(created_by_id)
+    seed_ids = {m["name"] for m in OPENCODE_GO_MODELS_DETAILED}
+    # Intersect with the curated seed so defaults stay sensible; fall back to the
+    # first few ids when the seed list has gone stale against the live catalog.
+    default_set = (seed_ids & created_by_id.keys()) or set(sorted_ids[:MIN_DEFAULT_MODELS])
+
+    return [
+        create_model_metadata(
+            provider="OpenCode Go",
+            name=name,
+            icon="Terminal",
+            tool_calling=True,
+            default=name in default_set,
+            created=created_by_id[name],
+        )
+        for name in sorted_ids
+    ]
+
+
 def fetch_live_watsonx_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
     """Fetch live WatsonX models from the configured WatsonX instance.
 
@@ -1125,6 +1210,8 @@ def get_live_models_for_provider(
         return fetch_live_watsonx_models(user_id, model_type)
     if provider == "OpenRouter":
         return fetch_live_openrouter_models(user_id, model_type)
+    if provider == "OpenCode Go":
+        return fetch_live_opencode_go_models(user_id, model_type)
     if provider == "OpenAI":
         return fetch_live_openai_compatible_models(user_id, model_type)
     if provider == "Azure AI Foundry":
